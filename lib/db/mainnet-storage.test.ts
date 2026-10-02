@@ -76,6 +76,7 @@ it("recovers expired owner custody through normal withdrawal handlers while pres
   vi.doMock("../account-sessions", () => ({ accountSessionContext: async () => ({ db: authenticationDb, wallet: authenticatedWallet }) }));
   cleanup.push(() => vi.doUnmock("../account-sessions"));
   vi.stubEnv("KERYX_WITHDRAWAL_MAX_FEE_MICROS", "1000"); vi.stubEnv("KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS", "100");
+  vi.stubEnv("NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS", "100");
   vi.stubEnv("KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS", "10");
   vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request, init: RequestInit) => {
     const target = String(url);
@@ -142,10 +143,24 @@ it("recovers expired owner custody through normal withdrawal handlers while pres
   authenticationDb = adapter; availableBalance = "0.999";
   await adapter.revokeSessionGrant(wallet, consent.grantEpoch, signer);
   const prepared = await prepare.POST(request("/api/session/withdraw/prepare", { sessAddr: signer, grantEpoch: consent.grantEpoch, amountMicros: "800000" }));
-  expect(prepared.status).toBe(200); const p = await prepared.json();
+  expect(prepared.status).toBe(200); let p = await prepared.json();
   expect(p).toMatchObject({ ownerAddr: wallet, sessAddr: signer, network: profile.networkId,
     balance: { heldPaymentMicroUsdc: "100000", maxFeeMicroUsdc: "1000" },
     burnIntent: { spec: { destinationRecipient: pad(wallet as `0x${string}`, { size: 32 }), value: "800000" } } });
+  const authorize = await import("../../app/api/session/withdraw/authorize/route"), cancel = await import("../../app/api/session/withdraw/cancel/route");
+  // An explicit pre-crypto cancellation retains the original and permits a new
+  // reviewed preparation. Even a valid burn signature cannot revive that old ID.
+  const cancelled = await cancel.POST(request("/api/session/withdraw/cancel", { requestId: p.requestId }));
+  expect(cancelled.status).toBe(200);
+  expect(await cancelled.json()).toMatchObject({ preparation: p, signingPhase: "cancelled_unexposed",
+    cancellation: { requestId: p.requestId, ownerAddr: wallet, sessAddr: signer, reason: "cancelled-unexposed" } });
+  const oldSignature = await session.signTypedData((await import("../gateway/withdraw-protocol")).withdrawTypedData(p.burnIntent));
+  expect((await submit.POST(request("/api/session/withdraw/submit", { requestId: p.requestId, signature: oldSignature }))).status).toBe(503);
+  expect((await authorize.POST(request("/api/session/withdraw/authorize", { requestId: p.requestId }))).status).toBe(409);
+  await expect(other.reserveSessionWithdrawal(p)).rejects.toThrow();
+  expect(await adapter.pendingSessionWithdrawal(wallet, signer)).toBeNull(); expect(transferCalls).toBe(0);
+  const newPreparation = await prepare.POST(request("/api/session/withdraw/prepare", { sessAddr: signer, grantEpoch: consent.grantEpoch, amountMicros: "800000" }));
+  expect(newPreparation.status).toBe(200); const previousId = p.requestId; p = await newPreparation.json(); expect(p.requestId).not.toBe(previousId);
   // A concurrent connection cannot revive payment permission or replace the burn.
   const concurrent = await Promise.allSettled([
     other.upsertSessionGrant({ sessionId: wallet, ownerAddr: wallet, sessAddr: signer, grantEpoch: randomUUID(), cap: 2,
@@ -156,11 +171,17 @@ it("recovers expired owner custody through normal withdrawal handlers while pres
   expect(concurrent.map(result => result.status)).toEqual(["rejected", "fulfilled", "rejected"]);
   const repeat = await prepare.POST(request("/api/session/withdraw/prepare", { sessAddr: signer, grantEpoch: consent.grantEpoch, amountMicros: "700000" }));
   expect(await repeat.json()).toEqual(p);
+  // Two actual native connections race cancel vs authorize. Authorization wins
+  // this scheduling order and the other transaction must retain the exposure.
+  const transitions = await Promise.allSettled([adapter.authorizeSessionWithdrawal(p.requestId, wallet), other.cancelSessionWithdrawal(p.requestId, wallet)]);
+  expect(transitions.map(result => result.status)).toEqual(["fulfilled", "rejected"]);
+  expect((await authorize.POST(request("/api/session/withdraw/authorize", { requestId: p.requestId }))).status).toBe(200);
   const signature = await session.signTypedData((await import("../gateway/withdraw-protocol")).withdrawTypedData(p.burnIntent));
   const body = { requestId: p.requestId, signature };
   const sent = await submit.POST(request("/api/session/withdraw/submit", body)); expect(sent.status).toBe(200);
   expect(await sent.json()).toMatchObject({ preparation: p, progress: { status: "awaiting-transfer-evidence", retryAuthorized: false }, mint: null, completion: null });
   expect((await submit.POST(request("/api/session/withdraw/submit", body))).status).toBe(200); expect(transferCalls).toBe(1);
+  expect((await cancel.POST(request("/api/session/withdraw/cancel", { requestId: p.requestId }))).status).toBe(409);
   expect((await adapter.getCreatorWithdrawal(p.requestId, signer))?.request.burnIntent).toEqual(p.burnIntent);
   const liabilities = await history.GET(new NextRequest(`https://keryx.cc/api/session/withdraw/payments?sessAddr=${signer}&grantEpoch=${consent.grantEpoch}`));
   const historyBody = await liabilities.json(); expect(historyBody).toMatchObject({ nextCursor: null, retryAuthorized: false });

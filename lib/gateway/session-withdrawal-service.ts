@@ -19,6 +19,8 @@ import { withdrawalRpcTransport } from "./withdrawal-rpc-transport";
 import { withdrawalReceiptObserverForRpc } from "./withdrawal-receipt-observation";
 import { verifySessionWithdrawalCompletion } from "./session-withdrawal-completion";
 import { withdrawalMintTermsSchema } from "./withdrawal-mint-transaction";
+import { configuredSessionCashoutMaxAheadBlocks } from "../session/browser-session-cashout-policy";
+import { sessionWithdrawalCancellationSchema } from "./session-withdrawal-protocol";
 
 const integer = z.string().regex(/^(0|[1-9][0-9]{0,15})$/).refine(value => BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER));
 /** Operator-owned fee/height limits, independent of browser input and treasury
@@ -26,7 +28,7 @@ const integer = z.string().regex(/^(0|[1-9][0-9]{0,15})$/).refine(value => BigIn
 function preparationPolicy() {
   mainnetGrantPolicy();
   return { maxFeeMicros: integer.parse(process.env.KERYX_WITHDRAWAL_MAX_FEE_MICROS),
-    heightLimits: { maxAheadBlocks: integer.refine(v => BigInt(v) > BigInt(0)).parse(process.env.KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS),
+    heightLimits: { maxAheadBlocks: configuredSessionCashoutMaxAheadBlocks(),
       maxProcessingLagBlocks: integer.parse(process.env.KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS) } };
 }
 export async function prepareSessionWithdrawal(db: KeryxDB, owner: string, input: unknown, signal: AbortSignal) {
@@ -65,20 +67,27 @@ export async function sessionWithdrawalStatus(db: KeryxDB, owner: string, reques
   const progress = await withdrawalTransferProgress(db, requestId, preparation.sessAddr);
   const attestation = await db.getCreatorWithdrawalAttestation(requestId, preparation.sessAddr);
   const completion = await db.getSessionWithdrawalCompletion(requestId, owner);
+  const signingPhase = await db.getSessionWithdrawalSigningPhase(requestId, owner);
+  if (!signingPhase) throw new Error("Original withdrawal phase unavailable");
+  const cancellation = signingPhase === "cancelled_unexposed" ? sessionWithdrawalCancellationSchema.parse({
+    format: "keryx-session-withdrawal-cancellation-v1", network: preparation.network,
+    requestId, ownerAddr: owner, sessAddr: preparation.sessAddr, reason: "cancelled-unexposed" }) : null;
   let mint = null;
-  if (attestation && !completion) {
+  if (attestation && !completion && !cancellation) {
     const record = await db.getCreatorWithdrawal(requestId, preparation.sessAddr);
     if (!record || canonicalJson(record.request.burnIntent) !== canonicalJson(preparation.burnIntent)) throw new Error("Original withdrawal conflict");
     const observation = await withdrawalMintObserverForRpc(config.rpcUrl)(record, attestation, owner, signal);
     if (observation) mint = { to: preparation.policy.gatewayMinter, data: encodeFunctionData({ abi: WITHDRAWAL_MINTER_ABI,
       functionName: "gatewayMint", args: [attestation.attestation, attestation.signature] }), value: "0", network: ARC_MAINNET_PROFILE.networkId, observation };
   }
-  return { preparation, progress: { status: completion ? "mint-finalized-observed" : progress?.status ?? "prepared", retryAuthorized: false,
+  return { preparation, signingPhase, cancellation,
+    progress: { status: cancellation ? "cancelled-unexposed" : completion ? "mint-finalized-observed" : progress?.status ?? "prepared", retryAuthorized: false,
     chainFinalityVerified: !!completion }, attestation, mint, completion };
 }
 export async function submitSessionWithdrawal(db: KeryxDB, owner: string, id: string, signature: Hex, signal: AbortSignal) {
   const preparation = await db.getSessionWithdrawal(id, owner);
   if (!preparation) return null;
+  if (await db.getSessionWithdrawalSigningPhase(id, owner) !== "exposed") throw new Error("Original withdrawal signing not authorized");
   await readRetainedMainnetSessionAuthority(db, owner, preparation.grantEpoch, preparation.sessAddr);
   const original = await createWithdrawalRequest({ burnIntent: preparation.burnIntent, signature }, preparation.policy, ARC_MAINNET_PROFILE);
   if (original.id !== id) throw new Error("Original withdrawal conflict");
@@ -93,6 +102,15 @@ export async function submitSessionWithdrawal(db: KeryxDB, owner: string, id: st
     const height = BigInt(record.request.burnIntent.maxBlockHeight);
     if (height < BigInt(window.minimumBlockHeight) || height > BigInt(window.maximumBlockHeight)) throw new Error("Withdrawal height refused");
   }, requestCircleWithdrawalTransfer, signal);
+  return sessionWithdrawalStatus(db, owner, id, signal);
+}
+
+export async function transitionSessionWithdrawal(db: KeryxDB, owner: string, id: string, action: "authorize" | "cancel", signal: AbortSignal) {
+  mainnetGrantPolicy();
+  const p = await db.getSessionWithdrawal(id, owner); if (!p) return null;
+  await readRetainedMainnetSessionAuthority(db, owner, p.grantEpoch, p.sessAddr);
+  if (action === "authorize") await db.authorizeSessionWithdrawal(id, owner);
+  else await db.cancelSessionWithdrawal(id, owner);
   return sessionWithdrawalStatus(db, owner, id, signal);
 }
 

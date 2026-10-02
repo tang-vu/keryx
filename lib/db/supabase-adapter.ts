@@ -1451,6 +1451,15 @@ export class SupabaseAdapter implements KeryxDB {
   async getSessionWithdrawalCompletion(_id:string,_owner:string):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion|null> {
     throw new Error("Native PostgreSQL session withdrawal is not admitted");
   }
+  async getSessionWithdrawalSigningPhase(_id:string,_owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalSigningPhase|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async authorizeSessionWithdrawal(_id:string,_owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
+  async cancelSessionWithdrawal(_id:string,_owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalCancellation|null> {
+    throw new Error("Native PostgreSQL session withdrawal is not admitted");
+  }
   async completeSessionWithdrawal(_id:string,_owner:string,_outcome:import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion):Promise<import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion> {
     throw new Error("Native PostgreSQL session withdrawal is not admitted");
   }

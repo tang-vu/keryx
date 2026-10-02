@@ -1,7 +1,8 @@
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
 import { sqliteSessionWithdrawalAccounting, reserveSqliteSessionWithdrawal, readSqliteSessionWithdrawal, pendingSqliteSessionWithdrawal, listSqliteSessionWithdrawalPayments,
-  readSqliteSessionWithdrawalCompletion, completeSqliteSessionWithdrawal } from "./session-withdrawal-journal";
+  readSqliteSessionWithdrawalCompletion, completeSqliteSessionWithdrawal, readSqliteSessionWithdrawalPhase,
+  exposeSqliteSessionWithdrawal, cancelSqliteSessionWithdrawal } from "./session-withdrawal-journal";
 import type { SessionWithdrawalPreparation } from "../gateway/session-withdrawal-protocol";
 import { issueSqliteSessionGrantConsent, consumeSqliteSessionGrantConsent, readSqliteSessionGrantConsent } from "./session-grant-consents";
 import type { SessionGrantConsent } from "../payments/session-grant-consent";
@@ -656,6 +657,18 @@ export class SqliteAdapter implements KeryxDB {
   async getSessionWithdrawalCompletion(id: string, owner: string) {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
     return readSqliteSessionWithdrawalCompletion(this.db, id, owner);
+  }
+  async getSessionWithdrawalSigningPhase(id: string, owner: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return readSqliteSessionWithdrawalPhase(this.db, id, owner);
+  }
+  async authorizeSessionWithdrawal(id: string, owner: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return exposeSqliteSessionWithdrawal(this.db, id, owner);
+  }
+  async cancelSessionWithdrawal(id: string, owner: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return cancelSqliteSessionWithdrawal(this.db, id, owner);
   }
   async completeSessionWithdrawal(id: string, owner: string, outcome: import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion) {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
