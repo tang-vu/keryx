@@ -23,7 +23,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fmtUsdc } from "./phase-style";
 import { confirmsIndex, confirmsRegistration, registrationId, registrationTitles, walletRequestWasRejected, type RegistrationIdentity, type RegistrationPhase } from "@/lib/sources/registration-status";
-import { REGISTRY_ABI } from "@/lib/registry/registry-client";
+import { REGISTRY_ABI } from "@/lib/registry/registry-abi";
+import { browserPaymentProfile, browserRegistryAddress } from "@/lib/browser-payment-profile";
 
 interface CreatedSource {
   id: string;
@@ -105,7 +106,7 @@ export function RegisterForm({
   const wallet = useAccount();
   const walletRef = useRef(wallet);
   useLayoutEffect(() => { walletRef.current = wallet; }, [wallet]);
-  const publicClient = usePublicClient({ chainId: 5042002 });
+  const publicClient = usePublicClient({ chainId: browserPaymentProfile().chainId });
   const [pendingTxHash, setPendingTxHash] = useState<`0x${string}` | undefined>();
   const [phase, setPhase] = useState<RegistrationPhase>("offline");
   const [statusMessage, setStatusMessage] = useState("");
@@ -224,6 +225,8 @@ export function RegisterForm({
         // The contract derives the sourceId on-chain as keccak256(abi.encode(msg.sender, urlHash)).
         const params = data.registerParams as OnchainRegisterParams;
         const registryAddress = data.registryAddress as `0x${string}`;
+        if (!browserPaymentProfile().testnet && registryAddress?.toLowerCase() !== browserRegistryAddress().toLowerCase())
+          throw new Error("Registration target differs from the reviewed network registry");
         const returnedSourceId = data.sourceId as string;
 
         // On-chain rows are indexed unverified — surface the feed-ownership proof step.
@@ -240,20 +243,21 @@ export function RegisterForm({
           verified: data.verification ? false : true,
           authors: params.authors.map(a => ({ name: a.wallet, splitWeight: a.basisPoints / 10_000 })),
         });
-        if (!creator || walletRef.current.address?.toLowerCase() !== creator.toLowerCase() || walletRef.current.chainId !== 5042002 || !publicClient) {
-          throw new Error("Connect your signed-in creator wallet on Arc Testnet before signing.");
+        if (!creator || walletRef.current.address?.toLowerCase() !== creator.toLowerCase() || walletRef.current.chainId !== browserPaymentProfile().chainId || !publicClient) {
+          throw new Error(`Connect your signed-in creator wallet on ${browserPaymentProfile().label} before signing.`);
         }
         // Initial registration preparation binds payout to the authenticated SIWE session.
         // A wallet switch does not update that session: never sign its preparation as another creator.
         if (params.payoutWallet.toLowerCase() !== creator.toLowerCase()) {
           throw new Error("Sign in again with the connected creator wallet. This prepared registration belongs to another signed-in wallet.");
         }
+        if (await publicClient.getChainId() !== browserPaymentProfile().chainId) throw new Error("Registration RPC network changed");
         toast.loading("Waiting for wallet signature...", { id: "register-tx" });
 
         walletRequestStarted = true;
         const txHash = await writeContractAsync({
           account: creator,
-          chainId: 5042002,
+          chainId: browserPaymentProfile().chainId,
           address: registryAddress,
           abi: REGISTRY_ABI,
           functionName: "register",
@@ -277,6 +281,7 @@ export function RegisterForm({
         busy.current = false;
         void checkRegistration(generation);
       } else {
+        if (!browserPaymentProfile().testnet) throw new Error("Mainnet registration requires confirmed on-chain authority");
         setPhase("offline");
         // Offline / DB-direct path — source written immediately.
         const source = data.source as CreatedSource;

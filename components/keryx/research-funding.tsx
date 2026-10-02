@@ -11,6 +11,7 @@ import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
 import { BUYER_GATEWAY } from "@/lib/buyer/protocol";
 import { fundingReadiness, hasUncertainFunding } from "@/lib/buyer/funding-readiness";
 import { ResearchFundingActivity } from "./research-funding-activity";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 
@@ -31,7 +32,7 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
   payer: string; initialAmount: number; requiredMicros: string; creditRevision?: number; disabled: boolean; onBusy: (busy: boolean) => void; onChanged: () => void;
 }) {
   const { data: wallet } = useWalletClient();
-  const chain = usePublicClient({ chainId: 5042002 }) as PublicClient | undefined;
+  const chain = usePublicClient({ chainId: browserPaymentProfile().chainId }) as PublicClient | undefined;
   const [amount, setAmount] = useState(String(initialAmount));
   const [accepted, setAccepted] = useState(false);
   const [rows, setRows] = useState<FundingRecord[]>([]);
@@ -161,7 +162,7 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
     <details ref={fundingDetails} className="border border-line p-4">
     <summary className="cursor-pointer font-mono text-xs">Add USDC to Gateway</summary>
     <p className="mt-3 font-serif text-sm">Approve an exact amount, then deposit it into your own Gateway balance. Each transaction needs a wallet confirmation and costs gas. This does not buy research or pay Keryx.</p>
-    <p className="mt-2 break-all font-mono text-xs">Arc testnet Gateway: {BUYER_GATEWAY}</p>
+    <p className="mt-2 break-all font-mono text-xs">{browserPaymentProfile().label} Gateway: {BUYER_GATEWAY}</p>
     {!active && <div className="mt-4 space-y-3">
       <label className="grid gap-2 font-mono text-xs">Deposit amount (testnet USDC)<input value={amount} disabled={busy || disabled} onChange={event => { setAmount(event.target.value); setAccepted(false); }} inputMode="decimal" className="w-full border border-line bg-paper p-3 sm:w-48" /></label>
       <label className="flex items-start gap-3 font-serif text-sm"><input type="checkbox" checked={accepted} disabled={busy || disabled} onChange={event => setAccepted(event.target.checked)} className="mt-1" /><span>I want to add this amount to my own Gateway balance, plus transaction gas. I will keep my wallet transaction hashes for recovery.</span></label>

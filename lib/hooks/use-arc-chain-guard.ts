@@ -13,7 +13,7 @@
  */
 
 import { useChainId, useSwitchChain } from "wagmi";
-import { arcTestnet } from "@/lib/chains";
+import { arcChain } from "@/lib/chains";
 
 export interface ArcChainGuard {
   isOnArc: boolean;
@@ -25,10 +25,10 @@ export function useArcChainGuard(): ArcChainGuard {
   const chainId = useChainId();
   const { switchChain, isPending } = useSwitchChain();
 
-  const isOnArc = chainId === arcTestnet.id;
+  const isOnArc = chainId === arcChain.id;
 
   const switchToArc = () => {
-    switchChain({ chainId: arcTestnet.id });
+    switchChain({ chainId: arcChain.id });
   };
 
   return { isOnArc, isSwitching: isPending, switchToArc };

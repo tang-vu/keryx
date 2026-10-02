@@ -1,0 +1,35 @@
+# Normal browser mainnet custody and payment admission
+
+This prepares the full public Keryx mainnet cutover on `keryx.cc`, not an invited-wallet pilot. It does not authorize deployment or real funding. Both unset network labels retain Arc testnet. Mainnet requires matching server/public labels and independently compiled registry authority. Requests cannot choose a network or RPC.
+
+## Retained original custody
+
+Mainnet custody binds canonical network pins, exact HTTPS origin and connected owner, independently of mutable grant epochs/caps. Its secret wallet derivation signature stays local and never reaches the server. Existing funded testnet identities retain their exact historical message and worker policy. Keys, grants and journals are not relabelled between networks.
+
+Before funding, the worker commits the original AES-256-GCM ciphertext and namespaced nonexportable wrapping key in native IndexedDB. Encryption authenticates the custody identity and signer address. Concurrent enrollment retains the first original; even another valid wallet signature cannot silently rotate it. Logout locks heap custody and invalidates unfinished publication. It does not destroy original recovery, refund funds or claw back exposed authorizations. Payment expiry also retains custody.
+
+This is a **same-browser storage dependency**. Reload/logout can restore the original without another derivation signature. Wiping browser data, losing the device or losing its wrapping key can lose access to the funded signer. Repeating `personal_sign` elsewhere is not a guaranteed backup across wallet implementations. Funding UI states this limitation before requesting funds. This implementation claims no portable encrypted recovery export.
+
+This is **not an XSS-proof vault or on-chain spend cap**. Same-origin script can obtain the IndexedDB wrapping CryptoKey and ciphertext and invoke decryption despite nonexportability. It also observes the initial wallet derivation signature on the page. Worker message isolation restricts ordinary/raw signing paths and independently rejects untrusted challenges, but a compromised origin/browser/signer can put deposited funds at risk. The release assumes a trusted application origin and browser; nonexportability only prevents raw AES key export.
+
+## Owner funding and dual consent proofs
+
+The connected owner reviews exact ERC-20 USDC approval and `GatewayWallet.depositFor(USDC, sessionSigner, amount)`. Token amounts use six decimals; native gas uses eighteen and is separate. The mainnet worker has no funding transaction API. Session funding reuses the normal buyer transaction journal with an explicit depositor. Sender, nonce, exact calldata, hash, confirmation and replacement evidence remain bound to the original operation across reloads/tabs. Unknown submission/storage outcomes retain the attempt and never trigger another deposit. On-chain confirmation alone does not claim Circle credit. For owner-funded sessions, the unique funding lock remains held after on-chain confirmation until known Circle availability includes the original recorded pre-deposit balance plus amount. Credit lag cannot create another automatic deposit prompt.
+
+Authenticated `POST /api/session/grant/challenge` receives `{sessAddr, budgetMicros, recover?}` and issues `{consent, funding}`. `budgetMicros` means desired **current** capacity. Consent signs an absolute cumulative signer cap: confirmed lifetime debit plus the lesser of that desired capacity and freshly known Gateway availability. Funding metadata exposes confirmed debit, retained spend/holds, available funds and proposed remaining capacity. The browser checks the arithmetic and shows it before requesting owner consent. Pending/unknown signed liabilities remain held.
+
+The owner signs the readable exact consent. The worker verifies that signature and captured custody, then produces a separate narrow session-possession proof. `POST /api/session/grant` sends `{consent, signature, sessionSignature}`; the secret derivation signature is absent. Both public proofs bind the server-issued single-use epoch, owner, signer, network, origin, cap and expiry. The server verifies both before atomic challenge consumption/grant admission. A public funded address alone must not let a foreign owner reserve its global capacity before a payment signature exists.
+
+Renewal requires new explicit owner consent and freshly known funds. Neither renewal nor top-up resets retained lifetime spending. Mainnet UI reports owner consent capacity and retained spend/holds; receipts separately report actual settled, pending and uncertain payments.
+
+## Payment admission
+
+Ordinary research SSE supplies a request-ID notification. The dedicated worker fetches the authenticated original from `/api/ask/challenge` and verifies the current dual-proof grant. It reads fresh source payout/author/price authority from the compiled registry read pin over the static mainnet RPC, attesting chain before/after reads and checking the pinned block hash. There is no DB payout fallback or stale result. Wrong payee/price/network/nonce/grant, an unverified discount, inactive source or unavailable authority refuses that leg; another source can still contribute to the answer.
+
+One atomic IndexedDB reservation records cumulative lifetime signer exposure and unique nonce before cryptography. Epochs, logout, reload, failure and timeout never reset it. A newly owner-signed absolute cap permits only additional capacity above retained exposure. The worker reauthenticates the unchanged grant before and after cryptography, suppressing publication after another tab's revocation. It exposes no arbitrary mainnet `signTypedData`, `signMessage` or `signTransaction` operation.
+
+## Validation and remaining release work
+
+Real EOA tests cover identity/address AAD, different valid derivation signatures retaining one original, logout/reload restore, delayed commit cancellation, owner/session proofs, exact journal payment signatures, post-crypto revocation and retained exposure. Chromium runs the production worker with native IndexedDB and synthetic cookie/registry transport. Packaging acceptance additionally loads the actual Next/Turbopack bootstrap and emitted dependency chunks under the generated Next CSP using synthetic matching build pins. No live funds or production synthetic activation flag is used.
+
+The full release still needs coordinated backend/API composition, authenticated server-handler research acceptance, fresh sealed mainnet state/registry, session cashout and owner launch/funding decision. Cashout must sign only a journal-bound finite Gateway BurnIntent to the authenticated owner, reserve known balance minus exposed liabilities and bounded fees, then let the owner wallet submit reviewed mint calldata/gas. Expired/locked custody must restore for that narrow operation while payments remain closed. Cashout is not claimed implemented by this checkpoint.

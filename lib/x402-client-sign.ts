@@ -16,13 +16,14 @@
  */
 
 import { isAddress, type WalletClient } from "viem";
-import { ARC_TESTNET_PROFILE } from "./arc-network-profile";
+import { browserPaymentProfile } from "./browser-payment-profile";
 
 // Independent browser policy for the current Arc testnet deployment.
-const ARC_NETWORK = ARC_TESTNET_PROFILE.networkId;
-const ARC_CHAIN_ID = ARC_TESTNET_PROFILE.chainId;
-const ARC_USDC = ARC_TESTNET_PROFILE.usdcAddress;
-const ARC_GATEWAY = ARC_TESTNET_PROFILE.gatewayWallet;
+const PROFILE = browserPaymentProfile();
+const ARC_NETWORK = PROFILE.networkId;
+const ARC_CHAIN_ID = PROFILE.chainId;
+const ARC_USDC = PROFILE.usdcAddress;
+const ARC_GATEWAY = PROFILE.gatewayWallet;
 const MIN_TIMEOUT_SECONDS = 604900;
 const MAX_TIMEOUT_SECONDS = 691200;
 

@@ -33,6 +33,7 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
   const { state, ask, reset } = useAskStream({
     sessionId: grantBinding.sessionId,
     getSessionWalletClient: grantBinding.getSessionWalletClient,
+    authorizeSessionPayment: grantBinding.authorizeSessionPayment,
     grantCap: grantBinding.grantCap,
     sourceIndex,
     onSessionExpired: grantBinding.markExpired,

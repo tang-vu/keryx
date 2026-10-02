@@ -1,6 +1,6 @@
 import type { BrowserPaymentContext } from "./browser-cosign-gateway";
 import type { SourcePaymentAuthority } from "./client-payto-allowlist";
-import { validateArticleOfferProof } from "../offers/article-offer";
+import { validateArticleOfferProof } from "../offers/article-offer-proof";
 
 export type BrowserFetchPriceDecision =
   | { allowed: true }

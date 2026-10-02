@@ -2,6 +2,7 @@
  * Cloudflare injects a versioned `/beacon.min.js/<hash>` URL for automatic Web Analytics setup,
  * so the origin (rather than one unversioned path) must be allowed.
  */
+import { configuredPaymentProfile } from "./arc-network-profile";
 export const CLOUDFLARE_WEB_ANALYTICS_SCRIPT_ORIGIN =
   "https://static.cloudflareinsights.com";
 
@@ -13,6 +14,7 @@ export function contentSecurityPolicy(
   production = process.env.NODE_ENV === "production",
   additionalScriptSources: readonly string[] = [],
 ): string {
+  const profile = configuredPaymentProfile(process.env.KERYX_NETWORK, process.env.NEXT_PUBLIC_KERYX_NETWORK);
   const script = [
     "'self'",
     "'unsafe-inline'",
@@ -28,8 +30,8 @@ export function contentSecurityPolicy(
     "font-src 'self' data:",
     [
       "connect-src 'self'",
-      "https://rpc.testnet.arc.network",
-      "https://gateway-api-testnet.circle.com",
+      profile.rpcUrl,
+      profile.gatewayApiUrl,
       "https://*.supabase.co",
       "wss://*.supabase.co",
       "https://*.walletconnect.com",

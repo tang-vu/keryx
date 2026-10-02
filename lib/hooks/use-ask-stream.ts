@@ -31,6 +31,7 @@ import type { SourceIndex } from "@/lib/payments/client-payto-allowlist";
 import { isPaymentRecord } from "@/lib/payments/payment-state";
 import { readSession } from "@/lib/session/session-storage";
 import { BrowserSignBudget } from "./browser-sign-budget";
+import { browserPaymentProfile } from "../browser-payment-profile";
 
 export type StreamMode = "real" | "offline";
 
@@ -92,6 +93,8 @@ function parseFrame(block: string): { event: string; data: string } | null {
 }
 
 interface AskStreamOpts {
+  /** Mainnet worker reads the authenticated journal original itself; SSE is notification only. */
+  authorizeSessionPayment?: (reqId: string) => Promise<string>;
   /**
    * Returns the viem WalletClient backed by the session private key, or null
    * when no session is active. Injected to avoid coupling to useSessionGrant.
@@ -122,6 +125,7 @@ interface AskStreamOpts {
 export function useAskStream(opts?: AskStreamOpts) {
   const {
     getSessionWalletClient,
+    authorizeSessionPayment,
     sessionId,
     grantCap,
     sourceIndex,
@@ -191,6 +195,18 @@ export function useAskStream(opts?: AskStreamOpts) {
         return;
       }
       const getWallet = getSessionWalletClient;
+
+      if (!browserPaymentProfile().testnet) {
+        if (!sessionId || !authorizeSessionPayment) return;
+        void authorizeSessionPayment(reqId).then(async paymentHeader => {
+          const response = await fetch("/api/ask/sign", { method: "POST", credentials: "same-origin", redirect: "error",
+            headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId, reqId, paymentHeader }),
+            signal: AbortSignal.timeout(8000) });
+          if (!response.ok) throw new Error("Payment callback unavailable; signed liability remains retained");
+          await response.body?.cancel();
+        }).catch(() => { console.warn("[keryx] mainnet payment leg refused; other answer sources continue"); });
+        return;
+      }
 
       if (!sessionId || !getWallet) {
         // No session configured — server shouldn't be sending sign-requests, but handle gracefully.
@@ -321,7 +337,7 @@ export function useAskStream(opts?: AskStreamOpts) {
   // opts is an object reference — destructure the primitive/stable values into the dep array
   // so the hook re-creates handleEvent when the grant activates or the cap changes.
   // sourceIndex is a Map: stable after the one-time /api/sources fetch in app/page.tsx.
-  }, [sessionId, getSessionWalletClient, sourceIndex]);
+  }, [sessionId, getSessionWalletClient, authorizeSessionPayment, sourceIndex]);
 
   const ask = useCallback(
     async (

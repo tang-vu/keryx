@@ -48,6 +48,11 @@ funded session identities remain retained; never silently import them as mainnet
 Full-product adoption/profitability evidence remains separate from financial migration
 and cannot be inferred from synthetic mainnet checks.
 
+The [normal browser custody checkpoint](./mainnet-browser-custody.md) documents retained original
+same-device recovery, owner funding, dual consent/possession proofs, cumulative signed capacity,
+and actual Chromium/Next worker evidence. Full authenticated server research composition and
+owner-only session cashout remain release gates; this source checkpoint does not activate mainnet.
+
 ## Current baseline and gaps
 
 Current [October 2 preparation](#october-2-preparation) records guarded backend

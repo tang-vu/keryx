@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import nextConfig from "../next.config";
 import {
   appSecurityHeaders,
@@ -8,6 +8,17 @@ import {
 } from "./security-headers";
 
 describe("application security headers", () => {
+  it("compiles only the selected mainnet payment destinations and rejects mixed deployment rails", () => {
+    vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
+    try {
+      const csp = contentSecurityPolicy(true);
+      expect(csp).toContain("https://rpc.blockdaemon.mainnet.arc.io");
+      expect(csp).toContain("https://gateway-api.circle.com");
+      expect(csp).not.toContain("https://rpc.testnet.arc.network");
+      expect(csp).not.toContain("https://gateway-api-testnet.circle.com");
+      vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arcTestnet"); expect(() => contentSecurityPolicy(true)).toThrow("must match");
+    } finally { vi.unstubAllEnvs(); }
+  });
   it("blocks framing/plugins and limits wallet network destinations", () => {
     const csp = contentSecurityPolicy(true);
     expect(csp).toContain("frame-ancestors 'none'");

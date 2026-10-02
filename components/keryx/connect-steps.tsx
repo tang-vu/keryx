@@ -11,6 +11,7 @@ import { Loader2, ShieldCheck, LogOut, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { WalletPicker } from "@/components/keryx/wallet-picker";
 import type { ArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ export function ChainBanner({ guard }: { guard: ArcChainGuard }) {
           Wrong network
         </p>
         <p className="mt-0.5 text-[12px] leading-snug text-ink-2">
-          Keryx runs on Arc Testnet (chainId 5042002). Switch to continue.
+          Keryx runs on {browserPaymentProfile().label} (chainId {browserPaymentProfile().chainId}). Switch to continue.
         </p>
       </div>
       <button
@@ -72,7 +73,7 @@ export function ConnectStep({ isBusy }: { isBusy: boolean }) {
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">Step 1</p>
         <p className="mt-1 font-display text-xl font-medium text-ink">Connect wallet</p>
         <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
-          Choose your browser wallet. Arc Testnet will be added automatically
+          Choose your browser wallet. {browserPaymentProfile().label} will be added automatically
           if not already configured.
         </p>
       </div>
@@ -124,7 +125,7 @@ export function SignInStep({
         type="button"
         onClick={onSignIn}
         disabled={authState !== "idle" || wrongChain}
-        title={wrongChain ? "Switch to Arc Testnet first" : undefined}
+        title={wrongChain ? `Switch to ${browserPaymentProfile().label} first` : undefined}
         className="flex w-full items-center justify-center gap-2 border border-ink bg-seal px-4 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
       >
         {authState !== "idle" ? (

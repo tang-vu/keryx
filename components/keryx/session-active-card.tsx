@@ -13,6 +13,7 @@
 import { useEffect, useState } from "react";
 import type { GrantState } from "@/lib/hooks/use-session-grant";
 import { UsdcPresetChips } from "@/components/keryx/usdc-preset-chips";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 /** Warn (and offer one-click extend) when this little of the grant TTL remains. */
 const EXPIRY_WARN_MS = 10 * 60 * 1000;
@@ -73,7 +74,7 @@ export function SessionActiveCard({ grantState, onTopUp, onRevoke, onExtend }: P
           {/* green dot = active session */}
           <span className="h-2 w-2 rounded-full bg-paid" />
           <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2">
-            Session active — ${remaining.toFixed(4)} remaining
+            {browserPaymentProfile().testnet ? `Session active — $${remaining.toFixed(4)} remaining` : `Session active — owner consent cap $${grantState.cap.toFixed(6)}`}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -95,7 +96,7 @@ export function SessionActiveCard({ grantState, onTopUp, onRevoke, onExtend }: P
       </div>
 
       {/* spend progress bar */}
-      <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-line">
+      {browserPaymentProfile().testnet && <><div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-line">
         <div
           className="h-full rounded-full bg-seal transition-all"
           style={{ width: `${spentPct}%` }}
@@ -104,7 +105,8 @@ export function SessionActiveCard({ grantState, onTopUp, onRevoke, onExtend }: P
       <div className="mt-1 flex justify-between font-mono text-[9px] tracking-widest text-faint">
         <span>${grantState.spent.toFixed(4)} spent</span>
         <span>${grantState.cap.toFixed(4)} cap</span>
-      </div>
+      </div></>}
+      {!browserPaymentProfile().testnet && <p className="mt-2 text-xs text-ink-3">Consent capacity is not settled spending. Pending or uncertain signed authorizations retain capacity; payment receipts report their state separately.</p>}
 
       {remainingMs !== null && !expiringSoon && (
         <div className="mt-1.5 font-mono text-[9px] text-faint">
@@ -130,7 +132,7 @@ export function SessionActiveCard({ grantState, onTopUp, onRevoke, onExtend }: P
           <span className="w-full font-mono text-[9px] leading-relaxed text-faint">
             {extendFailed
               ? "Could not extend — if it keeps failing, use “Recover funded session” after expiry."
-              : "One click — no signature, no gas. Your unspent USDC carries over."}
+              : browserPaymentProfile().testnet ? "One click — no signature, no gas. Your unspent USDC carries over." : "Review a new owner consent signature. Existing signed liabilities remain reserved."}
           </span>
         </div>
       )}
@@ -160,7 +162,7 @@ export function SessionActiveCard({ grantState, onTopUp, onRevoke, onExtend }: P
             Add funds ▸
           </button>
           <span className="w-full font-mono text-[9px] leading-relaxed text-faint">
-            One MetaMask tx · deposits into the same session · cap rises after confirm
+            {browserPaymentProfile().testnet ? "One MetaMask tx · deposits into the same session · cap rises after confirm" : "Exact owner approval + depositFor · native gas is extra · review new consent after confirmed credit"}
           </span>
         </div>
       )}
@@ -173,8 +175,8 @@ export function SessionActiveCard({ grantState, onTopUp, onRevoke, onExtend }: P
             {grantState.sessAddr ? (
               <span className="font-mono text-[11px]">{grantState.sessAddr.slice(0, 10)}…</span>
             ) : null}
-            {" "}— derived from your wallet, so you can resume it anytime with
-            “Recover funded session”. (It is not auto-returned to your wallet.)
+            {browserPaymentProfile().testnet ? <> — derived from your wallet, so you can resume it anytime with
+            “Recover funded session”. (It is not auto-returned to your wallet.)</> : <>. Revocation locks this worker and retains encrypted recovery on this browser. Exposed authorizations remain liabilities. Funds are not automatically refunded; retain this device and use the owner withdrawal flow.</>}
           </p>
           <div className="flex gap-2">
             <button

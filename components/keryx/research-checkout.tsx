@@ -1,4 +1,5 @@
 "use client";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
@@ -32,7 +33,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
   const parsed = buyerRequestSchema.safeParse({ question, budget, researchMode: mode, packageVersion: version, responseMode: "async" });
   const amount = String(Math.round(total * 1e6));
   const reviewCurrent = !!review && parsed.success && JSON.stringify(review.request) === JSON.stringify(parsed.data)
-    && review.payer === address && review.payee === payee && review.amount === amount && chainId === 5042002;
+    && review.payer === address && review.payee === payee && review.amount === amount && chainId === browserPaymentProfile().chainId;
 
   useEffect(() => () => { operation.current?.abort(); }, []);
 
@@ -75,12 +76,12 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
 
   return <div className="mt-5 space-y-4 border border-line bg-paper-2 p-4">
     <h3 className="font-display text-2xl">Buy with your wallet</h3>
-    <p className="font-serif text-sm text-ink-2">One signature authorizes this fixed-price research job from your wallet’s Gateway balance. Arc testnet only. Externally owned accounts (EOAs) are supported.</p>
+    <p className="font-serif text-sm text-ink-2">One signature authorizes this fixed-price research job from your wallet’s Gateway balance. {browserPaymentProfile().label}. Externally owned accounts (EOAs) are supported.</p>
     {!address ? <WalletPicker isBusy={busy} onConnected={() => {}} /> : <>
       <p className="break-all font-mono text-xs">Buyer wallet: {address}</p>
-      {chainId !== 5042002 ? <button type="button" disabled={busy || switching} className={control} onClick={() => {
-        void switchChainAsync({ chainId: 5042002 }).catch(() => setMessage("Network switch was not completed. Choose Arc testnet in your wallet."));
-      }}>{switching ? "Switching…" : "Switch to Arc testnet"}</button> : <>
+      {chainId !== browserPaymentProfile().chainId ? <button type="button" disabled={busy || switching} className={control} onClick={() => {
+        void switchChainAsync({ chainId: browserPaymentProfile().chainId }).catch(() => setMessage(`Network switch was not completed. Choose ${browserPaymentProfile().label} in your wallet.`));
+      }}>{switching ? "Switching…" : `Switch to ${browserPaymentProfile().label}`}</button> : <>
         <ResearchFunding key={address} payer={address} initialAmount={total} requiredMicros={amount} creditRevision={creditRevision} disabled={busy} onBusy={setFundingBusy} onChanged={() => {}} />
         <button type="button" className={control} disabled={busy || !parsed.success || !wallet || BigInt(amount) > BigInt(1_000_000)} onClick={() => {
           if (!parsed.success || !address) return;

@@ -1,5 +1,3 @@
-import type { IsolatedSessionContext } from "./isolated-session-context";
-
 /** Implementations must atomically retain the first key for a namespace. Never reuse legacy keys. */
 export interface WrappingKeyStore {
   getOrCreate(namespace: string, candidate: CryptoKey): Promise<CryptoKey>;
@@ -59,7 +57,7 @@ export function indexedDbWrappingKeyStore(): WrappingKeyStore {
 }
 
 /** Encryption authenticates the full identity and session address as additional data. */
-export function createIsolatedSessionVault(context: Pick<IsolatedSessionContext, "storageNamespace" | "digest">, store: WrappingKeyStore) {
+export function createIsolatedSessionVault(context: Readonly<{ storageNamespace: string; digest: string }>, store: WrappingKeyStore) {
   const namespace = context.storageNamespace;
   const digest = context.digest;
   const getOrCreate = store.getOrCreate.bind(store), destroy = store.destroy.bind(store);

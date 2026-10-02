@@ -1,5 +1,6 @@
 import { recoverTypedDataAddress, type Hex } from "viem";
 import { z } from "zod";
+import { browserPaymentProfile } from "../browser-payment-profile";
 import { BUYER_ENDPOINT, BUYER_ORIGIN, addressSchema, buyerRequestSchema, buyerTypedData, type BuyerRequest, type BuyerAuthorization, type BuyerIntentEnvelope } from "./protocol";
 import { browserBuyerJobId, browserNewAuthorization, encodeBrowserPayment } from "./browser-policy";
 import { createBrowserJournal, claimBrowserSubmission, readBrowserJournal, saveBrowserAcknowledgement } from "./browser-journal";
@@ -8,7 +9,7 @@ import { buyerFetch, readBuyerJson, type BuyerFetch } from "./transport";
 import { sellerPaymentEvidence, validateSellerEvidence } from "./result-binding";
 import { verifyBrowserBuyerJob, verifyBrowserBuyerReceipt } from "./browser-result";
 
-const walletSchema = z.object({ address: addressSchema, chainId: z.literal(5042002),
+const walletSchema = z.object({ address: addressSchema, chainId: z.literal(browserPaymentProfile().chainId),
   gatewayBalanceMicros: z.string().regex(/^(0|[1-9]\d{0,77})$/) });
 export type BrowserBuyerWallet = z.infer<typeof walletSchema>;
 const journal = { create: createBrowserJournal, claim: claimBrowserSubmission, read: readBrowserJournal, acknowledge: saveBrowserAcknowledgement };

@@ -12,7 +12,8 @@
 
 import { createConfig, http, cookieStorage, createStorage } from "wagmi";
 import { injected, metaMask, walletConnect } from "wagmi/connectors";
-import { arcTestnet } from "./chains";
+import { arcChain } from "./chains";
+import { browserPaymentProfile } from "./browser-payment-profile";
 import { deferredWalletConnector } from "./deferred-wallet-connector";
 
 export function makeConfig() {
@@ -36,13 +37,13 @@ export function makeConfig() {
   ];
 
   return createConfig({
-    chains: [arcTestnet],
+    chains: [arcChain],
     ssr: true,
     // cookieStorage is required for wagmi SSR hydration on Next.js App Router —
     // it serialises wallet connection state into cookies so the server can render
     // the connected state without a client-side flash.
-    storage: createStorage({ storage: cookieStorage }),
+    storage: createStorage({ storage: cookieStorage, ...(browserPaymentProfile().testnet ? {} : { key: `wagmi-${browserPaymentProfile().networkId}` }) }),
     connectors,
-    transports: { [arcTestnet.id]: http() },
+    transports: { 5042: http(), 5042002: http() },
   });
 }

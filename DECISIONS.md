@@ -4268,3 +4268,35 @@ Require coordinated durable state identity, ordinary owner consent, observed fun
 registry/content authority, bounded nonce/cap allocation, settlement/recovery and
 withdrawal/operational evidence before the final owner launch decision. See the
 [corrected mainnet delivery plan](docs/mainnet-delivery-plan.md).
+
+## Normal public mainnet authority and retained custody - 2026-10-02
+
+Use trusted startup network twins across normal web, API, CLI/MCP, bots and adapters;
+retain existing testnet defaults until the coordinated owner cutover. Legacy unlabelled
+task/journal originals remain testnet and cannot be automatically relabelled. Mainnet
+callers use fresh rail/origin-scoped state, including `~/.keryx/arc`. Source candidate
+versions do not claim published packages, installers or synchronized deployment.
+
+Normal browser grants require both readable owner consent and a separate session-key
+possession proof over the exact one-use grant epoch, owner, signer, network, origin,
+cumulative cap and expiry. A publicly observable funded signer address alone lets a
+foreign owner hold another signer's global capacity before signing; verify both proofs
+before admission. The secret derivation signature stays local. Renewal/top-up reviews
+an absolute lifetime signer cap backed by confirmed debit plus fresh current capacity;
+previous spend, nonce exposure and unknown signed liabilities never reset by epoch.
+
+Keep the original mainnet signer encrypted in owner/network/origin-scoped IndexedDB
+before funding. Logout locks and retains custody; expiry closes payments but does not
+erase withdrawal access. Recovery depends on that browser's wrapping key and ciphertext:
+lost/wiped storage is not guaranteed recoverable by repeating `personal_sign` elsewhere.
+Same-origin script can obtain the nonexportable AES CryptoKey handle and decrypt available
+ciphertext, and sees the initial wallet derivation signature. Worker isolation is neither
+an XSS-proof vault nor an on-chain cap; compromised origin/browser/signer endangers funds.
+
+Owner-reviewed funding uses exact ERC-20 approval plus `depositFor`, with native gas
+separate and the existing uncertainty/replacement journal retained. Offline registry
+preparation emits only source/compiler-bound curated SourceRegistry ABI/bytecode and
+unsigned deploy/register/exact-approve/depositFor requests for owner review. It has no
+wallet/key, broadcast, funding or launch authority. Preserve old proposal evidence as
+superseded rather than rebranding it as the public release. See
+[normal mainnet browser custody](docs/mainnet-browser-custody.md).
