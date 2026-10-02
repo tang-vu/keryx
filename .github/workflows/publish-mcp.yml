@@ -113,7 +113,7 @@ jobs:
       - name: Publish verified archive using npm Trusted Publishing
         run: |
           sha256sum --check release/SHA256SUMS
-          npm publish release/*.tgz --ignore-scripts --access public --provenance --registry https://registry.npmjs.org/
+          npm publish ./release/*.tgz --ignore-scripts --access public --provenance --registry https://registry.npmjs.org/
       - name: Verify public registry version and integrity
         env:
           EXPECTED_VERSION: ${{ inputs.version }}
