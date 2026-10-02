@@ -77,6 +77,15 @@ that visible projection, preserving recorded settlement independently.
 Rows predating citation/evidence arrays retain their original recorded shape and money;
 projection invents no missing evidence and needs no catalog lookup for such records.
 
+Dashboard `/api/metrics` and health traction `/api/health` publish aggregate
+`groundedClaimRate: null` with `evidenceQuality.status: "unavailable"` and basis
+`"recorded-unreassessed"`. Stored historical evidence counters were captured before
+current provenance projection and can include subsequently demoted demo evidence;
+their sample counts remain recorded telemetry, not current factual support. This
+repair does not scan paid bodies, rewrite archive rows, alter payment totals or change
+per-run A2A quality. A reviewed provenance-aware historical analytics reassessment is
+required before an aggregate factual grounding rate can be published again.
+
 Web SSE/history, public archive and feeds, API dispatch/receipts, A2A, OpenAI and remote
 MCP share these records. Caller CLI and stdio MCP forward the same API result. BibTeX,
 RIS and evidence CSV retain explicit illustrative labels. Operator CLI and desktop

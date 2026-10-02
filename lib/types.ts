@@ -514,7 +514,13 @@ export interface QueryRun {
   pendingSpendUsdc?: number;
 }
 
-/** Aggregate metrics for the traction dashboard. Computed only from real, settled rows in prod. */
+export interface DashboardEvidenceQuality {
+  status: "unavailable";
+  basis: "recorded-unreassessed";
+  explanation: string;
+}
+
+/** Aggregate dashboard telemetry. Payment totals use settled rows; evidence counters are recorded history. */
 export interface DashboardMetrics {
   totalPayments: number;
   totalVolumeUsdc: number;
@@ -524,11 +530,13 @@ export interface DashboardMetrics {
   totalQueries: number;
   payingQueries: number; // queries that produced >= 1 payment
   readerToPayerConversion: number; // payingQueries / totalQueries
-  /** Runs recorded after the evidence ledger shipped; historical runs are not guessed. */
+  /** Recorded evidence-counter samples; not reassessed against current source provenance. */
   evidenceRunSamples: number;
   evidenceClaimSamples: number;
-  groundedClaimRate: number;
-  /** Measured runs where no citation passed the reward gate. */
+  /** Aggregate factual grounding is unavailable until provenance-aware historical reassessment. */
+  groundedClaimRate: number | null;
+  evidenceQuality: DashboardEvidenceQuality;
+  /** Recorded runs with a known-zero planned creator citation pool; not a current factual quality measure. */
   citationPoolWithheldRuns: number;
   /** Creator offers queued from /wanted, including terminal outcomes. */
   gapIntentOffers: number;

@@ -195,6 +195,7 @@ export async function GET() {
           creatorsEarning: m.creatorsEarning,
           totalQueries: m.totalQueries,
           groundedClaimRate: m.groundedClaimRate,
+          evidenceQuality: m.evidenceQuality,
           pendingPaymentConfirmations: m.pendingPaymentConfirmations,
           pendingPaymentVolumeUsdc: m.pendingPaymentVolumeUsdc,
           failedPaymentAttempts: m.failedPaymentAttempts,

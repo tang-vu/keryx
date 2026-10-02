@@ -52,6 +52,22 @@ export const openapiSpec = {
       },
     },
     schemas: {
+      DashboardGroundingStatus: {
+        type: "object",
+        required: ["groundedClaimRate", "evidenceQuality"],
+        properties: {
+          groundedClaimRate: { type: "null", description: "Aggregate factual grounding is unavailable until provenance-aware historical reassessment. This is separate from per-run A2A quality." },
+          evidenceQuality: {
+            type: "object",
+            required: ["status", "basis", "explanation"],
+            properties: {
+              status: { type: "string", const: "unavailable" },
+              basis: { type: "string", const: "recorded-unreassessed" },
+              explanation: { type: "string", description: "Stored historical counters have not been reassessed against current source provenance." },
+            },
+          },
+        },
+      },
       A2aResearchPackage: {
         type: "object",
         required: ["schema", "id", "version", "researchMode", "execution", "serviceLevel", "quality"],
@@ -541,6 +557,33 @@ export const openapiSpec = {
     },
   },
   paths: {
+    "/api/metrics": {
+      get: {
+        operationId: "getDashboardMetrics",
+        summary: "Read aggregate dashboard telemetry",
+        description: "Public aggregate telemetry and settled payment totals. Recorded historical evidence samples do not establish current factual support; groundedClaimRate is null with an explicit unreassessed basis. This endpoint neither reads paid bodies nor reassesses archived evidence.",
+        responses: { "200": { description: "Dashboard metrics, leaderboard, topics and daily settled volume.", content: {
+          "application/json": { schema: { type: "object", required: ["metrics"], properties: {
+            metrics: { $ref: "#/components/schemas/DashboardGroundingStatus" },
+          } } },
+        } } },
+      },
+    },
+    "/api/health": {
+      get: {
+        operationId: "getServiceHealth",
+        summary: "Read datastore readiness and aggregate traction",
+        description: "Chain-free health probe. Traction preserves settled payment totals and identifies aggregate factual grounding as unavailable pending historical provenance reassessment; per-run A2A quality is separate.",
+        responses: {
+          "200": { description: "Datastore ready, with operational status and traction.", content: {
+            "application/json": { schema: { type: "object", required: ["ok", "traction"], properties: {
+              ok: { type: "boolean", const: true }, traction: { $ref: "#/components/schemas/DashboardGroundingStatus" },
+            } } },
+          } },
+          "503": { description: "Datastore unavailable; no traction snapshot is returned." },
+        },
+      },
+    },
     "/api/research/monthly": monthlyOpenApiPath,
     "/api/dispatch/{id}/receipt": {
       get: {

@@ -1,4 +1,5 @@
 import type {
+  DashboardEvidenceQuality,
   DashboardMetrics,
   McpClientChannel,
   PaymentOrigin,
@@ -43,6 +44,12 @@ export interface MetricGapIntentRow {
 function round(n: number): number {
   return Math.round(n * 1_000_000) / 1_000_000;
 }
+
+export const AGGREGATE_EVIDENCE_QUALITY: Readonly<DashboardEvidenceQuality> = Object.freeze({
+  status: "unavailable",
+  basis: "recorded-unreassessed",
+  explanation: "Stored historical evidence counters have not been reassessed against current source provenance; aggregate factual grounding is unavailable.",
+});
 
 export interface RunEvidenceMetrics {
   evidenceClaimCount: number | null;
@@ -127,10 +134,6 @@ export function calculateDashboardMetrics(
     (sum, run) => sum + Number(run.evidenceClaimCount ?? 0),
     0,
   );
-  const groundedClaims = evidenceRuns.reduce(
-    (sum, run) => sum + Number(run.groundedClaimCount ?? 0),
-    0,
-  );
 
   return {
     totalPayments: payments.length,
@@ -143,9 +146,10 @@ export function calculateDashboardMetrics(
     readerToPayerConversion: runRows.length ? round(payingQueryIds.size / runRows.length) : 0,
     evidenceRunSamples: evidenceRuns.length,
     evidenceClaimSamples,
-    groundedClaimRate: evidenceClaimSamples
-      ? round(groundedClaims / evidenceClaimSamples)
-      : 0,
+    // Stored counters can include subsequently demoted synthetic evidence. Aggregate reads do
+    // not establish current factual support; keep their sample counts without publishing a rate.
+    groundedClaimRate: null,
+    evidenceQuality: AGGREGATE_EVIDENCE_QUALITY,
     citationPoolWithheldRuns: evidenceRuns.filter(
       (run) =>
         Number(run.evidenceClaimCount ?? 0) > 0 &&

@@ -196,7 +196,7 @@ describe("calculateDashboardMetrics", () => {
     expect(metrics.totalQueries).toBe(2);
   });
 
-  it("reports evidence grounding without inventing samples for historical runs", () => {
+  it("keeps recorded evidence samples without treating their stored counters as current factual grounding", () => {
     const metrics = calculateDashboardMetrics([], [
       { id: "historical", origin: "engine" },
       {
@@ -217,8 +217,28 @@ describe("calculateDashboardMetrics", () => {
 
     expect(metrics.evidenceRunSamples).toBe(2);
     expect(metrics.evidenceClaimSamples).toBe(4);
-    expect(metrics.groundedClaimRate).toBe(0.5);
+    expect(metrics.groundedClaimRate).toBeNull();
+    expect(metrics.evidenceQuality).toMatchObject({ status: "unavailable", basis: "recorded-unreassessed" });
+    expect(metrics.evidenceQuality.explanation).toContain("have not been reassessed");
     expect(metrics.citationPoolWithheldRuns).toBe(1);
+  });
+
+  it("withholds aggregate factual quality even for all-grounded stored counters while preserving every payment state", () => {
+    const payments = [
+      { amountUsdc: 0.003, sourceId: "demo", queryId: "old-demo", kind: "citation" as const, settled: true },
+      { amountUsdc: 0.02, sourceId: "keryx", queryId: "old-demo", kind: "inbound" as const, settled: true },
+      { amountUsdc: 0.004, sourceId: "pending", queryId: "unknown", kind: "fetch" as const, settled: false, settlementStatus: "pending" as const },
+      { amountUsdc: 0.006, sourceId: "failed", queryId: "failed", kind: "fetch" as const, settled: false, settlementStatus: "failed" as const },
+    ];
+    const runs = [{ id: "old-demo", evidenceClaimCount: 1, groundedClaimCount: 1, rewardedCitationCount: 1 }];
+    const original = structuredClone({ payments, runs });
+    const metrics = calculateDashboardMetrics(payments, runs);
+    expect(metrics.groundedClaimRate).toBeNull();
+    expect(metrics.evidenceQuality.status).toBe("unavailable");
+    expect(metrics).toMatchObject({ totalPayments: 2, totalVolumeUsdc: 0.023, totalCreatorPayoutsUsdc: 0.003,
+      pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.004, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.006 });
+    expect({ payments, runs }).toEqual(original);
+    expect(calculateDashboardMetrics([], []).groundedClaimRate).toBeNull();
   });
 
   it("derives additive evidence telemetry from QueryRun JSON", () => {
