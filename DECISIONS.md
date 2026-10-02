@@ -4290,3 +4290,14 @@ Preserve the established v1 raw result/default brief contract across the TypeScr
 ## Empty evidence production completion - 2026-10-02
 
 Initialize the shared orchestrator's Low confidence fallback before its early returns. Next's production optimizer coalesced an uninitialized confidence binding with a later verdict, causing no-source and failed-original-read paths to throw despite passing source tests. Protect actual compiled behavior with a hermetic post-build regression in CI. Result/payment/export contracts remain unchanged across shared consumers. See [production empty-evidence regression](docs/engineering/empty-evidence-production-2026-10-02.md).
+
+## Guarded Arc unsigned fill compatibility - 2026-10-02
+
+Bind only an absent unsigned `eth_fillTransaction` sender to the originally captured
+local account. Arc's unsigned transaction serialization omits `from`, so requiring
+that field stranded reviewed funding operations before signing. Explicit null,
+malformed or mismatched senders still refuse; exact chain/tuple validation and
+independent recovery of the actual signed sender remain mandatory before broadcast.
+Do not infer that a missing journal hash authorizes another attempt: retain original
+funding evidence and require owner recovery of any uncertain admission. See
+[treasury transaction isolation](docs/treasury-transaction-isolation.md).

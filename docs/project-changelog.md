@@ -7,6 +7,7 @@
 - Bind all public seller debit nonces to immutable purpose, request/resource, payee and amount before settlement, preventing cross-product replay. Retain ambiguous claims and historical evidence.
 - Add web checkout/status/recovery, shared API, caller-wallet Monthly CLI, OpenAPI, and read-only Monthly discovery in both MCP transports. Label job/history/receipts as prepaid allocations. Desktop, extension, bots and private research preserve documented handoff/product boundaries.
 - Require focused payment/concurrency/recovery checks, hermetic browser evidence, real PostgreSQL concurrent CI, independent review and deployed commit/schema verification before pilot activation. See [Monthly release gates](research-monthly.md).
+- Restore guarded Arc funding compatibility when unsigned RPC fills omit `from`: bind absence to the captured signer while preserving explicit sender refusal, exact signed-byte validation and no broadcast retry. Retain original funding journals; no new custody or mainnet authority.
 
 ### 2026-10-02 - Bounded mainnet pilot candidate preparation
 
