@@ -14,7 +14,7 @@ const event = [{ type: "event", name: "SourceRegistered", inputs: [
 const log = { address: registry, topics: encodeEventTopics({ abi: event, eventName: "SourceRegistered", args: { id: sourceId, creator } }),
   data: encodeAbiParameters([{ type: "string" }], [""]) };
 declare global { interface Window {
-  registrationWrites: Record<string, unknown>[]; registrationChain: number; registrationCreated: number;
+  registrationWrites: Record<string, unknown>[]; registrationChain: number; registrationCreated: number; registrationChainReads: number; registrationRpcChain: number;
   registrationInitialCreator?: string;
   setRegistrationWallet: (address: string) => void;
   registrationWriteError?: "reject" | "unknown";
@@ -24,7 +24,7 @@ const bundle = await build({ stdin: { resolveDir: process.cwd(), loader: "tsx", 
 import React from 'react'; import {createRoot} from 'react-dom/client';
 import {RegisterForm} from './components/keryx/register-form';
 import {DecisionFeedbackPanel} from './app/creator/[id]/decision-feedback-panel';
-window.registrationWrites=[];window.registrationCreated=0;window.registrationWriteError=undefined;
+window.registrationWrites=[];window.registrationCreated=0;window.registrationChainReads=0;window.registrationRpcChain=5042002;window.registrationWriteError=undefined;
 const initialCreator=window.registrationInitialCreator||'${creator}';
 function Harness(){const [address,setAddress]=React.useState(initialCreator);window.registrationWallet=address;window.setRegistrationWallet=setAddress;const [visible,setVisible]=React.useState(true);window.registrationMount=setVisible;
 return React.createElement(React.Fragment,null,visible&&React.createElement(RegisterForm,{prefillWalletAddress:initialCreator,onCreated:()=>window.registrationCreated++}),React.createElement(DecisionFeedbackPanel,{creatorId:'feedback'}));}
@@ -35,7 +35,7 @@ createRoot(document.getElementById('root')).render(React.createElement(Harness))
     b.onLoad({ filter: /.*/, namespace: "fixture" }, a => ({ resolveDir: process.cwd(), contents: a.path === "next/link" ? "import React from 'react';export default function Link(props){return React.createElement('a',props)}" : a.path === "wagmi" ? `
 export const useAccount=()=>({address:window.registrationWallet,chainId:5042002});
 export const useWriteContract=()=>({writeContractAsync:async args=>{if(window.registrationWriteError){const error=new Error('synthetic wallet error');if(window.registrationWriteError==='reject')error.cause={code:4001};throw error;}window.registrationWrites.push(JSON.parse(JSON.stringify(args,(_,v)=>typeof v==='bigint'?String(v):v)));return '${hash}';}});
-const client={waitForTransactionReceipt:()=>new Promise((resolve,reject)=>{window.finishReceipt=resolve;window.failReceipt=()=>reject(new Error('synthetic RPC failure'));})};
+const client={getChainId:async()=>{window.registrationChainReads++;return window.registrationRpcChain;},waitForTransactionReceipt:()=>new Promise((resolve,reject)=>{window.finishReceipt=resolve;window.failReceipt=()=>reject(new Error('synthetic RPC failure'));})};
 export const usePublicClient=({chainId})=>{window.registrationChain=chainId;return client;};
 ` : a.path === "sonner" ? "export const toast=Object.fromEntries(['success','error','loading','dismiss'].map(kind=>[kind,()=>{}]));" : "export const REGISTRY_ABI=[];" }));
   } }] });
@@ -59,7 +59,7 @@ try {
  await fresh();await page.getByText("2 BUY",{exact:false}).waitFor();assert.equal(await page.getByText(/fresh tolls/).count(),0);
  // Atomic duplicate guard: two same-turn click events produce exactly one prepare/write.
  await page.getByRole("button",{name:/Publish source/}).evaluate(el=>{(el as HTMLButtonElement).click();(el as HTMLButtonElement).click();});
- await page.waitForFunction(()=>!!window.finishReceipt);assert.equal(posts,1);assert.equal((await page.evaluate(()=>window.registrationWrites)).length,1);
+ await page.waitForFunction(()=>!!window.finishReceipt);assert.equal(posts,1);assert.equal((await page.evaluate(()=>window.registrationWrites)).length,1);assert.equal(await page.evaluate(()=>window.registrationChainReads),1);
  await page.getByText("Transaction submitted: confirmation pending",{exact:false}).waitFor();assert.equal(reads,0);
  assert(await page.getByRole("button",{name:"Register another source"}).isDisabled());
  await page.getByText("fixture-token",{exact:true}).waitFor();await page.getByText("fixture-secret",{exact:true}).waitFor();
@@ -72,6 +72,10 @@ try {
  indexMode="match";await page.getByRole("button",{name:"Check registration status"}).click();await page.getByText("Registration confirmed and indexed:",{exact:false}).waitFor();assert.equal(await page.evaluate(()=>window.registrationCreated),1);assert(!(await page.getByRole("button",{name:/Verify ownership/}).isDisabled()));
  await page.getByRole("button",{name:/Verify ownership/}).click();await page.getByRole("button",{name:/Verify ownership/}).waitFor({state:"hidden"});assert.equal(verifiedId,sourceId);
  assert.equal(await page.getByRole("link",{name:"View on ArcScan"}).getAttribute("href"),`https://testnet.arcscan.app/tx/${replacement}`);
+ // The wallet's declared rail cannot substitute for the actual public-client chain.
+ await fresh();await page.evaluate(()=>{window.registrationRpcChain=5042;});await page.getByRole("button",{name:/Publish source/}).click();
+ await page.getByText("Registration RPC network changed",{exact:false}).waitFor();
+ assert.equal(await page.evaluate(()=>window.registrationChainReads),1);assert.equal((await page.evaluate(()=>window.registrationWrites)).length,0);
  for(const [status,logs] of [["reverted",[log]],["success",[]],["success",[{...log,address:creator}]],["success",[{...log,topics:encodeEventTopics({abi:event,eventName:"SourceRegistered",args:{id:urlHash,creator}})}]],["success",[{...log,topics:encodeEventTopics({abi:event,eventName:"SourceRegistered",args:{id:sourceId,creator:registry}})}]]] as const){
   await fresh();const before=reads;await submit();await receipt(status,[...logs]);await page.getByText("Registration not confirmed:",{exact:false}).waitFor();assert.equal(reads,before);assert.equal(await page.evaluate(()=>window.registrationCreated),0);
  }
