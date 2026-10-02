@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+## Selected public treasury observation — 2026-10-03
+
+The installed Unified Balance Kit defines Arc testnet only. Mainnet `/api/treasury`
+therefore reads the public role's configured policy and actual sealed SQLite identity
+through the read-only application boundary, checks historical role separation, and
+requests that exact address/domain from the selected Circle Gateway balance API.
+It never reads the retained testnet wallet, loads a custody key or admits spending.
+The current policy/identity is revalidated after asynchronous reads, and mainnet
+does not reuse a last-good cache when policy or Circle observation is unavailable.
+Available USDC is distinct from kit confirmed/pending-deposit totals; an unanswered
+or mismatched Circle row is unknown, while an explicit matching zero is zero.
+Public balance and health observations do not establish hosted payment readiness.
+The status page consumes this public observation; CLI/MCP/desktop/extension callers
+have no treasury-endpoint consumer and retain their independently bounded payment
+and original-network recovery contracts. The historical Circle grant-media script
+explicitly requires the testnet App Kit response and refuses a mainnet response;
+its archived screenshots and traction are not relabeled as mainnet proof.
+
 ## Full public mainnet storage and recovery — 2026-10-02
 
 An unsigned session withdrawal has a retained pre-crypto exposure transition. The

@@ -150,7 +150,7 @@ Circle Gateway helpers beyond the payment path.
 | File | Purpose |
 |------|---------|
 | `withdraw-intent.ts` | Builds + verifies the creator-signed Gateway burn intent for gasless self-serve cash-outs (Circle's fee reserved before signing). |
-| `unified-balance.ts` | Settlement wallet's chain-abstracted Gateway balance via Circle App Kit (Unified Balance Kit), read-only by address. Feeds `/api/treasury` + `/status`. |
+| `unified-balance.ts` | Read-only `/api/treasury` + `/status` observation. Testnet retains the legacy address-only App Kit confirmed/pending view; mainnet binds the sealed public policy/store and selected Circle Gateway available balance, preserving unknown and revalidating policy without custody/signing. |
 
 ### `lib/registry/`
 On-chain registry client + off-chain indexer cache.
@@ -249,7 +249,7 @@ RESTful endpoints for agent, sources, metrics, API keys.
 | `/session/*` | SIWE JWT | Grant / credit / revoke session. |
 | `/withdraw` | creator wallet signature | Self-serve gasless cash-out: creator signs a Gateway burn intent, treasury relays. |
 | `/withdrawals` | public | Ledger of executed creator cash-outs (real tx hashes). |
-| `/treasury` | public | Settlement wallet's chain-abstracted Gateway balance via Circle App Kit (Unified Balance Kit), 60s cache. |
+| `/treasury` | public | Selected public treasury observation: testnet App Kit confirmed/pending balance with legacy 60s cache; mainnet reviewed public-role available USDC (unknown distinct from zero), no stale cache or payment-readiness claim. |
 | `/health` | public | Liveness + readiness JSON (uptime, commit, settlement mode, traction). |
 | `/creator/[id]` | public | Creator earnings page data + notify-webhook config. |
 | `/runs`, `/dispatch/[id]` | public | Query history + shareable per-dispatch permalinks. |
@@ -356,7 +356,7 @@ Next.js 16 App Router.
 | `/dashboard` | Public traction dashboard: metrics, leaderboard, recent dispatches, payments feed. |
 | `/creator/[id]` | Public creator earnings page + social card (lifetime USDC, per-question payouts). |
 | `/dispatch/[id]` | Shareable permalink for one agent run (trace, citations, settled payouts, social card). |
-| `/status` | Uptime page: health, deployed commit, settlement mode, live traction, App Kit treasury balance. |
+| `/status` | Uptime page: health, deployed commit, settlement mode, live traction, selected treasury observation (testnet App Kit or mainnet Gateway available USDC). |
 | `/dev` | Admin dashboard (requires dev JWT). |
 
 ---

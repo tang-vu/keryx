@@ -2,6 +2,7 @@
 
 ### Public mainnet-support candidate (2026-10-02, v0.26.0)
 
+- Observe the reviewed mainnet public treasury through its sealed storage/policy and selected Circle Gateway available balance. Preserve the historical testnet App Kit view; never reuse its wallet/chains or stale balance on mainnet, and display unavailable Circle amounts as unknown rather than zero. Balance observation is separate from funded payment readiness.
 - Use fresh application 0.26.0 and MCP/desktop 0.4.0 candidate identities for the coordinated selected-network release. Preserve immutable earlier app 0.25.1/MCP/desktop 0.3.2 artifacts and their actual publication evidence.
 - Compose normal public browser research, owner-funded retained sessions, dual consent/possession proofs, cumulative and per-question caps, and owner-wallet session/creator cashout. Synthetic normal-handler/Chromium checks include encrypted purchases and citations, uncertain-response recovery, exact owner mint finality and research resumed with the same signer. Historical receipts retain their original network.
 - Support selected-network Monthly checkout with fresh native SQLite authority, actual dedicated custody and exact original redemption recovery. Native handler/SDK acceptance exercises a 1.98-USDC mainnet quote without the historical testnet ceiling; four manual requests remain current-capacity admission, not escrow or an automatic schedule.

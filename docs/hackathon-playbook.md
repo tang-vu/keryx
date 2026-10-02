@@ -4,6 +4,10 @@
 > Verified against the live site (lepton.thecanteenapp.com) + the Canteen "Distribution Bootstrap"
 > article on **2026-06-20**. **Keryx is dead-center in the winning lane — sharpen, don't rebuild.**
 
+The App Kit treasury examples below describe the historical Arc testnet proof.
+The current selected-mainnet treasury view uses Circle Gateway available USDC;
+the installed Unified Balance Kit does not define Arc mainnet.
+
 ## The contest
 - **Event:** Lepton Agents Hackathon (Canteen × Circle, settled on Arc in USDC). Online.
 - **Window:** **Jun 15 → Jun 29, 2026.** Judged work must be built in-window. Judging is **async after the deadline — there is NO live demo day.** So the **video + repo + live link must stand on their own.**

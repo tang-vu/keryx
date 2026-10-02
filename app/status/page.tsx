@@ -50,9 +50,10 @@ interface Health {
   };
 }
 
-/** Shape of /api/treasury — Gateway balance via Circle App Kit (Unified Balance Kit). */
+/** Selected public treasury observation; the legacy testnet view uses Circle App Kit. */
 interface Treasury {
   available: boolean;
+  observation?: { network: "eip155:5042"; address: string; availableUsdc: string | null } | null;
   unifiedBalance: {
     address: string;
     totalConfirmedUsdc: string;
@@ -93,9 +94,13 @@ export default function StatusPage() {
     const pollTreasury = async () => {
       try {
         const r = await fetch("/api/treasury", { cache: "no-store" });
-        if (r.ok && alive) setTreasury((await r.json()) as Treasury);
+        if (alive) {
+          if (r.ok) setTreasury((await r.json()) as Treasury);
+          else setTreasury(current => current?.observation ? null : current);
+        }
       } catch {
-        /* section simply stays hidden */
+        // Never leave a formerly known mainnet observation displayed as current after a failed read.
+        if (alive) setTreasury(current => current?.observation ? null : current);
       }
     };
     poll();
@@ -166,6 +171,21 @@ export default function StatusPage() {
               <PendingReconciliationSection reconciliation={health.reconciliation} />
             )}
 
+
+            {treasury?.observation && (
+              <>
+                <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
+                  Public research treasury · Arc mainnet
+                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
+                  <Row k="Gateway available USDC" v={treasury.observation.availableUsdc === null ? "Unknown" : `$${treasury.observation.availableUsdc}`} />
+                </dl>
+                <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
+                  {treasury.observation.address.slice(0, 6)}…{treasury.observation.address.slice(-4)} · Circle Gateway balance observation.
+                  Available balance is checked again before research spending.
+                </p>
+              </>
+            )}
 
             {treasury?.available && treasury.unifiedBalance && (
               <>

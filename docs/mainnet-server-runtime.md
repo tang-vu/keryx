@@ -313,6 +313,21 @@ operating capacity. Payout balance monitoring selects a canonical original rail,
 attests mainnet before and after the read, and retains unknown for a malformed,
 unreachable or inexact balance.
 
+`/api/treasury` is a separate public, address-only observation. On mainnet it uses
+the read-only sealed application store, validates the configured public policy and
+historical custody role, and reads that exact address/domain from the selected
+Circle Gateway API. It revalidates identity/policy after awaiting Circle and never
+serves the retained testnet wallet or a stale last-good snapshot. Its
+`observation.availableUsdc` is a decimal string or `null` (unknown); `unifiedBalance`
+is `null`, because the installed Unified Balance Kit has no Arc mainnet definition.
+An explicit matching Circle zero is zero; missing, malformed, foreign or unavailable
+rows remain unknown. This path loads no key, admits no policy/spend, and reports
+`paymentReadiness: "not-probed"`. `/status` displays available USDC, not invented
+confirmed/pending-deposit totals. Testnet retains its existing App Kit response.
+Ordinary CLI/MCP/desktop/extension callers do not consume this endpoint. The
+historical `create-circle-grant-media.mjs` generator requires the testnet App Kit
+shape and refuses mainnet rather than producing mislabeled historical proof.
+
 The experimental scholarly-rights v1 protocol remains testnet-only. Its creator
 endpoint refuses mainnet before authentication/storage/body processing rather than
 emitting a testnet rights binding for mainnet custody. Ordinary creator source
