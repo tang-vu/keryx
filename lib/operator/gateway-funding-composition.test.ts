@@ -80,7 +80,10 @@ describe("dormant Operator funding release", () => {
     const resolveImport = (file: string, specifier: string) => {
       if (!specifier.startsWith(".") && !specifier.startsWith("@/")) return null;
       const base = specifier.startsWith("@/") ? join(cwd, specifier.slice(2)) : resolve(cwd, dirname(file), specifier);
-      const target = [base, `${base}.ts`, `${base}.tsx`, `${base}.mts`, join(base, "index.ts"), join(base, "index.tsx")]
+      // Node ESM .mjs specifiers in TypeScript scripts resolve to their .mts source.
+      // Follow that source edge too; ignoring it would omit its authority graph.
+      const target = [base, ...(base.endsWith(".mjs") ? [base.slice(0, -4) + ".mts"] : []),
+        `${base}.ts`, `${base}.tsx`, `${base}.mts`, join(base, "index.ts"), join(base, "index.tsx")]
         .find(candidate => existsSync(candidate) && /\.(?:ts|tsx|mts)$/.test(candidate));
       if (!target && !existsSync(base)) throw new Error(`Unresolved application import: ${file}: ${specifier}`);
       return target ? name(target) : null;

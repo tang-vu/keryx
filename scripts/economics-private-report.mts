@@ -14,14 +14,10 @@ async function main() {
   const profile = config.profile;
   await writePrivateEconomicsReport(values.directory, async () => {
     // Never call init(): a report must not migrate data or rewrite paid-content caches.
-    const enrolled = !profile.testnet || process.env.KERYX_STORAGE_MANIFEST !== undefined;
-    const db = enrolled
-      ? hasSupabase()
-        ? await (await import("../lib/db/enrolled-supabase-adapter")).createReadonlyEnrolledSupabaseAdapter()
-        : await (await import("../lib/db/enrolled-sqlite-adapter")).createReadonlyEnrolledSqliteAdapter()
-      : hasSupabase()
+    const enrolled = await (await import("../lib/db/application-storage")).createReadonlyApplicationStorage();
+    const db = enrolled ?? (hasSupabase()
         ? new (await import("../lib/db/supabase-adapter")).SupabaseAdapter()
-        : new (await import("../lib/db/sqlite-adapter")).SqliteAdapter(resolve("data/keryx.sqlite"), { readOnly: true });
+        : new (await import("../lib/db/sqlite-adapter")).SqliteAdapter(resolve("data/keryx.sqlite"), { readOnly: true }));
     try { return await db.economics(); }
     finally { (db as { close?: () => void }).close?.(); }
   }, profile);
