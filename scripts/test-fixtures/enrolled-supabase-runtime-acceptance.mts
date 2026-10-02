@@ -129,8 +129,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       return { child, result, completed: () => completed };
     };
     const enrollment = concurrentOwnerSql(`begin;set local application_name='keryx-revoke-enrollment';
-      select keryx_storage.enroll(${literal(identity)},'${before}');
-      select keryx_storage.snapshot_digest();`, true);
+      select keryx_storage.enroll(${literal(identity)},'${before}');`, true);
     let refresh: ReturnType<typeof concurrentOwnerSql> | undefined;
     try {
       const deadline = performance.now() + 10_000;
@@ -143,7 +142,8 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
           throw new Error(`Actual enrollment exited before publication: ${diagnostic}`);
         }
         if (performance.now() >= deadline) {
-          const state = sql("select coalesce(jsonb_agg(jsonb_build_object('state',state,'waitType',wait_event_type,'wait',wait_event))::text,'[]') from pg_stat_activity where datname=current_database() and application_name='keryx-revoke-enrollment'");
+          // Classify this owned statement without logging its identity argument.
+          const state = sql("select coalesce(jsonb_agg(jsonb_build_object('state',state,'waitType',wait_event_type,'wait',wait_event,'stage',case when ltrim(query) like 'select keryx_storage.enroll(%' then 'enroll' when ltrim(query) like 'select keryx_storage.snapshot_digest(%' then 'snapshot' else 'other' end,'elapsedMs',floor(extract(epoch from clock_timestamp()-query_start)*1000)))::text,'[]') from pg_stat_activity where datname=current_database() and application_name='keryx-revoke-enrollment'");
           throw new Error(`Actual enrollment precommit boundary unavailable: ${state}`);
         }
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -157,7 +157,10 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
       }
       // Explicit release only after the contender is proven blocked. No timing
       // window depends on a sleep long enough for a loaded CI runner.
-      enrollment.child.stdin?.end("commit;\n");
+      // Take the complete post-enrollment snapshot while still holding the owner
+      // transaction, after contention is proven. The enrollment barrier does not
+      // combine two independently bounded, CPU-heavy statements into one budget.
+      enrollment.child.stdin?.end("select keryx_storage.snapshot_digest();commit;\n");
       const enrolledResult = await enrollment.result;
       assert(enrolledResult.ok, "Actual concurrent owner enrollment succeeded");
       assert.match(enrolledResult.output, /^[0-9a-f]{64}$/);
