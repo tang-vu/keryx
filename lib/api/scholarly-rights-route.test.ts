@@ -1,6 +1,10 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-const mocks = vi.hoisted(() => ({ session: vi.fn(), db: vi.fn(), terms: vi.fn(), settle: vi.fn() }));
+const mocks = vi.hoisted(() => ({ session: vi.fn(), db: vi.fn(), terms: vi.fn(), settle: vi.fn(), mainnet: false }));
+vi.mock("@/lib/config", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/config")>();
+  return { ...original, config: { ...original.config, get networkId() { return mocks.mainnet ? "eip155:5042" : "eip155:5042002"; } } };
+});
 vi.mock("@/lib/auth", () => ({ getSession: mocks.session }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
 vi.mock("@/lib/registry/source-fetch-payto", () => ({ sourceFetchTerms: mocks.terms }));
@@ -15,10 +19,22 @@ let db: { getSource: ReturnType<typeof vi.fn>; getPaperState?: ReturnType<typeof
 const ctx = { params: Promise.resolve({ id: "paper" }) };
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.mainnet = false;
   db = { getSource: vi.fn().mockResolvedValue(source), getPaperState: vi.fn().mockResolvedValue(null),
     submitPaper: vi.fn(), beginPaperEnrollment: vi.fn(), getItems: vi.fn().mockResolvedValue([]), consumeRateLimit: vi.fn().mockResolvedValue({ allowed: true }) };
   mocks.session.mockResolvedValue({ address: creator }); mocks.db.mockResolvedValue(db);
   mocks.terms.mockResolvedValue({ authority: "onchain", stale: false, active: true, creator, payTo: creator, listPriceUsdc: 0.01 });
+});
+it("refuses the experimental mainnet rights domain before auth, storage or body processing", async () => {
+  mocks.mainnet = true;
+  const req = new NextRequest("https://example.test/api/creator/paper/scholarly", { method: "POST", body: "{}" });
+  for (const handler of [GET, POST, PUT]) {
+    const response = await handler(req, ctx);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({ network: "eip155:5042" });
+  }
+  expect(mocks.session).not.toHaveBeenCalled(); expect(mocks.db).not.toHaveBeenCalled(); expect(req.bodyUsed).toBe(false);
 });
 it("authenticates status, draft enrollment and signed submissions before reading their body", async () => {
   mocks.session.mockResolvedValue(null);

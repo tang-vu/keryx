@@ -26,23 +26,30 @@ export function mainnetHostedPolicy(db: KeryxDB, role: "public" | "private" = "p
     throw new Error("Hosted origin unavailable");
   return configuredHostedTreasuryPolicy(identity, url.origin, role);
 }
-/** Pre-purchase custody/capacity check. Public-address derivation verifies the
- * dedicated key against sealed policy; no signing, reservation, funding or transaction. */
-export async function assertMainnetHostedResearchReady(db:KeryxDB,budgetMicros:string) {
-  if(!/^[1-9][0-9]{0,15}$/.test(budgetMicros) || BigInt(budgetMicros)>BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Hosted budget unavailable");
-  const policy=mainnetHostedPolicy(db),budget=BigInt(budgetMicros);
-  if(budget>BigInt(policy.queryCapMicroUsdc) || !/^0x[0-9a-fA-F]{64}$/.test(process.env.KERYX_MAINNET_TREASURY_PRIVATE_KEY??""))
-    throw new Error("Hosted operating configuration unavailable");
+/** Public-address comparison and historical role proof; no signer construction,
+ * signature, reservation, vendor request or funding. */
+export async function assertMainnetHostedCustodyReady(db:KeryxDB,role:"public"|"private"="public") {
+  const policy=mainnetHostedPolicy(db,role),keyName=role==="private"?"KERYX_MAINNET_PRIVATE_TREASURY_PRIVATE_KEY":"KERYX_MAINNET_TREASURY_PRIVATE_KEY";
   try {
-    if(privateKeyToAddress(process.env.KERYX_MAINNET_TREASURY_PRIVATE_KEY as `0x${string}`).toLowerCase()!==policy.signer) throw new Error();
+    const key=process.env[keyName];
+    if(!key || !/^0x[0-9a-fA-F]{64}$/.test(key) || privateKeyToAddress(key as `0x${string}`).toLowerCase()!==policy.signer) throw new Error();
   } catch { throw new Error("Dedicated hosted mainnet custody unavailable"); }
-  const before=await db.hostedTreasuryAccounting(policy.signer,"public");
+  await db.hostedTreasuryAccounting(policy.signer,role);
+  if(canonicalJson(mainnetHostedPolicy(db,role))!==canonicalJson(policy)) throw new Error("Hosted policy changed");
+  return policy;
+}
+/** Pre-purchase custody/capacity check. Never signs, reserves, funds or transacts. */
+export async function assertMainnetHostedResearchReady(db:KeryxDB,budgetMicros:string,role:"public"|"private"="public") {
+  if(!/^[1-9][0-9]{0,15}$/.test(budgetMicros) || BigInt(budgetMicros)>BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Hosted budget unavailable");
+  const policy=await assertMainnetHostedCustodyReady(db,role),budget=BigInt(budgetMicros);
+  if(budget>BigInt(policy.queryCapMicroUsdc)) throw new Error("Hosted operating configuration unavailable");
+  const before=await db.hostedTreasuryAccounting(policy.signer,role);
   await assertArcRpcChain(config.rpcUrl,ARC_MAINNET_PROFILE);
   const available=await getGatewayAvailableAtomic(policy.signer,ARC_MAINNET_PROFILE);
   if(available===null || BigInt(before.retainedMicroUsdc)+budget>BigInt(policy.lifetimeCapMicroUsdc) ||
     BigInt(before.retainedMicroUsdc)-BigInt(before.confirmedMicroUsdc)+budget>available ||
-    canonicalJson(before)!==canonicalJson(await db.hostedTreasuryAccounting(policy.signer,"public"))) throw new Error("Hosted current capacity unavailable");
-  if(canonicalJson(mainnetHostedPolicy(db))!==canonicalJson(policy)) throw new Error("Hosted policy changed");
+    canonicalJson(before)!==canonicalJson(await db.hostedTreasuryAccounting(policy.signer,role))) throw new Error("Hosted current capacity unavailable");
+  if(canonicalJson(await assertMainnetHostedCustodyReady(db,role))!==canonicalJson(policy)) throw new Error("Hosted policy changed");
 }
 /** Only an enrolled application DB and protected reviewed policy can reach the
  * dedicated key. Never loads legacy custody, creates a key, funds or transacts. */
