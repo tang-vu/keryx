@@ -449,7 +449,7 @@ export interface KeryxDB {
   /** Dispatches a wallet ran while signed in, newest first. Address match is case-insensitive:
    *  runs are stamped lowercased, but callers hand over whatever casing the session carries. */
   listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]>;
-  /** Testnet-only observed costs/subsidies and hypothetical service pricing. Never settlement. */
+  /** Selected-rail recorded settlement observations and usage estimates. Not reconciled profit. */
   economics(): Promise<EconomicsSnapshot>;
 
   // ── privacy-preserving activation telemetry ──

@@ -24,8 +24,9 @@ export function browserSessionCustodyContext(profile: ArcNetworkProfile, origin:
     "Keryx browser spending session key v3", `Origin: ${origin}`, `Owner: ${identity.owner}`,
     `Network: ${profile.networkId}`, `Chain ID: ${profile.chainId}`, `USDC: ${profile.usdcAddress.toLowerCase()}`,
     `Gateway wallet: ${profile.gatewayWallet.toLowerCase()}`, `Custody identity: ${digest}`,
-    "This signature derives a recoverable session key; it is not a transaction or server delegation.",
-    "Keep this exact context for recovery. Deposited Gateway funds remain after logout.",
+    "This signature derives a session key; it is not a transaction or server delegation.",
+    "Recovery depends on retained encrypted storage in this browser. Repeating a wallet signature is not a universal backup.",
+    "Deposited Gateway funds remain after logout; lost browser key storage can lose access to them.",
   ].join("\n");
   return Object.freeze({ ...identity, digest, derivationMessage, storageNamespace: `keryx-browser-session-v3-${digest.slice(2)}` });
 }
