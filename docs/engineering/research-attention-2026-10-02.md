@@ -73,3 +73,41 @@ and receipt reconciliation are a separate gate.
 Free scholarly papers stay free and must never acquire invented payouts. Actual
 user recording/research usefulness and any bounty participant eligibility remain
 separate, unverified criteria. No mainnet or scheduler activation is authorized.
+
+## October 3 omitted-proposal follow-up
+
+The [read-only follow-up](https://github.com/tang-vu/keryx/issues/128#issuecomment-5964251612)
+reproduced a detector blind spot on merged `f9dca8d`: source S1 contained only a
+qualified approval-binding passage; the draft also asserted that all attacks were
+eliminated using S1. Its evidence proposals omitted the latter assertion. With zero
+rejected spans/markers, the finalizer returned the whole draft despite zero evaluation
+coverage. This is an omitted-proposal boundary, not a newly introduced regression.
+A synthetic variation confirms that covering every requested target can still leave
+an extra same-source draft assertion unsupported.
+
+[D-300](../../DECISIONS.md) therefore always projects evidence-bearing completions
+into openly quoted qualifying excerpts, numbered unverified research topics and gaps.
+No arbitrary draft prose survives; lexical matching is not treated as entailment.
+Completion confidence stays Low even with high recorded coverage. Estimates, source
+truth, contradictions, complete synthesis and usefulness are distinct. Supported creator
+quote contributions retain their existing reward gate; paid fetch debits survive when
+every quote is withheld. Target labels cannot create factual Markdown headings or
+synthetic citation controls in the answer or appended report topics.
+
+Hermetic component/orchestrator checks exercise the exact omitted-evaluation case,
+the fully covered target variation, all/zero/no-proposal cases, supported quoted
+contributions, negation/numbers/extra clauses, formatted and multilingual drafts,
+and poisoned/overbroad proposal labels. They trace the finalized answer through
+attribution, persisted runs, trace events, report/receipt integrity and the shared
+A2A/OpenAI/remote MCP/checked-receipt BibTeX/RIS/CSV projections. The minified source
+Chromium fixture checks real rendered target/estimate wording and retained citation
+controls with all HTTP intercepted. It is run in integrated CI through
+`npm run test:browser-research-ux`; these fictional passages are not manuscript evidence.
+
+Code review, integrated CI/build and distribution acceptance remain separate from
+live product acceptance. Issue #128 stays open for useful exact-paper comparison,
+actual report/evidence/reference exports, independently correlated paid settlement
+and user review. Production maintenance remains held for the separately active
+network transition: this source candidate makes no runtime deploy, ENV, service,
+ingress, research/payment request or mainnet activation. Current deployed SHA and
+live output quality are not established by these synthetic checks.

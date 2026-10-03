@@ -29,6 +29,14 @@ discovery-only. It does not perform unrestricted web browsing. A corpus preview
 does not guarantee a useful or supported answer. The seller link goes to existing
 registration/ownership verification, without a promised purchase or citation.
 
+After reads, new evidence-bearing completions deliver openly quoted qualified
+source excerpts with unverified research topics and gaps. Complete synthesis stays
+unverified even if every target has an excerpt; source-marker admission cannot
+establish support for omitted draft assertions. Recorded support/coverage estimates
+are not factual accuracy or entailment. This staged delivery boundary neither proves
+source quality nor makes a preview purchase-worthy. See [scholarly research](scholarly-research.md)
+and [researcher exports](researcher-exports.md).
+
 Run `node --import tsx scripts/test-research-evidence-browser.mts` for the hermetic
 Chromium acceptance. It is also part of `npm run test:browser-research-ux` after the
 production build in CI. All HTTP is intercepted: no source ingestion, research,

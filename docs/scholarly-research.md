@@ -68,6 +68,19 @@ Scholarly references remain `public-reference` assets with no creator rewards.
 Metadata never changes registered payout wallets, source ownership, signing or caps.
 Author opt-in payments are a separate [proposed staged plan](paid-scholarly-papers.md).
 
+The October 3 #128 follow-up adds a staged extractive delivery boundary for new
+evidence-bearing completions. An accepted paper marker does not prove every draft
+assertion carrying it, and complete target coverage does not detect an omitted
+unsupported assertion. Deliver only openly quoted qualifying source excerpts, with
+explicit gaps and numbered **research targets** labelled as unverified requested
+topics. The synthesized draft is withheld as a conclusion even when no proposal
+was rejected. Completion confidence stays Low: source matching and model-estimated
+support/coverage do not establish entailment, factual truth, contradiction resolution
+or a complete useful paper comparison. Original source statements may be incorrect.
+Qualified free-paper excerpts remain reusable references with zero creator reward.
+Previously archived answers are not rewritten or newly certified by this boundary.
+See [the remaining acceptance gates](engineering/research-attention-2026-10-02.md).
+
 ## Metadata reuse
 
 Every admitted scholarly citation retains its observed provider record URL and time,

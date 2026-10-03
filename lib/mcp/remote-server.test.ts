@@ -65,6 +65,10 @@ describe("remote MCP server", () => {
       }),
     );
     expect(result.isError).not.toBe(true);
+    const responseText = (result.content as { type: string; text?: string }[]).filter(item => item.type === "text").map(item => item.text).join("\n");
+    expect(responseText).toContain("research targets meet the recorded excerpt-support threshold");
+    expect(responseText).toContain("does not verify entailment or complete synthesis");
+    expect(responseText).not.toContain("claims passed the grounding threshold");
     expect(result.structuredContent).toEqual(
       expect.objectContaining({
         queryId: "mcp-run",

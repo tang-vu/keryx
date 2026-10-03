@@ -49,9 +49,11 @@ rail underneath it. Give it a question and a budget:
    with a human-readable rationale for every choice.
 3. It **pays the x402 toll** only for what it buys, checks **sufficiency** after each read, and
    stops early when it has enough.
-4. It **synthesizes** a grounded answer with inline citations, **weighs each source's real
-   contribution**, and **settles a weighted USDC nanopayment to every creator it cited** —
-   multi-author works split on-chain, 100% to creator wallets, 0% platform fee.
+4. The claim-grounding candidate returns **qualified source excerpts with inline citations**
+   and explicitly labelled research targets/gaps. It withholds arbitrary synthesis,
+   retains a **Low/incomplete** boundary, and allocates bounded citation rewards only
+   to eligible accepted sources. Creator payouts are settled only when recorded
+   payment evidence confirms settlement; multi-author rewards follow their payout split.
 
 The result is a working micro-economy: readers that pay by default, and writers that earn by
 being *useful* — not by being clicked.
@@ -63,10 +65,20 @@ the model reasons about money and shows its work, streamed live to the UI:
 
 - **Buy / skip / cache with rationale** — every spend decision names the exact article version and explains why.
 - **Open article market** — [`/market`](https://keryx.cc/market) and `GET /api/offers` publish exact payable versions, registry list prices, x402 paths, and verifiable EIP-712 discounts signed by publishers.
-- **Adjudication** ⚖️ — when two sources conflict, the agent doesn't average them; it decides which
-  to trust and says why.
-- **Confidence verdict** 📊 — it rates its own answer (High / Moderate / Low) and hedges the prose
-  accordingly, instead of bluffing.
+- **Source comparisons**: recorded exact excerpts let readers inspect differing sources.
+  The current claim-grounding candidate does not certify an independent synthesized
+  conclusion about which source is correct.
+- **Confidence boundary**: the current extractive answer is labelled Low/incomplete.
+  Qualified source excerpts provide recorded support; target coverage estimates do not
+  verify each assertion or establish complete useful synthesis.
+- **Claim-grounding follow-up candidate**: evidence-bearing answers project qualified literal
+  source excerpts and explicitly labelled quoted research targets/gaps. Arbitrary synthesis
+  is withheld because marker-level support cannot prove every assertion. Accepted excerpt
+  citations still support rewards, with original paid-fetch debits, article bindings and
+  settlement identities. The concurrent mainnet transition remains in maintenance;
+  this source repair is not a deployed/live-quality claim. Qualified-excerpt hosted
+  behavior requires accepted hosted deployment; package publication can complete
+  separately while maintenance remains held.
 - **Evidence ledger** — every rewarded citation carries a claim-indexed exact quote. The
   orchestrator verifies that quote against content it actually read before the marker can receive
   a citation reward; rejected markers are removed from the answer.
@@ -163,11 +175,13 @@ Example trace (real output):
 - **Local x402 MCP** — the caller-funded package uses its local Arc wallet to pay
   Keryx's x402 toll before Keryx researches and pays creators. Version 0.3.2 requires
   existing owner-provisioned custody, a trusted merchant policy and supported Node.
-  Use [verified package distribution](docs/mcp-distribution.md); npm and its registry
-  pointer need separate verification; public npm version discovery returned 0.3.2 on October 2.
-  The 0.4.1 coordinated research repair candidate requires new packed acceptance and
-  publication verification; the dated observation does not establish that candidate release.
-  Do not use the older npm release for the new custody/signing boundary.
+  Use [verified package distribution](docs/mcp-distribution.md). October 3 discovery found
+  npm latest 0.4.1 and
+  GitHub v0.26.1 assets from `f9dca8d` are the previous immutable release. Application
+  0.26.2, caller MCP 0.4.2 and desktop 0.4.2 are coordinated claim-grounding candidates;
+  packed acceptance, exact-source installer checks and publication are separate gates.
+  Check verified release assets and npm integrity/provenance for current artifact status;
+  publication does not establish hosted deployment.
 - **Discord slash command** — [install the Keryx app](https://discord.com/oauth2/authorize?client_id=1527619548809924678)
   in any server and type `/ask`: the reply embed carries the grounded answer, every creator paid,
   and a link to the dispatch trace. No bot process — signed interactions POST straight to the API

@@ -1,5 +1,5 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
-import { emptyEvidenceAnswer } from "./empty-public-evidence";
+import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { finalizeGroundedAnswer } from "./answer-grounding";
 import { discoverPublicReferences } from "./public-reference-evidence";
 import { discoverScholarly } from "../scholarly/discovery";
@@ -1185,7 +1185,7 @@ export async function* runAgent(
   const synthesized = await engine.synthesize({ question: input.question, subClaims, gathered });
   if (synthesized.evidenceReview) {
     yield emit("evidence", synthesized.evidenceReview === "unavailable"
-      ? "Evidence relevance review unavailable; keeping the draft with citation rewards withheld."
+      ? "Evidence relevance review unavailable; only qualified excerpts may be delivered, with unsupported prose and rewards withheld."
       : "Relevance review returned; only checked excerpts can retain support, and review cannot raise it.",
     { relevanceReview: synthesized.evidenceReview });
   }
@@ -1228,6 +1228,11 @@ export async function* runAgent(
   }
   evidenceMeasured = true;
   answer = finalizeGroundedAnswer({ question: input.question, answer, ledger });
+  const vi = researchResponseLanguage(input.question) === "vi";
+  yield emit("evidence", vi
+    ? "Chỉ cung cấp trích đoạn nguồn đủ điều kiện; chưa xác minh được tổng hợp đầy đủ và hỗ trợ cho từng nhận định."
+    : "Delivering qualified source excerpts; complete synthesis and per-assertion support remain unverified.",
+    { answerDelivery: "qualified-excerpts", completeness: "unverified" });
   const used = gathered.filter((g) =>
     ledger.acceptedMarkers.has(g.marker),
   );
@@ -1235,7 +1240,7 @@ export async function* runAgent(
   for (const item of evidence) {
     yield emit(
       "evidence",
-      `${item.sourceKind === "public-reference" && item.qualifiesForAnswer ? "Verified public reference (no creator reward)" : item.qualifiesForReward ? "Verified" : "Below support/reward gate"} — ${item.marker} supports claim ${item.claimIndex + 1} at ${Math.round(item.support * 100)}%: “${item.quote.slice(0, 140)}${item.quote.length > 140 ? "…" : ""}”`,
+      `${item.sourceKind === "public-reference" && item.qualifiesForAnswer ? "Source-matched public excerpt (no creator reward)" : item.qualifiesForReward ? "Source-matched reward-eligible excerpt" : "Below support/reward gate"} — ${item.marker}, research target ${item.claimIndex + 1}, proposed support ${Math.round(item.support * 100)}% (estimate, not entailment): “${item.quote.slice(0, 140)}${item.quote.length > 140 ? "…" : ""}”`,
       item,
     );
   }
@@ -1261,17 +1266,23 @@ export async function* runAgent(
   }
 
   // Coverage cannot resolve a contradiction or turn a source preference into corroboration.
-  const verdict = researchVerdict({ coverage: claimCoverage,
+  const evidenceVerdict = researchVerdict({ coverage: claimCoverage,
     sources: gathered,
     citedMarkers: [...ledger.acceptedMarkers], sourceMarkers: gathered.map(source => source.marker),
     conflicts: synthesized.conflicts ?? [], finalAssessmentSufficient: finalSufficiency.sufficient });
+  // Coverage estimates describe the excerpt ledger, never a verified complete synthesis.
+  const verdict: Confidence = { level: "Low", reason: vi
+    ? `Chỉ cung cấp trích đoạn nguồn; chưa xác minh được tổng hợp đầy đủ và hỗ trợ cho từng nhận định. Có ${claimCoverage.filter(claim => !(claim.coverage >= MIN_REWARD_SUPPORT)).length} yêu cầu dưới ngưỡng hỗ trợ theo đánh giá ghi nhận; độ bao phủ không chứng minh tính đúng đắn hoặc giải quyết mâu thuẫn nguồn.`
+    : `Only source excerpts are delivered; complete synthesis and per-assertion support remain unverified. Evidence assessment: ${evidenceVerdict.reason}` };
   runConfidence = verdict;
 
   if (verdict.level === "Low" && used.length > 0) {
-    answer = `> ⚠ Low confidence — ${verdict.reason} within budget. Treat this as provisional.\n\n${answer}`;
+    answer = vi ? `> ⚠ Độ tin cậy thấp — ${verdict.reason} Kết quả chưa hoàn chỉnh.\n\n${answer}`
+      : `> ⚠ Low confidence — ${verdict.reason} within budget. Treat this as provisional.\n\n${answer}`;
   }
 
-  yield emit("synthesize", `Drafted answer citing ${used.length} source(s)`, { answer });
+  yield emit("synthesize", vi ? `Đã chuẩn bị trích đoạn từ ${used.length} nguồn; chưa xác minh được tổng hợp đầy đủ`
+    : `Prepared source excerpts citing ${used.length} source(s); complete synthesis is unverified`, { answer });
   yield emit("verdict", `Confidence: ${verdict.level} — ${verdict.reason}.`, verdict);
 
   // 6) ATTRIBUTE contribution weights

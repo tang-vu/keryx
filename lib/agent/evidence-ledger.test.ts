@@ -136,6 +136,21 @@ describe("buildEvidenceLedger", () => {
     expect(tooWeak.claimCoverage[0]?.coverage).toBe(0);
   });
 
+  it.each([240, 241])("bounds raw stored quote length at 240 characters: %s", rawLength => {
+    const words = "Circleburns USDC on the source domain.";
+    const quote = `Circle${" ".repeat(rawLength - words.length)}burns USDC on the source domain.`;
+    expect(quote).toHaveLength(rawLength);
+    const ledger = buildEvidenceLedger({ subClaims: claims, gathered, answer: "Burns USDC [S1].",
+      declaredMarkers: ["S1"], proposedEvidence: [evidence({ quote })], finalAssessment: assessment() });
+    const admitted = rawLength === 240;
+    expect(ledger.acceptedMarkers.has("S1")).toBe(admitted);
+    expect(ledger.evidence.some(item => item.qualifiesForAnswer)).toBe(admitted);
+    expect(ledger.evidence.some(item => item.qualifiesForReward)).toBe(admitted);
+    expect(ledger.droppedEvidence).toBe(admitted ? 0 : 1);
+    if (admitted) expect(ledger.evidence[0].quote).toBe(quote);
+    else expect(ledger.claimCoverage[0]).toMatchObject({ coverage: 0, coveredBy: [] });
+  });
+
   it("rejects oversized evidence excerpts even when they occur in the source", () => {
     const quote = "x".repeat(241);
     const ledger = buildEvidenceLedger({

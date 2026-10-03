@@ -51,6 +51,14 @@ import {
 } from "../sources/source-item-asset";
 import { articleOfferId, articleOfferTypedData } from "../offers/article-offer";
 import { a2aResearchPackage, completedA2aServiceReceipt } from "../a2a/research-package";
+import { a2aResponseFromRun } from "../a2a/result";
+import { quoteA2aResearch } from "../a2a/pricing";
+import { remoteResearchResult } from "../mcp/remote-server";
+import { buildAnswerContent, keryxMeta } from "../openai-compat";
+import { buildResearchReceipt, verifyResearchReceipt } from "../research-receipt";
+import { researchReportMarkdown } from "../research-report-export";
+import { exportsFromCheckedReceipt } from "../research/receipt-exports";
+import { surfaceResearch } from "../research/surface-result";
 
 const AGENT = "0xAGENT";
 const EPS = 1e-6;
@@ -938,7 +946,7 @@ describe("runAgent — money-safety invariants", () => {
 
     const { run, steps } = await drive({ question: "q", budget: 0.05 }, d);
 
-    expect(run.answer).toContain("grounded answer");
+    expect(run.answer).toContain("“content:a” [S1]");
     expect(run.totalSpent).toBeGreaterThan(0);
     expect(run.settledPayments).toBe(2);
     expect(steps.some((step) => step.message.includes("receipt retained"))).toBe(true);
@@ -1655,7 +1663,8 @@ it("keeps earned citation rewards while an incomplete final assessment lowers co
     const gateway = fakeGateway();
     const { run } = await drive({ question: "What throughput and latency were measured?", budget: 0.04 },
       deps([makeSource({ id: "alpha" }), makeSource({ id: "beta" })], engine, gateway));
-    expect(run.confidence?.level).toBe(sufficient ? "Moderate" : "Low");
+    expect(run.confidence?.level).toBe("Low");
+    expect(run.confidence?.reason).toContain("complete synthesis and per-assertion support remain unverified");
     expect(run.citations).toHaveLength(2); expect(gateway.citationCalls).toHaveLength(2);
     totals.push(run.totalSpent);
     if (!sufficient) {
@@ -1679,7 +1688,7 @@ it("keeps valid citations while reported disagreement limits the final confidenc
     });
     const gateway = fakeGateway();
     const { run } = await drive({ question: "Which retention period applies?", budget: 0.04 }, deps(sources, engine, gateway));
-    expect(run.confidence?.level).toBe(trusted === "none" ? "Low" : "Moderate");
+    expect(run.confidence?.level).toBe("Low");
     expect(run.citations).toHaveLength(2);
     expect(gateway.citationCalls).toHaveLength(2);
     if (trusted === "none") expect(run.answer).toContain("unresolved");
@@ -1826,7 +1835,7 @@ describe("funding uncertainty preserves public research", () => {
       expect(published[0].detail).not.toBe(run.decisions.find(decision => decision.sourceId === source.id));
       expect(run.citations).toHaveLength(1); expect(run.citations[0]).toMatchObject({ sourceId: "public:free", reward: 0 });
       expect(run.evidence?.some(item => item.sourceKind === "public-reference" && item.qualifiesForAnswer)).toBe(true);
-      expect(run.answer).toContain("grounded answer [S1]"); expect(run.answer).toContain("wallet funding activity remains unverified");
+      expect(run.answer).toContain("“Public agents require honest evidence and source attribution.” [S1]"); expect(run.answer).toContain("wallet funding activity remains unverified");
       expect(run.trace.some(step => (step.detail as { fundingReadiness?: string } | undefined)?.fundingReadiness === "unknown")).toBe(true);
       expect(run.trace.some(step => step.message.startsWith(`SKIP ${source.name}`))).toBe(true);
       expect(run.trace.at(-1)?.message).toContain("Creator-payment amounts only");
@@ -2022,14 +2031,94 @@ describe("research issue trust regressions", () => {
 });
 
 
-it("retains a fully qualified paid draft and the exact existing citation allocation", async () => {
+it("retains a qualified paid excerpt and the exact existing citation allocation", async () => {
   const source = makeSource({ id: "qualified-paid", fetchPrice: 0.004 });
   const engine = fakeEngine({ synthesize: input => ({ answer: "Qualified paid draft [S1].", citedMarkers: ["S1"],
     evidence: [{ claimIndex: 0, marker: "S1", quote: input.gathered[0].text, support: 0.9 }] }) });
   const gateway = fakeGateway(), d = deps([source], engine, gateway);
   const { run } = await drive({ question: "Qualified paid question", budget: 0.03 }, d);
-  expect(run.answer).toBe("Qualified paid draft [S1].");
+  expect(run.answer).not.toContain("Qualified paid draft");
+  expect(run.answer).toContain("“content:qualified-paid” [S1]");
   expect(run.citations).toHaveLength(1); expect(run.citations[0].reward).toBeCloseTo(0.03 * config.citationPoolRatio, 8);
   expect(d.db.payments.map(payment => [payment.kind, payment.amountUsdc])).toEqual([["fetch", 0.004], ["citation", 0.03 * config.citationPoolRatio]]);
   expect(run.totalSpent).toBeCloseTo(0.004 + 0.03 * config.citationPoolRatio, 8);
+});
+
+describe("omitted-assertion completion boundary", () => {
+  it.each(["omitted-evaluation", "covered-targets", "covered-targets-vi", "no-proposals", "inflated-evaluation", "inflated-only", "multiline-methods"])("projects %s through finalization, attribution, history, receipts and exports", async variant => {
+    const covered = variant.startsWith("covered-targets");
+    const vietnamese = variant.endsWith("-vi");
+    const sourceQuote = "The protocol binds approval to canonical action identity.";
+    const quote = variant === "multiline-methods" ? sourceQuote.replace("approval to", "approval\nto") : sourceQuote;
+    const evaluation = "The benchmark includes ten commands.";
+    const unsupported = "All attacks are eliminated";
+    const targets = ["Methods", "Evaluation"];
+    const item: SourceItem = { id: "observed-item", sourceId: "owned-paper", title: "Observed article",
+      link: "https://owned.example/article", summary: "Approval protocol and benchmark", content: `${sourceQuote} ${evaluation}` };
+    const source = makeSource({ id: item.sourceId, fetchPrice: 0.004 });
+    const engine = fakeEngine({
+      sufficiency: input => ({ sufficient: covered, rationale: "Synthetic assessment",
+        perClaim: input.subClaims.map((claim, index) => ({ claim,
+          coverage: variant !== "no-proposals" && (index === 0 || covered || variant === "inflated-evaluation") ? 0.9 : 0,
+          coveredBy: index === 0 || covered || variant === "inflated-evaluation" ? ["S1"] : [] })) }),
+      synthesize: () => ({ answer: `The protocol binds approval [S1]. ${unsupported} [S1].`, citedMarkers: ["S1"],
+        evidence: variant === "no-proposals" ? [] : [
+          { claimIndex: 0, marker: "S1", quote: variant === "inflated-only" ? quote.replace("approval", `approval${" ".repeat(241)}`) : quote, support: 0.9 },
+          ...(covered || variant === "inflated-evaluation" ? [{ claimIndex: 1, marker: "S1",
+            quote: variant === "inflated-evaluation" ? evaluation.replace("includes", `includes${" ".repeat(241)}`) : evaluation, support: 0.9 }] : []),
+        ] }),
+    });
+    engine.decompose = async () => targets;
+    const attribution = vi.spyOn(engine, "attribute");
+    const gateway = fakeGateway(), effects = isolatedTestEffects();
+    const d = { ...deps([source], engine, gateway, { items: { [source.id]: [item] } }), effects };
+    const run = await collectRun({ question: vietnamese ? "So sánh phương pháp và đánh giá, trả lời bằng tiếng Việt." : "Compare methods and evaluation", budget: 0.03,
+      executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } }, { deps: d });
+    expect(run.answer).not.toContain(unsupported);
+    expect(run.trace.some(step => JSON.stringify(step).includes(unsupported))).toBe(false);
+    expect(effects.saveQueryRun).toHaveBeenCalledWith(run);
+    expect(run.confidence?.level).toBe("Low");
+    expect(run.confidence?.reason).toContain(vietnamese ? "chưa xác minh được tổng hợp đầy đủ" : "complete synthesis and per-assertion support remain unverified");
+    if (vietnamese) {
+      expect(run.answer).toContain("Độ tin cậy thấp");
+      expect(run.answer).not.toContain("Low confidence");
+      expect(run.trace.some(step => step.message.includes("Chỉ cung cấp trích đoạn nguồn đủ điều kiện"))).toBe(true);
+    }
+    expect(run.trace.some(step => (step.detail as { answerDelivery?: string })?.answerDelivery === "qualified-excerpts")).toBe(true);
+    const supported = variant !== "no-proposals" && variant !== "inflated-only";
+    expect(run.citations).toHaveLength(supported ? 1 : 0);
+    expect(gateway.citationCalls).toHaveLength(supported ? 1 : 0);
+    expect(gateway.fetchCalls).toEqual([source.id]);
+    expect(run.totalSpent).toBeCloseTo(0.004 + (supported ? 0.03 * config.citationPoolRatio : 0), 8);
+    if (supported) {
+      expect(run.answer).toContain(`“${sourceQuote}” [S1]`);
+      expect(run.evidence?.[0].quote).toBe(quote);
+      expect(run.citations[0]).toMatchObject({ itemId: item.id, itemUrl: item.link, contentVersion: sourceItemContentVersion(item) });
+      expect(attribution).toHaveBeenCalledWith(expect.objectContaining({ answer: run.answer }));
+      expect(run.answer.includes(evaluation)).toBe(covered);
+    } else {
+      expect(attribution).not.toHaveBeenCalled();
+      expect(run.answer).toContain("No supported answer");
+      expect(run.answer).not.toContain(quote);
+    }
+    const payments = vi.mocked(effects.recordPayment).mock.calls.map(([payment]) => payment);
+    const receipt = buildResearchReceipt(run, payments);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.dispatch.answer).toBe(run.answer);
+    expect(receipt.payload.claims[0]?.evidence[0]?.quote).toBe(supported ? quote : undefined);
+    const report = researchReportMarkdown(run, null, payments);
+    expect(report).toContain(run.answer);
+    expect(report).not.toContain(unsupported);
+    expect(buildAnswerContent(run)).toContain(run.answer);
+    expect(buildAnswerContent(run)).not.toContain(unsupported);
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run),
+      a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick"))]) {
+      expect(JSON.stringify(result)).not.toContain(unsupported);
+      expect(result.researchExports.bibtex.count).toBe(supported ? 1 : 0);
+      expect(result.researchExports.ris.count).toBe(supported ? 1 : 0);
+      expect(result.researchExports.evidenceCsv.includes(quote)).toBe(supported);
+      expect(result.evidence.map(item => item.quote)).toEqual(supported ? covered ? [quote, evaluation] : [quote] : []);
+      expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
+    }
+  });
 });

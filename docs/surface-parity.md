@@ -48,7 +48,7 @@ MCP protocol `0.2.0` keep their separate identities and documented web/service r
 Registry publication, exact-source installer acceptance, deployment health and
 artifact hashes remain gates; repository version metadata is not delivery evidence.
 
-Current coordinated source candidate versions: application 0.26.1, desktop 0.4.1, caller MCP release tarball 0.4.1 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. npm latest was independently observed as 0.3.2 on October 2 at 13:56 UTC; 0.4.1 publication/integrity and Chrome Web Store submission remain unverified. These are release candidates until exact artifact/deployment checks complete.
+Current coordinated source candidate versions: application 0.26.2, desktop 0.4.2, caller MCP 0.4.2 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. October 3 registry discovery confirmed npm latest 0.4.1 and no 0.4.2; GitHub v0.26.1 contains immutable MCP/desktop 0.4.1 assets from `f9dca8d`. New versions remain candidates until exact artifact/publication acceptance. Chrome Web Store submission remains unverified.
 
 
 ### Coordinated research/creator repair candidate, 2026-10-03
@@ -89,3 +89,37 @@ independent review, complete useful research outputs, exact-source packed MCP re
 npm integrity/provenance, installer export/standard-user checks and asset hashes are required
 before synchronized-delivery claims. Candidate version metadata satisfies none of those
 observations by itself.
+
+### Claim-grounding follow-up audit, 2026-10-03
+
+Application 0.26.2 and MCP/desktop 0.4.2 are prepared source candidates for the
+shared claim-grounding repair. Every new evidence-bearing answer projects qualified
+literal source excerpts and explicitly labelled quoted research targets/gaps; arbitrary
+synthesis is withheld because marker-level support cannot prove every assertion.
+High target coverage does not establish per-assertion entailment or complete useful
+synthesis; the Low/incomplete boundary remains explicit. Accepted excerpt citations
+remain reward-eligible. Paid-fetch debits, source/version bindings and original
+settlement/receipt identities are retained. No schema or API transport change is added.
+
+| Surface | Audited answer/evidence path | Retained role boundary |
+| --- | --- | --- |
+| Web and embed | `app/api/ask/route.ts`, `lib/hooks/use-ask-stream.ts`, `app/embed/embed-client.tsx` consume shared agent SSE and retained answer; `components/keryx/answer-card.tsx`, `components/keryx/citation-evidence-panel.tsx`, `components/keryx/evidence-matrix-export.tsx` label research targets/coverage estimates | Browser co-sign and displayed payment state retain existing authority. |
+| API/A2A | `app/api/agent/ask/route.ts` calls `collectRun`; `lib/research/surface-result.ts` exposes bounded structured evidence/exports | Existing order, receipt and settlement bindings; no new transport contract. |
+| Remote MCP | `app/mcp/route.ts`, `lib/mcp/remote-server.ts` forward the shared answer and `surfaceResearch`; footer distinguishes target excerpt-support from entailment/complete synthesis | Protocol identity 0.2.0 remains; no new caller custody. |
+| OpenAI and extension | `app/api/v1/chat/completions/route.ts`, `lib/openai-compat.ts`; `extension/popup.js` forwards content deltas | Extension 0.1.1 remains a thin hosted client; exact-source ZIP role, no Chrome Store claim. |
+| Caller CLI/stdio MCP | `scripts/buyer-agent.mts`, `lib/buyer/client.ts`, `mcp/keryx-buyer.mts`, `mcp/keryx-mcp-server.mts` consume the retained hosted answer/results | MCP 0.4.2 candidate needs exact packed acceptance/publication; caller custody/recovery stays unchanged. Retired `scripts/a2a-client.mts` remains deliberately inert. |
+| Local Operator and desktop | `scripts/operator.mts`, `lib/operator/result.ts`, `desktop/src/helper.ts`, `desktop/src/workspace.ts`, `desktop/src/renderer.tsx` reuse checked saved answers/receipt exports | Existing historical bytes are not independently repaired or recertified offline. Desktop 0.4.2 requires rebuilt exact-source installer, export and standard-user acceptance; no signer/scheduler. |
+| Discord, Telegram, Slack | `app/api/discord/interactions/route.ts` + `lib/discord/ask-interaction.ts`; `app/api/telegram/webhook/route.ts` + `lib/telegram/ask-message.ts`; `app/api/slack/commands/route.ts` + `lib/slack/ask-command.ts` call `collectRun` and truncate/escape its answer | Thin messages link the full dispatch and retain planned/settled/offline labels; no independent synthesis or creator administration. |
+
+The previously observed public HTTP 503 is an independent live maintenance gate
+for the active mainnet transition. This release preparation neither changes that
+maintenance state nor claims a new deployed SHA, current live research quality,
+network activation or payment readiness. Required CI/review, fresh package/installer
+acceptance, immutable publication readback and the independent deployment handoff
+remain open. Metadata parity alone does not establish synchronized delivery.
+
+Artifact acceptance/publication and hosted deployment are separate gates. Verified
+0.4.2 MCP/desktop artifacts may be published while runtime maintenance remains held;
+check immutable release manifests and npm integrity/provenance for artifact status.
+Qualified-excerpt hosted behavior starts only after accepted hosted deployment, not
+from a package installation or source version alone.

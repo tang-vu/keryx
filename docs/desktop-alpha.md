@@ -148,7 +148,7 @@ artifact needs a new verified release source, not an unverified replacement buil
 
 Assets include the portable ZIP, installer, source manifest and SHA-256 checksums.
 Asset names include the full source commit, and uploads refuse to overwrite existing
-assets. Desktop candidate package version 0.4.1 is independent of the web release version;
+assets. Desktop candidate package version 0.4.2 is independent of the web release version;
 the release tag and manifest establish the shared source identity. The alpha has
 no automatic updater, so installed users must deliberately install a newer package.
 These packaging gates do not authorize mainnet or establish payment readiness.
@@ -160,7 +160,7 @@ do not remove or overwrite them to force a retry. Installer hashes are recorded
 in the source manifest for new packages.
 
 
-## Network-scoped tasks (0.4.1 source candidate)
+## Network-scoped tasks (introduced in 0.4.1)
 
 New preparation explicitly selects Arc Testnet/Mainnet and saves the rail before
 buyer handoff. Mainnet uses task v2 with `network: eip155:5042`; legacy v1 files
@@ -193,3 +193,23 @@ no native Rust domain cutover or new desktop payment authority is inferred. Web 
 and feed proof remain deliberate hosted SIWE handoffs. Exact-source installer hashes,
 packaged exports and fresh standard-user acceptance remain required before distribution
 is reported synchronized with application 0.26.1.
+
+### October 3 claim-grounding follow-up candidate
+
+Desktop 0.4.2 is a new coordinated source candidate; the published 0.4.1 installer
+from `f9dca8d` remains immutable. After accepted hosted deployment of the repair, new
+hosted evidence-bearing answers retain qualified
+literal source excerpts and explicitly labelled quoted research targets/gaps. Marker-level
+support cannot prove arbitrary synthesis or each assertion, even when all target coverage
+is high; Low/incomplete remains the disclosed boundary. Saved answers and checked receipts
+retain their original bytes, paid-fetch debits, source/version bindings and settlement
+identities. Local exports do not independently certify or repair historical prose.
+
+The desktop still performs local task preparation, receipt-bound exports and deliberate
+buyer handoff; it gains no signer or autonomous scheduler. Exact-source rebuilt installer
+and standard-user/export acceptance remain required. Existing public maintenance is an
+independent live gate; this source candidate does not establish deployment or live quality.
+
+Artifact publication may complete while hosted runtime maintenance remains held. Check
+verified release manifests/checksums for installer status independently of hosted health;
+installing a new desktop package does not switch or repair the hosted server.

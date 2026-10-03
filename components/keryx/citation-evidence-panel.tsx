@@ -123,7 +123,7 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
               {quotes.map((item, index) => (
                 <li key={`${item.claimIndex}-${index}`} className="border-l-2 border-paid pl-4">
                   <blockquote className="font-serif text-[17px] leading-relaxed text-ink">“{item.quote}”</blockquote>
-                  <p className="mt-2 text-xs text-ink-3">Supports: {item.claim}</p>
+                  <p className="mt-2 text-xs text-ink-3">Research target (unverified): “{item.claim}”</p>
                 </li>
               ))}
             </ul>
