@@ -19,6 +19,9 @@ SSH=keryx-vps
 APP_DIR=/root/keryx
 PORT=3939
 HEALTH="http://localhost:$PORT/api/health"
+# The public-origin server checks these fixed trusted ingress fields before Next.
+# Keep loopback transport; do not exempt health or accept caller-selected origins.
+HEALTH_CURL="curl -fsS -H 'Host: keryx.cc' -H 'X-Forwarded-Proto: https' $HEALTH"
 PRESERVE_HELD=${KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER:-0}
 REVIEWED_CONFIG=${KERYX_REDEPLOY_REVIEWED_PM2_CONFIG:-}
 REVIEWED_SHA=${KERYX_REDEPLOY_REVIEWED_PM2_SHA256:-}
@@ -73,7 +76,7 @@ run_ssh -o BatchMode=yes -o ConnectTimeout=10 "$SSH" true 2>/dev/null \
 # scheduler mutation. The operator must drain all owned writers beforehand.
 if [[ -n "$REVIEWED_CONFIG" ]]; then reviewed_role validate; fi
 
-PREVIOUS_COMMIT=$(run_ssh "$SSH" "curl -fsS $HEALTH" 2>/dev/null \
+PREVIOUS_COMMIT=$(run_ssh "$SSH" "$HEALTH_CURL" 2>/dev/null \
   | sed -n 's/.*"commit":"\([^"]*\)".*/\1/p' || true)
 
 # Both workers import repository code and dependencies while running. Pause cycle
@@ -138,7 +141,7 @@ fi
 say "5/5 health check ($HEALTH)"
 ok=""
 for i in $(seq 1 20); do
-  body=$(run_ssh "$SSH" "curl -fsS $HEALTH" 2>/dev/null || true)
+  body=$(run_ssh "$SSH" "$HEALTH_CURL" 2>/dev/null || true)
   if printf '%s' "$body" | grep -q "\"commit\":\"$COMMIT\""; then
     ok=1
     echo "healthy after ${i}s — $COMMIT live"

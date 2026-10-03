@@ -64,8 +64,7 @@ argument prefix is:
 ["-i", "PATH=/usr/bin:/bin", "NODE_ENV=production", "/usr/bin/node", "--env-file=/root/keryx/.env.local"]
 ```
 
-Append `['/root/keryx/node_modules/next/dist/bin/next','start','-p','3939',
-'--hostname','127.0.0.1','--keepAliveTimeout','100000']` for web,
+Append `['/root/keryx/scripts/next-public-server.mjs','--port','3939']` for web,
 or `['--import','/root/keryx/node_modules/tsx/dist/loader.mjs',
 '/root/keryx/scripts/a2a-research-worker.mts']` for A2A. No inline `env` object or
 arbitrary arguments are accepted. Optional fields are `exec_mode: "fork"`,
@@ -74,14 +73,22 @@ arbitrary arguments are accepted. Optional fields are `exec_mode: "fork"`,
 ENV file supplies the rail, registry, identity, policy and secrets; this helper
 does not infer or change that authority.
 
-The reviewed web listener binds loopback behind the tunnel. Its 100-second idle
-keep-alive timeout exceeds the observed cloudflared 2026.6 origin pool default of
-90 seconds, following the installed Next CLI's documented proxy guidance. This
-addresses an explicit deployment timeout mismatch; it is not a claim that a
-standard Next failure was reproduced. Normal Next retains Node's default unlimited
-requests per socket. The separate QA proxy's request-count fix is not applied here.
-Existing stopped clean web definitions without these flags remain recognizable for
-retention and replacement; new reviewed configurations require both fixed flags.
+The reviewed launcher requires Node 24.16 or later and the pinned Next 16.3.6.
+The reviewed server gives Next the public metadata `keryx.cc:443` while listening
+physically on `127.0.0.1:3939`. This preserves the normal HTTPS origin used by
+Session originals; supplying the physical loopback address as Next metadata caused
+an origin mismatch in the controlled QA flow. It admits only public Host and
+forwarded HTTPS requests before Next, without rewriting request URLs or headers.
+Deployment health checks use the fixed trusted headers `Host: keryx.cc` and
+`X-Forwarded-Proto: https` over loopback; health has no origin exemption.
+
+Its 100-second idle keep-alive timeout exceeds the observed cloudflared 2026.6
+origin pool default of 90 seconds. Requests per socket remain unlimited, independently
+of the separate QA proxy fix. The launcher's only alternate CLI port is `3940` for
+controlled QA; reviewed production PM2 inputs require `3939`. Existing stopped clean
+Next CLI definitions, with or without the preceding loopback/keep-alive flags, remain
+recognizable solely for retention and replacement. Local development and the default
+Next CLI workflow retain their existing localhost behavior.
 
 Protected JSON hashes and stopped/absent PM2 definitions are checked before source
 changes, and again at role replacement. Active, duplicate or changed definitions

@@ -30,6 +30,9 @@ jobs:
       - name: Typecheck (tsc)
         run: npm run typecheck
 
+      - name: Public-origin Next server (pinned Next fixture, loopback only)
+        run: node --test scripts/next-public-server.test.mjs
+
       - name: Scheduled source upkeep Worker (isolated Free worker, no deployment)
         run: |
           npm ci --prefix cloudflare/source-upkeep --no-audit --no-fund
