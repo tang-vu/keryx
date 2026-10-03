@@ -7,6 +7,9 @@ import { hasKnownSyntheticFingerprint } from "../research/evidence-provenance";
  * those proposals authorize a citation reward by themselves. This module accepts only source
  * markers that are present in the answer, declared by synthesis, backed by a quote that occurs in
  * the gathered source, and strong enough to meet the product's grounding threshold.
+ * Marker admission qualifies the quoted contribution, not every assertion in synthesized prose.
+ * Literal matching establishes source provenance; model support remains an estimate of relevance,
+ * never a deterministic entailment or truth check. Answer delivery enforces a separate boundary.
  */
 
 import type {
@@ -182,6 +185,9 @@ export function removeUnsupportedCitationMarkers(
 }
 
 function quoteOccursInSource(quote: string, source: string): boolean {
+  // UI/receipt/export projections bound the stored excerpt, not only its normalized form.
+  // Whitespace normalization must not admit a larger raw excerpt or an unexportable reward.
+  if (quote.length > MAX_QUOTE_LENGTH) return false;
   const normalizedQuote = normalize(quote);
   if (
     normalizedQuote.length < MIN_QUOTE_LENGTH ||

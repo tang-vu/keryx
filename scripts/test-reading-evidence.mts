@@ -26,6 +26,8 @@ import { createRoot } from 'react-dom/client';
 import { AnswerCard } from './components/keryx/answer-card';
 import { ReasoningConsole } from './components/keryx/reasoning-console';
 import { DispatchView } from './app/dispatch/[id]/dispatch-view';
+import { buildEvidenceLedger } from './lib/agent/evidence-ledger';
+import { finalizeGroundedAnswer } from './lib/agent/answer-grounding';
 const citation = {marker:'S1', sourceId:'source-1', sourceName:'Research Journal', itemId:'article-1', itemTitle:'The article: an unusually long title about measured evidence and a disputed claim across several research teams', itemUrl:'https://example.org/article', weight:1, reward:0.003, rationale:'evidence'};
 const missing = {marker:'S2',sourceId:'source-2',sourceName:'Older Archive',itemTitle:'Legacy article',weight:0, reward:0, rationale:'legacy'};
 const web = {marker:'S3',sourceId:'public:web:fixture',sourceName:'publisher.example',itemTitle:'Original public document',itemUrl:'https://publisher.example/final',contentVersion:'a'.repeat(64),sourceKind:'public-reference',publicDeliveryKind:'excerpt',weight:0,reward:0,rationale:'public evidence',webProvenance:{retrievedAt:'2026-10-01T00:00:00Z',publisherGroup:'publisher.example',normalizedBodyHash:'b'.repeat(64),extraction:'pdf',truncated:true}};
@@ -36,13 +38,31 @@ const payment = (itemId,status,amount) => ({kind:'citation',queryId:'synthetic',
 run.confidence={level:'Moderate',reason:'Observed source grounding only'};run.citations.push(web);run.answer+=' Original public evidence [S3].';run.evidence.push({claimIndex:12,claim:'Original public evidence',marker:'S3',sourceId:web.sourceId,sourceName:web.sourceName,quote:'The original public document explicitly states this finding.',support:0.8,qualifiesForAnswer:true,qualifiesForReward:false,...web});
 run.citations.push(scholarly);run.answer+=' Abstract-scoped finding [S4].';run.evidence.push({claimIndex:13,claim:'Abstract-scoped finding',quote:'This is the observed abstract passage.',support:0.8,qualifiesForAnswer:true,qualifiesForReward:false,...scholarly});
 const payments = [payment('article-1','settled',0.001),payment('article-1','pending',0.002),payment('article-1','simulated',0.008),payment('other-article','settled',0.4),{...payment('article-1','settled',0.3),queryId:'other-run'},{...payment('article-1','simulated',0.006),settled:true}];
-function App(){const [steps,setSteps]=React.useState(trace);window.addStep=()=>setSteps(s=>[...s,{phase:'discover',ts:s.length,message:'Step '+s.length}]);return <><div style={{height:900}}>Reading fixture</div><DispatchView run={run} payments={payments}/><ReasoningConsole steps={steps} streaming={true} budget={0.01}/></>};
+function groundedFixture(covered){
+  const quote='The protocol binds approval to canonical action identity.';
+  const evaluation='The benchmark includes ten commands.';
+  const claims=['Methods','All attacks are eliminated'];
+  const identity={marker:'S1',sourceId:'protocol',sourceName:'Protocol fixture',itemId:'protocol-item',itemTitle:'Protocol article',itemUrl:'https://fixture.invalid/protocol',contentVersion:'recorded-version',sourceKind:'public-reference'};
+  const draft='The protocol binds approval [S1]. All attacks are eliminated [S1].';
+  const ledger=buildEvidenceLedger({subClaims:claims,gathered:[{...identity,text:quote+' '+evaluation}],answer:draft,declaredMarkers:['S1'],
+    proposedEvidence:[{claimIndex:0,marker:'S1',quote,support:0.9},...(covered?[{claimIndex:1,marker:'S1',quote:evaluation,support:0.9}]:[])],
+    finalAssessment:claims.map((claim,index)=>({claim,coverage:index===0||covered?0.9:0,coveredBy:index===0||covered?['S1']:[]}))});
+  return {...run,id:'grounding',subClaims:claims,trace:[],answer:finalizeGroundedAnswer({question:'Compare',answer:draft,ledger}),
+    claimCoverage:ledger.claimCoverage,evidence:ledger.evidence,citations:[{...identity,weight:1,reward:0,rationale:'Qualified quoted contribution'}],
+    confidence:{level:'Low',reason:'Complete synthesis and per-assertion support remain unverified'}};
+}
+function App(){const [steps,setSteps]=React.useState(trace);const [grounding,setGrounding]=React.useState(null);
+window.showGroundingFixture=covered=>setGrounding(groundedFixture(covered));
+window.addStep=()=>setSteps(s=>[...s,{phase:'discover',ts:s.length,message:'Step '+s.length}]);
+if(grounding)return <AnswerCard run={grounding} meta={null}/>;
+return <><div style={{height:900}}>Reading fixture</div><DispatchView run={run} payments={payments}/><ReasoningConsole steps={steps} streaming={true} budget={0.01}/></>};
 createRoot(document.getElementById('root')).render(<App/>);
 `,
     resolveDir: process.cwd(),
     loader: "tsx",
   },
   bundle: true,
+  minify: true,
   platform: "browser",
   format: "iife",
   jsx: "automatic",
@@ -112,6 +132,8 @@ try {
   const dialog = page.getByRole("dialog", { name: /The article/ });
   await dialog.waitFor();
   assert.match(await dialog.innerText(), /The measured result was positive/);
+  assert.match(await dialog.innerText(), /Research target \(unverified\):/);
+  assert.doesNotMatch(await dialog.innerText(), /Supports:/);
   assert.match(await dialog.innerText(), /\$0\.001.*settled/);
   assert.match(await dialog.innerText(), /pending confirmation/);
   assert.match(await dialog.innerText(), /offline simulated payment/);
@@ -207,8 +229,24 @@ try {
   assert.equal(await log.evaluate(element => element.scrollTop), 0);
   await page.getByRole("button", { name: "Jump to latest" }).click();
   assert(await log.evaluate(element => element.scrollTop > 0));
+  for (const covered of [false, true]) {
+    await page.evaluate(covered => (window as unknown as { showGroundingFixture: (covered: boolean) => void }).showGroundingFixture(covered), covered);
+    await page.getByText("Source excerpts only.", { exact: false }).waitFor();
+    const rendered = await page.locator("body").innerText();
+    assert(!rendered.includes("All attacks are eliminated [S1]"), "same-source omitted assertion must not survive the minified finalizer");
+    assert(rendered.includes('Requested topic (unverified): “All attacks are eliminated”'), "overbroad target must be labelled as an unverified topic");
+    assert(rendered.includes('“The protocol binds approval to canonical action identity.”'), "qualified source excerpt must remain quoted");
+    assert.equal(rendered.includes('“The benchmark includes ten commands.”'), covered);
+    assert(rendered.includes("90% estimated"), "coverage must be presented as an estimate");
+    assert(rendered.includes("not proof of entailment"));
+    const matrix = page.getByText("Research evidence matrix", { exact: true });
+    if (!await matrix.evaluate(element => element.closest("details")?.open)) await matrix.click();
+    await page.getByRole("columnheader", { name: "Research target (unverified)" }).waitFor();
+    assert.equal(await page.getByRole("button", { name: /Open evidence for Protocol article/ }).count(), covered ? 2 : 1,
+      "only quoted evidence should create answer citation controls");
+  }
   assert.deepEqual(errors, []);
-  console.log("PASS: citation evidence and payment state, modal focus/scroll, and contained log following");
+  console.log("PASS: citation evidence/payment state, modal focus/scroll, contained log following, and minified omitted-assertion projection with unverified target labels");
 } finally {
   await browser.close();
 }

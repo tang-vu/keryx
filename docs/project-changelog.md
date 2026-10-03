@@ -1,5 +1,33 @@
 # Keryx Project Changelog
 
+### Qualified excerpt delivery boundary (2026-10-03, pending acceptance)
+
+- Always project new evidence-bearing completions into openly quoted qualified
+  source excerpts and explicit research-target gaps. An accepted source marker or
+  fully covered target set cannot admit extra draft assertions whose proposals
+  were omitted. Withhold arbitrary synthesized prose, including negation changes,
+  altered numbers, added clauses and formatted/multilingual conclusions.
+- Label model-proposed research topics as unverified and recorded support/coverage
+  as estimates. Complete synthesis and per-assertion entailment remain unverified;
+  completion confidence stays Low, with English/Vietnamese delivery limitations.
+  This is a staged extractive product limitation, not demonstrated complete research
+  or usefulness. Source statements may be false or conflicting.
+- Preserve qualified source/article/version citations and creator reward eligibility,
+  attribute only delivered evidence, and retain paid fetch debits when every quote
+  is withheld. Reports, receipts, reference/evidence exports and shared public/private
+  transport consumers retain the same finalized result without another purchase.
+  Existing archived answer bytes are not rewritten or newly certified.
+- Apply the existing 240-character excerpt limit to raw trimmed quotes as well as
+  normalized matching. Whitespace-inflated over-limit proposals cannot earn answer
+  admission or rewards while disappearing from bounded exports. Within-bound multiline
+  excerpt bytes remain intact in the ledger, receipt and evidence CSV.
+- Synthetic component, orchestrator, transport/export and minified Chromium fixtures
+  cover the omitted-evaluation and fully covered target variants. Integrated CI,
+  independent review, current build/distribution acceptance and useful real paper
+  comparisons remain separate release/product gates. #128 stays open. Production
+  maintenance remains held for the separately active network transition; this
+  candidate does not authorize runtime deployment or network/service changes.
+
 ### Coordinated research and creator recovery candidate (2026-10-03, v0.26.1)
 
 - Replace rejected factual drafts with qualified literal evidence and explicit target

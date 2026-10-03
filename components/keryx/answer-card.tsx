@@ -188,8 +188,9 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
   return (
     <div className="mt-7 border-t border-ink pt-5">
       <p className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
-        Evidence ledger — supporting quotes
+        Evidence ledger — recorded source excerpts
       </p>
+      <p className="mb-3 text-sm text-ink-3">Research targets are unverified topics. Coverage is an estimate of excerpt support, not proof of entailment, factual truth or a complete answer.</p>
       <ol className="space-y-3">
         {run.claimCoverage?.map((claim) => {
           const spans = evidence.filter(
@@ -204,7 +205,7 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
             >
               <div className="flex items-start justify-between gap-4">
                 <p className="font-serif text-[14px] leading-snug text-ink">
-                  {claim.claim}
+                  Requested topic (unverified): “{claim.claim}”
                 </p>
                 <span
                   className={cn(
@@ -212,7 +213,7 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
                     claim.coverage >= 0.4 ? "text-paid" : "text-seal",
                   )}
                 >
-                  {Math.round(claim.coverage * 100)}%
+                  {Math.round(claim.coverage * 100)}% estimated
                 </span>
               </div>
               {spans.length > 0 ? (
@@ -231,7 +232,7 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
                 </div>
               ) : (
                 <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-seal">
-                  No supporting evidence
+                  No qualifying excerpt recorded
                 </p>
               )}
             </li>

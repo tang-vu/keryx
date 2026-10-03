@@ -227,7 +227,7 @@ export interface EvidenceRecord extends Partial<SourceItemIdentity> {
   sourceName: string;
   quote: string;
   support: number; // 0..1, model-proposed but bounded after the quote is verified
-  /** Exact quote, answer marker and support passed; separate from payment eligibility. */
+  /** Literal source quote, answer marker and estimated-support gate passed; not entailment/truth. */
   qualifiesForAnswer?: boolean;
   qualifiesForReward: boolean;
 }

@@ -1,5 +1,49 @@
 # Keryx — Decision Log
 
+**D-300** - Admit source excerpts without certifying synthesized assertions - *2026-10-03*
+
+The #128 follow-up reproduced an omitted evidence proposal: one accepted source marker
+preserved both a qualified methods statement and an unsupported attack-elimination claim.
+No span or marker was rejected, and the unsupported draft survived even when the ledger
+reported a separate evaluation gap. Covering every requested target does not repair this
+boundary: another unsupported assertion can still reuse the same accepted marker.
+
+Supersede D-297's fully-qualified-draft exception with unconditional extractive delivery
+after reads. The current proposal contract has no complete assertion-to-evidence mapping;
+neither target coverage, literal overlap nor a second model relevance estimate proves
+entailment of arbitrary prose. Publish only qualified, openly quoted source excerpts,
+grouped under numbered research targets whose model-proposed labels are explicitly quoted
+as unverified topics. Show absent/low-assessed-support gaps and a prominent unverified
+complete-synthesis limitation. Cap completion confidence at Low even when coverage is high;
+recorded support and coverage remain estimates of the excerpt ledger. Source truth,
+contradictions, per-assertion entailment and useful complete synthesis remain separate gates.
+
+This is a conservative staged product limitation, not a demonstrated answer-quality or
+usefulness improvement. Do not add a sentence/lexical compatibility parser that launders
+negation, changed numbers, extra clauses, translations or formatting into accepted claims.
+Qualified quoted contributions retain existing source/article/version bindings and creator
+reward eligibility. Attribute only the projected answer; retain paid access debits when all
+quotes are withheld. No new payout, signer, reservation, settlement or discovery authority.
+Enforce the stored trimmed quote's 240-character ceiling before normalized matching,
+as well as the existing normalized ceiling/minimum. Whitespace inflation must not create
+answer/reward admission for an excerpt that receipts/UI/exports cannot retain. Preserve
+within-bound multiline quotes exactly in the ledger and portable export data.
+
+Web SSE/history, public/private APIs, A2A, remote/stdio MCP, OpenAI extension, CLI, desktop
+receipt exports and thin bot/extension consumers retain the shared finalized answer and
+admitted citations/evidence. Reports, receipts and reference/evidence exports reuse those
+records without enrichment. Archived answer bytes are not retrospectively rewritten or
+semantically certified. The minified source/browser regression, focused source tests,
+application/operations TypeScript, independent review and integrated CI are code gates;
+current deployment, useful original-paper comparisons, actual export inspection, independent
+settlement and user review are separate unverified gates. Issue #128 remains open. Production
+maintenance remains held by the separately active network transition; this code candidate
+does not authorize runtime deployment, funding, mainnet activation or service changes.
+
+Reversible: restore richer synthesis only after a separately reviewed assertion-completeness
+and entailment policy has demonstrated acceptance, not by relaxing source-marker admission.
+See [issue 128 investigation](docs/engineering/research-attention-2026-10-02.md).
+
 **D-299** - Resume creator drafts and persisted feed proof - *2026-10-03*
 
 Preserve public registration context in a canonical URL rather than ephemeral component

@@ -53,7 +53,7 @@ function researchText(result: ReturnType<typeof remoteResearchResult>): string {
   return (
     `${result.answer}\n\n` +
     `Citations and planned creator rewards\n${rewards}\n\n` +
-    `Evidence: ${groundedClaims}/${result.claimCoverage.length} claims passed the grounding threshold\n` +
+    `Evidence: ${groundedClaims}/${result.claimCoverage.length} research targets meet the recorded excerpt-support threshold; this does not verify entailment or complete synthesis\n` +
     `Total recorded to creators: $${result.totalToCreatorsUsdc.toFixed(4)} USDC · ${settlement}\n` +
     `Confidence: ${result.confidence?.level ?? "Low"} · ${result.dispatchUrl}`
   );
@@ -68,7 +68,7 @@ export function createRemoteMcpServer(
     name: "keryx",
     version: "0.2.0",
     description:
-      "Budgeted research over creator sources with citation rewards on Arc testnet. Anonymous research is sponsored by Keryx's treasury.",
+      "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
 
   server.registerTool(
@@ -77,7 +77,7 @@ export function createRemoteMcpServer(
       title: "Research with Keryx",
       description:
         "Research a question under a USDC creator-payment budget. Keryx selects sources, pays " +
-        "access tolls and weighted citation rewards on Arc testnet, then returns a grounded answer and receipt. This remote surface uses Keryx's treasury; anonymous research is sponsored, not caller-funded usage. Public research may send your question to our search provider. The source USDC budget is separate from model and search operating costs.",
+        "access tolls and weighted citation rewards on the configured Arc network, then returns qualified source excerpts and a receipt. Complete synthesis and per-assertion entailment remain unverified. This remote surface uses Keryx's treasury; anonymous research is sponsored, not caller-funded usage. Public research may send your question to our search provider. The source USDC budget is separate from model and search operating costs.",
       inputSchema: {
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
         budget: z

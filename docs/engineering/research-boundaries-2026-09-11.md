@@ -35,3 +35,13 @@ has been resolved. No production prompt or reward policy was changed by this dia
 Still open: broader independently authored cases, controlled repeated model comparisons,
 end-to-end discovery/purchase/cache/delivery failures, independent user usefulness review,
 and explicit treatment of conflicting evidence in completion/confidence policy.
+
+October 3 boundary update: [D-300](../../DECISIONS.md) now withholds arbitrary
+synthesized prose after reads and delivers only qualified openly quoted source
+excerpts with unverified research topics/gaps. Completion confidence stays Low;
+fully covered targets cannot establish support for every draft assertion, especially
+when the model omits its evidence proposal. This deterministic delivery limit does
+not prove source truth, resolve contradictions or supply complete useful synthesis.
+The earlier model observations above remain historical diagnostic evidence, not
+acceptance of the new delivery policy. See [the #128 follow-up and remaining
+gates](research-attention-2026-10-02.md).

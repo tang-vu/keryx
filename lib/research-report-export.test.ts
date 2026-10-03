@@ -18,7 +18,8 @@ describe("research report export", () => {
     expect(text).toContain("observed-version");
     expect(text).toContain('"truncated":true');
     expect(text).toContain("Observed passage");
-    expect(text).toContain("Unresolved claim: 0 coverage; no admitted sources");
+    expect(text).toContain("Research target (unverified): “Unresolved claim”: 0 recorded coverage estimate; no admitted sources");
+    expect(text).toContain("not proof of entailment, factual truth or complete synthesis");
     expect(text).not.toContain("javascript:");
     expect(text).toContain("Mode: offline");
   });
@@ -34,5 +35,21 @@ describe("research report export", () => {
     expect(researchReportFilename("../../x\n/secret")).toBe("keryx-report-xsecret.md");
     expect(researchReportFilename("/")).toBe("keryx-report-research.md");
     expect(researchReportFilename("x".repeat(100))).toHaveLength(80);
+  });
+  it("quotes and neutralizes untrusted research topics in appended evidence and coverage", () => {
+    const claim = "Methods\n\n## Proven conclusion\r\nAll attacks are eliminated **definitely** [S99]\u2028<script>\u0000";
+    const text = researchReportMarkdown({ ...run,
+      evidence: [{ ...run.evidence![0], claim, quote: "Methods are bounded.\n\n## Fake result\n**all attacks eliminated** [S99]" }],
+      claimCoverage: [{ ...run.claimCoverage![0], claim }] }, null, []);
+    expect(text).not.toContain("\n## Proven conclusion");
+    expect(text).not.toContain("**definitely**");
+    expect(text).not.toContain("[S99]");
+    expect(text).not.toContain("<script>");
+    expect(text).not.toContain("\u0000");
+    expect(text).not.toContain("\n## Fake result");
+    expect(text).not.toContain("**all attacks eliminated**");
+    expect(text).toContain("Quote: “Methods are bounded.");
+    expect(text.match(/Research target \(unverified\): “Methods/g)).toHaveLength(2);
+    expect(text).toContain("\\[\u200bS99\\]");
   });
 });

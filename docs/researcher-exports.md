@@ -28,7 +28,7 @@ does not search for literature or synchronize a Zotero account.
 
 ## Evidence for technical and market research
 
-Expand **Research evidence matrix** to compare each recorded research claim with cited sources.
+Expand **Research evidence matrix** to compare each recorded research target with cited sources.
 Inspect the recorded answer-qualified excerpts in the cells and download **evidence CSV** for a
 spreadsheet or research brief. CSV includes article identity and content version when recorded,
 and explicit rows for claims without inspectable excerpts. Formula-like cells are neutralized
@@ -41,6 +41,22 @@ The matrix only displays bounded excerpts matching the cited source and article 
 does not turn agent confidence or coverage into measured accuracy. A missing excerpt means an
 inspection gap, not proof that the claim is false or disputed. Older dispatches may have no
 claim or evidence ledger; the interface labels those missing records explicitly.
+
+New evidence-bearing completions use an explicitly extractive result: only qualifying
+source quotations are delivered, and complete synthesis is unverified. Model-proposed
+target labels are unverified topics, not established conclusions; support and coverage
+are recorded estimates, not entailment or truth checks. Even a source with an admitted
+excerpt cannot support every assertion that a draft attaches to its marker. Reports
+and portable receipts preserve the exact finalized answer. BibTeX/RIS include retained
+article citations; evidence CSV includes retained qualified excerpts and target gaps.
+The stable CSV `claim` field carries the recorded research target, not a certified
+factual claim. These exports do not promote a withheld assertion or initiate another
+purchase. A paid access toll remains a debit when its source supplies no qualifying
+quote, while an admitted creator excerpt keeps its existing reward eligibility.
+Archived answer bytes retain their original meaning and are not retroactively certified.
+The 240-character bound applies to the raw trimmed stored excerpt and its normalized
+match form. Within-bound multiline quote bytes remain intact in evidence/receipt/CSV
+data; Markdown report topics and appended excerpts are escaped quoted presentation.
 
 Neither references nor the matrix are settlement evidence. For the complete question, answer,
 decisions, evidence and classified creator payment states, retain the separate

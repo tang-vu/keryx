@@ -8,6 +8,14 @@ function safeUrl(value?: string): string | null {
   } catch { return null; }
 }
 
+/** Recorded topics/excerpts are quoted data, never Markdown structure or citation controls. */
+function quotedReportLiteral(value: string): string {
+  const literal = value.replace(/[\p{Cc}\u2028\u2029]+/gu, " ")
+    .replace(/\[(S\d+)\]/g, "[\u200b$1]")
+    .replace(/[\\`*_{}\[\]()<>#!|]/g, "\\$&");
+  return `“${literal}”`;
+}
+
 /** Export the observed report; a citation or proposed reward never implies settlement. */
 export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, payments: PaymentRecord[]): string {
   const lines = ["# Keryx research report", "", run.question, "", `Source cap: ${run.budget} USDC. Mode: ${meta?.mode ?? run.paymentMode ?? "unknown"}.`, "", run.answer, "", "## Cited sources", ""];
@@ -19,8 +27,9 @@ export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, paym
     if (citation.scholarly) lines.push(`Observed scholarly metadata and read scope (peer review unknown): ${JSON.stringify(citation.scholarly)}`);
   }
   lines.push("", "## Evidence and limitations", "");
-  for (const evidence of run.evidence ?? []) lines.push(`${evidence.marker} · ${evidence.claim}`, `Quote: ${evidence.quote}`, `Answer support admitted: ${evidence.qualifiesForAnswer === true}. Reward eligible: ${evidence.qualifiesForReward}.`, "");
-  for (const coverage of run.claimCoverage ?? []) lines.push(`${coverage.claim}: ${coverage.coverage} coverage; ${coverage.coveredBy.join(", ") || "no admitted sources"}`);
+  lines.push("Research targets are unverified topics. Recorded excerpt support and coverage are estimates, not proof of entailment, factual truth or complete synthesis.", "");
+  for (const evidence of run.evidence ?? []) lines.push(`${evidence.marker} · Research target (unverified): ${quotedReportLiteral(evidence.claim)}`, `Quote: ${quotedReportLiteral(evidence.quote)}`, `Source excerpt admitted: ${evidence.qualifiesForAnswer === true}. Reward eligible: ${evidence.qualifiesForReward}.`, "");
+  for (const coverage of run.claimCoverage ?? []) lines.push(`Research target (unverified): ${quotedReportLiteral(coverage.claim)}: ${coverage.coverage} recorded coverage estimate; ${coverage.coveredBy.join(", ") || "no admitted sources"}`);
   lines.push("", "## Creator payment evidence", "", "A citation alone does not prove settlement. Search and model operating costs are separate from the source cap.");
   if (!payments.length) lines.push("No payment records received in this conversation.");
   for (const payment of payments) {
