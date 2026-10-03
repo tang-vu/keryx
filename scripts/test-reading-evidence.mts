@@ -47,14 +47,14 @@ function groundedFixture(covered){
   const ledger=buildEvidenceLedger({subClaims:claims,gathered:[{...identity,text:quote+' '+evaluation}],answer:draft,declaredMarkers:['S1'],
     proposedEvidence:[{claimIndex:0,marker:'S1',quote,support:0.9},...(covered?[{claimIndex:1,marker:'S1',quote:evaluation,support:0.9}]:[])],
     finalAssessment:claims.map((claim,index)=>({claim,coverage:index===0||covered?0.9:0,coveredBy:index===0||covered?['S1']:[]}))});
-  return {...run,id:'grounding',subClaims:claims,trace:[],answer:finalizeGroundedAnswer({question:'Compare',answer:draft,ledger}),
+  return {...run,id:covered?'grounding-covered':'grounding-gap',subClaims:claims,trace:[],answer:finalizeGroundedAnswer({question:'Compare',answer:draft,ledger}),
     claimCoverage:ledger.claimCoverage,evidence:ledger.evidence,citations:[{...identity,weight:1,reward:0,rationale:'Qualified quoted contribution'}],
     confidence:{level:'Low',reason:'Complete synthesis and per-assertion support remain unverified'}};
 }
 function App(){const [steps,setSteps]=React.useState(trace);const [grounding,setGrounding]=React.useState(null);
-window.showGroundingFixture=covered=>setGrounding(groundedFixture(covered));
+window.prepareGroundingFixture=covered=>{const next=groundedFixture(covered);window.commitGroundingFixture=()=>setGrounding(next);};
 window.addStep=()=>setSteps(s=>[...s,{phase:'discover',ts:s.length,message:'Step '+s.length}]);
-if(grounding)return <AnswerCard run={grounding} meta={null}/>;
+if(grounding)return <section data-testid="grounding-result" data-run-id={grounding.id}><AnswerCard run={grounding} meta={null}/></section>;
 return <><div style={{height:900}}>Reading fixture</div><DispatchView run={run} payments={payments}/><ReasoningConsole steps={steps} streaming={true} budget={0.01}/></>};
 createRoot(document.getElementById('root')).render(<App/>);
 `,
@@ -230,23 +230,35 @@ try {
   await page.getByRole("button", { name: "Jump to latest" }).click();
   assert(await log.evaluate(element => element.scrollTop > 0));
   for (const covered of [false, true]) {
-    await page.evaluate(covered => (window as unknown as { showGroundingFixture: (covered: boolean) => void }).showGroundingFixture(covered), covered);
-    await page.getByText("Source excerpts only.", { exact: false }).waitFor();
-    const rendered = await page.locator("body").innerText();
+    // Hold the next result explicitly: shared intro text can match the previous React
+    // render. The expected identity must be absent until this prepared result commits.
+    await page.evaluate(covered => (window as unknown as { prepareGroundingFixture: (covered: boolean) => void }).prepareGroundingFixture(covered), covered);
+    const result = page.locator(`[data-testid="grounding-result"][data-run-id="${covered ? "grounding-covered" : "grounding-gap"}"]`);
+    assert.equal(await result.count(), 0, "an uncommitted fixture must not satisfy the next result identity");
+    if (covered) {
+      assert.equal(await page.locator('[data-testid="grounding-result"][data-run-id="grounding-gap"]').count(), 1,
+        "the previous gap result remains rendered while the covered result is held");
+      assert.equal(await page.getByText("Source excerpts only.", { exact: false }).count(), 1,
+        "shared intro text still matches the old result and cannot synchronize a new snapshot");
+    }
+    await page.evaluate(() => (window as unknown as { commitGroundingFixture: () => void }).commitGroundingFixture());
+    await result.waitFor();
+    await result.getByText("Source excerpts only.", { exact: false }).waitFor();
+    const rendered = await result.innerText();
     assert(!rendered.includes("All attacks are eliminated [S1]"), "same-source omitted assertion must not survive the minified finalizer");
     assert(rendered.includes('Requested topic (unverified): “All attacks are eliminated”'), "overbroad target must be labelled as an unverified topic");
     assert(rendered.includes('“The protocol binds approval to canonical action identity.”'), "qualified source excerpt must remain quoted");
     assert.equal(rendered.includes('“The benchmark includes ten commands.”'), covered);
     assert(rendered.includes("90% estimated"), "coverage must be presented as an estimate");
     assert(rendered.includes("not proof of entailment"));
-    const matrix = page.getByText("Research evidence matrix", { exact: true });
+    const matrix = result.getByText("Research evidence matrix", { exact: true });
     if (!await matrix.evaluate(element => element.closest("details")?.open)) await matrix.click();
-    await page.getByRole("columnheader", { name: "Research target (unverified)" }).waitFor();
-    assert.equal(await page.getByRole("button", { name: /Open evidence for Protocol article/ }).count(), covered ? 2 : 1,
+    await result.getByRole("columnheader", { name: "Research target (unverified)" }).waitFor();
+    assert.equal(await result.getByRole("button", { name: /Open evidence for Protocol article/ }).count(), covered ? 2 : 1,
       "only quoted evidence should create answer citation controls");
   }
   assert.deepEqual(errors, []);
-  console.log("PASS: citation evidence/payment state, modal focus/scroll, contained log following, and minified omitted-assertion projection with unverified target labels");
+  console.log("PASS: citation evidence/payment state, modal focus/scroll, contained log following, minified omitted-assertion projection, unverified target labels, and held-render result-identity synchronization");
 } finally {
   await browser.close();
 }
