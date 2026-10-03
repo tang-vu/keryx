@@ -4763,6 +4763,14 @@ Local exposure and server authorization precede burn cryptography, and an atomic
 
 ## Explicit reviewed deployment roles and scheduler preservation - 2026-10-03
 
+Reviewed public web launches bind `127.0.0.1` and use Next's supported
+`--keepAliveTimeout 100000`, exceeding the observed cloudflared origin idle-pool
+default of 90 seconds. This follows Next's documented downstream-proxy guidance;
+no standard Next timeout failure was established. Normal Next keeps the default
+unlimited requests per socket, independently of the separate QA proxy fix. Only
+the exact new launcher is admitted for deployment; the preceding clean launcher
+is recognized solely when retaining a stopped definition for replacement.
+
 Network and managed-role transitions need supported deployment inputs instead of
 replaying a saved PM2 environment or silently resuming held financial schedulers.
 The optional reviewed PM2 JSON is byte-hash bound and protected, restricts two fixed

@@ -64,7 +64,8 @@ argument prefix is:
 ["-i", "PATH=/usr/bin:/bin", "NODE_ENV=production", "/usr/bin/node", "--env-file=/root/keryx/.env.local"]
 ```
 
-Append `['/root/keryx/node_modules/next/dist/bin/next','start','-p','3939']` for web,
+Append `['/root/keryx/node_modules/next/dist/bin/next','start','-p','3939',
+'--hostname','127.0.0.1','--keepAliveTimeout','100000']` for web,
 or `['--import','/root/keryx/node_modules/tsx/dist/loader.mjs',
 '/root/keryx/scripts/a2a-research-worker.mts']` for A2A. No inline `env` object or
 arbitrary arguments are accepted. Optional fields are `exec_mode: "fork"`,
@@ -72,6 +73,15 @@ arbitrary arguments are accepted. Optional fields are `exec_mode: "fork"`,
 `/root/.pm2/logs/` using a simple `.log` basename. The separately reviewed server
 ENV file supplies the rail, registry, identity, policy and secrets; this helper
 does not infer or change that authority.
+
+The reviewed web listener binds loopback behind the tunnel. Its 100-second idle
+keep-alive timeout exceeds the observed cloudflared 2026.6 origin pool default of
+90 seconds, following the installed Next CLI's documented proxy guidance. This
+addresses an explicit deployment timeout mismatch; it is not a claim that a
+standard Next failure was reproduced. Normal Next retains Node's default unlimited
+requests per socket. The separate QA proxy's request-count fix is not applied here.
+Existing stopped clean web definitions without these flags remain recognizable for
+retention and replacement; new reviewed configurations require both fixed flags.
 
 Protected JSON hashes and stopped/absent PM2 definitions are checked before source
 changes, and again at role replacement. Active, duplicate or changed definitions
