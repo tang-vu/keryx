@@ -4761,6 +4761,21 @@ Headless session cashout reuses the restricted browser withdrawal policy and sha
 
 Local exposure and server authorization precede burn cryptography, and an atomic local delivery claim precedes transfer HTTP. Lost authorization/submission responses remain original recovery, never permission for a second burn. Before an unsigned owner mint packet is displayed, its nonce, calldata, gas and fee ceilings are retained; a manually supplied owner transaction hash is committed before completion HTTP. Only evidenced original cancellation/completion removes the relevant barrier. The CLI has no owner transaction signing or broadcast authority. Own-EOA MCP balances retain the separate same-owner SIWE withdrawal handoff; delegated session support does not imply key-only MCP cashout. These native synthetic checks do not prove live settlement or distributed cloned-state exclusion.
 
+## Explicit reviewed deployment roles and scheduler preservation - 2026-10-03
+
+Network and managed-role transitions need supported deployment inputs instead of
+replaying a saved PM2 environment or silently resuming held financial schedulers.
+The optional reviewed PM2 JSON is byte-hash bound and protected, restricts two fixed
+clean ENV-file launchers, and replaces only positively stopped or absent roles.
+Sanitized stopped definition references precede replacement; raw PM2 environments
+are not exported. Operator-owned positive drain and separate custody/identity/rail
+review remain prerequisites. Scheduler preservation leaves all existing worker,
+timer and cron holds untouched. Reviewed deployment retains build recovery evidence
+and holds failed starts/health checks for inspection rather than destructively
+rolling back after a transition. Default code-only deployment remains compatible.
+No product payment authority or supported-client contract changes follow from these
+operational inputs.
+
 ## Read-only storage selection and compiled browser fixtures - 2026-10-02
 
 Private economics reporting selects its reviewed read-only adapter through the same source-owned application storage boundary. It must not initialize the ordinary database, acquire writer authority or silently fall back from an unavailable mainnet identity. Keep the dormant funding/enrollment import guard unchanged; resolve `.mjs` imports to their authored `.mts` sources so the guard examines the actual transitive graph.

@@ -33,6 +33,63 @@ build compiled in 6.7 minutes before page generation and reload. The old `.next`
 serving while `.next.tmp` builds. This reduces planned downtime; it does not guarantee
 availability during host, memory, dependency-install or tunnel failures.
 
+### Reviewed role transition with held schedulers
+
+For an explicitly drained release or network transition, `npm run redeploy` also accepts:
+
+```bash
+KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER=1 \
+KERYX_REDEPLOY_REVIEWED_PM2_CONFIG=/root/.local/share/keryx-release/roles.json \
+KERYX_REDEPLOY_REVIEWED_PM2_SHA256=<sha256-of-exact-protected-json-bytes> \
+npm run redeploy
+```
+
+The paired PM2 inputs are optional; the scheduler flag defaults to `0`. A malformed
+pair refuses before deployment. With preservation enabled, the script neither
+stops/resumes the private worker or withdrawal cycle nor rewrites reconciliation
+cron. Existing schedules and unknown originals remain held. Before starting this
+mode, the operator must positively drain every owned web, A2A, private and scheduled
+writer, exclude concurrent deploys, and retain the original recovery evidence.
+This flag does not stop writers or authorize payments, environment replacement,
+database migration, or a network transition.
+
+The reviewed JSON must be root-owned, mode `0600`, a single regular file under
+`/root/.local/share/`, with root-owned non-writable ancestors. It contains only
+`{"apps":[...,...]}` for `keryx` and `keryx-a2a-worker`. Each app requires
+`script: "/usr/bin/env"`, `interpreter: "none"`, `cwd: "/root/keryx"`, an explicit
+boolean `autorestart`, and `kill_timeout` between `330000` and `900000`. Its exact
+argument prefix is:
+
+```json
+["-i", "PATH=/usr/bin:/bin", "NODE_ENV=production", "/usr/bin/node", "--env-file=/root/keryx/.env.local"]
+```
+
+Append `['/root/keryx/node_modules/next/dist/bin/next','start','-p','3939']` for web,
+or `['--import','/root/keryx/node_modules/tsx/dist/loader.mjs',
+'/root/keryx/scripts/a2a-research-worker.mts']` for A2A. No inline `env` object or
+arbitrary arguments are accepted. Optional fields are `exec_mode: "fork"`,
+`instances: 1`, boolean `merge_logs`/`time`, and `out_file`/`error_file` beneath
+`/root/.pm2/logs/` using a simple `.log` basename. The separately reviewed server
+ENV file supplies the rail, registry, identity, policy and secrets; this helper
+does not infer or change that authority.
+
+Protected JSON hashes and stopped/absent PM2 definitions are checked before source
+changes, and again at role replacement. Active, duplicate or changed definitions
+refuse. Each replacement first retains an exclusive root-only sanitized stopped
+definition reference beside the config; raw PM2 environment values are never
+exported. Only recognized old npm wrappers or the exact clean launcher can be
+replaced. These references preserve executable arguments and the ENV-file path,
+not a complete secret-bearing PM2 dump. Preserve the original protected ENV backup
+separately. The helper never stops, signals, retries or reloads a running role.
+
+Reviewed deployment retains `.next.bak` after success and refuses an existing
+backup before swapping builds. A failed start or commit health check leaves the
+current process/build and recovery artifacts for inspection; it does not roll back
+automatically. Recover explicitly from the retained original after checking payment,
+worker, configuration and database compatibility. These changes affect VPS
+deployment orchestration only; web/API, desktop, CLI, MCP, extensions and bots keep
+their application contracts and distribution versions.
+
 ### Successful dependency installation state
 
 `scripts/dependency-state.mjs` uses only Node built-ins, so it can run before installation.
