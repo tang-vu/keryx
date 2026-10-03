@@ -104,6 +104,7 @@ export function deployReviewedRole(mode, configFile, config, manager, recheck, r
   if (JSON.stringify(stoppedDefinition(manager.list(), name)) !== JSON.stringify(previous[0])) refuse();
   if (previous[0]) manager.run(['delete', name]);
   recheck();
+  if (stoppedDefinition(manager.list(), name) !== null) refuse();
   manager.run(['start', configFile, '--only', name]);
   recheck();
   const started = manager.list().filter(r => r.name === name);

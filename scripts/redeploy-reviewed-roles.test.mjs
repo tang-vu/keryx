@@ -81,6 +81,25 @@ test('failed start leaves preserved stopped reference; no retries or stop comman
   assert.throws(() => deploy(h)); assert.equal(h.retained.length, 1);
   assert.ok(!h.events.some(e => ['stop', 'restart', 'reload'].includes(e[0])));
 });
+test('a competing definition after delete or just before absent-role start refuses', () => {
+  const deleted = harness(), run = deleted.manager.run;
+  deleted.manager.run = args => {
+    run(args);
+    if (args[0] === 'delete') deleted.change(() => [{ ...old('keryx'), pid: 456 }]);
+  };
+  assert.throws(() => deploy(deleted));
+  assert.deepEqual(deleted.events.filter(e => ['delete', 'start'].includes(e[0])), [['delete', 'keryx']]);
+  for (const pid of [0, 456]) {
+    const absent = harness([]), recheck = absent.recheck;
+    let checks = 0;
+    absent.recheck = () => {
+      recheck();
+      if (++checks === 3) absent.change(() => [{ ...old('keryx'), pid }]);
+    };
+    assert.throws(() => deploy(absent));
+    assert.ok(!absent.events.some(e => ['delete', 'start'].includes(e[0])));
+  }
+});
 test('post-start runtime must match reviewed kill policy and args', () => {
   const h = harness(), run = h.manager.run;
   h.manager.run = args => { run(args); if (args[0] === 'start') h.change(r => [{ ...r[0], pm2_env: { ...r[0].pm2_env, kill_timeout: 1000 } }]); };
