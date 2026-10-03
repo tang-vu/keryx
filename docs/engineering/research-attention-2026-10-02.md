@@ -111,3 +111,15 @@ and user review. Production maintenance remains held for the separately active
 network transition: this source candidate makes no runtime deploy, ENV, service,
 ingress, research/payment request or mainnet activation. Current deployed SHA and
 live output quality are not established by these synthetic checks.
+
+Post-merge CI on `0623c37` exposed a browser-fixture synchronization race, not a
+demonstrated product grounding failure: the second covered-target fixture reused
+the first result's intro text as its wait condition, allowing an old React render
+to satisfy the wait before the new evaluation quote committed. A controlled held
+render reproduces the exact false/true assertion. The fixture now waits for a
+distinct committed run identity before inspecting scoped text and citation controls;
+it explicitly proves the old result/shared intro cannot satisfy that identity.
+All omitted-assertion, supported-quote, target/estimate and citation checks remain.
+Both desktop CI path filters include this fixture so the next release source SHA
+receives packaged/fresh-consumer acceptance. No product, contract, payment, version
+or runtime activation changes accompany this test/CI correction.
