@@ -7,11 +7,15 @@ import { fileURLToPath } from 'node:url';
 const names = ['keryx', 'keryx-a2a-worker'];
 const prefix = ['-i', 'PATH=/usr/bin:/bin', 'NODE_ENV=production', '/usr/bin/node', '--env-file=/root/keryx/.env.local'];
 const tails = {
-  keryx: ['/root/keryx/node_modules/next/dist/bin/next', 'start', '-p', '3939'],
+  keryx: ['/root/keryx/node_modules/next/dist/bin/next', 'start', '-p', '3939',
+    '--hostname', '127.0.0.1', '--keepAliveTimeout', '100000'],
   'keryx-a2a-worker': ['--import', '/root/keryx/node_modules/tsx/dist/loader.mjs', '/root/keryx/scripts/a2a-research-worker.mts'],
 };
 const refuse = () => { throw Error('Reviewed role deployment refused; preserve processes and retained builds.'); };
 const digest = b => createHash('sha256').update(b).digest('hex');
+// Recognize the earlier clean launcher only when retaining a stopped definition;
+// new reviewed configurations always require the explicit loopback/timeout tail.
+const previousWebTail = ['/root/keryx/node_modules/next/dist/bin/next', 'start', '-p', '3939'];
 
 function stoppedDefinition(rows, name) {
   if (!Array.isArray(rows)) refuse();
@@ -23,7 +27,8 @@ function stoppedDefinition(rows, name) {
   // Retain only recognized executable arguments. PM2's environment may contain
   // secrets; it is never copied, serialized, or printed by this helper.
   const clean = e.pm_exec_path === '/usr/bin/env' && e.exec_interpreter === 'none' &&
-    JSON.stringify(e.args) === JSON.stringify([...prefix, ...tails[name]]);
+    (JSON.stringify(e.args) === JSON.stringify([...prefix, ...tails[name]]) ||
+      name === 'keryx' && JSON.stringify(e.args) === JSON.stringify([...prefix, ...previousWebTail]));
   const legacy = /(?:^|\/)npm(?:-cli\.js)?$/.test(e.pm_exec_path ?? '') &&
     JSON.stringify(e.args) === JSON.stringify(['run', name === 'keryx' ? 'start' : 'a2a-worker']);
   if (e.pm_cwd !== '/root/keryx' || (!clean && !legacy) ||
