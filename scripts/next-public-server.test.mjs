@@ -93,14 +93,15 @@ export async function GET(request){
     assert.equal(running.server.listening, false);
     running = null;
     if (process.platform !== 'win32') {
-      // POSIX SIGTERM exercises the actual Next close in a separate process.
+      // POSIX SIGTERM exercises the actual supported shutdown in a separate process.
       // Use an ephemeral socket; a live QA instance may already own port 3940.
       // Windows child.kill is
       // forceful, so it must never stand in for this graceful-exit evidence.
-      const entry = `import {startNextPublicServer} from ${JSON.stringify(new URL('./next-public-server.mjs', import.meta.url).href)};
+      const entry = `import {startNextPublicServer,installNextPublicShutdown} from ${JSON.stringify(new URL('./next-public-server.mjs', import.meta.url).href)};
 const running=await startNextPublicServer({port:0});
+installNextPublicShutdown(running);
 console.log(JSON.stringify(running.receipt));
-process.once('SIGTERM',()=>running.close().then(()=>console.log(JSON.stringify({httpDrained:true}))));`;
+setInterval(()=>{},60000);`;
       const child = spawn(process.execPath, ['--input-type=module', '-e', entry], {
         cwd: dir, env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' }, stdio: ['ignore', 'pipe', 'pipe'],
       });
@@ -127,7 +128,7 @@ process.once('SIGTERM',()=>running.close().then(()=>console.log(JSON.stringify({
       await new Promise((accept) => setTimeout(accept, 80));
       child.kill('SIGTERM');
       assert.equal((await active).status, 200);
-      assert.deepEqual(await exited, { code: 0, signal: null });
+      assert.deepEqual(await exited, { code: 143, signal: null });
       assert.match(stdout, /"httpDrained":true/);
     }
   } finally {

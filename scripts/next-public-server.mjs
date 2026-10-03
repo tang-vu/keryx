@@ -82,6 +82,7 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939 }
       // the owned HTTP listener must have positively drained before calling it.
       await new Promise((accept, reject) => server.close((error) => error ? reject(error) : accept()));
       await app.close();
+      await requireApp('next/dist/trace').flushAllTraces();
     })();
     return closing;
   };
@@ -93,27 +94,38 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939 }
   } };
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-  if (args.length !== 0 && (args.length !== 2 || args[0] !== '--port' || !['3939', '3940'].includes(args[1]))) {
-    throw new Error('INVALID_ARGUMENTS');
-  }
-  const running = await startNextPublicServer({ port: args.length ? Number(args[1]) : 3939 });
-  console.log(JSON.stringify(running.receipt));
+export function installNextPublicShutdown(running) {
   let stopping = false;
-  const stop = () => {
+  const stop = (signal) => {
     if (stopping) return;
     stopping = true;
     running.close().then(() => {
-      console.log(JSON.stringify({ format: 'keryx-next-public-server-closed-v1', pid: process.pid, httpDrained: true }));
+      // Match pinned production Next's signal exit after HTTP/Next/trace drain.
+      // App-owned background intervals need not end naturally. Flush the bounded
+      // closed receipt before self-exit; there is no timeout or external kill.
+      const exitCode = signal === 'SIGINT' ? 130 : 143;
+      const receipt = { format: 'keryx-next-public-server-closed-v1', pid: process.pid, httpDrained: true, signal, exitCode };
+      return new Promise((accept, reject) => process.stdout.write(JSON.stringify(receipt) + '\n', (error) => error ? reject(error) : accept(exitCode)));
+    }).then((exitCode) => {
+      process.exit(exitCode);
     }).catch(() => {
       console.error('NEXT_PUBLIC_SERVER_CLOSE_FAILED_HOLD');
       // A failed close must retain the process for diagnosis, never report exit.
       setInterval(() => {}, 60000);
     });
   };
-  process.on('SIGTERM', stop);
-  process.on('SIGINT', stop);
+  process.on('SIGTERM', () => stop('SIGTERM'));
+  process.on('SIGINT', () => stop('SIGINT'));
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  if (args.length !== 0 && (args.length !== 2 || args[0] !== '--port' || !['3939', '3940'].includes(args[1]))) {
+    throw new Error('INVALID_ARGUMENTS');
+  }
+  const running = await startNextPublicServer({ port: args.length ? Number(args[1]) : 3939 });
+  installNextPublicShutdown(running);
+  console.log(JSON.stringify(running.receipt));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
