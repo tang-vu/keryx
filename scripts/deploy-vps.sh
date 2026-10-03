@@ -121,6 +121,8 @@ cat <<DONE
 
 ✅ App built and running on the VPS at http://localhost:$PORT (internal).
    Verify:  ssh $SSH "curl -s -o /dev/null -w '%{http_code}\n' http://localhost:$PORT"
+   For the reviewed public-origin server, verify its health with trusted ingress headers:
+   ssh $SSH "curl -fsS -H 'Host: keryx.cc' -H 'X-Forwarded-Proto: https' http://127.0.0.1:$PORT/api/health"
 
 Next — expose it at keryx.cc with a Cloudflare named tunnel (headless path):
   1. Add keryx.cc to a free Cloudflare account; switch nameservers at Namecheap to Cloudflare's.

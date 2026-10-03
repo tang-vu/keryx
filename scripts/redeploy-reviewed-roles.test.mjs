@@ -7,8 +7,7 @@ const config = () => ({ apps: ['keryx', 'keryx-a2a-worker'].map(name => ({
   autorestart: false, kill_timeout: 330000,
   args: ['-i', 'PATH=/usr/bin:/bin', 'NODE_ENV=production', '/usr/bin/node',
     '--env-file=/root/keryx/.env.local', ...(name === 'keryx'
-      ? ['/root/keryx/node_modules/next/dist/bin/next', 'start', '-p', '3939',
-        '--hostname', '127.0.0.1', '--keepAliveTimeout', '100000']
+      ? ['/root/keryx/scripts/next-public-server.mjs', '--port', '3939']
       : ['--import', '/root/keryx/node_modules/tsx/dist/loader.mjs', '/root/keryx/scripts/a2a-research-worker.mts'])],
 })) });
 const old = name => ({ name, pid: 0, pm2_env: { status: 'stopped', pm_exec_path: '/usr/bin/npm',
@@ -46,19 +45,22 @@ test('exact clean roles: arbitrary ENV, arguments, paths and duplicates refuse',
     const c = config(); mutate(c); assert.throws(() => validateReviewedRoles(c));
   }
 });
-test('new web launcher requires exact loopback and timeout; stopped prior launcher remains recoverable', () => {
-  for (const mutate of [a => a.args.splice(-4), a => a.args[a.args.length - 3] = '0.0.0.0',
-    a => a.args[a.args.length - 1] = '90000', a => a.args.push('--foo'),
-    a => a.args[a.args.length - 2] = '--requestTimeout']) {
+test('new web launcher requires exact public server and production port; stopped prior launchers recover', () => {
+  const priorTail = ['/root/keryx/node_modules/next/dist/bin/next', 'start', '-p', '3939'];
+  for (const mutate of [a => a.args.splice(-3), a => a.args[a.args.length - 1] = '3940',
+    a => a.args[a.args.length - 3] = '/tmp/server.mjs', a => a.args.push('--hostname', 'evil.example'),
+    a => a.args[a.args.length - 2] = '--host', a => a.args.splice(-3, 3, ...priorTail)]) {
     const c = config(); mutate(c.apps[0]); assert.throws(() => validateReviewedRoles(c));
   }
-  const h = harness(), wanted = h.c.apps[0];
-  h.change(() => [{ name: 'keryx', pid: 0, pm2_env: { status: 'stopped',
-    pm_exec_path: wanted.script, pm_cwd: wanted.cwd, exec_interpreter: wanted.interpreter,
-    args: wanted.args.slice(0, -4), autorestart: wanted.autorestart, kill_timeout: wanted.kill_timeout } }]);
-  deploy(h);
-  assert.deepEqual(h.retained[0].row.args, wanted.args.slice(0, -4));
-  assert.ok(h.events.some(e => e[0] === 'start'));
+  for (const tail of [priorTail, [...priorTail, '--hostname', '127.0.0.1', '--keepAliveTimeout', '100000']]) {
+    const h = harness(), wanted = h.c.apps[0], previousArgs = [...wanted.args.slice(0, -3), ...tail];
+    h.change(() => [{ name: 'keryx', pid: 0, pm2_env: { status: 'stopped',
+      pm_exec_path: wanted.script, pm_cwd: wanted.cwd, exec_interpreter: wanted.interpreter,
+      args: previousArgs, autorestart: wanted.autorestart, kill_timeout: wanted.kill_timeout } }]);
+    deploy(h);
+    assert.deepEqual(h.retained[0].row.args, previousArgs);
+    assert.ok(h.events.some(e => e[0] === 'start'));
+  }
 });
 test('stopped definition retained without raw environment before replacement', () => {
   const h = harness(); deploy(h);

@@ -44,6 +44,8 @@ managed
 grep -q 'roles.json .* validate' "$DEPLOY_TEST_TRACE"
 grep -q 'roles.json .* a2a' "$DEPLOY_TEST_TRACE"
 grep -q 'roles.json .* web' "$DEPLOY_TEST_TRACE"
+grep -q 'curl -fsS' "$DEPLOY_TEST_TRACE"
+! grep 'curl -fsS' "$DEPLOY_TEST_TRACE" | grep -v "Host: keryx.cc.*X-Forwarded-Proto: https"
 first_validate=$(grep -n 'roles.json .* validate' "$DEPLOY_TEST_TRACE" | head -1 | cut -d: -f1)
 first_sync=$(grep -n 'git fetch' "$DEPLOY_TEST_TRACE" | head -1 | cut -d: -f1)
 (( first_validate < first_sync ))

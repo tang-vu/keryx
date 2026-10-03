@@ -4763,13 +4763,17 @@ Local exposure and server authorization precede burn cryptography, and an atomic
 
 ## Explicit reviewed deployment roles and scheduler preservation - 2026-10-03
 
-Reviewed public web launches bind `127.0.0.1` and use Next's supported
-`--keepAliveTimeout 100000`, exceeding the observed cloudflared origin idle-pool
-default of 90 seconds. This follows Next's documented downstream-proxy guidance;
-no standard Next timeout failure was established. Normal Next keeps the default
+Reviewed public web launches separate Next's public metadata (`keryx.cc:443`) from
+the physical loopback listener (`127.0.0.1:3939`). Using the physical address as
+Next metadata caused a normal Session-original origin mismatch in controlled QA.
+The fixed shared server checks public Host and forwarded HTTPS before Next, without
+rewriting request URLs or headers; deployment health sends those same trusted
+constant headers rather than bypassing the check. Its 100-second idle keep-alive
+exceeds the observed cloudflared origin pool default of 90 seconds; Node retains
 unlimited requests per socket, independently of the separate QA proxy fix. Only
-the exact new launcher is admitted for deployment; the preceding clean launcher
-is recognized solely when retaining a stopped definition for replacement.
+the exact shared launcher is admitted for new reviewed production roles. Both
+preceding clean Next CLI tails are recognized solely for stopped-definition recovery.
+Local development and default CLI launch behavior remain separate.
 
 Network and managed-role transitions need supported deployment inputs instead of
 replaying a saved PM2 environment or silently resuming held financial schedulers.
