@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**Authored web sources define generated CSS — 2026-10-04.** A production
+Turbopack build timed out in its PostCSS subprocess while clean CI builds passed.
+Tailwind's automatic project scan admitted retained `.next.*` builds that the
+existing ignore rules did not cover. Restrict web utility discovery to authored
+`app`, `components`, `lib` and `shared` sources and ignore generated `.next.*`
+directories. Keep retained builds as recovery evidence; their contents must not
+affect a subsequent stylesheet. A bounded, in-memory PostCSS check on the actual
+VPS completed in 2.1 seconds at about 115 MB RSS. The complete production build
+and live deployment remain separate acceptance checks. No bundler, payment,
+custody, API or non-web distribution contract changes follow from this choice.
+
 **Mainnet lifecycle and onboarding recovery — 2026-10-04.** The owner confirmed
 the public product is already on mainnet and requested fixes for awkward or broken
 flows. Direct health observation confirms the deployed Arc profile; historical

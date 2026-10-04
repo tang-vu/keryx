@@ -150,3 +150,16 @@ An esbuild dependency-graph check found no changed runtime inputs in the caller
 MCP server (30 inputs), Operator desktop helper (41) or repository buyer CLI (30).
 This supports retaining their existing package versions; it is not a claim that
 their immutable artifacts were rebuilt from the new web commit.
+
+### October 4 CSS build follow-up
+
+Web application 0.26.4 bounds generated utility CSS to `app`, `components`, `lib`
+and `shared`; generated/retained builds are excluded. Web and embed consume that
+stylesheet. API, A2A, remote MCP and bot/OpenAI adapters gain no request/result or
+payment changes. Buyer CLI/stdio MCP retain version 0.4.2; Operator desktop 0.4.2
+has its own renderer stylesheet and shared design tokens; extension 0.1.1 keeps
+its own popup CSS. No authored class roots for those separate styles are removed.
+Their runtime/package contracts remain unchanged. Root application release assets
+may carry fresh source provenance without changing the independent package versions.
+Production CSS/build/browser CI, retained-build source exclusion and actual deployed
+commit verification are the relevant release gates for this follow-up.

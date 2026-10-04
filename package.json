@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.26.3",
+  "version": "0.26.4",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",

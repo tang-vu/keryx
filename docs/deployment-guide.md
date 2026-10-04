@@ -43,6 +43,17 @@ use and 1,959 MiB peak RSS on the development machine. This is not a VPS duratio
 or host-capacity guarantee. Retain adequate RAM/swap and keep failed-deploy workers
 under explicit operator control.
 
+Web Tailwind sources are explicit (`app`, `components`, `lib`, `shared`). This
+keeps retained `.next.*` builds and operational evidence out of generated CSS.
+Keep recovery artifacts: moving or deleting them to make CSS compilation pass
+is not part of the build. New web class-bearing source roots need an explicit
+entry in `app/globals.css` and the source-scope regression. See Tailwind's
+[source discovery documentation](https://tailwindcss.com/docs/detecting-classes-in-source-files#disabling-automatic-detection).
+On October 4, the full VPS build timed out receiving from its PostCSS subprocess;
+the same stylesheet with bounded sources processed directly on that VPS in
+2.1 seconds at about 115 MB RSS. That isolated result establishes CSS processing,
+not complete-build success or a general host-capacity guarantee.
+
 On Windows where `bash.exe` resolves to unavailable WSL, use the installed Git
 Bash without changing the deployment script or its checks:
 
