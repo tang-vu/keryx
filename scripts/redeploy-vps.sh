@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 #
-# redeploy-vps.sh — low-downtime code deploy to the already-provisioned VPS.
+# redeploy-vps.sh — code deploy to the already-provisioned VPS.
 #
-# The live build keeps serving the whole time: we build the new release into a TEMP
-# dist dir (.next.tmp) while keryx still serves the old .next, then atomically swap it
-# in and `pm2 reload` (a ~1-2s blip, not a multi-minute build outage). The live .next is
-# never touched until the build SUCCEEDS — so a failed or OOM-killed build leaves
-# keryx.cc exactly as it was (no stale-lock outage). After reload we hit /api/health and
-# automatically roll back to the previous build if the new one doesn't come up.
+# Current mainnet uses reviewed role configuration and preserved held schedulers.
+# That path requires web/A2A to be positively stopped before source sync and build:
+# plan a maintenance window. Build into .next.tmp, retain .next.bak at the swap,
+# and inspect failures; reviewed deployments never automatically roll back.
+# The legacy unreviewed path below can keep the old build serving while it builds
+# and has automatic rollback. It is not the current mainnet operating procedure.
+# See docs/mainnet-update-flow.md and docs/deployment-guide.md for reviewed inputs.
 #
 # Use this for code-only changes. Changes to successful-install inputs trigger an
 # `npm ci`; for first-time provisioning (Node, pm2, swap, cloudflared) use deploy-vps.sh.
