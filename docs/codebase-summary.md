@@ -1,5 +1,8 @@
 # Keryx Codebase Summary
 
+Production uses Arc mainnet. [Current status](mainnet-status.md) records network/
+contracts and dated delivery; explicit testnet entries below are development or history.
+
 **Version:** 0.19.0 (exact authorization expiry and pending ownership, updated 2026-08-25)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
@@ -81,7 +84,7 @@ SIWE nonce/verify/signout routes.
 | `/signout` | POST | Clear cookies. |
 
 ### `lib/wagmi-config.ts`
-Wallet connect configuration. Chains (Arc testnet), storage (cookie), wallets (injected + WalletConnect).
+Wallet connect configuration. Chains (selected Arc mainnet/testnet profile), storage (cookie), wallets (injected + WalletConnect).
 
 ---
 
@@ -131,7 +134,9 @@ Agent entrypoint (SSE) + signature return handler.
 ## Smart Contracts & On-Chain
 
 ### `contracts/`
-Hardhat project. SourceRegistry.sol tracks sources on Arc testnet.
+Hardhat project. SourceRegistry.sol tracks creator-owned sources on Arc.
+Production mainnet registry: `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`;
+see [current deployment](mainnet-status.md).
 
 | File | Purpose |
 |------|---------|
@@ -139,7 +144,7 @@ Hardhat project. SourceRegistry.sol tracks sources on Arc testnet.
 | `test/` | Hardhat tests (security threats, split edge cases, creator gating). |
 | `deploy.ts` | Deploy script. Output: deployed address. |
 
-**Deployed on Arc testnet (2026-06-18):**
+**Historical Arc testnet deployment (2026-06-18):**
 - Address: `0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536`
 - Deploy block: `47474631`
 - Deploy tx: `0x3844…97cd` (funder wallet)
@@ -259,7 +264,7 @@ RESTful endpoints for agent, sources, metrics, API keys.
 | `/wanted`, `/wanted/[id]` | public | Open/filled demand board plus canonical shareable claim briefs and creator-offer status receipts. |
 | `/offers` | public | Article offer book: free metadata, effective/list prices, paid paths, signature proofs. |
 | `/docs` | public | OpenAPI (Scalar UI). |
-| `/faucet`, `/faucet/onramp` | public | Testnet USDC drip + one-call funding for external callers. |
+| `/faucet`, `/faucet/onramp` | public | Testnet-only USDC drip + one-call funding; unavailable on mainnet. |
 
 ### `components/ask/use-ask-stream.ts`
 React hook for SSE stream + sign-request/response loop. Handles connection, back-off, abort, session scoping.
@@ -379,7 +384,7 @@ Shared TypeScript interfaces for agent, payments, registry, DB.
 | `next.config.ts` | Next.js config (ESM, SWC). |
 | `tsconfig.json` | TypeScript paths, strictNullChecks, JSX React 19. |
 | `tailwind.config.ts` | Tailwind setup + Keryx Mint colors. |
-| `hardhat.config.ts` | Hardhat: Arc testnet, viem, test timeout. |
+| `hardhat.config.ts` | Hardhat: isolated Arc testnet development, viem, test timeout; mainnet setup uses reviewed unsigned artifacts. |
 | `.env.example` | Template env vars. |
 | `package.json` | v0.12.0, deps (Next 16, React 19, wagmi, viem, `@circle-fin/x402-batching`, `@circle-fin/unified-balance-kit`, `@x402/*` v2, pinata, siwe, jose, rate-limiter-flexible, tailwindcss, hardhat). |
 

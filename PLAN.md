@@ -1,5 +1,9 @@
 # Keryx — Build Plan
 
+> **Current network (October 4, 2026):** production is Arc mainnet (`eip155:5042`).
+> See [current deployment and contracts](docs/mainnet-status.md). The dated Lepton/
+> ETHOnline testnet build history below retains its original network and receipts.
+
 > **Active Tameion direction (2026-09-28):** [docs/tameion-2026.md](docs/tameion-2026.md)
 > plans Keryx Operator, a Windows desktop alpha, and evidence-gated pilots for the September 27–
 > October 10 event. Its unchecked work is proposed, not shipped. The Lepton and ETHOnline material

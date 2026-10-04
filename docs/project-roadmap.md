@@ -14,7 +14,8 @@ change the production payment authority or complete a Tauri desktop migration.
 
 ## Current priorities
 
-Production is on mainnet as observed October 4, 2026. Use the
+Production is on Arc mainnet as observed October 4, 2026; [current status](mainnet-status.md)
+records network, contracts and release identities. Use the
 [post-launch update flow](mainnet-update-flow.md) for subsequent releases and the
 [24-task internal workload / 12-item backlog](research-workload.md) for proactive
 product work. Internal evaluation is separate from independent customer demand.

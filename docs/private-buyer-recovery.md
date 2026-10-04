@@ -1,8 +1,21 @@
 # Private buyer recovery
 
-The recovery command reads an existing `keryx-private-buyer-intent-v1` journal on Arc
-testnet. Private checkout is still unavailable. Public buyer journals use a different
-format and cannot be recovered with this command.
+The recovery command reads an existing `keryx-private-buyer-intent-v1` journal on its
+original configured Arc network. Public production uses mainnet; private checkout
+availability has separate custody, worker and backing gates. Public buyer journals
+use a different format and cannot be recovered with this command.
+
+Set BOTH `KERYX_NETWORK=arc` and `NEXT_PUBLIC_KERYX_NETWORK=arc` in the explicitly
+loaded private environment for mainnet originals. Retained testnet originals use
+both labels set to `arcTestnet`; never relabel or replace their authorizations.
+See [current deployment evidence](mainnet-status.md).
+
+## Historical preparation and route-integration checkpoints
+
+The following helper/integration paragraphs retain the earlier implementation
+checkpoints. The current private checkout command is documented in
+[private buyer checkout](private-buyer-checkout.md); mounted handlers still require
+their independent operating readiness before accepting a fresh purchase.
 
 The internal Node preparation helper validates independently chosen quote terms and
 reserves a new journal directory before requesting a payment signature. It verifies
@@ -30,6 +43,8 @@ Keep the original journal directory after a timeout. Recovery validates its sign
 owner, commitment and job identity. It does not refresh the authorization or resubmit
 payment, and it leaves the original intent and attempt marker unchanged.
 
+## Current recovery command
+
 Store the owner's `KERYX_BUYER_PRIVATE_KEY` in a local ignored environment file. Do not
 put a private key in command arguments. Pin the private and public merchant addresses
 from trusted operator configuration; do not copy them blindly from an imported journal.
@@ -44,7 +59,7 @@ If the key is already in the environment:
 npm run buyer:private:recover -- --state ./private-job --private-payee 0x... --public-payee 0x...
 ```
 
-The command signs a SIWE login for `keryx.cc` on Arc testnet, reads the authenticated
+The command signs a SIWE login for `keryx.cc` on the configured original Arc network, reads the authenticated
 result and confirms sign-out. It never requests a payment signature, wallet creation,
 deposit, approval or transfer. An unconfirmed session revocation is reported as an
 error. A lost login response can leave an unknown session until its 15-minute expiry.

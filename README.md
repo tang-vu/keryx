@@ -3,7 +3,7 @@
 [![npm: keryx-mcp](https://img.shields.io/npm/v/keryx-mcp?logo=npm&label=keryx-mcp&color=CB3837)](https://www.npmjs.com/package/keryx-mcp)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.tang--vu%2Fkeryx-6E56CF)](https://registry.modelcontextprotocol.io/v0/servers?search=keryx)
 [![live: keryx.cc](https://img.shields.io/badge/live-keryx.cc-1aa251)](https://keryx.cc)
-[![settles on Arc testnet](https://img.shields.io/badge/settles_on-Arc_testnet-1f1f1f)](https://docs.arc.network)
+[![settles on Arc mainnet](https://img.shields.io/badge/settles_on-Arc_mainnet-1f1f1f)](https://docs.arc.io)
 [![payments: Circle x402](https://img.shields.io/badge/payments-Circle_x402-2775CA)](https://github.com/circlefin/arc-nanopayments)
 [![CI](https://github.com/tang-vu/keryx/actions/workflows/ci.yml/badge.svg)](https://github.com/tang-vu/keryx/actions/workflows/ci.yml)
 
@@ -21,7 +21,7 @@ Windows local Operator alpha: `npm run desktop:install` then `npm run desktop:st
 See the [desktop guide](docs/desktop-alpha.md) for the unpacked app build, offline
 saved results, private Markdown briefs, and limits.
 
-[Research Monthly](docs/research-monthly.md): one Arc-testnet pilot for four Deep
+[Research Monthly](docs/research-monthly.md): a bounded plan for four Deep
 requests over 30 days, 10% below four separate packages with unchanged creator
 caps. Manual renewal; no scheduling or unlimited use. Failed/pending jobs use a
 slot. Web/API own the entitlement; Monthly CLI and MCP handoffs share that contract.
@@ -71,14 +71,13 @@ the model reasons about money and shows its work, streamed live to the UI:
 - **Confidence boundary**: the current extractive answer is labelled Low/incomplete.
   Qualified source excerpts provide recorded support; target coverage estimates do not
   verify each assertion or establish complete useful synthesis.
-- **Claim-grounding follow-up candidate**: evidence-bearing answers project qualified literal
+- **Qualified excerpt answers**: evidence-bearing answers project qualified literal
   source excerpts and explicitly labelled quoted research targets/gaps. Arbitrary synthesis
   is withheld because marker-level support cannot prove every assertion. Accepted excerpt
   citations still support rewards, with original paid-fetch debits, article bindings and
-  settlement identities. The concurrent mainnet transition remains in maintenance;
-  this source repair is not a deployed/live-quality claim. Qualified-excerpt hosted
-  behavior requires accepted hosted deployment; package publication can complete
-  separately while maintenance remains held.
+  settlement identities. Production now uses Arc mainnet; see the
+  [current deployment and evidence limits](docs/mainnet-status.md).
+  Deployment does not establish complete useful synthesis or independent acceptance.
 - **Evidence ledger** — every rewarded citation carries a claim-indexed exact quote. The
   orchestrator verifies that quote against content it actually read before the marker can receive
   a citation reward; rejected markers are removed from the answer.
@@ -112,7 +111,7 @@ Money safety is enforced in code, not by the model: the LLM proposes value; the 
 enforces the hard budget cap, so a hallucinated number can never overspend. An economic-invariant
 test suite (spend ≤ budget, payouts = weights, splits sum exactly) runs in CI on every push.
 
-Example trace (real output):
+Historical testnet trace (recorded output; not current mainnet traction):
 
 ```
 [decide]  BUY Agent Economy Weekly — strong match on x402, autonomous, commerce; worth the $0.004 toll
@@ -134,9 +133,10 @@ Example trace (real output):
   canonical shareable brief and social card, so the specific gap can reach the writer who covers it.
 - **Onboard from your own wallet** — paste an RSS feed at [keryx.cc/register](https://keryx.cc/register)
   and publish your source to the on-chain registry. Keryx sets up the x402-priced endpoint and
-  free preview; it never holds your key, and the faucet on that page covers the gas.
+  free preview; it never holds your key. On mainnet your wallet supplies native USDC
+  gas; the faucet is available only on testnet.
 - **Own your payout** — your registered source pays the wallet you signed in with.
-  The first owner-verified creator ([conzit.com](https://conzit.com)) proved feed ownership,
+  The first historically owner-verified testnet creator ([conzit.com](https://conzit.com)) proved feed ownership,
   set its address, was cited &
   paid end-to-end — and has since claimed its registry record from its own wallet, so its on-chain
   `creator` is the creator, not Keryx. We've also proposed this as an opt-in convention upstream in
@@ -150,12 +150,12 @@ Example trace (real output):
 - **Show it off** — an embeddable **"Cited by Keryx" badge** (live SVG at `/api/creator/<id>/badge.svg`)
   displays your real citation count + USDC earned on your own site, with copy-paste Markdown/HTML on
   each creator page. Payouts become portable, verifiable proof.
-- **Cash out yourself, gas-free** — a self-serve, non-custodial withdraw: your wallet signs a
-  Gateway burn intent in the browser, the treasury relays gas. Real creators have executed real
-  on-chain cash-outs.
+- **Cash out yourself** — your wallet signs a Gateway burn intent in the browser and
+  submits the reviewed mainnet mint with native USDC gas. Optional gas-relay operation
+  is a separate role; historical testnet cash-outs do not prove a mainnet withdrawal.
 - **Keep everything** — 100% of every citation reward goes to creator wallets. 0% platform fee.
 - **Squat-proof identity** — sources live in an on-chain SourceRegistry
-  ([`0x2e12Fa…`](https://testnet.arcscan.app/address/0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536))
+  ([`0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb))
   with creator-scoped IDs and on-chain multi-author splits.
 
 ## For developers & agents
@@ -236,9 +236,10 @@ labeled `SIMULATED`.
   *access* toll to read, plus a dynamic *citation* reward priced by contribution weight. Fetched
   but uncited earns the toll; cited earns proportionally more only after its evidence passes the
   deterministic grounding gate.
-- **Circle Gateway nanopayments** — batched sub-cent settlement (floor $0.000001). Average Keryx
+- **Circle Gateway nanopayments** — batched sub-cent settlement (floor $0.000001). Historical testnet average
   payment: ~$0.0044 — a true nanopayment, uneconomical on any card rail.
-- **Circle App Kit (Unified Balance Kit)** — chain-abstracted treasury balance, published live on
+- **Treasury observation** — mainnet reads the sealed public role's Circle Gateway balance;
+  historical testnet used Circle App Kit (Unified Balance Kit). Current observation is published on
   [`/status`](https://keryx.cc/status) and [`/api/treasury`](https://keryx.cc/api/treasury).
 - **SourceRegistry contract on Arc** — source identity, IPFS CIDs, multi-author splits; on-chain
   events drive the off-chain indexer.
@@ -249,32 +250,31 @@ labeled `SIMULATED`.
 
 ## Live numbers
 
-The [live Ledger](https://keryx.cc/dashboard) shows settled Arc testnet USDC,
+The [live Ledger](https://keryx.cc/dashboard) shows recorded settled Arc mainnet USDC,
 creator payouts, and recent payments. [Public Proof](https://keryx.cc/proof)
 links the supporting registry, Gateway, and cash-out evidence.
 
 ## Architecture
 
-Public deployment addresses observed October 2, 2026 from
-[/api/health](https://keryx.cc/api/health), [/api/treasury](https://keryx.cc/api/treasury)
-and the [Monthly quote](https://keryx.cc/api/research/monthly?quote=1).
-All rows are **Arc testnet (`eip155:5042002`)**; they are not mainnet deployment claims.
+Production uses **Arc mainnet (`eip155:5042`)**, observed October 4, 2026 through
+[/api/health](https://keryx.cc/api/health). Full constants, release identities and
+the separation from historical testnet evidence are in [mainnet status](docs/mainnet-status.md).
 
 | Role | Full public address | Explorer |
 | --- | --- | --- |
-| SourceRegistry | `0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536` | [Arc testnet](https://testnet.arcscan.app/address/0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536) |
-| Settlement treasury balance identity | `0x29028Fe1122E17Fe7863A22701e863FE4DaE1aFB` | [Arc testnet](https://testnet.arcscan.app/address/0x29028Fe1122E17Fe7863A22701e863FE4DaE1aFB) |
-| Research Monthly merchant/payee | `0xC5965E3175Ef063FaeB8BCd3abe2d25b5D27D586` | [Arc testnet](https://testnet.arcscan.app/address/0xC5965E3175Ef063FaeB8BCd3abe2d25b5D27D586) |
+| SourceRegistry | `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb` | [Arc mainnet](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb) |
+| Gateway Wallet | `0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE` | [Arc mainnet](https://explorer.arc.io/address/0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE) |
+| Gateway Minter | `0x2222222d7164433c4C09B0b0D809a9b52C04C205` | [Arc mainnet](https://explorer.arc.io/address/0x2222222d7164433c4C09B0b0D809a9b52C04C205) |
 
 Creator and user session addresses vary by workflow. The
 [submission pack](docs/tameion-submission.md#public-addresses) also records public
 USDC and Gateway contract references and the evidence required for actual payments.
 
 ```
-BROWSER (Web App)                    IPFS + Arc Smart Contracts              Circle Gateway + Arc Testnet
+BROWSER (Web App)                    IPFS + Arc Smart Contracts              Circle Gateway + Arc Mainnet
 ─────────────────                    ─────────────────────────               ──────────────────────────────
 ┌──────────────────┐                 [SourceRegistry]
-│ /ask page        │ (SIWE           on Arc 0x2e12Fa...                       USDC on Arc
+│ /ask page        │ (SIWE           on Arc 0x42a640...                       USDC on Arc
 │ + wallet connect │  auth)           • sources[]                             (ERC-20, 6 decimals)
 │                  │                   • emit Registry events
 └────────┬─────────┘                   • indexed by off-chain DB
@@ -285,7 +285,7 @@ BROWSER (Web App)                    IPFS + Arc Smart Contracts              Cir
          │                                                                      • x402 EIP-712 verify
          │                             [Keryx API]
          │ co-sign loop (fetch+POST):  • auth: SIWE JWT (browser + API key)   [Arc RPC]
-    /api/ask (SSE) ──────────────────▶ /api/session/*   (grant, credit)       rpc.testnet.arc.network
+    /api/ask (SSE) ──────────────────▶ /api/session/*   (grant, credit)       selected Arc mainnet RPC
     browser streams                     /api/ask         (agent asks, gets
     sign-requests                       /api/ask/sign    sign-requests back)
     ◀────────────────────────────────  /api/source/[id]/item/[itemId]?version=…
@@ -303,7 +303,9 @@ BROWSER (Web App)                    IPFS + Arc Smart Contracts              Cir
 ## Run it
 
 **One command — the full cycle (~90s).** Decide → pay the x402 toll → read → synthesize → settle
-weighted citation rewards, then print the Arc-testnet wallets whose USDC actually moved:
+weighted citation rewards, then report payments on the explicitly configured network.
+The checked-in environment example is for isolated testnet development; mainnet
+operations require the reviewed configuration and a finite authorized budget:
 
 ```bash
 npm run demo -- "How do x402 and stablecoins enable AI agent commerce?" --budget 0.05
@@ -335,7 +337,7 @@ npm run metrics
 ```
 
 The legacy `generate-wallets` command is retired because it printed private keys
-and replaced existing environment custody. For real testnet operations, provision
+and replaced existing environment custody. For real operations, provision
 secrets privately under the current role-specific labels and preserve existing
 wallets and backups. Follow [treasury custody](docs/treasury-wallet-custody.md) or
 [caller-owned buyer setup](docs/buyer-agent.md); starting a demo does not create or
@@ -344,8 +346,9 @@ recover a wallet.
 | Mode | Reasoning | Payments | When |
 |------|-----------|----------|------|
 | **Offline dev** | heuristic, no LLM key | simulated, labeled | laptop, zero setup |
-| **Server treasury** | Claude / DeepSeek | real Arc testnet (funder wallet) | paid A2A requests |
-| **User interactive** | Claude / DeepSeek | real Arc testnet (user-funded session EOA) | the web app |
+| **Server treasury** | Claude / DeepSeek | real Arc mainnet, dedicated sealed-policy custody | admitted hosted research and paid A2A |
+| **User interactive** | Claude / DeepSeek | real Arc mainnet, user-funded session signer | production web app |
+| **Isolated integration tests** | configured provider or fixtures | Arc testnet, separate keys/state | payment drills and development |
 
 ## Built to stay up
 
@@ -365,7 +368,7 @@ Keryx runs as a real service, not a demo that dies after the video:
 The interactive path is non-custodial. Its key security boundaries are:
 
 1. **Circle facilitator** — x402 settlement batches through Circle's facilitator (no on-chain
-   alternative on Arc testnet yet).
+   alternative in the current Arc payment path).
 2. **Server holds the IPFS decryption key** — content is encrypted at rest, but key release is
    server-side (Lit Protocol planned once Arc is supported).
 3. **Session key lives in a Web Worker** — derived there, never returned; the tab holds only
@@ -418,12 +421,12 @@ and [maintenance and surface boundaries](docs/arc-primitives-maintenance.md).
 Keryx started at the **Lepton Agents Hackathon** (Canteen × Circle, on Arc, June 2026) as the
 canonical build of the "herald" model — *content cited, paid per citation* — and never stopped
 running. The service at [keryx.cc](https://keryx.cc) runs caller-driven research with
-recorded Arc-testnet settlement; it has no hourly research or payout guarantee.
+Arc mainnet payment authority; it has no hourly research or payout guarantee.
 Current work adds broad-web and scholarly evidence, chat-first cited reports, local
 Windows/CLI task recovery, and a bounded Research Monthly pilot. The full Operator
-and autonomous scheduler remain planned. Full-product mainnet migration is in preparation
-under [explicit release gates](docs/mainnet-delivery-plan.md); testnet health does not
-establish mainnet readiness. See the [Tameion submission evidence](docs/tameion-submission.md)
+and autonomous scheduler remain planned. Production mainnet is live; independent
+usefulness, audit, adoption and profitability retain their
+[explicit acceptance gates](docs/mainnet-delivery-plan.md). See the [Tameion submission evidence](docs/tameion-submission.md)
 for dated releases, public contract/wallet addresses, product delta and pending pilot proof.
 
 ## Stack

@@ -1,7 +1,9 @@
 # Versioned A2A Research Packages
 
 Keryx publishes the exact execution contract an external agent buys at `POST /api/agent/ask`.
-These packages are available on Arc testnet. Version `1.0.0` is an immutable snapshot; changing an
+Public production uses Arc mainnet; local testnet deployments retain their original rail.
+Check the current quote and [deployment evidence](mainnet-status.md) for availability.
+Version `1.0.0` is an immutable snapshot; changing an
 execution limit, measurement rule, target, or remedy requires a new version.
 
 ## Package 1.0.0
@@ -34,7 +36,7 @@ Both packages declare:
 ```
 
 This is a measurable service objective, not a contractual SLA, uptime promise, or refund right.
-The package price remains fixed and non-refundable under the current testnet terms.
+The accepted package price remains fixed and non-refundable under its disclosed terms.
 
 ## Pinning and execution
 

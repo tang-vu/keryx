@@ -1,11 +1,17 @@
 # Keryx browser extension
 
-Highlight text on **any** page → ask Keryx → get a cited answer while every source it reads gets
-paid in USDC on Arc. Or right-click a page you own → list it as a paid source in one hop.
+Highlight text on **any** page → ask Keryx → get a cited answer with citation
+allocations and recorded creator-payment state in USDC on Arc. Or right-click a
+page you own → open its source-registration form.
 
 It is a thin client over the public [OpenAI-compatible endpoint](https://keryx.cc/api/v1) — no
 wallet, no key, no build step. The anonymous free tier is treasury-funded and IP rate-limited, the
 same guard the site's own no-wallet asker uses.
+
+Public production uses Arc mainnet. The extension has no wallet signer or local
+network selector; it consumes the selected hosted deployment. Planned rewards
+and pending payments remain separate from settled creator payouts. See
+[current deployment and distribution evidence](../docs/mainnet-status.md).
 
 ## What it does
 

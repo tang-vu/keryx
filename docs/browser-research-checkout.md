@@ -1,5 +1,11 @@
 # Browser research checkout design
 
+**Scope:** this document retains the original checkout design and testnet acceptance.
+Production is now Arc mainnet; [current status](mainnet-status.md),
+[normal server runtime](mainnet-server-runtime.md) and [operations](mainnet-operations.md)
+describe current mainnet authority. Legacy testnet keys/state and dated evidence
+remain on their original rail; this document does not authorize a new migration or spend.
+
 Status: design history with implementation updates, September 9, 2026. The original
 proposal used baseline `35736f8`; later releases added checkout, funding and recovery.
 Full acceptance belongs to B1/B2 in

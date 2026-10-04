@@ -38,7 +38,7 @@ actual decision, rather than only testing that an answer was generated.
 > decision you expect to revisit?
 
 The owner identifies prospects and chooses an outreach channel. Send only after
-authorization. Do not promise production mainnet payment before release approval.
+authorization. Production uses mainnet; confirm current purchase readiness and a finite authorized buyer budget before promising a paid workflow.
 
 ## Acceptance and evidence
 

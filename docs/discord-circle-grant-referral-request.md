@@ -1,5 +1,10 @@
 # Circle grant referral request
 
+**Historical referral draft (August 2026):** the copied release counts, payments,
+addresses and testnet status below belong to that submission period. Production
+is now Arc mainnet; use [current status](mainnet-status.md) and the updated
+[grant proposal](circle-grant-2026-cohort-2.md) for a new message. This refresh sends nothing.
+
 Copy the complete block below into `#circle-grant-referral-requests`:
 
 ```text

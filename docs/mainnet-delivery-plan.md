@@ -2,7 +2,8 @@
 
 **Current deployment observation, October 4, 2026:** the owner confirmed that
 mainnet is live. A direct public `/api/health` read reported `operational`,
-`network: arc`, `settles: real` and commit `55fc80c`. This supersedes the
+`network: arc`, `settles: real` and commit `1297d43` at `2026-10-04T16:42:30.685Z`.
+[Current status](mainnet-status.md) records the mainnet contracts and release identities. This supersedes the
 pre-launch deployment status below; its dated gates remain historical evidence
 and outstanding product/operational work, not a claim that every acceptance
 criterion was independently completed. Routine maintenance preserves the active
@@ -24,9 +25,10 @@ The [shared Rust engine migration plan](./rust-engine-migration.md) adds domain 
 rollback and platform gates. Passing a read-only local slice cannot satisfy signer,
 spend, settlement, recovery or mainnet gates here.
 
-Mainnet readiness and permission to launch are separate. The existing testnet
-restrictions remain until the final owner go/no-go decision. No mainnet keys,
-addresses or service availability will be inferred from testnet configuration.
+The mainnet launch is owner-confirmed and observed. Remaining audit, recovery,
+product and economic gates are not automatically closed by deployment. Additional
+spending and custody changes retain their own authorization. Mainnet authority is
+never inferred from testnet keys, addresses, service responses or historical records.
 
 October 2 corrected direction: migrate the complete public Keryx product to mainnet
 on `keryx.cc`, including normal wallet login, buyer funding/grants, creator registration
@@ -240,14 +242,14 @@ end-to-end research acceptance, independent review or a new confidence guarantee
 
 | Gate | Required evidence | Baseline status |
 | --- | --- | --- |
-| M1 Network/services | Official Arc mainnet chain/token/RPC/explorer values, Gateway nanopayment support, deployed code and SDK support verified against the intended environment | [September 29 evidence](./engineering/mainnet-readiness-2026-09-29.md): official network, token and Gateway addresses published; narrow RPC code presence observed. PR #26 (`a79e882`) upgraded SDK 3.5.0 and pinned the testnet seller facilitator URL; one live testnet toll reportedly settled. Mainnet contract identity, Keryx registry deployment, mainnet SDK and end-to-end settlement checks remain open |
-| M2 Authority/isolation | Separate production configuration, deployments and keys; no cross-environment signatures/nonces/DB records; bounded user and treasury funds | Testnet authority retained; guarded SQLite/PostgreSQL factories have native candidate acceptance but remain dormant. Runtime caller integration, trusted custody history, deployment enrollment and drained cutover remain open. |
+| M1 Network/services | Official Arc mainnet chain/token/RPC/explorer values, Gateway nanopayment support, deployed code and SDK support verified against the intended environment | [September 29 evidence](./engineering/mainnet-readiness-2026-09-29.md): official network, token and Gateway addresses published; narrow RPC code presence observed. PR #26 (`a79e882`) upgraded SDK 3.5.0 and pinned the testnet seller facilitator URL; one live testnet toll reportedly settled. Canonical mainnet profile and selected SDK are implemented; the current registry is reported by [health/status](mainnet-status.md). The September 29 checks alone did not prove this later deployment; real end-to-end mainnet settlement evidence remains distinct |
+| M2 Authority/isolation | Separate production configuration, deployments and keys; no cross-environment signatures/nonces/DB records; bounded user and treasury funds | Production uses fresh sealed mainnet SQLite and dedicated reviewed roles; see [server runtime](mainnet-server-runtime.md) and [operations](mainnet-operations.md). Optional Supabase mainnet remains staged. Component/native tests do not independently verify all deployed custody, restore or concurrency guarantees. |
 | M3 Security | Independent review of signer/session authority, contracts, x402/Gateway, registry, encrypted delivery and auth; remediated critical/high findings and documented residuals | D-272 atomic admission and retained original-epoch/signer accounting have repository code/test evidence. The [independent review packet](./independent-security-review.md) defines the candidate handoff; independent mainnet review and remediation acceptance are not demonstrated |
 | M4 Settlement/recovery | Lost response, replay/concurrency, Circle/RPC outage, settled-but-undelivered and reconciliation drills; no silent pending-to-failed transitions | Focused tests and owner pilots exist; [funded withdrawal original/receipt recovery](./engineering/creator-funded-withdrawal-drill.md) passed two new keyless processes and idempotent accounting. Unknown-UUID Circle response loss and release-wide drill evidence remain open |
 | M5 Operations | Restore/rollback/rotation drills, realistic capacity/load test, alert routing, funding limits and an incident owner | [Outside-host fixed-404 diagnostic](./outside-host-ops-monitor.md) passed real reads, both first-attempt Telegram deliveries and owner response acceptance; a real healthy production Cron sample was separately observed. Real VPS outage/failover, restore/rollback/rotation, sustained scheduling and durable NTP synchronization remain open |
 | M6 Product/data policy | Buyer/creator journeys above accepted, private history/content access reviewed, clear pricing/refund/retention/support terms | Partial; owner-scoped private history, browser receipt-integrity code/tests and separate registry-owned listing discovery exist. Creator discovery limits and independent creator pilot, wallet UX, portability/recovery drills, privacy/retention and policy review remain open |
 | M7 Economics/adoption | Cost coverage, independently initiated repeated use, measured quality and positive unit contribution with no unpriced-cost assumptions | Not established |
-| M8 Launch decision | Owner reviews the concrete release, evidence dossier, funds/limits and remaining risks, then explicitly approves mainnet deployment/spend | Not requested or granted |
+| M8 Launch decision | Owner reviews the concrete release, evidence dossier, funds/limits and remaining risks, then explicitly approves mainnet deployment/spend | Owner confirmed production mainnet on October 4; public health observes the launched `arc`/`real` service. This does not grant new funding, paid experiments or schedules. |
 
 If external Arc services remain unavailable, build and verify the release candidate
 on supported testnet rails and keep M1 open. Do not relabel that state as mainnet-ready
@@ -304,7 +306,7 @@ and static SDK 3.5 metadata matched. The report retained `M1_PARTIAL`,
 operator session, not retained as a new artifact file. This proves neither audit
 identity, private registry deployment nor settlement, and accessed no wallet key
 or signer. Official Arc/Circle network references were also rechecked that day;
-the deployed signing profile remains testnet.
+the deployed signing profile remained testnet at that historical checkpoint.
 
 [Creator cash-out recovery](./creator-withdrawal-recovery.md) has a shared signed-request
 identity and a private immutable single-admission journal in SQLite/PostgreSQL. The

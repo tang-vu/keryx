@@ -1,5 +1,10 @@
 # Private worker operator integration
 
+Production is Arc mainnet; [current status](mainnet-status.md) and
+[normal server runtime](mainnet-server-runtime.md#ordinary-a2a-and-private-admission)
+describe its current authority. Provisioning/install instructions do not start a
+worker or grant additional spend/schedule permission.
+
 `privateWorkerBootstrap(db, resultSpool)` prepares the private worker but does not start a process,
 run a tick, fund a wallet or enable checkout. It returns null when
 `KERYX_PRIVATE_WORKER_ENABLED` is unset or `0`. Other values except `1` fail closed.
@@ -8,8 +13,10 @@ signal is activated by installing this release.
 
 ## Managed VPS service
 
-The current VPS has a running managed worker with purchasing restricted to one configured
-owner-operated testnet pilot account. The [first paid pilot](./engineering/private-paid-pilot-2026-09-10.md)
+Production now uses the mainnet private-worker role with dedicated sealed policy,
+custody and per-request readiness checks; mainnet admission has no pilot payer invite list.
+Actual worker/capacity and purchase availability must be observed separately. The
+former single-account testnet pilot remains historical evidence. The [first paid pilot](./engineering/private-paid-pilot-2026-09-10.md)
 records completed execution, payment evidence, owner recovery and remaining limitations. The
 [supervision and deploy drill](./engineering/private-worker-supervision-2026-09-10.md)
 records actual startup, stop/resume, deployment ordering and the remaining acceptance limits.
@@ -144,9 +151,12 @@ configured private treasury. It rejects reuse of the configured public funder, p
 seller or reserved merchant identities. The operator must still inventory other public
 or legacy signing wallets; this comparison does not discover every wallet in use.
 The configured reserved-payee list must agree with the public seller's cached guard.
-Only Arc testnet (`eip155:5042002`, Gateway domain 26) is accepted.
+This legacy bootstrap branch accepts only Arc testnet (`eip155:5042002`, Gateway
+domain 26); normal mainnet bootstrap uses the dedicated sealed policy and custody
+described in [server runtime](mainnet-server-runtime.md#ordinary-a2a-and-private-admission).
 The [Circle supported-chain reference](https://developers.circle.com/gateway/references/supported-blockchains),
-rechecked September 10, 2026, lists Arc as testnet-only with domain 26.
+rechecked September 10, 2026, then listed Arc as testnet-only with domain 26.
+Current mainnet contracts/service pins are separately recorded in [status](mainnet-status.md).
 
 The actual Circle `BatchEvmScheme` wraps the private EOA. Balance checks call the
 existing Gateway reader for that same address and preserve integer micro-USDC. Unknown
@@ -268,7 +278,7 @@ keep the iteration degraded even if other eligible research succeeds and set the
 exit code to one. Pending/processing evidence remains pending/processing. All lifetime reservations,
 including completed jobs, remain in this bounded sweep; large histories need further scheduling work.
 Supabase deployments require migrations through 61; SQLite initializes the release and interruption ledgers locally.
-The managed production testnet worker and first owner-operated pilot are documented above;
+The historical managed testnet worker and first owner-operated pilot are documented above;
 independent paid acceptance and the remaining operational gates are still open.
 
 For an interrupted claimed job without a saved result, use the

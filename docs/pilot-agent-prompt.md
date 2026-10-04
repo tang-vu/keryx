@@ -2,7 +2,7 @@
 
 This prompt is for an actual task in the participant's own project. It does not
 authorize paid research, wallet funding, source publication, recording or public posts.
-Start with the existing sponsored remote MCP trial. Sponsorship and testnet use must
+Start with the existing sponsored remote MCP trial. Sponsorship and the actual selected network must
 remain explicit. Source availability may make the task unsuitable.
 Verify deployed broad web research capabilities before using them; local implementation
 and an API key do not establish production availability.
@@ -51,7 +51,7 @@ Produce a private pilot note: task and baseline method; source suitability; actu
 calls; useful output; corrections; assistance and review time; failures; and my feedback.
 Keep any provided run/receipt reference private. Distinguish completed delivery,
 seller-reported payment and independently verified settlement. Missing evidence stays
-unknown; a digest is not a transaction hash. Label sponsorship and Arc testnet clearly.
+unknown; a digest is not a transaction hash. Label sponsorship and the recorded original network clearly; production is Arc mainnet and historical testnet receipts stay testnet.
 
 Ask whether I have another genuine task, without creating one just to count repeat
 use. Do not upload the note, disclose my identity, record my screen, post on X or submit

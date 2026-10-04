@@ -1,9 +1,11 @@
-# Full mainnet server migration
+# Mainnet server runtime
 
 The owner requested the existing public Keryx product on mainnet, across its supported
-surfaces. This supersedes the invited-pilot release proposal. The default deployment
-remains Arc testnet; preparing or selecting a profile does not authorize a production
-cutover, funding, or spending.
+surfaces. This supersedes the invited-pilot release proposal. **Production is now
+Arc mainnet**, confirmed by the owner and [public health](mainnet-status.md) on
+October 4. Unspecified local network configuration retains the testnet compatibility
+default; it does not describe production. Profile selection alone never authorizes
+funding or spending.
 
 The actual public deployment uses SQLite. Its full ordinary mainnet release targets
 a fresh sealed SQLite namespace while retaining legacy testnet custody and history
@@ -133,10 +135,11 @@ challenge. Its existing request/amount limits remain normal caller policy, with 
 invitation list or pilot-wide ceilings. A foreign challenge cannot choose the chain.
 
 Mainnet cannot select offline payment simulation because a treasury key is absent.
-During the unfinished treasury migration, `RealGateway` refuses mainnet before loading
-the legacy persistent wallet or constructing signers. Completing normal treasury,
-private, A2A and hosted sponsor roles still requires reviewed mainnet custody and
-funding admission; this temporary refusal is not the final full-surface deliverable.
+The legacy testnet `RealGateway` refuses mainnet before loading its persistent wallet
+or constructing signers. Normal hosted, A2A and private mainnet roles use separate
+dedicated custody, sealed policy and retained funding admission, as described below
+and in [mainnet operations](mainnet-operations.md). Missing role capacity refuses;
+it cannot fall back to testnet custody or simulated settlement.
 Paid-content cache encryption is required for mainnet independently of a treasury key.
 
 ## Session cashout and original outcomes
@@ -248,7 +251,7 @@ unknown submission retention, policy renewal and private ledger isolation. It do
 not establish real vendor settlement or activate an operating policy. Optional
 Supabase hosted authority remains explicitly refused pending native schema acceptance.
 
-## Remaining acceptance
+## Acceptance evidence and remaining work
 
 Before activation, compose the final browser, backend and operational changes on
 current main and verify applicable web, desktop, CLI/MCP, API, extension and bot
@@ -264,8 +267,9 @@ tests do not establish funded settlement or external security-audit closure.
 Cash-out must preserve original signer custody after payment expiry, revocation or
 logout, authenticate its retained owner independently of the active grant, and retain
 signed pending liabilities when calculating available withdrawal capacity. Restoring
-custody for withdrawal does not renew payment permission. No actual mainnet activation,
-private custody file, funded transaction or deployment is part of this preparation.
+custody for withdrawal does not renew payment permission. The original source preparation did not perform mainnet activation or funded
+transactions. Production has since launched; use the dated [status](mainnet-status.md)
+and original operation evidence rather than treating component tests as settlement.
 
 Withdrawal transport preparation now accepts an explicit canonical mainnet profile:
 the unsigned builder pins its contracts, the v2 request retains its original network,

@@ -1,5 +1,11 @@
 # Treasury transaction and payment isolation
 
+**Scope:** this document retains the legacy testnet treasury transaction guard.
+Production is now Arc mainnet; [current status](mainnet-status.md),
+[normal server runtime](mainnet-server-runtime.md) and [operations](mainnet-operations.md)
+describe current mainnet authority. Legacy testnet keys/state and dated evidence
+remain on their original rail; this document does not authorize a new migration or spend.
+
 The server treasury path and supported local maintenance/demo commands retain Arc
 testnet authority. A successful `eth_chainId` preflight cannot authorize whatever
 transaction an RPC later prepares: the pinned viem/SDK path accepts

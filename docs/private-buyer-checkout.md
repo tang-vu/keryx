@@ -2,12 +2,13 @@
 
 The client command composes temporary SIWE sign-in, independent quote validation,
 exclusive durable payment journaling, one submission attempt and confirmed sign-out.
-Production private purchasing is still unavailable. The client requires the quote
-response to explicitly report availability. The route only reports true for a configured pilot
-payer when the private purchase bootstrap's worker and backing checks pass; production flags
-remain disabled. The purchase route independently repeats those checks when submitting.
-No payment signature or journal is created in that case. This command does not enable
-the server, provision a merchant or prove worker readiness.
+Public production selects Arc mainnet. Private purchasing is separately enabled
+and requires the quote response to explicitly report availability after reviewed
+custody, worker and backing checks pass. Mainnet has no payer invitation list;
+the retained testnet pilot has its own configured payer admission. The purchase
+route independently repeats readiness checks when submitting. Unavailable checkout
+creates no payment signature or journal. This command does not enable the server,
+provision a merchant or prove worker readiness. See [current deployment evidence](mainnet-status.md).
 
 Store the buyer key in an ignored environment file. Pin merchant addresses from
 trusted operator configuration, not from an unverified quote. Choose the research
@@ -37,14 +38,18 @@ The endpoint above is a synthetic example, not a configured service. The selecte
 endpoint/model must match the operator's disclosed policy. The request file is bounded
 to 16 KiB; it and the journal contain private plaintext. Secure their directory and
 keep them outside source control. No command auto-loads an environment file.
+For public mainnet, include BOTH `KERYX_NETWORK=arc` and
+`NEXT_PUBLIC_KERYX_NETWORK=arc` in the explicitly loaded private environment.
+Recover historical testnet originals with both labels set to `arcTestnet`;
+changing configuration never migrates a retained authorization.
 
 ```sh
 node --env-file=.env.buyer-private.local --import tsx --no-warnings scripts/private-buyer-checkout.mts --request ./private-request.json --state ./new-private-job --private-payee 0x... --public-payee 0x... --max-total-micros 50000 --max-fee-micros 20000
 ```
 
 Amounts in the limits are integer micro-USDC: 50,000 is 0.05 USDC, including the
-creator budget and service fee. The buyer enforces a maximum total of 1 USDC on Arc
-testnet. Unused creator budget is retained, not refunded, and answer quality is best
+creator budget and service fee. The buyer enforces a maximum total of 1 USDC on the
+selected Arc network. Unused creator budget is retained, not refunded, and answer quality is best
 effort. These terms are checked in the quote before any payment signature.
 
 The state directory must not exist and its parent must exist. It is reserved

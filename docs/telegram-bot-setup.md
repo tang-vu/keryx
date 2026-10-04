@@ -6,14 +6,20 @@
 
 Keryx ships a Telegram front door: a bot anyone can DM or add to a group. A member types
 `/ask …` (in a DM, just the question works), Keryx runs its full paid-source reasoning loop, and
-the reply shows the grounded answer, **every creator paid** (weighted USDC citation rewards on Arc
-testnet), and a link to the dispatch trace on keryx.cc.
+the reply shows the grounded answer, citation allocations and recorded creator-payment
+state in USDC on Arc, and a link to the dispatch trace on keryx.cc.
+
+Public production uses Arc mainnet. The bot uses the hosted treasury-funded
+research path and carries no caller wallet or payment signer. Pending rewards
+and planned allocations remain separate from settled payments. See
+[current deployment evidence](mainnet-status.md).
 
 No polling process — Telegram POSTs each update to `https://keryx.cc/api/telegram/webhook`, which
 acks immediately, posts a placeholder, and edits it into the answer when the run settles. It is a
 thin client over the same treasury-funded free-trial path as the site's no-wallet ask (budget
-clamped to `KERYX_ANON_MAX_BUDGET`, rate-limited per Telegram user, tagged `web` in traction — a
-Telegram member is a genuine external asker).
+clamped to `KERYX_ANON_MAX_BUDGET`, rate-limited per Telegram user, tagged `web` with
+platform/user attribution). Independent adoption still requires independently
+initiated use and recorded evidence; a bot channel alone does not prove it.
 
 ## One-time setup (~3 minutes)
 

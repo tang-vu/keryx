@@ -1,6 +1,9 @@
 # Testnet economics observatory
 
-Keryx measures unit economics on Arc testnet before proposing a mainnet fee. The observer is
+This document records the historical testnet unit-economics observer. Production
+is now Arc mainnet; selected-network private reporting is described in
+[mainnet operations](mainnet-operations.md#private-economics-across-retained-networks).
+Testnet estimates and receipts cannot establish mainnet revenue or profit. The observer is
 read-only: it cannot authorize, settle, retry, release, or relabel a payment.
 
 ## What is measured

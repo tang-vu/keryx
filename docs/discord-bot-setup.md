@@ -6,14 +6,20 @@
 
 Keryx ships a Discord front door: a slash command any server can install. A member types
 `/ask question: …`, Keryx runs its full paid-source reasoning loop, and the reply embed shows the
-grounded answer, **every creator paid** (weighted USDC citation rewards on Arc testnet), and a link
+grounded answer, citation allocations and recorded creator-payment state in USDC on Arc, and a link
 to the dispatch trace on keryx.cc.
+
+Public production uses Arc mainnet. The bot uses the hosted treasury-funded
+research path and carries no caller wallet or payment signer. Pending rewards
+and planned allocations remain separate from settled payments. See
+[current deployment evidence](mainnet-status.md).
 
 No gateway connection, no separate bot process — Discord POSTs each interaction to
 `https://keryx.cc/api/discord/interactions`, which acks within 3 s and edits the reply when the
 run settles. It is a thin client over the same treasury-funded free-trial path as the site's
 no-wallet ask (budget clamped to `KERYX_ANON_MAX_BUDGET`, rate-limited per Discord user, tagged
-`web` in traction — a Discord member is a genuine external asker).
+`web` with platform/user attribution). Independent adoption still requires
+independently initiated use and recorded evidence; a bot channel alone does not prove it.
 
 ## One-time setup (~5 minutes)
 

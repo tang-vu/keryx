@@ -1,6 +1,6 @@
 # Immutable v1 task preparation evaluation
 
-This is the pure-core stage of the [selected next domain](rust-engine-migration.md#next-domain-candidate-local-task-creation).
+This is the pure-core stage of the [historical selected next domain](rust-engine-migration.md#historical-next-domain-candidate-local-task-creation).
 It evaluates validation and encoding before native filesystem publication. The
 TypeScript `createOperatorTask` remains the production owner; the read-only native
 CLI still exposes only protocol, status, result and brief. This stage cannot create
@@ -25,8 +25,10 @@ Reuse the v1 Rust request and task validation, with the TypeScript writer as the
 transition oracle. Preserve strict fields, JavaScript whitespace trimming and
 UTF-16 question length, request field order, payee spelling, atomic cap spelling,
 UUID/date grammar and the original accepted budget number. The cap must exceed
-the rounded creator budget and cannot exceed one testnet USDC. This is the current
-local Operator contract, not a mainnet limit or an on-chain policy.
+the rounded creator budget and cannot exceed one testnet USDC in this historical
+v1 evaluation. The current network-scoped task contract is described in
+[native task creation](native-task-creation.md#network-scoped-task-preparation);
+the v1 ceiling is not a mainnet limit or an on-chain policy.
 
 The shared request validator must also check the raw budget against `0.5` before
 rounding. The old reader accepted `0.500000000000001` with a `500001` cap because

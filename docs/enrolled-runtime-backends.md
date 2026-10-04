@@ -1,5 +1,10 @@
 # Enrolled application backend acceptance
 
+**Source-checkpoint scope:** the earlier staged backend descriptions below are
+preparation history. Production now uses sealed mainnet SQLite through the normal
+[application storage boundary](mainnet-server-runtime.md#application-storage-boundary).
+Optional Supabase mainnet remains staged; legacy testnet stores are not relabelled.
+
 Design D-289, October 1, 2026, with selected-network application composition added
 by the reviewed mainnet preparation. `getDb()` retains ordinary testnet adapters
 and requires a sealed enrolled facade for selected mainnet application storage.

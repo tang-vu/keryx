@@ -12,7 +12,8 @@ entire discount comes from the service allocation. Creator caps, source tolls an
 citation rewards are unchanged. The four-request total is rounded upward to the
 next four micro-USDC so every request has the same exact allocation. The quote
 discloses rounding. Invalid economics, nonpositive service allocation, unsupported
-package, or totals above one testnet USDC refuse admission. Cost coverage and profit
+package, or totals above the applicable profile's limits refuse admission. The
+historical one-USDC plan ceiling applies only to testnet. Cost coverage and profit
 remain unproven; a discount is not evidence of sustainable margins.
 
 Purchase snapshots fix the cap, package, fee allocation, payee and expiration.
@@ -38,7 +39,7 @@ for Monthly and a standalone job or a paid source/citation. Historical recorded
 nonces without sufficient resource binding fail closed. Ambiguous settlement
 retains the claim; it does not release it or activate a plan.
 
-## Selected-network release candidate
+## Selected-network authority
 
 Checkout and proof domains use the trusted deployment profile, never a received
 quote or recovery file. The historical one-USDC Monthly ceiling remains testnet
@@ -50,12 +51,16 @@ files remain recoverable on testnet. An unresolved debit survives reload and blo
 another purchase until the original plan is recovered. Status and recovery do not
 submit another payment.
 
-The candidate UI has actual React/Chromium/IndexedDB evidence on both profiles,
+The UI has actual React/Chromium/IndexedDB evidence on both profiles,
 including a 1.8-USDC mainnet quote rendered by the real funding component, exact
 synthetic EOA signing, foreign-file refusal and lost-acknowledgement recovery.
 Intercepted HTTP and synthetic signatures do not prove mainnet settlement.
-Mainnet API and page admission remain closed until the backend's fresh sealed
-SQLite Monthly domain and exact dedicated custody readiness have native acceptance.
+Mainnet API and page admission require the fresh sealed SQLite Monthly domain
+and exact dedicated custody readiness. Production health reports mainnet, but
+the public Monthly quote returned HTTP 503 during the October 4 documentation
+audit. That observation does not establish a current offer, payee, price or
+purchase readiness. Check the current quote before any purchase; see
+[deployment and per-role availability](mainnet-status.md).
 Legacy migration 0078 is an ordinary testnet path; copying its rows into a fresh
 mainnet store is not migration. Optional Supabase mainnet remains staged separately.
 
@@ -114,11 +119,9 @@ signed status and job/receipt recovery. Do not delete plans, consumed slots or
 claims. Rollback must retain the claim-aware public seller version: an older seller
 that bypasses admission is not a safe rollback while any admitted nonce exists.
 Desktop and extension installers retain their web handoff; no installer format changes.
-The initial product release uses stdio MCP 0.3.1. The subsequent isolated-storage
-release alignment uses 0.3.2 and requires its separate tested, verified publication.
-Immutable earlier release artifacts retain their original source and checksums.
-
-The initial Monthly stdio package candidate was 0.3.1; the coordinated mainnet
-client candidate is 0.4.0. Neither source version proves publication. Verify the
-actual npm/immutable release artifact and installed consumer before reporting
-synchronized delivery.
+The initial Monthly stdio package used 0.3.1, followed by isolated-storage 0.3.2
+and mainnet preparation 0.4.0. Those are historical checkpoints. October 4 public
+npm readback confirmed stdio MCP **0.4.3**, and GitHub `v0.26.8` supplies MCP and
+desktop **0.4.3** artifacts from `1297d43`. Immutable earlier artifacts retain
+their original source and checksums. [Current distribution evidence](mainnet-status.md)
+is separate from Monthly purchase readiness and live payment evidence.

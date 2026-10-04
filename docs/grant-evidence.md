@@ -1,5 +1,9 @@
 # Keryx public evidence map
 
+**Historical testnet evidence (v0.13, August 13):** retain the numbers and
+addresses below on their original network. Production is now Arc mainnet;
+[current deployment](mainnet-status.md) is separate from this snapshot and its traction.
+
 Snapshot captured **2026-08-13 04:18 UTC**. Live values continue moving at
 [keryx.cc/proof](https://keryx.cc/proof); this file records what was publicly verifiable at the
 v0.13 release boundary.

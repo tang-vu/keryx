@@ -1,12 +1,13 @@
 # Full public mainnet operations and distribution
 
-October 2, 2026: the owner requests full ordinary mainnet Keryx on `keryx.cc`,
+October 4, 2026: full ordinary mainnet Keryx is deployed on `keryx.cc`,
 including supported clients and creator payments. Earlier invited-pilot proposals
 are superseded. Their tests remain isolation evidence, not mainnet settlement.
-The owner has authorized the full public mainnet direction. Concrete registry
-deployment, native setup gas and ERC20 funding amounts or wallet transactions remain
-unspecified and unperformed. Production remains Arc testnet until the coordinated
-release and those concrete funding/receipt gates pass.
+The owner confirmed the public mainnet launch. [Current status](mainnet-status.md)
+records the observed `arc`/`real` deployment, registry and distribution identities.
+The original October 2 setup/cutover procedure below is retained for operator
+reference, not a claim that production still awaits migration. Additional wallet
+transactions, funding and schedules need their applicable finite authorization.
 
 ## Trusted deployment selection
 
@@ -34,9 +35,9 @@ Mainnet has no inferred WebSocket URL: the indexer uses its HTTP polling path.
 | Research Monthly | Ordinary prepaid research and immutable slot redemption through web, API, CLI and remote/stdio MCP | Fresh sealed SQLite uses identity/profile-bound v2 purchases, submitted original claims and actual selected receipt network. Native handler/client acceptance covers checkout and original redemption recovery; optional PostgreSQL remains staged. Historical enrolled testnet adapters refuse this domain. Never relabel a testnet Monthly debit or remaining slots as mainnet. |
 | Public paid A2A and private buyer checkout | Existing caller-funded inbound toll and durable job/recovery contracts | Shared selected-profile challenge and signature binding, fresh orders/journals, exact original GET recovery and private checkout/logout acceptance. |
 | Buyer CLI, private CLI and Operator CLI | Deliberate caller-funded purchase, then inspection/recovery/export of original jobs | Both network labels; existing owner price/fee caps remain. New private state directory for mainnet. Historical testnet jobs remain identifiable and recoverable with their original profile; no ledger relabelling. |
-| Local stdio MCP | Caller-owned wallet, exact inbound x402 toll, bounded approval/deposit and original-attempt recovery | Source candidate `keryx-mcp` 0.4.0. Default mainnet custody/journals live under `~/.keryx/arc`; testnet stays under `~/.keryx`. v2 journals bind network and payment origin; legacy unlabelled/v1 files mean testnet. Packed installed stdio acceptance covers both profiles, actual SDK signature verification, response-loss fencing and new-process keyless recovery; network responses are synthetic. npm publication is separately verified. |
+| Local stdio MCP | Caller-owned wallet, exact inbound x402 toll, bounded approval/deposit and original-attempt recovery | Published `keryx-mcp` 0.4.3 (October 4 observation). Default mainnet custody/journals live under `~/.keryx/arc`; testnet stays under `~/.keryx`. v2 journals bind network and payment origin; legacy unlabelled/v1 files mean testnet. Packed installed stdio acceptance covers both profiles, actual SDK signature verification, response-loss fencing and new-process keyless recovery; network responses are synthetic. npm publication is separately verified. |
 | Remote MCP `/mcp` and OpenAI action | Existing hosted API-key/server-budget research role; shared server payment paths | Hosted services use the same selected environment and fresh treasury state. Their independent protocol identity remains separate from the caller package version. No new caller key is sent to the server. |
-| Windows Tauri desktop | Local task creation, explicit buyer handoff, receipt inspection and exports | Desktop 0.4.0 source candidate adds explicit task-network selection and matched-label CLI handoff; it has no native wallet signer or autonomous scheduler. Preserve this role; verify the invoked buyer's selected labels and new state. Exact installer/build assets and standard-user handoff acceptance remain distribution gates. |
+| Windows Tauri desktop | Local task creation, explicit buyer handoff, receipt inspection and exports | Desktop 0.4.3 retains explicit task-network selection and matched-label CLI handoff; it has no native wallet signer or autonomous scheduler. Preserve this role; verify the invoked buyer's selected labels and new state. Exact installer/build assets and standard-user handoff acceptance remain distribution gates. |
 | Chrome extension | Thin selected-text research/API adapter and creator-listing handoff | Existing ZIP source version 0.1.1 research calls the OpenAI-compatible hosted treasury/free-tier API; it does not hold a caller key. Creator listing opens the normal wallet registration page. Verify hosted sponsor admission, selected-network/payment-mode responses and listing handoff; repack exact source if adapter metadata changes. Store publication is separate. |
 | Telegram, Discord and Slack | Existing hosted bot-key and budget-limited research adapters | Shared server treasury policy and fresh environment, explicit real/offline/payment state and links to dispatch evidence. Do not add bot-held caller/session keys or imply bot messages independently approve treasury spending. |
 | Headless web driver | Owner-operated normal wallet/session flow, tagged self-generated engine activity | Shared normal custody/grant/signature contract migration and retained funding/payment barriers are required. Testnet faucet behavior cannot fund mainnet. Its runs do not establish external traction. |
@@ -82,7 +83,7 @@ and index a fresh catalog only after source/feed rights and content encryption
 acceptance. Import public descriptions and creator-owned source identity through
 this verified path; never import testnet payment/settlement/grant records as mainnet.
 
-## Existing-host cutover, backup and rollback
+## Existing-host cutover, backup and rollback reference
 
 1. Freeze an exact reviewed release and inventory current private runtime files,
    owner custodians, service names, selected environment and unresolved original
@@ -129,14 +130,14 @@ authorizations or Gateway deposits.
 
 ## Current evidence and remaining gates
 
-Selected-profile source, offline bytecode/calldata preparation and local synthetic
-journal checks are preparation evidence. Real fresh registry deployment, catalog
-authority, owner-funded acceptance, coordinated host cutover and exact distributed
-package/installer publication remain open. The last verified production preparation
-deployment was `7714533ced82a55ff6fb1ddb90a72717465aa54c`, independently verified
-on October 2 at 13:13 UTC, operational on Arc testnet;
-it does not establish the current release's deployment. Current published versions
-must be read back at release time rather than inferred from this matrix.
+The October 4 health observation confirms hosted commit `1297d43`, Arc mainnet,
+real settlement mode and registry `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`.
+Application v0.26.8 exposes MCP/desktop 0.4.3 assets and npm reports MCP 0.4.3;
+see [current status](mainnet-status.md). Recheck each role and distribution separately.
+Health does not prove prefunding, a completed paid/cited/withdrawal journey or
+independent security acceptance. Public Monthly checkout readiness was unavailable
+during the documentation check. Historical October 2 testnet deployment observations
+remain preparation evidence, not current network or revenue claims.
 
 ## Private economics across retained networks
 
@@ -152,8 +153,8 @@ Usage price intervals and hypothetical service fees remain estimates. Recorded
 settlement observations are not reconciled invoices or realized profit. Native
 SQLite read-only projection tests use synthetic evidence and preserve file bytes;
 they do not establish enrolled mainnet admission, funded settlement or native
-Supabase acceptance. The coordinated server sealed-SQLite migration must land before
-mainnet report acceptance; optional native Supabase mainnet remains staged, and the protected Linux publisher still needs its
+Supabase acceptance. Mainnet reporting uses the sealed SQLite authority described in
+[server runtime](mainnet-server-runtime.md); optional native Supabase mainnet remains staged, and the protected Linux publisher still needs its
 release-platform checks.
 
 ## Normal authenticated headless web client

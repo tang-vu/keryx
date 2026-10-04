@@ -4,6 +4,11 @@ Keryx exposes a stateless MCP Streamable HTTP endpoint at `https://keryx.cc/mcp`
 the published `keryx-mcp` stdio package: remote clients need no local process, while the stdio
 package remains the caller-funded x402 option.
 
+Public production uses Arc mainnet. Remote calls use the hosted treasury-funded
+research path; the client supplies no payment signer. Hosted health and per-role
+availability remain separate from publication of the stdio package. See
+[current deployment and distribution evidence](mainnet-status.md).
+
 ## Architecture decision
 
 **Decision.** Create a fresh `McpServer` and Web Standard transport per request, with JSON response
@@ -37,6 +42,10 @@ the `/mcp` route and registry `remotes` entry; existing `mcp` rows remain readab
 - `research(question, budget?, model?, mode?, scholarly?)` — runs budgeted creator-paid research and returns both text
   and structured answer/citation/settlement metadata.
 - `keryx_status()` — reports the active caller tier and budget cap without starting a dispatch.
+- `research_monthly()` — reads Monthly discovery and returns a web/API handoff;
+  it never buys or redeems an entitlement. Check the actual quote for current
+  availability. The shared tool's retained testnet wording is a documented
+  [runtime-copy follow-up](surface-parity.md#october-4-documentation-and-current-release-status).
 
 ## Client configuration
 

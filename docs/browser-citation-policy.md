@@ -1,5 +1,10 @@
 # Owner approval for citation rewards
 
+**Scope:** this document describes the dormant testnet separate-origin citation-policy prerequisite;
+it is not the normal deployed mainnet signer contract. Production uses Arc mainnet
+through [normal server runtime](mainnet-server-runtime.md) and [current runtime domains](mainnet-runtime-domains.md).
+Preserve the staged component's testnet pins until its separate reviewed cutover.
+
 This is a dormant prerequisite for the separate-origin signer. It does not
 enroll an owner, issue a reward plan, admit a payment, expose an original, or
 change the deployed browser payment path. The existing owner query policy and

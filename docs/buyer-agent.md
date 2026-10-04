@@ -1,6 +1,7 @@
 # Independent buyer agent — selected Arc network
 
-For the four-request prepaid pilot, use [Research Monthly](research-monthly.md).
+Public production uses Arc mainnet; see [current deployment evidence](mainnet-status.md).
+For the four-request prepaid product, use [Research Monthly](research-monthly.md).
 `npm run monthly -- quote --payee 0x...` reads its price; buy in the reviewed web
 checkout, then use `status --id` or `redeem --request` with the original downloaded
 request file. These commands use the caller's wallet; status never submits a
