@@ -1,0 +1,327 @@
+{
+  "schemaVersion": "keryx-internal-workload-v1",
+  "authoredOn": "2026-10-04",
+  "origin": "owner-requested-agent-authored",
+  "scope": "Internal evaluation tasks, not customer requests, measured demand or traction.",
+  "authority": {
+    "mainnetSpendingAuthorized": false,
+    "externalProviderCallsAuthorized": false,
+    "automaticScheduling": false
+  },
+  "reviewPolicy": "Evaluate source integrity and useful task completion separately. Current D-300 extractive output remains in force; task rubrics do not authorize richer unsupported synthesis. Acceptance is not inferred from HTTP completion or model confidence.",
+  "cases": [
+    {
+      "id": "R01",
+      "segment": "technical",
+      "prompt": "Compare SQLite WAL and rollback journals for a single-host API with concurrent reads, one writer and a recoverable backup requirement.",
+      "deliverable": "A decision brief with operating assumptions, tradeoffs and a backup checklist.",
+      "acceptance": [
+        "Use original SQLite documentation.",
+        "Separate concurrency, durability and backup claims.",
+        "State what cannot be decided without workload measurements."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R02",
+      "segment": "technical",
+      "prompt": "Design a webhook consumer that receives duplicates and out-of-order events. What should the team persist and how should it recover?",
+      "deliverable": "A state-transition checklist and failure table.",
+      "acceptance": [
+        "Use the selected provider's actual delivery contract.",
+        "Do not promise exactly-once external execution.",
+        "Distinguish received, processed, failed and unknown outcomes."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R03",
+      "segment": "technical",
+      "prompt": "Compare a database-backed job queue with a managed queue for a small service that must recover interrupted jobs.",
+      "deliverable": "An options table and a conditional recommendation.",
+      "acceptance": [
+        "State workload and operations assumptions.",
+        "Separate visibility timeout from a business retry guarantee.",
+        "Do not invent throughput or cost measurements."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R04",
+      "segment": "technical",
+      "prompt": "Evaluate an authentication SDK upgrade using an exact current version and proposed version supplied with the task.",
+      "deliverable": "A migration note listing breaking changes, tests and rollback constraints.",
+      "acceptance": [
+        "Request missing version identifiers before execution.",
+        "Bind claims to official release notes and migration docs.",
+        "Separate observed changes from suggested tests."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R05",
+      "segment": "technical",
+      "prompt": "How should a public API respond to provider rate limits while preventing one caller from consuming everyone's quota?",
+      "deliverable": "A bounded retry and quota design checklist.",
+      "acceptance": [
+        "Use primary HTTP/provider documentation.",
+        "Explain which limits are shared and per caller.",
+        "Keep retry suggestions bounded and distinguish paid effects."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R06",
+      "segment": "technical",
+      "prompt": "Compare exact vector search and an approximate index for a small knowledge base where missing an important result is costly.",
+      "deliverable": "A decision brief and proposed measurement plan.",
+      "acceptance": [
+        "Do not infer recall from marketing benchmarks.",
+        "Identify corpus size, update frequency and latency assumptions.",
+        "Separate a proposed evaluation from measured results."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R07",
+      "segment": "technical",
+      "prompt": "Prepare an upgrade decision for an exact dependency advisory and our affected version, supplied with this task.",
+      "deliverable": "An affectedness matrix and upgrade checklist.",
+      "acceptance": [
+        "Request the exact advisory/version instead of guessing.",
+        "Use maintainer advisories and release notes.",
+        "Do not claim the application is vulnerable solely because a package name matches."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R08",
+      "segment": "technical",
+      "prompt": "Review the minimum browser-extension permissions needed to research user-selected text and open a source-registration page.",
+      "deliverable": "A permissions-to-feature mapping.",
+      "acceptance": [
+        "Use official extension documentation.",
+        "Separate selected-text access from arbitrary page access.",
+        "Do not propose broader permissions without a feature need."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R09",
+      "segment": "research",
+      "prompt": "Compare arXiv 2606.02668v1 and 2607.13716v1 on approval/action binding, runtime-state changes, expiry/replay and audit evidence.",
+      "deliverable": "A dimension-by-dimension comparison with exact excerpts and reference exports.",
+      "acceptance": [
+        "Bind every admitted excerpt to the exact observed version.",
+        "Label truncated and unavailable dimensions.",
+        "Carry forward issue #128; no full-paper or successful comparison claim without evidence."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R10",
+      "segment": "research",
+      "prompt": "A paper is available only as an abstract. What can I cite about its method and results, and what remains unknown?",
+      "deliverable": "An abstract-bounded research note.",
+      "acceptance": [
+        "Use a frozen abstract fixture first.",
+        "Never infer full-text access or absent experimental details.",
+        "Keep read scope visible in report and exports."
+      ],
+      "execution": "offline-fixtures-first",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R11",
+      "segment": "research",
+      "prompt": "Two copies of the same dated policy disagree on a retention period. Which period should our team rely on?",
+      "deliverable": "A conflict note with an unresolved decision and required clarification.",
+      "acceptance": [
+        "Freeze both conflicting excerpts.",
+        "Do not average the periods or invent precedence.",
+        "An unresolved answer can be correct behavior but is not a completed decision."
+      ],
+      "execution": "offline-fixtures-first",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R12",
+      "segment": "research",
+      "prompt": "Three sites repeat one original study. How much independent support do we actually have?",
+      "deliverable": "An evidence-origin map.",
+      "acceptance": [
+        "Use frozen copied-source fixtures.",
+        "Do not count copies as three independent studies.",
+        "State uncertainty when common origin cannot be established."
+      ],
+      "execution": "offline-fixtures-first",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R13",
+      "segment": "research",
+      "prompt": "Compare a text PDF with a scanned PDF on the same topic and explain which requested claims were actually readable.",
+      "deliverable": "A read-scope and missing-evidence report.",
+      "acceptance": [
+        "Use isolated documents with known text/image-only content.",
+        "Do not treat extraction failure as evidence the claim is false.",
+        "Provide a targeted recovery step without an invented OCR capability."
+      ],
+      "execution": "offline-fixtures-first",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R14",
+      "segment": "research",
+      "prompt": "Update a saved research conclusion after one cited document has changed version.",
+      "deliverable": "A before/after evidence note.",
+      "acceptance": [
+        "Retain the original answer and source identity.",
+        "Show changed evidence and unresolved implications.",
+        "Never silently rewrite the old receipt or infer a payment."
+      ],
+      "execution": "offline-fixtures-first",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R15",
+      "segment": "content",
+      "prompt": "Propose three English educational video ideas about the water cycle for ages 6-8, each feasible as a three-minute narrated animation.",
+      "deliverable": "Three supported ideas and one clearly labeled proposed production outline.",
+      "acceptance": [
+        "Use appropriate factual primary sources.",
+        "Separate facts, creative suggestions and audience assumptions.",
+        "Do not claim trend velocity, virality, competitor retention or measured educational impact."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R16",
+      "segment": "content",
+      "prompt": "Fact-check a supplied draft children's science script before production.",
+      "deliverable": "A claim table with corrections and unresolved claims.",
+      "acceptance": [
+        "Require the draft as task input.",
+        "Check factual assertions against original sources.",
+        "Keep editing suggestions separate from source quotations."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R17",
+      "segment": "content",
+      "prompt": "Identify unanswered questions in our supplied public API documentation that block a first-time integration.",
+      "deliverable": "A prioritized documentation-gap checklist.",
+      "acceptance": [
+        "Use the supplied docs snapshot and an explicit integration task.",
+        "Do not infer customer demand from a documentation omission.",
+        "Distinguish a missing explanation from a missing product capability."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R18",
+      "segment": "content",
+      "prompt": "Compare two supplied product offers for a small team's exact workflow, including integration effort and pricing uncertainty.",
+      "deliverable": "A procurement brief with dated observed terms and open questions.",
+      "acceptance": [
+        "Require product identifiers, workflow and constraints.",
+        "Use primary vendor terms; preserve unknown prices and limits.",
+        "Do not substitute a generic feature ranking for the actual decision."
+      ],
+      "execution": "staging-public-research-after-input-and-cost-review",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R19",
+      "segment": "commerce",
+      "prompt": "Onboard a controlled test publisher feed and verify the exact listing, ownership and payout identity.",
+      "deliverable": "An onboarding acceptance record in isolated staging.",
+      "acceptance": [
+        "Use a publisher-owned test feed and testnet-only custody.",
+        "Listing is not a purchase, citation or customer.",
+        "Never copy production authorizations or fabricate ownership."
+      ],
+      "execution": "offline-fixtures-first",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R20",
+      "segment": "commerce",
+      "prompt": "Change a synthetic source's payout authority between discovery and purchase. How does the buyer react?",
+      "deliverable": "A refusal or fresh-authority trace with unchanged original evidence.",
+      "acceptance": [
+        "Offline fixtures first; no adversarial production mutation.",
+        "Do not honor stale cached payout authority.",
+        "Preserve exact source/version and authorization identity."
+      ],
+      "execution": "offline-fixtures-first",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R21",
+      "segment": "commerce",
+      "prompt": "Lose a simulated settlement response after submission, then reopen the same task in a new process.",
+      "deliverable": "An original-attempt recovery record.",
+      "acceptance": [
+        "Keep the original nonce and unknown liability.",
+        "Do not create another debit to discover the first outcome.",
+        "Promote settled or failed only from matched terminal evidence."
+      ],
+      "execution": "offline-fixtures-first",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R22",
+      "segment": "commerce",
+      "prompt": "Let a simulated paid access debit succeed but content delivery fail.",
+      "deliverable": "A partial-delivery report and accurate payment receipt.",
+      "acceptance": [
+        "Retain the access debit.",
+        "Unavailable content cannot qualify as evidence or citation reward.",
+        "A failed leg must not erase useful evidence from other sources."
+      ],
+      "execution": "offline-fixtures-first",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R23",
+      "segment": "commerce",
+      "prompt": "Redeem a Monthly slot, interrupt the job and submit the exact same request again.",
+      "deliverable": "A single-slot, single-order recovery record.",
+      "acceptance": [
+        "Use isolated entitlement/authorization fixtures.",
+        "Preserve documented failed/pending slot consumption.",
+        "No duplicate execution, debit or silent refund."
+      ],
+      "execution": "offline-fixtures-first",
+      "status": "specified-not-executed"
+    },
+    {
+      "id": "R24",
+      "segment": "commerce",
+      "prompt": "Open one retained synthetic research result through web/API, remote and stdio MCP, CLI, desktop, extension and bot adapters where applicable.",
+      "deliverable": "A supported-surface parity matrix.",
+      "acceptance": [
+        "Compare source identities, read limits and payment-state classifications.",
+        "Unsupported surfaces use their documented handoff; do not invent a native feature.",
+        "Recovery/export must not initiate new research or payment."
+      ],
+      "execution": "offline-fixtures-first",
+      "status": "specified-not-executed"
+    }
+  ]
+}
+

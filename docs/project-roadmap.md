@@ -14,6 +14,11 @@ change the production payment authority or complete a Tauri desktop migration.
 
 ## Current priorities
 
+Production is on mainnet as observed October 4, 2026. Use the
+[post-launch update flow](mainnet-update-flow.md) for subsequent releases and the
+[24-task internal workload / 12-item backlog](research-workload.md) for proactive
+product work. Internal evaluation is separate from independent customer demand.
+
 1. Validate repeat paid research with independently funded buyers and useful
    sources controlled by their creators.
 2. Improve answer quality and show the source decisions, evidence, and exact
@@ -21,7 +26,9 @@ change the production payment authority or complete a Tauri desktop migration.
 3. Rehearse recovery, reconciliation, backup restore, and deployment rollback.
 4. Measure costs against actual bills and receipts before changing prices or
    claiming operating profit.
-5. Evaluate mainnet separately against the release gates in the delivery plan.
+5. Maintain the deployed mainnet service through reviewed updates, isolated
+   offline/testnet validation and bounded mainnet acceptance where authorized.
+   Deployment does not close the remaining product/usefulness or financial gates.
 
 The former long-range roadmap and version table are preserved in
 [Git history](https://github.com/tang-vu/keryx/blob/742454a/docs/project-roadmap.md).
