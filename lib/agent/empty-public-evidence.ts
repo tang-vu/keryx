@@ -63,11 +63,9 @@ export function emptyPublicEvidenceDetail(
       : "Try one exact DOI or versioned arXiv target and inspect the recorded SKIP/read failures. "
     : vi ? "Thu hẹp câu hỏi vào một quyết định cụ thể, thêm URL tài liệu gốc phù hợp và kiểm tra lý do SKIP/lỗi đọc đã ghi. "
       : "Narrow the question to one concrete decision, supply a relevant original source URL, and inspect the recorded SKIP/read failures. ";
-  const nextSteps = publicReadRecoveryLines(outcomes, vi);
   return discoveryDetail(options.discovery, vi) + detail + recovery + (vi
     ? "Tăng ngân sách nguồn không giải quyết được giới hạn chọn nguồn miễn phí hoặc trích xuất văn bản. Bản xem trước không phải bằng chứng đã đọc. Lượt này không chứng minh rằng không có bằng chứng phù hợp."
-    : "A larger source budget does not resolve a free-source attention gate or extraction limit. Metadata previews are not read evidence. This does not establish that no relevant evidence exists.")
-    + (nextSteps.length ? `\n\n${nextSteps.join("\n")}` : "");
+    : "A larger source budget does not resolve a free-source attention gate or extraction limit. Metadata previews are not read evidence. This does not establish that no relevant evidence exists.");
 }
 
 /** Payment states are supplied by the orchestrator; this presentation helper changes no ledger. */
@@ -92,7 +90,9 @@ export function emptyEvidenceAnswer(input: {
   if (input.settledPayments > 0) return prefix + (vi
     ? "thanh toán nguồn đã hoàn tất nhưng chưa nhận được nội dung có thể dùng. Các khoản đã xác nhận vẫn được ghi nhận. Giữ lượt này để kiểm tra trước khi mua lại."
     : "source payments settled, but no usable content was received. Confirmed payments remain recorded. Keep this job for review before buying again.");
-  const detail = emptyPublicEvidenceDetail(input.outcomes, input.skipped, input);
+  const nextSteps = publicReadRecoveryLines(input.outcomes, vi);
+  const detail = emptyPublicEvidenceDetail(input.outcomes, input.skipped, input)
+    + (nextSteps.length ? `\n\n${nextSteps.join("\n")}` : "");
   if (input.fetchFailures > 0) return prefix + (vi
     ? "đọc nguồn thất bại và chưa có thanh toán nguồn nào được xác nhận. Kiểm tra bản ghi thanh toán của lượt này trước khi bắt đầu lượt trả phí khác. "
     : "source reads failed and no source payment was confirmed. Review this job's payment records before starting another paid job. ") + detail;
