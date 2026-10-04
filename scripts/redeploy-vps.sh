@@ -135,6 +135,8 @@ fi
 # 1. sync source — the OLD .next keeps serving (git touches source only, not .next)
 if [[ -n "$ECONOMIC_CONFIG" ]]; then
   say "1/5 syncing source at $APP_DIR (economic migration maintenance; writers stopped)"
+elif [[ -n "$REVIEWED_CONFIG" ]]; then
+  say "1/5 syncing source at $APP_DIR (reviewed-role maintenance; writers stopped)"
 else
   say "1/5 syncing source at $APP_DIR (live build keeps serving)"
 fi
@@ -162,6 +164,8 @@ REMOTE
 # 3. typecheck, then build into .next.tmp — the live .next is untouched on any failure
 if [[ -n "$ECONOMIC_CONFIG" ]]; then
   say "3/5 typechecking + building into .next.tmp (economic migration maintenance; writers stopped)"
+elif [[ -n "$REVIEWED_CONFIG" ]]; then
+  say "3/5 typechecking + building into .next.tmp (reviewed-role maintenance; writers stopped)"
 else
   say "3/5 typechecking + building into .next.tmp (old build still live)"
 fi
@@ -242,6 +246,8 @@ fi
 DEPLOY_COMPLETE=1
 if [[ -n "$ECONOMIC_CONFIG" ]]; then
   echo "Economic migration redeploy complete — $COMMIT live on keryx.cc; private workers and schedulers remain held."
+elif [[ -n "$REVIEWED_CONFIG" ]]; then
+  echo "Reviewed-role redeploy complete — $COMMIT live on keryx.cc; verify separately held workers and schedulers."
 else
   echo "✅ redeploy complete — $COMMIT live on keryx.cc (low-downtime)"
 fi

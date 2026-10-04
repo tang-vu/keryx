@@ -1,7 +1,9 @@
 # Original-read and research-recovery follow-up
 
-Application 0.26.7 is a candidate until required CI, independent review and the
-deployed commit are verified. This follows the [24-task baseline](research-workload-2026-10-04.md)
+Application 0.26.7 was released at `6562ebe` after independent review and required
+CI. Public health, homepage, hosted roles and the actual assembled readers were
+verified; private-worker restoration remained a separately recorded operations gate.
+This follows the [24-task baseline](research-workload-2026-10-04.md)
 at `3c29d7ad44b0af0b809d721602add3b27f5f6b14`. These are internal evaluation tasks,
 not independent customer acceptance or traction.
 
@@ -50,10 +52,11 @@ not demonstrate useful decomposition or completion of the requested decisions.
 R13 now includes exact-version text-layer recovery and says no OCR occurred; R14
 requests the missing section of the same version and retains the old snapshot.
 R11 conflict guidance passes synthetic focused checks but is not exercised by the
-heuristic, which emits no conflicts. No post-change live-model batch has run; the
-previous 1 narrowly usable / 11 partial / 6 rejected assessment remains historical,
-not superseded by these offline results. The earlier USD 1 authorization was for
-one completed batch; an additional bounded comparison requires its own approval.
+heuristic, which emits no conflicts. At the reader checkpoint no post-change model
+batch had run; the previous 1 narrowly usable / 11 partial / 6 rejected assessment
+was not superseded by the offline results. The owner subsequently approved a
+separate additional USD 1 comparison. Its results and newly observed identity/context
+defects are recorded in [the follow-up](research-evidence-follow-up-2026-10-04.md).
 
 TypeScript and lint pass (five pre-existing warnings). Focused reader, transport,
 fallback and saved-surface regressions pass. The first integrated check caught an
@@ -69,8 +72,11 @@ A separate clean Windows checkout with physical dependencies and npm 11.19.0
 reproduced the original locator failure, then passed the corrected minified
 orchestrator checks and assembled HTML/PDF runtime test. The earlier full Windows
 run against shared dependencies was stopped incomplete after retained failures and
-slow execution; it is not a passing full-suite result. Final required CI, deployed
-health and distribution readback remain release gates until observed.
+slow execution; it is not a passing full-suite result. Final required PR checks and
+main CI passed, including the corrected production tests; downloaded MCP/desktop
+assets matched their exact-source manifests and embedded source identity. Published
+MCP/desktop remain 0.4.3 and the existing extension remains 0.1.1. These observations
+do not establish acceptance of every installed client or complete research output.
 Source-reading results cannot establish complete synthesis,
 independent discovery recall, current commercial applicability or billing costs.
 

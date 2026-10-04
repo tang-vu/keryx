@@ -1,5 +1,32 @@
 # Keryx — Decision Log
 
+**Observed paper identity and bounded contextual evidence — 2026-10-04.** The
+additional authorized live comparison reproduced CAVA excerpts admitted under
+explicit Weng paper targets because HTML URLs bypassed the original-paper checks.
+Use the recorded canonical arXiv document URL and exact version for those
+targets, with one modern/legacy identifier grammar across discovery and admission.
+Keep discovery's two-ID bound separate from target admission, which must inspect
+every explicit identity. A query, fragment, lookalike host, absent URL or discovery
+metadata cannot supply original-document authority. Production original reads
+already bind an observed URL before attaching discovery metadata; remove the old
+metadata-only compatibility path. Public reads bind the fetched final URL; paid and
+cached reads retain existing catalog URL/receipt trust, not independent origin or
+authorship proof. Secondary or mirrored provenance needs a separate
+explicit contract. Refused exact-paper evidence cannot qualify an answer or reward;
+legitimate own-paper evidence keeps its existing eligibility and public-reference
+reward exclusion. Never rewrite archived answer, receipt or settlement bytes.
+
+The same comparison retained source qualifications that bounded context selection
+discarded before synthesis. Preserve selected short source blocks as contiguous
+units within the existing source/passage/context limits and expose omissions. Keep
+candidate work bounded independently of formatting density. If an intact block
+does not fit, retain the gap instead of trimming away its qualification or forcing
+benchmark coverage. This improves supplied context, not semantic entailment or
+complete synthesis. D-300 remains authoritative; a literal excerpt and Low label
+do not establish a useful decision. Preserve the full-attempt failures and separate
+any diagnostic rerun under the unchanged approved cumulative model allowance.
+See [the measured follow-up](docs/engineering/research-evidence-follow-up-2026-10-04.md).
+
 **Bounded reading and actionable incomplete research — 2026-10-04.** Replay the
 failed original-document bytes before changing reader limits. Replace HTML's full
 browser DOM with standards-based parse5 normalization and Mozilla's lightweight

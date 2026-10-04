@@ -1,4 +1,4 @@
-import { questionArxivIds } from "../scholarly/arxiv-identity";
+import { arxivDocumentId, targetArxivIds } from "../scholarly/arxiv-identity";
 import { hasKnownSyntheticFingerprint } from "../research/evidence-provenance";
 /**
  * Deterministic evidence gate between model prose and creator money.
@@ -77,10 +77,13 @@ export function buildEvidenceLedger(input: {
       continue;
     }
 
-    const exactTargets = exactArxivTargets(input.subClaims[claimIndex]!);
-    const observedArxivId = questionArxivIds(source.itemUrl ?? "")[0] ?? (source.scholarly?.provider === "arxiv" ? source.scholarly.arxivId : undefined);
-    const officialArxivRead = /^https:\/\/arxiv\.org\/(?:pdf|abs)\//i.test(source.itemUrl ?? "");
-    if (exactTargets.length && ((observedArxivId && !exactTargets.includes(observedArxivId)) || (officialArxivRead && !questionArxivIds(source.itemUrl ?? "").length))) {
+    const exactTargets = targetArxivIds(input.subClaims[claimIndex]!);
+    // The retained item URL takes precedence over discovery metadata: public reads
+    // bind the fetched final URL; paid/cache reads retain existing catalog trust.
+    // Unknown/secondary URLs cannot become an exact original through a title,
+    // query string or metadata fallback. This is not independent origin proof.
+    const observedArxivId = arxivDocumentId(source.itemUrl ?? "");
+    if (exactTargets.length && (!observedArxivId || !exactTargets.includes(observedArxivId))) {
       droppedEvidence++;
       continue;
     }
@@ -162,13 +165,6 @@ export function extractAnswerMarkers(answer: string): Set<string> {
     if (match[1]) markers.add(match[1]);
   }
   return markers;
-}
-
-/** Model decomposition may retain a bare versioned ID without the arXiv prefix. */
-function exactArxivTargets(claim: string): string[] {
-  const bareIds = [...claim.matchAll(/(?:^|[^\w.])(\d{4}\.\d{4,5}v[1-9]\d*)(?![\w]|\.[\w])/gi)]
-    .map(match => match[1].toLowerCase());
-  return [...new Set([...questionArxivIds(claim), ...bareIds])];
 }
 
 /** Remove source markers that did not earn a place in the ledger, so a rejected citation cannot
