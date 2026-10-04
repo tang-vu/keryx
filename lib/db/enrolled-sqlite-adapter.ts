@@ -74,6 +74,8 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   getSessionWithdrawalSigningPhase: "read",
   authorizeSessionWithdrawal: "write",
   cancelSessionWithdrawal: "write",
+  getSessionWithdrawalAbort: "read",
+  abortSessionWithdrawal: "write",
   admitHostedTreasuryPolicy: "write",
   hostedTreasuryAccounting: "read",
   admitHostedAuthorization: "write",

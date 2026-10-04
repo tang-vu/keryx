@@ -2,7 +2,8 @@
  * GET  /api/keys  — list all API keys for the SIWE-authenticated wallet.
  * POST /api/keys  — mint a new key (raw value shown once; SIWE-gated).
  *
- * Keys are identity + rate-limit only. Callers still pay via x402 on every /api/agent/ask call.
+ * Keys are identity + rate-limit only. Callers still pay via x402 on every /api/agent/ask call;
+ * sponsored chat/MCP allowance belongs to the wallet, never to each newly minted key.
  */
 
 import { NextRequest } from "next/server";
@@ -17,6 +18,9 @@ import {
   serializeSourceIds,
 } from "@/lib/api-key-scopes";
 import { getDb } from "@/lib/db";
+import { clientIp } from "@/lib/rate-limit";
+import { checkApiKeyMintAdmission } from "@/lib/sponsored-admission";
+import { isRequestObject } from "@/lib/request-object";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,7 +46,9 @@ export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return Response.json({ error: "unauthenticated" }, { status: 401 });
 
-  const body = (await req.json().catch(() => ({}))) as {
+  const parsedBody: unknown = await req.json().catch(() => null);
+  if (!isRequestObject(parsedBody)) return Response.json({ error: "request body must be a JSON object" }, { status: 400 });
+  const body = parsedBody as {
     label?: string;
     scopes?: unknown;
     sourceIds?: unknown;
@@ -53,6 +59,9 @@ export async function POST(req: NextRequest) {
   // key that can do nothing is a support ticket. The caller narrows deliberately.
   const scopes = normalizeScopes(body.scopes);
   const sourceIds = normalizeSourceIds(body.sourceIds);
+
+  const limited = await checkApiKeyMintAdmission(session.address, clientIp(req));
+  if (limited) return limited;
 
   const { rawKey, prefix, id } = await mintApiKey(
     session.address,

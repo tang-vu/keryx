@@ -1,5 +1,20 @@
 # Keryx Project Changelog
 
+### Mainnet economic recovery (2026-10-04, v0.26.5 candidate)
+
+- Recover interrupted Session signing only before burn-signature publication, with an
+  original-bound local fence, owner/session authentication and immutable server outcome.
+  Published or uncertain transfers remain held; no automatic funding or transfer retry.
+- Release exact terminal-failed payment capacity once, retaining nonces and original
+  question caps. Stream complete retained accounting history beyond 10,000 payments.
+- Share sponsored admission across each wallet's keys, caller IP and all hosted/bot
+  surfaces; fail closed on durable-counter outage. Key creation adds no research quota.
+- Accept exact quoted micro-USDC budgets in async A2A despite floating-point noise.
+- Coordinate web/API/bots, explicit headless state v4 migration and CLI recovery.
+  Application 0.26.5 and desktop/MCP 0.4.3 are source candidates until integrated
+  acceptance, stopped-writer schema migration, deployment and distribution readback.
+  See [repair scope and gates](engineering/mainnet-economic-recovery.md).
+
 ### Reliable CSS builds with retained recovery artifacts (2026-10-04, v0.26.4)
 
 - Generate web utilities from the authored application, components, library and

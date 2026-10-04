@@ -163,3 +163,15 @@ Their runtime/package contracts remain unchanged. Root application release asset
 may carry fresh source provenance without changing the independent package versions.
 Production CSS/build/browser CI, retained-build source exclusion and actual deployed
 commit verification are the relevant release gates for this follow-up.
+
+### October 4 economic recovery
+
+Application 0.26.5 coordinates the original-bound Session publication abort, exact
+terminal-failure capacity recovery, complete lifetime accounting, shared sponsored
+admission and canonical A2A micro-USDC validation. The [surface matrix and release
+gates](engineering/mainnet-economic-recovery.md) record every applicable adapter.
+Headless delegated custody uses an explicit v4 upgrade with retained originals and
+old-writer refusal. Desktop/MCP 0.4.3 are refreshed source candidates; extension
+0.1.1 remains a thin chat adapter and remote MCP keeps protocol identity 0.2.0.
+Actual production commit, accepted installer/tarball manifests, npm publication and
+CI must be recorded separately before synchronized delivery is claimed.

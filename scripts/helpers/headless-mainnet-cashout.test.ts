@@ -14,6 +14,9 @@ import { privateHeadlessTestDirectory } from "./headless-state-test-fixture";
 import { headlessCashoutFixture,headlessCashoutCompletion,testHeadlessContext as context,testHeadlessWrapping as wrapping } from "./headless-cashout-test-fixture";
 import { createBrowserSessionKey } from "../../lib/session/browser-session-key";
 import { runHeadlessCashout } from "./headless-mainnet-cashout.mjs";
+import { HEADLESS_WITHDRAWAL_SCHEMA } from "./headless-mainnet-withdrawals.mjs";
+import { canonicalJson } from "../../lib/canonical-json";
+import { createSessionWithdrawalAbort, verifySessionWithdrawalAbort } from "../../lib/gateway/session-withdrawal-abort";
 
 const roots:string[]=[],closers:Array<()=>void>=[];
 afterEach(()=>{for(const close of closers.splice(0))close();for(const root of roots.splice(0)){if(!path.resolve(root).startsWith(path.join(os.tmpdir(),"keryx-headless-state-")))throw new Error("Unexpected fixture cleanup path");fs.rmSync(root,{recursive:true,force:true});}vi.restoreAllMocks();});
@@ -29,7 +32,7 @@ it("explicit v2 upgrade keeps first cipher, original headers/caps/nonces and fen
   await f.state.reserve(context.storageNamespace,f.p.grantEpoch,pay.nonce,BigInt(1000),BigInt(1000000),pay.question,pay.original);
   await f.state.retainHeader(pay.nonce,"synthetic-original-signed-payment");f.key.lock();f.state.close();
   const db=new DatabaseSync(file);
-  db.exec("DROP TRIGGER exposure_withdrawal_fence;DROP TABLE withdrawals;DROP TABLE upgrade_history;DROP TRIGGER identity_no_update;");
+  db.exec("DROP TRIGGER exposure_withdrawal_fence;DROP TRIGGER settled_terminal_no_failed;DROP TABLE publication_aborts;DROP TABLE failed_terminal;DROP TABLE upgrade_v4_history;DROP TABLE withdrawals;DROP TABLE upgrade_history;DROP TRIGGER identity_no_update;");
   db.prepare("UPDATE identity SET value=? WHERE singleton=1").run(JSON.stringify({custody:context,format:"keryx-headless-session-state-v2"}));
   // Match the old writer's canonical identity exactly.
   const {canonicalJson}=await import("../../lib/canonical-json");
@@ -58,6 +61,70 @@ it("explicit v2 upgrade keeps first cipher, original headers/caps/nonces and fen
   }finally{fs.unlinkSync(legacy);}
 },30000);
 
+it("explicit v3 upgrade retains exposed originals and fences the archived v3 writer before crypto",async()=>{
+  const dir=directory(),f=await fixture(dir),pay=payment(f.p),ns=context.storageNamespace,file=f.state.file;
+  await f.state.reserve(ns,f.p.grantEpoch,pay.nonce,BigInt(1000),BigInt(1000000),pay.question,pay.original);
+  await f.state.retainHeader(pay.nonce,"synthetic-original-signed-payment");
+  await f.state.withdrawals.storage.reserveWithdrawal(ns,f.p,(await f.state.withdrawals.storage.readExposure(ns)).version);
+  await f.state.withdrawals.storage.retainOutcome(ns,f.p,{exposed:true});f.key.lock();f.state.close();
+  const db=new DatabaseSync(file);
+  db.exec("DROP TRIGGER exposure_withdrawal_fence;DROP TRIGGER settled_terminal_no_failed;DROP TABLE publication_aborts;DROP TABLE failed_terminal;DROP TABLE upgrade_v4_history;DROP TRIGGER identity_no_update;");
+  db.exec(HEADLESS_WITHDRAWAL_SCHEMA.slice(HEADLESS_WITHDRAWAL_SCHEMA.indexOf("CREATE TRIGGER exposure_withdrawal_fence")));
+  db.prepare("UPDATE identity SET value=? WHERE singleton=1").run(canonicalJson({format:"keryx-headless-session-state-v3",custody:context}));
+  db.exec("CREATE TRIGGER identity_no_update BEFORE UPDATE ON identity BEGIN SELECT RAISE(ABORT,'immutable'); END;");
+  const tables=["custody","questions","exposure","headers","terminal","withdrawals","upgrade_history"];
+  const before=tables.map(t=>db.prepare(`SELECT * FROM ${t}`).all());db.close();
+  const unchanged=fs.readFileSync(file);
+  await expect(openHeadlessMainnetState(dir,context,wrapping,false)).rejects.toThrow("owner recovery");expect(fs.readFileSync(file)).toEqual(unchanged);
+  const legacy=path.resolve(".artifacts","legacy-headless-v3.mts");fs.mkdirSync(path.dirname(legacy),{recursive:true});
+  const old=fs.readFileSync(new URL("../fixtures/headless-mainnet-state-v3.mts.txt",import.meta.url),"utf8").replaceAll("\r\n","\n");
+  expect(createHash("sha256").update(old).digest("hex")).toBe("b213dcdfb72480cc63d620e0b17bce8e096fb6651d81e9d7d274460c4a26d839");
+  // Relative helper imports must target current compatibility dependencies in the fixture.
+  fs.writeFileSync(legacy,old.replaceAll("../../lib/","../lib/").replaceAll('"./headless-mainnet-withdrawals.mjs"','"../scripts/helpers/headless-mainnet-withdrawals.mts"'));
+  const script=`import{openHeadlessMainnetState}from ${JSON.stringify(pathToFileURL(legacy).href)};import{ARC_MAINNET_PROFILE}from './lib/arc-network-profile.ts';import{browserSessionCustodyContext}from './lib/session/browser-session-custody.ts';try{const s=await openHeadlessMainnetState(process.env.STATE,browserSessionCustodyContext(ARC_MAINNET_PROFILE,'https://keryx.cc',process.env.OWNER),process.env.WRAP,false);s.close();console.log('v3-opened')}catch{console.log('v3-refused')}`;
+  const invoke=()=>execFileSync(process.execPath,["--import","tsx","--input-type=module","-e",script],{encoding:"utf8",windowsHide:true,timeout:15000,
+    env:{...process.env,KERYX_NETWORK:"arc",NEXT_PUBLIC_KERYX_NETWORK:"arc",STATE:dir,OWNER:context.owner,WRAP:wrapping}});
+  try {
+    expect(invoke()).toContain("v3-opened");
+    const upgraded=await openHeadlessMainnetState(dir,context,wrapping,false,true);closers.push(()=>upgraded.close());
+    expect(upgraded.withdrawals.activeWithdrawal()).toBe(f.p.requestId);
+    const inspect=new DatabaseSync(file,{readOnly:true});expect(tables.map(t=>inspect.prepare(`SELECT * FROM ${t}`).all())).toEqual(before);inspect.close();upgraded.close();
+    const v4=fs.readFileSync(file);expect(invoke()).toContain("v3-refused");expect(fs.readFileSync(file)).toEqual(v4);
+  } finally {fs.unlinkSync(legacy);}
+},30000);
+
+it("retains a pending publication abort across lost acknowledgement and restart; only its exact proof clears the cashout barrier",async()=>{
+  const dir=directory(),f=await fixture(dir),ns=context.storageNamespace;
+  await f.state.withdrawals.storage.reserveWithdrawal(ns,f.p,(await f.state.withdrawals.storage.readExposure(ns)).version);
+  await f.state.withdrawals.storage.retainOutcome(ns,f.p,{exposed:true});
+  let proof:unknown=null,abortCalls=0;
+  const json=async(url:string,_method?:string,body?:unknown):Promise<unknown>=>{
+    if(url==="/api/session/withdraw/abort"){
+      abortCalls++;expect(f.state.withdrawals.references()[0]).toMatchObject({cancelled:true,publicationAbortPending:true});
+      proof=await createSessionWithdrawalAbort(f.p,(body as {signature:string}).signature);
+      throw new Error("lost abort acknowledgement");
+    }
+    return {preparation:f.p,signingPhase:proof?"aborted_before_publication":"exposed",publicationAbort:proof,cancellation:null,
+      progress:{status:"prepared",retryAuthorized:false,chainFinalityVerified:false},attestation:null,mint:null,completion:null};
+  };
+  await expect(runHeadlessCashout(["withdraw-abort",f.p.requestId],f.key,f.state,json)).rejects.toThrow("lost abort acknowledgement");
+  expect(abortCalls).toBe(1);expect(f.state.withdrawals.activeWithdrawal()).toBe(f.p.requestId);
+  await expect(f.state.withdrawals.storage.retainOutcome(ns,f.p,{signature:`0x${"11".repeat(65)}`})).rejects.toThrow();
+  f.key.lock();f.state.close();
+  const reopened=await openHeadlessMainnetState(dir,context,wrapping,false),key=createBrowserSessionKey(context.origin,context.owner,reopened);await key.restore();
+  closers.push(()=>{key.lock();reopened.close();});
+  expect(reopened.withdrawals.activeWithdrawal()).toBe(f.p.requestId);
+  const verifiedProof=await verifySessionWithdrawalAbort(proof,f.p);
+  await expect(reopened.withdrawals.storage.confirmPublicationAbort!(ns,f.p,{...verifiedProof,requestId:`0x${"aa".repeat(32)}`})).rejects.toThrow();
+  const ack=async()=>({preparation:f.p,signingPhase:"aborted_before_publication",publicationAbort:proof,cancellation:null,
+    progress:{status:"prepared",retryAuthorized:false,chainFinalityVerified:false},attestation:null,mint:null,completion:null});
+  await runHeadlessCashout(["withdraw-abort",f.p.requestId],key,reopened,ack);
+  expect(reopened.withdrawals.activeWithdrawal()).toBeNull();
+  expect(reopened.withdrawals.references()[0]).toMatchObject({cancelled:true,publicationAbortPending:false,submitted:false});
+  await expect(runHeadlessCashout(["withdraw-sign",f.p.requestId,"500000","1000"],key,reopened,ack)).rejects.toThrow();
+  await expect(runHeadlessCashout(["withdraw-submit",f.p.requestId],key,reopened,ack)).rejects.toThrow();
+});
+
 it("payment admission and never-exposed cancellation share the native barrier; originals remain immutable",async()=>{
   const f=await fixture(directory()),pay=payment(f.p),ns=context.storageNamespace,s=f.state.withdrawals.storage;
   const snapshot=await s.readExposure(ns);
@@ -73,7 +140,8 @@ it("payment admission and never-exposed cancellation share the native barrier; o
 it("expired/revoked recovery retains a lost burn submission, original unsigned Mint nonce/fees and manual hash before exact completion",async()=>{
   const dir=directory(),f=await fixture(dir),ns=context.storageNamespace;
   let phase="prepared",submits=0,crypto=0,completion:unknown=null,mintReads=0;
-  const countedKey={context:f.key.context,get address(){return f.key.address;},async signWithdrawalPreparation(value:unknown){crypto++;return f.key.signWithdrawalPreparation(value);}};
+  const countedKey={context:f.key.context,get address(){return f.key.address;},async signWithdrawalPreparation(value:unknown){crypto++;return f.key.signWithdrawalPreparation(value);},
+    signWithdrawalAbort:(value:unknown)=>f.key.signWithdrawalAbort(value)};
   const json=async(url:string,method?:string,body?:unknown):Promise<unknown>=>{
     if(url.includes("/credit?"))return{status:"known",network:profile.networkId,address:f.p.sessAddr,available:"1000000"};
     if(url.includes("/withdraw/payments?"))return{network:profile.networkId,sessAddr:f.p.sessAddr,retryAuthorized:false,payments:[],nextCursor:null};

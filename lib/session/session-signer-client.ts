@@ -153,6 +153,10 @@ export class SessionSigner {
     if (browserPaymentProfile().testnet) throw new Error("Use the original testnet cashout flow");
     return this.call<{ requestId: string; cancelledUnexposed: true }>({ type: "cancelUnexposedWithdrawal", requestId });
   }
+  async abortWithdrawal(requestId: string) {
+    if (browserPaymentProfile().testnet) throw new Error("Use the original testnet cashout flow");
+    return this.call<{ requestId: string; abortedBeforePublication: true }>({ type: "abortWithdrawal", requestId });
+  }
   async reconcileWithdrawal(requestId: string) {
     if (browserPaymentProfile().testnet) throw new Error("Use the original testnet cashout flow");
     return this.call<{ requestId: string; completed: boolean; status: string }>({ type: "reconcileWithdrawal", requestId });

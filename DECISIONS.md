@@ -1,5 +1,38 @@
 # Keryx — Decision Log
 
+**Economic recovery preserves original authority — 2026-10-04.** The owner
+authorized repairs after the deployed-mainnet economic audit. An exposed withdrawal
+marker can precede cryptography; distinguish it from publication of a retained burn
+signature. Permit an owner-authenticated local signing abort only after the original
+custody store atomically fences publication, and only when the server has no signed
+request, transfer claim, attestation or completion. Retain an immutable, original-bound
+abort outcome. Never label it a completed mint or a never-exposed cancellation. A
+lost acknowledgment keeps the local barrier until the same outcome is read back.
+Existing browser writers must recognize the local tombstone and refuse publication.
+Headless state upgrades retain custody and originals and fence old writers.
+
+This is an authenticated assertion from the existing trusted browser/session holder,
+not an independent cryptographic proof that no signature exists. Already published
+or ambiguously submitted signatures remain held. Expiry, empty vendor searches,
+balance changes and unused direct-burn hashes alone do not authorize release.
+
+Exact terminal-failed browser payments may release local lifetime capacity once,
+using the same original nonce/economic binding and trusted server/Circle journal as
+cashout. Keep nonce and terminal evidence permanently; settled debit is not failed
+capacity. Old per-question reservations stay conservative when the browser did not
+retain a reliable question association. Renewed consent can use recovered capacity
+for a new question; a retry cannot reuse the original nonce.
+
+Sponsored web, chat, remote MCP and bot research share durable caller and global
+admission. API keys identify one wallet rather than creating independent allowances.
+The default global 60 dispatches/minute is a throughput bound, not a dollar-cost
+guarantee; existing reviewed treasury query/lifetime USDC caps remain authoritative.
+Storage outages refuse sponsorship. Paid A2A and caller-funded Session roles retain
+their own admission. Quote and async worker validation use the same exact integer
+micro-USDC roundtrip, and lifetime funding accounting streams all original evidence
+instead of expiring at a fixed history count. See
+[implementation and release gates](docs/engineering/mainnet-economic-recovery.md).
+
 **Authored web sources define generated CSS — 2026-10-04.** A production
 Turbopack build timed out in its PostCSS subprocess while clean CI builds passed.
 Tailwind's automatic project scan admitted retained `.next.*` builds that the

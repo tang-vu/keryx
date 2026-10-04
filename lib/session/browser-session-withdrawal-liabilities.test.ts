@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { readBrowserWithdrawalLiabilities } from "./browser-session-withdrawal-liabilities";
+import { readBrowserSessionPaymentAccounting, readBrowserWithdrawalLiabilities } from "./browser-session-withdrawal-liabilities";
 import { canonicalJson } from "../canonical-json";
 import { ARC_MAINNET_PROFILE as profile } from "../arc-network-profile";
 import type { LocalSessionAuthorization } from "./browser-session-withdrawal-storage";
@@ -39,4 +39,27 @@ it("holds a claimed settlement with any changed original payer, payee, requireme
     {...f.journal,grantEpoch:"cccccccc-cccc-4ccc-8ccc-cccccccccccc"},
     {...f.journal,signedHeaderHash:undefined}];
   for(const changed of changes) expect(await readBrowserWithdrawalLiabilities([f.local],owner,signer,epoch,async()=>f.page([changed]))).toBe(BigInt(500000));
+});
+
+it("releases only exact original terminal-failed evidence, never a pending or mismatched failure", async () => {
+  const f = await fixture();
+  const failed = { ...f.journal, phase: "failed", payment: { ...f.journal.payment, settled: false, settlementStatus: "failed" } };
+  const result = await readBrowserSessionPaymentAccounting([f.local], owner, signer, epoch, async () => f.page([failed]));
+  expect(result.held).toBe(BigInt(0));
+  expect(result.failures).toMatchObject([{ nonce, epoch, amount: "500000", transferId: "circle-original", original: f.local.original }]);
+  expect(result.failures[0].evidenceDigest).toMatch(/^[0-9a-f]{64}$/);
+  for (const change of [
+    { ...failed, phase: "submission_attempted" },
+    { ...failed, signedHeaderHash: undefined },
+    { ...failed, payment: { ...failed.payment, settled: true } },
+    { ...failed, payment: { ...failed.payment, txHash: null } },
+    { ...failed, payment: { ...failed.payment, amountUsdc: 0.4 } },
+    { ...failed, payment: { ...failed.payment, authorizationId: `0x${"77".repeat(32)}` } },
+    { ...failed, payment: { ...failed.payment, payer: owner } },
+    { ...failed, paymentContext: { item: { itemId: "different" } } },
+    { ...failed, requirements: { ...failed.requirements, asset: owner } },
+  ]) {
+    expect(await readBrowserSessionPaymentAccounting([f.local], owner, signer, epoch, async () => f.page([change])))
+      .toEqual({ held: BigInt(500000), failures: [] });
+  }
 });

@@ -49,6 +49,7 @@ jobs:
           bash scripts/withdrawal-cycle-deploy.check.sh
           bash scripts/redeploy-vps.check.sh
           node --test scripts/redeploy-reviewed-roles.test.mjs
+          node --test scripts/redeploy-economic-migration.test.mjs
           node --test scripts/dependency-state.check.mjs
           node --test scripts/release-ops-preflight.test.mjs
           node scripts/dependency-state.mjs record

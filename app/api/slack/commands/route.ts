@@ -19,7 +19,7 @@
 import { NextRequest, after } from "next/server";
 import { collectRun } from "@/lib/agent";
 import { config } from "@/lib/config";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { verifyRequestSignature } from "@/lib/slack/verify-request-signature";
 import {
   type SlashCommand,
@@ -55,9 +55,9 @@ export async function POST(req: NextRequest) {
 
   // Treasury-funded like the site's free trial — throttle per Slack user, not per IP (every request
   // arrives from Slack's servers, so IPs are useless as a key here).
-  const limited = await checkRateLimit(`slack:${cmd.userId}`, "treasuryAsk");
+  const limited = await checkSponsoredResearchAdmission({ kind: "bot", platform: "slack", userId: cmd.userId });
   if (limited) {
-    return Response.json(ephemeral("Free dispatches are rate-limited — try again in a minute."));
+    return Response.json(ephemeral("Sponsored dispatches are temporarily limited or unavailable — try again in a minute."));
   }
 
   const budget = Math.min(config.defaultBudget, config.anonMaxBudget);

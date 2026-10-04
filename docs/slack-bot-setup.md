@@ -59,7 +59,7 @@ follows when the dispatch completes (typically well under a minute; the `respons
 |---|---|
 | Forged requests | `X-Slack-Signature` HMAC-SHA256 over the raw body keyed by the Signing Secret, compared constant-time; wrong → 401 (`lib/slack/verify-request-signature.ts`) |
 | Replays | `X-Slack-Request-Timestamp` more than 5 min from now is rejected before the digest is even checked |
-| Treasury drain | Same clamp as the site free trial: budget ≤ `KERYX_ANON_MAX_BUDGET`, `treasuryAsk` rate-limit tier keyed per Slack user id |
+| Treasury drain | Same clamp as the site free trial: budget ≤ `KERYX_ANON_MAX_BUDGET`, 5/minute per authenticated Slack user id plus the durable global sponsored allowance (60/minute by default, shared with web/chat/MCP and other bots); counter outages refuse admission |
 | SSRF / spam relay | The answer is posted only after confirming the body-supplied `response_url` host is `hooks.slack.com` |
 | Markup injection | Answer and source names escape Slack's `& < >` mrkdwn control chars before rendering |
 | Unconfigured deploys | `SLACK_SIGNING_SECRET` unset → endpoint answers 503, nothing else changes |

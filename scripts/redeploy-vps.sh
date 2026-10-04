@@ -25,11 +25,19 @@ HEALTH_CURL="curl -fsS -H 'Host: keryx.cc' -H 'X-Forwarded-Proto: https' $HEALTH
 PRESERVE_HELD=${KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER:-0}
 REVIEWED_CONFIG=${KERYX_REDEPLOY_REVIEWED_PM2_CONFIG:-}
 REVIEWED_SHA=${KERYX_REDEPLOY_REVIEWED_PM2_SHA256:-}
+ECONOMIC_CONFIG=${KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG:-}
+ECONOMIC_SHA=${KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256:-}
 case "$PRESERVE_HELD" in 0|1) ;; *) echo "Invalid scheduler preservation input" >&2; exit 1 ;; esac
 if [[ -n "$REVIEWED_CONFIG" || -n "$REVIEWED_SHA" ]]; then
   [[ "$REVIEWED_CONFIG" =~ ^/root/\.local/share/[a-zA-Z0-9_./-]+\.json$ &&
      "$REVIEWED_CONFIG" != *..* && "$REVIEWED_SHA" =~ ^[a-f0-9]{64}$ ]] \
     || { echo "Invalid paired reviewed PM2 inputs" >&2; exit 1; }
+fi
+if [[ -n "$ECONOMIC_CONFIG" || -n "$ECONOMIC_SHA" ]]; then
+  [[ "$ECONOMIC_CONFIG" =~ ^/root/\.local/share/[a-zA-Z0-9_./-]+\.json$ &&
+     "$ECONOMIC_CONFIG" != *..* && "$ECONOMIC_SHA" =~ ^[a-f0-9]{64}$ &&
+     -n "$REVIEWED_CONFIG" && "$PRESERVE_HELD" == 1 ]] \
+    || { echo "Economic migration requires paired protected inputs, reviewed stopped PM2 roles and held schedulers" >&2; exit 1; }
 fi
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
@@ -65,6 +73,35 @@ reviewed_role() {
   run_ssh "$SSH" /usr/bin/node --input-type=module - "$REVIEWED_CONFIG" "$REVIEWED_SHA" "$1" \
     < "$SCRIPT_DIR/redeploy-reviewed-roles.mjs"
 }
+economic_migration() {
+  if [[ "$1" == hold ]]; then
+    run_ssh "$SSH" /usr/bin/env -i PATH=/usr/bin:/bin /usr/bin/node --input-type=module - hold \
+      < "$SCRIPT_DIR/redeploy-economic-migration.mjs"
+  else
+    run_ssh "$SSH" /usr/bin/env -i PATH=/usr/bin:/bin /usr/bin/node --input-type=module - \
+      "$1" "$ECONOMIC_CONFIG" "$ECONOMIC_SHA" "$REVIEWED_CONFIG" "$REVIEWED_SHA" \
+      < "$SCRIPT_DIR/redeploy-economic-migration.mjs"
+  fi
+}
+
+MIGRATION_ATTEMPTED=0
+DEPLOY_COMPLETE=0
+economic_failure_hold() {
+  local status=$?
+  trap - EXIT INT TERM HUP
+  if [[ "$MIGRATION_ATTEMPTED" == 1 && "$DEPLOY_COMPLETE" == 0 ]]; then
+    echo "Economic migration was attempted; stopping public roles and retaining every build. No automatic rollback." >&2
+    economic_migration hold || echo "Public role stop could not be verified; inspect the VPS immediately and keep all writers held." >&2
+    [[ "$status" != 0 ]] || status=1
+  fi
+  exit "$status"
+}
+if [[ -n "$ECONOMIC_CONFIG" ]]; then
+  trap economic_failure_hold EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
+fi
 
 say() { printf '\n\033[1;36m=== %s\033[0m\n' "$*"; }
 
@@ -75,6 +112,11 @@ run_ssh -o BatchMode=yes -o ConnectTimeout=10 "$SSH" true 2>/dev/null \
 # Validate protected bytes and positively exited definitions before any source or
 # scheduler mutation. The operator must drain all owned writers beforehand.
 if [[ -n "$REVIEWED_CONFIG" ]]; then reviewed_role validate; fi
+if [[ -n "$ECONOMIC_CONFIG" ]]; then
+  economic_migration validate
+  # Never replace retained output from an earlier migration attempt.
+  run_ssh "$SSH" "cd $APP_DIR && test ! -e .next.tmp && test ! -L .next.tmp && test ! -e .next.bak && test ! -L .next.bak"
+fi
 
 PREVIOUS_COMMIT=$(run_ssh "$SSH" "$HEALTH_CURL" 2>/dev/null \
   | sed -n 's/.*"commit":"\([^"]*\)".*/\1/p' || true)
@@ -90,7 +132,11 @@ case "$PRIVATE_WORKER_STATE" in absent|inactive|active) ;; *) echo "Invalid priv
 fi
 
 # 1. sync source — the OLD .next keeps serving (git touches source only, not .next)
-say "1/5 syncing source at $APP_DIR (live build keeps serving)"
+if [[ -n "$ECONOMIC_CONFIG" ]]; then
+  say "1/5 syncing source at $APP_DIR (economic migration maintenance; writers stopped)"
+else
+  say "1/5 syncing source at $APP_DIR (live build keeps serving)"
+fi
 run_ssh "$SSH" "cd $APP_DIR && git fetch -q origin && git reset -q --hard origin/main && git log -1 --oneline"
 COMMIT=$(run_ssh "$SSH" "cd $APP_DIR && git rev-parse --short HEAD")
 # Next can inline server env while bundling, so the commit must be present BEFORE the build.
@@ -113,11 +159,23 @@ fi
 REMOTE
 
 # 3. typecheck, then build into .next.tmp — the live .next is untouched on any failure
-say "3/5 typechecking + building into .next.tmp (old build still live)"
+if [[ -n "$ECONOMIC_CONFIG" ]]; then
+  say "3/5 typechecking + building into .next.tmp (economic migration maintenance; writers stopped)"
+else
+  say "3/5 typechecking + building into .next.tmp (old build still live)"
+fi
 # The full TypeScript graph now exceeds 1536 MiB. Keep its separate, finite
 # 2560 MiB allowance; Next and its static worker retain the reviewed 1536 MiB cap.
 # These phases run sequentially, and a failed check cannot reach the build/swap.
-run_ssh "$SSH" "cd $APP_DIR && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=2560 npm run typecheck && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
+if [[ -n "$ECONOMIC_CONFIG" ]]; then
+  run_ssh "$SSH" "cd $APP_DIR && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=2560 npm run typecheck && test ! -e .next.tmp && test ! -L .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
+  # A lost response may follow committed DDL. Arm the hold before making the call;
+  # no subsequent failure may restart the old exact-profile runtime.
+  MIGRATION_ATTEMPTED=1
+  economic_migration migrate
+else
+  run_ssh "$SSH" "cd $APP_DIR && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=2560 npm run typecheck && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
+fi
 
 # 4. Start/restart the new durable worker before exposing the async route, then swap the web build.
 # PM2 gives an in-flight worker up to 330s to finish after SIGINT; started jobs are never requeued.
@@ -180,4 +238,9 @@ REMOTE
 else
   echo "Held schedulers preserved; no worker resume or cron rewrite."
 fi
-echo "✅ redeploy complete — $COMMIT live on keryx.cc (low-downtime)"
+DEPLOY_COMPLETE=1
+if [[ -n "$ECONOMIC_CONFIG" ]]; then
+  echo "Economic migration redeploy complete — $COMMIT live on keryx.cc; private workers and schedulers remain held."
+else
+  echo "✅ redeploy complete — $COMMIT live on keryx.cc (low-downtime)"
+fi

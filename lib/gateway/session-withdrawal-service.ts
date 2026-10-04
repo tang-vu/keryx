@@ -19,6 +19,7 @@ import { observeWithdrawalOwnerCompletion } from "./withdrawal-owner-completion-
 import { verifySessionWithdrawalCompletion } from "./session-withdrawal-completion";
 import { configuredSessionCashoutMaxAheadBlocks } from "../session/browser-session-cashout-policy";
 import { sessionWithdrawalCancellationSchema } from "./session-withdrawal-protocol";
+import { createSessionWithdrawalAbort } from "./session-withdrawal-abort";
 
 const integer = z.string().regex(/^(0|[1-9][0-9]{0,15})$/).refine(value => BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER));
 /** Operator-owned fee/height limits, independent of browser input and treasury
@@ -65,22 +66,36 @@ export async function sessionWithdrawalStatus(db: KeryxDB, owner: string, reques
   const progress = await withdrawalTransferProgress(db, requestId, preparation.sessAddr);
   const attestation = await db.getCreatorWithdrawalAttestation(requestId, preparation.sessAddr);
   const completion = await db.getSessionWithdrawalCompletion(requestId, owner);
+  const publicationAbort = await db.getSessionWithdrawalAbort(requestId, owner);
   const signingPhase = await db.getSessionWithdrawalSigningPhase(requestId, owner);
   if (!signingPhase) throw new Error("Original withdrawal phase unavailable");
   const cancellation = signingPhase === "cancelled_unexposed" ? sessionWithdrawalCancellationSchema.parse({
     format: "keryx-session-withdrawal-cancellation-v1", network: preparation.network,
     requestId, ownerAddr: owner, sessAddr: preparation.sessAddr, reason: "cancelled-unexposed" }) : null;
   let mint = null;
-  if (attestation && !completion && !cancellation) {
+  if (attestation && !completion && !cancellation && !publicationAbort) {
     const record = await db.getCreatorWithdrawal(requestId, preparation.sessAddr);
     if (!record || canonicalJson(record.request.burnIntent) !== canonicalJson(preparation.burnIntent)) throw new Error("Original withdrawal conflict");
     const observation = await withdrawalMintObserverForRpc(config.rpcUrl)(record, attestation, owner, signal);
     if (observation) mint = { to: preparation.policy.gatewayMinter, data: encodeFunctionData({ abi: WITHDRAWAL_MINTER_ABI,
       functionName: "gatewayMint", args: [attestation.attestation, attestation.signature] }), value: "0", network: ARC_MAINNET_PROFILE.networkId, observation };
   }
-  return { preparation, signingPhase, cancellation,
-    progress: { status: cancellation ? "cancelled-unexposed" : completion ? "mint-finalized-observed" : progress?.status ?? "prepared", retryAuthorized: false,
+  return { preparation, signingPhase, cancellation, ...(publicationAbort ? { publicationAbort } : {}),
+    progress: { status: publicationAbort ? "aborted-before-publication" : cancellation ? "cancelled-unexposed" : completion ? "mint-finalized-observed" : progress?.status ?? "prepared", retryAuthorized: false,
     chainFinalityVerified: !!completion }, attestation, mint, completion };
+}
+
+/** Owner-authenticated local signing abort. The holder permanently fenced publication;
+ * server-side originals, signed requests and transfer claims remain independent authority. */
+export async function abortSessionWithdrawalPublication(db: KeryxDB, owner: string, id: string, signature: Hex, signal: AbortSignal) {
+  mainnetGrantPolicy();
+  const p = await db.getSessionWithdrawal(id, owner);
+  if (!p) return null;
+  await readRetainedMainnetSessionAuthority(db, owner, p.grantEpoch, p.sessAddr);
+  const proof = await createSessionWithdrawalAbort(p, signature);
+  signal.throwIfAborted();
+  await db.abortSessionWithdrawal(id, owner, proof);
+  return sessionWithdrawalStatus(db, owner, id, signal);
 }
 export async function submitSessionWithdrawal(db: KeryxDB, owner: string, id: string, signature: Hex, signal: AbortSignal) {
   const preparation = await db.getSessionWithdrawal(id, owner);

@@ -2,7 +2,8 @@
 
 Keryx exposes a drop-in **OpenAI Chat Completions** surface. Any tool that speaks the OpenAI wire
 format can ask Keryx a question; Keryx researches it over paid sources and settles a weighted USDC
-citation reward to every creator it cites, on Arc testnet.
+citation reward to eligible creators it cites on the configured Arc network. Public production
+uses mainnet; `/api/health` reports the selected network and settlement mode.
 
 - **Base URL:** `https://keryx.cc/api/v1`
 - **Model:** `keryx` (default), or pick a reasoning model chat-app style with
@@ -18,7 +19,10 @@ citation reward to every creator it cites, on Arc testnet.
   server-side (the answer stays at its dispatch URL).
 - **Auth:** send any token as the API key. On the **free tier** the token is ignored
   (treasury-funded, IP rate-limited). Send a **`kx_live_…`** key (mint at
-  [keryx.cc/dev](https://keryx.cc/dev)) for higher limits + usage metering.
+  [keryx.cc/dev](https://keryx.cc/dev)) for wallet-based limits + usage metering.
+  All keys for one wallet share 10 sponsored calls/minute across chat and remote MCP;
+  direct calls also share 10/minute per IP and the global sponsored allowance.
+  Creating another key adds no quota. [Full limits](engineering/mainnet-economic-recovery.md#sponsored-admission).
 - **Streaming:** with `stream: true`, the agent's live buy/skip/trust reasoning arrives as
   `delta.reasoning_content` (o1-style), then the answer as `delta.content`. The terminal chunk
   carries a `keryx` extension (`queryId`, `citations`, `totalToCreators`, `dispatchUrl`).
@@ -27,7 +31,8 @@ citation reward to every creator it cites, on Arc testnet.
 - Try it with no install at [keryx.cc/playground](https://keryx.cc/playground). Full schema at
   [keryx.cc/api/docs](https://keryx.cc/api/docs).
 
-> Testnet only — settlements are real but in testnet USDC. No real money moves.
+> Mainnet sponsored research uses Keryx treasury funds within its reviewed caps.
+> Caller-funded A2A is a separate x402 route; an API key holds no prepaid balance.
 
 ---
 

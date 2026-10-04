@@ -51,6 +51,7 @@ export function sqliteCreatorOwnerAccounting(db: DatabaseSync, owner: string): C
   let held=BigInt(0), completed=BigInt(0);
   const sessions=db.prepare(`SELECT p.data,c.request_id AS completed FROM session_withdrawal_preparations p
     LEFT JOIN session_withdrawal_completions c USING(request_id) WHERE p.signer=?
+    AND NOT EXISTS(SELECT 1 FROM session_withdrawal_publication_aborts a WHERE a.request_id=p.request_id)
     AND NOT EXISTS(SELECT 1 FROM session_withdrawal_cancellations x WHERE x.request_id=p.request_id) LIMIT 10001`).all(owner);
   if(sessions.length>10000) throw new Error("Owner withdrawal inspection limit exceeded");
   for(const row of sessions) {

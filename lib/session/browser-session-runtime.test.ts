@@ -116,3 +116,34 @@ it("accepts a same-epoch retained spend increase while keeping immutable consent
   expect((await createBrowserSessionRuntime(key, f.dependencies).authorizePayment(f.challenge.reqId, f.question)).paymentHeader).toBeTruthy();
   expect(f.consumed.size).toBe(1);
 });
+
+it.each(["recovered", "no-evidence", "locked", "changed-grant", "still-held"] as const)(
+  "revalidates one local failed-capacity recovery before signing (%s)", async mode => {
+    const f = await fixture();
+    let reserves = 0, recoveries = 0, signatures = 0;
+    const key = { ...f.key, signPayment: async (...args: Parameters<typeof f.key.signPayment>) => {
+      signatures++; return f.key.signPayment(...args);
+    } };
+    const runtime = createBrowserSessionRuntime(key, { ...f.dependencies,
+      reserve: async (...args) => {
+        reserves++;
+        if (reserves === 1 || mode === "still-held") throw new Error("retained capacity");
+        const [namespace, epoch, nonce, amount, cap, question] = args;
+        await f.dependencies.reserve(namespace, epoch, nonce, amount, cap, question);
+      },
+      reconcileFailed: async (namespace, owner, signer, epoch) => {
+        recoveries++;
+        expect([namespace, owner, signer, epoch]).toEqual([f.key.context.storageNamespace, f.key.context.owner,
+          f.key.address!.toLowerCase(), f.grant.grantEpoch]);
+        if (mode === "locked") runtime.lock();
+        if (mode === "changed-grant") f.grant.capMicroUsdc = "9000";
+        return mode === "no-evidence" ? 0 : 1;
+      },
+    });
+    if (mode === "recovered") expect((await runtime.authorizePayment(f.challenge.reqId, f.question)).paymentHeader).toBeTruthy();
+    else await expect(runtime.authorizePayment(f.challenge.reqId, f.question)).rejects.toThrow();
+    expect(recoveries).toBe(1);
+    expect(signatures).toBe(mode === "recovered" ? 1 : 0);
+    expect(reserves).toBe(mode === "recovered" || mode === "still-held" ? 2 : 1);
+  },
+);

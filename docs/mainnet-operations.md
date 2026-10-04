@@ -224,9 +224,11 @@ public value requires rebuilding the worker and checking the effective server tw
 
 A prepared unsigned withdrawal remains cancellable only before native exposure,
 signed-request admission or claim. Native authorization marks exposure before
-cryptography. Any exposed, signed, submitted or unknown original remains retained
-and holds its financial barrier until exact observed completion; a timeout does
-not cancel it. The coordinated headless cashout candidate consumes the same independently checked
+cryptography. An exposed original can use the separate authenticated publication
+abort only when the local signer durably fences signing before publishing a signature
+and the server has no signed request/claim/outcome. Signed, submitted or unknown
+transfers remain retained and hold their barrier until exact observed completion;
+a timeout does not cancel them. The coordinated headless cashout consumes the same independently checked
 normal withdrawal policy; its native migration/journal acceptance is separate from
 actual real-funded withdrawal receipts.
 
@@ -355,11 +357,53 @@ caller-owned ordinary payments do not gain treasury authority from a policy file
 
 ## Delegated headless session cashout commands
 
-Keep the **same** private state directory and wrapping environment. Candidate v3
-adds durable withdrawal exposure/barriers without replacing the first funded cipher,
-original nonces, per-question budgets or lifetime caps. Existing v2 state is refused
-by normal v3 commands until explicit `migrate`; it is never upgraded or adopted
-automatically. Migration must preserve custody/history and fence old payment writers.
+### Economic recovery storage upgrade
+
+The application schema adds one immutable publication-abort journal. Existing
+production stores need an explicit stopped-writer migration; normal startup never
+rewrites them. The storage identity, manifest, public/private treasury policies,
+signers and caps remain unchanged. Do not create a replacement enrollment.
+
+From the reviewed release, inspect only the explicitly selected mainnet manifest:
+
+```bash
+node --import tsx scripts/mainnet-economic-storage-migrate.mts inspect --manifest "$REVIEWED_MANIFEST"
+```
+
+Retain the returned canonical `manifestDigest` and `identityDigest`. They are not
+hashes of the manifest file's formatting. Build and verify the new release, stop
+all web, A2A, private and withdrawal writers, and positively verify process exit.
+Then use fresh protected backup and JSONL receipt destinations:
+
+```bash
+node --import tsx scripts/mainnet-economic-storage-migrate.mts migrate \
+  --manifest "$REVIEWED_MANIFEST" --expected-manifest "$MANIFEST_DIGEST" \
+  --expected-identity "$IDENTITY_DIGEST" --backup "$FRESH_BACKUP" \
+  --receipt "$FRESH_RECEIPT_JSONL" --writers-stopped
+```
+
+The tool creates and verifies a native backup, then rechecks the manifest, original
+snapshot and backup under the same exclusive lock before changing schema. It hashes
+every retained typed row, including original TEXT bytes, and verifies preservation
+afterward. It refuses an unknown schema, changed original, existing destination or
+missing drain assertion. The assertion is an operator prerequisite, not automatic
+process discovery. Preserve both `backup-verified` and `migration-verified` receipts.
+
+After an ambiguous response, keep writers stopped and inspect the original plus
+retained receipts. Do not overwrite the backup, repeat signing, restore a snapshot
+automatically or restart an old build: the old runtime refuses the new schema.
+Resume only the reviewed new runtime after exact migration and identity/policy
+readback, then verify `/api/health` against the pushed commit. Preserve previously
+held schedulers. The tool itself does not authorize signing or financial operations.
+
+### Retained headless custody
+
+Keep the **same** private state directory and wrapping environment. State v4
+adds immutable terminal-failure releases and signing-publication aborts without replacing
+the first funded cipher, original nonces, headers, question budgets or withdrawals.
+Existing v2/v3 state is refused by normal v4 commands until explicit `migrate`;
+it is never upgraded or adopted automatically. Migration preserves custody/history
+and fences archived old payment writers.
 Older v1/unrecognised files remain refused in place for owner recovery.
 
 ```text
@@ -372,6 +416,7 @@ npm run web -- withdraw-mint REQUEST_ID
 npm run web -- withdraw-complete REQUEST_ID OWNER_MINT_TX_HASH
 npm run web -- withdraw-recover REQUEST_ID
 npm run web -- withdraw-cancel REQUEST_ID
+npm run web -- withdraw-abort REQUEST_ID
 ```
 
 Amounts and maximum burn fee use exact integer micro-USDC. Preparation/signing
@@ -390,8 +435,13 @@ transaction hash with `withdraw-complete` before completion HTTP; uncertain
 completion is recovered by the same original ID/hash. These commands never sign or
 broadcast an owner transaction, export a personal key, or use the testnet relay.
 
-Only exact unexposed cancellation or independently observed original completion
-releases the withdrawal barrier. Exposed/signed/submitted/unknown state remains
-held; a timeout is not cancellation. Keep private backups through completion.
+Exact unexposed cancellation, acknowledged original publication abort, or independently
+observed original completion releases the withdrawal barrier. `withdraw-abort` is
+only for interrupted signing before a signature was saved/published. Its local
+tombstone retains the barrier through response loss until exact server acknowledgement;
+signed/submitted/unknown transfers remain held. A timeout is not cancellation.
+Exact journal-verified terminal-failed payments release lifetime local capacity once,
+retaining their nonce/header and conservative original question cap. Keep private
+backups through completion. See [economic recovery](engineering/mainnet-economic-recovery.md).
 Native local acceptance is not a real funded receipt, distributed cloned-state
 exclusion or proof of Windows host power-loss durability.

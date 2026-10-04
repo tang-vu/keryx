@@ -50,7 +50,7 @@ dispatch completes (typically well under a minute).
 | Concern | Guard |
 |---|---|
 | Forged webhook calls | `X-Telegram-Bot-Api-Secret-Token` must equal the registered secret, compared constant-time; wrong/missing → 401 |
-| Treasury drain | Same clamp as the site free trial: budget ≤ `KERYX_ANON_MAX_BUDGET`, `treasuryAsk` rate-limit tier keyed per Telegram user id |
+| Treasury drain | Same clamp as the site free trial: budget ≤ `KERYX_ANON_MAX_BUDGET`, 5/minute per authenticated Telegram user id plus the durable global sponsored allowance (60/minute by default, shared with web/chat/MCP and other bots); counter outages refuse admission |
 | Bot loops | Updates from other bots (`from.is_bot`) are ignored, so two bots can't ping-pong the treasury dry |
 | HTML injection | Answer and source names are HTML-escaped before `parse_mode: HTML` rendering |
 | Unconfigured deploys | Either env var unset → endpoint answers 503, nothing else changes |

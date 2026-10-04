@@ -19,9 +19,11 @@ and a browser could attempt DNS-rebinding/cross-origin calls.
 
 **Mitigation.**
 
-- Anonymous `research` calls use the existing IP-keyed `treasuryAsk` limit and `anonMaxBudget`.
-- An ask-scoped `kx_live_…` key uses the keyed rate limit and `a2aMaxBudget`; its verified wallet,
-  not a client argument, supplies stable actor attribution.
+- Anonymous `research` calls share the 5/minute anonymous IP allowance and `anonMaxBudget`.
+- An ask-scoped `kx_live_…` key uses `a2aMaxBudget`; all keys for its verified wallet share
+  10/minute across sponsored web/chat/MCP. Direct requests also share 10/minute per IP.
+  Every sponsored surface shares a durable global allowance (60/minute by default);
+  unavailable counters refuse research. See [admission limits](engineering/mainnet-economic-recovery.md#sponsored-admission).
 - A present `Origin` must match the request origin, configured Keryx base URL, or an explicit
   `KERYX_MCP_ALLOWED_ORIGINS` entry. Invalid origins receive HTTP 403.
 - The endpoint is stateless and exposes no server-initiated notification stream or durable session.

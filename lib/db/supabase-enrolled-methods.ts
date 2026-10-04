@@ -143,6 +143,8 @@ export const SUPABASE_ENROLLED_METHODS = Object.freeze({
   getSessionWithdrawalSigningPhase: "read",
   authorizeSessionWithdrawal: "write",
   cancelSessionWithdrawal: "write",
+  getSessionWithdrawalAbort: "read",
+  abortSessionWithdrawal: "write",
   admitHostedTreasuryPolicy: "write",
   hostedTreasuryAccounting: "read",
   admitHostedAuthorization: "write",

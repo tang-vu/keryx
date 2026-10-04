@@ -42,6 +42,44 @@ has authorized the public-mainnet direction. Registry gas, owner wallet transact
 and hosted USDC funding amounts remain concrete financial inputs to review; source
 preparation is not a receipt or proof of profitability/traction.
 
+## Interrupted Session withdrawal signing
+
+The web recovery panel offers **Cancel interrupted signing**; the shared headless
+runtime exposes `withdraw-abort <original-request-id>`. The original local custody
+record must exist with no saved burn signature, possible submission, mint attempt or
+completion. A strict local transaction permanently fences publication before HTTP or
+the restricted abort proof signature. Browser records also set the existing cancelled
+sentinel so an already-open older tab cannot retain a late burn signature.
+
+`POST /api/session/withdraw/abort` requires the authenticated original owner, allowed
+origin and a session-key assertion bound to the entire retained preparation. SQLite
+atomically refuses the abort if any signed request, transfer claim, attestation or
+completion exists. An immutable abort outcome blocks all later original submissions,
+including older application writers. A previously acknowledged never-exposed
+cancellation may coexist with this outcome, so losing that earlier acknowledgement
+does not strand a later local publication fence. All original rows remain retained.
+
+A lost abort acknowledgement keeps the local withdrawal barrier. Retry the same
+abort to read and verify the exact outcome, then clear that local barrier. It does
+not reactivate the payment grant; the owner prepares another withdrawal or explicitly
+renews the Session. The proof authenticates an assertion by the existing trusted
+browser/session holder; it is not an independent proof that no signature exists.
+Already saved or ambiguously submitted burns continue through original recovery.
+
+Elapsed burn height is not release authority. Circle's direct burn path enforces
+`maxBlockHeight` and transfer-spec replay protection, but its operator batch path
+applies balance changes without those per-burn fields. Expired attestation status
+also describes the destination attestation, not cancellation of every possible
+source liability. See Circle's [direct burns](https://github.com/circlefin/evm-gateway-contracts/blob/c21d2d2e356d6566b6c7c3dde7ebcbdf1747590b/src/modules/wallet/Burns.sol),
+[batch processing](https://github.com/circlefin/evm-gateway-contracts/blob/c21d2d2e356d6566b6c7c3dde7ebcbdf1747590b/src/modules/wallet/Batches.sol),
+and [transfer status](https://developers.circle.com/api-reference/gateway/all/get-transfer-by-id).
+
+Existing sealed SQLite requires the explicit stopped-writer migration and verified
+backup described in [operations](mainnet-operations.md). Startup never repairs an old
+schema; previous application profiles refuse the upgraded store. Headless state
+requires its explicit v4 migration while preserving the same custody path. Supabase
+mainnet and Rust financial writers remain unadmitted.
+
 ## Historical preparation components
 
 The initial candidate-manifest and invited browser enrollment proposals are retained

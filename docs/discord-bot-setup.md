@@ -51,6 +51,6 @@ dispatch completes (typically well under a minute; the interaction token allows 
 | Concern | Guard |
 |---|---|
 | Forged webhook calls | Ed25519 signature over every request body (`lib/discord/verify-interaction-signature.ts`); invalid → 401 |
-| Treasury drain | Same clamp as the site free trial: budget ≤ `KERYX_ANON_MAX_BUDGET`, `treasuryAsk` rate-limit tier keyed per Discord user id |
+| Treasury drain | Same clamp as the site free trial: budget ≤ `KERYX_ANON_MAX_BUDGET`, 5/minute per authenticated Discord user id plus the durable global sponsored allowance (60/minute by default, shared with web/chat/MCP and other bots); counter outages refuse admission |
 | Unconfigured deploys | `DISCORD_PUBLIC_KEY` unset → endpoint answers 503, nothing else changes |
 | Token hygiene | `DISCORD_BOT_TOKEN` is used only by the local `register-discord` script; the running app never reads it |

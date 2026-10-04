@@ -342,7 +342,8 @@ export function McpIntegrationClient() {
                 <p className="mt-2 max-w-[620px] font-serif text-[15px] leading-[1.6] text-ink-3">
                   Try Remote MCP without a key. For higher limits and wallet-level attribution,
                   create an ask-scoped API key in the developer portal. Keryx still funds creator
-                  rewards; your key controls identity and rate limits only.
+                  rewards; your key controls identity and rate limits only. All keys for one
+                  wallet share the same sponsored allowance across chat and Remote MCP.
                 </p>
               </div>
             </div>

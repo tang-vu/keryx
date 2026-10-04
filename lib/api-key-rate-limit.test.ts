@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   verifyApiKey: vi.fn(),
   checkRateLimit: vi.fn(),
+  checkSponsoredResearchAdmission: vi.fn(),
   getDb: vi.fn(),
 }));
 
@@ -13,6 +14,11 @@ vi.mock("@/lib/rate-limit", () => ({
   clientIp: vi.fn(() => "127.0.0.1"),
 }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.getDb }));
+vi.mock("@/lib/sponsored-admission", () => ({ checkSponsoredResearchAdmission: mocks.checkSponsoredResearchAdmission }));
+vi.mock("@/lib/config", async original => {
+  const actual = await original<typeof import("./config")>();
+  return { ...actual, config: { ...actual.config, sellerAddress: "0x1111111111111111111111111111111111111111" } };
+});
 vi.mock("@/lib/agent", () => ({ collectRun: vi.fn() }));
 vi.mock("@/lib/payments/payment-gateway", () => ({ makePayment: vi.fn() }));
 vi.mock("@/lib/x402-server", () => ({
@@ -50,6 +56,7 @@ describe("authenticated ask rate-limit identity", () => {
     mocks.checkRateLimit.mockResolvedValue(
       Response.json({ error: "rate limit exceeded" }, { status: 429 }),
     );
+    mocks.checkSponsoredResearchAdmission.mockResolvedValue(Response.json({ error: "sponsored_rate_limit" }, { status: 429 }));
   });
 
   it("keys the paid A2A route by verified key id, never the bearer secret", async () => {
@@ -61,18 +68,18 @@ describe("authenticated ask rate-limit identity", () => {
     expect(mocks.checkRateLimit).not.toHaveBeenCalledWith(RAW_KEY, expect.anything());
   });
 
-  it("keys the OpenAI-compatible route by verified key id", async () => {
+  it("keys sponsored OpenAI-compatible requests by verified wallet, independently of key id", async () => {
     const response = await postChat(
       request("/api/v1/chat/completions", {
         model: "keryx",
-        messages: [{ role: "user", content: "q" }],
+        messages: [{ role: "user", content: "Synthetic question" }],
       }),
     );
 
     expect(response.status).toBe(429);
     expect(mocks.verifyApiKey).toHaveBeenCalledWith(RAW_KEY);
-    expect(mocks.checkRateLimit).toHaveBeenCalledWith(KEY_CONTEXT.keyId, "ask");
-    expect(mocks.checkRateLimit).not.toHaveBeenCalledWith(RAW_KEY, expect.anything());
+    expect(mocks.checkSponsoredResearchAdmission).toHaveBeenCalledWith({ kind: "key", wallet: KEY_CONTEXT.walletAddress, ip: "127.0.0.1" });
+    expect(mocks.checkRateLimit).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid key before touching the durable limiter", async () => {

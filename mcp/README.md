@@ -5,7 +5,7 @@ The local stdio buyer pays the inbound x402 toll from a configured caller wallet
 A Circle settlement identifier is batching evidence, not an individual EVM transaction hash.
 Testnet calls and owner-operated tests do not establish external traction or mainnet readiness.
 
-Version 0.4.2 forwards the retained hosted answer and structured evidence. After an
+Version 0.4.3 forwards the retained hosted answer and structured evidence. After an
 accepted hosted deployment of the claim-grounding repair, evidence-bearing answers
 contain qualified literal source excerpts and explicitly labelled quoted research
 targets/gaps; arbitrary synthesis is withheld because marker-level support cannot prove
@@ -13,17 +13,17 @@ each assertion. High target coverage does not establish per-assertion entailment
 complete useful synthesis: the answer retains an explicit Low/incomplete boundary.
 Accepted excerpt citations remain eligible for creator rewards; paid-fetch debits,
 source/version bindings and original settlement/receipt identities remain unchanged.
-No schema, API transport or caller custody change is introduced. Exact-source packed
-acceptance and publication integrity are independent artifact gates. October 3 registry
-discovery observed latest 0.4.1 and no 0.4.2. Check the verified release assets and npm
-integrity/provenance readback for current artifact status. Source or package publication
-does not establish hosted deployment: the concurrent mainnet maintenance hold remains
-an independent live gate, and this package does not switch the hosted server.
+The coordinated economic repair accepts exact quoted micro-USDC budgets in hosted
+async A2A. Remote sponsored research shares wallet/IP/global admission; creating more
+keys adds no quota. The stdio caller still pays its own x402 toll and retains its own
+original custody/recovery contract. Exact-source packed acceptance and publication
+integrity are independent artifact gates. Check release manifests, npm integrity and
+the hosted `/api/health` commit separately; a package does not switch the hosted server.
 
 ## Research Monthly
 
-Stdio 0.4.2 and the remote service expose read-only `research_monthly` discovery.
-The four-request, 30-day Arc-testnet pilot uses manual renewal and a 10% total-price
+Stdio 0.4.3 and the remote service expose read-only `research_monthly` discovery.
+The four-request, 30-day package uses manual renewal and a 10% total-price
 discount with unchanged creator caps. Failed and pending jobs retain slots.
 Buy/redeem through the caller-wallet [web checkout](https://keryx.cc/research#monthly)
 or shared API/Monthly CLI; existing MCP research tools remain separate jobs.
@@ -54,12 +54,11 @@ Builds use the repository's pinned npm 11.19.0 installer. Critical consumer depe
 pinned to Circle x402 batching 3.5.0 and viem 2.55.19.
 
 The verified release tarball can be installed directly. npm registry availability is a separate
-publication step: do not assume `npx keryx-mcp@latest` contains these safeguards. October 3
-registry discovery observed latest 0.4.1; use current verified release assets and registry
-integrity/provenance readback to establish whether 0.4.2 has been published.
+publication step: use current verified release assets and registry integrity/provenance
+readback to establish whether 0.4.3 has been published.
 
 ```bash
-npm install /absolute/path/keryx-mcp-0.4.2.tgz
+npm install /absolute/path/keryx-mcp-0.4.3.tgz
 ```
 
 Configure your MCP client to run `node /absolute/path/node_modules/keryx-mcp/dist/keryx-mcp.mjs`.
@@ -119,7 +118,9 @@ Host ACLs and protection against a malicious local owner remain required. Journa
 bounded schema checks, not custody-file provenance proofs. File contents are flushed before
 payment I/O; POSIX parent directories are flushed where supported. Windows namespace durability,
 recursive-directory power-loss behavior and real host recovery still need operational acceptance.
-RPC/provider honesty and independent security review remain separate gates. Mainnet code selection does not authorize a live deployment or any funds. Production remains testnet until the coordinated cutover is accepted.
+RPC/provider honesty and independent security review remain separate gates. Mainnet
+code selection grants no spending authority. Public production uses mainnet; choose
+the same network explicitly in the caller profile and verify `/api/health` before use.
 
 ## Build and verify from source
 
@@ -139,7 +140,7 @@ After the independent MCP install, also run `npm exec -- tsc --noEmit -p mcp/tsc
 from the repository root. This checks MCP and imported shared source against the MCP package's
 installed viem/Circle declarations, matching the single external dependency closure used by the
 bundled consumer. Run the packed acceptance with
-`node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.4.2.tgz /absolute/path/to/pinned/npm-cli.js`.
+`node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.4.3.tgz /absolute/path/to/pinned/npm-cli.js`.
 
 Mainnet purchase and original recovery require HTTPS without URL credentials or fragments. This is transport protection, not a seller host allowlist. Plain HTTP remains available for deliberate testnet local development.
 
