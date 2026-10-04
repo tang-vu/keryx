@@ -16,7 +16,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-@import "tailwindcss";
+/* Only authored web sources contribute utilities. Retained deploy builds, SQL,
+ * reports and other product distributions must not become PostCSS dependencies. */
+@import "tailwindcss" source(none);
+@source "./";
+@source "../components";
+@source "../lib";
+@source "../shared";
 @import "tw-animate-css";
 @import "../shared/design-tokens.css";
 

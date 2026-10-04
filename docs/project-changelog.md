@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Reliable CSS builds with retained recovery artifacts (2026-10-04, v0.26.4)
+
+- Generate web utilities from the authored application, components, library and
+  shared sources. Retained builds, operational evidence and unrelated workspaces
+  no longer contribute CSS classes or expand the production PostCSS scan.
+- Preserve rollback evidence and ignore all generated `.next.*` directories.
+  Add an actual PostCSS regression with synthetic retained/failed builds and
+  legitimate web classes, alongside the existing production and browser CI gates.
+- Carry forward the mainnet Session and creator onboarding repairs in v0.26.3.
+  MCP/desktop 0.4.2 and extension 0.1.1 retain their independent styles and contracts.
+
 ### Mainnet session and creator onboarding repair (2026-10-04, v0.26.3)
 
 - Show saved-session recovery while it is running; block duplicate activation,

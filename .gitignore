@@ -13,6 +13,8 @@ wallets.json
 # next.js
 .next/
 .next.tmp/
+# Temporary, rollback and retained Next builds are generated release evidence.
+.next.*/
 out/
 build/
 dist/
