@@ -1,4 +1,4 @@
-# Independent buyer agent — Arc testnet
+# Independent buyer agent — selected Arc network
 
 For the four-request prepaid pilot, use [Research Monthly](research-monthly.md).
 `npm run monthly -- quote --payee 0x...` reads its price; buy in the reviewed web
@@ -9,13 +9,21 @@ payment and exact redemption recovery never consumes a second slot.
 The buyer client purchases Keryx Quick/Deep research using the caller's own funded
 Gateway balance. It imports no Keryx server configuration and cannot access the
 Keryx funder. Requires Node 24 (recommended), this repository and `npm install`.
-No mainnet support, automatic funding, deposits or approvals are included.
+Arc mainnet and Arc testnet use separate configured profiles and journals. This
+repository buyer command requires an existing Gateway balance; it does not perform
+automatic funding, deposits or approvals.
 
 ## Prepare
 
-1. Use an EOA with an existing Arc-testnet Gateway balance. Keep its private key
+1. Use an EOA with an existing Gateway balance on the selected Arc network. Keep its private key
    only in `.env.buyer.local` as `KERYX_BUYER_PRIVATE_KEY=0x...`, or inject the same
    environment variable from your own secret manager. Never paste a key into commands.
+   For the public mainnet deployment, set both `KERYX_NETWORK=arc` and
+   `NEXT_PUBLIC_KERYX_NETWORK=arc` in that private environment file before starting
+   the command. An unset public profile retains the historical testnet default;
+   the payment challenge cannot switch the client's signing network. Mainnet
+   uses real USDC. Preserve historical testnet journals and recover them with
+   their original `arcTestnet` configuration; changing labels does not migrate funds.
 2. Open https://keryx.cc/research, choose a package/cap, enter your question, and
    download `request.json`. Keep this file private; it contains your question.
 3. Independently confirm the Keryx treasury payee shown on that page before pinning
@@ -73,7 +81,7 @@ It stops on completed, failed, review-required, unknown order or network error.
 Run it again with the SAME directory to continue. Exit 2 means an incomplete/review
 state; exit 1 means refusal or an error; a completed verified result exits 0.
 
-Limits: one pinned Keryx HTTPS origin, x402 v2 exact batching, Arc testnet USDC,
+Limits: one pinned Keryx HTTPS origin, x402 v2 exact batching, selected-network Arc USDC,
 GatewayWalletBatched v1 domain, trusted payee, at most 0.50 USDC creator cap and
 1 USDC total per job. Caller limits may be lower. Amounts must have at most six
 decimal places. These are per-job limits, not a global wallet spend allowance.

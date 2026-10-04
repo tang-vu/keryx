@@ -57,6 +57,7 @@ export type GrantStatus =
   | "depositing"       // session EOA approve + Gateway deposit txs
   | "confirming"       // waiting for Circle Gateway to reflect the credit (off-chain lag)
   | "registering"      // POSTing to /api/session/grant
+  | "restoring"        // reading retained same-browser mainnet custody; no wallet prompt
   | "recovering"       // re-deriving key from a signature to resume a funded session
   | "active"
   | "paused"           // status unknown; retain funded session and require recovery

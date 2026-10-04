@@ -8,6 +8,7 @@ import type { TypedDataPayload } from "./session-signer-protocol";
 import { parseSessionGrantConsent, createSessionGrantConsentMessage, createSessionGrantSignerProofMessage } from "../payments/session-grant-consent";
 import { verifySessionWithdrawalPreparation } from "../gateway/session-withdrawal-protocol";
 import { withdrawTypedData } from "../gateway/withdraw-protocol";
+import { SessionCustodyMissingError } from "./session-custody-error";
 
 export interface RetainedSessionStore {
   read(namespace: string): Promise<IsolatedWrappedKey | null>;
@@ -90,8 +91,8 @@ export function createBrowserSessionKey(origin: string, owner: string, dependenc
     restore() {
       return lifecycle(async () => {
         const retained = await dependencies.retained.read(context.storageNamespace);
-        if (!retained) refused();
-        return load(retained!);
+        if (!retained) throw new SessionCustodyMissingError();
+        return load(retained);
       });
     },
     async signPayment(payload: TypedDataPayload) {

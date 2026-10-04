@@ -212,6 +212,8 @@ export function reconcileSettlement(
 
 /** What /status needs: the verdict and the per-wallet rows, without the tolerance arithmetic. */
 export interface SettlementParitySummary {
+  /** Selected rail at the original balance observation; absent on retained legacy summaries. */
+  network?: string;
   checkedAt: string;
   owedUsdc: number;
   confirmedUsdc: number;

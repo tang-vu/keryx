@@ -14,6 +14,7 @@ export type BulkPhase =
   | "ready"      // ingested, awaiting the creator's on-chain signature
   | "signing"    // wallet signature prompt open
   | "confirming" // tx submitted, waiting for the receipt
+  | "unknown"    // original submission/confirmation requires read-only recovery
   | "done"       // on-chain (or offline row already written)
   | "failed"     // ingest or tx failed
   | "skipped";   // deselected by the creator
@@ -28,13 +29,16 @@ export interface BulkFeed {
   selected: boolean;
   phase: BulkPhase;
   txHash?: string;
+  /** Wallet-returned original, never overwritten by the editable recovery lookup. */
+  submittedTxHash?: string;
 }
 
 const PHASE_LABEL: Record<BulkPhase, string> = {
   ready: "Ready to sign",
   signing: "Awaiting signature…",
   confirming: "Confirming on-chain…",
-  done: "Registered",
+  done: "Registration confirmed",
+  unknown: "Confirmation unknown",
   failed: "Failed",
   skipped: "Skipped",
 };
@@ -51,10 +55,14 @@ export function BulkImportResults({
   feeds,
   onToggle,
   busy,
+  onCheck,
+  onHashChange,
 }: {
   feeds: BulkFeed[];
   onToggle: (rssUrl: string) => void;
   busy: boolean;
+  onCheck: (rssUrl: string) => void;
+  onHashChange: (rssUrl: string, hash: string) => void;
 }) {
   if (feeds.length === 0) return null;
   return (
@@ -67,15 +75,25 @@ export function BulkImportResults({
             <input
               type="checkbox"
               checked={f.selected && f.ok}
-              disabled={!f.ok || busy || f.phase === "done"}
+              disabled={!f.ok || busy || f.phase !== "ready"}
               onChange={() => onToggle(f.rssUrl)}
               className="h-3.5 w-3.5 shrink-0 accent-seal"
             />
             <div className={`min-w-0 flex-1 ${dim ? "opacity-55" : ""}`}>
               <p className="truncate font-mono text-[12px] text-ink">{f.rssUrl}</p>
               <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
-                {f.ok ? PHASE_LABEL[f.phase] : f.error || "Could not read feed"}
+                {f.ok ? f.phase === "done" && f.mode === "offline" ? "Saved locally (offline)" : PHASE_LABEL[f.phase] : f.error || "Could not read feed"}
               </p>
+              {f.ok && f.error && <p role="status" className="mt-1 text-xs text-seal">{f.error}</p>}
+              {(f.phase === "unknown" || f.phase === "confirming") && <div className="mt-2 space-y-2">
+                <label className="block text-xs">Original transaction hash
+                  <input aria-label={`Original registration transaction for ${f.rssUrl}`} value={f.txHash ?? ""} disabled={busy}
+                    onChange={event => onHashChange(f.rssUrl, event.target.value.trim())} className="mt-1 w-full border border-line p-1 font-mono text-xs" />
+                </label>
+                <button type="button" disabled={busy || !/^0x[0-9a-f]{64}$/i.test(f.txHash ?? "")}
+                  onClick={() => onCheck(f.rssUrl)} className="text-xs underline disabled:opacity-50">Check original registration</button>
+                {f.submittedTxHash && <p className="break-all text-xs">Wallet-submitted original: <a className="underline" href={`${browserPaymentProfile().explorerUrl}/tx/${f.submittedTxHash}`} target="_blank" rel="noopener noreferrer">{f.submittedTxHash}</a></p>}
+              </div>}
             </div>
             {f.txHash && (
               <a

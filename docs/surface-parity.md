@@ -123,3 +123,30 @@ Artifact acceptance/publication and hosted deployment are separate gates. Verifi
 check immutable release manifests and npm integrity/provenance for artifact status.
 Qualified-excerpt hosted behavior starts only after accepted hosted deployment, not
 from a package installation or source version alone.
+
+## October 4 mainnet onboarding repair
+
+Application candidate **0.26.3** fixes browser Session lifecycle, creator funding
+guidance and bulk registration confirmation. Direct production health before this
+update reported Arc mainnet `55fc80c`. npm readback reported `keryx-mcp` **0.4.2**;
+GitHub release `v0.26.2` supplies MCP/desktop **0.4.2** artifacts at `412fd4e`.
+Those immutable distributions have distinct source provenance from the web release.
+
+| Surface | Audit and release boundary |
+| --- | --- |
+| Web | Ship Session hook, worker/client error classification, recovery UI, creator bulk/faucet and funding copy together. Actual browser regression and emitted mainnet worker/CSP checks apply. |
+| API / remote MCP | Session public routes, grants, settlement authorization, research orders and remote MCP contract are unchanged. Settlement health observations gain an optional recorded network for correct inspection guidance; old networkless observations remain unknown. |
+| Buyer CLI / stdio MCP | They retain their own caller custody and selected-network policy, and do not use the browser Session or creator-registration UI. Correct the linked buyer guide for mainnet environment selection; MCP package 0.4.2 remains unchanged. |
+| Operator / desktop | Private local workspace and explicit buyer handoff remain their roles. No browser custody or creator transaction UI is bundled; desktop 0.4.2 remains unchanged. No new installer is required for this browser-only fix. |
+| Extension / OpenAI / bots | Hosted research adapters keep their existing request/result and payment contracts. Creator/session management stays in the hosted web UI; extension 0.1.1 and bot commands require no new distribution. |
+
+Acceptance covers synthetic failures, owner changes, receipt identity and no
+duplicate wallet requests, plus existing normal-handler payment/cashout journeys.
+It does not claim new live spending, independent settlement verification or proof
+that every product journey is complete. Deployment is verified separately by the
+pushed commit at public `/api/health`; preserve existing runtime funding and schedules.
+
+An esbuild dependency-graph check found no changed runtime inputs in the caller
+MCP server (30 inputs), Operator desktop helper (41) or repository buyer CLI (30).
+This supports retaining their existing package versions; it is not a claim that
+their immutable artifacts were rebuilt from the new web commit.

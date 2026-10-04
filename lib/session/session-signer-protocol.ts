@@ -28,7 +28,7 @@ export type SignerRequest =
 
 export type SignerResponse =
   | { id: number; ok: true; result: unknown }
-  | { id: number; ok: false; error: string };
+  | { id: number; ok: false; error: string; code?: "session_custody_missing" };
 
 /** `Omit` over a union collapses it to the shared keys; this keeps each variant intact. */
 export type SignerRequestBody = SignerRequest extends infer Variant

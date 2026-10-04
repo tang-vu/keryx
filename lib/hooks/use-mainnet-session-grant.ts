@@ -17,6 +17,7 @@ import { z } from "zod";
 import type { BrowserQuestionBudget } from "../session/browser-session-runtime";
 import { readOwnerSessionCredit } from "../session/session-funding-credit";
 import { readRetainedSessionGrantReference, retainSessionGrantReference } from "../session/browser-session-grant-reference";
+import { SessionCustodyMissingError } from "../session/session-custody-error";
 
 const initial: GrantState = { status: "idle", sessAddr: null, sessionId: null, cap: 0, spent: 0,
   expiresAt: null, grantEpoch: null, error: null };
@@ -41,11 +42,29 @@ export function useMainnetSessionGrant() {
   const ownerRef = useRef(owner), generation = useRef(0), signerRef = useRef<SessionSigner | null>(null);
   const clock = useRef<ReturnType<typeof createSessionGrantClock> | null>(null);
   const currentConsent = useRef<SessionGrantConsent | null>(null);
+  // Acquire synchronously, before any await or React render. Never queue a second
+  // funding/consent attempt behind recovery or another wallet action.
+  const mounted = useRef(true);
+  const operationActive = useRef<{ generation: number; done: Promise<void> } | null>(null);
+  const beginOperation = useCallback(() => {
+    if (operationActive.current) return null;
+    let complete!: () => void;
+    const done = new Promise<void>(resolve => { complete = resolve; });
+    operationActive.current = { generation: generation.current + 1, done };
+    return () => { operationActive.current = null; complete(); };
+  }, []);
   useLayoutEffect(() => {
-    if (ownerRef.current !== owner) { generation.current += 1; clock.current = null; currentConsent.current = null; void signerRef.current?.clear(); }
+    if (ownerRef.current !== owner) {
+      generation.current += 1; clock.current = null; currentConsent.current = null; void signerRef.current?.clear();
+      // Reflect disconnected payment authority before repaint, including during a pending wallet prompt.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (!owner) setState(s => ({ ...s, status: s.sessionId ? "paused" : "idle", expiresAt: null, grantEpoch: null,
+        error: "Connect the original owner wallet to recover the saved session." }));
+    }
     ownerRef.current = owner;
   }, [owner]);
   useEffect(() => {
+    mounted.current = true;
     function changed(event: Event) {
       if ((event as CustomEvent).detail !== "signed-out") return;
       generation.current += 1; clock.current = null; currentConsent.current = null;
@@ -53,7 +72,7 @@ export function useMainnetSessionGrant() {
       setState(s => ({ ...s, status: s.sessAddr ? "paused" : "idle", error: null, expiresAt: null, grantEpoch: null }));
     }
     window.addEventListener("keryx:auth", changed);
-    return () => { window.removeEventListener("keryx:auth", changed); generation.current += 1; void signerRef.current?.clear(); };
+    return () => { mounted.current = false; window.removeEventListener("keryx:auth", changed); generation.current += 1; void signerRef.current?.clear(); };
   }, []);
   const signer = useCallback(() => { signerRef.current ??= getSessionSigner(); return signerRef.current; }, []);
   const lockPaymentAuthority = useCallback(() => {
@@ -62,7 +81,9 @@ export function useMainnetSessionGrant() {
   }, []);
   const failure = useCallback((err: unknown) => {
     lockPaymentAuthority();
-    setState(s => ({ ...s, status: s.sessAddr ? "paused" : "error", error: err instanceof Error ? err.message : "Session unavailable" }));
+    setState(s => ({ ...s, status: s.sessAddr ? "paused" : "error", error: err instanceof z.ZodError
+      ? "Session status could not be verified. Retry recovery on this browser."
+      : err instanceof Error ? err.message : "Session unavailable" }));
   }, [lockPaymentAuthority]);
   const ensureArc = useCallback(async () => {
     if (!wallet || !ownerRef.current) throw new Error("Connect and authenticate the owner wallet first");
@@ -139,19 +160,48 @@ export function useMainnetSessionGrant() {
   }, [wallet, ensureArc, publishGrant, signer]);
   const tryRecover = useCallback(async () => {
     if (browserPaymentProfile() !== profile || !owner || ownerRef.current !== owner) return false;
+    const waiting = operationActive.current;
+    if (waiting) {
+      // Effect replay or a changed owner may invalidate an older operation.
+      // Wait for it to leave the worker, then only read the current owner's
+      // custody. User-triggered funding/consent is never queued or replayed.
+      if (waiting.generation === generation.current) return false;
+      const resumeGeneration = generation.current;
+      await waiting.done;
+      if (!mounted.current || ownerRef.current !== owner || generation.current !== resumeGeneration) return false;
+    }
+    const finish = beginOperation();
+    if (!finish) return false;
     const expectedOwner = owner, expectedGeneration = ++generation.current;
     clock.current = null; currentConsent.current = null;
+    setState(s => ({ ...(s.sessionId === expectedOwner ? s : initial), status: "restoring", sessionId: expectedOwner, error: null }));
     try {
       const sessAddr = await signer().restoreRetained(expectedOwner);
       if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) return false;
-      setState(s => ({ ...s, status: "paused", sessAddr, sessionId: expectedOwner, error: null }));
+      setState(s => ({ ...s, sessAddr }));
       const started = performance.now();
-      try { await publishGrant(await sessionJson("/api/session/grant"), sessAddr, started, expectedGeneration); }
-      catch { if (generation.current === expectedGeneration && ownerRef.current === expectedOwner) lockPaymentAuthority(); }
+      try {
+        const metadata = await sessionJson("/api/session/grant");
+        if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) return false;
+        if (z.object({ active: z.literal(false) }).strict().safeParse(metadata).success) {
+          lockPaymentAuthority();
+          setState(s => ({ ...s, status: "paused", expiresAt: null, grantEpoch: null,
+            error: "Saved session restored. Review a new spending consent to resume; existing funds remain in Gateway." }));
+        } else await publishGrant(metadata, sessAddr, started, expectedGeneration);
+      }
+      catch (err) { if (generation.current === expectedGeneration && ownerRef.current === expectedOwner) failure(err); }
       return true;
-    } catch { return false; }
-  }, [signer, publishGrant, owner, lockPaymentAuthority]);
+    } catch (err) {
+      if (generation.current === expectedGeneration && ownerRef.current === expectedOwner) {
+        if (err instanceof SessionCustodyMissingError) setState(initial);
+        else failure(err);
+      }
+      return false;
+    } finally { finish(); }
+  }, [signer, publishGrant, owner, failure, beginOperation, lockPaymentAuthority]);
   const generateAndFund = useCallback(async (budgetUsdc: number, addFunds = false) => {
+    const finish = beginOperation();
+    if (!finish) return;
     let expectedGeneration = ++generation.current;
     const previous = currentConsent.current;
     clock.current = null; currentConsent.current = null;
@@ -171,10 +221,13 @@ export function useMainnetSessionGrant() {
       if (!wallet || !rpc || !expectedOwner) throw new Error("Connect and authenticate the owner wallet first");
       setState(s => ({ ...s, status: "switching", error: null })); await ensureArc();
       assertCurrent();
-      const context = await signer().initializeOwner(expectedOwner);
       let sessAddr: Hex;
       try { sessAddr = await signer().restoreRetained(expectedOwner); }
-      catch {
+      catch (err) {
+        assertCurrent();
+        if (!(err instanceof SessionCustodyMissingError)) throw err;
+        const context = await signer().initializeOwner(expectedOwner);
+        assertCurrent();
         setState(s => ({ ...s, status: "generating" }));
         const signature = await wallet.signMessage({ account: wallet.account!, message: context.derivationMessage });
         assertCurrent();
@@ -205,13 +258,17 @@ export function useMainnetSessionGrant() {
       }
       throw new Error("Deposit is confirmed on-chain. Gateway credit is pending; recover the retained session later without depositing again.");
     } catch (err) { if (generation.current === expectedGeneration && ownerRef.current === expectedOwner) failure(err); }
-  }, [wallet, rpc, ensureArc, signer, consentGrant, failure, state.grantEpoch, state.status]);
+    finally { finish(); }
+  }, [wallet, rpc, ensureArc, signer, consentGrant, failure, state.grantEpoch, state.status, beginOperation]);
   const recoverViaSignature = useCallback(async () => {
+    const finish = beginOperation();
+    if (!finish) return false;
     const expectedOwner = ownerRef.current; let expectedGeneration = ++generation.current;
     clock.current = null; currentConsent.current = null;
     const assertCurrent = () => { if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) throw new Error("Session recovery changed"); };
     try {
       if (!expectedOwner) throw new Error("Connect the original owner wallet first");
+      setState(s => ({ ...(s.sessionId === expectedOwner ? s : initial), status: "restoring", sessionId: expectedOwner, error: null }));
       const sessAddr = await signer().restoreRetained(expectedOwner); assertCurrent();
       const available = await readGatewayCredit(sessAddr);
       assertCurrent();
@@ -220,7 +277,8 @@ export function useMainnetSessionGrant() {
       assertCurrent(); expectedGeneration = generation.current+1;
       await consentGrant(sessAddr, available.toString()); return true;
     } catch (err) { if (generation.current === expectedGeneration && ownerRef.current === expectedOwner) failure(err); return false; }
-  }, [signer, consentGrant, failure]);
+    finally { finish(); }
+  }, [signer, consentGrant, failure, beginOperation]);
   const extend = useCallback(async () => recoverViaSignature(), [recoverViaSignature]);
   const topUp = useCallback(async (usdc: number) => { await generateAndFund(usdc, true); }, [generateAndFund]);
   const revoke = useCallback(async () => {
@@ -228,8 +286,9 @@ export function useMainnetSessionGrant() {
     const { sessAddr, sessionId, grantEpoch } = state;
     clock.current = null; currentConsent.current = null;
     // Immediately lock heap custody; never delete the original funded key.
-    await signer().clear();
+    setState(s => ({ ...s, status: "revoking", error: null }));
     try {
+      await signer().clear();
       if (!sessAddr || !sessionId || !grantEpoch || sessionId !== expectedOwner) throw new Error("Restore the current owner grant before requesting server revocation");
       await revokeBrowserSessionGrant({ sessAddr: sessAddr.toLowerCase(), sessionId, grantEpoch });
       if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) return { residualUsdc: 0, sessAddr };

@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { SessionCustodyMissingError } from "./session-custody-error";
 import { privateKeyToAccount } from "viem/accounts";
 import { createBrowserSessionKey, type RetainedSessionStore } from "./browser-session-key";
 import type { IsolatedWrappedKey, WrappingKeyStore } from "./isolated-session-vault";
@@ -18,6 +19,25 @@ function memory() {
     async retain(namespace, blob) { if (!blobs.has(namespace)) blobs.set(namespace, structuredClone(blob)); return structuredClone(blobs.get(namespace)!); } };
   return { wrappingKeys, retained };
 }
+it("distinguishes absent custody from failed reads or corrupt retained ciphertext", async () => {
+  const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), stores = memory();
+  const key = createBrowserSessionKey("https://keryx.cc", owner.address, stores);
+  await expect(key.restore()).rejects.toBeInstanceOf(SessionCustodyMissingError);
+  const read = stores.retained.read;
+  stores.retained.read = async () => { throw new Error("IndexedDB unavailable"); };
+  await expect(key.restore()).rejects.toThrow("IndexedDB unavailable");
+  stores.retained.read = read;
+  await key.derive(await owner.signMessage({ message: key.context.derivationMessage }));
+  key.lock();
+  stores.retained.read = async namespace => {
+    const blob = (await read(namespace))!;
+    blob.wrapped[0] ^= 1;
+    return blob;
+  };
+  await expect(key.restore()).rejects.not.toBeInstanceOf(SessionCustodyMissingError);
+  expect(key.address).toBeNull();
+});
+
 it("restores original mainnet custody across logout and key derivation changes without a wallet signature", async () => {
   const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), stores = memory();
   const first = createBrowserSessionKey("https://keryx.cc", owner.address, stores);

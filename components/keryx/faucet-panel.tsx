@@ -16,10 +16,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, useReadContract, useConnectorClient } from "wagmi";
-import { erc20Abi } from "viem";
+import { erc20Abi, formatUnits } from "viem";
 import { Loader2, Droplets, ExternalLink, PlusCircle } from "lucide-react";
-import { config as kConfig } from "@/lib/config";
-import { arcTestnet } from "@/lib/chains";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { currentArcLabel } from "@/lib/arc-network-display";
 
 const CIRCLE_FAUCET = "https://faucet.circle.com/";
 const EXPLORER = "https://testnet.arcscan.app";
@@ -34,6 +34,32 @@ interface FaucetResult {
 }
 
 export function FaucetPanel() {
+  return browserPaymentProfile().testnet ? <TestnetFaucetPanel /> : <MainnetFundingPanel />;
+}
+
+function MainnetFundingPanel() {
+  const { address, isConnected } = useAccount();
+  const profile = browserPaymentProfile();
+  const { data: rawBalance, isError, isFetching, refetch } = useReadContract({
+    address: profile.usdcAddress,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    chainId: profile.chainId,
+    query: { enabled: isConnected && !!address },
+  });
+  if (!isConnected) return null;
+  return <section className="space-y-2 border border-line bg-paper-2 px-4 py-3 text-sm" aria-label="Creator wallet funding">
+    <h2 className="font-mono text-xs">{currentArcLabel} wallet funding</h2>
+    <p>Fund your connected wallet with real USDC on {currentArcLabel} before registering. Leave USDC in the wallet for native gas; Gateway credit cannot pay wallet transaction gas.</p>
+    <p className="font-mono text-xs">Wallet USDC: {isError || rawBalance === undefined ? "unavailable" : formatUnits(rawBalance, profile.erc20Decimals)}</p>
+    <button type="button" disabled={isFetching} onClick={() => void refetch()} className="font-mono text-xs underline disabled:opacity-50">{isFetching ? "Checking wallet balance…" : "Refresh wallet balance"}</button>
+    <p className="text-xs text-ink-3">Select {currentArcLabel} in your wallet. Each registration needs your wallet confirmation and costs gas.</p>
+  </section>;
+}
+
+function TestnetFaucetPanel() {
+  const profile = browserPaymentProfile();
   const { address, isConnected } = useAccount();
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [result, setResult] = useState<FaucetResult | null>(null);
@@ -42,11 +68,11 @@ export function FaucetPanel() {
 
   // Read the wallet's ERC-20 USDC balance on Arc (6 decimals).
   const { data: rawBalance, refetch: refetchBalance } = useReadContract({
-    address: kConfig.usdcAddress,
+    address: profile.usdcAddress,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    chainId: arcTestnet.id,
+    chainId: profile.chainId,
     query: { enabled: isConnected && !!address },
   });
 
@@ -86,7 +112,7 @@ export function FaucetPanel() {
         params: {
           type: "ERC20",
           options: {
-            address: kConfig.usdcAddress,
+            address: profile.usdcAddress,
             symbol: "USDC",
             decimals: 6,
           },
@@ -98,7 +124,7 @@ export function FaucetPanel() {
       console.warn("[faucet] wallet_watchAsset:", err instanceof Error ? err.message : String(err));
       setWatchStatus("unsupported");
     }
-  }, [connectorClient]);
+  }, [connectorClient, profile.usdcAddress]);
 
   if (!isConnected) return null;
 
@@ -187,7 +213,7 @@ export function FaucetPanel() {
         )}
         {watchStatus === "unsupported" && (
           <span className="font-mono text-[10px] text-faint">
-            (import USDC manually: {kConfig.usdcAddress.slice(0, 10)}…)
+            (import USDC manually: {profile.usdcAddress.slice(0, 10)}…)
           </span>
         )}
 

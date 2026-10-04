@@ -23,6 +23,7 @@
  */
 
 import { getDb } from "../lib/db/index.ts";
+import { config } from "../lib/config.ts";
 import { getGatewayHeldUsdc } from "../lib/gateway/gateway-balance.ts";
 import { getOnchainUsdcBalances } from "../lib/gateway/onchain-usdc-balance.ts";
 import { sendAlert } from "../lib/notify/alert.ts";
@@ -79,7 +80,7 @@ async function main(): Promise<void> {
   }
 
   // Persist BEFORE deciding health — /status should show a failing check, not an empty section.
-  await db.setSyncState(SETTLEMENT_PARITY_STATE_KEY, JSON.stringify(summarizeSettlement(report)));
+  await db.setSyncState(SETTLEMENT_PARITY_STATE_KEY, JSON.stringify({ ...summarizeSettlement(report), network: config.networkId }));
 
   if (report.counts.unknown > 0) {
     // Not a failure: Circle or the Arc RPC being unreachable says nothing about the money. Worth

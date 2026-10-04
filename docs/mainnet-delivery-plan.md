@@ -1,5 +1,14 @@
 # Keryx: complete product and mainnet delivery
 
+**Current deployment observation, October 4, 2026:** the owner confirmed that
+mainnet is live. A direct public `/api/health` read reported `operational`,
+`network: arc`, `settles: real` and commit `55fc80c`. This supersedes the
+pre-launch deployment status below; its dated gates remain historical evidence
+and outstanding product/operational work, not a claim that every acceptance
+criterion was independently completed. Routine maintenance preserves the active
+mainnet profile, custody, original liabilities and existing scheduler state.
+It does not authorize additional owner spending or a reset of testnet history.
+
 Active objective, September 9, 2026: a complete buyer/creator/developer ecosystem,
 explicit revenue and profit formulas, and evidence-backed readiness for mainnet.
 ETHOnline is an intermediate delivery milestone. Completing its demo does not finish

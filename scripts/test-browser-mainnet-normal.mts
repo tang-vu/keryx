@@ -114,7 +114,7 @@ try {
     await page.goto(origin);
     await page.evaluate(workerUrl => {
       const worker = new Worker(workerUrl), pending = new Map<number, { resolve(v:unknown):void; reject(e:Error):void }>(); let seq=0;
-      worker.onmessage = ({data:r}) => { const slot=pending.get(r.id);if(!slot)return;pending.delete(r.id);if(r.ok)slot.resolve(r.result);else slot.reject(new Error(r.error)); };
+      worker.onmessage = ({data:r}) => { const slot=pending.get(r.id);if(!slot)return;pending.delete(r.id);if(r.ok)slot.resolve(r.result);else slot.reject(Object.assign(new Error(r.error), { code: r.code })); };
       worker.onerror = () => { for(const slot of pending.values())slot.reject(new Error("Packaged worker failed"));pending.clear(); };
       (window as unknown as { fixture: Fixture }).fixture = { call(type,fields={}) {
         const id=++seq;return new Promise((resolve,reject)=>{pending.set(id,{resolve,reject});worker.postMessage({id,type,...fields});}); } };
@@ -124,6 +124,10 @@ try {
     (window as unknown as {fixture:Fixture}).fixture.call(type,fields),{type,fields});
   const first=await context.newPage();await mount(first);
   assert.equal((await call(first,"initializeOwner",{owner:owner.address}) as {derivationMessage:string}).derivationMessage,custody.derivationMessage);
+  assert.equal(await first.evaluate(async () => {
+    try { await (window as unknown as { fixture: Fixture }).fixture.call("restoreRetained"); return null; }
+    catch (error) { return (error as { code?: string }).code; }
+  }), "session_custody_missing", "Only empty retained storage can permit initial derivation");
   const derived=await call(first,"deriveFromSignature",{signature}) as {address:Hex};
   const consent={format:"keryx-session-grant-consent-v1" as const,network:profile.networkId,origin,ownerAddr:owner.address.toLowerCase(),
     sessAddr:derived.address.toLowerCase(),grantEpoch:epoch,capMicroUsdc:"2000",expirySeconds:String(Math.floor(Date.now()/1000)+3600)};
