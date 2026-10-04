@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**Current-network documentation convention — 2026-10-04.** The owner confirmed
+that production is already mainnet and requested a documentation-wide refresh.
+[Current status](docs/mainnet-status.md) records the direct `arc`/`real` health
+observation, mainnet contracts and independently observed distribution identities.
+Use mainnet for present-tense production instructions; keep isolated testnet
+development, staged domains and historical receipts labelled with their actual
+network. Publication/deployment is distinct from paid acceptance, revenue, useful
+synthesis and external audit. This documentation update changes no runtime default,
+spend authority, custody, scheduler or distribution version.
+
 **Observed paper identity and bounded contextual evidence — 2026-10-04.** The
 additional authorized live comparison reproduced CAVA excerpts admitted under
 explicit Weng paper targets because HTML URLs bypassed the original-paper checks.

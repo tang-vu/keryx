@@ -1,5 +1,9 @@
 # Keryx — Tameion builder showcase & fireside preparation
 
+**Cập nhật 2026-10-04:** production đã lên Arc mainnet. Xem
+[trạng thái và địa chỉ hiện tại](mainnet-status.md); các câu chuyện testnet cũ bên dưới
+vẫn giữ đúng mạng và thời điểm, không chuyển thành doanh thu mainnet.
+
 Prepared September 25, 2026. Draft for Tang Minh Vu to review; not sent to the organizer.
 
 ## Ghi chú trước khi gửi
@@ -8,7 +12,7 @@ Prepared September 25, 2026. Draft for Tang Minh Vu to review; not sent to the o
 - Xác nhận câu 1 về nền tảng cá nhân; chưa thêm số năm kinh nghiệm, công việc hoặc dự án trước Keryx vì chưa có thông tin xác nhận.
 - Câu 5 là quan điểm được đề xuất để bạn duyệt. Câu 6 có thể bổ sung địa điểm hoặc bỏ vì không bắt buộc.
 - X handle đã xác nhận: `@keryxpays` là tài khoản dự án Keryx; `@tangvu_dev` là tài khoản cá nhân của Tang Vu. Xem lại video cũ trước khi gửi. Video là bản demo trước đây, không phải demo Keryx Operator đã hoàn thành.
-- Keryx hiện có nền tảng nghiên cứu và thanh toán trên Arc testnet. Keryx Operator là hướng phát triển cho Tameion; không giới thiệu toàn bộ vòng vận hành đó như tính năng đã hoàn tất.
+- Keryx hiện chạy nền tảng nghiên cứu và thanh toán trên Arc mainnet (`eip155:5042`). Keryx Operator là hướng phát triển cho Tameion; không giới thiệu toàn bộ vòng vận hành đó như tính năng đã hoàn tất.
 - Không đưa số tiền giải thưởng hoặc nội dung trao đổi riêng với người tổ chức vào bản công khai này. Không có số liệu doanh thu, lợi nhuận hoặc khách hàng chưa được xác minh.
 
 ## Email — written builder showcase
@@ -80,7 +84,7 @@ Introductions to small research businesses or teams already paying for informati
 - Keryx X: https://x.com/keryxpays
 - Tang Vu X: https://x.com/tangvu_dev
 
-The video shows an earlier version of Keryx; the website reflects the current product. The payment flows discussed here use Arc testnet.
+The video shows an earlier version of Keryx; the website reflects the current product. The earlier video records Arc-testnet flows; the current website uses Arc mainnet. Historical testnet payments are not mainnet revenue.
 
 ### A little context on what comes next
 
@@ -90,7 +94,7 @@ For Tameion, I want to build toward Keryx Operator, the financial operations lay
 
 The question is: can an agent run the business behind its research?
 
-My longer-term goal is to serve paying users on mainnet. The immediate work is to validate demand and complete the operational and safety work needed to support them responsibly.
+Keryx is now deployed on Arc mainnet. The immediate work is to validate useful paid outcomes and independent demand, and strengthen operational and safety evidence.
 
 Looking forward to our conversation on October 2!
 
@@ -171,9 +175,9 @@ The next milestone is repeat use for actual research needs. I want to work with 
 
 ### What about mainnet?
 
-Serving paying users on mainnet is a goal. I am not presenting the current testnet activity as mainnet revenue.
+Keryx is live on Arc mainnet, confirmed by current public health. Historical testnet activity is still testnet evidence; mainnet revenue and independent paying customers require their own settled records and consented outcome evidence.
 
-I need to validate demand and complete the release checks before making that move. The important outcome is a service people can rely on and want to keep using.
+I still need to validate independent demand and close the remaining security, recovery and usefulness gates. The important outcome is a service people can rely on and want to keep using.
 
 ### What is new for Tameion?
 

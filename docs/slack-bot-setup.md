@@ -2,15 +2,21 @@
 
 Keryx ships a Slack front door: a `/keryx` slash command any workspace can install. A member types
 `/keryx …`, Keryx runs its full paid-source reasoning loop, and the reply shows the grounded
-answer, **every creator paid** (weighted USDC citation rewards on Arc testnet), and a link to the
+answer, citation allocations and recorded creator-payment state in USDC on Arc, and a link to the
 dispatch trace on keryx.cc.
+
+Public production uses Arc mainnet. The bot uses the hosted treasury-funded
+research path and carries no caller wallet or payment signer. Pending rewards
+and planned allocations remain separate from settled payments. See
+[current deployment evidence](mainnet-status.md).
 
 **No bot token, no scopes, no socket connection.** Slack POSTs each command to
 `https://keryx.cc/api/slack/commands`, which acks within 3 s with an ephemeral "dispatching…" note
 and posts the answer back over the command's `response_url` when the run settles. It is a thin
 client over the same treasury-funded free-trial path as the site's no-wallet ask (budget clamped to
-`KERYX_ANON_MAX_BUDGET`, rate-limited per Slack user, tagged `web` in traction — a Slack member is a
-genuine external asker).
+`KERYX_ANON_MAX_BUDGET`, rate-limited per Slack user, tagged `web` with platform/user
+attribution). Independent adoption still requires independently initiated use and
+recorded evidence; a bot channel alone does not prove it.
 
 ## One-time setup (~3 minutes)
 

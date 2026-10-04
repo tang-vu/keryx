@@ -1,8 +1,11 @@
 # Private browser checkout
 
-The configured testnet pilot can review and purchase private research in `/research`,
-using the same owner-only server admission as the CLI. General availability is not enabled.
-The browser also displays private account history and locally retained recovery entries.
+Private research in `/research` uses the same independently gated server admission
+as the CLI. Public production selects Arc mainnet; mainnet admission has no payer
+invitation list, but fresh quotes still require configured private custody, worker
+and backing readiness. Retained testnet pilots preserve their own payer admission.
+The browser displays private account history and locally retained recovery entries.
+See [current deployment and per-role availability](mainnet-status.md).
 
 An operator-resolved interrupted execution now shows `interrupted`, its recorded time
 and current payment evidence without a completed answer. Keep the recovery file and do
@@ -30,8 +33,10 @@ total and creator ledger. This is not a portable cryptographic receipt or chain-
 
 ## Implemented journal boundary
 
-`lib/buyer/private-browser-journal.ts` uses a separate `keryx-private-buyer-jobs-v1`
-IndexedDB database. It does not sign, fund wallets or issue HTTP requests.
+`lib/buyer/private-browser-journal.ts` uses a separate network-scoped IndexedDB
+database: mainnet `keryx-private-buyer-jobs-v2-eip155:5042`; retained testnet
+`keryx-private-buyer-jobs-v1`. It does not sign, fund wallets or issue HTTP requests.
+Legacy originals stay on their recorded rail and are never relabelled.
 
 1. Reserve a validated unsigned draft exclusively before invoking the wallet.
 2. Validate and save the first signed intent against the exact reserved draft; read it back.
@@ -85,5 +90,6 @@ at mobile and desktop sizes using the application CSS. Funding is separately tes
 existing browser funding suite. No live payment is made by these checks.
 
 Still required: independent wallet-extension/mobile acceptance, a live browser private paid
-pilot, server retention and portable private receipt verification. Purchase
-availability remains constrained by the server's pilot allowlist.
+acceptance, server retention and portable private receipt verification. Purchase
+availability remains constrained by the selected role's custody, worker and backing
+checks; the separate historical testnet pilot retains its configured payer list.

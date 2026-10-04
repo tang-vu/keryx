@@ -1,5 +1,11 @@
 # Existing treasury spend-wallet custody
 
+**Scope:** this document retains legacy testnet treasury custody and recovery.
+Production is now Arc mainnet; [current status](mainnet-status.md),
+[normal server runtime](mainnet-server-runtime.md) and [operations](mainnet-operations.md)
+describe current mainnet authority. Legacy testnet keys/state and dated evidence
+remain on their original rail; this document does not authorize a new migration or spend.
+
 The server treasury path requires an existing valid `data/spend-wallet.json`.
 `RealGateway` never creates a replacement when that file is missing, unreadable,
 malformed or inconsistent. It refuses before constructing its signer, Gateway SDK

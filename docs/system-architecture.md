@@ -1,13 +1,16 @@
 # Keryx System Architecture
 
-**Version:** 0.19.0 Exact authorization expiry and pending ownership (2026-08-25)
-**Status:** Shipped (Phases 01–06 complete)
+**Current network:** Arc mainnet, observed October 4, 2026; [status and contracts](mainnet-status.md).
+The overview below follows the mainnet profile. Detailed legacy sequences and risks
+were originally documented at v0.19.0 (August 25); current consent, durable admission,
+custody, hosted roles and recovery are specified in [server runtime](mainnet-server-runtime.md)
+and [runtime domains](mainnet-runtime-domains.md). Phase completion is historical.
 
 ---
 
 ## System Overview
 
-Keryx is a non-custodial AI citation-payment agent dApp on Arc testnet. The system spans three domains:
+Keryx is a non-custodial AI citation-payment agent dApp on Arc mainnet. The system spans three domains:
 
 1. **User browser** — SIWE wallet auth, session key generation, x402 co-signing
 2. **Backend services** — agent brain, DB, IPFS encryption, API keys
@@ -27,7 +30,7 @@ BROWSER                              KERYX SERVER                     ARC + CIRC
    ├─ See hero + "Ask" CTA
    └─ Not authed → /connect button
 
-2. Connect Wallet (MetaMask Arc Testnet)
+2. Connect Wallet (MetaMask Arc mainnet)
    ├─ wagmi detects wallet
    ├─ GET /api/auth/nonce → receive nonce cookie (5m TTL)
    └─ User signs SIWE message in wallet (no tx)
@@ -208,7 +211,7 @@ start an automatic question or payment.
 ### Creator Registration Flow
 
 ```
-BROWSER                      KERYX SERVER                   ARC TESTNET
+BROWSER                      KERYX SERVER                   ARC MAINNET
 ────────                     ────────────                   ───────────
 
 1. Creator visits keryx.cc/register
@@ -246,9 +249,9 @@ BROWSER                      KERYX SERVER                   ARC TESTNET
 ┌─────────────────────────────────────────────────────────────────┐
 │ SIWE (Sign-In-With-Ethereum)                                    │
 ├─────────────────────────────────────────────────────────────────┤
-│ 1. wagmi v3 + viem v2 connect wallet on Arc testnet chain       │
+│ 1. wagmi v3 + viem v2 connect wallet on selected Arc mainnet chain       │
 │ 2. GET /api/auth/nonce → server issues nonce (5m cookie)        │
-│ 3. Client SIWE message build: domain, chainId 5042002, nonce    │
+│ 3. Client SIWE message build: domain, chainId 5042, nonce    │
 │ 4. User signs in wallet (non-custodial, no tx)                  │
 │ 5. POST /api/auth/verify {message, signature}                   │
 │    ├─ siwe.verify() checks: signature, nonce, domain, chainId   │
@@ -298,7 +301,7 @@ BROWSER                      KERYX SERVER                   ARC TESTNET
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ SourceRegistry (Arc testnet 0x2e12Fa...)                        │
+│ SourceRegistry (Arc mainnet 0x42a640...)                        │
 ├─────────────────────────────────────────────────────────────────┤
 │ Solidity contract: registerSource(url, cid, splits, tags)       │
 │                                                                  │
@@ -520,7 +523,7 @@ aggregation independent of full receipt payloads and leave pre-ledger history un
 ```
 localhost:3939                   Node.js server
 ├─ Next.js 16 App Router        + SQLite (data/keryx.db)
-├─ Wagmi hooks (client-side)     + Hardhat + Arc testnet RPC
+├─ Wagmi hooks (client-side)     + isolated Hardhat tests + selected Arc RPC
 ├─ Agent brain + offline gateway + Optional Anthropic API key
 └─ SSE + /api/ask endpoint
 ```
@@ -559,11 +562,13 @@ keryx.cc (Cloudflare CNAME)
 
 **Documented residuals** (trade-offs, tracked):
 - R1: Citation payTo redirect under full compromise (cap-bounded; author manifest fix post-hackathon)
-- R2: Grant funding not on-chain verified (retry fails at Gateway; balance API check post-hackathon)
+- R2 historical gap: current mainnet grant admission checks known Circle capacity and
+  retained lifetime debits/holds; availability observations are not future funding guarantees.
 - R3: Worker-held session key; only AES-GCM ciphertext is tab-persisted. XSS during the one-time
   wallet derivation signature can reproduce it, and same-origin injected code can spend the cap to
   registry-valid payees. A separate-origin signer boundary is the remaining mitigation.
-- R4: Grant state lost on server restart (acceptable for testnet; persist grant metadata post-hackathon)
+- R4 historical gap: current mainnet grants, nonces and spend reservations are durable in
+  sealed SQLite. Restore/replay/concurrent-writer acceptance remains separately evidenced.
 
 See `docs/security-threat-model.md` for full matrix.
 
@@ -571,13 +576,13 @@ See `docs/security-threat-model.md` for full matrix.
 
 ## Scaling & Future Paths
 
-### Limitations (Testnet MVP)
+### Historical MVP limitations (August 2026)
 - **In-process rate-limit**: `rate-limiter-flexible` — single-instance only
 - **Indexer polling**: every 30s, no backpressure if Arc RPC slow
 - **IPFS key on server**: no client-side decryption without server trust
 - **Source enumeration**: `sourceIds[]` call is O(n), not paginated
 
-### Post-Hackathon Roadmap
+### Historical post-hackathon proposals
 1. Redis rate-limit → multi-instance scale
 2. Event-only indexing (subscribe to Arc finality)
 3. Lit Protocol key release (once Arc added to Lit)

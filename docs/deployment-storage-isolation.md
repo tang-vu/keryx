@@ -1,5 +1,11 @@
 # Testnet deployment and storage identity
 
+**Scope:** this document retains the October 1 testnet storage-isolation proposal.
+Production is now Arc mainnet; [current status](mainnet-status.md),
+[normal server runtime](mainnet-server-runtime.md) and [operations](mainnet-operations.md)
+describe current mainnet authority. Legacy testnet keys/state and dated evidence
+remain on their original rail; this document does not authorize a new migration or spend.
+
 Proposed M2 preparation, October 1, 2026. Source baseline
 `57aef9fada210e2de4db2da24f966d716ffde456`. This document defines implementation and
 operator acceptance work; no storage identity, enrollment command, migration or

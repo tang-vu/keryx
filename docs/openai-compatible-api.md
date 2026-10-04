@@ -4,6 +4,8 @@ Keryx exposes a drop-in **OpenAI Chat Completions** surface. Any tool that speak
 format can ask Keryx a question; Keryx researches it over paid sources and settles a weighted USDC
 citation reward to eligible creators it cites on the configured Arc network. Public production
 uses mainnet; `/api/health` reports the selected network and settlement mode.
+See [current deployment evidence](mainnet-status.md); sponsored research readiness
+and the settlement state of each run remain separate from network selection.
 
 - **Base URL:** `https://keryx.cc/api/v1`
 - **Model:** `keryx` (default), or pick a reasoning model chat-app style with

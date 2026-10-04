@@ -1,15 +1,18 @@
 # MCP package distribution
 
 The caller-funded stdio package is distributed separately from the hosted remote
-MCP endpoint. Candidate package 0.4.2 must pass the clean packaged consumer gate
-before release. Registry discovery on October 3 confirmed latest 0.4.1 and no 0.4.2;
-GitHub v0.26.1 retains the exact-source 0.4.1 tarball and desktop assets from `f9dca8d`.
-Those immutable releases do not establish delivery of this claim-grounding repair.
-New npm integrity/provenance and registry readback remain gates. Publication uses the
-owner-configured OIDC trusted publisher; a repository version bump is not release
-evidence. See [publishing](npm-publishing.md).
+MCP endpoint. On October 4, 2026, public npm readback confirmed **0.4.3**, and
+[GitHub v0.26.8](https://github.com/tang-vu/keryx/releases/tag/v0.26.8) supplies the
+0.4.3 tarball and source manifest from `1297d43f7c1a8356ceccac061b1cba65b93d2819`.
+Its SHA-256 is `61f80f78537dad116392aa08ddb7e46ac71433cc158f85a0deedeedbcc604e8d`.
+npm reports integrity `sha512-XUC+4Wamxj9ahCVenlx4iB6NoB7LunXAhdTx+1hrpMQItsJVn1GKDRNiP7MdzhK7x2++MkilAqJ/eaaMBsEJjw==`
+and a SLSA provenance attestation. The immutable release manifest retains
+`npmRegistryPublished: false` from artifact creation; the later public npm
+observation establishes subsequent publication without rewriting that manifest.
+See [current deployment/distribution evidence](mainnet-status.md) and
+[publishing](npm-publishing.md).
 
-Version 0.4.2 forwards the retained hosted answer and existing structured evidence
+Version 0.4.3 forwards the retained hosted answer and existing structured evidence
 without synthesizing independent assertions or changing the transport contract. The
 qualified-excerpt hosted behavior requires an accepted hosted deployment of the repair.
 Research targets/gaps are explicitly quoted and labelled; High target coverage does not
@@ -30,18 +33,21 @@ purchase, retained original response-loss state without a second debit, and
 new-process keyless GET-only recovery. These are package and local recovery
 checks; they do not demonstrate live settlement or mainnet readiness.
 
-The workflow attaches `keryx-mcp-0.4.2.tgz` and its `.source.json` manifest to the
-matching web release. The manifest records the source commit and SHA-256 and
-explicitly records that npm publication is pending. Assets are never overwritten.
-Use the verified release tarball as an npm install specification in your MCP client:
+The workflow attaches `keryx-mcp-0.4.3.tgz` and its `.source.json` manifest to the
+matching web release. The manifest records the source commit, SHA-256 and
+publication status at artifact creation. Assets are never overwritten.
+Use the published package or verified release tarball as an npm install specification
+in your MCP client:
 
 ```text
-npx --yes --package=https://github.com/tang-vu/keryx/releases/download/<release-tag>/keryx-mcp-0.4.2.tgz keryx-mcp
+npx --yes --package=keryx-mcp@0.4.3 keryx-mcp
+npx --yes --package=https://github.com/tang-vu/keryx/releases/download/v0.26.8/keryx-mcp-0.4.3.tgz keryx-mcp
 ```
 
-Replace `<release-tag>` with the release that contains those verified assets.
 Follow the wallet and funding setup in [the package README](../mcp/README.md).
-Version 0.4.2 retains the requirement for existing owner-provisioned wallet custody,
+Public production uses mainnet; set BOTH `KERYX_NETWORK=arc` and
+`NEXT_PUBLIC_KERYX_NETWORK=arc` in the client's secure local environment.
+Version 0.4.3 retains the requirement for existing owner-provisioned wallet custody,
 an explicit trusted merchant policy and the documented supported Node range.
 Status remains keyless; changing a registry version does not provision or recover
 a wallet. Preserve existing payment journals during migration, including ambiguous

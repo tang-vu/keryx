@@ -1,5 +1,9 @@
 # Normal browser mainnet custody and payment admission
 
+**Current deployment:** production is already Arc mainnet;
+[status](mainnet-status.md) records the dated release. The source preparation below
+explains custody and recovery boundaries, not a claim that launch is still pending.
+
 This prepares the full public Keryx mainnet cutover on `keryx.cc`, not an invited-wallet pilot. It does not authorize deployment or real funding. Both unset network labels retain Arc testnet. Mainnet requires matching server/public labels and independently compiled registry authority. Requests cannot choose a network or RPC.
 
 ## Retained original custody
@@ -79,7 +83,7 @@ Actual React funding acceptance submits only exact owner approval and depositFor
 
 The actual React cashout journey now exercises normal prepare/authorize/submit/status/complete handlers with a fresh sealed SQLite deployment, Chromium worker/IndexedDB and synthetic external Circle/RPC transport. It cancels a never-exposed original, retains a lost transfer response without another transfer, submits an actual owner-signed serialized mint transaction through the ordinary component, verifies original mint finality and resumes cited research with the same signer. Focused checks cover expired custody, wrong origin/recipient, cross-tab admission races, retained uncertain liabilities and lifetime-cap preservation. The actual Next-emitted worker and generated CSP also exercise the narrow expired-custody cashout path with matching synthetic build pins.
 
-The full release still needs independent live wallet/funding/cashout acceptance, fresh sealed production mainnet state/registry, final coordinated SQL/operational evidence and the owner's launch/funds decision. These synthetic transport checks do not establish live settlement or authorize mainnet activation.
+At this October 2 source checkpoint, the full release still needed fresh production mainnet state/registry and the owner's launch/funds decision. Production has since launched; [current status](mainnet-status.md) records its observed identities. Independent live wallet/funding/cashout and remaining operational acceptance must still be evidenced separately. These synthetic transport checks do not establish live settlement or authorize additional spending.
 
 October 2 composed browser graph `70f202348f000c5a86cf16f3dfe99d58d31c6bb7`
 passed the canonical npm 11.19.0 / Next 16.3.6 production build (48 static pages)

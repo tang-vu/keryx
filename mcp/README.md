@@ -2,6 +2,10 @@
 
 Keryx buys selected sources under a budget and returns a cited answer with creator-payment state.
 The local stdio buyer pays the inbound x402 toll from a configured caller wallet on the independently configured Arc network.
+Public production uses Arc mainnet (`eip155:5042`). Set BOTH `KERYX_NETWORK=arc`
+and `NEXT_PUBLIC_KERYX_NETWORK=arc` in the MCP client's private environment before
+connecting to `https://keryx.cc`; unset profiles retain the local testnet default.
+See [current deployment and distribution evidence](../docs/mainnet-status.md).
 A Circle settlement identifier is batching evidence, not an individual EVM transaction hash.
 Testnet calls and owner-operated tests do not establish external traction or mainnet readiness.
 
@@ -53,12 +57,13 @@ Version **0.4.0** changes local setup. Use Node.js **22.19+ in the 22 LTS line, 
 Builds use the repository's pinned npm 11.19.0 installer. Critical consumer dependencies are
 pinned to Circle x402 batching 3.5.0 and viem 2.55.19.
 
-The verified release tarball can be installed directly. npm registry availability is a separate
-publication step: use current verified release assets and registry integrity/provenance
-readback to establish whether 0.4.3 has been published.
+On October 4, 2026, public npm readback confirmed `keryx-mcp` **0.4.3** and GitHub
+release `v0.26.8` provided the matching tarball from `1297d43`. Install the published
+package or the immutable release tarball. [Distribution evidence](../docs/mainnet-status.md)
+records artifact identity separately from hosted health and payment availability.
 
 ```bash
-npm install /absolute/path/keryx-mcp-0.4.3.tgz
+npm install keryx-mcp@0.4.3
 ```
 
 Configure your MCP client to run `node /absolute/path/node_modules/keryx-mcp/dist/keryx-mcp.mjs`.
@@ -75,7 +80,7 @@ environment configuration; do not put private keys in command-line arguments or 
 | `KERYX_PAYMENT_JOURNAL` | Beside the selected wallet: `buyer-payment.json` | Private original payment barrier; its sibling `.funding.json` tracks funding separately. |
 | `KERYX_GATEWAY_DEPOSIT` | `0.5` | Bounded deposit of existing caller USDC, at most 1 USDC. |
 | `KERYX_MAX_TOTAL_USDC` | `1` | Caller quote ceiling; exact fee/budget amounts require six or fewer decimal places. |
-| `KERYX_RPC_URL` | `https://rpc.testnet.arc.network` | Endpoint attested as the selected Arc network by shared signing/funding guards. An operator-configured RPC failover is allowed; per-operation chain attestation cannot be replaced by the endpoint label. |
+| `KERYX_RPC_URL` | Selected profile: mainnet `https://rpc.blockdaemon.mainnet.arc.io`; testnet `https://rpc.testnet.arc.network` | Endpoint attested as the selected Arc network by shared signing/funding guards. An operator-configured RPC failover is allowed; per-operation chain attestation cannot be replaced by the endpoint label. |
 
 Call `keryx_wallet_status` first. Without a configured key/file, initialization and tool discovery
 still work and status explains what is missing. Without merchant policy, status reports the caller

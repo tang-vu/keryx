@@ -1,5 +1,10 @@
 # Withdrawal cycle supervision
 
+**Scope:** legacy testnet gas-relay supervision and drills. Current production
+is Arc mainnet; normal creators use the [owner-wallet cashout path](mainnet-server-runtime.md#ordinary-creator-owner-wallet-cashout).
+An optional relay still needs its own reviewed provisioning and acceptance.
+Do not treat an old testnet relay gate as a blanket absence of mainnet withdrawals.
+
 Status: prepared and verified for syntax/lifecycle; not installed or enabled on the
 production VPS. Funded testnet relay acceptance, incident alerts and backup/restore
 drills remain required before opening new withdrawals.

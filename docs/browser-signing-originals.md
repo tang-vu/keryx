@@ -1,5 +1,10 @@
 # Browser signing originals: backend stage
 
+**Scope:** this document describes the staged testnet browser-query-policy backend;
+it is not the normal deployed mainnet signer contract. Production uses Arc mainnet
+through [normal server runtime](mainnet-server-runtime.md) and [current runtime domains](mainnet-runtime-domains.md).
+Preserve the staged component's testnet pins until its separate reviewed cutover.
+
 This candidate extends the existing browser authorization journal on Arc testnet.
 It supplies backend admission and read interfaces only. Schema installation is
 inactive and does not activate durable-v2, change browser routes, deploy a signer,

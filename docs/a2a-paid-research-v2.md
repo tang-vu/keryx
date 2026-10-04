@@ -1,8 +1,10 @@
 # A2A Paid Research v2
 
-This document is the operating contract for `POST /api/agent/ask`. The feature is Arc-testnet-only.
-It does not enable mainnet, custody caller keys, alter creator `payTo`, or make projected economics
-into settled revenue.
+This document is the operating contract for `POST /api/agent/ask`. Public production
+uses Arc mainnet (`eip155:5042`); independently configured local testnet clients retain
+their original rail. Caller keys remain in caller custody, creator `payTo` remains
+source-owned, and projected economics remain separate from settled revenue. Check
+the current quote and [deployment evidence](mainnet-status.md) for operating availability.
 
 ## Product contract
 

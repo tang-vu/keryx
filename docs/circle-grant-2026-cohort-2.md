@@ -1,6 +1,6 @@
 # Circle 2026 Cohort 2 — Keryx proposal (copy/paste version)
 
-Prepared: 2026-08-13
+Prepared: 2026-08-13; current-network refresh: 2026-10-04. Production is Arc mainnet; the August traction snapshot below remains testnet history. This edit does not resubmit the application. See [current status](mainnet-status.md).
 
 Each form field below has one `text` block. Use the copy button on that block and paste it directly into Questbook. Lines inside a block are intentional; there is no hard-wrapped prose to join manually.
 
@@ -132,7 +132,7 @@ Keryx turns a citation into a programmable USDC settlement. Given a question and
 ### Why hasn't this problem been solved yet? What are the barriers?
 
 ```text
-Several systems have to become trustworthy at the same time. First, card fees and one-transaction-per-payment gas costs are larger than the sub-cent value of a single read or citation; Gateway's batched Nanopayments remove that economic barrier. Second, an off-chain database cannot be allowed to redirect creator rewards, so ownership, payout wallets, price ceilings, and author splits need an independent authority. Third, an autonomous agent must not receive an unlimited wallet key; spend reservation, signer custody, expiry, revocation, and retry behavior must be bounded. Fourth, a payment must follow evidence that actually supports the answer, not a generated citation or an article that was purchased but unused. Fifth, a lost settlement response can hide a real debit: retrying blindly risks a duplicate charge, while treating it as failed understates creator earnings. Sixth, public discovery and IPFS cannot expose paid content before settlement. Finally, operating with real funds requires security review, compliance policies, jurisdiction analysis, and incident procedures in addition to working code. Keryx addresses the technical barriers on Arc testnet today and keeps the remaining mainnet and compliance work explicit rather than claiming testnet readiness is equivalent to a regulated commercial launch.
+Several systems have to become trustworthy at the same time. First, card fees and one-transaction-per-payment gas costs are larger than the sub-cent value of a single read or citation; Gateway's batched Nanopayments remove that economic barrier. Second, an off-chain database cannot be allowed to redirect creator rewards, so ownership, payout wallets, price ceilings, and author splits need an independent authority. Third, an autonomous agent must not receive an unlimited wallet key; spend reservation, signer custody, expiry, revocation, and retry behavior must be bounded. Fourth, a payment must follow evidence that actually supports the answer, not a generated citation or an article that was purchased but unused. Fifth, a lost settlement response can hide a real debit: retrying blindly risks a duplicate charge, while treating it as failed understates creator earnings. Sixth, public discovery and IPFS cannot expose paid content before settlement. Finally, operating with real funds requires security review, compliance policies, jurisdiction analysis, and incident procedures in addition to working code. Keryx is now deployed on Arc mainnet and keeps the remaining independent security review, operational acceptance and compliance work explicit. Deployment is not a regulated-commercial-launch or audit-completion claim; historical testnet evidence remains separately labelled.
 ```
 
 ### Why are you and your team uniquely suited to solve this problem?
@@ -162,7 +162,7 @@ Keryx enables autonomous agents to discover paid knowledge, make bounded purchas
 Select `Yes`. If an explanation field appears, paste:
 
 ```text
-Yes. Keryx is a publicly accessible, continuously operated production web/API service at https://keryx.cc. Its financial settlement currently uses Arc testnet USDC, so it is not yet an Arc mainnet financial product.
+Yes. Keryx is a publicly accessible, continuously operated production web/API service at https://keryx.cc. Its selected financial settlement now uses Arc mainnet USDC (eip155:5042), confirmed by public health on October 4, 2026. Independent audit, paid adoption and profitability are separate evidence gates.
 ```
 
 ### Are you live on Arc?
@@ -170,19 +170,19 @@ Yes. Keryx is a publicly accessible, continuously operated production web/API se
 Select `Yes`. If an explanation field appears, paste:
 
 ```text
-Yes — Arc testnet (eip155:5042002). SourceRegistry: https://testnet.arcscan.app/address/0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536. Public chain, registry, and settlement evidence: https://keryx.cc/proof.
+Yes — Arc mainnet (eip155:5042). SourceRegistry: https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb. Public chain, registry, and settlement evidence: https://keryx.cc/proof.
 ```
 
 ### Please enter the smart contract addresses
 
 ```text
-SourceRegistry (Arc testnet, eip155:5042002): 0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536
+SourceRegistry (Arc mainnet, eip155:5042): 0x42a64061b6cd84067bb660b2a9b8aa881fd225bb
 ```
 
 ### Which other chain(s) are you currently live on?
 
 ```text
-None. Keryx is currently deployed only on Arc testnet (eip155:5042002).
+None. Keryx production is deployed on Arc mainnet (eip155:5042); isolated testnet environments and historical evidence remain separate.
 ```
 
 ### Which Circle products are currently integrated?
@@ -227,7 +227,7 @@ CCTP Forwarding Service for funding Arc sessions from Ethereum and Base, plus Ga
 If an additional explanation field appears, paste:
 
 ```text
-Keryx plans to add CCTP V2 and Forwarding Service so agents and creators can fund Arc sessions from native USDC on Ethereum or Base without manually bridging. An optional Circle Agent Wallets path will support programmatic and enterprise callers while preserving the existing user-held browser signer. After security review and product availability, the proven Gateway Nanopayments, x402 settlement, creator payout, and withdrawal flows will move to Arc mainnet USDC.
+Keryx plans to add CCTP V2 and Forwarding Service so agents and creators can fund Arc sessions from native USDC on Ethereum or Base without manually bridging. An optional Circle Agent Wallets path will support programmatic and enterprise callers while preserving the existing user-held browser signer. Production already selects Arc mainnet for Gateway Nanopayments, x402 and creator authority. Independent review and exact funded acceptance remain requirements for each newly changed payment, funding or withdrawal path.
 ```
 
 ## 4. Milestones and Timelines
@@ -239,13 +239,13 @@ Add four milestones. Each title and details block is ready for its corresponding
 Title (61/1024 characters):
 
 ```text
-Security review and Arc mainnet release candidate (Weeks 1–6)
+Independent security review and mainnet hardening (Weeks 1–6)
 ```
 
 Details (single paragraph, below 2048 characters):
 
 ```text
-Commission an independent review of the browser co-sign path, x402 buyer/seller verification, session-cap reservation, SourceRegistry payout authority, encrypted paid-content release, and Circle settlement reconciliation. Close all critical/high findings and publish the non-sensitive report and remediation map. Produce a mainnet release candidate with explicit network configuration, contract deployment runbook, key rotation, treasury limits, monitoring, rollback, and incident response. Keep mainnet spending disabled until the audit, Circle/Arc endpoint availability, and a founder go/no-go checklist all pass. Acceptance evidence: public audit/remediation summary; zero open critical/high findings; CI and contract suite green; testnet failure drills for RPC outage, duplicate or replayed authorization, Circle timeout, and post-settlement delivery failure; reproducible deployment runbook.
+Commission an independent review of the browser co-sign path, x402 buyer/seller verification, session-cap reservation, SourceRegistry payout authority, encrypted paid-content release, and Circle settlement reconciliation. Close all critical/high findings and publish the non-sensitive report and remediation map. Harden the already-launched mainnet service with explicit network configuration, verified contract provenance, key rotation, treasury limits, monitoring, rollback and incident response. Keep any new unaccepted financial path closed until its independent review, vendor availability and concrete founder release/funds decision pass; deployment does not close the external audit. Acceptance evidence: public audit/remediation summary; zero open critical/high findings; CI and contract suite green; testnet failure drills for RPC outage, duplicate or replayed authorization, Circle timeout, and post-settlement delivery failure; reproducible deployment runbook.
 ```
 
 ### Milestone 2
@@ -281,13 +281,13 @@ Recruit and verify at least 10 independently controlled creator/source wallets; 
 Title (63/1024 characters):
 
 ```text
-Arc mainnet launch and reusable ecosystem package (Weeks 16–24)
+Mainnet adoption and reusable ecosystem package (Weeks 16–24)
 ```
 
 Details (single paragraph, below 2048 characters):
 
 ```text
-Launch the audited product on Arc mainnet with USDC, Gateway Nanopayments, x402 access/citation settlement, SourceRegistry payout authority, CCTP-funded sessions, and creator withdrawals. If required Circle/Arc mainnet services are not generally available, deliver a mainnet-ready release candidate and keep funds on testnet rather than simulating a launch. Publish versioned packages and reference integrations for two-toll settlement, non-custodial session caps, registry payee verification, exact integer reward splitting, and ambiguous-payment reconciliation. Grow to 25 independently controlled creators, 10 external agent/developer integrations, and 1,000 independently initiated paid queries; secure at least three design partners for paid API or enterprise pilots. Acceptance evidence: mainnet deployment and explorer links or an explicit availability-blocked release candidate; tagged open-source release; integration documentation; public usage dashboard; three partner confirmations.
+Complete independent audit and funded acceptance of the deployed Arc mainnet product, including USDC, Gateway Nanopayments, x402 access/citation settlement, SourceRegistry authority and creator withdrawals. Add CCTP-funded sessions only after their separate integration and review gates pass. An unavailable vendor path remains closed and explicitly pending rather than being simulated as a successful payment. Publish versioned packages and reference integrations for two-toll settlement, non-custodial session caps, registry payee verification, exact integer reward splitting, and ambiguous-payment reconciliation. Grow to 25 independently controlled creators, 10 external agent/developer integrations, and 1,000 independently initiated paid queries; secure at least three design partners for paid API or enterprise pilots. Acceptance evidence: verified current mainnet deployment/explorer links plus accepted audit and exact paid workflows; tagged open-source release; integration documentation; public usage dashboard; three partner confirmations.
 ```
 
 ## 5. Project Traction and Roadmap
@@ -295,7 +295,7 @@ Launch the audited product on Arc mainnet with USDC, Gateway Nanopayments, x402 
 ### Tell us about your current traction and success already achieved
 
 ```text
-Production snapshot captured 2026-08-13 UTC: Keryx has processed 1,853 total queries and 9,522 real settled testnet nanopayments, representing $45.113314 testnet USDC in total volume and $39.193314 paid to creator/source wallets. Twenty source wallets have earned, and all 20 SourceRegistry records are continuously checked against Arc; this is not a claim of 20 independent publisher businesses because several sources are curated or first-party samples. Independently initiated usage accounts for 141 queries, 131 paid queries, 611 external payments, and $2.635999 testnet USDC in creator payouts. All four identified external actors returned, external feedback is 9/9 positive, and all 66 measured external settlement attempts succeeded, with zero pending confirmations and zero failed attempts in the snapshot. Creators completed 12 self-service cash-outs totaling $0.753304 testnet USDC, each with an ArcScan-resolvable transaction. Separately, 1,712 first-party autonomous-agent queries generated 8,911 payments; this is real settlement and load activity but is explicitly excluded from external adoption claims. One independently owner-verified creator has claimed its registry record, been cited, paid, and cashed out end to end. Keryx has shipped 13 public releases since June 2026 and remains live between releases. The current production commit, CI, Arc registry parity, Circle balance parity, and creator withdrawal evidence are linked at https://keryx.cc/proof. The current testnet service does not claim platform revenue.
+Production snapshot captured 2026-08-13 UTC: Keryx has processed 1,853 total queries and 9,522 real settled testnet nanopayments, representing $45.113314 testnet USDC in total volume and $39.193314 paid to creator/source wallets. Twenty source wallets have earned, and all 20 SourceRegistry records are continuously checked against Arc; this is not a claim of 20 independent publisher businesses because several sources are curated or first-party samples. Independently initiated usage accounts for 141 queries, 131 paid queries, 611 external payments, and $2.635999 testnet USDC in creator payouts. All four identified external actors returned, external feedback is 9/9 positive, and all 66 measured external settlement attempts succeeded, with zero pending confirmations and zero failed attempts in the snapshot. Creators completed 12 self-service cash-outs totaling $0.753304 testnet USDC, each with an ArcScan-resolvable transaction. Separately, 1,712 first-party autonomous-agent queries generated 8,911 payments; this is real settlement and load activity but is explicitly excluded from external adoption claims. One independently owner-verified creator has claimed its registry record, been cited, paid, and cashed out end to end. Keryx has shipped 13 public releases since June 2026 and remains live between releases. The current production commit, CI, Arc registry parity, Circle balance parity, and creator withdrawal evidence are linked at https://keryx.cc/proof. This August testnet snapshot does not establish mainnet revenue. The current production network is separately observed as Arc mainnet.
 ```
 
 ### Public analytics dashboard
@@ -329,13 +329,13 @@ No — Keryx is founder-funded and bootstrapped and has not raised institutional
 ### Technical Roadmap
 
 ```text
-Months 0–2: complete a third-party security review; harden the browser signer, payment evidence, registry authority, encryption, and production incident runbooks; and produce an Arc mainnet release candidate. Existing Circle integrations remain USDC, Gateway Nanopayments, x402, and Unified Balance Kit. Months 2–4: add CCTP V2 and Forwarding Service to fund Arc sessions from Ethereum and Base; add an optional Circle Agent Wallets path for programmatic callers; preserve non-custodial browser sessions as a distinct authority boundary; and run a verified external creator/agent pilot. Months 4–6: move audited flows to Arc mainnet when required Circle/Arc services are available; release reusable SDK modules and operating docs; and scale external creators, agent integrations, independently initiated paid queries, and paid design partnerships. The payment source of truth remains explicit: SourceRegistry authorizes payees and splits; the browser or approved agent wallet owns the signing key; the funded session balance is the economic cap; Circle settlement evidence determines settled state; the database is an operational ledger/cache; and unavailable verification remains unknown rather than invented success or failure.
+Months 0–2: complete a third-party security review; harden the browser signer, payment evidence, registry authority, encryption, and production incident runbooks; and harden the deployed Arc mainnet service. Existing Circle integrations remain USDC, Gateway Nanopayments, x402, and Unified Balance Kit. Months 2–4: add CCTP V2 and Forwarding Service to fund Arc sessions from Ethereum and Base; add an optional Circle Agent Wallets path for programmatic callers; preserve non-custodial browser sessions as a distinct authority boundary; and run a verified external creator/agent pilot. Months 4–6: accept audited mainnet workflows and newly added vendor integrations against concrete release gates; release reusable SDK modules and operating docs; and scale external creators, agent integrations, independently initiated paid queries, and paid design partnerships. The payment source of truth remains explicit: SourceRegistry authorizes payees and splits; the browser or approved agent wallet owns the signing key; the funded session balance is the economic cap; Circle settlement evidence determines settled state; the database is an operational ledger/cache; and unavailable verification remains unknown rather than invented success or failure.
 ```
 
 ### How will this grant support your technical roadmap?
 
 ```text
-Grant funding will convert a proven testnet product into an audited, externally adopted Arc mainnet service. We plan to allocate 45% to engineering and Circle integrations, including CCTP/Forwarding funding, Agent Wallets support, Arc mainnet migration, SDK extraction, and recovery tooling; 20% to an independent security review of browser signer/session authority, x402/Gateway settlement, registry payout controls, smart contracts, and encrypted content delivery; 20% to creator and agent pilots, including onboarding, integration engineering, documentation, structured feedback, testimonials, and design-partner case studies; 10% to production infrastructure and observability, including redundant RPC, encrypted backups, settlement/registry parity, alerting, uptime, and incident response; and 5% to open-source ecosystem work, examples, technical writing, and Arc community workshops. This funding accelerates work that cannot responsibly be skipped—security review, mainnet operations, and real external pilots—rather than subsidizing cosmetic features or first-party transaction volume.
+Grant funding will strengthen the already-deployed Arc mainnet product through independent audit, operational resilience and measured external adoption; those outcomes are not established by launch alone. We plan to allocate 45% to engineering and Circle integrations, including CCTP/Forwarding funding, Agent Wallets support, Arc mainnet hardening, SDK extraction, and recovery tooling; 20% to an independent security review of browser signer/session authority, x402/Gateway settlement, registry payout controls, smart contracts, and encrypted content delivery; 20% to creator and agent pilots, including onboarding, integration engineering, documentation, structured feedback, testimonials, and design-partner case studies; 10% to production infrastructure and observability, including redundant RPC, encrypted backups, settlement/registry parity, alerting, uptime, and incident response; and 5% to open-source ecosystem work, examples, technical writing, and Arc community workshops. This funding accelerates work that cannot responsibly be skipped—security review, mainnet operations, and real external pilots—rather than subsidizing cosmetic features or first-party transaction volume.
 ```
 
 ## 6. Deck and Demo
@@ -352,7 +352,7 @@ https://youtu.be/De22GVl2KnY
 2. **0:25–1:55 — Codebase walkthrough:** show `lib/agent/run-agent.ts`, `lib/payments/browser-cosign-gateway.ts`, `lib/x402-server.ts`, the paid source and citation routes, `lib/gateway/x402-transfer-reconciliation.ts`, and `contracts/SourceRegistry.sol`. Explain the hard budget, browser-held signer, two-toll model, settlement evidence, and on-chain payout authority.
 3. **1:55–3:25 — Live integration:** ask one question with a small budget; show at least one BUY and one SKIP/CACHE; show the x402 access payment, cited answer, contribution weights, and citation reward receipt; open the dispatch and creator earnings page.
 4. **3:25–4:20 — Circle and Arc verification:** show Canteen Arc RPC, SourceRegistry zero mismatches, Circle settlement parity, and a creator withdrawal on ArcScan. Explain that Gateway payments have Circle settlement IDs because settlement is batched, while cash-outs are individual EVM transactions.
-5. **4:20–5:00 — Roadmap:** state current integrations—USDC, Gateway Nanopayments, x402, Unified Balance Kit—and planned integrations—CCTP V2/Forwarding Service, optional Circle Agent Wallets, audited Arc mainnet launch, and external creator/agent pilots.
+5. **4:20–5:00 — Roadmap:** state current integrations—USDC, Gateway Nanopayments, x402, Unified Balance Kit—and planned integrations—CCTP V2/Forwarding Service, optional Circle Agent Wallets, independent mainnet audit/hardening, and external creator/agent pilots.
 
 ### Investor deck
 
@@ -370,7 +370,7 @@ https://drive.google.com/file/d/1TNHbjz2_CyQwLCUGJNmKAyFlfEgl935f/view?usp=drive
 6. Traction — combined settled totals with source-linked proof.
 7. Users and go-to-market — publishers, research/data providers, agent developers, MCP/OpenAI/A2A distribution.
 8. Business model — paid agent/API plans and enterprise integrations; creator rewards remain a pass-through pool.
-9. Six-month milestones — audit, CCTP/Agent Wallets, external pilot, Arc mainnet launch.
+9. Six-month milestones — audit, CCTP/Agent Wallets, external pilot, mainnet hardening and adoption.
 10. Team and ask — Tang Vu, shipped evidence, Circle technical/co-marketing support, and milestone-based funding.
 
 ## 7. Conflict of Interest
@@ -411,7 +411,8 @@ Do not use that statement unless it is fully true. Disclose any relationship tha
 - Main repository: https://github.com/tang-vu/keryx
 - Latest release: https://github.com/tang-vu/keryx/releases/latest
 - Reusable primitives: https://github.com/tang-vu/keryx-arc-primitives
-- SourceRegistry: https://testnet.arcscan.app/address/0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536
+- Current mainnet SourceRegistry: https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb
+- Historical August testnet SourceRegistry: https://testnet.arcscan.app/address/0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536
 - Architecture: https://github.com/tang-vu/keryx/blob/main/docs/system-architecture.md
 - Security model: https://github.com/tang-vu/keryx/blob/main/docs/security-threat-model.md
 

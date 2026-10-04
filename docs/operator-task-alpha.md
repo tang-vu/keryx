@@ -1,12 +1,19 @@
 # Operator task alpha
 
-This first Operator slice is a local Arc-testnet research task handoff. It persists
+The Operator alpha is a local research task handoff on the trusted configured Arc network. It persists
 one normalized request, a pinned seller payee, and a per-job total cap. It does not
 create a wallet, fund it, sign, submit a purchase, or start a background worker.
 The existing buyer CLI remains the only CLI purchase path. Immutable task creation
 uses the shared Rust writer; local inspection and buyer recovery remain TypeScript.
 See the [native creation contract](./native-task-creation.md) for publication outcomes,
 artifact verification and rollback.
+
+For current public production, set BOTH `KERYX_NETWORK=arc` and
+`NEXT_PUBLIC_KERYX_NETWORK=arc` before task preparation, buyer handoff and remote
+recovery. Mainnet tasks retain `eip155:5042`; legacy v1 tasks remain testnet
+originals and must be recovered using their original profile. Unset configuration
+retains the local testnet default. Task creation grants no spending authority.
+See [current deployment and distribution evidence](mainnet-status.md).
 
 Download `request.json` from [/research](https://keryx.cc/research) as described in
 the [buyer guide](./buyer-agent.md). Create a private workspace before creating tasks,

@@ -1,5 +1,11 @@
 # Storage authority entrypoints
 
+**Scope:** this document retains the testnet storage entrypoint inventory and staged source checkpoints.
+Production is now Arc mainnet; [current status](mainnet-status.md),
+[normal server runtime](mainnet-server-runtime.md) and [operations](mainnet-operations.md)
+describe current mainnet authority. Legacy testnet keys/state and dated evidence
+remain on their original rail; this document does not authorize a new migration or spend.
+
 Read-only implementation inventory, October 1, 2026, at `c9ef864` (PR66). This is an integration checklist for the [storage isolation proposal](deployment-storage-isolation.md), not an implemented fence or closed M2 gate. No private database, environment file, credentials, or signing material was read. Searches cover tracked application/library/scripts/desktop/Rust/Cloudflare source and SQL migrations; test fixture processes are marked by their paths below. A textual inventory cannot certify absence of dynamically supplied code or future entrypoints. Re-run it against the implementation candidate and require a reviewed coverage diff.
 
 ## Immediate integration constraints

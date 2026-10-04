@@ -1,5 +1,11 @@
 # Arc mainnet public evidence probe
 
+**Scope:** this document retains dated read-only preparation probes.
+Production is now Arc mainnet; [current status](mainnet-status.md),
+[normal server runtime](mainnet-server-runtime.md) and [operations](mainnet-operations.md)
+describe current mainnet authority. Legacy testnet keys/state and dated evidence
+remain on their original rail; this document does not authorize a new migration or spend.
+
 This standalone inspector advances external availability evidence for M1. Its
 result is always `M1_PARTIAL`, `mainnetReady: false`. It does not activate mainnet,
 change runtime configuration, import SDK signers, query private accounts, send a

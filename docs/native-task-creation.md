@@ -116,7 +116,11 @@ outside this immutable-task domain release. See the
 [shared engine migration plan](./rust-engine-migration.md) for those separate gates.
 
 
-## Network-scoped mainnet preparation (October 2 source candidate)
+## Network-scoped task preparation
+
+Production is now mainnet; desktop 0.4.3 assets are published with the hosted
+v0.26.8 release. [Current status](mainnet-status.md) records dated distribution.
+The October 2 tests below remain source/component evidence rather than settlement.
 
 The native writer accepts an optional canonical `network` for new local preparation.
 An absent value or selected testnet retains the exact historical v1 bytes. Mainnet

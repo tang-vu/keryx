@@ -5,7 +5,7 @@ Prereq: Google account + one-time $5 developer registration fee.
 
 ## Upload
 
-- Build the zip: `npm run pack:extension` → `keryx-extension-v0.1.0.zip` (repo root, gitignored).
+- Build the zip: `npm run pack:extension` → `keryx-extension-v0.1.1.zip` (repo root, gitignored).
 - Bump `extension/manifest.json` `version` before every re-upload — the store rejects a reused version.
 - Zip has no top-level folder (store requirement); exactly 10 files, no README.
 
@@ -14,16 +14,16 @@ Prereq: Google account + one-time $5 developer registration fee.
 | Field | Value |
 |---|---|
 | Name | Keryx — Ask & pay creators |
-| Summary (≤132 chars) | Highlight text on any page, ask Keryx, get a cited answer — and every writer it cites gets paid in USDC. No wallet needed. |
+| Summary (≤132 chars) | Highlight text, ask Keryx, and get a cited answer with recorded creator-payment evidence in USDC on Arc. No wallet needed. |
 | Category | Productivity → Tools (alt: Search Tools) |
 | Language | English |
 
 **Description** (plain text, no markdown):
 
 ```
-Keryx is a reading agent that pays the writers it reads.
+Keryx is a reading agent that buys selected sources and rewards eligible cited creators.
 
-Highlight text on any page, right-click "Ask Keryx", and watch the agent work in real time: it decides which paid sources to buy, reads them, writes a grounded answer with citations — and settles a real USDC micropayment to every creator it cited, on Circle's Arc network. 100% of citation rewards go to creators. No wallet, key, or sign-up needed: the free tier is built in.
+Highlight text on any page, right-click "Ask Keryx", and watch the agent work in real time: it decides which paid sources to buy, reads them, and returns a cited answer with planned citation allocations and recorded creator-payment evidence in USDC on Circle's Arc network. Eligible cited creators receive weighted rewards; pending payments remain visible. 100% of citation rewards go to creators. No wallet, key, or sign-up needed: the free tier is treasury-funded within server-side limits.
 
 WHAT IT DOES
 • Toolbar popup — type or paste a question (pre-filled with your selection), set a budget, watch the agent's live buy/skip/trust reasoning stream in before the answer and the list of creators it paid.
@@ -33,7 +33,7 @@ WHAT IT DOES
 PRIVACY
 The only network destination is keryx.cc, and only when you press Ask. No analytics, no tracking, no background reading of pages. Full policy: https://keryx.cc/privacy
 
-Keryx runs on Circle's Arc testnet — payments are real on-chain settlements in testnet USDC. Answer permalinks are public.
+Public Keryx runs on Arc mainnet. Settlement records distinguish confirmed payments, pending amounts and planned rewards. Circle batching settlement identifiers are separate from individual EVM transaction hashes. Answer permalinks are public.
 ```
 
 ## Privacy tab

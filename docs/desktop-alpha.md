@@ -1,9 +1,11 @@
 # Operator desktop alpha (Windows)
 
-Research Monthly purchasing/redemption uses the [shared web/API pilot](research-monthly.md).
+Research Monthly purchasing/redemption uses the [shared web/API product](research-monthly.md).
 The desktop remains a local task/inspection/recovery surface; it does not create
-another entitlement writer or schedule recurring research. This release changes
-no desktop installer artifact or source pin.
+another entitlement writer or schedule recurring research. Public production uses
+Arc mainnet; task preparation supports mainnet and retained testnet originals.
+GitHub `v0.26.8` published desktop **0.4.3** artifacts from `1297d43` on October 4,
+2026. See [current deployment and distribution evidence](mainnet-status.md).
 
 The Windows desktop uses a Tauri 2/WebView2 shell under
 [D-260](../DECISIONS.md). The shell bundles a pinned Node runtime and a bounded
@@ -15,7 +17,7 @@ to Rust. Release acceptance requires hosted standard-user installer and
 fresh-runner checks.
 It creates and lists private task directories, including
 tasks created by the CLI. It saves a research question, Quick/Deep mode, pinned seller
-payee, creator budget, and total cap on Arc testnet. Creation does not buy research.
+payee, creator budget, and total cap on the selected Arc network. Creation does not buy research.
 
 For development on Windows x64, install Node 24, root dependencies, a Windows SDK,
 Microsoft C++ Build Tools, the MSVC Rust toolchain and the WebView2 runtime. Then:
@@ -108,8 +110,9 @@ source filename and import time. These reference snapshots stay local and are no
 used to generate answers. They are not uploaded by the desktop app.
 
 This alpha does not schedule jobs, notify, approve spending, create or fund wallets,
-sign purchases, or provide a business obligation ledger. It has no mainnet mode. The
-web server and its existing buyer/payment authority are unchanged.
+sign purchases, or provide a business obligation ledger. Mainnet task preparation
+and GET-only recovery use the configured rail; actual purchases use the deliberate
+buyer CLI handoff and its caller-held payment authority.
 
 Validation commands: `npm --prefix desktop test`, `npm --prefix desktop run typecheck`,
 `node desktop/scripts/test-ui.mjs`, and `npm run desktop:build`. The isolated UI test
@@ -148,7 +151,7 @@ artifact needs a new verified release source, not an unverified replacement buil
 
 Assets include the portable ZIP, installer, source manifest and SHA-256 checksums.
 Asset names include the full source commit, and uploads refuse to overwrite existing
-assets. Desktop candidate package version 0.4.2 is independent of the web release version;
+assets. Desktop package version 0.4.3 is independent of the web release version;
 the release tag and manifest establish the shared source identity. The alpha has
 no automatic updater, so installed users must deliberately install a newer package.
 These packaging gates do not authorize mainnet or establish payment readiness.
@@ -181,7 +184,7 @@ The source version is not a published installer claim. Exact native Windows
 package/manifest, standard-user mixed-history handoff/recovery and published asset
 checksums remain coordinated release gates.
 
-### October 3 coordinated research repair candidate
+### Historical October 3 coordinated research repair checkpoint
 
 Desktop 0.4.1 rebuilds the TypeScript receipt/result helper so integrity-checked saved
 research exports demote trusted synthetic demo evidence while retaining recorded money
@@ -194,7 +197,7 @@ and feed proof remain deliberate hosted SIWE handoffs. Exact-source installer ha
 packaged exports and fresh standard-user acceptance remain required before distribution
 is reported synchronized with application 0.26.1.
 
-### October 3 claim-grounding follow-up candidate
+### Historical October 3 claim-grounding follow-up checkpoint
 
 Desktop 0.4.2 is a new coordinated source candidate; the published 0.4.1 installer
 from `f9dca8d` remains immutable. After accepted hosted deployment of the repair, new

@@ -1,5 +1,23 @@
 # Creator cash-out recovery implementation
 
+## Current mainnet owner-wallet path
+
+Public production uses Arc mainnet. Ordinary creator cashout and retained Session
+cashout use their respective owner-held proofs and a separately reviewed owner
+mint transaction; they do not require the legacy treasury relay described below.
+See [current browser custody and ordinary creator withdrawals](mainnet-browser-custody.md#ordinary-creator-owner-wallet-withdrawals)
+and [deployment evidence](mainnet-status.md). A submitted original is recovered
+by its saved identity; missing responses never authorize a new burn or mint.
+Mainnet journals have separate network namespaces. Preserve testnet originals
+and their recorded settlement evidence on their original rail.
+
+## Historical testnet relay implementation and acceptance record
+
+The remaining sections document the September–October 2 testnet relay work and
+its acceptance checkpoints. Their fixed testnet policies, addresses, journal
+formats and open relay gates are historical or testnet-specific; they are not
+the current mainnet owner-wallet procedure or its release status.
+
 October 2 operator scope: the user authorized comprehensive testing plus a
 bounded withdrawal of eligible owner-managed testnet balances. The separate
 [owner cash-out batch](engineering/creator-owner-cashout-batch.md) retains one

@@ -2,9 +2,38 @@
 
 User-confirmed policy, October 1, 2026: every update audits every applicable surface and ships its shared contracts, adapters, tests, documentation and distribution together. No applicable surface may be skipped. Intentional role boundaries remain explicit; identical UI and payment authority are not required across distinct roles.
 
-## Audit baseline
+## October 4 documentation and current release status
 
-Audited research baseline `59757f8`; release branch rebased on `0417cee` (chat globe #110). Source baseline `59757f8` (root version 0.24.5), October 1. Recent merged changes include bounded public web research (#101), retained source context and captured browser signing authority (#100/#104), owner-signed citation policies (#102), observer-only retained-transfer checks (#103), chat-first reading (#105), researcher exports (#106), staged enrolled SQLite runtime (#107), and DOI/scholarly discovery (#109). Earlier Windows Tauri/Rust task creation, registry-owned creator listings, Gateway funding readiness and SDK testnet pin remain applicable dependencies. This is a source audit, not a claim that all product/mainnet gates passed.
+The user confirmed that Keryx is already on mainnet. Public health observed at
+`2026-10-04T16:42:30Z` reported commit `1297d43`, network `arc` and real settlement
+mode. The application release is **0.26.8**; public npm readback confirmed stdio
+MCP **0.4.3**, and GitHub `v0.26.8` contains MCP/desktop **0.4.3** artifacts from
+`1297d43f7c1a8356ceccac061b1cba65b93d2819`. Remote MCP retains protocol identity
+**0.2.0**, and extension source remains **0.1.1**. See the dated
+[deployment and distribution record](mainnet-status.md) for current evidence;
+the older candidates and gate reports below are historical checkpoints.
+
+| Surface | Current network and intentional role boundary | Documentation/distribution scope |
+| --- | --- | --- |
+| Web and creator UI | Arc mainnet browser co-sign, caller funding, source registration and owner-wallet withdrawal paths | Document current production separately from historical testnet settlement and the legacy relay. |
+| API / paid A2A | Selected mainnet caller-funded purchase; hosted execution requires its independent custody/capacity readiness | Package 1.0.0 and receipt semantics remain unchanged. Deployment health alone does not prove a currently available quote or completed payment. |
+| Remote MCP / OpenAI | Hosted mainnet treasury-funded research within sponsored admission limits | No caller wallet or independent payment signer; remote protocol identity 0.2.0 remains. |
+| Buyer CLI / stdio MCP | Caller-held custody, explicit matching `arc` profiles and original-network journals | Published stdio 0.4.3; unset configuration retains the local testnet default, so production setup must select mainnet explicitly. |
+| Operator CLI / desktop | Selected-network local tasks, receipt exports and GET-only recovery; purchases use deliberate buyer CLI handoff | Desktop 0.4.3 assets are published at v0.26.8. Local tasks confer no signer or autonomous scheduler. |
+| Extension / Discord / Telegram / Slack | Thin hosted research clients on the public mainnet deployment | Extension 0.1.1 remains unchanged; no new bot commands or client payment authority. Chrome Web Store submission remains unverified. |
+| Monthly / private research | Selected mainnet roles with separate offer/custody/worker/backing readiness | The public Monthly quote returned HTTP 503 during this audit; retain unavailable state instead of quoting a historical testnet price. Ordinary mainnet private admission has no payer invitation list. |
+
+Remaining runtime-copy follow-up: `lib/monthly/mcp-discovery.ts` still describes
+`research_monthly` as an “Arc-testnet Monthly quote”. The remote and published stdio
+tool share that retained description. This documentation refresh records the
+selected mainnet contract without modifying runtime code or immutable packages.
+A later runtime-copy update must pass the applicable shared-package release gates.
+The experimental scholarly-rights v1 protocol remains separately staged on testnet;
+ordinary mainnet reading, registration and cashout are separate roles.
+
+## Historical October 1 audit baseline
+
+Audited research baseline `59757f8`; release branch rebased on `0417cee` (chat globe #110). Source baseline `59757f8` (root version 0.24.5), October 1. Merged changes at that checkpoint included bounded public web research (#101), retained source context and captured browser signing authority (#100/#104), owner-signed citation policies (#102), observer-only retained-transfer checks (#103), chat-first reading (#105), researcher exports (#106), staged enrolled SQLite runtime (#107), and DOI/scholarly discovery (#109). Earlier Windows Tauri/Rust task creation, registry-owned creator listings, Gateway funding readiness and the SDK testnet pin were dependencies at that baseline. This historical source audit does not establish current deployment or distribution status.
 
 | Capability | Applicable surfaces and implementation | Intentional boundaries / release evidence still needed |
 | --- | --- | --- |
@@ -32,11 +61,11 @@ mainnet funding/settlement or synchronized hosted/package/installer delivery.
 2. Update every applicable surface together; record intentional exclusions and remaining work rather than silently omitting them. Exercise actual transport/CLI/IPC behavior, not just a helper mirror.
 3. Pass focused regression tests, type checking, relevant production build, independent review and required CI. Desktop changes require exact-source packaged Windows and fresh standard-user installer acceptance. Caller MCP changes require clean-install packed-package startup, synthetic signing, original-response-loss fencing and new-process GET-only recovery acceptance.
 4. Record root source commit/version, production `/api/health` commit, desktop installer/manifest version and exact release asset checksums, remote MCP protocol version, and caller MCP published npm version or verified release tarball. A green desktop CI build without downloadable current assets is not distribution completion; a repo package bump without npm publication is not an npm release.
-5. Merge/deploy/release under `AGENTS.md`, verify each applicable artifact and update the evidence record. Never advertise a not-yet-published registry package. Preserve mainnet M1-M8 and final owner approval independently.
+5. Merge/deploy/release under `AGENTS.md`, verify each applicable artifact and update the evidence record. Never advertise a not-yet-published registry package. Preserve the applicable M1–M8 acceptance and custody/spending gates; current mainnet status does not authorize additional funds or historical journal relabelling.
 
-Observed before this update: production health matched `59757f8`; latest GitHub application release was v0.24.5 without desktop assets, while desktop 0.3.0 assets were attached to v0.24.0. npm `keryx-mcp` was 0.1.1. These are pre-release observations, not acceptance of the new update. Final distribution evidence must be recorded after release; missing npm credentials must remain explicit.
+Observed before the historical October 1 update: production health matched `59757f8`; latest GitHub application release was v0.24.5 without desktop assets, while desktop 0.3.0 assets were attached to v0.24.0. npm `keryx-mcp` was 0.1.1. These are historical pre-release observations. Final distribution evidence must be recorded after each release; missing publication credentials must remain explicit.
 
-Candidate versions: application 0.24.7, desktop 0.3.1, caller MCP release tarball 0.3.0 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. npm latest was independently observed as 0.3.2 on October 2 at 13:56 UTC; 0.4.1 publication/integrity and Chrome Web Store submission remain unverified. These are release candidates until exact artifact/deployment checks complete.
+Historical candidate versions at the October 1–2 checkpoint: application 0.24.7, desktop 0.3.1, caller MCP release tarball 0.3.0 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retained its separate protocol identity 0.2.0. npm latest was independently observed as 0.3.2 on October 2 at 13:56 UTC; 0.4.1 publication/integrity and Chrome Web Store submission were then unverified. These observations remain historical; use the current record above for delivery status.
 
 
 ### Fresh isolated-storage alignment, 2026-10-02
@@ -48,7 +77,7 @@ MCP protocol `0.2.0` keep their separate identities and documented web/service r
 Registry publication, exact-source installer acceptance, deployment health and
 artifact hashes remain gates; repository version metadata is not delivery evidence.
 
-Current coordinated source candidate versions: application 0.26.2, desktop 0.4.2, caller MCP 0.4.2 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retains its separate protocol identity 0.2.0. October 3 registry discovery confirmed npm latest 0.4.1 and no 0.4.2; GitHub v0.26.1 contains immutable MCP/desktop 0.4.1 assets from `f9dca8d`. New versions remain candidates until exact artifact/publication acceptance. Chrome Web Store submission remains unverified.
+Historical coordinated source candidates at the October 3 checkpoint: application 0.26.2, desktop 0.4.2, caller MCP 0.4.2 (server identity derives from package), extension ZIP 0.1.1. Remote MCP retained its separate protocol identity 0.2.0. October 3 registry discovery confirmed npm latest 0.4.1 and no 0.4.2; GitHub v0.26.1 contains immutable MCP/desktop 0.4.1 assets from `f9dca8d`. These were candidates pending exact artifact/publication acceptance. Chrome Web Store submission remains unverified.
 
 
 ### Coordinated research/creator repair candidate, 2026-10-03

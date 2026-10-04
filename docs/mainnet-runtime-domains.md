@@ -2,8 +2,10 @@
 
 The owner directed **full public mainnet Keryx** on October 2, 2026, on the existing
 keryx.cc domain. The initial invited browser pilot was superseded. This document
-tracks the coordinated source candidate; it does not assert a deployed mainnet
-service, published package, installer acceptance or real funded settlement.
+tracks the coordinated runtime boundaries. **Production has launched on Arc
+mainnet**; [current status](mainnet-status.md) records observed health, registry and
+distribution. The matrix retains domain-specific acceptance requirements: deployment
+alone does not prove real funded settlement, independent audit or useful research.
 
 Trusted deployment configuration selects Arc mainnet (`arc`, chain 5042) or Arc
 testnet (`arcTestnet`). `KERYX_NETWORK` and `NEXT_PUBLIC_KERYX_NETWORK` must match;
@@ -22,7 +24,7 @@ Circle service origin and RPC are independently pinned; the explorer is
 
 ## Coordinated public release matrix
 
-| Surface/domain | Candidate support and authority | Remaining acceptance/release boundary |
+| Surface/domain | Implemented support and authority | Acceptance and role-specific evidence |
 | --- | --- | --- |
 | Web research and session payments | Normal SIWE owner routes, selected-profile worker, exact original challenge/source/item authority, durable lifetime and per-question reservations before cryptography; owner/network/origin custody retained across logout. | Final composed route/worker/SQLite checks and real funded settlement/delivery evidence. No arbitrary worker transaction interface. |
 | Public source/citation API and creator publishing | Fresh selected registry is payout authority; ordinary connected-wallet registration/listing updates and selected seller SDK. | Owner-reviewed registry creation, exact deployed runtime receipt and creator-owned source import; no testnet payout cache import as authority. |
@@ -79,6 +81,8 @@ backup described in [operations](mainnet-operations.md). Startup never repairs a
 schema; previous application profiles refuse the upgraded store. Headless state
 requires its explicit v4 migration while preserving the same custody path. Supabase
 mainnet and Rust financial writers remain unadmitted.
+
+<a id="dormant-isolated-signer-component"></a>
 
 ## Historical preparation components
 

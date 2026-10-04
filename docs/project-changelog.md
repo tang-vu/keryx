@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+## October 4, 2026 — Mainnet documentation refresh
+
+Production documentation now names Arc mainnet (`5042` / `eip155:5042`) and its
+verified public registry/Gateway constants. README, active plans, configuration
+guidance, creator/buyer flows and supported-surface guides distinguish the launched
+service from isolated testnet development and historical payment evidence.
+[Current status](mainnet-status.md) records dated release/publication observations
+and remaining purchase, usefulness, security and adoption limits. Documentation-only:
+no runtime/version/custody change, new deployment or payment.
+
 ### Original-paper identity and bounded context (2026-10-04, v0.26.8 candidate)
 
 - Bind exact-paper evidence to its recorded canonical arXiv URL and version, including
