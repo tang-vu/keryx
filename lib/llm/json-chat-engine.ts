@@ -14,6 +14,7 @@ import { buildContextualQuoteOptions } from "./quote-context";
 import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE } from "./decision-brief";
 import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
 import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
+import { buildEvidenceReviewInput } from "./evidence-review-input";
 import type { Decision } from "../types";
 import type {
   AttributeInput,
@@ -279,7 +280,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   async synthesize(input: SynthInput): Promise<SynthResult> {
     if (input.answerFormat === "decision-brief" && this.supportsDecisionBrief()) return this.synthesizeDecisionBrief(input);
     const sources = evidenceContext(input.question, input.subClaims, input.gathered);
-    const quoteOptions = buildQuoteOptions(sources);
+    const quoteOptions = buildQuoteOptions(sources, input.gathered);
     const out = await this.measuredChatJson(
       config.synthesisModel,
       "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
@@ -303,7 +304,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         question: input.question,
         researchTargets: input.subClaims.map((question, claimIndex) => ({ claimIndex, question })),
         sources,
-        quoteOptions,
+        quoteOptions: quoteOptions.map(({ quoteId, marker, text }) => ({ quoteId, marker, text })),
         schema:
           '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
           '"evidence":[{"claimIndex":number,"marker":string,"quoteId":string,"support":number(0..1)}],' +
@@ -314,15 +315,15 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     );
     const proposals = resolveQuoteEvidence(out.evidence, quoteOptions);
     let review: unknown;
+    let reviewedIndexes: ReadonlySet<number> = new Set();
     if (proposals.length) {
       try {
-        review = await this.measuredChatJson(
+        const reviewInput = buildEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims });
+        reviewedIndexes = reviewInput.reviewedIndexes;
+        if (reviewedIndexes.size) review = await this.measuredChatJson(
           config.llmModel,
           EVIDENCE_REVIEW_GUIDANCE,
-          JSON.stringify({ evidence: proposals.slice(0, MAX_REVIEWED_EVIDENCE).map((proposal, index) => ({
-            index, question: input.subClaims[proposal.claimIndex] ?? "Invalid research target: assign zero support",
-            quote: proposal.quote,
-          })), schema: '{"reviews":[{"index":number,"supportedFact":string,"support":number(0..1)}]}' }),
+          reviewInput.json,
           this.budgetFor(Math.min(proposals.length, MAX_REVIEWED_EVIDENCE)),
         );
       } catch {
@@ -333,7 +334,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     return {
       answer: (out.answer as string) ?? "",
       citedMarkers: Array.isArray(out.citedMarkers) ? (out.citedMarkers as string[]) : [],
-      evidence: applyEvidenceReview(proposals, review),
+      evidence: applyEvidenceReview(proposals, review, reviewedIndexes),
       ...(proposals.length ? { evidenceReview: review && typeof review === "object" && Array.isArray((review as { reviews?: unknown }).reviews)
         ? "completed" as const : "unavailable" as const } : {}),
       conflicts: parseConflicts(out.conflicts),

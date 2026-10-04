@@ -1,6 +1,7 @@
 import type { evidenceContext } from "./evidence-context";
 import type { GatheredContent } from "./reasoning-engine";
 import { isWellFormedUtf16 } from "./well-formed-utf16";
+import { completeEvidenceSpans } from "./evidence-span";
 
 export interface ContextualQuoteOption {
   quoteId: string;
@@ -105,7 +106,8 @@ function contextSpan(text: string, start: number, end: number, boundaries: Retur
  * It is bounded structural context, never a claim of entailment or completeness;
  * unread document truncation and delivery-kind provenance remain separate.
  */
-export function buildContextualQuoteOptions(sources: ReturnType<typeof evidenceContext>, gathered: GatheredContent[]): ContextualQuoteOption[] {
+export function buildContextualQuoteOptions(sources: ReturnType<typeof evidenceContext>, gathered: GatheredContent[],
+  policy: { completeSentencesOnly?: boolean } = {}): ContextualQuoteOption[] {
   const byMarker = new Map<string, GatheredContent>();
   for (const source of gathered) {
     if (!source.marker?.trim() || byMarker.has(source.marker)) invalid("ambiguous gathered marker");
@@ -135,7 +137,11 @@ export function buildContextualQuoteOptions(sources: ReturnType<typeof evidenceC
     const boundaries = contextBoundaries(scanned);
     const options: ContextualQuoteOption[] = [];
     const offeredSpans = new Set<string>();
-    passages: for (const passage of source.passages) {
+    const passages = policy.completeSentencesOnly
+      ? completeEvidenceSpans(original).filter(span => source.passages.some(passage => passage.start <= span.start && passage.end >= span.end))
+        .map(span => ({ ...span, text: original.text.slice(span.start, span.end) }))
+      : source.passages;
+    passages: for (const passage of passages) {
       for (const sentence of segmenter.segment(passage.text)) {
         const [bodyStart, bodyEnd] = trimSpan(scanned, passage.start + sentence.index,
           Math.min(scanned.length, passage.start + sentence.index + sentence.segment.length));

@@ -8,6 +8,7 @@ import type {
   GatheredContent,
   ProposedEvidence,
 } from "../llm/reasoning-engine";
+import { fixtureEvidenceSpans } from "../../test-support/evidence-fixtures";
 
 const gathered: GatheredContent[] = [
   {
@@ -42,13 +43,13 @@ function assessment(
 function evidence(
   over: Partial<ProposedEvidence> = {},
 ): ProposedEvidence {
-  return {
+  return fixtureEvidenceSpans(gathered, [{
     claimIndex: 0,
     marker: "S1",
     quote: "Circle burns USDC on the source domain.",
     support: 0.8,
     ...over,
-  };
+  }])[0];
 }
 
 describe("buildEvidenceLedger", () => {
@@ -74,13 +75,14 @@ describe("buildEvidenceLedger", () => {
     });
   });
 
-  it("normalizes whitespace but does not accept a paraphrased or fabricated quote", () => {
+  it("retains exact whitespace and rejects an altered or fabricated source quote", () => {
     const ledger = buildEvidenceLedger({
       subClaims: claims,
       gathered,
       answer: "CCTP burns USDC [S1].",
       declaredMarkers: ["S1"],
       proposedEvidence: [
+        evidence({ quote: gathered[0].text }),
         evidence({
           quote:
             "Circle burns USDC on the source domain. An attestation authorizes minting on the destination.",
@@ -91,7 +93,7 @@ describe("buildEvidenceLedger", () => {
     });
 
     expect(ledger.evidence).toHaveLength(1);
-    expect(ledger.droppedEvidence).toBe(1);
+    expect(ledger.droppedEvidence).toBe(2);
   });
 
   it("withholds reward when any leg of the citation contract is missing", () => {
@@ -140,8 +142,8 @@ describe("buildEvidenceLedger", () => {
     const words = "Circleburns USDC on the source domain.";
     const quote = `Circle${" ".repeat(rawLength - words.length)}burns USDC on the source domain.`;
     expect(quote).toHaveLength(rawLength);
-    const ledger = buildEvidenceLedger({ subClaims: claims, gathered, answer: "Burns USDC [S1].",
-      declaredMarkers: ["S1"], proposedEvidence: [evidence({ quote })], finalAssessment: assessment() });
+    const ledger = buildEvidenceLedger({ subClaims: claims, gathered: [{ ...gathered[0], text: quote }], answer: "Burns USDC [S1].",
+      declaredMarkers: ["S1"], proposedEvidence: [evidence({ quote, quoteSpan: { start: 0, end: quote.length } })], finalAssessment: assessment() });
     const admitted = rawLength === 240;
     expect(ledger.acceptedMarkers.has("S1")).toBe(admitted);
     expect(ledger.evidence.some(item => item.qualifiesForAnswer)).toBe(admitted);
@@ -227,7 +229,7 @@ it("separates public answer support from reward eligibility and rejects weak/non
   for (const [support, cited] of [[0.9, true], [0.2, true], [0, true], [0.9, false]] as const) {
     const ledger = buildEvidenceLedger({ subClaims: ["claim"], gathered: [source],
       answer: cited ? "Claim [S1]" : "Claim", declaredMarkers: cited ? ["S1"] : [],
-      proposedEvidence: [{ claimIndex: 0, marker: "S1", quote: source.text, support }],
+      proposedEvidence: [{ claimIndex: 0, marker: "S1", quote: source.text, quoteSpan: { start: 0, end: source.text.length }, support }],
       finalAssessment: [{ claim: "claim", coverage: 0.9, coveredBy: ["S1"] }],
     });
     expect(ledger.evidence[0]?.qualifiesForReward).toBe(false);

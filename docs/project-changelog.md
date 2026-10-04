@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Preserve source qualifications and complete quotations (2026-10-05, v0.26.11 candidate)
+
+- Review quotations with exact source positions, URL/version and neighboring text.
+  Withhold cut or unbound excerpts before admitting citations or creator rewards.
+- Preserve read slots when an official-document request encounters recognized
+  discussion pages, including cached/paid candidates and final read redirects.
+- Keep historical reports and payment authority unchanged, with no additional model
+  calls or retries. The completed client round accepted 0/3 useful answers; this
+  correction has only offline validation. See [scope and gates](engineering/source-context-2026-10-05.md).
+
 ### Public source claims and explicit future earnings (2026-10-05, v0.26.10)
 
 - Add `/claim-source` for wallet-bound website or RSS publisher proof, challenge recovery,
@@ -17,7 +27,7 @@
   receipts. Operator desktop 0.4.4 updates its receipt read model; MCP 0.4.3 and extension
   0.1.1 keep their unchanged compatible distribution roles.
 
-### Retain research when model calls fail (2026-10-05, v0.26.9 candidate)
+### Retain research when model calls fail (2026-10-05, v0.26.9)
 
 - Preserve completed reads and payment receipts when later model assessment,
   synthesis or attribution is unavailable. Stop additional purchases when reading

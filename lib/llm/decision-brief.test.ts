@@ -59,8 +59,8 @@ describe("strict decision-brief candidate contract", () => {
     expect(reviewed?.actions).toEqual(["a1"]);
     expect(reviewed?.packet.candidate.actions[0].conditions).toEqual(["If this fictional queue is the one being evaluated."]);
     expect(briefEvidence(reviewed!)).toEqual([
-      { claimIndex: 0, marker: "S1", quote: "The fictional queue may deliver duplicate messages.", support: 0.9 },
-      { claimIndex: 1, marker: "S1", quote: "Retry handlers must tolerate duplicates.", support: 0.8 },
+      { claimIndex: 0, marker: "S1", quote: "The fictional queue may deliver duplicate messages.", quoteSpan: { start: 0, end: 51 }, support: 0.9 },
+      { claimIndex: 1, marker: "S1", quote: "Retry handlers must tolerate duplicates.", quoteSpan: { start: 52, end: 92 }, support: 0.8 },
     ]);
   });
 
@@ -503,8 +503,8 @@ describe("separate quote contribution admission", () => {
     ];
     const reviewed = reviewDecisionBrief(packet, raw)!;
     expect(briefEvidence(reviewed).filter(row => row.claimIndex === 0)).toEqual([
-      { claimIndex: 0, marker: "S1", quote: "The fictional queue may deliver duplicate messages.", support: 0.7 },
-      { claimIndex: 0, marker: "S1", quote: "Retry handlers must tolerate duplicates.", support: 0.45 },
+      { claimIndex: 0, marker: "S1", quote: "The fictional queue may deliver duplicate messages.", quoteSpan: { start: 0, end: 51 }, support: 0.7 },
+      { claimIndex: 0, marker: "S1", quote: "Retry handlers must tolerate duplicates.", quoteSpan: { start: 52, end: 92 }, support: 0.45 },
     ]);
   });
 
@@ -543,7 +543,7 @@ describe("separate quote contribution admission", () => {
     expect(reviewed.facts.map(fact => fact.id)).toEqual(["f2"]);
     expect(reviewed.actions).toEqual(["a2"]);
     const evidence = briefEvidence(reviewed);
-    expect(evidence).toEqual([{ claimIndex: 1, marker: "S1", quote: "Retry handlers must tolerate duplicates.", support: 0.8 }]);
+    expect(evidence).toEqual([{ claimIndex: 1, marker: "S1", quote: "Retry handlers must tolerate duplicates.", quoteSpan: { start: 52, end: 92 }, support: 0.8 }]);
     const ledger = buildEvidenceLedger({ subClaims: value.input.subClaims, gathered: value.input.gathered,
       answer: "[S1] [S2]", declaredMarkers: ["S1", "S2"], proposedEvidence: evidence,
       finalAssessment: value.input.subClaims.map(claim => ({ claim, coverage: 1, coveredBy: ["S1", "S2"] })),

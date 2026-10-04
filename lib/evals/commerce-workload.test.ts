@@ -230,7 +230,7 @@ it("R22 keeps a settled access debit after failed delivery and continues from an
     reevaluate: async () => ({ claims: [], shouldBuyMore: false, recommendedIds: [], rationale: "No additional attempts" }),
     synthesize: async input => ({ answer: input.gathered.map(item => `[${item.marker}] ${item.text}`).join("\n"),
       citedMarkers: input.gathered.map(item => item.marker), conflicts: [], evidence: input.gathered.map(item =>
-        ({ claimIndex: 1, marker: item.marker, quote: item.text, support: .9 })) }),
+        ({ claimIndex: 1, marker: item.marker, quote: item.text, quoteSpan: { start: 0, end: item.text.length }, support: .9 })) }),
     attribute: async input => input.used.map(item => ({ sourceId: item.sourceId, weight: 1 / input.used.length, rationale: "Read source" })) };
   try {
     for (const source of sources) await db.upsertSource(source);

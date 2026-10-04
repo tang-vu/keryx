@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**Bind legacy evidence to complete source spans and private neighboring context — 2026-10-05.**
+Ordinary-client results exposed an unconfirmed proposal without its qualification
+and a mid-sentence excerpt. Bind new internal proposals to exact read offsets,
+refuse structurally cut quotes independently of model support, and include bounded
+neighbors plus source identity in the existing review. Never reconstruct runtime
+offsets by text lookup or add paid retries. Withhold known discussion pages from
+targets that explicitly require official documentation, retaining mixed-source
+research. This negative gate does not certify other URLs. Keep payout authority,
+allocation, public schemas and historical answers unchanged. Lower recall is an
+explicit limit; usefulness remains unproven. See [design and evidence](docs/engineering/source-context-2026-10-05.md).
+
+
 **Public discovery, verified control and explicit future earnings — 2026-10-05.**
 Keep public RSS and on-demand broad-web evidence readable without a creator account,
 wallet, price or payout authority. Do not attempt to pre-crawl the entire internet or

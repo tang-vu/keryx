@@ -91,7 +91,7 @@ try {
     const synthesized = await engine.synthesize(input);
     // Fixed permissive assessment isolates synthesis/old identity+literal gates;
     // it is NOT an executed sufficiency, discovery or production payment result.
-    const ledger = buildEvidenceLedger({ subClaims: input.subClaims, gathered, answer: synthesized.answer,
+    const ledger = buildEvidenceLedger({ question: input.question, subClaims: input.subClaims, gathered, answer: synthesized.answer,
       declaredMarkers: synthesized.citedMarkers, proposedEvidence: synthesized.evidence,
       finalAssessment: input.subClaims.map(claim => ({ claim, coverage: 1, coveredBy: gathered.map(source => source.marker) })) });
     const projected = deliverDecisionBrief(synthesized.decisionBrief, ledger, input.question);
