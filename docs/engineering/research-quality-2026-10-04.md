@@ -56,9 +56,22 @@ not superseded by these offline results. The earlier USD 1 authorization was for
 one completed batch; an additional bounded comparison requires its own approval.
 
 TypeScript and lint pass (five pre-existing warnings). Focused reader, transport,
-fallback and saved-surface regressions pass. Required clean CI, production build,
-assembled HTML/PDF trace, deployed health and distribution readback remain release
-gates until observed. Source-reading results cannot establish complete synthesis,
+fallback and saved-surface regressions pass. The first integrated check caught an
+inline-detail contract regression; moving the appendix to the full answer preserves
+that contract and all payment-priority branches. A subsequent clean CI run passed
+3,524 tests with four configured skips and built the application, then exposed the
+compiled-test locator's assumption that every export has an explicit numeric ID
+and synchronous initialization. Structural export-key discovery and awaited module
+exports retain the same behavior assertions; six locator regressions cover the
+observed formats and refuse ambiguous or unsupported identities.
+
+A separate clean Windows checkout with physical dependencies and npm 11.19.0
+reproduced the original locator failure, then passed the corrected minified
+orchestrator checks and assembled HTML/PDF runtime test. The earlier full Windows
+run against shared dependencies was stopped incomplete after retained failures and
+slow execution; it is not a passing full-suite result. Final required CI, deployed
+health and distribution readback remain release gates until observed.
+Source-reading results cannot establish complete synthesis,
 independent discovery recall, current commercial applicability or billing costs.
 
 ## Actionable incomplete results
