@@ -2,6 +2,13 @@
 
 How Keryx ships to production. **The live site is served from a VPS**, not Vercel.
 
+**Post-mainnet workflow (October 4, 2026):** use the
+[update flow](mainnet-update-flow.md) before executing this runbook. Production
+uses reviewed role configuration, sealed storage and deliberately held schedules.
+Preserve those exact inputs and states; a bare default redeploy may install
+reconciliation cron or use a legacy launcher. Historical provisioning/backup
+examples below do not establish the active mainnet configuration.
+
 ## Topology
 - **VPS** (`root@`, app at `/root/keryx`) runs the Next.js app under **pm2** (process `keryx`, port **3939**).
 - **Cloudflare named tunnel** maps `https://keryx.cc` → `http://localhost:3939` on the VPS (already configured).
@@ -14,24 +21,36 @@ How Keryx ships to production. **The live site is served from a VPS**, not Verce
 - VPS has Node 24, pm2, cloudflared, and 2 GB swap (the script provisions these; re-runnable).
 - Cloudflare tunnel `keryx.cc → :3939` live.
 
-## Standard deploy — run after every change you want live
+## Standard release — reviewed PR, then current origin/main
+
+Work on a focused feature branch; pass required CI and review, then merge the PR.
+Do not push a feature directly to main. Documentation-only updates require no
+runtime deployment. For user-visible product updates, inspect the actual mainnet
+role/storage/policy state and use the reviewed deployment mode below.
+
 ```bash
-# 1. commit (conventional message, no AI refs)
-git add <in-scope-files> && git commit -m "feat(scope): what changed"
+# On the feature branch, after appropriate validation
+git add <in-scope-files>
+git commit -m "feat(scope): what changed"
+git push -u origin <feature-branch>
 
-# 2. push — MANDATORY: deploy resets the VPS to origin/main
-git push origin main
+# Open the PR, pass required CI/review, merge, and verify the merged commit.
+# Inspect source, custody/schema compatibility and actual worker/scheduler state.
+# Supply the validated reviewed-role and held-scheduler inputs described below.
 
-# 3. deploy (verify dependencies, typecheck, temporary build, health-gated reload)
+# Deploy only after that preparation; never run this bare on the reviewed mainnet host.
 npm run redeploy
 
-# 4. verify
-curl -fsS https://keryx.cc/api/health # check commit and operational status; don't publish full telemetry
+# Verify expected commit/network and operational state; do not publish private telemetry.
+curl -fsS https://keryx.cc/api/health
 ```
 The build runs **on the VPS** and can remain quiet for several minutes. A September 9
-build compiled in 6.7 minutes before page generation and reload. The old `.next` keeps
-serving while `.next.tmp` builds. This reduces planned downtime; it does not guarantee
-availability during host, memory, dependency-install or tunnel failures.
+build compiled in 6.7 minutes before page generation and reload; this is historical
+timing, not a current estimate. **The reviewed mainnet path requires web and A2A
+writers positively stopped before source sync/build**, so plan a maintenance window.
+The prior build is retained for recovery. Only the legacy non-reviewed path keeps
+the old `.next` serving while `.next.tmp` builds; do not promise that availability
+for the reviewed mainnet procedure.
 
 The full TypeScript graph and the Next build have separate memory limits. The
 release typecheck uses a 2,560 MiB V8 old-space allowance; Next and its static
@@ -175,7 +194,10 @@ timeouts recovered without a VPS reboot, and the original deployment completed.
 The root cause of that interruption was not established. Do not claim the dependency
 reuse change fixes host or tunnel outages.
 
-> **If you forget to push**, the deploy silently ships the *previous* commit (`git reset --hard origin/main` discards nothing local — it just checks out what GitHub has). Always push first.
+> Deployment checks out origin/main on the VPS. Pushing a feature branch alone
+> does not deploy it: merge the reviewed PR first. The server-side hard reset can
+> discard tracked server edits; inspect and preserve unexpected server work before
+> deployment. The development checkout is a separate filesystem.
 
 On Windows, the npm script enters WSL to run Bash but automatically delegates SSH back to Windows
 OpenSSH so it uses the documented `keryx-vps` alias. Set `KERYX_SSH_BIN` only when a different SSH
@@ -217,8 +239,8 @@ Useful read-only verification before a release:
 ```bash
 arc-canteen rpc eth_chainId
 arc-canteen rpc eth_blockNumber
-# JSON params: SourceRegistry address + "latest"
-arc-canteen rpc eth_getCode '["0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536","latest"]'
+# For eth_getCode, use the registry from the verified selected-network profile.
+# Do not copy a historical testnet address into a mainnet check.
 ```
 
 On Windows, keep Python text I/O in UTF-8 when using CLI releases that still rely on the platform
@@ -231,12 +253,31 @@ the RPC URL.
 # locally, validate it, push the correction, then use the normal temporary-build path.
 npm run redeploy
 ```
-The redeploy script automatically restores its previous build when its internal
-post-reload commit health gate fails. A later manual rollback must also account for
-worker/config/database compatibility; do not overwrite the active build in place.
+The legacy non-reviewed path attempts an automatic build rollback when its health
+gate fails. **Reviewed-role deployment does not:** it retains builds and stops for
+inspection. After an economic migration attempt it holds public writers and
+forbids automatic rollback, including when the response is lost. Inspect actual
+original migration evidence and worker/config/database compatibility before a
+reviewed forward fix or rollback; never overwrite newer financial state with an
+older snapshot or resume an old writer against a new sealed schema.
 
 ## Backups (SQLite is the source of truth)
-All real traction lives in one SQLite file (`/root/keryx/data/keryx.sqlite`). `npm run backup` takes a
+
+**Mainnet boundary:** first resolve the actual enrolled storage target, identity
+and schema from the protected runtime manifest. Do not assume the legacy path
+below is the financial database. The generic backup command reads
+KERYX_SQLITE_PATH with a data/keryx.sqlite fallback; this is not proof that it
+selects the enrolled mainnet target. Use the reviewed identity-aware backup and
+migration procedure, retain manifest/policy/custody bindings privately, and verify
+restoration separately. The economic migration's native snapshot/receipt checks
+are described in [economic recovery](engineering/mainnet-economic-recovery.md).
+Do not rerun that migration to obtain an unrelated backup.
+
+The remaining path/cron examples in this section describe the legacy ordinary
+SQLite deployment. Neither their path nor hourly scheduling is asserted for
+current mainnet. Its retained held schedules must not be activated by this text.
+
+The legacy ordinary SQLite deployment uses `/root/keryx/data/keryx.sqlite`. `npm run backup` takes a
 consistent snapshot of the LIVE db (`VACUUM INTO`, safe under WAL — no downtime), gzips it, rotates the
 last `KERYX_BACKUP_KEEP` (default 48) under `data/backups/`, and — when configured — copies it off-box.
 `npm run deploy` installs an **hourly cron** that runs it automatically.
@@ -253,11 +294,13 @@ the target schema offline before replacing the live file. Keep a rollback copy a
 handle the stopped database's WAL/SHM files deliberately; stopping only the web process
 is insufficient. Full service-restore acceptance remains open in the delivery plan.
 
-Before restored data serves requests, clear the ephemeral `auth_challenges` and
+For the legacy ordinary adapter, before restored data serves requests, clear the ephemeral `auth_challenges` and
 `web_sessions` tables after schema initialization. A stale snapshot must not resurrect
 a consumed login challenge or revoked web session. This requires users to sign in
 again. Preserve all payment grants, reservations, authorizations and research journals;
-account-session cleanup is not a payment-state reset. See
+account-session cleanup is not a payment-state reset. Mainnet enrolled storage
+requires its reviewed schema/identity-aware procedure; do not apply legacy SQL or
+initialization directly to an enrolled financial store. See
 [revocable-session recovery](./engineering/revocable-sessions-2026-09-09.md).
 
 **Encrypted off-box copy** uses a dedicated private Cloudflare R2 Standard bucket and AES-256-GCM. The job uploads at most once per UTC day, retains 24 encrypted snapshots (32 MiB each maximum), reserves a bounded monthly request budget before network operations, and refuses legacy plaintext rclone configuration. Account alerts are notifications, not spending caps; other projects share the free allowance. See [encrypted backup setup, job limits and offline restore drills](encrypted-backups.md).
@@ -318,9 +361,10 @@ separately. Keep `.env.local` private.
 ## Quick reference
 | Action | Command |
 |---|---|
-| Deploy current `origin/main` | `npm run deploy` |
-| Full flow | `git commit` → `git push origin main` → `npm run deploy` |
-| Verify live | `curl -s -o /dev/null -w '%{http_code}\n' https://keryx.cc` |
+| Deploy current reviewed `origin/main` | `npm run redeploy` with validated role/held-scheduler inputs |
+| Provision a host | `npm run deploy` — separate provisioning scope, never a routine update |
+| Full flow | Feature branch → checks/review → PR merge → prepared redeploy → commit/network verification |
+| Verify live | `curl -fsS https://keryx.cc/api/health` plus relevant read-only acceptance |
 | VPS app logs | `ssh keryx-vps "pm2 logs keryx --lines 60"` |
-| Manual DB backup | `ssh keryx-vps "cd /root/keryx && npm run backup"` |
+| Manual DB backup | Resolve current storage identity and use its reviewed backup procedure; legacy command above is not a mainnet selector |
 | Announce update | `npm run arc:update -- "…"` |
