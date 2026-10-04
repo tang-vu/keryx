@@ -28,7 +28,7 @@ export function ResearchRequest({ mode, budget, version, total, payee }: {
       link.href = url; link.download = "request.json"; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }} className="ml-3 mt-3 border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40">Download request</button>
-    <p className="mt-3 font-serif text-sm text-ink-2">Use the <a className="underline" href="https://github.com/tang-vu/keryx/blob/main/docs/buyer-agent.md" target="_blank" rel="noopener noreferrer">buyer-agent guide</a> to quote, pay from your own funded testnet wallet, and resume the same job after a disconnect.</p>
+    <p className="mt-3 font-serif text-sm text-ink-2">Use the <a className="underline" href="https://github.com/tang-vu/keryx/blob/main/docs/buyer-agent.md" target="_blank" rel="noopener noreferrer">buyer-agent guide</a> to quote, pay from your own funded {currentArcLabel} wallet, and resume the same job after a disconnect.</p>
     <p role="status" className="mt-2 font-serif text-sm">{copied}</p>
     </details>
   </div>;

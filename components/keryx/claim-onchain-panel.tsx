@@ -46,7 +46,7 @@ export function ClaimOnchainPanel({
       <p className="text-xs text-ink-2">
         {unclaimed.length === 1 ? "This source was" : "These sources were"} listed before the
         on-chain registry existed. Registering from this wallet claims the same listing on-chain —
-        earnings, feed, and verification carry over. It costs a little gas (faucet below).
+        earnings, feed, and verification carry over. Review wallet funding below for registration gas.
       </p>
       <ul className="space-y-2">
         {unclaimed.map((s) => (

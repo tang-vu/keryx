@@ -1,5 +1,7 @@
 "use client";
 
+import { arcProfileLabel, recordedArcProfile } from "@/lib/arc-network-display";
+
 /**
  * /status section for settlement parity: what Keryx's payout ledger claims is still sitting in
  * Circle's Gateway for creators, against what Circle itself says it holds for those same wallets.
@@ -16,6 +18,7 @@
 
 /** Mirrors the `settlement` object /api/health returns. */
 export interface SettlementHealth {
+  network?: string;
   checkedAt: string;
   owedUsdc: number;
   confirmedUsdc: number;
@@ -48,6 +51,8 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
   const backed = counts.confirmed + counts.surplus + counts.cashedOut;
   const answered = backed + counts.short;
   const top = accounts.slice(0, 8);
+  // Never assign the current deployment's network to a retained balance observation.
+  const recordedProfile = settlement.network === undefined ? undefined : recordedArcProfile(settlement.network);
 
   return (
     <>
@@ -123,17 +128,20 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
       )}
 
       <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">
-        Gateway settlement leaves no per-payment explorer hash, so every hour Keryx asks Circle what
-        it holds for each payee and publishes both numbers. A wallet holding <em>more</em> than
+        Gateway settlement leaves no per-payment explorer hash. Keryx compares the payout ledger
+        with observed Circle balances for each payee and publishes both numbers. A wallet holding <em>more</em> than
         Keryx accounts for is the creator&rsquo;s own money and never flags; one holding less is
         read against its on-chain balance first, because a creator may cash out by any route they
-        like. Check any row yourself:
+        like.
       </p>
+      {recordedProfile ? <>
+      <p className="mt-2 text-xs text-ink-2">Check a current balance on this observation&apos;s original network: {arcProfileLabel(recordedProfile)}.</p>
       <pre className="mt-2 overflow-x-auto border border-line bg-paper-2 p-3 font-mono text-[10px] leading-relaxed text-ink-2">
-{`curl -s https://gateway-api-testnet.circle.com/v1/balances \\
+{`curl -s ${recordedProfile.gatewayApiUrl}/v1/balances \\
   -H 'content-type: application/json' \\
   -d '{"token":"USDC","sources":[{"depositor":"${top[0]?.address ?? "0x…"}","domain":26}]}'`}
       </pre>
+      </> : <p className="mt-2 text-xs text-ink-2">This saved observation has no recognized original network. Confirm its network before querying a current Gateway balance.</p>}
     </>
   );
 }

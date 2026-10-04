@@ -22,6 +22,7 @@ import type { WrappedKey } from "./session-key-vault";
 import { browserPaymentProfile } from "../browser-payment-profile";
 import type { BrowserSessionOperation, BrowserQuestionBudget } from "./browser-session-runtime";
 import type { BrowserSessionWithdrawalReview } from "./browser-session-withdrawal-runtime";
+import { SessionCustodyMissingError } from "./session-custody-error";
 
 type Pending = { resolve: (value: unknown) => void; reject: (reason: Error) => void };
 
@@ -88,7 +89,8 @@ export class SessionSigner {
       if (!slot) return;
       this.pending.delete(id);
       if (ok) slot.resolve(event.data.result);
-      else slot.reject(new Error(event.data.error));
+      else slot.reject(event.data.code === "session_custody_missing"
+        ? new SessionCustodyMissingError() : new Error(event.data.error));
     });
     this.worker.addEventListener("error", (event) => {
       const err = new Error(event.message || "session signer worker failed");

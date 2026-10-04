@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+**Mainnet lifecycle and onboarding recovery — 2026-10-04.** The owner confirmed
+the public product is already on mainnet and requested fixes for awkward or broken
+flows. Direct health observation confirms the deployed Arc profile; historical
+pre-launch gates do not describe current deployment. Keep automatic Session restore
+visible and serialize lifecycle actions before any await. An invalidated operation
+may be followed by a read of the current owner's saved custody, never a replay of
+funding or consent. Only a successful empty custody read permits initial derivation;
+storage failures, corrupt ciphertext and cancelled operations refuse. Inactive
+consent retains a recoverable session with clear renewal guidance.
+
+Bulk creator registration uses the same compiled mainnet registry and exact
+registration-event checks as the single-source path. Capture owner/SIWE/network
+across wallet and RPC awaits; unknown outcomes retain the original transaction
+for observation. Unrelated manually supplied receipts cannot release uncertainty.
+Faucet actions are testnet-only, and mainnet guidance distinguishes wallet gas
+from Gateway credit. These repairs preserve custody formats, settlement/cap
+authority, historical records and the API purchase contract.
+
 **D-300** - Admit source excerpts without certifying synthesized assertions - *2026-10-03*
 
 The #128 follow-up reproduced an omitted evidence proposal: one accepted source marker

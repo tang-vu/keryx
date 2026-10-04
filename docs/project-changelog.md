@@ -1,5 +1,24 @@
 # Keryx Project Changelog
 
+### Mainnet session and creator onboarding repair (2026-10-04, v0.26.3)
+
+- Show saved-session recovery while it is running; block duplicate activation,
+  renewal and funding actions. Recover cleanly after owner changes or effect replay,
+  and show reconnect guidance after a wallet disconnect. Unavailable or corrupt
+  custody never triggers a replacement-key signature.
+- Explain expired/revoked saved sessions as needing fresh spending consent, without
+  exposing schema-validation internals. Retain funded recovery and original holds.
+- Mainnet creator onboarding reads the correct wallet balance and explains real
+  USDC/native gas. Bulk registration pins the authenticated owner, network and
+  registry, checks the exact registration event, and offers observation of an
+  uncertain original transaction without signing it again.
+- Update buyer CLI guidance for explicitly configured mainnet/testnet profiles.
+  Status-page balance-check examples follow the observation's recorded network;
+  legacy observations without that identity never guess a testnet/mainnet endpoint.
+  Browser changes are served by the web application; desktop, caller CLI/stdio
+  MCP and thin bot/extension roles keep their existing contracts. See
+  [surface audit](surface-parity.md#october-4-mainnet-onboarding-repair).
+
 ### Qualified excerpt delivery boundary (2026-10-03, pending acceptance)
 
 - Always project new evidence-bearing completions into openly quoted qualified

@@ -25,12 +25,11 @@ interface Props {
   onActivate: (budgetUsdc: number) => void;
   /** Add more USDC to the currently-active session. */
   onTopUp: (addUsdc: number) => void;
-  /** Fresh TTL for the current session — one API call, no wallet interaction. */
+  /** Renew the grant; mainnet requires a fresh owner consent signature. */
   onExtend: () => Promise<boolean>;
   onRevoke: () => void;
   onTryRecover: () => void;
-  /** Re-derive the key from a wallet signature to resume a funded session
-   *  (new device / closed tab / after sign-out). Guarantees funds aren't lost. */
+  /** Restore the retained mainnet key, or the legacy testnet signature flow. */
   onRecoverViaSignature: () => void;
 }
 
@@ -42,6 +41,8 @@ const STATUS_LABEL: Record<string, string> = {
   confirming: "Deposit confirming on Circle Gateway — activates automatically…",
   registering: "Registering grant…",
   recovering: "Recovering session — sign in your wallet…",
+  restoring: "Restoring saved session in this browser…",
+  revoking: "Revoking spending consent…",
 };
 
 export function GrantSpendDialog({
@@ -62,12 +63,12 @@ export function GrantSpendDialog({
   const budgetNum = parseFloat(budgetInput);
   const budgetValid = Number.isFinite(budgetNum) && budgetNum > 0;
 
-  // On mount, offer to recover from sessionStorage (handles page refreshes).
+  // Read the selected network's retained custody after refresh/sign-in.
   useEffect(() => {
     onTryRecover();
   }, [onTryRecover]);
 
-  const isWorking = ["switching", "generating", "funding", "depositing", "confirming", "registering", "recovering"].includes(grantState.status);
+  const isWorking = ["switching", "generating", "funding", "depositing", "confirming", "registering", "recovering", "restoring", "revoking"].includes(grantState.status);
 
   if (grantState.status === "active") {
     return (
@@ -149,7 +150,9 @@ export function GrantSpendDialog({
           </div>
           <p className="mt-1.5 font-mono text-[9px] leading-relaxed text-faint">
             {resumeFailed
-              ? "Could not resume from this tab — use “Recover funded session” below (one signature, no gas)."
+              ? browserPaymentProfile().testnet
+                ? "Could not resume from this tab — use “Recover funded session” below (one signature, no gas)."
+                : "Recovery did not complete. Keep this browser's saved data and retry when the wallet and Gateway are available."
               : browserPaymentProfile().testnet ? "One click, no signature — or recover with a signature on any device."
                 : "Resume retained custody on this browser and review a new owner consent signature. Expired grants cannot authorize payments."}
           </p>
@@ -159,7 +162,7 @@ export function GrantSpendDialog({
       <p className="mb-3 max-w-[52ch] font-serif text-[13px] leading-snug text-ink-2">
         Fund a browser-held session key with USDC. The agent buys sources
         automatically — no wallet prompt per source. Your key never leaves
-        this tab.
+        the browser signer.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">

@@ -30,6 +30,21 @@ One atomic IndexedDB reservation records cumulative lifetime signer exposure, th
 
 An unavailable session-status lookup or expiry immediately invalidates payment registration and locks heap custody while retaining local recovery. Cached question callbacks require the exact published registration, current clock, owner and signer before dispatch and again after worker awaits. They cannot spend while paused or become active again merely because the same owner/epoch was restored. Explicit recovery publishes a fresh local registration. Native-handler/React/production-worker acceptance verifies zero paused dispatch and no header/settlement when a lookup failure occurs during an original challenge await.
 
+## Lifecycle recovery UI — October 4
+
+Automatic restoration shows a working state and holds one lifecycle operation
+before its first await. Activation, top-up and renewal do not queue behind it.
+If an owner change or React effect replay invalidates an operation, automatic
+recovery waits for it to finish and only reads the current owner's retained
+custody. Disconnect pauses with reconnect guidance. No old wallet action replays.
+
+A worker response distinguishes a successful empty original-custody read from
+storage/decryption/operation failure. Only the empty read permits first derivation.
+Corrupt or inaccessible saved custody stays an explicit recovery error. Inactive
+server consent keeps the saved address and prompts renewal rather than displaying
+raw schema failures. Custody bytes, namespaces, wrapping keys and the grant/payment
+protocol remain unchanged; the private worker response adds one optional error code.
+
 ## Owner-only session cashout
 
 The ordinary session panel reviews an exact amount and maximum USDC fee before preparing an authenticated original withdrawal. Expired or revoked payment consent remains usable only as retained owner/session custody proof; it does not reopen payments. The worker accepts only an original request ID and the locally reviewed amount/fee ceiling. It verifies both original public signatures, its own owner/signer/origin, static mainnet contracts, a finite compiled block window and fresh selected-chain RPC observations.

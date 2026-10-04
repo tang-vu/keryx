@@ -8,6 +8,7 @@ import { sessionJson } from "./browser-session-http";
 import { readBrowserMainnetSource } from "./browser-session-source-authority";
 import { reserveBrowserSessionAuthorization } from "./browser-session-capacity";
 import { createBrowserSessionWithdrawalRuntime } from "./browser-session-withdrawal-runtime";
+import { SessionCustodyMissingError } from "./session-custody-error";
 declare const self: DedicatedWorkerGlobalScope;
 let key: ReturnType<typeof createBrowserSessionKey> | null = null;
 let runtime: ReturnType<typeof createBrowserSessionRuntime> | null = null;
@@ -49,6 +50,8 @@ self.onmessage = (event: MessageEvent<BrowserSessionOperation & { id: number }>)
   })().then(result => {
     if (expected !== generation) throw new Error();
     self.postMessage({ id: request.id, ok: true, result });
-  }).catch(() => self.postMessage({ id: request.id, ok: false, error: "Browser session operation refused" }))
+  }).catch(error => self.postMessage({ id: request.id, ok: false, error: "Browser session operation refused",
+    ...(expected === generation && request.type === "restoreRetained" && error instanceof SessionCustodyMissingError
+      ? { code: error.code } : {}) }))
     .finally(() => { active = false; });
 };
