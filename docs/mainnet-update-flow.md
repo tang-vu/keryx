@@ -64,8 +64,10 @@ offline reproduction. No shadow production payment is permitted.
    reviewed role configuration and deliberately held schedules. A bare default
    redeploy can rewrite cron or use a legacy launcher; preserve the reviewed
    inputs and do not copy a historical invocation without validating its bindings.
-   The reviewed-role path positively stops web/A2A before source sync/build;
-   plan a maintenance window rather than promising a zero-downtime release.
+   The reviewed-role path requires the operator to positively stop/drain web
+   and A2A before source sync/build; the helper validates that state rather than
+   performing the stop. Plan a maintenance window rather than promising a
+   zero-downtime release.
    Storage/custody/policy changes require their explicit migration procedure,
    verified backups and positive drain of all affected writers/signers.
 8. **Verify hosted and distributed delivery.** Match public health to the merged
