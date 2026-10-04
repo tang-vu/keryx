@@ -130,6 +130,15 @@ describe("message builders", () => {
   it("help text is HTML-safe and carries usage plus the status link", () => {
     expect(helpText()).toContain("/ask");
     expect(helpText()).toContain("/status");
+    expect(helpText()).toContain("planned USDC creator rewards");
+    expect(helpText()).not.toContain("really, on-chain");
+  });
+
+  it.each(["real", "offline", undefined] as const)("does not infer a network or settled payment from a %s run", paymentMode => {
+    const text = buildAnswerText(fakeRun({ paymentMode }));
+    expect(text).toContain("Citations and planned rewards (USDC)");
+    expect(text).toContain("Recorded amounts are not settlement proof");
+    expect(text).not.toMatch(/Arc (testnet|mainnet)/);
   });
 
   it("formats API URLs and error text", () => {

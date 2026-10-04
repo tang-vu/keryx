@@ -179,6 +179,13 @@ describe("response builders", () => {
     expect(embed.description.endsWith("…")).toBe(true);
   });
 
+  it.each(["real", "offline", undefined] as const)("does not infer a network or settled payment from a %s run", paymentMode => {
+    const embed = buildAnswerMessage(fakeRun({ paymentMode })).embeds[0]!;
+    expect(embed.fields[0]!.name).toBe("Citations and planned rewards (USDC)");
+    expect(embed.footer.text).toContain("Recorded amounts are not settlement proof");
+    expect(JSON.stringify(embed)).not.toMatch(/Arc (testnet|mainnet)/);
+  });
+
   it("formats follow-up URL and error message", () => {
     expect(followupUrl("a", "t")).toBe(
       "https://discord.com/api/v10/webhooks/a/t/messages/@original",

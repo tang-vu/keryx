@@ -5,6 +5,8 @@
     "incremental": false
   },
   "include": [
+    "scripts/eval-research-workload.mts",
+    "scripts/eval-commerce-workload.mts",
     "scripts/eval-cloudflare.mts",
     "scripts/test-browser-session-revoke.mts",
     "scripts/test-browser-isolated-session.mts",

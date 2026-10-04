@@ -157,6 +157,9 @@ jobs:
         run: |
           npm run eval:agent:ci
           node --import tsx scripts/eval-research-boundary-corpus.mts --check
+          npm run eval:workload:research -- --capture --fixtures
+          npm run eval:workload:research -- --replay --fixtures
+          npm run eval:workload:commerce
 
       - name: Engineering feed integrity (no settlement)
         run: node --import tsx scripts/build-engineering-feed.mts --check
