@@ -59,7 +59,9 @@ describe("bounded evidence context", () => {
     expect(result.excerpted).toBe(true);
     const ledger = buildEvidenceLedger({
       subClaims: claims, gathered, answer: "The server sends payment requirements [S1].", declaredMarkers: ["S1"],
-      proposedEvidence: [{ marker: "S1", claimIndex: 0, quote, support: 0.9 }],
+      proposedEvidence: [{ marker: "S1", claimIndex: 0, quote, support: 0.9,
+        quoteSpan: { start: "Release history and unrelated maintenance notes. ".repeat(130).length + 2,
+          end: "Release history and unrelated maintenance notes. ".repeat(130).length + 2 + quote.length } }],
       finalAssessment: claims.map((claim) => ({ claim, coverage: 0.9, coveredBy: ["S1"] })),
     });
     expect(ledger.evidence[0].qualifiesForReward).toBe(true);

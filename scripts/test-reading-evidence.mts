@@ -45,7 +45,7 @@ function groundedFixture(covered){
   const identity={marker:'S1',sourceId:'protocol',sourceName:'Protocol fixture',itemId:'protocol-item',itemTitle:'Protocol article',itemUrl:'https://fixture.invalid/protocol',contentVersion:'recorded-version',sourceKind:'public-reference'};
   const draft='The protocol binds approval [S1]. All attacks are eliminated [S1].';
   const ledger=buildEvidenceLedger({subClaims:claims,gathered:[{...identity,text:quote+' '+evaluation}],answer:draft,declaredMarkers:['S1'],
-    proposedEvidence:[{claimIndex:0,marker:'S1',quote,support:0.9},...(covered?[{claimIndex:1,marker:'S1',quote:evaluation,support:0.9}]:[])],
+    proposedEvidence:[{claimIndex:0,marker:'S1',quote,quoteSpan:{start:0,end:quote.length},support:0.9},...(covered?[{claimIndex:1,marker:'S1',quote:evaluation,quoteSpan:{start:quote.length+1,end:quote.length+1+evaluation.length},support:0.9}]:[])],
     finalAssessment:claims.map((claim,index)=>({claim,coverage:index===0||covered?0.9:0,coveredBy:index===0||covered?['S1']:[]}))});
   return {...run,id:covered?'grounding-covered':'grounding-gap',subClaims:claims,trace:[],answer:finalizeGroundedAnswer({question:'Compare',answer:draft,ledger}),
     claimCoverage:ledger.claimCoverage,evidence:ledger.evidence,citations:[{...identity,weight:1,reward:0,rationale:'Qualified quoted contribution'}],

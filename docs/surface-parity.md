@@ -1,5 +1,22 @@
 # Supported-surface release parity
 
+## Source context correction, October 5, 2026
+
+App **0.26.11 candidate** changes new research in the shared server/engine pipeline:
+exact complete quote spans, bounded private context review and narrow negative
+documentation-source requirements. Web/SSE/history, API, A2A, remote MCP, OpenAI,
+Discord/Telegram/Slack and extension receive the same finalized hosted result.
+Repository CLI execution uses the shared engine; caller buyer/stdio MCP retains
+its hosted purchase role. Private research keeps external-search isolation.
+Archived receipts, schemas, custody, source-owned payout and allocation are unchanged.
+
+Paired builds against d6332a1 show identical emitted desktop helper/renderer/bridge/
+CSS and MCP bundles, with source stamps held constant; extension's ten package
+inputs are unchanged. Desktop **0.4.4**, MCP **0.4.3**, extension **0.1.1** and remote
+protocol **0.2.0** retain their roles. Exact-source CI, release assets and public
+deployment health remain distinct verification gates; installed clients are not
+assumed upgraded. [Evidence and remaining usefulness gates](engineering/source-context-2026-10-05.md).
+
 ## Public source claims, October 5, 2026
 
 Application **0.26.10** adds wallet-bound website/RSS control verification and separate

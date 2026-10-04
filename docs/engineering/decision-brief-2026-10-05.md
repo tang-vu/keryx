@@ -88,8 +88,10 @@ review, not human/customer acceptance or autonomous discovery recall. The harnes
 isolates synthesis with a fixed permissive coverage assessment; it executes no
 search, database, source payment or client journey. Frozen inputs, excluded grader
 labels, exact captures, failures, prompt/source hashes and output artifacts are
-retained privately. Actual-client acceptance of the reliability release is pending;
-it cannot turn these failed brief evaluations into a passing usefulness claim.
+retained privately. The three ordinary-client questions later completed, with 0/3
+accepted complete useful answers. The finite paid round is closed. See the
+[outcomes and unpaid correction](source-context-2026-10-05.md); neither release
+health nor these results turn the failed brief evaluations into a usefulness pass.
 
 ## Retain completed work when compute fails
 

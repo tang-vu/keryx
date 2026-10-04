@@ -161,6 +161,8 @@ export interface ProposedEvidence {
   marker: string; // S1, S2, ...
   quote: string; // short verbatim span copied from the gathered source
   support: number; // 0..1 estimate of how directly the span supports the claim
+  /** Server-resolved UTF-16 source offsets; private proposal metadata, not a receipt field. */
+  quoteSpan?: import("./evidence-span").EvidenceSpan;
 }
 
 /** Result of synthesis: the grounded answer, which markers it cited, and any source

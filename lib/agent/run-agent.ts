@@ -1,4 +1,5 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
+import { discussionDoesNotMeetDocumentRequest } from "../research/source-requirements";
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
 import { finalizeGroundedAnswer } from "./answer-grounding";
@@ -294,6 +295,8 @@ export async function* runAgent(
         subClaims, input.researchMode === "quick", webSignal());
       webDiscovery = { status: "completed", attemptedQueries: discovered.attemptedQueries, succeededQueries: discovered.succeededQueries, failedQueries: discovered.failedQueries };
       for (const [id, candidate] of discovered.candidates) { webCandidates.set(id, candidate); publicCandidates.set(id, candidate); }
+      if (discovered.withheldDiscussionPreviews) yield emit("discover",
+        discovered.withheldDiscussionPreviews + " discussion-page previews withheld because the request asks for official documentation. Other previews are not thereby verified as official.");
       yield emit("discover", `Web search: ${discovered.attemptedQueries}/${discovered.queries} planned queries attempted, ${discovered.succeededQueries} succeeded, ${discovered.candidates.size} public page previews, ${discovered.failedQueries} unavailable queries${discovered.cancelled ? "; search deadline or cancellation reached" : ""}${discovered.truncatedQueries ? "; query text bounded at 500 characters" : ""}. Snippets are discovery only. Public reads spend no USDC; model and service operating costs remain separate.`);
     } catch { webDiscovery = { status: "unavailable" }; yield emit("discover", "Web search unavailable; continuing with the available catalog. No web evidence was established."); }
     finally { webRemainingMs -= Date.now() - operationStarted; }
@@ -622,7 +625,18 @@ export async function* runAgent(
   // selection. The portfolio may choose a subset of positive proposals; it can never promote a
   // model SKIP, create a candidate, or alter the authoritative registry/offer price.
   const preparedDecisions: Decision[] = [];
-  for (const r of internalProposed) {
+  const discussionBlockedIds = new Set<string>();
+  for (const proposedDecision of internalProposed) {
+    const targets = proposedDecision.targets.filter(index =>
+      !discussionDoesNotMeetDocumentRequest(input.question, proposedDecision.itemUrl, subClaims[index]));
+    const r = { ...proposedDecision, targets };
+    if (discussionDoesNotMeetDocumentRequest(input.question, r.itemUrl) ||
+        proposedDecision.targets.length > 0 && targets.length === 0) {
+      discussionBlockedIds.add(r.assetId ?? r.sourceId);
+      preparedDecisions.push({ ...r, action: "SKIP",
+        rationale: "The request asks for official documentation; this URL identifies a discussion or issue page, so no read slot or source payment is authorized." });
+      continue;
+    }
     // A CACHE proposal against a copy the source has published past is not a free read of that
     // source. Charge for it — here, before the budget guard, so the re-read is reserved like any
     // other purchase: converting it later at fetch time would settle a toll the fetch budget never
@@ -995,6 +1009,8 @@ export async function* runAgent(
           (d) =>
             d.action === "SKIP" &&
             !d.external &&
+            !discussionDoesNotMeetDocumentRequest(input.question, d.itemUrl) &&
+            !discussionBlockedIds.has(d.assetId ?? d.sourceId) &&
             !isExternal(d.sourceId) &&
             !gatheredIds.has(d.assetId ?? d.sourceId) &&
             (!fundingUnavailable || publicReads.has(d.assetId ?? d.sourceId) || webCandidates.has(d.assetId ?? d.sourceId)),
@@ -1051,6 +1067,12 @@ export async function* runAgent(
       // Buy additional sources the engine recommended to fill coverage gaps
       for (const recId of reeval.recommendedIds) {
         if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
+        const recommended = webCandidates.get(recId) ?? publicCandidates.get(recId) ?? assetById.get(recId)?.candidate;
+        if (discussionBlockedIds.has(recId) || discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl) ||
+            subClaims.length > 0 && subClaims.every(claim => discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl, claim))) {
+          yield emit("reevaluate", "Discussion-page recommendation withheld: the request requires official documentation.");
+          continue;
+        }
         if (attentionUsed >= attentionLimit) {
           yield emit(
             "reevaluate",
@@ -1307,6 +1329,7 @@ export async function* runAgent(
     ? synthesized.answer
     : `Read ${gathered.length} source(s) (${gathered.map((g) => g.sourceName).join(", ")}), but couldn't compose a written summary this run. Please try again.`;
   let ledger = buildEvidenceLedger({
+    question: input.question,
     subClaims,
     gathered,
     answer,

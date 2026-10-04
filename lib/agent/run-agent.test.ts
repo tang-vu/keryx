@@ -66,6 +66,8 @@ import { ArticleReadError } from "../web-research/article-reader";
 import * as fetchAuthority from "../registry/source-fetch-payto";
 import type { SourceClaim } from "../sources/public-source-claim";
 import { sourceClaimReceipt } from "../sources/source-claim-access";
+import { fixtureEvidenceSpans } from "../../test-support/evidence-fixtures";
+import { completeEvidenceSpans } from "../llm/evidence-span";
 
 const AGENT = "0xAGENT";
 const EPS = 1e-6;
@@ -161,19 +163,20 @@ function fakeEngine(over: EngineOverrides = {}): ReasoningEngine & { decideInput
         return {
           ...r,
           conflicts: r.conflicts ?? [],
-          evidence: r.evidence ?? [],
+          evidence: fixtureEvidenceSpans(input.gathered, r.evidence ?? []),
         };
       }
       return {
         answer: `grounded answer ${input.gathered.map((g) => `[${g.marker}]`).join(" ")}`,
         citedMarkers: input.gathered.map((g) => g.marker),
         conflicts: [],
-        evidence: input.gathered.map((g) => ({
+        evidence: input.gathered.flatMap((g) => completeEvidenceSpans(g).slice(0, 1).map(span => ({
           claimIndex: 0,
           marker: g.marker,
-          quote: g.text,
+          quote: g.text.slice(span.start, span.end),
+          quoteSpan: span,
           support: 0.9,
-        })),
+        }))),
       };
     },
     async attribute(input: { used: { sourceId: string }[] }) {
@@ -224,7 +227,7 @@ function fakeGateway(opts: { failOn?: string } = {}): FakeGateway {
         settled: true,
         txHash: "0xfetch",
       });
-      return { content: item?.content || `content:${source.id}`, payment };
+      return { content: item?.content || `content:${source.id}.`, payment };
     },
     async payCitation({ source, author, item, amount, weight, queryId, rationale }) {
       gw.citationCalls.push({ sourceId: source.id, payee: author.walletAddress, amount });
@@ -293,7 +296,7 @@ function fakeDb(sources: Source[], state: DbState = {}): KeryxDB & { payments: P
     },
     async getCached(sourceId: string) {
       return state.cachedAt?.[sourceId] || state.cachedByKey?.[sourceId]
-        ? `cached:${sourceId}`
+        ? `cached:${sourceId}.`
         : null;
     },
     async getCachedAt(sourceId: string) {
@@ -354,7 +357,7 @@ function injectPapers(d: AgentDeps, ids = ["1706.03762v7"]) {
 it("reads exact versioned scholarly PDFs, preserves observed metadata, and never funds or pays paper authors", async () => {
   const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
   const funded = vi.spyOn(d.gateway, "ensureFunded");
-  d.readWebArticle = vi.fn(async (url: string) => ({ text: "The versioned paper actually contains this evidence.", title: "pdf hostname", finalUrl: url, kind: "pdf" as const, truncated: true }));
+  d.readWebArticle = vi.fn(async (url: string) => ({ text: "The versioned paper actually contains this evidence. Unfinished extraction tail", title: "pdf hostname", finalUrl: url, kind: "pdf" as const, truncated: true }));
   const { run } = await drive({ question: "Transformer attention", scholarly: true, origin: "web" }, d);
   expect(d.discoverScholarly).toHaveBeenCalledWith("Transformer attention", true, expect.any(AbortSignal));
   expect(run.citations[0]).toMatchObject({ sourceKind: "public-reference", reward: 0, itemUrl: "https://arxiv.org/pdf/1706.03762v7",
@@ -428,6 +431,90 @@ it("never promotes an unread search snippet into evidence and contains page-read
   const { run, steps } = await drive({ question: "Unanswerable original question", origin: "web" }, d);
   expect(run.citations).toHaveLength(0); expect(run.evidence ?? []).toHaveLength(0); expect((d.gateway as FakeGateway).fetchCalls).toHaveLength(0); expect((d.gateway as FakeGateway).citationCalls).toHaveLength(0);
   expect(JSON.stringify(steps)).not.toContain("internal secret response");
+});
+
+it("preserves the Quick read slot for a document when search returns forum threads first", async () => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  const fund = vi.spyOn(d.gateway, "ensureFunded");
+  d.webSearch = { search: async () => [
+    { title: "Forum proposal", url: "https://sqlite.org/forum/info/first", snippet: "A proposal" },
+    { title: "Another proposal", url: "https://sqlite.org/forum/info/second", snippet: "Another proposal" },
+    { title: "Backup documentation", url: "https://sqlite.org/backup.html", snippet: "Documentation preview" },
+  ] };
+  d.readWebArticle = vi.fn(async url => ({ text: "The documentation describes consistent database snapshots.",
+    title: "Document", finalUrl: url, kind: "html" as const, truncated: false }));
+  const { run, steps } = await drive({ question: "Use official SQLite documentation to explain backups.", origin: "web",
+    researchMode: "quick", executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } }, d);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(1);
+  expect(run.citations[0]?.itemUrl).toBe("https://sqlite.org/backup.html");
+  expect(steps.some(step => step.message.includes("discussion"))).toBe(true);
+  expect(fund).not.toHaveBeenCalled();
+  expect((d.gateway as FakeGateway).fetchCalls).toEqual([]);
+});
+
+it.each([false, true])("skips a known owned discussion before funding or reading, including cached=%s and reevaluation", async cached => {
+  const source = makeSource({ id: "discussion", fetchPrice: 0.002 });
+  const item: SourceItem = { id: "thread", sourceId: source.id, title: "Forum", summary: "A suggestion",
+    link: "https://sqlite.org/forum/info/example", content: "The participant proposes a backup procedure." };
+  const engine = fakeEngine({ sufficiency: () => ({ sufficient: false, rationale: "Need documentation" }),
+    reevaluate: () => ({ shouldBuyMore: true, recommendedIds: [source.id], rationale: "Model tries blocked source" }) });
+  const gateway = fakeGateway();
+  const d = deps([source], engine, gateway, { items: { [source.id]: [item] },
+    ...(cached ? { cachedByKey: { [sourceItemCacheKey(source.id, item)]: "2026-10-05" } } : {}) });
+  const fund = vi.spyOn(gateway, "ensureFunded");
+  const { run } = await drive({ question: "Use official SQLite documentation to explain backups.", budget: 0.05,
+    researchMode: "deep", executionLimits: { attentionLimit: 2, reevaluateRounds: 1 } }, d);
+  expect(run.decisions[0]?.action).toBe("SKIP");
+  expect(run.citations).toEqual([]); expect(run.totalSpent).toBe(0);
+  expect(fund).not.toHaveBeenCalled(); expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]);
+});
+
+it("retains ordinary discussion requests but withholds citations after a document redirects to a forum", async () => {
+  for (const official of [false, true]) {
+    const d = deps([], fakeEngine(), fakeGateway());
+    d.webSearch = { search: async () => [{ title: "Backup", url: "https://sqlite.org/backup.html", snippet: "Backup preview" }] };
+    d.readWebArticle = vi.fn(async () => ({ text: "The participant proposes a backup procedure.", title: "Forum proposal",
+      finalUrl: "https://sqlite.org/forum/info/example", kind: "html" as const, truncated: false }));
+    const { run } = await drive({ question: official ? "Use official SQLite documentation to explain backups." : "What backup procedure does the discussion propose?", origin: "web" }, d);
+    expect(d.readWebArticle).toHaveBeenCalledTimes(1);
+    expect(run.citations).toHaveLength(official ? 0 : 1);
+    expect((d.gateway as FakeGateway).citationCalls).toEqual([]);
+  }
+});
+
+it("retains a forum comparison target while removing its incompatible documentation target", async () => {
+  const question = "Use official SQLite documentation for the guarantee. Then summarize user forum experiences.";
+  const claims = ["Use official SQLite documentation for the guarantee.", "Summarize user forum experiences."];
+  const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: 0 }), targets: [0, 1] })),
+    synthesize: input => ({ answer: "Forum proposal [S1].", citedMarkers: ["S1"],
+      evidence: claims.map((_, claimIndex) => ({ claimIndex, marker: "S1", quote: input.gathered[0].text, support: 1 })) }) });
+  engine.decompose = async () => claims;
+  const d = deps([], engine, fakeGateway());
+  d.webSearch = { search: async () => [{ title: "Forum", url: "https://sqlite.org/forum/info/proposal", snippet: "A proposal" }] };
+  d.readWebArticle = vi.fn(async url => ({ text: "The participant proposes a backup procedure.", title: "Forum",
+    finalUrl: url, kind: "html" as const, truncated: false }));
+  const { run } = await drive({ question, origin: "web", researchMode: "quick" }, d);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(1);
+  expect(run.decisions[0].targets).toEqual([1]);
+  expect(run.evidence?.map(row => row.claimIndex)).toEqual([1]);
+  expect(run.claimCoverage?.[0].coveredBy).toEqual([]);
+  expect(run.citations).toHaveLength(1);
+  expect(run.totalSpent).toBe(0);
+});
+
+it("does not buy a discussion proposed only for an explicit documentation target", async () => {
+  const source = makeSource({ id: "forum-only" });
+  const item: SourceItem = { id: "thread", sourceId: source.id, title: "Forum", summary: "A proposal",
+    link: "https://sqlite.org/forum/info/proposal", content: "The participant proposes a backup procedure." };
+  const engine = fakeEngine({ sufficiency: () => ({ sufficient: false, rationale: "Needs docs" }),
+    reevaluate: () => ({ shouldBuyMore: true, recommendedIds: [source.id], rationale: "Try forum" }) });
+  engine.decompose = async () => ["Use official SQLite documentation to explain backups."];
+  const gateway = fakeGateway(), fund = vi.spyOn(gateway, "ensureFunded");
+  const { run } = await drive({ question: "Explain database backups.", researchMode: "deep", budget: 0.05 },
+    deps([source], engine, gateway, { items: { [source.id]: [item] } }));
+  expect(run.decisions[0].action).toBe("SKIP");
+  expect(fund).not.toHaveBeenCalled(); expect(gateway.fetchCalls).toEqual([]);
+  expect(run.citations).toEqual([]);
 });
 it("retains partial-read recovery across saved surfaces without including it in creator attribution", async () => {
   const owned = makeSource({ id: "owned-original", fetchPrice: 0.002 });
@@ -991,7 +1078,7 @@ describe("runAgent — money-safety invariants", () => {
 
     const { run, steps } = await drive({ question: "q", budget: 0.05 }, d);
 
-    expect(run.answer).toContain("“content:a” [S1]");
+    expect(run.answer).toContain("“content:a.” [S1]");
     expect(run.totalSpent).toBeGreaterThan(0);
     expect(run.settledPayments).toBe(2);
     expect(steps.some((step) => step.message.includes("receipt retained"))).toBe(true);
@@ -1615,7 +1702,7 @@ it("routes a complete collected run through explicit effects without public writ
   d.discoverExternal = vi.fn(async () => { throw new Error("Legacy discovery forbidden"); });
   const effects = isolatedTestEffects(queryId);
   effects.getCachedAt = vi.fn(async key => key === "cached" ? new Date().toISOString() : null);
-  effects.getCached = vi.fn(async () => "Scoped cached evidence");
+  effects.getCached = vi.fn(async () => "Scoped cached evidence.");
   const saveOrder: string[] = [];
   effects.saveQueryRun = vi.fn(async () => { saveOrder.push("save"); });
   const run = await collectRun({ question, queryId, budget: 0.05,
@@ -1628,7 +1715,7 @@ it("routes a complete collected run through explicit effects without public writ
   expect(forbidden).not.toHaveBeenCalled();
   expect(d.discoverExternal).not.toHaveBeenCalled();
   expect(effects.getCached).toHaveBeenCalledWith("cached");
-  expect(effects.setCached).toHaveBeenCalledWith("paid", "content:paid");
+  expect(effects.setCached).toHaveBeenCalledWith("paid", "content:paid.");
   expect(effects.recordPayment).toHaveBeenCalledTimes(3);
   expect(effects.discoverExternal).toHaveBeenCalledWith(question, expect.any(Array));
   expect(effects.decisionContext).toHaveBeenCalledWith(question, expect.any(Array));
@@ -2040,7 +2127,7 @@ describe("original public attention gate regression (#128)", () => {
     const d = deps([], engine, fakeGateway());
     const candidate = scholarlyCandidate({ ...paper("2607.13716v1").item!.scholarly!, title: "CAVA: Canonical Action Verification and Attestation for Runtime Governance of Agentic AI Systems" });
     d.discoverScholarly = async () => ({ candidates: new Map([[candidate.id, candidate]]), succeeded: 1, unavailable: 0, requestedDois: 0, resolvedDois: 0 });
-    d.readWebArticle = vi.fn(async url => ({ text: "Synthetic CAVA source evidence for the regression, not a real paper passage.", title: "Paper", finalUrl: url, kind: "pdf" as const, truncated: true }));
+    d.readWebArticle = vi.fn(async url => ({ text: "Synthetic CAVA source evidence for the regression, not a real paper passage. Unfinished extraction tail", title: "Paper", finalUrl: url, kind: "pdf" as const, truncated: true }));
     const { run } = await drive({ question, origin: "web", researchMode: "deep" }, d);
     expect(run.decisions[0].expectedValue).toBeGreaterThanOrEqual(0.12); expect(run.decisions[0].expectedValue).toBeLessThan(0.45);
     expect(run.decisions[0].targets.length).toBeGreaterThan(0); expect(d.readWebArticle).toHaveBeenCalledTimes(1);
@@ -2151,7 +2238,7 @@ it("retains a qualified paid excerpt and the exact existing citation allocation"
   const gateway = fakeGateway(), d = deps([source], engine, gateway);
   const { run } = await drive({ question: "Qualified paid question", budget: 0.03 }, d);
   expect(run.answer).not.toContain("Qualified paid draft");
-  expect(run.answer).toContain("“content:qualified-paid” [S1]");
+  expect(run.answer).toContain("“content:qualified-paid.” [S1]");
   expect(run.citations).toHaveLength(1); expect(run.citations[0].reward).toBeCloseTo(0.03 * config.citationPoolRatio, 8);
   expect(d.db.payments.map(payment => [payment.kind, payment.amountUsdc])).toEqual([["fetch", 0.004], ["citation", 0.03 * config.citationPoolRatio]]);
   expect(run.totalSpent).toBeCloseTo(0.004 + 0.03 * config.citationPoolRatio, 8);
@@ -2198,7 +2285,7 @@ describe("omitted-assertion completion boundary", () => {
       expect(run.trace.some(step => step.message.includes("Chỉ cung cấp trích đoạn nguồn đủ điều kiện"))).toBe(true);
     }
     expect(run.trace.some(step => (step.detail as { answerDelivery?: string })?.answerDelivery === "qualified-excerpts")).toBe(true);
-    const supported = variant !== "no-proposals" && variant !== "inflated-only";
+    const supported = variant !== "no-proposals" && variant !== "inflated-only" && variant !== "multiline-methods";
     expect(run.citations).toHaveLength(supported ? 1 : 0);
     expect(gateway.citationCalls).toHaveLength(supported ? 1 : 0);
     expect(gateway.fetchCalls).toEqual([source.id]);

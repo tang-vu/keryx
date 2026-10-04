@@ -159,7 +159,7 @@ export function briefEvidence(brief: ReviewedDecisionBrief): ProposedEvidence[] 
     const fact = brief.packet.candidate.facts.find(fact => fact.id === accepted.id)!;
     return fact.quoteIds.map(id => {
       const quote = brief.packet.quotes.find(quote => quote.quoteId === id)!;
-      return { claimIndex: fact.targetIndex, marker: quote.marker, quote: quote.text,
+      return { claimIndex: fact.targetIndex, marker: quote.marker, quote: quote.text, quoteSpan: { start: quote.start, end: quote.end },
         support: accepted.quoteSupports.find(item => item.quoteId === id)!.support };
     });
   });

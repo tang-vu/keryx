@@ -31,7 +31,7 @@ const feed = await ingestRssXml(readFileSync('docs/engineering/feed.xml','utf8')
 const gathered = feed.items.map((item,i) => ({sourceId:`engineering-${i}`,sourceName:'Keryx Engineering (first-party)',marker:`S${i+1}`,text:item.content,itemTitle:item.title}));
 const subClaims = ['How does the buyer preserve the original job before submission?', 'What does resume do after response loss, and what payment actions does it avoid?'];
 const question = 'How can a Keryx buyer recover a job after losing the submission response without paying again?';
-const options = buildQuoteOptions(evidenceContext(question, subClaims, gathered));
+const options = buildQuoteOptions(evidenceContext(question, subClaims, gathered), gathered);
 const expected = options.find(option => option.marker === 'S2' && option.text === expectedQuote);
 if (!expected) throw new Error('The pre-submission journal evidence is missing from the model quote menu.');
 if (!args.includes('--live')) {

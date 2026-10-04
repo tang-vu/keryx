@@ -3,6 +3,21 @@ import { discoverWeb } from "./discovery";
 import { bodyIdentity, canonicalUrl, publisherGroup } from "./url-identity";
 import { searxngProvider } from "./search-provider";
 
+it("preserves publisher slots for requested documentation without extra searches or inventing a page", async () => {
+  const search = vi.fn(async () => [
+    { title: "Official-looking forum", url: "https://sqlite.org/forum/info/one", snippet: "A proposal" },
+    { title: "Another forum", url: "https://sqlite.org/forum/info/two", snippet: "A question" },
+    { title: "Backup documentation", url: "https://sqlite.org/backup.html", snippet: "An unread document preview" },
+  ]);
+  const result = await discoverWeb({ search }, "Use official SQLite documentation.", ["Explain backup"], true);
+  expect(search).toHaveBeenCalledTimes(2);
+  expect(result.withheldDiscussionPreviews).toBe(2);
+  expect([...result.candidates.values()].map(c => c.item?.itemUrl)).toEqual(["https://sqlite.org/backup.html"]);
+  const onlyForum = await discoverWeb({ search: async () => (await search()).slice(0, 2) }, "Dùng tài liệu chính thức SQLite.", [], true);
+  expect(onlyForum.candidates.size).toBe(0);
+  expect(onlyForum.withheldDiscussionPreviews).toBe(2);
+});
+
 it("bounds queries and candidates, groups subdomains and treats snippets only as previews", async () => {
   const search = vi.fn(async () => Array.from({ length: 50 }, (_, index) => ({ title: `page ${index}`, snippet: "<b>preview only</b>", url: `https://host${index}.example.com/${index}` })));
   const result = await discoverWeb({ search }, "query", ["claim one", "claim two", "claim three"], true);
