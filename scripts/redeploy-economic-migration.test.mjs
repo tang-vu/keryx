@@ -142,6 +142,7 @@ esac
   const environment = { ...process.env, PATH: `${directory}${path.delimiter}${process.env.PATH}`,
     KERYX_SSH_BIN: path.join(directory, 'ssh').replaceAll('\\', '/'), ECONOMIC_TEST_TRACE: trace.replaceAll('\\', '/'),
     KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER: '1', KERYX_REDEPLOY_REVIEWED_PM2_CONFIG: rolesFile,
+    KERYX_REDEPLOY_EXPECTED_COMMIT: 'e'.repeat(40),
     KERYX_REDEPLOY_REVIEWED_PM2_SHA256: 'c'.repeat(64), KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG: configFile,
     KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256: 'd'.repeat(64) };
   const execute = (failure = '', extra = {}) => {
@@ -170,6 +171,7 @@ esac
   const build = execute('build');
   assert.notEqual(build.status, 0); assert.doesNotMatch(build.trace, / - (migrate|hold)/);
   for (const extra of [{ KERYX_REDEPLOY_REVIEWED_PM2_CONFIG: '', KERYX_REDEPLOY_REVIEWED_PM2_SHA256: '' },
+    { KERYX_REDEPLOY_EXPECTED_COMMIT: '' },
     { KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER: '0' }, { KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256: '' },
     { KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG: '/tmp/untrusted.json' }]) {
     const result = execute('', extra); assert.notEqual(result.status, 0); assert.equal(result.trace, '');

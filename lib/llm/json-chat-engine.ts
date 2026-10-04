@@ -10,6 +10,8 @@ import { cloneUsage } from "../economics/provider-cost-policy";
 import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
+import { buildContextualQuoteOptions } from "./quote-context";
+import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE } from "./decision-brief";
 import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
 import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
 import type { Decision } from "../types";
@@ -27,10 +29,14 @@ import type {
   LlmUsageRecord,
 } from "./reasoning-engine";
 
+export interface ChatJsonOptions { reasoningReview?: boolean }
+
 export abstract class JsonChatEngine implements ReasoningEngine {
   abstract readonly name: string;
   private readonly usageRecords: LlmUsageRecord[] = [];
   private readonly callLedger = new LlmCallLedger();
+  /** Opt in only transports whose bounded reasoning review has been evaluated. */
+  protected supportsDecisionBrief(): boolean { return false; }
 
   get calls() { return this.callLedger.calls; }
 
@@ -72,6 +78,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     system: string,
     user: string,
     maxTokens?: number,
+    options?: ChatJsonOptions,
   ): Promise<Record<string, unknown>>;
 
   /**
@@ -270,6 +277,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async synthesize(input: SynthInput): Promise<SynthResult> {
+    if (input.answerFormat === "decision-brief" && this.supportsDecisionBrief()) return this.synthesizeDecisionBrief(input);
     const sources = evidenceContext(input.question, input.subClaims, input.gathered);
     const quoteOptions = buildQuoteOptions(sources);
     const out = await this.measuredChatJson(
@@ -332,6 +340,38 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     };
   }
 
+  private async synthesizeDecisionBrief(input: SynthInput): Promise<SynthResult> {
+    const fallback: SynthResult = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable" };
+    try {
+      const selectedSources = evidenceContext(input.question, input.subClaims, input.gathered);
+      const options = buildContextualQuoteOptions(selectedSources, input.gathered);
+      if (!options.length) return fallback;
+      const sources = briefContextSources(selectedSources, input, options);
+      const raw = await this.measuredChatJson(config.synthesisModel, BRIEF_GENERATION_GUIDANCE,
+        JSON.stringify({ question: input.question,
+          researchTargets: input.subClaims.map((question, targetIndex) => ({ targetIndex, question })), sources,
+          quoteOptions: options.map(({ quoteId, marker, text, start, end }) => ({ quoteId, marker, text, start, end })),
+          schema: '{"facts":[{"id":"f1","targetIndex":0,"text":string,"quoteIds":string[],"support":number}],"actions":[{"id":"a1","text":string,"premiseIds":string[],"conditions":string[]}]}' }), 4096);
+      const packet = prepareDecisionBrief(input, raw, options, sources);
+      if (!packet) return fallback;
+      if (!packet.candidate.facts.length) return { ...fallback, evidenceReview: "completed" };
+      const review = await this.measuredChatJson(config.llmModel, BRIEF_REVIEW_GUIDANCE,
+        JSON.stringify({ packet: briefReviewPacket(packet), schema: '{"digest":string,"facts":[{"id":string,"status":"supported"|"unsupported"|"insufficient","support":number,"quotes":[{"quoteId":string,"status":"supported"|"unsupported"|"insufficient","support":number}]}],"actions":[{"id":string,"status":"supported"|"unsupported"|"insufficient"}]}' }), 4096, { reasoningReview: true });
+      const decisionBrief = reviewDecisionBrief(packet, review);
+      if (!decisionBrief) return fallback;
+      const evidence = briefEvidence(decisionBrief);
+      const citedMarkers = [...new Set(evidence.map(item => item.marker))];
+      // Only a marker envelope reaches the old evidence gate. Human prose is
+      // rendered later from surviving reviewed rows after all existing gates.
+      return { answer: citedMarkers.map(marker => `[${marker}]`).join(" "), citedMarkers, evidence,
+        conflicts: [], evidenceReview: "completed", decisionBrief };
+    } catch {
+      // A malformed generation/review, transport outage or input cap must not
+      // discard completed paid reads or route an unreviewed narrative to the UI.
+      return fallback;
+    }
+  }
+
   async attribute(
     input: AttributeInput,
   ): Promise<{ sourceId: string; weight: number; rationale: string }[]> {
@@ -358,7 +398,10 @@ export abstract class JsonChatEngine implements ReasoningEngine {
 }
 
 export function extractJson(text: string): Record<string, unknown> {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  // A valid JSON string can itself contain fenced source/code examples. Parse
+  // the whole response first; only a surrounding fence is a transport wrapper.
+  try { return JSON.parse(text); } catch { /* inspect an outer wrapper below */ }
+  const fenced = text.trim().match(/^```(?:json)?\s*([\s\S]*?)```$/);
   const raw = fenced ? fenced[1] : text;
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");

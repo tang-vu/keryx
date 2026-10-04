@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { JsonChatEngine } from "./json-chat-engine";
+import { JsonChatEngine, extractJson } from "./json-chat-engine";
 import type { DecideInput } from "./reasoning-engine";
 import { ResilientEngine, reasoningAttempts } from "./resilient-engine";
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
@@ -35,6 +35,12 @@ class StubEngine extends JsonChatEngine {
     return this.budgetFor(items);
   }
 }
+
+it("preserves valid JSON containing embedded fenced examples", () => {
+  const value = { answer: "Example: ```sql CREATE INDEX i ON t(c); ```", facts: [{ text: "A literal ``` delimiter" }] };
+  expect(extractJson(JSON.stringify(value))).toEqual(value);
+  expect(extractJson("```json\n" + JSON.stringify(value) + "\n```")).toEqual(value);
+});
 
 describe("bounded independent research targets", () => {
   it("preserves all six requested paper-by-dimension targets and exact versions", async () => {

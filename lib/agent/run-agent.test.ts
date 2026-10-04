@@ -30,6 +30,9 @@ import type { ResearchEffects } from "./research-effects";
 import { config } from "../config";
 import { HeuristicEngine } from "../llm/heuristic-engine";
 import { JsonChatEngine } from "../llm/json-chat-engine";
+import { evidenceContext } from "../llm/evidence-context";
+import { buildContextualQuoteOptions } from "../llm/quote-context";
+import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence } from "../llm/decision-brief";
 import { makePayment, type PaymentGateway } from "../payments/payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "../payments/payment-state";
 import type { AgentDeps } from "./deps";
@@ -2155,6 +2158,64 @@ describe("omitted-assertion completion boundary", () => {
       expect(result.researchExports.ris.count).toBe(supported ? 1 : 0);
       expect(result.researchExports.evidenceCsv.includes(quote)).toBe(supported);
       expect(result.evidence.map(item => item.quote)).toEqual(supported ? covered ? [quote, evaluation] : [quote] : []);
+      expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
+    }
+  });
+});
+
+describe("completed reads survive bounded model exhaustion", () => {
+  it.each(["sufficiency", "reevaluate", "synthesize", "attribute"] as const)("retains the final dispatch and receipts after %s fails", async stage => {
+    const sources = [makeSource({ id: "alpha" }), makeSource({ id: "beta" })];
+    const engine = fakeEngine();
+    engine[stage] = vi.fn(async () => { throw new Error("private-error allowance exhausted"); });
+    if (stage === "reevaluate") {
+      engine.decide = async input => input.candidates.map((candidate, index) => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+        action: index === 0 ? "BUY" as const : "SKIP" as const,
+      }));
+      engine.sufficiency = async input => ({ sufficient: false, rationale: "gap", perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.2, coveredBy: ["S1"] })) });
+    }
+    const gateway = fakeGateway();
+    const d = deps(sources, engine, gateway);
+    const { run, steps } = await drive({ question: "Assess the provided evidence", budget: 0.04, researchMode: "deep" }, d);
+    expect(gateway.fetchCalls).toEqual(["alpha"]);
+    expect(run.answer.length).toBeGreaterThan(0);
+    expect(run.totalSpent).toBeGreaterThanOrEqual(0.002);
+    expect(verifyResearchReceipt(buildResearchReceipt(run, d.db.payments)).valid).toBe(true);
+    expect(JSON.stringify(steps)).not.toContain("private-error");
+    if (stage === "attribute") {
+      expect(gateway.citationCalls).toHaveLength(1);
+      expect(run.citations[0].rationale).toContain("equal split");
+    }
+    if (stage === "synthesize" || stage === "sufficiency") expect(gateway.citationCalls).toHaveLength(0);
+  });
+
+  it("delivers the reviewed brief consistently across SSE, receipts and shared exports without private context or attribution prose", async () => {
+    const engine = fakeEngine({ synthesize: input => {
+      const sources = evidenceContext(input.question, input.subClaims, input.gathered);
+      const options = buildContextualQuoteOptions(sources, input.gathered);
+      const packet = prepareDecisionBrief(input, { facts: [{ id: "f1", targetIndex: 0,
+        text: "The inspected fixture contains its alpha content.", quoteIds: [options[0].quoteId], support: 0.9 }], actions: [] }, options, sources)!;
+      const decisionBrief = reviewDecisionBrief(packet, { digest: packet.digest,
+        facts: [{ id: "f1", status: "supported", support: 0.8,
+          quotes: [{ quoteId: options[0].quoteId, status: "supported", support: 0.8 }] }], actions: [] })!;
+      return { answer: "[S1]", citedMarkers: ["S1"], evidence: briefEvidence(decisionBrief), decisionBrief, evidenceReview: "completed" };
+    }, attribute: used => used.map(source => ({ sourceId: source.sourceId, weight: 1, rationale: "UNREVIEWED ATTRIBUTION ASSERTION" })) });
+    const gateway = fakeGateway(); const d = deps([makeSource({ id: "alpha" })], engine, gateway);
+    const { run, steps } = await drive({ question: "Inspect the fixture content", budget: 0.04 }, d);
+    expect(run.answer).toContain("The inspected fixture contains its alpha content.");
+    expect(steps.some(step => (step.detail as { answerDelivery?: string })?.answerDelivery === "reviewed-decision-brief")).toBe(true);
+    expect(JSON.stringify(steps)).not.toContain("UNREVIEWED ATTRIBUTION ASSERTION");
+    expect(JSON.stringify(steps)).not.toContain('"contextStart"');
+    expect(gateway.citationCalls).toHaveLength(1);
+    const receipt = buildResearchReceipt(run, d.db.payments);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.dispatch.answer).toBe(run.answer);
+    expect(researchReportMarkdown(run, null, d.db.payments)).toContain(run.answer);
+    expect(buildAnswerContent(run)).toContain(run.answer);
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run),
+      a2aResponseFromRun(run, quoteA2aResearch(0.04, "quick"))]) {
+      expect(JSON.stringify(result)).not.toContain("UNREVIEWED ATTRIBUTION ASSERTION");
       expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
     }
   });

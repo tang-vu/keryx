@@ -7,7 +7,7 @@
  */
 
 import { config } from "../config";
-import { extractJson, JsonChatEngine } from "./json-chat-engine";
+import { extractJson, JsonChatEngine, type ChatJsonOptions } from "./json-chat-engine";
 import { capturePricePolicy } from "../economics/provider-cost-policy";
 import { ReasoningInputLimitError } from "./reasoning-engine";
 
@@ -32,6 +32,12 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
   readonly name: string;
   private readonly opts: OpenAICompatibleOpts;
 
+  protected supportsDecisionBrief(): boolean {
+    const flash = (model: string) => /^(deepseek-v4-flash|deepseek-flash)$/.test(model);
+    return this.opts.provider === "deepseek" && this.opts.baseUrl === "https://api.deepseek.com" &&
+      (this.opts.model ? flash(this.opts.model) : flash(config.llmModel) && flash(config.synthesisModel));
+  }
+
   constructor(opts?: OpenAICompatibleOpts) {
     super();
     this.opts = opts ? { ...opts } : {
@@ -48,6 +54,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     system: string,
     user: string,
     maxTokens = 2048,
+    options?: ChatJsonOptions,
   ): Promise<Record<string, unknown>> {
     const wireModel = this.opts.model ?? model;
     if (this.opts.provider === "cloudflare") {
@@ -72,8 +79,9 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
         model: wireModel,
         // V4 defaults to thinking, which can consume a bounded JSON step's entire output
         // allowance before producing content. Keep the existing token cap and failover.
-        ...(this.opts.provider === "deepseek" && /^deepseek-v4-(flash|pro)$/.test(wireModel)
-          ? { thinking: { type: "disabled" } }
+        ...(this.opts.provider === "deepseek" && /^(deepseek-v4-(flash|pro)|deepseek-flash)$/.test(wireModel)
+          ? { thinking: { type: options?.reasoningReview ? "enabled" : "disabled" },
+            ...(options?.reasoningReview ? { reasoning_effort: "low" } : {}) }
           : {}),
         messages: [
           { role: "system", content: system + " Respond with a single JSON object." },

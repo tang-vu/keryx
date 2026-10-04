@@ -239,6 +239,13 @@ export function evidenceContext(question: string, subClaims: string[], gathered:
     return {
       marker: source.marker, sourceId: source.sourceId, name: source.sourceName,
       article: source.itemTitle, articleUrl: source.itemUrl, publishedAt: source.itemPublishedAt,
+      ...(source.contentVersion ? { contentVersion: source.contentVersion } : {}),
+      ...(source.webProvenance ? { webProvenance: {
+        retrievedAt: source.webProvenance.retrievedAt,
+        normalizedBodyHash: source.webProvenance.normalizedBodyHash,
+        extraction: source.webProvenance.extraction,
+        truncated: source.webProvenance.truncated,
+      } } : {}),
       sourceKind: source.sourceKind ?? "creator",
       ...(source.scholarly ? { scholarly: source.scholarly } : {}),
       deliveryKind: source.publicDeliveryKind ?? source.contentReceipt?.deliveryKind ?? "unknown",
