@@ -9,13 +9,15 @@ import { readGatewayCredit } from "../gateway/read-credit";
 import { readBrowserSessionWithdrawalChain, observeBrowserSessionWithdrawalCompletion } from "./browser-session-withdrawal-chain";
 import { readBrowserWithdrawalLiabilities } from "./browser-session-withdrawal-liabilities";
 import { readBrowserSessionExposure, readBrowserSessionWithdrawal, reserveBrowserSessionWithdrawal,
-  retainBrowserSessionWithdrawalOutcome, cancelUnexposedBrowserWithdrawal } from "./browser-session-withdrawal-storage";
+  retainBrowserSessionWithdrawalOutcome, cancelUnexposedBrowserWithdrawal, abortBrowserSessionWithdrawalPublication,
+  confirmBrowserSessionWithdrawalAbort } from "./browser-session-withdrawal-storage";
+import { createSessionWithdrawalAbort, verifySessionWithdrawalAbort } from "../gateway/session-withdrawal-abort";
 
 const hash = z.string().regex(/^0x[0-9a-f]{64}$/);
 const micros = z.string().regex(/^(0|[1-9]\d{0,15})$/).refine(value => BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER));
 export const browserSessionWithdrawalReviewSchema = z.object({ amountMicroUsdc: micros.refine(v => BigInt(v)>BigInt(0)), maxFeeMicroUsdc: micros }).strict();
 export type BrowserSessionWithdrawalReview = z.infer<typeof browserSessionWithdrawalReviewSchema>;
-const statusSchema = z.object({ preparation: z.unknown(), signingPhase: z.enum(["prepared","exposed","cancelled_unexposed","completed"]),
+const statusSchema = z.object({ preparation: z.unknown(), signingPhase: z.enum(["prepared","exposed","cancelled_unexposed","completed","aborted_before_publication"]), publicationAbort: z.unknown().optional(),
   cancellation: z.unknown().nullable(), progress: z.object({ status: z.string(), retryAuthorized: z.literal(false), chainFinalityVerified: z.boolean() }).strict(),
   attestation: z.unknown().nullable(), mint: z.unknown().nullable(), completion: z.unknown().nullable() }).strict();
 const cancellationSchema = z.object({ format: z.literal("keryx-session-withdrawal-cancellation-v1"), network: z.literal(profile.networkId),
@@ -24,6 +26,7 @@ export interface SessionWithdrawalRuntimeKey {
   readonly context: BrowserSessionCustodyContext;
   readonly address: Hex|null;
   signWithdrawalPreparation(value: unknown): Promise<Hex>;
+  signWithdrawalAbort?(value: unknown): Promise<Hex>;
 }
 export type SessionWithdrawalRuntimeStorage = {
   readExposure: typeof readBrowserSessionExposure;
@@ -31,6 +34,8 @@ export type SessionWithdrawalRuntimeStorage = {
   reserveWithdrawal: typeof reserveBrowserSessionWithdrawal;
   retainOutcome: typeof retainBrowserSessionWithdrawalOutcome;
   cancelUnexposed: typeof cancelUnexposedBrowserWithdrawal;
+  abortPublication?: typeof abortBrowserSessionWithdrawalPublication;
+  confirmPublicationAbort?: typeof confirmBrowserSessionWithdrawalAbort;
 };
 
 /** Separate recovery permission: expired payment consent never blocks owner-only cashout.
@@ -43,7 +48,8 @@ export function createBrowserSessionWithdrawalRuntime(key: SessionWithdrawalRunt
 }) {
   if(key.context.profile!==profile)throw new Error("Mainnet withdrawal custody profile refused");
   const storage=dependencies.storage??{readExposure:readBrowserSessionExposure,readWithdrawal:readBrowserSessionWithdrawal,
-    reserveWithdrawal:reserveBrowserSessionWithdrawal,retainOutcome:retainBrowserSessionWithdrawalOutcome,cancelUnexposed:cancelUnexposedBrowserWithdrawal};
+    reserveWithdrawal:reserveBrowserSessionWithdrawal,retainOutcome:retainBrowserSessionWithdrawalOutcome,cancelUnexposed:cancelUnexposedBrowserWithdrawal,
+    abortPublication:abortBrowserSessionWithdrawalPublication,confirmPublicationAbort:confirmBrowserSessionWithdrawalAbort};
   let generation = 0;
   const namespace = key.context.storageNamespace;
   const refuse = (): never => { throw new Error("Original session withdrawal refused; retain its recovery record"); };
@@ -57,6 +63,36 @@ export function createBrowserSessionWithdrawalRuntime(key: SessionWithdrawalRunt
   }
   return Object.freeze({
     lock() { generation++; },
+    async abortWithdrawal(requestId: string) {
+      hash.parse(requestId);
+      const expected = generation, retained = await storage.readWithdrawal(namespace, requestId);
+      if (!retained || !storage.abortPublication || !storage.confirmPublicationAbort || !key.signWithdrawalAbort) return refuse();
+      const p = await verifySessionWithdrawalPreparation(retained.preparation);
+      const live = () => { if (generation !== expected || key.address?.toLowerCase() !== p.sessAddr || p.ownerAddr !== key.context.owner ||
+        p.authorization.consent.origin !== key.context.origin || p.requestId !== requestId) refuse(); };
+      live();
+      // Fence publication before the first HTTP request. An interrupted crypto call
+      // or stale tab must fail its later signature retention, including legacy tabs.
+      await storage.abortPublication(namespace, p); live();
+      const original = await status(requestId); live();
+      if (canonicalJson(original.preparation) !== canonicalJson(p) || original.value.completion ||
+        !["prepared", "exposed", "cancelled_unexposed", "aborted_before_publication"].includes(original.value.signingPhase)) refuse();
+      if (original.value.signingPhase === "cancelled_unexposed") {
+        const cancellation = cancellationSchema.parse(original.value.cancellation);
+        if (cancellation.requestId !== requestId || cancellation.ownerAddr !== p.ownerAddr || cancellation.sessAddr !== p.sessAddr) refuse();
+      } else if (original.value.cancellation) refuse();
+      const proof = original.value.publicationAbort
+        ? await verifySessionWithdrawalAbort(original.value.publicationAbort, p)
+        : await createSessionWithdrawalAbort(p, await key.signWithdrawalAbort(p));
+      live();
+      const response = statusSchema.parse(await dependencies.json("/api/session/withdraw/abort", "POST", { requestId, signature: proof.signature }));
+      live();
+      if (response.signingPhase !== "aborted_before_publication" || response.completion || response.cancellation ||
+        canonicalJson(await verifySessionWithdrawalPreparation(response.preparation)) !== canonicalJson(p) ||
+        canonicalJson(await verifySessionWithdrawalAbort(response.publicationAbort, p)) !== canonicalJson(proof)) refuse();
+      await storage.confirmPublicationAbort(namespace, p, proof); live();
+      return { requestId, abortedBeforePublication: true };
+    },
     async signWithdrawal(requestId: string, reviewValue: BrowserSessionWithdrawalReview) {
       const expected = generation, review = browserSessionWithdrawalReviewSchema.parse(reviewValue);
       let original = await status(requestId);

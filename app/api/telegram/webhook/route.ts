@@ -21,7 +21,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextRequest, after } from "next/server";
 import { collectRun } from "@/lib/agent";
 import { config } from "@/lib/config";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import {
   type AskMessage,
   type TelegramUpdate,
@@ -79,12 +79,12 @@ export async function POST(req: NextRequest) {
 
   // Treasury-funded like the site's free trial — throttle per Telegram user, not per IP
   // (every request arrives from Telegram's servers, so IPs are useless as a key here).
-  const limited = await checkRateLimit(`telegram:${cmd.userId}`, "treasuryAsk");
+  const limited = await checkSponsoredResearchAdmission({ kind: "bot", platform: "telegram", userId: String(cmd.userId) });
   if (limited) {
     return Response.json({
       method: "sendMessage",
       chat_id: cmd.chatId,
-      text: "Free dispatches are rate-limited — try again in a minute.",
+      text: "Sponsored dispatches are temporarily limited or unavailable — try again in a minute.",
     });
   }
 

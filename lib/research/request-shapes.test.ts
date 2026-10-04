@@ -6,6 +6,7 @@ vi.mock("@/lib/config", async original => { const actual = await original<typeof
 vi.mock("@/lib/agent", () => ({ collectRun: calls.collectRun, getAgentDeps: calls.getAgentDeps }));
 vi.mock("@/lib/agent/run-agent", () => ({ runAgent: calls.runAgent }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: vi.fn(async () => null), clientIp: () => "fixture" }));
+vi.mock("@/lib/sponsored-admission", () => ({ checkSponsoredResearchAdmission: vi.fn(async () => null) }));
 import { POST as chat } from "@/app/api/v1/chat/completions/route";
 import { POST as ask } from "@/app/api/ask/route";
 import type { QueryRun } from "../types";

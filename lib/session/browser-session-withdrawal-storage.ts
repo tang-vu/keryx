@@ -2,12 +2,14 @@ import { canonicalJson } from "../canonical-json";
 import type { BrowserSessionAuthorizationBinding } from "./browser-session-runtime";
 import type { SessionWithdrawalPreparation } from "../gateway/session-withdrawal-protocol";
 import type { OwnerWalletMintAttempt } from "../gateway/withdrawal-owner-wallet-mint";
+import { verifySessionWithdrawalAbort, type SessionWithdrawalAbort } from "../gateway/session-withdrawal-abort";
 
 export type LocalSessionAuthorization = { nonce: string; epoch: string; amount: string;
   original?: BrowserSessionAuthorizationBinding; requirementsDigest?: string };
 export type BrowserSessionOwnerMint = OwnerWalletMintAttempt;
 export type BrowserWithdrawalReservation = { preparation: SessionWithdrawalPreparation; exposed?: true; signature?: string;
-  completion?: unknown; cancelled?: true; submissionPossible?: true; mint?: BrowserSessionOwnerMint };
+  completion?: unknown; cancelled?: true; submissionPossible?: true; mint?: BrowserSessionOwnerMint;
+  publicationAbort?: { pending: boolean; proof?: SessionWithdrawalAbort } };
 
 /** Uses the existing lifetime exposure database. A withdrawal never deletes old nonces,
  * payment consumption, consent epochs or historical withdrawal identities. */
@@ -81,13 +83,14 @@ export async function readBrowserSessionWithdrawal(namespace: string, requestId:
 /** Public original references for reload/recovery; never return a burn signature here. */
 export async function listBrowserSessionWithdrawalReferences(namespace: string) {
   const db=await openBrowserSessionExposure(namespace);
-  try{return await new Promise<Array<{requestId:string;grantEpoch:string;amountMicroUsdc:string;mintHash?:string;completed:boolean;cancelled:boolean}>>((resolve,reject)=>{
+  try{return await new Promise<Array<{requestId:string;grantEpoch:string;amountMicroUsdc:string;mintHash?:string;completed:boolean;cancelled:boolean;publicationAbort?:{pending:boolean}}>>((resolve,reject)=>{
     const tx=browserSessionExposureTransaction(db,"grants","readonly"),cursor=tx.objectStore("grants").openCursor();
-    const rows:Array<{requestId:string;grantEpoch:string;amountMicroUsdc:string;mintHash?:string;completed:boolean;cancelled:boolean}>=[];
+    const rows:Array<{requestId:string;grantEpoch:string;amountMicroUsdc:string;mintHash?:string;completed:boolean;cancelled:boolean;publicationAbort?:{pending:boolean}}>=[];
     cursor.onsuccess=()=>{const item=cursor.result;if(!item)return;
       if(String(item.key).startsWith("withdrawal:")){const row=item.value as BrowserWithdrawalReservation;
         rows.push({requestId:row.preparation.requestId,grantEpoch:row.preparation.grantEpoch,amountMicroUsdc:row.preparation.burnIntent.spec.value,
-          ...(row.mint?.hash?{mintHash:row.mint.hash}:{}),completed:!!row.completion,cancelled:!!row.cancelled})}
+          ...(row.mint?.hash?{mintHash:row.mint.hash}:{}),completed:!!row.completion,cancelled:!!row.cancelled,
+          ...(row.publicationAbort?{publicationAbort:{pending:row.publicationAbort.pending}}:{})})}
       item.continue();
     };
     tx.oncomplete=()=>resolve(rows);tx.onabort=tx.onerror=()=>reject(new Error("Original cashout references unavailable"));
@@ -140,5 +143,44 @@ export async function cancelUnexposedBrowserWithdrawal(namespace: string, prepar
     };
     read.onsuccess = active.onsuccess = checked;
     tx.oncomplete = () => resolve(); tx.onabort = tx.onerror = () => reject(new Error("Exposed withdrawal cannot be cancelled"));
+  }); } finally { db.close(); }
+}
+
+/** Atomic publication exclusion across old and new tabs. Legacy writers understand
+ * cancelled=true and cannot publish a burn after this tombstone commits. The active
+ * hold survives until the server acknowledges the same authenticated abort. */
+export async function abortBrowserSessionWithdrawalPublication(namespace: string, preparation: SessionWithdrawalPreparation) {
+  const p = structuredClone(preparation), db = await openBrowserSessionExposure(namespace);
+  try { await new Promise<void>((resolve, reject) => {
+    const tx = browserSessionExposureTransaction(db, "grants", "readwrite"), store = tx.objectStore("grants");
+    const read = store.get(`withdrawal:${p.requestId}`), active = store.get("active-withdrawal"); let ready = 0;
+    const checked = () => {
+      if (++ready !== 2) return;
+      const row = read.result as BrowserWithdrawalReservation | undefined;
+      if (!row || canonicalJson(row.preparation) !== canonicalJson(p) || row.signature || row.submissionPossible || row.mint || row.completion ||
+        (row.cancelled && !row.publicationAbort) || (!row.publicationAbort?.proof && active.result !== p.requestId)) { tx.abort(); return; }
+      if (!row.publicationAbort) store.put({ ...row, cancelled: true, publicationAbort: { pending: true } }, `withdrawal:${p.requestId}`);
+    };
+    read.onsuccess = active.onsuccess = checked;
+    tx.oncomplete = () => resolve(); tx.onabort = tx.onerror = () => reject(new Error("Burn signature may have been published; retain original recovery"));
+  }); } finally { db.close(); }
+}
+export async function confirmBrowserSessionWithdrawalAbort(namespace: string, preparation: SessionWithdrawalPreparation, value: SessionWithdrawalAbort) {
+  const p = structuredClone(preparation), proof = await verifySessionWithdrawalAbort(structuredClone(value), p);
+  const db = await openBrowserSessionExposure(namespace);
+  try { await new Promise<void>((resolve, reject) => {
+    const tx = browserSessionExposureTransaction(db, "grants", "readwrite"), store = tx.objectStore("grants");
+    const read = store.get(`withdrawal:${p.requestId}`), active = store.get("active-withdrawal"); let ready = 0;
+    const checked = () => {
+      if (++ready !== 2) return;
+      const row = read.result as BrowserWithdrawalReservation | undefined;
+      if (!row?.cancelled || !row.publicationAbort || canonicalJson(row.preparation) !== canonicalJson(p) || row.signature || row.submissionPossible || row.mint || row.completion ||
+        (row.publicationAbort.proof && canonicalJson(row.publicationAbort.proof) !== canonicalJson(proof)) ||
+        (row.publicationAbort.pending && active.result !== p.requestId)) { tx.abort(); return; }
+      store.put({ ...row, publicationAbort: { pending: false, proof } }, `withdrawal:${p.requestId}`);
+      if (active.result === p.requestId) store.delete("active-withdrawal");
+    };
+    read.onsuccess = active.onsuccess = checked;
+    tx.oncomplete = () => resolve(); tx.onabort = tx.onerror = () => reject(new Error("Original publication abort acknowledgement differs"));
   }); } finally { db.close(); }
 }

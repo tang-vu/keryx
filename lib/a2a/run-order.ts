@@ -8,6 +8,7 @@ import {
   type A2aOrderRequest,
 } from "./order";
 import { verifiedA2aResponseFromRun } from "./operator-resolution";
+import { exactA2aMicros } from "./amount-micros";
 import {
   isSupportedA2aResearchPackage,
   type A2aResearchPackage,
@@ -61,17 +62,13 @@ function validRequest(
   ) {
     return null;
   }
-  const micro = (amount: number) => Math.round(amount * 1e6);
-  const creatorMicros = micro(order.creatorBudgetUsdc);
-  const feeMicros = micro(order.serviceFeeUsdc);
-  const totalMicros = micro(order.amountUsdc);
+  const creatorMicros = exactA2aMicros(order.creatorBudgetUsdc);
+  const feeMicros = exactA2aMicros(order.serviceFeeUsdc);
+  const totalMicros = exactA2aMicros(order.amountUsdc);
   if (
-    !Number.isFinite(order.amountUsdc) ||
-    !Number.isFinite(order.creatorBudgetUsdc) ||
-    !Number.isFinite(order.serviceFeeUsdc) ||
-    !Number.isInteger(order.amountUsdc * 1e6) ||
-    !Number.isInteger(order.creatorBudgetUsdc * 1e6) ||
-    !Number.isInteger(order.serviceFeeUsdc * 1e6) ||
+    totalMicros === null ||
+    creatorMicros === null ||
+    feeMicros === null ||
     creatorMicros <= 0 ||
     feeMicros <= 0 ||
     totalMicros !== creatorMicros + feeMicros ||

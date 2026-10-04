@@ -11,6 +11,7 @@ import { decodeFunctionData, encodeFunctionData, keccak256, parseTransaction } f
 import { z } from "zod";
 import { ARC_MAINNET_PROFILE } from "../../lib/arc-network-profile";
 import { WITHDRAWAL_MINTER_ABI } from "../../lib/gateway/withdrawal-mint-observation";
+import { verifySessionWithdrawalAbort } from "../../lib/gateway/session-withdrawal-abort";
 
 const refuse = (): never => { throw new Error("Original headless cashout unavailable; preserve custody and original attempts"); };
 type Stored = Omit<BrowserWithdrawalReservation, "signature"> & { signatureCipher?: { iv: string; encrypted: string } };
@@ -47,6 +48,24 @@ CREATE TRIGGER exposure_withdrawal_fence BEFORE INSERT ON exposure WHEN
 BEGIN SELECT RAISE(ABORT,'cashout barrier'); END;
 `;
 
+export const HEADLESS_WITHDRAWAL_V4_SCHEMA = `
+CREATE TABLE upgrade_v4_history(singleton INTEGER PRIMARY KEY CHECK(singleton=1),value TEXT NOT NULL) STRICT;
+CREATE TRIGGER upgrade_v4_no_update BEFORE UPDATE ON upgrade_v4_history BEGIN SELECT RAISE(ABORT,'immutable'); END;
+CREATE TRIGGER upgrade_v4_no_delete BEFORE DELETE ON upgrade_v4_history BEGIN SELECT RAISE(ABORT,'immutable'); END;
+CREATE TABLE publication_aborts(id TEXT PRIMARY KEY REFERENCES withdrawals(id),pending INTEGER NOT NULL CHECK(pending IN(0,1)),
+  proof TEXT CHECK(proof IS NULL OR json_valid(proof)),CHECK((pending=1 AND proof IS NULL) OR (pending=0 AND proof IS NOT NULL))) STRICT;
+CREATE TRIGGER publication_aborts_no_delete BEFORE DELETE ON publication_aborts BEGIN SELECT RAISE(ABORT,'immutable'); END;
+CREATE TRIGGER publication_aborts_original BEFORE UPDATE ON publication_aborts WHEN
+  old.pending<>1 OR new.pending<>0 OR old.id IS NOT new.id OR new.proof IS NULL
+BEGIN SELECT RAISE(ABORT,'immutable abort'); END;
+DROP TRIGGER exposure_withdrawal_fence;
+CREATE TRIGGER exposure_withdrawal_fence BEFORE INSERT ON exposure WHEN
+  (SELECT json_extract(value,'$.format') FROM identity WHERE singleton=1) IS NOT 'keryx-headless-session-state-v4' OR
+  EXISTS(SELECT 1 FROM withdrawals WHERE json_extract(value,'$.cancelled') IS NOT 1 AND json_extract(value,'$.completion') IS NULL) OR
+  EXISTS(SELECT 1 FROM publication_aborts WHERE pending=1)
+BEGIN SELECT RAISE(ABORT,'cashout barrier'); END;
+`;
+
 /** Native injection for the reviewed browser cashout policy. One SQLite writer
  * owns both payment exposure and original cashout barriers, never a second ledger. */
 export function headlessWithdrawalStorage(db: DatabaseSync, context: BrowserSessionCustodyContext,
@@ -63,13 +82,17 @@ export function headlessWithdrawalStorage(db: DatabaseSync, context: BrowserSess
   const get = (id: string): Stored | null => {
     active(); if (!/^0x[0-9a-f]{64}$/.test(id)) refuse();
     const row = db.prepare("SELECT value FROM withdrawals WHERE id=?").get(id);
-    const parsed=row ? JSON.parse(String(row.value)) as Stored : null;if(parsed?.mint)validatedMint(parsed.mint);return parsed;
+    const parsed=row ? JSON.parse(String(row.value)) as Stored : null;
+    const abort=db.prepare("SELECT pending,proof FROM publication_aborts WHERE id=?").get(id);
+    if(abort){if(!parsed)return refuse();if(!parsed.cancelled||parsed.signatureCipher||parsed.submissionPossible||parsed.mint||parsed.completion)refuse();
+      parsed.publicationAbort={pending:abort.pending===1,...(abort.proof?{proof:JSON.parse(String(abort.proof))}:{})};}
+    if(parsed?.mint)validatedMint(parsed.mint);return parsed;
   };
   const activeWithdrawal = () => {
-    active(); const pending = rows().filter(row => { const v=JSON.parse(String(row.value)) as Stored; return !v.cancelled && !v.completion; });
+    active(); const pending = rows().filter(row => { const v=get(String(row.id))!; return v.publicationAbort?.pending || !v.cancelled && !v.completion; });
     if (pending.length > 1) refuse(); return pending.length ? String(pending[0].id) : null;
   };
-  const version = () => `${db.prepare("SELECT COUNT(*) AS n FROM exposure").get()!.n}:${db.prepare("SELECT COUNT(*) AS n FROM terminal").get()!.n}`;
+  const version = () => `${db.prepare("SELECT COUNT(*) AS n FROM exposure").get()!.n}:${db.prepare("SELECT COUNT(*) AS n FROM terminal").get()!.n}:${db.prepare("SELECT COUNT(*) AS n FROM failed_terminal").get()!.n}`;
   const transaction = <T,>(callback: () => T): T => {
     active(); db.exec("BEGIN IMMEDIATE");
     try { active(); const result=callback(); db.exec("COMMIT"); sync(); return result; }
@@ -129,10 +152,31 @@ export function headlessWithdrawalStorage(db: DatabaseSync, context: BrowserSess
         exact(p,row);if(activeWithdrawal()!==p.requestId||row.exposed||row.signatureCipher||row.completion||row.cancelled||row.submissionPossible||row.mint)refuse();
         save(p.requestId,{...row,cancelled:true});});
     },
+    async abortPublication(value,preparation) {
+      namespace(value);const p=original(preparation);
+      transaction(()=>{const row=exact(p,get(p.requestId));
+        if(row.signatureCipher||row.submissionPossible||row.mint||row.completion)refuse();
+        if(row.publicationAbort)return;
+        if(row.cancelled||activeWithdrawal()!==p.requestId)refuse();
+        save(p.requestId,{...row,cancelled:true});
+        db.prepare("INSERT INTO publication_aborts VALUES(?,1,NULL)").run(p.requestId);
+      });
+    },
+    async confirmPublicationAbort(value,preparation,proof) {
+      namespace(value);const p=original(preparation),verified=await verifySessionWithdrawalAbort(proof,p);
+      transaction(()=>{const row=exact(p,get(p.requestId));
+        const abort=row.publicationAbort;if(!abort)return refuse();
+        if(!row.cancelled||row.signatureCipher||row.submissionPossible||row.mint||row.completion)refuse();
+        if(!abort.pending){if(canonicalJson(abort.proof)!==canonicalJson(verified))refuse();return;}
+        if(activeWithdrawal()!==p.requestId)refuse();
+        db.prepare("UPDATE publication_aborts SET pending=0,proof=? WHERE id=? AND pending=1").run(canonicalJson(verified),p.requestId);
+      });
+    },
   };
   return Object.freeze({storage,activeWithdrawal,
     references(){active();return rows().map(row=>{const v=get(String(row.id))!;return {requestId:String(row.id),grantEpoch:v.preparation.grantEpoch,
-      amountMicroUsdc:v.preparation.burnIntent.spec.value,exposed:!!v.exposed,submitted:!!v.submissionPossible,completed:!!v.completion,cancelled:!!v.cancelled,...(v.mint?.hash?{mintHash:v.mint.hash}:{}),...(v.mint?{mint:v.mint}:{})};});},
+      amountMicroUsdc:v.preparation.burnIntent.spec.value,exposed:!!v.exposed,submitted:!!v.submissionPossible,completed:!!v.completion,cancelled:!!v.cancelled,
+      ...(v.publicationAbort?{publicationAbortPending:v.publicationAbort.pending}:{}),...(v.mint?.hash?{mintHash:v.mint.hash}:{}),...(v.mint?{mint:v.mint}:{})};});},
     claimSubmission(preparation:SessionWithdrawalPreparation){const p=original(preparation);return transaction(()=>{const row=exact(p,get(p.requestId));
       if(!row.signatureCipher||row.cancelled||row.completion)refuse();if(row.submissionPossible)return false;save(p.requestId,{...row,submissionPossible:true});return true;});},
     claimMint(preparation:SessionWithdrawalPreparation,mint:OwnerWalletMintAttempt){const p=original(preparation),captured=validatedMint(structuredClone(mint));return transaction(()=>{const row=exact(p,get(p.requestId));

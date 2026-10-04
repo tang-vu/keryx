@@ -72,6 +72,8 @@ export function SessionCashoutPanel({sessAddr}:{sessAddr:string|null}){
   });
   const cancel=()=>action(async(current,originalOwner)=>{const signer=await restore(originalOwner);current();
     await signer.cancelUnexposedWithdrawal(id);current();setStatus("cancelled before exposure; original ID retained")});
+  const abort=()=>action(async(current,originalOwner)=>{const signer=await restore(originalOwner);current();
+    await signer.abortWithdrawal(id);current();setStatus("interrupted signing cancelled; original retained. Prepare a new withdrawal or renew your Session to resume research.")});
   const mint=()=>action(async(current,originalOwner)=>{
     if(!preparation||!wallet||!rpc)throw new Error("Original cashout and owner wallet unavailable");
     const body=await sessionJson(`/api/session/withdraw/${preparation.requestId}`) as {attestation:unknown};current();
@@ -87,17 +89,19 @@ export function SessionCashoutPanel({sessAddr}:{sessAddr:string|null}){
     <button type="button" onClick={()=>setOpen(v=>!v)} className="underline underline-offset-2">Withdraw retained session funds</button>
     {open&&<div className="mt-3 space-y-3">
       <p>Recipient is your original owner wallet. Research pauses while a withdrawal is unresolved. Signed payments and uncertain transfers remain held; gas is paid separately by your owner wallet. Logout and grant expiry retain this browser&apos;s recovery key.</p>
+      <p>If signing was interrupted before a burn signature was saved, cancel interrupted signing to unlock recovery. This also works after the original expires. A saved signature or transfer attempt requires original recovery.</p>
       <div className="flex flex-wrap gap-3"><label>Amount USDC <input aria-label="Session withdrawal amount" value={amount} onChange={e=>setAmount(e.target.value)} className="w-28 border border-rule p-1"/></label>
         <label>Maximum fee USDC <input aria-label="Session withdrawal maximum fee" value={fee} onChange={e=>setFee(e.target.value)} className="w-28 border border-rule p-1"/></label></div>
       <button disabled={busy} onClick={prepare} className="underline">Prepare reviewed amount and fee ceiling</button>
       {references.length>0&&<label className="block">Retained originals <select aria-label="Retained session cashouts" value={references.some(row=>row.requestId===id)?id:""}
         onChange={e=>{setId(e.target.value);setPreparation(null);setHash(references.find(row=>row.requestId===e.target.value)?.mintHash??"")}} className="ml-2 max-w-full border border-rule p-1">
-        <option value="">Choose an original</option>{references.map(row=><option key={row.requestId} value={row.requestId}>{row.requestId} — {row.completed?"completed":row.cancelled?"cancelled":"recovery"}</option>)}
+        <option value="">Choose an original</option>{references.map(row=><option key={row.requestId} value={row.requestId}>{row.requestId} — {row.publicationAbort?.pending?"signing cancellation pending":row.publicationAbort?"signing cancelled":row.completed?"completed":row.cancelled?"cancelled":"recovery"}</option>)}
       </select></label>}
       {preparation&&<p>Original amount {Number(preparation.burnIntent.spec.value)/1e6} USDC; fee at most {Number(preparation.burnIntent.maxFee)/1e6} USDC. Recipient {preparation.ownerAddr}. Finite burn height {preparation.burnIntent.maxBlockHeight}.</p>}
       <label className="block">Original request ID <input aria-label="Original session withdrawal request" value={id} onChange={e=>{setId(e.target.value);setPreparation(null)}} className="mt-1 w-full border border-rule p-1 font-mono"/></label>
       <div className="flex flex-wrap gap-3"><button disabled={busy||!preparation} onClick={sign} className="underline">Sign and submit original burn</button>
         <button disabled={busy||!id} onClick={recover} className="underline">Read original recovery</button><button disabled={busy||!id} onClick={cancel} className="underline">Cancel never-exposed preparation</button>
+        <button disabled={busy||!id} onClick={abort} className="underline">Cancel interrupted signing</button>
         <button disabled={busy||!preparation} onClick={mint} className="underline">Review owner wallet mint and gas</button></div>
       <label className="block">Original owner mint hash <input aria-label="Original session mint hash" value={hash} onChange={e=>setHash(e.target.value)} className="mt-1 w-full border border-rule p-1 font-mono"/></label>
       <button disabled={busy||!id||!hash} onClick={complete} className="underline">Verify original mint finality</button>

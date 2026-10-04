@@ -10,6 +10,7 @@ import { sqliteSessionWithdrawalAccounting, reserveSqliteSessionWithdrawal, read
   readSqliteSessionWithdrawalCompletion, completeSqliteSessionWithdrawal, readSqliteSessionWithdrawalPhase,
   exposeSqliteSessionWithdrawal, cancelSqliteSessionWithdrawal } from "./session-withdrawal-journal";
 import type { SessionWithdrawalPreparation } from "../gateway/session-withdrawal-protocol";
+import { abortSqliteSessionWithdrawal, readSqliteSessionWithdrawalAbort } from "./session-withdrawal-abort";
 import { issueSqliteSessionGrantConsent, consumeSqliteSessionGrantConsent, readSqliteSessionGrantConsent } from "./session-grant-consents";
 import type { SessionGrantConsent } from "../payments/session-grant-consent";
 import { hasScholarlyRights, assertNoOrphanedPaperMarker } from "./scholarly-capability";
@@ -725,6 +726,14 @@ export class SqliteAdapter implements KeryxDB {
   async cancelSessionWithdrawal(id: string, owner: string) {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
     return cancelSqliteSessionWithdrawal(this.db, id, owner);
+  }
+  async getSessionWithdrawalAbort(id: string, owner: string) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return readSqliteSessionWithdrawalAbort(this.db, id, owner);
+  }
+  async abortSessionWithdrawal(id: string, owner: string, proof: import("../gateway/session-withdrawal-abort").SessionWithdrawalAbort) {
+    if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");
+    return abortSqliteSessionWithdrawal(this.db, id, owner, proof);
   }
   async completeSessionWithdrawal(id: string, owner: string, outcome: import("../gateway/session-withdrawal-completion").SessionWithdrawalCompletion) {
     if (this.enrolledMode !== "mainnet-real") throw new Error("Session withdrawal requires admitted mainnet storage");

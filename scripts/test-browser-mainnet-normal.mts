@@ -13,7 +13,10 @@ import type {SessionWithdrawalPreparation} from "../lib/gateway/session-withdraw
 import { REGISTRY_ABI } from "../lib/registry/registry-abi";
 import { contentSecurityPolicy } from "../lib/security-headers";
 import { readFileSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { resolve, join } from "node:path";
+import { createSessionWithdrawalAbort, type SessionWithdrawalAbort } from "../lib/gateway/session-withdrawal-abort";
+import type { BrowserSessionAuthorizationBinding } from "../lib/session/browser-session-runtime";
 
 process.env.KERYX_NETWORK = "arc"; process.env.NEXT_PUBLIC_KERYX_NETWORK = "arc";
 const origin = "https://keryx.cc", registry = `0x${"33".repeat(20)}` as Hex;
@@ -60,8 +63,10 @@ let requestedAmount = "1000";
 const reqId = "00000000-0000-4000-8000-000000000002";
 let epoch = "00000000-0000-4000-8000-000000000001";
 let preparation:SessionWithdrawalPreparation|null=null,withdrawalPhase="prepared";
-const withdrawalStatus=()=>({preparation,signingPhase:withdrawalPhase,cancellation:null,
-  progress:{status:"prepared",retryAuthorized:false,chainFinalityVerified:false},attestation:null,mint:null,completion:null});
+let publicationAbort:SessionWithdrawalAbort|null=null,loseAuthorizeAck=false,loseAbortAck=false,abortPosts=0,liabilityReads=0,rpcReads=0;
+const challenges=new Map<string,BrowserSessionAuthorizationBinding>(),paymentJournals:unknown[]=[];
+const withdrawalStatus=()=>({preparation,signingPhase:withdrawalPhase,cancellation:null,...(publicationAbort?{publicationAbort}:{}),
+  progress:{status:publicationAbort?"aborted-before-publication":"prepared",retryAuthorized:false,chainFinalityVerified:false},attestation:null,mint:null,completion:null});
 const browser = await chromium.launch({ headless: true });
 try {
   const context = await browser.newContext();
@@ -69,6 +74,7 @@ try {
   await context.route("**/*", async route => {
     requests++; const request = route.request(), url = new URL(request.url());
     if (url.origin === new URL(profile.rpcUrl).origin) {
+      rpcReads++;
       assert.equal(request.method(), "POST"); const body = request.postDataJSON() as { id: number; method: string; params: unknown[] };
       assert.ok(["eth_chainId", "eth_getBlockByNumber", "eth_call","eth_getCode"].includes(body.method));
       if (body.method === "eth_call") assert.equal((body.params[0] as {to:string}).to.toLowerCase(), registry.toLowerCase());
@@ -85,9 +91,22 @@ try {
     if(url.pathname==="/api/session/credit")return route.fulfill({json:{status:"known",network:profile.networkId,address:url.searchParams.get("address")?.toLowerCase(),available:"1000000"}});
     assert.ok(request.headers().cookie?.includes("siwe_session=synthetic-cookie"), "Worker must use cookie authentication");
     if (!authenticated) return route.fulfill({ status: 403, json: { error: "unavailable" } });
-    if(url.pathname==="/api/session/withdraw/payments")return route.fulfill({json:{network:profile.networkId,sessAddr:preparation!.sessAddr,retryAuthorized:false,payments:[],nextCursor:null}});
+    if(url.pathname==="/api/session/withdraw/payments"){
+      liabilityReads++;assert.equal(url.searchParams.get("sessAddr"),grant!.sessAddr);
+      return route.fulfill({json:{network:profile.networkId,sessAddr:grant!.sessAddr,retryAuthorized:false,payments:paymentJournals,nextCursor:null}});
+    }
     if(url.pathname==="/api/session/withdraw/authorize"){
-      assert.deepEqual(request.postDataJSON(),{requestId:preparation!.requestId});withdrawalPhase="exposed";return route.fulfill({json:withdrawalStatus()});
+      assert.deepEqual(request.postDataJSON(),{requestId:preparation!.requestId});withdrawalPhase="exposed";
+      if(loseAuthorizeAck){loseAuthorizeAck=false;return route.abort("failed");}
+      return route.fulfill({json:withdrawalStatus()});
+    }
+    if(url.pathname==="/api/session/withdraw/abort"){
+      abortPosts++;const body=request.postDataJSON() as {requestId:string;signature:string};assert.equal(body.requestId,preparation!.requestId);
+      const proof=await createSessionWithdrawalAbort(preparation!,body.signature);
+      if(publicationAbort)assert.deepEqual(proof,publicationAbort,"Lost acknowledgement retries only the same original abort");
+      publicationAbort=proof;withdrawalPhase="aborted_before_publication";
+      if(loseAbortAck){loseAbortAck=false;return route.abort("failed");}
+      return route.fulfill({json:withdrawalStatus()});
     }
     if(url.pathname===`/api/session/withdraw/${preparation?.requestId}`)return route.fulfill({json:withdrawalStatus()});
     if (url.pathname === "/api/session/grant") {
@@ -101,13 +120,15 @@ try {
         contentVersion: `sha256:${"77".repeat(32)}` }, payTo: payout, listPriceMicroUsdc: price.toString() } });
     }
     assert.equal(url.pathname, "/api/ask/challenge"); assert.deepEqual(request.postDataJSON(), { reqId });
-    return route.fulfill({ json: { sessionId: owner.address.toLowerCase(), reqId, grantEpoch: epoch,
-      sessAddr: grant!.sessAddr, sourceId, kind: "fetch", expectedNonce: `0x${nonceIndex.toString(16).padStart(64,"0")}`,
+    const challenge:BrowserSessionAuthorizationBinding={ sessionId: owner.address.toLowerCase(), reqId, grantEpoch: epoch,
+      sessAddr: String(grant!.sessAddr), sourceId, kind: "fetch", expectedNonce: `0x${nonceIndex.toString(16).padStart(64,"0")}`,
       browserAuthorizationProtocol: "durable-v1", requirements: { scheme: "exact", network: profile.networkId,
         asset: profile.usdcAddress, amount: requestedAmount, payTo: creator.address, maxTimeoutSeconds: 604900,
         extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: profile.gatewayWallet } },
       paymentContext: { item: { itemId: "article", itemTitle: "A reviewed mainnet article", itemUrl: "https://creator.test/article",
-        contentVersion: `sha256:${"77".repeat(32)}` } } } });
+        contentVersion: `sha256:${"77".repeat(32)}` } } };
+    challenges.set(challenge.expectedNonce,structuredClone(challenge));
+    return route.fulfill({json:challenge});
   });
   type Fixture = { call(type: string, fields?: Record<string, unknown>): Promise<unknown> };
   async function mount(page: Page) {
@@ -122,6 +143,21 @@ try {
   }
   const call = (page:Page,type:string,fields:Record<string,unknown>={}) => page.evaluate(({type,fields}) =>
     (window as unknown as {fixture:Fixture}).fixture.call(type,fields),{type,fields});
+  // Read the actual worker's durable store; this fixture never edits its exposure or custody.
+  const exposure=(page:Page,id?:string)=>page.evaluate(({namespace,id})=>new Promise<{
+    total:string;nonceCount:number;barrier:string|null;exposed:boolean;hasSignature:boolean;cancelled:boolean;abortPending:boolean|null;
+  }>((resolve,reject)=>{
+    const opening=indexedDB.open(`${namespace}-authorizations`,1);
+    opening.onupgradeneeded=()=>opening.transaction!.abort();opening.onerror=()=>reject(new Error("Worker exposure store missing"));
+    opening.onsuccess=()=>{
+      const db=opening.result,tx=db.transaction(["nonces","grants"],"readonly"),grants=tx.objectStore("grants");
+      const total=grants.get("signed-total"),count=tx.objectStore("nonces").count(),barrier=grants.get("active-withdrawal"),row=id?grants.get(`withdrawal:${id}`):null;
+      tx.oncomplete=()=>{db.close();resolve({total:total.result?.total??"0",nonceCount:count.result,barrier:barrier.result??null,
+        exposed:!!row?.result?.exposed,hasSignature:!!row?.result?.signature,cancelled:!!row?.result?.cancelled,
+        abortPending:row?.result?.publicationAbort?.pending??null});};
+      tx.onabort=tx.onerror=()=>{db.close();reject(new Error("Worker exposure read failed"));};
+    };
+  }),{namespace:custody.storageNamespace,id});
   const first=await context.newPage();await mount(first);
   assert.equal((await call(first,"initializeOwner",{owner:owner.address}) as {derivationMessage:string}).derivationMessage,custody.derivationMessage);
   assert.equal(await first.evaluate(async () => {
@@ -163,6 +199,23 @@ try {
   const increasedSessionSignature=await call(first,"signGrantConsentProof",{consent:increased,ownerSignature:increasedOwnerSignature});
   grant={...grant,grantEpoch:epoch,capMicroUsdc:"3000",consent:increased,ownerSignature:increasedOwnerSignature,sessionSignature:increasedSessionSignature};
   assert.ok((await call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000008",budgetMicroUsdc:"10000"}}) as {paymentHeader:string}).paymentHeader,"Explicit increased cumulative owner cap permits only the additional capacity");
+  const failedOriginal=challenges.get(payment.authorization.nonce)!;
+  assert.ok(failedOriginal,"Retain the synthetic original that actually returned a browser signature");
+  paymentJournals.push({nonce:failedOriginal.expectedNonce,sessionId:failedOriginal.sessionId,signer:failedOriginal.sessAddr,
+    requestId:failedOriginal.reqId,grantEpoch:failedOriginal.grantEpoch,phase:"failed",requirements:failedOriginal.requirements,
+    paymentContext:failedOriginal.paymentContext,signedHeaderHash:createHash("sha256").update(authorized.paymentHeader).digest("hex"),
+    payment:{authorizationId:failedOriginal.expectedNonce,payer:failedOriginal.sessAddr,payee:failedOriginal.requirements.payTo,
+      network:profile.networkId,sourceId:failedOriginal.sourceId,kind:failedOriginal.kind,amountUsdc:0.001,
+      settled:false,settlementStatus:"failed",txHash:"synthetic-original-terminal-failure"}});
+  nonceIndex=4;const readsBeforeRecovery=liabilityReads;
+  assert.ok((await call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000012",budgetMicroUsdc:"10000"}}) as {paymentHeader:string}).paymentHeader,
+    "Actual worker retries local admission after matching the original terminal failure");
+  assert.ok(liabilityReads>readsBeforeRecovery,"The production worker must wire failure reconciliation into admission");
+  assert.equal((await exposure(first)).total,"3000","Only the failed 1000 micros were restored and reused");
+  nonceIndex=40;
+  await assert.rejects(call(second,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000013",budgetMicroUsdc:"10000"}}),
+    "Another tab cannot release the same terminal failure twice");
+  assert.equal((await exposure(second)).total,"3000");
   authenticated=false;await assert.rejects(call(first,"bindGrant"));
   await call(first,"lock");assert.equal((await call(first,"restoreRetained") as {address:string}).address,derived.address,"Expired/revoked auth cannot erase recovery");
   authenticated=true;rpcChain="0x4cef52";nonceIndex=4;
@@ -199,10 +252,47 @@ try {
     height:{minimumBlockHeight:"110",maximumBlockHeight:"400",observedBlockNumber:"100",observedBlockHash:blockHash,observedAt:new Date().toISOString()}};
   await call(first,"lock");await call(first,"restoreRetained");
   await assert.rejects(call(first,"signGrantConsentProof",{consent:expired,ownerSignature:preparation.authorization.ownerSignature}),"Expired payment permission stays closed");
+  const interrupted=preparation;loseAuthorizeAck=true;
+  await assert.rejects(call(first,"signWithdrawal",{requestId:interrupted.requestId,review:{amountMicroUsdc:"100000",maxFeeMicroUsdc:"1000"}}),
+    "Synthetic authorize acknowledgement loss interrupts the real worker before burn publication");
+  const interruptedExposure=await exposure(first,interrupted.requestId);
+  assert.equal(withdrawalPhase,"exposed");assert.equal(interruptedExposure.barrier,interrupted.requestId);
+  assert.equal(interruptedExposure.exposed,true);assert.equal(interruptedExposure.hasSignature,false);
+  block.number="0x6f"; // The original finite burn height (110) has now passed.
+  loseAbortAck=true;const rpcBeforeAbort=rpcReads;
+  await assert.rejects(call(first,"abortWithdrawal",{requestId:interrupted.requestId}),"Lost abort ACK retains the local publication fence");
+  assert.equal(abortPosts,1,"The actual worker transport must reach the abort endpoint before synthetic ACK loss");
+  assert.equal(withdrawalPhase,"aborted_before_publication");assert.equal(loseAbortAck,false);
+  const pendingAbort=await exposure(first,interrupted.requestId);
+  assert.equal(pendingAbort.abortPending,true);assert.equal(pendingAbort.cancelled,true);
+  assert.equal(pendingAbort.hasSignature,false);assert.equal(pendingAbort.barrier,interrupted.requestId);
+  assert.equal(rpcReads,rpcBeforeAbort,"Publication abort needs no new burn, mint or expired-height observation");
+  nonceIndex=8;
+  await assert.rejects(call(second,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000014",budgetMicroUsdc:"10000"}}),
+    "A pending abort acknowledgement still blocks payment admission in other tabs");
+  assert.equal((await exposure(second)).nonceCount,pendingAbort.nonceCount);
+  await call(first,"lock");await mount(first);await call(first,"initializeOwner",{owner:owner.address});await call(first,"restoreRetained");
+  assert.equal((await exposure(first,interrupted.requestId)).abortPending,true,"Worker restart preserves the pending abort");
+  assert.deepEqual(await call(first,"abortWithdrawal",{requestId:interrupted.requestId}),{requestId:interrupted.requestId,abortedBeforePublication:true});
+  assert.equal(abortPosts,2,"Retry acknowledges the original nonfinancial abort only");
+  const finishedAbort=await exposure(first,interrupted.requestId);
+  assert.equal(finishedAbort.abortPending,false);assert.equal(finishedAbort.cancelled,true);assert.equal(finishedAbort.exposed,true);
+  assert.equal(finishedAbort.hasSignature,false);assert.equal(finishedAbort.barrier,null);
+  // A new reviewed original remains independently signable. Reset only the synthetic
+  // chain snapshot and server fixture; leave both workers' actual retained history intact.
+  block.number="0x64";withdrawalPhase="prepared";publicationAbort=null;
+  const freshBurn={...prepareWithdrawIntentForProfile(profile,expired.sessAddr,"100000",expired.ownerAddr,"1000"),maxBlockHeight:"110"};
+  preparation={...interrupted,burnIntent:freshBurn,requestId:hashTypedData(withdrawTypedData(freshBurn))};
+  assert.notEqual(preparation.requestId,interrupted.requestId);
   const cashout=await call(first,"signWithdrawal",{requestId:preparation.requestId,review:{amountMicroUsdc:"100000",maxFeeMicroUsdc:"1000"}}) as {signature:Hex};
-  assert.equal((await recoverTypedDataAddress({...withdrawTypedData(burnIntent),signature:cashout.signature})).toLowerCase(),expired.sessAddr);
+  assert.equal((await recoverTypedDataAddress({...withdrawTypedData(freshBurn),signature:cashout.signature})).toLowerCase(),expired.sessAddr);
+  const abortPostsBeforePublished=abortPosts;
+  await assert.rejects(call(first,"abortWithdrawal",{requestId:preparation.requestId}),"An already returned burn signature can never be aborted");
+  assert.equal(abortPosts,abortPostsBeforePublished,"Published burns refuse before any abort request");
+  assert.equal((await exposure(first,preparation.requestId)).hasSignature,true);
   nonceIndex=8;await assert.rejects(call(second,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000011",budgetMicroUsdc:"10000"}}),"Retained withdrawal barrier blocks other tabs");
   assert.equal(withdrawalPhase,"exposed");
   console.log(JSON.stringify({status:"passed",realChromium:true,realIndexedDB:true,worker:nextDist?"Next production packaged":"production source",requests,
-    authenticatedChallenge:true,ownerAndSessionProof:true,nonceAndCapRetained:true,logoutRecovery:true,expiredOwnerCashout:true,liveFunds:false}));
+    authenticatedChallenge:true,ownerAndSessionProof:true,nonceAndCapRetained:true,logoutRecovery:true,expiredOwnerCashout:true,
+    failedPaymentCapacityRecovery:true,interruptedSigningAbort:true,abortLostAckRestart:true,publishedBurnAbortRefused:true,liveFunds:false}));
 } finally { await browser.close(); }

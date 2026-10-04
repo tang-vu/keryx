@@ -9,6 +9,7 @@ import { readBrowserMainnetSource } from "./browser-session-source-authority";
 import { reserveBrowserSessionAuthorization } from "./browser-session-capacity";
 import { createBrowserSessionWithdrawalRuntime } from "./browser-session-withdrawal-runtime";
 import { SessionCustodyMissingError } from "./session-custody-error";
+import { reconcileBrowserSessionFailedAuthorizations } from "./browser-session-failure-recovery";
 declare const self: DedicatedWorkerGlobalScope;
 let key: ReturnType<typeof createBrowserSessionKey> | null = null;
 let runtime: ReturnType<typeof createBrowserSessionRuntime> | null = null;
@@ -31,7 +32,8 @@ self.onmessage = (event: MessageEvent<BrowserSessionOperation & { id: number }>)
         { wrappingKeys: indexedDbWrappingKeyStore(), retained: indexedDbRetainedSessionStore() });
       if (key && key.context.digest !== candidate.context.digest) { cashout?.lock(); runtime?.lock(); key = null; runtime = null; cashout = null; }
       key ??= candidate;
-      runtime ??= createBrowserSessionRuntime(key, { json: sessionJson, readSource: readBrowserMainnetSource, reserve: reserveBrowserSessionAuthorization });
+      runtime ??= createBrowserSessionRuntime(key, { json: sessionJson, readSource: readBrowserMainnetSource, reserve: reserveBrowserSessionAuthorization,
+        reconcileFailed: (namespace, owner, signer, epoch) => reconcileBrowserSessionFailedAuthorizations(namespace, owner, signer, epoch, sessionJson) });
       cashout ??= createBrowserSessionWithdrawalRuntime(key, { json: sessionJson });
       return { derivationMessage: key.context.derivationMessage, storageNamespace: key.context.storageNamespace };
     }
@@ -44,6 +46,7 @@ self.onmessage = (event: MessageEvent<BrowserSessionOperation & { id: number }>)
       case "authorizePayment": return runtime.authorizePayment(request.reqId, request.question);
       case "signWithdrawal": return cashout!.signWithdrawal(request.requestId, request.review);
       case "cancelUnexposedWithdrawal": return cashout!.cancelUnexposedWithdrawal(request.requestId);
+      case "abortWithdrawal": return cashout!.abortWithdrawal(request.requestId);
       case "reconcileWithdrawal": return cashout!.reconcileWithdrawal(request.requestId);
       default: throw new Error();
     }

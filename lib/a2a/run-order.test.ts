@@ -2,9 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { a2aRequestHash, legacyA2aRequestHash, type A2aOrder } from "./order";
 import { runClaimedA2aOrder } from "./run-order";
 import { a2aResearchPackage } from "./research-package";
+import { quoteA2aResearch } from "./pricing";
+import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 
-function claimedOrder(): A2aOrder {
-  const request = { question: "What changed?", origin: "a2a" as const, model: "test-model" };
+function claimedOrder(budget = 0.05): A2aOrder {
+  const quote = quoteA2aResearch(budget, "deep");
+  const request = { question: "What changed?", origin: "a2a" as const, model: "test-model", network: ARC_MAINNET_PROFILE.networkId };
   const researchPackage = a2aResearchPackage("deep");
   return {
     id: "a2a_claimed",
@@ -12,17 +15,17 @@ function claimedOrder(): A2aOrder {
     authorizationId: "0xnonce",
     requestHash: a2aRequestHash({
       question: request.question,
-      creatorBudgetUsdc: 0.05,
-      serviceFeeUsdc: 0.05,
+      creatorBudgetUsdc: quote.creatorBudgetUsdc,
+      serviceFeeUsdc: quote.serviceFeeUsdc,
       researchMode: "deep",
       researchPackage,
       model: request.model,
     }),
     payer: "0x1111111111111111111111111111111111111111",
     payee: "0x2222222222222222222222222222222222222222",
-    amountUsdc: 0.1,
-    creatorBudgetUsdc: 0.05,
-    serviceFeeUsdc: 0.05,
+    amountUsdc: quote.totalPriceUsdc,
+    creatorBudgetUsdc: quote.creatorBudgetUsdc,
+    serviceFeeUsdc: quote.serviceFeeUsdc,
     researchMode: "deep",
     researchPackage,
     status: "running",
@@ -42,8 +45,9 @@ function claimedOrder(): A2aOrder {
 }
 
 describe("durable A2A worker", () => {
-  it("revalidates the paid request and completes a real treasury run", async () => {
-    let current = claimedOrder();
+  it.each([0.05, 0.01, 0.0157, 0.0314])("completes a quoted exact %s-USDC paid request despite binary multiplication noise", async (budget) => {
+    let current = claimedOrder(budget);
+    expect(current.creatorBudgetUsdc).toBe(budget);
     const db = {
       completeA2aOrder: vi.fn().mockResolvedValue(true),
       getA2aOrder: vi.fn(async () => current),
@@ -81,7 +85,7 @@ describe("durable A2A worker", () => {
       };
     });
 
-    const outcome = await runClaimedA2aOrder(db as never, claimedOrder(), {
+    const outcome = await runClaimedA2aOrder(db as never, current, {
       collector: collector as never,
       expectedPayee: "0x2222222222222222222222222222222222222222",
     });
@@ -90,7 +94,7 @@ describe("durable A2A worker", () => {
     expect(collector).toHaveBeenCalledWith(
       expect.objectContaining({
         fundingOwner: "treasury",
-        budget: 0.05,
+        budget,
         question: "What changed?",
         executionLimits: { attentionLimit: 4, reevaluateRounds: 1 },
       }),
@@ -99,6 +103,27 @@ describe("durable A2A worker", () => {
     expect(db.markA2aOrderPaymentStarted).toHaveBeenCalledOnce();
     expect(db.markA2aOrderResultSaving).toHaveBeenCalledOnce();
     expect(db.failA2aOrder).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { creatorBudgetUsdc: 0.0157001 },
+    { serviceFeeUsdc: 0.0500001 },
+    { amountUsdc: 0.1000001 },
+    { creatorBudgetUsdc: 0 },
+    { serviceFeeUsdc: -0.01 },
+    { amountUsdc: Number.NaN },
+    { creatorBudgetUsdc: (Number.MAX_SAFE_INTEGER + 1) / 1e6 },
+  ])("refuses fractional, nonfinite and unsafe stored amounts before research: %j", async (changed) => {
+    const order = { ...claimedOrder(), ...changed };
+    // A matching rounded request hash must not legitimize a fractional stored amount.
+    order.requestHash = a2aRequestHash({ question: order.request!.question,
+      creatorBudgetUsdc: order.creatorBudgetUsdc, serviceFeeUsdc: order.serviceFeeUsdc,
+      researchMode: order.researchMode, researchPackage: order.researchPackage, model: order.request!.model });
+    const db = { failA2aOrder: vi.fn().mockResolvedValue(true) };
+    const collector = vi.fn();
+    const outcome = await runClaimedA2aOrder(db as never, order, { collector });
+    expect(outcome).toMatchObject({ status: "failed", errorCode: "invalid_order_data" });
+    expect(collector).not.toHaveBeenCalled();
   });
 
   it("fails before creator spend when private input no longer matches its request hash", async () => {

@@ -14,7 +14,8 @@ import { hasScope, parseScopes } from "@/lib/api-key-scopes";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { createRemoteMcpServer, type RemoteMcpAccess } from "@/lib/mcp/remote-server";
-import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/rate-limit";
+import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { readMcpBody } from "@/lib/mcp/request-body";
 import { isAllowedMcpOrigin, normalizeMcpClient, researchCallCount } from "@/lib/mcp/route-helpers";
 
@@ -61,7 +62,7 @@ async function resolveAccess(
       return jsonRpcHttpError(req, 403, -32003, "API key is not scoped for research.");
     }
     if (researchCall) {
-      const limited = await checkRateLimit(key.keyId, "ask");
+      const limited = await checkSponsoredResearchAdmission({ kind: "key", wallet: key.walletAddress, ip: clientIp(req) });
       if (limited) return limited;
       const db = await getDb();
       void db.incrementUsage(key.keyId);
@@ -74,11 +75,7 @@ async function resolveAccess(
   }
 
   if (researchCall) {
-    const limited = await checkRateLimit(clientIp(req), "treasuryAsk", {
-      code: "free_trial_limit",
-      message:
-        "Remote MCP free research is rate-limited. Use an ask-scoped kx_live_ API key for higher limits.",
-    });
+    const limited = await checkSponsoredResearchAdmission({ kind: "anonymous", ip: clientIp(req) });
     if (limited) return limited;
   }
   return {

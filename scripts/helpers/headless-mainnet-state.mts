@@ -9,7 +9,9 @@ import { ARC_MAINNET_PROFILE } from "../../lib/arc-network-profile";
 import { browserSessionCustodyContext, type BrowserSessionCustodyContext } from "../../lib/session/browser-session-custody";
 import type { RetainedSessionStore } from "../../lib/session/browser-session-key";
 import type { IsolatedWrappedKey, WrappingKeyStore } from "../../lib/session/isolated-session-vault";
-import { HEADLESS_WITHDRAWAL_SCHEMA, headlessWithdrawalStorage } from "./headless-mainnet-withdrawals.mjs";
+import { HEADLESS_WITHDRAWAL_SCHEMA, HEADLESS_WITHDRAWAL_V4_SCHEMA, headlessWithdrawalStorage } from "./headless-mainnet-withdrawals.mjs";
+import { HEADLESS_FAILURE_SCHEMA, recordHeadlessFailure } from "./headless-mainnet-failures.mjs";
+import type { BrowserSessionFailedAuthorization } from "../../lib/session/browser-session-withdrawal-liabilities";
 
 const ERROR = "Headless session state unavailable; preserve custody and original attempts for owner recovery";
 const fail = (): never => { throw new Error(ERROR); };
@@ -59,7 +61,7 @@ function blob(value: unknown, context: BrowserSessionCustodyContext): IsolatedWr
 /** Owner-only standalone storage. Keys come from protected environment, never from
  * this database. It retains the first ciphertext and every admitted nonce forever;
  * local locks/exposure are not a distributed clone-proof or server settlement ledger. */
-export async function openHeadlessMainnetState(directory: string, context: BrowserSessionCustodyContext, wrappingKey: string, createIfMissing = true, migrateV2 = false) {
+export async function openHeadlessMainnetState(directory: string, context: BrowserSessionCustodyContext, wrappingKey: string, createIfMissing = true, migrateLegacy = false) {
   let database: DatabaseSync | undefined, lock: string | undefined, lockInode: fs.Stats | undefined;
   try {
     if (!path.isAbsolute(directory) || path.resolve(directory) !== directory || context.profile !== ARC_MAINNET_PROFILE ||
@@ -87,8 +89,9 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
     protectedPath(file, false);
     database = new DatabaseSync(file);
     if (fresh) database.exec("PRAGMA synchronous=FULL; PRAGMA journal_mode=DELETE; PRAGMA busy_timeout=1000;");
-    const identity = canonicalJson({ format: "keryx-headless-session-state-v3", custody: context });
-    const previousIdentity = canonicalJson({ format: "keryx-headless-session-state-v2", custody: context });
+    const identity = canonicalJson({ format: "keryx-headless-session-state-v4", custody: context });
+    const v2Identity = canonicalJson({ format: "keryx-headless-session-state-v2", custody: context });
+    const v3Identity = canonicalJson({ format: "keryx-headless-session-state-v3", custody: context });
     if (fresh) {
       database.exec(`BEGIN IMMEDIATE;
         CREATE TABLE identity(singleton INTEGER PRIMARY KEY CHECK(singleton=1),value TEXT NOT NULL) STRICT;
@@ -110,18 +113,26 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
         CREATE TRIGGER headers_no_update BEFORE UPDATE ON headers BEGIN SELECT RAISE(ABORT,'immutable'); END;
         CREATE TRIGGER headers_no_delete BEFORE DELETE ON headers BEGIN SELECT RAISE(ABORT,'immutable'); END;`);
       database.exec(HEADLESS_WITHDRAWAL_SCHEMA);
+      database.exec(HEADLESS_WITHDRAWAL_V4_SCHEMA + HEADLESS_FAILURE_SCHEMA);
       database.prepare("INSERT INTO identity VALUES(1,?)").run(identity); database.exec("COMMIT"); syncDirectory(directory);
     }
     const db = database;
-    if (!fresh && db.prepare("SELECT value FROM identity WHERE singleton=1").get()?.value === previousIdentity) {
-      if (!migrateV2 || db.prepare("PRAGMA integrity_check").get()?.integrity_check !== "ok") fail();
+    const previousIdentity = db.prepare("SELECT value FROM identity WHERE singleton=1").get()?.value;
+    if (!fresh && (previousIdentity === v2Identity || previousIdentity === v3Identity)) {
+      if (!migrateLegacy || db.prepare("PRAGMA integrity_check").get()?.integrity_check !== "ok") fail();
       const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map(row=>row.name);
-      if (canonicalJson(tables) !== canonicalJson(["custody","exposure","headers","identity","questions","terminal"])) fail();
+      const expectedTables = ["custody","exposure","headers","identity","questions","terminal",
+        ...(previousIdentity === v3Identity ? ["upgrade_history","withdrawals"] : [])];
+      if (canonicalJson(tables) !== canonicalJson(expectedTables)) fail();
       db.exec("PRAGMA synchronous=FULL; PRAGMA journal_mode=DELETE; BEGIN IMMEDIATE");
       try {
         if (db.prepare("SELECT value FROM identity WHERE singleton=1").get()?.value !== previousIdentity) fail();
-        db.exec(HEADLESS_WITHDRAWAL_SCHEMA);
-        db.prepare("INSERT INTO upgrade_history VALUES(1,?)").run(previousIdentity);
+        if (previousIdentity === v2Identity) {
+          db.exec(HEADLESS_WITHDRAWAL_SCHEMA);
+          db.prepare("INSERT INTO upgrade_history VALUES(1,?)").run(previousIdentity);
+        }
+        db.exec(HEADLESS_WITHDRAWAL_V4_SCHEMA + HEADLESS_FAILURE_SCHEMA);
+        db.prepare("INSERT INTO upgrade_v4_history VALUES(1,?)").run(previousIdentity);
         db.exec("DROP TRIGGER identity_no_update");
         db.prepare("UPDATE identity SET value=? WHERE singleton=1").run(identity);
         db.exec("CREATE TRIGGER identity_no_update BEFORE UPDATE ON identity BEGIN SELECT RAISE(ABORT,'immutable'); END; COMMIT");
@@ -178,10 +189,14 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
           const priorQuestion=db.prepare("SELECT budget FROM questions WHERE id=?").get(question.id);
           if(priorQuestion && priorQuestion.budget!==question.budgetMicroUsdc)fail();
           db.prepare("INSERT OR IGNORE INTO questions VALUES(?,?)").run(question.id,question.budgetMicroUsdc);
-          const rows = db.prepare("SELECT amount,question_id FROM exposure").all();
+          const rows = db.prepare("SELECT e.amount,e.question_id,f.nonce AS failed FROM exposure e LEFT JOIN failed_terminal f ON f.nonce=e.nonce").all();
           if (rows.length >= MAX_ORIGINALS) fail();
           let total = BigInt(0),questionTotal=BigInt(0);
-          for (const row of rows) { if (!/^[1-9]\d{0,15}$/.test(String(row.amount))) fail(); total += BigInt(String(row.amount)); if(row.question_id===question.id)questionTotal+=BigInt(String(row.amount)); }
+          for (const row of rows) { if (!/^[1-9]\d{0,15}$/.test(String(row.amount))) fail();
+            if(!row.failed)total += BigInt(String(row.amount));
+            // Failed payment capacity may fund a new question; the original question
+            // keeps its conservative lifetime allocation and cannot loop on failures.
+            if(row.question_id===question.id)questionTotal+=BigInt(String(row.amount)); }
           if (total + amount > cap || questionTotal+amount>BigInt(question.budgetMicroUsdc)) fail();
           const binding = canonicalJson(original), digest = createHash("sha256").update(canonicalJson(original.requirements)).digest("hex");
           if(Buffer.byteLength(binding)>32768)fail();
@@ -190,7 +205,12 @@ export async function openHeadlessMainnetState(directory: string, context: Brows
         } catch { try { db.exec("ROLLBACK"); } catch { /* committed exposure stays held */ } return fail(); }
       },
       originalNonces() { active(); return db.prepare("SELECT nonce,epoch,amount,cap,req_id,original,requirements_digest FROM exposure ORDER BY nonce").all(); },
-      unresolvedNonces() { active(); return db.prepare("SELECT nonce,epoch,amount,cap,req_id,original,requirements_digest FROM exposure WHERE nonce NOT IN (SELECT nonce FROM terminal) ORDER BY nonce").all(); },
+      unresolvedNonces() { active(); return db.prepare("SELECT nonce,epoch,amount,cap,req_id,original,requirements_digest FROM exposure WHERE nonce NOT IN (SELECT nonce FROM terminal) AND nonce NOT IN (SELECT nonce FROM failed_terminal) ORDER BY nonce").all(); },
+      recordFailed(value: BrowserSessionFailedAuthorization) {
+        active(); db.exec("BEGIN IMMEDIATE");
+        try { active(); const changed=recordHeadlessFailure(db,structuredClone(value)); db.exec("COMMIT");syncDirectory(directory);return changed; }
+        catch { try { db.exec("ROLLBACK"); } catch { /* Retain committed original failure evidence. */ } return fail(); }
+      },
       recordSettled(nonce: string, proofDigest: string) {
         active(); if (!/^0x[0-9a-f]{64}$/.test(nonce) || !/^[0-9a-f]{64}$/.test(proofDigest) ||
           !db.prepare("SELECT nonce FROM exposure WHERE nonce=?").get(nonce)) fail();

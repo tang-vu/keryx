@@ -9,6 +9,7 @@ import { parseSessionGrantConsent, createSessionGrantConsentMessage, createSessi
 import { verifySessionWithdrawalPreparation } from "../gateway/session-withdrawal-protocol";
 import { withdrawTypedData } from "../gateway/withdraw-protocol";
 import { SessionCustodyMissingError } from "./session-custody-error";
+import { sessionWithdrawalAbortMessage } from "../gateway/session-withdrawal-abort";
 
 export interface RetainedSessionStore {
   read(namespace: string): Promise<IsolatedWrappedKey | null>;
@@ -123,6 +124,17 @@ export function createBrowserSessionKey(origin: string, owner: string, dependenc
       if (prepared.ownerAddr !== context.owner || prepared.sessAddr !== captured!.address.toLowerCase() ||
         prepared.authorization.consent.origin !== context.origin) refused();
       const signature = await captured!.signTypedData(withdrawTypedData(prepared.burnIntent));
+      if (generation !== expected || account !== captured) refused();
+      return signature;
+    },
+    /** Restricted assertion only; the withdrawal runtime must first commit its local publication fence. */
+    async signWithdrawalAbort(value: unknown) {
+      const snapshot = structuredClone(value), captured = account, expected = generation;
+      if (!captured || busy) refused();
+      const prepared = await verifySessionWithdrawalPreparation(snapshot);
+      if (prepared.ownerAddr !== context.owner || prepared.sessAddr !== captured!.address.toLowerCase() ||
+        prepared.authorization.consent.origin !== context.origin) refused();
+      const signature = await captured!.signMessage({ message: sessionWithdrawalAbortMessage(prepared) });
       if (generation !== expected || account !== captured) refused();
       return signature;
     },

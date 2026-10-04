@@ -87,6 +87,7 @@ export function sqliteSessionWithdrawalAccounting(db: DatabaseSync, signer: stri
   const held = checkedMicro(funding.retainedSpentMicroUsdc) - confirmed;
   const withdrawals = db.prepare(`SELECT w.data FROM session_withdrawal_preparations w
     LEFT JOIN session_withdrawal_completions c USING(request_id) WHERE w.signer=? AND c.request_id IS NULL
+    AND NOT EXISTS(SELECT 1 FROM session_withdrawal_publication_aborts a WHERE a.request_id=w.request_id)
     AND NOT EXISTS(SELECT 1 FROM session_withdrawal_cancellations x WHERE x.request_id=w.request_id)`).all(signer);
   let heldWithdrawal = 0;
   for (const row of withdrawals) {
@@ -102,7 +103,7 @@ export async function reserveSqliteSessionWithdrawal(db: DatabaseSync, value: Se
     if (!proof || canonicalJson(proof) !== canonicalJson(p.authorization)) throw new Error("Retained recovery proof unavailable");
     const existing = db.prepare("SELECT data FROM session_withdrawal_preparations WHERE request_id=?").get(p.requestId);
     if (existing) {
-      if (existing.data !== canonicalJson(p) || sqliteSessionWithdrawalPhase(db, p.requestId) === "cancelled_unexposed")
+      if (existing.data !== canonicalJson(p) || ["cancelled_unexposed", "aborted_before_publication"].includes(sqliteSessionWithdrawalPhase(db, p.requestId)))
         throw new Error("Original withdrawal conflict"); return;
     }
     const now = sqliteSessionWithdrawalAccounting(db, p.sessAddr);
@@ -126,6 +127,7 @@ export async function pendingSqliteSessionWithdrawal(db: DatabaseSync, owner: st
   const row = db.prepare(`SELECT w.request_id FROM session_withdrawal_preparations w
     LEFT JOIN session_withdrawal_completions c USING(request_id)
     WHERE w.recovery_owner=? AND w.signer=? AND c.request_id IS NULL
+    AND NOT EXISTS(SELECT 1 FROM session_withdrawal_publication_aborts a WHERE a.request_id=w.request_id)
     AND NOT EXISTS(SELECT 1 FROM session_withdrawal_cancellations x WHERE x.request_id=w.request_id)`).get(owner, signer);
   return row ? readSqliteSessionWithdrawal(db, String(row.request_id), owner) : null;
 }
@@ -136,6 +138,7 @@ export async function readSqliteSessionWithdrawalCompletion(db: DatabaseSync, id
   return row ? verifySessionWithdrawalCompletion(JSON.parse(String(row.data)), original) : null;
 }
 function sqliteSessionWithdrawalPhase(db: DatabaseSync, id: string): SessionWithdrawalSigningPhase {
+  if (db.prepare("SELECT 1 FROM session_withdrawal_publication_aborts WHERE request_id=?").get(id)) return "aborted_before_publication";
   if (db.prepare("SELECT 1 FROM session_withdrawal_cancellations WHERE request_id=?").get(id)) return "cancelled_unexposed";
   if (db.prepare("SELECT 1 FROM session_withdrawal_completions WHERE request_id=?").get(id)) return "completed";
   return db.prepare("SELECT 1 FROM session_withdrawal_exposures WHERE request_id=?").get(id) ? "exposed" : "prepared";
@@ -149,7 +152,7 @@ export async function exposeSqliteSessionWithdrawal(db: DatabaseSync, id: string
   const p = await readSqliteSessionWithdrawal(db, id, owner); if (!p) return null;
   sqliteJournalTransaction(db, () => {
     const phase = sqliteSessionWithdrawalPhase(db, id);
-    if (phase === "cancelled_unexposed" || phase === "completed") throw new Error("Original signing authority unavailable");
+    if (!["prepared", "exposed"].includes(phase)) throw new Error("Original signing authority unavailable");
     db.prepare("INSERT INTO session_withdrawal_exposures(request_id) VALUES(?) ON CONFLICT DO NOTHING").run(id);
   });
   return p;

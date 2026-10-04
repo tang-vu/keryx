@@ -24,6 +24,7 @@ import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
 import { config } from "@/lib/config";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { getDb } from "@/lib/db";
 import { buildFollowUpQuestion } from "@/lib/agent/follow-up-question";
 import { getGrant } from "@/lib/payments/session-grants";
@@ -160,11 +161,7 @@ export async function POST(req: NextRequest) {
     });
     if (limited) return limited;
   } else {
-    const limited = await checkRateLimit(clientIp(req), "treasuryAsk", {
-      code: "free_trial_limit",
-      message:
-        "You've used your free dispatches for the moment. Connect a wallet to keep going on your own budget — or try again shortly.",
-    });
+    const limited = await checkSponsoredResearchAdmission({ kind: "anonymous", ip: clientIp(req), wallet: asker });
     if (limited) return limited;
   }
 

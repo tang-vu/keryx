@@ -5,7 +5,7 @@
  * its full reasoning loop over paid sources and pays every cited creator downstream in USDC on Arc.
  *
  * Auth (via the standard `Authorization: Bearer …` header OpenAI clients already send):
- *  - `kx_live_…` Keryx key → identified caller: higher budget cap, key rate-limit, usage metered,
+ *  - `kx_live_…` Keryx key → identified caller: higher budget cap, wallet rate-limit, usage metered,
  *    tagged `a2a` (genuine external agent).
  *  - anything else / no key → anonymous free trial: treasury-funded, IP rate-limited, anon budget
  *    cap, tagged `web`. Same guard model as the site's own no-wallet /api/ask path.
@@ -24,7 +24,8 @@ import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { verifyApiKey } from "@/lib/api-keys";
 import { hasScope, parseScopes } from "@/lib/api-key-scopes";
-import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/rate-limit";
+import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import {
   type ChatCompletionRequest,
   lastUserQuestion,
@@ -73,31 +74,19 @@ export async function POST(req: NextRequest) {
   // Default to the anonymous free tier; a valid Keryx key upgrades caps + provenance tag.
   let origin: PaymentOrigin = "web";
   let budgetCap = config.anonMaxBudget;
+  let keyIdentity: { walletAddress: string; keyId: string } | undefined;
 
   if (rawKey?.startsWith("kx_live_")) {
     // The caller intends to authenticate with a Keryx key — hold them to it.
     const keyCtx = await verifyApiKey(rawKey);
     if (!keyCtx) return openaiError("invalid or revoked api key", 401, "invalid_api_key");
-    // The raw bearer value is a secret. Only its verified, non-secret database id may enter the
-    // durable rate-limit store.
-    const limited = await checkRateLimit(keyCtx.keyId, "ask");
-    if (limited) return limited;
     // An export-only key (e.g. one handed to an accountant) must not drive agent runs.
     if (!hasScope(parseScopes(keyCtx.scopes), "ask")) {
       return openaiError("this api key is not scoped for ask", 403, "insufficient_scope");
     }
-    const db = await getDb();
-    void db.incrementUsage(keyCtx.keyId); // fire-and-forget daily counter
+    keyIdentity = keyCtx;
     origin = "a2a";
     budgetCap = config.a2aMaxBudget;
-  } else {
-    // Anonymous free trial — treasury-funded, so IP rate-limit against scripted drain / fake volume.
-    const limited = await checkRateLimit(clientIp(req), "treasuryAsk", {
-      code: "free_trial_limit",
-      message:
-        "Free dispatches are rate-limited. Pass a kx_live_ API key as the Bearer token for higher limits.",
-    });
-    if (limited) return limited;
   }
 
   if (body.scholarly !== undefined && typeof body.scholarly !== "boolean") return openaiError("scholarly must be a boolean", 400, "invalid_request");
@@ -116,6 +105,19 @@ export async function POST(req: NextRequest) {
 
   if (!config.sellerAddress) {
     return openaiError("treasury wallet not configured", 500, "server_error");
+  }
+
+  const limited = await checkSponsoredResearchAdmission(keyIdentity
+    ? { kind: "key", wallet: keyIdentity.walletAddress, ip: clientIp(req) }
+    : { kind: "anonymous", ip: clientIp(req) });
+  if (limited) {
+    const headers = new Headers(limited.headers);
+    for (const [key, value] of Object.entries(CORS)) headers.set(key, value);
+    return new Response(limited.body, { status: limited.status, headers });
+  }
+  if (keyIdentity) {
+    const db = await getDb();
+    void db.incrementUsage(keyIdentity.keyId);
   }
 
   // Keryx's own headless drivers pass the shared bot key so their self-generated calls are tagged

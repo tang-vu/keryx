@@ -16,7 +16,7 @@ export function validateHeadlessCashoutArgs(args:string[]){
   if(args[0]==="withdraw-prepare")return z.tuple([z.literal("withdraw-prepare"),z.string().uuid(),micros.refine(v=>BigInt(v)>BigInt(0)),micros]).parse(args);
   if(args[0]==="withdraw-sign")return z.tuple([z.literal("withdraw-sign"),hash,micros.refine(v=>BigInt(v)>BigInt(0)),micros]).parse(args);
   if(args[0]==="withdraw-complete")return z.tuple([z.literal("withdraw-complete"),hash,hash]).parse(args);
-  return z.tuple([z.enum(["withdraw-status","withdraw-submit","withdraw-cancel","withdraw-mint","withdraw-recover"]),hash]).parse(args);
+  return z.tuple([z.enum(["withdraw-status","withdraw-submit","withdraw-cancel","withdraw-abort","withdraw-mint","withdraw-recover"]),hash]).parse(args);
 }
 
 /** No raw transaction signer. Every operation selects an original retained ID;
@@ -46,6 +46,7 @@ export async function runHeadlessCashout(args:string[],key:SessionWithdrawalRunt
     return {requestId:id,signatureRetained:true,notice:"Signature retained privately. Submit the original once; uncertainty remains held."};
   }
   if(action==="withdraw-cancel")return runtime.cancelUnexposedWithdrawal(id);
+  if(action==="withdraw-abort")return runtime.abortWithdrawal(id);
   const {value,p}=await status(id),local=await state.withdrawals.storage.readWithdrawal(ns,id);
   if(action==="withdraw-status")return {requestId:id,network:p.network,signingPhase:value.signingPhase,progress:value.progress,
     local:state.withdrawals.references().find(row=>row.requestId===id)??null,retryAuthorized:false};

@@ -6,8 +6,8 @@
  * (anonymous /api/ask, the Discord/Slack/Telegram front doors, the unkeyed A2A endpoint), where a
  * reset window is real USDC. The web process and the traction daemon also kept separate counts.
  *
- * The DB row is authoritative. The in-process limiter stays as the fallback for when the DB is
- * unreachable: degraded (per-process, reset on restart) but never open.
+ * The DB row is authoritative. Ordinary compute throttles retain the legacy in-process fallback.
+ * Sponsored research and key mint admission use consumeDurablePoint and refuse on store failure.
  */
 
 import { RateLimiterMemory, RateLimiterRes } from "rate-limiter-flexible";
@@ -51,16 +51,28 @@ export async function consumePoint(
   points: number,
   windowMs: number,
 ): Promise<RateLimitDecision> {
-  const now = Date.now();
   try {
-    const db = await getDb();
-    const decision = await db.consumeRateLimit(`${tier}:${key}`, points, windowMs, now);
-    void sweepExpired(now);
-    return decision;
+    return await consumeDurablePoint(key, tier, points, windowMs);
   } catch (err) {
     console.error("[rate-limit] durable store unavailable, using in-process limiter:", err);
     return consumeInProcess(key, tier, points, windowMs);
   }
+}
+
+/** Sponsored work must share one durable allowance across processes, including during outages.
+ * Unlike ordinary compute throttles this operation throws when that authority is unavailable;
+ * callers must refuse admission, never substitute a fresh in-process allowance. */
+export async function consumeDurablePoint(
+  key: string,
+  tier: string,
+  points: number,
+  windowMs: number,
+): Promise<RateLimitDecision> {
+  const now = Date.now();
+  const db = await getDb();
+  const decision = await db.consumeRateLimit(`${tier}:${key}`, points, windowMs, now);
+  void sweepExpired(now);
+  return decision;
 }
 
 async function consumeInProcess(

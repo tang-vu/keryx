@@ -27,6 +27,7 @@ function fixture(lost=false,duplicate=false){
     const body=init?.body?JSON.parse(String(init.body)):undefined;
     if(url.pathname==="/api/auth/nonce")return json({nonce:"syntheticnonce1234"});
     if(url.pathname==="/api/auth/verify"){expect(new SiweMessage(body.message).chainId).toBe(5042);return json({ok:true});}
+    if(url.pathname==="/api/session/withdraw/payments")return json({network:profile.networkId,sessAddr:consent.sessAddr,retryAuthorized:false,payments:[],nextCursor:null});
     if(url.pathname==="/api/session/grant/challenge"){
       consent={format:"keryx-session-grant-consent-v1",network:profile.networkId,origin:context.origin,ownerAddr:context.owner,
         sessAddr:body.sessAddr.toLowerCase(),grantEpoch:epoch,capMicroUsdc:"2000",expirySeconds:String(Math.floor(Date.now()/1000)+3600)};

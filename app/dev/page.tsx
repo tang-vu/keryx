@@ -259,8 +259,8 @@ export default function DevPage() {
         }),
       });
       if (!res.ok) {
-        const j = (await res.json()) as { error?: string };
-        throw new Error(j.error ?? `HTTP ${res.status}`);
+        const j = (await res.json()) as { error?: string; message?: string };
+        throw new Error(j.message ?? j.error ?? `HTTP ${res.status}`);
       }
       const { rawKey: rk } = (await res.json()) as { rawKey: string; prefix: string; id: string };
       setRawKey(rk);
@@ -327,7 +327,9 @@ export default function DevPage() {
             Any OpenAI SDK or tool works — set the base URL to{" "}
             <code className="text-seal">https://keryx.cc/api/v1</code> and model{" "}
             <code className="text-seal">keryx</code>. Free to try with no key; pass a{" "}
-            <code className="text-seal">kx_live_…</code> key as the Bearer token for higher limits.
+            <code className="text-seal">kx_live_…</code> key as the Bearer token for wallet-based limits.
+            All keys for one wallet share 10 sponsored calls per minute across chat and Remote MCP;
+            caller IP and shared service limits also apply. Creating more keys adds no allowance.
             Every cited creator is paid in USDC on Arc. With{" "}
             <code className="text-seal">stream:true</code> the agent&apos;s live buy/skip/trust
             reasoning arrives as <code className="text-seal">reasoning_content</code>.

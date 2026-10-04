@@ -51,6 +51,7 @@ export type BrowserSessionOperation =
   | { type: "signGrantConsentProof"; consent: unknown; ownerSignature: Hex }
   | { type: "signWithdrawal"; requestId: string; review: BrowserSessionWithdrawalReview }
   | { type: "cancelUnexposedWithdrawal"; requestId: string }
+  | { type: "abortWithdrawal"; requestId: string }
   | { type: "reconcileWithdrawal"; requestId: string }
   | { type: "lock" };
 
@@ -62,6 +63,7 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
   readSource(registryId: string): Promise<SourcePaymentAuthority>;
   reserve(namespace: string, epoch: string, nonce: string, amount: bigint, cap: bigint, question: BrowserQuestionBudget,
     original: BrowserSessionAuthorizationBinding): Promise<void>;
+  reconcileFailed?(namespace: string, owner: string, signer: string, epoch: string): Promise<number>;
 }) {
   if (key.context.profile !== profile) throw new Error("Browser session profile refused");
   const refuse = (): never => { throw new Error("Browser payment authorization refused"); };
@@ -119,8 +121,17 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
           authority, context: challenge.paymentContext as BrowserPaymentContext });
         if (!price.allowed) refuse();
       } else if (challenge.paymentContext) refuse();
-      await dependencies.reserve(key.context.storageNamespace, bound.consent.grantEpoch, challenge.expectedNonce,
+      const reserve = () => dependencies.reserve(key.context.storageNamespace, bound.consent.grantEpoch, challenge.expectedNonce,
         BigInt(requirements.amount), BigInt(bound.consent.capMicroUsdc), scope, structuredClone(challenge));
+      try { await reserve(); }
+      catch (error) {
+        // Repair only exact original terminal failures, and retry local admission
+        // once. No signature or remote payment is retried by this recovery.
+        if (!dependencies.reconcileFailed || !(await dependencies.reconcileFailed(key.context.storageNamespace,
+          key.context.owner, bound.response.sessAddr, bound.consent.grantEpoch))) throw error;
+        if (expectedGeneration !== generation || grantPolicy(await bindGrant()) !== grantPolicy(bound)) refuse();
+        await reserve();
+      }
       if (grantPolicy(await bindGrant()) !== grantPolicy(bound) || expectedGeneration !== generation) refuse();
       const now = Math.floor(Date.now()/1000), authorization = { from: bound.response.sessAddr as Hex,
         to: requirements.payTo as Hex, value: requirements.amount, validAfter: String(now-600),

@@ -17,6 +17,7 @@ import { inspectHeadlessOriginal } from "./helpers/headless-mainnet-originals.mj
 import { canonicalJson } from "../lib/canonical-json";
 import { openHeadlessMainnetState } from "./helpers/headless-mainnet-state.mjs";
 import { runHeadlessCashout,validateHeadlessCashoutArgs,type HeadlessCashoutPorts } from "./helpers/headless-mainnet-cashout.mjs";
+import { reconcileHeadlessFailures } from "./helpers/headless-mainnet-failures.mjs";
 
 const refuse = (): never => { throw new Error("Headless mainnet admission refused; preserve original custody and attempts"); };
 function micros(value: string | undefined) {
@@ -43,8 +44,8 @@ export async function runHeadlessMainnet(args: string[], ports: {
     !process.env.KERYX_HEADLESS_STATE_DIRECTORY) refuse();
   const owner = privateKeyToAccount(ownerKey! as Hex), context = browserSessionCustodyContext(profile,origin,owner.address);
   const state = await openHeadlessMainnetState(process.env.KERYX_HEADLESS_STATE_DIRECTORY!,context,wrappingKey!,action === "prepare" || action === "ask",action === "migrate");
-  if(action==="migrate"){try{console.log(JSON.stringify({format:"keryx-headless-session-state-v3",network:profile.networkId,originalAttempts:state.originalNonces().length,
-    notice:"Migration retained original encrypted custody and all attempts. Previous v2 writers now refuse this identity; no owner signature or payment performed."}));}finally{state.close();}return;}
+  if(action==="migrate"){try{console.log(JSON.stringify({format:"keryx-headless-session-state-v4",network:profile.networkId,originalAttempts:state.originalNonces().length,
+    notice:"Migration retained original encrypted custody and all attempts. Previous v2/v3 writers now refuse this identity; no owner signature or payment performed."}));}finally{state.close();}return;}
   const key = createBrowserSessionKey(origin,owner.address,state);
   try {
     const retained = await state.retained.read(context.storageNamespace);
@@ -75,6 +76,7 @@ export async function runHeadlessMainnet(args: string[], ports: {
     await json("/api/auth/verify","POST",{message,signature:await owner.signMessage({message})});
     if(cashout){console.log(JSON.stringify(await runHeadlessCashout(args,key,state,json,ports.cashout)));return;}
     if(state.withdrawals.activeWithdrawal())refuse();
+    await reconcileHeadlessFailures(state,context.owner,key.address!,json);
     for (const original of state.unresolvedNonces()) {
       if (typeof original.req_id !== "string") refuse();
       const observation = await inspectHeadlessOriginal(await json(`/api/session/authorizations/${encodeURIComponent(String(original.req_id))}`),{
@@ -134,7 +136,11 @@ export async function runHeadlessMainnet(args: string[], ports: {
             if(typeof data.reqId!=="string"||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(data.reqId))refuse();const reqId=data.reqId as string;
             if(attemptedRequests.has(reqId))continue;attemptedRequests.add(reqId);
             try {
-              const runtime=createBrowserSessionRuntime(key,{json,readSource:readSource!,reserve:(n,e,nonce,amount,limit,q,original)=>state.reserve(n,e,nonce,amount,limit,q,original)});
+              const runtime=createBrowserSessionRuntime(key,{json,readSource:readSource!,reserve:(n,e,nonce,amount,limit,q,original)=>state.reserve(n,e,nonce,amount,limit,q,original),
+                reconcileFailed:async(namespace,account,signer)=>{
+                  if(namespace!==context.storageNamespace||account!==context.owner||signer!==key.address?.toLowerCase())refuse();
+                  return reconcileHeadlessFailures(state,account,signer,json);
+                }});
               const {paymentHeader}=await runtime.authorizePayment(reqId,questionScope);
               const authorization=JSON.parse(atob(paymentHeader)).authorization as {nonce:string};
               await state.retainHeader(authorization.nonce,paymentHeader);

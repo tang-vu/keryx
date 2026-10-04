@@ -180,6 +180,9 @@ it("admits hosted SDK originals before crypto and vendor exposure and retains li
 
 it("recovers expired owner custody through normal withdrawal handlers while preserving unknown holds and one original burn", async () => {
   const { adapter } = await fixture();
+  // This synthetic RPC's fixed block timestamps must not age while native storage
+  // assertions run; live RPC freshness has separate focused coverage.
+  vi.useFakeTimers({ toFake: ["Date"] });
   const { privateKeyToAccount } = await import("viem/accounts"), { NextRequest, } = await import("next/server");
   const { pad, toHex, parseTransaction, keccak256, encodeAbiParameters, encodeEventTopics, encodeFunctionData } = await import("viem");
   const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), session = privateKeyToAccount(`0x${"22".repeat(32)}`);
@@ -275,6 +278,37 @@ it("recovers expired owner custody through normal withdrawal handlers while pres
   expect((await authorize.POST(request("/api/session/withdraw/authorize", { requestId: p.requestId }))).status).toBe(409);
   await expect(other.reserveSessionWithdrawal(p)).rejects.toThrow();
   expect(await adapter.pendingSessionWithdrawal(wallet, signer)).toBeNull(); expect(transferCalls).toBe(0);
+  // A lost acknowledgement of never-exposed cancellation must also resolve a new
+  // local publication fence; both immutable server outcomes remain retained.
+  const cancelAbort = await import("../../app/api/session/withdraw/abort/route"), cancelAbortProof = await import("../gateway/session-withdrawal-abort");
+  const cancelAbortBody = { requestId: p.requestId, signature: await session.signMessage({ message: cancelAbortProof.sessionWithdrawalAbortMessage(p) }) };
+  expect((await cancelAbort.POST(request("/api/session/withdraw/abort", cancelAbortBody))).status).toBe(200);
+  expect(await adapter.getSessionWithdrawalSigningPhase(p.requestId, wallet)).toBe("aborted_before_publication");
+  // Exposure without signature publication is recoverable through an authenticated
+  // local abort, retaining history and preventing every old signing/submission path.
+  const interrupted = await (await prepare.POST(request("/api/session/withdraw/prepare", { sessAddr: signer, grantEpoch: consent.grantEpoch, amountMicros: "800000" }))).json();
+  await adapter.authorizeSessionWithdrawal(interrupted.requestId, wallet);
+  const abort = await import("../../app/api/session/withdraw/abort/route"), abortProof = await import("../gateway/session-withdrawal-abort");
+  const abortBody = { requestId: interrupted.requestId, signature: await session.signMessage({ message: abortProof.sessionWithdrawalAbortMessage(interrupted) }) };
+  expect((await abort.POST(request("/api/session/withdraw/abort", { ...abortBody, signature: await owner.signMessage({ message: abortProof.sessionWithdrawalAbortMessage(interrupted) }) }))).status).toBe(409);
+  authenticatedWallet = payee;
+  expect((await abort.POST(request("/api/session/withdraw/abort", abortBody))).status).toBe(404);
+  authenticatedWallet = wallet;
+  for (let replay = 0; replay < 2; replay++) {
+    const response = await abort.POST(request("/api/session/withdraw/abort", abortBody));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ signingPhase: "aborted_before_publication", cancellation: null, completion: null,
+      publicationAbort: { requestId: interrupted.requestId, signature: abortBody.signature }, progress: { chainFinalityVerified: false } });
+  }
+  expect(await adapter.pendingSessionWithdrawal(wallet, signer)).toBeNull();
+  expect((await adapter.sessionWithdrawalAccounting(signer)).heldWithdrawalMicroUsdc).toBe("0");
+  await expect(other.authorizeSessionWithdrawal(interrupted.requestId, wallet)).rejects.toThrow();
+  await expect(other.reserveSessionWithdrawal(interrupted)).rejects.toThrow();
+  const oldRequest = await (await import("../gateway/withdrawal-request")).createWithdrawalRequest({ burnIntent: interrupted.burnIntent,
+    signature: await session.signTypedData((await import("../gateway/withdraw-protocol")).withdrawTypedData(interrupted.burnIntent)) }, interrupted.policy, profile);
+  await expect(other.reserveCreatorWithdrawal(oldRequest)).rejects.toThrow();
+  expect(await adapter.getSessionWithdrawal(interrupted.requestId, wallet)).toEqual(interrupted);
+  expect((await adapter.getSessionGrant(wallet))?.expiry).toBe(0);
   const newPreparation = await prepare.POST(request("/api/session/withdraw/prepare", { sessAddr: signer, grantEpoch: consent.grantEpoch, amountMicros: "800000" }));
   expect(newPreparation.status).toBe(200); const previousId = p.requestId; p = await newPreparation.json(); expect(p.requestId).not.toBe(previousId);
   // A concurrent connection cannot revive payment permission or replace the burn.
@@ -298,6 +332,8 @@ it("recovers expired owner custody through normal withdrawal handlers while pres
   expect(await sent.json()).toMatchObject({ preparation: p, progress: { status: "awaiting-transfer-evidence", retryAuthorized: false }, mint: null, completion: null });
   expect((await submit.POST(request("/api/session/withdraw/submit", body))).status).toBe(200); expect(transferCalls).toBe(1);
   expect((await cancel.POST(request("/api/session/withdraw/cancel", { requestId: p.requestId }))).status).toBe(409);
+  expect((await abort.POST(request("/api/session/withdraw/abort", { requestId: p.requestId,
+    signature: await session.signMessage({ message: abortProof.sessionWithdrawalAbortMessage(p) }) }))).status).toBe(409);
   expect((await adapter.getCreatorWithdrawal(p.requestId, signer))?.request.burnIntent).toEqual(p.burnIntent);
   const liabilities = await history.GET(new NextRequest(`https://keryx.cc/api/session/withdraw/payments?sessAddr=${signer}&grantEpoch=${consent.grantEpoch}`));
   const historyBody = await liabilities.json(); expect(historyBody).toMatchObject({ nextCursor: null, retryAuthorized: false });

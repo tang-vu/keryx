@@ -13,10 +13,20 @@ const journal = z.object({ nonce: hash, sessionId: address, requestId: z.string(
 const page = z.object({ network: z.literal(profile.networkId), sessAddr: address, retryAuthorized: z.literal(false),
   payments: z.array(z.unknown()).max(64), nextCursor: hash.nullable() }).strict();
 
-/** A lifetime signed total is not a current liability. Only an original real settled
- * journal with the complete retained nonce/economic tuple can distinguish past debit.
- * Missing old metadata, failed/unknown states and unmatched evidence remain held. */
-export async function readBrowserWithdrawalLiabilities(rows: readonly LocalSessionAuthorization[], owner: string, signer: string,
+export type BrowserSessionFailedAuthorization = LocalSessionAuthorization & {
+  original: NonNullable<LocalSessionAuthorization["original"]>;
+  requirementsDigest: string;
+  transferId: string;
+  evidenceDigest: string;
+};
+
+const sha256 = async (value: unknown) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",
+  new TextEncoder().encode(canonicalJson(value)))), byte => byte.toString(16).padStart(2, "0")).join("");
+
+/** The authenticated original journal is the server/Circle authority already used by
+ * cashout. Only exact settled debit or terminal failed evidence ends a local hold.
+ * Missing metadata, timeouts, empty searches and mismatched rows never release it. */
+export async function readBrowserSessionPaymentAccounting(rows: readonly LocalSessionAuthorization[], owner: string, signer: string,
   epoch: string, json: (path: string) => Promise<unknown>) {
   const known = new Map<string, z.infer<typeof journal>>(); let cursor: string | null = null;
   for (;;) {
@@ -33,17 +43,16 @@ export async function readBrowserWithdrawalLiabilities(rows: readonly LocalSessi
     cursor = result.nextCursor;
   }
   let held = BigInt(0);
+  const failures: BrowserSessionFailedAuthorization[] = [];
   for (const row of rows) {
     if (!/^[1-9]\d{0,15}$/.test(row.amount) || BigInt(row.amount) > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Retained exposure differs");
     const p = known.get(row.nonce), original = row.original;
-    let settled = false;
+    let ended = false;
     if (p && original && row.requirementsDigest) {
       let requirements: ReturnType<typeof parseBrowserSessionPaymentRequirements> | null = null;
       try { requirements = parseBrowserSessionPaymentRequirements(p.requirements); } catch { /* Wrong rail/domain remains held. */ }
-      const digest = requirements ? Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonicalJson(requirements)))),
-        byte => byte.toString(16).padStart(2,"0")).join("") : null;
-      settled = p.phase === "settled" && p.payment.settled && p.payment.settlementStatus === "settled" &&
-        !!p.payment.txHash && !!p.signedHeaderHash && p.payment.network === profile.networkId &&
+      const digest = requirements ? await sha256(requirements) : null;
+      const exact = !!p.payment.txHash?.trim() && !!p.signedHeaderHash && p.payment.network === profile.networkId &&
         p.payment.payer === signer && p.payment.payee === original.requirements.payTo &&
         p.payment.authorizationId === row.nonce && p.nonce === original.expectedNonce && p.grantEpoch === row.epoch &&
         p.grantEpoch === original.grantEpoch && p.requestId === original.reqId && p.sessionId === original.sessionId &&
@@ -52,8 +61,18 @@ export async function readBrowserWithdrawalLiabilities(rows: readonly LocalSessi
         original.requirements.amount === row.amount && digest === row.requirementsDigest &&
         canonicalJson(requirements) === canonicalJson(original.requirements) &&
         canonicalJson(p.paymentContext ?? null) === canonicalJson(original.paymentContext ?? null);
+      const failed = exact && p.phase === "failed" && !p.payment.settled && p.payment.settlementStatus === "failed";
+      ended = failed || (exact && p.phase === "settled" && p.payment.settled && p.payment.settlementStatus === "settled");
+      if (failed) failures.push({ ...row, original, requirementsDigest: row.requirementsDigest,
+        transferId: p.payment.txHash!, evidenceDigest: await sha256({ original, requirementsDigest: digest,
+          signedHeaderHash: p.signedHeaderHash, transferId: p.payment.txHash, status: "failed" }) });
     }
-    if (!settled) held += BigInt(row.amount);
+    if (!ended) held += BigInt(row.amount);
   }
-  return held;
+  return { held, failures };
+}
+
+export async function readBrowserWithdrawalLiabilities(rows: readonly LocalSessionAuthorization[], owner: string, signer: string,
+  epoch: string, json: (path: string) => Promise<unknown>) {
+  return (await readBrowserSessionPaymentAccounting(rows, owner, signer, epoch, json)).held;
 }

@@ -1,5 +1,6 @@
 import { config } from "../config";
 import type { ResearchMode } from "../types";
+import { a2aUsdcFromMicros } from "./amount-micros";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
   a2aResearchPackageForVersion,
@@ -47,9 +48,9 @@ export function quoteA2aResearch(
     policy: "a2a-fixed-package-v2",
     researchMode: mode,
     researchPackage: a2aResearchPackageForVersion(mode, packageVersion),
-    creatorBudgetUsdc: creatorBudgetMicros / MICROS,
-    serviceFeeUsdc: serviceFeeMicros / MICROS,
-    totalPriceUsdc: (creatorBudgetMicros + serviceFeeMicros) / MICROS,
+    creatorBudgetUsdc: a2aUsdcFromMicros(creatorBudgetMicros),
+    serviceFeeUsdc: a2aUsdcFromMicros(serviceFeeMicros),
+    totalPriceUsdc: a2aUsdcFromMicros(creatorBudgetMicros + serviceFeeMicros),
     refundable: false,
   };
 }

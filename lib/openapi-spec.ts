@@ -17,7 +17,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.26.2",
+    version: "0.26.5",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -29,7 +29,7 @@ export const openapiSpec = {
     contact: { url: "https://keryx.cc" },
     license: { name: "MIT" },
   },
-  servers: [{ url: "https://keryx.cc", description: "Production (Arc testnet)" }],
+  servers: [{ url: "https://keryx.cc", description: "Production (Arc mainnet; verify /api/health for active mode)" }],
   components: {
     securitySchemes: {
       ApiKeyAuth: {
@@ -793,7 +793,9 @@ export const openapiSpec = {
         description:
           "Drop-in OpenAI Chat Completions endpoint. Set base_url to https://keryx.cc/api/v1 and " +
           "model `keryx`. The free tier needs no key (treasury-funded, IP rate-limited); a " +
-          "`kx_live_…` Bearer key raises limits and meters usage. Keryx researches the last user " +
+          "`kx_live_…` Bearer key identifies its wallet and meters usage. All keys for a wallet share " +
+          "10 sponsored calls/minute across chat and remote MCP; direct IP and shared global limits also apply. " +
+          "New keys add no quota; unavailable durable counters refuse admission. Keryx researches the last user " +
           "message over paid sources and pays every cited creator downstream in USDC on Arc. With " +
           "`stream:true`, live reasoning streams as `reasoning_content` deltas. This path is NOT " +
           "x402 — no payment-signature required.",
@@ -821,7 +823,7 @@ export const openapiSpec = {
             content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
           },
           "429": {
-            description: "Rate limit exceeded (free tier by IP, keyed tier by key).",
+            description: "Shared sponsored allowance exceeded (anonymous IP, verified wallet, direct IP or global capacity).",
             headers: {
               "Retry-After": {
                 description: "Seconds until the rate limit window resets.",
@@ -830,6 +832,11 @@ export const openapiSpec = {
             },
           },
           "500": { description: "Treasury wallet not configured." },
+          "503": {
+            description: "Durable sponsored admission is unavailable; no research was started.",
+            headers: { "Retry-After": { description: "Seconds before retrying admission.", schema: { type: "integer" } } },
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+          },
         },
       },
     },

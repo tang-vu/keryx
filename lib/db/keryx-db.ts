@@ -376,6 +376,8 @@ export interface KeryxDB {
   getSessionWithdrawalSigningPhase(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalSigningPhase|null>;
   authorizeSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalPreparation|null>;
   cancelSessionWithdrawal(id:string,owner:string):Promise<import("../gateway/session-withdrawal-protocol").SessionWithdrawalCancellation|null>;
+  getSessionWithdrawalAbort(id:string,owner:string):Promise<import("../gateway/session-withdrawal-abort").SessionWithdrawalAbort|null>;
+  abortSessionWithdrawal(id:string,owner:string,proof:import("../gateway/session-withdrawal-abort").SessionWithdrawalAbort):Promise<import("../gateway/session-withdrawal-abort").SessionWithdrawalAbort|null>;
   admitHostedTreasuryPolicy(policy:import("../payments/hosted-treasury-policy").HostedTreasuryPolicy,role:"public"|"private"):Promise<string>;
   hostedTreasuryAccounting(signer:string,role?:"public"|"private"):Promise<import("./hosted-treasury-journal").HostedTreasuryAccounting>;
   admitHostedAuthorization(input:import("./hosted-treasury-journal").HostedAuthorizationAdmission):Promise<string>;

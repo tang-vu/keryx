@@ -1,7 +1,8 @@
 /**
  * API key mint + verify utilities.
  *
- * Keys are identity + rate-limit only — callers STILL pay via x402 on every request.
+ * Keys are identity + rate-limit only. Paid A2A calls still require x402; sponsored chat/MCP
+ * calls share the verified wallet's allowance rather than receiving new quota per key.
  * No credit ledger, no fund custody anywhere in this file.
  *
  * Format: kx_live_<96 hex chars> (total 104 chars, 384-bit entropy suffix)
