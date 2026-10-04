@@ -57,13 +57,14 @@ export class HeuristicEngine implements ReasoningEngine {
   readonly name = "heuristic";
 
   async decompose(question: string): Promise<string[]> {
-    const parts = question
-      .split(/\?|;|\band\b|\bvs\.?\b|,/i)
-      .map((p) => p.trim())
-      .filter((p) => tokenize(p).size >= 2);
-    if (parts.length > MAX_RESEARCH_TARGETS) throw new Error(`Research request exceeds ${MAX_RESEARCH_TARGETS} bounded targets; narrow the requested scope.`);
-    const claims = parts.length > 1 ? parts : [question.trim()];
-    return claims.map((c) => (c.endsWith("?") ? c : c + "?").replace(/\?+$/, "?"));
+    // Explicit question/semicolon boundaries remain independently inspectable. Commas and
+    // conjunctions are only optional refinements: prose formatting must not invent excess scope.
+    // Keep delimiters and short constraints so neither path drops any requested wording.
+    const explicit = question.split(/(?<=[?;])(?=[^?;])/u).map(part => part.trim()).filter(Boolean);
+    if (explicit.length > MAX_RESEARCH_TARGETS) throw new Error(`Research request exceeds ${MAX_RESEARCH_TARGETS} bounded targets; narrow the requested scope.`);
+    const refined = explicit.flatMap(part => part.split(/(?<=,)(?!\d)|\b(?=and\b|vs\.?\b)/i))
+      .map(part => part.trim()).filter(Boolean);
+    return refined.length > MAX_RESEARCH_TARGETS ? explicit : refined.length ? refined : [question.trim()];
   }
 
   async decide(input: DecideInput): Promise<Decision[]> {

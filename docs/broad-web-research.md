@@ -70,6 +70,26 @@ with an older installer or upgrade payment dependencies to work around it. CI pi
 Node 24.21.0 with its matching npm. Production Node 24.16 may remain in place, but
 its installer must pass the npm 11.19.0 gate before deployment.
 
+The October 4 reader follow-up uses parse5 to normalize at most 2 MiB of raw HTML
+inside the child before applying the 500 kB normalized markup limit. Scripts,
+styles, templates, comments and explicitly hidden nodes are not evidence. The
+reader prefers a unique main region, then a unique article when no main exists;
+ambiguous layouts use Readability. It preserves document order, table cell boundaries
+and preformatted text. This does not evaluate stylesheets, scripts or computed
+visibility. A successful extraction can still omit content or include publisher
+boilerplate; `truncated` reports the output ceiling, not complete semantic coverage.
+Markdown responses use the existing bounded inert-text path. DNS validation covers
+all resolved addresses before choosing one public IPv4 address when available, or
+the original IPv6 address otherwise; the request remains pinned with no new retry.
+
+Empty and partial results include suggested recovery for the actual read failure,
+abstract-only scope or truncated snapshot. A reported conflict asks for original
+passages, versions and document authority without treating the model's preference
+as resolution. Guidance is not an executed read or purchase, and pending/unknown
+payments remain attached to their original records. These additions reach the
+stored final answer after attribution and settlement; they do not change citations
+or reward allocation. See the [dated comparison](engineering/research-quality-2026-10-04.md).
+
 ## Evidence and uncertainty
 
 Admit only immutable observed text to synthesis and the existing literal quote gate.

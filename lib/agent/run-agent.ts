@@ -1,5 +1,6 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
+import { researchFollowUp } from "./research-follow-up";
 import { finalizeGroundedAnswer } from "./answer-grounding";
 import { discoverPublicReferences } from "./public-reference-evidence";
 import { discoverScholarly } from "../scholarly/discovery";
@@ -1471,6 +1472,11 @@ export async function* runAgent(
     // Never fail a run on memory save
   }
 
+  // Follow-up guidance describes observed limits after attribution and settlement. It must
+  // not change model-assigned contribution weights or confer evidence/payment authority.
+  const followUp = researchFollowUp({ vi, outcomes: publicReadOutcomes, gathered, conflicts: synthesized.conflicts ?? [],
+    paymentReviewRequired: fundingUnavailable || pendingPayments > 0 || fetchFailures > 0 });
+  if (followUp) answer += `\n\n${followUp}`;
   return finish(answer);
 
   // ── helpers ──

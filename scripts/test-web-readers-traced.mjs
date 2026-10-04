@@ -24,6 +24,20 @@ try {
   const html = `<html><head><title>Fixture</title></head><body><article><h1>Fixture</h1><p>${passage.repeat(20)}</p></article></body></html>`;
   const extractedHtml = await worker("html-reader-worker.mjs", [], JSON.stringify({ text: html, finalUrl: "https://example.com/article" }));
   assert.ok(extractedHtml.text.includes(passage.trim())); assert.equal(extractedHtml.kind, "html");
+  // Exercise normalization above the old raw-byte cap and semantic-region fidelity using
+  // only the assembled trace: the actual document must beat an unrelated article card.
+  const caveat = "Delivery can happen more than once; reconcile against the original event identifier.";
+  const semantic = `<html><head><title>Delivery guide</title><script>${"x".repeat(600000)}</script></head><body>` +
+    `<main><h1>Delivery guide</h1><p>${passage.repeat(4)}</p><p>${caveat}</p>` +
+    `<p hidden>Fabricated exactly-once guarantee.</p></main><article><p>Related card only.</p></article></body></html>`;
+  const normalized = await worker("html-reader-worker.mjs", [], JSON.stringify({ text: semantic, finalUrl: "https://example.com/guide" }));
+  assert.ok(normalized.text.includes(caveat)); assert.ok(!normalized.text.includes("Fabricated"));
+  assert.ok(!normalized.text.includes("Related card only")); assert.equal(normalized.truncated, false);
+  // With no main/article region, Readability's lightweight DOM is a required runtime asset.
+  const fallback = `<html><head><title>Fallback guide</title></head><body><div id="content">` +
+    `<h1>Fallback guide</h1>${Array.from({ length: 5 }, () => `<p>${passage.repeat(4)}</p>`).join("")}</div></body></html>`;
+  const readable = await worker("html-reader-worker.mjs", [], JSON.stringify({ text: fallback, finalUrl: "https://example.com/fallback" }));
+  assert.ok(readable.text.includes(passage.trim())); assert.equal(readable.kind, "html");
   const extractedPdf = await worker("pdf-reader-worker.mjs", ["2", "1000"], pdf("Original PDF evidence"));
   assert.equal(extractedPdf.text, "Original PDF evidence"); assert.equal(extractedPdf.pagesRead, 1);
   console.log("Assembled production trace: actual HTML and PDF extraction passed (no network or secrets).");

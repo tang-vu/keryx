@@ -127,7 +127,7 @@ export async function assertPublicUrl(raw: string): Promise<URL> {
   return (await resolvePublicUrl(raw)).url;
 }
 
-async function resolvePublicUrl(raw: string, signal?: AbortSignal): Promise<{ url: URL; addresses: string[] }> {
+async function resolvePublicUrl(raw: string, signal?: AbortSignal): Promise<{ url: URL; address: string }> {
   if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
   let url: URL;
   try {
@@ -154,7 +154,11 @@ async function resolvePublicUrl(raw: string, signal?: AbortSignal): Promise<{ ur
   if (!addresses.every(isPublicAddress)) {
     throw new UnsafeTargetError("that address is on a private network");
   }
-  return { url, addresses };
+  // Prefer IPv4 when both families are public: an IPv6 DNS answer need not mean this host has
+  // IPv6 connectivity. Validate the entire answer set first, and still pin exactly one address.
+  // IPv6-only names and public IP literals retain their original address.
+  const address = addresses.find((candidate) => isIP(candidate) === 4) ?? addresses[0]!;
+  return { url, address };
 }
 
 /**
@@ -234,9 +238,9 @@ export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): P
   try {
     let target = raw;
     for (let hop = 0; hop <= maxHops; hop++) {
-      const { url, addresses } = await resolvePublicUrl(target, ctrl.signal);
+      const { url, address } = await resolvePublicUrl(target, ctrl.signal);
       if (limits.httpsOnly && url.protocol !== "https:") throw new UnsafeTargetError("only HTTPS articles can be read");
-      const dispatcher = pinnedAgent(addresses[0]!);
+      const dispatcher = pinnedAgent(address);
       try {
         const res = await undiciFetch(url, {
           dispatcher,
@@ -279,8 +283,8 @@ export async function fetchPublicUrl(
   init: RequestInit,
   limits: PublicRequestLimits = {},
 ): Promise<Response> {
-  const { url, addresses } = await resolvePublicUrl(raw);
-  const dispatcher = pinnedAgent(addresses[0]!);
+  const { url, address } = await resolvePublicUrl(raw);
+  const dispatcher = pinnedAgent(address);
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), limits.timeoutMs ?? DEFAULTS.timeoutMs);
   const onAbort = () => ctrl.abort();

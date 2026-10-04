@@ -1,4 +1,5 @@
 import type { Decision } from "../types";
+import { publicReadRecoveryLines, type PublicReadOutcome } from "./read-recovery";
 
 export interface PublicDiscoverySummary {
   attemptedQueries?: number;
@@ -18,7 +19,6 @@ export function researchResponseLanguage(question: string): "en" | "vi" {
 }
 
 interface EmptyPublicOptions { question?: string; discovery?: PublicDiscoverySummary }
-interface ReadOutcome { name: string; code: string }
 
 function recordedText(value: string, limit: number): string {
   return value.replace(/[\r\n\u0000-\u001f]/g, " ").slice(0, limit);
@@ -44,7 +44,7 @@ function discoveryDetail(summary: PublicDiscoverySummary | undefined, vi: boolea
 
 /** Recorded codes/decisions only; never promote discovery metadata into read evidence. */
 export function emptyPublicEvidenceDetail(
-  outcomes: ReadOutcome[],
+  outcomes: PublicReadOutcome[],
   skipped: Decision[],
   options: EmptyPublicOptions = {},
 ): string {
@@ -63,15 +63,17 @@ export function emptyPublicEvidenceDetail(
       : "Try one exact DOI or versioned arXiv target and inspect the recorded SKIP/read failures. "
     : vi ? "Thu hẹp câu hỏi vào một quyết định cụ thể, thêm URL tài liệu gốc phù hợp và kiểm tra lý do SKIP/lỗi đọc đã ghi. "
       : "Narrow the question to one concrete decision, supply a relevant original source URL, and inspect the recorded SKIP/read failures. ";
+  const nextSteps = publicReadRecoveryLines(outcomes, vi);
   return discoveryDetail(options.discovery, vi) + detail + recovery + (vi
     ? "Tăng ngân sách nguồn không giải quyết được giới hạn chọn nguồn miễn phí hoặc trích xuất văn bản. Bản xem trước không phải bằng chứng đã đọc. Lượt này không chứng minh rằng không có bằng chứng phù hợp."
-    : "A larger source budget does not resolve a free-source attention gate or extraction limit. Metadata previews are not read evidence. This does not establish that no relevant evidence exists.");
+    : "A larger source budget does not resolve a free-source attention gate or extraction limit. Metadata previews are not read evidence. This does not establish that no relevant evidence exists.")
+    + (nextSteps.length ? `\n\n${nextSteps.join("\n")}` : "");
 }
 
 /** Payment states are supplied by the orchestrator; this presentation helper changes no ledger. */
 export function emptyEvidenceAnswer(input: {
   question: string;
-  outcomes: ReadOutcome[];
+  outcomes: PublicReadOutcome[];
   skipped: Decision[];
   discovery?: PublicDiscoverySummary;
   fundingUnavailable: boolean;
