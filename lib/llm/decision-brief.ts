@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { SynthInput, ProposedEvidence } from "./reasoning-engine";
 import type { ContextualQuoteOption } from "./quote-context";
 import type { evidenceContext } from "./evidence-context";
+import { isWellFormedUtf16 } from "./well-formed-utf16";
 
 type BriefSources = (ReturnType<typeof evidenceContext>[number] & {
   quoteContexts?: { start: number; end: number; text: string }[];
@@ -49,7 +50,7 @@ export interface ReviewedDecisionBrief {
 
 const record = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
 const keys = (x: Record<string, unknown>, allowed: string[]) => Object.keys(x).every(key => allowed.includes(key)) && allowed.every(key => key in x);
-const text = (x: unknown, limit: number): x is string => typeof x === "string" && x.trim().length > 0 && x.length <= limit && x.isWellFormed() && !/[\u0000-\u001f\u007f]/.test(x);
+const text = (x: unknown, limit: number): x is string => typeof x === "string" && x.trim().length > 0 && x.length <= limit && isWellFormedUtf16(x) && !/[\u0000-\u001f\u007f]/.test(x);
 const score = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x) && x >= 0 && x <= 1;
 const ids = (x: unknown, limit: number): x is string[] => Array.isArray(x) && x.length > 0 && x.length <= limit && x.every(id => text(id, 24)) && new Set(x).size === x.length;
 

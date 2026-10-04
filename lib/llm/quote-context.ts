@@ -1,5 +1,6 @@
 import type { evidenceContext } from "./evidence-context";
 import type { GatheredContent } from "./reasoning-engine";
+import { isWellFormedUtf16 } from "./well-formed-utf16";
 
 export interface ContextualQuoteOption {
   quoteId: string;
@@ -126,7 +127,7 @@ export function buildContextualQuoteOptions(sources: ReturnType<typeof evidenceC
     }
     let scanned = original.text.slice(0, scanEnd);
     if (scanEnd < original.text.length && highSurrogate(scanned.at(-1) ?? "")) scanned = scanned.slice(0, -1);
-    if (!scanned.isWellFormed()) invalid("malformed source Unicode");
+    if (!isWellFormedUtf16(scanned)) invalid("malformed source Unicode");
     return { source, original, scanned };
   });
   return bindings.flatMap(({ source, original, scanned }, sourceIndex) => {
