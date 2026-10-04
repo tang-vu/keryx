@@ -51,7 +51,7 @@ for (let repeat = 0; repeat < 3; repeat++) {
     const engine = new Experiment(variant);
     const assessment = await engine.sufficiency({question,subClaims,gathered});
     const synthesis = await engine.synthesize({question,subClaims,gathered});
-    const ledger = buildEvidenceLedger({subClaims,gathered,answer:synthesis.answer,declaredMarkers:synthesis.citedMarkers,proposedEvidence:synthesis.evidence,finalAssessment:assessment.perClaim});
+    const ledger = buildEvidenceLedger({question,subClaims,gathered,answer:synthesis.answer,declaredMarkers:synthesis.citedMarkers,proposedEvidence:synthesis.evidence,finalAssessment:assessment.perClaim});
     const row = {repeat,variant:variant?'evidence-first':'baseline',model:engine.name,
       selectedExpectedQuote: synthesis.evidence.some(item => item.claimIndex === 0 && item.quote === expectedQuote),
       originalEvidence: engine.originalEvidence,

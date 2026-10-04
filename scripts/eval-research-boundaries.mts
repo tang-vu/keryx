@@ -44,7 +44,7 @@ try {
     const input = {question:entry.question,subClaims:entry.targets,gathered:entry.gathered};
     const assessment = await engine.sufficiency(input);
     const synthesis = await engine.synthesize(input);
-    const ledger = buildEvidenceLedger({subClaims:entry.targets,gathered:entry.gathered,answer:synthesis.answer,
+    const ledger = buildEvidenceLedger({question:entry.question,subClaims:entry.targets,gathered:entry.gathered,answer:synthesis.answer,
       declaredMarkers:synthesis.citedMarkers,proposedEvidence:synthesis.evidence,finalAssessment:assessment.perClaim});
     const checks = entry.targets.map((target,index) => {
       const coverage = ledger.claimCoverage[index]?.coverage ?? 0;

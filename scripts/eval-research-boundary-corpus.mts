@@ -32,7 +32,7 @@ try {
     const subClaims = await engine.decompose(entry.question);
     const gathered = [...entry.gathered], input = { question: entry.question, subClaims, gathered };
     const assessment = await engine.sufficiency(input), synthesis = await engine.synthesize(input);
-    const ledger = buildEvidenceLedger({ subClaims, gathered, answer: synthesis.answer, declaredMarkers: synthesis.citedMarkers,
+    const ledger = buildEvidenceLedger({ question: entry.question, subClaims, gathered, answer: synthesis.answer, declaredMarkers: synthesis.citedMarkers,
       proposedEvidence: synthesis.evidence, finalAssessment: assessment.perClaim });
     results.push({ ...entry, engine: engine.name, subClaims, assessment, synthesis,
       ledger: { ...ledger, acceptedMarkers: [...ledger.acceptedMarkers] }, usage: engine.usage });
