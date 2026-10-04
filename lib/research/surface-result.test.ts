@@ -1,4 +1,4 @@
-import { buildResearchReceipt } from "../research-receipt";
+import { buildResearchReceipt, verifyResearchReceipt } from "../research-receipt";
 import { exportsFromCheckedReceipt } from "./receipt-exports";
 import { describe, expect, it } from "vitest";
 import { a2aResponseFromRun } from "../a2a/result";
@@ -20,6 +20,25 @@ export function fixture(): QueryRun {
 }
 
 describe("research surface parity", () => {
+  it("retains bounded claim policy and creator-free provenance through shared transports and portable receipts", () => {
+    const run = fixture(), policy = { id: "a".repeat(64), revision: 3, mode: "free" as const,
+      verifiedAt: "2026-10-01T00:00:00.000Z", effectiveAt: "2026-10-01T00:00:00.000Z" };
+    for (const record of [run.citations[0], run.evidence![0]]) {
+      delete record.sourceKind;
+      Object.assign(record, { sourceId: "owned", sourceClaim: { ...policy, privateNonce: "MUST_NOT_EXPORT" }, accessKind: "creator-free" });
+    }
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run),
+      a2aResponseFromRun(run, quoteA2aResearch(0.03, "deep"))]) {
+      expect(result.citations[0]).toMatchObject({ sourceClaim: policy, accessKind: "creator-free" });
+      expect(result.evidence[0]).toMatchObject({ sourceClaim: policy, accessKind: "creator-free", qualifiesForReward: false });
+      expect(JSON.stringify(result)).not.toContain("MUST_NOT_EXPORT");
+    }
+    const receipt = buildResearchReceipt(run, []);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.citations[0]).toMatchObject({ sourceClaim: policy, accessKind: "creator-free" });
+    expect(receipt.payload.claims[0].evidence[0]).toMatchObject({ sourceClaim: policy, accessKind: "creator-free" });
+    expect(JSON.stringify(receipt)).not.toContain("MUST_NOT_EXPORT");
+  });
   it("does not obstruct saved-run recovery or fabricate a missing claim ledger", () => {
     const run = fixture();
     delete (run as Partial<QueryRun>).subClaims;

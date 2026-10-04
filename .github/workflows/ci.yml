@@ -105,6 +105,9 @@ jobs:
       - name: Scholarly creator rights (hermetic wallet and HTTP, no settlement)
         run: npm run test:browser-scholarly-rights
 
+      - name: Public source claims (both profiles, mobile/desktop, hermetic wallet and HTTP)
+        run: npm run test:browser-public-source-claim
+
       - name: Browser checkout UI (hermetic, no settlement)
         run: npm run test:browser-checkout
 

@@ -7,6 +7,13 @@ Arc mainnet; task preparation supports mainnet and retained testnet originals.
 GitHub `v0.26.8` published desktop **0.4.3** artifacts from `1297d43` on October 4,
 2026. See [current deployment and distribution evidence](mainnet-status.md).
 
+Desktop **0.4.4** is the source candidate for [public source claims](public-source-claims.md).
+Its receipt reader and exports preserve the captured claim policy and creator-free
+delivery status. Claim verification, linking and earnings management remain in the
+hosted wallet flow; the desktop does not acquire signing or publisher authority.
+Exact-source packaged and fresh standard-user installer acceptance, downloadable
+assets and production readback remain release gates.
+
 The Windows desktop uses a Tauri 2/WebView2 shell under
 [D-260](../DECISIONS.md). The shell bundles a pinned Node runtime and a bounded
 stdio helper using the existing TypeScript WorkspaceStore for inspection, private

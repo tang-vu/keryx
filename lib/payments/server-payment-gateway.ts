@@ -1,5 +1,7 @@
 import { config } from "../config";
-import type { ArticleOfferRef, Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
+import type { ArticleOfferRef, Author, PaymentRecord, Source, SourceItem, SourceItemIdentity, SourceClaimReceipt } from "../types";
+import { sourceClaimPath } from "../sources/source-claim-request";
+import { assertCreatorPaymentClaim } from "./source-claim-payment";
 import { matchesSourceItemIdentity, sourceItemIdentity } from "../sources/source-item-asset";
 import { articlePaidPath } from "../offers/resolve-article-offer";
 import { sourceFetchPayTo, sourceFetchTerms } from "../registry/source-fetch-payto";
@@ -8,7 +10,7 @@ import { PaymentPendingError, PaymentSettledError } from "./payment-state";
 import { payWithServerSigner, type ServerX402Attempt, type BatchPayloadSigner, type ServerX402Submission } from "./server-x402-client";
 import type { privateCreatorJournal } from "./private-creator-journal";
 
-export interface PaymentJournalContext { queryId: string; kind: "fetch" | "citation"; sourceId: string; itemId: string | null }
+export interface PaymentJournalContext { queryId: string; kind: "fetch" | "citation"; sourceId: string; itemId: string | null; sourceClaim?: SourceClaimReceipt }
 
 /** Shared creator payment operations, with no key loading, wallet creation or automatic funding. */
 export abstract class ServerPaymentGateway implements PaymentGateway {
@@ -27,23 +29,27 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
     queryId,
     priceUsdc = source.fetchPrice,
     offer,
+    sourceClaim,
   }: {
     source: Source;
     item?: SourceItem;
     queryId: string;
     priceUsdc?: number;
     offer?: ArticleOfferRef;
+    sourceClaim?: SourceClaimReceipt;
   }): Promise<FetchResult> {
-    const journal = this.paymentJournal?.({ queryId, kind: "fetch", sourceId: source.id, itemId: item?.id ?? null });
-    const url = item
-      ? `${config.baseUrl}${articlePaidPath({
+    const journal = this.paymentJournal?.({ queryId, kind: "fetch", sourceId: source.id, itemId: item?.id ?? null, sourceClaim });
+    await assertCreatorPaymentClaim(source, sourceClaim, "fetch");
+    const path = item
+      ? articlePaidPath({
           sourceId: source.id,
           itemId: item.id,
           contentVersion: sourceItemIdentity(item).contentVersion,
           offerId: offer?.id,
           listPriceUsdc: offer?.listPriceUsdc,
-        })}`
-      : `${config.baseUrl}/api/source/${source.id}`;
+        })
+      : `/api/source/${source.id}`;
+    const url = `${config.baseUrl}${sourceClaimPath(path, sourceClaim)}`;
     const itemIdentity = item ? sourceItemIdentity(item) : undefined;
     const fetchPayee = await sourceFetchPayTo(source);
     const observed = await payWithServerSigner<{
@@ -57,7 +63,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
       expectedPayee: fetchPayee,
       expectedAmount: priceUsdc,
       payer: this.spend.address,
-      signer: this.signerForPayment({ queryId, kind: "fetch", sourceId: source.id, itemId: item?.id ?? null }),
+      signer: this.signerForPayment({ queryId, kind: "fetch", sourceId: source.id, itemId: item?.id ?? null, sourceClaim }),
       beforeSubmit: journal?.beforeSubmit,
       beforeSignedSubmit: journal?.beforeSignedSubmit,
     });
@@ -69,6 +75,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
       sourceId: source.id,
       sourceName: source.name,
       ...(itemIdentity ?? {}),
+      sourceClaim,
       offerId: offer?.id,
       listPriceUsdc: offer?.listPriceUsdc,
       payer: this.spend.address,
@@ -95,6 +102,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
     weight,
     queryId,
     rationale,
+    sourceClaim,
   }: {
     source: Source;
     author: Author;
@@ -103,22 +111,25 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
     weight: number;
     queryId: string;
     rationale: string;
+    sourceClaim?: SourceClaimReceipt;
   }): Promise<PaymentRecord> {
     if (config.profile.name === "arc") {
       const terms = await sourceFetchTerms(source, { refresh: true });
       if (!terms.citationWallets?.has(author.walletAddress.toLowerCase())) throw new Error("Mainnet citation recipient has no fresh source authority");
     }
-    const journal = this.paymentJournal?.({ queryId, kind: "citation", sourceId: source.id, itemId: item?.itemId ?? null });
-    const url = `${config.baseUrl}/api/cite/${source.id}?author=${encodeURIComponent(
+    const journal = this.paymentJournal?.({ queryId, kind: "citation", sourceId: source.id, itemId: item?.itemId ?? null, sourceClaim });
+    await assertCreatorPaymentClaim(source, sourceClaim, "citation");
+    const path = `/api/cite/${source.id}?author=${encodeURIComponent(
       author.walletAddress,
     )}&amount=${amount.toFixed(6)}`;
+    const url = `${config.baseUrl}${sourceClaimPath(path, sourceClaim)}`;
     const observed = await payWithServerSigner<{ ok?: boolean }>({
       url,
       method: "POST",
       expectedPayee: author.walletAddress,
       expectedAmount: amount,
       payer: this.spend.address,
-      signer: this.signerForPayment({ queryId, kind: "citation", sourceId: source.id, itemId: item?.itemId ?? null }),
+      signer: this.signerForPayment({ queryId, kind: "citation", sourceId: source.id, itemId: item?.itemId ?? null, sourceClaim }),
       beforeSubmit: journal?.beforeSubmit,
       beforeSignedSubmit: journal?.beforeSignedSubmit,
     });
@@ -130,6 +141,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
       sourceId: source.id,
       sourceName: source.name,
       ...item,
+      sourceClaim,
       payer: this.spend.address,
       payee: author.walletAddress,
       weight,
@@ -181,6 +193,7 @@ function paymentFromAttempt(
     itemUrl: context.itemUrl,
     contentVersion: context.contentVersion,
     itemPublishedAt: context.itemPublishedAt,
+    sourceClaim: context.sourceClaim,
     offerId: context.offerId,
     listPriceUsdc: context.listPriceUsdc,
     payer: context.payer,

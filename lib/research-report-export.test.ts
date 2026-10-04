@@ -11,6 +11,15 @@ const run = {
 const payment = (settled: boolean, settlementStatus?: PaymentRecord["settlementStatus"]) => ({ sourceName: "Writer", amountUsdc: 0.001, kind: "citation", settled, settlementStatus } as PaymentRecord);
 
 describe("research report export", () => {
+  it("shows captured free access and policy without treating them as settlement or leaking internal fields", () => {
+    const snapshot = structuredClone(run);
+    Object.assign(snapshot.citations[0], { accessKind: "creator-free", sourceClaim: { id: "a".repeat(64), revision: 3,
+      mode: "free", effectiveAt: "2026-10-05T00:00:00.000Z", verifiedAt: "2026-10-05T00:00:00.000Z", privateNonce: "MUST_NOT_EXPORT" } });
+    const text = researchReportMarkdown(snapshot, null, []);
+    expect(text).toContain("creator-authorized free read; no access-settlement receipt");
+    expect(text).toContain('"revision":3'); expect(text).toContain("historical context, not current payout authority");
+    expect(text).not.toContain("MUST_NOT_EXPORT");
+  });
   it("preserves citations, observed provenance and unsupported evidence without unsafe reference URLs", () => {
     const text = researchReportMarkdown(run, { engine: "fixture", mode: "offline" }, []);
     expect(text).toContain("Finding [S1]");

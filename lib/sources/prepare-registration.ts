@@ -27,6 +27,8 @@ import {
 } from "@/lib/demand-intent";
 import type { SourceItem } from "@/lib/types";
 import { storeSourceItems } from "@/lib/sources/store-source-item";
+import { canonicalSourceUrl } from "./public-source-claim";
+import { reserveSourceClaimRegistration } from "./public-source-claim-service";
 
 type KeryxDB = Awaited<ReturnType<typeof getDb>>;
 
@@ -74,6 +76,12 @@ export async function prepareSourceRegistration(
   // Parse and ingest feed / manual fields.
   let input: CreateSourceInput;
   let feedItems: Omit<SourceItem, "id" | "sourceId">[] = [];
+  const sourceClaimId = typeof body.sourceClaimId === "string" ? body.sourceClaimId.trim() : "";
+  if (sourceClaimId && !/^[a-f0-9]{64}$/.test(sourceClaimId)) return { status: 400, payload: { error: "Invalid source claim identity" } };
+  const explicitPrice = body.fetchPrice === undefined || body.fetchPrice === null || body.fetchPrice === ""
+    ? undefined : Number(body.fetchPrice);
+  if (explicitPrice !== undefined && (!Number.isFinite(explicitPrice) || explicitPrice < 0 || explicitPrice > 1_000_000))
+    return { status: 400, payload: { error: "Source price must be a finite nonnegative USDC amount" } };
 
   try {
     if (typeof body.rssUrl === "string" && body.rssUrl.trim()) {
@@ -85,7 +93,7 @@ export async function prepareSourceRegistration(
         description: (body.description as string) || feed.feedDescription || feed.feedTitle,
         rssUrl: body.rssUrl.trim(),
         tags: (body.tags as string[]) ?? [],
-        fetchPrice: body.fetchPrice ? Number(body.fetchPrice) : undefined,
+        fetchPrice: explicitPrice,
         walletAddress: sessionWallet,
         authors: (body.authors as CreateSourceInput["authors"]) || undefined,
         items: feed.items,
@@ -96,7 +104,7 @@ export async function prepareSourceRegistration(
         url: (body.url as string) ?? "",
         description: body.description,
         tags: (body.tags as string[]) ?? [],
-        fetchPrice: body.fetchPrice ? Number(body.fetchPrice) : undefined,
+        fetchPrice: explicitPrice,
         walletAddress: sessionWallet,
         authors: (body.authors as CreateSourceInput["authors"]) || undefined,
         items: ((body.items as CreateSourceInput["items"]) || []).map(({ evidenceProvenance, ...item }) => {
@@ -132,12 +140,23 @@ export async function prepareSourceRegistration(
 
   // ── On-chain path (registry configured) ──────────────────────────────────
   if (config.registryAddress) {
-    const canonicalUrl = input.url || input.rssUrl || "";
+    let canonicalUrl = input.url || input.rssUrl || "";
     if (!canonicalUrl) {
       return {
         status: 400,
         payload: { error: "url or rssUrl required when registry is configured" },
       };
+    }
+    if (sourceClaimId) {
+      try {
+        const claim = await db.getSourceClaim?.(sourceClaimId);
+        if (!claim || claim.ownerWallet !== sessionWallet.toLowerCase()) throw new Error("Verified claim belongs to another wallet");
+        canonicalUrl = canonicalSourceUrl(canonicalUrl);
+        if (canonicalUrl !== claim.canonicalUrl || (claim.rssUrl && input.rssUrl !== claim.rssUrl) ||
+            (input.rssUrl && new URL(input.rssUrl).origin !== new URL(claim.canonicalUrl).origin && input.rssUrl !== claim.rssUrl))
+          throw new Error("Registration must retain the verified source URL and feed");
+        input.url = canonicalUrl;
+      } catch { return { status: 409, payload: { error: "Registration does not match the verified public source claim" } }; }
     }
 
     // urlHash is passed to register(); contract derives id = keccak256(abi.encode(creator, urlHash)).
@@ -150,6 +169,11 @@ export async function prepareSourceRegistration(
     // before the tx: it decides which row the event lands on, and therefore which id owns the feed.
     const claimed = await claimOnchainIdForExistingSource(db, sessionWallet, canonicalUrl, sid);
     const rowId = claimed?.id ?? sid;
+    if (sourceClaimId) {
+      try { await reserveSourceClaimRegistration(db, { claimId: sourceClaimId, wallet: sessionWallet,
+        canonicalUrl, sourceId: rowId, onchainId: sid }); }
+      catch (error) { return { status: 409, payload: { error: error instanceof Error ? error.message : "Source claim could not be reserved" } }; }
+    }
 
     // Ingest RSS items to DB now — keyed by the row the indexer will write, so the agent cache
     // is ready before the indexer processes the SourceRegistered event. Item ids are minted fresh
@@ -203,12 +227,13 @@ export async function prepareSourceRegistration(
         // The row's id, which is the hash for a first listing and the original slug for a source
         // that predates the registry. This is what /api/sources/verify expects back.
         sourceId: rowId,
+        ...(sourceClaimId ? { sourceClaimId } : {}),
         registryAddress: config.registryAddress,
         notify: await applyNotify(rowId),
         gapIntent: await queueGapOffer(db, gapOffer, rowId, sessionWallet),
         // The indexer writes a NEW row UNVERIFIED — earning needs feed-ownership proof first. A row
         // claimed from before the registry already gave that proof, and must not be asked again.
-        verification: claimed?.verified
+        verification: sourceClaimId || claimed?.verified
           ? null
           : verificationInfo(sessionWallet, input.rssUrl || canonicalUrl),
         registerParams: {
@@ -227,6 +252,7 @@ export async function prepareSourceRegistration(
   }
 
   // ── Offline / DB-direct path (registry not configured) ───────────────────
+  if (sourceClaimId) return { status: 409, payload: { error: "Claimed creator sources require an owner-signed registry listing" } };
   // Maintains full backward compatibility: seed scripts, offline dev, and the
   // CLI `npm run ask` all continue to work without a deployed contract.
   //

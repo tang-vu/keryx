@@ -107,10 +107,12 @@ export function buildEvidenceLedger(input: {
       contentVersion: source.contentVersion,
       itemPublishedAt: source.itemPublishedAt,
       contentReceipt: source.contentReceipt,
+      sourceClaim: source.sourceClaim,
+      accessKind: source.accessKind,
       quote,
       support,
       qualifiesForAnswer,
-      qualifiesForReward: qualifiesForAnswer && source.sourceKind !== "public-reference",
+      qualifiesForReward: qualifiesForAnswer && source.sourceKind !== "public-reference" && source.creatorRewardEligible !== false,
     });
   }
 

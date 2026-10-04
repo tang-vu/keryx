@@ -1,4 +1,5 @@
 import type { PublicReference } from "../public-references/catalog";
+import type { SourceClaim, SourceClaimChallenge, IssueSourceClaimChallenge, VerifySourceClaim, BindSourceClaim, UpdateSourceClaimPolicy } from "../sources/public-source-claim";
 /**
  * KeryxDB — persistence interface shared by the SQLite (dev) and Supabase (prod) adapters.
  * All amounts are USDC numbers. Metrics are computed only from real rows.
@@ -326,6 +327,16 @@ export interface KeryxDB {
   // ── sync state (registry indexer checkpoint) ──
   /** Get a named sync-state value (e.g. "lastSyncedBlock"). Returns null if not set. */
   getSyncState(key: string): Promise<string | null>;
+  /** Source claims are atomic SQLite-only state; unsupported adapters expose no mutation fallback. */
+  issueSourceClaimChallenge?(input: IssueSourceClaimChallenge): Promise<SourceClaimChallenge>;
+  getSourceClaimChallenge?(id: string): Promise<SourceClaimChallenge | null>;
+  reserveSourceClaimVerification?(challengeId: string, wallet: string, now?: number): Promise<SourceClaimChallenge>;
+  verifySourceClaim?(input: VerifySourceClaim): Promise<SourceClaim>;
+  getSourceClaim?(id: string): Promise<SourceClaim | null>;
+  getSourceClaimForSource?(sourceId: string): Promise<SourceClaim | null>;
+  listSourceClaims?(wallet?: string): Promise<SourceClaim[]>;
+  bindSourceClaim?(input: BindSourceClaim): Promise<SourceClaim>;
+  updateSourceClaimPolicy?(input: UpdateSourceClaimPolicy): Promise<SourceClaim>;
   /** SQLite-only scheduled maintenance. Other adapters fail closed until equivalent atomic claims exist. */
   claimSourceUpkeep?(now: number): Promise<SourceUpkeepClaim | null>;
   finishSourceUpkeep?(claim: SourceUpkeepClaim, summary: SourceUpkeepSummary, now: number): Promise<void>;

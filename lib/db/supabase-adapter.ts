@@ -282,6 +282,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
+    if (s.sourceClaimId) throw new Error("Managed source claims require accepted atomic SQLite claim storage; Supabase imports are unsupported");
     if (s.scholarlyEnrolled) throw new Error("Scholarly enrolled sources cannot migrate to the unsupported Supabase backend");
     if (s.id.startsWith("public:")) throw new Error("Reserved public-reference source ID");
     // active defaults to true for offline/DB-direct rows that predate the flag.

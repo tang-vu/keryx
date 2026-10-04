@@ -22,6 +22,7 @@ import type {
   Source,
   SourceItem,
   SourceItemIdentity,
+  SourceClaimReceipt,
 } from "../types";
 import {
   matchesSourceItemIdentity,
@@ -29,6 +30,8 @@ import {
 } from "../sources/source-item-asset";
 import { sourceFetchPayTo } from "../registry/source-fetch-payto";
 import { articlePaidPath } from "../offers/resolve-article-offer";
+import { sourceClaimPath } from "../sources/source-claim-request";
+import { assertCreatorPaymentClaim } from "./source-claim-payment";
 import {
   makePayment,
   type FetchResult,
@@ -60,6 +63,7 @@ export interface SignRequest {
 export interface BrowserPaymentContext {
   item?: SourceItemIdentity;
   offer?: ArticleOfferRef;
+  sourceClaim?: SourceClaimReceipt;
 }
 
 interface ChallengeBody {
@@ -133,22 +137,25 @@ export class BrowserCoSignGateway implements PaymentGateway {
     queryId,
     priceUsdc = source.fetchPrice,
     offer,
+    sourceClaim,
   }: {
     source: Source;
     item?: SourceItem;
     queryId: string;
     priceUsdc?: number;
     offer?: ArticleOfferRef;
+    sourceClaim?: SourceClaimReceipt;
   }): Promise<FetchResult> {
-    const url = item
-      ? `${config.baseUrl}${articlePaidPath({
+    const path = item
+      ? articlePaidPath({
           sourceId: source.id,
           itemId: item.id,
           contentVersion: sourceItemIdentity(item).contentVersion,
           offerId: offer?.id,
           listPriceUsdc: offer?.listPriceUsdc,
-        })}`
-      : `${config.baseUrl}/api/source/${source.id}`;
+        })
+      : `/api/source/${source.id}`;
+    const url = `${config.baseUrl}${sourceClaimPath(path, sourceClaim)}`;
     const identity = item ? sourceItemIdentity(item) : undefined;
     const fetchPayee = await sourceFetchPayTo(source);
     const { content, payment } = await this.buyWithCoSign(
@@ -162,7 +169,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
       undefined,
       identity,
       fetchPayee,
-      offer
+      offer,
+      sourceClaim
     );
     return { content, payment };
   }
@@ -175,6 +183,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     weight,
     queryId,
     rationale,
+    sourceClaim,
   }: {
     source: Source;
     author: Author;
@@ -183,12 +192,14 @@ export class BrowserCoSignGateway implements PaymentGateway {
     weight: number;
     queryId: string;
     rationale: string;
+    sourceClaim?: SourceClaimReceipt;
   }): Promise<PaymentRecord> {
-    const url = `${config.baseUrl}/api/cite/${
+    const path = `/api/cite/${
       source.id
     }?author=${encodeURIComponent(
       author.walletAddress
     )}&amount=${amount.toFixed(6)}`;
+    const url = `${config.baseUrl}${sourceClaimPath(path, sourceClaim)}`;
     const { payment } = await this.buyWithCoSign(
       url,
       source,
@@ -198,7 +209,10 @@ export class BrowserCoSignGateway implements PaymentGateway {
       weight,
       rationale,
       author,
-      item
+      item,
+      undefined,
+      undefined,
+      sourceClaim
     );
     return payment;
   }
@@ -216,7 +230,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
     author?: Author,
     item?: SourceItemIdentity,
     payeeOverride?: string,
-    offer?: ArticleOfferRef
+    offer?: ArticleOfferRef,
+    sourceClaim?: SourceClaimReceipt
   ): Promise<{ content: string; payment: PaymentRecord }> {
     // Guard: abort if client disconnected or grant revoked.
     if (this.abortSignal?.aborted) {
@@ -230,6 +245,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     // Step 1: hit the URL without a payment header to obtain the 402 challenge.
     // The challenge MUST be requested with the same method the paid retry will use:
     // /api/source is GET, but /api/cite is POST-only (a GET there returns 405, not 402).
+    await assertCreatorPaymentClaim(source, sourceClaim, kind);
     const reqId = crypto.randomUUID();
     const method = kind === "fetch" ? "GET" : "POST";
     const requirements = await this.fetchRequirements(url, method);
@@ -253,13 +269,14 @@ export class BrowserCoSignGateway implements PaymentGateway {
       payee,
       amountMicroUsdc: Number(requirements.amount),
       requirements,
-      ...(config.profile.name === "arc" && kind === "fetch" ? { paymentContext: { item, offer } } : {}),
+      ...(config.profile.name === "arc" || sourceClaim ? { paymentContext: kind === "fetch" ? { item, offer, sourceClaim } : sourceClaim ? { sourceClaim } : undefined } : {}),
       payment: {
         kind,
         queryId,
         sourceId: source.id,
         sourceName: source.name,
         ...item,
+        sourceClaim,
         offerId: offer?.id,
         listPriceUsdc: offer?.listPriceUsdc,
         payer: this.sessAddr,
@@ -340,7 +357,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
         requirements,
         kind,
         source.id,
-        kind === "fetch" ? { item, offer } : undefined,
+        kind === "fetch" ? { item, offer, sourceClaim } : sourceClaim ? { sourceClaim } : undefined,
         journal.nonce
       );
       signed = parseAndValidateSignedHeader(
@@ -383,6 +400,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
       sourceId: source.id,
       sourceName: source.name,
       ...item,
+      sourceClaim,
       offerId: offer?.id,
       listPriceUsdc: offer?.listPriceUsdc,
       payer,
@@ -414,6 +432,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
     } catch {
       // A storage failure leaves grant authority unknown. Fail closed and retain capacity.
     }
+    try { await assertCreatorPaymentClaim(source, sourceClaim, kind); }
+    catch { grantCurrent = false; }
     if (!grantCurrent || this.abortSignal?.aborted) {
       throw new PaymentPendingError(
         "signed authorization withheld before submission; external use remains uncertain",

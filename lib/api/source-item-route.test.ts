@@ -68,6 +68,18 @@ describe("paid article route", () => {
     expect(mocks.settleThenServe).not.toHaveBeenCalled();
   });
 
+  it("delivers an exact zero-price article without an x402 challenge, payment or paid cache", async () => {
+    db.getSource.mockResolvedValue({ ...source, fetchPrice: 0 });
+    const identity = sourceItemIdentity(item);
+    const response = await GET(new NextRequest(`https://keryx.test/api/source/source-1/item/article-1?version=${encodeURIComponent(identity.contentVersion)}`),
+      { params: Promise.resolve({ id: source.id, itemId: item.id }) });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ content: item.content, access: "creator-free", pricing: { priceUsdc: 0, listPriceUsdc: 0 },
+      item: { contentVersion: identity.contentVersion, accessKind: "creator-free" } });
+    expect(mocks.settleThenServe).not.toHaveBeenCalled();
+    expect(db.setCached).not.toHaveBeenCalled();
+  });
+
   it("binds the challenge and paid response to one exact article version", async () => {
     const identity = sourceItemIdentity(item);
     const response = await GET(

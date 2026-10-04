@@ -70,6 +70,7 @@ export interface RegisterPrefill {
   fetchPrice?: number;
   gapId?: string;
   matchedItemLink?: string;
+  sourceClaimId?: string;
 }
 
 export function RegisterForm({
@@ -88,7 +89,7 @@ export function RegisterForm({
   const [url, setUrl] = useState(prefill?.url ?? "");
   const [description, setDescription] = useState(prefill?.description ?? "");
   const [fetchPrice, setFetchPrice] = useState(
-    prefill?.fetchPrice ? String(prefill.fetchPrice) : "0.016",
+    prefill?.fetchPrice !== undefined ? String(prefill.fetchPrice) : "0.016",
   );
   const [notifyUrl, setNotifyUrl] = useState("");
   // A prefill without a feed can only go through the manual fields — open them.
@@ -140,14 +141,14 @@ export function RegisterForm({
         }
         target.eventConfirmed = true;
         setPhase("indexing");
-        setStatusMessage("Registration confirmed on-chain. Indexing is not yet confirmed; feed ownership is still required before earning.");
+        setStatusMessage(prefill?.sourceClaimId ? "Registration confirmed on-chain. Indexing is not yet confirmed; claim policy activation is still required before earning." : "Registration confirmed on-chain. Indexing is not yet confirmed; feed ownership is still required before earning.");
       }
       // One exact owner-only read per check; never treat elapsed time as indexing evidence.
       const res = await fetch(`/api/creator/${encodeURIComponent(target.sourceId)}/listing`, { signal: AbortSignal.timeout(10_000) });
       const data: unknown = res.ok ? await res.json() : null;
       if (!current()) return;
       if (confirmsIndex(data, target)) {
-        setPhase("indexed"); setStatusMessage("Registration confirmed and indexed. Verify feed ownership before this source can earn.");
+        setPhase("indexed"); setStatusMessage(prefill?.sourceClaimId ? "Registration confirmed and indexed. Return to your source claim to review and explicitly activate its policy." : "Registration confirmed and indexed. Verify feed ownership before this source can earn.");
         onCreated?.();
       } else {
         setPhase("indexing"); setStatusMessage("Registration confirmed on-chain. Indexing is not yet confirmed. Check again later; do not resubmit this registration.");
@@ -166,7 +167,13 @@ export function RegisterForm({
 
   const submit = async () => {
     if (busy.current || pending.current) return;
+    const requestedPrice = Number(fetchPrice);
+    if (!fetchPrice.trim() || !Number.isFinite(requestedPrice) || requestedPrice < 0 || !Number.isSafeInteger(Math.round(requestedPrice * 1_000_000)) || Math.round(requestedPrice * 1_000_000) / 1_000_000 !== requestedPrice) {
+      toast.error("Use an exact, nonnegative USDC read price with at most six decimal places.");
+      return;
+    }
     const baseBody = {
+      ...(prefill?.sourceClaimId ? { sourceClaimId: prefill.sourceClaimId } : {}),
       ...(prefillWalletAddress ? { walletAddress: prefillWalletAddress } : {}),
       ...(notifyUrl.trim() ? { notifyUrl: notifyUrl.trim() } : {}),
       ...(prefill?.gapId && prefill.matchedItemLink
@@ -181,13 +188,13 @@ export function RegisterForm({
     // silently ignored the slider. The canonical url binds the on-chain source id; a feed carries
     // its own, a manual source has to be told.
     const body = rssUrl.trim()
-      ? { ...baseBody, rssUrl: rssUrl.trim(), fetchPrice: parseFloat(fetchPrice) || undefined }
+      ? { ...baseBody, rssUrl: rssUrl.trim(), ...(prefill?.sourceClaimId && url.trim() ? { url: url.trim() } : {}), fetchPrice: requestedPrice }
       : {
           ...baseBody,
           name: name.trim(),
           url: url.trim(),
           description: description.trim(),
-          fetchPrice: parseFloat(fetchPrice) || undefined,
+          fetchPrice: requestedPrice,
         };
 
     if (!("rssUrl" in body)) {
@@ -317,6 +324,7 @@ export function RegisterForm({
     return (
       <SuccessCard
         source={created}
+        sourceClaimId={prefill?.sourceClaimId}
         verification={verification}
         notify={notify}
         gapIntent={gapIntent}
@@ -363,12 +371,13 @@ export function RegisterForm({
           <Input
             id="rss"
             value={rssUrl}
+            readOnly={!!prefill?.sourceClaimId}
             onChange={(e) => setRssUrl(e.target.value)}
             placeholder="https://yourblog.com/feed.xml"
             className="bg-paper-2 font-mono text-sm"
           />
           <p className="text-xs text-ink-2">
-            Sign with your wallet, then prove feed ownership before this source can earn. A paid read and a cited answer have separate rewards.
+            {prefill?.sourceClaimId ? "This feed is bound to your verified source claim. Registration does not activate its earning policy." : "Sign with your wallet, then prove feed ownership before this source can earn. A paid read and a cited answer have separate rewards."}
           </p>
         </div>
 
@@ -407,6 +416,7 @@ export function RegisterForm({
               <Input
                 id="url"
                 value={url}
+                readOnly={!!prefill?.sourceClaimId}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://yourblog.com"
                 className="bg-card font-mono text-sm"
@@ -447,7 +457,10 @@ export function RegisterForm({
               ${fmtUsdc(price)}
             </span>
           </div>
-          <input
+          {prefill?.sourceClaimId ? <>
+            <Input id="price" type="number" min="0" step="0.000001" value={fetchPrice} onChange={event => setFetchPrice(event.target.value)} className="bg-paper-2" />
+            <p className="text-xs text-ink-2">Zero preserves free reads for free or citation-only mode. A positive toll is required for paid mode. This registration stays off the claim&apos;s earning path until you return and explicitly activate its policy.</p>
+          </> : <><input
             id="price"
             type="range"
             min={0.005}
@@ -461,6 +474,7 @@ export function RegisterForm({
             <span>$0.005</span>
             <span>$0.040</span>
           </div>
+          </>}
         </div>
 
         <div className="space-y-2">
@@ -504,6 +518,7 @@ export function RegisterForm({
 
 function SuccessCard({
   source,
+  sourceClaimId,
   verification,
   notify,
   gapIntent,
@@ -513,6 +528,7 @@ function SuccessCard({
   onAgain,
 }: {
   source: CreatedSource;
+  sourceClaimId?: string;
   verification: Verification | null;
   notify: { url: string; secret: string } | null;
   gapIntent: GapIntentReceipt | null;
@@ -536,12 +552,13 @@ function SuccessCard({
       </div>
       <div className="space-y-4 p-6">
         {statusMessage && <p role="status" className="text-sm text-ink-2">{statusMessage}</p>}
+        {sourceClaimId && <p className="text-sm">This listing is reserved for your verified public-source claim. Earnings remain disabled until its policy is explicitly activated. <a className="underline" href={`/claim-source?claimId=${encodeURIComponent(sourceClaimId)}`}>Return to source claim</a> after indexing.</p>}
         {pendingTxHash && (phase === "unknown" || phase === "indexing") && (
           <button type="button" disabled={checking} onClick={onCheck} className="text-sm text-seal underline disabled:opacity-60">
             {checking ? "Checking status..." : "Check registration status"}
           </button>
         )}
-        {needsVerify && (
+        {needsVerify && !sourceClaimId && (
           verification.canVerify ? <FeedVerificationPanel key={source.id} source={source} onVerified={onVerified} enabled={phase === "offline" || phase === "indexed"} /> : <p className="text-sm">{verification.instructions}</p>
         )}
         {notify && <NotifySecretPanel notify={notify} />}
@@ -577,14 +594,14 @@ function SuccessCard({
             View on ArcScan
           </a>
         )}
-        <button
+        {!sourceClaimId && <button
           type="button"
           onClick={onAgain}
           disabled={checking || phase === "signing" || phase === "mining" || phase === "unknown" || phase === "indexing"}
           className="w-full rounded-md border border-line px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-paper-2"
         >
           Register another source
-        </button>
+        </button>}
       </div>
     </div>
   );

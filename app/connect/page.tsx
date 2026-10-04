@@ -27,7 +27,7 @@ import {
 } from "@/components/keryx/connect-steps";
 import { useArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
-import { registrationDraft, registrationTarget, safeRegistrationReturn, registrationOwnerMatches } from "@/lib/registration-return";
+import { sourceReturnWithOwner, safeRegistrationReturn, registrationOwnerMatches } from "@/lib/registration-return";
 import { AccountSessions } from "@/components/keryx/account-sessions";
 
 export default function ConnectPage() {
@@ -40,10 +40,8 @@ export default function ConnectPage() {
     const timer = window.setTimeout(() => {
       const target = safeRegistrationReturn(new URLSearchParams(window.location.search).get("returnTo"));
       if (!target) { setReturnTo(null); return; }
-      const draft = registrationDraft(new URL(target, window.location.origin).searchParams);
-      // Bind once to the wallet that starts this flow, retaining it across reloads and switches.
-      if (address && !draft.owner) draft.owner = address.toLowerCase();
-      const bound = registrationTarget(draft);
+      // Bind once to the initiating wallet, retaining it across reloads and switches.
+      const bound = sourceReturnWithOwner(target, address);
       const params = new URLSearchParams({ returnTo: bound });
       window.history.replaceState(window.history.state, "", `/connect?${params}`);
       setReturnTo(bound);

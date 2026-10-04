@@ -18,6 +18,11 @@ import { storagePaymentProfile, type StorageIdentity } from "./storage-identity"
 import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
+import { issueSqliteSourceClaimChallenge, getSqliteSourceClaimChallenge, reserveSqliteSourceClaimVerification,
+  verifySqliteSourceClaim, getSqliteSourceClaim, getSqliteSourceClaimForSource, listSqliteSourceClaims,
+  bindSqliteSourceClaim, updateSqliteSourceClaimPolicy, getRetainedSourceClaimMarker } from "./public-source-claims";
+import { canonicalSourceUrl, type IssueSourceClaimChallenge, type VerifySourceClaim,
+  type BindSourceClaim, type UpdateSourceClaimPolicy } from "../sources/public-source-claim";
 /**
  * SQLite adapter using Node's built-in `node:sqlite` (no native compile).
  * The offline-dev datastore; the deployed app uses the Supabase adapter instead.
@@ -205,6 +210,10 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
+    const claim = getSqliteSourceClaimForSource(this.db, s.id);
+    if (s.sourceClaimId && s.sourceClaimId !== claim?.id) throw new Error("Managed source import requires its original source claim history");
+    if (claim && (canonicalSourceUrl(s.url) !== claim.canonicalUrl || s.onchainId?.toLowerCase() !== claim.onchainId?.toLowerCase()
+      || claim.rssUrl && s.rssUrl !== claim.rssUrl)) throw new Error("Managed source identity differs from its retained claim");
     if (s.scholarlyEnrolled && (this.enrolledIdentity || !hasScholarlyRights(this.db) || !this.db.prepare("SELECT 1 FROM scholarly_enrollments WHERE source_id=?").get(s.id)))
       throw new Error("Marked scholarly sources require the original persisted rights history; standalone catalog import is refused");
     if (s.id.startsWith("public:")) throw new Error("Reserved public-reference source ID");
@@ -274,13 +283,13 @@ export class SqliteAdapter implements KeryxDB {
   async listSources(): Promise<Source[]> {
     // Filter to active=1 only — deactivated on-chain sources must not be discovered/cited.
     const rows = this.db.prepare(`SELECT * FROM sources WHERE active = 1 ORDER BY created_at`).all();
-    return rows.map(rowToSource);
+    return rows.map(row => rowToSourceWithClaim(this.db, row));
   }
 
   async listAllSources(): Promise<Source[]> {
     // Deactivated rows included — owner history only, never discovery. See the interface note.
     const rows = this.db.prepare(`SELECT * FROM sources ORDER BY created_at`).all();
-    return rows.map(rowToSource);
+    return rows.map(row => rowToSourceWithClaim(this.db, row));
   }
 
   async setSourceMeta(id: string, meta: import("./keryx-db").SourceMeta): Promise<void> {
@@ -353,14 +362,14 @@ export class SqliteAdapter implements KeryxDB {
 
   async getSource(id: string): Promise<Source | null> {
     const row = this.db.prepare(`SELECT * FROM sources WHERE id=?`).get(id);
-    return row ? rowToSource(row) : null;
+    return row ? rowToSourceWithClaim(this.db, row) : null;
   }
 
   async getSourceByOnchainId(onchainId: string): Promise<Source | null> {
     const row = this.db
       .prepare(`SELECT * FROM sources WHERE lower(onchain_id) = lower(?) LIMIT 1`)
       .get(onchainId);
-    return row ? rowToSource(row) : null;
+    return row ? rowToSourceWithClaim(this.db, row) : null;
   }
 
   async addItems(items: SourceItem[]): Promise<void> {
@@ -626,6 +635,15 @@ export class SqliteAdapter implements KeryxDB {
     const row = this.db.prepare(`SELECT value FROM sync_state WHERE key=?`).get(key);
     return row ? (row.value as string) : null;
   }
+  async issueSourceClaimChallenge(input: IssueSourceClaimChallenge) { return issueSqliteSourceClaimChallenge(this.db, input); }
+  async getSourceClaimChallenge(id: string) { return getSqliteSourceClaimChallenge(this.db, id); }
+  async reserveSourceClaimVerification(challengeId: string, wallet: string, now?: number) { return reserveSqliteSourceClaimVerification(this.db, challengeId, wallet, now); }
+  async verifySourceClaim(input: VerifySourceClaim) { return verifySqliteSourceClaim(this.db, input); }
+  async getSourceClaim(id: string) { return getSqliteSourceClaim(this.db, id); }
+  async getSourceClaimForSource(id: string) { return getSqliteSourceClaimForSource(this.db, id); }
+  async listSourceClaims(wallet?: string) { return listSqliteSourceClaims(this.db, wallet); }
+  async bindSourceClaim(input: BindSourceClaim) { return bindSqliteSourceClaim(this.db, input); }
+  async updateSourceClaimPolicy(input: UpdateSourceClaimPolicy) { return updateSqliteSourceClaimPolicy(this.db, input); }
 
   async claimSourceUpkeep(now: number): Promise<SourceUpkeepClaim | null> {
     return claimSqliteSourceUpkeep(this.db, now);
@@ -2401,6 +2419,10 @@ function rowToApiKey(r: Record<string, unknown>): ApiKeyRow {
   };
 }
 
+function rowToSourceWithClaim(db: DatabaseSync, row: Record<string, unknown>): Source {
+  const source = rowToSource(row), marker = getRetainedSourceClaimMarker(db, source.id);
+  return marker ? { ...source, sourceClaimId: marker } : source;
+}
 function rowToSource(r: Record<string, unknown>): Source {
   return {
     ...(r.scholarly_enrolled === 1 ? { scholarlyEnrolled: true } : {}),

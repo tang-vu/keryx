@@ -6,6 +6,8 @@ import { createSessionGrantConsentMessage } from "../payments/session-grant-cons
 import { createBrowserSessionKey, type RetainedSessionStore } from "./browser-session-key";
 import { createBrowserSessionRuntime } from "./browser-session-runtime";
 import type { IsolatedWrappedKey, WrappingKeyStore } from "./isolated-session-vault";
+import type { SourceClaim } from "../sources/public-source-claim";
+import { sourceClaimReceipt } from "../sources/source-claim-access";
 
 async function fixture() {
   const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), payout = privateKeyToAccount(`0x${"22".repeat(32)}`).address.toLowerCase();
@@ -38,6 +40,47 @@ async function fixture() {
   };
   return {owner,key,question,grant:provedGrant,challenge,dependencies,consumed,revoke(){revoked=true;}};
 }
+
+async function claimedFixture(kind: "fetch" | "citation" = "fetch") {
+  const f = await fixture(), originalJson = f.dependencies.json, authority = await f.dependencies.readSource();
+  const time = new Date(Date.now() - 1000).toISOString();
+  const claim: SourceClaim = { id: "a".repeat(64), canonicalUrl: "https://source.test/", ownerWallet: authority.creator,
+    deploymentOrigin: f.key.context.origin, network: profile.networkId, registryAddress: `0x${"99".repeat(20)}`,
+    verifiedAt: time, effectiveAt: time, revision: 3, mode: kind === "fetch" ? "paid" : "citation-only",
+    linkedSourceId: "publication", onchainId: `0x${"55".repeat(32)}`, distributionPermission: true };
+  Object.assign(f.challenge, { kind, paymentContext: kind === "fetch" ? { ...f.challenge.paymentContext, sourceClaim: sourceClaimReceipt(claim) } :
+    { sourceClaim: sourceClaimReceipt(claim) } });
+  f.dependencies.json = async path => path === "/api/sources" ? { sources: [{ id: "publication", onchainId: claim.onchainId, sourceClaimId: claim.id }] } :
+    path.startsWith("/api/source-claims?") ? { claim: structuredClone(claim) } : originalJson(path);
+  if (kind === "citation") f.dependencies.readSource = async () => ({ ...authority, listPriceUsdc: 0 });
+  return { ...f, claim };
+}
+
+it.each(["fetch", "citation"] as const)("retains and independently validates the original claim policy for %s signing", async kind => {
+  const f = await claimedFixture(kind);
+  const result = await createBrowserSessionRuntime(f.key, f.dependencies).authorizePayment(f.challenge.reqId, f.question);
+  expect(JSON.parse(atob(result.paymentHeader)).authorization.nonce).toBe(f.challenge.expectedNonce);
+  expect(f.consumed.size).toBe(1);
+});
+
+it("refuses changed, expired, disabled or missing claim policy before nonce exposure", async () => {
+  for (const mutate of [(f: Awaited<ReturnType<typeof claimedFixture>>) => { f.claim.revision++; },
+    (f: Awaited<ReturnType<typeof claimedFixture>>) => { f.claim.verifiedAt = new Date(Date.now() - 25 * 3600_000).toISOString(); },
+    (f: Awaited<ReturnType<typeof claimedFixture>>) => { f.claim.distributionPermission = false; },
+    (f: Awaited<ReturnType<typeof claimedFixture>>) => { delete (f.challenge.paymentContext as { sourceClaim?: unknown }).sourceClaim; }]) {
+    const f = await claimedFixture(); mutate(f);
+    await expect(createBrowserSessionRuntime(f.key, f.dependencies).authorizePayment(f.challenge.reqId, f.question)).rejects.toThrow();
+    expect(f.consumed.size).toBe(0);
+  }
+});
+
+it("retains the original reservation and withholds header publication if policy changes during signing", async () => {
+  const f = await claimedFixture(), key = { ...f.key, signPayment: async (...args: Parameters<typeof f.key.signPayment>) => {
+    const signature = await f.key.signPayment(...args); f.claim.revision++; return signature;
+  } };
+  await expect(createBrowserSessionRuntime(key, f.dependencies).authorizePayment(f.challenge.reqId, f.question)).rejects.toThrow();
+  expect(f.consumed.size).toBe(1);
+});
 it("signs the authenticated original with real mainnet EOA cryptography and retains nonce exposure across reload",async()=>{
   const f=await fixture(),runtime=createBrowserSessionRuntime(f.key,f.dependencies);
   const {paymentHeader}=await runtime.authorizePayment(f.challenge.reqId, f.question);

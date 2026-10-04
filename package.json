@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.26.9",
+  "version": "0.26.10",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -92,6 +92,7 @@
     "test:browser-checkout": "node --import tsx scripts/test-browser-checkout.mts",
     "test:browser-monthly": "node --import tsx scripts/test-browser-monthly.mts",
     "test:browser-auth": "node --import tsx scripts/test-browser-auth.mts",
+    "test:browser-public-source-claim": "node --import tsx scripts/test-browser-public-source-claim.mts",
     "test:browser-private-history": "node --import tsx scripts/test-browser-private-history.mts",
     "test:business-calculator": "node --import tsx scripts/test-business-calculator.mts",
     "test:browser-mainnet-normal": "node --import tsx scripts/test-browser-mainnet-normal.mts",
