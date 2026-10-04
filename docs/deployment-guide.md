@@ -33,6 +33,29 @@ build compiled in 6.7 minutes before page generation and reload. The old `.next`
 serving while `.next.tmp` builds. This reduces planned downtime; it does not guarantee
 availability during host, memory, dependency-install or tunnel failures.
 
+The full TypeScript graph and the Next build have separate memory limits. The
+release typecheck uses a 2,560 MiB V8 old-space allowance; Next and its static
+worker keep the 1,536 MiB allowance. These do not cap total process RSS or host
+memory. The phases remain sequential, and typecheck failure prevents
+building or swapping the live app. On October 4 the 1,536 MiB typecheck failed
+before build; an uncached check at 2,560 MiB completed with 1,741 MiB of heap in
+use and 1,959 MiB peak RSS on the development machine. This is not a VPS duration
+or host-capacity guarantee. Retain adequate RAM/swap and keep failed-deploy workers
+under explicit operator control.
+
+On Windows where `bash.exe` resolves to unavailable WSL, use the installed Git
+Bash without changing the deployment script or its checks:
+
+```powershell
+$env:PATH = 'C:\Program Files\Git\bin;' + $env:PATH
+$env:KERYX_SSH_BIN = '/c/Windows/System32/OpenSSH/ssh.exe'
+$env:MSYS_NO_PATHCONV = '1'
+npm run redeploy
+```
+
+These environment settings apply to the current shell. Preserve any existing
+deployment role/scheduler inputs and the configured SSH host-key verification.
+
 ### Reviewed role transition with held schedulers
 
 For an explicitly drained release or network transition, `npm run redeploy` also accepts:
