@@ -1,5 +1,28 @@
 # Keryx Project Changelog
 
+### More reliable original reads and recovery guidance (2026-10-04, v0.26.7 candidate)
+
+- Read larger script-heavy public pages within the existing isolated parser bounds,
+  accept publisher Markdown, and prefer a validated public IPv4 address on dual-stack
+  hosts. Preserve exact document identity, missing text and truncation limits.
+- Preserve the main document over related article cards and exclude explicitly hidden
+  text. Production trace checks exercise the actual HTML/PDF worker dependencies.
+- Include targeted next steps for unreadable PDFs, partial documents, abstracts and
+  unverified conflicts in saved answers and shared exports, preserving payment records
+  and creator attribution. No automatic read, purchase or conflict resolution follows.
+- Preserve full question wording in offline fallback without treating every comma
+  as excess research scope; keep the eight-target bound for explicit questions.
+- Read success remains separate from useful task completion; arbitrary synthesis is
+  still withheld under D-300. See [validation and limits](engineering/research-quality-2026-10-04.md).
+
+### Internal workload execution and honest bot labels (2026-10-04, v0.26.6)
+
+- Exercise 18 research tasks with a bounded real model and six synthetic commerce/
+  recovery scenarios; retain failures and review usefulness separately from execution.
+- Replace stale testnet and automatic-settlement wording in bot results with
+  network-neutral planned rewards and links to original receipts.
+- See [observations and remaining acceptance](engineering/research-workload-2026-10-04.md).
+
 ### Mainnet economic recovery (2026-10-04, v0.26.5 candidate)
 
 - Recover interrupted Session signing only before burn-signature publication, with an

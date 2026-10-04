@@ -90,7 +90,7 @@ for (const input of selected) {
         citations: result.observation.citedSources, hardFailures: result.observation.hardFailures }));
     } catch (error) {
       const detail = error instanceof Error ? error.message : "";
-      const failure = /exceeded? \d+ (bounded )?targets/.test(detail) ? "research-target-limit" : detail.includes("snapshot integrity") ? "capture-integrity-failed"
+      const failure = /(?:exceeds|exceeded) \d+ (bounded )?targets/.test(detail) ? "research-target-limit" : detail.includes("snapshot integrity") ? "capture-integrity-failed"
         : detail.includes("allowance") ? "model-allowance-unavailable" : "execution-failed";
       failed = true; report.push({ id: input.id, pipelineCompleted: false, failure,
         diagnostic: detail.slice(0, 200), calls: "calls" in engine ? engine.calls : [], usage: "usage" in engine ? engine.usage : [] });

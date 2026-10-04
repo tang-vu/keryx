@@ -58,6 +58,7 @@ const nextConfig: NextConfig = {
   // from node_modules at runtime instead.
   serverExternalPackages: [
     "jsdom",
+    "parse5",
     "@mozilla/readability",
     "pdfjs-dist",
     "@circle-fin/unified-balance-kit",
@@ -65,7 +66,7 @@ const nextConfig: NextConfig = {
     "@coral-xyz/anchor",
   ],
   outputFileTracingIncludes: {
-    "/*": ["./lib/web-research/*-worker.mjs", "./node_modules/@mozilla/readability/**", "./node_modules/pdfjs-dist/legacy/build/*.mjs", "./node_modules/pdfjs-dist/package.json"],
+    "/*": ["./lib/web-research/*-worker.mjs", "./lib/web-research/html-visibility.mjs", "./node_modules/@mozilla/readability/**", "./node_modules/pdfjs-dist/legacy/build/*.mjs", "./node_modules/pdfjs-dist/package.json"],
   },
 };
 

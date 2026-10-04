@@ -59,6 +59,7 @@ import { buildResearchReceipt, verifyResearchReceipt } from "../research-receipt
 import { researchReportMarkdown } from "../research-report-export";
 import { exportsFromCheckedReceipt } from "../research/receipt-exports";
 import { surfaceResearch } from "../research/surface-result";
+import { ArticleReadError } from "../web-research/article-reader";
 
 const AGENT = "0xAGENT";
 const EPS = 1e-6;
@@ -419,6 +420,42 @@ it("never promotes an unread search snippet into evidence and contains page-read
   const { run, steps } = await drive({ question: "Unanswerable original question", origin: "web" }, d);
   expect(run.citations).toHaveLength(0); expect(run.evidence ?? []).toHaveLength(0); expect((d.gateway as FakeGateway).fetchCalls).toHaveLength(0); expect((d.gateway as FakeGateway).citationCalls).toHaveLength(0);
   expect(JSON.stringify(steps)).not.toContain("internal secret response");
+});
+it("retains partial-read recovery across saved surfaces without including it in creator attribution", async () => {
+  const owned = makeSource({ id: "owned-original", fetchPrice: 0.002 });
+  const quote = "This original document describes a bounded source observation.";
+  const item: SourceItem = { id: "owned-article", sourceId: owned.id, title: "Owned original", summary: "An original observation",
+    link: "https://owned-original.example/article", content: quote };
+  const engine = fakeEngine(), gateway = fakeGateway(), effects = isolatedTestEffects();
+  const attribution = vi.spyOn(engine, "attribute");
+  const d = { ...deps([owned], engine, gateway, { items: { [owned.id]: [item] } }), effects };
+  d.webSearch = { search: async () => [{ title: "Image PDF", url: "https://scan.example/appendix.pdf", snippet: "Unavailable claims are not evidence" }] };
+  d.readWebArticle = async () => { throw new ArticleReadError("pdf-extraction-unavailable"); };
+  const run = await collectRun({ question: "Compare the original and appendix", origin: "web", budget: 0.03 }, { deps: d });
+  expect(run.answer).toContain("This run did not perform OCR");
+  expect(run.answer).toContain(quote);
+  expect(run.answer).not.toContain("Unavailable claims are not evidence");
+  expect(run.citations.map(citation => citation.sourceId)).toEqual([owned.id]);
+  expect(run.totalSpent).toBeCloseTo(owned.fetchPrice + 0.03 * config.citationPoolRatio, 8);
+  expect(gateway.citationCalls).toHaveLength(1);
+  expect(attribution).toHaveBeenCalledTimes(1);
+  const attributed = attribution.mock.calls[0]![0].answer;
+  expect(attributed).not.toContain("Next steps to complete");
+  expect(run.answer.startsWith(attributed)).toBe(true);
+  expect(effects.saveQueryRun).toHaveBeenCalledWith(run);
+  const payments = vi.mocked(effects.recordPayment).mock.calls.map(([payment]) => payment);
+  const receipt = buildResearchReceipt(run, payments);
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  expect(receipt.payload.dispatch.answer).toBe(run.answer);
+  expect(researchReportMarkdown(run, null, payments)).toContain(run.answer);
+  expect(buildAnswerContent(run)).toContain(run.answer);
+  for (const result of [remoteResearchResult(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick"))]) {
+    expect(JSON.stringify(result)).toContain("This run did not perform OCR");
+  }
+  for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run),
+    a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick"))]) {
+    expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
+  }
 });
 it("does not send private questions to external web providers even if a provider is available", async () => {
   const d = deps([], fakeEngine(), fakeGateway()), queryId = `prv_${"9".repeat(64)}`;

@@ -1,4 +1,5 @@
 import type { Decision } from "../types";
+import { publicReadRecoveryLines, type PublicReadOutcome } from "./read-recovery";
 
 export interface PublicDiscoverySummary {
   attemptedQueries?: number;
@@ -18,7 +19,6 @@ export function researchResponseLanguage(question: string): "en" | "vi" {
 }
 
 interface EmptyPublicOptions { question?: string; discovery?: PublicDiscoverySummary }
-interface ReadOutcome { name: string; code: string }
 
 function recordedText(value: string, limit: number): string {
   return value.replace(/[\r\n\u0000-\u001f]/g, " ").slice(0, limit);
@@ -44,7 +44,7 @@ function discoveryDetail(summary: PublicDiscoverySummary | undefined, vi: boolea
 
 /** Recorded codes/decisions only; never promote discovery metadata into read evidence. */
 export function emptyPublicEvidenceDetail(
-  outcomes: ReadOutcome[],
+  outcomes: PublicReadOutcome[],
   skipped: Decision[],
   options: EmptyPublicOptions = {},
 ): string {
@@ -71,7 +71,7 @@ export function emptyPublicEvidenceDetail(
 /** Payment states are supplied by the orchestrator; this presentation helper changes no ledger. */
 export function emptyEvidenceAnswer(input: {
   question: string;
-  outcomes: ReadOutcome[];
+  outcomes: PublicReadOutcome[];
   skipped: Decision[];
   discovery?: PublicDiscoverySummary;
   fundingUnavailable: boolean;
@@ -90,7 +90,9 @@ export function emptyEvidenceAnswer(input: {
   if (input.settledPayments > 0) return prefix + (vi
     ? "thanh toán nguồn đã hoàn tất nhưng chưa nhận được nội dung có thể dùng. Các khoản đã xác nhận vẫn được ghi nhận. Giữ lượt này để kiểm tra trước khi mua lại."
     : "source payments settled, but no usable content was received. Confirmed payments remain recorded. Keep this job for review before buying again.");
-  const detail = emptyPublicEvidenceDetail(input.outcomes, input.skipped, input);
+  const nextSteps = publicReadRecoveryLines(input.outcomes, vi);
+  const detail = emptyPublicEvidenceDetail(input.outcomes, input.skipped, input)
+    + (nextSteps.length ? `\n\n${nextSteps.join("\n")}` : "");
   if (input.fetchFailures > 0) return prefix + (vi
     ? "đọc nguồn thất bại và chưa có thanh toán nguồn nào được xác nhận. Kiểm tra bản ghi thanh toán của lượt này trước khi bắt đầu lượt trả phí khác. "
     : "source reads failed and no source payment was confirmed. Review this job's payment records before starting another paid job. ") + detail;

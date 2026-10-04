@@ -56,6 +56,11 @@ B03/B06/B07 directly support the already-open issue #128 rather than replacing i
 live usefulness and export gates. Repeated independent demand remains an external
 validation task even if all 24 internal scenarios pass.
 
+October 4 follow-up: [B06/B07 candidate and measured limits](engineering/research-quality-2026-10-04.md)
+records 22/22 public URL captures and 18/18 offline pipeline completions, targeted
+read-recovery guidance, independent reader review and remaining release gates.
+Those counts do not close B04/B05 usefulness or B12 independent-user acceptance.
+
 ## Record each execution
 
 Keep raw reports, questions with private context, receipts, user identities and

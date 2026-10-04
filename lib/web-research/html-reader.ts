@@ -2,12 +2,12 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import type { ArticleRead } from "./article-reader";
 import { acquireParserSlot } from "./parser-slots";
-import { JSDOM } from "jsdom";
+import { parse } from "parse5";
 
 export async function extractHtml(text: string, finalUrl: string, signal?: AbortSignal): Promise<ArticleRead> {
   // Keep this external package visible to Next's dependency tracer; DOM construction and
   // untrusted parsing remain exclusively in the child. It also fails closed on missing runtime.
-  if (typeof JSDOM !== "function") throw new Error("HTML parser unavailable");
+  if (typeof parse !== "function" || Buffer.byteLength(text, "utf8") > 2 * 1024 * 1024 || finalUrl.length > 4096) throw new Error("HTML parser unavailable");
   if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
   const release = acquireParserSlot();
   try { return await new Promise((resolve, reject) => {

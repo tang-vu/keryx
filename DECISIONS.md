@@ -1,5 +1,29 @@
 # Keryx — Decision Log
 
+**Bounded reading and actionable incomplete research — 2026-10-04.** Replay the
+failed original-document bytes before changing reader limits. Replace HTML's full
+browser DOM with standards-based parse5 normalization and Mozilla's lightweight
+Readability DOM inside the existing disposable child. Keep the 2 MiB transport cap,
+500 kB normalized markup cap, 20,000-element/256-depth limits, 64 MiB old-space
+setting, four-second HTML deadline, one parser slot and 60,000-character output
+ceiling. Exclude explicitly hidden content and select a unique main region ahead
+of an unrelated article card. This is static text extraction, not rendered-page or
+whole-document verification. Accept publisher Markdown as inert text. Validate every
+DNS answer as public before preferring a pinned IPv4 address; do not add retries or
+weaken redirect, TLS, URL-identity or SSRF checks.
+
+Append deterministic follow-up guidance for observed failed reads, truncated text
+and abstract-only delivery after answer attribution and settlement. A model-reported
+conflict remains explicitly unverified; it cannot choose document authority. Paid
+unknowns require inspection of the original records before another paid attempt.
+Guidance performs no action, adds no evidence markers, changes no creator weights,
+and survives saved answers and shared exports. Offline fallback decomposition
+preserves the complete requested wording and explicit question/semicolon targets;
+punctuation-based refinements cannot create an artificial excess-target rejection.
+The eight-target limit still rejects excess explicit scope. D-300 remains in force: increased
+read yield and suggested next steps do not demonstrate useful complete synthesis.
+See [quality follow-up and release gates](docs/engineering/research-quality-2026-10-04.md).
+
 **Execute workload acceptance separately from usefulness — 2026-10-04.** The owner
 requested end-to-end execution of the 24 internal tasks and approved one live-model
 batch capped at USD 1, with no mainnet source USDC. Capture original public reads,

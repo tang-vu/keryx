@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HeuristicEngine } from "./heuristic-engine";
+import { INTERNAL_RESEARCH_INPUTS } from "../evals/internal-research-inputs";
 
 describe("free heuristic gap reads", () => {
   it.each([0, -0.000001, 0.01])("recommends relevant free reads at remaining monetary budget %s", async remainingBudget => {
@@ -24,4 +25,24 @@ it("retains independent scope targets and refuses excess requested scope instead
   const targets = ["paper one methods", "paper one evaluation", "paper one limitations", "paper two methods", "paper two evaluation", "paper two limitations"];
   expect(await engine.decompose(targets.join("; "))).toHaveLength(6);
   await expect(engine.decompose(Array.from({ length: 9 }, (_, index) => `scope target ${index}`).join("; "))).rejects.toThrow("exceeds 8");
+});
+
+it.each(["R01", "R18"])("retains every requested detail when punctuation over-fragments %s", async id => {
+  const question = INTERNAL_RESEARCH_INPUTS.find(input => input.id === id)!.question;
+  const targets = await new HeuristicEngine().decompose(question);
+  expect(targets.length).toBeGreaterThan(0);
+  expect(targets.length).toBeLessThanOrEqual(8);
+  expect(targets.join("").replace(/\s/g, "")).toBe(question.replace(/\s/g, ""));
+});
+
+it("keeps short constraints and numeric punctuation without losing requested text", async () => {
+  const question = "Compare 1,000 jobs and 3 GB; USD 25? No backups?";
+  const targets = await new HeuristicEngine().decompose(question);
+  expect(targets.join("").replace(/\s/g, "")).toBe(question.replace(/\s/g, ""));
+  expect(targets.some(target => target.includes("1,000"))).toBe(true);
+});
+
+it("refuses more than eight explicit questions even when each uses one word", async () => {
+  await expect(new HeuristicEngine().decompose("One? Two? Three? Four? Five? Six? Seven? Eight? Nine?"))
+    .rejects.toThrow("exceeds 8");
 });
