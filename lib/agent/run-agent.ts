@@ -2,6 +2,7 @@ import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
 import { finalizeGroundedAnswer } from "./answer-grounding";
+import { deliverDecisionBrief } from "./decision-brief";
 import { discoverPublicReferences } from "./public-reference-evidence";
 import { discoverScholarly } from "../scholarly/discovery";
 import { paperCanResearch, paperDuplicatesPublicBody } from "../scholarly/paid-gate";
@@ -48,6 +49,8 @@ import type {
   GatheredContent,
   SourceCandidate,
   SufficiencyResult,
+  SynthResult,
+  ReevaluateOutput,
 } from "../llm";
 import { effectiveEngineName, reasoningAttempts, reasoningUsage, reasoningCalls } from "../llm/resilient-engine";
 import type { AgentDeps } from "./deps";
@@ -734,6 +737,7 @@ export async function* runAgent(
   }
 
   let lastSufficient = false;
+  let readingAssessmentUnavailable = false;
   let lastGaps = 0; // sub-claims with coverage < 0.4 from the most recent sufficiency check
 
   for (const d of buys) {
@@ -868,7 +872,13 @@ export async function* runAgent(
       }
 
       // stop-early check after each paid read — now with per-claim coverage
-      const suf = await engine.sufficiency({ question: input.question, subClaims, gathered });
+      let suf: SufficiencyResult;
+      try { suf = await engine.sufficiency({ question: input.question, subClaims, gathered }); }
+      catch {
+        readingAssessmentUnavailable = true;
+        yield emit("sufficiency", "Reading assessment unavailable; stopping further purchases and retaining completed reads and receipts.");
+        break;
+      }
       if (suf.perClaim && suf.perClaim.length > 0) {
         for (const c of suf.perClaim) {
           const pct = Math.round(c.coverage * 100);
@@ -901,7 +911,9 @@ export async function* runAgent(
 
   // Skip re-evaluation when the last sufficiency check already confirmed full coverage —
   // no point burning an LLM call to discover there are no gaps.
-  if (lastSufficient && lastGaps === 0 && reevaluateRounds > 0) {
+  if (readingAssessmentUnavailable) {
+    yield emit("reevaluate", "Additional purchases withheld because the reading assessment was unavailable.");
+  } else if (lastSufficient && lastGaps === 0 && reevaluateRounds > 0) {
     yield emit("reevaluate", `All sub-claims already well-covered (sufficiency passed with 0 gaps) — skipping re-evaluation to save latency.`);
   } else if (gathered.length > 0 && reevaluateRounds > 0) {
     for (let round = 0; round < reevaluateRounds; round++) {
@@ -934,13 +946,17 @@ export async function* runAgent(
 
       if (skipped.length === 0) break;
 
-      const reeval = await engine.reevaluate({
+      let reeval: ReevaluateOutput;
+      try { reeval = await engine.reevaluate({
         question: input.question,
         subClaims,
         gathered,
         skippedSources: skipped,
         remainingBudget,
-      });
+      }); } catch {
+        yield emit("reevaluate", "Gap assessment unavailable; retaining completed reads and withholding additional purchases.");
+        break;
+      }
 
       // Emit per-claim coverage assessment — visible multi-pass reasoning
       for (const c of reeval.claims) {
@@ -1140,10 +1156,8 @@ export async function* runAgent(
       subClaims,
       gathered,
     });
-  } catch (error) {
+  } catch {
     finalAssessmentAvailable = false;
-    const reason =
-      error instanceof Error ? error.message : "unknown assessment error";
     finalSufficiency = {
       sufficient: false,
       rationale:
@@ -1156,7 +1170,7 @@ export async function* runAgent(
     };
     yield emit(
       "sufficiency",
-      `Final coverage assessment failed (${reason}); continuing conservatively with zero coverage.`,
+      "Final coverage assessment failed; continuing conservatively with zero coverage.",
       { final: true, failed: true },
     );
   }
@@ -1183,7 +1197,13 @@ export async function* runAgent(
 
   // 5) SYNTHESIZE
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
-  const synthesized = await engine.synthesize({ question: input.question, subClaims, gathered });
+  let synthesized: SynthResult;
+  try { synthesized = await engine.synthesize({ question: input.question, subClaims, gathered,
+    ...(process.env.KERYX_DECISION_BRIEF === "1" ? { answerFormat: "decision-brief" as const } : {}) }); }
+  catch {
+    synthesized = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable" };
+    yield emit("synthesize", "Synthesis unavailable; completed reads and payment receipts are retained, with unsupported conclusions withheld.");
+  }
   if (synthesized.evidenceReview) {
     yield emit("evidence", synthesized.evidenceReview === "unavailable"
       ? "Evidence relevance review unavailable; only qualified excerpts may be delivered, with unsupported prose and rewards withheld."
@@ -1191,22 +1211,18 @@ export async function* runAgent(
     { relevanceReview: synthesized.evidenceReview });
   }
 
-  // Surface disagreements and the reported preference, including unresolved cases.
-  for (const cf of synthesized.conflicts ?? []) {
-    const positions = cf.positions.map((p) => `${p.marker} ${p.stance}`).join("  vs  ");
-    yield emit(
-      "adjudicate",
-      `⚖️ Sources disagreed on ${cf.point} — ${positions} → reported preference: ${cf.trusted || "none"} (${cf.reason})`,
-      cf,
-    );
-  }
+  // Legacy conflict prose has no assertion-to-evidence review. Keep the warning
+  // without streaming an unreviewed claim before the answer delivery boundary.
+  if (synthesized.conflicts?.length) yield emit("adjudicate",
+    "The draft reported possible source disagreements; their wording and preference remain unverified.",
+    { reportedConflicts: synthesized.conflicts.length, status: "unverified" });
 
   // Guard against an empty body (e.g. the model returned unparseable JSON) so the run never
   // completes "done" showing a blank answer after real money was spent.
   let answer = synthesized.answer?.trim()
     ? synthesized.answer
     : `Read ${gathered.length} source(s) (${gathered.map((g) => g.sourceName).join(", ")}), but couldn't compose a written summary this run. Please try again.`;
-  const ledger = buildEvidenceLedger({
+  let ledger = buildEvidenceLedger({
     subClaims,
     gathered,
     answer,
@@ -1216,6 +1232,9 @@ export async function* runAgent(
     rewardAuthorizationAvailable: finalAssessmentAvailable,
     allowIllustrativeDemo: gateway.mode === "offline",
   });
+  const projectedBrief = deliverDecisionBrief(synthesized.decisionBrief, ledger, input.question);
+  if (projectedBrief) ledger = projectedBrief.ledger;
+  const brief = projectedBrief?.facts ? projectedBrief : undefined;
   evidence = ledger.evidence;
   claimCoverage = ledger.claimCoverage;
   if (evidencePortfolio) {
@@ -1228,12 +1247,14 @@ export async function* runAgent(
     });
   }
   evidenceMeasured = true;
-  answer = finalizeGroundedAnswer({ question: input.question, answer, ledger });
+  answer = brief?.answer ?? finalizeGroundedAnswer({ question: input.question, answer, ledger });
   const vi = researchResponseLanguage(input.question) === "vi";
-  yield emit("evidence", vi
+  yield emit("evidence", brief ? (vi ? "Đã kiểm tra riêng từng nhận định và bước tiếp theo; vẫn còn giới hạn của trích đoạn và đánh giá model."
+    : "Statements and conditional next steps received separate review; excerpt and model-assessment limitations remain.") : vi
     ? "Chỉ cung cấp trích đoạn nguồn đủ điều kiện; chưa xác minh được tổng hợp đầy đủ và hỗ trợ cho từng nhận định."
     : "Delivering qualified source excerpts; complete synthesis and per-assertion support remain unverified.",
-    { answerDelivery: "qualified-excerpts", completeness: "unverified" });
+    { answerDelivery: brief ? "reviewed-decision-brief" : "qualified-excerpts", completeness: "unverified",
+      ...(brief ? { briefDigest: brief.digest, facts: brief.facts, actions: brief.actions } : {}) });
   const used = gathered.filter((g) =>
     ledger.acceptedMarkers.has(g.marker),
   );
@@ -1272,7 +1293,9 @@ export async function* runAgent(
     citedMarkers: [...ledger.acceptedMarkers], sourceMarkers: gathered.map(source => source.marker),
     conflicts: synthesized.conflicts ?? [], finalAssessmentSufficient: finalSufficiency.sufficient });
   // Coverage estimates describe the excerpt ledger, never a verified complete synthesis.
-  const verdict: Confidence = { level: "Low", reason: vi
+  const verdict: Confidence = { level: "Low", reason: brief ? (vi
+    ? "Bản phân tích đã qua kiểm tra bằng model trên trích đoạn có giới hạn; chưa xác minh tính đầy đủ hoặc tính đúng đắn độc lập."
+    : "The brief received model review over bounded excerpts; completeness and independent factual correctness remain unverified.") : vi
     ? `Chỉ cung cấp trích đoạn nguồn; chưa xác minh được tổng hợp đầy đủ và hỗ trợ cho từng nhận định. Có ${claimCoverage.filter(claim => !(claim.coverage >= MIN_REWARD_SUPPORT)).length} yêu cầu dưới ngưỡng hỗ trợ theo đánh giá ghi nhận; độ bao phủ không chứng minh tính đúng đắn hoặc giải quyết mâu thuẫn nguồn.`
     : `Only source excerpts are delivered; complete synthesis and per-assertion support remain unverified. Evidence assessment: ${evidenceVerdict.reason}` };
   runConfidence = verdict;
@@ -1282,17 +1305,23 @@ export async function* runAgent(
       : `> ⚠ Low confidence — ${verdict.reason} within budget. Treat this as provisional.\n\n${answer}`;
   }
 
-  yield emit("synthesize", vi ? `Đã chuẩn bị trích đoạn từ ${used.length} nguồn; chưa xác minh được tổng hợp đầy đủ`
+  yield emit("synthesize", brief ? (vi ? `Đã chuẩn bị bản phân tích có dẫn nguồn từ ${used.length} nguồn`
+    : `Prepared a cited decision brief from ${used.length} source(s)`) : vi ? `Đã chuẩn bị trích đoạn từ ${used.length} nguồn; chưa xác minh được tổng hợp đầy đủ`
     : `Prepared source excerpts citing ${used.length} source(s); complete synthesis is unverified`, { answer });
   yield emit("verdict", `Confidence: ${verdict.level} — ${verdict.reason}.`, verdict);
 
   // 6) ATTRIBUTE contribution weights
   if (used.length > 0) {
-    const proposedAttributions = await engine.attribute({
+    let proposedAttributions: Awaited<ReturnType<typeof engine.attribute>> = [];
+    try { proposedAttributions = await engine.attribute({
       question: input.question,
       answer,
       used,
-    });
+    }); } catch {
+      // Reuse the existing invalid/incomplete-attribution equal-share policy,
+      // restricted to the final delivered evidence. No additional model call.
+      yield emit("attribute", "Attribution unavailable; using the existing equal split across evidence-eligible delivered citations.");
+    }
     const attributions = resolveAttributions(
       used,
       proposedAttributions,
@@ -1320,7 +1349,8 @@ export async function* runAgent(
         scholarly: g.scholarly,
         weight: attribution.weight,
         reward: g.sourceKind === "public-reference" ? 0 : rewards[index] ?? 0,
-        rationale: attribution.rationale,
+        rationale: brief ? (vi ? "Đóng góp từ bằng chứng được giữ trong bản phân tích; trọng số là phân bổ, không chứng nhận tính đúng đắn."
+          : "Contribution from evidence retained in the brief; weight is an allocation, not certification of factual correctness.") : attribution.rationale,
       };
     });
   }

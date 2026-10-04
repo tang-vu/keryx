@@ -1,5 +1,19 @@
 # Keryx Project Changelog
 
+### Retain research when model calls fail (2026-10-05, v0.26.9 candidate)
+
+- Preserve completed reads and payment receipts when later model assessment,
+  synthesis or attribution is unavailable. Stop additional purchases when reading
+  assessment fails; retain existing evidence/reward authority and allocation rules.
+- Add an optional fact/action brief with exact contextual quotes, complete row and
+  quote-contribution review, and dependency rejection. It remains gated:
+  all three independent usefulness attempts failed. The feature stays disabled.
+- Add a protected finite model allowance for ordinary production-client acceptance,
+  with durable failed-request holds and an exact supplier scope. Source USDC and
+  search remain separate costs. See [evidence and pending delivery gates](engineering/decision-brief-2026-10-05.md).
+- Bind reviewed deployment to the exact accepted remote commit and preserve retained
+  build directories. CLI labels distinguish planned allocation from evidenced settlement.
+
 ## October 4, 2026 — Mainnet documentation refresh
 
 Production documentation now names Arc mainnet (`5042` / `eip155:5042`) and its

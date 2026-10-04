@@ -34,7 +34,7 @@ const question =
 
 console.log(c.bold(`\n🏛  Keryx — citation-toll reading agent`));
 console.log(`${c.dim("engine:")} ${getReasoningEngine(model).name}`);
-console.log(`${c.dim("budget:")} $${budget ?? 0.05}`);
+console.log(`${c.dim("source cap:")} ${budget ?? 0.05} USDC`);
 console.log(`${c.dim("question:")} ${question}\n`);
 if (allowExternalWeb) console.log("Public web search may send this question to the configured search provider. The source USDC budget is separate from model and search operating costs.");
 console.log(c.dim("─".repeat(72)));
@@ -45,20 +45,22 @@ console.log(c.dim("─".repeat(72)));
 console.log(c.bold("\n📝 Answer\n"));
 console.log(run.answer);
 
-console.log(c.bold("\n💸 Creators paid"));
+console.log(c.bold("\n💸 Planned citation allocations (USDC)"));
 if (run.citations.length === 0) {
-  console.log(c.dim("  (no citations settled)"));
+  console.log(c.dim("  (no citation allocations)"));
 } else {
   for (const cit of run.citations) {
     console.log(
-      `  • ${cit.sourceName}: ${c.green("$" + cit.reward)} ${c.dim(`(${(cit.weight * 100).toFixed(0)}% contribution)`)}`,
+      `  • ${cit.sourceName}: ${c.green(cit.reward + " USDC")} ${c.dim(`(${(cit.weight * 100).toFixed(0)}% contribution)`)}`,
     );
   }
 }
 
 console.log(
-  c.bold(`\n📊 Total spent: ${c.green("$" + run.totalSpent)}`) +
-    c.dim(`  →  100% to creators  ·  ${run.decisions.filter((d) => d.action === "BUY").length} bought / ${run.decisions.filter((d) => d.action === "SKIP").length} skipped`),
+  c.bold(`\n📊 Recorded source total: ${c.green(run.totalSpent + " USDC")}`) +
+    c.dim(`  ·  ${run.decisions.filter((d) => d.action === "BUY").length} bought / ${run.decisions.filter((d) => d.action === "SKIP").length} skipped`),
 );
+console.log(c.dim(`Payment mode: ${run.paymentMode === "offline" ? "offline simulation" : run.paymentMode ?? "unknown"}. Allocations and recorded totals do not prove settlement; inspect the original per-payment receipts.`));
+console.log(c.dim("Model and search operating costs are separate from the source cap and recorded source total."));
 console.log(c.dim(`\nrun id: ${run.id}\n`));
 process.exit(0);

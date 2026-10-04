@@ -1,5 +1,47 @@
 # Keryx — Decision Log
 
+**Stage a bounded brief behind measured usefulness and contribution review — 2026-10-05.**
+The owner authorized ordinary mainnet client use within one USD 2 round, at most
+three questions and 0.15 source USDC, with no topup. Keep external compute/search
+costs separate from source payees and count both against the finite allowance.
+Use protected durable per-request reservations for the exact supplier transport;
+failed/unknown requests retain their holds. An expired policy cannot fall through
+to another provider. Preserve explicit private-provider role boundaries.
+
+D-300 remains the default. An opt-in bounded fact/action contract requires exact
+quote provenance, the same neighboring context for generation/review, immutable
+packet binding, complete whole-row AND per-quote contribution review, dependency
+closure and a final downward-only projection through existing evidence gates.
+Missing optional generation actions normalize to an empty set before review;
+no invalid present row, unknown field or incomplete review is repaired. Duplicate
+context may be omitted on the wire only when identical bytes remain at their exact
+offsets in the shared source context. No arbitrary prose gains evidence/reward
+authority. Retain the original full packet privately and publish only bounded
+excerpts/finalized output. Model review estimates support; it does not certify truth.
+
+The initial independent set failed at 3/12 useful with six material unsupported
+rows. A separate high-effort review set exhausted its output cap and was stopped
+after four failures made its gate unreachable. Neither result authorizes richer
+production answers. The final lower-effort candidate also failed: five completed
+cases yielded no useful brief, with four exhausted reviews and one malformed
+generation. Keep the feature disabled. Future activation still needs a fresh
+independently authored set with at least 10/12 useful artifacts and zero material
+errors, plus separately graded insufficient cases. Keep all
+failures, unknown costs and versioned evidence. See
+[the bounded-brief findings and release gates](docs/engineering/decision-brief-2026-10-05.md).
+
+Compute failure after a paid read must preserve the final dispatch and receipts.
+Stop extra purchases after an unavailable reading assessment, retain existing
+final-assessment reward withholding, and let attribution outages reach the already
+documented equal-share fallback only over admitted delivered contributions. Keep
+unreviewed conflict and attribution prose outside the brief's delivery boundary.
+
+Reviewed deployment binds the fetched remote main to an explicit accepted full
+commit before source mutation, then resets that immutable object. Preserve every
+retained temporary/backup build until its operator-reviewed archive is verified;
+refuse a new temporary build appearing between preflight and build. These checks
+prevent a moving main branch or stale build cleanup from changing a reviewed release.
+
 **Current-network documentation convention — 2026-10-04.** The owner confirmed
 that production is already mainnet and requested a documentation-wide refresh.
 [Current status](docs/mainnet-status.md) records the direct `arc`/`real` health

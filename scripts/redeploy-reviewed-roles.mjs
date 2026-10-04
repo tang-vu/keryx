@@ -18,6 +18,34 @@ const previousWebTail = ['/root/keryx/node_modules/next/dist/bin/next', 'start',
 const previousLoopbackWebTail = [...previousWebTail,
   '--hostname', '127.0.0.1', '--keepAliveTimeout', '100000'];
 
+// Only these non-secret operator controls may precede the fixed Node command. Node's
+// --env-file still owns every financial/custody setting; no arbitrary PM2 env is accepted.
+// The model runtime independently verifies the protected, nonsymlink policy file and digest.
+function reviewedControls(args, tail) {
+  if (!Array.isArray(args) || args.some(value => typeof value !== 'string') ||
+      JSON.stringify(args.slice(0, 3)) !== JSON.stringify(prefix.slice(0, 3))) return null;
+  const binary = args.indexOf('/usr/bin/node');
+  if (binary < 3 || binary > 6 ||
+      JSON.stringify(args.slice(binary)) !== JSON.stringify([...prefix.slice(3), ...tail])) return null;
+  const controls = new Map();
+  for (const assignment of args.slice(3, binary)) {
+    const split = assignment.indexOf('=');
+    if (split < 1) return null;
+    const key = assignment.slice(0, split), value = assignment.slice(split + 1);
+    if (controls.has(key)) return null;
+    if (key === 'KERYX_DECISION_BRIEF') { if (!/^[01]$/.test(value)) return null; }
+    else if (key === 'KERYX_MODEL_ALLOWANCE_FILE') {
+      if (!/^\/root\/\.local\/share\/[a-zA-Z0-9_./-]+\.json$/.test(value) ||
+          value.includes('..') || path.posix.resolve(value) !== value) return null;
+    } else if (key === 'KERYX_MODEL_ALLOWANCE_SHA256') { if (!/^[a-f0-9]{64}$/.test(value)) return null; }
+    else return null;
+    controls.set(key, value);
+  }
+  if (controls.has('KERYX_MODEL_ALLOWANCE_FILE') !== controls.has('KERYX_MODEL_ALLOWANCE_SHA256')) return null;
+  return ['KERYX_DECISION_BRIEF', 'KERYX_MODEL_ALLOWANCE_FILE', 'KERYX_MODEL_ALLOWANCE_SHA256']
+    .map(key => controls.get(key) ?? null);
+}
+
 function stoppedDefinition(rows, name) {
   if (!Array.isArray(rows)) refuse();
   const found = rows.filter(r => r.name === name);
@@ -28,9 +56,9 @@ function stoppedDefinition(rows, name) {
   // Retain only recognized executable arguments. PM2's environment may contain
   // secrets; it is never copied, serialized, or printed by this helper.
   const clean = e.pm_exec_path === '/usr/bin/env' && e.exec_interpreter === 'none' &&
-    (JSON.stringify(e.args) === JSON.stringify([...prefix, ...tails[name]]) ||
+    (reviewedControls(e.args, tails[name]) !== null ||
       name === 'keryx' && [previousWebTail, previousLoopbackWebTail].some(tail =>
-        JSON.stringify(e.args) === JSON.stringify([...prefix, ...tail])));
+        reviewedControls(e.args, tail) !== null));
   const legacy = /(?:^|\/)npm(?:-cli\.js)?$/.test(e.pm_exec_path ?? '') &&
     JSON.stringify(e.args) === JSON.stringify(['run', name === 'keryx' ? 'start' : 'a2a-worker']);
   if (e.pm_cwd !== '/root/keryx' || (!clean && !legacy) ||
@@ -56,6 +84,7 @@ function retainDefinition(configFile, name, previous, expected) {
 export function validateReviewedRoles(value) {
   if (!value || Object.keys(value).join('|') !== 'apps' || !Array.isArray(value.apps) || value.apps.length !== 2) refuse();
   const allowed = new Set(['name', 'script', 'interpreter', 'cwd', 'args', 'autorestart', 'kill_timeout', 'out_file', 'error_file', 'exec_mode', 'instances', 'merge_logs', 'time']);
+  const controls = [];
   for (const name of names) {
     const matches = value.apps.filter(a => a?.name === name);
     if (matches.length !== 1) refuse();
@@ -63,12 +92,16 @@ export function validateReviewedRoles(value) {
     if (Object.keys(a).some(k => !allowed.has(k)) || a.script !== '/usr/bin/env' || a.interpreter !== 'none' ||
         a.cwd !== '/root/keryx' || typeof a.autorestart !== 'boolean' ||
         !Number.isSafeInteger(a.kill_timeout) || a.kill_timeout < 330000 || a.kill_timeout > 900000 ||
-        JSON.stringify(a.args) !== JSON.stringify([...prefix, ...tails[name]]) ||
+        reviewedControls(a.args, tails[name]) === null ||
         a.exec_mode !== undefined && a.exec_mode !== 'fork' || a.instances !== undefined && a.instances !== 1) refuse();
     for (const k of ['out_file', 'error_file']) if (a[k] !== undefined &&
       (typeof a[k] !== 'string' || !/^\/root\/\.pm2\/logs\/[a-zA-Z0-9_-]+\.log$/.test(a[k]))) refuse();
     for (const k of ['merge_logs', 'time']) if (a[k] !== undefined && typeof a[k] !== 'boolean') refuse();
+    controls.push(JSON.stringify(reviewedControls(a.args, tails[name])));
   }
+  // Both public processes share the same allowance/feature scope. A worker without the
+  // reviewed pair must not become an alternate provider path outside the web's budget.
+  if (controls[0] !== controls[1]) refuse();
   return value;
 }
 

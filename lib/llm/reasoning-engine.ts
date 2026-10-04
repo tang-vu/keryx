@@ -135,6 +135,8 @@ export interface SynthInput {
   question: string;
   subClaims: string[];
   gathered: GatheredContent[];
+  /** Internal staged delivery contract; source/payment authority is unchanged. */
+  answerFormat?: "decision-brief";
 }
 
 /** A factual disagreement the agent found between sources while writing the answer,
@@ -168,6 +170,8 @@ export interface SynthResult {
   evidence: ProposedEvidence[];
   /** Optional second-pass relevance check; engines without this pass leave it absent. */
   evidenceReview?: "completed" | "unavailable";
+  /** Server-local reviewed rows/context; never serialize this packet in public receipts. */
+  decisionBrief?: import("./decision-brief").ReviewedDecisionBrief;
 }
 
 export interface AttributeInput {

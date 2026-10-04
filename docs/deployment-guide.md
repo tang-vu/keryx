@@ -94,11 +94,18 @@ For an explicitly drained release or network transition, `npm run redeploy` also
 KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER=1 \
 KERYX_REDEPLOY_REVIEWED_PM2_CONFIG=/root/.local/share/keryx-release/roles.json \
 KERYX_REDEPLOY_REVIEWED_PM2_SHA256=<sha256-of-exact-protected-json-bytes> \
+KERYX_REDEPLOY_EXPECTED_COMMIT=<accepted-40-character-lowercase-commit> \
 npm run redeploy
 ```
 
 The paired PM2 inputs are optional; the scheduler flag defaults to `0`. A malformed
-pair refuses before deployment. With preservation enabled, the script neither
+pair or missing exact expected commit refuses before deployment. The fetched
+remote `origin/main` must equal that commit before resetting source; reset uses
+the immutable commit rather than a moving branch reference. Every reviewed path
+refuses retained `.next.tmp` and `.next.bak` before source changes, and checks for
+a new `.next.tmp` again before building. Archive and verify retained recovery
+evidence before removing an explicitly reviewed directory. With preservation
+enabled, the script neither
 stops/resumes the private worker or withdrawal cycle nor rewrites reconciliation
 cron. Existing schedules and unknown originals remain held. Before starting this
 mode, the operator must positively drain every owned web, A2A, private and scheduled
@@ -116,6 +123,13 @@ argument prefix is:
 ```json
 ["-i", "PATH=/usr/bin:/bin", "NODE_ENV=production", "/usr/bin/node", "--env-file=/root/keryx/.env.local"]
 ```
+
+Only three optional non-secret assignments may precede `/usr/bin/node`:
+`KERYX_DECISION_BRIEF=0|1` and the paired `KERYX_MODEL_ALLOWANCE_FILE` plus
+`KERYX_MODEL_ALLOWANCE_SHA256`. The protected JSON path/digest must match the
+finite runtime policy, and both roles must carry identical controls. Arbitrary
+environment assignments remain refused. The brief stays disabled after failed
+usefulness evaluations; see [its activation gates](engineering/decision-brief-2026-10-05.md).
 
 Append `['/root/keryx/scripts/next-public-server.mjs','--port','3939']` for web,
 or `['--import','/root/keryx/node_modules/tsx/dist/loader.mjs',
