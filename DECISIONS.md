@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**Execute workload acceptance separately from usefulness — 2026-10-04.** The owner
+requested end-to-end execution of the 24 internal tasks and approved one live-model
+batch capped at USD 1, with no mainnet source USDC. Capture original public reads,
+retain errors, and replay the supplied candidates through the production orchestrator
+with an isolated database, a deny-payment gateway and complete local effects. Label
+model use, snapshot replay and payment mode separately. A complete run and a valid
+receipt do not establish a useful requested artifact, autonomous discovery recall,
+independent demand or real settlement. Preserve failed attempts and D-300's delivery
+boundary. The dated live harness reserves conservative peak-rate cost before each
+HTTP request, retains failures, flushes state and excludes concurrent owners; uncertain
+state stays held. See the [execution findings](docs/engineering/research-workload-2026-10-04.md).
+
+Bot projections lack authoritative historical chain/settlement evidence. Display
+network-neutral planned USDC rewards and link to original receipts; do not infer a
+network from today's configuration or settlement from a citation/recorded total.
+
 **Economic recovery preserves original authority — 2026-10-04.** The owner
 authorized repairs after the deployed-mainnet economic audit. An exposed withdrawal
 marker can precede cryptography; distinguish it from publication of a retained burn

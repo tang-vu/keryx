@@ -68,8 +68,8 @@ export function helpText(): string {
   return [
     "<b>Keryx</b> — the citation-toll research herald.",
     "",
-    "Ask a question and Keryx buys the right paid sources, answers with citations, and pays " +
-      "every cited creator in USDC on Arc — really, on-chain.",
+    "Ask a question and Keryx reads selected sources, returns cited evidence, and records " +
+      "planned USDC creator rewards. Open the full trace to check payment mode and settlement receipts.",
     "",
     "Usage: <code>/ask what is x402?</code>",
     "In this private chat you can also just type the question.",
@@ -92,7 +92,7 @@ export function buildAnswerText(run: QueryRun): string {
   parts.push(escapeHtml(truncate(run.answer, ANSWER_MAX)), "");
 
   if (run.citations.length > 0) {
-    parts.push("<b>Citations and planned rewards — weighted USDC citation rewards on Arc testnet</b>");
+    parts.push("<b>Citations and planned rewards (USDC)</b>");
     for (const c of run.citations) {
       parts.push(
         escapeHtml(`${c.sourceName} — $${c.reward.toFixed(4)} (weight ${c.weight.toFixed(2)})`),
@@ -104,6 +104,7 @@ export function buildAnswerText(run: QueryRun): string {
   const plural = run.citations.length === 1 ? "" : "s";
   parts.push(
     `${run.citations.length} source${plural} cited · $${run.totalToCreators.toFixed(4)} recorded to creators / ${run.paymentMode ?? "legacy"}`,
+    "Recorded amounts are not settlement proof; check the full trace receipts.",
     `Full trace: ${config.baseUrl}/dispatch/${run.id}`,
   );
   return truncate(parts.join("\n"), MESSAGE_MAX);

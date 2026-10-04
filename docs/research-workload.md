@@ -99,6 +99,10 @@ allowance. These commands create no autonomous background workload.
 
 ## Initial checkpoint
 
+This checkpoint is historical. The subsequent [execution report](engineering/research-workload-2026-10-04.md)
+records real-model attempts for R01-R18 and isolated synthetic scenarios for R19-R24,
+including failures, usefulness review and the remaining live/user gates.
+
 The specification and deployment-doc correction are the first deliverables.
 On October 4, 2026, the existing six-case heuristic regression suite passed with
 zero hard failures against runtime source b71789b; the four fictional boundary
