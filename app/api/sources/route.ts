@@ -65,6 +65,7 @@ function toPublicSource(s: Source) {
     walletAddress: s.walletAddress,
     authors: s.authors.map((a) => ({ name: a.name, splitWeight: a.splitWeight })),
     onchainId: s.onchainId,
+    sourceClaimId: s.sourceClaimId,
     registerTx: s.registerTx,
     verified: s.verified !== false, // undefined → true (grandfathered)
   };

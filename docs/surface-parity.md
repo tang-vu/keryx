@@ -1,5 +1,27 @@
 # Supported-surface release parity
 
+## Public source claims, October 5, 2026
+
+Application **0.26.10** adds wallet-bound website/RSS control verification and separate
+prospective earnings policies. Web and authenticated API own claim management.
+The shared research pipeline, hosted API/A2A, remote MCP, OpenAI, bots and browser
+Session runtime retain selected-policy admission and free-read evidence. Portable
+receipts and Operator exports preserve that captured policy as historical evidence,
+not current payout authority. See [the claim protocol and gates](public-source-claims.md).
+
+An esbuild runtime-input audit against `1297d43` found the desktop helper's receipt
+read model changed, requiring **desktop 0.4.4** and its installed-app acceptance.
+The caller MCP bundle's 30 runtime inputs and emitted hash are unchanged, so
+**MCP 0.4.3** remains compatible; stdio forwards the hosted structured result.
+The extension's 10 allowlisted inputs and packer are unchanged, retaining **0.1.1**.
+Remote MCP keeps its separate protocol identity **0.2.0**. CLI, desktop, extension
+and bots gain no publisher administration or new payment authority.
+
+Versions are source candidates until CI, exact-source downloadable desktop/MCP
+artifacts and production `/api/health` commit are verified. Existing immutable
+distributions retain their original source provenance; unchanged package versions
+do not imply they were republished from this web commit.
+
 User-confirmed policy, October 1, 2026: every update audits every applicable surface and ships its shared contracts, adapters, tests, documentation and distribution together. No applicable surface may be skipped. Intentional role boundaries remain explicit; identical UI and payment authority are not required across distinct roles.
 
 ## October 4 documentation and current release status

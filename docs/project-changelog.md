@@ -1,5 +1,22 @@
 # Keryx Project Changelog
 
+### Public source claims and explicit future earnings (2026-10-05, v0.26.10)
+
+- Add `/claim-source` for wallet-bound website or RSS publisher proof, challenge recovery,
+  exact registry linking and a separate free/citation-only/paid policy with rights consent.
+- Keep public discovery and historical public citations free. Read exact zero-price creator
+  articles without an access payment; reward only qualified citations when separately enabled.
+- Bind new charges to the selected policy and retained original nonce. Pause unavailable or
+  stale authority, preserve public evidence and report uncertain funding without retrying it.
+- Show claim mode/control status on source listings. Validate both profiles and mobile/desktop
+  flows with a hermetic Chromium journey and native concurrent policy-admission tests.
+- Claim management is web/API; shared readers retain their existing surface roles. See
+  [public source claims](public-source-claims.md). No fake mainnet paid sources or real spending
+  are part of this release validation.
+- Preserve captured claim policy and free-read provenance in shared research and portable
+  receipts. Operator desktop 0.4.4 updates its receipt read model; MCP 0.4.3 and extension
+  0.1.1 keep their unchanged compatible distribution roles.
+
 ### Retain research when model calls fail (2026-10-05, v0.26.9 candidate)
 
 - Preserve completed reads and payment receipts when later model assessment,

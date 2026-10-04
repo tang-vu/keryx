@@ -3,6 +3,11 @@ import { fetchByCid, hasPinata } from "../ipfs/pinata-client";
 import type { SourceItem } from "../types";
 import { validateArticleContentManifest } from "./article-content-manifest";
 import { contentBodyHash, contentBytes } from "./content-receipt";
+import type { KeryxDB } from "../db/keryx-db";
+import type { Source, SourceClaimReceipt } from "../types";
+import { sourceFetchTerms } from "../registry/source-fetch-payto";
+import { sourceClaimAccess } from "./source-claim-access";
+import { sourceItemContentVersion } from "./source-item-asset";
 
 interface ResolveOptions {
   /** Legacy source bundles may degrade one broken article to its free summary. */
@@ -15,6 +20,36 @@ interface ResolveOptions {
 export async function resolveSourceItemContent(
   item: SourceItem,
   settle: { payer: string; transaction: string },
+  options: ResolveOptions,
+): Promise<string> {
+  return resolveDeliveredContent(item, { kind: "paid", ...settle }, options);
+}
+
+/** A creator's current zero price authorizes delivery without an x402 payment or fake receipt. */
+export async function resolveFreeSourceItemContent(
+  db: KeryxDB, source: Source, item: SourceItem,
+  expectedClaim?: SourceClaimReceipt | null,
+): Promise<string> {
+  if (source.id.startsWith("public:") || item.sourceId !== source.id || source.scholarlyEnrolled)
+    throw new Error("This source cannot use creator-free delivery");
+  const current = await db.getSource(source.id);
+  const currentItem = await db.getItem(source.id, item.id);
+  if (!current || !currentItem || current.active === false || current.verified === false ||
+      sourceItemContentVersion(currentItem) !== sourceItemContentVersion(item))
+    throw new Error("Free source or exact article version changed");
+  const terms = await sourceFetchTerms(current, { refresh: true });
+  const access = await sourceClaimAccess(db, current, terms,
+    expectedClaim === undefined ? {} : { expected: expectedClaim });
+  if (!terms.active || terms.listPriceUsdc !== 0 || !access.readAllowed)
+    throw new Error("The creator has not authorized a free read of this article");
+  return resolveDeliveredContent(currentItem, { kind: "free" }, {
+    allowSummaryFallback: false, expectedManifestSigner: terms.creator,
+  });
+}
+
+async function resolveDeliveredContent(
+  item: SourceItem,
+  access: { kind: "paid"; payer: string; transaction: string } | { kind: "free" },
   options: ResolveOptions,
 ): Promise<string> {
   if (item.storageMode === "db_encrypted") {
@@ -62,7 +97,8 @@ export async function resolveSourceItemContent(
       const invalid = await invalidReceiptReason(item, plaintext, options.expectedManifestSigner);
       if (invalid) throw new Error(invalid);
       console.log(
-        `[ipfs] decrypted item ${item.id} for payer ${settle.payer} tx ${settle.transaction}`,
+        access.kind === "paid" ? `[ipfs] decrypted item ${item.id} for payer ${access.payer} tx ${access.transaction}`
+          : `[ipfs] delivered creator-authorized free item ${item.id}`,
       );
       return plaintext;
     } catch (error) {

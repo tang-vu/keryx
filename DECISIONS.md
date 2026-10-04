@@ -1,5 +1,47 @@
 # Keryx — Decision Log
 
+**Public discovery, verified control and explicit future earnings — 2026-10-05.**
+Keep public RSS and on-demand broad-web evidence readable without a creator account,
+wallet, price or payout authority. Do not attempt to pre-crawl the entire internet or
+populate an empty mainnet marketplace with simulated paid creators. A public reference
+keeps its original identity and archived receipts after a publisher claims control.
+
+Claims prove control of an exact HTTPS source using an expiring, wallet/network/origin
+bound challenge in an origin-root file or publisher-controlled RSS/Atom channel metadata.
+Post bodies, comments and redirects cannot establish control. Store one owner atomically,
+retain proof and revision history, and bind a separate creator listing to its exact
+on-chain source ID and reviewed registry address. Strong proof may verify that listing
+only after fresh live creator authority agrees. Verification and linking default to free;
+earning requires a separate explicit distribution permission and policy selection.
+Citation-only requires an owner-set zero registry toll; paid access requires a positive
+registry toll. On-chain payout and author splits remain authoritative.
+
+A zero-price article is a current version-bound free delivery, with no access signature,
+deposit, simulated settlement or paid-cache receipt. Only a qualified actual citation may
+trigger a later citation reward when enabled. Preserve the original free public candidate
+until a creator read succeeds, and admit an exact URL/body only once. Disabled or unavailable
+creator delivery cannot erase public evidence. A first uncertain funding boundary blocks
+further automatic payments and stays visible alongside the completed answer.
+
+Capture the policy revision before reading and bind new financial admission to that snapshot.
+Managed paid endpoints require the selected claim ID/revision, but unsigned URL metadata
+alone is insufficient: atomic SQLite admission compares the current policy and the nonce's
+retained browser/hosted original. Existing economic originals keep their policy for recovery;
+policy updates never bill old reads or rewrite exposed authorization/settlement evidence.
+Pause new managed earnings when control proof is over 24 hours old, the registry changes,
+permission is disabled, or authority cannot be verified. Refresh proof manually; disabling
+earnings remains available during outages. Unsupported storage refuses claim writes and
+managed admission. Use existing sealed storage without adding a mainnet schema migration.
+
+Claim management belongs to the wallet web flow and its authenticated API. Shared research
+behavior and original policy checks apply to hosted API/A2A/MCP/bots and the headless browser
+Session runtime. Existing stdio buyer, desktop and extension protocols keep their roles;
+their packaged reader contracts do not become claim-management or payout authority. Scholarly
+rights enrollment remains separately gated. Acceptance requires native concurrent admission,
+real React/browser journeys, original-signature substitution tests, existing payment checks,
+TypeScript/lint/build, independent review and verified production commit. See
+[the source claim guide](docs/public-source-claims.md).
+
 **Stage a bounded brief behind measured usefulness and contribution review — 2026-10-05.**
 The owner authorized ordinary mainnet client use within one USD 2 round, at most
 three questions and 0.15 source USDC, with no topup. Keep external compute/search

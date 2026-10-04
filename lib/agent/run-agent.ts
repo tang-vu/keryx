@@ -75,6 +75,10 @@ import {
   sourceItemIdentity,
 } from "../sources/source-item-asset";
 import { sourceFetchTerms } from "../registry/source-fetch-payto";
+import { sourceClaimAccess, publicDuplicateOfOwnedItem } from "../sources/source-claim-access";
+import { resolveFreeSourceItemContent } from "../sources/resolve-source-item-content";
+import { contentBodyHash } from "../sources/content-receipt";
+import type { SourceClaimReceipt } from "../types";
 import { resolveValidArticleOffer } from "../offers/resolve-article-offer";
 import {
   buildEvidenceLedger,
@@ -150,6 +154,9 @@ interface InternalAsset {
   priceUsdc: number;
   listPriceUsdc: number;
   offer?: ArticleOfferRef;
+  claimPolicy?: SourceClaimReceipt;
+  rewardAllowed?: boolean;
+  publicFallback?: GatheredContent;
 }
 
 export async function* runAgent(
@@ -330,21 +337,23 @@ export async function* runAgent(
       }
       const identity = bodyIdentity(article.text);
       lastWebFailure = "empty-or-duplicate-body";
-      if (!article.text.trim() || seenWebBodies.has(identity) || seenWebUrls.has(article.finalUrl) || publicReads.size && [...publicReads.values()].some(read => bodyIdentity(read.text) === identity)) {
+      if (!article.text.trim() || seenWebBodies.has(identity) || seenWebUrls.has(article.finalUrl) ||
+          gathered.some(read => bodyIdentity(read.text) === identity && read.itemUrl === article.finalUrl) ||
+          publicReads.size && [...publicReads.values()].some(read => bodyIdentity(read.text) === identity)) {
         publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure });
         return null;
       }
       seenWebBodies.add(identity);
       seenWebUrls.add(article.finalUrl);
-      const gathered = gatheredArticle(id, article);
+      const extracted = gatheredArticle(id, article);
       if (metadata) {
-        gathered.scholarly = { ...metadata, evidenceScope: metadata.provider === "arxiv" ? abstractFallback ? "abstract-page" : "paper-text" : "publisher-page" };
-        gathered.itemTitle = metadata.title;
-        gathered.itemPublishedAt = metadata.publishedDate?.length === 10 ? metadata.publishedDate : undefined;
-        gathered.publicDeliveryKind = abstractFallback ? "abstract" : "excerpt";
+        extracted.scholarly = { ...metadata, evidenceScope: metadata.provider === "arxiv" ? abstractFallback ? "abstract-page" : "paper-text" : "publisher-page" };
+        extracted.itemTitle = metadata.title;
+        extracted.itemPublishedAt = metadata.publishedDate?.length === 10 ? metadata.publishedDate : undefined;
+        extracted.publicDeliveryKind = abstractFallback ? "abstract" : "excerpt";
         if (abstractFallback) scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: only the abstract page was read; full-paper evidence is unavailable.`);
       }
-      return gathered;
+      return extracted;
     } catch (error) { lastWebFailure = articleFailureCode(error); publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure }); return null; }
     finally { webRemainingMs -= Date.now() - operationStarted; }
   }
@@ -365,6 +374,16 @@ export async function* runAgent(
       continue;
     }
     if (!terms.active) continue;
+    let claimAccess;
+    try { claimAccess = await sourceClaimAccess(db, s, terms, { now: startedAt }); }
+    catch {
+      yield emit("discover", `SKIP creator listing ${s.name}: its verified claim policy is unavailable; original public references remain free.`);
+      continue;
+    }
+    if (!claimAccess.readAllowed) {
+      yield emit("discover", `SKIP creator listing ${s.name}: earning has not been enabled for its current registry price.`);
+      continue;
+    }
     const catalogItems = (await db.getItems(s.id)).map(item => hasKnownSeedFingerprint(item.title, item.link, item.bodyHash)
       ? { ...item, evidenceProvenance: "synthetic-demo" as const } : item);
     const items = catalogItems.filter(item => gateway.mode === "offline" || item.evidenceProvenance !== "synthetic-demo");
@@ -382,8 +401,16 @@ export async function* runAgent(
     }
 
     if (item) {
+      const duplicatePublic = claimAccess.claim && [...publicReads.values()].find(read =>
+        publicDuplicateOfOwnedItem(item, read, contentBodyHash));
+      if (duplicatePublic && (terms.listPriceUsdc > 0 || !claimAccess.rewardAllowed)) {
+        yield emit("discover", `READ preference for ${s.name}: the same exact article is already a free public reference; no duplicate purchase or contribution.`);
+        continue;
+      }
       const id = sourceItemAssetId(item.id);
-      const identity = sourceItemIdentity({ ...item, evidenceProvenance: item.evidenceProvenance ?? s.evidenceProvenance });
+      const identity = { ...sourceItemIdentity({ ...item, evidenceProvenance: item.evidenceProvenance ?? s.evidenceProvenance }),
+        ...(claimAccess.snapshot ? { sourceClaim: claimAccess.snapshot } : {}),
+        ...(terms.listPriceUsdc === 0 ? { accessKind: "creator-free" as const } : {}) };
       const cacheKey = sourceItemCacheKey(s.id, item);
       const cached = Boolean(await effects.getCachedAt(cacheKey));
       if (cached) freshCache.add(id);
@@ -425,6 +452,9 @@ export async function* runAgent(
         cacheKey,
         priceUsdc,
         listPriceUsdc: terms.listPriceUsdc,
+        claimPolicy: claimAccess.snapshot,
+        rewardAllowed: claimAccess.rewardAllowed,
+        ...(duplicatePublic ? { publicFallback: duplicatePublic } : {}),
         offer: resolvedOffer
           ? { ...resolvedOffer.ref, proof: resolvedOffer.offer }
           : undefined,
@@ -433,6 +463,7 @@ export async function* runAgent(
     }
 
     // Historical source rows with no articles retain the original source-level purchase path.
+    if (terms.listPriceUsdc === 0) continue;
     const cached = isCacheFresh(
       await effects.getCachedAt(s.id),
       newestPublishedAt(items),
@@ -456,6 +487,8 @@ export async function* runAgent(
       cacheKey: s.id,
       priceUsdc: terms.listPriceUsdc,
       listPriceUsdc: terms.listPriceUsdc,
+      claimPolicy: claimAccess.snapshot,
+      rewardAllowed: claimAccess.rewardAllowed,
     });
   }
 
@@ -723,7 +756,8 @@ export async function* runAgent(
   // (real mode tops up from the funder once; offline is a no-op). Cached sources still earn
   // citation rewards, so fund only when an owned payable source will be used.
   let spendWalletReady = false;
-  if (buys.some((decision) => !publicCandidates.has(decision.assetId ?? decision.sourceId))) {
+  if (buys.some((decision) =>
+      (assetById.get(decision.assetId ?? decision.sourceId)?.priceUsdc ?? 0) > 0)) {
     try {
       const funded = await gateway.ensureFunded(budget);
       spendWalletReady = true;
@@ -753,15 +787,31 @@ export async function* runAgent(
     }
     const publicRead = publicReads.get(d.assetId ?? d.sourceId);
     if (publicRead) {
+      if (gathered.some(read => read.itemUrl === publicRead.itemUrl && contentBodyHash(read.text) === contentBodyHash(publicRead.text))) {
+        yield emit("fetch", `SKIP ${d.sourceName}: this exact article already contributes once to the answer.`);
+        continue;
+      }
       const marker = `S${++markerN}`;
       gathered.push({ ...publicRead, marker });
       yield emit("fetch", `Read ${d.sourceName} - free public feed reference, no creator payment - ${marker}`);
       continue;
     }
-    if (fundingUnavailable) continue;
     const asset = assetById.get(d.assetId ?? d.sourceId);
     if (!asset) continue;
+    if (fundingUnavailable && asset.priceUsdc > 0) continue;
     const { source, item, cacheKey } = asset;
+    try {
+      const currentTerms = await sourceFetchTerms(source, { refresh: true });
+      const currentAccess = await sourceClaimAccess(db, source, currentTerms, { expected: asset.claimPolicy ?? null });
+      if (!currentAccess.readAllowed || currentTerms.listPriceUsdc !== asset.listPriceUsdc) throw new Error("Source terms changed");
+    } catch {
+      yield emit("fetch", `SKIP ${source.name}: source claim or registry terms changed after discovery; no new payment.`);
+      continue;
+    }
+    if (item && asset.claimPolicy && gathered.some(read => publicDuplicateOfOwnedItem(item, read, contentBodyHash))) {
+      yield emit("fetch", `SKIP ${source.name}: this exact article was already read; no duplicate contribution or reward.`);
+      continue;
+    }
     if (await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text))) {
       yield emit("fetch", `SKIP paid manuscript ${source.name}: identical body was already read publicly, no duplicate access or reward.`);
       continue;
@@ -773,7 +823,19 @@ export async function* runAgent(
     const itemIdentity = { ...asset.candidate.item, evidenceProvenance: asset.candidate.item?.evidenceProvenance ?? source.evidenceProvenance };
     const assetLabel = item ? `${source.name} — ${item.title}` : source.name;
     const marker = `S${++markerN}`;
-    if (d.action === "CACHE") {
+    if (asset.priceUsdc === 0 && item) {
+      try {
+        const text = await resolveFreeSourceItemContent(db, source, item, asset.claimPolicy ?? null);
+        gathered.push({ assetId: asset.candidate.id, sourceId: source.id, sourceName: source.name,
+          ...itemIdentity, marker, text, accessKind: "creator-free", creatorRewardEligible: asset.rewardAllowed !== false });
+        yield emit("fetch", `READ ${assetLabel}: creator-authorized free access, 0 USDC; ${asset.rewardAllowed ? "only a qualified future citation may earn a reward" : "creator rewards are disabled"} — ${marker}`);
+      } catch {
+        if (asset.publicFallback) {
+          gathered.push({ ...asset.publicFallback, marker });
+          yield emit("fetch", `READ ${assetLabel}: creator delivery unavailable; original public reference retained, no creator reward — ${marker}`);
+        } else yield emit("fetch", `Free creator article ${assetLabel} unavailable; continuing with other evidence.`);
+      }
+    } else if (d.action === "CACHE") {
       const cached = (await effects.getCached(cacheKey)) ?? "";
       gathered.push({
         assetId: asset.candidate.id,
@@ -782,6 +844,7 @@ export async function* runAgent(
         ...itemIdentity,
         marker,
         text: cached,
+        creatorRewardEligible: asset.rewardAllowed !== false,
       });
       yield emit("fetch", `Reused cached ${assetLabel} (free) — ${marker}`);
     } else {
@@ -798,6 +861,7 @@ export async function* runAgent(
           queryId,
           priceUsdc: asset.priceUsdc,
           offer: asset.offer,
+          sourceClaim: asset.claimPolicy,
         });
         if (payment.settled) settledPayments++;
         if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
@@ -817,6 +881,7 @@ export async function* runAgent(
           ...itemIdentity,
           marker,
           text: content,
+          creatorRewardEligible: asset.rewardAllowed !== false,
         });
         yield emit(
           "fetch",
@@ -1004,6 +1069,7 @@ export async function* runAgent(
         }
         const publicRead = publicReads.get(recId);
         if (publicRead && !gatheredIds.has(recId)) {
+          if (gathered.some(read => read.itemUrl === publicRead.itemUrl && contentBodyHash(read.text) === contentBodyHash(publicRead.text))) continue;
           const marker = `S${++markerN}`;
           gathered.push({ ...publicRead, marker });
           attentionUsed++;
@@ -1011,15 +1077,21 @@ export async function* runAgent(
           yield emit("reevaluate", `Filling gap - free public feed reference ${publicRead.sourceName}, no creator payment - ${marker}`);
           continue;
         }
-        if (fundingUnavailable) {
-          yield* withholdOwnedReads("reevaluate", recId);
-          continue;
-        }
         const asset = assetById.get(recId);
         const source = asset?.source;
         // Guard against an engine recommending a source we already read (duplicate marker +
         // double payment) or that no longer fits the remaining budget.
         if (!asset || !source || gatheredIds.has(recId) || (remainingBudget <= 0 && asset.priceUsdc > 0) || asset.priceUsdc > remainingBudget + 1e-9) continue;
+        if (fundingUnavailable && asset.priceUsdc > 0) {
+          yield* withholdOwnedReads("reevaluate", recId);
+          continue;
+        }
+        try {
+          const currentTerms = await sourceFetchTerms(source, { refresh: true });
+          const access = await sourceClaimAccess(db, source, currentTerms, { expected: asset.claimPolicy ?? null });
+          if (!access.readAllowed || currentTerms.listPriceUsdc !== asset.listPriceUsdc) throw new Error("Source terms changed");
+        } catch { yield emit("reevaluate", `SKIP ${source.name}: claim or registry terms changed; no new payment.`); continue; }
+        if (asset.item && asset.claimPolicy && gathered.some(read => publicDuplicateOfOwnedItem(asset.item!, read, contentBodyHash))) continue;
         if (await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text))) {
           yield emit("reevaluate", `SKIP paid manuscript ${source.name}: identical public body is already evidence, no duplicate payment.`);
           continue;
@@ -1032,6 +1104,16 @@ export async function* runAgent(
         const marker = `S${++markerN}`;
         const assetLabel = asset.item ? `${source.name} — ${asset.item.title}` : source.name;
         const itemIdentity = { ...asset.candidate.item, evidenceProvenance: asset.candidate.item?.evidenceProvenance ?? source.evidenceProvenance };
+        if (asset.priceUsdc === 0 && asset.item) {
+          try {
+            const text = await resolveFreeSourceItemContent(db, source, asset.item, asset.claimPolicy ?? null);
+            gathered.push({ assetId: asset.candidate.id, sourceId: source.id, sourceName: source.name,
+              ...itemIdentity, marker, text, accessKind: "creator-free", creatorRewardEligible: asset.rewardAllowed !== false });
+            attentionUsed++; gatheredIds.add(recId);
+            yield emit("reevaluate", `READ ${assetLabel}: creator-authorized free article, 0 USDC — ${marker}`);
+          } catch { yield emit("reevaluate", `Free creator article ${assetLabel} unavailable; continuing research.`); }
+          continue;
+        }
         // Funding errors have their own uncertainty boundary. They are never
         // interpreted as a creator payment record or permission to retry funding.
         if (!spendWalletReady) {
@@ -1054,6 +1136,7 @@ export async function* runAgent(
             queryId,
             priceUsdc: asset.priceUsdc,
             offer: asset.offer,
+            sourceClaim: asset.claimPolicy,
           });
           if (payment.settled) settledPayments++;
           if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
@@ -1073,6 +1156,7 @@ export async function* runAgent(
             ...itemIdentity,
             marker,
             text: content,
+            creatorRewardEligible: asset.rewardAllowed !== false,
           });
           attentionUsed++;
           gatheredIds.add(asset.candidate.id);
@@ -1347,8 +1431,10 @@ export async function* runAgent(
         publicDeliveryKind: g.publicDeliveryKind,
         webProvenance: g.webProvenance,
         scholarly: g.scholarly,
+        sourceClaim: g.sourceClaim,
+        accessKind: g.accessKind,
         weight: attribution.weight,
-        reward: g.sourceKind === "public-reference" ? 0 : rewards[index] ?? 0,
+        reward: g.sourceKind === "public-reference" || g.creatorRewardEligible === false ? 0 : rewards[index] ?? 0,
         rationale: brief ? (vi ? "Đóng góp từ bằng chứng được giữ trong bản phân tích; trọng số là phân bổ, không chứng nhận tính đúng đắn."
           : "Contribution from evidence retained in the brief; weight is an allocation, not certification of factual correctness.") : attribution.rationale,
       };
@@ -1365,6 +1451,26 @@ export async function* runAgent(
     if (publicReads.has(c.sourceId) || isPublicReferenceId(c.sourceId)) continue;
     const source = sourceById.get(c.sourceId);
     if (!source || c.reward <= 0) continue;
+    try {
+      const terms = await sourceFetchTerms(source, { refresh: true });
+      const access = await sourceClaimAccess(db, source, terms, { expected: c.sourceClaim ?? null });
+      if (!access.rewardAllowed) throw new Error("Creator rewards are disabled");
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") throw error;
+      c.reward = 0;
+      yield emit("settle", `Citation reward withheld for ${source.name}: current policy does not authorize a new payment. The cited answer remains available.`);
+      continue;
+    }
+    if (fundingUnavailable) { c.reward = 0; continue; }
+    if (!spendWalletReady) {
+      try { await gateway.ensureFunded(budget); spendWalletReady = true; }
+      catch (error) {
+        if (error instanceof Error && error.name === "AbortError") throw error;
+        yield* withholdOwnedReads("settle");
+        c.reward = 0;
+        continue;
+      }
+    }
     const authors = source.authors.length ? source.authors : [{ name: source.name, walletAddress: source.walletAddress, splitWeight: 1 }];
     // Allocate the reward across authors in integer micro-USDC so the settled legs sum to EXACTLY
     // c.reward — independent rounding per author (round(reward * weight)) would let the legs drift
@@ -1390,6 +1496,8 @@ export async function* runAgent(
                 contentVersion: c.contentVersion,
                 ...(c.itemPublishedAt ? { itemPublishedAt: c.itemPublishedAt } : {}),
                 ...(c.contentReceipt ? { contentReceipt: c.contentReceipt } : {}),
+                ...(c.sourceClaim ? { sourceClaim: c.sourceClaim } : {}),
+                ...(c.accessKind ? { accessKind: c.accessKind } : {}),
               }
             : undefined;
         const payment = await gateway.payCitation({
@@ -1400,6 +1508,7 @@ export async function* runAgent(
           weight: c.weight,
           queryId,
           rationale,
+          sourceClaim: c.sourceClaim,
         });
         if (payment.settled) settledPayments++;
         if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
@@ -1510,7 +1619,7 @@ export async function* runAgent(
   return finish(answer);
 
   // ── helpers ──
-  function withholdOwnedReads(phase: "fetch" | "reevaluate", selectedAssetId?: string): TraceStep[] {
+  function withholdOwnedReads(phase: "fetch" | "reevaluate" | "settle", selectedAssetId?: string): TraceStep[] {
     const steps: TraceStep[] = [];
     if (!fundingUnavailable) {
       fundingUnavailable = true;
@@ -1520,7 +1629,7 @@ export async function* runAgent(
     }
     for (const [index, decision] of finalDecisions.entries()) {
       const assetId = decision.assetId ?? decision.sourceId;
-      if (decision.external || publicCandidates.has(assetId)
+      if (decision.external || publicCandidates.has(assetId) || assetById.get(assetId)?.priceUsdc === 0
         || (decision.action !== "BUY" && decision.action !== "CACHE" && assetId !== selectedAssetId)) continue;
       // decide events retain the published planning snapshot. Replace the final
       // decision instead of mutating the object already streamed and traced.

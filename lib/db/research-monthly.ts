@@ -7,6 +7,9 @@ import { assertVerifiedSqliteConnection } from "./storage-identity-connection";
 import { storagePaymentProfile, storageIdentityDigest } from "./storage-identity";
 import { a2aOrderId, a2aRequestHash, sameA2aOrder, type A2aOrder } from "../a2a/order";
 import { a2aResearchPackageFingerprint, isSupportedA2aResearchPackage, type A2aResearchPackage } from "../a2a/research-package";
+import { sourceClaimReceiptSchema } from "../sources/public-source-claim";
+import { admitSqliteSourceClaimPurchasePolicy } from "./public-source-claims";
+import type { SourceClaimReceipt } from "../types";
 
 export const MONTHLY_REQUEST_LIMIT = 4;
 export const MONTHLY_TERM_MS = 30 * 24 * 60 * 60_000;
@@ -26,6 +29,10 @@ export interface ResearchPurchaseClaim {
   requireExisting?: boolean;
   /** Exact EIP-3009 validity and separate challenge expiry, in decimal epoch seconds. */
   issued?: { validAfter: string; validBefore: string; expiresAt: string };
+  /** Exact seller source even when a managed caller omits its required expected policy. */
+  resourceSourceId?: string;
+  resourceKind?: "fetch" | "citation";
+  sourceClaim?: { sourceId: string; receipt: SourceClaimReceipt; kind: "fetch" | "citation" };
 }
 function trustedProfile(profile: ArcNetworkProfile) {
   if (profile !== ARC_MAINNET_PROFILE && profile !== ARC_TESTNET_PROFILE) throw new Error("Untrusted research profile");
@@ -259,7 +266,11 @@ function claimRow(value: ResearchPurchaseClaim, profile: ArcNetworkProfile = ARC
   trustedProfile(profile);
   const claim = z.object({ network: z.literal(profile.networkId), asset: z.literal(profile.usdcAddress.toLowerCase()).optional(), payer: address, payee: address,
     authorizationId: z.string().min(1).max(256), purpose: z.enum(["a2a", "monthly", "resource"]), requestHash: z.string().regex(/^[0-9a-f]{64}$/), amountMicros: micros,
-    requireExisting: z.boolean().optional(), issued: issuedSchema.optional() }).strict().parse(value);
+    requireExisting: z.boolean().optional(), issued: issuedSchema.optional(), resourceSourceId: z.string().min(1).max(256).optional(), resourceKind: z.enum(["fetch", "citation"]).optional(),
+    sourceClaim: z.object({ sourceId: z.string().min(1).max(256), receipt: sourceClaimReceiptSchema, kind: z.enum(["fetch", "citation"]) }).strict().optional() }).strict().parse(value);
+  if (claim.sourceClaim && (claim.purpose !== "resource" || claim.resourceSourceId && claim.resourceSourceId !== claim.sourceClaim.sourceId ||
+    claim.resourceKind && claim.resourceKind !== claim.sourceClaim.kind))
+    throw new Error("Research source claim context differs from seller resource");
   if (claim.requireExisting && (!claim.issued || claim.purpose !== "monthly")) throw new Error("Issued Monthly authorization required");
   if (claim.issued) {
     const now=BigInt(Math.floor(Date.now()/1000)),after=BigInt(claim.issued.validAfter),before=BigInt(claim.issued.validBefore),expiry=BigInt(claim.issued.expiresAt);
@@ -277,6 +288,10 @@ export function claimSqliteResearchPurchase(db: DatabaseSync, value: ResearchPur
   if (ownTransaction) db.exec("BEGIN IMMEDIATE");
   try {
     assertSqliteResearchAuthority(db,profile,true);
+    const existing = db.prepare("SELECT 1 FROM research_purchase_authorizations WHERE network=? AND asset=? AND payer=? AND authorization_id=?").get(row.network,row.asset,row.payer,row.authorization_id);
+    admitSqliteSourceClaimPurchasePolicy(db, { identity: { network: row.network, payer: row.payer, authorizationId: row.authorization_id },
+      existing: Boolean(existing), sourceId: value.resourceSourceId ?? value.sourceClaim?.sourceId,
+      receipt: value.sourceClaim?.receipt, kind: value.sourceClaim?.kind ?? value.resourceKind, payee: row.payee, amountMicros: row.amount_micros });
     if (!required) db.prepare("INSERT OR IGNORE INTO research_purchase_authorizations (network,asset,payer,payee,authorization_id,product,purchase_id,request_hash,amount_micros,issued_data) VALUES (?,?,?,?,?,?,?,?,?,?)")
       .run(...Object.values(row).map(value => value !== null && typeof value === "object" ? JSON.stringify({...value,submitted:false}) : value));
     const stored = db.prepare("SELECT * FROM research_purchase_authorizations WHERE network=? AND asset=? AND payer=? AND authorization_id=?").get(row.network,row.asset,row.payer,row.authorization_id);
@@ -293,6 +308,7 @@ export function claimSqliteResearchPurchase(db: DatabaseSync, value: ResearchPur
   } catch (error) { if (ownTransaction) db.exec("ROLLBACK"); throw error; }
 }
 export async function claimSupabaseResearchPurchase(db: SupabaseClient, value: ResearchPurchaseClaim) {
+  if (value.sourceClaim) throw new Error("Atomic managed source payment admission is unsupported on Supabase");
   const {row,required}=claimRow(value);
   const { data, error } = await db.rpc("claim_research_purchase", { p_claim: {...row,requireExisting:required} });
   if (error || data !== true) throw new Error("Research authorization claim conflict");

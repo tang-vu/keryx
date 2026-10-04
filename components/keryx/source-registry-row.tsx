@@ -10,6 +10,7 @@ import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { fmtUsdc } from "./phase-style";
 import type { Source } from "@/lib/types";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import type { SourceClaim } from "@/lib/sources/public-source-claim";
 
 const EXPLORER = browserPaymentProfile().explorerUrl;
 
@@ -31,9 +32,12 @@ export interface RegistryRowProps {
   source: Source;
   totalEarnedUsdc: number;
   citationCount: number;
+  claim?: SourceClaim | null;
+  claimPolicyUnavailable?: boolean;
+  controlFresh?: boolean;
 }
 
-export function SourceRegistryRow({ source: s, totalEarnedUsdc, citationCount }: RegistryRowProps) {
+export function SourceRegistryRow({ source: s, totalEarnedUsdc, citationCount, claim, claimPolicyUnavailable, controlFresh }: RegistryRowProps) {
   const previewNote = s.previewDepth ? PREVIEW_NOTE[s.previewDepth] : undefined;
 
   return (
@@ -58,7 +62,7 @@ export function SourceRegistryRow({ source: s, totalEarnedUsdc, citationCount }:
           )}
         </div>
         <span className="shrink-0 rounded-md bg-seal/10 px-2 py-0.5 font-mono text-xs font-semibold text-seal">
-          ${fmtUsdc(s.fetchPrice)} / read
+          {claim ? "Registry toll: " : ""}${fmtUsdc(s.fetchPrice)} / read
         </span>
       </div>
 
@@ -67,6 +71,10 @@ export function SourceRegistryRow({ source: s, totalEarnedUsdc, citationCount }:
           {s.description}
         </p>
       )}
+      {claimPolicyUnavailable ? <p className="mt-3 text-sm text-seal">Claim policy unavailable. New claimed-source payments are withheld.</p> : claim && <p className="mt-3 text-sm text-ink-2">
+        {claim.mode === "free" ? "Free policy · no creator rewards." : !controlFresh ? "Claim control expired · earning eligibility paused." : !claim.distributionPermission ? "Distribution consent unavailable · earnings disabled." : claim.mode === "citation-only" ? "Citation-only policy · zero-price reads and qualified citation rewards." : "Paid policy · selected paid reads and qualified citation rewards."}{" "}
+        <Link href={`/claim-source?claimId=${encodeURIComponent(claim.id)}`} className="underline">Inspect source claim</Link>
+      </p>}
 
       <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-ink-3">
         {s.onchainId &&

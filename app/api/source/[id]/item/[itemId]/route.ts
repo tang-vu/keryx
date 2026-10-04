@@ -10,7 +10,9 @@ import {
   sourceItemCacheKey,
   sourceItemIdentity,
 } from "@/lib/sources/source-item-asset";
-import { resolveSourceItemContent } from "@/lib/sources/resolve-source-item-content";
+import { resolveSourceItemContent, resolveFreeSourceItemContent } from "@/lib/sources/resolve-source-item-content";
+import { sourceClaimAccess } from "@/lib/sources/source-claim-access";
+import { assertSourceClaimRequest, sourceClaimPath } from "@/lib/sources/source-claim-request";
 import { settleThenServe } from "@/lib/x402-server";
 
 export const runtime = "nodejs";
@@ -65,14 +67,31 @@ export async function GET(
     return Response.json({ error: "Scholarly pilot does not support discounted offers" }, { status: 409 });
   const rightsDenied = await paperPaidGate(db, source, req, { kind: "fetch", item, payee: terms.payTo, amountMicros: Math.round(priceUsdc * 1e6) });
   if (rightsDenied) return rightsDenied;
+  let claimAccess;
+  try { claimAccess = await sourceClaimAccess(db, source, terms); }
+  catch { return Response.json({ error: "Current source claim authority is unavailable" }, { status: 503 }); }
+  if (!claimAccess.readAllowed) return Response.json({ error: "This creator has not enabled access at the current price" }, { status: 410 });
+  if (priceUsdc > 0 || req.nextUrl.searchParams.has("claimId") || req.nextUrl.searchParams.has("claimRevision")) {
+    try { assertSourceClaimRequest(req.nextUrl.searchParams, claimAccess.snapshot); }
+    catch { return Response.json({ error: "Source policy changed; rediscover before paying" }, { status: 409 }); }
+  }
+  if (priceUsdc === 0) {
+    try {
+      const content = await resolveFreeSourceItemContent(db, source, item, claimAccess.snapshot ?? null);
+      return Response.json({ content, name: source.name,
+        item: { ...identity, accessKind: "creator-free", ...(claimAccess.snapshot ? { sourceClaim: claimAccess.snapshot } : {}) },
+        access: "creator-free", creatorRewardsEnabled: claimAccess.rewardAllowed,
+        pricing: { offerId: null, priceUsdc: 0, listPriceUsdc: 0 } }, { headers: { "Cache-Control": "no-store" } });
+    } catch { return Response.json({ error: "The exact free article is unavailable" }, { status: 503 }); }
+  }
   const cacheKey = sourceItemCacheKey(id, item);
-  const endpoint = articlePaidPath({
+  const endpoint = sourceClaimPath(articlePaidPath({
     sourceId: id,
     itemId,
     contentVersion: identity.contentVersion,
     offerId: offer?.offer.id,
     listPriceUsdc: offer?.ref.listPriceUsdc,
-  });
+  }), claimAccess.snapshot);
 
   return settleThenServe(
     req,
@@ -80,6 +99,9 @@ export async function GET(
       priceUsdc,
       payTo: terms.payTo,
       endpoint,
+      resourceSourceId: id,
+      resourceKind: "fetch",
+      ...(claimAccess.snapshot ? { sourceClaim: { sourceId: id, receipt: claimAccess.snapshot, kind: "fetch" as const } } : {}),
       description: `${source.name} — ${item.title}`,
     },
     async (settle) => {

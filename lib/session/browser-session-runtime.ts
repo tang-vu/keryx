@@ -9,6 +9,8 @@ import type { SourcePaymentAuthority } from "../payments/client-payto-allowlist"
 import type { BrowserSessionCustodyContext } from "./browser-session-custody";
 import type { TypedDataPayload } from "./session-signer-protocol";
 import type { BrowserSessionWithdrawalReview } from "./browser-session-withdrawal-runtime";
+import { sourceClaimReceiptSchema, sameSourceClaim } from "../sources/source-claim-request";
+import { sourceClaimSchema, claimControlIsFresh } from "../sources/public-source-claim";
 
 /** Shared browser/headless admission. Implementations retain custody and reserve exposure;
  * this interface offers only the specific payment primitive consumed by this policy. */
@@ -35,10 +37,12 @@ const challengeSchema = z.object({ sessionId: addr, reqId: z.string().uuid(), gr
   sourceId: z.string().min(1).max(128), kind: z.enum(["fetch", "citation"]),
   expectedNonce: z.string().regex(/^0x[0-9a-f]{64}$/), browserAuthorizationProtocol: z.literal("durable-v1"),
   requirements: requirementsSchema,
-  paymentContext: z.object({ item: z.record(z.string(), z.unknown()).optional(), offer: z.record(z.string(), z.unknown()).optional() }).strict().optional(),
+  paymentContext: z.object({ item: z.record(z.string(), z.unknown()).optional(), offer: z.record(z.string(), z.unknown()).optional(),
+    sourceClaim: sourceClaimReceiptSchema.optional() }).strict().optional(),
 });
 export type BrowserSessionAuthorizationBinding = z.infer<typeof challengeSchema>;
-const sourceIndexSchema = z.array(z.object({ id: z.string(), onchainId: z.string().regex(/^0x[0-9a-f]{64}$/).optional() })).max(1000);
+const sourceIndexSchema = z.array(z.object({ id: z.string(), onchainId: z.string().regex(/^0x[0-9a-f]{64}$/).optional(),
+  sourceClaimId: z.string().regex(/^[a-f0-9]{64}$/).optional() })).max(1000);
 const itemSchema = z.object({ itemId: z.string().min(1).max(1024), contentVersion: z.string().min(1).max(256) }).passthrough();
 const previewSchema = z.object({ sourceId: z.string(), item: itemSchema, payTo: addr,
   listPriceMicroUsdc: z.string().regex(/^(0|[1-9]\d{0,15})$/) }).strict();
@@ -107,6 +111,19 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
       const requirements = challenge.requirements, payTo = requirements.payTo;
       if (!authority.active || !authority.onchain || (challenge.kind === "fetch"
         ? payTo !== authority.fetchPayTo.toLowerCase() : !authority.wallets.has(payTo))) refuse();
+      async function claimPolicy() {
+        const expected = challenge.paymentContext?.sourceClaim;
+        if (!expected) { if (entry!.sourceClaimId) refuse(); return; }
+        const body = await dependencies.json(`/api/source-claims?claimId=${expected.id}`);
+        const claim = sourceClaimSchema.parse((body as { claim?: unknown })?.claim);
+        if (entry!.sourceClaimId !== expected.id || claim.linkedSourceId !== challenge.sourceId ||
+            claim.onchainId !== entry!.onchainId || claim.network !== profile.networkId ||
+            claim.deploymentOrigin !== key.context.origin || claim.ownerWallet !== authority.creator.toLowerCase() ||
+            !sameSourceClaim(claim, expected) || !claimControlIsFresh(claim) || Date.parse(claim.effectiveAt) > Date.now() || !claim.distributionPermission ||
+            (challenge.kind === "fetch" ? claim.mode !== "paid" || authority.listPriceUsdc <= 0 :
+              claim.mode === "free" || (claim.mode === "paid" ? authority.listPriceUsdc <= 0 : authority.listPriceUsdc !== 0))) refuse();
+      }
+      await claimPolicy();
       if (challenge.kind === "fetch") {
         if (challenge.paymentContext?.item) {
           const item = itemSchema.parse(challenge.paymentContext.item);
@@ -120,7 +137,7 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
         const price = await validateBrowserFetchPrice({ sourceId: challenge.sourceId, amountUsdc6: requirements.amount,
           authority, context: challenge.paymentContext as BrowserPaymentContext });
         if (!price.allowed) refuse();
-      } else if (challenge.paymentContext) refuse();
+      } else if (challenge.paymentContext && (challenge.paymentContext.item || challenge.paymentContext.offer || !challenge.paymentContext.sourceClaim)) refuse();
       const reserve = () => dependencies.reserve(key.context.storageNamespace, bound.consent.grantEpoch, challenge.expectedNonce,
         BigInt(requirements.amount), BigInt(bound.consent.capMicroUsdc), scope, structuredClone(challenge));
       try { await reserve(); }
@@ -133,6 +150,7 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
         await reserve();
       }
       if (grantPolicy(await bindGrant()) !== grantPolicy(bound) || expectedGeneration !== generation) refuse();
+      await claimPolicy();
       const now = Math.floor(Date.now()/1000), authorization = { from: bound.response.sessAddr as Hex,
         to: requirements.payTo as Hex, value: requirements.amount, validAfter: String(now-600),
         validBefore: String(now+requirements.maxTimeoutSeconds), nonce: challenge.expectedNonce as Hex };
@@ -142,6 +160,7 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
         { name: "validAfter", type: "uint256" }, { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" } ] },
         primaryType: "TransferWithAuthorization", message: authorization });
       if (expectedGeneration !== generation || grantPolicy(await bindGrant()) !== grantPolicy(bound)) refuse();
+      await claimPolicy();
       return { paymentHeader: btoa(JSON.stringify({ authorization, signature })) };
     },
   });

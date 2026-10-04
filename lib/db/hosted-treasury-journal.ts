@@ -1,6 +1,8 @@
 import type { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { sourceClaimReceiptSchema } from "../sources/source-claim-request";
+import { assertSqliteSourceClaimPaymentPolicy } from "./public-source-claims";
 import { canonicalJson } from "../canonical-json";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 import { createSessionSigningPolicy } from "../session/session-signing-policy";
@@ -52,6 +54,7 @@ CREATE TRIGGER hosted_signer_grant_update_refused BEFORE UPDATE ON session_grant
 const text = z.string().min(1).max(256), micro = z.string().regex(/^(0|[1-9][0-9]{0,15})$/).refine(v => BigInt(v) <= BigInt(Number.MAX_SAFE_INTEGER));
 export const hostedPaymentContextSchema = z.object({ queryId: text, kind: z.enum(["fetch", "citation"]), sourceId: text,
  itemId: text.nullable(), queryBudgetMicroUsdc: micro.refine(v => BigInt(v) > BigInt(0)),
+ sourceClaim: sourceClaimReceiptSchema.optional(),
  privateJob: z.object({id:text,owner:z.string().regex(/^0x[0-9a-f]{40}$/),workerId:text}).strict().nullable() }).strict();
 export type HostedPaymentContext = z.infer<typeof hostedPaymentContextSchema>;
 export type HostedTreasuryAccounting = { retainedMicroUsdc: string; confirmedMicroUsdc: string };
@@ -120,6 +123,7 @@ export function admitSqliteHostedAuthorization(db: DatabaseSync, input: HostedAu
  const available=BigInt(micro.parse(input.availableMicroUsdc)), original=canonicalJson({context:c,payload});
  if (amount<=0 || p.expiresAtSeconds<=Math.floor(Date.now()/1000) || BigInt(c.queryBudgetMicroUsdc)>BigInt(p.queryCapMicroUsdc)) throw new Error("Hosted authority refused");
  sqliteJournalTransaction(db,()=>{
+  assertSqliteSourceClaimPaymentPolicy(db, { sourceId: c.sourceId, expected: c.sourceClaim ?? null, kind: c.kind, network: ARC_MAINNET_PROFILE.networkId });
   const admittedPolicy=db.prepare("SELECT data,role FROM hosted_treasury_policies WHERE digest=?").get(digest);
   if(admittedPolicy?.data!==canonicalJson(p) || admittedPolicy.role!==(c.privateJob?"private":"public")) throw new Error("Hosted policy not admitted for this role");
   if(db.prepare("SELECT 1 FROM hosted_treasury_authorizations WHERE nonce=?").get(nonce) ||

@@ -63,6 +63,9 @@ import { researchReportMarkdown } from "../research-report-export";
 import { exportsFromCheckedReceipt } from "../research/receipt-exports";
 import { surfaceResearch } from "../research/surface-result";
 import { ArticleReadError } from "../web-research/article-reader";
+import * as fetchAuthority from "../registry/source-fetch-payto";
+import type { SourceClaim } from "../sources/public-source-claim";
+import { sourceClaimReceipt } from "../sources/source-claim-access";
 
 const AGENT = "0xAGENT";
 const EPS = 1e-6;
@@ -267,6 +270,8 @@ function fakeDb(sources: Source[], state: DbState = {}): KeryxDB & { payments: P
     async listSources() {
       return sources;
     },
+    async getSource(id: string) { return sources.find(source => source.id === id) ?? null; },
+    async getItem(sourceId: string, itemId: string) { return state.items?.[sourceId]?.find(item => item.id === itemId) ?? null; },
     async getItems(sourceId: string) {
       if (state.items?.[sourceId]) return state.items[sourceId];
       const publishedAt = state.newestItem?.[sourceId];
@@ -1744,6 +1749,74 @@ function publicRef(id = "public:free"): PublicReference {
       link: `https://public.test/${id.replace(":", "-")}`, deliveryKind: "excerpt" }],
   });
 }
+
+describe("claim-managed free creator reading", () => {
+  async function fixture(mode: "free" | "citation-only", ids = ["owned-free"]) {
+    const oldOrigin = config.baseUrl;
+    Object.assign(config, { baseUrl: "https://keryx.cc" });
+    const proofTime = new Date(Date.now() - 1000).toISOString(), wallet = `0x${"11".repeat(20)}`;
+    const sources = ids.map(id => makeSource({ id, fetchPrice: 0, url: `https://${id}.example/`, walletAddress: wallet,
+      onchainId: `0x${"22".repeat(32)}`, sourceClaimId: id === ids[0] ? "a".repeat(64) : "b".repeat(64), verified: true }));
+    const claims = new Map(sources.map(source => [source.id, { id: source.sourceClaimId!, canonicalUrl: source.url,
+      ownerWallet: wallet, deploymentOrigin: new URL(config.baseUrl).origin, network: config.networkId, linkedSourceId: source.id,
+      onchainId: source.onchainId, mode, distributionPermission: mode !== "free", revision: 3, effectiveAt: proofTime, verifiedAt: proofTime } as SourceClaim]));
+    const items = Object.fromEntries(sources.map(source => [source.id, [{ id: `${source.id}-article`, sourceId: source.id,
+      title: "Source evidence", summary: "Preview", content: `Measured evidence from ${source.id} supports the research question.`,
+      link: `${source.url}article`, publishedAt: proofTime }]]));
+    const gateway = fakeGateway(), engine = fakeEngine(), d = deps(sources, engine, gateway, { items });
+    d.db.getSourceClaimForSource = async id => claims.get(id) ?? null;
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
+      payTo: source.walletAddress, creator: source.walletAddress, listPriceUsdc: 0, active: true, authority: "onchain", stale: false }));
+    const restore = terms.mockRestore.bind(terms);
+    terms.mockRestore = () => { Object.assign(config, { baseUrl: oldOrigin }); return restore(); };
+    return { sources, items, claims, gateway, engine, d, terms };
+  }
+  it("reads verified free content without funding, x402, reward legs or fabricated payment records", async () => {
+    const f = await fixture("free"), fund = vi.spyOn(f.gateway, "ensureFunded");
+    try {
+      const { run } = await drive({ question: "What was measured?", budget: 0.02, researchMode: "quick" }, f.d);
+      expect(run.citations).toHaveLength(1);
+      expect(run.citations[0]).toMatchObject({ reward: 0, accessKind: "creator-free", sourceClaim: sourceClaimReceipt(f.claims.get(f.sources[0].id)!) });
+      expect(run.evidence?.[0]?.qualifiesForReward).toBe(false);
+      expect(fund).not.toHaveBeenCalled(); expect(f.gateway.fetchCalls).toEqual([]); expect(f.gateway.citationCalls).toEqual([]);
+      expect(f.d.db.payments).toEqual([]); expect(run.totalSpent).toBe(0);
+    } finally { f.terms.mockRestore(); }
+  });
+  it("funds only an evidence-qualified citation reward after a citation-only free read", async () => {
+    const f = await fixture("citation-only"), fund = vi.spyOn(f.gateway, "ensureFunded");
+    try {
+      const { run } = await drive({ question: "What was measured?", budget: 0.02, researchMode: "quick" }, f.d);
+      expect(f.gateway.fetchCalls).toEqual([]); expect(fund).toHaveBeenCalledOnce();
+      expect(f.gateway.citationCalls).toHaveLength(1); expect(f.d.db.payments.every(payment => payment.kind === "citation")).toBe(true);
+      expect(run.citations[0].reward).toBeGreaterThan(0); expect(run.evidence?.[0]?.qualifiesForReward).toBe(true);
+    } finally { f.terms.mockRestore(); }
+  });
+  it("retains the cited answer and reports one uncertain funding boundary across multiple free creators", async () => {
+    const f = await fixture("citation-only", ["owned-free", "another-free"]), fund = vi.spyOn(f.gateway, "ensureFunded").mockRejectedValue(new Error("Gateway credit is unknown"));
+    try {
+      const { run } = await drive({ question: "What was measured?", budget: 0.02, researchMode: "quick" }, f.d);
+      expect(run.citations).toHaveLength(2); expect(run.citations.every(citation => citation.reward === 0)).toBe(true);
+      expect(fund).toHaveBeenCalledOnce(); expect(f.gateway.citationCalls).toEqual([]); expect(f.d.db.payments).toEqual([]);
+      expect(run.answer).toContain("Funding readiness is unknown");
+      expect(run.trace.some(step => step.message.includes("Funding readiness is unknown"))).toBe(true);
+    } finally { f.terms.mockRestore(); }
+  });
+  it.each(["SKIP", "changed"])("preserves the original free public candidate when creator delivery is %s", async reason => {
+    const f = await fixture("citation-only"), reference = publicRef();
+    const article = f.items[f.sources[0].id][0]; article.content = reference.items[0].content; article.link = reference.items[0].link;
+    f.d.db.listPublicReferences = async () => [reference];
+    const engine = fakeEngine({ decide: input => {
+      if (reason === "changed") f.claims.get(f.sources[0].id)!.revision++;
+      return input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+        action: candidate.sourceId === f.sources[0].id && reason === "SKIP" ? "SKIP" : "BUY" }));
+    } });
+    try {
+      const { run } = await drive({ question: "What was measured?", budget: 0.02, researchMode: "quick" }, { ...f.d, engine });
+      expect(run.citations).toHaveLength(1); expect(run.citations[0]).toMatchObject({ sourceId: reference.id, sourceKind: "public-reference", reward: 0 });
+      expect(f.gateway.fetchCalls).toEqual([]); expect(f.gateway.citationCalls).toEqual([]);
+    } finally { f.terms.mockRestore(); }
+  });
+});
 
 describe("public feed references remain off the payment rail", () => {
   it("grounds public citations after a malicious BUY without gateway, cache or settlement rows", async () => {

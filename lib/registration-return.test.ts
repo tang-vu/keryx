@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { registrationConnectHref, registrationDraft, registrationOwnerMatches, registrationTarget, safeRegistrationReturn } from "./registration-return";
+import { registrationConnectHref, registrationDraft, registrationOwnerMatches, registrationTarget, safeRegistrationReturn, sourceClaimDraft, sourceClaimTarget, sourceReturnWithOwner, sourceClaimConnectHref } from "./registration-return";
 const owner = `0x${"a".repeat(40)}`;
 it("roundtrips the prepared feed and paired Wanted context with wallet binding", () => {
   const draft = { rssUrl: "https://publisher.example/feed?a=1&b=2", gapId: "gap-123", matchedItemLink: "https://publisher.example/post", owner };
@@ -38,3 +38,22 @@ it("checks normalized URL length when Unicode expands into escaped bytes", () =>
   expect(url.length).toBeLessThan(2048);
   expect(() => registrationDraft(new URLSearchParams({ rss: url }))).toThrow(/2048 normalized/);
 });
+it("retains a claim registration and its exact zero-price review through sign-in", () => {
+  const draft = { url: "https://publisher.example/article", name: "Publisher", sourceClaimId: "a".repeat(64), fetchPrice: 0, owner };
+  const target = registrationTarget(draft);
+  expect(registrationDraft(new URL(target, "https://test.example").searchParams)).toEqual(draft);
+  expect(safeRegistrationReturn(target)).toBe(target);
+  expect(new URL(registrationConnectHref(draft)!, "https://test.example").searchParams.get("returnTo")).toBe(target);
+  expect(() => registrationDraft(new URLSearchParams({ fetchPrice: "0.0000001" }))).toThrow();
+  expect(() => registrationDraft(new URLSearchParams({ sourceClaimId: "../invalid" }))).toThrow();
+});
+it("roundtrips only bounded claim context and retains the original initiating wallet", () => {
+  const draft = { url: "https://publisher.example/article", referenceId: "public:publisher", challengeId: "b".repeat(64), owner };
+  const target = sourceClaimTarget(draft);
+  expect(sourceClaimDraft(new URL(target, "https://test.example").searchParams)).toEqual(draft);
+  expect(safeRegistrationReturn(target + "&returnTo=https://evil.example")).toBe(target);
+  expect(sourceReturnWithOwner(target, `0x${"c".repeat(40)}`)).toBe(target);
+  expect(registrationOwnerMatches(target, `0x${"c".repeat(40)}`)).toBe(false);
+  expect(sourceClaimConnectHref(draft)).not.toBeNull();
+});
+it.each(["/claim-source#x", "/claim-source/../connect", "/claim-source?url=http://publisher.example", "/claim-source?url=https://user:pass@publisher.example", "/claim-source?referenceId=../wrong", "/claim-source?challengeId=wrong", "/claim-source\\@evil.example", "/claim-source?url=javascript:alert(1)"])("rejects unsafe source claim return %s", value => expect(safeRegistrationReturn(value)).toBeNull());

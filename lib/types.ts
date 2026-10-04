@@ -8,6 +8,8 @@ export interface Source {
   evidenceProvenance?: "synthetic-demo";
   /** Sticky distribution-rights enrollment; unsupported backends must refuse paid activation. */
   scholarlyEnrolled?: boolean;
+  /** Retained opt-in claim binding. Catalog import cannot discard its policy/history. */
+  sourceClaimId?: string;
   id: string;
   name: string;
   url: string; // homepage / canonical link
@@ -86,18 +88,18 @@ export interface ContentReceiptRef {
   manifest?: ArticleContentManifest;
 }
 
-/** A content item belonging to a source (ingested from RSS). Preview is free; content is paid. */
+/** A creator content item. Preview is free; a positive current toll gates body delivery. */
 export interface SourceItem {
   evidenceProvenance?: "synthetic-demo";
   id: string;
   sourceId: string;
   title: string;
   summary: string; // free preview shown during discovery
-  content: string; // full text unlocked after the x402 toll (plaintext in DB when IPFS disabled)
+  content: string; // current creator price/policy gates delivery; zero-price reads require no toll
   link: string;
   publishedAt?: string;
   // Phase 04: IPFS encrypted content. When set, `content` is empty and the real text lives
-  // on IPFS as AES-256-GCM ciphertext. Decryption happens only inside produce() post-settle.
+  // on IPFS as AES-256-GCM ciphertext. Paid delivery follows settlement; free delivery rechecks zero price.
   ipfsCid?: string;       // CID of the encrypted blob on Pinata IPFS
   itemKeyEnc?: string;    // base64: per-item AES key wrapped with CONTENT_MASTER_KEY (+ 16-byte GCM tag)
   itemIv?: string;        // base64: 12-byte GCM nonce used to encrypt the content
@@ -113,6 +115,10 @@ export interface SourceItem {
 
 /** Immutable identity for the exact article version the agent evaluated and purchased. */
 export interface SourceItemIdentity {
+  /** Policy captured before this read; informational history, never payout authority. */
+  sourceClaim?: SourceClaimReceipt;
+  /** A free read is distinct from a cache hit or a settled access payment. */
+  accessKind?: "creator-free";
   evidenceProvenance?: "synthetic-demo";
   /** Observed provider metadata; never creator identity or payout authority. */
   scholarly?: ScholarlyMetadata;
@@ -132,6 +138,14 @@ export interface SourceItemIdentity {
   contentVersion: string;
   itemPublishedAt?: string;
   contentReceipt?: ContentReceiptRef;
+}
+
+export interface SourceClaimReceipt {
+  id: string;
+  revision: number;
+  mode: "free" | "citation-only" | "paid";
+  effectiveAt: string;
+  verifiedAt: string;
 }
 
 export interface ScholarlyMetadata {

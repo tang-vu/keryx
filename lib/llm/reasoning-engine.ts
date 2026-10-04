@@ -103,6 +103,8 @@ export interface DecideInput {
 
 /** Content the agent has unlocked, ready to read. */
 export interface GatheredContent extends Partial<SourceItemIdentity> {
+  /** Trusted read-time policy can withhold rewards without discarding useful evidence. */
+  creatorRewardEligible?: boolean;
   /** Reasoning candidate that produced this read; distinct from registry sourceId for articles. */
   assetId?: string;
   sourceId: string;
