@@ -61,6 +61,11 @@ records 22/22 public URL captures and 18/18 offline pipeline completions, target
 read-recovery guidance, independent reader review and remaining release gates.
 Those counts do not close B04/B05 usefulness or B12 independent-user acceptance.
 
+The separately approved [live comparison and evidence follow-up](engineering/research-evidence-follow-up-2026-10-04.md)
+retains 14/18 initial pipeline completions, a distinct usefulness assessment and
+observed exact-paper/context defects. Correcting those defects does not retroactively
+change the initial outputs or prove complete autonomous synthesis.
+
 ## Record each execution
 
 Keep raw reports, questions with private context, receipts, user identities and

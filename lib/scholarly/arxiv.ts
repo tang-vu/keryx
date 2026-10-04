@@ -2,7 +2,7 @@ import Parser from "rss-parser";
 import type { ScholarlyMetadata } from "../types";
 import { cleanText, fetchMetadata, type MetadataFetch } from "./provider";
 import { normalizeDoi } from "./doi";
-import { questionArxivIds } from "./arxiv-identity";
+import { normalizeVersionedArxivId, questionArxivIds } from "./arxiv-identity";
 export { questionArxivIds } from "./arxiv-identity";
 
 const parser = new Parser<Record<string, never>, { id?: string; paperAuthors?: Array<{ name?: string[] }>; paperDoi?: string }>({
@@ -39,7 +39,7 @@ export async function arxivSearch(question: string, signal?: AbortSignal, fetche
     url.searchParams.set("max_results", "2");
     const records = await parseArxiv(await fetcher(url.href, signal), new Date().toISOString());
     // A provider response cannot replace a requested version with latest or another work.
-    return records.filter(record => ids.includes(record.arxivId!));
+    return records.filter(record => ids.includes(normalizeVersionedArxivId(record.arxivId ?? "") ?? ""));
   }
   // Literal quoted words: question text cannot add API operators or URL parameters.
   const ignored = new Set("a an the how what why when where which who does do did is are was were can could should would will of to in on for and or with from about show explain compare describe evidence research paper papers study studies effect effects approach approaches system systems use using reduce".split(" "));

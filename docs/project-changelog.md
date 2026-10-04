@@ -1,6 +1,20 @@
 # Keryx Project Changelog
 
-### More reliable original reads and recovery guidance (2026-10-04, v0.26.7 candidate)
+### Original-paper identity and bounded context (2026-10-04, v0.26.8 candidate)
+
+- Bind exact-paper evidence to its recorded canonical arXiv URL and version, including
+  HTML originals. Refuse metadata-only, unidentified and cross-paper proposals before
+  answer and reward qualification; preserve correct own-paper evidence.
+- Keep short selected source blocks intact so a neighboring qualification is not
+  discarded merely to retain an isolated sentence. Preserve bounded context and
+  explicit omissions; omitted source text and useful synthesis remain separate gates.
+- Retain the additional live comparison's failures, costs and usefulness assessment.
+  D-300, archived originals and payment authority remain unchanged. See
+  [observations and acceptance](engineering/research-evidence-follow-up-2026-10-04.md).
+- Describe reviewed mainnet deployment as maintenance in operational logs, with
+  separate verification of held worker restoration.
+
+### More reliable original reads and recovery guidance (2026-10-04, v0.26.7)
 
 - Read larger script-heavy public pages within the existing isolated parser bounds,
   accept publisher Markdown, and prefer a validated public IPv4 address on dual-stack

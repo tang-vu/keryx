@@ -239,7 +239,7 @@ it("separates public answer support from reward eligibility and rejects weak/non
 
 
 it("refuses exact-version cross-paper target evidence even when the quote and support pass", () => {
-  const source: GatheredContent = { ...gathered[0], scholarly: { provider: "arxiv", arxivId: "2501.12345v1", recordUrl: "https://export.arxiv.org", retrievedAt: "2026-10-02", title: "Paper", authors: [], workType: "preprint", peerReview: "unknown" } };
+  const source: GatheredContent = { ...gathered[0], itemUrl: "https://arxiv.org/pdf/2501.12345v1", scholarly: { provider: "arxiv", arxivId: "2501.12345v1", recordUrl: "https://export.arxiv.org", retrievedAt: "2026-10-02", title: "Paper", authors: [], workType: "preprint", peerReview: "unknown" } };
   const subClaims = ["Methods in arXiv:2501.12345v1", "Evaluation in arXiv:2502.54321v2"];
   const ledger = buildEvidenceLedger({ subClaims, gathered: [source], answer: "Methods and evaluation [S1].", declaredMarkers: ["S1"],
     proposedEvidence: [evidence({ claimIndex: 0 }), evidence({ claimIndex: 1 })],
