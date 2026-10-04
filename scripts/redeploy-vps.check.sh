@@ -14,6 +14,8 @@ input=""
 if [[ "$args" == *'bash -s'* || "$args" == *'/usr/bin/node --input-type=module - '* ]]; then input=$(cat); fi
 printf '%s\n' "$args" >> "$DEPLOY_TEST_TRACE"
 case "$args" in
+  *'npm run typecheck'*)
+    [[ "${DEPLOY_TEST_BAD_TYPECHECK:-0}" != 1 ]] || exit 1 ;;
   *'/usr/bin/node --input-type=module - '*)
     [[ "$input" == *'export function deployReviewedRole'* ]] || exit 1
     [[ "${DEPLOY_TEST_BAD_CONFIG:-0}" != 1 ]] || exit 1 ;;
@@ -46,6 +48,7 @@ grep -q 'roles.json .* a2a' "$DEPLOY_TEST_TRACE"
 grep -q 'roles.json .* web' "$DEPLOY_TEST_TRACE"
 grep -q 'curl -fsS' "$DEPLOY_TEST_TRACE"
 ! grep 'curl -fsS' "$DEPLOY_TEST_TRACE" | grep -v "Host: keryx.cc.*X-Forwarded-Proto: https"
+grep -q 'NODE_OPTIONS=--max-old-space-size=2560 npm run typecheck && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build' "$DEPLOY_TEST_TRACE"
 first_validate=$(grep -n 'roles.json .* validate' "$DEPLOY_TEST_TRACE" | head -1 | cut -d: -f1)
 first_sync=$(grep -n 'git fetch' "$DEPLOY_TEST_TRACE" | head -1 | cut -d: -f1)
 (( first_validate < first_sync ))
@@ -57,6 +60,9 @@ if DEPLOY_TEST_BAD_HEALTH=1 managed; then exit 1; fi
 grep -q 'hold current processes' "$fixture/output"
 ! grep -Eq 'rm -rf .next|pm2 (restart|reload)|bash -s -- resume|crontab' "$DEPLOY_TEST_TRACE"
 # Default path still pauses/resumes workers and uses its existing reload behavior.
+clear_trace
+if DEPLOY_TEST_BAD_TYPECHECK=1 managed; then exit 1; fi
+! grep -Eq 'roles.json .* (a2a|web)|pm2 (restart|reload)|mv .next' "$DEPLOY_TEST_TRACE"
 clear_trace
 run
 grep -q 'bash -s -- stop' "$DEPLOY_TEST_TRACE"
