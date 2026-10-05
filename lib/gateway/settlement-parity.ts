@@ -212,6 +212,8 @@ export function reconcileSettlement(
 
 /** What /status needs: the verdict and the per-wallet rows, without the tolerance arithmetic. */
 export interface SettlementParitySummary {
+  /** Empty ledger checks perform no Circle balance lookup and prove no payment. */
+  basis?: "empty-ledger";
   /** Selected rail at the original balance observation; absent on retained legacy summaries. */
   network?: string;
   checkedAt: string;

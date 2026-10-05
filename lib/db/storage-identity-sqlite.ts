@@ -5,6 +5,7 @@ import { DatabaseSync, constants as sqliteConstants } from "node:sqlite";
 import { refuseStorage, storageIdentityDigest, storagePaymentProfile, validateStorageIdentity, StorageIdentityRefused, type StorageIdentity } from "./storage-identity";
 import { GATEWAY_FUNDING_TABLES } from "./gateway-funding-ledger-types";
 import { gatewayFundingFenceStatements } from "./gateway-funding-sqlite-schema";
+import { sqliteSchemaMatches } from "./sqlite-schema-match";
 
 export const STORAGE_IDENTITY_TABLE = "keryx_storage_identity";
 export const STORAGE_APPLICATION_TABLES = Object.freeze([
@@ -216,10 +217,8 @@ export function installStorageFences(db: DatabaseSync, identity: Readonly<Storag
   }
 }
 export function assertStorageFences(db: DatabaseSync, identity: Readonly<StorageIdentity>): void {
-  for (const [name, sql] of Object.entries(storageFenceStatements(db, identity))) {
-    if (db.prepare("SELECT sql=? AS matches FROM sqlite_schema WHERE type='trigger' AND name=?").get(sql, name)?.matches !== 1) refuseStorage("fence_missing_or_changed");
-  }
-  for (const [name, sql] of Object.entries(MARKER_GUARDS)) {
-    if (db.prepare("SELECT sql=? AS matches FROM sqlite_schema WHERE type='trigger' AND name=?").get(sql, name)?.matches !== 1) refuseStorage("marker_guard_missing_or_changed");
-  }
+  if (!sqliteSchemaMatches(db, Object.entries(storageFenceStatements(db, identity)).map(([name, sql]) => [name, "trigger", sql])))
+    refuseStorage("fence_missing_or_changed");
+  if (!sqliteSchemaMatches(db, Object.entries(MARKER_GUARDS).map(([name, sql]) => [name, "trigger", sql])))
+    refuseStorage("marker_guard_missing_or_changed");
 }

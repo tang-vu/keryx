@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import * as readiness from "../payments/gateway-funding-readiness";
 import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
@@ -197,11 +198,32 @@ describe("explicit keyless funding inspection command", () => {
     expect(JSON.parse(result.stdout).availability.status).toBe("not-requested"); expect(readFileSync(f.file)).toEqual(bytes); expect(f.snapshot()).toEqual(snapshot);
   });
   it("copies helper options before awaits so caller mutation cannot change paths or requested observation", async () => {
+    // Test-side wrappers call the original implementation unchanged. Diagnostics
+    // record only phases and elapsed time, never arguments or private evidence.
+    const phases: string[] = [], started = performance.now();
+    const mark = (phase: string) => phases.push(`${phase}:${Math.round(performance.now()-started)}ms`);
+    const factory = readiness.createGatewayFundingReadinessObserverForTrustedSyntheticComposition;
+    const unseal = readiness.unsealVerifiedGatewayFundingReadiness, assertCurrent = readiness.assertVerifiedGatewayFundingReadinessCurrent;
+    const spies = [
+      vi.spyOn(readiness, "createGatewayFundingReadinessObserverForTrustedSyntheticComposition").mockImplementation((...args) => {
+        const observer = factory(...args);
+        return async request => { mark("observe-start"); const result = await observer(request); mark(result ? "token-returned" : "no-token"); return result; };
+      }),
+      vi.spyOn(readiness, "unsealVerifiedGatewayFundingReadiness").mockImplementation(async (...args) => {
+        mark("unseal-start"); try { const result = await unseal(...args); mark("unseal-complete"); return result; }
+        catch(error) { mark("unseal-refused"); throw error; }
+      }),
+      vi.spyOn(readiness, "assertVerifiedGatewayFundingReadinessCurrent").mockImplementation((...args) => {
+        mark("current-start"); try { assertCurrent(...args); mark("current-complete"); }
+        catch(error) { mark("current-refused"); throw error; }
+      }),
+    ];
     const request = { ...options(), currentAvailability: true }, bytes = readFileSync(f.file), snapshot = f.snapshot();
     responseValue = { token: "USDC", balances: [{ depositor: f.operation.policy.spend, domain: 26, balance: "0.000100" }] };
-    onAvailability = () => { request.currentAvailability = false; request.storageManifestPath = "missing"; request.operationManifestPath = "missing"; };
+    onAvailability = () => { mark("http-available"); request.currentAvailability = false; request.storageManifestPath = "missing"; request.operationManifestPath = "missing"; };
     try { const result = await inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition(request, endpoint); expect(result.availability.status).toBe("observed-available-meets-minimum"); }
-    finally { onAvailability = undefined; }
+    catch(error) { throw new Error(`Funding inspection test failed (${phases.join(" ")})`, { cause: error }); }
+    finally { onAvailability = undefined; spies.forEach(spy => spy.mockRestore()); }
     expect(readFileSync(f.file)).toEqual(bytes); expect(f.snapshot()).toEqual(snapshot);
   });
   it("refuses assembled snapshot drift from an actual native concurrent writer without adding inspection writes", async () => {

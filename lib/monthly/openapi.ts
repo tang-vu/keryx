@@ -1,6 +1,6 @@
 const proof = { type: "object", additionalProperties: false, required: ["payer", "timestamp", "signature"], properties: {
   payer: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" }, timestamp: { type: "integer", description: "Unix milliseconds, valid for five minutes" },
-  signature: { type: "string", description: "EOA personal signature over the exact monthlyMessage action/payload, host and Arc-testnet domain" } } };
+  signature: { type: "string", description: "EOA personal signature over the exact monthlyMessage action/payload, host and selected payment network domain. Match the network in the current quote before signing." } } };
 export const monthlyOpenApiPath = {
   get: { operationId: "researchMonthlyQuoteOrStatus", summary: "Quote Monthly or read payer-authorized plan status",
     description: "GET ?quote=1 is unpaid. GET ?id=monthly_... requires x-keryx-monthly-proof JSON for action=status and payload={monthlyId}. Neither signs or submits a debit.",

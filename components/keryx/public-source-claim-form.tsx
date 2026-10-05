@@ -9,6 +9,8 @@ import { canonicalSourceUrl, claimControlIsFresh, sourceClaimChallengeSchema, so
 import { sourceClaimConnectHref, sourceClaimTarget, type SourceClaimDraft } from "@/lib/registration-return";
 import { PublicSourceClaimPolicy } from "./public-source-claim-policy";
 import { claimRequest } from "./public-source-claim-api";
+import { ClaimControlStatus, ClaimTime } from "./public-source-claim-status";
+import { PublicSourceClaims } from "./public-source-claims";
 
 interface InitialClaim extends SourceClaimDraft { rssUrl?: string; name?: string }
 interface ProofState { challenge: SourceClaimChallenge; proof: SourceClaimProof; proofUrl: string; proofToken?: string }
@@ -125,7 +127,10 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "" }: { ini
   const copyProof = async () => { if (!proof) return; try { await navigator.clipboard.writeText(proof.challenge.proofMethod === "rss-channel" ? proof.proofToken! : JSON.stringify(proof.proof, null, 2)); setMessage("Proof contents copied."); } catch { setMessage("Copy is unavailable. Select and copy the proof contents below."); } };
   const downloadProof = () => { if (!proof) return; const objectUrl = URL.createObjectURL(new Blob([JSON.stringify(proof.proof, null, 2)], { type: "application/json" })); const a = document.createElement("a"); a.href = objectUrl; a.download = "keryx-source-claim.json"; a.click(); URL.revokeObjectURL(objectUrl); };
   const connectHref = sourceClaimConnectHref({ ...selection, url: url || selection.url, owner: selection.owner ?? wallet.address?.toLowerCase() });
+  const browsingClaims = !selection.url && !selection.claimId && !selection.challengeId;
+  const ownedClaims = enabled && owner ? <PublicSourceClaims key={identity} owner={owner} network={profile.networkId} enabled={!loading} now={now} /> : null;
   return <div className="mt-8 space-y-6">
+    {browsingClaims && ownedClaims}
     <section className="space-y-3 border border-ink bg-paper-2 p-5" aria-labelledby="claim-source-url-title">
       <h2 id="claim-source-url-title" className="font-display text-2xl">1. Choose your source</h2>
       <label htmlFor="claim-source-url" className="block text-sm">Public source URL</label>
@@ -142,7 +147,7 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "" }: { ini
       <h2 id="claim-proof-title" className="font-display text-2xl">{proof.challenge.proofMethod === "rss-channel" ? "2. Publish your channel token" : "2. Publish your proof file"}</h2>
       <p className="text-sm leading-relaxed text-ink-2">{proof.challenge.proofMethod === "rss-channel" ? "Place this exact token as a separate word in the feed's publisher-controlled channel title or description, or Atom subtitle. Tokens inside posts, comments and item text do not prove ownership. The feed must be served without redirects." : "Serve this exact JSON at the address below, directly without redirects."} It binds this source, wallet, deployment and network to a single-use challenge.</p>
       <p className="break-all font-mono text-xs">{proof.proofUrl}</p>
-      <p className="text-sm">Proof expires: <time dateTime={proof.challenge.expiresAt}>{new Date(proof.challenge.expiresAt).toLocaleString()}</time></p>
+      <p className="text-sm">Proof expires: <ClaimTime value={proof.challenge.expiresAt} /></p>
       <label htmlFor="claim-proof-json" className="block text-sm">{proof.challenge.proofMethod === "rss-channel" ? "Channel proof token" : "Proof file contents"}</label>
       <textarea id="claim-proof-json" readOnly value={proof.challenge.proofMethod === "rss-channel" ? proof.proofToken : JSON.stringify(proof.proof, null, 2)} rows={proof.challenge.proofMethod === "rss-channel" ? 4 : 12} className="w-full min-w-0 border border-line bg-paper-2 p-3 font-mono text-xs" />
       <div className="flex flex-wrap gap-3"><button type="button" className="min-h-11 border border-line px-3 text-sm" onClick={() => void copyProof()}>{proof.challenge.proofMethod === "rss-channel" ? "Copy channel token" : "Copy proof JSON"}</button>{proof.challenge.proofMethod !== "rss-channel" && <button type="button" className="min-h-11 border border-line px-3 text-sm" onClick={downloadProof}>Download proof file</button>}</div>
@@ -150,10 +155,11 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "" }: { ini
       <button type="button" onClick={() => void verify()} disabled={loading || expired || !enabled} className={actionStyle}>Check ownership</button>
     </section>}
     {claim && <section className="space-y-3 border border-paid/50 bg-paid/5 p-5" aria-labelledby="claim-verified-title">
-      <h2 id="claim-verified-title" className="font-display text-2xl">Source control verified</h2>
-      <p className="text-sm">Last checked: <time dateTime={claim.verifiedAt}>{new Date(claim.verifiedAt).toLocaleString()}</time>. Source control expires after 24 hours; earning eligibility pauses until you verify again. Public free reads are unaffected.</p>
-      {needsFreshProof && <p role="status" className="text-sm text-seal">Control verification expired. Earning eligibility is paused. Create a fresh proof above before linking a listing or activating earnings.</p>}
+      <h2 id="claim-verified-title" className="font-display text-2xl">{needsFreshProof ? "Source control needs re-verification" : "Source control verified"}</h2>
+      <ClaimControlStatus claim={claim} now={now} />
+      {needsFreshProof && <div className="space-y-2"><p className="text-sm text-ink-2">Create a fresh challenge, replace the hosted file or channel token, then choose Check ownership. Verification keeps your saved policy; review its status below before new earning uses. A failed check requires fixing the proof or explicitly creating another challenge.</p><button type="button" onClick={() => void createProof()} disabled={loading || !enabled || !ready} className={actionStyle}>Re-verify source control</button></div>}
       <PublicSourceClaimPolicy key={`${identity}:${claim.id}:${claim.revision}:${reviewRevision}`} claim={claim} name={initial.name} enabled={enabled && !loading} controlFresh={!needsFreshProof} onChanged={next => { if (currentRef.current.identity === identity && currentRef.current.enabled) acceptClaim(next, identity); }} onReload={() => void load()} />
     </section>}
+    {!browsingClaims && ownedClaims}
   </div>;
 }

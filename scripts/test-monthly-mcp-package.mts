@@ -20,6 +20,8 @@ try {
   assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["ask_keryx", "keryx_wallet_status", "keryx_recover", "research_monthly"].sort());
   const tool = tools.tools.find(tool => tool.name === "research_monthly")!;
   assert.equal(tool.annotations?.readOnlyHint, true);
+  assert.doesNotMatch(tool.description ?? "", /Arc[- ]testnet/i);
+  assert.match(tool.description ?? "", /quote/i);
   const result = await client.callTool({ name: "research_monthly", arguments: {} });
   assert.equal(result.isError, undefined);
   const text = (result.content as { type: string; text: string }[])[0].text;

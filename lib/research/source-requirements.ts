@@ -38,3 +38,23 @@ export function discussionDoesNotMeetDocumentRequest(question: string, itemUrl: 
   return isRecognizedDiscussionUrl(itemUrl) &&
     (requestsOfficialDocumentation(question) || !!claim && requestsOfficialDocumentation(claim));
 }
+
+export const MAX_REQUESTED_SOURCE_URLS = 8;
+
+/** URLs written by the caller are discovery leads, not document evidence or authorship proof.
+ * Never extract from model-created research targets or invent a replacement URL. */
+export function requestedSourceUrls(question: string): { urls: string[]; omitted: number } {
+  const distinct = new Set<string>();
+  for (const match of question.matchAll(/\bhttps?:\/\/[^\s<>"'`]+/giu)) {
+    let value = match[0];
+    const before = question[match.index! - 1];
+    if (!before || !/[<"'`]/.test(before)) value = value.replace(/[.,;]+$/, "");
+    // Prose/Markdown closers are not part of an unbalanced URL. Balanced path
+    // parentheses and encoded punctuation retain their original spelling.
+    while (value.endsWith(")") && (value.match(/\)/g)?.length ?? 0) > (value.match(/\(/g)?.length ?? 0)) value = value.slice(0, -1);
+    while (value.endsWith("]") && !value.includes("[")) value = value.slice(0, -1);
+    if (!before || !/[<"'`]/.test(before)) value = value.replace(/[.,;]+$/, "");
+    if (value) distinct.add(value);
+  }
+  return { urls: [...distinct].slice(0, MAX_REQUESTED_SOURCE_URLS), omitted: Math.max(0, distinct.size - MAX_REQUESTED_SOURCE_URLS) };
+}

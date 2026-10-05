@@ -1,9 +1,9 @@
 /**
  * GET /api/health — liveness + readiness probe.
  *
- * Two jobs: (1) the post-reload gate for the low-downtime redeploy
- * (scripts/redeploy-vps.sh) — a non-200 here triggers an automatic rollback to the
- * previous build; (2) a public uptime signal for the /status page and any external
+ * Two jobs: (1) the post-reload readiness gate for redeploy
+ * (scripts/redeploy-vps.sh); reviewed mainnet recovery retains builds and requires
+ * explicit operator handling on failure; (2) a public uptime signal for /status and external
  * monitor. Cheap by design: aggregate DB reads only, no chain or LLM calls. Returns 200
  * when ready, 503 when the datastore is unreachable.
  */
@@ -24,6 +24,7 @@ import {
   type PendingReconciliationSummary,
 } from "@/lib/gateway/x402-transfer-reconciliation";
 import { classifyArcRpcProvider } from "@/lib/ops/public-proof";
+import { monitoringObservations } from "@/lib/ops/monitoring-observations";
 import {
   assessPendingReconciliation,
   type PendingReconciliationAssessment,
@@ -187,6 +188,7 @@ export async function GET() {
         dispatches,
         settlement,
         reconciliation,
+        monitoring: monitoringObservations({ registry: registry?.parity, dispatches, settlement, reconciliation }),
         a2aWorker,
         a2aJobs,
         traction: {

@@ -1,5 +1,24 @@
 # Supported-surface release parity
 
+## Mainnet consistency, October 5, 2026
+
+Application **0.26.12**, MCP **0.4.4** and desktop **0.4.5** are coordinated
+candidates for corrected runtime metadata, supplied-source discovery, explicit
+monitoring observations, native schema-guard performance and creator/desktop recovery UX.
+Remote MCP exposes Monthly metadata and recorded source-selection/fallback telemetry
+with protocol 0.3.0. Shared hosted API/A2A/OpenAI results and stdio forwarding expose
+the additive telemetry; extension 0.1.1 and bots retain their thin client roles.
+Slack/OpenAI distinguish planned rewards and original settlement modes. Buyer CLI
+and private research preserve their selected-profile and external-effect gates.
+These source identities require CI,
+packaged desktop acceptance, actual npm/assets and deployment readback before
+publication is claimed. [Scope and remaining gates](engineering/mainnet-consistency-2026-10-05.md).
+
+The official MCP Registry's October 5 readback still points to npm 0.1.1 under
+server 0.2.0. The 0.4.4 source manifest and manual publication workflow must update
+that catalog only after npm publication/readback; hosted MCP protocol, npm bytes and
+registry metadata are distinct release evidence.
+
 ## Source context correction, October 5, 2026
 
 App **0.26.11 candidate** changes new research in the shared server/engine pipeline:

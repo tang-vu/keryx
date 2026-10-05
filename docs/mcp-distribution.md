@@ -1,5 +1,15 @@
 # MCP package distribution
 
+October 5 correction candidate: **0.4.4** updates Monthly runtime guidance and
+forwards additive recorded reasoning metadata from the hosted result. Its source
+manifest selects the same npm version; publish the npm archive and verify its bytes
+before updating the official MCP Registry. The registry's public readback on October 5
+still showed server **0.2.0** pointing to npm **0.1.1**, which is separate from the
+newer npm/GitHub distribution below. Registry publication uses the repository's
+manual release workflow and short-lived GitHub OIDC namespace authentication;
+publication and public readback remain gates until that workflow succeeds.
+Hosted remote MCP independently uses protocol **0.3.0** for the additive result.
+
 The caller-funded stdio package is distributed separately from the hosted remote
 MCP endpoint. On October 4, 2026, public npm readback confirmed **0.4.3**, and
 [GitHub v0.26.8](https://github.com/tang-vu/keryx/releases/tag/v0.26.8) supplies the

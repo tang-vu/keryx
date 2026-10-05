@@ -91,6 +91,29 @@ function decideInput(candidateCount: number): DecideInput {
 }
 
 describe("decide", () => {
+  it("instructs discovery-only SKIP even for advertised Arc-compatible external candidates", async () => {
+    let system = "", user = "";
+    class CaptureEngine extends JsonChatEngine {
+      readonly name = "capture";
+      protected async chatJson(_model: string, prompt: string, payload: string) {
+        system = prompt; user = payload;
+        return { decisions: [{ sourceId: "ext:https://paid.example/api", action: "SKIP", expectedValue: 0.9,
+          confidence: 1, rationale: "discovery-only", targets: [] }] };
+      }
+    }
+    const input = decideInput(1);
+    input.candidates[0].id = "ext:https://paid.example/api";
+    input.candidates[0].external = { resource: "https://paid.example/api", chains: ["Arc mainnet"],
+      payTo: "0xadvertised", onArc: true };
+    const decisions = await new CaptureEngine().decide(input);
+    expect(decisions).toMatchObject([{ action: "SKIP", targets: [] }]);
+    expect(JSON.parse(user).candidates[0]).toMatchObject({ external: true, settlesOnArc: true });
+    expect(system).toContain("regardless of their advertised payment networks");
+    expect(system).toContain("Mark them SKIP");
+    expect(system).toContain("not trusted payment authority or settlement evidence");
+    expect(system).not.toMatch(/OTHER chains|off-rail chain/);
+  });
+
   it("refuses to read an empty reply as a decision to buy nothing", async () => {
     // What a truncated or off-schema reply looks like after parsing.
     const engine = new StubEngine({});

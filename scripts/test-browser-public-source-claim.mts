@@ -1,6 +1,6 @@
 /** Actual claim/connect/register React with synthetic API/wallet only. All HTTP is intercepted. */
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { build } from "esbuild";
 import postcss from "postcss";
@@ -16,6 +16,8 @@ const canonicalUrl = "https://publisher.example/article", claimId = "a".repeat(6
 const sourceId = registrationId(owner, urlHash), tx = `0x${"5".repeat(64)}`;
 const receipt = { status: "success", transactionHash: tx, logs: [{ address: registry, topics: encodeEventTopics({ abi: [{ type: "event", name: "SourceRegistered", inputs: [{ name: "id", type: "bytes32", indexed: true }, { name: "creator", type: "address", indexed: true }, { name: "contentCid", type: "string", indexed: false }] }], eventName: "SourceRegistered", args: { id: sourceId, creator: owner } }), data: encodeAbiParameters([{ type: "string" }], [""]) }] };
 const css = (await postcss([tailwind()]).process(await readFile("app/globals.css", "utf8"), { from: path.resolve("app/globals.css") })).css;
+const artifacts = path.resolve(".artifacts/public-source-claim-ui");
+await mkdir(artifacts, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 try {
   for (const profile of [ARC_TESTNET_PROFILE, ARC_MAINNET_PROFILE]) {
@@ -26,6 +28,7 @@ import RegisterPage from'./app/register/page';import ConnectPage from'./app/conn
 import{sourceClaimDraft}from'./lib/registration-return';
 window.wallet={address:sessionStorage.getItem('wallet')||'${owner}',isConnected:true,chainId:${profile.chainId}};
 window.walletWrites=[];window.walletSigns=0;window.timeOffset=0;const originalNow=Date.now;Date.now=()=>originalNow()+window.timeOffset;
+window.holdUiClock=new URLSearchParams(location.search).has('holdUiClock');const originalInterval=window.setInterval;window.setInterval=(callback,delay,...args)=>delay===1000&&typeof callback==='function'?originalInterval((...values)=>{if(!window.holdUiClock)callback(...values)},delay,...args):originalInterval(callback,delay,...args);
 window.setWallet=(address,chainId=${profile.chainId})=>{window.wallet={address,isConnected:!!address,chainId};window.dispatchEvent(new Event('wallet-change'));};
 createRoot(document.getElementById('root')).render(location.pathname==='/register'?<RegisterPage/>:location.pathname==='/connect'?<ConnectPage/>:<main className="mx-auto max-w-3xl px-4 py-10 sm:px-8"><PublicSourceClaimForm initial={sourceClaimDraft(new URLSearchParams(location.search))}/></main>);
 `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
@@ -40,7 +43,7 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
     for (const viewport of [{ width: 390, height: 844 }, { width: 1366, height: 900 }]) {
       const context = await browser.newContext({ viewport });
       let authenticated = false, sessionOwner = owner, stored: SourceClaim | null = null, challenge: SourceClaimChallenge | null = null;
-      let proofResult = "missing", held: Route | undefined, indexed = false, fetchPrice = 0, policyConflict = false;
+      let proofResult = "missing", held: Route | undefined, heldList: Route | undefined, indexed = false, fetchPrice = 0, policyConflict = false, holdList = false, wrongListScope = false;
       const policies: Record<string, unknown>[] = [], registrations: Record<string, unknown>[] = [], links: Record<string, unknown>[] = [], errors: string[] = [];
       let challengeCalls = 0, verifyCalls = 0;
       let expectedCanonical = canonicalUrl;
@@ -53,6 +56,10 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
         if (pathname === "/api/auth/nonce") { const now = Date.now(); return route.fulfill({ json: { nonce: "ClaimFixtureNonce123", issuedAt: new Date(now).toISOString(), challengeExpiresAt: new Date(now + 300000).toISOString(), sessionExpiresAt: new Date(now + 7 * 86400000).toISOString() } }); }
         if (pathname === "/api/auth/verify") { authenticated = true; return route.fulfill({ json: { ok: true, address: owner, role: "asker" } }); }
         if (pathname === "/api/source-claims") {
+          if (!url.searchParams.size) {
+            if (holdList) { heldList = route; return; }
+            return route.fulfill({ json: { claims: stored ? [{ ...stored, ...(wrongListScope ? { ownerWallet: other } : {}) }] : [] } });
+          }
           if (url.searchParams.has("challengeId") && challenge) return route.fulfill({ json: challengeResponse() });
           return route.fulfill({ json: { claim: !url.searchParams.has("canonicalUrl") || url.searchParams.get("canonicalUrl") === stored?.canonicalUrl ? stored : null } });
         }
@@ -65,7 +72,7 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
           verifyCalls++; assert.deepEqual(req.postDataJSON(), { challengeId: challenge!.id });
           if (proofResult === "held") { held = route; return; }
           if (proofResult !== "present") return route.fulfill({ status: proofResult === "conflict" ? 409 : 422, json: { error: proofResult === "conflict" ? "This source is already claimed by another wallet." : "The proof file could not be verified. Publish the exact file without redirects and retry." } });
-          const now = new Date().toISOString(); stored = { id: claimId, canonicalUrl: challenge!.canonicalUrl, ...(challenge!.rssUrl ? { rssUrl: challenge!.rssUrl, proofMethod: challenge!.proofMethod } : {}), ownerWallet: owner, deploymentOrigin: "https://claim.test", network: profile.networkId, verifiedAt: now, revision: 1, effectiveAt: now, mode: "free", distributionPermission: false };
+          const now = new Date().toISOString(); stored = stored?.canonicalUrl === challenge!.canonicalUrl ? { ...stored, verifiedAt: now, revision: stored.revision + 1 } : { id: claimId, canonicalUrl: challenge!.canonicalUrl, ...(challenge!.rssUrl ? { rssUrl: challenge!.rssUrl, proofMethod: challenge!.proofMethod } : {}), ownerWallet: owner, deploymentOrigin: "https://claim.test", network: profile.networkId, verifiedAt: now, revision: 1, effectiveAt: now, mode: "free", distributionPermission: false };
           return route.fulfill({ json: { claim: stored } });
         }
         if (pathname === `/api/source-claims/${claimId}/link`) { const body = req.postDataJSON(); links.push(body); assert.deepEqual(body, { expectedRevision: stored!.revision, sourceId }); stored = { ...stored!, revision: stored!.revision + 1, linkedSourceId: sourceId, onchainId: sourceId, registryAddress: registry }; return route.fulfill({ json: { claim: stored } }); }
@@ -122,12 +129,24 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
       await page.waitForFunction(() => (document.querySelector('input[name="source-claim-mode"][value="free"]') as HTMLInputElement | null)?.checked);
       await page.getByRole("radio", { name: /Citation rewards/ }).check(); assert(await page.getByRole("button", { name: "Activate citation rewards" }).isDisabled());
       await page.getByRole("checkbox", { name: /I have the rights to distribute/ }).check(); await page.getByRole("button", { name: "Activate citation rewards" }).click();
-      await page.getByText(/This earning policy is active/).waitFor(); assert.equal(stored!.mode, "citation-only");
+      await page.getByText(/This earning policy is saved/).waitFor(); assert.equal(stored!.mode, "citation-only");
       await page.getByRole("radio", { name: /Paid reads/ }).check(); await page.getByRole("checkbox", { name: /I have the rights to distribute/ }).check(); assert(await page.getByRole("button", { name: "Activate paid reads" }).isDisabled());
       fetchPrice = 0.02; await page.getByRole("button", { name: "Refresh indexed listings" }).click(); await page.getByText("$0.02 USDC", { exact: true }).waitFor();
-      await page.getByRole("button", { name: "Activate paid reads" }).click(); await page.getByText(/This earning policy is active/).waitFor(); assert.equal(stored!.mode, "paid");
+      await page.getByRole("button", { name: "Activate paid reads" }).click(); await page.getByText(/This earning policy is saved/).waitFor(); assert.equal(stored!.mode, "paid");
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Actual generated CSS must fit ${viewport.width}px`);
       const count = policies.length;
+      // A fast fresh-list read before the first clock tick must not announce expiry.
+      const beforeFreshList = { challengeCalls, verifyCalls, policies: policies.length };
+      await page.goto("https://claim.test/claim-source?holdUiClock=1");
+      await page.getByRole("button", { name: "Load my source claims" }).click();
+      const freshList = page.getByRole("region", { name: "Your source claims" });
+      await freshList.getByText(/Checking control proof freshness/).waitFor();
+      assert.equal(await freshList.getByText(/Control verification expired/).count(), 0);
+      await page.evaluate(() => { (window as unknown as { holdUiClock: boolean }).holdUiClock = false; });
+      await freshList.getByText(/Control proof is current/).waitFor();
+      assert.deepEqual({ challengeCalls, verifyCalls, policies: policies.length }, beforeFreshList);
+      await freshList.getByRole("link", { name: "Review or re-verify this source" }).click();
+      await page.getByRole("heading", { name: "Source control verified" }).waitFor();
       await page.evaluate(chainId => (window as unknown as { setWallet: (address: string, chainId: number) => void }).setWallet("0x" + "1".repeat(40), chainId), profile.testnet ? 5042 : 5042002);
       await page.getByText(/Switch your wallet to/).waitFor(); assert.equal(await page.getByRole("button", { name: "Activate paid reads" }).count(), 0); assert.equal(policies.length, count);
       await page.reload(); await page.getByRole("heading", { name: "Source control verified" }).waitFor();
@@ -140,8 +159,52 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
       // Expired control visibly pauses policy and never automatically rechecks or activates it.
       stored = { ...stored!, verifiedAt: new Date(Date.now() - 2 * 86400000).toISOString() };
       await page.goto(`https://claim.test/claim-source?claimId=${claimId}`); await page.getByText(/Control verification expired/).waitFor();
-      assert.equal(await page.getByText(/This earning policy is active/).count(), 0); assert.equal(policies.length, count);
+      assert.equal(await page.getByText(/This earning policy is saved/).count(), 0); assert.equal(policies.length, count);
       await page.getByRole("radio", { name: /^Free Free reads/ }).check(); assert(!await page.getByRole("button", { name: "Keep this claim free" }).isDisabled(), "Disabling earnings remains available after control expires");
+      // Owner-list recovery uses persisted claims, never a renewal or activation on load.
+      const staleVerifiedAt = stored!.verifiedAt, beforeRenewal = { challengeCalls, verifyCalls, policies: policies.length };
+      await page.goto("https://claim.test/claim-source");
+      await page.getByRole("button", { name: "Load my source claims" }).click();
+      const owned = page.getByRole("region", { name: "Your source claims" });
+      await owned.getByText(/Control verification expired/).waitFor();
+      const deadline = new Date(Date.parse(staleVerifiedAt) + 86400000).toISOString();
+      assert.equal(await owned.locator("time").nth(1).getAttribute("datetime"), deadline);
+      assert.match(await owned.locator("time").nth(1).innerText(), /UTC|GMT/, "Deadline includes the viewer timezone");
+      assert.deepEqual({ challengeCalls, verifyCalls, policies: policies.length }, beforeRenewal);
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Saved claim list fits the viewport");
+      await page.screenshot({ path: path.join(artifacts, `${profile.name}-${viewport.width}-saved-claims.png`), fullPage: true });
+      await owned.getByRole("link", { name: "Review or re-verify this source" }).click();
+      await page.getByRole("heading", { name: "Source control needs re-verification" }).waitFor();
+      assert.equal(await page.getByText(/This earning policy is saved/).count(), 0);
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Expired claim controls fit the viewport");
+      await page.screenshot({ path: path.join(artifacts, `${profile.name}-${viewport.width}-expired-claim.png`), fullPage: true });
+      await page.getByRole("button", { name: "Re-verify source control" }).click();
+      await page.getByRole("heading", { name: "2. Publish your proof file" }).waitFor();
+      assert.equal(verifyCalls, beforeRenewal.verifyCalls, "Creating a fresh challenge must not automatically check ownership");
+      proofResult = "missing";
+      await page.getByRole("button", { name: "Check ownership", exact: true }).click();
+      await page.getByText(/The proof file could not be verified/).waitFor();
+      assert.equal(await page.getByText(/This earning policy is saved/).count(), 0);
+      proofResult = "present";
+      await page.getByRole("button", { name: "Check ownership", exact: true }).click();
+      await page.getByRole("heading", { name: "Source control verified" }).waitFor();
+      assert.equal(stored!.mode, "paid", "Renewal preserves the existing saved policy");
+      assert.equal(policies.length, count, "Renewal must not submit policy activation");
+      assert.equal(verifyCalls, beforeRenewal.verifyCalls + 2);
+      // Refuse a wrong-scope list and fence a response arriving after wallet change.
+      await page.goto("https://claim.test/claim-source"); wrongListScope = true;
+      await page.getByRole("button", { name: "Load my source claims" }).click();
+      await page.getByText(/The claim list does not match/).waitFor();
+      assert.equal(await page.getByRole("link", { name: "Review or re-verify this source" }).count(), 0);
+      wrongListScope = false; holdList = true;
+      await page.getByRole("button", { name: "Load my source claims" }).click();
+      await page.waitForFunction(() => document.body.textContent?.includes("Loading your claims…"));
+      assert(heldList);
+      await page.evaluate(address => (window as unknown as { setWallet: (address: string) => void }).setWallet(address), other);
+      await page.getByRole("link", { name: "Connect and sign in to claim" }).waitFor();
+      await heldList.fulfill({ json: { claims: [stored] } });
+      assert.equal(await page.getByRole("link", { name: "Review or re-verify this source" }).count(), 0);
+      assert.equal(policies.length, count); holdList = false;
       // General RSS sources use the exact feed URL and channel metadata proof, with safe reload.
       expectedCanonical = "https://publisher.example/feed.xml"; stored = null; proofResult = "present";
       await page.goto(`https://claim.test/claim-source?url=${encodeURIComponent(expectedCanonical)}`);
@@ -165,7 +228,7 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
       assert.equal(registrations[1].url, expectedCanonical); assert.notEqual(registrations[1].url, feedHomepage);
       assert.equal(registrations[1].sourceClaimId, claimId); assert.equal(registrations[1].fetchPrice, 0); assert.equal(policies.length, count);
       assert.deepEqual(errors, []); await context.close();
-      console.log(`PASS ${profile.name}/${viewport.width}px: signed-in resume, proof expiry/conflict/failure, reload authority, zero-price registration, explicit rights/policy activation, stale wallet/network refusal. All transport and wallet synthetic.`);
+      console.log(`PASS ${profile.name}/${viewport.width}px: signed-in resume, proof expiry/conflict/failure, owner-list renewal with preserved policy, exact deadlines, stale owner-list/wallet/network refusal, zero-price registration, explicit rights/policy activation. All transport and wallet synthetic.`);
     }
   }
 } finally { await browser.close(); }

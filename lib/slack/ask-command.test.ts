@@ -114,13 +114,24 @@ function fakeRun(overrides: Partial<QueryRun> = {}): QueryRun {
 }
 
 describe("message builders", () => {
-  it("builds bold question, answer, creators-paid block, totals, and dispatch link", () => {
+  it("builds bold question, answer, planned rewards, recorded totals, and dispatch link", () => {
     const text = buildAnswerText(fakeRun());
     expect(text).toContain("*What is x402?*");
     expect(text).toContain("HTTP payment protocol");
     expect(text).toContain("Conzit — $0.0120 (weight 0.60)");
     expect(text).toContain("2 sources cited");
     expect(text).toContain("/dispatch/run-1");
+    expect(text).toContain("Citations and planned rewards");
+    expect(text).toContain("$0.0200 recorded creator-payment total / legacy");
+    expect(text).toContain("Planned rewards are not settlement evidence");
+    expect(text).not.toMatch(/on Arc|Creators paid/);
+  });
+
+  it.each(["real", "offline"] as const)("preserves the original %s payment mode without inferring a network", (paymentMode) => {
+    const text = buildAnswerText(fakeRun({ paymentMode }));
+    expect(text).toContain(`recorded creator-payment total / ${paymentMode}`);
+    expect(text).toContain("settled, pending, failed or simulated payments");
+    expect(text).not.toMatch(/on-chain|testnet|mainnet/);
   });
 
   it("escapes Slack's reserved chars so creator text can't inject markup", () => {
@@ -147,6 +158,8 @@ describe("message builders", () => {
   it("help text carries usage and the status link, error text is escaped", () => {
     expect(helpText()).toContain("/keryx");
     expect(helpText()).toContain("/status");
+    expect(helpText()).toContain("eligible cited creators");
+    expect(helpText()).not.toMatch(/every cited creator|really, on-chain|Creators keep 100%/);
     expect(buildErrorText(new Error("boom <tag>"))).toContain("boom &lt;tag&gt;");
   });
 });

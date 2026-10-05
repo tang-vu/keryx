@@ -44,6 +44,10 @@ async function main(): Promise<void> {
   // than the claim — the harmless direction. Reversed, every busy minute would invent a shortfall.
   const [ledger, sources] = await Promise.all([db.settlementLedger(), db.listSources()]);
   if (ledger.length === 0) {
+    await db.setSyncState(SETTLEMENT_PARITY_STATE_KEY, JSON.stringify({
+      ...summarizeSettlement(reconcileSettlement([], new Map(), new Date().toISOString())),
+      network: config.networkId, basis: "empty-ledger",
+    }));
     console.log("[settlement] no settled payouts on file — nothing to reconcile.");
     return;
   }

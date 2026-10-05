@@ -5,7 +5,7 @@ import {
 import { assertEnrolledSupabaseAuthority, closeEnrolledSupabaseAdapter, createEnrolledSupabaseAdapter, createReadonlyEnrolledSupabaseAdapter } from "./enrolled-supabase-adapter";
 import { makePayment } from "../payments/payment-gateway";
 import { createClient } from "@supabase/supabase-js";
-import { STORAGE_TESTNET_PROFILE_DIGEST } from "./storage-identity";
+import { STORAGE_MAINNET_PROFILE_DIGEST, STORAGE_TESTNET_PROFILE_DIGEST } from "./storage-identity";
 import type { StorageDeploymentManifest } from "./runtime-storage-config";
 import { SUPABASE_RUNTIME_CONTRACT } from "./supabase-runtime-contract";
 import * as sourceAuthority from "../payments/browser-original-source-authority";
@@ -63,6 +63,70 @@ describe("SupabaseAdapter.recordPayment", () => {
     }))).rejects.toBe(failure);
     expect(from).toHaveBeenCalledWith("payment_events");
     expect(insert).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("SupabaseAdapter.settlementLedger read integrity", () => {
+  function legacy(reads: Record<string, { data: unknown; error: unknown } | Error>) {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key-no-authority");
+    const from = vi.fn((table: string) => ({ select: vi.fn(async () => {
+      const value = reads[table];
+      if (value instanceof Error) throw value;
+      return value;
+    }) }));
+    vi.mocked(createClient).mockReturnValue({ from } as unknown as ReturnType<typeof createClient>);
+    return { db: new SupabaseAdapter(), from };
+  }
+
+  it.each(["payment_events", "withdrawals"])("rejects resolved %s failures rather than reporting empty or partial evidence", async table => {
+    const reads = { payment_events: { data: [{ payee: "0xWallet", source_name: "Fixture", amount_usdc: 0.002, kind: "fetch", settled: true }], error: null },
+      withdrawals: { data: [], error: null } } as Record<string, { data: unknown; error: unknown }>;
+    reads[table] = { data: null, error: { message: "PRIVATE_PROVIDER_BODY", details: "private database details" } };
+    const { db } = legacy(reads);
+    await expect(db.settlementLedger()).rejects.toThrow(/^Settlement ledger unavailable$/);
+  });
+
+  it.each(["payment_events", "withdrawals"])("sanitizes rejected %s transport failures", async table => {
+    const reads: Record<string, { data: unknown; error: unknown } | Error> = {
+      payment_events: { data: [], error: null }, withdrawals: { data: [], error: null },
+    };
+    reads[table] = new Error("PRIVATE_PROVIDER_BODY");
+    await expect(legacy(reads).db.settlementLedger()).rejects.toThrow(/^Settlement ledger unavailable$/);
+  });
+
+  it("returns empty only after both table reads successfully return empty arrays", async () => {
+    const { db, from } = legacy({ payment_events: { data: [], error: null }, withdrawals: { data: [], error: null } });
+    await expect(db.settlementLedger()).resolves.toEqual([]);
+    expect(from.mock.calls.map(([table]) => table)).toEqual(["payment_events", "withdrawals"]);
+    await expect(legacy({ payment_events: { data: null, error: null }, withdrawals: { data: [], error: null } }).db.settlementLedger())
+      .rejects.toThrow(/^Settlement ledger unavailable$/);
+  });
+
+  it("preserves successful payment/withdrawal aggregation and excludes inbound and unsettled rows", async () => {
+    const { db } = legacy({ payment_events: { data: [
+      { payee: "0xWallet", source_name: "Fixture", amount_usdc: 0.003, kind: "fetch", settled: true },
+      { payee: "0xwallet", amount_usdc: 0.002, kind: "citation", settled: true },
+      { payee: "0xOther", amount_usdc: 1, kind: "inbound", settled: true },
+      { payee: "0xOther", amount_usdc: 1, kind: "citation", settled: false },
+    ], error: null }, withdrawals: { data: [{ wallet: "0xWALLET", amount_usdc: 0.001 }], error: null } });
+    await expect(db.settlementLedger()).resolves.toEqual([{ address: "0xWallet", label: "Fixture", paidUsdc: 0.005,
+      paymentCount: 2, withdrawnUsdc: 0.001, withdrawCount: 1 }]);
+  });
+
+  it("retains the mainnet enrolled initialization refusal without falling back to legacy tables", async () => {
+    const deployment: StorageDeploymentManifest = { format: "keryx-storage-deployment-v1",
+      backend: { kind: "supabase", url: "https://synthetic-db.invalid" }, identity: {
+        format: "keryx-mainnet-storage-identity-v1", network: "eip155:5042", authorityMode: "mainnet-real",
+        deploymentId: "11111111-1111-4111-8111-111111111111", storageId: "22222222-2222-4222-8222-222222222222",
+        enrollmentId: "33333333-3333-4333-8333-333333333333", enrolledAt: "2026-01-01T00:00:00.000Z",
+        profileDigest: STORAGE_MAINNET_PROFILE_DIGEST, provenanceDigest: "0".repeat(64),
+      } };
+    const from = vi.fn(), rpc = vi.fn();
+    const { adapter } = assembleAuthorityBoundSupabaseCore(
+      { from, rpc } as unknown as ReturnType<typeof createClient>, deployment, () => deployment);
+    await expect(adapter.settlementLedger()).rejects.toMatchObject({ reason: "adapter_not_initialized" });
+    expect(from).not.toHaveBeenCalled(); expect(rpc).not.toHaveBeenCalled();
   });
 });
 

@@ -157,8 +157,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "Explain the connection in the rationale. If no target is supported by the preview, choose SKIP with targets:[]. " +
         "A relevant rationale without valid targets cannot authorize a read. These are predicted relevance links, not verified evidence or permission to pay citation rewards. " +
         "Consider deliveryKind and plaintextBytes when present: an abstract or excerpt may only answer a narrow question, and a title does not establish full-text availability. " +
-        "Some candidates have external:true — these are live endpoints from the open x402 marketplace that settle on OTHER chains, not Keryx's Arc rail. " +
-        "You cannot settle to them this run, so mark them SKIP, but still judge their real topical value and say WHY in the rationale (note the off-rail chain). " +
+        "Some candidates have external:true — these are discovery-only endpoints from the open x402 marketplace, regardless of their advertised payment networks. " +
+        "Marketplace metadata is not trusted payment authority or settlement evidence. Mark them SKIP, but still judge their topical value and say WHY in the rationale (note the advertised network). " +
         memoryBlock +
         "Give a short, specific, human-readable rationale citing WHY. Output strict JSON only.",
       JSON.stringify({

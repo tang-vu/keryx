@@ -1,5 +1,37 @@
 # Keryx — Decision Log
 
+**Monitoring observations and mainnet defaults — 2026-10-05.** Describe service
+availability separately from recorded financial checks. Add bounded freshness for
+the four existing summary records without vendor requests, scheduler changes or
+financial transitions in health. A missing, invalid, future or stale timestamp is
+unavailable/currently unobserved, never an inferred successful check. A recent
+summary dates an observation and does not prove a pass, active scheduling or settlement.
+New desktop tasks target the public mainnet service; persisted task networks remain
+immutable history. Creator proof keeps the 24-hour control boundary and manual
+refresh, with clear owner recovery rather than implicit renewal or earnings activation.
+Monthly/Slack/external discovery copy reflects its actual role; marketplace metadata
+does not authorize payments. See [release scope](docs/engineering/mainnet-consistency-2026-10-05.md).
+
+**Caller source leads, serving visibility and native authority checks — 2026-10-05.**
+URLs in the original question are bounded unread discovery leads even without a search
+provider. Never manufacture a source from a domain or model-created target, force a BUY,
+or treat a supplied URL as document contents, official authorship or creator authority.
+Keep existing public transport, final identity, evidence and portfolio bounds; fragment
+requests share a document read and do not claim section-specific extraction. Retain
+refusal and omission reasons so discovery failure does not become another request for
+the same already-supplied URLs. Private and unattended external-effect gates remain.
+
+Expose allowlisted recorded reasoning attempts and step-specific serving/fallback state
+through shared results. Aggregate engine names or model synthesis cannot certify model
+source selection; missing, invalid and bounded-out telemetry remains unknown. This is
+observability, not a circuit reset, provider policy change or recovered usefulness claim.
+
+Batch trusted exact schema triples in one native SQLite statement per guard. Compare the
+first matching stored definition with binary exact SQL semantics, preserving missing,
+null and drift refusals. Do not materialize stored SQL into JavaScript or cache authority.
+Keep storage enrollment, authorizers, markers, counts and observation deadlines intact.
+Windows acceptance and Linux CI must verify both correctness and the reported improvement.
+
 **Bind legacy evidence to complete source spans and private neighboring context — 2026-10-05.**
 Ordinary-client results exposed an unconfirmed proposal without its qualification
 and a mid-sentence excerpt. Bind new internal proposals to exact read offsets,
