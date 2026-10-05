@@ -5,8 +5,12 @@
 - Receipts record a selection that was never read as SKIP and release its toll
   reservation. A client disconnect after a creator payment no longer discards the
   dispatch. The final coverage check reuses an identical interim assessment.
-- Paid reads expire from the cache after `KERYX_CACHE_TTL_SECONDS` (default 7 days)
-  and browser-funded reads are cached per paying wallet.
+- Paid reads expire from the cache after `KERYX_CACHE_TTL_SECONDS` (default 7 days).
+  The cache stays shared: per-payer keys were withdrawn after review because enrolled
+  storage caps cached rows and never evicts.
+- Review corrections: a disconnect during an in-flight first payment keeps its
+  dispatch; gap expansion reuses a fresh cached copy instead of buying it again;
+  sponsored admission counts an IPv6 /64 as one caller.
 - A run the asker does not fund leaves out sources that pay the asker's verified
   wallet. Sponsored research has daily dispatch caps per caller and service-wide.
 - No change to planning, context, attention or search limits, answer delivery,

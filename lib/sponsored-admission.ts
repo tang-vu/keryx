@@ -22,8 +22,28 @@ export type SponsoredCaller =
 
 type Bucket = { key: string; tier: string; points: number; windowMs?: number };
 
+/**
+ * One allowance per network a subscriber controls. An IPv6 customer is routinely delegated a whole
+ * /64, so hashing the full address would hand out a fresh allowance for every address in it.
+ * Unparseable input is hashed as given: it still shares one bucket with identical input.
+ */
+export function admissionNetwork(ip: string): string {
+  const address = ip.trim().toLowerCase().replace(/%.*$/, "");
+  if (!address.includes(":")) return address || "unknown";
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(address);
+  if (mapped) return mapped[1]!;
+  const [head = "", tail] = address.split("::");
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  if (address.split("::").length > 2 || left.length + right.length > 8 ||
+      [...left, ...right].some((group) => !/^[0-9a-f]{1,4}$/.test(group))) return address;
+  const groups = tail === undefined ? left : [...left, ...Array(8 - left.length - right.length).fill("0"), ...right];
+  if (groups.length !== 8) return address;
+  return `${groups.slice(0, 4).map((group) => group.replace(/^0+(?=.)/, "")).join(":")}::/64`;
+}
+
 function ipKey(ip: string): string {
-  return createHash("sha256").update(ip.trim() || "unknown").digest("hex");
+  return createHash("sha256").update(admissionNetwork(ip)).digest("hex");
 }
 
 function positiveLimit(value: string | undefined, fallback: number): number {

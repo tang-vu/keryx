@@ -276,8 +276,6 @@ async function* runAdmittedAgent(
     [s.walletAddress, ...s.authors.map((author) => author.walletAddress)]
       .some((wallet) => wallet?.toLowerCase() === outsideFundedAsker);
   const selfOwnedCount = allSources.filter(paysAsker).length;
-  // Browser-funded reads are cached per paying wallet; one reader's toll is not another's licence.
-  const cacheScope = input.fundingOwner === "browser" && input.asker ? `payer:${input.asker.toLowerCase()}:` : "";
   const eligible = allSources.filter((s) => s.verified !== false && !paysAsker(s) && !isPublicReferenceId(s.id) && (gateway.mode === "offline" || s.evidenceProvenance !== "synthetic-demo"));
   const rights = await Promise.all(eligible.map(s => paperCanResearch(db, s, input.paidScholarly === true && origin === "web")));
   const sources = eligible.filter((_s, index) => rights[index]);
@@ -470,7 +468,7 @@ async function* runAdmittedAgent(
       const identity = { ...sourceItemIdentity({ ...item, evidenceProvenance: item.evidenceProvenance ?? s.evidenceProvenance }),
         ...(claimAccess.snapshot ? { sourceClaim: claimAccess.snapshot } : {}),
         ...(terms.listPriceUsdc === 0 ? { accessKind: "creator-free" as const } : {}) };
-      const cacheKey = cacheScope + sourceItemCacheKey(s.id, item);
+      const cacheKey = sourceItemCacheKey(s.id, item);
       const cached = isCacheWithinTtl(await effects.getCachedAt(cacheKey), Date.now(), config.cacheTtlSeconds);
       if (cached) freshCache.add(id);
       const summary = previewSummary(item.summary, depth);
@@ -523,7 +521,7 @@ async function* runAdmittedAgent(
 
     // Historical source rows with no articles retain the original source-level purchase path.
     if (terms.listPriceUsdc === 0) continue;
-    const legacyCachedAt = await effects.getCachedAt(cacheScope + s.id);
+    const legacyCachedAt = await effects.getCachedAt(s.id);
     const cached = isCacheFresh(legacyCachedAt, newestPublishedAt(items), Date.now()) &&
       isCacheWithinTtl(legacyCachedAt, Date.now(), config.cacheTtlSeconds);
     if (cached) freshCache.add(s.id);
@@ -541,7 +539,7 @@ async function* runAdmittedAgent(
     assetById.set(s.id, {
       candidate,
       source: s,
-      cacheKey: cacheScope + s.id,
+      cacheKey: s.id,
       priceUsdc: terms.listPriceUsdc,
       listPriceUsdc: terms.listPriceUsdc,
       claimPolicy: claimAccess.snapshot,
@@ -1046,14 +1044,18 @@ async function* runAdmittedAgent(
       lastSufficient = suf.sufficient;
       lastGaps = suf.perClaim ? suf.perClaim.filter((c) => c.coverage < 0.4).length : 0;
       if (suf.sufficient) {
-        const unread = buys.slice(buys.indexOf(d) + 1);
-        const remaining = unread.filter((x) => x.action === "BUY" && assetById.has(x.assetId ?? x.sourceId));
         // Record what actually happened: an unread selection is not a purchase, and its toll
-        // reservation returns to the fetch budget for any later gap-filling read.
-        for (const x of unread) markUnread(x, "not read: the sources already read covered every research target, so the agent stopped early.");
-        spentTolls = Math.max(0, round(spentTolls - remaining.reduce((sum, x) => sum + x.price, 0)));
-        if (remaining.length) {
-          yield emit("sufficiency", `Stopping early — skipping ${remaining.length} further paid fetch(es) to save budget.`);
+        // reservation returns to the fetch budget for any later gap-filling read. A decision
+        // already withheld by a funding failure keeps its reservation and its own rationale.
+        let unreadBuys = 0;
+        let released = 0;
+        for (const x of buys.slice(buys.indexOf(d) + 1)) {
+          const was = markUnread(x, "not read: the sources already read covered every research target, so the agent stopped early.");
+          if (was === "BUY" && assetById.has(x.assetId ?? x.sourceId)) { unreadBuys++; released += x.price; }
+        }
+        spentTolls = Math.max(0, round(spentTolls - released));
+        if (unreadBuys) {
+          yield emit("sufficiency", `Stopping early — skipping ${unreadBuys} further paid fetch(es) to save budget.`);
         }
         break;
       }
@@ -1208,6 +1210,17 @@ async function* runAdmittedAgent(
         const marker = `S${++markerN}`;
         const assetLabel = asset.item ? `${source.name} — ${asset.item.title}` : source.name;
         const itemIdentity = { ...asset.candidate.item, evidenceProvenance: asset.candidate.item?.evidenceProvenance ?? source.evidenceProvenance };
+        // A fresh cached copy is already paid for: read it instead of buying the same article again.
+        if (asset.priceUsdc > 0 && freshCache.has(recId)) {
+          const cachedText = await effects.getCached(asset.cacheKey).catch(() => null);
+          if (cachedText) {
+            gathered.push({ assetId: asset.candidate.id, sourceId: source.id, sourceName: source.name,
+              ...itemIdentity, marker, text: cachedText, creatorRewardEligible: asset.rewardAllowed !== false });
+            attentionUsed++; gatheredIds.add(recId);
+            yield emit("reevaluate", `Filling gap — reused cached ${assetLabel} (free) — ${marker}`);
+            continue;
+          }
+        }
         if (asset.priceUsdc === 0 && asset.item) {
           try {
             const text = await resolveFreeSourceItemContent(db, source, asset.item, asset.claimPolicy ?? null);
@@ -1336,10 +1349,10 @@ async function* runAdmittedAgent(
       discovery: webDiscovery, fundingUnavailable, pendingPayments, settledPayments, fetchFailures }));
   }
 
-  // 4c) FINAL COVERAGE — always reassess after every cache read and re-evaluation purchase.
-  // Earlier snapshots help decide whether to spend more, but cannot authorize confidence or
-  // citation rewards: CACHE-only runs used to keep an unmeasured lastGaps=0, while re-evaluation
-  // purchases left the pre-purchase coverage snapshot behind.
+  // 4c) FINAL COVERAGE — confidence and citation rewards are authorized only by an assessment of
+  // the complete read set. An interim assessment is reused solely when nothing was read after it
+  // (the read list is append-only, so an equal count is identical evidence); any later cache read
+  // or re-evaluation purchase forces a fresh assessment.
   let finalSufficiency: SufficiencyResult;
   let finalAssessmentAvailable = true;
   try {
@@ -1731,14 +1744,18 @@ async function* runAdmittedAgent(
   return finish(answer);
 
   // ── helpers ──
-  /** Turn a selected-but-never-read decision into a SKIP so receipts and counts match reality. */
-  function markUnread(decision: Decision, reason: string): void {
+  /**
+   * Turn a selected-but-never-read decision into a SKIP so receipts and counts match reality.
+   * Returns the action it replaced, or null when the decision was already a SKIP or is unknown.
+   */
+  function markUnread(decision: Decision, reason: string): "BUY" | "CACHE" | null {
     const assetId = decision.assetId ?? decision.sourceId;
     const index = finalDecisions.findIndex((item) => !item.external && (item.assetId ?? item.sourceId) === assetId);
-    if (index < 0) return;
-    const current = finalDecisions[index]!;
+    const current = index < 0 ? undefined : finalDecisions[index];
+    if (!current || current.action === "SKIP") return null;
     // Replace rather than mutate: the decide step already streamed the planning snapshot.
     finalDecisions[index] = { ...current, action: "SKIP", rationale: `${current.rationale} — ${reason}` };
+    return current.action;
   }
   function withholdOwnedReads(phase: "fetch" | "reevaluate" | "settle", selectedAssetId?: string): TraceStep[] {
     const steps: TraceStep[] = [];

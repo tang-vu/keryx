@@ -138,7 +138,7 @@ export const config = {
 
   // A paid read is reusable for a bounded period, not forever: without an expiry the first toll for
   // an article version is the last one that version ever earns, however often it is read. 0 disables
-  // expiry. Browser-funded reads are additionally cached per paying wallet (see run-agent).
+  // expiry. The cache is shared between callers: enrolled storage caps its rows and never evicts.
   cacheTtlSeconds: Math.max(0, Math.round(num(process.env.KERYX_CACHE_TTL_SECONDS, 604_800))),
 
   // Original public reads have no toll and no pre-read evidence. Keep their preview
