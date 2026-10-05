@@ -22,6 +22,7 @@ import { BROWSER_AUTHORIZATION_PROTOCOL } from "@/lib/payments/browser-authoriza
 import { getSession } from "@/lib/auth";
 import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
+import { researchFailureMessage } from "@/lib/llm/research-plan";
 import { config } from "@/lib/config";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
@@ -319,7 +320,7 @@ export async function POST(req: NextRequest) {
           send("done", run);
         }
       } catch (err) {
-        send("error", { message: err instanceof Error ? err.message : String(err) });
+        send("error", { message: researchFailureMessage(err) });
       } finally {
         controller.close();
       }

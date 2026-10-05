@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Bounded planning refusals and heading recall (2026-10-05, v0.26.17 candidate)
+
+- Distinguish comparison subjects from source references while preserving independently
+  inspectable targets and the existing eight-target cap.
+- Stop malformed or overexpanded plans before discovery and extra paid planning tiers.
+  Return bounded original-caller refinement guidance; preserve actual usage and circuits.
+- Prefer uniquely matching extracted heading hints and contiguous context within existing
+  selection bounds, retaining exact quote/source provenance and reward gates.
+- The closed browser round remains 0/3 useful. Useful synthesis and a new finite live
+  acceptance remain open. See [scope, surfaces and gates](engineering/research-planning-2026-10-05.md).
+
 ### Preserve zero source budgets and bound browser acceptance (2026-10-05, v0.26.16 candidate)
 
 - Preserve an explicit zero source budget across web/SSE, OpenAI API and remote MCP;

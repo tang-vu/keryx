@@ -10,6 +10,7 @@
 import { collectRun } from "../lib/agent/index.ts";
 import { getReasoningEngine } from "../lib/llm/index.ts";
 import { c, printStep } from "./trace-console.mts";
+import { ResearchPlanningError, researchFailureMessage } from "../lib/llm/research-plan.ts";
 
 // ── parse args ──
 const argv = process.argv.slice(2);
@@ -39,7 +40,11 @@ console.log(`${c.dim("question:")} ${question}\n`);
 if (allowExternalWeb) console.log("Public web search may send this question to the configured search provider. The source USDC budget is separate from model and search operating costs.");
 console.log(c.dim("─".repeat(72)));
 
-const run = await collectRun({ question, budget, model, origin: "engine", allowExternalWeb }, { onStep: printStep });
+const run = await collectRun({ question, budget, model, origin: "engine", allowExternalWeb }, { onStep: printStep }).catch(error => {
+  if (!(error instanceof ResearchPlanningError)) throw error;
+  console.error(researchFailureMessage(error));
+  process.exit(1);
+});
 
 console.log(c.dim("─".repeat(72)));
 console.log(c.bold("\n📝 Answer\n"));

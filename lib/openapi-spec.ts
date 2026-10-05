@@ -874,7 +874,8 @@ export const openapiSpec = {
         responses: {
           "200": {
             description:
-              "ChatCompletion object, or an SSE stream of chat.completion.chunk when stream=true.",
+              "ChatCompletion object, or an SSE stream of chat.completion.chunk when stream=true. " +
+              "A terminal planning refusal in a started stream is emitted as [keryx error] content, without a successful completion or automatic retry.",
             content: {
               "application/json": { schema: { $ref: "#/components/schemas/ChatCompletion" } },
             },
@@ -886,6 +887,18 @@ export const openapiSpec = {
           "401": {
             description: "A kx_live_ key was supplied but is invalid or revoked.",
             content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+          },
+          "422": {
+            description: "Non-streaming research could not prepare a valid complete plan within eight independent targets. " +
+              "Code research_plan_refinement_required supplies original-caller guidance; a model call may already have incurred compute cost. No automatic paid retry or completed report follows.",
+            content: { "application/json": { schema: {
+              type: "object", required: ["error"], properties: { error: {
+                type: "object", required: ["message", "type", "code"], properties: {
+                  message: { type: "string" }, type: { type: "string", enum: ["invalid_request_error"] },
+                  code: { type: "string", enum: ["research_plan_refinement_required"] },
+                },
+              } },
+            } } },
           },
           "429": {
             description: "Shared sponsored allowance exceeded (anonymous IP, verified wallet, direct IP or global capacity).",

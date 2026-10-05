@@ -5,6 +5,7 @@
     "incremental": false
   },
   "include": [
+    "scripts/ask.mts",
     "scripts/eval-decision-brief.mts",
     "scripts/eval-research-workload.mts",
     "scripts/eval-commerce-workload.mts",

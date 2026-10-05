@@ -1,5 +1,12 @@
 # MCP package distribution
 
+The 0.26.17 bounded-planning/context candidate updates hosted research and caller-only
+error guidance while retaining remote MCP protocol **0.3.1**. Its changed modules are
+outside the caller-funded stdio package's 31-file runtime graph. Keep accepted **0.4.5**
+bytes and 0.26.15 source provenance; no new npm identity/publication is needed for this
+hosted change. Verify deployed health and public package versions independently.
+See [surface audit and live gates](engineering/research-planning-2026-10-05.md).
+
 The current source selects caller-funded MCP **0.4.5**, retaining the hosted
 `reasoning` contract and adding typed failure/input-limit categories and
 per-original scope/status. Its exact-source archive, npm bytes/provenance,

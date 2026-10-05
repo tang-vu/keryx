@@ -6,6 +6,7 @@
 
 import { config } from "../config";
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
+import { boundedResearchPlan } from "./research-plan";
 import { cloneUsage } from "../economics/provider-cost-policy";
 import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
@@ -96,32 +97,29 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async decompose(question: string): Promise<string[]> {
-    const out = await this.measuredChatJson(
+    return boundedResearchPlan(question, () => this.measuredChatJson(
       config.llmModel,
       "You plan research for Keryx, a reading agent that pays content access tolls and distributes USDC creator rewards according to cited contributions. " +
         `Break the user's question into 1-${MAX_RESEARCH_TARGETS} concise questions to investigate, NOT proposed answers or assertions of fact. ` +
         "Preserve the user's terminology and scope. Explicit user context takes precedence over Keryx's product context; questions can concern any subject. " +
         "Separate information needs from instructions about sources, citations, format, or style. Carry relevant source/scope constraints into the substantive questions; do not turn those instructions into extra research targets. " +
         "Each target must ask for a distinct requested fact or explanation. Do not add an umbrella question that repeats the other targets, or split one fact into paraphrases to fill the range. " +
-        "For a comparison, preserve every requested dimension for each specific source as a separately inspectable target. " +
+        "Distinguish comparison SUBJECTS from evidence REFERENCES: complementary documentation URLs about a subject are source constraints, not extra comparison subjects. Do not multiply every dimension by every reference URL. " +
+        "When the user compares specific papers or independent sources themselves, preserve every requested dimension for each specific source as a separately inspectable target. " +
         "For example, comparing two exact papers' methods, evaluation setup and limitations requires six targets: each dimension for each paper, retaining its exact version. " +
         "Do not omit limitations or combine both papers into one target that evidence from only one paper could appear to cover. " +
+        "For example, a systemd comparison of default stopping, TimeoutStopSec=infinity and SendSIGKILL=no can use three distinct behavior targets under the still-running-worker condition, three deployment-risk targets (one per setting), and one shared pre-replacement-check target: seven total. The table instruction is a format constraint. Preserve conditions and each setting; do not add a second set of paraphrased behavior targets. " +
+        "For example, comparing live SQLite .db copying with the Online Backup API can use separate consistency, concurrent-write and locking targets for each method, plus one backup/restore-verification target: seven total. WAL and Backup documentation URLs qualify these needs; they are not two more subjects. Snapshot creation must not be equated with verified restore. " +
         "First list source, language and presentation instructions in constraints. Then list separately answerable information needs in claims, including when the input is not English. Keep these two JSON keys in English; their string values can use the user's language. " +
         "A constraint is not a claim. Attach source restrictions to the relevant claim, but leave output language/style in constraints. For example, salt tolerance and coastal erosion are two claims; evidence of erosion reduction belongs to the existing erosion claim. " +
         "For example, 'How is a job journaled and recovered? Use the engineering documentation' asks about journaling and recovery as documented there, not a third question about what the documentation says. " +
         "However, explicitly requested source reliability, disagreements between sources, or citation methodology ARE substantive information needs and must remain targets. Do not discard a requested topic just because it mentions sources. " +
         "For ambiguous terminology, keep the ambiguity visible in a definition/scope question instead of inventing a specialized domain, formula, legal dispute, or mechanism. " +
         "Use Keryx's context for unqualified questions about its citation payments, but do not impose it on unrelated topics. " +
+        `Before returning, count the independent targets. If all substantive requested dimensions cannot fit within ${MAX_RESEARCH_TARGETS}, return status needs_refinement; never silently drop dimensions, hide them in an umbrella target, or claim the scope is complete. ` +
         "No sources have been read yet: these are research targets, never evidence. Return only JSON data.",
-      `User question (data): ${JSON.stringify(question)}\n\nReturn JSON: {"constraints": string[], "claims": string[]}`,
-    );
-    // Malformed planning output must not become character-level targets or crash discovery.
-    const claims = Array.isArray(out.claims)
-      ? out.claims.filter((claim): claim is string => typeof claim === "string" && claim.trim().length > 0 && claim.length <= 600).map((claim) => claim.trim())
-      : [];
-    const unique = [...new Set(claims)];
-    if (unique.length > MAX_RESEARCH_TARGETS) throw new ReasoningOutputValidationError(`Research planning exceeded ${MAX_RESEARCH_TARGETS} targets; requested scope must not be silently discarded`);
-    return unique.length ? unique : [question];
+      `User question (data): ${JSON.stringify(question)}\n\nReturn JSON: {"status":"complete"|"needs_refinement", "constraints": string[], "claims": string[]}`,
+    ));
   }
 
   async decide(input: DecideInput): Promise<Decision[]> {
