@@ -30,6 +30,7 @@ import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { getDb } from "@/lib/db";
 import { buildFollowUpQuestion } from "@/lib/agent/follow-up-question";
 import { getGrant } from "@/lib/payments/session-grants";
+import { isPaymentRecord } from "@/lib/payments/payment-state";
 import { awaitSignature } from "@/lib/payments/pending-signatures";
 import type {
   BrowserPaymentContext,
@@ -288,8 +289,8 @@ export async function POST(req: NextRequest) {
             question: askQuestion,
             signal: agentAbort.signal,
             budget: askBudget,
-            // Verified SIWE wallet only. Scopes the paid-read cache to the payer and keeps a
-            // treasury-funded run from buying or rewarding the asker's own sources.
+            // Verified SIWE wallet only. Keeps a treasury-funded run from buying or rewarding the
+            // asker's own sources.
             asker,
             researchMode,
             scholarly: body.scholarly === true,
@@ -306,7 +307,7 @@ export async function POST(req: NextRequest) {
         let res = await gen.next();
         while (!res.done) {
           send("step", res.value);
-          if (isPaymentStep(res.value.detail)) retainPaymentHistory = true;
+          if (isPaymentRecord(res.value.detail)) retainPaymentHistory = true;
           res = await gen.next();
           if (agentAbort.signal.aborted) break;
         }
@@ -360,11 +361,4 @@ export async function POST(req: NextRequest) {
       "X-Accel-Buffering": "no",
     },
   });
-}
-
-/** Trace steps that carry a creator payment record (settled, pending or simulated). */
-function isPaymentStep(detail: unknown): boolean {
-  return typeof detail === "object" && detail !== null &&
-    typeof (detail as { amountUsdc?: unknown }).amountUsdc === "number" &&
-    typeof (detail as { kind?: unknown }).kind === "string";
 }

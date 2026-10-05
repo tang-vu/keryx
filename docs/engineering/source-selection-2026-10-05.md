@@ -90,6 +90,10 @@ wallet's sources from sponsored runs and retains dispatches after observed
 creator payments. Its planning/context/attention/search expansion trial was
 withdrawn. This source-selection repair preserves those accepted behaviors;
 the combined runtime requires its own CI/review and deployed-source verification.
+Separately merged PR #176 withdraws per-payer cache keys because the enrolled
+store never evicts, reuses fresh cache during gap expansion, corrects unread
+reservation release and counts IPv6 callers by /64. The candidate retains those
+corrections; the cache remains shared within its existing reuse window.
 
 Combined review found two payment-boundary gaps in that update. Sponsored source
 exclusion now uses current registry toll/citation recipients, with DB author
