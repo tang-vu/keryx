@@ -1,6 +1,6 @@
 # Reading activity and source visibility
 
-Application **0.26.21 candidate**, October 5, 2026. The owner requested useful
+Application **0.26.22 candidate**, October 5, 2026. The owner requested useful
 presentation of real activity and sources even before creator earnings. This
 release changes presentation, aggregate reads and read isolation, with no source import, enrollment,
 schema migration, payment authority, custody or schedule.

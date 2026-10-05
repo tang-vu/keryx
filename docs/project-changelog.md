@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Reading activity, source visibility and account totals (2026-10-05, v0.26.21 candidate)
+### Reading activity, source visibility and account totals (2026-10-05, v0.26.22 candidate)
 
 - Lead the public ledger with recorded questions and sources; keep settlement
   totals and complete original-network proof inspectable. Omit confirmed-empty
@@ -16,6 +16,16 @@
 - Preserve available activity through independent read failures and date retained
   data. No source import, auth/schema/custody change or payment allowance.
   See [scope and acceptance](engineering/ledger-sources-2026-10-05.md).
+
+## October 5, 2026 — OSS adoption and decision context (v0.26.21 candidate)
+
+- Keep historical source performance in serialized input data so publisher-owned
+  names cannot enter system instructions through research memory.
+- Retain current target, source-price and spend enforcement, with regression
+  coverage using real aggregated synthetic history. This verifies prompt packaging,
+  not universal prompt-injection resistance or live research usefulness.
+- Add a source-pinned survey of eight OSS AI/skills projects and a repo-local
+  adoption skill. See [patterns, surfaces and remaining gates](engineering/oss-ai-adoption-2026-10-05.md).
 
 ### Deep research searches every target (2026-10-05)
 
