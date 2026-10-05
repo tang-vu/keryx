@@ -55,7 +55,7 @@ function launch(scenario: Scenario, hold: boolean, once = false, command?: { pat
 }
 type Process = ReturnType<typeof launch>;
 function cleanNetwork(process: Process) {
-  assert.equal(process.stderr, "[keryx llm] decompose fell back to heuristic after provider failure: provider (HTTP 503)\n");
+  assert.equal(process.stderr, "[keryx llm] decompose fell back to heuristic after step failure: provider (HTTP 503)\n");
   assert.equal(process.events.some(event => event.status === "forbidden-network"), false);
   const summary = process.summaries().find(row => row.status === "test-network-summary");
   // A job may continue through multiple reasoning stages while draining. Job claims,
