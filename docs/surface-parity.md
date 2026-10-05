@@ -14,6 +14,11 @@ These source identities require CI,
 packaged desktop acceptance, actual npm/assets and deployment readback before
 publication is claimed. [Scope and remaining gates](engineering/mainnet-consistency-2026-10-05.md).
 
+The official MCP Registry's October 5 readback still points to npm 0.1.1 under
+server 0.2.0. The 0.4.4 source manifest and manual publication workflow must update
+that catalog only after npm publication/readback; hosted MCP protocol, npm bytes and
+registry metadata are distinct release evidence.
+
 ## Source context correction, October 5, 2026
 
 App **0.26.11 candidate** changes new research in the shared server/engine pipeline:

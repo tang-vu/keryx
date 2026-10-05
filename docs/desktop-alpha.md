@@ -139,6 +139,8 @@ For the complete-file publisher and packaged Windows app, run from the repositor
 ```powershell
 npx vitest run lib/operator/private-text-export.test.ts
 npm run desktop:package
+$env:KERYX_NETWORK='arc'
+$env:NEXT_PUBLIC_KERYX_NETWORK='arc'
 node --import tsx desktop/scripts/tauri-smoke.mjs desktop/release/KeryxOperator-win32-x64/KeryxOperator.exe
 ```
 

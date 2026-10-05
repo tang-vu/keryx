@@ -89,6 +89,24 @@ typed. Focused Supabase tests passed 21 cases. Review cleared the final source,
 telemetry, UI, native schema and empty-ledger paths. Full CI, packaged distribution
 and live deployed-commit verification remain required.
 
+Final application/operations TypeScript and lint passed (five existing warnings).
+The production build passed after installing the locked dependency closure with
+npm 11.19.0 in the isolated worktree; Turbopack rejects a dependency junction outside
+its project root. Actual built HTML/PDF readers and minified empty-evidence branches
+passed without network access. The unmodified packed MCP consumer passed on Windows
+for both profiles, including synthetic SDK signing, response-loss barriers and keyless
+GET-only recovery. An earlier initialization timeout was not reproduced; no deadline
+was increased and its cause remains unproven.
+
+The packaged desktop fixture selects the same explicit mainnet profile as a fresh
+UI-created task, and asserts that persisted task identity before synthetic saved-result
+recovery. Its prior unconfigured testnet buyer was correctly refused by the unchanged
+network guard. Portable/installed acceptance on the final CI source remains required.
+The manual MCP publishing workflow also verifies npm/official Registry identities,
+reuses matching immutable versions and refuses unknown/conflicting/deleted state.
+Its seven lightweight failure/recovery tests are part of CI; live publication stays
+an independent release gate.
+
 Source versions are not distribution or deployment proof. Required focused tests,
 TypeScript, lint, production build, independent review, CI, exact-source packaged
 desktop acceptance, npm/artifact readback and production health must precede a

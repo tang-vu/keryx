@@ -266,6 +266,9 @@ try {
   const taskDirectory = join(view.path, created.directoryName);
   const persisted = JSON.parse(await readFile(join(taskDirectory, "task.json"), "utf8"));
   if (persisted.request.question !== created.question) throw Error("Native-created task bytes differ from UI");
+  if (persisted.network !== "eip155:5042" || BUYER_NETWORK !== persisted.network) {
+    throw Error("Fresh packaged mainnet task and synthetic buyer fixture must use the same profile");
+  }
   const referenceRow = await page.evaluate(() => window.keryxDesktop.importReference());
   if (referenceRow.name !== basename(reference)) throw Error("Reference import did not return the synthetic file");
   const denied = await page.evaluate(async () => {
