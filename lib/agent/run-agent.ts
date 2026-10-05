@@ -273,10 +273,13 @@ export async function* runAgent(
   function admitWeb(candidate: SourceCandidate) {
     const supplied = requestedByUrl.get(canonicalUrl(candidate.item?.itemUrl ?? "") ?? "");
     const requirement = supplied?.item?.requestedSource;
+    const previous = webCandidates.get(supplied?.id ?? candidate.id);
+    const sameDocument = canonicalUrl(previous?.item?.itemUrl ?? "") === canonicalUrl(candidate.item?.itemUrl ?? "");
     const admitted = requirement && candidate.item ? { ...candidate,
       id: supplied!.id, sourceId: supplied!.id,
       description: `${candidate.description} This original URL was explicitly supplied by the caller; contents remain unobserved.`,
-      item: { ...candidate.item, requestedSource: requirement } } : candidate;
+      item: { ...candidate.item, ...(sameDocument && !candidate.item.scholarly && previous?.item?.scholarly
+        ? { scholarly: previous.item.scholarly } : {}), requestedSource: requirement } } : candidate;
     webCandidates.set(admitted.id, admitted); publicCandidates.set(admitted.id, admitted);
   }
   if (!externalDocumentsWithheld) for (const candidate of requested.candidates.values()) admitWeb(candidate);

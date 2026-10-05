@@ -491,7 +491,7 @@ it("merges an exact supplied arXiv PDF with scholarly metadata into one original
   const candidate = scholarlyCandidate({ provider: "arxiv", recordUrl: "https://export.arxiv.org/api/query?id_list=2606.02668v1",
     retrievedAt: new Date().toISOString(), title: "Exact paper", authors: [], arxivId: "2606.02668v1", workType: "preprint", peerReview: "unknown" });
   const d = deps([], fakeEngine(), fakeGateway());
-  d.webSearch = { search: async () => [] };
+  d.webSearch = { search: async () => [{ title: "Search preview of the same paper", url: "https://arxiv.org/pdf/2606.02668v1", snippet: "unverified" }] };
   d.discoverScholarly = async () => ({ candidates: new Map([[candidate.id, candidate]]), succeeded: 1, unavailable: 0, requestedDois: 0, resolvedDois: 0 });
   d.readWebArticle = vi.fn(async url => ({ text: "The exact original paper was read under this synthetic transport.", title: "Paper", finalUrl: url, kind: "pdf" as const, truncated: false }));
   const { run } = await drive({ question: "Use https://arxiv.org/pdf/2606.02668v1", origin: "web" }, d);
