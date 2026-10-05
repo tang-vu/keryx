@@ -68,6 +68,7 @@ it("shows held capacity, clamps question requests to the signed maximum and make
     await page.evaluate(() => (window as unknown as { showBudget(): void }).showBudget());
     await page.getByText("0.020000 USDC used or held").waitFor();
     expect(await page.getByText(/0\.030000 USDC remaining/).count()).toBe(1);
+    expect(await page.getByText("Budget and model: $0.015000 USDC").count()).toBe(1);
     await page.getByLabel("What do you want to know?").fill("Compare two research approaches");
     await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
     await page.getByRole("button", { name: "Renew duration" }).click();

@@ -211,7 +211,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
           <p className="text-xs text-ink-3">Requires your funded browser session. Uses the question budget for access and supported citation rewards. Public scholarly references stay free; only approved exact versions can be paid.</p>
           <details ref={advancedRef} className="mt-3 border-t border-line pt-2">
             <summary className="flex min-h-11 cursor-pointer items-center font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2 marker:text-seal hover:text-ink">
-              Budget and model: ${budget.toFixed(3)} USDC
+              Budget and model: ${effectiveBudget.toFixed(6)} USDC
             </summary>
             <div className="pb-2 pt-1">
               <div className="flex flex-wrap items-center justify-between gap-2" data-tour="budget">
