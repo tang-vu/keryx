@@ -2,7 +2,7 @@
 
 ## Reading activity and source library, October 5, 2026
 
-Application **0.26.21 candidate** changes web `/dashboard`, `/sources`, navigation
+Application **0.26.21 candidate** changes web `/dashboard`, `/sources`, linked creator identity labels, navigation
 and confirmed-empty settlement ticker presentation. Recent public citation URLs
 also appear as a bounded history collection, independently of retained feeds and
 creator enrollment. A shared server view isolates

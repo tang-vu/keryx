@@ -30,6 +30,8 @@ discoverability is not a stored catalog count.
 
 Fresh managed claim evidence supplies control labels. Expired/unavailable claims
 and grandfathered verification flags cannot certify current publisher control.
+Linked creator profiles also omit the legacy boolean's verification icon and describe
+recorded payments without promising a payout for every citation.
 Registration remains distinct from control and earning eligibility. Credentialed
 or unsupported external URLs are not navigation links; their listing remains visible.
 
@@ -43,7 +45,7 @@ preserve other available collections without inferring empty or zero.
 
 | Surface | Scope and role boundary |
 | --- | --- |
-| Web | Ledger, Sources, navigation and shared ticker presentation change. |
+| Web | Ledger, Sources, linked creator identity copy, navigation and shared ticker presentation change. |
 | API / paid A2A | Existing source/payment/run payloads and original evidence remain; no new endpoint or field. The directory helper is a read-only view, never a buyer/payee allowlist. |
 | Remote MCP / OpenAI | Hosted research/payment contracts and remote protocol 0.3.1 retain their roles. |
 | Buyer / Operator CLI and stdio MCP | These runtimes do not import the new display/view helpers. Caller custody/recovery and MCP 0.4.5 retain their contracts. |
