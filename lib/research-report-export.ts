@@ -28,6 +28,7 @@ export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, paym
       revision: citation.sourceClaim.revision, mode: citation.sourceClaim.mode, effectiveAt: citation.sourceClaim.effectiveAt,
       verifiedAt: citation.sourceClaim.verifiedAt })}. This is historical context, not current payout authority.`);
     if (citation.webProvenance) lines.push(`Observed provenance: ${JSON.stringify(citation.webProvenance)}`);
+    if (citation.requestedSource) lines.push(`Supplied original scope: ${JSON.stringify(citation.requestedSource)}`);
     if (citation.scholarly) lines.push(`Observed scholarly metadata and read scope (peer review unknown): ${JSON.stringify(citation.scholarly)}`);
   }
   lines.push("", "## Evidence and limitations", "");

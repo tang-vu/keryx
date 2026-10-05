@@ -100,3 +100,23 @@ Only keys with the `ask` scope can run as an authenticated caller. The key raise
 and attributes the run; it does not custody funds or become a payment authority.
 
 `mode` accepts `quick` or `deep` (default). `scholarly: true` opts into bounded Crossref/arXiv discovery and sends the question to those services. Structured results retain article/version metadata, answer-qualified public evidence, and recorded BibTeX/RIS/evidence CSV exports. Planned citation allocations are separate from settlement; `creatorsPaid` remains null when the distinct settled count is unavailable.
+
+The result exposes bounded `reasoningAttempts` and one `reasoning` projection with
+`telemetry`, `attemptsOmitted`, per-step serving and `sourceSelection`. Each step
+retains its recorded engine/tier and marks degraded/heuristic serving. Text-only
+consumers receive the same summary; the aggregate `engine` alone does not show
+which provider selected sources. Attempts contain allowlisted categories/status/
+timing and numeric local input bounds, never prompts or provider response bodies.
+`reasoning.telemetry` marks unavailable/incomplete history explicitly; absent
+serving tiers are not reconstructed. Remote protocol0.3.0 remains additive.
+
+Request-local output validation or input refusal does not clear historical circuit failures.
+If a half-open probe was already acquired, its bounded lease expires normally; a rejected
+result is not evidence of successful provider health. No circuit reset is part of this repair.
+
+This additive contract also travels through shared A2A and OpenAI metadata. The caller-funded
+stdio package forwards hosted fields and formats the same summary without adding a model call
+or changing source-payment authority. Hosted deployment and stdio package publication remain
+independent release gates. The original S10 exception diagnosis and a separately authorized
+bounded live retest for [issue #158](https://github.com/tang-vu/keryx/issues/158) remain open;
+synthetic resilience checks do not establish live model quality or authorize a circuit reset.

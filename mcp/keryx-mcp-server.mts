@@ -16,6 +16,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { askKeryx, getStatus, meta, recoverKeryx } from "./keryx-buyer.mts";
+import { reasoningServingText } from "../lib/llm/reasoning-telemetry.ts";
 
 const server = new McpServer({ name: "keryx", version: packageInfo.version });
 import { registerMonthlyDiscovery } from "../lib/monthly/mcp-discovery.ts";
@@ -53,6 +54,7 @@ server.registerTool(
       const proof = r.settlementId ? ` (Circle Gateway settlement ${r.settlementId.slice(0, 12)}…, batched on Arc)` : "";
       const text =
         `${r.answer}\n\n` +
+        `${reasoningServingText(r)}\n\n` +
         `— Paid Keryx ${r.amountPaid} USDC${proof}\n` +
         `Recorded creator total: $${r.totalToCreators}; citation allocations (not individual settlement proof):\n${cites}\n` +
         `On-chain proof + live feed: ${meta.baseUrl}/dashboard`;

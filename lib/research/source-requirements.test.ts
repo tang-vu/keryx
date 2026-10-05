@@ -74,4 +74,11 @@ describe("caller-supplied source URL leads", () => {
       urls: ["http://docs.example/original"], omitted: 0 });
     expect(requestedSourceUrls("Use official SQLite documentation.").urls).toEqual([]);
   });
+
+  it("bounds scanning and never admits a URL cut by the question bound", () => {
+    const partial = "x".repeat(29980) + " https://docs.example/exact-version";
+    expect(requestedSourceUrls(partial)).toEqual({ urls: [], omitted: 0, questionTruncated: true });
+    const repeated = Array.from({ length: 17 }, () => "https://docs.example/first").join(" ") + " https://docs.example/unscanned";
+    expect(requestedSourceUrls(repeated)).toEqual({ urls: ["https://docs.example/first"], omitted: 0, scanTruncated: true });
+  });
 });

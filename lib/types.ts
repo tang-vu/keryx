@@ -115,6 +115,9 @@ export interface SourceItem {
 
 /** Immutable identity for the exact article version the agent evaluated and purchased. */
 export interface SourceItemIdentity {
+  /** Original URLs explicitly supplied by the caller, including requested fragments.
+   * The current reader attempts bounded whole-document extraction, not section targeting. */
+  requestedSource?: { urls: string[]; readScope: "bounded-whole-document" };
   /** Policy captured before this read; informational history, never payout authority. */
   sourceClaim?: SourceClaimReceipt;
   /** A free read is distinct from a cache hit or a settled access payment. */

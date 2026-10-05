@@ -43,9 +43,14 @@ export const MAX_REQUESTED_SOURCE_URLS = 8;
 
 /** URLs written by the caller are discovery leads, not document evidence or authorship proof.
  * Never extract from model-created research targets or invent a replacement URL. */
-export function requestedSourceUrls(question: string): { urls: string[]; omitted: number } {
+export function requestedSourceUrls(question: string): { urls: string[]; omitted: number; scanTruncated?: true; questionTruncated?: true } {
   const distinct = new Set<string>();
-  for (const match of question.matchAll(/\bhttps?:\/\/[^\s<>"'`]+/giu)) {
+  let scanned = 0, scanTruncated = false;
+  const bounded = question.slice(0, 30000);
+  for (const match of bounded.matchAll(/\bhttps?:\/\/[^\s<>"'`]+/giu)) {
+    if (++scanned > 16) { scanTruncated = true; break; }
+    // Do not turn a URL cut by the question bound into a replacement document.
+    if (question.length > bounded.length && match.index! + match[0].length === bounded.length) continue;
     let value = match[0];
     const before = question[match.index! - 1];
     if (!before || !/[<"'`]/.test(before)) value = value.replace(/[.,;]+$/, "");
@@ -56,5 +61,6 @@ export function requestedSourceUrls(question: string): { urls: string[]; omitted
     if (!before || !/[<"'`]/.test(before)) value = value.replace(/[.,;]+$/, "");
     if (value) distinct.add(value);
   }
-  return { urls: [...distinct].slice(0, MAX_REQUESTED_SOURCE_URLS), omitted: Math.max(0, distinct.size - MAX_REQUESTED_SOURCE_URLS) };
+  return { urls: [...distinct].slice(0, MAX_REQUESTED_SOURCE_URLS), omitted: Math.max(0, distinct.size - MAX_REQUESTED_SOURCE_URLS),
+    ...(scanTruncated ? { scanTruncated: true } : {}), ...(question.length > bounded.length ? { questionTruncated: true } : {}) };
 }

@@ -1,5 +1,19 @@
 # Keryx Project Changelog
 
+### Original scope, typed reasoning failures and release isolation (2026-10-05, v0.26.15 candidate)
+
+- Consider supplied original URLs independently of search; retain per-source skips,
+  failures, bounded reads and section limitations in the answer and receipt.
+- Distinguish invalid model output, internal errors and ineligible fallbacks from
+  transport failures; expose recorded per-step serving to MCP consumers.
+- Retain the full funding inspection/unseal path after the native schema timing
+  repair in v0.26.12; add diagnostics, post-issuance drift and fresh-custody Windows coverage.
+- Stage immutable-release preparation and synthetic no-spend rehearsal. The current
+  reviewed maintenance deployment remains authoritative.
+- Publish distinct MCP 0.4.5 and desktop 0.4.6 bytes after exact-source acceptance.
+- No new paid evaluation or circuit reset. #128, #158's historical/live gates and
+  #164's real deployment gates remain open. See [scope and audit](engineering/issue-followups-2026-10-05.md).
+
 ### Reusable research budgets and optional Google wallet onboarding (2026-10-05, v0.26.14)
 
 - Select a research allowance, per-question maximum and 1-hour/24-hour/7-day

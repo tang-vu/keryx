@@ -35,18 +35,28 @@ changes that private consent or routes private jobs to Cloudflare.
 
 ## Bounds, quota and economics
 
-The documented model context is 24,000 tokens. Keryx refuses a request before HTTP when its
+The [documented model context](https://developers.cloudflare.com/workers-ai/models/llama-3.3-70b-instruct-fp8-fast/)
+is 24,000 tokens (rechecked October 5, 2026). Keryx refuses a request before HTTP when its
 UTF-8 prompt bytes plus requested output exceed 23,000, conservatively reserving framing
 headroom. Its existing per-step output ceilings stay at or below 8,192 tokens. This is a local
 bound, not a supplier promise about output quality. Evidence is never silently truncated to fit.
-Large research contexts can therefore bypass this experimental tier through visible failure.
+Eligibility is checked against the actual constructed step prompt, including every research
+target, candidate metadata, budget, memory and the existing preview bounds. A configured tier
+is not a promise that a large `decide` payload fits. Oversized requests visibly bypass this tier
+as `input-limited` / `input_limit`, recording only UTF-8 byte count, requested output tokens
+and the conservative 23,000-unit ceiling. The refusal creates no supplier HTTP request or
+call-ledger entry. No targets/candidates are removed and no billable batch fanout is added.
 Local preflight refusal does not mark the supplier unhealthy or clear prior supplier failures.
 If refusal occurs after acquiring a half-open probe, that bounded probe lease expires normally;
-it is not recorded as supplier success. An upstream HTTP 413 remains a supplier failure.
+it is not recorded as supplier success. Upstream HTTP 400/413/422 remains a recorded failed
+request, but does not poison the provider-step circuit for unrelated clients. Output/schema
+validation and truncated JSON likewise degrade only that request without identical paid retries.
 Requests use nonstreaming JSON mode, the existing timeout and shared durable provider/step
-circuits; redirects are prohibited. Truncated JSON and quota errors remain failures. The
-existing last-provider retry policy makes at most three calls, then visibly degrades to the
-local heuristic. Payment enforcement remains outside the model.
+circuits; redirects are prohibited. Known transport outages, deadlines, quota errors, 5xx and
+401/403/404 configuration failures can affect shared circuits. Unknown application exceptions
+are `internal`, never inferred to be network failures. The existing last-provider retry policy
+makes at most three calls for retryable supplier failures; a full timeout advances immediately.
+The final tier is visibly the local heuristic. Payment enforcement remains outside the model.
 
 Workers AI currently includes 10,000 Neurons per day on its free plan; exhaustion stops
 inference until reset. Keep this deployment on that plan. Keryx does not upgrade the account,

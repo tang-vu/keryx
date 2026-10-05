@@ -5061,6 +5061,53 @@ Private economics reporting selects its reviewed read-only adapter through the s
 
 Hermetic browser fixtures compile explicit public profile/registry pins as Next does, rather than installing a Node `process` global or accepting request-selected authority. Historical testnet signing, clock and malicious-parent assertions retain their original rail and limits. Faithful gateway/route fixtures provide inherited methods, canonical profiles and the required native authority interface; successful setup must not remove nonce, privacy or durable-issuance assertions. The desktop question remains visible in the first reading area with the original layout/keyboard acceptance thresholds.
 
+
+## Explicit originals and request-local reasoning failures - 2026-10-05
+
+A caller-supplied URL is a bounded discovery requirement, independent of search
+ranking; it is never document evidence, publisher authority or payment permission.
+Preserve each original and its fragment scope through decisions and final status,
+including model omission. Retain whole-document read limits, attention selection,
+exact arXiv identity and private/unattended disclosure boundaries. Secondary reads
+cannot silently satisfy an unread requested original. Optional receipt metadata
+adds scope without rewriting historical records or changing reward eligibility.
+
+Distinguish post-response output validation, internal errors and proven local
+input limits from supplier transport/health failures. Request-specific failures
+must not poison a shared provider-step circuit. Test the actual bounded prompt
+before claiming a fallback usable, retain all required input, and expose per-step
+serving to consumers. Preserve returned-call usage and existing durable failures;
+neither a new release nor an offline reproduction authorizes clearing circuits
+or reopening a closed paid evaluation. See the issue-followup scope document.
+
+Immutable source/artifact staging is independent preparation, not production
+admission. Keep the reviewed early writer drain until clean immutable role bindings,
+economic compatibility/rollback, off-box evidence and measured no-spend plus ordinary
+production rollout pass. Synthetic process timing establishes only that fixture.
+
+After the parallel v0.26.12 native-schema batching repair, retain the complete
+keyless inspection path: async unseal/fresh backend, semantic manifest reread,
+full assembled original comparison and final five-second freshness check. Exact
+schema guards still run on every operation; no authority cache or new issuance
+API is needed. The native Windows mutation/drift checks pass with the stronger
+original path. Timings are fixture evidence, not production performance guarantees.
+Browser fixtures model concurrent work at the synthetic wallet boundary, outside
+the production transport deadline, with fresh state for each journey and unchanged
+assertions. Windows timing failures do not justify weakening the deployed limits.
+
+
+### Reconcile parallel issue and mainnet releases - 2026-10-05
+
+v0.26.12 merged while issue repairs were in CI. v0.26.15 must retain its mainnet
+surface/monitor/schema fixes and resolve overlap through one URL-admission helper
+and one bounded public `reasoning` contract, preserving remote protocol0.3.0.
+Named originals have the existing eight-lead cap and independent admission from
+search publisher slots; actual attention, public transport, evidence and spend
+limits remain. Canonical bodies retain up to four requested fragment URLs as
+scope metadata, with truthful final read status. New MCP 0.4.5 / desktop 0.4.6 identities
+avoid reuse of already selected 0.4.4 / 0.4.5 bytes. Combined regressions, independent
+review, exact-source CI and serialized deployment/publication remain required.
+
 ## Reusable research budgets and optional Google wallets - 2026-10-05
 
 The owner authorized reducing repeated wallet confirmations and adding a Google-linked

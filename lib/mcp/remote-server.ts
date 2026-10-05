@@ -8,6 +8,7 @@ import { resolveModelChoice } from "../llm";
 import type { McpClientChannel, QueryRun } from "../types";
 import { registerMonthlyDiscovery } from "../monthly/mcp-discovery";
 import { quoteResearchMonthly } from "../monthly/quote";
+import { reasoningServingText } from "../llm/reasoning-telemetry";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
@@ -57,6 +58,7 @@ function researchText(result: ReturnType<typeof remoteResearchResult>): string {
 
   return (
     `${result.answer}\n\n` +
+    `${reasoningServingText(result)}\n\n` +
     `Citations and planned creator rewards\n${rewards}\n\n` +
     `Evidence: ${groundedClaims}/${result.claimCoverage.length} research targets meet the recorded excerpt-support threshold; this does not verify entailment or complete synthesis\n` +
     `${selectionText}\n` +

@@ -8,6 +8,7 @@ export function receiptAsset(value: Partial<SourceItemIdentity>): ReceiptAsset {
       mode: value.sourceClaim.mode, effectiveAt: value.sourceClaim.effectiveAt, verifiedAt: value.sourceClaim.verifiedAt } } : {}),
     ...(value.accessKind === "creator-free" ? { accessKind: value.accessKind } : {}),
     ...(value.webProvenance ? { webProvenance: { ...value.webProvenance } } : {}),
+    ...(value.requestedSource ? { requestedSource: { urls: [...value.requestedSource.urls], readScope: value.requestedSource.readScope } } : {}),
     ...(value.scholarly ? { scholarly: {
       provider: value.scholarly.provider, recordUrl: value.scholarly.recordUrl, retrievedAt: value.scholarly.retrievedAt,
       title: value.scholarly.title, authors: [...value.scholarly.authors],

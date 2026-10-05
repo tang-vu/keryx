@@ -85,13 +85,20 @@ async function fixture(status: "success" | "reverted" | "missing" | "pending" = 
   const snapshot = () => { const db = new DatabaseSync(file, { readOnly: true }); try { return scanFullStorageSnapshot(db); } finally { db.close(); } };
   return { file, operation, request, snapshot, original: snapshot() };
 }
-let f: Awaited<ReturnType<typeof fixture>>, reverted: typeof f, missing: typeof f, pending: typeof f;
+let f: Awaited<ReturnType<typeof fixture>>, reverted: typeof f, missing: typeof f, pending: typeof f, drift: typeof f;
 function available(value: string = "0.000100", extras = {}) { return { token: "USDC", balances: [{ depositor: f.operation.policy.spend, domain: 26, balance: value, ...extras }] }; }
 function respond(value: unknown) { balanceHandler = (_req, res) => { res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify(value)); }; }
 beforeAll(async () => {
   await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve)); const address = server.address(); if (!address || typeof address === "string") throw new Error();
-  endpoint = `http://127.0.0.1:${address.port}/v1/balances`; f = await fixture(); reverted = await fixture("reverted"); missing = await fixture("missing"); pending = await fixture("pending");
-}, 30000);
+  endpoint = `http://127.0.0.1:${address.port}/v1/balances`;
+});
+// Independent native fixture provisioning has its own unchanged setup bound.
+// One aggregate hook coupled four owner subprocess/SQLite lifecycles to 30s.
+beforeAll(async () => { f = await fixture(); }, 30000);
+beforeAll(async () => { reverted = await fixture("reverted"); }, 30000);
+beforeAll(async () => { missing = await fixture("missing"); }, 30000);
+beforeAll(async () => { pending = await fixture("pending"); }, 30000);
+beforeAll(async () => { drift = await fixture(); }, 30000);
 afterEach(() => { expect(f.snapshot()).toEqual(f.original); expect(reverted.snapshot()).toEqual(reverted.original); expect(missing.snapshot()).toEqual(missing.original); expect(pending.snapshot()).toEqual(pending.original); expect(forbiddenWrites).toBe(0); });
 afterAll(async () => { ledgers.forEach(l => l.close()); server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); dirs.forEach(dir => rmSync(dir, { recursive: true, force: true })); });
 describe("keyless current funding availability issuer", () => {
@@ -132,7 +139,7 @@ describe("keyless current funding availability issuer", () => {
     expect(await compose(endpoint)(mutable)).toBeNull();
   });
   it("reloads actual namespace state on unseal and rejects a changed ledger snapshot", async () => {
-    const isolated = await fixture();
+    const isolated = drift;
     respond({ token: "USDC", balances: [{ depositor: isolated.operation.policy.spend, domain: 26, balance: "0.000100" }] });
     const token = await compose(endpoint)(isolated.request); expect(token).not.toBeNull();
     const next = { ...isolated.operation, operationId: randomUUID(), ownerAuthorizationId: randomUUID() };
@@ -149,7 +156,15 @@ describe("keyless current funding availability issuer", () => {
   it("rejects expired tokens using captured monotonic time despite delayed event-loop timers", async () => {
     respond(available()); const token = await compose(endpoint)(f.request); expect(token).not.toBeNull();
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5100);
-    expect(() => current(token!, f.request)).toThrow(); await expect(unseal(token!, f.request)).rejects.toThrow();
+    let rejection: unknown;
+    try { current(token!, f.request); } catch (error) { rejection = error; }
+    expect(rejection).toBeInstanceOf(Error);
+    const diagnostic = (rejection as Error).cause as { phase: string; tokenAgeMs: number };
+    expect(Object.keys(diagnostic).sort()).toEqual(["phase", "tokenAgeMs"]);
+    expect(diagnostic.phase).toBe("readiness-token-freshness"); expect(diagnostic.tokenAgeMs).toBeGreaterThanOrEqual(5000);
+    for (const secret of [f.file, f.operation.policy.spend, f.operation.policy.funder, f.operation.operationId, "rawTransaction", "transactionHash"])
+      expect(JSON.stringify(diagnostic)).not.toContain(secret);
+    await expect(unseal(token!, f.request)).rejects.toThrow();
   }, 10000);
   it("refuses lost HTTP/redirect/oversize and never retries", async () => {
     const scenarios = [(_req: IncomingMessage, res: ServerResponse) => res.destroy(), (_req: IncomingMessage, res: ServerResponse) => { res.statusCode = 302; res.setHeader("Location", endpoint); res.end(); },

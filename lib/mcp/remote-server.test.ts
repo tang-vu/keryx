@@ -33,6 +33,11 @@ function completedRun(): QueryRun {
     paymentMode: "real",
     paymentAttempts: 1,
     settledPayments: 1,
+    reasoningAttempts: [
+      { step: "decompose", engine: "llm:deepseek:deepseek-v4-flash", tier: 0, attempt: 1, startedAt: 1, durationMs: 1, outcome: "served" },
+      { step: "decide", engine: "llm:deepseek:deepseek-v4-flash", tier: 0, attempt: 0, startedAt: 2, durationMs: 0, outcome: "circuit-open" },
+      { step: "decide", engine: "heuristic", tier: 3, attempt: 1, startedAt: 3, durationMs: 0, outcome: "served" },
+    ],
   };
 }
 
@@ -60,7 +65,7 @@ describe("remote MCP server", () => {
   });
 
   it.each([undefined, "offline"] as const)("labels %s payment history without inferring simulation from missing mode", async paymentMode => {
-    const run = completedRun(); run.paymentMode = paymentMode;
+    const run = completedRun(); run.paymentMode = paymentMode; run.reasoningAttempts = undefined;
     const server = createRemoteMcpServer({ budgetCap: 0.03, clientChannel: "other" }, async () => run);
     const client = new Client({ name: "test-client", version: "1.0.0" });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -108,11 +113,15 @@ describe("remote MCP server", () => {
     expect(responseText).toContain("research targets meet the recorded excerpt-support threshold");
     expect(responseText).toContain("does not verify entailment or complete synthesis");
     expect(responseText).not.toContain("claims passed the grounding threshold");
+    expect(responseText).toContain("decide: heuristic (heuristic; fallback served)");
     expect(result.structuredContent).toEqual(
       expect.objectContaining({
         queryId: "mcp-run",
         totalToCreatorsUsdc: 0.01,
         settledPayments: 1,
+        reasoningAttempts: expect.arrayContaining([expect.objectContaining({ step: "decide", engine: "heuristic", outcome: "served" })]),
+        reasoning: expect.objectContaining({ telemetry: "recorded",
+          sourceSelection: { step: "decide", state: "heuristic", servingEngines: ["heuristic"], fallbackUsed: true } }),
       }),
     );
 

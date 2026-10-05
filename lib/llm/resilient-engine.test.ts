@@ -198,14 +198,14 @@ describe("ResilientEngine labelling", () => {
     expect(effectiveEngineName(workingEngine("heuristic"))).toBe("heuristic");
   });
 
-  it("opens a hard-failure circuit and skips the dead provider on the next step", async () => {
+  it("opens a provider-configuration circuit and skips the dead provider on the next step", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     let primaryCalls = 0;
     const broken = {
       ...brokenEngine("llm:deepseek:bad-model", 400),
       decompose: () => {
         primaryCalls++;
-        return Promise.reject(hardError());
+        return Promise.reject(Object.assign(new Error("LLM 401"), { status: 401 }));
       },
     } as unknown as ReasoningEngine;
     const fallback = workingEngine("llm:mimo:mimo-v2.5");

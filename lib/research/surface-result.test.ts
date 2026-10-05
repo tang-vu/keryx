@@ -26,6 +26,21 @@ export function fixture(): QueryRun {
 }
 
 describe("research surface parity", () => {
+  it("retains typed request-local refusal metadata on the one shared bounded reasoning contract", () => {
+    const run = fixture(); run.engine = "llm:deepseek:recorded-model";
+    run.reasoningAttempts = [attempt({ outcome: "failed", error: "output_validation" }),
+      attempt({ engine: "llm:cloudflare:recorded-model", tier: 1, outcome: "input-limited", error: "input_limit",
+        inputBounds: { promptUtf8Bytes: 25000, requestedOutputTokens: 8192, maximumCombinedUnits: 23000 } }),
+      attempt({ engine: "heuristic", tier: 2 })];
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run),
+      a2aResponseFromRun(run, quoteA2aResearch(0.03, "deep"))]) {
+      expect(result.reasoningAttempts).toEqual(run.reasoningAttempts);
+      expect(result.reasoning).toMatchObject({ telemetry: "recorded", attemptsOmitted: 0,
+        sourceSelection: { state: "heuristic", servingEngines: ["heuristic"], fallbackUsed: true } });
+      expect(result).not.toHaveProperty("reasoningTelemetry"); expect(result).not.toHaveProperty("reasoningServing");
+    }
+  });
+
   it("exposes actual heuristic source selection despite a model aggregate label and other model-served steps", () => {
     const run = fixture(); run.engine = "llm:deepseek:recorded-model";
     run.reasoningAttempts = [attempt({ step: "decompose" }),
