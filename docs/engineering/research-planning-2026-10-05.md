@@ -70,6 +70,12 @@ checks, inert extraction/provenance checks, TypeScript, lint, production build, 
 review and exact-source required CI. Deployed health and any changed published artifact bytes
 require separate readback. No database, custody, settlement contract or spend-cap migration.
 
+The separately authorized five system cron operations jobs and daily rotation retain their
+existing limits. Maintenance must inspect system cron as well as root crontab, hold/drain
+the installed jobs and writers, then review and repin their source/storage bindings before
+restoring the prior configuration. An empty root crontab is not proof that all schedules
+are held. Deployment never permits a fresh research allowance or a replacement payment.
+
 The changed root package version is application identity, not an installed-client update.
 The build command in `mcp/package.json` and `desktop/build.mjs` defines package entries; inspect
 their authored runtime imports rather than inferring artifact impact from broad CI path filters.

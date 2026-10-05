@@ -5,7 +5,10 @@ October 5 planning-repair baseline: read-only public health at
 mode at `31286250`; SSH source identity was
 `3128625054836e51aaace3310bda426bbe06da14`, application **0.26.16**. Public roles used
 the reviewed steady brief-disabled definitions, no allowance environment, zero active
-cron entries, and an idle A2A queue. The existing private worker was active with
+root-crontab entries, and an idle A2A queue. Separately installed system cron jobs
+were activated by the other authorized delivery at 08:02 UTC; they require an explicit
+hold/drain and reviewed source/storage repinning before this maintenance deployment.
+The existing private worker was active with
 infinite graceful stop and no forced kill. This establishes baseline identity and
 availability, not useful research or a new settlement.
 
