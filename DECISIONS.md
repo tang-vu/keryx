@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**Isolate invalid source proposals and retain classified caller failures — 2026-10-05.**
+An actionable model decision needs a complete valid target list and exact input
+candidate identity. Reject the entire invalid proposal, withhold every duplicate
+candidate group, and retain independently valid proposals through existing read,
+evidence and payment gates. Never infer links from the rationale, filter invalid
+targets into a usable subset, rewrite the plan or promote a model SKIP. A genuine
+all-SKIP remains valid; invalid output with no valid actionable proposal ends as a
+terminal request-local refusal without another paid tier or circuit mutation.
+
+Keep bounded allowlisted reason/count/index diagnostics, supplier call/token
+counters and explicit withheld-source rationales. Export terminal diagnostic JSON
+to the caller without creating a completed dispatch or financial receipt; omit
+question/provider/source/custody values. Missing historical payloads stay unknown
+and representative offline fixtures do not prove live usefulness. See
+[selection repair and gates](docs/engineering/source-selection-2026-10-05.md).
+
 **Monitoring observations and mainnet defaults — 2026-10-05.** Describe service
 availability separately from recorded financial checks. Add bounded freshness for
 the four existing summary records without vendor requests, scheduler changes or

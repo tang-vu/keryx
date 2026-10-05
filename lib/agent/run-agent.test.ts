@@ -1,4 +1,7 @@
 import { referenceSnapshot, type PublicReference } from "../public-references/catalog";
+import { createHash } from "node:crypto";
+import { ResearchSelectionError } from "../llm/research-selection";
+import { SQLITE_SELECTION_QUESTION, SQLITE_SELECTION_QUESTION_SHA256, SQLITE_SELECTION_TARGETS } from "../../test-support/sqlite-selection-fixture";
 import { scholarlyCandidate } from "../scholarly/discovery";
 import { SEED_SOURCES } from "../sources/seed-data";
 import { contentBodyHash } from "../sources/content-receipt";
@@ -2530,6 +2533,81 @@ describe("omitted-assertion completion boundary", () => {
       expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
     }
   });
+});
+
+/** Same frozen question, representative eight targets and synthetic provider/page responses. */
+class SqliteSelectionFixture extends JsonChatEngine {
+  readonly name = "llm:synthetic-sqlite-selection";
+  constructor(private readonly allInvalid: boolean) { super(); }
+  protected async chatJson(_model: string, _system: string, user: string) {
+    this.recordUsage({ model: "synthetic", inputTokens: 100, cachedInputTokens: null, outputTokens: 20 });
+    if (user.startsWith("User question (data):")) {
+      return { status: "complete", claims: SQLITE_SELECTION_TARGETS, constraints: ["Use both exact originals, no paid sources."] };
+    }
+    const body = JSON.parse(user);
+    if (Array.isArray(body.candidates)) {
+      return { decisions: body.candidates.map((candidate: { sourceId: string; articleUrl?: string }, index: number) => {
+        const original = candidate.articleUrl === "https://sqlite.org/wal.html" || candidate.articleUrl === "https://sqlite.org/backup.html";
+        return { sourceId: candidate.sourceId, action: "CACHE", expectedValue: original ? 1 : 0.2,
+          confidence: 0.8, rationale: "Synthetic predicted relevance; not document evidence.",
+          ...(this.allInvalid ? {} : { targets: original ? (candidate.articleUrl?.endsWith("wal.html") ? [0, 1, 4, 7] : [2, 3, 5, 6, 7]) : [index === 2 ? 8 : -1] }) };
+      }) };
+    }
+    if (body.schema.includes('"sufficient"')) return { sufficient: false, rationale: "Synthetic evidence is insufficient.",
+      perClaim: SQLITE_SELECTION_TARGETS.map(claim => ({ claim, coverage: 0, coveredBy: [] })) };
+    if (body.schema.includes('"citedMarkers"')) return { answer: "Synthetic fixture establishes no SQLite backup guarantee.",
+      citedMarkers: [], evidence: [], conflicts: [] };
+    return { weights: [] };
+  }
+}
+function sqliteSelectionDeps(allInvalid: boolean) {
+  const engine = new SqliteSelectionFixture(allInvalid), gateway = fakeGateway();
+  const d = deps([], engine, gateway);
+  d.webSearch = { search: vi.fn(async () => Array.from({ length: 8 }, (_, index) => ({
+    title: `Synthetic SQLite preview ${index}`, url: `https://publisher-${index}.example/sqlite-backup`, snippet: "Synthetic preview only." }))) };
+  d.readWebArticle = vi.fn(async url => ({ text: "Synthetic observed fixture text; no real snapshot or restore was tested.",
+    title: "Synthetic original", finalUrl: url, kind: "html" as const, truncated: false }));
+  return { d, engine, gateway };
+}
+
+it("keeps the frozen SQLite question and reads both supplied originals despite unrelated invalid mapping rows", async () => {
+  expect(createHash("sha256").update(SQLITE_SELECTION_QUESTION).digest("hex")).toBe(SQLITE_SELECTION_QUESTION_SHA256);
+  const { d, gateway } = sqliteSelectionDeps(false);
+  const { run, steps } = await drive({ question: SQLITE_SELECTION_QUESTION, budget: 0, researchMode: "quick", origin: "web" }, d);
+  expect(run.question).toBe(SQLITE_SELECTION_QUESTION);
+  expect(run.subClaims).toEqual(SQLITE_SELECTION_TARGETS);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(2);
+  expect(vi.mocked(d.readWebArticle!).mock.calls.map(call => call[0]).sort())
+    .toEqual(["https://sqlite.org/backup.html", "https://sqlite.org/wal.html"]);
+  const withheld = run.decisions.filter(item => item.selectionRefusal);
+  expect(withheld).toHaveLength(8);
+  expect(withheld.every(item => item.action === "SKIP" && item.targets.length === 0)).toBe(true);
+  expect(steps.some(step => step.phase === "decide" && step.message.includes("Decision validation withheld"))).toBe(true);
+  expect(run.trace.some(step => (step.detail as { protocol?: string } | undefined)?.protocol === "keryx-source-selection-v1")).toBe(true);
+  expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]);
+  expect(run.citations).toEqual([]);
+});
+
+it("retains the classified SQLite failure and billed response counters without reading, paying or another model attempt", async () => {
+  const { d, engine, gateway } = sqliteSelectionDeps(true);
+  const steps: TraceStep[] = [];
+  let error: unknown;
+  try {
+    for await (const step of runAgent({ question: SQLITE_SELECTION_QUESTION, budget: 0, researchMode: "quick", origin: "web" }, d)) steps.push(step);
+  }
+  catch (caught) { error = caught; }
+  expect(error).toBeInstanceOf(ResearchSelectionError);
+  expect((error as ResearchSelectionError).diagnostic).toMatchObject({ outcome: "refused",
+    counts: { targetCount: 8, validActionableCount: 0 }, reasons: expect.arrayContaining([expect.objectContaining({ code: "missing_targets" })]) });
+  // Completed supplier responses remain separate from the application's rejected selection.
+  expect(engine.calls).toHaveLength(2);
+  expect(engine.calls.every(call => call.outcome === "returned")).toBe(true);
+  expect(engine.usage).toHaveLength(2);
+  expect(engine.usage.reduce((sum, item) => sum + item.inputTokens, 0)).toBe(200);
+  expect(d.readWebArticle).not.toHaveBeenCalled();
+  expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]);
+  expect(steps.at(-1)).toMatchObject({ phase: "decide", detail: { protocol: "keryx-source-selection-v1", outcome: "refused" } });
+  expect(steps.some(step => step.phase === "done")).toBe(false);
 });
 
 describe("completed reads survive bounded model exhaustion", () => {

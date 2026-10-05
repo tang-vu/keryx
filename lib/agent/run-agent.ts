@@ -31,6 +31,7 @@ import { isPublicReferenceId } from "../public-references/catalog";
 
 import { researchVerdict } from "./research-verdict";
 import { config } from "../config";
+import { ResearchSelectionError, readSelectionDiagnostics } from "../llm/research-selection";
 import type {
   ClaimCoverageRecord,
   Citation,
@@ -619,7 +620,20 @@ async function* runAdmittedAgent(
   }
   // Combine memory + reputation into a single context string for the decide prompt
   const fullContext = [memoryContext, reputationContext].filter(Boolean).join("\n\n") || undefined;
-  const proposed = await engine.decide({ question: input.question, subClaims, candidates, budget, spentSoFar: 0, memoryContext: fullContext });
+  const priorSelectionIds = new Set(readSelectionDiagnostics(engine).map(item => item.id));
+  let proposed: Decision[];
+  try {
+    proposed = await engine.decide({ question: input.question, subClaims, candidates, budget, spentSoFar: 0, memoryContext: fullContext });
+  } catch (error) {
+    if (error instanceof ResearchSelectionError) {
+      yield emit("decide", "Source selection was refused by the decision validator. No invalid proposal authorizes a read or payment; this is an incomplete request, not a completed report.", error.diagnostic);
+    }
+    throw error;
+  }
+  for (const diagnostic of readSelectionDiagnostics(engine)) {
+    if (priorSelectionIds.has(diagnostic.id) || diagnostic.outcome !== "partial") continue;
+    yield emit("decide", `Decision validation withheld ${diagnostic.counts.withheldCandidateCount} candidate(s) and rejected ${diagnostic.counts.invalidRowCount} row(s). Independently valid proposals continue through the existing read and payment gates. All research targets remain; proposed relevance is not verified evidence.`, diagnostic);
+  }
   const sourceById = new Map(sources.map((s) => [s.id, s]));
   const assetBySourceId = new Map(
     [...assetById.values()].map((asset) => [asset.source.id, asset]),

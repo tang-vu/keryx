@@ -39,6 +39,8 @@ import {
 import type { PaymentOrigin } from "@/lib/types";
 import { parseAskQuestion } from "@/lib/ask-input";
 import { ResearchPlanningError, researchFailureMessage } from "@/lib/llm/research-plan";
+import { ResearchSelectionError } from "@/lib/llm/research-selection";
+import type { SelectionDiagnostic } from "@/lib/research/selection-diagnostic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,9 +55,9 @@ const CORS = {
 };
 
 /** OpenAI-shaped error envelope so client SDKs surface a readable message. */
-function openaiError(message: string, status: number, code: string) {
+function openaiError(message: string, status: number, code: string, selectionDiagnostic?: SelectionDiagnostic) {
   return Response.json(
-    { error: { message, type: "invalid_request_error", code } },
+    { error: { message, type: "invalid_request_error", code, ...(selectionDiagnostic ? { selectionDiagnostic } : {}) } },
     { status, headers: CORS },
   );
 }
@@ -142,8 +144,9 @@ export async function POST(req: NextRequest) {
       const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep" });
       return Response.json(buildCompletion(run, modelName), { headers: CORS });
     } catch (error) {
-      if (!(error instanceof ResearchPlanningError)) throw error;
-      return openaiError(researchFailureMessage(error), error.status, error.code);
+      if (!(error instanceof ResearchPlanningError) && !(error instanceof ResearchSelectionError)) throw error;
+      return openaiError(researchFailureMessage(error), error.status, error.code,
+        error instanceof ResearchSelectionError ? error.diagnostic : undefined);
     }
   }
 
@@ -178,7 +181,8 @@ export async function POST(req: NextRequest) {
         send(
           buildChunk(id, modelName, {
             content: `\n\n[keryx error] ${researchFailureMessage(err)}`,
-          }),
+          }, null, err instanceof ResearchSelectionError
+            ? { keryx_error: { code: err.code, selectionDiagnostic: err.diagnostic } } : undefined),
         );
       } finally {
         controller.close();

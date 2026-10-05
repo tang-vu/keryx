@@ -11,6 +11,7 @@
 import { config } from "../config";
 import { HeuristicEngine } from "./heuristic-engine";
 import { ResearchPlanningError } from "./research-plan";
+import { MAX_SELECTION_DIAGNOSTIC_HISTORY, ResearchSelectionError, readSelectionDiagnostics } from "./research-selection";
 import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
 import type {
   AttributeInput,
@@ -150,6 +151,11 @@ export class ResilientEngine implements ReasoningEngine {
     return primary && fallback ? [...primary, ...fallback] : undefined;
   }
 
+  get selectionDiagnostics() {
+    return [...readSelectionDiagnostics(this.primary), ...readSelectionDiagnostics(this.fallback)]
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(-MAX_SELECTION_DIAGNOSTIC_HISTORY);
+  }
+
   private async runFallback<T>(
     label: ReasoningStep,
     call: (engine: ReasoningEngine) => Promise<T>,
@@ -243,9 +249,9 @@ export class ResilientEngine implements ReasoningEngine {
           outcome: err instanceof ReasoningInputLimitError ? "input-limited" : "failed",
           ...errorTelemetry(err),
         });
-        // A planner refusal is a completed billable response, not permission to try
-        // another model or hide independent requirements inside a heuristic aggregate.
-        if (err instanceof ResearchPlanningError) throw err;
+        // A request-local planning/selection refusal cannot authorize another billable tier.
+        // It supplies neither a provider failure nor proof to clear an existing half-open lease.
+        if (err instanceof ResearchPlanningError || err instanceof ResearchSelectionError) throw err;
         if (isTimeout(err) || !isTransient(err) || attempt === maxAttempts) break;
         await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** (attempt - 1)));
       }

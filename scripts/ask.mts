@@ -11,6 +11,7 @@ import { collectRun } from "../lib/agent/index.ts";
 import { getReasoningEngine } from "../lib/llm/index.ts";
 import { c, printStep } from "./trace-console.mts";
 import { ResearchPlanningError, researchFailureMessage } from "../lib/llm/research-plan.ts";
+import { ResearchSelectionError } from "../lib/llm/research-selection.ts";
 
 // ── parse args ──
 const argv = process.argv.slice(2);
@@ -41,8 +42,9 @@ if (allowExternalWeb) console.log("Public web search may send this question to t
 console.log(c.dim("─".repeat(72)));
 
 const run = await collectRun({ question, budget, model, origin: "engine", allowExternalWeb }, { onStep: printStep }).catch(error => {
-  if (!(error instanceof ResearchPlanningError)) throw error;
+  if (!(error instanceof ResearchPlanningError) && !(error instanceof ResearchSelectionError)) throw error;
   console.error(researchFailureMessage(error));
+  if (error instanceof ResearchSelectionError) console.error(JSON.stringify({ selectionDiagnostic: error.diagnostic }));
   process.exit(1);
 });
 

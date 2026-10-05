@@ -23,6 +23,7 @@ import { getSession } from "@/lib/auth";
 import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
 import { researchFailureMessage } from "@/lib/llm/research-plan";
+import { ResearchSelectionError } from "@/lib/llm/research-selection";
 import { config } from "@/lib/config";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
@@ -320,7 +321,8 @@ export async function POST(req: NextRequest) {
           send("done", run);
         }
       } catch (err) {
-        send("error", { message: researchFailureMessage(err) });
+        send("error", { message: researchFailureMessage(err),
+          ...(err instanceof ResearchSelectionError ? { code: err.code, selectionDiagnostic: err.diagnostic } : {}) });
       } finally {
         controller.close();
       }

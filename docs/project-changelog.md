@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### Source-selection isolation and failure diagnostics (2026-10-05, v0.26.19 candidate)
+
+- Give the selector explicit source IDs and zero-based allowed target indexes.
+  Withhold invalid or duplicate candidate proposals while independently valid
+  proposals continue through existing source, evidence, portfolio and payment gates.
+- Stop invalid output with no valid actionable selection using a classified local
+  error, retaining supplier usage without another paid tier or circuit mutation.
+- Retain bounded diagnostics in mixed-selection traces and add explicit failure JSON
+  downloads to web/embed; API, remote MCP and CLI expose the same classified error.
+  A diagnostic is not a completed report or payment receipt.
+- Preserve the closed v0.26.17 result of 0/3 useful and all allowance journals;
+  useful-client/settlement/export gates remain open. See [scope and validation](engineering/source-selection-2026-10-05.md).
+
 ### Public Google onboarding policies (2026-10-05, v0.26.18 candidate)
 
 - Publish a linked terms page covering research, content rights, visible prices,
