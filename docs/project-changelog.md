@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+## October 5, 2026 — OSS adoption and decision context (v0.26.20 candidate)
+
+- Keep historical source performance in serialized input data so publisher-owned
+  names cannot enter system instructions through research memory.
+- Retain current target, source-price and spend enforcement, with regression
+  coverage using real aggregated synthetic history. This verifies prompt packaging,
+  not universal prompt-injection resistance or live research usefulness.
+- Add a source-pinned survey of eight OSS AI/skills projects and a repo-local
+  adoption skill. See [patterns, surfaces and remaining gates](engineering/oss-ai-adoption-2026-10-05.md).
+
+
 ## October 5, 2026 — Bounded sponsorship, recurring tolls and accurate unread receipts
 
 - Receipts record a selection that was never read as SKIP and release its toll

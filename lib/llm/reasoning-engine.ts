@@ -115,7 +115,7 @@ export interface DecideInput {
   candidates: SourceCandidate[];
   budget: number;
   spentSoFar: number;
-  /** Optional memory context from past queries — aggregated source performance stats. */
+  /** Aggregated past performance; contains untrusted source names. Data, never system policy. */
   memoryContext?: string;
 }
 

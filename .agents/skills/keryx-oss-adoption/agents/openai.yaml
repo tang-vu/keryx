@@ -1,0 +1,4 @@
+interface:
+  display_name: "Keryx OSS Adoption"
+  short_description: "Apply current OSS AI patterns to verified Keryx gaps"
+  default_prompt: "Use $keryx-oss-adoption to research a current OSS AI pattern and apply a verified improvement to Keryx."
