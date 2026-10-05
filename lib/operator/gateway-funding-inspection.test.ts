@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
@@ -18,7 +18,9 @@ import { inspectGatewayFundingSqliteOwnerTarget, installGatewayFundingSqliteOwne
   openGatewayFundingSqliteLedger, openGatewayFundingSqliteTerminalObserver } from "../db/gateway-funding-sqlite";
 import { syntheticFundingTerminal } from "../db/gateway-funding-sqlite-test-receipt";
 import { GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST } from "../payments/gateway-funding-receipt-policy";
-import { inspectGatewayFundingSqliteOperation, inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition } from "./gateway-funding-inspection";
+import { inspectGatewayFundingSqliteOperation } from "./gateway-funding-inspection";
+import * as readiness from "../payments/gateway-funding-readiness";
+import * as inspection from "./gateway-funding-inspection";
 import { validateGatewayFundingOperationLocator, type GatewayFundingOperationLocator } from "../payments/gateway-funding-operation-locator";
 
 const digest = (value: unknown) => createHash("sha256").update(canonicalJson(value)).digest("hex");
@@ -96,7 +98,10 @@ async function syntheticAvailability() {
     const inspect=loaded.inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition??loaded.default?.inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition;
     if(typeof inspect!=='function')throw new Error('Synthetic inspection module unavailable');
     let wire='';for await(const chunk of process.stdin)wire+=chunk.toString();const request=JSON.parse(wire);
-    try{process.stdout.write(JSON.stringify(await inspect(request.options,request.endpoint)));}catch{process.stderr.write('Funding inspection unavailable; private details omitted');process.exitCode=1;}`;
+    try{process.stdout.write(JSON.stringify(await inspect(request.options,request.endpoint)));
+    }catch(error){process.stderr.write('Funding inspection unavailable; private details omitted');
+      const diagnostic=error.cause;if(diagnostic&&['open','initial-load','observe','unseal','refreshed-load','publish'].includes(diagnostic.phase))
+        process.stderr.write(JSON.stringify({phase:diagnostic.phase,elapsedMs:diagnostic.elapsedMs,tokenAgeMs:diagnostic.tokenAgeMs}));process.exitCode=1;}`;
   return await subprocess(["--input-type=module", "-e", script], { options: { ...options(), currentAvailability: true }, endpoint });
 }
 function privateFree(wire: string) { for (const secret of [f.file, f.dir, f.operation.policy.spend, f.operation.policy.funder, "rawTransaction", "ownerAuthorizationDigest", "transactionHash"]) expect(wire).not.toContain(secret); expect(Buffer.byteLength(wire)).toBeLessThanOrEqual(8192); }
@@ -127,7 +132,7 @@ describe("explicit keyless funding inspection command", () => {
     const bytes = readFileSync(f.file), snapshot = f.snapshot();
     for (const available of ["0.000100", "0.000099"]) {
       responseValue = { token: "USDC", balances: [{ depositor: f.operation.policy.spend, domain: 26, balance: available }] };
-      const result = await syntheticAvailability(); expect(result.code).toBe(0);
+      const result = await syntheticAvailability(); expect(result.code, result.stderr).toBe(0);
       expect(JSON.parse(result.stdout).availability).toEqual(available === "0.000100" ? { status: "observed-available-meets-minimum", availableMicros: "100", minimumAvailableMicros: "100" } : { status: "unknown" }); privateFree(result.stdout);
     }
     expect(readFileSync(f.file)).toEqual(bytes); expect(f.snapshot()).toEqual(snapshot);
@@ -200,8 +205,10 @@ describe("explicit keyless funding inspection command", () => {
     const request = { ...options(), currentAvailability: true }, bytes = readFileSync(f.file), snapshot = f.snapshot();
     responseValue = { token: "USDC", balances: [{ depositor: f.operation.policy.spend, domain: 26, balance: "0.000100" }] };
     onAvailability = () => { request.currentAvailability = false; request.storageManifestPath = "missing"; request.operationManifestPath = "missing"; };
-    try { const result = await inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition(request, endpoint); expect(result.availability.status).toBe("observed-available-meets-minimum"); }
-    finally { onAvailability = undefined; }
+    try {
+      const result = await inspection.inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition(request, endpoint);
+      expect(result.availability.status).toBe("observed-available-meets-minimum");
+    } finally { onAvailability = undefined; }
     expect(readFileSync(f.file)).toEqual(bytes); expect(f.snapshot()).toEqual(snapshot);
   });
   it("refuses assembled snapshot drift from an actual native concurrent writer without adding inspection writes", async () => {
@@ -215,6 +222,30 @@ describe("explicit keyless funding inspection command", () => {
     try { const result = await syntheticAvailability(); expect(result.code).toBe(1); expect(result.stdout).toBe(""); privateFree(result.stderr); }
     finally { onAvailability = undefined; }
     expect(writerSnapshot).toBeDefined(); expect(writerSnapshot).not.toEqual(before); expect(f.snapshot()).toEqual(writerSnapshot); expect(readFileSync(f.file)).toEqual(writerBytes);
+  });
+
+  it("rechecks the complete original snapshot after readiness issuance before composing its report", async () => {
+    const originalFactory = readiness.createGatewayFundingReadinessInspectionObserverForTrustedSyntheticComposition;
+    const before = f.snapshot();
+    let writerSnapshot: unknown, writerBytes: Buffer | undefined;
+    const spy = vi.spyOn(readiness, "createGatewayFundingReadinessInspectionObserverForTrustedSyntheticComposition").mockImplementation(endpoint => {
+      const observe = originalFactory(endpoint);
+      return async request => {
+        const observation = await observe(request); expect(observation).not.toBeNull();
+        readiness.assertVerifiedGatewayFundingReadinessCurrent(observation!.token, request);
+        const writer = openGatewayFundingSqliteLedger(f.file, f.storage.identity);
+        try { await writer.reserveStep(f.operation.operationId, "approval", "1"); } finally { writer.close(); }
+        readiness.assertVerifiedGatewayFundingReadinessCurrent(observation!.token, request);
+        writerSnapshot = f.snapshot(); writerBytes = readFileSync(f.file); return observation;
+      };
+    });
+    responseValue = { token: "USDC", balances: [{ depositor: f.operation.policy.spend, domain: 26, balance: "0.000100" }] };
+    try {
+      await expect(inspection.inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition({ ...options(), currentAvailability: true }, endpoint))
+        .rejects.toMatchObject({ cause: { phase: "refreshed-load" } });
+    } finally { spy.mockRestore(); }
+    expect(writerSnapshot).toBeDefined(); expect(writerSnapshot).not.toEqual(before);
+    expect(f.snapshot()).toEqual(writerSnapshot); expect(readFileSync(f.file)).toEqual(writerBytes);
   });
 
 });

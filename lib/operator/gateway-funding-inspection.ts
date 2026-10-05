@@ -8,8 +8,8 @@ import { storageIdentityDigest } from "../db/storage-identity";
 import { openGatewayFundingSqliteLedger } from "../db/gateway-funding-sqlite";
 import { validateFundingNamespace } from "../db/gateway-funding-ledger-validation";
 import { gatewayFundingReplayDigest, validateGatewayFundingOperation } from "../payments/gateway-funding-policy";
-import { observeGatewayFundingReadiness, unsealVerifiedGatewayFundingReadiness, assertVerifiedGatewayFundingReadinessCurrent,
-  createGatewayFundingReadinessObserverForTrustedSyntheticComposition, type GatewayFundingReadinessRequest } from "../payments/gateway-funding-readiness";
+import { observeGatewayFundingReadinessForInspection, assertVerifiedGatewayFundingReadinessCurrent,
+  createGatewayFundingReadinessInspectionObserverForTrustedSyntheticComposition, type GatewayFundingReadinessRequest } from "../payments/gateway-funding-readiness";
 import type { VerifiedGatewayFundingReadiness } from "../payments/gateway-funding-readiness";
 import { GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST } from "../payments/gateway-funding-receipt-policy";
 import { validateGatewayFundingOperationLocator } from "../payments/gateway-funding-operation-locator";
@@ -42,8 +42,9 @@ function readCanonical(held: ReturnType<typeof holdStorageTarget>) {
 }
 /** Keyless trusted host helper. The supported CLI runs it inside a killable
  * minimal-environment child; V8 heap limits do not bound native SQLite RSS. */
-async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: typeof observeGatewayFundingReadiness) {
+async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: typeof observeGatewayFundingReadinessForInspection) {
   const started = now();
+  let phase = "open";
   let storageHeld: ReturnType<typeof holdStorageTarget> | undefined, operationHeld: typeof storageHeld;
   let ledger: ReturnType<typeof openGatewayFundingSqliteLedger> | undefined;
   const elapsed = () => { const n = now() - started; if (!Number.isFinite(n) || n < 0 || n >= TOTAL_MS) refuse(); };
@@ -58,9 +59,11 @@ async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: t
       || storageIdentityDigest(storage.identity) !== proof.identityDigest) refuse();
     ledger = openGatewayFundingSqliteLedger(storage.backend.databasePath, storage.identity, { readOnly: true }); elapsed();
     const guard = () => {
-      elapsed(); storageHeld!.verify(); operationHeld!.verify();
+      elapsed();
+      // readCanonical verifies the held path/descriptor both before and after
+      // reading. Exact canonical bytes retain the already validated manifest
+      // semantics; rereading/parsing the same path adds no authority evidence.
       if (digest(readCanonical(storageHeld!)) !== proof.storageManifestDigest || canonicalJson(validateGatewayFundingOperationLocator(readCanonical(operationHeld!))) !== canonicalJson(proof)
-        || canonicalJson(inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: options.storageManifestPath })) !== canonicalJson(storage)
         || storageIdentityDigest(ledger!.getStorageIdentity()) !== proof.identityDigest) refuse(); elapsed();
     };
     const load = async () => {
@@ -82,6 +85,7 @@ async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: t
       }
       return { operation, namespaces, steps, originals };
     };
+    phase = "initial-load";
     const initial = await load(), { namespaces, steps } = initial;
     let availability: Readonly<{ status: string; availableMicros?: string; minimumAvailableMicros?: string }> = Object.freeze({ status: options.currentAvailability ? "unknown" : "not-requested" });
     const request: GatewayFundingReadinessRequest = { ledger, operationId: proof.operationId, expectedIdentity: storage.identity,
@@ -89,24 +93,32 @@ async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: t
     let currentToken: VerifiedGatewayFundingReadiness | undefined;
     if (options.currentAvailability && steps.deposit === "finalized-success") {
       try {
-        guard(); const token = await observe(request); guard();
-        if (token) { const evidence = await unsealVerifiedGatewayFundingReadiness(token, request); guard(); assertVerifiedGatewayFundingReadinessCurrent(token, request);
+        phase = "observe"; guard(); const observation = await observe(request); guard();
+        if (observation) { const { token, evidence } = observation; assertVerifiedGatewayFundingReadinessCurrent(token, request);
           availability = Object.freeze({ status: "observed-available-meets-minimum", availableMicros: evidence.availableMicros, minimumAvailableMicros: evidence.minimumAvailableMicros }); currentToken = token; }
       } catch { guard(); }
     }
-    const refreshed = await load();
+    phase = "refreshed-load"; const refreshed = await load();
     if (canonicalJson(initial) !== canonicalJson(refreshed)) refuse();
     const report = Object.freeze({ format: "keryx-funding-inspection-report-v1", status: "inspected-originals", readOnly: true, signingResumeAuthorized: false,
       steps: Object.freeze(steps), namespaces: Object.freeze(namespaces.map(ns => Object.freeze({ role: ns.role, nextReservedNonce: ns.nextNonce, nextCryptoNonce: ns.nextCryptoNonce,
         lifetimeLimits: ns.limits, retainedExposure: ns.used, nativeAggregateLimitWei: ns.nativeAggregateLimitWei, nativeAggregateUsedWei: ns.nativeAggregateUsedWei }))), availability });
     guard(); if (Buffer.byteLength(JSON.stringify(report)) > MAX_BYTES) refuse(); guard();
-    if (currentToken) assertVerifiedGatewayFundingReadinessCurrent(currentToken, request); return report;
-  } catch { return refuse(); }
+    phase = "publish"; if (currentToken) assertVerifiedGatewayFundingReadinessCurrent(currentToken, request); return report;
+  } catch (error) {
+    const cause = error instanceof Error ? Object.getOwnPropertyDescriptor(error, "cause")?.value : undefined;
+    const tokenAgeMs = cause && Object.getOwnPropertyDescriptor(cause, "phase")?.value === "readiness-token-freshness"
+      ? Object.getOwnPropertyDescriptor(cause, "tokenAgeMs")?.value : null;
+    throw new Error("Funding inspection unavailable; private details omitted", { cause: Object.freeze({ phase,
+      elapsedMs: Math.max(0, Math.round(now() - started)),
+      tokenAgeMs: Number.isSafeInteger(tokenAgeMs) && tokenAgeMs >= 0 ? tokenAgeMs : null,
+    }) });
+  }
   finally { try { ledger?.close(); } finally { try { operationHeld?.close(); } finally { storageHeld?.close(); } } }
 }
-export function inspectGatewayFundingSqliteOperation(options: GatewayFundingInspectionOptions) { return inspect(options, observeGatewayFundingReadiness); }
+export function inspectGatewayFundingSqliteOperation(options: GatewayFundingInspectionOptions) { return inspect(options, observeGatewayFundingReadinessForInspection); }
 /** Explicit synthetic fixture composition; the production CLI exposes no endpoint option. */
 export function inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition(options: GatewayFundingInspectionOptions, endpoint: string) {
-  const started = now(), observer = createGatewayFundingReadinessObserverForTrustedSyntheticComposition(endpoint);
+  const started = now(), observer = createGatewayFundingReadinessInspectionObserverForTrustedSyntheticComposition(endpoint);
   if (now() - started >= TOTAL_MS) refuse(); return inspect(options, observer);
 }

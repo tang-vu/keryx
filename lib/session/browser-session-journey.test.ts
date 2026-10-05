@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
-import { build } from "esbuild";
+import { build, type BuildOptions } from "esbuild";
 import { chromium } from "playwright";
 import { decodeFunctionData, encodeFunctionResult, erc20Abi, toHex, keccak256, parseTransaction,
   encodeFunctionData, encodeAbiParameters, encodeEventTopics, type Hex } from "viem";
@@ -16,6 +16,31 @@ import { createSqliteStorage } from "../db/storage-identity-provision";
 import type { QueryRun } from "../types";
 
 const cleanup: Array<() => void | Promise<void>> = [];
+// Only immutable compiled fixture bytes are shared. Every scenario still opens
+// fresh storage, authentication, browser context, worker and custody lifecycles.
+const bundles = new Map<"worker" | "session" | "creator", Promise<string>>();
+function fixtureBundle(role: "worker" | "session" | "creator", options: BuildOptions) {
+  let pending = bundles.get(role);
+  if (!pending) {
+    pending = build(options).then(result => {
+      if (result.outputFiles?.length !== 1) throw new Error("Synthetic browser bundle unavailable");
+      return result.outputFiles[0].text;
+    });
+    bundles.set(role, pending);
+  }
+  return pending;
+}
+// Capture only canonical endpoint categories and transport timing. Cookies, bodies,
+// query strings, identities and signatures never enter fixture diagnostics.
+const transportProbe = `const originalFetch=globalThis.fetch.bind(globalThis);
+globalThis.fetch=async(input,init)=>{
+  const started=performance.now(),url=new URL(typeof input==='string'?input:input.url,globalThis.location.href);
+  const path=url.origin===globalThis.location.origin?url.pathname.replace(/0x[0-9a-f]{40,64}/g,'[id]').replace(/(\\/api\\/source\\/)[^/]+(\\/item\\/)[^/]+/,'$1[id]$2[id]'):'external-rpc';
+  let status=null;
+  try{const response=await originalFetch(input,init);status=response.status;return response}
+  finally{console.info('SESSION_TRANSPORT '+JSON.stringify({path,status,elapsedMs:Math.round(performance.now()-started),
+    abortCause:init?.signal?.aborted?(init.signal.reason?.name==='TimeoutError'?'deadline':'aborted'):'none'}))}
+};`;
 afterEach(async () => {
   for (const close of cleanup.splice(0).reverse()) await close();
   vi.doUnmock("next/headers"); vi.doUnmock("@circle-fin/x402-batching/server");
@@ -25,7 +50,10 @@ afterEach(async () => {
 /** Production composition is intact: native sealed DB, JWT/row auth, normal handlers, SSE,
  * runAgent, BrowserCoSignGateway, paid encrypted seller and actual browser worker/IndexedDB.
  * Only Next's request cookie accessor and external RPC/Circle transport are synthetic. */
-it.each([false, true, "liveness", "creator"] as const)("completes a normal mainnet browser journey (%s)", async failCitation => {
+// Recovery races, funding with a delayed credit observation, and cash-out each
+// keep their complete production composition within the existing case deadline.
+it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("completes a normal mainnet browser journey (%s)", async failCitation => {
+  const citationFails = failCitation === true;
   vi.resetModules();
   const folder = mkdtempSync(join(tmpdir(), "keryx-browser-mainnet-journey-")), databasePath = join(folder, "fresh.sqlite");
   cleanup.push(() => rmSync(folder, { recursive: true, force: true }));
@@ -53,7 +81,7 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
       return { isValid: true, payer: sessionAddress };
     }
     async settle(payload: { resource: { url: string }; payload: { authorization: { nonce: string; value: string } } }) {
-      if (failCitation && payload.resource.url.includes("/api/cite/")) return { success: false, errorReason: "synthetic citation failure" };
+      if (citationFails && payload.resource.url.includes("/api/cite/")) return { success: false, errorReason: "synthetic citation failure" };
       expect(settledNonces.has(payload.payload.authorization.nonce)).toBe(false);
       settledNonces.add(payload.payload.authorization.nonce); circleDebit += BigInt(payload.payload.authorization.value);
       return { success: true, payer: sessionAddress, transaction: `synthetic-circle-${settledNonces.size}`, network: profile.networkId };
@@ -151,10 +179,11 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
     if (target.startsWith(origin)) return dispatch(target, init);
     throw new Error("Unexpected external network refused");
   });
-  const worker = await build({ entryPoints: ["lib/session/mainnet-session-signer.worker.ts"], platform: "browser", bundle: true, write: false,
+  const worker = await fixtureBundle("worker", { entryPoints: ["lib/session/mainnet-session-signer.worker.ts"], platform: "browser", bundle: true, write: false,
+    banner: { js: transportProbe },
     define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
       "process.env.NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS":'"300"' } });
-  const hook = await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
+  const hook = await fixtureBundle(failCitation === "creator" ? "creator" : "session", { stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
     import React from 'react'; import {createRoot} from 'react-dom/client';
     import {useMainnetSessionGrant} from './lib/hooks/use-mainnet-session-grant';
     import {SessionCashoutPanel} from './components/keryx/session-cashout-panel';
@@ -180,6 +209,7 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
     function Probe(){const grant=useMainnetSessionGrant(); window.normalGrant=grant;return <><output id="state">{JSON.stringify(grant.state)}</output><SessionCashoutPanel sessAddr={grant.state.sessAddr}/></>}
     createRoot(document.getElementById('root')).render(${failCitation==="creator"?`<CreatorOwnerWithdrawalPanel address="${owner.address}"/>`:"<Probe/>"});
   ` }, bundle: true, write: false, platform: "browser", format: "esm",
+    banner: { js: transportProbe },
     define: { "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"',
       "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
       "process.env.NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS":'"300"' },
@@ -196,15 +226,15 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
     creatorBurnSigns++;return owner.signTypedData(fields);
   });
   let duringApproval: (() => Promise<void>) | undefined;
-  let duringNextGrantChallenge: (() => Promise<void>) | undefined;
   let afterDeposit: (() => Promise<void>) | undefined;
   let startAfterDeposit: (() => void) | undefined, laterSignatureReady: Promise<void> | undefined;
+  let capturedCredit: { path: string; status: number; body: string; headers: Record<string, string> } | undefined;
   const fundingProposals: Array<{ requested: string; cap: string }> = [];
   const { GATEWAY_DEPOSIT_FOR_ABI } = await import("../buyer/funding-policy");
-  let originalCashoutId="";
+  let originalCashoutId="", sessionMinting=false;
   await context.exposeFunction("ownerFundingSubmit", async (tx: { from: string; to: string; data: Hex; value: string; nonce: number;gas?:string;maxFeePerGas?:string;maxPriorityFeePerGas?:string }) => {
     expect(tx.from.toLowerCase()).toBe(owner.address.toLowerCase()); expect(tx.value).toBe("0");
-    if(tx.nonce===2||failCitation==="creator"){
+    if(sessionMinting||failCitation==="creator"){
       expect(tx.to.toLowerCase()).toBe(profile.gatewayMinter.toLowerCase());
       const localRecord=(await db.getCreatorWithdrawal(originalCashoutId,failCitation==="creator"?owner.address.toLowerCase():sessionAddress))!;
       const {WITHDRAWAL_MINTER_ABI}=await import("../gateway/withdrawal-mint-observation");
@@ -235,7 +265,22 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
       expect(String(decoded.args![1]).toLowerCase()).toBe(sessionAddress); expect(decoded.args![2]).toBe(BigInt(50000));
       depositCredit += BigInt(50000);
       startAfterDeposit?.();
-      duringNextGrantChallenge = afterDeposit;
+      if (afterDeposit) {
+        await laterSignatureReady;
+        const retained = await page.evaluate(owner => (window as unknown as {
+          fundingRecords(owner: string): Promise<Array<{ gatewayCreditObservedAt: string }>>;
+          normalGrant: { state: { grantEpoch: string } };
+        }).fundingRecords(owner).then(rows => ({ after: rows[0].gatewayCreditObservedAt,
+          epoch: (window as unknown as { normalGrant: { state: { grantEpoch: string } } }).normalGrant.state.grantEpoch })), owner.address);
+        const path = `/api/session/credit?${new URLSearchParams({ address: sessionAddress, accounting: "original-v1", grantEpoch: retained.epoch, after: retained.after })}`;
+        const projection = await dispatch(`${origin}${path}`, {}, token);
+        expect(projection.status).toBe(200);
+        capturedCredit = { path, status: projection.status, body: await projection.text(), headers: Object.fromEntries(projection.headers) };
+        // Model a credit response sampled before this debit, then delivered later.
+        // Complete research at the synthetic wallet boundary, before another API
+        // request starts its production transport deadline.
+        await afterDeposit();
+      }
     }
     return `0x${(tx.nonce+1).toString(16).padStart(64,"0")}`;
   });
@@ -244,19 +289,20 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
   await context.route("**/*", async route => {
     const req = route.request(), url = req.url();
     if (url === `${origin}/`) return route.fulfill({ contentType: "text/html", body: '<div id="root"></div><script type="module" src="/hook.js"></script>' });
-    if (url === `${origin}/hook.js`) return route.fulfill({ contentType: "application/javascript", body: hook.outputFiles[0].text });
-    if (url === `${origin}/worker.js` || url === `${origin}/mainnet-session-signer.worker.ts`) return route.fulfill({ contentType: "application/javascript", body: worker.outputFiles[0].text });
+    if (url === `${origin}/hook.js`) return route.fulfill({ contentType: "application/javascript", body: hook });
+    if (url === `${origin}/worker.js` || url === `${origin}/mainnet-session-signer.worker.ts`) return route.fulfill({ contentType: "application/javascript", body: worker });
     if (url.startsWith(profile.rpcUrl)) { const response = await rpc({ body: req.postData() }); return route.fulfill({ status: response.status, body: await response.text(), contentType: "application/json" }); }
     if(failStatusLookup&&url===`${origin}/api/session/grant`&&req.method()==="GET")return route.fulfill({status:503,contentType:"application/json",body:"{}"});
     expect(url.startsWith(origin)).toBe(true);
     const receivedToken = req.headers().cookie?.split(";").map(s => s.trim()).find(s => s.startsWith("keryx_session="))?.slice("keryx_session=".length);
     if (holdRevoke && url === `${origin}/api/session/revoke`) { holdRevoke = false; held = true; await new Promise<void>(resolve => { releaseHeld = resolve; }); }
     if(holdAskChallenge&&url===`${origin}/api/ask/challenge`){holdAskChallenge=false;held=true;await new Promise<void>(resolve=>{releaseHeld=resolve})}
-    if (url === `${origin}/api/session/grant/challenge` && duringNextGrantChallenge) {
-      const settle = duringNextGrantChallenge; duringNextGrantChallenge = undefined; await settle();
+    if (capturedCredit && url.includes("/api/session/credit?")) {
+      const projection = capturedCredit; capturedCredit = undefined;
+      expect(`${new URL(url).pathname}${new URL(url).search}`).toBe(projection.path);
+      return route.fulfill({ status: projection.status, body: projection.body, headers: projection.headers });
     }
     const response = await dispatch(url, { method: req.method(), body: req.postData() ?? undefined, headers: req.headers() }, receivedToken);
-    if (laterSignatureReady && url.includes("/api/session/credit?") && new URL(url).searchParams.has("after")) await laterSignatureReady;
     if (afterDeposit && url === `${origin}/api/session/grant/challenge` && response.ok) {
       const proposal = await response.clone().json();
       fundingProposals.push({ requested: JSON.parse(req.postData()!).budgetMicros, cap: proposal.consent.capMicroUsdc });
@@ -264,7 +310,10 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
     if (holdGrant && req.method() === "GET" && url === `${origin}/api/session/grant`) { holdGrant = false; held = true; await new Promise<void>(resolve => { releaseHeld = resolve; }); }
     return route.fulfill({ status: response.status, body: await response.text(), headers: Object.fromEntries(response.headers) });
   });
-  const page = await context.newPage();await page.goto(origin);
+  const page = await context.newPage();
+  const transportDiagnostics: string[] = [];
+  page.on("console", message => { if (message.text().startsWith("SESSION_TRANSPORT ")) transportDiagnostics.push(message.text().slice("SESSION_TRANSPORT ".length)); });
+  await page.goto(origin);
   if(failCitation==="creator"){
     const {ARC_TESTNET_PROFILE}=await import("../arc-network-profile");
     const {prepareWithdrawIntentForProfile}=await import("../gateway/withdraw-intent-core"),{withdrawTypedData}=await import("../gateway/withdraw-protocol");
@@ -393,10 +442,10 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
   }
   const { done, signs } = await completeResearch("How do durable reservations protect payment nonces?", 0.01, identity.enrollmentId);
   expect(done).not.toBeNull(); expect(done!.answer).toContain("[S1]"); expect(done!.answer).toContain("nonce"); expect(done!.citations.length).toBeGreaterThan(0);
-  expect(signs).toBe(2); expect(settledNonces.size).toBe(failCitation ? 1 : 2);
+  expect(signs).toBe(2); expect(settledNonces.size).toBe(citationFails ? 1 : 2);
   const payments = await db.listCreatorPaymentAttemptsByQuery(done!.id);
   expect(payments.find(p => p.kind === "fetch")?.settled).toBe(true);
-  expect(payments.some(p => p.kind === "citation" && p.settled)).toBe(!failCitation);
+  expect(payments.some(p => p.kind === "citation" && p.settled)).toBe(!citationFails);
   expect(await db.getQueryRun(done!.id)).not.toBeNull();
   if (!failCitation) {
     const renew = async () => {
@@ -437,6 +486,8 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
     expect((await hookState()).status).toBe("paused");
     expect((await (await dispatch(`${origin}/api/session/grant`, {}, token)).json()).grantEpoch).toBe(afterLogout.grantEpoch);
     await recover(); await expect.poll(hookState).toMatchObject({ status: "active", grantEpoch: afterLogout.grantEpoch });
+  }
+  if (failCitation === "funding") {
     const originalCap = (await hookState()).cap;
     duringApproval = async () => {
       const debitBefore = circleDebit;
@@ -451,7 +502,7 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
       expect(result.done.answer).toContain("[S1]");expect(circleDebit).toBeGreaterThan(debitBefore);};
     const messagesBeforeFunding = ownerMessages.length;
     await page.evaluate(() => (window as unknown as { normalGrant: { topUp(amount: number): Promise<void> } }).normalGrant.topUp(0.05));
-    const toppedUp=await hookState();expect(toppedUp.status,JSON.stringify(toppedUp)).toBe("active");
+    const toppedUp=await hookState();expect(toppedUp.status,`status=${toppedUp.status} transport=${transportDiagnostics.slice(-12).join(";")}`).toBe("active");
     expect(Math.round((await hookState()).cap*1e6)).toBe(Math.round(originalCap*1e6)+50000);
     const target = BigInt(Math.round(originalCap*1e6)+50000);
     expect(fundingProposals).toHaveLength(2);
@@ -463,6 +514,9 @@ it.each([false, true, "liveness", "creator"] as const)("completes a normal mainn
     expect(fundingRows).toHaveLength(1); expect(fundingRows[0].gatewayCreditAcknowledged).toBe(true);
     expect(fundingRows[0].activePayer).toBeUndefined(); expect(fundingRows[0].gatewayCreditObservedAt).toBeDefined();
     expect(await page.evaluate(() => (window as unknown as { sentFunding: unknown[] }).sentFunding.length)).toBe(2);
+  }
+  if (failCitation === "cashout") {
+    sessionMinting=true;
     const retainedEpoch=(await hookState()).grantEpoch;
     await page.evaluate(()=>(window as unknown as {normalGrant:{revoke():Promise<unknown>}}).normalGrant.revoke());
     await call("lock");await call("restoreRetained");blockTimestamp=Math.floor(Date.now()/1000);
