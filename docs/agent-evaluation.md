@@ -46,6 +46,19 @@ precision/recall, read precision/recall, expected decisions, evidence-bounded cl
 evidence yield, and spend efficiency. Budget, payment provenance, forbidden reads, unexpected
 citations, and scenario coverage floors are hard failures rather than score deductions.
 
+The grader independently audits retained evidence against the frozen source/item
+bodies, claim identities and answer/citation markers. Paid frozen evidence also
+requires an identified fetch belonging to this run. Coverage counts distinct
+verified claim indexes and cannot exceed their evidence support (with six-place
+reporting precision); duplicated or invalid coverage and absent/wrong-source
+quotes fail the case. Evidence yield uses verified reward evidence among recorded
+fetch sources. It does not accept eligibility flags or coverage alone as proof.
+Legacy evidence without an item ID can match one body of its source, not a joined
+body or an independently certified purchased version. Source-only fetch observations
+cannot prove which paid item was read. These literal/report checks do not establish
+semantic entailment, truth or completeness of the answer. See
+[the OSS adoption and regression record](engineering/frozen-eval-grounding-2026-10-06.md).
+
 ## Corpus and baselines
 
 Cases live in `lib/evals/corpus.ts`. The corpus SHA-256 binds the baseline to the exact questions,

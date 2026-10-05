@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**Audit frozen evidence independently of reported agent scores — 2026-10-06.**
+Use a native evaluation helper, separate from the production evidence gate, to
+validate retained quote/source/item/claim/marker consistency and this run's paid
+fetch observations against the frozen corpus. Duplicate coverage cannot inflate
+the grounded rate, and coverage stays within verified evidence's reported support
+at six-place precision. Invalid provenance fails acceptance regardless of score.
+Refresh ADK/Promptfoo references and adopt their separate response/trajectory and
+deterministic/model-grade patterns without a framework dependency or model judge.
+Literal membership is provenance, not semantic entailment or truth; free/cache/live
+trajectory and usefulness remain separate work. Preserve the six-case baseline
+and all production payment, custody, provider and schedule gates. This is a
+development-only CLI/CI change with no app/distribution identity or deployment.
+See [evidence, scope and rollback](docs/engineering/frozen-eval-grounding-2026-10-06.md).
+
 **Show recorded reading and retained sources before empty earnings — 2026-10-05.**
 The owner requested visible real source information, including public references and
 unverified creator listings. Treat Sources as a reading library and the ledger as

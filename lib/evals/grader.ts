@@ -1,5 +1,6 @@
 import type { Decision, PaymentRecord, QueryRun } from "../types";
 import type { AgentEvalCase, EvalCaseResult, EvalMetrics, EvalRunObservation } from "./types";
+import { auditFrozenGrounding } from "./frozen-grounding";
 
 const EPSILON = 1e-9;
 
@@ -30,10 +31,11 @@ export function gradeAgentRun(testCase: AgentEvalCase, observation: EvalRunObser
   const requiredReads = testCase.expected.requiredReadSourceIds ?? [];
   const forbiddenReads = new Set(testCase.expected.forbiddenReadSourceIds ?? []);
   const decisionEntries = Object.entries(testCase.expected.decisions ?? {});
-  const grounded = (run.claimCoverage ?? []).filter((claim) => claim.coverage >= 0.4).length;
-  const groundedClaimRate = ratio(grounded, run.subClaims.length);
+  const grounding = auditFrozenGrounding(testCase, run,
+    fetches.filter((payment) => payment.queryId === run.id));
+  const groundedClaimRate = ratio(grounding.groundedClaimCount, run.subClaims.length);
   const qualifyingEvidenceSources = new Set(
-    (run.evidence ?? []).filter((evidence) => evidence.qualifiesForReward).map((evidence) => evidence.sourceId),
+    readSourceIds.filter((sourceId) => grounding.rewardEvidenceSourceIds.has(sourceId)),
   );
 
   const metrics: EvalMetrics = {
@@ -53,7 +55,7 @@ export function gradeAgentRun(testCase: AgentEvalCase, observation: EvalRunObser
         : Math.min(1, qualifyingEvidenceSources.size / Math.max(1, readSourceIds.length)),
   };
 
-  const hardFailures: string[] = [];
+  const hardFailures: string[] = [...grounding.hardFailures];
   if (run.paymentMode !== "offline") hardFailures.push(`payment mode was ${run.paymentMode ?? "unknown"}, expected offline`);
   if ((run.settledPayments ?? 0) !== 0) hardFailures.push("evaluation produced a settled payment");
   if ((run.pendingPayments ?? 0) !== 0) hardFailures.push("evaluation produced a pending authorization");

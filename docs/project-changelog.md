@@ -20,6 +20,17 @@
 - Keep the private-worker signer fixture independent of live RPC availability while
   verifying real SDK signatures and refusal before signing when chain attestation fails.
 
+## October 6, 2026 — Independent frozen-corpus eval assertions (development tooling)
+
+- Reject fabricated/wrong-item quotes, inconsistent citation/claim markers,
+  inflated coverage and evidence from unread paid items in the offline eval grader.
+- Verify provenance independently of the production gate and reported eligibility;
+  keep the six-case corpus/baseline and 98.33/100 deterministic score unchanged.
+- Apply refreshed ADK/Promptfoo evaluation patterns without adding dependencies.
+  These assertions verify literal/report consistency, not semantic truth or live
+  model usefulness. No runtime contract, app identity, deployment or client package
+  changes. See [scope and acceptance](engineering/frozen-eval-grounding-2026-10-06.md).
+
 ### Reading activity, source visibility and account totals (2026-10-05, v0.26.22 candidate)
 
 - Lead the public ledger with recorded questions and sources; keep settlement
