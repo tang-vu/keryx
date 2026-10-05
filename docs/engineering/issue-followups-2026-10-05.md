@@ -72,6 +72,10 @@ credit observation. Every journey has fresh custody, storage and browser state;
 only fixed compiled fixture bytes are cached. Both cap proposals, clipping, one
 owner consent, original signing and settlement assertions remain required. Windows
 CI exercises all six variants under the original transport and case deadlines.
+Each independent readiness fixture now has its own existing 30-second setup hook,
+instead of sharing one aggregate hook. Aggregate setup allowance therefore grows;
+production bounds and per-case deadlines do not. The drift fixture is provisioned
+before its bounded failure check.
 
 The [immutable staging tools](../immutable-release-staging.md) prepare isolated
 source/artifact evidence only. Current reviewed maintenance deployment remains
