@@ -42,6 +42,45 @@ function completedRun(): QueryRun {
 }
 
 describe("remote MCP server", () => {
+  it("reports the actual heuristic decide tier over MCP while preserving the original model label", async () => {
+    const run = completedRun(); run.engine = "llm:deepseek:recorded-model";
+    run.reasoningAttempts = [
+      { step: "decompose", engine: run.engine, tier: 0, attempt: 1, startedAt: 1, durationMs: 5, outcome: "served" },
+      { step: "decide", engine: run.engine, tier: 0, attempt: 0, startedAt: 2, durationMs: 0, outcome: "circuit-open", retryAfterMs: 1000 },
+      { step: "decide", engine: "heuristic", tier: 1, attempt: 1, startedAt: 3, durationMs: 1, outcome: "served" },
+    ];
+    const server = createRemoteMcpServer({ budgetCap: 0.03, clientChannel: "codex" }, async () => run);
+    const client = new Client({ name: "test-client", version: "1.0.0" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await server.connect(serverTransport); await client.connect(clientTransport);
+      expect(client.getServerVersion()?.version).toBe("0.3.0");
+      const result = await client.callTool({ name: "research", arguments: { question: "What changed?" } });
+      expect(result.structuredContent).toMatchObject({ engine: run.engine, reasoningAttempts: run.reasoningAttempts,
+        reasoning: { sourceSelection: { state: "heuristic", servingEngines: ["heuristic"], fallbackUsed: true } } });
+      const text = (result.content as { type: string; text?: string }[]).map(item => item.text ?? "").join("\n");
+      expect(text).toContain("Recorded source selection: heuristic · heuristic · fallback served");
+      expect(text).toContain("does not verify entailment or complete synthesis");
+    } finally { await client.close(); await server.close(); }
+  });
+
+  it.each([undefined, "offline"] as const)("labels %s payment history without inferring simulation from missing mode", async paymentMode => {
+    const run = completedRun(); run.paymentMode = paymentMode; run.reasoningAttempts = undefined;
+    const server = createRemoteMcpServer({ budgetCap: 0.03, clientChannel: "other" }, async () => run);
+    const client = new Client({ name: "test-client", version: "1.0.0" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await server.connect(serverTransport); await client.connect(clientTransport);
+      const result = await client.callTool({ name: "research", arguments: { question: "What changed?" } });
+      const text = (result.content as { type: string; text?: string }[]).map(item => item.text ?? "").join("\n");
+      expect(result.structuredContent).toMatchObject({ paymentMode: paymentMode ?? "legacy",
+        reasoning: { sourceSelection: { state: "unknown", fallbackUsed: null } } });
+      if (paymentMode === "offline") expect(text).toContain("offline payment simulation");
+      else { expect(text).toContain("payment mode unknown"); expect(text).not.toContain("offline payment simulation"); }
+      expect(text).toContain("Recorded source selection: unknown");
+    } finally { await client.close(); await server.close(); }
+  });
+
   it("exposes research and clamps budget while preserving verified attribution", async () => {
     const runner = vi.fn(async () => completedRun());
     const server = createRemoteMcpServer(
@@ -74,15 +113,15 @@ describe("remote MCP server", () => {
     expect(responseText).toContain("research targets meet the recorded excerpt-support threshold");
     expect(responseText).toContain("does not verify entailment or complete synthesis");
     expect(responseText).not.toContain("claims passed the grounding threshold");
-    expect(responseText).toContain("decide: heuristic (degraded)");
+    expect(responseText).toContain("decide: heuristic (heuristic; fallback served)");
     expect(result.structuredContent).toEqual(
       expect.objectContaining({
         queryId: "mcp-run",
         totalToCreatorsUsdc: 0.01,
         settledPayments: 1,
-        reasoningTelemetry: "recorded",
         reasoningAttempts: expect.arrayContaining([expect.objectContaining({ step: "decide", engine: "heuristic", outcome: "served" })]),
-        reasoningServing: expect.arrayContaining([expect.objectContaining({ step: "decide", engines: ["heuristic"], degraded: true, heuristic: true })]),
+        reasoning: expect.objectContaining({ telemetry: "recorded",
+          sourceSelection: { step: "decide", state: "heuristic", servingEngines: ["heuristic"], fallbackUsed: true } }),
       }),
     );
 

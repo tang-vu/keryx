@@ -15,8 +15,7 @@ import { inspectGatewayFundingSqliteOwnerTarget, installGatewayFundingSqliteOwne
 import type { GatewayFundingLedger, FundingReservationSnapshot } from "../db/gateway-funding-ledger-types";
 import { createGatewayFundingReceiptObserverForTrustedComposition } from "./gateway-funding-receipt-observer";
 import { GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST } from "./gateway-funding-receipt-policy";
-import { createGatewayFundingReadinessObserverForTrustedSyntheticComposition as compose,
-  createGatewayFundingReadinessInspectionObserverForTrustedSyntheticComposition as composeInspection, unsealVerifiedGatewayFundingReadiness as unseal,
+import { createGatewayFundingReadinessObserverForTrustedSyntheticComposition as compose, unsealVerifiedGatewayFundingReadiness as unseal,
   assertVerifiedGatewayFundingReadinessCurrent as current, type GatewayFundingReadinessRequest, type VerifiedGatewayFundingReadiness } from "./gateway-funding-readiness";
 
 const dirs: string[] = [], ledgers: GatewayFundingLedger[] = [];
@@ -110,13 +109,6 @@ describe("keyless current funding availability issuer", () => {
     expect(evidence.availableMicros).not.toBe((BigInt(f.operation.initialAvailableMicros) + BigInt(f.operation.depositMicros)).toString());
     expect(Object.isFrozen(evidence)).toBe(true);
     expect(balances.at(-1)).toEqual({ method: "POST", body: { token: "USDC", sources: [{ depositor: f.operation.policy.spend, domain: 26 }] }, authorization: undefined });
-  });
-  it("returns immutable validated issuance evidence without changing retained-token unseal behavior", async () => {
-    respond(available()); const observation = await composeInspection(endpoint)(f.request); expect(observation).not.toBeNull();
-    expect(Object.isFrozen(observation)).toBe(true); expect(Object.isFrozen(observation!.evidence)).toBe(true);
-    expect(Object.keys(observation!.token)).toEqual([]);
-    expect(observation!.evidence).toMatchObject({ basis: "finalized-original-deposit-plus-current-available", availableMicros: "100" });
-    expect(await unseal(observation!.token, f.request)).toEqual(observation!.evidence); current(observation!.token, f.request);
   });
   it.each(["wrong-token", "foreign-depositor", "foreign-domain", "duplicate", "missing", "negative", "precision", "overflow", "insufficient"])("refuses %s balance instead of retrying/depositing", async kind => {
     let value: unknown = available();

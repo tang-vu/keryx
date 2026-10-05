@@ -8,8 +8,8 @@ import { storageIdentityDigest } from "../db/storage-identity";
 import { openGatewayFundingSqliteLedger } from "../db/gateway-funding-sqlite";
 import { validateFundingNamespace } from "../db/gateway-funding-ledger-validation";
 import { gatewayFundingReplayDigest, validateGatewayFundingOperation } from "../payments/gateway-funding-policy";
-import { observeGatewayFundingReadinessForInspection, assertVerifiedGatewayFundingReadinessCurrent,
-  createGatewayFundingReadinessInspectionObserverForTrustedSyntheticComposition, type GatewayFundingReadinessRequest } from "../payments/gateway-funding-readiness";
+import { observeGatewayFundingReadiness, unsealVerifiedGatewayFundingReadiness, assertVerifiedGatewayFundingReadinessCurrent,
+  createGatewayFundingReadinessObserverForTrustedSyntheticComposition, type GatewayFundingReadinessRequest } from "../payments/gateway-funding-readiness";
 import type { VerifiedGatewayFundingReadiness } from "../payments/gateway-funding-readiness";
 import { GATEWAY_FUNDING_RECEIPT_POLICY_DIGEST } from "../payments/gateway-funding-receipt-policy";
 import { validateGatewayFundingOperationLocator } from "../payments/gateway-funding-operation-locator";
@@ -42,7 +42,7 @@ function readCanonical(held: ReturnType<typeof holdStorageTarget>) {
 }
 /** Keyless trusted host helper. The supported CLI runs it inside a killable
  * minimal-environment child; V8 heap limits do not bound native SQLite RSS. */
-async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: typeof observeGatewayFundingReadinessForInspection) {
+async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: typeof observeGatewayFundingReadiness) {
   const started = now();
   let phase = "open";
   let storageHeld: ReturnType<typeof holdStorageTarget> | undefined, operationHeld: typeof storageHeld;
@@ -59,11 +59,9 @@ async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: t
       || storageIdentityDigest(storage.identity) !== proof.identityDigest) refuse();
     ledger = openGatewayFundingSqliteLedger(storage.backend.databasePath, storage.identity, { readOnly: true }); elapsed();
     const guard = () => {
-      elapsed();
-      // readCanonical verifies the held path/descriptor both before and after
-      // reading. Exact canonical bytes retain the already validated manifest
-      // semantics; rereading/parsing the same path adds no authority evidence.
+      elapsed(); storageHeld!.verify(); operationHeld!.verify();
       if (digest(readCanonical(storageHeld!)) !== proof.storageManifestDigest || canonicalJson(validateGatewayFundingOperationLocator(readCanonical(operationHeld!))) !== canonicalJson(proof)
+        || canonicalJson(inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: options.storageManifestPath })) !== canonicalJson(storage)
         || storageIdentityDigest(ledger!.getStorageIdentity()) !== proof.identityDigest) refuse(); elapsed();
     };
     const load = async () => {
@@ -93,8 +91,8 @@ async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: t
     let currentToken: VerifiedGatewayFundingReadiness | undefined;
     if (options.currentAvailability && steps.deposit === "finalized-success") {
       try {
-        phase = "observe"; guard(); const observation = await observe(request); guard();
-        if (observation) { const { token, evidence } = observation; assertVerifiedGatewayFundingReadinessCurrent(token, request);
+        phase = "observe"; guard(); const token = await observe(request); guard();
+        if (token) { phase = "unseal"; const evidence = await unsealVerifiedGatewayFundingReadiness(token, request); guard(); assertVerifiedGatewayFundingReadinessCurrent(token, request);
           availability = Object.freeze({ status: "observed-available-meets-minimum", availableMicros: evidence.availableMicros, minimumAvailableMicros: evidence.minimumAvailableMicros }); currentToken = token; }
       } catch { guard(); }
     }
@@ -116,9 +114,9 @@ async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: t
   }
   finally { try { ledger?.close(); } finally { try { operationHeld?.close(); } finally { storageHeld?.close(); } } }
 }
-export function inspectGatewayFundingSqliteOperation(options: GatewayFundingInspectionOptions) { return inspect(options, observeGatewayFundingReadinessForInspection); }
+export function inspectGatewayFundingSqliteOperation(options: GatewayFundingInspectionOptions) { return inspect(options, observeGatewayFundingReadiness); }
 /** Explicit synthetic fixture composition; the production CLI exposes no endpoint option. */
 export function inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition(options: GatewayFundingInspectionOptions, endpoint: string) {
-  const started = now(), observer = createGatewayFundingReadinessInspectionObserverForTrustedSyntheticComposition(endpoint);
+  const started = now(), observer = createGatewayFundingReadinessObserverForTrustedSyntheticComposition(endpoint);
   if (now() - started >= TOTAL_MS) refuse(); return inspect(options, observer);
 }

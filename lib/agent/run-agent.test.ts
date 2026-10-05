@@ -12,7 +12,7 @@ import { contentBodyHash } from "../sources/content-receipt";
  *   2. 100% of spend reaches creator wallets (payer = agent, payee = creator, no platform skim);
  *   3. a multi-author citation reward splits across authors and the legs sum back to the reward;
  *   4. the full citation pool is distributed when contribution weights sum to 1;
- *   5. external marketplace endpoints are always SKIP — never settled (off Keryx's Arc rail);
+ *   5. external marketplace endpoints are always SKIP, regardless of advertised payment network;
  *   6. unverified sources are off the money path (listed, but never discovered/read/cited/paid);
  *   7. a single toll failure degrades gracefully — the run still answers from what it read;
  *   8. a missing budget falls back to the configured default.
@@ -428,7 +428,7 @@ it.each([
   expect(d.readWebArticle).toHaveBeenCalledTimes(expected);
   expect(run.decisions).toHaveLength(expected);
   expect(run.decisions.every(item => item.requestedSource?.readScope === "bounded-whole-document")).toBe(true);
-  expect(steps.some(step => step.message.includes("explicitly supplied URL"))).toBe(true);
+  expect(steps.some(step => step.message.includes("Supplied source URL"))).toBe(true);
   expect(run.answer).toContain("Supplied original source status");
   expect(run.answer).toContain("Extraction was truncated");
   if (question.includes("#")) expect(run.answer).toContain("not that section specifically");
@@ -474,7 +474,7 @@ it("reports supplied originals' read failures and existing URLs in empty recover
   d.webSearch = { search: async () => [] };
   d.readWebArticle = async () => { throw new ArticleReadError("html-extraction-unavailable"); };
   const { run } = await drive({ question: "Use https://www.sqlite.org/wal.html for WAL durability.", origin: "web" }, d);
-  expect(run.answer).toContain("question already supplied original source URLs");
+  expect(run.answer).toContain("Source URLs were already supplied in the question");
   expect(run.answer).toContain("Read failed: html-extraction-unavailable");
   expect(run.answer).not.toContain("supply a relevant original source URL");
 });
@@ -526,6 +526,85 @@ it("reads selected original web content without funding, rejects snippet evidenc
   expect(run.citations).toHaveLength(1); expect(run.citations[0]).toMatchObject({ itemUrl: "https://publisher.example/final", reward: 0, webProvenance: { extraction: "html" } });
   expect(run.evidence?.[0]).toMatchObject({ quote: "Exact original evidence from the public page.", qualifiesForReward: false, webProvenance: { extraction: "html" } });
   expect(steps.some(step => step.message.includes("not a cache hit"))).toBe(true);
+});
+
+it.each([
+  ["SQLite", ["https://www.sqlite.org/wal.html", "https://www.sqlite.org/pragma.html#pragma_synchronous"]],
+  ["PostgreSQL", ["https://www.postgresql.org/docs/current/sql-select.html"]],
+] as const)("offers and reads caller-supplied %s originals when controlled search omits them", async (_product, suppliedUrls) => {
+  const urls: readonly string[] = suppliedUrls;
+  const engine = fakeEngine({ sufficiency: () => ({ sufficient: false, rationale: "Controlled fixture needs each target" }),
+    decide: input => input.candidates.map((candidate, index) => ({ ...buy({ id: candidate.id, name: candidate.name, price: 0 }), targets: [index] })) });
+  engine.decompose = async () => urls.map((_, index) => `What does requested document ${index + 1} state?`);
+  const d = deps([], engine, fakeGateway()), fund = vi.spyOn(d.gateway, "ensureFunded");
+  d.webSearch = { search: vi.fn(async () => []) };
+  d.readWebArticle = vi.fn(async url => {
+    const finalUrl = new URL(url); finalUrl.hash = "";
+    return { text: `Controlled document ${urls.indexOf(url) + 1} contains an intact synthetic evidence sentence. Unfinished extraction tail`,
+      title: "Controlled original", finalUrl: finalUrl.href, kind: "html" as const, truncated: true };
+  });
+  const { run, steps } = await drive({ question: `Use ${urls.join(" and ")} to inspect the originals.`, origin: "web",
+    researchMode: "deep", executionLimits: { attentionLimit: urls.length, reevaluateRounds: 0 } }, d);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(urls.length);
+  for (const url of urls) {
+    const bodyUrl = new URL(url); bodyUrl.hash = "";
+    expect(d.readWebArticle).toHaveBeenCalledWith(bodyUrl.href, expect.any(AbortSignal));
+    expect(engine.decideInput?.candidates.some(candidate => candidate.item?.itemUrl === bodyUrl.href && candidate.item.requestedSource?.urls.includes(url))).toBe(true);
+    expect(steps.some(step => step.message.includes(`Supplied source URL ${url} admitted`))).toBe(true);
+  }
+  expect(run.citations).toHaveLength(urls.length);
+  expect(run.citations.every(citation => citation.reward === 0 && citation.webProvenance?.truncated === true)).toBe(true);
+  expect(steps.some(step => step.message.includes("bounded whole-document read"))).toBe(true);
+  expect(fund).not.toHaveBeenCalled(); expect(d.db.payments).toEqual([]);
+  const receipt = buildResearchReceipt(run, d.db.payments);
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  expect(receipt.payload.dispatch.question).toBe(run.question);
+  expect(receipt.payload.dispatch.answer).toBe(run.answer);
+});
+
+it.each(["missing", "invalid"])("offers exact supplied URLs with %s provider configuration without promoting an omitted decision", async state => {
+  const configured = config.webSearchProvider, endpoint = config.webSearchUrl;
+  Object.assign(config, { webSearchProvider: state === "missing" ? "" : "searxng", webSearchUrl: "invalid" });
+  try {
+    const engine = fakeEngine({ decide: () => [] }), d = deps([], engine, fakeGateway());
+    d.readWebArticle = vi.fn(async () => { throw new Error("Unexpected read"); });
+    const { run, steps } = await drive({ question: "Use https://www.sqlite.org/wal.html for this decision.", origin: "web" }, d);
+    expect(engine.decideInput?.candidates.some(candidate => candidate.item?.itemUrl === "https://www.sqlite.org/wal.html")).toBe(true);
+    expect(run.decisions.find(decision => decision.itemUrl === "https://www.sqlite.org/wal.html")).toMatchObject({ action: "SKIP", price: 0,
+      rationale: expect.stringContaining("No valid decision was returned") });
+    expect(d.readWebArticle).not.toHaveBeenCalled();
+    expect(run.answer).toContain("Source URLs were already supplied");
+    expect(run.answer).not.toContain("supply a relevant original source URL");
+    expect(steps.some(step => step.message.includes(state === "missing"
+      ? "search provider not configured, supplied URL leads only" : "search configuration unavailable, supplied URL leads only"))).toBe(true);
+  } finally { Object.assign(config, { webSearchProvider: configured, webSearchUrl: endpoint }); }
+});
+
+it("records unsafe source refusals without inventing a read attempt", async () => {
+  const configured = config.webSearchProvider; Object.assign(config, { webSearchProvider: "" });
+  try {
+    const d = deps([], fakeEngine(), fakeGateway());
+    d.readWebArticle = vi.fn(async () => { throw new Error("Unsafe read"); });
+    const { run, steps } = await drive({ question: "Read https://127.0.0.1/private and http://docs.example/legacy.", origin: "web" }, d);
+    expect(d.readWebArticle).not.toHaveBeenCalled(); expect(run.citations).toEqual([]);
+    expect(steps.some(step => step.message.includes("non-public-literal-host"))).toBe(true);
+    expect(steps.some(step => step.message.includes("https-required"))).toBe(true);
+    expect(run.answer).toContain("discovery refusal");
+    expect(run.answer).not.toContain("Selected public originals could not supply usable text");
+  } finally { Object.assign(config, { webSearchProvider: configured }); }
+});
+
+it.each(["unattended", "private", "private-opt-in"])("withholds supplied URL reads for %s research", async scope => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  const search = vi.fn(async () => []); d.webSearch = { search };
+  d.readWebArticle = vi.fn(async () => { throw new Error("Forbidden read"); });
+  const privateId = `prv_${"6".repeat(64)}`;
+  if (scope !== "unattended") d.effects = isolatedTestEffects(privateId);
+  const { run, steps } = await drive({ question: "Use https://docs.example/original.", origin: scope === "unattended" ? "engine" : "web",
+    ...(scope !== "unattended" ? { queryId: privateId } : {}), ...(scope === "private-opt-in" ? { allowExternalWeb: true } : {}) }, d);
+  expect(search).not.toHaveBeenCalled(); expect(d.readWebArticle).not.toHaveBeenCalled();
+  expect(run.decisions.some(decision => decision.itemUrl === "https://docs.example/original")).toBe(false);
+  expect(steps.some(step => step.message.includes("Supplied source URL"))).toBe(false);
 });
 it("never promotes an unread search snippet into evidence and contains page-read failures", async () => {
   const d = deps([], fakeEngine(), fakeGateway());
@@ -916,7 +995,11 @@ describe("runAgent — money-safety invariants", () => {
     expect(paidRewards).toBeCloseTo(pool, 9);
   });
 
-  it("never settles to external marketplace endpoints — they are forced to SKIP", async () => {
+  it.each([
+    { chain: "Base", onArc: false },
+    { chain: "Arc mainnet", onArc: true },
+    { chain: "Arc testnet", onArc: true },
+  ])("never purchases external marketplace endpoints advertising $chain — they are forced to SKIP", async ({ chain, onArc }) => {
     const budget = 0.05;
     const sources = [makeSource({ id: "a", fetchPrice: 0.004 })];
     // Engine proposes BUYing an external endpoint too; the orchestrator must veto it.
@@ -937,13 +1020,22 @@ describe("runAgent — money-safety invariants", () => {
     });
     const gw = fakeGateway();
     const d = deps(sources, engine, gw);
+    d.discoverExternal = vi.fn(async () => [{
+      id: "ext:https://paid.example/api", name: "External API", description: "Advertised paid API", tags: [],
+      fetchPrice: 0.01, cached: false, preview: "External metadata",
+      external: { resource: "https://paid.example/api", chains: [chain], payTo: "0xexternal", onArc },
+    }]);
 
-    const { run } = await drive({ question: "q", budget }, d);
+    const { run, steps } = await drive({ question: "q", budget, researchMode: "deep" }, d);
 
+    expect(d.discoverExternal).toHaveBeenCalledOnce();
     const ext = run.decisions.find((x) => x.sourceId.startsWith("ext:"));
     expect(ext).toBeDefined();
     expect(ext!.action).toBe("SKIP");
     expect(ext!.external).toBe(true);
+    expect(ext!.rationale).toContain(`advertises acceptance on ${chain}`);
+    expect(ext!.rationale).toContain("discovery-only");
+    expect(steps.some(step => step.message.includes(`advertise acceptance on ${chain}`))).toBe(true);
     // No fetch call and no payment ever references an external endpoint.
     expect(gw.fetchCalls.some((id) => id.startsWith("ext:"))).toBe(false);
     expect(d.db.payments.some((p) => p.sourceId.startsWith("ext:"))).toBe(false);

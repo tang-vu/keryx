@@ -1,16 +1,18 @@
 # Open-issue reliability repairs
 
-This release addresses reproducible code paths in #157, #158 and #163, and stages
-tools for #164. It does not reopen the completed paid evaluation or claim #128's
+This v0.26.13 candidate extends the merged v0.26.12 repairs with complete original
+scope/status, typed reasoning isolation and staging tools. #163 was closed by
+v0.26.12; this release retains its full authority checks and adds regression assurance. It does not reopen the completed paid evaluation or claim #128's
 useful research, independent settlement or user-recording gates passed. Historical
 dispatches, receipts and provider circuits are preserved.
 
 ## Supplied originals (#157)
 
-Extract at most four explicit HTTPS document candidates from the original question,
+Recognize at most eight distinct explicit URL leads from the original question,
 independently of search results and publisher slots. Scan at most sixteen URLs in
-a bounded question; visibly refuse oversized, credential-bearing and unsupported
-HTTP links. HTTP is recognized but the existing reader still requires HTTPS; no
+the first30,000 question characters; never admit a URL cut at that boundary.
+Visibly refuse oversized (2,000 characters), credential-bearing, non-public literal
+host, unsupported port, official-document discussion and unsupported HTTP links. HTTP is recognized but the existing reader still requires HTTPS; no
 replacement URL is invented. Actual reads retain public-only DNS pinning, redirect,
 byte/parser/time and attention bounds. Admission is not evidence, official-source
 verification or payment authority. Private/unattended disclosure restrictions remain.
@@ -58,12 +60,12 @@ snapshot comparison, replay and custody checks. Fixture orchestration must model
 the observed races without putting an entire research run inside a timed API call.
 
 The unchanged baseline inspection failed at publication after its token reached
-5,006/5,072 ms; its refusal was correct. Keyless inspection now consumes immutable
-evidence at validated token issuance, then reloads and compares its complete
-original operation, namespaces and all four reservation slots before the final
-freshness check. Retained-token consumers still perform the full unseal reload.
-Held descriptor/path and canonical manifest bytes remain checked; an identical
-manifest is no longer reparsed redundantly. Native post-issuance drift must refuse.
+5,006/5,072 ms; its refusal was correct. v0.26.12 batches exact SQLite schema
+comparisons per guarded call without caching authority. The combined implementation
+retains async unseal and its fresh backend snapshot, full manifest semantic/byte
+reread, held descriptor/path, complete assembled original operation/namespaces/all
+four reservation slots and the final freshness check. No issuance-evidence shortcut
+is retained. Native post-issuance drift must refuse, including the unseal itself.
 
 The browser baseline aborted the grant challenge at 8,005 ms because the fixture
 put concurrent research inside that timed HTTP call. The fixture now completes

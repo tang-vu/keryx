@@ -1,5 +1,37 @@
 # Keryx — Decision Log
 
+**Monitoring observations and mainnet defaults — 2026-10-05.** Describe service
+availability separately from recorded financial checks. Add bounded freshness for
+the four existing summary records without vendor requests, scheduler changes or
+financial transitions in health. A missing, invalid, future or stale timestamp is
+unavailable/currently unobserved, never an inferred successful check. A recent
+summary dates an observation and does not prove a pass, active scheduling or settlement.
+New desktop tasks target the public mainnet service; persisted task networks remain
+immutable history. Creator proof keeps the 24-hour control boundary and manual
+refresh, with clear owner recovery rather than implicit renewal or earnings activation.
+Monthly/Slack/external discovery copy reflects its actual role; marketplace metadata
+does not authorize payments. See [release scope](docs/engineering/mainnet-consistency-2026-10-05.md).
+
+**Caller source leads, serving visibility and native authority checks — 2026-10-05.**
+URLs in the original question are bounded unread discovery leads even without a search
+provider. Never manufacture a source from a domain or model-created target, force a BUY,
+or treat a supplied URL as document contents, official authorship or creator authority.
+Keep existing public transport, final identity, evidence and portfolio bounds; fragment
+requests share a document read and do not claim section-specific extraction. Retain
+refusal and omission reasons so discovery failure does not become another request for
+the same already-supplied URLs. Private and unattended external-effect gates remain.
+
+Expose allowlisted recorded reasoning attempts and step-specific serving/fallback state
+through shared results. Aggregate engine names or model synthesis cannot certify model
+source selection; missing, invalid and bounded-out telemetry remains unknown. This is
+observability, not a circuit reset, provider policy change or recovered usefulness claim.
+
+Batch trusted exact schema triples in one native SQLite statement per guard. Compare the
+first matching stored definition with binary exact SQL semantics, preserving missing,
+null and drift refusals. Do not materialize stored SQL into JavaScript or cache authority.
+Keep storage enrollment, authorizers, markers, counts and observation deadlines intact.
+Windows acceptance and Linux CI must verify both correctness and the reported improvement.
+
 **Bind legacy evidence to complete source spans and private neighboring context — 2026-10-05.**
 Ordinary-client results exposed an unconfirmed proposal without its qualification
 and a mid-sentence excerpt. Bind new internal proposals to exact read offsets,
@@ -5053,12 +5085,25 @@ admission. Keep the reviewed early writer drain until clean immutable role bindi
 economic compatibility/rollback, off-box evidence and measured no-spend plus ordinary
 production rollout pass. Synthetic process timing establishes only that fixture.
 
-Keyless funding inspection can consume immutable evidence at validated readiness
-issuance when it subsequently reloads and compares its full assembled originals
-and performs a final freshness check. A retained-token consumer must still unseal
-against a fresh backend snapshot. Redundant manifest reparsing is not an authority
-check when held path/descriptor, exact canonical bytes and native backend binding
-are already verified. Preserve the five-second TTL and every custody/replay guard.
+After the parallel v0.26.12 native-schema batching repair, retain the complete
+keyless inspection path: async unseal/fresh backend, semantic manifest reread,
+full assembled original comparison and final five-second freshness check. Exact
+schema guards still run on every operation; no authority cache or new issuance
+API is needed. The native Windows mutation/drift checks pass with the stronger
+original path. Timings are fixture evidence, not production performance guarantees.
 Browser fixtures model concurrent work at the synthetic wallet boundary, outside
 the production transport deadline, with fresh state for each journey and unchanged
 assertions. Windows timing failures do not justify weakening the deployed limits.
+
+
+### Reconcile parallel issue and mainnet releases - 2026-10-05
+
+v0.26.12 merged while issue repairs were in CI. v0.26.13 must retain its mainnet
+surface/monitor/schema fixes and resolve overlap through one URL-admission helper
+and one bounded public `reasoning` contract, preserving remote protocol0.3.0.
+Named originals have the existing eight-lead cap and independent admission from
+search publisher slots; actual attention, public transport, evidence and spend
+limits remain. Canonical bodies retain up to four requested fragment URLs as
+scope metadata, with truthful final read status. New MCP0.4.5/desktop0.4.6 identities
+avoid reuse of already selected0.4.4/0.4.5 bytes. Combined regressions, independent
+review, exact-source CI and serialized deployment/publication remain required.

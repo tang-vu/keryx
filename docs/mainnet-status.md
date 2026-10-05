@@ -9,11 +9,11 @@ observation; recheck health for the current release.
 
 ## October 5 reliability candidate
 
-Application 0.26.12, stdio MCP 0.4.4 and Operator desktop 0.4.5 coordinate
+Application 0.26.13, stdio MCP 0.4.5 and Operator desktop 0.4.6 coordinate
 [the open-issue repairs](engineering/issue-followups-2026-10-05.md). They require
 exact-source CI/review, separate accepted package publication and deployed-health
 readback. The dated observations below remain historical. Remote MCP protocol
-0.2.0 and extension 0.1.1 retain their compatible roles. This candidate does not
+0.3.0 from the merged v0.26.12 correction and extension 0.1.1 retain their roles. This candidate does not
 reopen paid evaluation, clear durable circuits, activate richer briefs or admit
 immutable production cutover.
 
@@ -84,11 +84,16 @@ the public Monthly quote returned HTTP 503 during this documentation check, so
 purchase readiness and its current merchant were not verified here. Preserve these
 unknowns instead of importing old testnet figures.
 
-One runtime-copy follow-up remains outside this documentation-only refresh:
+At that documentation-only refresh, one runtime-copy follow-up remained:
 `research_monthly` tool metadata in `lib/monthly/mcp-discovery.ts` and the immutable
 MCP 0.4.3 package still says “Arc-testnet Monthly quote”. The selected payment
 profile/API determines the actual network; correcting distributed runtime metadata
-requires its own coordinated release. See [surface parity](surface-parity.md).
+requires its own coordinated release. The October 5 **0.26.12 / MCP 0.4.4**
+candidate corrects that metadata and related Slack/API/discovery copy; exact-source
+publication and deployment remain separate gates. Its unpaid Monthly quote check
+returned mainnet successfully, superseding the earlier unavailable observation
+for current availability only. See [scope and open gates](engineering/mainnet-consistency-2026-10-05.md)
+and [surface parity](surface-parity.md).
 
 Routine changes follow [the post-mainnet update flow](mainnet-update-flow.md).
 Documentation-only changes require review and CI, without redeploying unchanged

@@ -98,14 +98,14 @@ export interface SourceCandidate {
   preview: string; // free preview (recent item titles + summaries)
   /**
    * Present only on endpoints discovered in the live external x402 marketplace (Circle services).
-   * They settle on other chains, not Keryx's Arc rail, so they are discovery-only: the agent
-   * reasons over them but the orchestrator never purchases them.
+   * All remain discovery-only, regardless of their advertised payment networks: the agent
+   * reasons over them but the orchestrator never purchases them. Metadata is not payment authority.
    */
   external?: {
     resource: string; // the paid endpoint URL
-    chains: string[]; // human chain labels it settles on (e.g. "Base", "Ethereum")
-    payTo: string; // seller wallet
-    onArc: boolean; // true only if it settles on Keryx's Arc rail (none today)
+    chains: string[]; // human labels for advertised payment networks (e.g. "Base", "Arc mainnet")
+    payTo: string; // advertised seller wallet, not trusted payout authority
+    onArc: boolean; // advertises acceptance on Keryx's selected Arc profile; discovery-only
   };
 }
 

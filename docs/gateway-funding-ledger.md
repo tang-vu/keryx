@@ -258,13 +258,13 @@ opaque token binds the operation and backend snapshot; async unseal reloads it a
 synchronous consumer check rejects elapsed or changed authority. Concurrent debit, insufficient
 availability or outage leaves readiness unknown and cannot start another funding operation.
 
-Keyless inspection receives immutable evidence at that validated issuance boundary,
-then reloads and compares its complete assembled original operation, namespaces and
-all four reservation slots before its final synchronous token freshness check.
-Retained-token consumers still require async unseal and its backend reload. This
-composition grants no funding, signing or resume permission. Windows acceptance
-covers native post-issuance drift, retained-token expiry and all browser variants
-with the existing freshness and transport deadlines.
+Keyless inspection retains async unseal with its fresh backend snapshot, the full
+canonical manifest reread and assembled original operation/namespaces/all four
+reservation slots before the final synchronous token freshness check. Exact native
+schema comparisons are batched per guarded operation, never cached as authority.
+Windows regression coverage rejects post-issuance native drift and retained-token
+expiry under the original freshness/transport deadlines. This grants no funding,
+signing or resume permission.
 
 Preflight/readiness and orchestration are separate candidates under implementation and review.
 Their generated-key, localhost HTTP and native-store fixtures do not establish funded production

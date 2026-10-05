@@ -1,4 +1,4 @@
-name: Publish MCP to npm
+name: Publish MCP to npm and official Registry
 
 on:
   workflow_dispatch:
@@ -62,6 +62,8 @@ jobs:
           assert.equal(pkg.repository.directory, 'mcp');
           assert.notEqual(pkg.private, true);
           NODE
+          node --test scripts/mcp-registry-release.test.mjs
+          node scripts/mcp-registry-release.mjs validate
       - name: Build and inspect the exact release archive
         run: |
           npm --prefix mcp run build
@@ -102,6 +104,10 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24.21.0'
@@ -110,11 +116,21 @@ jobs:
         with:
           name: npm-release
           path: release/
-      - name: Publish verified archive using npm Trusted Publishing
+      - name: Check verified archive and exact npm version before any publication
+        id: npm-preflight
+        timeout-minutes: 1
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
         run: |
           sha256sum --check release/SHA256SUMS
-          npm publish ./release/*.tgz --ignore-scripts --access public --provenance --registry https://registry.npmjs.org/
+          node scripts/mcp-registry-release.mjs preflight-npm
+      - name: Publish verified archive once using npm Trusted Publishing
+        if: steps.npm-preflight.outputs.state == 'absent'
+        timeout-minutes: 3
+        run: |
+          npm publish ./release/*.tgz --ignore-scripts --access public --provenance --registry https://registry.npmjs.org/ --fetch-retries=0
       - name: Verify public registry version and integrity
+        if: ${{ !cancelled() && steps.npm-preflight.outcome == 'success' }}
         timeout-minutes: 7
         env:
           EXPECTED_VERSION: ${{ inputs.version }}
@@ -142,3 +158,40 @@ jobs:
           assert.equal(published.version, process.env.EXPECTED_VERSION);
           assert.equal(published.dist.integrity, pack.integrity);
           NODE
+          node scripts/mcp-registry-release.mjs verify-npm
+      - name: Check exact official Registry version before any publication
+        id: registry-preflight
+        timeout-minutes: 1
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: node scripts/mcp-registry-release.mjs preflight
+      - name: Install pinned official MCP publisher
+        if: steps.registry-preflight.outputs.state == 'absent'
+        timeout-minutes: 2
+        run: |
+          mkdir "$RUNNER_TEMP/mcp-publisher"
+          curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 10 --max-time 60 \
+            https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz \
+            --output "$RUNNER_TEMP/mcp-publisher/archive.tar.gz"
+          # Official release asset digest verified through the GitHub Releases API.
+          echo "a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc  $RUNNER_TEMP/mcp-publisher/archive.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/mcp-publisher/archive.tar.gz" -C "$RUNNER_TEMP/mcp-publisher" mcp-publisher
+          "$RUNNER_TEMP/mcp-publisher/mcp-publisher" validate mcp/server.json
+      - name: Publish exact manifest once using repository-owner GitHub OIDC
+        if: steps.registry-preflight.outputs.state == 'absent'
+        timeout-minutes: 2
+        run: |
+          publisher="$RUNNER_TEMP/mcp-publisher/mcp-publisher"
+          trap '"$publisher" logout >/dev/null 2>&1 || true' EXIT
+          "$publisher" login github-oidc --registry=https://registry.modelcontextprotocol.io
+          # One submission only. A timeout or uncertain response must be inspected,
+          # never followed by a blind repeat of this command.
+          "$publisher" publish mcp/server.json
+      - name: Verify exact and latest public MCP Registry manifests
+        # Read back even if the one publish command had an ambiguous response.
+        # That failure still fails the job; this step never retries publication.
+        if: ${{ !cancelled() && steps.registry-preflight.outcome == 'success' }}
+        timeout-minutes: 6
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: node scripts/mcp-registry-release.mjs verify

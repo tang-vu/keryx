@@ -225,25 +225,31 @@ describe("explicit keyless funding inspection command", () => {
   });
 
   it("rechecks the complete original snapshot after readiness issuance before composing its report", async () => {
-    const originalFactory = readiness.createGatewayFundingReadinessInspectionObserverForTrustedSyntheticComposition;
+    const originalFactory = readiness.createGatewayFundingReadinessObserverForTrustedSyntheticComposition;
+    const originalUnseal = readiness.unsealVerifiedGatewayFundingReadiness;
     const before = f.snapshot();
     let writerSnapshot: unknown, writerBytes: Buffer | undefined;
-    const spy = vi.spyOn(readiness, "createGatewayFundingReadinessInspectionObserverForTrustedSyntheticComposition").mockImplementation(endpoint => {
+    let unsealRefused = false;
+    const unsealSpy = vi.spyOn(readiness, "unsealVerifiedGatewayFundingReadiness").mockImplementation(async (...args) => {
+      try { return await originalUnseal(...args); } catch (error) { unsealRefused = true; throw error; }
+    });
+    const spy = vi.spyOn(readiness, "createGatewayFundingReadinessObserverForTrustedSyntheticComposition").mockImplementation(endpoint => {
       const observe = originalFactory(endpoint);
       return async request => {
-        const observation = await observe(request); expect(observation).not.toBeNull();
-        readiness.assertVerifiedGatewayFundingReadinessCurrent(observation!.token, request);
+        const token = await observe(request); expect(token).not.toBeNull();
+        readiness.assertVerifiedGatewayFundingReadinessCurrent(token!, request);
         const writer = openGatewayFundingSqliteLedger(f.file, f.storage.identity);
         try { await writer.reserveStep(f.operation.operationId, "approval", "1"); } finally { writer.close(); }
-        readiness.assertVerifiedGatewayFundingReadinessCurrent(observation!.token, request);
-        writerSnapshot = f.snapshot(); writerBytes = readFileSync(f.file); return observation;
+        readiness.assertVerifiedGatewayFundingReadinessCurrent(token!, request);
+        writerSnapshot = f.snapshot(); writerBytes = readFileSync(f.file); return token;
       };
     });
     responseValue = { token: "USDC", balances: [{ depositor: f.operation.policy.spend, domain: 26, balance: "0.000100" }] };
     try {
       await expect(inspection.inspectGatewayFundingSqliteOperationForTrustedSyntheticComposition({ ...options(), currentAvailability: true }, endpoint))
         .rejects.toMatchObject({ cause: { phase: "refreshed-load" } });
-    } finally { spy.mockRestore(); }
+      expect(unsealSpy).toHaveBeenCalledOnce(); expect(unsealRefused).toBe(true);
+    } finally { spy.mockRestore(); unsealSpy.mockRestore(); }
     expect(writerSnapshot).toBeDefined(); expect(writerSnapshot).not.toEqual(before);
     expect(f.snapshot()).toEqual(writerSnapshot); expect(readFileSync(f.file)).toEqual(writerBytes);
   });

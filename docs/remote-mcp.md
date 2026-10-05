@@ -101,14 +101,14 @@ and attributes the run; it does not custody funds or become a payment authority.
 
 `mode` accepts `quick` or `deep` (default). `scholarly: true` opts into bounded Crossref/arXiv discovery and sends the question to those services. Structured results retain article/version metadata, answer-qualified public evidence, and recorded BibTeX/RIS/evidence CSV exports. Planned citation allocations are separate from settlement; `creatorsPaid` remains null when the distinct settled count is unavailable.
 
-The result also exposes `reasoningAttempts` and `reasoningServing`, grouped by reasoning step.
-Each serving entry retains every recorded serving engine/tier, including repeated passes, and
-marks `degraded` and `heuristic`. Text-only consumers receive the same per-step summary. For
-example, `decide: heuristic (degraded)` remains visible when other steps used DeepSeek; the
-aggregate `engine` string alone does not establish which provider selected sources. Attempts
-contain bounded categories/status/timing and local input-fit counts, never prompts or provider
-response bodies. `reasoningTelemetry: "unavailable"` explicitly labels older results without
-attempt history; their serving tiers are not reconstructed.
+The result exposes bounded `reasoningAttempts` and one `reasoning` projection with
+`telemetry`, `attemptsOmitted`, per-step serving and `sourceSelection`. Each step
+retains its recorded engine/tier and marks degraded/heuristic serving. Text-only
+consumers receive the same summary; the aggregate `engine` alone does not show
+which provider selected sources. Attempts contain allowlisted categories/status/
+timing and numeric local input bounds, never prompts or provider response bodies.
+`reasoning.telemetry` marks unavailable/incomplete history explicitly; absent
+serving tiers are not reconstructed. Remote protocol0.3.0 remains additive.
 
 Request-local output validation or input refusal does not clear historical circuit failures.
 If a half-open probe was already acquired, its bounded lease expires normally; a rejected

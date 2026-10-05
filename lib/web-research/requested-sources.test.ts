@@ -14,16 +14,17 @@ it("admits bounded supplied originals without search and retains section request
 it("reports HTTP, credentials, oversized and excess originals without unsafe replacement or credential output", () => {
   const result = requestedSources("http://example.com/a https://user:secret@example.com/a https://example.com/" + "a".repeat(2049)
     + " " + Array.from({ length: 8 }, (_, i) => `https://example.com/${i}`).join(" "));
-  expect(result.candidates.size).toBe(4);
-  expect(result.notices).toHaveLength(7);
+  expect(result.candidates.size).toBe(5);
+  expect(result.notices).toHaveLength(4);
   expect(result.notices[0].reason).toContain("requires HTTPS");
   expect(JSON.stringify(result.notices)).not.toContain("secret");
-  expect(result.notices.at(-1)?.reason).toContain("4 documents");
+  expect(result.notices.at(-1)?.reason).toContain("eight-lead limit");
 });
 
 it("bounds scans and does not read DNS or infer public eligibility from admission", () => {
   const result = requestedSources("https://127.0.0.1/private " + Array.from({ length: 25 }, (_, i) => `https://example.com/${i}`).join(" "));
-  expect(result.candidates.size).toBe(4);
+  expect(result.candidates.size).toBe(7);
+  expect(result.leads[0].refusal).toBe("non-public-literal-host");
   expect(result.notices.at(-1)?.reason).toContain("scan limit");
   expect([...result.candidates.values()][0].description).toContain("unobserved");
 });

@@ -22,8 +22,10 @@ Zero source-access USDC does not mean zero search, model or infrastructure cost.
 
 ## Discovery and reading
 
-Questions containing original URLs admit up to four explicit HTTPS candidates
-independently of search results. Decisions and the answer report each original's
+Questions containing original URLs recognize up to eight distinct caller leads
+within a 30,000-character/16-URL scan, independently of search publisher slots.
+Unsafe or cut-at-bound URLs are refused, including when returned again by search.
+Decisions and the answer report each original's
 observed status, including omitted proposals/read failures; secondary excerpts do
 not satisfy an unread original. Fragments remain request metadata, while the reader
 attempts only bounded whole-document extraction. Unsupported HTTP, credentials,

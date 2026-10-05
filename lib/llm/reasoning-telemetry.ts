@@ -1,64 +1,73 @@
+import { z } from "zod";
 import type { ReasoningAttempt, ReasoningStep } from "./reasoning-engine";
+
+const reasoningSteps = ["decompose", "decide", "sufficiency", "reevaluate", "synthesize", "attribute"] as const;
+const MAX_PUBLIC_REASONING_ATTEMPTS = 256;
+const count = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const reasoningAttemptSchema = z.object({
+  step: z.enum(reasoningSteps), engine: z.string().min(1).max(256).refine(value => !/[\r\n\0]/.test(value)),
+  tier: count, attempt: count, startedAt: count, durationMs: count,
+  outcome: z.enum(["served", "failed", "circuit-open", "input-limited"]), retryAfterMs: count.optional(),
+  status: z.number().int().min(100).max(599).optional(),
+  error: z.enum(["timeout", "rate_limited", "provider", "network", "invalid_request", "output_validation", "input_limit", "internal"]).optional(),
+  inputBounds: z.object({ promptUtf8Bytes: count, requestedOutputTokens: count, maximumCombinedUnits: count }).optional(),
+}).refine(value => value.outcome === "circuit-open" ? value.attempt === 0 : value.attempt > 0);
 
 export interface ReasoningServingStep {
   step: ReasoningStep;
-  /** Every serving engine for this step, including repeated selection/assessment passes. */
-  engines: string[];
-  tiers: number[];
-  degraded: boolean;
-  heuristic: boolean;
+  state: "unknown" | "mixed" | "heuristic" | "model";
+  /** Every recorded serving engine, including repeated or overlapping passes. */
+  servingEngines: string[];
+  /** Null when missing/omitted attempts prevent a negative conclusion. */
+  fallbackUsed: boolean | null;
 }
 
 export interface ReasoningSurface {
-  reasoningTelemetry: "recorded" | "unavailable";
   reasoningAttempts: ReasoningAttempt[];
-  reasoningServing: ReasoningServingStep[];
+  reasoning: {
+    telemetry: "recorded" | "incomplete" | "unavailable";
+    attemptsOmitted: number;
+    steps: ReasoningServingStep[];
+    sourceSelection: ReasoningServingStep;
+  };
 }
 
-const steps = new Set<ReasoningStep>(["decompose", "decide", "sufficiency", "reevaluate", "synthesize", "attribute"]);
-const errors = new Set<ReasoningAttempt["error"]>(["timeout", "rate_limited", "provider", "network", "invalid_request", "output_validation", "input_limit", "internal"]);
-const outcomes = new Set<ReasoningAttempt["outcome"]>(["served", "failed", "circuit-open", "input-limited"]);
-const nonnegative = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-
-/** Public allowlist projection: no exceptions, bodies, prompts or arbitrary historical fields. */
-export function surfaceReasoning(attempts?: readonly ReasoningAttempt[]): ReasoningSurface {
-  if (!Array.isArray(attempts)) return { reasoningTelemetry: "unavailable", reasoningAttempts: [], reasoningServing: [] };
-  const reasoningAttempts: ReasoningAttempt[] = attempts.flatMap(attempt => {
-    if (!attempt || !steps.has(attempt.step) || !outcomes.has(attempt.outcome) || typeof attempt.engine !== "string" ||
-      attempt.engine.length > 200 || !nonnegative(attempt.tier) || !nonnegative(attempt.attempt) ||
-      !nonnegative(attempt.startedAt) || !nonnegative(attempt.durationMs)) return [];
-    const bounds = attempt.inputBounds;
-    return [{ step: attempt.step, engine: attempt.engine, tier: attempt.tier, attempt: attempt.attempt,
-      startedAt: attempt.startedAt, durationMs: attempt.durationMs, outcome: attempt.outcome,
-      ...(nonnegative(attempt.retryAfterMs) ? { retryAfterMs: attempt.retryAfterMs } : {}),
-      ...(nonnegative(attempt.status) && attempt.status >= 100 && attempt.status <= 599 ? { status: attempt.status } : {}),
-      ...(errors.has(attempt.error) ? { error: attempt.error } : {}),
-      ...(bounds && nonnegative(bounds.promptUtf8Bytes) && nonnegative(bounds.requestedOutputTokens) &&
-        nonnegative(bounds.maximumCombinedUnits) ? { inputBounds: {
-          promptUtf8Bytes: bounds.promptUtf8Bytes, requestedOutputTokens: bounds.requestedOutputTokens,
-          maximumCombinedUnits: bounds.maximumCombinedUnits,
-        } } : {}),
-    }];
-  });
-  const byStep = new Map<ReasoningStep, ReasoningServingStep>();
-  for (const attempt of reasoningAttempts) {
-    let serving = byStep.get(attempt.step);
-    if (!serving) {
-      serving = { step: attempt.step, engines: [], tiers: [], degraded: false, heuristic: false };
-      byStep.set(attempt.step, serving);
-    }
-    if (attempt.outcome !== "served") { serving.degraded = true; continue; }
-    if (!serving.engines.includes(attempt.engine)) serving.engines.push(attempt.engine);
-    if (!serving.tiers.includes(attempt.tier)) serving.tiers.push(attempt.tier);
-    serving.degraded ||= attempt.tier > 0;
-    serving.heuristic ||= attempt.engine === "heuristic";
+/** The shared bounded public contract. Never infer serving from the aggregate
+ * engine, expose provider bodies, or certify model-only serving after omission. */
+export function surfaceReasoning(recorded: unknown): ReasoningSurface {
+  const input: unknown[] = Array.isArray(recorded) ? recorded : [];
+  const attempts: ReasoningAttempt[] = [];
+  for (const value of input.slice(0, MAX_PUBLIC_REASONING_ATTEMPTS)) {
+    const parsed = reasoningAttemptSchema.safeParse(value);
+    if (parsed.success) attempts.push(parsed.data);
   }
-  return { reasoningTelemetry: "recorded", reasoningAttempts, reasoningServing: [...byStep.values()] };
+  const omitted = input.length - attempts.length;
+  const telemetry = omitted || recorded != null && !Array.isArray(recorded) ? "incomplete" as const
+    : attempts.length ? "recorded" as const : "unavailable" as const;
+  const summarize = (step: ReasoningStep): ReasoningServingStep => {
+    const served = attempts.filter(attempt => attempt.step === step && attempt.outcome === "served");
+    const servingEngines = [...new Set(served.map(attempt => attempt.engine))];
+    const heuristic = servingEngines.includes("heuristic");
+    const models = servingEngines.some(engine => engine.startsWith("llm:"));
+    const state = telemetry !== "recorded" || !served.length || servingEngines.some(engine => engine !== "heuristic" && !engine.startsWith("llm:"))
+      ? "unknown" as const : heuristic && models ? "mixed" as const : heuristic ? "heuristic" as const : "model" as const;
+    return { step, state, servingEngines,
+      fallbackUsed: served.some(attempt => attempt.tier > 0) ? true : telemetry === "recorded" && served.length > 0 ? false : null };
+  };
+  return { reasoningAttempts: attempts, reasoning: { telemetry, attemptsOmitted: omitted,
+    steps: reasoningSteps.filter(step => attempts.some(attempt => attempt.step === step)).map(summarize),
+    sourceSelection: summarize("decide") } };
 }
 
+/** Text-only clients consume the same recorded facts; absent history stays unknown. */
 export function reasoningServingText(result: Partial<ReasoningSurface>): string {
-  if (result.reasoningTelemetry !== "recorded" || !Array.isArray(result.reasoningServing)) return "Per-step serving tiers: unavailable in this recorded result.";
-  if (result.reasoningServing.length === 0) return "Per-step serving tiers: no recorded steps.";
-  return "Per-step serving tiers: " + result.reasoningServing.map(step =>
-    `${step.step}: ${step.engines.join(" + ") || "no served tier"}${step.degraded ? " (degraded)" : ""}`).join("; ");
+  const reasoning = result.reasoning;
+  if (!reasoning || !Array.isArray(reasoning.steps)) return "Per-step serving tiers: unavailable in this recorded result.";
+  if (!reasoning.steps.length) return `Per-step serving tiers: no recorded steps (${reasoning.telemetry} attempt telemetry).`;
+  return `Per-step serving tiers (${reasoning.telemetry} attempt telemetry): ` + reasoning.steps.map(step => {
+    const engines = step.servingEngines.slice(0, 4).join(" + ") || "none recorded";
+    const remainder = step.servingEngines.length > 4 ? ` + ${step.servingEngines.length - 4} more` : "";
+    const fallback = step.fallbackUsed === true ? "fallback served" : step.fallbackUsed === false ? "requested tier served" : "fallback use unknown";
+    return `${step.step}: ${engines}${remainder} (${step.state}; ${fallback})`;
+  }).join("; ");
 }

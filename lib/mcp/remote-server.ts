@@ -29,7 +29,6 @@ export function remoteResearchResult(run: QueryRun) {
     totalToCreatorsUsdc: run.totalToCreators,
     confidence: run.confidence,
     engine: run.engine,
-    paymentMode: run.paymentMode,
     paymentAttempts: run.paymentAttempts ?? 0,
     settledPayments: run.settledPayments ?? 0,
     dispatchUrl: `${config.baseUrl}/dispatch/${run.id}`,
@@ -46,7 +45,13 @@ function researchText(result: ReturnType<typeof remoteResearchResult>): string {
   const settlement =
     result.paymentMode === "real"
       ? `${result.settledPayments}/${result.paymentAttempts} payment attempts settled`
-      : "offline payment simulation";
+      : result.paymentMode === "offline" ? "offline payment simulation" : "payment mode unknown; no simulation or settlement inferred";
+  const selection = result.reasoning.sourceSelection;
+  const engines = selection.servingEngines.slice(0, 4).join(", ") || "none recorded";
+  const engineRemainder = selection.servingEngines.length > 4 ? ` + ${selection.servingEngines.length - 4} more` : "";
+  const selectionText = `Recorded source selection: ${selection.state} · ${engines}${engineRemainder} · ` +
+    (selection.fallbackUsed === true ? "fallback served" : selection.fallbackUsed === false ? "requested tier served" : "fallback use unknown") +
+    ` (${result.reasoning.telemetry} attempt telemetry)`;
   const groundedClaims = result.claimCoverage.filter(
     (claim) => claim.coverage >= 0.4,
   ).length;
@@ -56,6 +61,7 @@ function researchText(result: ReturnType<typeof remoteResearchResult>): string {
     `${reasoningServingText(result)}\n\n` +
     `Citations and planned creator rewards\n${rewards}\n\n` +
     `Evidence: ${groundedClaims}/${result.claimCoverage.length} research targets meet the recorded excerpt-support threshold; this does not verify entailment or complete synthesis\n` +
+    `${selectionText}\n` +
     `Total recorded to creators: $${result.totalToCreatorsUsdc.toFixed(4)} USDC · ${settlement}\n` +
     `Confidence: ${result.confidence?.level ?? "Low"} · ${result.dispatchUrl}`
   );
@@ -68,7 +74,7 @@ export function createRemoteMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: "keryx",
-    version: "0.2.0",
+    version: "0.3.0",
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });

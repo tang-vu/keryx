@@ -1,17 +1,36 @@
 # Keryx Project Changelog
 
-### Original admission, serving-tier visibility and Windows reliability (2026-10-05, v0.26.12 candidate)
+### Original scope, typed reasoning failures and release isolation (2026-10-05, v0.26.13 candidate)
 
 - Consider supplied original URLs independently of search; retain per-source skips,
   failures, bounded reads and section limitations in the answer and receipt.
 - Distinguish invalid model output, internal errors and ineligible fallbacks from
   transport failures; expose recorded per-step serving to MCP consumers.
-- Diagnose Windows timing failures without raising production freshness/transport
-  limits; add focused Windows regression coverage.
+- Retain the full funding inspection/unseal path after the native schema timing
+  repair in v0.26.12; add diagnostics, post-issuance drift and fresh-custody Windows coverage.
 - Stage immutable-release preparation and synthetic no-spend rehearsal. The current
   reviewed maintenance deployment remains authoritative.
+- Publish distinct MCP 0.4.5 and desktop 0.4.6 bytes after exact-source acceptance.
 - No new paid evaluation or circuit reset. #128, #158's historical/live gates and
   #164's real deployment gates remain open. See [scope and audit](engineering/issue-followups-2026-10-05.md).
+### Align mainnet runtime guidance and recovery UX (2026-10-05, v0.26.12 candidate)
+
+- Correct Slack/OpenAI, Monthly MCP/API and external marketplace guidance without inferring
+  settlement or changing the network of historical records.
+- Default new Operator desktop tasks to Arc mainnet and expose creator claim-control
+  freshness with deliberate verification recovery. Existing task networks and the
+  24-hour proof policy remain intact.
+- Expose missing and stale financial-monitor observations separately from service
+  availability. Preserve held schedules, payment reservations and signing authority.
+- Admit bounded caller-supplied source URLs as unread leads when search omits them;
+  retain normal public-read and evidence gates, and show refusal or selection skips.
+- Expose recorded source-selection engines and fallback telemetry in shared results
+  and remote MCP. Unknown history stays unknown; no circuit reset or paid retest occurs.
+- Batch exact SQLite schema comparisons in native code without caching authority or
+  weakening freshness. Record empty-ledger observations without claiming settlement.
+- Coordinate MCP 0.4.4 and desktop 0.4.5 distribution; extension and remote protocol
+  retain their existing roles, with remote MCP's additive result labelled 0.3.0.
+  See [scope and open gates](engineering/mainnet-consistency-2026-10-05.md).
 
 ### Preserve source qualifications and complete quotations (2026-10-05, v0.26.11 candidate)
 

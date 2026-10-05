@@ -9,6 +9,7 @@ import { canonicalSourceUrl, sourceClaimSchema, type SourceClaim, type SourceCla
 import { registrationTarget } from "@/lib/registration-return";
 import { fmtUsdc } from "./phase-style";
 import { claimRequest } from "./public-source-claim-api";
+import { ClaimTime } from "./public-source-claim-status";
 
 interface Listing { id: string; name: string; url: string; rssUrl?: string; walletAddress: string; onchainId?: string; fetchPrice: number }
 const modes: { value: SourceClaimMode; title: string; detail: string }[] = [
@@ -72,7 +73,7 @@ export function PublicSourceClaimPolicy({ claim, name, enabled, controlFresh, on
   return <div className="space-y-5 border-t border-paid/30 pt-5">
     <div>
       <h3 className="font-display text-2xl">3. Choose and activate a policy</h3>
-      <p className="mt-2 text-sm leading-relaxed text-ink-2">Current policy: <strong>{modes.find(value => value.value === claim.mode)?.title}</strong>. Effective for new uses from <time dateTime={claim.effectiveAt}>{new Date(claim.effectiveAt).toLocaleString()}</time>. Verification does not collect past rewards or charge for earlier free reads.</p>
+      <p className="mt-2 text-sm leading-relaxed text-ink-2">Saved policy: <strong>{modes.find(value => value.value === claim.mode)?.title}</strong>. Effective for eligible new uses from <ClaimTime value={claim.effectiveAt} />. Verification does not collect past rewards or charge for earlier free reads.</p>
     </div>
     <fieldset disabled={working || !enabled} className="space-y-3">
       <legend className="mb-2 text-sm font-semibold">Requested policy</legend>
@@ -101,7 +102,7 @@ export function PublicSourceClaimPolicy({ claim, name, enabled, controlFresh, on
     {earning && <label className="flex min-h-11 items-start gap-3 border border-line bg-paper p-3 text-sm"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} disabled={!enabled || working} className="mt-1" /><span>I have the rights to distribute the registered content through Keryx and receive payments for it. Website control alone does not establish those rights.</span></label>}
     <p className="text-sm text-ink-2">{mode === "free" ? "This policy disables creator rewards for this claim. Public reads remain free." : mode === "citation-only" ? "Future reads remain free. Only new qualified citations after activation can earn rewards." : "Only new selected paid reads through this registered listing can incur its toll after activation. Public references and historical free receipts stay free."}</p>
     <button type="button" onClick={() => void mutate("policy")} disabled={!canActivate} className="min-h-11 border border-ink bg-seal px-4 py-2.5 text-sm text-paper disabled:opacity-50">{working ? "Saving policy…" : mode === "free" ? "Keep this claim free" : `Activate ${mode === "paid" ? "paid reads" : "citation rewards"}`}</button>
-    {claim.mode !== "free" && !changed && enabled && controlFresh && <p role="status" className="text-sm">This earning policy is active. New qualified uses may earn; activation does not guarantee selection or settlement.</p>}
+    {claim.mode !== "free" && !changed && enabled && controlFresh && <p role="status" className="text-sm">This earning policy is saved. New qualified uses may earn while control proof, permission and live registry authority remain valid; activation does not guarantee selection or settlement.</p>}
     {message && <div role="status" className="space-y-2 text-sm text-seal"><p>{message}</p><button type="button" onClick={onReload} className="min-h-11 underline">Reload current claim status</button></div>}
   </div>;
 }

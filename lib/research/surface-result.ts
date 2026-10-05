@@ -26,7 +26,8 @@ export function surfaceResearch(run: QueryRun) {
     quote: item.quote, support: item.support, qualifiesForAnswer: item.qualifiesForAnswer ?? item.qualifiesForReward,
     qualifiesForReward: item.qualifiesForReward, ...receiptAsset(item),
   }));
-  return { ...surfaceReasoning(run.reasoningAttempts), citations: run.citations.map(surfaceCitation), evidence,
+  return { citations: run.citations.map(surfaceCitation), evidence,
+    ...surfaceReasoning(run.reasoningAttempts),
     creatorsPaid: null, creatorsPaidAuthority: "distinct-settled-count-unavailable" as const,
     creatorsReferenced: new Set(run.citations.map(c => c.sourceId)).size,
     creatorRewardAllocations: new Set(run.citations.filter(c => c.sourceKind !== "public-reference" && c.reward > 0).map(c => c.sourceId)).size,

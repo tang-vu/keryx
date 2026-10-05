@@ -69,7 +69,7 @@ export function RegistryStatusSection({ registry }: { registry: RegistryHealth }
         <Row k="Indexed block" v={registry.lastSyncedBlock ?? "—"} />
       </dl>
       <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
-        Hourly sweep reads every registry record back and compares payout wallet, author
+        The recorded sweep reads every registry record back and compares payout wallet, author
         splits, price, and active flag against the cache the agent pays from.
       </p>
     </>

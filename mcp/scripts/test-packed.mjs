@@ -45,11 +45,13 @@ try {
   await writeFile(mock, `
 const fs=require('node:fs'), crypto=require('node:crypto'), viem=require('viem');
 const counts={paid:0,rpc:0,recovery:0};
-const reasoning={engine:'llm:deepseek:deepseek-v4-flash',reasoningTelemetry:'recorded',
+const reasoning={engine:'llm:deepseek:deepseek-v4-flash',
  reasoningAttempts:[{step:'decompose',engine:'llm:deepseek:deepseek-v4-flash',tier:0,attempt:1,startedAt:1,durationMs:0,outcome:'served'},
  {step:'decide',engine:'heuristic',tier:3,attempt:1,startedAt:2,durationMs:0,outcome:'served'}],
- reasoningServing:[{step:'decompose',engines:['llm:deepseek:deepseek-v4-flash'],tiers:[0],degraded:false,heuristic:false},
- {step:'decide',engines:['heuristic'],tiers:[3],degraded:true,heuristic:true}]};
+ reasoning:{telemetry:'recorded',attemptsOmitted:0,
+ steps:[{step:'decompose',state:'model',servingEngines:['llm:deepseek:deepseek-v4-flash'],fallbackUsed:false},
+ {step:'decide',state:'heuristic',servingEngines:['heuristic'],fallbackUsed:true}],
+ sourceSelection:{step:'decide',state:'heuristic',servingEngines:['heuristic'],fallbackUsed:true}}};
 const mainnet=process.env.KERYX_NETWORK==='arc', chain=mainnet?5042:5042002, network='eip155:'+chain, gateway=mainnet?'0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE':'0x0077777d7EBA4688BDeF3E311b846F25870A19B9', balanceApi=mainnet?'https://gateway-api.circle.com/v1/balances':'https://gateway-api-testnet.circle.com/v1/balances';
 const save=()=>fs.writeFileSync(process.env.TEST_COUNTS,JSON.stringify(counts));
 const deny=()=>{throw new Error('Live network forbidden in package acceptance');};
@@ -139,10 +141,11 @@ globalThis.fetch=async(input,init)=>{
   const happy = await session("happy", join(workspace, `${selectedNetwork}-happy-payment.json`));
   const status = await happy.call("keryx_wallet_status"); assert.match(status.content[0].text, /ready:    yes/);
   const answer = await happy.call("ask_keryx", { question: "Synthetic package research" }); assert(!answer.isError); assert.match(answer.content[0].text, /Synthetic cited answer/);
-  assert.match(answer.content[0].text, /decide: heuristic \(degraded\)/);
-  assert.equal(answer.structuredContent.reasoningTelemetry, "recorded");
-  assert.deepEqual(answer.structuredContent.reasoningServing.find(step => step.step === "decide"),
-    { step: "decide", engines: ["heuristic"], tiers: [3], degraded: true, heuristic: true });
+  assert.match(answer.content[0].text, /decide: heuristic \(heuristic; fallback served\)/);
+  assert.equal(answer.structuredContent.reasoning.telemetry, "recorded");
+  assert.deepEqual(answer.structuredContent.reasoning.sourceSelection,
+    { step: "decide", state: "heuristic", servingEngines: ["heuristic"], fallbackUsed: true });
+  assert(!('reasoningTelemetry' in answer.structuredContent)); assert(!('reasoningServing' in answer.structuredContent));
   assert.equal(answer.structuredContent.reasoningAttempts.find(attempt => attempt.step === "decide").engine, "heuristic");
   await happy.stop(); const happyCounts = JSON.parse(await readFile(happy.counts, "utf8")); assert.equal(happyCounts.paid, 1);
   const journal = join(workspace, `${selectedNetwork}-unknown-payment.json`), unknown = await session("unknown", journal);
@@ -152,7 +155,7 @@ globalThis.fetch=async(input,init)=>{
   const unknownCounts = JSON.parse(await readFile(unknown.counts, "utf8")); assert.equal(unknownCounts.paid, 1);
   const recovery = await session("recovery", journal, false);
   const recovered = await recovery.call("keryx_recover"); assert(!recovered.isError); assert.match(recovered.content[0].text, /Recovered original synthetic answer/);
-  assert.match(recovered.content[0].text, /"reasoningTelemetry": "recorded"/);
+  assert.match(recovered.content[0].text, /"telemetry": "recorded"/);
   await recovery.stop(); const recoveryCounts = JSON.parse(await readFile(recovery.counts, "utf8")); assert.equal(recoveryCounts.paid, 0); assert.equal(recoveryCounts.recovery, 1);
   }
   console.log(JSON.stringify({ networks: ["arcTestnet", "arc"], package: installedPackage.name, version: installedPackage.version, node: process.version,

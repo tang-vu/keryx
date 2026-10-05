@@ -118,6 +118,7 @@ jobs:
 
       - name: Built stdio Monthly discovery (hermetic, no settlement)
         run: |
+          node --test scripts/mcp-registry-release.test.mjs
           npm --prefix mcp run build
           node --import tsx scripts/test-monthly-mcp-package.mts
 

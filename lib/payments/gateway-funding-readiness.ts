@@ -55,10 +55,6 @@ export interface GatewayFundingReadinessEvidence {
 }
 declare const verified: unique symbol;
 export interface VerifiedGatewayFundingReadiness { readonly [verified]: true }
-export interface GatewayFundingReadinessObservation {
-  readonly token: VerifiedGatewayFundingReadiness;
-  readonly evidence: Readonly<GatewayFundingReadinessEvidence>;
-}
 type Issued = { ledger: GatewayFundingLedger; guard: () => void; metadata: string; snapshot: string;
   observed: number; evidence: Readonly<GatewayFundingReadinessEvidence> };
 const issued = new WeakMap<object, Issued>();
@@ -126,7 +122,7 @@ async function load(request: GatewayFundingReadinessRequest, live: () => void) {
     || BigInt(namespaces[1].nextCryptoNonce) <= BigInt(tx.nonce)) refuse();
   live(); return { operation, namespaces, hash: terminal.transactionHash, snapshot: digest({ operation, namespaces, slot }) };
 }
-async function observe(request: GatewayFundingReadinessRequest, endpoint: string, total: number, requestMs: number): Promise<Readonly<GatewayFundingReadinessObservation> | null> {
+async function observe(request: GatewayFundingReadinessRequest, endpoint: string, total: number, requestMs: number): Promise<VerifiedGatewayFundingReadiness | null> {
   const started = now(); // includes initial synchronous binding/guard work
   let life: ReturnType<typeof lifetime> | undefined;
   try {
@@ -161,31 +157,18 @@ async function observe(request: GatewayFundingReadinessRequest, endpoint: string
       availableMicros: available.toString(), minimumAvailableMicros: initial.operation.minimumAvailableMicros });
     life.live(); const token = Object.freeze({}) as VerifiedGatewayFundingReadiness;
     issued.set(token, { ledger: b.ledger, guard: b.guard, metadata: b.key, snapshot: initial.snapshot, observed, evidence });
-    assertVerifiedGatewayFundingReadinessCurrent(token, request); return Object.freeze({ token, evidence });
+    assertVerifiedGatewayFundingReadinessCurrent(token, request); return token;
   } catch { return null; } finally { life?.close(); }
 }
-export async function observeGatewayFundingReadiness(request: GatewayFundingReadinessRequest) { return (await observe(request, ENDPOINT, TOTAL_MS, REQUEST_MS))?.token ?? null; }
-/** Evidence at the validated issuance boundary. Keyless inspection still reloads
- * its complete assembled originals and checks this token at publication. A later
- * retained-token consumer must use unseal to obtain a new backend observation. */
-export function observeGatewayFundingReadinessForInspection(request: GatewayFundingReadinessRequest) { return observe(request, ENDPOINT, TOTAL_MS, REQUEST_MS); }
+export function observeGatewayFundingReadiness(request: GatewayFundingReadinessRequest) { return observe(request, ENDPOINT, TOTAL_MS, REQUEST_MS); }
 /** Fixed native localhost HTTP only; lower-only synthetic deadlines, no fetch or clock delegate. */
-function syntheticParameters(endpoint: string, limits?: Readonly<{ totalDeadlineMs: number; requestDeadlineMs: number }>) {
+export function createGatewayFundingReadinessObserverForTrustedSyntheticComposition(endpoint: string, limits?: Readonly<{ totalDeadlineMs: number; requestDeadlineMs: number }>) {
   const url = new URL(endpoint);
   if (url.protocol !== "http:" || url.hostname !== "127.0.0.1" || url.username || url.password || url.pathname !== "/v1/balances" || url.search || url.hash) refuse();
   let total = TOTAL_MS, request = REQUEST_MS;
   if (limits) { shape(limits, ["totalDeadlineMs", "requestDeadlineMs"]); total = limits.totalDeadlineMs; request = limits.requestDeadlineMs;
     if (!Number.isSafeInteger(total) || total <= 0 || total > TOTAL_MS || !Number.isSafeInteger(request) || request <= 0 || request > REQUEST_MS) refuse(); }
-  return { url: url.href, total, request };
-}
-export function createGatewayFundingReadinessObserverForTrustedSyntheticComposition(endpoint: string, limits?: Readonly<{ totalDeadlineMs: number; requestDeadlineMs: number }>) {
-  const parameters = syntheticParameters(endpoint, limits);
-  return async (value: GatewayFundingReadinessRequest) => (await observe(value, parameters.url, parameters.total, parameters.request))?.token ?? null;
-}
-/** Same native observer and bounds, with issuance evidence for keyless inspection. */
-export function createGatewayFundingReadinessInspectionObserverForTrustedSyntheticComposition(endpoint: string) {
-  const parameters = syntheticParameters(endpoint);
-  return (value: GatewayFundingReadinessRequest) => observe(value, parameters.url, parameters.total, parameters.request);
+  return (value: GatewayFundingReadinessRequest) => observe(value, url.href, total, request);
 }
 /** Last synchronous consumer boundary. Does not claim a new DB/Circle snapshot. */
 export function assertVerifiedGatewayFundingReadinessCurrent(token: VerifiedGatewayFundingReadiness, request: GatewayFundingReadinessRequest): void {

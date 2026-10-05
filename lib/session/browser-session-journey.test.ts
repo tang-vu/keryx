@@ -1,14 +1,14 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, onTestFailed, vi } from "vitest";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { build, type BuildOptions } from "esbuild";
 import { chromium } from "playwright";
 import { decodeFunctionData, encodeFunctionResult, erc20Abi, toHex, keccak256, parseTransaction,
   encodeFunctionData, encodeAbiParameters, encodeEventTopics, type Hex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { ARC_MAINNET_PROFILE as profile } from "../arc-network-profile";
 import { canonicalJson } from "../canonical-json";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "../db/storage-identity";
@@ -18,17 +18,19 @@ import type { QueryRun } from "../types";
 const cleanup: Array<() => void | Promise<void>> = [];
 // Only immutable compiled fixture bytes are shared. Every scenario still opens
 // fresh storage, authentication, browser context, worker and custody lifecycles.
-const bundles = new Map<"worker" | "session" | "creator", Promise<string>>();
+const bundles = new Map<"worker" | "session" | "creator", { inputDigest: string; output: Promise<string> }>();
 function fixtureBundle(role: "worker" | "session" | "creator", options: BuildOptions) {
-  let pending = bundles.get(role);
-  if (!pending) {
-    pending = build(options).then(result => {
+  const inputDigest = createHash("sha256").update(JSON.stringify(options, (_key, value) => typeof value === "function" ? value.toString() : value)).digest("hex");
+  let cached = bundles.get(role);
+  if (!cached) {
+    const output = build(options).then(result => {
       if (result.outputFiles?.length !== 1) throw new Error("Synthetic browser bundle unavailable");
       return result.outputFiles[0].text;
     });
-    bundles.set(role, pending);
+    cached = { inputDigest, output }; bundles.set(role, cached);
   }
-  return pending;
+  if (cached.inputDigest !== inputDigest) throw new Error("Synthetic browser bundle inputs changed");
+  return cached.output;
 }
 // Capture only canonical endpoint categories and transport timing. Cookies, bodies,
 // query strings, identities and signatures never enter fixture diagnostics.
@@ -54,6 +56,9 @@ afterEach(async () => {
 // keep their complete production composition within the existing case deadline.
 it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("completes a normal mainnet browser journey (%s)", async failCitation => {
   const citationFails = failCitation === true;
+  const transportDiagnostics: string[] = [];
+  let journeyPhase = "initial-registration";
+  onTestFailed(() => console.info(`Synthetic browser transport ${JSON.stringify({ phase: journeyPhase, requests: transportDiagnostics.slice(-30) })}`));
   vi.resetModules();
   const folder = mkdtempSync(join(tmpdir(), "keryx-browser-mainnet-journey-")), databasePath = join(folder, "fresh.sqlite");
   cleanup.push(() => rmSync(folder, { recursive: true, force: true }));
@@ -69,7 +74,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     KERYX_REGISTRY_ADDRESS: registry, NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: registry, BASE_URL: origin, JWT_SECRET: randomBytes(32).toString("hex"),
     KERYX_WITHDRAWAL_MAX_VALUE_MICROS:"1000000", KERYX_WITHDRAWAL_MAX_FEE_MICROS:"1000", KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS:"300", NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS:"300",
     KERYX_WITHDRAWAL_MAX_PROCESSING_LAG_BLOCKS:"20" })) vi.stubEnv(name, value);
-  const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), creator = privateKeyToAccount(`0x${"22".repeat(32)}`);
+  const owner = privateKeyToAccount(generatePrivateKey()), creator = privateKeyToAccount(generatePrivateKey());
   const cookies = new AsyncLocalStorage<string | undefined>();
   vi.doMock("next/headers", () => ({ cookies: async () => ({ get: (name: string) => name === "keryx_session" && cookies.getStore() ? { value: cookies.getStore() } : undefined }) }));
   const settledNonces = new Set<string>(); let sessionAddress = "", circleDebit = BigInt(0), depositCredit = BigInt(0);
@@ -201,13 +206,13 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
       getTransactionCount:async()=>window.sentFunding.length,getBlockNumber:async()=>BigInt(100+window.sentFunding.length*2),
       getTransaction:async({hash})=>{const tx=window.sentFunding.find(tx=>tx.hash===hash);return {...tx,value:BigInt(tx.value),blockNumber:BigInt(tx.blockNumber)}},
       getTransactionReceipt:async({hash})=>{const tx=window.sentFunding.find(tx=>tx.hash===hash);return {transactionHash:hash,blockHash:tx.blockHash,blockNumber:BigInt(tx.blockNumber),status:'success'}}};
-    window.wallet={account:{address:'${owner.address}'},getChainId:async()=>5042,getAddresses:async()=>['${owner.address}'],signMessage:async({message})=>window.ownerPersonalSign(message),
+    window.wallet={account:{address:window.fixtureOwnerAddress},getChainId:async()=>5042,getAddresses:async()=>[window.fixtureOwnerAddress],signMessage:async({message})=>window.ownerPersonalSign(message),
       signTypedData:async(fields)=>window.ownerBurnSign(JSON.parse(JSON.stringify(fields,(_,v)=>typeof v==='bigint'?v.toString():v))),
       sendTransaction:async(tx)=>{const hash=await window.ownerFundingSubmit({from:typeof tx.account==='string'?tx.account:tx.account.address,to:tx.to,data:tx.data,value:tx.value.toString(),nonce:tx.nonce,
       gas:tx.gas?.toString(),maxFeePerGas:tx.maxFeePerGas?.toString(),maxPriorityFeePerGas:tx.maxPriorityFeePerGas?.toString()});
       window.sentFunding.push({hash,from:tx.account,to:tx.to,input:tx.data,value:tx.value.toString(),nonce:tx.nonce,blockHash:'${blockHash}',blockNumber:String(101+tx.nonce*2)});return hash;}};
     function Probe(){const grant=useMainnetSessionGrant(); window.normalGrant=grant;return <><output id="state">{JSON.stringify(grant.state)}</output><SessionCashoutPanel sessAddr={grant.state.sessAddr}/></>}
-    createRoot(document.getElementById('root')).render(${failCitation==="creator"?`<CreatorOwnerWithdrawalPanel address="${owner.address}"/>`:"<Probe/>"});
+    createRoot(document.getElementById('root')).render(${failCitation==="creator"?"<CreatorOwnerWithdrawalPanel address={window.fixtureOwnerAddress}/>":"<Probe/>"});
   ` }, bundle: true, write: false, platform: "browser", format: "esm",
     banner: { js: transportProbe },
     define: { "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"',
@@ -219,6 +224,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     } }] });
   const browser = await chromium.launch({ headless: true }); cleanup.push(() => browser.close());
   const context = await browser.newContext(); await context.addCookies([{ name: "keryx_session", value: token, url: origin, secure: true, httpOnly: true, sameSite: "Strict" }]);
+  await context.addInitScript(address => { (window as unknown as { fixtureOwnerAddress: string }).fixtureOwnerAddress = address; }, owner.address);
   const ownerMessages: string[] = [];
   await context.exposeFunction("ownerPersonalSign", (message: string) => { ownerMessages.push(message); return owner.signMessage({ message }); });
   let creatorBurnSigns=0;
@@ -231,10 +237,10 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
   let capturedCredit: { path: string; status: number; body: string; headers: Record<string, string> } | undefined;
   const fundingProposals: Array<{ requested: string; cap: string }> = [];
   const { GATEWAY_DEPOSIT_FOR_ABI } = await import("../buyer/funding-policy");
-  let originalCashoutId="", sessionMinting=false;
+  let originalCashoutId="";
   await context.exposeFunction("ownerFundingSubmit", async (tx: { from: string; to: string; data: Hex; value: string; nonce: number;gas?:string;maxFeePerGas?:string;maxPriorityFeePerGas?:string }) => {
     expect(tx.from.toLowerCase()).toBe(owner.address.toLowerCase()); expect(tx.value).toBe("0");
-    if(sessionMinting||failCitation==="creator"){
+    if(tx.to.toLowerCase()===profile.gatewayMinter.toLowerCase()){
       expect(tx.to.toLowerCase()).toBe(profile.gatewayMinter.toLowerCase());
       const localRecord=(await db.getCreatorWithdrawal(originalCashoutId,failCitation==="creator"?owner.address.toLowerCase():sessionAddress))!;
       const {WITHDRAWAL_MINTER_ABI}=await import("../gateway/withdrawal-mint-observation");
@@ -311,7 +317,6 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     return route.fulfill({ status: response.status, body: await response.text(), headers: Object.fromEntries(response.headers) });
   });
   const page = await context.newPage();
-  const transportDiagnostics: string[] = [];
   page.on("console", message => { if (message.text().startsWith("SESSION_TRANSPORT ")) transportDiagnostics.push(message.text().slice("SESSION_TRANSPORT ".length)); });
   await page.goto(origin);
   if(failCitation==="creator"){
@@ -354,7 +359,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     expect(await page.getByRole("button",{name:"Send signed creator burn",exact:true}).isDisabled()).toBe(true);
     const record=(await db.getCreatorWithdrawal(originalCashoutId,owner.address.toLowerCase()))!;
     const claim=(await db.getCreatorWithdrawalTransferClaim(originalCashoutId,owner.address.toLowerCase()))!;
-    const spec=record.request.burnIntent.spec,attester=privateKeyToAccount(`0x${"44".repeat(32)}`);
+    const spec=record.request.burnIntent.spec,attester=privateKeyToAccount(generatePrivateKey());
     const encodedSpec="ca85def7000000010000001a0000001a"+[spec.sourceContract,spec.destinationContract,spec.sourceToken,spec.destinationToken,
       spec.sourceDepositor,spec.destinationRecipient,spec.sourceSigner,spec.destinationCaller].map(v=>v.slice(2)).join("")+BigInt(spec.value).toString(16).padStart(64,"0")+spec.salt.slice(2)+"00000000";
     const attestation=`0xff6fb334${BigInt(120).toString(16).padStart(64,"0")}00000154${encodedSpec}` as Hex;
@@ -448,6 +453,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
   expect(payments.some(p => p.kind === "citation" && p.settled)).toBe(!citationFails);
   expect(await db.getQueryRun(done!.id)).not.toBeNull();
   if (!failCitation) {
+    journeyPhase = "recovery-races";
     const renew = async () => {
       const proposal = await dispatch(`${origin}/api/session/grant/challenge`, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessAddr: sessionAddress, budgetMicros: "50000", recover: true }) }, token);
@@ -488,6 +494,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     await recover(); await expect.poll(hookState).toMatchObject({ status: "active", grantEpoch: afterLogout.grantEpoch });
   }
   if (failCitation === "funding") {
+    journeyPhase = "top-up";
     const originalCap = (await hookState()).cap;
     duringApproval = async () => {
       const debitBefore = circleDebit;
@@ -516,7 +523,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     expect(await page.evaluate(() => (window as unknown as { sentFunding: unknown[] }).sentFunding.length)).toBe(2);
   }
   if (failCitation === "cashout") {
-    sessionMinting=true;
+    journeyPhase = "retained-cashout";
     const retainedEpoch=(await hookState()).grantEpoch;
     await page.evaluate(()=>(window as unknown as {normalGrant:{revoke():Promise<unknown>}}).normalGrant.revoke());
     await call("lock");await call("restoreRetained");blockTimestamp=Math.floor(Date.now()/1000);
@@ -540,7 +547,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     expect(transferCalls).toBe(1);
     expect(await call("reconcileWithdrawal",{requestId:prepared.requestId})).toMatchObject({completed:false});
     const record=(await db.getCreatorWithdrawal(prepared.requestId,sessionAddress))!,claim=(await db.getCreatorWithdrawalTransferClaim(prepared.requestId,sessionAddress))!;
-    const spec=record.request.burnIntent.spec,attester=privateKeyToAccount(`0x${"44".repeat(32)}`);
+    const spec=record.request.burnIntent.spec,attester=privateKeyToAccount(generatePrivateKey());
     const encodedSpec="ca85def7000000010000001a0000001a"+[spec.sourceContract,spec.destinationContract,spec.sourceToken,spec.destinationToken,
       spec.sourceDepositor,spec.destinationRecipient,spec.sourceSigner,spec.destinationCaller].map(v=>v.slice(2)).join("")+
       BigInt(spec.value).toString(16).padStart(64,"0")+spec.salt.slice(2)+"00000000";
