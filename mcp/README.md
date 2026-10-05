@@ -1,5 +1,11 @@
 # Keryx MCP
 
+Candidate 0.4.4 adds recorded per-step serving/degradation and exact fallback-input
+eligibility. Preserve legacy unavailable telemetry and all retained payment journals.
+Use the currently verified published version below until release/npm acceptance
+confirms the new archive; publication is separate from hosted deployment.
+
+
 Keryx buys selected sources under a budget and returns a cited answer with creator-payment state.
 The local stdio buyer pays the inbound x402 toll from a configured caller wallet on the independently configured Arc network.
 Public production uses Arc mainnet (`eip155:5042`). Set BOTH `KERYX_NETWORK=arc`

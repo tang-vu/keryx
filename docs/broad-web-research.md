@@ -22,6 +22,14 @@ Zero source-access USDC does not mean zero search, model or infrastructure cost.
 
 ## Discovery and reading
 
+Questions containing original URLs admit up to four explicit HTTPS candidates
+independently of search results. Decisions and the answer report each original's
+observed status, including omitted proposals/read failures; secondary excerpts do
+not satisfy an unread original. Fragments remain request metadata, while the reader
+attempts only bounded whole-document extraction. Unsupported HTTP, credentials,
+oversized and excess URLs are visibly refused. Existing transport/evidence/attention
+and disclosure rules remain in force. See [scope](engineering/issue-followups-2026-10-05.md).
+
 Use an operator-configured search service with a fixed server-side endpoint. Do not
 accept provider endpoints from a question, silently rotate through public instances,
 or treat a narrow encyclopedia/feed search as whole-web coverage. The owner has no

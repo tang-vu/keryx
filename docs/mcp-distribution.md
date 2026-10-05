@@ -1,5 +1,10 @@
 # MCP package distribution
 
+The 0.4.4 candidate adds per-step serving/degradation to text and structured results.
+The version observations below are dated; verify new exact-source package, npm
+bytes/provenance and installer delivery separately before claiming release completion.
+
+
 The caller-funded stdio package is distributed separately from the hosted remote
 MCP endpoint. On October 4, 2026, public npm readback confirmed **0.4.3**, and
 [GitHub v0.26.8](https://github.com/tang-vu/keryx/releases/tag/v0.26.8) supplies the

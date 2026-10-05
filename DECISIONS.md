@@ -5028,3 +5028,27 @@ operational inputs.
 Private economics reporting selects its reviewed read-only adapter through the same source-owned application storage boundary. It must not initialize the ordinary database, acquire writer authority or silently fall back from an unavailable mainnet identity. Keep the dormant funding/enrollment import guard unchanged; resolve `.mjs` imports to their authored `.mts` sources so the guard examines the actual transitive graph.
 
 Hermetic browser fixtures compile explicit public profile/registry pins as Next does, rather than installing a Node `process` global or accepting request-selected authority. Historical testnet signing, clock and malicious-parent assertions retain their original rail and limits. Faithful gateway/route fixtures provide inherited methods, canonical profiles and the required native authority interface; successful setup must not remove nonce, privacy or durable-issuance assertions. The desktop question remains visible in the first reading area with the original layout/keyboard acceptance thresholds.
+
+
+## Explicit originals and request-local reasoning failures - 2026-10-05
+
+A caller-supplied URL is a bounded discovery requirement, independent of search
+ranking; it is never document evidence, publisher authority or payment permission.
+Preserve each original and its fragment scope through decisions and final status,
+including model omission. Retain whole-document read limits, attention selection,
+exact arXiv identity and private/unattended disclosure boundaries. Secondary reads
+cannot silently satisfy an unread requested original. Optional receipt metadata
+adds scope without rewriting historical records or changing reward eligibility.
+
+Distinguish post-response output validation, internal errors and proven local
+input limits from supplier transport/health failures. Request-specific failures
+must not poison a shared provider-step circuit. Test the actual bounded prompt
+before claiming a fallback usable, retain all required input, and expose per-step
+serving to consumers. Preserve returned-call usage and existing durable failures;
+neither a new release nor an offline reproduction authorizes clearing circuits
+or reopening a closed paid evaluation. See the issue-followup scope document.
+
+Immutable source/artifact staging is independent preparation, not production
+admission. Keep the reviewed early writer drain until clean immutable role bindings,
+economic compatibility/rollback, off-box evidence and measured no-spend plus ordinary
+production rollout pass. Synthetic process timing establishes only that fixture.

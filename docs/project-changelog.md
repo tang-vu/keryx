@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### Original admission, serving-tier visibility and Windows reliability (2026-10-05, v0.26.12 candidate)
+
+- Consider supplied original URLs independently of search; retain per-source skips,
+  failures, bounded reads and section limitations in the answer and receipt.
+- Distinguish invalid model output, internal errors and ineligible fallbacks from
+  transport failures; expose recorded per-step serving to MCP consumers.
+- Diagnose Windows timing failures without raising production freshness/transport
+  limits; add focused Windows regression coverage.
+- Stage immutable-release preparation and synthetic no-spend rehearsal. The current
+  reviewed maintenance deployment remains authoritative.
+- No new paid evaluation or circuit reset. #128, #158's historical/live gates and
+  #164's real deployment gates remain open. See [scope and audit](engineering/issue-followups-2026-10-05.md).
+
 ### Preserve source qualifications and complete quotations (2026-10-05, v0.26.11 candidate)
 
 - Review quotations with exact source positions, URL/version and neighboring text.
