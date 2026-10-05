@@ -38,15 +38,15 @@ purchase, retained original response-loss state without a second debit, and
 new-process keyless GET-only recovery. These are package and local recovery
 checks; they do not demonstrate live settlement or mainnet readiness.
 
-The workflow attaches `keryx-mcp-0.4.3.tgz` and its `.source.json` manifest to the
+For this release target, the workflow attaches `keryx-mcp-0.4.4.tgz` and its `.source.json` manifest to the
 matching web release. The manifest records the source commit, SHA-256 and
 publication status at artifact creation. Assets are never overwritten.
-Use the published package or verified release tarball as an npm install specification
+After verifying publication for this target, use the package or release tarball as an npm install specification
 in your MCP client:
 
 ```text
-npx --yes --package=keryx-mcp@0.4.3 keryx-mcp
-npx --yes --package=https://github.com/tang-vu/keryx/releases/download/v0.26.8/keryx-mcp-0.4.3.tgz keryx-mcp
+npx --yes --package=keryx-mcp@0.4.4 keryx-mcp
+npx --yes --package=https://github.com/tang-vu/keryx/releases/download/v0.26.12/keryx-mcp-0.4.4.tgz keryx-mcp
 ```
 
 Follow the wallet and funding setup in [the package README](../mcp/README.md).

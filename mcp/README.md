@@ -2,8 +2,8 @@
 
 Candidate 0.4.4 adds recorded per-step serving/degradation and exact fallback-input
 eligibility. Preserve legacy unavailable telemetry and all retained payment journals.
-Use the currently verified published version below until release/npm acceptance
-confirms the new archive; publication is separate from hosted deployment.
+Verify release/npm acceptance for this archive before installation; publication
+is separate from hosted deployment. The observations below are dated.
 
 
 Keryx buys selected sources under a budget and returns a cited answer with creator-payment state.
@@ -73,12 +73,12 @@ Builds use the repository's pinned npm 11.19.0 installer. Critical consumer depe
 pinned to Circle x402 batching 3.5.0 and viem 2.55.19.
 
 On October 4, 2026, public npm readback confirmed `keryx-mcp` **0.4.3** and GitHub
-release `v0.26.8` provided the matching tarball from `1297d43`. Install the published
-package or the immutable release tarball. [Distribution evidence](../docs/mainnet-status.md)
+release `v0.26.8` provided the matching tarball from `1297d43`. For this release
+target, verify 0.4.4 publication and its exact source before installing. [Distribution evidence](../docs/mainnet-status.md)
 records artifact identity separately from hosted health and payment availability.
 
 ```bash
-npm install keryx-mcp@0.4.3
+npm install keryx-mcp@0.4.4
 ```
 
 Configure your MCP client to run `node /absolute/path/node_modules/keryx-mcp/dist/keryx-mcp.mjs`.
@@ -160,7 +160,7 @@ After the independent MCP install, also run `npm exec -- tsc --noEmit -p mcp/tsc
 from the repository root. This checks MCP and imported shared source against the MCP package's
 installed viem/Circle declarations, matching the single external dependency closure used by the
 bundled consumer. Run the packed acceptance with
-`node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.4.3.tgz /absolute/path/to/pinned/npm-cli.js`.
+`node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.4.4.tgz /absolute/path/to/pinned/npm-cli.js`.
 
 Mainnet purchase and original recovery require HTTPS without URL credentials or fragments. This is transport protection, not a seller host allowlist. Plain HTTP remains available for deliberate testnet local development.
 
