@@ -9,16 +9,17 @@ import type { IsolatedWrappedKey, WrappingKeyStore } from "./isolated-session-va
 import type { SourceClaim } from "../sources/public-source-claim";
 import { sourceClaimReceipt } from "../sources/source-claim-access";
 
-async function fixture() {
+async function fixture(researchBudget?: { durationSeconds: number; questionCapMicroUsdc: string }) {
   const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), payout = privateKeyToAccount(`0x${"22".repeat(32)}`).address.toLowerCase();
   const keys = new Map<string, CryptoKey>(), blobs = new Map<string, IsolatedWrappedKey>();
   const wrappingKeys: WrappingKeyStore = { async getOrCreate(n, k) { if (!keys.has(n)) keys.set(n,k); return keys.get(n)!; }, async destroy() { throw new Error(); } };
   const retained: RetainedSessionStore = { async read(n) { return blobs.get(n) ?? null; }, async retain(n,b) { if (!blobs.has(n)) blobs.set(n,b); return blobs.get(n)!; } };
   const key = createBrowserSessionKey("https://keryx.cc",owner.address,{wrappingKeys,retained});
   await key.derive(await owner.signMessage({message:key.context.derivationMessage}));
-  const consent = { format: "keryx-session-grant-consent-v1" as const, network: profile.networkId, origin:key.context.origin,
+  const consent = { format: researchBudget ? "keryx-session-grant-consent-v2" as const : "keryx-session-grant-consent-v1" as const,
+    ...(researchBudget ?? {}), network: profile.networkId, origin:key.context.origin,
     ownerAddr:key.context.owner,sessAddr:key.address!.toLowerCase(),grantEpoch:"00000000-0000-4000-8000-000000000001",
-    capMicroUsdc:"2000",expirySeconds:String(Math.floor(Date.now()/1000)+3600) };
+    capMicroUsdc:"2000",expirySeconds:String(Math.floor(Date.now()/1000)+(researchBudget?.durationSeconds ?? 3600)) };
   const grant = { active:true,sessionId:key.context.owner,ownerAddr:key.context.owner,sessAddr:consent.sessAddr,
     grantEpoch:consent.grantEpoch,network:profile.networkId,origin:key.context.origin,capMicroUsdc:consent.capMicroUsdc,spentMicroUsdc:"0",consent,
     ownerSignature:await owner.signMessage({message:createSessionGrantConsentMessage(consent,profile)}) };
@@ -147,6 +148,22 @@ it("enforces a question's integer sum independently of a larger lifetime grant",
   f.challenge.requirements.amount = "1";
   await expect(createBrowserSessionRuntime(f.key, f.dependencies).authorizePayment(f.challenge.reqId, scope)).rejects.toThrow("retained capacity");
   await expect(runtime.authorizePayment(f.challenge.reqId, { ...scope, budgetMicroUsdc: "500000" })).rejects.toThrow("retained capacity");
+  expect(f.consumed.size).toBe(2);
+});
+
+it("admits explicitly signed seven-day research budgets and refuses a widened question before journal lookup", async () => {
+  const f = await fixture({ durationSeconds: 604800, questionCapMicroUsdc: "1000" });
+  let lookups = 0;
+  const originalJson = f.dependencies.json;
+  f.dependencies.json = async path => { if (path === "/api/ask/challenge") lookups++; return originalJson(path); };
+  const runtime = createBrowserSessionRuntime(f.key, f.dependencies);
+  await expect(runtime.authorizePayment(f.challenge.reqId, f.question)).rejects.toThrow("Browser payment authorization refused");
+  expect(lookups).toBe(0); expect(f.consumed.size).toBe(0);
+  await runtime.authorizePayment(f.challenge.reqId, { ...f.question, budgetMicroUsdc: "1000" });
+  runtime.lock(); await f.key.restore();
+  f.challenge.expectedNonce = `0x${"88".repeat(32)}`;
+  await createBrowserSessionRuntime(f.key, f.dependencies).authorizePayment(f.challenge.reqId,
+    { id: "00000000-0000-4000-8000-000000000004", budgetMicroUsdc: "1000" });
   expect(f.consumed.size).toBe(2);
 });
 

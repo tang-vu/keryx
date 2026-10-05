@@ -1,5 +1,6 @@
 /** Hermetic Monthly checkout/recovery UI. Synthetic EOA, intercepted HTTP, no settlement. */
 import { build } from "esbuild";
+import { circleSdkBrowserPlugin } from "./circle-sdk-browser-plugin.mts";
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import { privateKeyToAccount } from "viem/accounts";
@@ -25,7 +26,7 @@ const bundle = await build({ stdin: { contents: `
     signMessage:async value=>window.syntheticSignMessage(value.message),signTypedData:async value=>window.syntheticSignTyped(value.message)};
   createRoot(document.getElementById('root')).render(React.createElement(ResearchMonthly,{quote:${JSON.stringify(quote)}}));`,
   resolveDir: process.cwd(), loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false, metafile: true,
-  define: { "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" }, plugins: [{ name: "hermetic-monthly", setup(b) {
+  define: { "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" }, plugins: [circleSdkBrowserPlugin(), { name: "hermetic-monthly", setup(b) {
     b.onResolve({ filter: /^(wagmi|next\/image)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /wallet-picker|gateway\/read-credit/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onLoad({ filter: /.*/, namespace: "synthetic" }, args => ({ contents:

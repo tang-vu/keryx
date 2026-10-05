@@ -1,23 +1,25 @@
 "use client";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePublicClient, useSwitchChain, useWalletClient } from "wagmi";
-import type { Hex, PublicClient } from "viem";
+import { recoverMessageAddress, type Hex, type PublicClient } from "viem";
 import { ARC_MAINNET_PROFILE as profile } from "../arc-network-profile";
 import { browserPaymentProfile } from "../browser-payment-profile";
 import { getSessionSigner, type SessionSigner } from "../session/session-signer-client";
 import { fundOwnerGatewaySession, reconcileOwnerSessionCredit, acknowledgeOwnerSessionCredit } from "../session/owner-gateway-funding";
 import { sessionJson } from "../session/browser-session-http";
 import { revokeBrowserSessionGrant } from "../session/browser-session-revocation";
-import { createSessionGrantConsentMessage, parseSessionGrantConsent, type SessionGrantConsent } from "../payments/session-grant-consent";
+import { createSessionGrantConsentMessage, createSessionGrantSignerProofMessage, parseSessionGrantConsent,
+  researchBudgetDurationSchema, sessionGrantDurationSeconds, type SessionGrantConsent } from "../payments/session-grant-consent";
 import { createSessionGrantClock } from "../session-grant-time";
 import { watchSessionGrantClock } from "../session-grant-liveness";
-import { readGatewayCredit } from "../gateway/read-credit";
 import type { GrantState } from "./use-session-grant";
 import { z } from "zod";
 import type { BrowserQuestionBudget } from "../session/browser-session-runtime";
 import { readOwnerSessionCredit } from "../session/session-funding-credit";
 import { readRetainedSessionGrantReference, retainSessionGrantReference } from "../session/browser-session-grant-reference";
 import { SessionCustodyMissingError } from "../session/session-custody-error";
+
+export interface ResearchBudgetOptions { durationSeconds: number; questionCapUsdc: number }
 
 const initial: GrantState = { status: "idle", sessAddr: null, sessionId: null, cap: 0, spent: 0,
   expiresAt: null, grantEpoch: null, error: null };
@@ -42,6 +44,9 @@ export function useMainnetSessionGrant() {
   const ownerRef = useRef(owner), generation = useRef(0), signerRef = useRef<SessionSigner | null>(null);
   const clock = useRef<ReturnType<typeof createSessionGrantClock> | null>(null);
   const currentConsent = useRef<SessionGrantConsent | null>(null);
+  // Advisory previous policy survives lock/expiry. Renewal still verifies the original
+  // server-retained signatures, including after reload where this ref is empty.
+  const latestConsent = useRef<SessionGrantConsent | null>(null);
   // Acquire synchronously, before any await or React render. Never queue a second
   // funding/consent attempt behind recovery or another wallet action.
   const mounted = useRef(true);
@@ -55,6 +60,7 @@ export function useMainnetSessionGrant() {
   }, []);
   useLayoutEffect(() => {
     if (ownerRef.current !== owner) {
+      latestConsent.current = null;
       generation.current += 1; clock.current = null; currentConsent.current = null; void signerRef.current?.clear();
       // Reflect disconnected payment authority before repaint, including during a pending wallet prompt.
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -101,11 +107,11 @@ export function useMainnetSessionGrant() {
     assertCurrent();
     const metadata = z.object({ sessionId: z.string(), ownerAddr: z.string(), sessAddr: z.string(),
       grantEpoch: z.string().uuid(), expiresAt: z.string(), capMicroUsdc: micros, spentMicroUsdc: micros }).parse(body);
-    const next = createSessionGrantClock(body, { sessionId: expectedOwner, sessAddr }, started, performance.now(), 86400000);
     // Worker independently verifies exact owner signature, network, origin, epoch, cap and expiry.
     const bound = await signer().bindGrant() as { response: { spentMicroUsdc: unknown }; consent: unknown };
     assertCurrent();
     const current = parseSessionGrantConsent(bound.consent, profile);
+    const next = createSessionGrantClock(body, { sessionId: expectedOwner, sessAddr }, started, performance.now(), sessionGrantDurationSeconds(current)*1000);
     if (current.ownerAddr !== expectedOwner || current.sessAddr !== sessAddr.toLowerCase() ||
       current.grantEpoch !== metadata.grantEpoch || current.capMicroUsdc !== metadata.capMicroUsdc ||
       Number(current.expirySeconds)*1000 !== Date.parse(metadata.expiresAt))
@@ -114,26 +120,51 @@ export function useMainnetSessionGrant() {
     if (BigInt(spent) < BigInt(metadata.spentMicroUsdc)) throw new Error("Retained signer capacity decreased unexpectedly");
     retainSessionGrantReference(current);
     currentConsent.current = current;
+    latestConsent.current = current;
     clock.current = next;
     setPublishedGeneration(expectedGeneration);
     setState({ status: "active", sessAddr, sessionId: metadata.sessionId, cap: Number(cap)/1e6,
-      spent: Number(spent)/1e6, expiresAt: metadata.expiresAt, grantEpoch: next.grantEpoch, error: null });
+      spent: Number(spent)/1e6, expiresAt: metadata.expiresAt, grantEpoch: next.grantEpoch, error: null,
+      ...(current.format === "keryx-session-grant-consent-v2" ? { researchBudget: {
+        durationSeconds: current.durationSeconds, questionCapUsdc: Number(current.questionCapMicroUsdc)/1e6 } } : {}) });
   }, [signer]);
-  const consentGrant = useCallback(async (sessAddr: string, budgetMicros: string, absoluteTarget?: bigint) => {
+  const consentGrant = useCallback(async (sessAddr: string, budgetMicros: string, absoluteTarget?: bigint,
+    options?: ResearchBudgetOptions, renew = false, addFunds = false) => {
     const expectedOwner = ownerRef.current, expectedGeneration = ++generation.current;
     clock.current = null; currentConsent.current = null;
     if (!expectedOwner || !wallet) throw new Error("Owner wallet unavailable");
     const assertCurrent = () => { if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) throw new Error("Session registration changed"); };
     await ensureArc(); assertCurrent(); setState(s => ({ ...s, status: "registering", sessAddr }));
     let requested = BigInt(budgetMicros);
+    const selected = options ? { durationSeconds: researchBudgetDurationSchema.parse(options.durationSeconds),
+      questionCapMicroUsdc: amount(options.questionCapUsdc) } : undefined;
     let proposal: { consent: SessionGrantConsent; funding: z.infer<typeof fundingSchema> } | null = null;
     for (let attempt=0; attempt<3; attempt++) {
-      const challenge = await sessionJson("/api/session/grant/challenge", "POST", { sessAddr, budgetMicros: requested.toString(), recover: true }) as { consent: unknown; funding: unknown };
+      const challenge = await sessionJson("/api/session/grant/challenge", "POST", { sessAddr, budgetMicros: requested.toString(), recover: true,
+        ...(selected ?? {}), ...(renew ? { renew: true } : {}), ...(addFunds ? { addFunds: true } : {}) }) as { consent: unknown; funding: unknown; renewalAuthority?: unknown };
       assertCurrent();
       const consent = parseSessionGrantConsent(challenge.consent, profile), funding = fundingSchema.parse(challenge.funding);
       const confirmed = BigInt(funding.confirmedSpentMicroUsdc), available = BigInt(funding.availableMicroUsdc), cap = BigInt(consent.capMicroUsdc);
+      let expectedCap = confirmed+(requested < available ? requested : available);
+      if (renew) {
+        const authority = z.object({ consent: z.unknown(), ownerSignature: z.string().regex(/^0x[0-9a-fA-F]{130}$/),
+          sessionSignature: z.string().regex(/^0x[0-9a-fA-F]{130}$/) }).strict().parse(challenge.renewalAuthority);
+        const original = parseSessionGrantConsent(authority.consent, profile);
+        if (original.ownerAddr !== expectedOwner || original.sessAddr !== sessAddr.toLowerCase() || original.origin !== window.location.origin ||
+          (await recoverMessageAddress({ message: createSessionGrantConsentMessage(original, profile), signature: authority.ownerSignature as Hex })).toLowerCase() !== expectedOwner ||
+          (await recoverMessageAddress({ message: createSessionGrantSignerProofMessage(original, profile), signature: authority.sessionSignature as Hex })).toLowerCase() !== original.sessAddr)
+          throw new Error("Original research budget proof differs");
+        if (latestConsent.current && (latestConsent.current.grantEpoch !== original.grantEpoch || latestConsent.current.capMicroUsdc !== original.capMicroUsdc))
+          throw new Error("Research budget changed; restore its latest signed policy before renewing");
+        expectedCap = expectedCap < BigInt(original.capMicroUsdc) ? expectedCap : BigInt(original.capMicroUsdc);
+        if (!selected && original.format === "keryx-session-grant-consent-v2" && (consent.format !== original.format ||
+          consent.durationSeconds !== original.durationSeconds || consent.questionCapMicroUsdc !== original.questionCapMicroUsdc))
+          throw new Error("Renewal differs from the original selected policy");
+      }
+      if (selected && (consent.format !== "keryx-session-grant-consent-v2" || consent.durationSeconds !== selected.durationSeconds ||
+        consent.questionCapMicroUsdc !== selected.questionCapMicroUsdc)) throw new Error("Grant proposal differs from your selected duration or per-question maximum");
       if (consent.ownerAddr !== expectedOwner || consent.sessAddr !== sessAddr.toLowerCase() || consent.origin !== window.location.origin ||
-        cap !== confirmed+(requested < available ? requested : available)) throw new Error("Grant proposal differs from your selected funded budget");
+        cap !== expectedCap) throw new Error("Grant proposal differs from your selected funded budget");
       if (absoluteTarget !== undefined && cap > absoluteTarget) {
         if (attempt === 2 || confirmed >= absoluteTarget) throw new Error("Retained spend changed; review the selected cumulative cap before renewing");
         requested = absoluteTarget-confirmed; continue;
@@ -145,10 +176,12 @@ export function useMainnetSessionGrant() {
     const confirmed = BigInt(funding.confirmedSpentMicroUsdc), retained = BigInt(funding.retainedSpentMicroUsdc), cap = BigInt(consent.capMicroUsdc);
     const proposed = cap > retained ? cap-retained : BigInt(0);
     if (consent.ownerAddr !== expectedOwner || consent.sessAddr !== sessAddr.toLowerCase() ||
-      consent.origin !== window.location.origin || confirmed > retained || cap !== confirmed+(requested < available ? requested : available) ||
+      consent.origin !== window.location.origin || confirmed > retained ||
       proposed !== BigInt(funding.proposedRemainingMicroUsdc) || proposed <= BigInt(0)) throw new Error("Grant consent differs from your current funded budget or retained liabilities");
     setState(s => ({ ...s, consentReview: { cumulativeCapUsdc: Number(cap)/1e6, confirmedSpentUsdc: Number(confirmed)/1e6,
-      retainedSpentUsdc: Number(retained)/1e6, remainingCapacityUsdc: Number(proposed)/1e6, availableUsdc: Number(available)/1e6 } }));
+      retainedSpentUsdc: Number(retained)/1e6, remainingCapacityUsdc: Number(proposed)/1e6, availableUsdc: Number(available)/1e6,
+      ...(consent.format === "keryx-session-grant-consent-v2" ? { durationSeconds: consent.durationSeconds,
+        questionCapUsdc: Number(consent.questionCapMicroUsdc)/1e6 } : {}) } }));
     assertCurrent();
     const signature = await wallet.signMessage({ account: wallet.account!, message: createSessionGrantConsentMessage(consent, profile) });
     if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) throw new Error("Session registration changed");
@@ -199,7 +232,7 @@ export function useMainnetSessionGrant() {
       return false;
     } finally { finish(); }
   }, [signer, publishGrant, owner, failure, beginOperation, lockPaymentAuthority]);
-  const generateAndFund = useCallback(async (budgetUsdc: number, addFunds = false) => {
+  const generateAndFund = useCallback(async (budgetUsdc: number, addFunds = false, options?: ResearchBudgetOptions) => {
     const finish = beginOperation();
     if (!finish) return;
     let expectedGeneration = ++generation.current;
@@ -209,14 +242,22 @@ export function useMainnetSessionGrant() {
     const assertCurrent = () => { if (generation.current !== expectedGeneration || ownerRef.current !== expectedOwner) throw new Error("Session funding changed; retain the original transaction for recovery"); };
     const requestConsent = async (sessAddr: string, budget: string) => {
       assertCurrent(); expectedGeneration = generation.current+1;
-      return consentGrant(sessAddr, budget, targetCap ?? undefined);
+      return consentGrant(sessAddr, budget, targetCap ?? undefined, selectedPolicy, false, addFunds);
     };
     let targetCap: bigint | null = null;
+    let selectedPolicy = options;
     try {
       const micros = amount(budgetUsdc);
       if (addFunds && (!previous || state.status !== "active" || previous.grantEpoch !== state.grantEpoch || previous.ownerAddr !== expectedOwner))
         throw new Error("Restore the active owner consent before adding to its budget");
       targetCap = addFunds ? BigInt(previous!.capMicroUsdc)+BigInt(micros) : null;
+      if (addFunds && !selectedPolicy && previous?.format === "keryx-session-grant-consent-v2") selectedPolicy = {
+        durationSeconds: previous.durationSeconds, questionCapUsdc: Number(previous.questionCapMicroUsdc)/1e6 };
+      if (selectedPolicy) {
+        researchBudgetDurationSchema.parse(selectedPolicy.durationSeconds);
+        if (BigInt(amount(selectedPolicy.questionCapUsdc)) > (targetCap ?? BigInt(micros)))
+          throw new Error("The per-question maximum must fit inside the selected research budget");
+      }
       if (targetCap !== null && targetCap > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Requested cumulative cap exceeds the supported integer range");
       if (!wallet || !rpc || !expectedOwner) throw new Error("Connect and authenticate the owner wallet first");
       setState(s => ({ ...s, status: "switching", error: null })); await ensureArc();
@@ -260,7 +301,7 @@ export function useMainnetSessionGrant() {
     } catch (err) { if (generation.current === expectedGeneration && ownerRef.current === expectedOwner) failure(err); }
     finally { finish(); }
   }, [wallet, rpc, ensureArc, signer, consentGrant, failure, state.grantEpoch, state.status, beginOperation]);
-  const recoverViaSignature = useCallback(async () => {
+  const recoverViaSignature = useCallback(async (options?: ResearchBudgetOptions) => {
     const finish = beginOperation();
     if (!finish) return false;
     const expectedOwner = ownerRef.current; let expectedGeneration = ++generation.current;
@@ -270,17 +311,22 @@ export function useMainnetSessionGrant() {
       if (!expectedOwner) throw new Error("Connect the original owner wallet first");
       setState(s => ({ ...(s.sessionId === expectedOwner ? s : initial), status: "restoring", sessionId: expectedOwner, error: null }));
       const sessAddr = await signer().restoreRetained(expectedOwner); assertCurrent();
-      const available = await readGatewayCredit(sessAddr);
+      const projection = await readOwnerSessionCredit(sessAddr, readRetainedSessionGrantReference(expectedOwner, sessAddr));
+      const available = BigInt(projection.available), confirmed = BigInt(projection.confirmedSpentMicroUsdc);
       assertCurrent();
       await reconcileOwnerSessionCredit(expectedOwner as Hex, sessAddr, available); assertCurrent();
       if (available <= BigInt(0)) throw new Error("No available Gateway funds are confirmed; pending liabilities remain retained");
       assertCurrent(); expectedGeneration = generation.current+1;
-      await consentGrant(sessAddr, available.toString()); return true;
+      const previous = latestConsent.current;
+      const target = previous ? BigInt(previous.capMicroUsdc) : undefined;
+      const desired = target === undefined ? available : target > confirmed ? target-confirmed : BigInt(0);
+      if (desired <= BigInt(0)) throw new Error("The original research budget is consumed. Choose an explicit additional budget to continue.");
+      await consentGrant(sessAddr, desired.toString(), target, options, true); return true;
     } catch (err) { if (generation.current === expectedGeneration && ownerRef.current === expectedOwner) failure(err); return false; }
     finally { finish(); }
   }, [signer, consentGrant, failure, beginOperation]);
-  const extend = useCallback(async () => recoverViaSignature(), [recoverViaSignature]);
-  const topUp = useCallback(async (usdc: number) => { await generateAndFund(usdc, true); }, [generateAndFund]);
+  const extend = useCallback(async (options?: ResearchBudgetOptions) => recoverViaSignature(options), [recoverViaSignature]);
+  const topUp = useCallback(async (usdc: number, options?: ResearchBudgetOptions) => { await generateAndFund(usdc, true, options); }, [generateAndFund]);
   const revoke = useCallback(async () => {
     const expectedGeneration = ++generation.current, expectedOwner = ownerRef.current;
     const { sessAddr, sessionId, grantEpoch } = state;
@@ -317,6 +363,9 @@ export function useMainnetSessionGrant() {
         currentSigner.sessionAddress?.toLowerCase() !== consent.sessAddr) throw new Error("Active session registration unavailable");
     };
     assertCurrent(); // Cached callbacks must not dispatch while liveness/recovery is paused.
+    if (consent!.format === "keryx-session-grant-consent-v2" &&
+      BigInt(question.budgetMicroUsdc) > BigInt(consent!.questionCapMicroUsdc))
+      throw new Error("This question exceeds your signed per-question research maximum");
     const paymentHeader = await currentSigner!.authorizePayment(reqId, question);
     assertCurrent(); // Suppress a header if pause, expiry or replacement happened during worker awaits.
     return paymentHeader;

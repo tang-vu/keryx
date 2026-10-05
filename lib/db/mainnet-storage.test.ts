@@ -483,6 +483,63 @@ it("consumes an exact owner-signed funded consent once across two native connect
     expect(native.prepare("SELECT count(*) AS n FROM browser_retained_grants").get()?.n).toBe(1);
   } finally { native.close(); }
 }, 30000);
+it("renews a v2 research budget without adopting external deposits or resetting uncertain signer exposure", async () => {
+  const { adapter } = await fixture(), { config } = await import("../config");
+  const { privateKeyToAccount } = await import("viem/accounts");
+  const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), session = privateKeyToAccount(`0x${"22".repeat(32)}`);
+  const wallet = owner.address.toLowerCase(), signer = session.address.toLowerCase(), payee = `0x${"33".repeat(20)}`;
+  let available = "1.000000";
+  vi.stubGlobal("fetch", vi.fn(async () => Response.json({ token: "USDC", balances: [{ depositor: signer, domain: 26, balance: available, pending: "0" }] })));
+  const service = await import("../payments/mainnet-session-grants"), messages = await import("../payments/session-grant-consent");
+  const sign = async (consent: Parameters<typeof adapter.consumeSessionGrantConsent>[0]) => ({ consent,
+    signature: await owner.signMessage({ message: messages.createSessionGrantConsentMessage(consent, config.profile) }),
+    sessionSignature: await session.signMessage({ message: messages.createSessionGrantSignerProofMessage(consent, config.profile) }) });
+  const { consent } = await service.issueMainnetSessionGrant(adapter, wallet, { sessAddr: signer, budgetMicros: "500000",
+    durationSeconds: 604800, questionCapMicroUsdc: "500000" });
+  expect(consent).toMatchObject({ format: "keryx-session-grant-consent-v2", durationSeconds: 604800, questionCapMicroUsdc: "500000" });
+  const originalProof = await sign(consent);
+  await service.consumeMainnetSessionGrant(adapter, wallet, originalProof);
+  const queryId = randomUUID();
+  const input: BrowserJournalAdmission = { sessionId: wallet, signer, grantEpoch: consent.grantEpoch, requestId: randomUUID(), queryId,
+    sourceId: "synthetic-source", offerId: null, kind: "citation", payee, amountMicroUsdc: 100000,
+    network: config.profile.networkId, token: config.profile.usdcAddress, gatewayContract: config.profile.gatewayWallet,
+    requirements: { scheme: "exact", network: config.profile.networkId, asset: config.profile.usdcAddress, payTo: payee,
+      amount: "100000", maxTimeoutSeconds: 604900, extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: config.profile.gatewayWallet } },
+    payment: { kind: "citation", queryId, sourceId: "synthetic-source", sourceName: "Synthetic source", payer: signer, payee,
+      amountUsdc: 0.1, network: config.profile.networkId, grantEpoch: consent.grantEpoch } };
+  expect((await adapter.admitBrowserJournal(input)).status).toBe("admitted");
+  await adapter.exposeBrowserJournal(wallet, input.requestId);
+  available = "2.000000"; // An external deposit is observable money, not a new spending permission.
+  vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(Number(consent.expirySeconds)*1000 + 1);
+  await adapter.deleteExpiredSessionGrants(Date.now());
+  const second = await (await import("./enrolled-sqlite-adapter")).createEnrolledSqliteAdapter(); cleanup.push(() => second.close());
+  const renewed = await service.issueMainnetSessionGrant(second, wallet, { sessAddr: signer, budgetMicros: "2000000", renew: true });
+  expect(renewed.consent).toMatchObject({ format: "keryx-session-grant-consent-v2", capMicroUsdc: "500000", durationSeconds: 604800, questionCapMicroUsdc: "500000" });
+  expect(renewed.renewalAuthority).toEqual({ consent, ownerSignature: originalProof.signature, sessionSignature: originalProof.sessionSignature });
+  expect(renewed.funding).toMatchObject({ retainedSpentMicroUsdc: "100000", proposedRemainingMicroUsdc: "400000" });
+  const signed = await sign(renewed.consent);
+  const races = await Promise.allSettled([service.consumeMainnetSessionGrant(adapter, wallet, signed), service.consumeMainnetSessionGrant(second, wallet, signed)]);
+  expect(races.filter(result => result.status === "fulfilled")).toHaveLength(1);
+  expect((await second.getSessionGrant(wallet))!).toMatchObject({ cap: 0.5, spent: 0.1, grantEpoch: renewed.consent.grantEpoch });
+  expect((await second.getBrowserJournal(wallet, input.requestId))!).toMatchObject({ phase: "exposed", nonce: (await adapter.getBrowserJournal(wallet, input.requestId))!.nonce });
+  await expect(service.consumeMainnetSessionGrant(second, wallet, { ...signed, consent: { ...renewed.consent, questionCapMicroUsdc: "100001" } })).rejects.toThrow();
+  expect(await second.revokeSessionGrant(wallet, renewed.consent.grantEpoch, signer)).toBe(true);
+  const stale = await service.issueMainnetSessionGrant(second, wallet, { sessAddr: signer, budgetMicros: "500000", renew: true });
+  const staleSigned = await sign(stale.consent);
+  vi.setSystemTime(Date.now() + 91000);
+  await expect(service.consumeMainnetSessionGrant(second, wallet, staleSigned)).rejects.toThrow();
+  const originalJournal = (await second.getBrowserJournal(wallet, input.requestId))!;
+  expect(await second.settlePendingPayment(originalJournal.payment.id!, originalJournal.nonce, `0x${"aa".repeat(32)}`)).toBe(true);
+  const changedDuration = await service.issueMainnetSessionGrant(second, wallet, { sessAddr: signer, budgetMicros: "400000", renew: true,
+    durationSeconds: 86400, questionCapMicroUsdc: "500000" });
+  expect(changedDuration.consent).toMatchObject({ capMicroUsdc: "500000", durationSeconds: 86400, questionCapMicroUsdc: "500000" });
+  await service.consumeMainnetSessionGrant(second, wallet, await sign(changedDuration.consent));
+  const added = await service.issueMainnetSessionGrant(second, wallet, { sessAddr: signer, budgetMicros: "450000", addFunds: true,
+    durationSeconds: 604800, questionCapMicroUsdc: "500000" });
+  expect(added.consent).toMatchObject({ capMicroUsdc: "550000", questionCapMicroUsdc: "500000" });
+  await service.consumeMainnetSessionGrant(second, wallet, await sign(added.consent));
+  expect((await second.getSessionGrant(wallet))!).toMatchObject({ cap: 0.55, spent: 0.1 });
+}, 30000);
 it("refuses adopting, reusing or relabelling mainnet storage as testnet", async () => {
   const { file, identity } = await fixture();
   await expect(createSqliteStorage(file, identity)).rejects.toThrow();

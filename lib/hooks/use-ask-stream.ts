@@ -108,6 +108,8 @@ interface AskStreamOpts {
    * This is the browser's independent authority — it does NOT rely on the server.
    */
   grantCap?: number;
+  /** Owner-signed mainnet research maximum. The worker verifies it independently. */
+  questionCapUsdc?: number;
   /**
    * Public source index fetched once from /api/sources. Every payTo the browser signs
    * for — fetch toll or citation reward — is validated against the wallets the on-chain
@@ -128,6 +130,7 @@ export function useAskStream(opts?: AskStreamOpts) {
     authorizeSessionPayment,
     sessionId,
     grantCap,
+    questionCapUsdc,
     sourceIndex,
     onSessionExpired,
   } = opts ?? {};
@@ -359,6 +362,12 @@ export function useAskStream(opts?: AskStreamOpts) {
         const micros = Math.round(budget*1e6);
         if (!Number.isSafeInteger(micros) || micros <= 0 || Math.abs(budget*1e6-micros) > 0.000001)
           throw new Error("Question budget must be a positive integer amount of micro-USDC");
+        if (sessionId && questionCapUsdc !== undefined && (!Number.isFinite(questionCapUsdc) || questionCapUsdc <= 0 ||
+          micros > Math.round(questionCapUsdc*1e6))) {
+          setState({ ...INITIAL, status: "error", errorKind: "generic",
+            error: "This question exceeds your signed per-question research maximum. Lower its budget or explicitly update your research budget." });
+          return;
+        }
         questionBudgetRef.current = { id: crypto.randomUUID(), budgetMicroUsdc: String(micros) };
       }
       const controller = new AbortController();
@@ -491,7 +500,7 @@ export function useAskStream(opts?: AskStreamOpts) {
         }));
       }
     },
-    [handleEvent, reset, sessionId, grantCap, onSessionExpired],
+    [handleEvent, reset, sessionId, grantCap, questionCapUsdc, onSessionExpired],
   );
 
   return { state, ask, reset };

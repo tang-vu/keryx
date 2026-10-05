@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Reusable research budgets and optional Google wallet onboarding (2026-10-05, v0.26.14)
+
+- Select a research allowance, per-question maximum and 1-hour/24-hour/7-day
+  duration; reuse an active budget across conversations and reloads.
+- Show remaining authorization capacity, held amounts and a direct stop control.
+  Renewal retains the old ceiling; reviewed funding and consent increase it.
+- Preserve original v1 proofs/custody and exact durable liabilities. Version 2
+  policy is enforced independently by server admission and browser signing.
+- Add a configuration-gated Circle Google wallet connector and authenticated
+  wallet onboarding. Production credentials and live vendor acceptance are separate
+  activation gates. See [setup and surface boundaries](research-budget-onboarding.md).
+
 ### Align mainnet runtime guidance and recovery UX (2026-10-05, v0.26.12 candidate)
 
 - Correct Slack/OpenAI, Monthly MCP/API and external marketplace guidance without inferring

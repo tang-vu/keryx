@@ -2,7 +2,7 @@ import { z } from "zod";
 import { recoverMessageAddress, type Hex } from "viem";
 import { ARC_MAINNET_PROFILE as profile } from "../arc-network-profile";
 import { canonicalJson } from "../canonical-json";
-import { createSessionGrantConsentMessage, createSessionGrantSignerProofMessage, parseSessionGrantConsent } from "../payments/session-grant-consent";
+import { createSessionGrantConsentMessage, createSessionGrantSignerProofMessage, parseSessionGrantConsent, sessionGrantDurationSeconds } from "../payments/session-grant-consent";
 import { validateBrowserFetchPrice } from "../payments/browser-fetch-price-policy";
 import type { BrowserPaymentContext } from "../payments/browser-cosign-gateway";
 import type { SourcePaymentAuthority } from "../payments/client-payto-allowlist";
@@ -82,7 +82,7 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
       consent.ownerAddr !== key.context.owner || consent.sessAddr !== response.sessAddr ||
       consent.origin !== key.context.origin || consent.grantEpoch !== response.grantEpoch ||
       consent.capMicroUsdc !== response.capMicroUsdc || BigInt(consent.expirySeconds) <= BigInt(Math.floor(Date.now()/1000)) ||
-      BigInt(consent.expirySeconds) > BigInt(Math.floor(Date.now()/1000)+86400) ||
+      BigInt(consent.expirySeconds) > BigInt(Math.floor(Date.now()/1000)+sessionGrantDurationSeconds(consent)) ||
       (await recoverMessageAddress({ message: createSessionGrantConsentMessage(consent, profile),
         signature: response.ownerSignature as Hex })).toLowerCase() !== key.context.owner ||
       (await recoverMessageAddress({ message: createSessionGrantSignerProofMessage(consent, profile),
@@ -100,6 +100,8 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
       z.string().uuid().parse(reqId);
       const scope = z.object({ id: z.string().uuid(), budgetMicroUsdc: positive }).strict().parse(question);
       const expectedGeneration = generation, bound = await bindGrant();
+      if (bound.consent.format === "keryx-session-grant-consent-v2" &&
+        BigInt(scope.budgetMicroUsdc) > BigInt(bound.consent.questionCapMicroUsdc)) refuse();
       const challenge = challengeSchema.parse(await dependencies.json("/api/ask/challenge", "POST", { reqId }));
       if (challenge.reqId !== reqId || challenge.sessionId !== key.context.owner || challenge.sessAddr !== bound.response.sessAddr ||
         challenge.grantEpoch !== bound.consent.grantEpoch) refuse();

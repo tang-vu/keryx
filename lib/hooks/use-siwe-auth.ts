@@ -19,6 +19,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { SiweMessage } from "siwe";
 import { arcChain } from "@/lib/chains";
+import { CIRCLE_GOOGLE_CONNECTOR_ID } from "../circle-wallet-config";
+import { circleWalletIdentity, clearCircleWalletIdentity } from "../circle-wallet-browser";
 
 export type AuthState = "idle" | "signing" | "verifying" | "signing-out";
 export interface AuthSession {
@@ -33,7 +35,7 @@ export interface SignInResult {
 }
 
 export function useSiweAuth() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, connector } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const [authState, setAuthState] = useState<AuthState>("idle");
   const [session, setSession] = useState<AuthSession | null | undefined>(undefined);
@@ -48,6 +50,8 @@ export function useSiweAuth() {
       if (!res.ok && res.status !== 401) throw new Error("Session lookup unavailable");
       const s = res.ok ? ((await res.json()).session ?? null) : null;
       if (attempt !== revision.current) return null;
+      const google = circleWalletIdentity();
+      if (google && (!s || s.address?.toLowerCase() !== google.address.toLowerCase())) clearCircleWalletIdentity();
       setSession(s);
       return s;
     } catch {
@@ -75,7 +79,7 @@ export function useSiweAuth() {
 
   useEffect(() => {
     const changed = (event: Event) => {
-      if ((event as CustomEvent).detail === "signed-out") { revision.current++; setSession(null); }
+      if ((event as CustomEvent).detail === "signed-out") { clearCircleWalletIdentity(); revision.current++; setSession(null); }
       else void refresh();
     };
     const focused = () => { void refresh(); };
@@ -83,7 +87,10 @@ export function useSiweAuth() {
     window.addEventListener("focus", focused);
     try {
       channel.current = new BroadcastChannel("keryx-auth-v1");
-      channel.current.onmessage = focused;
+      channel.current.onmessage = event => {
+        if (event.data === "signed-out") { clearCircleWalletIdentity(); revision.current++; setSession(null); }
+        else focused();
+      };
     } catch { /* Focus refresh remains available when browser messaging is disabled. */ }
     return () => {
       window.removeEventListener("keryx:auth", changed); window.removeEventListener("focus", focused);
@@ -93,6 +100,13 @@ export function useSiweAuth() {
 
   const signIn = useCallback(async (): Promise<SignInResult> => {
     if (!address) return { ok: false };
+    if (connector?.id === CIRCLE_GOOGLE_CONNECTOR_ID) {
+      // Google callback already proved Circle token -> wallet ownership on the server.
+      // Never turn a persisted connector hint into authentication or prompt redundant SIWE.
+      const fresh = await refresh();
+      if (!fresh || fresh.address.toLowerCase() !== address.toLowerCase()) throw new Error("Reconnect with Google to sign in again");
+      return { ok: true, role: fresh.role };
+    }
     setAuthState("signing");
     try {
       const nonceRes = await fetch("/api/auth/nonce");
@@ -144,16 +158,17 @@ export function useSiweAuth() {
     } finally {
       setAuthState("idle");
     }
-  }, [address, signMessageAsync, refresh]);
+  }, [address, connector?.id, signMessageAsync, refresh]);
 
   const signOut = useCallback(async () => {
     setAuthState("signing-out");
     try {
       const response = await fetch("/api/auth/signout", { method: "POST", cache: "no-store", signal: AbortSignal.timeout(15000) });
       if (!response.ok || (await response.json()).ok !== true) throw new Error("Sign-out could not be confirmed. Please retry.");
+      clearCircleWalletIdentity();
       revision.current++; setSession(null);
       window.dispatchEvent(new CustomEvent("keryx:auth", { detail: "signed-out" }));
-      channel.current?.postMessage("changed");
+      channel.current?.postMessage("signed-out");
     } finally { setAuthState("idle"); }
   }, []);
 
