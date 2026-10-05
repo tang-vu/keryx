@@ -8,7 +8,7 @@
   the 2,000-character source context and A2A package limits are unchanged.
 - For an open "which items ..." comparison, planning names up to six specific
   candidates to verify instead of only generic targets.
-- One recorded local comparison read six pages for seven named systems instead of
+- One recorded local comparison read seven pages for seven named targets instead of
   three pages for three generic targets. Delivered evidence stayed thin and
   Low-confidence; see `DECISIONS.md` for the measured limits and added search cost.
 
