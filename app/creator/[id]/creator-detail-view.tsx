@@ -3,7 +3,7 @@
 import { OwnerFeedVerification } from "@/components/keryx/owner-feed-verification";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Banknote, Calendar, CircleX, Clock3, Hash, Wallet } from "lucide-react";
+import { BadgeCheck, Banknote, Calendar, CircleX, Clock3, Hash, Wallet } from "lucide-react";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { cn } from "@/lib/utils";
 import { ListingControlsPanel } from "./listing-controls-panel";

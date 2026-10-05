@@ -26,7 +26,14 @@ function metricBody(body: unknown): MetricsResponse {
     if (typeof metrics[key] !== "number" || !Number.isFinite(metrics[key]) || (metrics[key] as number) < 0) throw new Error("Invalid ledger metric");
   }
   if (!Array.isArray(value.leaderboard)) throw new Error("Invalid leaderboard");
-  return value as unknown as MetricsResponse;
+  const recordedAccounts = metrics.recordedAccounts;
+  return {
+    ...value,
+    metrics: {
+      ...metrics,
+      recordedAccounts: typeof recordedAccounts === "number" && Number.isSafeInteger(recordedAccounts) && recordedAccounts >= 0 ? recordedAccounts : null,
+    },
+  } as unknown as MetricsResponse;
 }
 function paymentBody(body: unknown): PaymentRecord[] {
   const value = objectBody(body).payments;
@@ -73,9 +80,11 @@ export function DashboardView({ sourcePreview }: { sourcePreview: ReactNode }) {
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-2">Explore recorded questions, citations, and sources. Creator payments appear with their original settlement evidence and network.</p>
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
           <span className="font-mono text-sm text-ink">{metrics ? <><span className="font-display text-2xl">{metrics.totalQueries}</span> recorded questions{metricsResource.status === "error" && " · last successful read"}</> : metricsResource.status === "error" ? "Question total unavailable" : "Loading question total…"}</span>
+          <span className="font-mono text-sm text-ink">{metrics?.recordedAccounts != null ? <><span className="font-display text-2xl">{metrics.recordedAccounts}</span> recorded accounts{metricsResource.status === "error" && " · last successful read"}</> : metrics || metricsResource.status === "error" ? "Account total unavailable" : "Loading account total…"}</span>
           <span className="font-mono text-xs text-paid">{currentArcLabel}</span>
           <Link href="/" className="min-h-11 border border-ink bg-ink px-4 py-3 font-mono text-xs text-paper hover:underline">Ask a question →</Link>
         </div>
+        <p className="mt-3 max-w-2xl text-xs leading-relaxed text-ink-3">Account totals include verified Google and wallet sign-ins. Each wallet is counted once; one person may use several wallets.</p>
       </header>
 
       <div className="mt-8 grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_300px]">

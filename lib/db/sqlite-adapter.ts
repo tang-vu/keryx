@@ -2130,7 +2130,18 @@ export class SqliteAdapter implements KeryxDB {
       .map((intent) => ({
         status: intent.status as import("../types").GapIntentStatus,
       }));
-    return calculateDashboardMetrics(payments, runs, feedback, gapIntents);
+    let recordedAccounts: number | null = null;
+    try {
+      // Aggregate inside SQLite: account addresses never enter the public projection.
+      // Older manually indexed casing is one account; malformed rows are excluded.
+      const row = this.db.prepare(`SELECT COUNT(DISTINCT LOWER(wallet_address)) AS n FROM users
+        WHERE typeof(wallet_address)='text' AND length(wallet_address)=42
+          AND lower(substr(wallet_address,1,2))='0x'
+          AND substr(wallet_address,3) NOT GLOB '*[^0-9a-fA-F]*'`).get();
+      const count = row?.n;
+      if (typeof count === "number" && Number.isSafeInteger(count) && count >= 0) recordedAccounts = count;
+    } catch { /* Account-index availability is independent from research/payment metrics. */ }
+    return { ...calculateDashboardMetrics(payments, runs, feedback, gapIntents), recordedAccounts };
   }
 
   async economics() {

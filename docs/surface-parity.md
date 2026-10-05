@@ -6,8 +6,12 @@ Application **0.26.21 candidate** changes web `/dashboard`, `/sources`, linked c
 and confirmed-empty settlement ticker presentation. Recent public citation URLs
 also appear as a bounded history collection, independently of retained feeds and
 creator enrollment. A shared server view isolates
-read availability without conferring payment/control authority or changing public
-API payloads. Public API/A2A, remote MCP/OpenAI, buyer/Operator CLI, stdio MCP,
+read availability without conferring payment/control authority. `/api/metrics`
+adds optional nullable `recordedAccounts` from authenticated wallet aggregates;
+no account rows or provider/unique-person inference is exposed. SQLite and legacy
+Supabase support exact counts; enrolled Supabase intentionally returns unknown
+pending a reviewed aggregate RPC. Auth/custody/schema contracts remain.
+Public API/A2A, remote MCP/OpenAI, buyer/Operator CLI, stdio MCP,
 desktop, extension and bots retain their research, receipt and payment contracts.
 Their runtime modules do not import the new web view/display helpers. Remote MCP
 **0.3.1**, caller MCP **0.4.5**, desktop **0.4.6**, extension **0.1.1** retain their roles.

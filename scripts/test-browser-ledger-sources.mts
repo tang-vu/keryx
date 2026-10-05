@@ -11,7 +11,7 @@ const reference = { id: "public:fixture", name: "Public publisher fixture", url:
 const source = { id: "fixture-creator", name: "Unverified creator fixture", url: "https://creator.example/", description: "An unverified registered listing.", verified: false, tags: ["Engineering"], authors: [], walletAddress: `0x${"1".repeat(40)}`, fetchPrice: 0.01, createdAt: "2026-10-05T00:00:00.000Z" };
 const citedEntry = { url: "https://docs.publisher.example/service", title: "A previously cited service manual", publisher: "docs.publisher.example", runId: "fixture-run", citedAt: "2026-10-05T00:00:00.000Z", deliveryKind: "excerpt", truncated: true, retrievedAt: "2026-10-04T23:00:00.000Z", extraction: "html" };
 const directory = { registry: { status: "ready", entries: [{ source, totalEarnedUsdc: 0, citationCount: 0, claim: null, claimPolicyUnavailable: false, controlFresh: false }] }, publicReferences: { status: "ready", entries: [reference] }, citedSources: { status: "ready", entries: [citedEntry], runCount: 28 }, earningsStatus: "ready" };
-const metrics = { totalQueries: 28, totalPayments: 0, totalVolumeUsdc: 0, totalCreatorPayoutsUsdc: 0, creatorsEarning: 0, pendingPaymentConfirmations: 0, pendingPaymentVolumeUsdc: 0, failedPaymentAttempts: 0, failedPaymentVolumeUsdc: 0 };
+const metrics = { totalQueries: 28, recordedAccounts: 7, totalPayments: 0, totalVolumeUsdc: 0, totalCreatorPayoutsUsdc: 0, creatorsEarning: 0, pendingPaymentConfirmations: 0, pendingPaymentVolumeUsdc: 0, failedPaymentAttempts: 0, failedPaymentVolumeUsdc: 0 };
 const run = { id: "fixture-run", question: "How should a live SQLite database be backed up safely?", answer: "Fixture answer [S1]", createdAt: "2026-10-05T00:00:00.000Z", totalSpent: 0, totalToCreators: 0, citationCount: 2, citations: [{ marker: "S1", sourceId: "public:web:fixture", sourceName: citedEntry.publisher, sourceKind: "public-reference", itemTitle: citedEntry.title, itemUrl: citedEntry.url, publicDeliveryKind: "excerpt", webProvenance: { retrievedAt: citedEntry.retrievedAt, truncated: true, extraction: "html" } }] };
 const chrome: Plugin = {
   name: "isolated-ledger-chrome",
@@ -55,7 +55,7 @@ try {
         const pathname = new URL(route.request().url()).pathname;
         if (pathname.startsWith("/api/")) {
           if (mode === "error" && pathname === "/api/metrics") return route.fulfill({ status: 503, json: { error: "unavailable" } });
-          if (pathname === "/api/metrics") return route.fulfill({ json: mode === "malformed" ? { metrics: { totalQueries: 28 }, leaderboard: [] } : { metrics: { ...metrics, ...(mode === "pending" ? { pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.02, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.01 } : {}) }, leaderboard: [] } });
+          if (pathname === "/api/metrics") return route.fulfill({ json: mode === "malformed" ? { metrics: { totalQueries: 28 }, leaderboard: [] } : { metrics: { ...metrics, ...(mode === "account-unavailable" ? { recordedAccounts: null } : mode === "account-malformed" ? { recordedAccounts: 1.5 } : mode === "account-zero" ? { recordedAccounts: 0 } : mode === "account-legacy" ? { recordedAccounts: undefined } : {}), ...(mode === "pending" ? { pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.02, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.01 } : {}) }, leaderboard: [] } });
           if (pathname === "/api/runs") return route.fulfill({ json: [run] });
           if (pathname === "/api/payments") return route.fulfill({ json: { payments: mode === "pending" ? [{ id: "fixture-payment", sourceName: "Pending creator fixture", queryId: "fixture-run", sourceId: "fixture-creator", kind: "citation", payer: "buyer", payee: "creator", amountUsdc: 0.02, network: "eip155:5042002", authorizationId: "fixture-authorization", settled: false, settlementStatus: "pending", createdAt: "2026-10-05T00:00:00.000Z" }] : [] } });
           if (pathname === "/api/withdrawals") return route.fulfill({ json: { withdrawals: [] } });
@@ -71,6 +71,8 @@ try {
       await open("/dashboard");
       await page.getByRole("heading", { name: "No settled payments yet" }).waitFor().catch(async error => { console.error({ errors, text: await page.locator("body").innerText() }); throw error; });
       await page.getByText(run.question).waitFor();
+      await page.getByText("7 recorded accounts", { exact: true }).waitFor();
+      await page.getByText(/Each wallet is counted once/).waitFor();
       assert.equal(await page.getByText("No creator earnings yet.").count(), 0);
       assert.equal(await page.getByText("No cash-outs yet.").count(), 0);
       assert.equal(await page.getByText(/to creators/).count(), 0);
@@ -100,6 +102,14 @@ try {
       await open("/dashboard");
       await page.getByText("Question total unavailable").waitFor();
       assert.equal(await page.getByRole("heading", { name: "No settled payments yet" }).count(), 0);
+
+      for (const accountMode of ["account-unavailable", "account-malformed", "account-legacy", "account-zero"]) {
+        mode = accountMode;
+        await open("/dashboard");
+        await page.getByText(accountMode === "account-zero" ? "0 recorded accounts" : "Account total unavailable", { exact: true }).waitFor();
+        await page.getByText("28 recorded questions", { exact: true }).waitFor();
+        await page.getByRole("heading", { name: "No settled payments yet" }).waitFor();
+      }
 
       mode = "pending";
       await open("/dashboard");

@@ -17,6 +17,17 @@ scope and answer permalinks. It reads the existing public `query_runs` store, ne
 private research results; omit synthetic citations and unsafe links. Historical
 citation metadata is not a source enrollment or payment/control authority.
 
+The owner also requested user statistics from Google or connected wallets. Expose
+the existing authenticated wallet account index as an aggregate of distinct valid
+normalized addresses. Repeated verified sign-ins to the same wallet count once;
+multiple wallets can belong to one person. A connection click and activation event
+are not account identities. Provider breakdowns and active/unique-person counts
+remain unavailable because the index does not store that evidence. Return unknown
+when an exact aggregate cannot be supplied, without replacing payment totals with
+zero. Public responses contain only the count, never account rows. Enrolled
+Supabase needs a separately reviewed aggregate operation before this count is
+available; this release adds no RPC, enrollment or auth change.
+
 Confirmed-empty settlement tickers disappear; loading and unavailable states remain
 explicit. Financial totals stay settled-only and inspectable, with pending/failed
 records and full payment evidence retained. Independent reads preserve available

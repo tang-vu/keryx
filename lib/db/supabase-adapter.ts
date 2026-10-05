@@ -1320,6 +1320,9 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async metrics(): Promise<DashboardMetrics> {
+    // Optional account metadata gets its own short deadline alongside the core
+    // reads, so unavailable indexing cannot consume the browser's metric budget.
+    const accountCount = this.recordedAccountCount();
     const reads = [
       () => this.allRows(
         "payment_events",
@@ -1337,7 +1340,7 @@ export class SupabaseAdapter implements KeryxDB {
     const [paymentRows, runRows, feedbackRows, gapIntentRows] = this.#enrolled
       ? [await reads[0](), await reads[1](), await reads[2](), await reads[3]()]
       : await Promise.all(reads.map(read => read()));
-    return calculateDashboardMetrics(
+    const metrics = calculateDashboardMetrics(
       paymentRows.map((p) => ({
         amountUsdc: Number(p.amount_usdc),
         sourceId: String(p.source_id ?? ""),
@@ -1382,6 +1385,32 @@ export class SupabaseAdapter implements KeryxDB {
           status: intent.status as import("../types").GapIntentStatus,
       })),
     );
+    return { ...metrics, recordedAccounts: await accountCount };
+  }
+
+  private async recordedAccountCount(): Promise<number | null> {
+    // The enrolled contract has no reviewed account-aggregate operation. Preserve
+    // its guard/role boundary without scanning users or inventing a new RPC.
+    if (this.#enrolled) return null;
+    try {
+      const patterns = ["^0x[0-9a-f]{40}$", "^0[xX][0-9a-fA-F]{40}$"];
+      const counts = await Promise.all(patterns.map((pattern, index) => {
+        const query = this.#sb.from("users")
+          .select("wallet_address", { count: "exact", head: true })
+          .filter("wallet_address", "match", pattern);
+        return (index === 1 ? query.not("wallet_address", "match", patterns[0]) : query)
+          .abortSignal(AbortSignal.timeout(3_000));
+      }));
+      const values = counts.map(result => result.count);
+      if (counts.some(result => result.error || result.data !== null) ||
+        values.some(count => typeof count !== "number" || !Number.isSafeInteger(count) || count < 0)) return null;
+      // Authenticated upserts normalize the address and the primary key dedupes it.
+      // Noncanonical legacy rows make a HEAD row count insufficient for exact
+      // normalized identity; withhold that aggregate rather than fetch addresses.
+      // Directly count valid noncanonical rows: comparing two growing total
+      // counts could hide an uppercase duplicate during a concurrent sign-in.
+      return values[1] === 0 ? values[0] : null;
+    } catch { return null; }
   }
 
   async economics() {

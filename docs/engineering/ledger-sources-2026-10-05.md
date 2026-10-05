@@ -2,7 +2,7 @@
 
 Application **0.26.21 candidate**, October 5, 2026. The owner requested useful
 presentation of real activity and sources even before creator earnings. This
-release changes presentation and read isolation, with no source import, enrollment,
+release changes presentation, aggregate reads and read isolation, with no source import, enrollment,
 schema migration, payment authority, custody or schedule.
 
 ## Behavior
@@ -11,6 +11,18 @@ The ledger prioritizes questions and recorded citation counts. Zero payouts no
 longer repeat on each question. One compact proof panel retains settled-only totals;
 pending/failed attempts, payments, earnings and cash-outs appear when present.
 Original networks and full payment evidence remain inspectable.
+
+The ledger also shows recorded account totals from the existing authenticated
+wallet index. Verified Google/Circle and wallet sign-ins normalize wallet identity;
+one wallet counts once, and one person may have several wallets. Connecting without
+authentication does not populate this index. No provider split, active-user or
+unique-person estimate is inferred. The additive optional nullable
+`metrics.recordedAccounts` field supplies only an exact count, never account rows.
+SQLite deduplicates valid addresses inside the database. Legacy Supabase uses
+metadata-only exact HEAD counts and withholds mixed-case index drift or failures.
+Enrolled Supabase returns `null` until a reviewed account aggregate RPC exists;
+it retains its registered scan-only boundary. Missing, invalid and unavailable
+account counts stay explicit while other research/payment metrics remain visible.
 
 Sources first presents original documents cited in recent public answers, then
 retained public feeds and creator listings, including unverified entries. Citation
@@ -46,7 +58,7 @@ preserve other available collections without inferring empty or zero.
 | Surface | Scope and role boundary |
 | --- | --- |
 | Web | Ledger, Sources, linked creator identity copy, navigation and shared ticker presentation change. |
-| API / paid A2A | Existing source/payment/run payloads and original evidence remain; no new endpoint or field. The directory helper is a read-only view, never a buyer/payee allowlist. |
+| API / paid A2A | `/api/metrics` adds optional nullable `recordedAccounts`; no account rows or new endpoint. Existing source/payment/run evidence and A2A checkout contracts remain. The directory helper is a read-only view, never a buyer/payee allowlist. |
 | Remote MCP / OpenAI | Hosted research/payment contracts and remote protocol 0.3.1 retain their roles. |
 | Buyer / Operator CLI and stdio MCP | These runtimes do not import the new display/view helpers. Caller custody/recovery and MCP 0.4.5 retain their contracts. |
 | Windows desktop | Task/receipt/export and buyer handoff retain desktop 0.4.6. Web links reach the updated pages. |
@@ -69,6 +81,10 @@ zero settlements, independent/malformed metrics failure, retry, dated stale read
 pending/failed records, expandable payment evidence, unverified listings, feed details
 and partial catalog failure, including citation history with empty feed/creator
 collections and history outage with other sources available. All new fixture HTTP is intercepted and read-only.
+Account tests verify valid normalized deduplication, invalid-address exclusion,
+metadata-only Supabase reads, count failures and the sealed/enrolled storage
+boundaries. Chromium verifies a real zero, missing/invalid/unavailable account
+counts and retained question/settlement metrics independently.
 The built research UX suite also covers hidden-empty tickers.
 
 TypeScript (both graphs), lint, production build, required CI, independent review,
