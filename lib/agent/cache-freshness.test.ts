@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { isCacheFresh, newestPublishedAt } from "./cache-freshness";
+import { isCacheFresh, isCacheWithinTtl, newestPublishedAt } from "./cache-freshness";
 import type { SourceItem } from "../types";
 
 const NOW = Date.parse("2026-07-26T00:00:00.000Z");
@@ -70,5 +70,18 @@ describe("newestPublishedAt", () => {
   it("is undefined for an empty or wholly undated feed", () => {
     expect(newestPublishedAt([])).toBeUndefined();
     expect(newestPublishedAt([item(undefined)])).toBeUndefined();
+  });
+});
+
+describe("isCacheWithinTtl", () => {
+  const now = Date.parse("2026-08-01T00:00:00.000Z");
+  it("expires a copy older than the window and never reuses a missing or unreadable one", () => {
+    expect(isCacheWithinTtl("2026-07-31T00:00:00.000Z", now, 172_800)).toBe(true);
+    expect(isCacheWithinTtl("2026-07-29T00:00:00.000Z", now, 172_800)).toBe(false);
+    expect(isCacheWithinTtl(null, now, 172_800)).toBe(false);
+    expect(isCacheWithinTtl("not a date", now, 0)).toBe(false);
+  });
+  it("treats a non-positive window as no expiry", () => {
+    expect(isCacheWithinTtl("2020-01-01T00:00:00.000Z", now, 0)).toBe(true);
   });
 });

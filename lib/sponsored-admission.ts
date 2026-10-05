@@ -8,25 +8,38 @@ const WINDOW_MS = 60_000;
 const ANONYMOUS_LIMIT = 5;
 const IDENTIFIED_LIMIT = 10;
 const DEFAULT_GLOBAL_LIMIT = 60;
+// Per-minute tiers bound bursts, not totals: at the anonymous budget ceiling 60 dispatches a minute
+// is an open-ended daily treasury liability. These daily counts make sponsored research a fixed,
+// knowable cost (dispatches x KERYX_ANON_MAX_BUDGET) per caller and for the whole service.
+const DAY_MS = 86_400_000;
+const DEFAULT_CALLER_DAILY_LIMIT = 50;
+const DEFAULT_GLOBAL_DAILY_LIMIT = 2_000;
 
 export type SponsoredCaller =
   | { kind: "anonymous"; ip: string; wallet?: string }
   | { kind: "key"; ip: string; wallet: string }
   | { kind: "bot"; platform: "discord" | "slack" | "telegram"; userId: string };
 
-type Bucket = { key: string; tier: string; points: number };
+type Bucket = { key: string; tier: string; points: number; windowMs?: number };
 
 function ipKey(ip: string): string {
   return createHash("sha256").update(ip.trim() || "unknown").digest("hex");
 }
 
-function globalDispatchLimit(): number {
-  const value = process.env.KERYX_SPONSORED_DISPATCHES_PER_MINUTE;
-  if (value === undefined || value.trim() === "") return DEFAULT_GLOBAL_LIMIT;
+function positiveLimit(value: string | undefined, fallback: number): number {
+  if (value === undefined || value.trim() === "") return fallback;
   if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < 1) {
     throw new Error("Invalid sponsored dispatch admission configuration");
   }
   return Number(value);
+}
+
+function dispatchLimits(): { perMinute: number; perDay: number; callerPerDay: number } {
+  return {
+    perMinute: positiveLimit(process.env.KERYX_SPONSORED_DISPATCHES_PER_MINUTE, DEFAULT_GLOBAL_LIMIT),
+    perDay: positiveLimit(process.env.KERYX_SPONSORED_DISPATCHES_PER_DAY, DEFAULT_GLOBAL_DAILY_LIMIT),
+    callerPerDay: positiveLimit(process.env.KERYX_SPONSORED_DISPATCHES_PER_CALLER_PER_DAY, DEFAULT_CALLER_DAILY_LIMIT),
+  };
 }
 
 async function admit(buckets: Bucket[]): Promise<Response | null> {
@@ -34,7 +47,7 @@ async function admit(buckets: Bucket[]): Promise<Response | null> {
     // Every counter is atomic in the durable store. A later refusal retains earlier points:
     // conservative under concurrency, and no compensation race can manufacture capacity.
     for (const bucket of buckets) {
-      const decision = await consumeDurablePoint(bucket.key, bucket.tier, bucket.points, WINDOW_MS);
+      const decision = await consumeDurablePoint(bucket.key, bucket.tier, bucket.points, bucket.windowMs ?? WINDOW_MS);
       if (!decision.allowed) {
         const retryAfter = Math.max(1, Math.ceil(decision.msBeforeNext / 1000));
         return Response.json({
@@ -60,12 +73,14 @@ function unavailable(): Response {
 
 /** Call after authenticating/validating the request and before model, search, or payment work. */
 export async function checkSponsoredResearchAdmission(caller: SponsoredCaller): Promise<Response | null> {
-  let globalLimit: number;
-  try { globalLimit = globalDispatchLimit(); } catch { return unavailable(); }
+  let limits: ReturnType<typeof dispatchLimits>;
+  try { limits = dispatchLimits(); } catch { return unavailable(); }
   const buckets: Bucket[] = [];
   if (caller.kind === "bot") {
     // Signed provider requests carry the user's platform id; provider IPs identify no end user.
-    buckets.push({ key: `${caller.platform}:${caller.userId}`, tier: "sponsored-user", points: ANONYMOUS_LIMIT });
+    const key = `${caller.platform}:${caller.userId}`;
+    buckets.push({ key, tier: "sponsored-user", points: ANONYMOUS_LIMIT });
+    buckets.push({ key, tier: "sponsored-user-day", points: limits.callerPerDay, windowMs: DAY_MS });
   } else {
     if (caller.wallet) {
       buckets.push({ key: caller.wallet.toLowerCase(), tier: "sponsored-wallet", points: IDENTIFIED_LIMIT });
@@ -76,9 +91,14 @@ export async function checkSponsoredResearchAdmission(caller: SponsoredCaller): 
     }
     // Same bucket for key and anonymous requests, regardless of wallet count or entry surface.
     buckets.push({ key, tier: "sponsored-ip", points: IDENTIFIED_LIMIT });
+    if (caller.wallet) {
+      buckets.push({ key: caller.wallet.toLowerCase(), tier: "sponsored-wallet-day", points: limits.callerPerDay, windowMs: DAY_MS });
+    }
+    buckets.push({ key, tier: "sponsored-ip-day", points: limits.callerPerDay, windowMs: DAY_MS });
   }
   // Locally throttled callers never burn the shared dispatch allowance.
-  buckets.push({ key: "all", tier: "sponsored-dispatch", points: globalLimit });
+  buckets.push({ key: "all", tier: "sponsored-dispatch", points: limits.perMinute });
+  buckets.push({ key: "all", tier: "sponsored-dispatch-day", points: limits.perDay, windowMs: DAY_MS });
   return admit(buckets);
 }
 

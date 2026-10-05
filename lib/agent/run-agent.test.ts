@@ -791,6 +791,9 @@ it("continues past partial or explicitly incomplete answers, then stops before a
     expect(gateway.fetchCalls).toHaveLength(2);
     expect(run.totalSpent).toBeLessThanOrEqual(0.05 + EPS);
     expect(steps.some(step => step.message.includes("Stopping early"))).toBe(true);
+    // The unread third selection is recorded as skipped, not as a purchase that never happened.
+    expect(run.decisions.filter(decision => decision.action === "BUY")).toHaveLength(2);
+    expect(run.decisions.find(decision => decision.action === "SKIP")?.rationale).toContain("stopped early");
   }
 });
 
@@ -1498,7 +1501,7 @@ describe("runAgent — money-safety invariants", () => {
 });
 
 describe("runAgent — article-level economics", () => {
-  const cache = (id: string) => ({ [id]: "2026-07-20T00:00:00.000Z" });
+  const cache = (id: string) => ({ [id]: new Date().toISOString() });
   const cacheDecision = (id: string, name = id.toUpperCase()): Decision => ({
     sourceId: id,
     sourceName: name,
@@ -1535,7 +1538,7 @@ describe("runAgent — article-level economics", () => {
       synthesize: () => ({ answer: "No supported answer.", citedMarkers: [], evidence: [] }),
     });
     const d = deps(sources, engine, fakeGateway(), {
-      cachedAt: Object.fromEntries(sources.map((source) => [source.id, "2026-07-20T00:00:00.000Z"])),
+      cachedAt: Object.fromEntries(sources.map((source) => [source.id, new Date().toISOString()])),
     });
 
     const { run } = await drive(
@@ -1776,7 +1779,7 @@ describe("runAgent — article-level economics", () => {
     const gw = fakeGateway();
     const d = deps([source], engine, gw, {
       items: { a: [item] },
-      cachedByKey: { [cacheKey]: "2026-07-20T00:00:00.000Z" },
+      cachedByKey: { [cacheKey]: new Date().toISOString() },
     });
 
     const { run } = await drive({ question: "q", budget: 0.05 }, d);
@@ -1786,6 +1789,56 @@ describe("runAgent — article-level economics", () => {
     expect(gw.fetchCalls).toEqual([]);
     expect(d.db.payments.some((p) => p.kind === "fetch")).toBe(false);
     expect(run.citations.length).toBeGreaterThan(0); // a cached read still earns a citation reward
+  });
+
+  it("buys again once a cached article is older than the reuse window, and scopes browser-funded reads to the payer", async () => {
+    const source = makeSource({ id: "a", fetchPrice: 0.004 });
+    const item: SourceItem = {
+      id: "a-i1", sourceId: "a", title: "post", summary: "summary",
+      content: "article content long enough for evidence", link: "https://example.test/post",
+      publishedAt: "2026-07-19T00:00:00.000Z",
+    };
+    const cacheKey = sourceItemCacheKey(source.id, item);
+    const expired = new Date(Date.now() - (config.cacheTtlSeconds + 60) * 1000).toISOString();
+    const stale = deps([source], fakeEngine({ decide: () => [cacheDecision("a")] }), fakeGateway(), {
+      items: { a: [item] }, cachedByKey: { [cacheKey]: expired },
+    });
+    expect((await drive({ question: "q", budget: 0.05 }, stale)).run.decisions[0].action).toBe("BUY");
+
+    // Someone else's fresh shared copy is not a free read for a wallet funding its own session.
+    const payer = "0x00000000000000000000000000000000000000aa";
+    const engine = fakeEngine({ decide: () => [cacheDecision("a")] });
+    const other = deps([source], engine, fakeGateway(), {
+      items: { a: [item] }, cachedByKey: { [cacheKey]: new Date().toISOString() },
+    });
+    await drive({ question: "q", budget: 0.05, asker: payer, fundingOwner: "browser" }, other);
+    expect(engine.decideInput?.candidates[0].cached).toBe(false);
+
+    const own = deps([source], engine, fakeGateway(), {
+      items: { a: [item] }, cachedByKey: { [`payer:${payer}:${cacheKey}`]: new Date().toISOString() },
+    });
+    await drive({ question: "q", budget: 0.05, asker: payer, fundingOwner: "browser" }, own);
+    expect(engine.decideInput?.candidates[0].cached).toBe(true);
+  });
+
+  it("keeps a source that pays the asker out of a run the asker does not fund", async () => {
+    const asker = "0x00000000000000000000000000000000000000bb";
+    const sources = [
+      makeSource({ id: "mine", walletAddress: asker.toUpperCase().replace("0X", "0x") }),
+      makeSource({ id: "coauthored", authors: [{ name: "me", walletAddress: asker, splitWeight: 1 }] }),
+      makeSource({ id: "other" }),
+    ];
+    const engine = fakeEngine();
+    const { run, steps } = await drive({ question: "q", budget: 0.05, asker, fundingOwner: "treasury" },
+      deps(sources, engine, fakeGateway()));
+    expect(engine.decideInput?.candidates.map((candidate) => candidate.sourceId)).toEqual(["other"]);
+    expect(run.decisions.some((decision) => decision.sourceId !== "other")).toBe(false);
+    expect(steps.some((step) => step.message.includes("pay the asking wallet"))).toBe(true);
+
+    // A wallet spending its own browser grant may buy its own work: no outside money is involved.
+    const funded = fakeEngine();
+    await drive({ question: "q", budget: 0.05, asker, fundingOwner: "browser" }, deps(sources, funded, fakeGateway()));
+    expect(funded.decideInput?.candidates).toHaveLength(3);
   });
 
   it.each([0.08, 0.119, 0.12, 0.2])("skips low-value cached content at EV %s because free bytes still consume attention", async expectedValue => {
@@ -1818,7 +1871,7 @@ describe("runAgent — article-level economics", () => {
       synthesize: () => ({ answer: "No supported answer.", citedMarkers: [], evidence: [] }),
     });
     const d = deps(sources, engine, fakeGateway(), {
-      cachedAt: Object.fromEntries(sources.map((source) => [source.id, "2026-07-20T00:00:00.000Z"])),
+      cachedAt: Object.fromEntries(sources.map((source) => [source.id, new Date().toISOString()])),
     });
 
     const { run } = await drive({ question: "q", budget: 0.05 }, d);
