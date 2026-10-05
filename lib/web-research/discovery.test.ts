@@ -39,3 +39,17 @@ it("bounds provider response parsing, rejects unsafe result URLs and disables re
     await expect(searxngProvider("http://127.0.0.1:8888/search").search("question")).rejects.toThrow("limit");
   } finally { request.mockRestore(); }
 });
+
+it("searches every deep research target and shares the candidate cap between queries", async () => {
+  const search = vi.fn(async (query: string) => Array.from({ length: 30 }, (_, index) => ({
+    title: `${query} ${index}`, snippet: "preview", url: `https://${query.replace(/\W/g, "")}${index}.test/page`,
+  })));
+  const claims = Array.from({ length: 8 }, (_, index) => `claim ${index}`);
+  const result = await discoverWeb({ search }, "question", claims, false);
+  expect(search).toHaveBeenCalledTimes(9);
+  expect(result.candidates.size).toBe(18);
+  // No single query fills the cap: the last target is still represented.
+  const names = [...result.candidates.values()].map(candidate => candidate.name);
+  expect(names.filter(name => name.startsWith("question ")).length).toBe(2);
+  expect(names.some(name => name.startsWith("claim 7 "))).toBe(true);
+});

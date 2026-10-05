@@ -1,5 +1,25 @@
 # Keryx Project Changelog
 
+## October 5, 2026 — Research usefulness, bounded sponsorship and recurring tolls
+
+- Deep research searches once per research target, in parallel, sharing the candidate
+  cap between queries; shows the model 4000 characters per source; and may read one
+  source per target (default attention limit 6; pinned A2A package limits unchanged).
+  Planning names specific candidates to verify for an unnamed "which X" comparison.
+- Optional `KERYX_ANSWER_DELIVERY=cited-synthesis` delivers the model-written answer
+  with rejected citation markers removed, followed by the excerpt ledger and the
+  computed evidence verdict. Default remains `qualified-excerpts`; reward gating is
+  unchanged. Not enabled in production by this change.
+- Receipts record a selection that was never read as SKIP and release its toll
+  reservation. A reasoning failure after a paid read, or a client disconnect after a
+  payment, no longer discards the dispatch.
+- Paid reads expire from the cache after `KERYX_CACHE_TTL_SECONDS` (default 7 days)
+  and browser-funded reads are cached per paying wallet.
+- A run the asker does not fund leaves out sources that pay the asker's verified
+  wallet. Sponsored research has daily dispatch caps per caller and service-wide.
+- Remaining limits: three of eight public page reads failed in the recorded local
+  trial; no browser-path service fee or A2A reserve refund. See `DECISIONS.md`.
+
 ## October 4, 2026 — Mainnet documentation refresh
 
 Production documentation now names Arc mainnet (`5042` / `eip155:5042`) and its

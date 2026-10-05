@@ -1,7 +1,7 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
-import { finalizeGroundedAnswer } from "./answer-grounding";
+import { finalizeCitedSynthesis, finalizeGroundedAnswer } from "./answer-grounding";
 import { discoverPublicReferences } from "./public-reference-evidence";
 import { discoverScholarly } from "../scholarly/discovery";
 import { paperCanResearch, paperDuplicatesPublicBody } from "../scholarly/paid-gate";
@@ -63,7 +63,7 @@ import {
 import { questionArxivIds } from "../scholarly/arxiv";
 import { hasKnownSeedFingerprint } from "../research/seed-evidence-fingerprints";
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
-import { isCacheFresh, newestPublishedAt } from "./cache-freshness";
+import { isCacheFresh, isCacheWithinTtl, newestPublishedAt } from "./cache-freshness";
 import {
   selectRelevantSourceItem,
   sourceItemAssetId,
@@ -184,7 +184,7 @@ export async function* runAgent(
   const defaultAttentionLimit =
     researchMode === "quick" ? Math.min(2, config.maxAttentionSources) : config.maxAttentionSources;
   const defaultReevaluateRounds = researchMode === "quick" ? 0 : config.reevaluateRounds;
-  const attentionLimit = input.executionLimits?.attentionLimit ?? defaultAttentionLimit;
+  let attentionLimit = input.executionLimits?.attentionLimit ?? defaultAttentionLimit;
   const reevaluateRounds = input.executionLimits?.reevaluateRounds ?? defaultReevaluateRounds;
   if (
     !Number.isInteger(attentionLimit) ||
@@ -224,6 +224,11 @@ export async function* runAgent(
   // 1) DECOMPOSE
   yield emit("decompose", `Breaking down: "${input.question}"`);
   const subClaims = await engine.decompose(input.question);
+  // A comparison names one target per candidate. Unless the caller pinned its limits, Deep research
+  // may read one source per target, so the last candidates are not left without any evidence.
+  if (!input.executionLimits && researchMode === "deep") {
+    attentionLimit = Math.min(32, Math.max(attentionLimit, subClaims.length));
+  }
   yield emit("decompose", `Identified ${subClaims.length} research target(s) to investigate; these are not established facts`, subClaims);
   yield emit(
     "decompose",
@@ -239,7 +244,16 @@ export async function* runAgent(
   // cited, or paid. Listing stays permissionless — unverified rows show in the directory, just
   // off the money path. Undefined verified = grandfathered true (curated seed + pre-flag rows).
   const allSources = await db.listSources();
-  const eligible = allSources.filter((s) => s.verified !== false && !isPublicReferenceId(s.id) && (gateway.mode === "offline" || s.evidenceProvenance !== "synthetic-demo"));
+  // A verified asker cannot draw someone else's money to their own wallet: when the run is not
+  // funded by the asker's browser grant, sources that pay the asker are left out of discovery.
+  const outsideFundedAsker = input.fundingOwner !== "browser" ? input.asker?.toLowerCase() : undefined;
+  const paysAsker = (s: Source) => Boolean(outsideFundedAsker) &&
+    [s.walletAddress, ...s.authors.map((author) => author.walletAddress)]
+      .some((wallet) => wallet?.toLowerCase() === outsideFundedAsker);
+  const selfOwnedCount = allSources.filter(paysAsker).length;
+  // Browser-funded reads are cached per paying wallet; one reader's toll is not another's licence.
+  const cacheScope = input.fundingOwner === "browser" && input.asker ? `payer:${input.asker.toLowerCase()}:` : "";
+  const eligible = allSources.filter((s) => s.verified !== false && !paysAsker(s) && !isPublicReferenceId(s.id) && (gateway.mode === "offline" || s.evidenceProvenance !== "synthetic-demo"));
   const rights = await Promise.all(eligible.map(s => paperCanResearch(db, s, input.paidScholarly === true && origin === "web")));
   const sources = eligible.filter((_s, index) => rights[index]);
   const unverifiedCount = allSources.filter((source) => source.verified === false).length;
@@ -297,7 +311,7 @@ export async function* runAgent(
   async function fetchWeb(id: string): Promise<GatheredContent | null> {
     lastWebFailure = "web-operation-limit";
     const candidate = webCandidates.get(id);
-    if (!candidate?.item?.itemUrl || webAttempts >= (input.researchMode === "quick" ? 4 : 8) || webRemainingMs <= 0) {
+    if (!candidate?.item?.itemUrl || webAttempts >= (input.researchMode === "quick" ? 4 : 12) || webRemainingMs <= 0) {
       publicReadOutcomes.push({ name: candidate?.name ?? "Public source", code: lastWebFailure });
       return null;
     }
@@ -314,7 +328,7 @@ export async function* runAgent(
       catch (error) {
         if (metadata?.provider !== "arxiv") throw error;
         scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: paper PDF unavailable (${articleFailureCode(error)}).`);
-        if (webAttempts >= (input.researchMode === "quick" ? 4 : 8) || webRemainingMs - (Date.now() - operationStarted) <= 0 || input.signal?.aborted) throw error;
+        if (webAttempts >= (input.researchMode === "quick" ? 4 : 12) || webRemainingMs - (Date.now() - operationStarted) <= 0 || input.signal?.aborted) throw error;
         webAttempts++;
         abstractFallback = true;
         article = await (deps.readWebArticle ?? readArticle)(`https://arxiv.org/abs/${metadata.arxivId}`,
@@ -381,8 +395,8 @@ export async function* runAgent(
     if (item) {
       const id = sourceItemAssetId(item.id);
       const identity = sourceItemIdentity({ ...item, evidenceProvenance: item.evidenceProvenance ?? s.evidenceProvenance });
-      const cacheKey = sourceItemCacheKey(s.id, item);
-      const cached = Boolean(await effects.getCachedAt(cacheKey));
+      const cacheKey = cacheScope + sourceItemCacheKey(s.id, item);
+      const cached = isCacheWithinTtl(await effects.getCachedAt(cacheKey), Date.now(), config.cacheTtlSeconds);
       if (cached) freshCache.add(id);
       const summary = previewSummary(item.summary, depth);
       const resolvedOffer = s.scholarlyEnrolled ? null : await resolveValidArticleOffer(db, s, item, terms);
@@ -430,11 +444,9 @@ export async function* runAgent(
     }
 
     // Historical source rows with no articles retain the original source-level purchase path.
-    const cached = isCacheFresh(
-      await effects.getCachedAt(s.id),
-      newestPublishedAt(items),
-      Date.now(),
-    );
+    const legacyCachedAt = await effects.getCachedAt(cacheScope + s.id);
+    const cached = isCacheFresh(legacyCachedAt, newestPublishedAt(items), Date.now()) &&
+      isCacheWithinTtl(legacyCachedAt, Date.now(), config.cacheTtlSeconds);
     if (cached) freshCache.add(s.id);
     const candidate: SourceCandidate = {
       id: s.id,
@@ -450,7 +462,7 @@ export async function* runAgent(
     assetById.set(s.id, {
       candidate,
       source: s,
-      cacheKey: s.id,
+      cacheKey: cacheScope + s.id,
       priceUsdc: terms.listPriceUsdc,
       listPriceUsdc: terms.listPriceUsdc,
     });
@@ -474,6 +486,13 @@ export async function* runAgent(
     `Discovered ${candidates.length - publicCandidates.size} verified creator source(s) and ${publicCandidates.size} free public reference(s)${unverifiedCount > 0 ? ` — skipped ${unverifiedCount} unverified (feed ownership unproven, off the money path)` : ""}`,
     candidates.map((c) => c.name),
   );
+  if (selfOwnedCount > 0) {
+    yield emit(
+      "discover",
+      `Left out ${selfOwnedCount} source(s) that pay the asking wallet: this run is not funded by that wallet, so it cannot buy or reward its own work.`,
+      { selfOwnedCount },
+    );
+  }
   if (signedOfferCount > 0) {
     yield emit(
       "discover",
@@ -735,6 +754,9 @@ export async function* runAgent(
 
   let lastSufficient = false;
   let lastGaps = 0; // sub-claims with coverage < 0.4 from the most recent sufficiency check
+  // Most recent interim assessment and the read count it covered, so the final check can reuse it
+  // instead of asking the same question about the same evidence twice.
+  let interimAssessment: { result: SufficiencyResult; reads: number } | undefined;
 
   for (const d of buys) {
     if (webCandidates.has(d.assetId ?? d.sourceId)) {
@@ -863,12 +885,22 @@ export async function* runAgent(
         // only post-authorization exits. Release the query-local reservation so another source can
         // fill the evidence gap without weakening the browser grant's independent atomic cap.
         spentTolls = Math.max(0, round(spentTolls - asset.priceUsdc));
+        markUnread(d, "the purchase failed before any authorization was submitted, so nothing was bought.");
         yield emit("fetch", `Couldn't buy ${assetLabel} (${reason}) — skipping it, continuing with what's read.`);
         continue;
       }
 
       // stop-early check after each paid read — now with per-claim coverage
-      const suf = await engine.sufficiency({ question: input.question, subClaims, gathered });
+      let suf: SufficiencyResult;
+      try {
+        suf = await engine.sufficiency({ question: input.question, subClaims, gathered });
+      } catch (error) {
+        // The toll is already paid. A failed interim assessment only loses the chance to stop early.
+        rethrowAbort(error);
+        yield emit("sufficiency", `Interim coverage check failed (${error instanceof Error ? error.message : String(error)}); continuing with the planned reads.`);
+        continue;
+      }
+      interimAssessment = { result: suf, reads: gathered.length };
       if (suf.perClaim && suf.perClaim.length > 0) {
         for (const c of suf.perClaim) {
           const pct = Math.round(c.coverage * 100);
@@ -880,7 +912,12 @@ export async function* runAgent(
       lastSufficient = suf.sufficient;
       lastGaps = suf.perClaim ? suf.perClaim.filter((c) => c.coverage < 0.4).length : 0;
       if (suf.sufficient) {
-        const remaining = buys.slice(buys.indexOf(d) + 1).filter((x) => x.action === "BUY");
+        const unread = buys.slice(buys.indexOf(d) + 1);
+        const remaining = unread.filter((x) => x.action === "BUY" && assetById.has(x.assetId ?? x.sourceId));
+        // Record what actually happened: an unread selection is not a purchase, and its toll
+        // reservation returns to the fetch budget for any later gap-filling read.
+        for (const x of unread) markUnread(x, "not read: the sources already read covered every research target, so the agent stopped early.");
+        spentTolls = Math.max(0, round(spentTolls - remaining.reduce((sum, x) => sum + x.price, 0)));
         if (remaining.length) {
           yield emit("sufficiency", `Stopping early — skipping ${remaining.length} further paid fetch(es) to save budget.`);
         }
@@ -934,13 +971,21 @@ export async function* runAgent(
 
       if (skipped.length === 0) break;
 
-      const reeval = await engine.reevaluate({
-        question: input.question,
-        subClaims,
-        gathered,
-        skippedSources: skipped,
-        remainingBudget,
-      });
+      let reeval;
+      try {
+        reeval = await engine.reevaluate({
+          question: input.question,
+          subClaims,
+          gathered,
+          skippedSources: skipped,
+          remainingBudget,
+        });
+      } catch (error) {
+        // Gap expansion is optional; paid reads already in hand must still reach the answer.
+        rethrowAbort(error);
+        yield emit("reevaluate", `Gap re-evaluation failed (${error instanceof Error ? error.message : String(error)}); answering from what was read.`);
+        break;
+      }
 
       // Emit per-claim coverage assessment — visible multi-pass reasoning
       for (const c of reeval.claims) {
@@ -1135,12 +1180,15 @@ export async function* runAgent(
   let finalSufficiency: SufficiencyResult;
   let finalAssessmentAvailable = true;
   try {
-    finalSufficiency = await engine.sufficiency({
-      question: input.question,
-      subClaims,
-      gathered,
-    });
+    finalSufficiency = interimAssessment?.reads === gathered.length
+      ? interimAssessment.result
+      : await engine.sufficiency({
+          question: input.question,
+          subClaims,
+          gathered,
+        });
   } catch (error) {
+    rethrowAbort(error);
     finalAssessmentAvailable = false;
     const reason =
       error instanceof Error ? error.message : "unknown assessment error";
@@ -1183,7 +1231,16 @@ export async function* runAgent(
 
   // 5) SYNTHESIZE
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
-  const synthesized = await engine.synthesize({ question: input.question, subClaims, gathered });
+  let synthesized: Awaited<ReturnType<typeof engine.synthesize>>;
+  try {
+    synthesized = await engine.synthesize({ question: input.question, subClaims, gathered });
+  } catch (error) {
+    // Tolls are settled and recorded. Finish with no admitted evidence (so no citation reward)
+    // rather than discarding the dispatch and its payment receipts.
+    rethrowAbort(error);
+    synthesized = { answer: "", citedMarkers: [], evidence: [], conflicts: [] };
+    yield emit("synthesize", `Synthesis failed (${error instanceof Error ? error.message : String(error)}); no evidence was admitted and citation rewards are withheld.`, { failed: true });
+  }
   if (synthesized.evidenceReview) {
     yield emit("evidence", synthesized.evidenceReview === "unavailable"
       ? "Evidence relevance review unavailable; only qualified excerpts may be delivered, with unsupported prose and rewards withheld."
@@ -1228,12 +1285,20 @@ export async function* runAgent(
     });
   }
   evidenceMeasured = true;
-  answer = finalizeGroundedAnswer({ question: input.question, answer, ledger });
+  const excerptAnswer = finalizeGroundedAnswer({ question: input.question, answer, ledger });
+  const synthesisAnswer = config.answerDelivery === "cited-synthesis"
+    ? finalizeCitedSynthesis({ question: input.question, answer, ledger })
+    : excerptAnswer;
+  // The synthesis mode itself falls back to excerpts when no cited sentence survives the gate.
+  const citedSynthesis = synthesisAnswer !== excerptAnswer;
+  answer = synthesisAnswer;
   const vi = researchResponseLanguage(input.question) === "vi";
-  yield emit("evidence", vi
-    ? "Chỉ cung cấp trích đoạn nguồn đủ điều kiện; chưa xác minh được tổng hợp đầy đủ và hỗ trợ cho từng nhận định."
-    : "Delivering qualified source excerpts; complete synthesis and per-assertion support remain unverified.",
-    { answerDelivery: "qualified-excerpts", completeness: "unverified" });
+  yield emit("evidence", citedSynthesis
+    ? vi ? "Cung cấp bản tóm tắt của mô hình, chỉ giữ trích dẫn có trích đoạn khớp nguồn; câu không có trích dẫn là chưa kiểm chứng."
+      : "Delivering the model-written summary with only source-matched citations kept; uncited sentences are unverified."
+    : vi ? "Chỉ cung cấp trích đoạn nguồn đủ điều kiện; chưa xác minh được tổng hợp đầy đủ và hỗ trợ cho từng nhận định."
+      : "Delivering qualified source excerpts; complete synthesis and per-assertion support remain unverified.",
+    { answerDelivery: citedSynthesis ? "cited-synthesis" : "qualified-excerpts", completeness: "unverified" });
   const used = gathered.filter((g) =>
     ledger.acceptedMarkers.has(g.marker),
   );
@@ -1272,27 +1337,29 @@ export async function* runAgent(
     citedMarkers: [...ledger.acceptedMarkers], sourceMarkers: gathered.map(source => source.marker),
     conflicts: synthesized.conflicts ?? [], finalAssessmentSufficient: finalSufficiency.sufficient });
   // Coverage estimates describe the excerpt ledger, never a verified complete synthesis.
-  const verdict: Confidence = { level: "Low", reason: vi
+  const verdict: Confidence = citedSynthesis ? evidenceVerdict : { level: "Low", reason: vi
     ? `Chỉ cung cấp trích đoạn nguồn; chưa xác minh được tổng hợp đầy đủ và hỗ trợ cho từng nhận định. Có ${claimCoverage.filter(claim => !(claim.coverage >= MIN_REWARD_SUPPORT)).length} yêu cầu dưới ngưỡng hỗ trợ theo đánh giá ghi nhận; độ bao phủ không chứng minh tính đúng đắn hoặc giải quyết mâu thuẫn nguồn.`
     : `Only source excerpts are delivered; complete synthesis and per-assertion support remain unverified. Evidence assessment: ${evidenceVerdict.reason}` };
   runConfidence = verdict;
 
   if (verdict.level === "Low" && used.length > 0) {
     answer = vi ? `> ⚠ Độ tin cậy thấp — ${verdict.reason} Kết quả chưa hoàn chỉnh.\n\n${answer}`
-      : `> ⚠ Low confidence — ${verdict.reason} within budget. Treat this as provisional.\n\n${answer}`;
+      : `> ⚠ Low confidence — ${verdict.reason.replace(/[.!?]$/, "")}. Treat this as provisional.\n\n${answer}`;
   }
 
-  yield emit("synthesize", vi ? `Đã chuẩn bị trích đoạn từ ${used.length} nguồn; chưa xác minh được tổng hợp đầy đủ`
+  yield emit("synthesize", citedSynthesis ? `Prepared a cited summary from ${used.length} source(s); uncited sentences are unverified`
+    : vi ? `Đã chuẩn bị trích đoạn từ ${used.length} nguồn; chưa xác minh được tổng hợp đầy đủ`
     : `Prepared source excerpts citing ${used.length} source(s); complete synthesis is unverified`, { answer });
   yield emit("verdict", `Confidence: ${verdict.level} — ${verdict.reason}.`, verdict);
 
   // 6) ATTRIBUTE contribution weights
   if (used.length > 0) {
+    // A failed attribution falls back to resolveAttributions' equal split across validated citations.
     const proposedAttributions = await engine.attribute({
       question: input.question,
       answer,
       used,
-    });
+    }).catch((error: unknown) => { rethrowAbort(error); return []; });
     const attributions = resolveAttributions(
       used,
       proposedAttributions,
@@ -1480,6 +1547,15 @@ export async function* runAgent(
   return finish(answer);
 
   // ── helpers ──
+  /** Turn a selected-but-never-read decision into a SKIP so receipts and counts match reality. */
+  function markUnread(decision: Decision, reason: string): void {
+    const assetId = decision.assetId ?? decision.sourceId;
+    const index = finalDecisions.findIndex((item) => !item.external && (item.assetId ?? item.sourceId) === assetId);
+    if (index < 0) return;
+    const current = finalDecisions[index]!;
+    // Replace rather than mutate: the decide step already streamed the planning snapshot.
+    finalDecisions[index] = { ...current, action: "SKIP", rationale: `${current.rationale} — ${reason}` };
+  }
   function withholdOwnedReads(phase: "fetch" | "reevaluate", selectedAssetId?: string): TraceStep[] {
     const steps: TraceStep[] = [];
     if (!fundingUnavailable) {
@@ -1559,6 +1635,11 @@ export async function* runAgent(
     );
     return demoteSyntheticEvidence(run);
   }
+}
+
+/** Cancellation is never a recoverable reasoning failure. */
+function rethrowAbort(error: unknown): void {
+  if (error instanceof Error && error.name === "AbortError") throw error;
 }
 
 function short(tx?: string | null): string {

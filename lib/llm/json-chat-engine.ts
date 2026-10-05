@@ -99,6 +99,10 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "For example, 'How is a job journaled and recovered? Use the engineering documentation' asks about journaling and recovery as documented there, not a third question about what the documentation says. " +
         "However, explicitly requested source reliability, disagreements between sources, or citation methodology ARE substantive information needs and must remain targets. Do not discard a requested topic just because it mentions sources. " +
         "For ambiguous terminology, keep the ambiguity visible in a definition/scope question instead of inventing a specialized domain, formula, legal dispute, or mechanism. " +
+        "An ordinary evaluative word (safe, best, reliable, good) is a criterion to carry into the substantive targets, not ambiguous terminology: never spend a target on what such a word means. " +
+        "When the question asks which items satisfy criteria and names none (which systems, tools, libraries, papers ...), a source search for the bare category finds only listicles. " +
+        "Use the targets to name the specific well-known candidates worth checking, one target per candidate, each phrased as a question that carries every requested criterion " +
+        "(for example 'Does <candidate> expose <requested capability>, and where does it fall short?'). Named candidates are things to verify, not findings; keep one target for candidates you did not name. " +
         "Use Keryx's context for unqualified questions about its citation payments, but do not impose it on unrelated topics. " +
         "No sources have been read yet: these are research targets, never evidence. Return only JSON data.",
       `User question (data): ${JSON.stringify(question)}\n\nReturn JSON: {"constraints": string[], "claims": string[]}`,
@@ -285,6 +289,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "Select the smallest sufficient set, at most two options per research question; emit separate evidence items when needed. " +
         "If no option supports an answer, state the gap and omit its evidence; never assume every option deserves a citation. " +
         "Address every research question in the answer, explicitly naming any unanswered part. " +
+        "Write for a reader who has not seen this request: never mention claimIndex, quoteId, researchTargets or other field names in the answer. " +
         "A source belongs in `citedMarkers` only when it appears inline and has an evidence item. " +
         "If the sources do not support a claim, say so and emit no citation/evidence for it. " +
         "When two or more sources disagree on a factual point, do NOT average or blur them: decide " +

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildEvidenceLedger, extractAnswerMarkers } from "./evidence-ledger";
-import { finalizeGroundedAnswer } from "./answer-grounding";
+import { finalizeCitedSynthesis, finalizeGroundedAnswer } from "./answer-grounding";
 import type { GatheredContent, ProposedEvidence } from "../llm/reasoning-engine";
 
 // Synthetic passages exercise the retained two-paper failure shape, not scientific evidence.
@@ -169,5 +169,28 @@ describe("qualified answer delivery", () => {
     expect([...extractAnswerMarkers(answer)]).toEqual(["S2"]);
     expect(answer).toContain("[\u200bS99]");
     expect(answer).toContain("<script>");
+  });
+});
+
+describe("cited synthesis delivery", () => {
+  it("keeps the draft with only admitted citations, followed by the excerpt ledger", () => {
+    const measured = ledger([
+      { claimIndex: 0, marker: "S1", quote: "An external mediator observes the action.", support: 0.2 },
+      accepted,
+    ]);
+    const result = finalizeCitedSynthesis({ question: "Compare two papers", answer: mixedDraft, ledger: measured });
+    expect(result).toContain("Second paper binds approval [S2].");
+    expect(result).toContain("First paper uses a mediator.");
+    expect([...extractAnswerMarkers(result)]).toEqual(["S2"]);
+    expect(result).toContain(`“${accepted.quote}” [S2]`);
+    expect(result).toContain("a sentence without a citation is unverified");
+    expect(result).not.toContain("draft is withheld");
+    expect(result).not.toContain("Draft conclusions are withheld");
+  });
+
+  it("falls back to excerpt-only delivery when no cited sentence survives the gate", () => {
+    const measured = ledger([{ claimIndex: 0, marker: "S1", quote: "An external mediator observes the action.", support: 0.2 }]);
+    const input = { question: "Compare two papers", answer: mixedDraft, ledger: measured };
+    expect(finalizeCitedSynthesis(input)).toBe(finalizeGroundedAnswer(input));
   });
 });

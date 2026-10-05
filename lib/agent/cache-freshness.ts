@@ -39,6 +39,23 @@ export function isCacheFresh(
   return newest <= cached;
 }
 
+/**
+ * True when a cached copy is young enough to reuse. A missing/unreadable timestamp is never
+ * reusable; a non-positive TTL disables expiry. Clock skew that puts the copy in the future is
+ * treated as fresh rather than forcing a second toll.
+ */
+export function isCacheWithinTtl(
+  cachedAt: string | null,
+  now: number,
+  ttlSeconds: number,
+): boolean {
+  if (!cachedAt) return false;
+  const cached = Date.parse(cachedAt);
+  if (!Number.isFinite(cached)) return false;
+  if (!(ttlSeconds > 0)) return true;
+  return now - cached <= ttlSeconds * 1000;
+}
+
 /** Newest publication date among a source's items. `getItems` returns newest-first. */
 export function newestPublishedAt(items: SourceItem[]): string | undefined {
   for (const item of items) if (item.publishedAt) return item.publishedAt;

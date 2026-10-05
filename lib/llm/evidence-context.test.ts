@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { ingestRssXml } from "../ingest/rss";
-import { evidenceContext, selectEvidencePassages } from "./evidence-context";
+import { MAX_CONTEXT_CHARACTERS, evidenceContext, selectEvidencePassages } from "./evidence-context";
 import { JsonChatEngine } from "./json-chat-engine";
 import { buildEvidenceLedger } from "../agent/evidence-ledger";
 import type { GatheredContent } from "./reasoning-engine";
@@ -25,7 +25,7 @@ describe("bounded evidence context", () => {
       "Resume sends only GET requests for the original job.",
       "It does not sign a new authorization or replay a purchase.",
     ]) expect(result.passages.some(p => p.text.includes(quote))).toBe(true);
-    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(MAX_CONTEXT_CHARACTERS);
     for (const p of result.passages) expect(p.text).toBe(article.content.slice(p.start, p.end));
   });
   it("keeps receipt integrity evidence when a second target asks for absent SQL details", async () => {
@@ -36,7 +36,7 @@ describe("bounded evidence context", () => {
       ["How does Keryx verify a research receipt?", "Which SQL isolation level does Keryx's buyer journal use?"]);
     expect(result.passages.some(p => p.text.includes("canonical SHA-256 digest"))).toBe(true);
     expect(result.passages.some(p => p.text.includes("original question and returned answer"))).toBe(true);
-    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(MAX_CONTEXT_CHARACTERS);
     for (const p of result.passages) expect(p.text).toBe(article.content.slice(p.start, p.end));
   });
   it("keeps recovery instructions that overlap an already selected journal passage", async () => {
@@ -46,14 +46,14 @@ describe("bounded evidence context", () => {
       "How can a Keryx buyer recover a job after losing the submission response without paying again?",
       ["How does the buyer preserve the original job before submission?", "What does resume do after response loss, and what payment actions does it avoid?"]);
     expect(result.passages.some((p) => p.text.includes("Resume sends only GET requests for the original job."))).toBe(true);
-    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(MAX_CONTEXT_CHARACTERS);
     for (const passage of result.passages) expect(passage.text).toBe(article.content.slice(passage.start, passage.end));
   });
   it("recovers late evidence without rewriting source text or exceeding the old synthesis text budget", () => {
-    expect(longText.slice(0, 2000)).not.toContain(quote);
+    expect(longText.slice(0, MAX_CONTEXT_CHARACTERS)).not.toContain(quote);
     const result = selectEvidencePassages(longText, question, claims);
     expect(result.passages.some((passage) => passage.text.includes(quote))).toBe(true);
-    expect(result.passages.reduce((total, passage) => total + passage.text.length, 0)).toBeLessThanOrEqual(2000);
+    expect(result.passages.reduce((total, passage) => total + passage.text.length, 0)).toBeLessThanOrEqual(MAX_CONTEXT_CHARACTERS);
     for (const passage of result.passages) expect(passage.text).toBe(longText.slice(passage.start, passage.end));
     expect(result.passages[0].start).toBe(0);
     expect(result.excerpted).toBe(true);
@@ -83,13 +83,13 @@ describe("bounded evidence context", () => {
     expect(result.passages.some((p) => p.text.includes("Solar battery storage"))).toBe(true);
   });
 
-  it("retains late fifth and sixth dimensions within the unchanged 2000-character source budget", () => {
+  it("retains late fifth and sixth dimensions within the bounded source budget", () => {
     const dimensions = ["alpha methods", "beta methods", "gamma evaluation", "delta evaluation", "epsilon limitations", "zeta limitations"];
     const facts = dimensions.map(dimension => `The synthetic ${dimension} dimension has explicit source text.`);
     const text = "Introduction. ".repeat(100) + facts.map(fact => fact + " Background. ".repeat(110)).join("\n");
     const result = selectEvidencePassages(text, "Compare methods, evaluation setup and limitations", dimensions);
     for (const fact of facts) expect(result.passages.some(p => p.text.includes(fact))).toBe(true);
-    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(MAX_CONTEXT_CHARACTERS);
     for (const passage of result.passages) expect(passage.text).toBe(text.slice(passage.start, passage.end));
   });
 
@@ -107,7 +107,7 @@ describe("bounded evidence context", () => {
     expect(result.scholarly?.arxivId).toBe("2606.02668v1");
     for (const fact of [ownFact, genericFact, unversionedFact]) expect(result.passages.some(p => p.text.includes(fact))).toBe(true);
     expect(result.passages.some(p => p.text.includes(wrongVersionFact))).toBe(false);
-    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(MAX_CONTEXT_CHARACTERS);
   });
 
   it("refuses excess target input instead of dropping late dimensions", () => {
@@ -121,7 +121,7 @@ describe("bounded evidence context", () => {
     const text = prefix + sentence + " General appendix. ".repeat(150);
     const result = selectEvidencePassages(text, "How is receipt integrity checked?", ["How is receipt integrity checked?"]);
     expect(result.passages.some(p => p.text.includes(sentence))).toBe(true);
-    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
+    expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(MAX_CONTEXT_CHARACTERS);
     for (const [index, p] of result.passages.entries()) {
       expect(p.text).toBe(text.slice(p.start, p.end));
       if (index) expect(p.start).toBeGreaterThan(result.passages[index - 1].end);

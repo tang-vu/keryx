@@ -174,6 +174,25 @@ describe("shared sponsored admission with durable identity", () => {
     expect(await checkSponsoredResearchAdmission({ kind: "anonymous", ip: "192.0.2.100" })).toBeNull();
   });
 
+  it("daily caps bound a caller and the whole service across minute windows", async () => {
+    vi.stubEnv("KERYX_SPONSORED_DISPATCHES_PER_CALLER_PER_DAY", "6");
+    vi.stubEnv("KERYX_SPONSORED_DISPATCHES_PER_DAY", "8");
+    const now = Date.now(); vi.spyOn(Date, "now").mockReturnValue(now);
+    const ask = (ip: string) => checkSponsoredResearchAdmission({ kind: "anonymous", ip });
+    for (let i = 0; i < 5; i++) expect(await ask("192.0.2.1")).toBeNull();
+    vi.mocked(Date.now).mockReturnValue(now + 60_001);
+    expect(await ask("192.0.2.1")).toBeNull();
+    // A fresh minute window does not renew the caller's day.
+    expect((await ask("192.0.2.1"))?.status).toBe(429);
+    expect(await ask("192.0.2.2")).toBeNull();
+    expect(await ask("192.0.2.3")).toBeNull();
+    // Eight admitted service-wide: a new caller is refused until the day rolls over.
+    expect((await ask("192.0.2.4"))?.status).toBe(429);
+    vi.mocked(Date.now).mockReturnValue(now + 86_400_001);
+    expect(await ask("192.0.2.4")).toBeNull();
+    expect(await ask("192.0.2.1")).toBeNull();
+  });
+
   it("bot users retain their own five-call allowance and provider namespaces do not collide", async () => {
     for (let i = 0; i < 5; i++) expect((await discord(discordRequest("same-id"))).status).toBe(200);
     expect(mocks.after).toHaveBeenCalledTimes(5);

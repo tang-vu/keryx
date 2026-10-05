@@ -127,7 +127,7 @@ export const config = {
   // reads independently from USDC so a cheap/noisy catalog cannot dilute the evidence set.
   maxAttentionSources: Math.max(
     1,
-    Math.round(num(process.env.KERYX_MAX_ATTENTION_SOURCES, 4)),
+    Math.round(num(process.env.KERYX_MAX_ATTENTION_SOURCES, 6)),
   ),
   // Cached content is free in money, not in attention. Only reuse it when the engine predicts
   // material value and names at least one sub-claim it can support.
@@ -135,6 +135,17 @@ export const config = {
     1,
     Math.max(0, num(process.env.KERYX_MIN_CACHE_EXPECTED_VALUE, 0.45)),
   ),
+
+  // A paid read is reusable for a bounded period, not forever: without an expiry the first toll for
+  // an article version is the last one that version ever earns, however often it is read. 0 disables
+  // expiry. Browser-funded reads are additionally cached per paying wallet (see run-agent).
+  cacheTtlSeconds: Math.max(0, Math.round(num(process.env.KERYX_CACHE_TTL_SECONDS, 604_800))),
+  // "qualified-excerpts" delivers only source-matched quotes with a fixed Low label. "cited-synthesis"
+  // delivers the model-written answer with rejected citation markers removed, followed by the same
+  // excerpt ledger, and reports the computed evidence verdict. Reward gating is identical in both.
+  answerDelivery: (process.env.KERYX_ANSWER_DELIVERY === "cited-synthesis"
+    ? "cited-synthesis"
+    : "qualified-excerpts") as "cited-synthesis" | "qualified-excerpts",
 
   // Original public reads have no toll and no pre-read evidence. Keep their preview
   // ranking floor aligned with the heuristic's positive selection threshold; cached

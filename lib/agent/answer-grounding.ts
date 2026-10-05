@@ -1,5 +1,5 @@
 import type { EvidenceLedger } from "./evidence-ledger";
-import { MIN_REWARD_SUPPORT } from "./evidence-ledger";
+import { MIN_REWARD_SUPPORT, extractAnswerMarkers, removeUnsupportedCitationMarkers } from "./evidence-ledger";
 import { researchResponseLanguage } from "./empty-public-evidence";
 
 function literal(value: string): string {
@@ -49,4 +49,28 @@ export function finalizeGroundedAnswer(input: {
     ? "Trích đoạn chỉ xác lập mức bám nguồn, không chứng minh tính đúng đắn, quan hệ suy ra hay toàn bộ nội dung bài. Mức hỗ trợ và độ bao phủ là ước lượng, không chứng nhận câu trả lời đầy đủ. Nội dung nguồn có thể sai hoặc mâu thuẫn. Các kết luận trong bản nháp không được giữ; cần đối chiếu văn bản gốc và đánh giá thêm. Trạng thái thanh toán vẫn nằm trong biên nhận riêng."
     : "Excerpts establish source grounding, not factual truth, entailment or whole-paper coverage. Support and coverage are estimates, not certification of a complete answer. Source statements may be wrong or conflicting. Draft conclusions are withheld; inspect the original text and obtain further review. Payment states remain in the separate receipt.";
   return [intro, ...sections, limitations].join("\n\n");
+}
+
+/**
+ * Opt-in delivery (KERYX_ANSWER_DELIVERY=cited-synthesis): the model-written answer with every
+ * rejected citation marker removed, followed by the unchanged excerpt ledger so each surviving
+ * citation can be checked against its quote. Sentences that end up with no marker are prose the
+ * gate could not tie to a source, and the note says so. Falls back to excerpt-only delivery when no
+ * cited sentence survives. Reward gating is decided by the ledger and is identical in both modes.
+ */
+export function finalizeCitedSynthesis(input: {
+  question: string;
+  answer: string;
+  ledger: EvidenceLedger;
+}): string {
+  const excerpts = finalizeGroundedAnswer(input);
+  const draft = removeUnsupportedCitationMarkers(input.answer, input.ledger.acceptedMarkers).trim();
+  if (!input.ledger.acceptedMarkers.size || !extractAnswerMarkers(draft).size) return excerpts;
+  const vi = researchResponseLanguage(input.question) === "vi";
+  const note = vi
+    ? "Tóm tắt do mô hình viết. Chỉ giữ các trích dẫn có trích đoạn khớp nguồn; câu không có trích dẫn là chưa được kiểm chứng. Đối chiếu với các trích đoạn bên dưới."
+    : "Model-written summary. Only citations backed by a source-matched excerpt are kept; a sentence without a citation is unverified. Check it against the excerpts below.";
+  // Drop the excerpt-only introduction and closing note: both state that the draft was withheld.
+  const ledgerSections = excerpts.split("\n\n").slice(1, -1).join("\n\n");
+  return [draft, note, ledgerSections].join("\n\n");
 }

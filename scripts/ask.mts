@@ -46,10 +46,15 @@ console.log(c.bold("\n📝 Answer\n"));
 console.log(run.answer);
 
 console.log(c.bold("\n💸 Creators paid"));
-if (run.citations.length === 0) {
+// Free public references are cited but have no payout authority; listing them as paid $0 misleads.
+const rewarded = run.citations.filter((cit) => cit.sourceKind !== "public-reference");
+if (rewarded.length < run.citations.length) {
+  console.log(c.dim(`  (${run.citations.length - rewarded.length} free public reference(s) cited, no payout)`));
+}
+if (rewarded.length === 0) {
   console.log(c.dim("  (no citations settled)"));
 } else {
-  for (const cit of run.citations) {
+  for (const cit of rewarded) {
     console.log(
       `  • ${cit.sourceName}: ${c.green("$" + cit.reward)} ${c.dim(`(${(cit.weight * 100).toFixed(0)}% contribution)`)}`,
     );
@@ -58,7 +63,7 @@ if (run.citations.length === 0) {
 
 console.log(
   c.bold(`\n📊 Total spent: ${c.green("$" + run.totalSpent)}`) +
-    c.dim(`  →  100% to creators  ·  ${run.decisions.filter((d) => d.action === "BUY").length} bought / ${run.decisions.filter((d) => d.action === "SKIP").length} skipped`),
+    c.dim(`  →  100% to creators  ·  ${run.decisions.filter((d) => d.action === "BUY").length} bought / ${run.decisions.filter((d) => d.action === "CACHE").length} free or cached reads / ${run.decisions.filter((d) => d.action === "SKIP").length} skipped`),
 );
 console.log(c.dim(`\nrun id: ${run.id}\n`));
 process.exit(0);
