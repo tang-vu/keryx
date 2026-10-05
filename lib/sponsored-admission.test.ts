@@ -26,7 +26,7 @@ vi.mock("./config", async original => {
 
 import { config } from "./config";
 import { mintApiKey } from "./api-keys";
-import { checkSponsoredResearchAdmission, checkApiKeyMintAdmission } from "./sponsored-admission";
+import { admissionNetwork, checkSponsoredResearchAdmission, checkApiKeyMintAdmission } from "./sponsored-admission";
 import { POST as chat } from "../app/api/v1/chat/completions/route";
 import { POST as mcp } from "../app/mcp/route";
 import { POST as web } from "../app/api/ask/route";
@@ -172,6 +172,21 @@ describe("shared sponsored admission with durable identity", () => {
     expect((await checkSponsoredResearchAdmission({ kind: "anonymous", ip: "192.0.2.100" }))?.status).toBe(429);
     vi.mocked(Date.now).mockReturnValue(now + 60_001);
     expect(await checkSponsoredResearchAdmission({ kind: "anonymous", ip: "192.0.2.100" })).toBeNull();
+  });
+
+  it("gives one allowance to an IPv6 /64 and leaves IPv4 and unparseable input as given", async () => {
+    expect(admissionNetwork("2001:db8:1:2:aaaa::1")).toBe("2001:db8:1:2::/64");
+    expect(admissionNetwork("2001:0DB8:0001:0002::ffff")).toBe("2001:db8:1:2::/64");
+    expect(admissionNetwork("2001:db8:1:3::1")).toBe("2001:db8:1:3::/64");
+    expect(admissionNetwork("::ffff:192.0.2.7")).toBe("192.0.2.7");
+    expect(admissionNetwork("192.0.2.7")).toBe("192.0.2.7");
+    expect(admissionNetwork("not:an:address")).toBe("not:an:address");
+    expect(admissionNetwork("")).toBe("unknown");
+    for (let i = 0; i < 5; i++) {
+      expect(await checkSponsoredResearchAdmission({ kind: "anonymous", ip: `2001:db8:1:2::${i + 1}` })).toBeNull();
+    }
+    expect((await checkSponsoredResearchAdmission({ kind: "anonymous", ip: "2001:db8:1:2:ffff::9" }))?.status).toBe(429);
+    expect(await checkSponsoredResearchAdmission({ kind: "anonymous", ip: "2001:db8:1:3::1" })).toBeNull();
   });
 
   it("daily caps bound a caller and the whole service across minute windows", async () => {

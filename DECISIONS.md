@@ -5204,3 +5204,14 @@ Expiry requires an explicit fresh login; completed Circle initialization can be
 resolved as the same canonical wallet on that attempt. No automatic signing or
 initialization retry, challenge renewal, budget/custody change or funding follows.
 The continuation window is distinct from vendor token and Keryx session lifetimes.
+
+## Independent review corrections to bounded sponsorship and unread receipts - 2026-10-05
+
+An independent review of the preceding update found no double payment, overspend or wrong payee, and four defects that are corrected here.
+
+- A disconnect while the first creator payment was still in flight cancelled the run that owned its receipt, because the route learned of a payment only from the trace step emitted after it. The route now also marks the existing creator-payment boundary, which is awaited immediately before every gateway call.
+- Per-payer cache keys are withdrawn. Enrolled storage admits at most 512 cached rows and 8 MiB and never evicts, so payer-by-version keys would exhaust it and make every later read a fresh toll for all callers. The shared cache with the reuse window remains: an expired row is replaced in place by its next purchase. Charging each reader for a paid read needs a per-payer entitlement record with the content stored once; that is an open design item.
+- Gap expansion reads a fresh cached copy instead of buying the same article again. Early stop releases a toll reservation only for a decision that is still an unread purchase, so a decision already withheld by a funding failure keeps its reservation and rationale.
+- Sponsored admission keys an IPv6 caller by its /64, since a subscriber is routinely delegated the whole prefix and a per-address key handed out a fresh allowance for each address.
+
+Considered and kept. Daily buckets stay after the caller's per-minute buckets and before the shared ones: a caller refused by the shared per-minute bucket loses one of its own daily points, which only its own retries can cost it, whereas the reverse order would let a caller with an exhausted day spend the shared per-minute allowance of everyone else. The own-source exclusion compares recorded wallets and can be avoided by asking signed out or from another wallet; the daily caps are the bound for those callers. It also applies to prepaid private research and to keyed chat completions, whose runs are now attributed to the key wallet in its history without counting as its spend.

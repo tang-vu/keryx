@@ -1791,7 +1791,7 @@ describe("runAgent — article-level economics", () => {
     expect(run.citations.length).toBeGreaterThan(0); // a cached read still earns a citation reward
   });
 
-  it("buys again once a cached article is older than the reuse window, and scopes browser-funded reads to the payer", async () => {
+  it("buys again once a cached article is older than the reuse window", async () => {
     const source = makeSource({ id: "a", fetchPrice: 0.004 });
     const item: SourceItem = {
       id: "a-i1", sourceId: "a", title: "post", summary: "summary",
@@ -1804,21 +1804,25 @@ describe("runAgent — article-level economics", () => {
       items: { a: [item] }, cachedByKey: { [cacheKey]: expired },
     });
     expect((await drive({ question: "q", budget: 0.05 }, stale)).run.decisions[0].action).toBe("BUY");
+  });
 
-    // Someone else's fresh shared copy is not a free read for a wallet funding its own session.
-    const payer = "0x00000000000000000000000000000000000000aa";
-    const engine = fakeEngine({ decide: () => [cacheDecision("a")] });
-    const other = deps([source], engine, fakeGateway(), {
-      items: { a: [item] }, cachedByKey: { [cacheKey]: new Date().toISOString() },
+  it("fills a gap from a fresh cached copy instead of buying the same article again", async () => {
+    const sources = [makeSource({ id: "a", fetchPrice: 0.004 }), makeSource({ id: "b", fetchPrice: 0.004 })];
+    const engine = fakeEngine({
+      decide: (input) => input.candidates.map((candidate) => candidate.id === "a"
+        ? buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice })
+        : { ...cacheDecision("b"), action: "SKIP" as const, targets: [] }),
+      sufficiency: () => ({ sufficient: false, rationale: "keep reading" }),
+      reevaluate: () => ({ shouldBuyMore: true, recommendedIds: ["b"], rationale: "fill the gap" }),
     });
-    await drive({ question: "q", budget: 0.05, asker: payer, fundingOwner: "browser" }, other);
-    expect(engine.decideInput?.candidates[0].cached).toBe(false);
+    const gw = fakeGateway();
+    const d = deps(sources, engine, gw, { cachedAt: cache("b") });
 
-    const own = deps([source], engine, fakeGateway(), {
-      items: { a: [item] }, cachedByKey: { [`payer:${payer}:${cacheKey}`]: new Date().toISOString() },
-    });
-    await drive({ question: "q", budget: 0.05, asker: payer, fundingOwner: "browser" }, own);
-    expect(engine.decideInput?.candidates[0].cached).toBe(true);
+    const { steps } = await drive({ question: "q", budget: 0.05 }, d);
+
+    expect(gw.fetchCalls).toEqual(["a"]);
+    expect(d.db.payments.filter((p) => p.kind === "fetch")).toHaveLength(1);
+    expect(steps.some((step) => step.message.includes("reused cached"))).toBe(true);
   });
 
   it("keeps a source that pays the asker out of a run the asker does not fund", async () => {
