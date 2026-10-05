@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Deep discovery accounting and comparison scope (2026-10-05, v0.26.22 candidate)
+### Deep discovery accounting and comparison scope (2026-10-06, v0.26.23 candidate)
 
 - Give the current combined source-selection and Deep-discovery update a distinct
   app identity. The immutable v0.26.20 tag and published archives belong to
@@ -17,6 +17,25 @@
   candidate shortlist; ask for scope choices when the requested breadth cannot fit.
 - This version change creates no live allowance, paid retest, funding, custody or
   schedule. Ordinary Chrome usefulness remains 0/3 and its acceptance gates stay open.
+- Keep the private-worker signer fixture independent of live RPC availability while
+  verifying real SDK signatures and refusal before signing when chain attestation fails.
+
+### Reading activity, source visibility and account totals (2026-10-05, v0.26.22 candidate)
+
+- Lead the public ledger with recorded questions and sources; keep settlement
+  totals and complete original-network proof inspectable. Omit confirmed-empty
+  settlement tickers and repeated zero-payout rows.
+- Show original documents cited in recent public answers, retained public feeds
+  and unverified creator listings with separate counts and reading/control labels.
+  Private results, synthetic citations and unsafe links stay outside the library.
+- Add recorded account totals from the authenticated wallet index, deduplicating
+  valid normalized addresses across Google and wallet sign-ins. The public API
+  exposes only an optional nullable aggregate. Provider splits, unique people and
+  active users are not inferred; enrolled Supabase remains unknown pending a
+  reviewed aggregate RPC.
+- Preserve available activity through independent read failures and date retained
+  data. No source import, auth/schema/custody change or payment allowance.
+  See [scope and acceptance](engineering/ledger-sources-2026-10-05.md).
 
 ## October 5, 2026 — OSS adoption and decision context (v0.26.21 candidate)
 
@@ -39,6 +58,7 @@
 - One recorded local comparison read seven pages for seven named targets instead of
   three pages for three generic targets. Delivered evidence stayed thin and
   Low-confidence; see `DECISIONS.md` for the measured limits and added search cost.
+
 ### Source-selection isolation and failure diagnostics (2026-10-05, v0.26.20 candidate)
 
 - Give the selector explicit source IDs and zero-based allowed target indexes.

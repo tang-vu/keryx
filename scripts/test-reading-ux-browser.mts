@@ -36,7 +36,8 @@ try {
   await loading.close();
 
   const empty = await openPage(320, 480, async route => route.fulfill({ json: { payments: [] } }));
-  await empty.getByText("No recent settled citations.").waitFor();
+  await empty.getByText("Loading settlements…").waitFor({ state: "hidden" });
+  assert.equal(await empty.getByText("No recent settled citations.").count(), 0);
   await empty.close();
 
   const failed = await openPage(320, 480, async route => route.fulfill({ status: 503, json: { error: "unavailable" } }));

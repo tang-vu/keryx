@@ -22,6 +22,7 @@ import {
 import { fmtUsdc, shortAddr } from "./phase-style";
 import { cn } from "@/lib/utils";
 import { GatewayContractReferences } from "./gateway-contract-references";
+import { recordedArcLabel } from "@/lib/arc-network-display";
 
 function timeAgo(iso: string): string {
   const d = new Date(iso).getTime();
@@ -46,13 +47,12 @@ export function PaymentsFeed({
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="font-serif text-lg font-normal">
-          Live payments feed
+          Payment records
         </CardTitle>
         <div className="flex items-center gap-3">
           <GatewayContractReferences records={payments} className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground hover:text-paid hover:underline"/>
           <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-paid">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-paid" />
-            live
+            recorded
           </span>
         </div>
       </CardHeader>
@@ -78,7 +78,7 @@ export function PaymentsFeed({
                     {p.sourceName}
                   </p>
                   <p className="mt-0.5 font-mono text-[10px] text-ink-3">
-                    {timeAgo(p.createdAt)} · {p.kind} ·{" "}
+                    {timeAgo(p.createdAt)} · {recordedArcLabel(p.network)} · {p.kind} ·{" "}
                     {status === "settled"
                       ? "settled in batch"
                       : status === "failed"
@@ -144,6 +144,7 @@ export function PaymentsFeed({
                     </TableCell>
                     <TableCell className="max-w-[180px] truncate text-sm font-medium">
                       {p.sourceName}
+                      <span className="mt-1 block font-mono text-[11px] font-normal text-muted-foreground">{recordedArcLabel(p.network)}</span>
                     </TableCell>
                     <TableCell
                       className={cn(
@@ -194,6 +195,7 @@ export function PaymentsFeed({
                           simulated
                         </span>
                       )}
+                      {(p.txHash || p.authorizationId) && <span className="mt-2 block max-w-60 break-all font-mono text-[11px] text-muted-foreground">{p.txHash ? "Recorded reference: " : "Authorization: "}{p.txHash ?? p.authorizationId}</span>}
                     </TableCell>
                   </TableRow>
                 ))}

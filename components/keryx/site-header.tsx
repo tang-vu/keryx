@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/", label: "Ask a question" },
-  { href: "/dashboard", label: "Payments & proof" },
+  { href: "/dashboard", label: "Activity & proof" },
   { href: "/answers", label: "Past answers" },
   { href: "/sources", label: "Sources" },
   { href: "/market", label: "Market" },

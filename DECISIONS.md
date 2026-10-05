@@ -1,5 +1,41 @@
 # Keryx — Decision Log
 
+**Show recorded reading and retained sources before empty earnings — 2026-10-05.**
+The owner requested visible real source information, including public references and
+unverified creator listings. Treat Sources as a reading library and the ledger as
+research activity with separately inspectable payment proof. Public feed snapshots
+can show publisher links, topics, retained article titles, publisher dates, delivery
+scope and collection time without granting ownership, factual accuracy or payment
+authority. Count retained public references separately from creator listings; broad
+web discoverability is not a stored catalog count. Do not bulk-import sources or
+rewrite historical evidence to fill the page.
+
+The live retained feed/creator collections were empty at readback, while public
+answers retained original citation URLs. Show a third, explicitly bounded collection
+of documents cited in recent public answers, with original links, recorded reading
+scope and answer permalinks. It reads the existing public `query_runs` store, never
+private research results; omit synthetic citations and unsafe links. Historical
+citation metadata is not a source enrollment or payment/control authority.
+
+The owner also requested user statistics from Google or connected wallets. Expose
+the existing authenticated wallet account index as an aggregate of distinct valid
+normalized addresses. Repeated verified sign-ins to the same wallet count once;
+multiple wallets can belong to one person. A connection click and activation event
+are not account identities. Provider breakdowns and active/unique-person counts
+remain unavailable because the index does not store that evidence. Return unknown
+when an exact aggregate cannot be supplied, without replacing payment totals with
+zero. Public responses contain only the count, never account rows. Enrolled
+Supabase needs a separately reviewed aggregate operation before this count is
+available; this release adds no RPC, enrollment or auth change.
+
+Confirmed-empty settlement tickers disappear; loading and unavailable states remain
+explicit. Financial totals stay settled-only and inspectable, with pending/failed
+records and full payment evidence retained. Independent reads preserve available
+activity through partial failures and date retained data after a failed refresh.
+Stream the source preview separately so its storage reads cannot delay the ledger
+shell. Registry registration and grandfathered verification flags do not certify
+current publisher control. See [scope and acceptance](docs/engineering/ledger-sources-2026-10-05.md).
+
 **Isolate invalid source proposals and retain classified caller failures — 2026-10-05.**
 An actionable model decision needs a complete valid target list and exact input
 candidate identity. Reject the entire invalid proposal, withhold every duplicate
