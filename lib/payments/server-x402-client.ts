@@ -1,6 +1,7 @@
 import type { PaymentSettlementStatus } from "../types";
 import { createHash } from "node:crypto";
 import { config } from "../config";
+import { assertRecipientAllowed, type RecipientExclusion } from "./recipient-exclusion";
 import {
   assertExpectedRequirements,
   atomicUsdc,
@@ -46,7 +47,7 @@ export interface ServerX402Submission {
   asset: string;
 }
 
-interface PayWithServerSignerInput {
+interface PayWithServerSignerInput extends RecipientExclusion {
   url: string;
   method: "GET" | "POST";
   expectedPayee: string;
@@ -66,6 +67,7 @@ export async function payWithServerSigner<T>({
   url,
   method,
   expectedPayee,
+  deniedRecipient,
   expectedAmount,
   payer,
   signer,
@@ -73,6 +75,7 @@ export async function payWithServerSigner<T>({
   beforeSubmit,
   beforeSignedSubmit,
 }: PayWithServerSignerInput): Promise<ServerX402Attempt<T>> {
+  assertRecipientAllowed(expectedPayee, deniedRecipient);
   const headers = { "Content-Type": "application/json", Accept: "application/json" };
   const challengeResponse = await fetchImpl(url, { method, headers });
   if (challengeResponse.status !== 402) {
@@ -96,11 +99,13 @@ export async function payWithServerSigner<T>({
     (candidate) => candidate.network === config.networkId && candidate.scheme === "exact",
   ) ?? challenge.accepts?.[0];
   if (!requirements) throw new Error(`no usable payment requirements in 402 from ${url}`);
+  assertRecipientAllowed(requirements.payTo, deniedRecipient);
   assertExpectedRequirements(requirements, expectedPayee, expectedAmount);
   const network = requirements.network;
   const asset = requirements.asset;
 
   const signed = await signer.createPaymentPayload(challenge.x402Version, requirements);
+  assertRecipientAllowed((signed.payload as { authorization?: { to?: unknown } } | null)?.authorization?.to, deniedRecipient);
   const authorization = authorizationEvidence(signed.payload);
   const paymentHeader = Buffer.from(JSON.stringify({
     ...signed,

@@ -1844,6 +1844,120 @@ describe("runAgent — article-level economics", () => {
     expect(funded.decideInput?.candidates).toHaveLength(3);
   });
 
+  it("excludes fresh registry payout and citation recipients despite stale independent DB wallets", async () => {
+    const asker = `0x${"ab".repeat(20)}`, independent = `0x${"12".repeat(20)}`;
+    const sources = ["self-toll", "self-author", "other"].map(id => makeSource({ id, walletAddress: independent }));
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
+      payTo: source.id === "self-toll" ? asker.toUpperCase() : independent, creator: independent,
+      listPriceUsdc: source.fetchPrice, active: true, authority: "onchain", stale: false,
+      citationWallets: new Set([source.id === "self-author" ? asker : independent]),
+    }));
+    try {
+      const engine = fakeEngine(), gateway = fakeGateway();
+      const fetch = vi.spyOn(gateway, "payFetch"), citation = vi.spyOn(gateway, "payCitation");
+      const d = deps(sources, engine, gateway);
+      const { steps } = await drive({ question: "q", budget: 0.05, asker, fundingOwner: "treasury" }, d);
+      expect(engine.decideInput?.candidates.map(candidate => candidate.sourceId)).toEqual(["other"]);
+      expect(gateway.fetchCalls).toEqual(["other"]);
+      expect(gateway.citationCalls.map(payment => payment.sourceId)).toEqual(["other"]);
+      expect(d.db.payments.every(payment => payment.payee.toLowerCase() !== asker)).toBe(true);
+      expect(fetch.mock.calls[0][0].deniedRecipient).toBe(asker);
+      expect(citation.mock.calls[0][0].deniedRecipient).toBe(asker);
+      expect(steps.some(step => step.message.includes("Left out 2 source(s) that pay the asking wallet"))).toBe(true);
+    } finally { terms.mockRestore(); }
+  });
+
+  it("withholds a changed registry recipient before initial payment while independent sources still work", async () => {
+    const asker = `0x${"ab".repeat(20)}`, independent = `0x${"12".repeat(20)}`;
+    const sources = ["changed", "other"].map(id => makeSource({ id, walletAddress: independent }));
+    let changed = false;
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
+      payTo: source.id === "changed" && changed ? asker : independent, creator: independent,
+      listPriceUsdc: source.fetchPrice, active: true, authority: "onchain", stale: false, citationWallets: new Set([independent]),
+    }));
+    try {
+      const engine = fakeEngine({ decide: input => { changed = true; return input.candidates.map(candidate =>
+        buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice })); } });
+      const gateway = fakeGateway(), boundary = vi.fn(), d = deps(sources, engine, gateway);
+      await drive({ question: "q", budget: 0.05, asker, fundingOwner: "treasury", researchMode: "quick",
+        onCreatorPaymentBoundary: boundary }, d);
+      expect(engine.decideInput?.candidates).toHaveLength(2);
+      expect(gateway.fetchCalls).toEqual(["other"]);
+      expect(gateway.citationCalls.map(payment => payment.sourceId)).toEqual(["other"]);
+      expect(d.db.payments.every(payment => payment.sourceId === "other")).toBe(true);
+      expect(boundary).toHaveBeenCalledTimes(2);
+    } finally { terms.mockRestore(); }
+  });
+
+  it("withholds a newly self-paying citation policy after valid reads without discarding the answer", async () => {
+    const asker = `0x${"ab".repeat(20)}`, independent = `0x${"12".repeat(20)}`;
+    const sources = ["changed", "other"].map(id => makeSource({ id, walletAddress: independent }));
+    let changed = false;
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
+      payTo: independent, creator: independent, listPriceUsdc: source.fetchPrice, active: true, authority: "onchain", stale: false,
+      citationWallets: new Set([source.id === "changed" && changed ? asker : independent]),
+    }));
+    try {
+      const gateway = fakeGateway(), engine = fakeEngine({
+        sufficiency: () => ({ sufficient: false, rationale: "Read both sources", perClaim: [{ claim: "the sub-claim", coverage: 0.9, coveredBy: ["S1", "S2"] }] }),
+        synthesize: input => { changed = true; return { answer: "Qualified original excerpts [S1] [S2].",
+          citedMarkers: input.gathered.map(source => source.marker), evidence: input.gathered.map(source => ({
+            claimIndex: 0, marker: source.marker, quote: source.text, support: 0.9,
+          })) }; },
+      });
+      const d = deps(sources, engine, gateway);
+      const { run } = await drive({ question: "q", budget: 0.05, asker, fundingOwner: "treasury", researchMode: "quick" }, d);
+      expect(gateway.fetchCalls).toEqual(["changed", "other"]);
+      expect(gateway.citationCalls.map(payment => payment.sourceId)).toEqual(["other"]);
+      expect(run.citations.find(citation => citation.sourceId === "changed")?.reward).toBe(0);
+      expect(d.db.payments.every(payment => payment.payee.toLowerCase() !== asker)).toBe(true);
+      expect(run.answer).toContain("content:changed");
+    } finally { terms.mockRestore(); }
+  });
+
+  it("rechecks a changed authoritative recipient before a gap-expansion purchase", async () => {
+    const asker = `0x${"ab".repeat(20)}`, independent = `0x${"12".repeat(20)}`;
+    const sources = ["other", "changed"].map(id => makeSource({ id, walletAddress: independent }));
+    let changed = false;
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
+      payTo: source.id === "changed" && changed ? asker : independent, creator: independent,
+      listPriceUsdc: source.fetchPrice, active: true, authority: "onchain", stale: false, citationWallets: new Set([independent]),
+    }));
+    try {
+      const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+        action: candidate.sourceId === "changed" ? "SKIP" : "BUY",
+      })), sufficiency: () => ({ sufficient: false, rationale: "A second source might fill the gap", perClaim: [
+        { claim: "the sub-claim", coverage: 0.2, coveredBy: ["S1"] },
+      ] }), reevaluate: () => { changed = true; return { shouldBuyMore: true, recommendedIds: ["changed"], rationale: "Investigate the gap" }; } });
+      const gateway = fakeGateway(), d = deps(sources, engine, gateway);
+      const { steps } = await drive({ question: "q", budget: 0.05, asker, fundingOwner: "treasury", researchMode: "deep" }, d);
+      expect(gateway.fetchCalls).toEqual(["other"]);
+      expect(d.db.payments.every(payment => payment.sourceId !== "changed")).toBe(true);
+      expect(steps.some(step => step.phase === "reevaluate" && step.message.includes("registry terms changed"))).toBe(true);
+    } finally { terms.mockRestore(); }
+  });
+
+  it("awaits the durable creator boundary before fetch/citation gateway calls and payment persistence", async () => {
+    const gateway = fakeGateway(), d = deps([makeSource({ id: "other" })], fakeEngine(), gateway);
+    const ready: (() => void)[] = [], release: (() => void)[] = [];
+    const entered = [0, 1].map(index => new Promise<void>(resolve => { ready[index] = resolve; }));
+    const gates = [0, 1].map(index => new Promise<void>(resolve => { release[index] = resolve; }));
+    let calls = 0;
+    const boundary = vi.fn(async () => { const index = calls++; ready[index](); await gates[index]; });
+    const running = drive({ question: "q", budget: 0.05, onCreatorPaymentBoundary: boundary }, d);
+    await entered[0];
+    expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+    release[0]();
+    await entered[1];
+    expect(gateway.fetchCalls).toEqual(["other"]); expect(gateway.citationCalls).toEqual([]);
+    expect(d.db.payments).toEqual([expect.objectContaining({ kind: "fetch" })]);
+    release[1]();
+    await running;
+    expect(boundary).toHaveBeenCalledTimes(2);
+    expect(gateway.citationCalls).toHaveLength(1); expect(d.db.payments).toHaveLength(2);
+  });
+
   it.each([0.08, 0.119, 0.12, 0.2])("skips low-value cached content at EV %s because free bytes still consume attention", async expectedValue => {
     const source = makeSource({ id: "a", fetchPrice: 0.004 });
     const engine = fakeEngine({

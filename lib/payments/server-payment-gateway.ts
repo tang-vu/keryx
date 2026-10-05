@@ -9,6 +9,7 @@ import { makePayment, type FetchResult, type PaymentGateway } from "./payment-ga
 import { PaymentPendingError, PaymentSettledError } from "./payment-state";
 import { payWithServerSigner, type ServerX402Attempt, type BatchPayloadSigner, type ServerX402Submission } from "./server-x402-client";
 import type { privateCreatorJournal } from "./private-creator-journal";
+import { assertRecipientAllowed, type RecipientExclusion } from "./recipient-exclusion";
 
 export interface PaymentJournalContext { queryId: string; kind: "fetch" | "citation"; sourceId: string; itemId: string | null; sourceClaim?: SourceClaimReceipt }
 
@@ -30,6 +31,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
     priceUsdc = source.fetchPrice,
     offer,
     sourceClaim,
+    deniedRecipient,
   }: {
     source: Source;
     item?: SourceItem;
@@ -37,7 +39,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
     priceUsdc?: number;
     offer?: ArticleOfferRef;
     sourceClaim?: SourceClaimReceipt;
-  }): Promise<FetchResult> {
+  } & RecipientExclusion): Promise<FetchResult> {
     const journal = this.paymentJournal?.({ queryId, kind: "fetch", sourceId: source.id, itemId: item?.id ?? null, sourceClaim });
     await assertCreatorPaymentClaim(source, sourceClaim, "fetch");
     const path = item
@@ -52,6 +54,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
     const url = `${config.baseUrl}${sourceClaimPath(path, sourceClaim)}`;
     const itemIdentity = item ? sourceItemIdentity(item) : undefined;
     const fetchPayee = await sourceFetchPayTo(source);
+    assertRecipientAllowed(fetchPayee, deniedRecipient);
     const observed = await payWithServerSigner<{
       content?: string;
       text?: string;
@@ -61,6 +64,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
       url,
       method: "GET",
       expectedPayee: fetchPayee,
+      deniedRecipient,
       expectedAmount: priceUsdc,
       payer: this.spend.address,
       signer: this.signerForPayment({ queryId, kind: "fetch", sourceId: source.id, itemId: item?.id ?? null, sourceClaim }),
@@ -103,6 +107,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
     queryId,
     rationale,
     sourceClaim,
+    deniedRecipient,
   }: {
     source: Source;
     author: Author;
@@ -112,7 +117,8 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
     queryId: string;
     rationale: string;
     sourceClaim?: SourceClaimReceipt;
-  }): Promise<PaymentRecord> {
+  } & RecipientExclusion): Promise<PaymentRecord> {
+    assertRecipientAllowed(author.walletAddress, deniedRecipient);
     if (config.profile.name === "arc") {
       const terms = await sourceFetchTerms(source, { refresh: true });
       if (!terms.citationWallets?.has(author.walletAddress.toLowerCase())) throw new Error("Mainnet citation recipient has no fresh source authority");
@@ -127,6 +133,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
       url,
       method: "POST",
       expectedPayee: author.walletAddress,
+      deniedRecipient,
       expectedAmount: amount,
       payer: this.spend.address,
       signer: this.signerForPayment({ queryId, kind: "citation", sourceId: source.id, itemId: item?.itemId ?? null, sourceClaim }),

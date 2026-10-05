@@ -10,6 +10,10 @@
 - Retain bounded diagnostics in mixed-selection traces and add explicit failure JSON
   downloads to web/embed; API, remote MCP and CLI expose the same classified error.
   A diagnostic is not a completed report or payment receipt.
+- Check sponsored self-recipient exclusion against current registry terms and the
+  final payment recipient before authorization. Preserve paid/pending dispatch
+  history when a web client disconnects during ledger/cache persistence; block
+  new creator payment attempts after disconnect.
 - Preserve the closed v0.26.17 result of 0/3 useful and all allowance journals;
   useful-client/settlement/export gates remain open. See [scope and validation](engineering/source-selection-2026-10-05.md).
 

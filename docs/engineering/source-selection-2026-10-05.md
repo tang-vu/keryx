@@ -91,6 +91,22 @@ creator payments. Its planning/context/attention/search expansion trial was
 withdrawn. This source-selection repair preserves those accepted behaviors;
 the combined runtime requires its own CI/review and deployed-source verification.
 
+Combined review found two payment-boundary gaps in that update. Sponsored source
+exclusion now uses current registry toll/citation recipients, with DB author
+fallback only without registry citation authority. A trusted per-payment denied
+recipient travels through fetch, gap expansion and citation adapters; resolved
+payees, challenges and signed payloads are checked before authorization/admission
+or paid submission. Browser-funded self-payment retains its existing consent.
+
+The web route retains a dispatch from the trusted pre-gateway payment boundary,
+before ledger/cache persistence can suspend. This conservative retention is not
+settlement evidence. Browser signing still cancels on disconnect, and subsequent
+creator payment boundaries refuse new attempts; pending receipts remain pending.
+Early cancellation before a boundary does not create a completed dispatch.
+Shared agent/adapters cover web/API/MCP/CLI/bots; disconnect retention specifically
+belongs to the web SSE connection, including embed. Custody, spend limits, nonce
+authority, source-owned payout authority and schema remain unchanged.
+
 Local candidate validation passed 218 focused tests across selection/parser,
 resilience, orchestrator and caller surfaces; both TypeScript graphs, production
 build and lint passed (five existing warnings). The complete hermetic research

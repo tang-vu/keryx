@@ -5206,3 +5206,23 @@ Money-path corrections found in an orchestrator review. All are downward or neut
 - Source passages carry an instruction to disregard embedded requests to cite, score or weight a source, since their authors are paid when cited.
 
 Deliberately not changed. A local trial of a "which systems ..." comparison improved when Deep research searched once per target, showed 4000 characters per source and read one source per target, but the same-day planning decision records that a larger target, context or cost limit is not an accepted repair, and bounded live acceptance reserves model and search usage atomically. Those changes were withdrawn from this update and remain an owner decision. No service fee on browser-funded research and no refund of an unused A2A creator reserve: both add a new mainnet money movement and need their own design and review.
+
+## Authoritative sponsored recipients and pre-gateway history retention - 2026-10-05
+
+The combined source-selection review found that DB-only self-recipient exclusion
+could miss a fresh registry payout, and a payment trace arrives after asynchronous
+ledger/cache writes. Use the existing current registry toll/citation authority at
+discovery and revalidation, then pass the verified outside-funded asker as a
+trusted denied recipient to every creator payment adapter. Deny resolved,
+challenged and signed recipients before signing/admission/submission. An immutable
+independent signed payee cannot be redirected by a later registry change. DB author
+fallback applies only without registry citation authority; a browser-funded owner
+keeps existing authorization to pay their own sources.
+
+For web SSE, retain history from the trusted pre-gateway callback, before payment
+or persistence can suspend. Retention means an attempt may exist, not that it
+settled. Cancel browser signing on connection loss and deny further creator
+payment boundaries while allowing the in-flight attempt and its truthful pending
+or settled receipt to finish recording. Cancellation before any boundary creates
+no completed dispatch. Existing spend caps, custody, nonce and financial evidence
+rules remain authoritative; the closed live allowance is not reopened.

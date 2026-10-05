@@ -66,6 +66,34 @@ beforeEach(() => {
 });
 
 describe("payWithServerSigner", () => {
+  it("refuses an excluded resolved recipient before HTTP, signing or journal admission", async () => {
+    const fetchImpl = vi.fn(), beforeSubmit = vi.fn();
+    await expect(payWithServerSigner({ url: "https://example.test/paid", method: "GET", expectedPayee: PAYEE,
+      expectedAmount: 0.002, payer: PAYER, signer, fetchImpl, beforeSubmit, deniedRecipient: PAYEE.toUpperCase() }))
+      .rejects.toThrow(/recipient is excluded/);
+    expect(fetchImpl).not.toHaveBeenCalled(); expect(signer.createPaymentPayload).not.toHaveBeenCalled();
+    expect(beforeSubmit).not.toHaveBeenCalled();
+  });
+
+  it("refuses an excluded final challenge recipient before authorization even if expected terms were independent", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(challenge(requirements({ payTo: PAYER }))), beforeSubmit = vi.fn();
+    await expect(payWithServerSigner({ url: "https://example.test/paid", method: "GET", expectedPayee: PAYEE,
+      expectedAmount: 0.002, payer: PAYER, signer, fetchImpl, beforeSubmit, deniedRecipient: PAYER }))
+      .rejects.toThrow(/recipient is excluded/);
+    expect(fetchImpl).toHaveBeenCalledOnce(); expect(signer.createPaymentPayload).not.toHaveBeenCalled();
+    expect(beforeSubmit).not.toHaveBeenCalled();
+  });
+
+  it("does not journal or submit an unexpectedly altered signed recipient", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(challenge()), beforeSubmit = vi.fn();
+    const altered = { createPaymentPayload: vi.fn(async () => ({ x402Version: 2, payload: {
+      authorization: { from: PAYER, to: PAYER, value: "2000", nonce: NONCE, validBefore: VALID_BEFORE }, signature: "synthetic-only" } })) };
+    await expect(payWithServerSigner({ url: "https://example.test/paid", method: "GET", expectedPayee: PAYEE,
+      expectedAmount: 0.002, payer: PAYER, signer: altered, fetchImpl, beforeSubmit, deniedRecipient: PAYER }))
+      .rejects.toThrow(/recipient is excluded/);
+    expect(fetchImpl).toHaveBeenCalledOnce(); expect(beforeSubmit).not.toHaveBeenCalled();
+  });
+
   it("awaits durable admission before sending a signed request and supplies only exact non-bearer evidence", async () => {
     let admit!: () => void;
     let entered!: () => void;
