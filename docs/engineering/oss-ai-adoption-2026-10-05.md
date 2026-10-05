@@ -46,6 +46,10 @@ its exact candidate/target validation, request-local refusal and sanitized failu
 diagnostics. The history still stays in JSON data; it is not interpolated inside
 the new transport/validation error handling.
 
+Integration also retains #180's discovery across Deep research targets and its
+document-relevance guidance for free reads. Historical context remains a weak
+hint; it cannot replace current candidate relevance or paid-toll limits.
+
 The new test constructs actual aggregated history from five synthetic runs and
 a source name containing instruction-like text and a JSON/schema override. It
 checks that the publisher text stays out of system policy, the JSON round-trip

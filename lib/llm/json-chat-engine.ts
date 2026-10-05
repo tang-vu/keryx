@@ -128,6 +128,11 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "For example, 'How is a job journaled and recovered? Use the engineering documentation' asks about journaling and recovery as documented there, not a third question about what the documentation says. " +
         "However, explicitly requested source reliability, disagreements between sources, or citation methodology ARE substantive information needs and must remain targets. Do not discard a requested topic just because it mentions sources. " +
         "For ambiguous terminology, keep the ambiguity visible in a definition/scope question instead of inventing a specialized domain, formula, legal dispute, or mechanism. " +
+        "An ordinary evaluative word (safe, best, reliable, good) is a criterion to carry into the substantive targets, not ambiguous terminology: do not spend a target on what such a word means. " +
+        "When the question asks which items satisfy criteria and names none (which systems, tools, libraries, vendors ...), a search for the bare category finds only listicles. " +
+        "Name the specific well-known candidates worth checking, at most six, one target per candidate, each phrased as a question carrying every requested criterion " +
+        "(for example 'Does <candidate> expose <requested capability>, and where does it fall short?'), plus one target for notable candidates you did not name. " +
+        "Named candidates are things to verify, not findings, and such a plan is complete: an open category does not require needs_refinement. " +
         "Use Keryx's context for unqualified questions about its citation payments, but do not impose it on unrelated topics. " +
         `Before returning, count the independent targets. If all substantive requested dimensions cannot fit within ${MAX_RESEARCH_TARGETS}, return status needs_refinement; never silently drop dimensions, hide them in an umbrella target, or claim the scope is complete. ` +
         "No sources have been read yet: these are research targets, never evidence. Return only JSON data.",
@@ -169,6 +174,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "Judge current previews against the current research targets and budget. A source absent from history has no negative evidence against it. " +
         "For EACH candidate choose action BUY (pay the toll, high value), CACHE (already cached & still useful, reuse free), or SKIP (not worth it). " +
         "Weigh expected value against price; prefer cheaper sufficient sources; avoid redundancy. Public web candidates are free original-page READ selections: legacy CACHE action selects a read, never claims a cache hit. Search snippets are unverified previews, not evidence. " +
+        "Frugality applies to paid tolls. A free public read spends no USDC and its preview is only a search snippet, so the snippet is not expected to contain the answer: " +
+        "select the read (CACHE) when the page itself is plausibly the right document for a target, such as official documentation, an API reference or a first-hand account of the named subject, and never SKIP a free read you describe as directly or strongly relevant. " +
+        "SKIP free reads that concern a different subject, and prefer the most direct document when several cover the same target. " +
         "A requestedSource identifies an original URL the user asked to inspect, with unobserved contents. Judge its potential to answer the requested targets; it is not evidence or guaranteed relevance. Explain any SKIP of a requested original. " +
         "Return exactly one decision row per candidate. Copy its sourceId exactly; do not return a URL, name, new ID or duplicate row. " +
         "The subClaims list contains indexed research targets. allowedTargetIndexes is the complete list of permitted integers for this request. " +
