@@ -5,8 +5,9 @@ import { config } from "./config";
 import { authJson } from "./auth-challenge";
 import { checkRateLimit, clientIp } from "./rate-limit";
 import { circleWalletPublicConfigured } from "./circle-wallet-config";
+import { AUTH_CHALLENGE_TTL_MS } from "./auth-time-policy";
 
-export const CIRCLE_LOGIN_TTL_MS = 10 * 60_000;
+export const CIRCLE_LOGIN_TTL_MS = AUTH_CHALLENGE_TTL_MS;
 export const CIRCLE_LOGIN_COOKIE = "keryx_circle_login";
 export const circleLoginStateSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export const circleUserTokenSchema = z.string().min(16).max(8192).regex(/^[A-Za-z0-9._~+\/-]+=*$/);

@@ -7,6 +7,7 @@ import { readFile } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 import { contentSecurityPolicy } from "../lib/security-headers";
 import { circleSdkBrowserPlugin } from "./circle-sdk-browser-plugin.mts";
+import { AUTH_CHALLENGE_TTL_MS } from "../lib/auth-time-policy";
 
 const base = "https://circle-smoke.test", owner = `0x${"1".repeat(40)}`;
 const walletId = "00000000-0000-4000-8000-000000000001", initializeId = "00000000-0000-4000-8000-000000000002";
@@ -70,7 +71,7 @@ try {
     if (url.pathname === "/api/auth/session") return route.fulfill({ json: { session: authenticated ? { address: owner, role: "asker" } : null } });
     if (url.pathname === "/api/auth/signout") { authenticated = false; return route.fulfill({ json: { ok: true } }); }
     if (url.pathname === "/api/auth/circle/config") return route.fulfill({ json: { available: true } });
-    if (url.pathname === "/api/auth/circle/device") return route.fulfill({ json: { deviceToken: "synthetic-device-token", deviceEncryptionKey: "synthetic-device-encryption-key", state: "a".repeat(64), expiresAt: Date.now() + 600_000 } });
+    if (url.pathname === "/api/auth/circle/device") return route.fulfill({ json: { deviceToken: "synthetic-device-token", deviceEncryptionKey: "synthetic-device-encryption-key", state: "a".repeat(64), expiresAt: Date.now() + AUTH_CHALLENGE_TTL_MS } });
     if (url.pathname === "/api/auth/circle/prepare") { initializeChallenges++; return route.fulfill({ json: { ready: false, challengeId: initializeId } }); }
     if (url.pathname === "/api/auth/circle/session") { authenticated = true; return route.fulfill({ json: { ok: true, address: owner, walletId } }); }
     if (url.pathname === "/api/auth/circle/sign") { signChallenges++; return route.fulfill({ json: { challengeId: signingId } }); }
@@ -140,7 +141,7 @@ try {
       if (url.origin !== builtBase) return route.abort();
       if (url.pathname === "/api/auth/session") return route.fulfill({ json: { session: null } });
       if (url.pathname === "/api/auth/circle/config") return route.fulfill({ json: { available: true } });
-      if (url.pathname === "/api/auth/circle/device") return route.fulfill({ json: { deviceToken: "synthetic-built-device", deviceEncryptionKey: "synthetic-built-device-key", state: "b".repeat(64), expiresAt: Date.now() + 600_000 } });
+      if (url.pathname === "/api/auth/circle/device") return route.fulfill({ json: { deviceToken: "synthetic-built-device", deviceEncryptionKey: "synthetic-built-device-key", state: "b".repeat(64), expiresAt: Date.now() + AUTH_CHALLENGE_TTL_MS } });
       // No application server, DB, source API or live vendor call runs in this check.
       if (url.pathname.startsWith("/api/")) return route.fulfill({ status: 503, json: { error: "Synthetic emitted-bundle smoke has no live API" } });
       assert.equal(route.request().method(), "GET", "Built smoke forbids application writes");

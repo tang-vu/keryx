@@ -5190,3 +5190,17 @@ Money-path corrections found in an orchestrator review. All are downward or neut
 - Source passages carry an instruction to disregard embedded requests to cite, score or weight a source, since their authors are paid when cited.
 
 Deliberately not changed. A local trial of a "which systems ..." comparison improved when Deep research searched once per target, showed 4000 characters per source and read one source per target, but the same-day planning decision records that a larger target, context or cost limit is not an accepted repair, and bounded live acceptance reserves model and search usage atomically. Those changes were withdrawn from this update and remain an owner decision. No service fee on browser-funded research and no refund of an unused A2A creator reserve: both add a new mainnet money movement and need their own design and review.
+
+## Align Google continuation with durable authentication limits - 2026-10-05
+
+Direct mainnet onboarding exposed a ten-minute Circle continuation that violated
+the existing SQLite auth-challenge ceiling of five minutes, returning 503 before
+OAuth began. Reuse the shared five-minute authentication policy for server
+issuance, cookie expiry and browser continuation admission. Preserve the sealed
+storage schema and single-use consumption rather than widen durable authority.
+Real-schema route coverage must exercise issuance, exact expiry and replay.
+
+Expiry requires an explicit fresh login; completed Circle initialization can be
+resolved as the same canonical wallet on that attempt. No automatic signing or
+initialization retry, challenge renewal, budget/custody change or funding follows.
+The continuation window is distinct from vendor token and Keryx session lifetimes.
