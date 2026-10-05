@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { SqliteAdapter } from "./sqlite-adapter";
 import type { PaymentRecord, QueryRun } from "../types";
 
@@ -80,6 +81,7 @@ describe("SQLite dashboard metrics", () => {
     await db.recordFeedback("web-1", "up");
 
     const metrics = await db.metrics();
+    expect(metrics.recordedAccounts).toBe(0);
     expect(metrics.totalPayments).toBe(2);
     expect(metrics.totalQueries).toBe(3);
     expect(metrics.payingQueries).toBe(2);
@@ -107,5 +109,36 @@ describe("SQLite dashboard metrics", () => {
     expect(metrics.mcpClientQueries).toEqual([
       { client: "cursor", queries: 1, payingQueries: 1 },
     ]);
+  });
+
+  it("counts indexed valid wallet accounts once across sign-ins and legacy casing", async () => {
+    const wallet = `0x${"aB".repeat(20)}`;
+    await db.upsertUser(wallet, "reader");
+    await db.upsertUser(wallet.toLowerCase(), "creator");
+    await db.upsertUser(`0x${"1".repeat(40)}`, "reader");
+    const native = new DatabaseSync(dbFile);
+    try {
+      const insert = native.prepare(`INSERT INTO users(wallet_address,role,display_handle,first_seen_at,last_seen_at)
+        VALUES (?,'reader','fixture','2026-10-05T00:00:00.000Z','2026-10-05T00:00:00.000Z')`);
+      for (const address of [wallet, `0X${"AB".repeat(20)}`, "0xshort", `0x${"g".repeat(40)}`, `0x${"2".repeat(41)}`]) insert.run(address);
+    } finally { native.close(); }
+    const metrics = await db.metrics();
+    expect(metrics.recordedAccounts).toBe(2);
+    expect(metrics.totalQueries).toBe(4);
+    expect(JSON.stringify(metrics)).not.toContain(wallet.toLowerCase());
+  });
+
+  it("marks a failed account-index read unavailable independently of the other metrics", async () => {
+    const native = new DatabaseSync(dbFile);
+    try {
+      native.exec("ALTER TABLE users RENAME TO fixture_users_unavailable");
+      const metrics = await db.metrics();
+      expect(metrics.recordedAccounts).toBeNull();
+      expect(metrics.totalQueries).toBe(4);
+      expect(metrics.totalPayments).toBe(3);
+    } finally {
+      native.exec("ALTER TABLE fixture_users_unavailable RENAME TO users");
+      native.close();
+    }
   });
 });

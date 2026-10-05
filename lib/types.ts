@@ -547,6 +547,10 @@ export interface DashboardMetrics {
   creatorsEarning: number;
   avgPaymentUsdc: number;
   totalQueries: number;
+  /** Indexed authenticated wallet accounts, deduped by valid normalized address.
+   * Not unique humans, active users, current connections or a sign-in-provider split.
+   * null/absent means the backend cannot supply an exact aggregate. */
+  recordedAccounts?: number | null;
   payingQueries: number; // queries that produced >= 1 payment
   readerToPayerConversion: number; // payingQueries / totalQueries
   /** Recorded evidence-counter samples; not reassessed against current source provenance. */

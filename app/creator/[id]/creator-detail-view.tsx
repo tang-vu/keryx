@@ -86,9 +86,6 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
             <h1 className="font-display text-[clamp(22px,3vw,30px)] font-medium tracking-tight text-ink">
               {source.name}
             </h1>
-            {source.verified && (
-              <BadgeCheck className="h-5 w-5 text-seal" />
-            )}
           </div>
           <p className="mt-1 max-w-xl font-serif text-[14px] text-ink-2">
             {source.description || "Registered creator on Keryx."}

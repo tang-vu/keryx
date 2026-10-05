@@ -39,6 +39,7 @@ try {
   await run("scripts/test-browser-selection-failure.mts");
   await run("scripts/test-browser-chat-payer.mts");
   await run("scripts/test-reading-evidence.mts");
+  await run("scripts/test-browser-ledger-sources.mts");
   if (server) {
     let ready = false;
     for (let i = 0; i < 120 && server.exitCode === null; i++) {

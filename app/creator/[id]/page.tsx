@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const source = await db.getSource(id);
     if (!source) return { title: "Creator not found — Keryx", robots: { index: false } };
     const title = `${source.name} — Keryx Creator`;
-    const description = `${source.name} earns USDC every time an AI agent cites their work on Keryx.`;
+    const description = `Source listing, citation activity and recorded creator payments for ${source.name} on Keryx.`;
     return {
       title,
       description,
@@ -57,12 +57,12 @@ export default async function CreatorPage({ params }: PageProps) {
         "@type": "Organization",
         name: source.name,
         ...(source.url ? { url: source.url } : {}),
-        description: `${source.name} is listed with Keryx and is paid in USDC each time an AI agent cites its work.`,
+        description: `${source.name} is listed with Keryx. Citation activity and recorded creator payments are shown separately.`,
       },
     },
     breadcrumbJsonLd(BASE, [
       { name: "Keryx", path: "/" },
-      { name: "The Registry", path: "/sources" },
+      { name: "Sources", path: "/sources" },
       { name: source.name },
     ]),
   ];
