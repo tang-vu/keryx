@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { privateReasoningEngine } from "../llm/private-engine";
 import { ResearchPlanningError } from "../llm/research-plan";
+import { ResearchSelectionError } from "../llm/research-selection";
 import { effectiveEngineName, reasoningAttempts, reasoningUsage, reasoningCalls } from "../llm/resilient-engine";
 import { calculateTestnetEconomics, economicsRunSample } from "./testnet-economics";
 import type { QueryRun } from "../types";
@@ -42,7 +43,7 @@ it.each(["measured", "missing", "failed"])("accounts for the optional evidence r
   });
 });
 
-it.each(["rejected", "truncated"])("keeps %s provider work unpriced after real local fallback", async (failure) => {
+it.each(["rejected", "truncated"])("keeps %s non-selection provider work unpriced after real local fallback", async (failure) => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   const http = vi.fn<typeof fetch>().mockImplementation(async () => failure === "rejected"
     ? new Response("Synthetic provider error", { status: 400 })
@@ -53,25 +54,56 @@ it.each(["rejected", "truncated"])("keeps %s provider work unpriced after real l
     modelId: "deepseek-flash", provider: "deepseek",
     baseUrl: "https://synthetic-provider.example/v1", apiKey: "synthetic-not-a-credential",
   });
-  // Decision failures still use the local fallback; invalid planning output is terminal.
-  const decisions = await engine.decide({
-    question: "How are synthetic research results stored?",
-    subClaims: ["How are synthetic research results stored?"], budget: 1, spentSoFar: 0,
-    candidates: [{ id: "synthetic", name: "Synthetic storage", description: "Research result storage",
-      tags: ["storage"], preview: "Synthetic research results use durable storage.", fetchPrice: 0.01, cached: false }],
+  // Generic response validation outside planning/selection retains local fallback.
+  const attribution = await engine.attribute({ question: "How are synthetic research results stored?",
+    answer: "Synthetic research results use durable storage [S1].",
+    used: [{ sourceId: "synthetic", sourceName: "Synthetic storage", marker: "S1",
+      text: "Synthetic research results use durable storage." }],
   });
-  expect(decisions).toMatchObject([{ sourceId: "synthetic", action: "BUY" }]);
+  expect(attribution).toMatchObject([{ sourceId: "synthetic", weight: 1 }]);
   expect(http).toHaveBeenCalledOnce();
   const attempts = reasoningAttempts(engine);
-  expect(attempts).toEqual(expect.arrayContaining([
-    expect.objectContaining({ outcome: "failed", tier: 0 }),
-    expect.objectContaining({ outcome: "served", engine: "heuristic" }),
-  ]));
+  expect(attempts).toEqual([
+    expect.objectContaining({ step: "attribute", outcome: "failed", tier: 0,
+      error: failure === "truncated" ? "output_validation" : "invalid_request" }),
+    expect.objectContaining({ step: "attribute", outcome: "served", tier: 1, engine: "heuristic" }),
+  ]);
+  expect(reasoningCalls(engine)).toEqual([expect.objectContaining({ outcome: "failed" })]);
+  expect(engine.selectionDiagnostics).toEqual([]);
   const usage = reasoningUsage(engine);
   expect(usage.length > 0).toBe(failure === "truncated");
   expect(calculateTestnetEconomics([{
     id: "synthetic-fallback-case", engine: effectiveEngineName(engine),
     reasoningAttempts: attempts, llmUsage: usage, llmCalls: reasoningCalls(engine),
+  }], [])).toMatchObject({ pricedRuns: 0, unpricedRuns: 1, shadowGrossMarginUsdBounds: null });
+});
+
+it.each(["malformed", "truncated", "missing-targets"])("retains unpriced billable usage when %s selection stops before fallback", async failure => {
+  const content = failure === "missing-targets" ? JSON.stringify({ decisions: [{ sourceId: "synthetic", action: "BUY",
+    expectedValue: 0.9, confidence: 0.9, rationale: "Predicted relevance" }] }) : "{broken";
+  const http = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ choices: [{ message: { content },
+    finish_reason: failure === "truncated" ? "length" : "stop" }], usage: { prompt_tokens: 100, completion_tokens: 2048 } }));
+  vi.stubGlobal("fetch", http);
+  const { engine } = privateReasoningEngine({ modelId: "deepseek-flash", provider: "deepseek",
+    baseUrl: "https://synthetic-provider.example/v1", apiKey: "synthetic-not-a-credential" });
+  await expect(engine.decide({ question: "How are synthetic research results stored?",
+    subClaims: ["How are synthetic research results stored?"], budget: 1, spentSoFar: 0,
+    candidates: [{ id: "synthetic", name: "Synthetic storage", description: "Research result storage",
+      tags: ["storage"], preview: "Synthetic research results use durable storage.", fetchPrice: 0.01, cached: false }],
+  })).rejects.toBeInstanceOf(ResearchSelectionError);
+  expect(http).toHaveBeenCalledOnce();
+  const attempts = reasoningAttempts(engine), usage = reasoningUsage(engine), calls = reasoningCalls(engine);
+  expect(attempts).toEqual([
+    expect.objectContaining({ step: "decide", tier: 0, attempt: 1, outcome: "failed", error: "output_validation", status: 422 }),
+  ]);
+  expect(usage).toEqual([expect.objectContaining({ inputTokens: 100, outputTokens: 2048, cachedInputTokens: null })]);
+  expect(calls).toEqual([expect.objectContaining({ outcome: failure === "missing-targets" ? "returned" : "failed" })]);
+  expect(usage[0].callId).toBe(calls![0].id);
+  expect(engine.selectionDiagnostics).toEqual([expect.objectContaining({ outcome: "refused",
+    reasons: [expect.objectContaining({ code: failure === "missing-targets" ? "missing_targets" : "invalid_output" })] })]);
+  expect(calculateTestnetEconomics([{
+    id: `synthetic-selection-refusal-${failure}`, engine: effectiveEngineName(engine),
+    reasoningAttempts: attempts, llmUsage: usage, llmCalls: calls,
   }], [])).toMatchObject({ pricedRuns: 0, unpricedRuns: 1, shadowGrossMarginUsdBounds: null });
 });
 

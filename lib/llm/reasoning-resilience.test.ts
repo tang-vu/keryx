@@ -8,6 +8,7 @@ import { HeuristicEngine } from "./heuristic-engine";
 import { DurableReasoningCircuitStore, MemoryReasoningCircuitStore } from "./reasoning-circuit-store";
 import { ResilientEngine, reasoningAttempts, reasoningCalls, reasoningUsage } from "./resilient-engine";
 import { ReasoningOutputValidationError, type DecideInput } from "./reasoning-engine";
+import { ResearchSelectionError } from "./research-selection";
 
 const opened: SqliteAdapter[] = [];
 const directories: string[] = [];
@@ -47,23 +48,37 @@ describe("response validation and durable client isolation", () => {
     expect(transport).toHaveBeenCalledTimes(2);
   });
 
-  it("retains a prior failure and bounded half-open lease after invalid model output", async () => {
+  it("retains a prior failure and bounded half-open lease after terminal invalid selection output", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(Date, "now").mockReturnValue(1001);
     const store = new MemoryReasoningCircuitStore(), key = JSON.stringify([names.deepseek, "decide"]);
     await store.failed(key, { transient: true, now: 0, failureThreshold: 1, baseCooldownMs: 1000, maxCooldownMs: 10000 });
     const success = vi.spyOn(store, "succeeded"), failed = vi.spyOn(store, "failed");
-    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ choices: [{ message: { content: "{broken" } }] })));
-    await new ResilientEngine(provider("deepseek"), new HeuristicEngine(), 0, store).decide(input());
+    const transport = vi.fn(async () => Response.json({ choices: [{ message: { content: "{broken" } }],
+      usage: { prompt_tokens: 5, completion_tokens: 3 } }));
+    vi.stubGlobal("fetch", transport);
+    const primary = provider("deepseek"), fallback = new HeuristicEngine();
+    const fallbackDecide = vi.spyOn(fallback, "decide");
+    const engine = new ResilientEngine(primary, fallback, 0, store);
+    await expect(engine.decide(input())).rejects.toBeInstanceOf(ResearchSelectionError);
+    expect(transport).toHaveBeenCalledOnce(); expect(fallbackDecide).not.toHaveBeenCalled();
+    expect(reasoningAttempts(engine)).toEqual([
+      expect.objectContaining({ step: "decide", tier: 0, attempt: 1, outcome: "failed", error: "output_validation", status: 422 }),
+    ]);
+    expect(engine.selectionDiagnostics[0]).toMatchObject({ outcome: "refused", reasons: [{ code: "invalid_output" }] });
+    expect(reasoningCalls(engine)).toEqual([expect.objectContaining({ outcome: "failed" })]);
+    expect(reasoningUsage(engine)).toEqual([
+      expect.objectContaining({ callId: primary.calls[0].id, inputTokens: 5, outputTokens: 3 }),
+    ]);
     expect(success).not.toHaveBeenCalled(); expect(failed).not.toHaveBeenCalled();
     expect((await store.acquire(key, 1002, 1000)).allowed).toBe(false);
     expect((await store.failed(key, { transient: true, now: 1002, failureThreshold: 1, baseCooldownMs: 1000, maxCooldownMs: 10000 })).failures).toBe(2);
   });
 
-  it("keeps a returned billable response distinct from failed decision validation and later requests", async () => {
+  it("keeps a returned billable response distinct from terminal decision validation and later requests", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const store = new MemoryReasoningCircuitStore();
-    const failed = vi.spyOn(store, "failed");
+    const failed = vi.spyOn(store, "failed"), succeeded = vi.spyOn(store, "succeeded");
     // A billable JSON response passes transport parsing but lacks required decision targets.
     const bad = Response.json({ choices: [{ message: { content: JSON.stringify({ decisions: [{ sourceId: "source-0",
       action: "BUY", expectedValue: 0.9, confidence: 0.9, rationale: "relevant" }] }) } }],
@@ -72,19 +87,51 @@ describe("response validation and durable client isolation", () => {
     vi.stubGlobal("fetch", transport);
     const primary = provider("deepseek"), alternate = provider("mimo");
     const first = new ResilientEngine(primary, alternate, 0, store);
-    expect(await first.decide(input())).toMatchObject([{ action: "BUY", targets: [0], price: 0.001 }]);
-    expect(reasoningAttempts(first)).toMatchObject([
-      { engine: names.deepseek, outcome: "failed", error: "output_validation" },
-      { engine: names.mimo, outcome: "served" },
+    await expect(first.decide(input())).rejects.toBeInstanceOf(ResearchSelectionError);
+    expect(reasoningAttempts(first)).toEqual([
+      expect.objectContaining({ step: "decide", engine: names.deepseek, tier: 0, attempt: 1, outcome: "failed", error: "output_validation", status: 422 }),
     ]);
+    expect(first.selectionDiagnostics[0]).toMatchObject({ outcome: "refused", reasons: [{ code: "missing_targets", rowIndex: 0, candidateIndex: 0 }] });
     expect(primary.calls[0].outcome).toBe("returned");
-    expect(reasoningUsage(first)).toHaveLength(2);
+    expect(primary.calls).toHaveLength(1); expect(alternate.calls).toEqual([]);
+    expect(reasoningUsage(first)).toHaveLength(1);
     expect(reasoningUsage(first)[0]).toMatchObject({ callId: primary.calls[0].id, inputTokens: 5809, outputTokens: 1921 });
-    expect(failed).not.toHaveBeenCalled();
+    expect(failed).not.toHaveBeenCalled(); expect(succeeded).not.toHaveBeenCalled();
+    expect(transport).toHaveBeenCalledOnce();
     const second = new ResilientEngine(provider("deepseek"), provider("mimo"), 0, store);
     expect(await second.decide(input())).toMatchObject([{ targets: [0] }]);
     expect(reasoningAttempts(second)).toMatchObject([{ engine: names.deepseek, outcome: "served" }]);
-    expect(transport).toHaveBeenCalledTimes(3);
+    expect(transport).toHaveBeenCalledTimes(2);
+    expect(failed).not.toHaveBeenCalled(); expect(succeeded).toHaveBeenCalledOnce();
+  });
+
+  it("still falls back for generic malformed non-selection output without clearing a half-open lease", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(Date, "now").mockReturnValue(1001);
+    const store = new MemoryReasoningCircuitStore(), key = JSON.stringify([names.deepseek, "attribute"]);
+    await store.failed(key, { transient: true, now: 0, failureThreshold: 1, baseCooldownMs: 1000, maxCooldownMs: 10000 });
+    const success = vi.spyOn(store, "succeeded"), failed = vi.spyOn(store, "failed");
+    const transport = vi.fn(async () => Response.json({ choices: [{ message: { content: "{broken" } }],
+      usage: { prompt_tokens: 5, completion_tokens: 3 } }));
+    vi.stubGlobal("fetch", transport);
+    const primary = provider("deepseek"), fallback = new HeuristicEngine();
+    const fallbackAttribute = vi.spyOn(fallback, "attribute");
+    const engine = new ResilientEngine(primary, fallback, 0, store);
+    expect(await engine.attribute({ question: "How is a journal entry retained?", answer: "The journal retains its original identifier [S1].",
+      used: [{ sourceId: "source-0", sourceName: "Journal 0", marker: "S1", text: "The journal retains its original identifier." }] }))
+      .toMatchObject([{ sourceId: "source-0", weight: 1 }]);
+    expect(transport).toHaveBeenCalledOnce(); expect(fallbackAttribute).toHaveBeenCalledOnce();
+    expect(reasoningAttempts(engine)).toEqual([
+      expect.objectContaining({ step: "attribute", engine: names.deepseek, tier: 0, outcome: "failed", error: "output_validation" }),
+      expect.objectContaining({ step: "attribute", engine: "heuristic", tier: 1, outcome: "served" }),
+    ]);
+    expect(engine.selectionDiagnostics).toEqual([]);
+    expect(reasoningCalls(engine)).toEqual([expect.objectContaining({ outcome: "failed" })]);
+    expect(reasoningUsage(engine)).toEqual([
+      expect.objectContaining({ callId: primary.calls[0].id, inputTokens: 5, outputTokens: 3 }),
+    ]);
+    expect(success).not.toHaveBeenCalled(); expect(failed).not.toHaveBeenCalled();
+    expect((await store.acquire(key, 1002, 1000)).allowed).toBe(false);
   });
 
   it.each([400, 413, 422])("keeps HTTP %s payload rejection local to its request", async status => {
