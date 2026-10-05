@@ -5,6 +5,7 @@ import type { ChallengeResult, SignMessageResult, SignTransactionResult } from "
 import { z } from "zod";
 import { circleWalletPublicConfig, circleWalletPublicConfigured } from "./circle-wallet-config";
 import { browserPaymentProfile } from "./browser-payment-profile";
+import { AUTH_CHALLENGE_TTL_MS } from "./auth-time-policy";
 
 const CONTINUATION = "keryx-circle-google-oauth-v1";
 const IDENTITY = `keryx-circle-owner-${browserPaymentProfile().networkId}`;
@@ -83,7 +84,7 @@ export async function startGoogleWalletLogin() {
   const deviceId = await sdk.getDeviceId();
   const device = await post("device", { deviceId });
   const pending = pendingSchema.parse({ ...device, origin: window.location.origin });
-  // Tab-scoped, ten-minute continuation only. User/refresh/encryption credentials never enter storage.
+  // Tab-scoped, five-minute Keryx continuation only. User/refresh/encryption credentials never enter storage.
   sessionStorage.setItem(CONTINUATION, JSON.stringify(pending));
   sdk.updateConfigs(sdkConfig(pending));
   await sdk.performLogin(SocialLoginProvider.GOOGLE);
@@ -121,7 +122,7 @@ export function resumeGoogleWalletLogin(): Promise<CircleWalletIdentity | null> 
     try {
       pending = pendingSchema.parse(JSON.parse(raw));
       if (pending.origin !== window.location.origin || pending.expiresAt <= Date.now()
-        || pending.expiresAt > Date.now() + 10 * 60_000 || !pending.oauthState
+        || pending.expiresAt > Date.now() + AUTH_CHALLENGE_TTL_MS || !pending.oauthState
         || hash.get("state") !== pending.oauthState) throw new Error("Google login expired; start again");
       if (hash.has("error")) throw new Error("Google sign-in cancelled");
       const { W3SSdk: SDK } = await import("@circle-fin/w3s-pw-web-sdk");

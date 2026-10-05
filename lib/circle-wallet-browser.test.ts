@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, expect, it, vi } from "vitest";
+import { AUTH_CHALLENGE_TTL_MS } from "./auth-time-policy";
 const sdkMocks = vi.hoisted(() => ({ execute: vi.fn(), login: vi.fn(), auth: vi.fn() }));
 vi.mock("./browser-payment-profile", () => ({ browserPaymentProfile: () => ({ networkId: "eip155:5042" }) }));
 vi.mock("@circle-fin/w3s-pw-web-sdk", () => ({ W3SSdk: class {
@@ -75,4 +76,18 @@ it("does not delete another tab's newer generic SDK state while cleaning up an e
   const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher); const browser = await import("./circle-wallet-browser");
   await expect(browser.resumeGoogleWalletLogin()).rejects.toThrow("expired");
   expect(fetcher).not.toHaveBeenCalled(); expect(localStorage.getItem("state")).toBe("new-state"); expect(localStorage.getItem("nonce")).toBe("new-nonce");
+});
+it("refuses continuation beyond the shared five-minute login window before any wallet operation", async () => {
+  sessionStorage.setItem(CONTINUATION, JSON.stringify({ state, deviceToken: "synthetic-device-token", deviceEncryptionKey: "synthetic-device-key",
+    expiresAt: Date.now() + AUTH_CHALLENGE_TTL_MS + 60_000, origin: window.location.origin, oauthState: "synthetic-oauth-state", oauthNonce: "synthetic-oauth-nonce" }));
+  localStorage.setItem("state", "synthetic-oauth-state"); localStorage.setItem("nonce", "synthetic-oauth-nonce");
+  localStorage.setItem("socialLoginProvider", "Google");
+  history.replaceState(null, "", "/connect#id_token=synthetic-google-token&state=synthetic-oauth-state");
+  const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
+  const browser = await import("./circle-wallet-browser");
+  await expect(browser.resumeGoogleWalletLogin()).rejects.toThrow("expired");
+  expect(fetcher).not.toHaveBeenCalled(); expect(sdkMocks.execute).not.toHaveBeenCalled();
+  expect(browser.circleWalletIdentity()).toBeUndefined(); expect(window.location.hash).toBe("");
+  expect(sessionStorage.getItem(CONTINUATION)).toBeNull(); expect(localStorage.getItem("state")).toBeNull();
+  expect(localStorage.getItem("nonce")).toBeNull(); expect(localStorage.getItem("socialLoginProvider")).toBeNull();
 });

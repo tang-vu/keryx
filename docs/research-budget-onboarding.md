@@ -57,6 +57,13 @@ EOA on the selected Arc network. Backend session issuance derives wallet ownersh
 from authenticated Circle responses, never a client-selected wallet address.
 Existing external wallets and their sign-in flow remain available.
 
+Keryx's Google login continuation and durable single-use challenge share the
+existing five-minute authentication window. Complete sign-in and wallet setup
+within that window; after expiry, explicitly start sign-in again. A completed
+Circle wallet is resolved as the same account on a new login. This window does
+not set Google's or Circle's token lifetime, extend the Keryx web session, or
+authorize spending. Initialization and signing are never automatically retried.
+
 Google requires a Circle Developer Console configuration and a Google OAuth client:
 
 - `NEXT_PUBLIC_CIRCLE_APP_ID`: public Circle Wallets app identifier.
