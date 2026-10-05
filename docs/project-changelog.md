@@ -1,5 +1,23 @@
 # Keryx Project Changelog
 
+### Deep discovery accounting and comparison scope (2026-10-05, v0.26.22 candidate)
+
+- Give the current combined source-selection and Deep-discovery update a distinct
+  app identity. The immutable v0.26.20 tag and published archives belong to
+  `562ac756`; later main `094bcb70` must not reuse their source provenance.
+- Retain separate MCP 0.4.5, Operator desktop 0.4.6, remote protocol 0.3.1 and
+  extension 0.1.1 identities. Fresh exact-source release archives, CI/review and
+  deployed-health readback remain required. Installed clients are not upgraded by
+  publishing an archive.
+- Keep dispatched search attempts and actual provider outcomes visible after
+  cancellation, without admitting late previews or dispatching another Quick search.
+  Keep Quick's shared 24-candidate cap; fairly share Deep's remaining slots after
+  retaining caller originals, including later targets and sparse search results.
+  Preserve independent comparison dimensions when selecting a bounded provisional
+  candidate shortlist; ask for scope choices when the requested breadth cannot fit.
+- This version change creates no live allowance, paid retest, funding, custody or
+  schedule. Ordinary Chrome usefulness remains 0/3 and its acceptance gates stay open.
+
 ### Deep research searches every target (2026-10-05)
 
 - Deep research searches the question and every research target together (up to nine

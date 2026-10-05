@@ -5265,3 +5265,35 @@ So this improves what the agent looks for and reads, not yet what it can deliver
 The comparison above used `deepseek-chat`. With the project default `deepseek-v4-flash`, one run on the branch skipped all 24 candidates, including pages its own rationale called directly or strongly relevant, because the search snippet did not itself contain the answer; unmodified main read four pages and cited none. The selection prompt now states that frugality applies to paid tolls, that a snippet is not expected to contain the answer, and that a free read described as directly relevant is selected. The following flash run read seven pages with no failed read. It still delivered no evidence, for a separate reason recorded below.
 
 Not changed, and still open: with the decision brief enabled on `deepseek-v4-flash`, three consecutive runs on this question each ended with an empty answer through a different fail-closed exit: the brief's 12,000-character context bound was exceeded (and was still exceeded after reducing to two reads), the review reply reached its 4,096-token ceiling, and a reply was not a valid JSON object. Falling back to excerpt synthesis and keeping only the reads that fit were both tried and withdrawn, since tests pin the brief as failing closed without retrying generation and no fixture reproduced the bound. Three single runs are observations, not a rate; the cause of each exit is not established beyond its error message.
+
+## Preserve Deep search attempts and atomic comparison scope - 2026-10-05
+
+Review of the merged Deep-discovery update found that cancellation could discard
+all search counters after parallel provider calls had already been dispatched.
+Count each invocation and its returned/rejected outcome at that boundary; preview
+admission remains separately cancelled. Synchronous provider failure is isolated
+per query. These counters describe calls and provider outcomes, not invoices or
+financial settlement. Quick keeps its sequential two-query ceiling and never
+dispatches a later query after cancellation.
+
+Deep preview admission shares only the capacity remaining after caller originals.
+A deterministic round-robin pass gives every successful query a chance before a
+broad query fills the cap, reusing spare capacity from empty or duplicate results
+without another search. Quick retains its original shared 24-candidate cap; it
+does not inherit a per-query quota that reduces useful first-query results.
+
+Provisional candidate names aid discovery for an open comparison, but one target
+cannot conceal multiple independently requested dimensions. Keep each candidate
+and independent dimension separate within the unchanged eight-target cap. Choose
+only a bounded, explicitly provisional shortlist that fits all dimensions; when
+the requested breadth cannot fit without changing scope, retain the existing
+terminal refinement path. Candidate names establish neither findings nor complete
+coverage of a category. This corrects the preceding compound-target instruction;
+the separately owner-authorized Deep discovery cost change remains intact.
+
+Give integrated source a fresh release identity rather than reusing the immutable
+v0.26.20 tag/archives from `562ac756`. Exact combined review/CI, deployed commit and
+public distribution readback remain independent gates. None of these repairs
+reopens the closed client/model/search scopes, creates a paid retry or circuit
+reset, authorizes funding/spending, changes custody or adds a schedule. Richer
+synthesis stays disabled and ordinary-client usefulness remains unaccepted.
