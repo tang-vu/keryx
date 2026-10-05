@@ -15,7 +15,7 @@ import { arxivDocumentId } from "../scholarly/arxiv-identity";
 import { searxngProvider } from "../web-research/search-provider";
 import { tavilyProvider } from "../web-research/tavily-provider";
 import { ArticleReadError, articleFailureCode, gatheredArticle, readArticle } from "../web-research/article-reader";
-import { bodyIdentity } from "../web-research/url-identity";
+import { bodyIdentity, canonicalUrl } from "../web-research/url-identity";
 import { isPublicReferenceId } from "../public-references/catalog";
 /**
  * The Keryx agent orchestrator — the brain.
@@ -268,13 +268,16 @@ export async function* runAgent(
   const webCandidates = new Map<string, SourceCandidate>();
   const gathered: GatheredContent[] = [];
   const requested = requestedSources(input.question);
+  const requestedByUrl = new Map([...requested.candidates.values()].map(candidate => [candidate.item!.itemUrl, candidate]));
   const externalDocumentsWithheld = effects.scope.kind === "job" || origin === "engine" && input.allowExternalWeb !== true;
   function admitWeb(candidate: SourceCandidate) {
-    const requirement = requested.candidates.get(candidate.id)?.item?.requestedSource;
+    const supplied = requestedByUrl.get(canonicalUrl(candidate.item?.itemUrl ?? "") ?? "");
+    const requirement = supplied?.item?.requestedSource;
     const admitted = requirement && candidate.item ? { ...candidate,
+      id: supplied!.id, sourceId: supplied!.id,
       description: `${candidate.description} This original URL was explicitly supplied by the caller; contents remain unobserved.`,
       item: { ...candidate.item, requestedSource: requirement } } : candidate;
-    webCandidates.set(candidate.id, admitted); publicCandidates.set(candidate.id, admitted);
+    webCandidates.set(admitted.id, admitted); publicCandidates.set(admitted.id, admitted);
   }
   if (!externalDocumentsWithheld) for (const candidate of requested.candidates.values()) admitWeb(candidate);
   for (const candidate of requested.candidates.values()) yield emit("discover",
@@ -323,12 +326,12 @@ export async function* runAgent(
   const seenWebUrls = new Set<string>();
   let lastWebFailure = "unavailable";
   const scholarlyReadFailures: string[] = [];
-  const publicReadOutcomes: Array<{ name: string; code: string }> = [];
+  const publicReadOutcomes: Array<{ name: string; code: string; assetId?: string }> = [];
   async function fetchWeb(id: string): Promise<GatheredContent | null> {
     lastWebFailure = "web-operation-limit";
     const candidate = webCandidates.get(id);
     if (!candidate?.item?.itemUrl || webAttempts >= (input.researchMode === "quick" ? 4 : 8) || webRemainingMs <= 0) {
-      publicReadOutcomes.push({ name: candidate?.name ?? "Public source", code: lastWebFailure });
+      publicReadOutcomes.push({ name: candidate?.name ?? "Public source", code: lastWebFailure, assetId: id });
       return null;
     }
     webAttempts++;
@@ -362,7 +365,7 @@ export async function* runAgent(
       if (!article.text.trim() || seenWebBodies.has(identity) || seenWebUrls.has(article.finalUrl) ||
           gathered.some(read => bodyIdentity(read.text) === identity && read.itemUrl === article.finalUrl) ||
           publicReads.size && [...publicReads.values()].some(read => bodyIdentity(read.text) === identity)) {
-        publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure });
+        publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure, assetId: id });
         return null;
       }
       seenWebBodies.add(identity);
@@ -378,7 +381,7 @@ export async function* runAgent(
         if (abstractFallback) scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: only the abstract page was read; full-paper evidence is unavailable.`);
       }
       return extracted;
-    } catch (error) { lastWebFailure = articleFailureCode(error); publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure }); return null; }
+    } catch (error) { lastWebFailure = articleFailureCode(error); publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure, assetId: id }); return null; }
     finally { webRemainingMs -= Date.now() - operationStarted; }
   }
   for (const candidate of publicCandidates.values()) {

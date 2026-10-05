@@ -15,7 +15,7 @@ export function requestedSourceReport(input: {
   for (const [id, candidate] of input.candidates) {
     const requirement = candidate.item!.requestedSource!;
     const read = input.gathered.find(item => item.assetId === id);
-    const failure = input.outcomes.find(item => item.name === candidate.name);
+    const failure = input.outcomes.find(item => item.assetId === id || !item.assetId && item.name === candidate.name);
     const decision = input.decisions.find(item => (item.assetId ?? item.sourceId) === id);
     let status: string;
     if (input.withheld) status = input.vi ? "Không đọc: truy cập ngoài phạm vi bị tắt cho lượt này." : "Not read: external document access is withheld for this run's scope.";
@@ -25,6 +25,9 @@ export function requestedSourceReport(input: {
         ? `Đã trích xuất có giới hạn từ ${quoted(read.itemUrl!)}; ${qualified ? "giữ được đoạn trích đủ điều kiện" : "chưa giữ được bằng chứng đủ điều kiện"}.`
         : `Bounded text extracted from ${quoted(read.itemUrl!)}; ${qualified ? "qualifying excerpts retained" : "no qualifying evidence retained"}.`;
       if (read.webProvenance?.truncated) status += input.vi ? " Bản trích xuất bị cắt." : " Extraction was truncated.";
+      if (read.publicDeliveryKind === "abstract" || read.scholarly?.evidenceScope === "abstract-page") status += input.vi
+        ? " Chỉ đọc trang tóm tắt; toàn văn bài báo chưa có."
+        : " Only the abstract page was read; full-paper evidence is unavailable.";
     } else if (failure) status = input.vi ? `Đọc thất bại: ${reportLabel(failure.code)}.` : `Read failed: ${reportLabel(failure.code)}.`;
     else status = `${decision?.action === "SKIP" ? "SKIP" : input.vi ? "Chưa đọc" : "Not read"}: ${reportLabel(decision?.rationale ?? (input.vi ? "Chưa hoàn tất lượt đọc trong giới hạn lượt này." : "A read did not complete within this run's limits."))}`;
     if (requirement.urls.some(url => new URL(url).hash)) status += input.vi

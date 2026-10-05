@@ -479,6 +479,30 @@ it("reports supplied originals' read failures and existing URLs in empty recover
   expect(run.answer).not.toContain("supply a relevant original source URL");
 });
 
+it("binds an extraction failure to the original asset after search changes its display title", async () => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  d.webSearch = { search: async () => [{ title: "A renamed preview", url: "https://www.sqlite.org/wal.html", snippet: "preview" }] };
+  d.readWebArticle = async () => { throw new ArticleReadError("html-extraction-unavailable"); };
+  const { run } = await drive({ question: "Use https://www.sqlite.org/wal.html", origin: "web" }, d);
+  expect(run.answer).toContain("`https://www.sqlite.org/wal.html`: Read failed: html-extraction-unavailable");
+});
+
+it("merges an exact supplied arXiv PDF with scholarly metadata into one original read identity", async () => {
+  const candidate = scholarlyCandidate({ provider: "arxiv", recordUrl: "https://export.arxiv.org/api/query?id_list=2606.02668v1",
+    retrievedAt: new Date().toISOString(), title: "Exact paper", authors: [], arxivId: "2606.02668v1", workType: "preprint", peerReview: "unknown" });
+  const d = deps([], fakeEngine(), fakeGateway());
+  d.webSearch = { search: async () => [] };
+  d.discoverScholarly = async () => ({ candidates: new Map([[candidate.id, candidate]]), succeeded: 1, unavailable: 0, requestedDois: 0, resolvedDois: 0 });
+  d.readWebArticle = vi.fn(async url => ({ text: "The exact original paper was read under this synthetic transport.", title: "Paper", finalUrl: url, kind: "pdf" as const, truncated: false }));
+  const { run } = await drive({ question: "Use https://arxiv.org/pdf/2606.02668v1", origin: "web" }, d);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(1);
+  expect(run.decisions).toHaveLength(1);
+  expect(run.decisions[0].requestedSource?.urls).toEqual(["https://arxiv.org/pdf/2606.02668v1"]);
+  expect(run.citations[0]?.scholarly?.evidenceScope).toBe("paper-text");
+  expect(run.answer).toContain("Bounded text extracted from `https://arxiv.org/pdf/2606.02668v1`");
+  expect(run.answer).not.toContain("omitted this supplied original");
+});
+
 it("withholds explicit URL transport for unattended research and rejects changed exact arXiv versions", async () => {
   const d = deps([], fakeEngine(), fakeGateway());
   d.readWebArticle = vi.fn(async () => ({ text: "A different version.", title: "Wrong", finalUrl: "https://arxiv.org/pdf/2606.02668v2", kind: "pdf" as const, truncated: false }));
