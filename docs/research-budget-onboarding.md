@@ -87,6 +87,10 @@ required.
 
 Before activation, verify Google return/recovery and Circle Arc EOA message,
 typed-data and raw-transaction signing on an isolated testnet configuration. The
+owner's browser-signer derivation must also reproduce the retained funded signer
+when the same recovery message is signed again; a valid EOA signature alone does
+not prove that recovery property. Google account recovery still does not restore
+the separate browser's encrypted budget custody automatically. The
 vendor's raw-signing endpoint description and current supported-chain schema are
 not fully consistent; source support alone does not resolve that integration
 gate. Mainnet funding acceptance requires its own finite authorization.

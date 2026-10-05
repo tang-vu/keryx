@@ -93,6 +93,7 @@ const html = `<div id="root"></div><script>${bundle.outputFiles[0].text}</script
     assert.equal(new URL(page.url()).searchParams.get('rss'),rss);
     await page.reload(); await page.getByText(`Ready to register: ${rss}.`,{exact:false}).waitFor();
     await page.getByRole('link',{name:'Sign in ▸',exact:true}).click();
+    await page.getByRole('button',{name:'Sign in with Ethereum ▸'}).waitFor();
     await page.evaluate(chainId=>{const w=window as unknown as {wallet:Record<string,unknown>};w.wallet={...w.wallet,chainId};window.dispatchEvent(new Event('wallet-change'));},profile.chainId===5042?5042002:5042);
     await page.getByText(`Keryx runs on ${profile.label} (chainId ${profile.chainId}). Switch to continue.`).waitFor();
     assert(await page.getByRole('button',{name:'Sign in with Ethereum ▸'}).isDisabled());assert.equal(signInCalls,0);
