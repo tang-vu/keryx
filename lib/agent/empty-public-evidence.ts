@@ -62,8 +62,8 @@ export function emptyPublicEvidenceDetail(
   // without importing server-only candidate identity/hash construction.
   const supplied = /https?:\/\/[^\s<>"`]+/iu.test(question.slice(0, 30000));
   const recovery = supplied
-    ? vi ? "Câu hỏi đã có URL nguồn gốc. Kiểm tra trạng thái của từng URL đã cung cấp bên dưới và lý do SKIP/lỗi đọc trong nhật ký trước khi thu hẹp một lượt mới. "
-      : "The question already supplied original source URLs. Inspect each supplied URL's status below and its recorded SKIP/read failure before narrowing a new task. "
+    ? vi ? "Câu hỏi đã có URL nguồn gốc. Kiểm tra trạng thái URL đã cung cấp và lý do SKIP/lỗi đọc nếu có trong nhật ký trước khi thu hẹp một lượt mới. "
+      : "The question already supplied original source URLs. Inspect any recorded supplied-URL status and recorded SKIP/read failures before narrowing a new task. "
     : scholarly
     ? vi ? "Thử một DOI chính xác hoặc mã arXiv có phiên bản và kiểm tra lý do SKIP/lỗi đọc đã ghi. "
       : "Try one exact DOI or versioned arXiv target and inspect the recorded SKIP/read failures. "
