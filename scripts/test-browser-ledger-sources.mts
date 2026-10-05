@@ -56,7 +56,7 @@ try {
           if (mode === "error" && pathname === "/api/metrics") return route.fulfill({ status: 503, json: { error: "unavailable" } });
           if (pathname === "/api/metrics") return route.fulfill({ json: mode === "malformed" ? { metrics: { totalQueries: 28 }, leaderboard: [] } : { metrics: { ...metrics, ...(mode === "pending" ? { pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.02, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.01 } : {}) }, leaderboard: [] } });
           if (pathname === "/api/runs") return route.fulfill({ json: [run] });
-          if (pathname === "/api/payments") return route.fulfill({ json: { payments: mode === "pending" ? [{ id: "fixture-payment", sourceName: "Pending creator fixture", queryId: "fixture-run", sourceId: "fixture-creator", kind: "citation", payer: "buyer", payee: "creator", amountUsdc: 0.02, network: network === "arc" ? "eip155:5042" : "eip155:5042002", settled: false, settlementStatus: "pending", createdAt: "2026-10-05T00:00:00.000Z" }] : [] } });
+          if (pathname === "/api/payments") return route.fulfill({ json: { payments: mode === "pending" ? [{ id: "fixture-payment", sourceName: "Pending creator fixture", queryId: "fixture-run", sourceId: "fixture-creator", kind: "citation", payer: "buyer", payee: "creator", amountUsdc: 0.02, network: "eip155:5042002", authorizationId: "fixture-authorization", settled: false, settlementStatus: "pending", createdAt: "2026-10-05T00:00:00.000Z" }] : [] } });
           if (pathname === "/api/withdrawals") return route.fulfill({ json: { withdrawals: [] } });
           throw new Error(`Unexpected API ${pathname}`);
         }
@@ -92,7 +92,7 @@ try {
       mode = "error";
       // Retry against an error after an accepted read must retain visibly dated data.
       await page.clock.fastForward(10_100);
-      await page.getByText(/Showing the last successful read/).waitFor();
+      await page.getByText(/Showing the last successful read from \d{2}\/\d{2}\/\d{4}, .* UTC/).waitFor();
 
       mode = "malformed";
       await open("/dashboard");
@@ -106,6 +106,9 @@ try {
       await page.getByTitle("Pending creator fixture", { exact: true }).waitFor();
       await page.getByText("Inspect payment evidence", { exact: true }).click();
       await page.getByRole("columnheader", { name: "Flow" }).waitFor();
+      await page.getByText("Authorization: fixture-authorization", { exact: true }).waitFor();
+      assert.equal(await page.locator("tbody").getByText("Arc Testnet", { exact: true }).count(), 1,
+        "A retained testnet record must keep its own network in either build profile");
 
       await open("/sources");
       await page.getByRole("heading", { name: "Sources to explore." }).waitFor();
