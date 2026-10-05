@@ -325,6 +325,11 @@ BROWSER (Web App)                    IPFS + Arc Smart Contracts              Cir
 
 ## Run it
 
+For project development, [the OSS AI adoption record](docs/engineering/oss-ai-adoption-2026-10-05.md)
+documents checked upstream patterns and their Keryx acceptance gates. Use
+[`$keryx-oss-adoption`](.agents/skills/keryx-oss-adoption/SKILL.md) for future
+OSS learning and adaptation tasks in supporting development agents.
+
 **One command — the full cycle (~90s).** Decide → pay the x402 toll → read → synthesize → settle
 weighted citation rewards, then report payments on the explicitly configured network.
 The checked-in environment example is for isolated testnet development; mainnet
