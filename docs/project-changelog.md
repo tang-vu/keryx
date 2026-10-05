@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Deep research searches every target (2026-10-05)
+
+- Deep research searches the question and every research target together (up to nine
+  queries) and shares the candidate cap between them; it may read one source per
+  target unless the caller pinned its limits. Quick research, the eight-target limit,
+  the 2,000-character source context and A2A package limits are unchanged.
+- For an open "which items ..." comparison, planning names up to six specific
+  candidates to verify instead of only generic targets.
+- One recorded local comparison read six pages for seven named systems instead of
+  three pages for three generic targets. Delivered evidence stayed thin and
+  Low-confidence; see `DECISIONS.md` for the measured limits and added search cost.
+
 ## October 5, 2026 — Bounded sponsorship, recurring tolls and accurate unread receipts
 
 - Receipts record a selection that was never read as SKIP and release its toll

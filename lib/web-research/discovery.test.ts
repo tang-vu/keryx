@@ -137,3 +137,32 @@ it("bounds provider response parsing, rejects unsafe result URLs and disables re
     await expect(searxngProvider("http://127.0.0.1:8888/search").search("question")).rejects.toThrow("limit");
   } finally { request.mockRestore(); }
 });
+
+it("searches every deep research target together and shares the candidate cap between queries", async () => {
+  const search = vi.fn(async (query: string) => Array.from({ length: 30 }, (_, index) => ({
+    title: `${query} ${index}`, snippet: "preview", url: `https://${query.replace(/\W/g, "")}${index}.test/page`,
+  })));
+  const claims = Array.from({ length: 8 }, (_, index) => `claim ${index}`);
+  const result = await discoverWeb({ search }, "question", claims, false);
+  expect(search).toHaveBeenCalledTimes(9);
+  expect(result).toMatchObject({ attemptedQueries: 9, succeededQueries: 9, failedQueries: 0 });
+  // No single query fills the cap: every target, including the last, is represented.
+  const names = [...result.candidates.values()].map(candidate => candidate.name);
+  expect(names.filter(name => name.startsWith("question ")).length).toBe(2);
+  expect(names.some(name => name.startsWith("claim 7 "))).toBe(true);
+  expect(result.candidates.size).toBe(18);
+});
+
+it("keeps a failed deep query from discarding the others, and quick research at two sequential queries", async () => {
+  const search = vi.fn(async (query: string) => {
+    if (query === "claim 1") throw new Error("provider unavailable");
+    return [{ title: `${query} hit`, snippet: "preview", url: `https://${query.replace(/\W/g, "")}.test/page` }];
+  });
+  const deep = await discoverWeb({ search }, "question", ["claim 0", "claim 1", "claim 2"], false);
+  expect(deep).toMatchObject({ attemptedQueries: 4, succeededQueries: 3, failedQueries: 1 });
+  expect(deep.candidates.size).toBe(3);
+  search.mockClear();
+  const quick = await discoverWeb({ search }, "question", ["claim 0", "claim 1", "claim 2"], true);
+  expect(search).toHaveBeenCalledTimes(2);
+  expect(quick.attemptedQueries).toBe(2);
+});

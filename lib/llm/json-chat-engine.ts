@@ -115,6 +115,11 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "For example, 'How is a job journaled and recovered? Use the engineering documentation' asks about journaling and recovery as documented there, not a third question about what the documentation says. " +
         "However, explicitly requested source reliability, disagreements between sources, or citation methodology ARE substantive information needs and must remain targets. Do not discard a requested topic just because it mentions sources. " +
         "For ambiguous terminology, keep the ambiguity visible in a definition/scope question instead of inventing a specialized domain, formula, legal dispute, or mechanism. " +
+        "An ordinary evaluative word (safe, best, reliable, good) is a criterion to carry into the substantive targets, not ambiguous terminology: do not spend a target on what such a word means. " +
+        "When the question asks which items satisfy criteria and names none (which systems, tools, libraries, vendors ...), a search for the bare category finds only listicles. " +
+        "Name the specific well-known candidates worth checking, at most six, one target per candidate, each phrased as a question carrying every requested criterion " +
+        "(for example 'Does <candidate> expose <requested capability>, and where does it fall short?'), plus one target for notable candidates you did not name. " +
+        "Named candidates are things to verify, not findings, and such a plan is complete: an open category does not require needs_refinement. " +
         "Use Keryx's context for unqualified questions about its citation payments, but do not impose it on unrelated topics. " +
         `Before returning, count the independent targets. If all substantive requested dimensions cannot fit within ${MAX_RESEARCH_TARGETS}, return status needs_refinement; never silently drop dimensions, hide them in an umbrella target, or claim the scope is complete. ` +
         "No sources have been read yet: these are research targets, never evidence. Return only JSON data.",
