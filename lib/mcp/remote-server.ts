@@ -9,6 +9,7 @@ import type { McpClientChannel, QueryRun } from "../types";
 import { registerMonthlyDiscovery } from "../monthly/mcp-discovery";
 import { quoteResearchMonthly } from "../monthly/quote";
 import { reasoningServingText } from "../llm/reasoning-telemetry";
+import { researchFailureMessage } from "../llm/research-plan";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
@@ -130,7 +131,7 @@ export function createRemoteMcpServer(
           structuredContent: result,
         };
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = researchFailureMessage(error);
         return {
           isError: true,
           content: [{ type: "text" as const, text: `Keryx research failed: ${message}` }],

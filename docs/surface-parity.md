@@ -1,5 +1,20 @@
 # Supported-surface release parity
 
+## Bounded planning and heading recall, October 5, 2026
+
+Application **0.26.17 candidate** changes shared planning/context and original-caller
+failure guidance in web SSE, OpenAI API, hosted remote MCP and repository ask CLI.
+Non-streaming OpenAI refusals use 422; remote MCP preserves protocol **0.3.1** and
+its existing error-text shape. Paid A2A/private jobs and bots keep original-order
+failure/recovery and disclosure boundaries. Extension **0.1.1** keeps its hosted handoff.
+
+The actual stdio MCP runtime graph (31 local files) and desktop helper graph (46),
+renderer and bridge do not reach these changed modules. Caller-funded MCP **0.4.5**
+and Operator **0.4.6** retain accepted 0.26.15 artifact provenance; broad CI path
+filters do not establish that package bytes changed. Verify their published versions
+separately from the new hosted commit. See [scope and remaining acceptance](engineering/research-planning-2026-10-05.md).
+The closed 0.26.16 browser round remains 0/3 useful; no paid retest follows this release.
+
 ## Bounded browser acceptance, October 5, 2026
 
 App **0.26.16 candidate** and hosted remote MCP **0.3.1** preserve explicit zero-source

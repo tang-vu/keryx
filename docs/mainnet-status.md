@@ -1,5 +1,23 @@
 # Current Arc mainnet deployment
 
+October 5 planning-repair baseline: read-only public health at
+`2026-10-05T08:20:26.904Z` reported operational, database ok, Arc and real settlement
+mode at `31286250`; SSH source identity was
+`3128625054836e51aaace3310bda426bbe06da14`, application **0.26.16**. Public roles used
+the reviewed steady brief-disabled definitions, no allowance environment, zero active
+root-crontab entries, and an idle A2A queue. Separately installed system cron jobs
+were activated by the other authorized delivery at 08:02 UTC; they require an explicit
+hold/drain and reviewed source/storage repinning before this maintenance deployment.
+The existing private worker was active with
+infinite graceful stop and no forced kill. This establishes baseline identity and
+availability, not useful research or a new settlement.
+
+The **0.26.17 candidate** addresses [bounded planning and heading recall](engineering/research-planning-2026-10-05.md).
+It retains remote MCP **0.3.1**, accepted caller-funded MCP **0.4.5**, desktop **0.4.6**
+and extension **0.1.1**. Its deployment and independent publication readbacks remain
+release steps. The closed browser round remains 0/3 useful; #128 and #169 live
+acceptance gates remain open.
+
 October 5 release observation: [PR 166](https://github.com/tang-vu/keryx/pull/166)
 was merged and app **0.26.12**, commit `a85bc1b6f75138ede9980d1123d5449a0da9693f`,
 was deployed. Public health at `2026-10-05T04:12:43.013Z` reported operational,

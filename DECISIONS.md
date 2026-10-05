@@ -5140,3 +5140,21 @@ and watchdog schedules during the round instead of claiming the public factory c
 No automatic renewal, retry, refund, new custody or scheduler activation follows from this
 policy. Technical completion and useful complete answers are separate acceptance criteria.
 See docs/engineering/bounded-live-research-2026-10-05.md for scope and release gates.
+
+## Preserve atomic targets and make planning refusal terminal - 2026-10-05
+
+The 0.26.16 ordinary-browser round graded 0/3 useful; two comparisons exceeded eight
+planning targets before discovery. Raw plans were not retained, so their exact expansion
+cause remains unproved. Distinguish compared subjects from complementary references in
+the existing planning call. Preserve every independently inspectable information need;
+neither a larger target/context/cost limit nor semantic grouping is an accepted repair.
+Malformed/excess/incomplete planning is a terminal request-local output refusal, retaining
+usage and circuit history instead of paid tier fanout or an aggregate heuristic answer.
+Caller-only narrowing excerpts are private error state, absent from ordinary inspection/logs.
+
+A unique normalized short extracted heading matching a supplied fragment may prioritize
+contiguous already-read text under existing context/candidate/scan bounds. This improves
+cross-language recall without certifying an HTML anchor or full section. Preserve literal
+quote/source/version/reward checks and D-300. Offline fixtures do not replace ordinary-client
+usefulness, prove the historical Next.js loss point or reopen the closed paid scope.
+See docs/engineering/research-planning-2026-10-05.md for adapter and release gates.

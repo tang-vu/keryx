@@ -10,6 +10,7 @@
 
 import { config } from "../config";
 import { HeuristicEngine } from "./heuristic-engine";
+import { ResearchPlanningError } from "./research-plan";
 import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
 import type {
   AttributeInput,
@@ -242,6 +243,9 @@ export class ResilientEngine implements ReasoningEngine {
           outcome: err instanceof ReasoningInputLimitError ? "input-limited" : "failed",
           ...errorTelemetry(err),
         });
+        // A planner refusal is a completed billable response, not permission to try
+        // another model or hide independent requirements inside a heuristic aggregate.
+        if (err instanceof ResearchPlanningError) throw err;
         if (isTimeout(err) || !isTransient(err) || attempt === maxAttempts) break;
         await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** (attempt - 1)));
       }
