@@ -62,8 +62,8 @@ Google requires a Circle Developer Console configuration and a Google OAuth clie
 - `NEXT_PUBLIC_CIRCLE_APP_ID`: public Circle Wallets app identifier.
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`: public Google web OAuth client identifier.
 - `CIRCLE_API_KEY`: private Circle Developer API key, environment only.
-- `KERYX_CIRCLE_GOOGLE_ENABLED=true`: explicit activation after configuration and
-  vendor acceptance; the checked-in template leaves this false.
+- `KERYX_CIRCLE_GOOGLE_ENABLED=true`: explicit activation after configuration
+  under the rollout choice below; the checked-in template leaves this false.
 - Existing `JWT_SECRET` and correctly selected network/profile configuration.
 
 Configure Google OAuth redirect `https://keryx.cc/connect` for production and each
@@ -71,6 +71,20 @@ explicit development origin's `/connect` path for isolated testing. Add the web
 client ID under Circle Wallets → User Controlled → Configurator → Social Logins →
 Google. Google audience publication/test-user settings determine who can sign in.
 Follow the [official Circle setup](https://developers.circle.com/wallets/user-controlled/build-a-wallet-app).
+
+For public Google sign-in, use an **External** Google audience and select **Publish
+app** on the Audience page to reach **In production**. Basic identity-only scopes
+(`openid`, `email`, `profile` or equivalents) also have a Google exception to the
+Testing allowlist and seven-day authorization expiry; adding each user's email is
+not required for that flow. Additional scopes can change verification requirements.
+See [Google audience settings](https://support.google.com/cloud/answer/15549945?hl=en).
+
+Google Branding uses `https://keryx.cc` as the homepage,
+`https://keryx.cc/privacy` for privacy and `https://keryx.cc/terms` for terms.
+The public pages disclose the optional Google/Circle processing and the separate
+browser research-key recovery boundary. Brand/name/logo verification and domain
+ownership verification are separate from publishing the audience. A saved URL or
+published audience does not prove Google approval or activate Keryx's feature flag.
 
 Absent or unavailable configuration hides the option and refuses its APIs. Source
 implementation and synthetic tests do not establish that production Google login
@@ -85,8 +99,14 @@ transport. SDK-only overrides keep its Firebase gRPC/HTTP dependencies on patche
 versions of their existing major lines; the high-severity dependency gate remains
 required.
 
-Before activation, verify Google return/recovery and Circle Arc EOA message,
-typed-data and raw-transaction signing on an isolated testnet configuration. The
+The default rollout verifies Google return/recovery and Circle Arc EOA message,
+typed-data and raw-transaction signing on an isolated testnet configuration. On
+October 5 the owner instead explicitly selected direct mainnet activation and
+acceptance on `keryx.cc`, using the configured mainnet key/App ID and published
+Google audience. This is a rollout choice, not evidence that vendor acceptance
+has passed. Begin with owner-driven sign-in/wallet creation and signing; source
+validation or feature activation does not authorize automatic funding or spending.
+Record each real result and leave unsupported or unverified operations open. The
 owner's browser-signer derivation must also reproduce the retained funded signer
 when the same recovery message is signed again; a valid EOA signature alone does
 not prove that recovery property. Google account recovery still does not restore

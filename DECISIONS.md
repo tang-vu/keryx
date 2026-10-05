@@ -5158,3 +5158,22 @@ cross-language recall without certifying an HTML anchor or full section. Preserv
 quote/source/version/reward checks and D-300. Offline fixtures do not replace ordinary-client
 usefulness, prove the historical Next.js loss point or reopen the closed paid scope.
 See docs/engineering/research-planning-2026-10-05.md for adapter and release gates.
+
+## Public Google wallet rollout and disclosures - 2026-10-05
+
+Publish hosted terms and accurate optional Google/Circle processing disclosures,
+with homepage/footer links, before enabling the configured Google wallet path.
+Distinguish Keryx account storage from provider identity processing, short-lived
+device continuation from in-memory signing credentials, and wallet identity from
+the separate retained browser research key. Login validity does not guarantee
+automatic removal of abandoned SDK OAuth metadata from browser storage.
+
+The owner selected direct mainnet activation and product acceptance on keryx.cc
+after publishing the Google audience and configuring Circle. This replaces the
+default isolated-testnet-first rollout for this setup, not the need to verify
+real Google return, wallet initialization, message/typed/raw signing and repeated
+recovery derivation. Keep each unverified operation open. Configuration deployment
+does not fund a wallet, issue spending consent or authorize automatic paid research;
+existing caps, journals, schedules and custody remain authoritative. Mainnet
+funding/spending acceptance still needs its applicable finite authorization.
+See docs/research-budget-onboarding.md for setup and supported-surface boundaries.

@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Public Google onboarding policies (2026-10-05, v0.26.18 candidate)
+
+- Publish a linked terms page covering research, content rights, visible prices,
+  payment evidence and wallet recovery without changing spending consent.
+- Disclose optional Google/Circle identity and token processing in the privacy
+  policy, including temporary device continuation and separate browser custody.
+- Document External/In production Google setup and the basic-identity Testing
+  exception. Public policies do not establish vendor acceptance or activate Google
+  wallets; live sign-in/signing/recovery remain gated.
+- The hosted policy pages serve web, desktop, extensions, CLI/MCP and bot callers
+  of the same service. No API, package, installer or payment contract changes.
+
 ### Bounded planning refusals and heading recall (2026-10-05, v0.26.17 candidate)
 
 - Distinguish comparison subjects from source references while preserving independently

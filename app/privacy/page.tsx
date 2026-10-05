@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "October 2, 2026";
+const UPDATED = "October 5, 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -120,8 +120,9 @@ export default function PrivacyPage() {
 
         <Section title="Wallets and accounts">
           <p>
-            Signing in is Sign-In-With-Ethereum: we store your wallet address, your role
-            (asker/creator), and a last-seen timestamp. No email, no password, no phone number.
+            External wallets use Sign-In-With-Ethereum. Keryx stores your wallet address,
+            your role (asker/creator), and a last-seen timestamp. Keryx does not store your
+            email address, Google password, or phone number in its account records.
             Everything you do on-chain — registrations, payments, withdrawals — is public on Arc by
             the nature of a blockchain, and Keryx links to it rather than hiding it. Session keys
             for browser co-signing are generated in your browser and never sent to us.
@@ -134,6 +135,40 @@ export default function PrivacyPage() {
             compromised same-origin script can use the stored wrapping key to decrypt custody
             despite its nonexportability, putting deposited funds at risk.
           </p>}
+        </Section>
+
+        <Section title="Optional Google wallet sign-in">
+          <p>
+            When Google sign-in is enabled, Google authenticates your account and Circle
+            User-Controlled Wallets handles the linked wallet. Google and Circle process the
+            identity information you consent to share, such as your email and basic profile,
+            under their own privacy policies. Keryx uses the authenticated Circle wallet to
+            sign you in; it does not request access to your Gmail messages, Drive files, or
+            Google password. Google sign-in alone does not authorize spending.
+          </p>
+          <p>
+            The browser sends the Circle user-session token to Keryx to verify wallet ownership
+            and request wallet actions. Keryx forwards it to Circle for those operations and
+            does not persist it in account records. After sign-in, the browser keeps the user
+            token and signing encryption key in memory. During the redirect, short-lived
+            device credentials and login state are saved in this tab&apos;s session storage.
+            The Circle SDK also saves OAuth state, nonce and provider entries in local storage.
+            The continuation is valid for ten minutes; returning to complete the flow removes
+            its continuation and matching SDK entries. Abandoning the redirect can leave
+            expired login data in browser storage. The Google callback token is removed from
+            the page URL after the return flow. A public wallet identity is remembered locally and checked against a current
+            Keryx session before reconnecting.
+          </p>
+          <p>
+            Reloading requires reconnecting Google for new owner-wallet signatures. Google
+            account recovery does not automatically restore the separate encrypted research
+            signing key retained on this browser. Signing out clears Google wallet signing
+            credentials but retains funded research-key recovery as described above.
+          </p>
+          <p>
+            See <a href="https://policies.google.com/privacy" className="text-seal underline underline-offset-2">Google&apos;s privacy policy</a>{" "}
+            and <a href="https://www.circle.com/legal/privacy-policy" className="text-seal underline underline-offset-2">Circle&apos;s privacy policy</a>.
+          </p>
         </Section>
 
         <Section title="If you list a source">

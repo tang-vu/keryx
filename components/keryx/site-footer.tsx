@@ -39,6 +39,7 @@ const DOCS: FooterLink[] = [
   { label: "x402 + Gateway ↗", href: "https://github.com/circlefin/arc-nanopayments", external: true },
   { label: "Arc network ↗", href: profile.testnet?"https://docs.arc.network":"https://docs.arc.io", external: true },
   { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
 ];
 
 function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
