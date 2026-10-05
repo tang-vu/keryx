@@ -32,7 +32,7 @@ const browser = await chromium.launch({ headless: true });
 const screenshots = [];
 const task = { handle: "task-1", directoryName: "task-1", question: "How does Arc settle a citation toll?", mode: "deep",
   payee: "0x1111111111111111111111111111111111111111", createdAt: "2026-09-29T09:00:00Z",
-  status: { stage: "buyer_journaled", creatorBudgetMicros: 10000, maxTotalMicros: 100000,
+  status: { stage: "buyer_journaled", network: "eip155:5042002", creatorBudgetMicros: 10000, maxTotalMicros: 100000,
     savedResult: "present_unchecked", lastObservation: { status: "completed", observedAt: "2026-09-29T09:05:00Z", payment: "seller_reported" } } };
 const view = { name: "Operator research", path: "C:\\private\\operator", tasks: [task],
   references: [{ handle: "ref-1", name: "Background reading.md", importedAt: "2026-09-29T08:00:00Z",
@@ -42,11 +42,19 @@ const result = { answer: "A cited result grounded in the saved receipt [1].", ci
 async function openPage(scenario, width, height) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   await page.addInitScript(({ scenario, view, result }) => {
+    let activeView = structuredClone(view);
     const initial = scenario === "empty" || scenario === "startup-error" ? null : view;
+    window.createdInputs = [];
     window.keryxDesktop = {
-      refresh: async () => { if (scenario === "startup-error") throw Error("Local helper unavailable"); return initial; },
+      refresh: async () => { if (scenario === "startup-error") throw Error("Local helper unavailable"); return initial ? activeView : null; },
       chooseWorkspace: async () => view, createWorkspace: async () => view,
-      createTask: async () => ({ ...view.tasks[0], publicationState: "windows_visible_entry_unproven" }),
+      createTask: async input => {
+        window.createdInputs.push(input);
+        const created = { ...view.tasks[0], handle: `created-${window.createdInputs.length}`, question: input.question,
+          status: { ...view.tasks[0].status, stage: "ready", savedResult: "missing", network: input.network === "arc" ? "eip155:5042" : "eip155:5042002" } };
+        activeView = { ...activeView, tasks: [...activeView.tasks, created] };
+        return { ...created, publicationState: "windows_visible_entry_unproven" };
+      },
       resumeTask: () => scenario === "pending-resume" ? new Promise(() => {}) : Promise.reject(Error("Offline UI fixture")),
       readResult: () => scenario === "pending-result" ? new Promise(() => {}) : Promise.resolve(result),
       exportBrief: async () => true, exportTask: async () => true,
@@ -76,6 +84,7 @@ try {
     const page = await openPage("workspace", width, height);
     const question = page.getByRole("textbox", { name: "Research question" });
     await question.waitFor();
+    if (await page.getByRole("combobox", { name: "Research network" }).inputValue() !== "arc") throw Error("Fresh task does not default to public mainnet");
     const questionY = (await question.boundingBox())?.y ?? Infinity;
     if (questionY > 400) throw Error(`Question falls below first reading area at ${width}px (${questionY}px)`);
     if (await page.getByRole("radio", { name: /Quick/ }).isChecked() !== true) throw Error("Quick default missing");
@@ -89,11 +98,31 @@ try {
     await page.getByRole("button", { name: /How does Arc settle/ }).click();
     await page.getByText("A cited result grounded in the saved receipt").waitFor();
     if (await page.getByText("PINNED SELLER PAYEE").count() < 1) throw Error("Payee not visible in task detail");
+    await page.locator(".handoff summary").click();
+    if (!(await page.locator(".handoff pre").textContent()).includes("$env:KERYX_NETWORK='arcTestnet'")) throw Error("Saved testnet handoff was changed to mainnet");
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error("Task detail overflows");
     screenshots.push(join(output, `task-detail-${width}.png`));
     await page.screenshot({ path: screenshots.at(-1), fullPage: true });
     await page.close();
   }
+  const networkPage = await openPage("workspace", 1240, 850);
+  for (const network of ["arc", "arcTestnet"]) {
+    const chooser = networkPage.getByRole("combobox", { name: "Research network" });
+    if (await chooser.inputValue() !== "arc") throw Error("New task reset lost mainnet default");
+    await chooser.selectOption(network);
+    await networkPage.getByRole("textbox", { name: "Research question" }).fill(`Saved ${network} task`);
+    await networkPage.getByRole("textbox", { name: "Pinned seller payee" }).fill(task.payee);
+    await networkPage.getByRole("button", { name: /Save task/ }).click();
+    await networkPage.getByRole("heading", { name: `Saved ${network} task` }).waitFor();
+    const createdInput = await networkPage.evaluate(() => window.createdInputs.at(-1));
+    if (createdInput.network !== network) throw Error("Selected task network was not sent to desktop API");
+    await networkPage.locator(".handoff summary").click();
+    const command = await networkPage.locator(".handoff pre").textContent();
+    if (!command.includes(`$env:KERYX_NETWORK='${network}'`) || !command.includes(`$env:NEXT_PUBLIC_KERYX_NETWORK='${network}'`)) throw Error("Saved network and buyer handoff do not agree");
+    if (!await networkPage.getByRole("button", { name: "Check original job" }).isDisabled()) throw Error("New task unexpectedly enables native buyer recovery");
+    await networkPage.getByRole("button", { name: /New research task/ }).click();
+  }
+  await networkPage.close();
   const failed = await openPage("startup-error", 760, 600);
   await failed.getByRole("alert").getByText("Local helper unavailable").waitFor();
   screenshots.push(join(output, "startup-error-760.png"));

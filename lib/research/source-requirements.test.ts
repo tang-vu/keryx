@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { discussionDoesNotMeetDocumentRequest, isRecognizedDiscussionUrl, requestsOfficialDocumentation } from "./source-requirements";
+import { discussionDoesNotMeetDocumentRequest, isRecognizedDiscussionUrl, requestsOfficialDocumentation, requestedSourceUrls } from "./source-requirements";
 
 describe("explicit documentation requirements", () => {
   it.each([
@@ -52,5 +52,26 @@ describe("explicit documentation requirements", () => {
     const url = "https://sqlite.org/forum/info/proposal";
     expect(discussionDoesNotMeetDocumentRequest(question, url, "Summarize user forum experiences.")).toBe(false);
     expect(discussionDoesNotMeetDocumentRequest(question, url, "Use official SQLite documentation for the guarantee.")).toBe(true);
+  });
+});
+
+describe("caller-supplied source URL leads", () => {
+  it("retains exact query/fragment scope and parses ordinary prose and Markdown closers", () => {
+    const question = "Use https://www.sqlite.org/wal.html and [synchronous](https://www.sqlite.org/pragma.html#pragma_synchronous). Also https://docs.example/path(foo)?v=1#section.";
+    expect(requestedSourceUrls(question)).toEqual({ urls: ["https://www.sqlite.org/wal.html",
+      "https://www.sqlite.org/pragma.html#pragma_synchronous", "https://docs.example/path(foo)?v=1#section"], omitted: 0 });
+    expect(requestedSourceUrls('Read `https://docs.example/path.` and <https://docs.example/other?q=a;b#frag.>')).toEqual({
+      urls: ["https://docs.example/path.", "https://docs.example/other?q=a;b#frag."], omitted: 0 });
+  });
+
+  it("deduplicates identical supplied URLs and reports the finite eight-lead boundary", () => {
+    const urls = Array.from({ length: 10 }, (_, index) => `https://docs${index}.example/page`);
+    expect(requestedSourceUrls(urls.join(" ") + " " + urls[0])).toEqual({ urls: urls.slice(0, 8), omitted: 2 });
+  });
+
+  it("treats HTTP URLs as leads without upgrading their scheme or inventing a URL from a domain", () => {
+    expect(requestedSourceUrls("Read http://docs.example/original. The other domain is sqlite.org.")).toEqual({
+      urls: ["http://docs.example/original"], omitted: 0 });
+    expect(requestedSourceUrls("Use official SQLite documentation.").urls).toEqual([]);
   });
 });

@@ -9,6 +9,22 @@ const summary: SettlementHealth = {
   accounts: [{ address: `0x${"11".repeat(20)}`, owedUsdc: 1, heldUsdc: 1, verdict: "confirmed" }],
 };
 
+it("does not turn an observed empty ledger into Circle-confirmed settlement", () => {
+  const markup = renderToStaticMarkup(createElement(SettlementProofSection, { settlement: {
+    ...summary, basis: "empty-ledger", network: "eip155:5042", owedUsdc: 0, confirmedUsdc: 0,
+    accounts: [], counts: { confirmed: 0, surplus: 0, cashedOut: 0, short: 0, unknown: 0 },
+  } }));
+  expect(markup).toContain("Circle balances were not queried");
+  expect(markup).not.toContain("confirmed by Circle");
+  expect(markup).not.toContain("curl -s");
+});
+
+it("does not hide recorded nonzero payouts behind a conflicting empty-ledger label", () => {
+  const markup = renderToStaticMarkup(createElement(SettlementProofSection, { settlement: { ...summary, basis: "empty-ledger" } }));
+  expect(markup).toContain("$1.000000");
+  expect(markup).not.toContain("Circle balances were not queried");
+});
+
 it.each([
   ["eip155:5042", "https://gateway-api.circle.com/v1/balances", "Arc mainnet"],
   ["eip155:5042002", "https://gateway-api-testnet.circle.com/v1/balances", "Arc Testnet"],

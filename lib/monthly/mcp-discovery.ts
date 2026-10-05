@@ -10,7 +10,7 @@ interface DiscoveryRegistrar {
 
 export function registerMonthlyDiscovery(server: DiscoveryRegistrar, quote: () => Promise<MonthlyQuote | null>) {
   server.registerTool("research_monthly", { title: "Research Monthly pilot",
-    description: "Read the four-request, 30-day Arc-testnet Monthly quote and handoff. Never buys or redeems a plan.", inputSchema: {},
+    description: "Read the four-request, 30-day Research Monthly quote and handoff. The current quote identifies its payment network. Never buys or redeems a plan.", inputSchema: {},
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } }, async () => {
     let current: MonthlyQuote | null = null; try { current = await quote(); } catch { /* Offer unavailable. */ }
     return { content: [{ type: "text" as const, text: JSON.stringify({ available: !!current, quote: current,

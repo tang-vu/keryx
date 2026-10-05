@@ -1,5 +1,5 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
-import { discussionDoesNotMeetDocumentRequest } from "../research/source-requirements";
+import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../research/source-requirements";
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
 import { finalizeGroundedAnswer } from "./answer-grounding";
@@ -285,19 +285,25 @@ export async function* runAgent(
   } else if (origin === "engine" && input.allowExternalWeb !== true) {
     webDiscovery = { status: "withheld" };
     yield emit("discover", "External web search withheld for unattended engine research; manual CLI research can explicitly opt in.");
-  } else if (deps.webSearch || config.webSearchProvider) {
+  } else if (deps.webSearch || config.webSearchProvider || requestedSourceUrls(input.question).urls.length) {
     const operationStarted = Date.now();
     try {
-      const configured = deps.webSearch ?? (config.webSearchProvider === "searxng" ? searxngProvider(config.webSearchUrl)
-        : config.webSearchProvider === "tavily" ? tavilyProvider(config.tavilyApiKey) : null);
-      if (!configured) throw new Error("Search provider is unconfigured");
+      let configured = deps.webSearch ?? null, configurationFailed = false;
+      if (!configured) try {
+        configured = config.webSearchProvider === "searxng" ? searxngProvider(config.webSearchUrl)
+          : config.webSearchProvider === "tavily" ? tavilyProvider(config.tavilyApiKey) : null;
+      } catch { configurationFailed = true; }
       const discovered = await discoverWeb(configured, input.question,
         subClaims, input.researchMode === "quick", webSignal());
-      webDiscovery = { status: "completed", attemptedQueries: discovered.attemptedQueries, succeededQueries: discovered.succeededQueries, failedQueries: discovered.failedQueries };
+      webDiscovery = { status: configurationFailed ? "unavailable" : configured ? "completed" : "not-configured", attemptedQueries: discovered.attemptedQueries, succeededQueries: discovered.succeededQueries, failedQueries: discovered.failedQueries };
       for (const [id, candidate] of discovered.candidates) { webCandidates.set(id, candidate); publicCandidates.set(id, candidate); }
+      for (const lead of discovered.requestedSources) yield emit("discover", lead.refusal
+        ? `SKIP supplied source URL ${lead.url}: ${lead.refusal}. No original read or document authority established.`
+        : `Supplied source URL ${lead.url} admitted as an unread discovery lead. No official authorship or evidence established; any fragment requests a section but only a bounded whole-document read is supported.`, lead);
+      if (discovered.omittedRequestedSources) yield emit("discover", `${discovered.omittedRequestedSources} additional supplied URL(s) withheld by the eight-lead discovery limit; narrow the source scope. No read attempted for those leads.`);
       if (discovered.withheldDiscussionPreviews) yield emit("discover",
         discovered.withheldDiscussionPreviews + " discussion-page previews withheld because the request asks for official documentation. Other previews are not thereby verified as official.");
-      yield emit("discover", `Web search: ${discovered.attemptedQueries}/${discovered.queries} planned queries attempted, ${discovered.succeededQueries} succeeded, ${discovered.candidates.size} public page previews, ${discovered.failedQueries} unavailable queries${discovered.cancelled ? "; search deadline or cancellation reached" : ""}${discovered.truncatedQueries ? "; query text bounded at 500 characters" : ""}. Snippets are discovery only. Public reads spend no USDC; model and service operating costs remain separate.`);
+      yield emit("discover", `Web search: ${discovered.attemptedQueries}/${discovered.queries} planned queries attempted, ${discovered.succeededQueries} succeeded, ${discovered.candidates.size} public page previews/leads, ${discovered.failedQueries} unavailable queries${!configured ? configurationFailed ? "; search configuration unavailable, supplied URL leads only" : "; search provider not configured, supplied URL leads only" : ""}${discovered.cancelled ? "; search deadline or cancellation reached" : ""}${discovered.truncatedQueries ? "; query text bounded at 500 characters" : ""}. Previews and supplied URLs are discovery only. Public reads spend no USDC; model and service operating costs remain separate.`);
     } catch { webDiscovery = { status: "unavailable" }; yield emit("discover", "Web search unavailable; continuing with the available catalog. No web evidence was established."); }
     finally { webRemainingMs -= Date.now() - operationStarted; }
     if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
@@ -522,7 +528,7 @@ export async function* runAgent(
   }
 
   // Probe the live open x402 marketplace (Circle services) — real third-party endpoints the agent
-  // can reason over alongside its creators. They settle off Keryx's Arc rail, so they're
+  // can reason over alongside its creators. Regardless of advertised network, they remain
   // discovery-only: evaluated and logged, never purchased.
   const external =
     researchMode === "deep"
@@ -533,7 +539,7 @@ export async function* runAgent(
     const chains = [...new Set(external.flatMap((c) => c.external!.chains))].join(", ");
     yield emit(
       "discover",
-      `Probed the live x402 marketplace — surfaced ${external.length} external endpoint(s)${chains ? ` (settle on ${chains})` : ""}. Off Keryx's Arc rail, so evaluated for discovery only.`,
+      `Probed the live x402 marketplace — surfaced ${external.length} external endpoint(s)${chains ? ` (advertise acceptance on ${chains})` : ""}. Evaluated for discovery only; external endpoints are never purchased by Keryx.`,
       external.map((c) => c.name),
     );
   }
@@ -581,8 +587,8 @@ export async function* runAgent(
   const externalById = new Map(external.map((c) => [c.id, c]));
 
   // External marketplace endpoints are discovery-only: the engine judges their value, but the
-  // orchestrator never settles to them (off Keryx's Arc rail) — enforced here like the budget cap,
-  // so a model BUY can never leak into a real off-rail purchase.
+  // orchestrator never purchases them, regardless of advertised rail — enforced here like the
+  // budget cap, so a model BUY can never leak into an external purchase.
   const proposedAssetIds = new Set<string>();
   const internalProposed = proposed
     .filter((d) => !isExternal(d.sourceId))
@@ -619,6 +625,12 @@ export async function* runAgent(
         ...asset.candidate.item,
       }];
     });
+  for (const candidate of webCandidates.values()) {
+    if (!candidate.tags.includes("requested-source") || proposedAssetIds.has(candidate.id)) continue;
+    internalProposed.push({ sourceId: candidate.id, assetId: candidate.id, sourceName: candidate.name,
+      action: "SKIP", price: 0, expectedValue: 0, confidence: 0, targets: [], ...candidate.item,
+      rationale: "No valid decision was returned for this supplied source URL; the original was not selected for reading. URL presence alone supplies neither relevance nor document authority." });
+  }
   const externalProposed = proposed.filter((d) => isExternal(d.sourceId));
 
   // Normalize model proposals and apply the downward-only preview gates before portfolio
@@ -731,7 +743,7 @@ export async function* runAgent(
       ...d,
       action: "SKIP",
       external: true,
-      rationale: `${base} External x402 endpoint on ${chain} (~$${d.price.toFixed(4)}/call) — off Keryx's Arc rail, so discovered & evaluated but not purchased this run.`,
+      rationale: `${base} External x402 endpoint advertises acceptance on ${chain} (~$${d.price.toFixed(4)}/call) — discovery-only, so evaluated but never purchased by Keryx.`,
     });
   }
 

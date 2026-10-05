@@ -1,5 +1,24 @@
 # Keryx Project Changelog
 
+### Align mainnet runtime guidance and recovery UX (2026-10-05, v0.26.12 candidate)
+
+- Correct Slack/OpenAI, Monthly MCP/API and external marketplace guidance without inferring
+  settlement or changing the network of historical records.
+- Default new Operator desktop tasks to Arc mainnet and expose creator claim-control
+  freshness with deliberate verification recovery. Existing task networks and the
+  24-hour proof policy remain intact.
+- Expose missing and stale financial-monitor observations separately from service
+  availability. Preserve held schedules, payment reservations and signing authority.
+- Admit bounded caller-supplied source URLs as unread leads when search omits them;
+  retain normal public-read and evidence gates, and show refusal or selection skips.
+- Expose recorded source-selection engines and fallback telemetry in shared results
+  and remote MCP. Unknown history stays unknown; no circuit reset or paid retest occurs.
+- Batch exact SQLite schema comparisons in native code without caching authority or
+  weakening freshness. Record empty-ledger observations without claiming settlement.
+- Coordinate MCP 0.4.4 and desktop 0.4.5 distribution; extension and remote protocol
+  retain their existing roles, with remote MCP's additive result labelled 0.3.0.
+  See [scope and open gates](engineering/mainnet-consistency-2026-10-05.md).
+
 ### Preserve source qualifications and complete quotations (2026-10-05, v0.26.11 candidate)
 
 - Review quotations with exact source positions, URL/version and neighboring text.

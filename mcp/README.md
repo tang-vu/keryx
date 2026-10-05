@@ -9,7 +9,8 @@ See [current deployment and distribution evidence](../docs/mainnet-status.md).
 A Circle settlement identifier is batching evidence, not an individual EVM transaction hash.
 Testnet calls and owner-operated tests do not establish external traction or mainnet readiness.
 
-Version 0.4.3 forwards the retained hosted answer and structured evidence. After an
+Version 0.4.4 corrects Monthly discovery metadata for the configured Arc network.
+It forwards the retained hosted answer and structured evidence. After an
 accepted hosted deployment of the claim-grounding repair, evidence-bearing answers
 contain qualified literal source excerpts and explicitly labelled quoted research
 targets/gaps; arbitrary synthesis is withheld because marker-level support cannot prove
@@ -26,7 +27,7 @@ the hosted `/api/health` commit separately; a package does not switch the hosted
 
 ## Research Monthly
 
-Stdio 0.4.3 and the remote service expose read-only `research_monthly` discovery.
+Stdio 0.4.4 and the remote service expose read-only `research_monthly` discovery.
 The four-request, 30-day package uses manual renewal and a 10% total-price
 discount with unchanged creator caps. Failed and pending jobs retain slots.
 Buy/redeem through the caller-wallet [web checkout](https://keryx.cc/research#monthly)
@@ -63,7 +64,7 @@ package or the immutable release tarball. [Distribution evidence](../docs/mainne
 records artifact identity separately from hosted health and payment availability.
 
 ```bash
-npm install keryx-mcp@0.4.3
+npm install keryx-mcp@0.4.4
 ```
 
 Configure your MCP client to run `node /absolute/path/node_modules/keryx-mcp/dist/keryx-mcp.mjs`.
@@ -145,7 +146,7 @@ After the independent MCP install, also run `npm exec -- tsc --noEmit -p mcp/tsc
 from the repository root. This checks MCP and imported shared source against the MCP package's
 installed viem/Circle declarations, matching the single external dependency closure used by the
 bundled consumer. Run the packed acceptance with
-`node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.4.3.tgz /absolute/path/to/pinned/npm-cli.js`.
+`node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.4.4.tgz /absolute/path/to/pinned/npm-cli.js`.
 
 Mainnet purchase and original recovery require HTTPS without URL credentials or fragments. This is transport protection, not a seller host allowlist. Plain HTTP remains available for deliberate testnet local development.
 

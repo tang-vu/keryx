@@ -6,7 +6,7 @@ import { surfaceResearch } from "./research/surface-result";
  *
  * These let any OpenAI-compatible SDK/tool (LangChain, LlamaIndex, OpenWebUI, LibreChat, …)
  * point base_url at https://keryx.cc/api/v1 and ask Keryx a question. The client speaks the
- * OpenAI wire format; Keryx runs its full reasoning loop and pays every cited creator downstream.
+ * OpenAI wire format; Keryx runs its reasoning loop and reports creator-payment state.
  *
  * The route (app/api/v1/chat/completions) owns auth, rate-limit, budget clamp, and the agent run;
  * this module only translates shapes so both stay small and the translation stays unit-testable.
@@ -90,7 +90,7 @@ export function keryxMeta(run: QueryRun) {
   };
 }
 
-/** Markdown footer listing the creators Keryx paid — so even a client that renders only `content`
+/** Markdown footer listing planned rewards — so even a client that renders only `content`
  *  (not the vendor extension) surfaces the citation economy. Empty when nothing was cited. */
 function citationsFooter(run: QueryRun): string {
   if (run.citations.length === 0) return "";
@@ -98,14 +98,15 @@ function citationsFooter(run: QueryRun): string {
     (c) => `- ${c.sourceName} — $${c.reward.toFixed(4)} (weight ${c.weight.toFixed(2)})`,
   );
   return (
-    `\n\n---\n**Citations and planned creator rewards** — weighted USDC citation rewards on Arc testnet:\n` +
+    `\n\n---\n**Citations and planned creator rewards** — weighted USDC allocations:\n` +
     lines.join("\n") +
-    `\n\nTotal to creators: $${run.totalToCreators.toFixed(4)} · ` +
+    `\n\nRecorded to creators: $${run.totalToCreators.toFixed(4)} · payment mode: ${run.paymentMode ?? "legacy"}. ` +
+    `Planned rewards and recorded totals do not establish settlement; inspect the original payment receipts. ` +
     `dispatch: ${config.baseUrl}/dispatch/${run.id}`
   );
 }
 
-/** Assistant message body = the grounded answer plus the creators-paid footer. */
+/** Assistant message body = the grounded answer plus planned rewards and receipt guidance. */
 export function buildAnswerContent(run: QueryRun): string {
   run = demoteSyntheticEvidence(run);
   return run.answer + citationsFooter(run);

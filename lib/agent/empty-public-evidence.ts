@@ -1,5 +1,6 @@
 import type { Decision } from "../types";
 import { publicReadRecoveryLines, type PublicReadOutcome } from "./read-recovery";
+import { requestedSourceUrls } from "../research/source-requirements";
 
 export interface PublicDiscoverySummary {
   attemptedQueries?: number;
@@ -58,7 +59,10 @@ export function emptyPublicEvidenceDetail(
       : `Selected public originals could not supply usable text: ${failures}. `
     : vi ? `Chưa đọc thành công tài liệu công khai gốc nào. ${gates ? `Lý do SKIP đã ghi: ${gates}. ` : ""}`
       : `No original public document was successfully read. ${gates ? `Recorded SKIP reasons: ${gates}. ` : ""}`;
-  const recovery = scholarly
+  const recovery = requestedSourceUrls(question).urls.length
+    ? vi ? "URL nguồn đã được cung cấp trong câu hỏi. Kiểm tra lý do từ chối khám phá, SKIP hoặc lỗi đọc của từng nguồn đã ghi; thu hẹp lượt tiếp theo vào tài liệu còn thiếu và phạm vi đọc được hỗ trợ. "
+      : "Source URLs were already supplied in the question. Inspect each original's recorded discovery refusal, SKIP or read failure; narrow any next task to the missing document and supported read scope. "
+    : scholarly
     ? vi ? "Thử một DOI chính xác hoặc mã arXiv có phiên bản và kiểm tra lý do SKIP/lỗi đọc đã ghi. "
       : "Try one exact DOI or versioned arXiv target and inspect the recorded SKIP/read failures. "
     : vi ? "Thu hẹp câu hỏi vào một quyết định cụ thể, thêm URL tài liệu gốc phù hợp và kiểm tra lý do SKIP/lỗi đọc đã ghi. "

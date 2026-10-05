@@ -147,7 +147,8 @@ export const config = {
   // ── Open x402 marketplace discovery ──
   // When on, the agent probes the live Circle x402 service bazaar (`circle services search`) during
   // discovery and reasons over real external endpoints alongside its registered creators. These
-  // settle on other chains (Base/ETH/… mainnet), not Keryx's Arc rail, so they are DISCOVERY-ONLY:
+  // advertise their own payment networks. They remain DISCOVERY-ONLY even when an endpoint
+  // advertises the selected Arc rail; listing metadata is not payment or delivery authority:
   // evaluated and logged, never purchased (the orchestrator enforces this, mirroring the budget cap).
   externalDiscovery: (process.env.KERYX_EXTERNAL_DISCOVERY ?? "1") !== "0",
   webSearchUrl: process.env.KERYX_WEB_SEARCH_URL ?? "",
