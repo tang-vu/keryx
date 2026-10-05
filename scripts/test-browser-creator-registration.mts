@@ -1,6 +1,7 @@
 /** Real registration/feedback components; synthetic wallet, receipts and APIs only. */
 import assert from "node:assert/strict";
 import { build } from "esbuild";
+import { circleSdkBrowserPlugin } from "./circle-sdk-browser-plugin.mts";
 import { chromium } from "playwright";
 import { encodeAbiParameters, encodeEventTopics } from "viem";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../lib/arc-network-profile";
@@ -35,7 +36,7 @@ function Harness(){const [address,setAddress]=React.useState(initialCreator);win
 return React.createElement(React.Fragment,null,visible&&React.createElement(RegisterForm,{prefillWalletAddress:initialCreator,onCreated:()=>window.registrationCreated++}),React.createElement(DecisionFeedbackPanel,{creatorId:'feedback'}));}
 createRoot(document.getElementById('root')).render(React.createElement(Harness));
 ` }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,
-  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": JSON.stringify(registry), "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-registration", setup(b) {
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": JSON.stringify(registry), "process.env.NODE_ENV": '"development"' }, plugins: [circleSdkBrowserPlugin(), { name: "synthetic-registration", setup(b) {
     b.onResolve({ filter: /^next\/link$|^wagmi$|^sonner$/ }, a => ({ path: a.path, namespace: "fixture" }));
     b.onLoad({ filter: /.*/, namespace: "fixture" }, a => ({ resolveDir: process.cwd(), contents: a.path === "next/link" ? "import React from 'react';export default function Link(props){return React.createElement('a',props)}" : a.path === "wagmi" ? `
 export const useAccount=()=>({address:window.registrationWallet,chainId:${profile.chainId}});
