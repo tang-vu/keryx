@@ -11,6 +11,22 @@
 - One recorded local comparison read seven pages for seven named targets instead of
   three pages for three generic targets. Delivered evidence stayed thin and
   Low-confidence; see `DECISIONS.md` for the measured limits and added search cost.
+### Source-selection isolation and failure diagnostics (2026-10-05, v0.26.20 candidate)
+
+- Give the selector explicit source IDs and zero-based allowed target indexes.
+  Withhold invalid or duplicate candidate proposals while independently valid
+  proposals continue through existing source, evidence, portfolio and payment gates.
+- Stop invalid output with no valid actionable selection using a classified local
+  error, retaining supplier usage without another paid tier or circuit mutation.
+- Retain bounded diagnostics in mixed-selection traces and add explicit failure JSON
+  downloads to web/embed; API, remote MCP and CLI expose the same classified error.
+  A diagnostic is not a completed report or payment receipt.
+- Check sponsored self-recipient exclusion against current registry terms and the
+  final payment recipient before authorization. Preserve paid/pending dispatch
+  history when a web client disconnects during ledger/cache persistence; block
+  new creator payment attempts after disconnect.
+- Preserve the closed v0.26.17 result of 0/3 useful and all allowance journals;
+  useful-client/settlement/export gates remain open. See [scope and validation](engineering/source-selection-2026-10-05.md).
 
 ## October 5, 2026 — Bounded sponsorship, recurring tolls and accurate unread receipts
 

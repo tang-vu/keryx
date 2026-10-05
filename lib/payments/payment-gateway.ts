@@ -24,6 +24,7 @@ import type {
 import type { KeryxDB } from "../db";
 import type { RequestSignatureFn } from "./browser-cosign-gateway";
 import { assertPaymentSettlementState } from "./payment-state";
+import type { RecipientExclusion } from "./recipient-exclusion";
 
 export interface FetchResult {
   content: string;
@@ -43,7 +44,7 @@ export interface PaymentGateway {
     priceUsdc?: number;
     offer?: ArticleOfferRef;
     sourceClaim?: SourceClaimReceipt;
-  }): Promise<FetchResult>;
+  } & RecipientExclusion): Promise<FetchResult>;
   /** Settle a weighted citation reward to one author wallet. */
   payCitation(args: {
     source: Source;
@@ -54,7 +55,7 @@ export interface PaymentGateway {
     queryId: string;
     rationale: string;
     sourceClaim?: SourceClaimReceipt;
-  }): Promise<PaymentRecord>;
+  } & RecipientExclusion): Promise<PaymentRecord>;
   agentAddress(): string;
 }
 

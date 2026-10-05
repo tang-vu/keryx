@@ -21,8 +21,8 @@ launch does not prove an accepted business outcome or grant unlimited spending.
 The [official event guidance](https://tameion.thecanteenapp.com/) requires a public
 repository and a recorded demo **under three minutes**, encourages a live link,
 and allows repeated submissions before the deadline. Submit via the
-[official form](https://forms.gle/BBWrdfuircrKiG2i6) by October 10, 23:59 ET
-(October 11, 10:59 Vietnam). Repository: [tang-vu/keryx](https://github.com/tang-vu/keryx).
+[official form](https://forms.gle/BBWrdfuircrKiG2i6) by October 17, 23:59 ET
+(October 18, 10:59 Vietnam; extended from October 10, observed October 5). Repository: [tang-vu/keryx](https://github.com/tang-vu/keryx).
 Live service: [keryx.cc](https://keryx.cc). Video URL: **pending**.
 Product and evidence-backed traction updates in Canteen, and showcase participation,
 are separate from submitting this form. This document does not authorize posting,
@@ -32,7 +32,7 @@ contacting businesses, recording participants or submitting on their behalf.
 
 Compare against `2291753cc4fff2135d546227d5aafda287cbed7d` (September 25), the
 pre-event main baseline; no intervening September 26/27 main commit replaces it.
-The September 27–October 10 window is still in progress. These are implemented
+The September 27–October 17 window is still in progress. These are implemented
 changes through October 4, not forecasts for the remainder or evidence of adoption.
 
 | Change | Source evidence | What it establishes and limits |

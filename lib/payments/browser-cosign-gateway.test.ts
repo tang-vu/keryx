@@ -630,6 +630,35 @@ describe("BrowserCoSignGateway", () => {
     });
   });
 
+  it("refuses excluded fetch/citation recipients before admission, signature exposure or HTTP", async () => {
+    const http = vi.fn(), sign = vi.fn(); vi.stubGlobal("fetch", http);
+    const gateway = new BrowserCoSignGateway("session", SESSION, sign);
+    await expect(gateway.payFetch({ source, queryId: "q", deniedRecipient: PAYEE })).rejects.toThrow(/recipient is excluded/);
+    await expect(gateway.payCitation({ source, author: { name: "Author", walletAddress: ATTACKER, splitWeight: 1 },
+      amount: 0.002, weight: 1, queryId: "q", rationale: "Qualified", deniedRecipient: ATTACKER })).rejects.toThrow(/recipient is excluded/);
+    expect(http).not.toHaveBeenCalled(); expect(sign).not.toHaveBeenCalled();
+    expect(grantMocks.admitBrowserJournal).not.toHaveBeenCalled(); expect(grantMocks.reserveSpend).not.toHaveBeenCalled();
+  });
+
+  it("refuses an excluded changed challenge before admitting or exposing a browser authorization", async () => {
+    const http = vi.fn().mockResolvedValue(challenge(requirements({ payTo: ATTACKER }))), sign = vi.fn();
+    vi.stubGlobal("fetch", http);
+    const gateway = new BrowserCoSignGateway("session", SESSION, sign);
+    await expect(gateway.payFetch({ source, queryId: "q", deniedRecipient: ATTACKER })).rejects.toThrow(/recipient is excluded/);
+    expect(http).toHaveBeenCalledOnce(); expect(sign).not.toHaveBeenCalled();
+    expect(grantMocks.admitBrowserJournal).not.toHaveBeenCalled(); expect(grantMocks.exposeBrowserJournal).not.toHaveBeenCalled();
+    expect(grantMocks.reserveSpend).not.toHaveBeenCalled();
+  });
+
+  it("preserves browser-owned self-payment when no outside-funding restriction applies", async () => {
+    const http = vi.fn().mockResolvedValueOnce(challenge(requirements({ payTo: SESSION }))).mockResolvedValueOnce(settledResponse());
+    const sign = vi.fn().mockResolvedValue(signedHeader({ to: SESSION })); vi.stubGlobal("fetch", http);
+    const gateway = new BrowserCoSignGateway("session", SESSION, sign);
+    expect((await gateway.payFetch({ source: { ...source, walletAddress: SESSION }, queryId: "q" })).payment)
+      .toMatchObject({ payee: SESSION, settled: true, amountUsdc: 0.002 });
+    expect(sign).toHaveBeenCalledOnce(); expect(grantMocks.admitBrowserJournal).toHaveBeenCalledOnce();
+  });
+
   it("retains a confirmed settlement when paid content delivery returns 5xx", async () => {
     const fetchMock = vi
       .fn()

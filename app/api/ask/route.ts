@@ -23,6 +23,7 @@ import { getSession } from "@/lib/auth";
 import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
 import { researchFailureMessage } from "@/lib/llm/research-plan";
+import { ResearchSelectionError } from "@/lib/llm/research-selection";
 import { config } from "@/lib/config";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
@@ -212,16 +213,17 @@ export async function POST(req: NextRequest) {
   // AbortController tied to the client connection so sign-request promises are
   // cancelled when the browser disconnects mid-run.
   const abort = new AbortController();
-  // The agent's own cancellation. A disconnect cancels research only while nothing has been paid:
-  // once a creator payment exists, the run finishes and is saved so the receipts keep their
-  // dispatch. Browser signing still stops with the connection (`abort`), which the agent treats as
-  // a failed purchase and answers from what it already read.
+  // Retain the dispatch from the trusted payment boundary, before a gateway call or its ledger
+  // writes can suspend. This is conservative retention, never evidence of settlement. Browser
+  // signing still stops with the connection, and no new creator payment starts after disconnect.
   const agentAbort = new AbortController();
-  let paymentObserved = false;
-  req.signal.addEventListener("abort", () => {
+  let retainPaymentHistory = false;
+  const disconnect = () => {
     abort.abort();
-    if (!paymentObserved) agentAbort.abort();
-  });
+    if (!retainPaymentHistory) agentAbort.abort();
+  };
+  req.signal.addEventListener("abort", disconnect, { once: true });
+  if (req.signal.aborted) disconnect();
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -278,6 +280,7 @@ export async function POST(req: NextRequest) {
           deps = await getAgentDeps({ model });
         }
 
+        if (agentAbort.signal.aborted) throw new DOMException("Research cancelled", "AbortError");
         send("meta", { engine: deps.engine.name, mode: deps.gateway.mode, researchMode });
         // Preserve the execution origin for audit. A manual internal client with the bot key
         // can be tagged `engine`; ordinary requests through this route are tagged `web`.
@@ -289,21 +292,22 @@ export async function POST(req: NextRequest) {
             // Verified SIWE wallet only. Keeps a treasury-funded run from buying or rewarding the
             // asker's own sources.
             asker,
-            // Awaited immediately before every creator gateway call, so a disconnect while the
-            // first payment is in flight no longer cancels the run that owns its receipt.
-            onCreatorPaymentBoundary: async () => { paymentObserved = true; },
             researchMode,
             scholarly: body.scholarly === true,
             paidScholarly: body.paidScholarly === true,
             origin: isBot ? "engine" : "web",
             fundingOwner: useBrowserCoSign ? "browser" : "treasury",
+            onCreatorPaymentBoundary: async () => {
+              if (abort.signal.aborted) throw new Error("Client disconnected before a new creator payment could start");
+              retainPaymentHistory = true;
+            },
           },
           deps,
         );
         let res = await gen.next();
         while (!res.done) {
           send("step", res.value);
-          if (isPaymentRecord(res.value.detail)) paymentObserved = true;
+          if (isPaymentRecord(res.value.detail)) retainPaymentHistory = true;
           res = await gen.next();
           if (agentAbort.signal.aborted) break;
         }
@@ -337,9 +341,11 @@ export async function POST(req: NextRequest) {
           send("done", run);
         }
       } catch (err) {
-        send("error", { message: researchFailureMessage(err) });
+        send("error", { message: researchFailureMessage(err),
+          ...(err instanceof ResearchSelectionError ? { code: err.code, selectionDiagnostic: err.diagnostic } : {}) });
       } finally {
-        controller.close();
+        req.signal.removeEventListener("abort", disconnect);
+        try { controller.close(); } catch { /* The disconnected reader may have cancelled it. */ }
       }
     },
   });

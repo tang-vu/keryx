@@ -8,6 +8,7 @@ import { CreatorsPaidPanel } from "./creators-paid-panel";
 import { stepPaymentTotals } from "./budget-meter";
 import { fmtUsdc } from "./phase-style";
 import { ReportActions } from "./report-actions";
+import { SelectionFailureDownload } from "./selection-failure-download";
 
 export interface ResearchTurnData {
   id: number;
@@ -42,6 +43,7 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
       {stopped && <p role="status" className="border border-line bg-paper p-4 text-sm text-ink-2">Stopped waiting for this research. Payments already signed may still settle; stopping does not refund them.</p>}
       {!stopped && state.status === "error" && <div role="alert" className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
         <p>{state.error ?? "Research could not finish. Try another question."}</p>
+        <SelectionFailureDownload diagnostic={state.selectionDiagnostic} />
         {state.errorKind === "rate-limit" && <p className="mt-2">Connect a funded session or try again{state.retryAfter ? ` in ${state.retryAfter}s` : " shortly"}.</p>}
       </div>}
       <details className="mt-3 border border-line bg-paper" onToggle={event => setEvidenceOpen(event.currentTarget.open)}>

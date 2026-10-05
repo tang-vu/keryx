@@ -5,7 +5,7 @@ It covers buyer, creator, developer, operator, research-quality, economics, and
 mainnet release work. [DECISIONS.md](../DECISIONS.md) records why the architecture
 changed; [project-changelog.md](./project-changelog.md) records what shipped.
 
-The [Tameion 2026 plan](./tameion-2026.md) sets the September 27–October 10 event
+The [Tameion 2026 plan](./tameion-2026.md) sets the September 27–October 17 event
 direction and its proposed Operator, Windows desktop, CLI, and pilot work. Its
 checklist is a plan, not release evidence; the acceptance map above remains in force.
 The [staged shared Rust engine migration](./rust-engine-migration.md) records the

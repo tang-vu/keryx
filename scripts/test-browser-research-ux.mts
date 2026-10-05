@@ -36,6 +36,7 @@ async function run(file: string) {
 try {
   await run("scripts/test-browser-research-form.mts");
   await run("scripts/test-browser-ask-isolation.mts");
+  await run("scripts/test-browser-selection-failure.mts");
   await run("scripts/test-browser-chat-payer.mts");
   await run("scripts/test-reading-evidence.mts");
   if (server) {

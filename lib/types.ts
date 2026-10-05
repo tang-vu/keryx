@@ -222,6 +222,8 @@ export interface Decision extends Partial<SourceItemIdentity> {
   confidence: number; // 0..1
   rationale: string; // human-readable WHY (buy/skip/cache)
   targets: number[]; // indexes of sub-claims this source is expected to address
+  /** Present only on a downward-only local validator SKIP; absent on model-authored choices. */
+  selectionRefusal?: import("./research/selection-diagnostic").SelectionRefusalReason;
   external?: boolean; // true = a marketplace endpoint, always discovery-only regardless of advertised network
 }
 
