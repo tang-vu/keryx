@@ -63,7 +63,8 @@ The OpenAI-compatible non-streaming API returns HTTP 422 with the code and
 `error.selectionDiagnostic`; a started stream retains HTTP 200, error text and
 `keryx_error` metadata, without completion metadata/`[DONE]`. Remote MCP retains
 `isError` and adds diagnostic JSON as text, without a successful structured
-result. The buyer CLI exits one and writes the code/diagnostic to stderr.
+result. The buyer CLI exits one and writes refusal guidance and diagnostic JSON
+to stderr.
 
 ## Validation and release gates
 
