@@ -5241,6 +5241,23 @@ resolved as the same canonical wallet on that attempt. No automatic signing or
 initialization retry, challenge renewal, budget/custody change or funding follows.
 The continuation window is distinct from vendor token and Keryx session lifetimes.
 
+## Source-backed OSS adoption and historical context roles - 2026-10-05
+
+The owner requested learning from current OSS AI projects and skills and applying
+useful patterns to Keryx. Keep a dated, source-pinned adoption record and a focused
+repo-local skill; choose native adaptations or dependencies according to an
+observed need and verified quality. Framework activity and token-saving claims
+are not adoption acceptance. See the [survey and gates](docs/engineering/oss-ai-adoption-2026-10-05.md).
+
+Historical source performance includes publisher-controlled current source names.
+Keep the complete history in serialized user data instead of interpolating it
+into system policy. Static instructions may explain historical relevance, while
+current previews/targets and existing authoritative price, budget and reward
+checks retain control. No runtime skills execution, memory access-scope expansion,
+payment authority, custody, provider allowance or scheduler follows. Deterministic
+regressions demonstrate role separation; live model robustness and usefulness
+remain separate evidence requirements.
+
 ## Independent review corrections to bounded sponsorship and unread receipts - 2026-10-05
 
 An independent review of the preceding update found no double payment, overspend or wrong payee, and four defects that are corrected here.
