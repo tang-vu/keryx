@@ -8,12 +8,15 @@
  * is labelled by what actually answered), and the output ceiling must grow with the corpus.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { JsonChatEngine, extractJson } from "./json-chat-engine";
 import type { DecideInput } from "./reasoning-engine";
 import { ResilientEngine, reasoningAttempts } from "./resilient-engine";
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { ResearchSelectionError } from "./research-selection";
+import { ResearchPlanningError, researchFailureMessage } from "./research-plan";
+import { OpenAICompatibleEngine } from "./openai-compatible-engine";
+import { MemoryReasoningCircuitStore } from "./reasoning-circuit-store";
 
 /** A test engine that returns whatever JSON the case wants, and records the ceiling it was given. */
 class StubEngine extends JsonChatEngine {
@@ -70,6 +73,99 @@ describe("bounded independent research targets", () => {
   it("refuses excessive model targets rather than silently deleting a requested dimension", async () => {
     const claims = Array.from({ length: MAX_RESEARCH_TARGETS + 1 }, (_, index) => `What is distinct target ${index}?`);
     await expect(new StubEngine({ claims }).decompose("An oversized comparison")).rejects.toThrow(/exceeded 8 targets/);
+  });
+});
+
+describe("open comparison planning through synthetic transport", () => {
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  function provider(name = "primary") {
+    return new OpenAICompatibleEngine({ name: `llm:open-comparison-${name}`,
+      baseUrl: `https://${name}.synthetic.invalid`, apiKey: "synthetic", model: "synthetic" });
+  }
+  function response(output: Record<string, unknown>) {
+    return Response.json({ choices: [{ message: { content: JSON.stringify(output) }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 23, completion_tokens: 11 } });
+  }
+
+  it("keeps a bounded provisional shortlist atomic and sends every dimension to selection", async () => {
+    // Synthetic candidate names and dimensions, not known systems, findings or historical model output.
+    const subjects = ["Candidate A", "Candidate B"];
+    const dimensions = ["API write support", "authorization safeguards", "limitations"];
+    const claims = subjects.flatMap(subject => dimensions.map(dimension => `What ${dimension} does ${subject} have?`));
+    const transport = vi.fn()
+      .mockResolvedValueOnce(response({ status: "complete", constraints: ["A provisional shortlist; verify eligibility from originals"], claims }))
+      .mockResolvedValueOnce(response({ decisions: [
+        { sourceId: "s0", action: "CACHE", expectedValue: 0.7, confidence: 0.5, rationale: "Unobserved original may address Candidate A", targets: [0, 1, 2] },
+        { sourceId: "s1", action: "CACHE", expectedValue: 0.7, confidence: 0.5, rationale: "Unobserved original may address Candidate B", targets: [3, 4, 5] },
+      ] }));
+    vi.stubGlobal("fetch", transport);
+    const engine = provider();
+    const question = "Suggest a provisional shortlist of two systems, checking each one's API write support, authorization safeguards and limitations.";
+    const subClaims = await engine.decompose(question);
+    expect(subClaims).toEqual(claims);
+    const input = decideInput(2);
+    input.question = question; input.subClaims = subClaims;
+    input.candidates.forEach(candidate => { candidate.sourceKind = "public-reference"; candidate.fetchPrice = 0; });
+    expect(await engine.decide(input)).toMatchObject([{ sourceId: "s0", targets: [0, 1, 2] }, { sourceId: "s1", targets: [3, 4, 5] }]);
+    expect(transport).toHaveBeenCalledTimes(2);
+    const planningWire = JSON.parse(transport.mock.calls[0][1].body as string);
+    expect(planningWire.messages[1].content).toContain(JSON.stringify(question));
+    expect(planningWire.messages[0].content).toContain("provisional discovery hypotheses");
+    expect(planningWire.messages[0].content).toContain("never put every criterion into one candidate target");
+    expect(planningWire.messages[0].content).toContain("Six candidates on those three dimensions require eighteen targets");
+    const selectionWire = JSON.parse(transport.mock.calls[1][1].body as string);
+    const payload = JSON.parse(selectionWire.messages[1].content);
+    expect(payload.subClaims).toEqual(claims.map((question, claimIndex) => ({ claimIndex, question })));
+    expect(payload.allowedTargetIndexes).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(engine.selectionDiagnostics).toEqual([]);
+    expect(engine.calls).toHaveLength(2);
+  });
+
+  it.each(["needs_refinement", "expanded_output"] as const)(
+    "refuses broad candidate-by-dimension scope as %s without another attempt or lost usage", async reason => {
+      const subjects = Array.from({ length: 6 }, (_, index) => `Candidate ${index}`);
+      const claims = subjects.flatMap(subject => ["API write support", "authorization safeguards", "limitations"]
+        .map(dimension => `What ${dimension} does ${subject} have?`));
+      const transport = vi.fn().mockResolvedValue(response({ status: reason === "needs_refinement" ? "needs_refinement" : "complete", claims }));
+      vi.stubGlobal("fetch", transport);
+      const primary = provider(), fallback = provider("fallback"), store = new MemoryReasoningCircuitStore();
+      const failed = vi.spyOn(store, "failed"), succeeded = vi.spyOn(store, "succeeded");
+      const engine = new ResilientEngine(primary, fallback, 0, store);
+      const question = "Compare six candidate systems on API write support, authorization safeguards and limitations; preserve every dimension and original source qualification.";
+      const error = await engine.decompose(question).then(() => { throw new Error("Expected bounded refusal"); }, value => value);
+      expect(error).toBeInstanceOf(ResearchPlanningError);
+      expect(error).toMatchObject({ reason, status: 422, maximumTargets: 8 });
+      expect(error.scopeChoices.length).toBeGreaterThan(0);
+      expect(error.scopeChoices.length).toBeLessThanOrEqual(3);
+      expect(researchFailureMessage(error)).toContain("not a new question or an automatic retry");
+      expect(JSON.stringify(error)).not.toContain("Compare six candidate systems");
+      expect(transport).toHaveBeenCalledOnce(); expect(fallback.calls).toEqual([]);
+      expect(primary.calls).toMatchObject([{ outcome: "returned" }]);
+      expect(primary.usage).toMatchObject([{ inputTokens: 23, outputTokens: 11 }]);
+      expect(reasoningAttempts(engine)).toMatchObject([{ step: "decompose", outcome: "failed", error: "output_validation", status: 422 }]);
+      expect(reasoningAttempts(engine)).toHaveLength(1);
+      expect(failed).not.toHaveBeenCalled(); expect(succeeded).not.toHaveBeenCalled();
+      expect(engine.selectionDiagnostics).toEqual([]);
+    },
+  );
+
+  it("preserves the exact eight-target ceiling without an extra category-coverage target", async () => {
+    const claims = ["Candidate A", "Candidate B"].flatMap(subject =>
+      ["API write support", "authorization safeguards", "transaction behavior", "limitations"]
+        .map(dimension => `What ${dimension} does ${subject} have?`));
+    const transport = vi.fn().mockResolvedValue(response({ status: "complete", claims }));
+    vi.stubGlobal("fetch", transport);
+    const engine = provider();
+    expect(await engine.decompose("Compare two provisional candidates on API write support, authorization safeguards, transaction behavior and limitations."))
+      .toEqual(claims);
+    expect(claims).toHaveLength(MAX_RESEARCH_TARGETS);
+    const prompt = JSON.parse(transport.mock.calls[0][1].body as string).messages[0].content;
+    expect(prompt).toContain("without silently narrowing the user's requested scope");
+    expect(prompt).toContain("naming candidates alone never establishes completeness");
+    expect(prompt).toContain("Do not add an umbrella target for 'other candidates'");
+    expect(prompt).not.toContain("one target per candidate");
+    expect(transport).toHaveBeenCalledOnce();
   });
 });
 

@@ -148,9 +148,9 @@ it("searches every deep research target together and shares the candidate cap be
   expect(result).toMatchObject({ attemptedQueries: 9, succeededQueries: 9, failedQueries: 0 });
   // No single query fills the cap: every target, including the last, is represented.
   const names = [...result.candidates.values()].map(candidate => candidate.name);
-  expect(names.filter(name => name.startsWith("question ")).length).toBe(2);
+  expect(names.filter(name => name.startsWith("question ")).length).toBe(3);
   expect(names.some(name => name.startsWith("claim 7 "))).toBe(true);
-  expect(result.candidates.size).toBe(18);
+  expect(result.candidates.size).toBe(24);
 });
 
 it("keeps a failed deep query from discarding the others, and quick research at two sequential queries", async () => {
@@ -165,4 +165,72 @@ it("keeps a failed deep query from discarding the others, and quick research at 
   const quick = await discoverWeb({ search }, "question", ["claim 0", "claim 1", "claim 2"], true);
   expect(search).toHaveBeenCalledTimes(2);
   expect(quick.attemptedQueries).toBe(2);
+});
+
+it("retains all dispatched deep search failures when cancellation prevents preview admission", async () => {
+  const controller = new AbortController();
+  const search = vi.fn((_query: string, signal?: AbortSignal) => new Promise<[]>(
+    (_resolve, reject) => signal!.addEventListener("abort", () => reject(new Error("cancelled provider attempt")), { once: true }),
+  ));
+  const pending = discoverWeb({ search }, "question", Array.from({ length: 8 }, (_, i) => `claim ${i}`), false, controller.signal);
+  expect(search).toHaveBeenCalledTimes(9);
+  controller.abort();
+  expect(await pending).toMatchObject({ queries: 9, attemptedQueries: 9, succeededQueries: 0, failedQueries: 9, cancelled: true });
+  expect((await pending).candidates.size).toBe(0);
+});
+
+it("counts a returned quick search after cancellation without admitting previews or dispatching another", async () => {
+  const controller = new AbortController();
+  let complete!: (hits: { title: string; snippet: string; url: string }[]) => void;
+  const search = vi.fn(() => new Promise<{ title: string; snippet: string; url: string }[]>(resolve => { complete = resolve; }));
+  const pending = discoverWeb({ search }, "question", ["claim"], true, controller.signal);
+  expect(search).toHaveBeenCalledTimes(1);
+  controller.abort();
+  complete([{ title: "Unread", snippet: "preview", url: "https://docs.example/manual" }]);
+  const result = await pending;
+  expect(result).toMatchObject({ attemptedQueries: 1, succeededQueries: 1, failedQueries: 0, cancelled: true });
+  expect(result.candidates.size).toBe(0);
+  expect(search).toHaveBeenCalledTimes(1);
+});
+
+it("isolates synchronous deep provider failures while counting every actual dispatch", async () => {
+  const search = vi.fn((query: string) => {
+    if (query === "claim 0") throw new Error("provider failed before returning a promise");
+    return Promise.resolve([{ title: query, snippet: "preview", url: `https://${query.replace(/\W/g, "")}.test/page` }]);
+  });
+  const result = await discoverWeb({ search }, "question", ["claim 0", "claim 1"], false);
+  expect(search).toHaveBeenCalledTimes(3);
+  expect(result).toMatchObject({ attemptedQueries: 3, succeededQueries: 2, failedQueries: 1, cancelled: false });
+  expect(result.candidates.size).toBe(2);
+});
+
+it("keeps Quick's full candidate cap when only the first sequential query has useful hits", async () => {
+  const search = vi.fn(async (query: string) => query === "question" ? Array.from({ length: 30 }, (_, i) => ({
+    title: `hit ${i}`, snippet: "preview", url: `https://quick${i}.test/page`,
+  })) : []);
+  const result = await discoverWeb({ search }, "question", ["empty"], true);
+  expect(search.mock.calls.map(([query]) => query)).toEqual(["question", "empty"]);
+  expect(result.candidates.size).toBe(24);
+});
+
+it("preserves eight originals and a fair slot for the last Deep target within the 24-candidate cap", async () => {
+  const originals = Array.from({ length: 8 }, (_, i) => `https://original${i}.test/manual`);
+  const search = vi.fn(async (query: string) => Array.from({ length: 30 }, (_, i) => ({
+    title: `${query.startsWith("Read") ? "question" : query} hit ${i}`, snippet: "preview",
+    url: `https://${query.startsWith("Read") ? "question" : query.replace(/\W/g, "")}${i}.test/page`,
+  })));
+  const result = await discoverWeb({ search }, `Read ${originals.join(" ")}`, Array.from({ length: 8 }, (_, i) => `claim ${i}`), false);
+  expect(result.candidates.size).toBe(24);
+  expect([...result.candidates.values()].slice(0, 8).map(candidate => candidate.item?.itemUrl)).toEqual(originals);
+  expect([...result.candidates.values()].some(candidate => candidate.name === "claim 7 hit 0")).toBe(true);
+  expect(result).toMatchObject({ attemptedQueries: 9, succeededQueries: 9, failedQueries: 0 });
+});
+
+it("shares unused Deep capacity after empty and duplicate queries without another search", async () => {
+  const search = vi.fn(async (query: string) => query === "empty" ? [] : Array.from({ length: 30 }, (_, i) => ({
+    title: `hit ${i}`, snippet: "preview", url: `https://deep${i}.test/page`,
+  })));
+  const result = await discoverWeb({ search }, "question", ["empty", "duplicates"], false);
+  expect(result.candidates.size).toBe(24);
+  expect(search).toHaveBeenCalledTimes(3);
 });
