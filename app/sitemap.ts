@@ -23,6 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/status`, changeFrequency: "daily", priority: 0.5 },
     { url: `${BASE}/connect`, changeFrequency: "monthly", priority: 0.4 },
     { url: `${BASE}/privacy`, changeFrequency: "monthly", priority: 0.3 },
+    { url: `${BASE}/terms`, changeFrequency: "monthly", priority: 0.3 },
   ];
 
   // The archive, built once and shared with the pages it describes (lib/answers-archive-cache) —
