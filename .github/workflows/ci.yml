@@ -125,6 +125,8 @@ jobs:
 
       - name: Browser sign-out (hermetic, no signing)
         run: npm run test:browser-auth
+      - name: Circle Google SDK and OAuth return (synthetic vendor transport, no wallet or funds)
+        run: npm run test:browser-circle-wallet
       - name: Session revoke and concurrent recovery (synthetic custody, no funds)
         run: node --import tsx scripts/test-browser-session-revoke.mts
       - name: Browser clock skew (synthetic login, no payment)

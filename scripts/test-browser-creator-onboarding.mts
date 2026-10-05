@@ -1,6 +1,7 @@
 /** Real register/connect/portfolio React flow. Synthetic wallet/auth/API; every request intercepted. */
 import assert from "node:assert/strict";
 import { build } from "esbuild";
+import { circleSdkBrowserPlugin } from "./circle-sdk-browser-plugin.mts";
 import { chromium, type Route } from "playwright";
 import { encodeAbiParameters, encodeEventTopics } from "viem";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../lib/arc-network-profile";
@@ -25,12 +26,12 @@ window.switchWallet=()=>{window.wallet={...window.wallet,address:'${other}'};ses
 createRoot(document.getElementById('root')).render(location.pathname==='/register'?<RegisterPage/>:location.pathname==='/connect'?<ConnectPage/>:location.pathname==='/creator/persisted'?<OwnerFeedVerification sourceId="persisted"/>:<MySourcesView/>);
 `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife",
   define: { "process.env": "{}", "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(other), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": JSON.stringify(other) },
-  plugins: [{ name: "synthetic-boundaries", setup(b) {
+  plugins: [circleSdkBrowserPlugin(), { name: "synthetic-boundaries", setup(b) {
     b.onResolve({ filter: /^(wagmi|sonner|next\/link)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /(site-header|bulk-import-form|claim-onchain-panel|faucet-panel|withdraw-earnings-panel|sources-list|account-sessions|wallet-picker|chain-banner)$/ }, args => ({ path: args.path, namespace: "stub" }));
     b.onLoad({ filter: /.*/, namespace: "stub" }, args => ({ loader: "jsx", contents: `export const SiteHeader=()=>null,BulkImportForm=()=>null,ClaimOnchainPanel=()=>null,FaucetPanel=()=>null,WithdrawEarningsPanel=()=>null,SourcesList=()=>null,AccountSessions=()=>null,WalletPicker=()=>null,ChainBanner=()=>null;` }));
     b.onLoad({ filter: /.*/, namespace: "synthetic" }, args => ({ loader: "jsx", resolveDir: process.cwd(), contents:
-      args.path === 'wagmi' ? `import{useSyncExternalStore}from'react';const subscribe=fn=>{window.addEventListener('wallet-change',fn);return()=>window.removeEventListener('wallet-change',fn)};export const useAccount=()=>useSyncExternalStore(subscribe,()=>window.wallet);export const useChainId=()=>useAccount().chainId;export const useSwitchChain=()=>({isPending:false,switchChain:({chainId})=>{window.wallet={...window.wallet,chainId};window.dispatchEvent(new Event('wallet-change'));}});export const useSignMessage=()=>({signMessageAsync:async()=> 'synthetic-signature'});export const useWriteContract=()=>({writeContractAsync:async()=> '${txHash}'});export const usePublicClient=()=>({getChainId:async()=>${profile.chainId},waitForTransactionReceipt:async()=>(${JSON.stringify(receipt)})});export const useDisconnect=()=>({disconnect:()=>{},disconnectAsync:async()=>{}});`
+      args.path === 'wagmi' ? `import{useSyncExternalStore}from'react';const subscribe=fn=>{window.addEventListener('wallet-change',fn);return()=>window.removeEventListener('wallet-change',fn)};export const useConnect=()=>({connectors:[],isPending:false,connectAsync:async()=>{throw Error("Unexpected Google connector in external-wallet fixture")}});export const useAccount=()=>useSyncExternalStore(subscribe,()=>window.wallet);export const useChainId=()=>useAccount().chainId;export const useSwitchChain=()=>({isPending:false,switchChain:({chainId})=>{window.wallet={...window.wallet,chainId};window.dispatchEvent(new Event('wallet-change'));}});export const useSignMessage=()=>({signMessageAsync:async()=> 'synthetic-signature'});export const useWriteContract=()=>({writeContractAsync:async()=> '${txHash}'});export const usePublicClient=()=>({getChainId:async()=>${profile.chainId},waitForTransactionReceipt:async()=>(${JSON.stringify(receipt)})});export const useDisconnect=()=>({disconnect:()=>{},disconnectAsync:async()=>{}});`
       : args.path === 'sonner' ? `export const toast=()=>{};toast.success=toast;toast.error=toast;toast.loading=toast;toast.dismiss=toast;`
       : `import React from 'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}` }));
   } }] });

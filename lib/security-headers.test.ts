@@ -5,9 +5,28 @@ import {
   CLOUDFLARE_WEB_ANALYTICS_SCRIPT_ORIGIN,
   contentSecurityPolicy,
   SCALAR_API_REFERENCE_SCRIPT_URL,
+  CIRCLE_WALLET_AUTH_FRAME_ORIGIN,
 } from "./security-headers";
 
 describe("application security headers", () => {
+  it("allows the exact Circle confirmation iframe only for explicitly configured Google onboarding", () => {
+    vi.stubEnv("KERYX_CIRCLE_GOOGLE_ENABLED", "true");
+    vi.stubEnv("NEXT_PUBLIC_CIRCLE_APP_ID", "synthetic-circle-app");
+    vi.stubEnv("NEXT_PUBLIC_GOOGLE_CLIENT_ID", "synthetic-google-client");
+    try {
+      const csp = contentSecurityPolicy(true);
+      const frames = csp.split("; ").find(value => value.startsWith("frame-src"));
+      expect(frames).toContain(CIRCLE_WALLET_AUTH_FRAME_ORIGIN);
+      expect(csp).not.toContain("https://*.circle.com");
+      expect(csp).not.toContain("'unsafe-eval'");
+      expect(csp.split("; ").find(value => value.startsWith("connect-src"))).not.toContain("pw-auth.circle.com");
+      expect(csp).not.toContain("accounts.google.com");
+      vi.stubEnv("KERYX_CIRCLE_GOOGLE_ENABLED", "false");
+      expect(contentSecurityPolicy(true)).not.toContain(CIRCLE_WALLET_AUTH_FRAME_ORIGIN);
+      vi.stubEnv("KERYX_CIRCLE_GOOGLE_ENABLED", "true"); vi.stubEnv("NEXT_PUBLIC_CIRCLE_APP_ID", "");
+      expect(contentSecurityPolicy(true)).not.toContain(CIRCLE_WALLET_AUTH_FRAME_ORIGIN);
+    } finally { vi.unstubAllEnvs(); }
+  });
   it("compiles only the selected mainnet payment destinations and rejects mixed deployment rails", () => {
     vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
     try {

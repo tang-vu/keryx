@@ -5060,3 +5060,20 @@ operational inputs.
 Private economics reporting selects its reviewed read-only adapter through the same source-owned application storage boundary. It must not initialize the ordinary database, acquire writer authority or silently fall back from an unavailable mainnet identity. Keep the dormant funding/enrollment import guard unchanged; resolve `.mjs` imports to their authored `.mts` sources so the guard examines the actual transitive graph.
 
 Hermetic browser fixtures compile explicit public profile/registry pins as Next does, rather than installing a Node `process` global or accepting request-selected authority. Historical testnet signing, clock and malicious-parent assertions retain their original rail and limits. Faithful gateway/route fixtures provide inherited methods, canonical profiles and the required native authority interface; successful setup must not remove nonce, privacy or durable-issuance assertions. The desktop question remains visible in the first reading area with the original layout/keyboard acceptance thresholds.
+
+## Reusable research budgets and optional Google wallets - 2026-10-05
+
+The owner authorized reducing repeated wallet confirmations and adding a Google-linked
+user-controlled wallet. Model mainnet delegation as an explicit research budget reused
+across conversations, with signed 1-hour/24-hour/7-day duration and per-question limit.
+Use a versioned v2 consent with independent server and worker checks; preserve v1
+message/proof bytes, original networks, retained custody and all cumulative liabilities.
+Renewal verifies the retained original and cannot increase its ceiling from external
+funding. A reviewed top-up and fresh owner signature are required for an increase.
+
+Circle user-controlled EOA wallets keep the owner-wallet interface compatible with
+existing payment/funding checks. Authenticate the actual Circle wallet server-side;
+Google authentication alone is not spending consent. Optional configuration and vendor
+acceptance gate activation. Research session custody remains same-browser storage;
+longer delegation is not an on-chain/XSS-proof policy wallet or portable recovery.
+See docs/research-budget-onboarding.md for setup, compatibility and surface roles.

@@ -38,3 +38,31 @@ it("separates public signer possession from owner delegation and binds its exact
     expect((await recoverMessageAddress({ message: createSessionGrantSignerProofMessage({ ...grant, ...mutation }, ARC_MAINNET_PROFILE), signature }))
       .toLowerCase()).not.toBe(grant.sessAddr);
 });
+
+it("preserves the historical v1 consent message byte for byte", () => {
+  expect(createSessionGrantConsentMessage(fields, ARC_MAINNET_PROFILE)).toBe([
+    "Keryx session payment grant", "Protocol: keryx-session-grant-consent-v1", "Network: eip155:5042", "Chain ID: 5042",
+    `USDC: ${ARC_MAINNET_PROFILE.usdcAddress.toLowerCase()}`, `Gateway wallet: ${ARC_MAINNET_PROFILE.gatewayWallet.toLowerCase()}`,
+    `Origin: ${fields.origin}`, `Owner: ${fields.ownerAddr}`, `Session signer: ${fields.sessAddr}`, `Grant epoch: ${fields.grantEpoch}`,
+    "Cumulative payment cap (micro-USDC): 100000000", "Expires at (Unix seconds): 1800000000",
+    "Scope: browser x402 payments using this session signer.",
+    "Revocation stops future server admission; exposed authorizations and deposited Gateway funds remain.",
+  ].join("\n"));
+});
+
+it("binds v2 duration and question maximum to both actual signatures and refuses policy widening", async () => {
+  const owner = privateKeyToAccount(generatePrivateKey()), session = privateKeyToAccount(generatePrivateKey());
+  const consent = { ...fields, format: "keryx-session-grant-consent-v2", ownerAddr: owner.address.toLowerCase(),
+    sessAddr: session.address.toLowerCase(), durationSeconds: 604800, questionCapMicroUsdc: "250000" };
+  const signature = await owner.signMessage({ message: createSessionGrantConsentMessage(consent, ARC_MAINNET_PROFILE) });
+  const proof = await session.signMessage({ message: createSessionGrantSignerProofMessage(consent, ARC_MAINNET_PROFILE) });
+  for (const mutation of [{ durationSeconds: 86400 }, { questionCapMicroUsdc: "250001" }]) {
+    expect((await recoverMessageAddress({ message: createSessionGrantConsentMessage({ ...consent, ...mutation }, ARC_MAINNET_PROFILE), signature })).toLowerCase()).not.toBe(consent.ownerAddr);
+    expect((await recoverMessageAddress({ message: createSessionGrantSignerProofMessage({ ...consent, ...mutation }, ARC_MAINNET_PROFILE), signature: proof })).toLowerCase()).not.toBe(consent.sessAddr);
+  }
+  for (const mutation of [{ durationSeconds: 604801 }, { durationSeconds: 7200 }, { questionCapMicroUsdc: "0" },
+    { questionCapMicroUsdc: "100000001" }, { network: ARC_TESTNET_PROFILE.networkId }])
+    expect(() => parseSessionGrantConsent({ ...consent, ...mutation }, ARC_MAINNET_PROFILE)).toThrow();
+  expect(() => parseSessionGrantConsent({ ...consent, network: ARC_TESTNET_PROFILE.networkId }, ARC_TESTNET_PROFILE)).toThrow();
+  expect(() => parseSessionGrantConsent({ ...fields, durationSeconds: 604800 }, ARC_MAINNET_PROFILE)).toThrow();
+});

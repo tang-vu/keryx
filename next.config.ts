@@ -6,6 +6,11 @@ import {
 } from "./lib/security-headers";
 
 const nextConfig: NextConfig = {
+  // Circle SDK 1.1.11 only decodes Google's nonce locally. Rewrite that exact
+  // browser-only module, retaining original Node JWT libraries everywhere else.
+  turbopack: { rules: { "*": [{ condition: { all: ["browser", {
+    path: /node_modules\/@circle-fin\/w3s-pw-web-sdk\/dist\/src\/index\.js$/,
+  }] }, loaders: ["./scripts/circle-sdk-browser-loader.cjs"], as: "*.js" }] } },
   // Keryx serves live data (agent runs, payments, metrics) — no static caching.
   // cacheComponents is intentionally off so API routes are always dynamic/fresh.
 

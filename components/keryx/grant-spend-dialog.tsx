@@ -1,213 +1,116 @@
 "use client";
 
-/**
- * GrantSpendDialog — the non-custodial spend gate for the browser co-sign flow.
- *
- * Shown above the AskForm when the user is SIWE-authenticated. States:
- *   idle/revoked → "Activate session" button → generateAndFund flow
- *   generating/funding/depositing/registering → progress indicator
- *   active → SessionActiveCard (cap bar, countdown, extend, top-up, revoke)
- *   expired → one-click resume (worker still holds the key) + signature recovery
- *   error → error message + retry
- *
- * The private session key lives in the signer worker — never rendered, never
- * sent to any server endpoint. This component only shows derived state.
- */
-
 import { useEffect, useState } from "react";
 import type { GrantState } from "@/lib/hooks/use-session-grant";
-import { SessionActiveCard } from "@/components/keryx/session-active-card";
-import { UsdcPresetChips } from "@/components/keryx/usdc-preset-chips";
+import type { ResearchBudgetOptions } from "@/lib/hooks/use-mainnet-session-grant";
+import { SessionActiveCard } from "./session-active-card";
+import { UsdcPresetChips } from "./usdc-preset-chips";
+import { ResearchBudgetFields, parseBudgetAmount } from "./research-budget-fields";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 interface Props {
   grantState: GrantState;
-  onActivate: (budgetUsdc: number) => void;
-  /** Add more USDC to the currently-active session. */
-  onTopUp: (addUsdc: number) => void;
-  /** Renew the grant; mainnet requires a fresh owner consent signature. */
-  onExtend: () => Promise<boolean>;
-  onRevoke: () => void;
-  onTryRecover: () => void;
-  /** Restore the retained mainnet key, or the legacy testnet signature flow. */
-  onRecoverViaSignature: () => void;
+  onActivate(budgetUsdc: number, options?: ResearchBudgetOptions): void;
+  onTopUp(addUsdc: number): void;
+  onExtend(options?: ResearchBudgetOptions): Promise<boolean>;
+  onRevoke(): void;
+  onTryRecover(): void;
+  onRecoverViaSignature(options?: ResearchBudgetOptions): void;
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  switching:  `Switch to ${browserPaymentProfile().label} in your wallet…`,
-  generating: "Generating session key…",
-  funding:    "Waiting for USDC transfer…",
-  depositing: "Depositing to Gateway…",
-  confirming: "Deposit confirming on Circle Gateway — activates automatically…",
-  registering: "Registering grant…",
-  recovering: "Recovering session — sign in your wallet…",
+  switching: "Switch to " + browserPaymentProfile().label + " in your wallet…",
+  generating: "Preparing your research budget…",
+  funding: "Review the USDC approval in your wallet…",
+  depositing: "Review the USDC deposit in your wallet…",
+  confirming: "Checking your deposit with Circle Gateway…",
+  registering: "Confirm your research budget in your wallet…",
+  recovering: "Recovering your saved budget…",
   restoring: "Restoring saved session in this browser…",
-  revoking: "Revoking spending consent…",
+  revoking: "Stopping research spending…",
 };
 
-export function GrantSpendDialog({
-  grantState,
-  onActivate,
-  onTopUp,
-  onExtend,
-  onRevoke,
-  onTryRecover,
-  onRecoverViaSignature,
-}: Props) {
-  // Keep the raw text so intermediate states ("", "0.") are typeable; coerce to a
-  // number only when activating. (A number state with parseFloat()||0.05 onChange
-  // snapped "0."/"" back to 0.05, making the field effectively un-typeable.)
+export function GrantSpendDialog({ grantState, onActivate, onTopUp, onExtend, onRevoke, onTryRecover, onRecoverViaSignature }: Props) {
+  const mainnet = !browserPaymentProfile().testnet;
   const [budgetInput, setBudgetInput] = useState("0.05");
+  const [questionInput, setQuestionInput] = useState("0.05");
+  const [durationSeconds, setDurationSeconds] = useState(604800);
   const [resuming, setResuming] = useState(false);
   const [resumeFailed, setResumeFailed] = useState(false);
-  const budgetNum = parseFloat(budgetInput);
-  const budgetValid = Number.isFinite(budgetNum) && budgetNum > 0;
+  const budget = parseBudgetAmount(budgetInput), question = parseBudgetAmount(questionInput);
+  const budgetValid = budget !== null && (!mainnet || (question !== null && question <= budget));
+  const options = mainnet && question !== null ? { durationSeconds, questionCapUsdc: question } : undefined;
 
-  // Read the selected network's retained custody after refresh/sign-in.
-  useEffect(() => {
-    onTryRecover();
-  }, [onTryRecover]);
+  useEffect(() => { onTryRecover(); }, [onTryRecover]);
 
-  const isWorking = ["switching", "generating", "funding", "depositing", "confirming", "registering", "recovering", "restoring", "revoking"].includes(grantState.status);
+  if (grantState.status === "active") return <SessionActiveCard grantState={grantState}
+    onTopUp={onTopUp} onRevoke={onRevoke} onExtend={onExtend} />;
 
-  if (grantState.status === "active") {
-    return (
-      <SessionActiveCard
-        grantState={grantState}
-        onTopUp={onTopUp}
-        onRevoke={onRevoke}
-        onExtend={onExtend}
-      />
-    );
-  }
-
-  if (isWorking) {
-    return (
-      <div className="mb-4 border border-line bg-paper px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-seal" />
-          <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2">
-            {STATUS_LABEL[grantState.status] ?? "Working…"}
-          </span>
-        </div>
-        {grantState.status === "registering" && grantState.consentReview && <p className="mt-2 text-xs text-ink-2">
-          Review owner consent: cumulative cap ${grantState.consentReview.cumulativeCapUsdc.toFixed(6)};
-          confirmed lifetime debit ${grantState.consentReview.confirmedSpentUsdc.toFixed(6)};
-          retained spend and signed holds ${grantState.consentReview.retainedSpentUsdc.toFixed(6)};
-          proposed remaining capacity ${grantState.consentReview.remainingCapacityUsdc.toFixed(6)}.
-          Current Gateway availability is ${grantState.consentReview.availableUsdc.toFixed(6)}. Unknown authorizations remain held.
-        </p>}
-        {grantState.status === "confirming" && (
-          // Reassure: the deposit is on-chain and safe; activation is hands-off and
-          // survives a reload, so the user can relax or keep browsing.
-          <p className="mt-2 font-serif text-[12.5px] leading-snug text-ink-2">
-            {browserPaymentProfile().testnet ? <>Your deposit is settling through Circle Gateway (usually under a minute).
-            The session activates on its own — you can keep this page open or even
-            reload; it picks up automatically. Your funds are safe on-chain.</> : <>Your transaction is confirmed on-chain. Gateway credit is still being checked. Review the owner consent signature when credit becomes available. Reload recovery retains the original signer; do not deposit again to resolve an uncertain transaction.</>}
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  // idle / revoked / expired / error → show activation form
-  return (
-    <div className="mb-4 border border-ink/20 bg-paper-2 px-4 py-3">
-      <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-        Non-custodial session
-      </div>
-
-      {(grantState.status === "error" || grantState.status === "paused") && grantState.error && (
-        <div className="mb-2 border border-destructive/40 bg-destructive/10 px-3 py-2 font-mono text-[11px] text-destructive">
-          {grantState.error}
-        </div>
-      )}
-
-      {(grantState.status === "expired" || grantState.status === "paused") && (
-        <div className="mb-2 border border-seal/40 bg-paper px-3 py-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[11px] leading-relaxed text-ink-2">
-              {grantState.status === "paused"
-                ? "Session status unavailable. Recover your funded session to continue."
-                : "Session expired — your USDC is safe in the Gateway."}
-            </span>
-            {/* The signer worker outlives the grant in this tab, so resuming is one
-                API call — no signature. Signature recovery stays as the fallback. */}
-            <button
-              type="button"
-              onClick={async () => {
-                setResuming(true);
-                setResumeFailed(false);
-                const ok = await onExtend();
-                if (!ok) setResumeFailed(true);
-                setResuming(false);
-              }}
-              disabled={resuming}
-              className="border border-ink bg-ink px-3 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_3px_0_var(--seal)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {resuming ? "Resuming…" : "Resume session ▸"}
-            </button>
-          </div>
-          <p className="mt-1.5 font-mono text-[9px] leading-relaxed text-faint">
-            {resumeFailed
-              ? browserPaymentProfile().testnet
-                ? "Could not resume from this tab — use “Recover funded session” below (one signature, no gas)."
-                : "Recovery did not complete. Keep this browser's saved data and retry when the wallet and Gateway are available."
-              : browserPaymentProfile().testnet ? "One click, no signature — or recover with a signature on any device."
-                : "Resume retained custody on this browser and review a new owner consent signature. Expired grants cannot authorize payments."}
-          </p>
-        </div>
-      )}
-
-      <p className="mb-3 max-w-[52ch] font-serif text-[13px] leading-snug text-ink-2">
-        Fund a browser-held session key with USDC. The agent buys sources
-        automatically — no wallet prompt per source. Your key never leaves
-        the browser signer.
-      </p>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
-            Budget
-          </label>
-          <UsdcPresetChips value={budgetInput} onPick={setBudgetInput} />
-          <input
-            type="number"
-            inputMode="decimal"
-            min={0.01}
-            max={1}
-            step={0.01}
-            value={budgetInput}
-            onChange={(e) => setBudgetInput(e.target.value)}
-            className="w-20 border border-ink/30 bg-paper px-2 py-1 font-mono text-[12px] text-ink focus:border-seal focus:outline-none"
-          />
-          <span className="font-mono text-[10px] text-ink-3">USDC</span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => budgetValid && onActivate(budgetNum)}
-          disabled={!budgetValid}
-          className="border border-ink bg-ink px-5 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--seal)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Activate session ▸
-        </button>
-
-        {/* Recover an already-funded session on a new device / after sign-out —
-            re-derives the key in the worker from a wallet signature (no new funds, no loss). */}
-        <button
-          type="button"
-          onClick={onRecoverViaSignature}
-          className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 underline underline-offset-2 hover:text-seal"
-        >
-          Recover funded session ▸
-        </button>
-      </div>
-
-      <p className="mt-2 font-mono text-[9px] leading-relaxed tracking-wide text-faint">
-        {browserPaymentProfile().testnet ? <>One MetaMask tx to fund · auto-signs per source · funds never lost: sign again on
-        any device to recover or withdraw</> : <>Owner wallet approves the exact USDC amount and deposits for your session, then signs a separate spending consent. Native gas is extra. Recovery uses encrypted storage on this browser: logout retains it, but deleting browser data or losing this device can lose access. Repeating a wallet signature on another device is not a guaranteed backup.</>}
-      </p>
+  const working = ["switching", "generating", "funding", "depositing", "confirming", "registering", "recovering", "restoring", "revoking"].includes(grantState.status);
+  if (working) return <div className="mb-4 border border-line bg-paper px-4 py-3" role="status">
+    <div className="flex items-center gap-2">
+      <span className="h-2 w-2 animate-pulse rounded-full bg-seal" />
+      <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2">{STATUS_LABEL[grantState.status] ?? "Working…"}</span>
     </div>
-  );
+    {grantState.status === "registering" && grantState.consentReview && <p className="mt-2 text-xs leading-relaxed text-ink-2">
+      Available to authorize: {grantState.consentReview.remainingCapacityUsdc.toFixed(6)} USDC.
+      {grantState.consentReview.questionCapUsdc !== undefined && <> Maximum per question: {grantState.consentReview.questionCapUsdc.toFixed(6)} USDC.</>}
+      {grantState.consentReview.durationSeconds !== undefined && <> Duration: {grantState.consentReview.durationSeconds / 3600} hours.</>}
+      {" "}Previously used or pending amounts remain counted.
+    </p>}
+    {grantState.status === "confirming" && <p className="mt-2 text-xs leading-relaxed text-ink-2">
+      Your deposit is confirmed on-chain. We are checking available Gateway credit. Keep this browser&apos;s saved data;
+      recovery checks the original deposit. Confirm the budget when the credit is available.
+    </p>}
+  </div>;
+
+  const retained = !!grantState.sessAddr;
+  return <div className="mb-4 space-y-3 border border-ink/20 bg-paper-2 px-4 py-3">
+    <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2">{mainnet ? "Research budget" : "Non-custodial session"}</div>
+    <p className="max-w-[65ch] text-sm leading-relaxed text-ink-2">
+      {mainnet ? "Set a budget once and use it across conversations until it expires or runs out. The agent pays for sources within your limits without asking you to sign each payment."
+        : "Fund a browser-held session with USDC. The agent pays for sources within your budget."}
+    </p>
+    {grantState.error && <p role="alert" className="border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">{grantState.error}</p>}
+
+    {retained && <div className="space-y-2 border border-seal/40 bg-paper px-3 py-3">
+      <p className="text-xs leading-relaxed text-ink-2">
+        Your funded budget is saved in this browser. Reuse it to continue.
+        {mainnet && " Renewal keeps the existing total ceiling and previously used or pending amounts."}
+      </p>
+      <button type="button" disabled={resuming} onClick={async () => {
+        setResuming(true); setResumeFailed(false);
+        try { if (!await onExtend()) setResumeFailed(true); }
+        catch { setResumeFailed(true); }
+        finally { setResuming(false); }
+      }} className="border border-ink bg-ink px-4 py-2 font-mono text-[11px] text-cream disabled:opacity-50">
+        {resuming ? "Recovering…" : mainnet ? "Continue with saved budget" : "Resume session ▸"}
+      </button>
+      {resumeFailed && <p role="alert" className="text-xs text-destructive">Recovery did not complete. Keep your saved browser data and retry when your wallet and Gateway are available.</p>}
+    </div>}
+
+    <div className="flex flex-wrap items-center gap-2">
+      <label htmlFor="research-total-budget" className="text-xs text-ink-2">{retained ? "New budget allowance" : "Total budget"} (USDC)</label>
+      <UsdcPresetChips value={budgetInput} onPick={setBudgetInput} />
+      <input id="research-total-budget" type="text" inputMode="decimal" value={budgetInput}
+        onChange={event => setBudgetInput(event.target.value)}
+        className="w-24 border border-ink/30 bg-paper px-3 py-2 font-mono text-xs text-ink focus:border-seal focus:outline-none" />
+    </div>
+    {mainnet && <ResearchBudgetFields questionInput={questionInput} onQuestionChange={setQuestionInput}
+      durationSeconds={durationSeconds} onDurationChange={setDurationSeconds} />}
+    {mainnet && budget !== null && question !== null && question > budget && <p role="alert" className="text-xs text-destructive">The per-question maximum must fit within the total budget.</p>}
+    <div className="flex flex-wrap items-center gap-3">
+      <button type="button" disabled={!budgetValid || resuming} onClick={() => { if (budgetValid && budget !== null) onActivate(budget, options); }}
+        className="border border-ink bg-ink px-5 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-cream disabled:cursor-not-allowed disabled:opacity-50">
+        {mainnet ? retained ? "Review new budget" : "Enable research budget" : "Activate session ▸"}
+      </button>
+      {!retained && <button type="button" onClick={() => onRecoverViaSignature()} className="text-xs text-ink-3 underline underline-offset-2">
+        {mainnet ? "Recover a saved budget" : "Recover funded session ▸"}
+      </button>}
+    </div>
+    <p className="max-w-[75ch] text-[11px] leading-relaxed text-ink-3">
+      {mainnet ? "First-time funding needs wallet approval and a deposit, followed by budget confirmation. Reloading or opening another conversation keeps your limits. Native gas is extra. Logout retains your encrypted budget; clearing browser data or losing this device can lose access to its funds."
+        : "Fund your session and confirm its allowance. Existing testnet recovery remains available."}
+    </p>
+  </div>;
 }

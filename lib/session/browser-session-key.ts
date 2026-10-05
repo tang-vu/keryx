@@ -5,7 +5,7 @@ import { browserSessionCustodyContext } from "./browser-session-custody";
 import { createIsolatedSessionVault, type IsolatedWrappedKey, type WrappingKeyStore } from "./isolated-session-vault";
 import { createSessionSigningPolicy } from "./session-signing-policy";
 import type { TypedDataPayload } from "./session-signer-protocol";
-import { parseSessionGrantConsent, createSessionGrantConsentMessage, createSessionGrantSignerProofMessage } from "../payments/session-grant-consent";
+import { parseSessionGrantConsent, createSessionGrantConsentMessage, createSessionGrantSignerProofMessage, sessionGrantDurationSeconds } from "../payments/session-grant-consent";
 import { verifySessionWithdrawalPreparation } from "../gateway/session-withdrawal-protocol";
 import { withdrawTypedData } from "../gateway/withdraw-protocol";
 import { SessionCustodyMissingError } from "./session-custody-error";
@@ -109,7 +109,7 @@ export function createBrowserSessionKey(origin: string, owner: string, dependenc
       if (!captured || busy) refused();
       const consent = parseSessionGrantConsent(structuredClone(value), ARC_MAINNET_PROFILE), now = Math.floor(Date.now()/1000);
       if (consent.ownerAddr !== context.owner || consent.sessAddr !== captured!.address.toLowerCase() || consent.origin !== context.origin ||
-        BigInt(consent.expirySeconds) <= BigInt(now) || BigInt(consent.expirySeconds) > BigInt(now+86400) ||
+        BigInt(consent.expirySeconds) <= BigInt(now) || BigInt(consent.expirySeconds) > BigInt(now+sessionGrantDurationSeconds(consent)) ||
         (await recoverMessageAddress({ message: createSessionGrantConsentMessage(consent, ARC_MAINNET_PROFILE), signature: ownerSignature })).toLowerCase() !== context.owner) refused();
       const signature = await captured!.signMessage({ message: createSessionGrantSignerProofMessage(consent, ARC_MAINNET_PROFILE) });
       if (generation !== expected || account !== captured) refused();
