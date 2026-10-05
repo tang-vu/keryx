@@ -1,6 +1,5 @@
 import type { Decision } from "../types";
 import { publicReadRecoveryLines, type PublicReadOutcome } from "./read-recovery";
-import { requestedSources } from "../web-research/requested-sources";
 
 export interface PublicDiscoverySummary {
   attemptedQueries?: number;
@@ -59,8 +58,10 @@ export function emptyPublicEvidenceDetail(
       : `Selected public originals could not supply usable text: ${failures}. `
     : vi ? `Chưa đọc thành công tài liệu công khai gốc nào. ${gates ? `Lý do SKIP đã ghi: ${gates}. ` : ""}`
       : `No original public document was successfully read. ${gates ? `Recorded SKIP reasons: ${gates}. ` : ""}`;
-  const supplied = requestedSources(question);
-  const recovery = supplied.candidates.size || supplied.notices.length
+  // This guidance is shared with browser rendering. Detect supplied URL text
+  // without importing server-only candidate identity/hash construction.
+  const supplied = /https?:\/\/[^\s<>"`]+/iu.test(question.slice(0, 30000));
+  const recovery = supplied
     ? vi ? "Câu hỏi đã có URL nguồn gốc. Kiểm tra trạng thái của từng URL đã cung cấp bên dưới và lý do SKIP/lỗi đọc trong nhật ký trước khi thu hẹp một lượt mới. "
       : "The question already supplied original source URLs. Inspect each supplied URL's status below and its recorded SKIP/read failure before narrowing a new task. "
     : scholarly

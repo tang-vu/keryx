@@ -78,4 +78,13 @@ describe("empty evidence details", () => {
     expect(emptyPublicEvidenceDetail([], [], { discovery: { status: "withheld" } })).toContain("withheld");
     expect(emptyPublicEvidenceDetail([], [], { discovery: { status: "not-configured" } })).toContain("not configured");
   });
+
+  it.each(["https://www.sqlite.org/pragma.html#pragma_synchronous", "http://example.org/original", "https://["])(
+    "recognizes supplied URL text without claiming admission for %s", url => {
+      const answer = emptyPublicEvidenceDetail([], [], { question: `Use ${url}` });
+      expect(answer).toContain("already supplied original source URLs");
+      expect(answer).toContain("recorded SKIP/read failure");
+      expect(answer).not.toContain("supply a relevant original source URL");
+    },
+  );
 });
