@@ -12,21 +12,32 @@ const limits = { sourceBytes: 256 * MiB, blobBytes: 32 * MiB, sourceFiles: 10000
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const refuse = () => { throw Error('Immutable staging refused; retain candidate and existing releases for inspection.'); };
 const signature = stat => [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs].join('|');
-const inside = (root, file) => file === root || file.startsWith(root + path.sep);
+const inside = (root, file) => {
+  // Windows case aliases must not bypass source/release or trace containment.
+  // Treat even a case-sensitive Windows directory conservatively here.
+  if (process.platform === 'win32') { root = root.toLowerCase(); file = file.toLowerCase(); }
+  return file === root || file.startsWith(root.endsWith(path.sep) ? root : root + path.sep);
+};
 const serial = value => JSON.stringify(value) + '\n';
+// Device and console aliases can select non-file handles on Windows, including
+// extension suffixes. Keep the accepted Git path vocabulary portable and narrow.
+const windowsDeviceName = /^(?:con|prn|aux|nul|com[1-9\u00b9\u00b2\u00b3]|lpt[1-9\u00b9\u00b2\u00b3]|conin\$|conout\$)(?:[ .]|$)/iu;
 
 function relativeName(name) {
   if (typeof name !== 'string' || name.length < 1 || name.length > 512 ||
       /[\x00-\x1f\x7f\\:*?"<>|\ufffd]/u.test(name) || path.posix.isAbsolute(name) ||
-      name.split('/').some(part => !part || part === '.' || part === '..' || /[. ]$/.test(part))) refuse();
+      name.split('/').some(part => !part || part === '.' || part === '..' || /[. ]$/.test(part) || windowsDeviceName.test(part))) refuse();
   return name;
 }
 
 function sourceName(name) {
   relativeName(name);
-  if (name.split('/').some(part => part === '.git' || part === 'wallets.json' ||
-      part.startsWith('.env') && part !== '.env.example' || /\.(?:key|pem|sqlite3?|db)$/.test(part)) ||
-      ['data', 'node_modules', '.next'].includes(name.split('/')[0])) refuse();
+  // Runtime/private exclusions must also cover Windows case aliases while the
+  // manifest still preserves the original accepted Git spelling.
+  const originals = name.split('/'), parts = originals.map(part => part.toLowerCase());
+  if (parts.some((part, index) => part === '.git' || part === 'wallets.json' ||
+      part.startsWith('.env') && originals[index] !== '.env.example' || /\.(?:key|pem|sqlite3?|db)$/.test(part)) ||
+      ['data', 'node_modules', '.next'].includes(parts[0])) refuse();
   return name;
 }
 
@@ -41,15 +52,19 @@ function noSymlinkParents(directory) {
 function absoluteDirectory(directory) {
   if (typeof directory !== 'string' || !path.isAbsolute(directory) || path.resolve(directory) !== directory) refuse();
   noSymlinkParents(directory);
-  return directory;
+  // Canonicalize existing roots before comparing them, including Windows short
+  // path/case aliases. No symlink ancestor is accepted by canonicalization.
+  return fs.realpathSync.native(directory);
 }
 
 function git(repo, argv, input, maxBuffer = limits.sourceBytes + 8 * MiB) {
   // Exact local objects only: no fetch, checkout, config export, hooks or shell.
   const env = { PATH: process.env.PATH, GIT_CONFIG_NOSYSTEM: '1',
-    GIT_CONFIG_GLOBAL: process.platform === 'win32' ? 'NUL' : '/dev/null', GIT_OPTIONAL_LOCKS: '0' };
+    GIT_CONFIG_GLOBAL: process.platform === 'win32' ? 'NUL' : '/dev/null', GIT_OPTIONAL_LOCKS: '0', GIT_NO_LAZY_FETCH: '1' };
   if (process.platform === 'win32') env.SystemRoot = process.env.SystemRoot;
-  return execFileSync('git', ['--no-replace-objects', '-C', repo, ...argv],
+  // The explicit option also makes older Git versions fail closed rather than
+  // silently ignoring an unknown environment variable and contacting a remote.
+  return execFileSync('git', ['--no-replace-objects', '--no-lazy-fetch', '-C', repo, ...argv],
     { env, input, maxBuffer, timeout: 60000, stdio: ['pipe', 'pipe', 'pipe'] });
 }
 
@@ -144,7 +159,7 @@ function readStable(file, maxBytes) {
 /** Materialize accepted local Git bytes into a new exclusive directory, never a
  * mutable checkout or a linked dependency tree shared with the serving process. */
 export function stageImmutableSource({ repo, releasesDir, commit, reserveBytes = 4 * 1024 * MiB }) {
-  absoluteDirectory(repo); absoluteDirectory(releasesDir);
+  repo = absoluteDirectory(repo); releasesDir = absoluteDirectory(releasesDir);
   if (inside(repo, releasesDir) || inside(releasesDir, repo) ||
       !Number.isSafeInteger(reserveBytes) || reserveBytes < 0 || reserveBytes > 64 * 1024 * MiB) refuse();
   const { tree, files, bytes, nonRuntimeGitlinks } = readExactTree(repo, commit);
@@ -250,6 +265,7 @@ function snapshotTree(root) {
 /** Inspect a separately prepared candidate. A digest binds bytes; it does not
  * attest successful tests, build environment, DB compatibility or spend authority. */
 export function inspectImmutableArtifact({ candidate, sourceManifestSha256 }) {
+  candidate = absoluteDirectory(candidate);
   const manifest = readSourceManifest(candidate, sourceManifestSha256);
   const source = path.join(candidate, 'source'); noSymlinkParents(source);
   const snapshot = snapshotTree(source), byName = new Map(snapshot.entries.map(entry => [entry.path, entry]));

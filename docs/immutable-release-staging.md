@@ -39,6 +39,10 @@ refuse. Working-tree modifications, ignored custody/ENV files, generated artifac
 and installed dependencies are not copied. Source files receive owner read-only
 modes (with original executable bits) on Linux. Source-directory ownership remains
 trusted; these permissions do not make hostile root writes impossible.
+Private/runtime path exclusions also cover case variants such as `.ENV.LOCAL`
+and `NODE_MODULES`, so Windows aliases cannot import those files. Only the exact
+`.env.example` spelling is exempt. Device/console basenames such as `NUL.txt`,
+`COM1` and `CONOUT$` refuse before opening a destination handle.
 
 The one explicitly recognized gitlink is `arc-primitives`, the separately published
 [non-runtime Showcase](arc-primitives-maintenance.md). Its exact pinned commit and
@@ -49,7 +53,8 @@ artifact inspection refuse. Any future runtime dependency on the standalone
 needs a separately reviewed exact-object materializer and builder acceptance.
 
 Preparation refuses a release root inside the serving repository, or the converse,
-and checks available disk space before creating a candidate. The production CLI
+including Windows case aliases; existing roots are canonicalized before comparison.
+It checks available disk space before creating a candidate. The production CLI
 fixes the source at `/root/keryx` and the release root at
 `/root/.local/share/keryx-releases`. That root must already exist with mode `0700`,
 root ownership and protected nonsymlink ancestors. There is no creation option
@@ -60,7 +65,14 @@ The source manifest binds the full commit/tree, complete file inventory, Git blo
 IDs and SHA-256 content hashes. Bounds are 10,000 source files, 32 MiB per blob
 and 256 MiB total source. Local Git calls have a finite 60-second command timeout.
 Git replacement objects and inherited Git configuration/environment overrides
-cannot substitute another accepted object. No secret configuration is printed.
+cannot substitute another accepted object. Every Git invocation explicitly disables
+lazy promisor fetches, so missing partial-clone objects refuse before a candidate
+is created. Git must support `--no-lazy-fetch`; older versions fail closed even if
+they would ignore `GIT_NO_LAZY_FETCH`. A read-only capability check confirmed that
+production Git 2.43.0 rejects this option; the prerequisite remains unmet there,
+and the current deployment does not use this helper.
+This work neither upgrades production Git nor authorizes staging there. No secret
+configuration is printed.
 
 `inspect` records a candidate **after separately authorized isolated preparation**.
 It rechecks every original source file, hashes the entire source/dependency/Next
@@ -194,6 +206,11 @@ refusal of refs/links/unknown gitlinks/private tracked state, retained candidate
 receipts, source/dependency substitution, incorrect digests and missing/escaping
 traces. Linux additionally checks internal symlink containment; an unprivileged
 Windows host may be unable to create that fixture.
+Windows checks case-alias nesting refusal. A missing-promisor-object regression
+uses a local filesystem transport witness, with no socket or remote service, to
+prove staging refuses without invoking the fetch transport.
+Device-name regression inputs use raw synthetic Git objects without creating or
+opening any device-named path.
 
 The rehearsal keeps a synthetic reader running against the predecessor while it
 prepares and inspects the candidate, then positively exits that reader, rechecks

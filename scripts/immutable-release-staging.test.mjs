@@ -18,7 +18,9 @@ function fixture(t) {
   });
   const repo = path.join(root, 'repo'), releasesDir = path.join(root, 'releases');
   fs.mkdirSync(repo, { mode: 0o700 }); fs.mkdirSync(releasesDir, { mode: 0o700 });
-  const git = args => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  const git = (args, input) => execFileSync('git', ['-C', repo, ...args], {
+    encoding: 'utf8', input, stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
+  }).trim();
   git(['init', '-q']); git(['config', 'user.name', 'Synthetic Fixture']); git(['config', 'user.email', 'fixture@example.invalid']);
   fs.writeFileSync(path.join(repo, 'runtime.txt'), 'accepted source bytes\n');
   fs.writeFileSync(path.join(repo, 'same-blob.txt'), 'accepted source bytes\n');
@@ -27,6 +29,17 @@ function fixture(t) {
   const commit = git(['rev-parse', 'HEAD']);
   const stage = () => stageImmutableSource({ repo, releasesDir, commit, reserveBytes: 0 });
   return { root, repo, releasesDir, commit, git, stage };
+}
+
+// Build an exact tree spelling without creating that working-tree path. This
+// also permits Windows device/case-alias fixtures without opening their handles.
+function commitWithPath(git, name) {
+  let object = git(['hash-object', 'runtime.txt']), kind = 'blob', mode = '100644';
+  for (const part of name.split('/').reverse()) {
+    object = git(['mktree', '-z'], `${mode} ${kind} ${object}\t${part}\0`);
+    kind = 'tree'; mode = '040000';
+  }
+  return git(['commit-tree', object, '-m', 'synthetic forbidden path']);
 }
 
 function addSyntheticArtifact(staged) {
@@ -63,6 +76,7 @@ test('refuses moving refs, malformed hashes and source/artifact directories insi
   }
   const nested = path.join(repo, 'releases'); fs.mkdirSync(nested);
   assert.throws(() => stageImmutableSource({ repo, releasesDir: nested, commit, reserveBytes: 0 }));
+  assert.throws(() => stageImmutableSource({ repo, releasesDir: path.parse(repo).root, commit, reserveBytes: 0 }));
   assert.throws(() => stageImmutableSource({ repo, releasesDir, commit, reserveBytes: -1 }));
   assert.deepEqual(fs.readdirSync(releasesDir), []);
 });
@@ -74,6 +88,65 @@ test('disk headroom refusal happens before creating a candidate', t => {
     assert.throws(() => stageImmutableSource({ repo, releasesDir, commit }));
   } finally { fs.statfsSync = original; }
   assert.deepEqual(fs.readdirSync(releasesDir), []);
+});
+
+test('Windows case aliases cannot place releases inside the serving tree or its ancestor', { skip: process.platform !== 'win32' }, t => {
+  const { root, repo, git, commit } = fixture(t), nested = path.join(repo, 'nested-releases');
+  fs.mkdirSync(nested);
+  const alias = path.join(root, 'REPO'), status = git(['status', '--porcelain']);
+  for (const [source, releasesDir] of [[alias, nested], [repo, alias], [alias, root]]) {
+    assert.throws(() => stageImmutableSource({ repo: source, releasesDir, commit, reserveBytes: 0 }));
+  }
+  assert.deepEqual(fs.readdirSync(nested), []);
+  assert.equal(git(['status', '--porcelain']), status);
+  assert.equal(fs.existsSync(path.join(root, commit)), false);
+});
+
+test('missing promisor objects refuse without invoking even a local fetch transport', t => {
+  const { root, repo, releasesDir, git, commit } = fixture(t);
+  const remote = path.join(root, 'local-only-remote'), witness = path.join(root, 'fetch-witness.mjs');
+  const marker = path.join(root, 'fetch-invoked');
+  fs.mkdirSync(remote);
+  execFileSync('git', ['init', '--bare', '-q', remote], { stdio: ['ignore', 'pipe', 'pipe'] });
+  fs.writeFileSync(witness, `import fs from 'node:fs';import {fileURLToPath} from 'node:url';\nfs.writeFileSync(fileURLToPath(new URL('./fetch-invoked',import.meta.url)),'local transport invoked');process.exit(1);\n`);
+  git(['config', 'extensions.partialClone', 'origin']);
+  git(['config', 'remote.origin.url', remote]);
+  git(['config', 'remote.origin.promisor', 'true']);
+  git(['config', 'remote.origin.partialclonefilter', 'blob:none']);
+  git(['config', 'protocol.file.allow', 'always']);
+  // This exclusively local upload-pack witness never reads application state or
+  // opens a socket. It proves the malformed fixture would otherwise auto-fetch.
+  const quoted = value => `'${value.replaceAll('\\', '/').replaceAll("'", "'\\''")}'`;
+  git(['config', 'remote.origin.uploadpack', `${quoted(process.execPath)} ${quoted(witness)}`]);
+  const object = git(['hash-object', 'runtime.txt']);
+  fs.unlinkSync(path.join(repo, '.git', 'objects', object.slice(0, 2), object.slice(2)));
+  assert.throws(() => git(['cat-file', '-e', object]));
+  assert.equal(fs.readFileSync(marker, 'utf8'), 'local transport invoked');
+  fs.unlinkSync(marker);
+  assert.throws(() => stageImmutableSource({ repo, releasesDir, commit, reserveBytes: 0 }));
+  assert.equal(fs.existsSync(marker), false);
+  assert.deepEqual(fs.readdirSync(releasesDir), []);
+});
+
+test('private/runtime case variants refuse before materialization', async t => {
+  for (const name of ['.ENV.LOCAL', '.ENV.EXAMPLE', 'WALLETS.JSON', 'NODE_MODULES/dependency.js']) {
+    await t.test(name, t => {
+      const { repo, releasesDir, git } = fixture(t), commit = commitWithPath(git, name);
+      assert.throws(() => stageImmutableSource({ repo, releasesDir, commit, reserveBytes: 0 }));
+      assert.deepEqual(fs.readdirSync(releasesDir), []);
+    });
+  }
+});
+
+test('device and console basenames refuse from raw Git trees without opening their paths', t => {
+  const { repo, releasesDir, git } = fixture(t);
+  for (const name of ['CON', 'nul.txt', 'AUX.json', 'PRN', 'COM1', 'LPT1.log', 'CONIN$', 'CONOUT$.txt', 'COM\u00b9.txt', 'LPT\u00b2', 'CON .log']) {
+    // mktree/commit-tree manipulate only Git objects. The fixture never creates
+    // a Windows device path, even on a host that cannot check out that tree.
+    const commit = commitWithPath(git, name);
+    assert.throws(() => stageImmutableSource({ repo, releasesDir, commit, reserveBytes: 0 }));
+    assert.deepEqual(fs.readdirSync(releasesDir), []);
+  }
 });
 
 test('source/release root symlink ancestors refuse even if they point at a valid directory', t => {
