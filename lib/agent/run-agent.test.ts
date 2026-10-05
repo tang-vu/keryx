@@ -413,6 +413,85 @@ it("automatically resolves a question DOI without opting into general scholarly 
   expect(d.discoverScholarly).toHaveBeenCalledWith("Explain 10.1234/exact", false, expect.any(AbortSignal));
 });
 
+it.each([
+  "Use https://www.sqlite.org/wal.html and https://www.sqlite.org/pragma.html#pragma_synchronous to explain WAL durability.",
+  "Use https://www.postgresql.org/docs/current/sql-select.html to explain queue locking and crash gaps.",
+])("considers supplied originals omitted by discovery and binds their bounded scope to trace and receipt: %s", async question => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  const fund = vi.spyOn(d.gateway, "ensureFunded");
+  d.webSearch = { search: async () => [] };
+  d.readWebArticle = vi.fn(async url => ({ text: "Synthetic original document evidence used only for this fixture.", title: "Original", finalUrl: url, kind: "html" as const, truncated: true }));
+  const { run, steps } = await drive({ question, origin: "web" }, d);
+  const candidates = (d.engine as ReturnType<typeof fakeEngine>).decideInput?.candidates ?? [];
+  const expected = question.includes("sqlite") ? 2 : 1;
+  expect(candidates).toHaveLength(expected);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(expected);
+  expect(run.decisions).toHaveLength(expected);
+  expect(run.decisions.every(item => item.requestedSource?.readScope === "bounded-whole-document")).toBe(true);
+  expect(steps.some(step => step.message.includes("explicitly supplied URL"))).toBe(true);
+  expect(run.answer).toContain("Supplied original source status");
+  expect(run.answer).toContain("Extraction was truncated");
+  if (question.includes("#")) expect(run.answer).toContain("not that section specifically");
+  const receipt = buildResearchReceipt(run, []);
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  expect(receipt.payload.agency.decisions.map(item => item.requestedSource)).toEqual(run.decisions.map(item => item.requestedSource));
+  expect(receipt.payload.dispatch.answer).toBe(run.answer);
+  for (const result of [remoteResearchResult(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick"))]) expect(result.answer).toBe(run.answer);
+  expect(fund).not.toHaveBeenCalled();
+  expect((d.gateway as FakeGateway).fetchCalls).toEqual([]);
+  expect((d.gateway as FakeGateway).citationCalls).toEqual([]);
+});
+
+it("makes omitted supplied originals inspectable when only secondary evidence is selected", async () => {
+  const d = deps([], fakeEngine({ decide: input => input.candidates.filter(c => !c.item?.requestedSource).map(c => buy({ id: c.id, name: c.name, price: 0 })) }), fakeGateway());
+  d.webSearch = { search: async () => [{ title: "Secondary", url: "https://secondary.example/queue", snippet: "preview" }] };
+  d.readWebArticle = async url => ({ text: "Synthetic secondary evidence is not a read of the supplied original.", title: "Secondary", finalUrl: url, kind: "html", truncated: false });
+  const { run } = await drive({ question: "Use https://www.postgresql.org/docs/current/sql-select.html to explain queues.", origin: "web" }, d);
+  expect(run.decisions.find(item => item.requestedSource)?.action).toBe("SKIP");
+  expect(run.answer).toContain("reasoning engine omitted this supplied original");
+  expect(run.citations[0]?.itemUrl).toBe("https://secondary.example/queue");
+  expect(run.citations.some(item => item.requestedSource)).toBe(false);
+});
+
+it("merges a search preview for the same original without losing requested fragment scope or duplicating the read", async () => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  d.webSearch = { search: async () => [{ title: "Search title", url: "https://www.sqlite.org/pragma.html", snippet: "An unverified search preview." }] };
+  d.readWebArticle = vi.fn(async url => ({ text: "Synthetic original text, not the search preview.", title: "Original", finalUrl: url, kind: "html" as const, truncated: false }));
+  const { run } = await drive({ question: "Use https://www.sqlite.org/pragma.html#pragma_synchronous", origin: "web" }, d);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(1);
+  expect(run.decisions).toHaveLength(1);
+  expect(run.citations[0]?.requestedSource?.urls).toEqual(["https://www.sqlite.org/pragma.html#pragma_synchronous"]);
+  expect(run.evidence?.[0]?.requestedSource).toEqual(run.citations[0]?.requestedSource);
+  expect(buildResearchReceipt(run, []).payload.citations[0]?.requestedSource).toEqual(run.citations[0]?.requestedSource);
+  expect(researchReportMarkdown(run, null, [])).toContain("Supplied original scope");
+  for (const result of [remoteResearchResult(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick")), keryxMeta(run), surfaceResearch(run)]) {
+    expect(JSON.stringify(result)).toContain("bounded-whole-document");
+  }
+});
+
+it("reports supplied originals' read failures and existing URLs in empty recovery without leaking transport details", async () => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  d.webSearch = { search: async () => [] };
+  d.readWebArticle = async () => { throw new ArticleReadError("html-extraction-unavailable"); };
+  const { run } = await drive({ question: "Use https://www.sqlite.org/wal.html for WAL durability.", origin: "web" }, d);
+  expect(run.answer).toContain("question already supplied original source URLs");
+  expect(run.answer).toContain("Read failed: html-extraction-unavailable");
+  expect(run.answer).not.toContain("supply a relevant original source URL");
+});
+
+it("withholds explicit URL transport for unattended research and rejects changed exact arXiv versions", async () => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  d.readWebArticle = vi.fn(async () => ({ text: "A different version.", title: "Wrong", finalUrl: "https://arxiv.org/pdf/2606.02668v2", kind: "pdf" as const, truncated: false }));
+  const withheld = await drive({ question: "Use https://example.com/private-task", origin: "engine" }, d);
+  expect(d.readWebArticle).not.toHaveBeenCalled();
+  expect(withheld.run.answer).toContain("external document access is withheld");
+  d.webSearch = { search: async () => [] };
+  d.discoverScholarly = async () => ({ candidates: new Map(), succeeded: 0, unavailable: 1, requestedDois: 0, resolvedDois: 0 });
+  const { run } = await drive({ question: "Use https://arxiv.org/pdf/2606.02668v1", origin: "web" }, d);
+  expect(run.citations).toEqual([]);
+  expect(run.answer).toContain("document-identity-changed");
+});
+
 it("reads selected original web content without funding, rejects snippet evidence and preserves fetched provenance", async () => {
   const d = deps([], fakeEngine(), fakeGateway());
   const fund = vi.spyOn(d.gateway, "ensureFunded");

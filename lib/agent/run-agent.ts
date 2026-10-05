@@ -9,6 +9,9 @@ import { discoverScholarly } from "../scholarly/discovery";
 import { paperCanResearch, paperDuplicatesPublicBody } from "../scholarly/paid-gate";
 import { questionDois } from "../scholarly/doi";
 import { discoverWeb } from "../web-research/discovery";
+import { requestedSources } from "../web-research/requested-sources";
+import { requestedSourceReport } from "./requested-source-report";
+import { arxivDocumentId } from "../scholarly/arxiv-identity";
 import { searxngProvider } from "../web-research/search-provider";
 import { tavilyProvider } from "../web-research/tavily-provider";
 import { ArticleReadError, articleFailureCode, gatheredArticle, readArticle } from "../web-research/article-reader";
@@ -263,6 +266,20 @@ export async function* runAgent(
   const freshCache = new Set<string>();
   const { publicReads, publicCandidates } = await discoverPublicReferences(db, input.question, subClaims);
   const webCandidates = new Map<string, SourceCandidate>();
+  const gathered: GatheredContent[] = [];
+  const requested = requestedSources(input.question);
+  const externalDocumentsWithheld = effects.scope.kind === "job" || origin === "engine" && input.allowExternalWeb !== true;
+  function admitWeb(candidate: SourceCandidate) {
+    const requirement = requested.candidates.get(candidate.id)?.item?.requestedSource;
+    const admitted = requirement && candidate.item ? { ...candidate,
+      description: `${candidate.description} This original URL was explicitly supplied by the caller; contents remain unobserved.`,
+      item: { ...candidate.item, requestedSource: requirement } } : candidate;
+    webCandidates.set(candidate.id, admitted); publicCandidates.set(candidate.id, admitted);
+  }
+  if (!externalDocumentsWithheld) for (const candidate of requested.candidates.values()) admitWeb(candidate);
+  for (const candidate of requested.candidates.values()) yield emit("discover",
+    `${externalDocumentsWithheld ? "WITHHELD" : "Original candidate"}: ${candidate.item!.requestedSource!.urls.join(", ")} — explicitly supplied URL; unobserved contents, no creator payment. The reader only attempts bounded whole-document extraction; a supplied fragment is not section targeting.`);
+  for (const notice of requested.notices) yield emit("discover", `SKIP supplied original ${notice.url}: ${notice.reason}`);
   let webDiscovery: { status: "completed" | "unavailable" | "not-configured" | "withheld"; attemptedQueries?: number; succeededQueries?: number; failedQueries?: number } = { status: "not-configured" };
   let webRemainingMs = input.researchMode === "quick" ? 30000 : 55000;
   let webAttempts = 0;
@@ -273,7 +290,7 @@ export async function* runAgent(
     const operationStarted = Date.now();
     try {
       const discovered = await (deps.discoverScholarly ?? discoverScholarly)(input.question, input.scholarly === true, webSignal());
-      for (const [id, candidate] of discovered.candidates) { webCandidates.set(id, candidate); publicCandidates.set(id, candidate); }
+      for (const candidate of discovered.candidates.values()) admitWeb(candidate);
       yield emit("discover", `Scholarly discovery: ${discovered.succeeded} provider requests succeeded, ${discovered.unavailable} unavailable; ${discovered.candidates.size} bibliographic previews. DOI lookup resolved ${discovered.resolvedDois}/${discovered.requestedDois} detected identifiers (up to two DOI lookups per run). Explicit versioned arXiv targets use a bounded exact lookup (up to two), rather than keyword search. Metadata is not paper evidence. arXiv is preprint material; peer review is unknown. Selected originals must be read; no creator payout.`);
     } catch { yield emit("discover", "Scholarly discovery unavailable; continuing with other sources. No paper evidence established."); }
     finally { webRemainingMs -= Date.now() - operationStarted; }
@@ -294,7 +311,7 @@ export async function* runAgent(
       const discovered = await discoverWeb(configured, input.question,
         subClaims, input.researchMode === "quick", webSignal());
       webDiscovery = { status: "completed", attemptedQueries: discovered.attemptedQueries, succeededQueries: discovered.succeededQueries, failedQueries: discovered.failedQueries };
-      for (const [id, candidate] of discovered.candidates) { webCandidates.set(id, candidate); publicCandidates.set(id, candidate); }
+      for (const candidate of discovered.candidates.values()) admitWeb(candidate);
       if (discovered.withheldDiscussionPreviews) yield emit("discover",
         discovered.withheldDiscussionPreviews + " discussion-page previews withheld because the request asks for official documentation. Other previews are not thereby verified as official.");
       yield emit("discover", `Web search: ${discovered.attemptedQueries}/${discovered.queries} planned queries attempted, ${discovered.succeededQueries} succeeded, ${discovered.candidates.size} public page previews, ${discovered.failedQueries} unavailable queries${discovered.cancelled ? "; search deadline or cancellation reached" : ""}${discovered.truncatedQueries ? "; query text bounded at 500 characters" : ""}. Snippets are discovery only. Public reads spend no USDC; model and service operating costs remain separate.`);
@@ -334,6 +351,8 @@ export async function* runAgent(
           AbortSignal.any([input.signal ?? new AbortController().signal, AbortSignal.timeout(Math.max(1, webRemainingMs - (Date.now() - operationStarted)))]));
       }
       // A provider's versioned repository identity must survive document redirects.
+      const requestedArxivId = candidate.item.requestedSource && arxivDocumentId(candidate.item.itemUrl);
+      if (requestedArxivId && arxivDocumentId(article.finalUrl) !== requestedArxivId) throw new ArticleReadError("document-identity-changed");
       if (metadata?.provider === "arxiv") {
         const expected = `https://arxiv.org/${abstractFallback ? "abs" : "pdf"}/${metadata.arxivId}`;
         if (article.finalUrl !== expected || (!abstractFallback && article.kind !== "pdf")) throw new ArticleReadError("document-identity-changed");
@@ -349,6 +368,8 @@ export async function* runAgent(
       seenWebBodies.add(identity);
       seenWebUrls.add(article.finalUrl);
       const extracted = gatheredArticle(id, article);
+      extracted.requestedSource = candidate.item.requestedSource;
+      if (requestedArxivId && /\/abs\//u.test(article.finalUrl)) extracted.publicDeliveryKind = "abstract";
       if (metadata) {
         extracted.scholarly = { ...metadata, evidenceScope: metadata.provider === "arxiv" ? abstractFallback ? "abstract-page" : "paper-text" : "publisher-page" };
         extracted.itemTitle = metadata.title;
@@ -620,6 +641,14 @@ export async function* runAgent(
       }];
     });
   const externalProposed = proposed.filter((d) => isExternal(d.sourceId));
+  // A model can omit an input candidate. Preserve every explicit original as an inspectable
+  // refusal instead of silently substituting whatever search happened to return.
+  if (!externalDocumentsWithheld) for (const [id, candidate] of requested.candidates) {
+    if (proposedAssetIds.has(id)) continue;
+    internalProposed.push({ sourceId: id, assetId: id, sourceName: candidate.name, ...candidate.item,
+      action: "SKIP", expectedValue: 0, price: 0, confidence: 0, targets: [],
+      rationale: "The reasoning engine omitted this supplied original from its proposals; no read was authorized. Narrow the task to this URL and inspect the original rather than silently substituting a secondary source." });
+  }
 
   // Normalize model proposals and apply the downward-only preview gates before portfolio
   // selection. The portfolio may choose a subset of positive proposals; it can never promote a
@@ -759,7 +788,6 @@ export async function* runAgent(
   }
 
   // 4) FETCH (+ stop-early sufficiency)
-  const gathered: GatheredContent[] = [];
   let markerN = 0;
   let fetchFailures = 0;
   const buys = finalDecisions.filter(
@@ -1453,6 +1481,7 @@ export async function* runAgent(
         sourceKind: g.sourceKind,
         publicDeliveryKind: g.publicDeliveryKind,
         webProvenance: g.webProvenance,
+        requestedSource: g.requestedSource,
         scholarly: g.scholarly,
         sourceClaim: g.sourceClaim,
         accessKind: g.accessKind,
@@ -1666,6 +1695,10 @@ export async function* runAgent(
     return steps;
   }
   function finish(answer: string): QueryRun {
+    const originals = requestedSourceReport({ candidates: requested.candidates, notices: requested.notices,
+      decisions: finalDecisions, gathered, evidence, outcomes: publicReadOutcomes,
+      vi: researchResponseLanguage(input.question) === "vi", withheld: externalDocumentsWithheld });
+    if (originals) answer += `\n\n${originals}`;
     if (fundingUnavailable) answer = `> ${fundingNotice}\n\n${answer}`;
     const totalSpent = round(
       payments
