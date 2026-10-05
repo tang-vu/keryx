@@ -1,5 +1,17 @@
 # Supported-surface release parity
 
+## Reading activity and source library, October 5, 2026
+
+Application **0.26.21 candidate** changes web `/dashboard`, `/sources`, navigation
+and confirmed-empty settlement ticker presentation. A shared server view isolates
+read availability without conferring payment/control authority or changing public
+API payloads. Public API/A2A, remote MCP/OpenAI, buyer/Operator CLI, stdio MCP,
+desktop, extension and bots retain their research, receipt and payment contracts.
+Their runtime modules do not import the new web view/display helpers. Remote MCP
+**0.3.1**, caller MCP **0.4.5**, desktop **0.4.6**, extension **0.1.1** retain their roles.
+Deployment and downloaded distribution identities remain separate release gates;
+installed-client upgrades are not inferred. See [scope and acceptance](engineering/ledger-sources-2026-10-05.md).
+
 ## Source selection and failure diagnostics, October 5, 2026
 
 Application **0.26.20 candidate** isolates invalid source proposals and shares a

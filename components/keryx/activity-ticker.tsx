@@ -3,9 +3,7 @@
 /**
  * Live citation ticker — a thin marquee of the most recent REAL settled citations
  * (source → reward → how long ago), pulled from /api/activity and refreshed every 20s.
- * Proof-of-life on the landing page: agents are paying creators right now. Renders
- * nothing until there's real activity, and silently no-ops on any fetch error, so it
- * can never break the page it sits on.
+ * Confirmed empty activity is hidden. Loading and unavailable activity stay distinct.
  */
 
 import { useEffect, useState } from "react";
@@ -60,7 +58,8 @@ export function ActivityTicker() {
     };
   }, []);
 
-  if (state !== "ready") return <div className="border-y border-line bg-paper/60 px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? "Loading recent settled citations…" : state === "empty" ? "No recent settled citations yet." : "Recent citation activity unavailable."}</div>;
+  if (state === "empty") return null;
+  if (state !== "ready") return <div className="border-y border-line bg-paper/60 px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? "Loading recent settled citations…" : "Recent citation activity unavailable."}</div>;
 
   // Duplicate the row so the marquee loops seamlessly (translateX -50% lands on the copy).
   const row = [...items, ...items];

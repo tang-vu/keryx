@@ -7,6 +7,12 @@ transport and extraction limits. It does not bulk-import the whole internet.
 every page that could be discovered. A search result, excerpt, abstract or video
 description may omit the full work; source discovery does not certify correctness.
 
+Appearing in the source library is separate from proving publisher control.
+The library shows retained public feeds and unverified creator listings with content, control and earnings
+labels. Article dates are publisher metadata; a feed excerpt or collection timestamp
+does not certify the original article's contents or accuracy. A legacy eligibility
+flag or on-chain registration alone cannot certify current publisher control.
+
 An owner claim connects a public source to its publisher's wallet. Proving source
 control is free and enables no earnings by itself. The owner separately chooses a
 policy for an exact registered listing. Existing registered sources retain their

@@ -39,12 +39,13 @@ export function DispatchWire() {
     return () => { window.clearTimeout(initial); window.clearInterval(timer); requests.current++; };
   }, [load]);
 
+  if (state === "empty") return null;
+
   return (
     <div className="flex h-10 items-center border-b border-ink bg-panel">
       <div className="flex h-10 shrink-0 items-center bg-ink px-2 font-mono text-[10px] uppercase tracking-wider text-paper sm:px-4"><span className="sm:hidden">Settled</span><span className="hidden sm:inline">Settled citations</span></div>
       <div className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap px-2 font-mono text-[11px] text-ink-2 sm:px-3" aria-live="polite">
         {state === "loading" && "Loading settlements…"}
-        {state === "empty" && "No recent settled citations."}
         {state === "error" && "Payment feed unavailable."}
         {state === "ready" && (
           <div className="flex w-max gap-6 whitespace-nowrap">

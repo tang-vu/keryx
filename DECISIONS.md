@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+**Show recorded reading and retained sources before empty earnings — 2026-10-05.**
+The owner requested visible real source information, including public references and
+unverified creator listings. Treat Sources as a reading library and the ledger as
+research activity with separately inspectable payment proof. Public feed snapshots
+can show publisher links, topics, retained article titles, publisher dates, delivery
+scope and collection time without granting ownership, factual accuracy or payment
+authority. Count retained public references separately from creator listings; broad
+web discoverability is not a stored catalog count. Do not bulk-import sources or
+rewrite historical evidence to fill the page.
+
+Confirmed-empty settlement tickers disappear; loading and unavailable states remain
+explicit. Financial totals stay settled-only and inspectable, with pending/failed
+records and full payment evidence retained. Independent reads preserve available
+activity through partial failures and date retained data after a failed refresh.
+Stream the source preview separately so its storage reads cannot delay the ledger
+shell. Registry registration and grandfathered verification flags do not certify
+current publisher control. See [scope and acceptance](docs/engineering/ledger-sources-2026-10-05.md).
+
 **Isolate invalid source proposals and retain classified caller failures — 2026-10-05.**
 An actionable model decision needs a complete valid target list and exact input
 candidate identity. Reject the entire invalid proposal, withhold every duplicate

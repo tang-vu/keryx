@@ -6,11 +6,12 @@
  */
 
 import Link from "next/link";
-import { ShieldAlert, ShieldCheck } from "lucide-react";
+import { Link2, ShieldAlert, ShieldCheck } from "lucide-react";
 import { fmtUsdc } from "./phase-style";
 import type { Source } from "@/lib/types";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import type { SourceClaim } from "@/lib/sources/public-source-claim";
+import { publisherControlLabel, safePublisherUrl } from "@/lib/sources/source-display";
 
 const EXPLORER = browserPaymentProfile().explorerUrl;
 
@@ -30,8 +31,8 @@ function domainOf(url: string): string {
 
 export interface RegistryRowProps {
   source: Source;
-  totalEarnedUsdc: number;
-  citationCount: number;
+  totalEarnedUsdc: number | null;
+  citationCount: number | null;
   claim?: SourceClaim | null;
   claimPolicyUnavailable?: boolean;
   controlFresh?: boolean;
@@ -39,20 +40,22 @@ export interface RegistryRowProps {
 
 export function SourceRegistryRow({ source: s, totalEarnedUsdc, citationCount, claim, claimPolicyUnavailable, controlFresh }: RegistryRowProps) {
   const previewNote = s.previewDepth ? PREVIEW_NOTE[s.previewDepth] : undefined;
+  const publisherUrl = safePublisherUrl(s.url);
+  const controlLabel = publisherControlLabel({ source: s, claim: claim ?? null, claimPolicyUnavailable: claimPolicyUnavailable ?? false, controlFresh: controlFresh ?? false });
 
   return (
     <article className="border border-ink bg-paper p-5 transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] sm:p-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <Link
-            href={`/creator/${s.id}`}
+            href={`/creator/${encodeURIComponent(s.id)}`}
             className="font-display text-[19px] font-medium leading-snug text-ink transition-colors hover:text-seal"
           >
             {s.name}
           </Link>
-          {s.url && (
+          {publisherUrl && (
             <a
-              href={s.url}
+              href={publisherUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="ml-2.5 font-mono text-[11px] text-ink-3 underline decoration-dotted underline-offset-4 transition-colors hover:text-seal"
@@ -83,35 +86,45 @@ export function SourceRegistryRow({ source: s, totalEarnedUsdc, citationCount, c
               href={`${EXPLORER}/tx/${s.registerTx}`}
               target="_blank"
               rel="noopener noreferrer"
-              title="Registered in the on-chain SourceRegistry — opens the register() transaction"
-              className="inline-flex items-center gap-1 text-paid transition-colors hover:underline"
+              title="On-chain listing and payout terms; registration does not prove publisher control — opens the register() transaction"
+              className="inline-flex items-center gap-1 transition-colors hover:underline"
             >
-              <ShieldCheck className="h-3 w-3" />
-              On-chain ↗
+              <Link2 className="h-3 w-3" />
+              Registered on-chain ↗
             </a>
           ) : (
             <span
-              title="Registered in the on-chain SourceRegistry"
-              className="inline-flex items-center gap-1 text-paid"
+              title="On-chain listing and payout terms; registration does not prove publisher control"
+              className="inline-flex items-center gap-1"
             >
-              <ShieldCheck className="h-3 w-3" />
-              On-chain
+              <Link2 className="h-3 w-3" />
+              Registered on-chain
             </span>
           ))}
-        {s.verified === false && (
+        {claimPolicyUnavailable ? (
+          <span className="inline-flex items-center gap-1 text-ink-3"><ShieldAlert className="h-3 w-3" />Publisher control unavailable</span>
+        ) : claim ? (
+          <span className={`inline-flex items-center gap-1 ${controlFresh ? "text-paid" : "text-amber-700"}`} title="Source control does not establish authorship, content accuracy or distribution rights">
+            {controlFresh ? <ShieldCheck className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
+            {controlLabel}
+          </span>
+        ) : s.verified === false ? (
           <span
-            title="Feed ownership not yet proven — listed, but the agent won't read, cite, or pay this source until its owner verifies."
+            title="This listing has not passed its publisher-control check. It remains visible; creator reading and payment eligibility are withheld."
             className="inline-flex items-center gap-1 text-amber-700"
           >
             <ShieldAlert className="h-3 w-3" />
-            Unverified
+            Publisher control unverified
           </span>
+        ) : (
+          <span>{controlLabel}</span>
         )}
-        {totalEarnedUsdc > 0 && (
+        {totalEarnedUsdc !== null && totalEarnedUsdc > 0 && (
           <span className="text-paid">
-            ${fmtUsdc(totalEarnedUsdc)} earned · {citationCount} cite{citationCount !== 1 ? "s" : ""}
+            ${fmtUsdc(totalEarnedUsdc)} settled earnings{citationCount !== null ? ` · ${citationCount} cite${citationCount !== 1 ? "s" : ""}` : " · citation count unavailable"}
           </span>
         )}
+        {totalEarnedUsdc === null && <span>Settled earnings unavailable</span>}
         {previewNote && <span>{previewNote}</span>}
         {s.tags.slice(0, 3).map((t) => (
           <span key={t} className="rounded border border-line bg-paper-2 px-1.5 py-0.5 normal-case tracking-normal">
