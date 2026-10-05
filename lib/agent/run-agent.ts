@@ -216,7 +216,7 @@ async function* runAdmittedAgent(
   const defaultAttentionLimit =
     researchMode === "quick" ? Math.min(2, config.maxAttentionSources) : config.maxAttentionSources;
   const defaultReevaluateRounds = researchMode === "quick" ? 0 : config.reevaluateRounds;
-  const attentionLimit = input.executionLimits?.attentionLimit ?? defaultAttentionLimit;
+  let attentionLimit = input.executionLimits?.attentionLimit ?? defaultAttentionLimit;
   const reevaluateRounds = input.executionLimits?.reevaluateRounds ?? defaultReevaluateRounds;
   if (
     !Number.isInteger(attentionLimit) ||
@@ -256,6 +256,11 @@ async function* runAdmittedAgent(
   // 1) DECOMPOSE
   yield emit("decompose", `Breaking down: "${input.question}"`);
   const subClaims = await engine.decompose(input.question);
+  // A comparison names one target per candidate. Unless the caller pinned its limits, Deep research
+  // may read one source per target, so the last candidates are not left without any evidence.
+  if (!input.executionLimits && researchMode === "deep") {
+    attentionLimit = Math.min(32, Math.max(attentionLimit, subClaims.length));
+  }
   yield emit("decompose", `Identified ${subClaims.length} research target(s) to investigate; these are not established facts`, subClaims);
   yield emit(
     "decompose",
@@ -359,7 +364,7 @@ async function* runAdmittedAgent(
   async function fetchWeb(id: string): Promise<GatheredContent | null> {
     lastWebFailure = "web-operation-limit";
     const candidate = webCandidates.get(id);
-    if (!candidate?.item?.itemUrl || webAttempts >= (input.researchMode === "quick" ? 4 : 8) || webRemainingMs <= 0) {
+    if (!candidate?.item?.itemUrl || webAttempts >= (input.researchMode === "quick" ? 4 : 12) || webRemainingMs <= 0) {
       publicReadOutcomes.push({ name: candidate?.name ?? "Public source", code: lastWebFailure, assetId: id });
       return null;
     }
@@ -376,7 +381,7 @@ async function* runAdmittedAgent(
       catch (error) {
         if (metadata?.provider !== "arxiv") throw error;
         scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: paper PDF unavailable (${articleFailureCode(error)}).`);
-        if (webAttempts >= (input.researchMode === "quick" ? 4 : 8) || webRemainingMs - (Date.now() - operationStarted) <= 0 || input.signal?.aborted) throw error;
+        if (webAttempts >= (input.researchMode === "quick" ? 4 : 12) || webRemainingMs - (Date.now() - operationStarted) <= 0 || input.signal?.aborted) throw error;
         webAttempts++;
         abstractFallback = true;
         article = await (deps.readWebArticle ?? readArticle)(`https://arxiv.org/abs/${metadata.arxivId}`,
