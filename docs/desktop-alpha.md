@@ -162,7 +162,7 @@ artifact needs a new verified release source, not an unverified replacement buil
 
 Assets include the portable ZIP, installer, source manifest and SHA-256 checksums.
 Asset names include the full source commit, and uploads refuse to overwrite existing
-assets. Desktop package version 0.4.3 is independent of the web release version;
+assets. The desktop package version is independent of the web release version;
 the release tag and manifest establish the shared source identity. The alpha has
 no automatic updater, so installed users must deliberately install a newer package.
 These packaging gates do not authorize mainnet or establish payment readiness.
