@@ -33,6 +33,11 @@ function completedRun(): QueryRun {
     paymentMode: "real",
     paymentAttempts: 1,
     settledPayments: 1,
+    reasoningAttempts: [
+      { step: "decompose", engine: "llm:deepseek:deepseek-v4-flash", tier: 0, attempt: 1, startedAt: 1, durationMs: 1, outcome: "served" },
+      { step: "decide", engine: "llm:deepseek:deepseek-v4-flash", tier: 0, attempt: 0, startedAt: 2, durationMs: 0, outcome: "circuit-open" },
+      { step: "decide", engine: "heuristic", tier: 3, attempt: 1, startedAt: 3, durationMs: 0, outcome: "served" },
+    ],
   };
 }
 
@@ -69,11 +74,15 @@ describe("remote MCP server", () => {
     expect(responseText).toContain("research targets meet the recorded excerpt-support threshold");
     expect(responseText).toContain("does not verify entailment or complete synthesis");
     expect(responseText).not.toContain("claims passed the grounding threshold");
+    expect(responseText).toContain("decide: heuristic (degraded)");
     expect(result.structuredContent).toEqual(
       expect.objectContaining({
         queryId: "mcp-run",
         totalToCreatorsUsdc: 0.01,
         settledPayments: 1,
+        reasoningTelemetry: "recorded",
+        reasoningAttempts: expect.arrayContaining([expect.objectContaining({ step: "decide", engine: "heuristic", outcome: "served" })]),
+        reasoningServing: expect.arrayContaining([expect.objectContaining({ step: "decide", engines: ["heuristic"], degraded: true, heuristic: true })]),
       }),
     );
 

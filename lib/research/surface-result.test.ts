@@ -20,6 +20,20 @@ export function fixture(): QueryRun {
 }
 
 describe("research surface parity", () => {
+  it("retains per-step heuristic serving and explicitly unavailable legacy telemetry through every shared surface", () => {
+    const run = fixture();
+    expect(surfaceResearch(run).reasoningTelemetry).toBe("unavailable");
+    run.engine = "llm:deepseek:deepseek-v4-flash";
+    run.reasoningAttempts = [
+      { step: "decide", engine: run.engine, tier: 0, attempt: 0, startedAt: 1, durationMs: 0, outcome: "circuit-open" },
+      { step: "decide", engine: "heuristic", tier: 3, attempt: 1, startedAt: 2, durationMs: 0, outcome: "served" },
+    ];
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run),
+      a2aResponseFromRun(run, quoteA2aResearch(0.03, "deep"))]) {
+      expect(result.reasoningAttempts).toEqual(run.reasoningAttempts);
+      expect(result.reasoningServing).toEqual([{ step: "decide", engines: ["heuristic"], tiers: [3], degraded: true, heuristic: true }]);
+    }
+  });
   it("retains bounded claim policy and creator-free provenance through shared transports and portable receipts", () => {
     const run = fixture(), policy = { id: "a".repeat(64), revision: 3, mode: "free" as const,
       verifiedAt: "2026-10-01T00:00:00.000Z", effectiveAt: "2026-10-01T00:00:00.000Z" };

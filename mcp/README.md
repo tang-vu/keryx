@@ -30,6 +30,15 @@ original custody/recovery contract. Exact-source packed acceptance and publicati
 integrity are independent artifact gates. Check release manifests, npm integrity and
 the hosted `/api/health` commit separately; a package does not switch the hosted server.
 
+Hosted results can include `reasoningAttempts`, `reasoningServing` and `reasoningTelemetry`.
+The package forwards them and includes the recorded per-step serving summary in tool text.
+For example, `decide: heuristic (degraded)` identifies local source selection even when other
+steps used a model. The aggregate engine label alone does not identify each serving tier.
+Older hosted responses without this metadata explicitly have unavailable per-step telemetry;
+the package makes no extra inference request to reconstruct it. These fields do not change
+caller funding, original payment recovery, source selection authority or evidence qualification.
+Check hosted deployment and package publication separately before expecting this contract live.
+
 ## Research Monthly
 
 Stdio 0.4.3 and the remote service expose read-only `research_monthly` discovery.

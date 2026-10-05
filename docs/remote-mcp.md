@@ -100,3 +100,23 @@ Only keys with the `ask` scope can run as an authenticated caller. The key raise
 and attributes the run; it does not custody funds or become a payment authority.
 
 `mode` accepts `quick` or `deep` (default). `scholarly: true` opts into bounded Crossref/arXiv discovery and sends the question to those services. Structured results retain article/version metadata, answer-qualified public evidence, and recorded BibTeX/RIS/evidence CSV exports. Planned citation allocations are separate from settlement; `creatorsPaid` remains null when the distinct settled count is unavailable.
+
+The result also exposes `reasoningAttempts` and `reasoningServing`, grouped by reasoning step.
+Each serving entry retains every recorded serving engine/tier, including repeated passes, and
+marks `degraded` and `heuristic`. Text-only consumers receive the same per-step summary. For
+example, `decide: heuristic (degraded)` remains visible when other steps used DeepSeek; the
+aggregate `engine` string alone does not establish which provider selected sources. Attempts
+contain bounded categories/status/timing and local input-fit counts, never prompts or provider
+response bodies. `reasoningTelemetry: "unavailable"` explicitly labels older results without
+attempt history; their serving tiers are not reconstructed.
+
+Request-local output validation or input refusal does not clear historical circuit failures.
+If a half-open probe was already acquired, its bounded lease expires normally; a rejected
+result is not evidence of successful provider health. No circuit reset is part of this repair.
+
+This additive contract also travels through shared A2A and OpenAI metadata. The caller-funded
+stdio package forwards hosted fields and formats the same summary without adding a model call
+or changing source-payment authority. Hosted deployment and stdio package publication remain
+independent release gates. The original S10 exception diagnosis and a separately authorized
+bounded live retest for [issue #158](https://github.com/tang-vu/keryx/issues/158) remain open;
+synthetic resilience checks do not establish live model quality or authorize a circuit reset.

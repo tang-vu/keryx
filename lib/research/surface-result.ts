@@ -3,6 +3,7 @@ import { receiptAsset } from "../research-receipt-asset";
 import { buildCitationExport } from "../research-citation-export";
 import type { Citation, QueryRun } from "../types";
 import { buildEvidenceMatrix, evidenceMatrixCsv, type EvidenceMatrixInput } from "./evidence-matrix";
+import { surfaceReasoning } from "../llm/reasoning-telemetry";
 
 /** Public recorded metadata only; no enrichment, network calls or payment authority. */
 export function surfaceCitation(citation: Citation) {
@@ -25,7 +26,7 @@ export function surfaceResearch(run: QueryRun) {
     quote: item.quote, support: item.support, qualifiesForAnswer: item.qualifiesForAnswer ?? item.qualifiesForReward,
     qualifiesForReward: item.qualifiesForReward, ...receiptAsset(item),
   }));
-  return { citations: run.citations.map(surfaceCitation), evidence,
+  return { ...surfaceReasoning(run.reasoningAttempts), citations: run.citations.map(surfaceCitation), evidence,
     creatorsPaid: null, creatorsPaidAuthority: "distinct-settled-count-unavailable" as const,
     creatorsReferenced: new Set(run.citations.map(c => c.sourceId)).size,
     creatorRewardAllocations: new Set(run.citations.filter(c => c.sourceKind !== "public-reference" && c.reward > 0).map(c => c.sourceId)).size,

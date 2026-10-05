@@ -10,7 +10,7 @@
 
 import { config } from "../config";
 import { HeuristicEngine } from "./heuristic-engine";
-import { ReasoningInputLimitError } from "./reasoning-engine";
+import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
 import type {
   AttributeInput,
   DecideInput,
@@ -38,24 +38,24 @@ function circuitKey(name: string, step: ReasoningStep): string {
   return JSON.stringify([name, step]);
 }
 
-/** Transient means retryable: rate limits, timeouts, 5xx, or a network error with no status. */
+/** Retry only observed supplier/transport failures; a statusless application error is unknown. */
 function isTransient(err: unknown): boolean {
-  const status = (err as { status?: number })?.status;
-  if (status === undefined) return true;
-  return status === 429 || status === 408 || status >= 500;
+  const { error } = errorTelemetry(err);
+  return error === "rate_limited" || error === "timeout" || error === "network" || error === "provider";
 }
 
 /** A full transport deadline is complete; repeating it only multiplies failover latency. */
 function isTimeout(err: unknown): boolean {
-  const status = (err as { status?: number })?.status;
-  const name = (err as { name?: string })?.name;
-  return status === 408 || name === "TimeoutError" || name === "AbortError";
+  return errorTelemetry(err).error === "timeout";
 }
 
 /** Persist only a bounded category/status, never a provider body that may echo request context. */
-function errorTelemetry(err: unknown): Pick<ReasoningAttempt, "status" | "error"> {
+function errorTelemetry(err: unknown): Pick<ReasoningAttempt, "status" | "error" | "inputBounds"> {
   const candidate = (err as { status?: unknown })?.status;
   const status = typeof candidate === "number" && Number.isInteger(candidate) && candidate >= 100 && candidate <= 599 ? candidate : undefined;
+  if (err instanceof ReasoningInputLimitError) return { status: 413, error: "input_limit", ...(err.bounds ? { inputBounds: err.bounds } : {}) };
+  if (err instanceof ReasoningOutputValidationError) return { ...(status ? { status } : {}), error: "output_validation" };
+  if (err instanceof ReasoningTransportError) return { error: err.category };
   const name = (err as { name?: string })?.name;
   if (status === 408 || name === "TimeoutError" || name === "AbortError") {
     return { ...(status ? { status } : {}), error: "timeout" };
@@ -64,8 +64,15 @@ function errorTelemetry(err: unknown): Pick<ReasoningAttempt, "status" | "error"
   if (status !== undefined && status >= 400 && status < 500) {
     return { status, error: "invalid_request" };
   }
-  if (status !== undefined) return { status, error: "provider" };
-  return { error: "network" };
+  if (status !== undefined && status >= 500) return { status, error: "provider" };
+  return { ...(status ? { status } : {}), error: "internal" };
+}
+
+/** Request-dependent invalid output/input must not deny unrelated clients a healthy provider. */
+function affectsCircuit(err: unknown): boolean {
+  const { error, status } = errorTelemetry(err);
+  return error === "network" || error === "timeout" || error === "rate_limited" || error === "provider" ||
+    error === "invalid_request" && (status === 401 || status === 403 || status === 404);
 }
 
 /** Test hook for the hermetic memory store. Production state is cleared only by a real success. */
@@ -169,7 +176,7 @@ export class ResilientEngine implements ReasoningEngine {
         attempt: 1,
         startedAt,
         durationMs: Math.max(0, Date.now() - startedAt),
-        outcome: "failed",
+        outcome: err instanceof ReasoningInputLimitError ? "input-limited" : "failed",
         ...errorTelemetry(err),
       });
       throw err;
@@ -232,7 +239,7 @@ export class ResilientEngine implements ReasoningEngine {
           attempt,
           startedAt,
           durationMs: Math.max(0, Date.now() - startedAt),
-          outcome: "failed",
+          outcome: err instanceof ReasoningInputLimitError ? "input-limited" : "failed",
           ...errorTelemetry(err),
         });
         if (isTimeout(err) || !isTransient(err) || attempt === maxAttempts) break;
@@ -243,7 +250,7 @@ export class ResilientEngine implements ReasoningEngine {
     // With a real alternate available, one exhausted call is enough to route later work around
     // this tier. A single-provider deployment keeps the configurable threshold before it falls to
     // deterministic reasoning. Failure streaks survive half-open probes and grow the cooldown.
-    if (!(lastErr instanceof ReasoningInputLimitError)) await this.circuitStore.failed(key, {
+    if (affectsCircuit(lastErr)) await this.circuitStore.failed(key, {
       transient: isTransient(lastErr),
       now: Date.now(),
       failureThreshold:
@@ -256,7 +263,7 @@ export class ResilientEngine implements ReasoningEngine {
     });
     const failure = errorTelemetry(lastErr);
     console.warn(
-      `[keryx llm] ${label} fell back to ${this.fallback.name} after ${lastErr instanceof ReasoningInputLimitError ? "local input refusal" : "provider failure"}: ${failure.error}${failure.status === undefined ? "" : ` (HTTP ${failure.status})`}`,
+      `[keryx llm] ${label} fell back to ${this.fallback.name} after ${lastErr instanceof ReasoningInputLimitError ? "local input refusal" : "step failure"}: ${failure.error}${failure.status === undefined ? "" : ` (HTTP ${failure.status})`}`,
     );
     this.fell++;
     return this.runFallback(label, call);

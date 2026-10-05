@@ -16,6 +16,7 @@ import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./cove
 import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
 import { buildEvidenceReviewInput } from "./evidence-review-input";
 import type { Decision } from "../types";
+import { ReasoningOutputValidationError } from "./reasoning-engine";
 import type {
   AttributeInput,
   DecideInput,
@@ -38,10 +39,13 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   private readonly callLedger = new LlmCallLedger();
   /** Opt in only transports whose bounded reasoning review has been evaluated. */
   protected supportsDecisionBrief(): boolean { return false; }
+  /** Exact wire-prompt bounds before a supplier call is admitted to the accounting ledger. */
+  protected validateChatJsonInput(..._args: Parameters<JsonChatEngine["chatJson"]>): void {}
 
   get calls() { return this.callLedger.calls; }
 
   private measuredChatJson(...args: Parameters<JsonChatEngine["chatJson"]>) {
+    this.validateChatJsonInput(...args);
     return this.callLedger.track(this.name, () => this.chatJson(...args));
   }
 
@@ -72,7 +76,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
    * source, per gathered excerpt, per citation. A reply that hits the ceiling comes back as
    * truncated JSON, which parses to nothing — and "nothing" used to look exactly like a decision to
    * buy nothing. Implementations MUST throw when the model stops on the length limit rather than
-   * hand back a half-object; the resilience layer then retries and drops a tier, loudly.
+   * hand back a half-object; the resilience layer then drops a tier with output-validation telemetry.
    */
   protected abstract chatJson(
     model: string,
@@ -116,7 +120,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       ? out.claims.filter((claim): claim is string => typeof claim === "string" && claim.trim().length > 0 && claim.length <= 600).map((claim) => claim.trim())
       : [];
     const unique = [...new Set(claims)];
-    if (unique.length > MAX_RESEARCH_TARGETS) throw new Error(`Research planning exceeded ${MAX_RESEARCH_TARGETS} targets; requested scope must not be silently discarded`);
+    if (unique.length > MAX_RESEARCH_TARGETS) throw new ReasoningOutputValidationError(`Research planning exceeded ${MAX_RESEARCH_TARGETS} targets; requested scope must not be silently discarded`);
     return unique.length ? unique : [question];
   }
 
@@ -138,6 +142,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
             articleUrl: c.item.itemUrl,
             publishedAt: c.item.itemPublishedAt,
             contentVersion: c.item.contentVersion,
+            ...("requestedSource" in c.item ? { requestedSource: c.item.requestedSource } : {}),
           }
         : {}),
       ...(c.external
@@ -152,6 +157,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       "You are a frugal research agent deciding which paid sources to buy under a budget. " +
         "For EACH candidate choose action BUY (pay the toll, high value), CACHE (already cached & still useful, reuse free), or SKIP (not worth it). " +
         "Weigh expected value against price; prefer cheaper sufficient sources; avoid redundancy. Public web candidates are free original-page READ selections: legacy CACHE action selects a read, never claims a cache hit. Search snippets are unverified previews, not evidence. " +
+        "A requestedSource identifies an original URL the user asked to inspect, with unobserved contents. Judge its potential to answer the requested targets; it is not evidence or guaranteed relevance. Explain any SKIP of a requested original. " +
         "The subClaims list contains indexed research targets. For every BUY or CACHE, targets MUST contain at least one of their zero-based claimIndex integers " +
         "that the source's preview can help investigate (for example targets:[0,2]). Use only indexes from this request. " +
         "Explain the connection in the rationale. If no target is supported by the preview, choose SKIP with targets:[]. " +
@@ -179,20 +185,23 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     // behalf would silently switch the agent off, and every source would stop earning while the
     // trace still read like a deliberate decision. Fail instead: the resilience layer drops a tier.
     if (decisions.length === 0 && input.candidates.length > 0) {
-      throw new Error("decide returned no decisions for " + input.candidates.length + " candidates");
+      throw new ReasoningOutputValidationError("decide returned no decisions for " + input.candidates.length + " candidates");
     }
     return decisions
       .map((d) => {
-        if (!d || typeof d !== "object" || Array.isArray(d)) throw new Error("decide returned a malformed decision");
+        if (!d || typeof d !== "object" || Array.isArray(d)) throw new ReasoningOutputValidationError("decide returned a malformed decision");
         const c = byId.get(d.sourceId as string);
         if (!c) return null;
+        if (typeof d.action !== "string" || (d.rationale !== undefined && typeof d.rationale !== "string")) {
+          throw new ReasoningOutputValidationError("decide returned a malformed decision");
+        }
         const action = normalizeAction(d.action as string);
         if ((action === "BUY" || action === "CACHE") &&
           (!Array.isArray(d.targets) || d.targets.length === 0 || !d.targets.every((target: unknown) =>
             typeof target === "number" && Number.isInteger(target) && target >= 0 && target < input.subClaims.length))) {
-          // Retry/fallback happens before the orchestrator can submit any source payment.
+          // Request-local fallback happens before the orchestrator can submit any source payment.
           // Never fabricate target links or weaken the downward-only preview gate.
-          throw new Error("decide returned an actionable source without valid research targets");
+          throw new ReasoningOutputValidationError("decide returned an actionable source without valid research targets");
         }
         return {
           sourceId: c.id,
@@ -261,7 +270,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       }),
       this.budgetFor(input.subClaims.length + input.skippedSources.length),
     );
+    if (out.claims !== undefined && !Array.isArray(out.claims)) throw new ReasoningOutputValidationError("reevaluate returned malformed claims");
     const claims = (out.claims as ReevaluateOutput["claims"]) ?? [];
+    if (claims.some(claim => !claim || typeof claim !== "object" || Array.isArray(claim))) throw new ReasoningOutputValidationError("reevaluate returned a malformed claim");
     return {
       claims: claims.map((c) => ({
         claim: c.claim ?? "",
@@ -387,8 +398,11 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       }),
       this.budgetFor(input.used.length),
     );
+    if (out.attributions !== undefined && !Array.isArray(out.attributions)) throw new ReasoningOutputValidationError("attribute returned malformed attributions");
     const atts =
       (out.attributions as { sourceId: string; weight: number; rationale: string }[]) ?? [];
+    if (atts.some(attribution => !attribution || typeof attribution !== "object" || Array.isArray(attribution) ||
+      typeof attribution.weight !== "number" || !Number.isFinite(attribution.weight))) throw new ReasoningOutputValidationError("attribute returned a malformed attribution");
     const total = atts.reduce((s, a) => s + (a.weight || 0), 0) || 1;
     return atts.map((a) => ({
       sourceId: a.sourceId,
@@ -401,16 +415,22 @@ export abstract class JsonChatEngine implements ReasoningEngine {
 export function extractJson(text: string): Record<string, unknown> {
   // A valid JSON string can itself contain fenced source/code examples. Parse
   // the whole response first; only a surrounding fence is a transport wrapper.
-  try { return JSON.parse(text); } catch { /* inspect an outer wrapper below */ }
+  const object = (value: unknown): Record<string, unknown> => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new ReasoningOutputValidationError("Model response is not a JSON object");
+    return value as Record<string, unknown>;
+  };
+  let parsed: unknown;
+  try { parsed = JSON.parse(text); } catch { /* inspect an outer wrapper below */ }
+  if (parsed !== undefined) return object(parsed);
   const fenced = text.trim().match(/^```(?:json)?\s*([\s\S]*?)```$/);
   const raw = fenced ? fenced[1] : text;
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
-  if (start === -1 || end === -1) return {};
+  if (start === -1 || end === -1) throw new ReasoningOutputValidationError("Model response is not valid JSON");
   try {
-    return JSON.parse(raw.slice(start, end + 1));
+    return object(JSON.parse(raw.slice(start, end + 1)));
   } catch {
-    return {};
+    throw new ReasoningOutputValidationError("Model response is not a valid JSON object");
   }
 }
 

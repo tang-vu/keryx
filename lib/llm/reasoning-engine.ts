@@ -14,6 +14,22 @@ import type { Decision, SourceItemIdentity } from "../types";
 /** A local request bound, before contacting a supplier. It must not mark a provider unhealthy. */
 export class ReasoningInputLimitError extends Error {
   readonly status = 413;
+  constructor(message: string, readonly bounds?: ReasoningInputBounds) { super(message); }
+}
+
+export interface ReasoningInputBounds {
+  promptUtf8Bytes: number;
+  requestedOutputTokens: number;
+  /** Conservative byte-fallback token upper bound plus output allowance. */
+  maximumCombinedUnits: number;
+}
+
+/** A completed model response failed the bounded output/decision contract, not the network. */
+export class ReasoningOutputValidationError extends Error {}
+
+/** Only transport boundaries may label a statusless failure as network/timeout. */
+export class ReasoningTransportError extends Error {
+  constructor(readonly category: "network" | "timeout") { super(`Reasoning transport ${category}`); }
 }
 
 export type ReasoningStep =
@@ -36,11 +52,13 @@ export interface ReasoningAttempt {
   attempt: number;
   startedAt: number;
   durationMs: number;
-  outcome: "served" | "failed" | "circuit-open";
+  outcome: "served" | "failed" | "circuit-open" | "input-limited";
   /** Remaining shared cooldown/half-open lease when this attempt was skipped. */
   retryAfterMs?: number;
   status?: number;
-  error?: "timeout" | "rate_limited" | "provider" | "network" | "invalid_request";
+  error?: "timeout" | "rate_limited" | "provider" | "network" | "invalid_request" | "output_validation" | "input_limit" | "internal";
+  /** Present only for a proved local refusal; never contains prompt or provider response text. */
+  inputBounds?: ReasoningInputBounds;
 }
 
 /** Provider-reported token usage for one completed (or billable truncated) model response.

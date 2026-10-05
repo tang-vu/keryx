@@ -151,11 +151,11 @@ describe("testnet economics", () => {
     });
   });
 
-  it("does not invent provider cost for a circuit-open skip followed by local execution", () => {
+  it.each(["circuit-open", "input-limited"] as const)("does not invent provider cost for a %s skip followed by local execution", (outcome) => {
     const skipped = run("skipped", "treasury");
     skipped.llmUsage = [];
     skipped.llmCalls = [];
-    skipped.reasoningAttempts![0].outcome = "circuit-open";
+    skipped.reasoningAttempts![0].outcome = outcome;
     skipped.reasoningAttempts!.push({
       step: "synthesize", engine: "heuristic", tier: 1, attempt: 1,
       startedAt: 1, durationMs: 1, outcome: "served",

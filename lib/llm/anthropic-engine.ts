@@ -3,8 +3,10 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import { APIConnectionError, APIConnectionTimeoutError } from "@anthropic-ai/sdk/error";
 import { config } from "../config";
 import { extractJson, JsonChatEngine } from "./json-chat-engine";
+import { ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
 
 export class AnthropicEngine extends JsonChatEngine {
   readonly name = `llm:anthropic:${config.llmModel}`;
@@ -17,6 +19,7 @@ export class AnthropicEngine extends JsonChatEngine {
     user: string,
     maxTokens = 2048,
   ): Promise<Record<string, unknown>> {
+    const deadline = AbortSignal.timeout(config.llmTimeoutMs);
     const msg = await this.client.messages.create(
       {
         model,
@@ -24,8 +27,13 @@ export class AnthropicEngine extends JsonChatEngine {
         system,
         messages: [{ role: "user", content: user }],
       },
-      { signal: AbortSignal.timeout(config.llmTimeoutMs) },
-    );
+      { signal: deadline },
+    ).catch((error: unknown) => {
+      // The SDK maps an aborted supplied signal to APIUserAbortError; this signal is our deadline.
+      if (deadline.aborted || error instanceof APIConnectionTimeoutError) throw new ReasoningTransportError("timeout");
+      if (error instanceof APIConnectionError) throw new ReasoningTransportError("network");
+      throw error;
+    });
     const usage = msg.usage as typeof msg.usage & {
       cache_read_input_tokens?: number | null;
     };
@@ -38,7 +46,7 @@ export class AnthropicEngine extends JsonChatEngine {
     // Same rule as the OpenAI-compatible transport: a reply stopped by the token ceiling is
     // truncated JSON, and half an object must fail rather than read as an answer.
     if (msg.stop_reason === "max_tokens") {
-      const err = new Error(
+      const err = new ReasoningOutputValidationError(
         `LLM reply hit the ${maxTokens}-token ceiling before closing its JSON`,
       ) as Error & { status?: number };
       err.status = 503;

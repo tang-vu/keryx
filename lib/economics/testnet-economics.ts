@@ -66,7 +66,7 @@ export type EconomicsRunSample = Pick<
 function completeUsage(run: Partial<QueryRun>): boolean {
   if (!Array.isArray(run.reasoningAttempts) || !Array.isArray(run.llmUsage)) return false;
   const realAttempts = run.reasoningAttempts.filter(
-    (attempt) => attempt.engine !== "heuristic" && attempt.outcome !== "circuit-open",
+    (attempt) => attempt.engine !== "heuristic" && attempt.outcome !== "circuit-open" && attempt.outcome !== "input-limited",
   );
   if (realAttempts.some((attempt) => attempt.outcome !== "served")) return false;
   if (realAttempts.length === 0 && run.llmUsage.length === 0 && !run.llmCalls?.length) {

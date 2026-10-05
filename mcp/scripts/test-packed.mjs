@@ -45,6 +45,11 @@ try {
   await writeFile(mock, `
 const fs=require('node:fs'), crypto=require('node:crypto'), viem=require('viem');
 const counts={paid:0,rpc:0,recovery:0};
+const reasoning={engine:'llm:deepseek:deepseek-v4-flash',reasoningTelemetry:'recorded',
+ reasoningAttempts:[{step:'decompose',engine:'llm:deepseek:deepseek-v4-flash',tier:0,attempt:1,startedAt:1,durationMs:0,outcome:'served'},
+ {step:'decide',engine:'heuristic',tier:3,attempt:1,startedAt:2,durationMs:0,outcome:'served'}],
+ reasoningServing:[{step:'decompose',engines:['llm:deepseek:deepseek-v4-flash'],tiers:[0],degraded:false,heuristic:false},
+ {step:'decide',engines:['heuristic'],tiers:[3],degraded:true,heuristic:true}]};
 const mainnet=process.env.KERYX_NETWORK==='arc', chain=mainnet?5042:5042002, network='eip155:'+chain, gateway=mainnet?'0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE':'0x0077777d7EBA4688BDeF3E311b846F25870A19B9', balanceApi=mainnet?'https://gateway-api.circle.com/v1/balances':'https://gateway-api-testnet.circle.com/v1/balances';
 const save=()=>fs.writeFileSync(process.env.TEST_COUNTS,JSON.stringify(counts));
 const deny=()=>{throw new Error('Live network forbidden in package acceptance');};
@@ -64,7 +69,7 @@ globalThis.fetch=async(input,init)=>{
  if(url===balanceApi)return Response.json({token:'USDC',balances:[{depositor:body.sources[0].depositor,domain:26,balance:'1'}]});
  if(url.startsWith('https://synthetic.example/api/agent/ask?queryId=')){
   counts.recovery++;save();const queryId=new URL(url).searchParams.get('queryId');
-  return Response.json({queryId,status:'completed',answer:'Recovered original synthetic answer',citations:[],creatorsPaid:0,totalToCreators:0,feePaid:0.05});
+  return Response.json({queryId,status:'completed',answer:'Recovered original synthetic answer',citations:[],creatorsPaid:0,totalToCreators:0,feePaid:0.05,...reasoning});
  }
  if(url!=='https://synthetic.example/api/agent/ask')throw new Error('Unapproved synthetic destination');
  const encoded=init.headers['Payment-Signature'];
@@ -76,7 +81,7 @@ globalThis.fetch=async(input,init)=>{
  const queryId='a2a_'+crypto.createHash('sha256').update(['keryx-a2a-v2',network,a.from.toLowerCase(),a.to.toLowerCase(),a.nonce.toLowerCase()].join('|')).digest('hex');
  counts.paid++;save();
  if(process.env.TEST_MODE==='unknown')throw new Error('Synthetic paid-response loss');
- return Response.json({queryId,status:'completed',answer:'Synthetic cited answer',citations:[],creatorsPaid:0,totalToCreators:0,feePaid:0.05},{headers:{'PAYMENT-RESPONSE':Buffer.from(JSON.stringify({success:true,network,payer:a.from,transaction:'synthetic-circle-settlement'})).toString('base64')}});
+ return Response.json({queryId,status:'completed',answer:'Synthetic cited answer',citations:[],creatorsPaid:0,totalToCreators:0,feePaid:0.05,...reasoning},{headers:{'PAYMENT-RESPONSE':Buffer.from(JSON.stringify({success:true,network,payer:a.from,transaction:'synthetic-circle-settlement'})).toString('base64')}});
 };
 `);
   let selectedNetwork = "arcTestnet";
@@ -134,6 +139,11 @@ globalThis.fetch=async(input,init)=>{
   const happy = await session("happy", join(workspace, `${selectedNetwork}-happy-payment.json`));
   const status = await happy.call("keryx_wallet_status"); assert.match(status.content[0].text, /ready:    yes/);
   const answer = await happy.call("ask_keryx", { question: "Synthetic package research" }); assert(!answer.isError); assert.match(answer.content[0].text, /Synthetic cited answer/);
+  assert.match(answer.content[0].text, /decide: heuristic \(degraded\)/);
+  assert.equal(answer.structuredContent.reasoningTelemetry, "recorded");
+  assert.deepEqual(answer.structuredContent.reasoningServing.find(step => step.step === "decide"),
+    { step: "decide", engines: ["heuristic"], tiers: [3], degraded: true, heuristic: true });
+  assert.equal(answer.structuredContent.reasoningAttempts.find(attempt => attempt.step === "decide").engine, "heuristic");
   await happy.stop(); const happyCounts = JSON.parse(await readFile(happy.counts, "utf8")); assert.equal(happyCounts.paid, 1);
   const journal = join(workspace, `${selectedNetwork}-unknown-payment.json`), unknown = await session("unknown", journal);
   assert((await unknown.call("ask_keryx", { question: "Synthetic response-loss research" })).isError);
@@ -142,10 +152,11 @@ globalThis.fetch=async(input,init)=>{
   const unknownCounts = JSON.parse(await readFile(unknown.counts, "utf8")); assert.equal(unknownCounts.paid, 1);
   const recovery = await session("recovery", journal, false);
   const recovered = await recovery.call("keryx_recover"); assert(!recovered.isError); assert.match(recovered.content[0].text, /Recovered original synthetic answer/);
+  assert.match(recovered.content[0].text, /"reasoningTelemetry": "recorded"/);
   await recovery.stop(); const recoveryCounts = JSON.parse(await readFile(recovery.counts, "utf8")); assert.equal(recoveryCounts.paid, 0); assert.equal(recoveryCounts.recovery, 1);
   }
   console.log(JSON.stringify({ networks: ["arcTestnet", "arc"], package: installedPackage.name, version: installedPackage.version, node: process.version,
-    dependencies, cases: ["keyless initialize/tools/status without wallet creation", "funded caller status", "actual SDK signed purchase", "original response-loss barrier and no second debit", "new-process keyless GET-only recovery"], liveNetwork: false }));
+    dependencies, cases: ["keyless initialize/tools/status without wallet creation", "funded caller status", "actual SDK signed purchase", "recorded per-step heuristic tier", "original response-loss barrier and no second debit", "new-process keyless GET-only recovery"], liveNetwork: false }));
 } finally {
   const stopped = await Promise.allSettled([...children].map(stopChild));
   // Only the mkdtemp-created acceptance workspace is removed.
