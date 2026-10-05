@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
   // Budget: a caller may pass a Keryx `budget` extension (extra_body); coerce + clamp to the cap
   // for this tier. Missing/invalid → default budget, still clamped.
   const requested =
-    typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget > 0
+    typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget >= 0
       ? body.budget
       : config.defaultBudget;
   const budget = Math.min(requested, budgetCap);

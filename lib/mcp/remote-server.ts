@@ -74,7 +74,7 @@ export function createRemoteMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: "keryx",
-    version: "0.3.0",
+    version: "0.3.1",
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
@@ -90,9 +90,9 @@ export function createRemoteMcpServer(
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
         budget: z
           .number()
-          .positive()
+          .nonnegative()
           .optional()
-          .describe("Maximum creator-payment budget in USDC; clamped to the caller's tier."),
+          .describe("Maximum creator-payment budget in USDC; 0 allows free sources without purchases or rewards. Clamped to the caller's tier."),
         scholarly: z.boolean().optional().describe("Opt in to bounded Crossref/arXiv paper discovery; sends the question to those providers."),
         mode: z.enum(["quick", "deep"]).optional().describe("Research depth; default deep."),
         model: z
@@ -110,7 +110,7 @@ export function createRemoteMcpServer(
     async ({ question, budget, model, scholarly, mode }) => {
       try {
         const requested =
-          typeof budget === "number" && Number.isFinite(budget) && budget > 0
+          typeof budget === "number" && Number.isFinite(budget) && budget >= 0
             ? budget
             : config.defaultBudget;
         const modelChoice = resolveModelChoice(model);

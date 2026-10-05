@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
   }
 
   const coercedBudget =
-    typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget > 0
+    typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget >= 0
       ? body.budget
       : config.defaultBudget;
   const remainingGrantUsdc = grant
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
         Math.round(grant.cap * 1_000_000) - Math.round(grant.spent * 1_000_000),
       ) / 1_000_000
     : undefined;
-  if (useBrowserCoSign && (!remainingGrantUsdc || remainingGrantUsdc <= 0)) {
+  if (useBrowserCoSign && coercedBudget > 0 && (!remainingGrantUsdc || remainingGrantUsdc <= 0)) {
     return Response.json(
       {
         error: "session_budget_exhausted",

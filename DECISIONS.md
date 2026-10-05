@@ -5124,3 +5124,19 @@ Google authentication alone is not spending consent. Optional configuration and 
 acceptance gate activation. Research session custody remains same-browser storage;
 longer delegation is not an on-chain/XSS-proof policy wallet or portable recovery.
 See docs/research-budget-onboarding.md for setup, compatibility and surface roles.
+
+## Separate zero-source research from finite compute authority - 2026-10-05
+
+Preserve an explicit zero source budget end to end instead of replacing it with a positive
+default. Zero authorizes no source purchase, creator reward or browser signing scope; model
+and search costs remain separate. Shared hosted and local execution applies the same payment
+guard, while caller-funded checkout products retain their independently positive fee contracts.
+
+For the owner's new USD 1 / three-question acceptance, use a distinct strict dated v2 policy
+with exact public-web question hashes and atomic durable model/search/question reservations.
+Bind transport to the admitted execution context and retain failed, interrupted and unknown
+holds. Keep the old model-only policy unchanged and closed. Pause direct private inference
+and watchdog schedules during the round instead of claiming the public factory covers them.
+No automatic renewal, retry, refund, new custody or scheduler activation follows from this
+policy. Technical completion and useful complete answers are separate acceptance criteria.
+See docs/engineering/bounded-live-research-2026-10-05.md for scope and release gates.

@@ -360,15 +360,16 @@ export function useAskStream(opts?: AskStreamOpts) {
       signBudgetRef.current = new BrowserSignBudget(grantCap);
       if (!browserPaymentProfile().testnet) {
         const micros = Math.round(budget*1e6);
-        if (!Number.isSafeInteger(micros) || micros <= 0 || Math.abs(budget*1e6-micros) > 0.000001)
-          throw new Error("Question budget must be a positive integer amount of micro-USDC");
+        if (!Number.isSafeInteger(micros) || micros < 0 || Math.abs(budget*1e6-micros) > 0.000001)
+          throw new Error("Question budget must be a non-negative integer amount of micro-USDC");
         if (sessionId && questionCapUsdc !== undefined && (!Number.isFinite(questionCapUsdc) || questionCapUsdc <= 0 ||
           micros > Math.round(questionCapUsdc*1e6))) {
           setState({ ...INITIAL, status: "error", errorKind: "generic",
             error: "This question exceeds your signed per-question research maximum. Lower its budget or explicitly update your research budget." });
           return;
         }
-        questionBudgetRef.current = { id: crypto.randomUUID(), budgetMicroUsdc: String(micros) };
+        // A free-only question carries no signing authority, even if a session is connected.
+        questionBudgetRef.current = micros === 0 ? null : { id: crypto.randomUUID(), budgetMicroUsdc: String(micros) };
       }
       const controller = new AbortController();
       abortRef.current = controller;

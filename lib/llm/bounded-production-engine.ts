@@ -5,6 +5,8 @@ import { z } from "zod";
 import { FLASH_POLICY } from "../economics/provider-cost-policy";
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
 import type { ChatJsonOptions } from "./json-chat-engine";
+import { ResearchAllowance, RESEARCH_ALLOWANCE_REVIEW, validateResearchAllowancePolicy,
+  type ConfiguredResearchAllowance } from "../research/research-allowance";
 
 // A new date requires a fresh supplier-price review, never just a renewed environment value.
 const PRICE_CHECKED_ON = "2026-10-04";
@@ -84,7 +86,8 @@ export function configuredProductionModelAllowance() {
   if (hash(bytes) !== expected) return refuse("policy digest mismatch");
   let value: unknown;
   try { value = JSON.parse(bytes.toString("utf8")); } catch { return refuse("policy refused"); }
-  const policy = validatePolicy(value);
+  const policy = value && typeof value === "object" && "format" in value && value.format === "keryx-production-research-allowance-v2"
+    ? validateResearchAllowancePolicy(value) : validatePolicy(value);
   return { policy, digest: expected, file };
 }
 
@@ -97,10 +100,18 @@ export type ConfiguredProductionModelAllowance = NonNullable<ReturnType<typeof c
 export class ProductionModelAllowance {
   readonly reservePerCallMicroUsd: number;
   readonly slots: number;
+  private readonly research: ResearchAllowance | null;
 
   constructor(private readonly configured: ConfiguredProductionModelAllowance,
     private readonly flushDirectory: (directory: string) => void = syncDirectory) {
     const { policy } = configured;
+    if (policy.format === "keryx-production-research-allowance-v2") {
+      this.research = new ResearchAllowance(configured as ConfiguredResearchAllowance, flushDirectory);
+      this.reservePerCallMicroUsd = RESEARCH_ALLOWANCE_REVIEW.modelReserveMicroUsd;
+      this.slots = policy.maximumCalls;
+      return;
+    }
+    this.research = null;
     validatePolicy(policy);
     this.reservePerCallMicroUsd = Math.ceil(
       (policy.maximumInputBytes + FRAMING_TOKENS) * FLASH_POLICY.upperRates.inputUsdPerMillion +
@@ -123,6 +134,7 @@ export class ProductionModelAllowance {
   }
 
   reserve(system: string, user: string, maxTokens: number) {
+    if (this.research) return this.research.reserveModel(system, user, maxTokens);
     const { policy, digest, file } = this.configured;
     validatePolicy(policy);
     if (hash(readProtected(file)) !== digest) refuse("policy changed; retained holds preserved");

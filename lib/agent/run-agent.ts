@@ -14,6 +14,7 @@ import { requestedSourceReport } from "./requested-source-report";
 import { arxivDocumentId } from "../scholarly/arxiv-identity";
 import { searxngProvider } from "../web-research/search-provider";
 import { tavilyProvider } from "../web-research/tavily-provider";
+import { admitBoundedResearch, bindBoundedResearchAdmission } from "../research/research-allowance";
 import { ArticleReadError, articleFailureCode, gatheredArticle, readArticle } from "../web-research/article-reader";
 import { bodyIdentity, canonicalUrl } from "../web-research/url-identity";
 import { isPublicReferenceId } from "../public-references/catalog";
@@ -164,6 +165,21 @@ interface InternalAsset {
 }
 
 export async function* runAgent(
+  input: RunInput,
+  deps: AgentDeps,
+): AsyncGenerator<TraceStep, QueryRun, void> {
+  const queryId = input.queryId ?? crypto.randomUUID();
+  const effects = resolveResearchEffects(deps.db, deps.effects, deps.discoverExternal, queryId);
+  const admission = admitBoundedResearch({ question: input.question, queryId, origin: input.origin,
+    researchMode: input.researchMode, budget: input.budget, fundingOwner: input.fundingOwner,
+    privateScope: effects.scope.kind !== "public", paidScholarly: input.paidScholarly });
+  if (admission && (deps.webSearch || config.webSearchProvider !== "tavily" || !config.tavilyApiKey.trim()))
+    throw new Error("Bounded research allowance requires the fixed basic Tavily transport");
+  const generator = runAdmittedAgent({ ...input, queryId }, { ...deps, effects });
+  return yield* (admission ? bindBoundedResearchAdmission(admission, generator, input.signal) : generator);
+}
+
+async function* runAdmittedAgent(
   input: RunInput,
   deps: AgentDeps,
 ): AsyncGenerator<TraceStep, QueryRun, void> {
@@ -808,7 +824,7 @@ export async function* runAgent(
   // (real mode tops up from the funder once; offline is a no-op). Cached sources still earn
   // citation rewards, so fund only when an owned payable source will be used.
   let spendWalletReady = false;
-  if (buys.some((decision) =>
+  if (budget > 0 && buys.some((decision) =>
       (assetById.get(decision.assetId ?? decision.sourceId)?.priceUsdc ?? 0) > 0)) {
     try {
       const funded = await gateway.ensureFunded(budget);
@@ -900,6 +916,10 @@ export async function* runAgent(
       });
       yield emit("fetch", `Reused cached ${assetLabel} (free) — ${marker}`);
     } else {
+      if (budget === 0) {
+        yield emit("fetch", `SKIP ${assetLabel}: this delivery requires the payment gateway; the question authorizes 0 USDC and no payment attempt.`);
+        continue;
+      }
       yield emit(
         "fetch",
         `Paying $${asset.priceUsdc} toll to read ${assetLabel}${asset.offer ? ` (signed offer; list $${asset.listPriceUsdc})` : ""}…`,
@@ -1176,6 +1196,10 @@ export async function* runAgent(
         }
         // Funding errors have their own uncertainty boundary. They are never
         // interpreted as a creator payment record or permission to retry funding.
+        if (budget === 0) {
+          yield emit("reevaluate", `SKIP ${assetLabel}: no payment gateway delivery is authorized by a 0 USDC question.`);
+          continue;
+        }
         if (!spendWalletReady) {
           try {
             await gateway.ensureFunded(budget);

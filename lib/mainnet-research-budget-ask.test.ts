@@ -26,8 +26,8 @@ beforeEach(() => {
   mocks.getAgentDeps.mockResolvedValue({ engine: { name: "heuristic" }, gateway: { mode: "browser-cosign" }, db: { saveQueryRun: async () => {} } });
   mocks.runAgent.mockImplementation(() => (async function* () { return { id: "run", trace: [], answer: "Synthetic answer", payments: [] }; })());
 });
-function request() { return new NextRequest("https://keryx.cc/api/ask", { method: "POST", body: JSON.stringify({
-  question: "How do signed research budgets work?", sessionId: owner, budget: 0.5, browserAuthorizationProtocol: "durable-v1",
+function request(budget = 0.5) { return new NextRequest("https://keryx.cc/api/ask", { method: "POST", body: JSON.stringify({
+  question: "How do signed research budgets work?", sessionId: owner, budget, browserAuthorizationProtocol: "durable-v1",
 }) }); }
 it("limits API research to the signed per-question maximum before starting the agent", async () => {
   const response = await POST(request()); await response.text();
@@ -40,4 +40,10 @@ it("refuses unavailable or replaced consent without dispatching research", async
   mocks.readAuthority.mockResolvedValueOnce({ consent: { capMicroUsdc: "500001", expirySeconds: "1800000000" } });
   expect((await POST(request())).status).toBe(503);
   expect(mocks.getAgentDeps).not.toHaveBeenCalled(); expect(mocks.runAgent).not.toHaveBeenCalled();
+});
+
+it("preserves an explicit zero source budget instead of substituting the default", async () => {
+  const response = await POST(request(0)); await response.text();
+  expect(response.status).toBe(200);
+  expect(mocks.runAgent).toHaveBeenCalledWith(expect.objectContaining({ budget: 0 }), expect.anything());
 });

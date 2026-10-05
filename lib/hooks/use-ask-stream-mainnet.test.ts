@@ -54,5 +54,11 @@ it("keeps originating mainnet question scopes and suppresses obsolete header cal
     expect(scopes.map(scope => scope.budgetMicroUsdc)).toEqual(["10000", "20000"]);
     expect(scopes[0].id).not.toBe(scopes[1].id);
     expect(headers.map(header => header.reqId)).toEqual(["00000000-0000-4000-8000-000000000002"]);
+    await page.evaluate(() => { void (window as unknown as Fixture).ask("Free-only question", 0); });
+    await page.waitForFunction(() => (window as unknown as Fixture).streams.length === 3);
+    await page.evaluate(() => (window as unknown as Fixture).emit(2, "00000000-0000-4000-8000-000000000004"));
+    await page.waitForTimeout(100);
+    expect(await page.evaluate(() => ({ scopes: (window as unknown as Fixture).scopes.length,
+      headers: (window as unknown as Fixture).headers.length }))).toEqual({ scopes: 2, headers: 1 });
   } finally { await browser.close(); }
 }, 20000);

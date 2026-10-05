@@ -12,6 +12,7 @@ import { getGatewayAvailableAtomic } from "../gateway/gateway-balance";
 import type { BatchPayloadSigner } from "./server-x402-client";
 import { privateCreatorJournal } from "./private-creator-journal";
 import { assertArcRpcChain } from "../arc-rpc-attestation";
+import { configuredResearchAllowance } from "../research/research-allowance";
 
 function exactBudget(value: number) {
   const amount = Math.round(value * 1e6);
@@ -40,6 +41,7 @@ export async function assertMainnetHostedCustodyReady(db:KeryxDB,role:"public"|"
 }
 /** Pre-purchase custody/capacity check. Never signs, reserves, funds or transacts. */
 export async function assertMainnetHostedResearchReady(db:KeryxDB,budgetMicros:string,role:"public"|"private"="public") {
+  if (configuredResearchAllowance()) throw new Error("Paid research admission is paused during bounded browser acceptance; original records remain recoverable");
   if(!/^[1-9][0-9]{0,15}$/.test(budgetMicros) || BigInt(budgetMicros)>BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Hosted budget unavailable");
   const policy=await assertMainnetHostedCustodyReady(db,role),budget=BigInt(budgetMicros);
   if(budget>BigInt(policy.queryCapMicroUsdc)) throw new Error("Hosted operating configuration unavailable");

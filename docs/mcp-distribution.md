@@ -1,15 +1,21 @@
 # MCP package distribution
 
-The 0.4.5 candidate retains the single hosted `reasoning` contract and remote
-protocol 0.3.0 from v0.26.12, adding typed failure/input-limit categories and
-per-original scope/status. It uses a distinct package identity from 0.4.4.
-Verify exact-source archive, npm bytes/provenance and installer separately.
+The current source selects caller-funded MCP **0.4.5**, retaining the hosted
+`reasoning` contract and adding typed failure/input-limit categories and
+per-original scope/status. Its exact-source archive, npm bytes/provenance,
+Registry publication and installer remain separate readback gates.
 
-The October 5 v0.26.12 correction selected package 0.4.4 and added manual official
-MCP Registry publication with short-lived GitHub OIDC. The then-observed registry
-server0.2.0 pointed to npm0.1.1; that dated inventory is independent of npm/GitHub.
-The current source manifest selects 0.4.5. Registry publication/readback remain
-separate gates after its exact npm bytes are verified.
+October 5 public readback at `04:30:40.677Z` confirmed **0.4.4** on npm and in the
+official MCP Registry's exact/latest manifest. It corrects Monthly runtime guidance
+and forwards recorded reasoning metadata. Its npm bytes match the tarball in
+[v0.26.12](https://github.com/tang-vu/keryx/releases/tag/v0.26.12), source
+`a85bc1b6f75138ede9980d1123d5449a0da9693f`, SHA-256
+`74b3e2c564b4100fc3ac9e0d170096e77999b6db16da8f180c001d3f0f5a1f77`.
+The repository's manual release workflow succeeded using npm Trusted Publishing and
+short-lived GitHub OIDC namespace authentication. This supersedes the earlier stale
+server 0.2.0 / npm 0.1.1 catalog observation without rewriting historical packages.
+Hosted remote MCP independently advances to **0.3.1** in the app **0.26.16 candidate**
+to preserve zero source budgets; its exact deployed version remains a separate gate.
 
 The caller-funded stdio package is distributed separately from the hosted remote
 MCP endpoint. On October 4, 2026, public npm readback confirmed **0.4.3**, and

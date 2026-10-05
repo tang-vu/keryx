@@ -78,3 +78,16 @@ it("shows held capacity, clamps question requests to the signed maximum and make
     ]);
   } finally { await context.close(); }
 });
+
+it("can submit free-only research with an explicit zero source budget", async () => {
+  const { context, page } = await mount();
+  try {
+    await page.getByLabel("What do you want to know?").fill("Read public documentation only");
+    await page.getByText("Budget and model: $0.050000 USDC").click();
+    await page.getByLabel("Maximum budget in USDC").fill("0");
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    expect(await page.evaluate(() => (window as unknown as { actions: unknown[] }).actions)).toEqual([
+      { type: "ask", question: "Read public documentation only", budget: 0 },
+    ]);
+  } finally { await context.close(); }
+});

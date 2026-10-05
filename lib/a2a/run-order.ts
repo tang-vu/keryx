@@ -9,6 +9,7 @@ import {
 } from "./order";
 import { verifiedA2aResponseFromRun } from "./operator-resolution";
 import { exactA2aMicros } from "./amount-micros";
+import { configuredResearchAllowance } from "../research/research-allowance";
 import {
   isSupportedA2aResearchPackage,
   type A2aResearchPackage,
@@ -175,6 +176,9 @@ export async function runNextA2aOrder(
   workerId: string,
   options: A2aRunOptions = {},
 ): Promise<A2aWorkerOutcome | null> {
+  // Keep already-paid queued originals untouched until ordinary execution is restored.
+  // A finite web allowance cannot turn their confirmed debit into research_failed.
+  if (configuredResearchAllowance()) return null;
   const order = await db.claimNextA2aOrder(workerId, new Date().toISOString());
   if (!order) return null;
   try {

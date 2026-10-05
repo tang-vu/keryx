@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Preserve zero source budgets and bound browser acceptance (2026-10-05, v0.26.16 candidate)
+
+- Preserve an explicit zero source budget across web/SSE, OpenAI API and remote MCP;
+  withhold gateway delivery and signing authority for free-only research.
+- Add a separate protected, dated browser allowance for three exact questions, bounded
+  model plus basic search attempts and zero source payments. Failed/unknown holds remain
+  consumed; previous closed allowances stay closed.
+- Remote MCP advances to 0.3.1. Caller-funded MCP 0.4.5, Operator 0.4.6 and extension
+  0.1.1 retain their existing custody and distribution roles. Actual live usefulness,
+  schedule activation and deployed-source verification remain gates.
+  See [authority and acceptance](engineering/bounded-live-research-2026-10-05.md).
+
 ### Original scope, typed reasoning failures and release isolation (2026-10-05, v0.26.15 candidate)
 
 - Consider supplied original URLs independently of search; retain per-source skips,

@@ -56,7 +56,7 @@ function readSharedAsk(): {
   const p = new URLSearchParams(window.location.search);
   const q = p.get("q")?.trim().slice(0, MAX_SHARED_Q) || null;
   const b = parseFloat(p.get("budget") ?? "");
-  const budget = Number.isFinite(b) && b >= 0.01 && b <= 0.08 ? b : null;
+  const budget = Number.isFinite(b) && b >= 0 && b <= 0.08 ? b : null;
   // Follow-up link from a dispatch permalink: the server re-reads this run and anchors the
   // question to it. An unknown id degrades to a standalone ask server-side.
   const rawParent = p.get("parent")?.trim() ?? "";
@@ -218,10 +218,10 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
                 <label htmlFor="ask-budget" className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">Maximum budget</label>
                 <span className="font-display text-[25px] font-semibold tabular-nums text-seal">${effectiveBudget.toFixed(6)}</span>
               </div>
-              <input id="ask-budget" type="range" min={Math.min(0.01, maximumBudget)} max={maximumBudget} step={maximumBudget < 0.01 ? 0.000001 : 0.005} value={effectiveBudget}
+              <input id="ask-budget" type="range" min={0} max={maximumBudget} step={maximumBudget < 0.01 ? 0.000001 : 0.005} value={effectiveBudget}
                 disabled={disabled} onChange={(e) => setBudget(parseFloat(e.target.value))}
                 className="mt-2 w-full" aria-label="Maximum budget in USDC" />
-              <p className="mt-2 font-serif text-[13px] text-ink-2">The agent cannot spend more than this amount on one question.</p>
+              <p className="mt-2 font-serif text-[13px] text-ink-2">The agent cannot spend more than this amount on one question. Choose 0 for free sources without source purchases or creator rewards. Model and search costs remain separate.</p>
               {models.length > 1 && (
                 <label className="mt-3 flex flex-col gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">
                   AI model
