@@ -1,16 +1,20 @@
 import { canonicalUrl } from "./url-identity";
 import type { SearchProvider } from "./search-provider";
+import { reserveBoundedSearch } from "../research/research-allowance";
 
 /** Fixed vendor endpoint; secrets stay in the server header, never URLs or public errors. */
 export function tavilyProvider(apiKey: string): SearchProvider {
   if (!apiKey.trim()) throw new Error("Search provider is unconfigured");
   return { async search(query, signal) {
+    const boundedQuery = query.slice(0, 500);
+    // Other callers cannot consume the dated shared allowance without an admitted question.
+    reserveBoundedSearch(boundedQuery);
     const boundedSignal = AbortSignal.any([signal ?? new AbortController().signal, AbortSignal.timeout(6000)]);
     try {
       const response = await fetch("https://api.tavily.com/search", {
         method: "POST", redirect: "error", signal: boundedSignal,
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ query: query.slice(0, 500), search_depth: "basic", topic: "general",
+        body: JSON.stringify({ query: boundedQuery, search_depth: "basic", topic: "general",
           auto_parameters: false, include_answer: false, include_raw_content: false, include_images: false, max_results: 10 }),
       });
       if (!response.ok) { await response.body?.cancel(); throw new Error("Search unavailable"); }

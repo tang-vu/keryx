@@ -797,6 +797,20 @@ it("continues past partial or explicitly incomplete answers, then stops before a
 // ── tests ───────────────────────────────────────────────────────────────────
 
 describe("runAgent — money-safety invariants", () => {
+  it("keeps zero source authority even when a model proposes paid and zero-priced gateway deliveries", async () => {
+    const gateway = fakeGateway();
+    const funding = vi.spyOn(gateway, "ensureFunded");
+    const d = deps([makeSource({ id: "paid" }), makeSource({ id: "legacy-free", fetchPrice: 0 })], fakeEngine(), gateway);
+    const { run } = await drive({ question: "Read what is available without payment", budget: 0, origin: "web", researchMode: "quick" }, d);
+    expect(run.budget).toBe(0);
+    expect(funding).not.toHaveBeenCalled();
+    expect(gateway.fetchCalls).toEqual([]);
+    expect(gateway.citationCalls).toEqual([]);
+    expect(d.db.payments).toEqual([]);
+    expect(run.paymentAttempts).toBe(0);
+    expect(run.totalSpent).toBe(0);
+  });
+
   it("bounds Quick mode to two claim-targeted reads and records the preview plan", async () => {
     const sources = ["a", "b", "c"].map((id) => makeSource({ id, fetchPrice: 0.002 }));
     const engine = fakeEngine({

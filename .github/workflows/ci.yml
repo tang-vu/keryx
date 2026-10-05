@@ -188,6 +188,9 @@ jobs:
       - name: Empty evidence (actual minified production orchestrator, no network)
         run: npm run test:built-empty-evidence
 
+      - name: Bounded research allowance (actual minified factory and orchestrator, synthetic providers)
+        run: npm run test:built-research-allowance
+
       - name: Bounded document readers (assembled production trace, no network)
         run: node scripts/test-web-readers-traced.mjs
 

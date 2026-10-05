@@ -1,23 +1,34 @@
 # Supported-surface release parity
 
+## Bounded browser acceptance, October 5, 2026
+
+App **0.26.16 candidate** and hosted remote MCP **0.3.1** preserve explicit zero-source
+budgets in web, SSE, OpenAI API and remote MCP. Shared execution blocks payment-gateway
+deliveries/rewards at zero. Bots and hosted clients inherit the shared guard. The optional
+finite compute allowance admits only three exact public-web Quick questions; it grants
+no trial authority to CLI, bots, A2A, remote/stdio MCP, local Operator or private jobs.
+Caller-funded MCP **0.4.5**, Operator **0.4.6** and extension **0.1.1** keep their existing
+custody, paid-checkout and browser-handoff contracts, with unchanged authored packages.
+See [implementation and separate acceptance gates](engineering/bounded-live-research-2026-10-05.md).
+
 ## Mainnet consistency, October 5, 2026
 
-Application **0.26.12**, MCP **0.4.4** and desktop **0.4.5** are coordinated
-candidates for corrected runtime metadata, supplied-source discovery, explicit
+Application **0.26.12**, MCP **0.4.4** and desktop **0.4.5** were coordinated in
+[PR 166](https://github.com/tang-vu/keryx/pull/166) for corrected runtime metadata, supplied-source discovery, explicit
 monitoring observations, native schema-guard performance and creator/desktop recovery UX.
 Remote MCP exposes Monthly metadata and recorded source-selection/fallback telemetry
 with protocol 0.3.0. Shared hosted API/A2A/OpenAI results and stdio forwarding expose
 the additive telemetry; extension 0.1.1 and bots retain their thin client roles.
 Slack/OpenAI distinguish planned rewards and original settlement modes. Buyer CLI
 and private research preserve their selected-profile and external-effect gates.
-These source identities require CI,
-packaged desktop acceptance, actual npm/assets and deployment readback before
-publication is claimed. [Scope and remaining gates](engineering/mainnet-consistency-2026-10-05.md).
+Exact-source CI and packaged desktop acceptance passed. October 5 public readback
+verified the six v0.26.12 assets, matching npm bytes, Registry exact/latest 0.4.4 and
+deployed health at `a85bc1b6`. [Current evidence](mainnet-status.md) and
+[scope and remaining gates](engineering/mainnet-consistency-2026-10-05.md).
 
-The official MCP Registry's October 5 readback still points to npm 0.1.1 under
-server 0.2.0. The 0.4.4 source manifest and manual publication workflow must update
-that catalog only after npm publication/readback; hosted MCP protocol, npm bytes and
-registry metadata are distinct release evidence.
+The earlier stale official MCP Registry observation is superseded by the verified
+0.4.4 publication. Hosted MCP protocol, npm bytes and registry metadata remain
+distinct release evidence.
 
 ## Source context correction, October 5, 2026
 

@@ -1,5 +1,21 @@
 # Current Arc mainnet deployment
 
+October 5 release observation: [PR 166](https://github.com/tang-vu/keryx/pull/166)
+was merged and app **0.26.12**, commit `a85bc1b6f75138ede9980d1123d5449a0da9693f`,
+was deployed. Public health at `2026-10-05T04:12:43.013Z` reported operational,
+database ok, Arc and real settlement mode at `a85bc1b6`. This establishes service
+availability and release identity, not a new settled payment or complete usefulness.
+Steady public controls retained brief0, the old closed allowance/journal, held schedules
+and unchanged custody; the previously active private worker was restored.
+
+Public distribution readback at `2026-10-05T04:30:40.677Z` verified all six assets in
+[v0.26.12](https://github.com/tang-vu/keryx/releases/tag/v0.26.12), Operator **0.4.5**
+with source/embedded commit `a85bc1b`, public npm **keryx-mcp 0.4.4** with bytes equal
+to the GitHub tarball, and official MCP Registry exact/latest **0.4.4**. The MCP tarball
+SHA-256 is `74b3e2c564b4100fc3ac9e0d170096e77999b6db16da8f180c001d3f0f5a1f77`.
+Subsequent main commits and the **0.26.16 / remote MCP 0.3.1 candidate** have their own
+deployment gates; recheck health before treating any source version as live.
+
 Updated October 4, 2026. Keryx production at [keryx.cc](https://keryx.cc) is on
 **Arc mainnet**. The owner confirmed the launch, and a read-only
 [/api/health](https://keryx.cc/api/health) observation at
