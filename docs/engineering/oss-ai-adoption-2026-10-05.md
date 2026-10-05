@@ -59,11 +59,11 @@ closed evaluations and disabled decision briefs remain closed.
 | Surface | Applicability |
 | --- | --- |
 | Web/SSE and browser/API research | Use the shared JSON reasoning engine; receive the corrected decision context. Request/response and signing contracts are unchanged. |
-| Hosted A2A and private research workers | Use the same engine when their configured provider inherits `JsonChatEngine`; preserve existing disclosure, caps and journals. |
+| Hosted A2A and private research workers | Use the same engine when their configured provider inherits `JsonChatEngine`. Private effects intentionally supply no shared historical memory; this update does not activate it. Preserve disclosure, caps and journals. |
 | Direct `ask`/demo CLI | Uses the shared engine for real JSON providers. Explicit offline heuristic reasoning does not use this prompt. |
 | Remote MCP, stdio MCP and caller-funded buyer CLI | Delegate research to hosted endpoints. No client bundle/protocol changes or package republishing required for this fix. |
 | Windows desktop/Operator | Task preparation, inspection and saved results keep their current local engine; research handed to the service receives the hosted fix. No installer byte changes required. |
-| Browser extension, Telegram and Discord adapters | Existing server-backed research uses the shared fix; no adapter contract change. |
+| Browser extension, Telegram, Discord and Slack adapters | Existing server-backed research uses the shared fix; no adapter contract change. |
 | Repository development agents | New `.agents/skills/keryx-oss-adoption` is discoverable in supporting agents; no runtime skill loader, arbitrary script runner or autonomous scheduler is introduced. |
 
 Acceptance: regression fails before/passes after; adjacent engine, memory and
