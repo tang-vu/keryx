@@ -153,7 +153,7 @@ export default function PrivacyPage() {
             token and signing encryption key in memory. During the redirect, short-lived
             device credentials and login state are saved in this tab&apos;s session storage.
             The Circle SDK also saves OAuth state, nonce and provider entries in local storage.
-            The continuation is valid for ten minutes; returning to complete the flow removes
+            The Keryx continuation is valid for five minutes; returning to complete the flow removes
             its continuation and matching SDK entries. Abandoning the redirect can leave
             expired login data in browser storage. The Google callback token is removed from
             the page URL after the return flow. A public wallet identity is remembered locally and checked against a current

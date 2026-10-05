@@ -5226,3 +5226,17 @@ payment boundaries while allowing the in-flight attempt and its truthful pending
 or settled receipt to finish recording. Cancellation before any boundary creates
 no completed dispatch. Existing spend caps, custody, nonce and financial evidence
 rules remain authoritative; the closed live allowance is not reopened.
+
+## Align Google continuation with durable authentication limits - 2026-10-05
+
+Direct mainnet onboarding exposed a ten-minute Circle continuation that violated
+the existing SQLite auth-challenge ceiling of five minutes, returning 503 before
+OAuth began. Reuse the shared five-minute authentication policy for server
+issuance, cookie expiry and browser continuation admission. Preserve the sealed
+storage schema and single-use consumption rather than widen durable authority.
+Real-schema route coverage must exercise issuance, exact expiry and replay.
+
+Expiry requires an explicit fresh login; completed Circle initialization can be
+resolved as the same canonical wallet on that attempt. No automatic signing or
+initialization retry, challenge renewal, budget/custody change or funding follows.
+The continuation window is distinct from vendor token and Keryx session lifetimes.
