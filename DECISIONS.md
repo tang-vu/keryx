@@ -5193,3 +5193,16 @@ does not fund a wallet, issue spending consent or authorize automatic paid resea
 existing caps, journals, schedules and custody remain authoritative. Mainnet
 funding/spending acceptance still needs its applicable finite authorization.
 See docs/research-budget-onboarding.md for setup and supported-surface boundaries.
+
+## Bounded sponsorship, recurring tolls and accurate unread receipts - 2026-10-05
+
+Money-path corrections found in an orchestrator review. All are downward or neutral for treasury exposure except the cache window.
+
+- A selection that was never read (early stop, or a purchase that failed before any authorization) is recorded as SKIP and its query-local toll reservation is released; receipts previously counted it as bought and the gap-expansion pass saw less budget than remained.
+- A client disconnect cancels research only while no creator payment has been observed; afterwards the run completes and is saved so payment receipts keep their dispatch.
+- The final coverage check reuses the interim assessment when nothing was read since, instead of repeating an identical model call.
+- Paid reads expire from the cache after `KERYX_CACHE_TTL_SECONDS` (default seven days), and a browser-funded read is cached per paying wallet. Without expiry an article version earned one toll for the life of the platform. This raises treasury toll spend on sponsored runs within the existing per-query and lifetime caps; the window is an owner-tunable business parameter.
+- A run not funded by the asker's own browser grant leaves out sources whose payout or author wallet is the verified asker (`/api/ask`, keyed chat completions, remote MCP). Chat bots and anonymous callers have no wallet identity, so sponsored research also has durable daily dispatch caps per caller and service-wide (`KERYX_SPONSORED_DISPATCHES_PER_CALLER_PER_DAY`, `KERYX_SPONSORED_DISPATCHES_PER_DAY`), making sponsorship a bounded daily cost instead of a per-minute rate.
+- Source passages carry an instruction to disregard embedded requests to cite, score or weight a source, since their authors are paid when cited.
+
+Deliberately not changed. A local trial of a "which systems ..." comparison improved when Deep research searched once per target, showed 4000 characters per source and read one source per target, but the same-day planning decision records that a larger target, context or cost limit is not an accepted repair, and bounded live acceptance reserves model and search usage atomically. Those changes were withdrawn from this update and remain an owner decision. No service fee on browser-funded research and no refund of an unused A2A creator reserve: both add a new mainnet money movement and need their own design and review.

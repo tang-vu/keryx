@@ -13,6 +13,18 @@
 - Preserve the closed v0.26.17 result of 0/3 useful and all allowance journals;
   useful-client/settlement/export gates remain open. See [scope and validation](engineering/source-selection-2026-10-05.md).
 
+## October 5, 2026 — Bounded sponsorship, recurring tolls and accurate unread receipts
+
+- Receipts record a selection that was never read as SKIP and release its toll
+  reservation. A client disconnect after a creator payment no longer discards the
+  dispatch. The final coverage check reuses an identical interim assessment.
+- Paid reads expire from the cache after `KERYX_CACHE_TTL_SECONDS` (default 7 days)
+  and browser-funded reads are cached per paying wallet.
+- A run the asker does not fund leaves out sources that pay the asker's verified
+  wallet. Sponsored research has daily dispatch caps per caller and service-wide.
+- No change to planning, context, attention or search limits, answer delivery,
+  fees or custody. See `DECISIONS.md`.
+
 ### Public Google onboarding policies (2026-10-05, v0.26.18 candidate)
 
 - Publish a linked terms page covering research, content rights, visible prices,

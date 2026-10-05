@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
   // ── Non-streaming: run to completion, return one ChatCompletion object. ──
   if (!body.stream) {
     try {
-      const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep" });
+      const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep", ...(keyIdentity ? { asker: keyIdentity.walletAddress } : {}) });
       return Response.json(buildCompletion(run, modelName), { headers: CORS });
     } catch (error) {
       if (!(error instanceof ResearchPlanningError) && !(error instanceof ResearchSelectionError)) throw error;
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
         // Stream each trace step as an o1-style reasoning delta. Clients that don't support
         // reasoning_content ignore it and still receive the answer content below.
         const run = await collectRun(
-          { question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep" },
+          { question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep", ...(keyIdentity ? { asker: keyIdentity.walletAddress } : {}) },
           { onStep: (s) => send(buildChunk(id, modelName, { reasoning_content: traceLine(s) })) },
         );
         send(buildChunk(id, modelName, { content: buildAnswerContent(run) }));

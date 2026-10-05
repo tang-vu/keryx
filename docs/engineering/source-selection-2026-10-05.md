@@ -84,6 +84,13 @@ and payment-history behavior; a diagnostic never converts them into completion.
 No new financial/storage schema, funding, schedules or custody is required.
 Distribution identities and deployed commit require separate readback.
 
+The candidate also integrates separately merged [PR #173](https://github.com/tang-vu/keryx/pull/173),
+which bounds daily sponsorship, expires paid cache reads, excludes the asking
+wallet's sources from sponsored runs and retains dispatches after observed
+creator payments. Its planning/context/attention/search expansion trial was
+withdrawn. This source-selection repair preserves those accepted behaviors;
+the combined runtime requires its own CI/review and deployed-source verification.
+
 Local candidate validation passed 218 focused tests across selection/parser,
 resilience, orchestrator and caller surfaces; both TypeScript graphs, production
 build and lint passed (five existing warnings). The complete hermetic research
@@ -93,6 +100,13 @@ inputs and Operator helper's 46, renderer and bridge inputs remain unchanged
 against `2a2ba75e`; renderer/bridge graph inspection externalized Tauri package
 imports. Exact committed-head CI/review, deployment and public package/installer
 readback remain release gates.
+
+After integrating PR #173, 196 focused agent/cache/admission/economics/surface
+tests and both TypeScript graphs plus a fresh production build passed. Three
+former CI expectations of selection fallback were replaced with terminal
+refusal/usage checks while preserving generic non-selection fallback coverage;
+the additional two-file set passed 33 tests. The original failing CI evidence
+remains retained rather than being reclassified as a passing run.
 
 Useful supported comparisons/checklists, actual ordinary-client exports,
 independent legitimate Arc settlement and user evidence remain open under

@@ -212,7 +212,16 @@ export async function POST(req: NextRequest) {
   // AbortController tied to the client connection so sign-request promises are
   // cancelled when the browser disconnects mid-run.
   const abort = new AbortController();
-  req.signal.addEventListener("abort", () => abort.abort());
+  // The agent's own cancellation. A disconnect cancels research only while nothing has been paid:
+  // once a creator payment exists, the run finishes and is saved so the receipts keep their
+  // dispatch. Browser signing still stops with the connection (`abort`), which the agent treats as
+  // a failed purchase and answers from what it already read.
+  const agentAbort = new AbortController();
+  let paymentObserved = false;
+  req.signal.addEventListener("abort", () => {
+    abort.abort();
+    if (!paymentObserved) agentAbort.abort();
+  });
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -275,8 +284,11 @@ export async function POST(req: NextRequest) {
         const gen = runAgent(
           {
             question: askQuestion,
-            signal: abort.signal,
+            signal: agentAbort.signal,
             budget: askBudget,
+            // Verified SIWE wallet only. Scopes the paid-read cache to the payer and keeps a
+            // treasury-funded run from buying or rewarding the asker's own sources.
+            asker,
             researchMode,
             scholarly: body.scholarly === true,
             paidScholarly: body.paidScholarly === true,
@@ -288,8 +300,9 @@ export async function POST(req: NextRequest) {
         let res = await gen.next();
         while (!res.done) {
           send("step", res.value);
+          if (isPaymentStep(res.value.detail)) paymentObserved = true;
           res = await gen.next();
-          if (abort.signal.aborted) break;
+          if (agentAbort.signal.aborted) break;
         }
         // When the generator is done (res.done === true), res.value is QueryRun.
         // If we broke early due to abort, skip saving — the run is incomplete.
@@ -340,4 +353,11 @@ export async function POST(req: NextRequest) {
       "X-Accel-Buffering": "no",
     },
   });
+}
+
+/** Trace steps that carry a creator payment record (settled, pending or simulated). */
+function isPaymentStep(detail: unknown): boolean {
+  return typeof detail === "object" && detail !== null &&
+    typeof (detail as { amountUsdc?: unknown }).amountUsdc === "number" &&
+    typeof (detail as { kind?: unknown }).kind === "string";
 }

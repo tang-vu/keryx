@@ -89,7 +89,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
    * source, per gathered excerpt, per citation. A reply that hits the ceiling comes back as
    * truncated JSON, which parses to nothing — and "nothing" used to look exactly like a decision to
    * buy nothing. Implementations MUST throw when the model stops on the length limit rather than
-   * hand back a half-object; the resilience layer then drops a tier with output-validation telemetry.
+   * hand back a half-object. Planning and selection classify this as a terminal local refusal;
+   * other stages retain their existing fallback behavior and output-validation telemetry.
    */
   protected abstract chatJson(
     model: string,
