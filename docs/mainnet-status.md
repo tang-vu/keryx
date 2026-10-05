@@ -7,6 +7,16 @@ Updated October 4, 2026. Keryx production at [keryx.cc](https://keryx.cc) is on
 settlement mode `real`, and deployed commit `1297d43`. This is a dated deployment
 observation; recheck health for the current release.
 
+## October 5 reliability candidate
+
+Application 0.26.12, stdio MCP 0.4.4 and Operator desktop 0.4.5 coordinate
+[the open-issue repairs](engineering/issue-followups-2026-10-05.md). They require
+exact-source CI/review, separate accepted package publication and deployed-health
+readback. The dated observations below remain historical. Remote MCP protocol
+0.2.0 and extension 0.1.1 retain their compatible roles. This candidate does not
+reopen paid evaluation, clear durable circuits, activate richer briefs or admit
+immutable production cutover.
+
 ## Network and public contracts
 
 The implementation source of truth is [the canonical network profile](../lib/arc-network-profile.ts).

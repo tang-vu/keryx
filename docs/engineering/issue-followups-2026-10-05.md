@@ -57,11 +57,31 @@ second readiness TTL, eight-second authenticated transport deadline, full origin
 snapshot comparison, replay and custody checks. Fixture orchestration must model
 the observed races without putting an entire research run inside a timed API call.
 
+The unchanged baseline inspection failed at publication after its token reached
+5,006/5,072 ms; its refusal was correct. Keyless inspection now consumes immutable
+evidence at validated token issuance, then reloads and compares its complete
+original operation, namespaces and all four reservation slots before the final
+freshness check. Retained-token consumers still perform the full unseal reload.
+Held descriptor/path and canonical manifest bytes remain checked; an identical
+manifest is no longer reparsed redundantly. Native post-issuance drift must refuse.
+
+The browser baseline aborted the grant challenge at 8,005 ms because the fixture
+put concurrent research inside that timed HTTP call. The fixture now completes
+that research at its synthetic wallet boundary and retains the captured earlier
+credit observation. Every journey has fresh custody, storage and browser state;
+only fixed compiled fixture bytes are cached. Both cap proposals, clipping, one
+owner consent, original signing and settlement assertions remain required. Windows
+CI exercises all six variants under the original transport and case deadlines.
+
 The [immutable staging tools](../immutable-release-staging.md) prepare isolated
 source/artifact evidence only. Current reviewed maintenance deployment remains
 authoritative. Synthetic handover timing is not an accepted real artifact cohort,
 storage rollback proof or production availability target. #164 remains open through
 isolated real-artifact rehearsal and reviewed ordinary-release measurement.
+
+Read-only production inspection found no retained lines correlated with the
+original S10 query/call identifiers. Generic historical fallback categories cannot
+establish that exception's cause. Preserve this distinction when updating #158.
 
 ## Surface audit and release gates
 

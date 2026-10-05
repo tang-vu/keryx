@@ -5052,3 +5052,13 @@ Immutable source/artifact staging is independent preparation, not production
 admission. Keep the reviewed early writer drain until clean immutable role bindings,
 economic compatibility/rollback, off-box evidence and measured no-spend plus ordinary
 production rollout pass. Synthetic process timing establishes only that fixture.
+
+Keyless funding inspection can consume immutable evidence at validated readiness
+issuance when it subsequently reloads and compares its full assembled originals
+and performs a final freshness check. A retained-token consumer must still unseal
+against a fresh backend snapshot. Redundant manifest reparsing is not an authority
+check when held path/descriptor, exact canonical bytes and native backend binding
+are already verified. Preserve the five-second TTL and every custody/replay guard.
+Browser fixtures model concurrent work at the synthetic wallet boundary, outside
+the production transport deadline, with fresh state for each journey and unchanged
+assertions. Windows timing failures do not justify weakening the deployed limits.
