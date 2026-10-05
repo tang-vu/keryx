@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Source-selection isolation and failure diagnostics (2026-10-05, v0.26.19 candidate)
+### Source-selection isolation and failure diagnostics (2026-10-05, v0.26.20 candidate)
 
 - Give the selector explicit source IDs and zero-based allowed target indexes.
   Withhold invalid or duplicate candidate proposals while independently valid

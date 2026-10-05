@@ -1,6 +1,6 @@
 # MCP package distribution
 
-The **0.26.19 source-selection candidate** adds hosted request-local diagnostic
+The **0.26.20 source-selection candidate** adds hosted request-local diagnostic
 text on terminal `isError` results; remote protocol stays **0.3.1**. Its actual
 stdio runtime graph retains all 31 canonical Git input blobs from 0.26.18, so
 caller-funded package **0.4.5** needs no new npm identity. The Operator helper's

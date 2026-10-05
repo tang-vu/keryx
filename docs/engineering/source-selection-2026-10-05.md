@@ -107,6 +107,11 @@ Shared agent/adapters cover web/API/MCP/CLI/bots; disconnect retention specifica
 belongs to the web SSE connection, including embed. Custody, spend limits, nonce
 authority, source-owned payout authority and schema remain unchanged.
 
+The combined candidate also retains separately merged PR #175's shared five-minute
+Google authentication continuation fix. Application version advances to 0.26.20
+without changing its vendor/storage authentication policy. Its separate deployment
+must restore before this release starts its own serialized maintenance.
+
 Local candidate validation passed 218 focused tests across selection/parser,
 resilience, orchestrator and caller surfaces; both TypeScript graphs, production
 build and lint passed (five existing warnings). The complete hermetic research
