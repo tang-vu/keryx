@@ -17,6 +17,18 @@
   data. No source import, auth/schema/custody change or payment allowance.
   See [scope and acceptance](engineering/ledger-sources-2026-10-05.md).
 
+### Deep research searches every target (2026-10-05)
+
+- Deep research searches the question and every research target together (up to nine
+  queries) and shares the candidate cap between them; it may read one source per
+  target unless the caller pinned its limits. Quick research, the eight-target limit,
+  the 2,000-character source context and A2A package limits are unchanged.
+- For an open "which items ..." comparison, planning names up to six specific
+  candidates to verify instead of only generic targets.
+- One recorded local comparison read seven pages for seven named targets instead of
+  three pages for three generic targets. Delivered evidence stayed thin and
+  Low-confidence; see `DECISIONS.md` for the measured limits and added search cost.
+
 ### Source-selection isolation and failure diagnostics (2026-10-05, v0.26.20 candidate)
 
 - Give the selector explicit source IDs and zero-based allowed target indexes.
