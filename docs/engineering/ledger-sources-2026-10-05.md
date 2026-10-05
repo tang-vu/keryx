@@ -12,9 +12,17 @@ longer repeat on each question. One compact proof panel retains settled-only tot
 pending/failed attempts, payments, earnings and cash-outs appear when present.
 Original networks and full payment evidence remain inspectable.
 
-Sources presents retained public feeds before creator listings, including unverified
-entries. Counts describe retained public references, creator listings and feed-item
-snapshots separately. Public cards show publisher/domain links, topics, article
+Sources first presents original documents cited in recent public answers, then
+retained public feeds and creator listings, including unverified entries. Citation
+history shows up to 40 distinct public documents from the latest 50 public question
+records, with original URLs, titles, recorded read scope and answer permalinks.
+Private research results use a separate store and are never read by this view.
+Private IDs, synthetic citations and unsafe links are excluded. No content bodies,
+questions, wallets, allocation rationale or reward amounts enter these history cards.
+
+Counts describe bounded citation history, retained public references, creator listings and feed-item
+snapshots separately. Empty feed/creator sections are omitted when other real sources
+are available. Public cards show publisher/domain links, topics, article
 titles, publisher-supplied dates, full-text/excerpt/abstract/metadata scope and
 collection timestamps. These snapshots do not prove that every original article
 was fetched, the publisher claimed it, or the content is correct. Broad-web
@@ -51,11 +59,14 @@ or settlement.
 
 Focused tests cover independent catalog/earnings outages, unknown earnings,
 unverified visibility, inactive exclusion, failed claim inspection, legacy flags,
-claim freshness and safe external links. Hermetic Chromium checks exercise actual
+claim freshness, exact creator/source binding and safe external links. History tests
+cover private/synthetic/paid exclusion, metadata-only output, newest URL deduplication,
+bounds and read failures. Hermetic Chromium checks exercise actual
 presentation components at 320, 768 and 1440 pixels on both supported profile labels:
 zero settlements, independent/malformed metrics failure, retry, dated stale reads,
 pending/failed records, expandable payment evidence, unverified listings, feed details
-and partial catalog failure. All new fixture HTTP is intercepted and read-only.
+and partial catalog failure, including citation history with empty feed/creator
+collections and history outage with other sources available. All new fixture HTTP is intercepted and read-only.
 The built research UX suite also covers hidden-empty tickers.
 
 TypeScript (both graphs), lint, production build, required CI, independent review,

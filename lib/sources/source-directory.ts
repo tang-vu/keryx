@@ -4,6 +4,7 @@ import type { Source } from "../types";
 import { sourceId as registrySourceId } from "../registry/registry-client";
 import { canonicalSourceUrl, claimControlIsFresh, sourceClaimSchema, type SourceClaim } from "./public-source-claim";
 import { sourceClaimPolicyForSource } from "./public-source-claim-service";
+import { loadCitedSourceHistory, type CitedSourceHistoryEntry } from "./cited-source-history";
 
 export interface RegistryEntry {
   source: Source;
@@ -17,6 +18,7 @@ export interface RegistryEntry {
 export interface SourceDirectory {
   registry: { status: "ready" | "unavailable"; entries: RegistryEntry[] };
   publicReferences: { status: "ready" | "unavailable"; entries: PublicReference[] };
+  citedSources: { status: "ready" | "unavailable"; entries: CitedSourceHistoryEntry[]; runCount: number };
   earningsStatus: "ready" | "unavailable";
 }
 
@@ -24,6 +26,7 @@ export function unavailableSourceDirectory(): SourceDirectory {
   return {
     registry: { status: "unavailable", entries: [] },
     publicReferences: { status: "unavailable", entries: [] },
+    citedSources: { status: "unavailable", entries: [], runCount: 0 },
     earningsStatus: "unavailable",
   };
 }
@@ -41,13 +44,14 @@ export function claimMatchesDisplayedSource(claim: SourceClaim, source: Source):
 
 /** Read-only presentation snapshot. Listing and earnings availability are independent. */
 export async function loadSourceDirectory(db: KeryxDB): Promise<SourceDirectory> {
-  const [sources, references, earnings] = await Promise.allSettled([
+  const [sources, references, earnings, citedSources] = await Promise.allSettled([
     Promise.resolve().then(() => db.listSources()),
     Promise.resolve().then(() => {
       if (!db.listPublicReferences) throw new Error("Public references unsupported");
       return db.listPublicReferences();
     }),
     Promise.resolve().then(() => db.creatorLeaderboard()),
+    Promise.resolve().then(() => loadCitedSourceHistory(db)),
   ]);
   const earningsById = new Map(earnings.status === "fulfilled"
     ? earnings.value.map(entry => [entry.sourceId, entry]) : []);
@@ -80,6 +84,9 @@ export async function loadSourceDirectory(db: KeryxDB): Promise<SourceDirectory>
       status: references.status === "fulfilled" ? "ready" : "unavailable",
       entries: references.status === "fulfilled" ? references.value.filter(reference => reference.active) : [],
     },
+    citedSources: citedSources.status === "fulfilled"
+      ? { status: "ready", ...citedSources.value }
+      : { status: "unavailable", entries: [], runCount: 0 },
     earningsStatus: earnings.status === "fulfilled" ? "ready" : "unavailable",
   };
 }

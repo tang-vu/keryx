@@ -9,9 +9,10 @@ import { chromium } from "playwright";
 
 const reference = { id: "public:fixture", name: "Public publisher fixture", url: "https://publisher.example/", rssUrl: "https://publisher.example/feed", description: "Retained public writing without payment authority.", tags: ["Engineering"], active: true, refreshedAt: "2026-10-05T00:00:00.000Z", items: Array.from({ length: 4 }, (_, index) => ({ id: `public-item:${String(index).repeat(64)}`, title: `Retained article ${index}`, summary: "Fixture excerpt", content: "Fixture content", link: `https://publisher.example/article-${index}`, publishedAt: `2026-10-0${index + 1}T00:00:00.000Z`, deliveryKind: "excerpt" })) };
 const source = { id: "fixture-creator", name: "Unverified creator fixture", url: "https://creator.example/", description: "An unverified registered listing.", verified: false, tags: ["Engineering"], authors: [], walletAddress: `0x${"1".repeat(40)}`, fetchPrice: 0.01, createdAt: "2026-10-05T00:00:00.000Z" };
-const directory = { registry: { status: "ready", entries: [{ source, totalEarnedUsdc: 0, citationCount: 0, claim: null, claimPolicyUnavailable: false, controlFresh: false }] }, publicReferences: { status: "ready", entries: [reference] }, earningsStatus: "ready" };
+const citedEntry = { url: "https://docs.publisher.example/service", title: "A previously cited service manual", publisher: "docs.publisher.example", runId: "fixture-run", citedAt: "2026-10-05T00:00:00.000Z", deliveryKind: "excerpt", truncated: true, retrievedAt: "2026-10-04T23:00:00.000Z", extraction: "html" };
+const directory = { registry: { status: "ready", entries: [{ source, totalEarnedUsdc: 0, citationCount: 0, claim: null, claimPolicyUnavailable: false, controlFresh: false }] }, publicReferences: { status: "ready", entries: [reference] }, citedSources: { status: "ready", entries: [citedEntry], runCount: 28 }, earningsStatus: "ready" };
 const metrics = { totalQueries: 28, totalPayments: 0, totalVolumeUsdc: 0, totalCreatorPayoutsUsdc: 0, creatorsEarning: 0, pendingPaymentConfirmations: 0, pendingPaymentVolumeUsdc: 0, failedPaymentAttempts: 0, failedPaymentVolumeUsdc: 0 };
-const run = { id: "fixture-run", question: "How should a live SQLite database be backed up safely?", createdAt: "2026-10-05T00:00:00.000Z", totalSpent: 0, totalToCreators: 0, citationCount: 2 };
+const run = { id: "fixture-run", question: "How should a live SQLite database be backed up safely?", answer: "Fixture answer [S1]", createdAt: "2026-10-05T00:00:00.000Z", totalSpent: 0, totalToCreators: 0, citationCount: 2, citations: [{ marker: "S1", sourceId: "public:web:fixture", sourceName: citedEntry.publisher, sourceKind: "public-reference", itemTitle: citedEntry.title, itemUrl: citedEntry.url, publicDeliveryKind: "excerpt", webProvenance: { retrievedAt: citedEntry.retrievedAt, truncated: true, extraction: "html" } }] };
 const chrome: Plugin = {
   name: "isolated-ledger-chrome",
   setup(build) {
@@ -36,9 +37,9 @@ try {
       import{DashboardView}from'./components/keryx/dashboard-view';
       import{SourceDirectoryPreview}from'./components/keryx/source-directory-preview';
       import SourcesPage from './app/sources/page';
-      const reference=${JSON.stringify(reference)}, source=${JSON.stringify(source)}, directory=${JSON.stringify(directory)};
+      const reference=${JSON.stringify(reference)}, source=${JSON.stringify(source)}, directory=${JSON.stringify(directory)}, run=${JSON.stringify(run)};
       const mode=new URL(location.href).searchParams.get('mode');
-      window.fixtureDb={listSources:async()=>{if(mode==='partial')throw Error('registry unavailable');return[source]},listPublicReferences:async()=>[reference],creatorLeaderboard:async()=>[],getSourceClaimForSource:async()=>null};
+      window.fixtureDb={listSources:async()=>{if(mode==='partial')throw Error('registry unavailable');return mode==='history-only'?[]:[source]},listPublicReferences:async()=>mode==='history-only'?[]:[reference],listRecentQueries:async()=>{if(mode==='history-error')throw Error('history unavailable');return[run]},creatorLeaderboard:async()=>[],getSourceClaimForSource:async()=>null};
       const root=createRoot(document.getElementById('root'));
       if(location.pathname==='/sources')SourcesPage().then(page=>root.render(page));
       else root.render(<DashboardView sourcePreview={<SourceDirectoryPreview directory={directory}/>}/>);
@@ -74,6 +75,7 @@ try {
       assert.equal(await page.getByText("No cash-outs yet.").count(), 0);
       assert.equal(await page.getByText(/to creators/).count(), 0);
       await page.getByText("Unverified creator fixture", { exact: true }).waitFor();
+      await page.getByRole("link", { name: citedEntry.title }).waitFor();
       assert.equal(await page.locator('a[href="/answers"]').count(), 1);
       await page.getByText("Inspect recorded totals", { exact: true }).click();
       assert.equal(await page.locator("dd").first().textContent(), "0");
@@ -121,6 +123,17 @@ try {
       await page.screenshot({ path: path.join(screenshots, `sources-${network}-${width}.png`), fullPage: true });
       await open("/sources?mode=partial");
       await page.getByText(/Creator listings are temporarily unavailable/).waitFor();
+      await page.getByRole("heading", { name: "Public publisher fixture ↗" }).waitFor();
+      await open("/sources?mode=history-only");
+      await page.getByRole("heading", { name: "Cited in past answers" }).waitFor();
+      await page.getByRole("link", { name: citedEntry.title }).waitFor();
+      await page.getByText("Excerpt recorded · Bounded extraction", { exact: true }).waitFor();
+      assert.equal(await page.getByText("No creator listings are recorded yet.").count(), 0);
+      assert.equal(await page.getByText("No public feed snapshots are retained yet.", { exact: false }).count(), 0);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `History-only overflow ${width}`);
+      await page.screenshot({ path: path.join(screenshots, `sources-history-${network}-${width}.png`), fullPage: true });
+      await open("/sources?mode=history-error");
+      await page.getByText(/Public citation history is temporarily unavailable/).waitFor();
       await page.getByRole("heading", { name: "Public publisher fixture ↗" }).waitFor();
       assert.deepEqual(errors, [], `Browser errors at ${network}/${width}`);
       await page.close();

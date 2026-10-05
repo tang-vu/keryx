@@ -12,6 +12,9 @@ The library shows retained public feeds and unverified creator listings with con
 labels. Article dates are publisher metadata; a feed excerpt or collection timestamp
 does not certify the original article's contents or accuracy. A legacy eligibility
 flag or on-chain registration alone cannot certify current publisher control.
+Original documents cited in recent public answers also appear as a bounded history
+collection. Their stored read scope and answer links confer no source enrollment,
+ownership or retrospective earnings. Private research results are excluded.
 
 An owner claim connects a public source to its publisher's wallet. Proving source
 control is free and enables no earnings by itself. The owner separately chooses a

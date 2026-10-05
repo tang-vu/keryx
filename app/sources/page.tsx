@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SourceRegistryRow } from "@/components/keryx/source-registry-row";
 import { PublicReferenceCard } from "@/components/keryx/public-reference-card";
+import { CitedSourceCard } from "@/components/keryx/cited-source-card";
 import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { safeInlineJson } from "@/lib/safe-json";
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 const TITLE = "Sources — public references and creator listings";
 const DESCRIPTION =
-  "Explore Keryx's retained public feeds and creator listings. Browse article titles, publication dates and available content, with publisher control and settled earnings shown separately.";
+  "Explore sources cited in Keryx's public answers, retained public feeds and creator listings, with reading scope, publisher control and settled earnings shown separately.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -34,10 +35,11 @@ export default async function SourcesPage() {
   } catch {
     directory = unavailableSourceDirectory();
   }
-  const { registry, publicReferences, earningsStatus } = directory;
+  const { registry, publicReferences, citedSources, earningsStatus } = directory;
   const entries = registry.entries;
   const references = publicReferences.entries;
-  const countsReady = registry.status === "ready" && publicReferences.status === "ready";
+  const countsReady = registry.status === "ready" && publicReferences.status === "ready" && citedSources.status === "ready";
+  const hasSources = entries.length + references.length + citedSources.entries.length > 0;
   const onchainCount = entries.filter((entry) => entry.source.onchainId).length;
   const totalPaid = entries.reduce((sum, entry) => sum + (entry.totalEarnedUsdc ?? 0), 0);
   const retainedItemCount = references.reduce((sum, reference) => sum + reference.items.length, 0);
@@ -51,10 +53,11 @@ export default async function SourcesPage() {
       url: `${BASE}/sources`,
       mainEntity: {
         "@type": "ItemList",
-        ...(countsReady ? { numberOfItems: entries.length + references.length } : {}),
+        ...(countsReady ? { numberOfItems: entries.length + references.length + citedSources.entries.length } : {}),
         itemListElement: [
+          ...citedSources.entries.map(entry => ({ url: entry.url, name: entry.title })),
           ...references.map((reference) => ({ url: reference.url, name: reference.name })),
-          ...entries.map((entry) => ({ url: `${BASE}/creator/${entry.source.id}`, name: entry.source.name })),
+          ...entries.map((entry) => ({ url: `${BASE}/creator/${encodeURIComponent(entry.source.id)}`, name: entry.source.name })),
         ].slice(0, 100).map((entry, index) => ({
           "@type": "ListItem",
           position: index + 1,
@@ -78,33 +81,31 @@ export default async function SourcesPage() {
           Sources to <em className="italic text-paid">explore.</em>
         </h1>
         <p className="mt-4 max-w-[65ch] font-serif text-[17px] leading-[1.55] text-ink-2">
-          Browse public writing and creator listings, then follow the original publisher.
-          Public references remain available without publisher verification. Source control,
-          available content and creator payments are separate records.
+          Follow documents cited in public answers, browse retained feeds and explore creator listings.
+          Sources remain visible without publisher verification. Reading scope, publisher control
+          and creator payments are separate records.
         </p>
 
-        <div className="mt-7 grid gap-px border border-line bg-line sm:grid-cols-3">
-          <a href="#public-references" className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
+        <div className="mt-7 grid gap-px border border-line bg-line sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+          {(citedSources.status === "unavailable" || citedSources.entries.length > 0) && <a href="#cited-sources" className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3">Recently cited documents</p>
+            <p className="mt-1 font-display text-3xl text-ink">{citedSources.status === "ready" ? citedSources.entries.length : "Unavailable"}</p>
+            <p className="mt-1 font-serif text-sm text-ink-2">From public answer history</p>
+          </a>}
+          {(publicReferences.status === "unavailable" || references.length > 0 || !hasSources) && <a href="#public-references" className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">Public references</p>
             <p className="mt-1 font-display text-3xl text-ink">
               {publicReferences.status === "ready" ? references.length : "Unavailable"}
             </p>
-            <p className="mt-1 font-serif text-sm text-ink-2">Retained feeds, free to read</p>
-          </a>
-          <a href="#creator-listings" className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
+            <p className="mt-1 font-serif text-sm text-ink-2">Retained feeds · {publicReferences.status === "ready" ? `${retainedItemCount} feed items` : "item count unavailable"}</p>
+          </a>}
+          {(registry.status === "unavailable" || entries.length > 0 || !hasSources) && <a href="#creator-listings" className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">Creator listings</p>
             <p className="mt-1 font-display text-3xl text-ink">
               {registry.status === "ready" ? entries.length : "Unavailable"}
             </p>
             <p className="mt-1 font-serif text-sm text-ink-2">Registration and payment policies</p>
-          </a>
-          <div className="bg-paper p-4 sm:p-5">
-            <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">Feed items retained</p>
-            <p className="mt-1 font-display text-3xl text-ink">
-              {publicReferences.status === "ready" ? retainedItemCount : "Unavailable"}
-            </p>
-            <p className="mt-1 font-serif text-sm text-ink-2">Full text, excerpts or metadata</p>
-          </div>
+          </a>}
         </div>
         {!countsReady && (
           <p className="mt-3 font-serif text-sm text-ink-2">
@@ -112,7 +113,16 @@ export default async function SourcesPage() {
           </p>
         )}
 
-        <section id="public-references" className="mt-10 scroll-mt-6" aria-labelledby="public-references-title">
+        {(citedSources.status === "unavailable" || citedSources.entries.length > 0) && <section id="cited-sources" className="mt-10 scroll-mt-6" aria-labelledby="cited-sources-title">
+          <h2 id="cited-sources-title" className="border-b border-ink pb-3 font-display text-2xl text-ink">Cited in past answers</h2>
+          {citedSources.status === "ready" ? <>
+            <p className="mt-3 max-w-[75ch] font-serif text-[15px] leading-relaxed text-ink-2">Showing up to 40 public documents from the latest {citedSources.runCount} public question record{citedSources.runCount === 1 ? "" : "s"}. Open the original document or inspect its cited answer. Past citations do not certify publisher control or content accuracy; past public reads stay free.</p>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">{citedSources.entries.slice(0, 12).map(entry => <CitedSourceCard key={entry.url} entry={entry} />)}</div>
+            {citedSources.entries.length > 12 && <details className="mt-5 border border-line bg-paper p-5"><summary className="min-h-11 cursor-pointer py-2 font-mono text-xs text-seal underline">Show {citedSources.entries.length - 12} more cited documents</summary><div className="mt-4 grid gap-4 md:grid-cols-2">{citedSources.entries.slice(12).map(entry => <CitedSourceCard key={entry.url} entry={entry} />)}</div></details>}
+          </> : <p role="status" className="mt-5 border border-line bg-paper p-5 font-serif text-[15px] text-ink-2">Public citation history is temporarily unavailable. Reload to retry; other source collections remain available.</p>}
+        </section>}
+
+        {(publicReferences.status === "unavailable" || references.length > 0 || !hasSources) && <section id="public-references" className="mt-10 scroll-mt-6" aria-labelledby="public-references-title">
           <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ink pb-3">
             <h2 id="public-references-title" className="font-display text-2xl text-ink">Public references</h2>
             <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-ink-3">Free reading · original publisher links</span>
@@ -134,9 +144,9 @@ export default async function SourcesPage() {
               No public feed snapshots are retained yet. You can still <Link href="/" className="text-seal underline underline-offset-4">ask a question</Link> with a public source URL.
             </p>
           )}
-        </section>
+        </section>}
 
-        <section id="creator-listings" className="mt-12 scroll-mt-6" aria-labelledby="creator-listings-title">
+        {(registry.status === "unavailable" || entries.length > 0 || !hasSources) && <section id="creator-listings" className="mt-12 scroll-mt-6" aria-labelledby="creator-listings-title">
           <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ink pb-3">
             <h2 id="creator-listings-title" className="font-display text-2xl text-ink">Creator listings</h2>
             {registry.status === "ready" && entries.length > 0 && (
@@ -168,7 +178,7 @@ export default async function SourcesPage() {
               <p className="mt-2 font-serif text-sm text-ink-3">Public references can support answers without generating creator payments.</p>
             </div>
           )}
-        </section>
+        </section>}
 
         <div className="mt-12 border-t border-ink pt-6">
           <h2 className="font-display text-2xl text-ink">Is your writing here?</h2>

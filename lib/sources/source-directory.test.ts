@@ -8,7 +8,7 @@ import { sourceId as registrySourceId } from "../registry/registry-client";
 
 const source: Source = { id: "unverified", name: "A publisher", url: "https://publisher.example/", description: "Public listing", verified: false, tags: [], authors: [], walletAddress: "0x1", fetchPrice: 0.01, createdAt: "2026-10-05T00:00:00.000Z" };
 function database(overrides: Partial<KeryxDB> = {}): KeryxDB {
-  return { listSources: async () => [source], listPublicReferences: async () => APPROVED_PUBLIC_REFERENCES, creatorLeaderboard: async () => [], getSourceClaimForSource: async () => null, ...overrides } as KeryxDB;
+  return { listSources: async () => [source], listPublicReferences: async () => APPROVED_PUBLIC_REFERENCES, listRecentQueries: async () => [], creatorLeaderboard: async () => [], getSourceClaimForSource: async () => null, ...overrides } as KeryxDB;
 }
 
 describe("read-only source directory availability", () => {
@@ -31,6 +31,12 @@ describe("read-only source directory availability", () => {
     const result = await loadSourceDirectory(database({ listSources: async () => { throw new Error("offline"); } }));
     expect(result.registry.status).toBe("unavailable");
     expect(result.publicReferences.entries).toHaveLength(5);
+  });
+  it("keeps source collections available when public citation history fails", async () => {
+    const result = await loadSourceDirectory(database({ listRecentQueries: async () => { throw new Error("history unavailable"); } }));
+    expect(result.citedSources.status).toBe("unavailable");
+    expect(result.publicReferences.status).toBe("ready");
+    expect(result.registry.status).toBe("ready");
   });
   it("distinguishes unsupported or failed references from a confirmed empty list", async () => {
     expect((await loadSourceDirectory(database({ listPublicReferences: undefined }))).publicReferences.status).toBe("unavailable");

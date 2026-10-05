@@ -3,7 +3,9 @@
 ## Reading activity and source library, October 5, 2026
 
 Application **0.26.21 candidate** changes web `/dashboard`, `/sources`, navigation
-and confirmed-empty settlement ticker presentation. A shared server view isolates
+and confirmed-empty settlement ticker presentation. Recent public citation URLs
+also appear as a bounded history collection, independently of retained feeds and
+creator enrollment. A shared server view isolates
 read availability without conferring payment/control authority or changing public
 API payloads. Public API/A2A, remote MCP/OpenAI, buyer/Operator CLI, stdio MCP,
 desktop, extension and bots retain their research, receipt and payment contracts.

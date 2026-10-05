@@ -10,6 +10,13 @@ authority. Count retained public references separately from creator listings; br
 web discoverability is not a stored catalog count. Do not bulk-import sources or
 rewrite historical evidence to fill the page.
 
+The live retained feed/creator collections were empty at readback, while public
+answers retained original citation URLs. Show a third, explicitly bounded collection
+of documents cited in recent public answers, with original links, recorded reading
+scope and answer permalinks. It reads the existing public `query_runs` store, never
+private research results; omit synthetic citations and unsafe links. Historical
+citation metadata is not a source enrollment or payment/control authority.
+
 Confirmed-empty settlement tickers disappear; loading and unavailable states remain
 explicit. Financial totals stay settled-only and inspectable, with pending/failed
 records and full payment evidence retained. Independent reads preserve available
