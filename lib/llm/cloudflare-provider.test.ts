@@ -90,12 +90,11 @@ it("retains prior failure state and the bounded half-open lease after local refu
   expect((await store.failed(key, { transient: true, now: 1002, failureThreshold: 1, baseCooldownMs: 1000, maxCooldownMs: 10000 })).failures).toBe(2);
 });
 
-it("still records an upstream HTTP 413 as a provider failure", async () => {
+it("retains an upstream HTTP 413 as a request failure without poisoning the provider circuit", async () => {
   const store = new MemoryReasoningCircuitStore(); const failed = vi.spyOn(store, "failed");
   vi.stubGlobal("fetch", vi.fn(async () => new Response("upstream rejection", { status: 413 })));
   await new ResilientEngine(engine(), undefined, 0, store).decompose("small fixture");
-  expect(failed).toHaveBeenCalledOnce();
-  expect(failed.mock.calls[0][1]).toMatchObject({ transient: false });
+  expect(failed).not.toHaveBeenCalled();
 });
 
 it("sends bounded JSON without vendor thinking options, prohibits redirects, and records gross tariff usage", async () => {

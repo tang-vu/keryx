@@ -14,6 +14,22 @@ import type { Decision, SourceItemIdentity } from "../types";
 /** A local request bound, before contacting a supplier. It must not mark a provider unhealthy. */
 export class ReasoningInputLimitError extends Error {
   readonly status = 413;
+  constructor(message: string, readonly bounds?: ReasoningInputBounds) { super(message); }
+}
+
+export interface ReasoningInputBounds {
+  promptUtf8Bytes: number;
+  requestedOutputTokens: number;
+  /** Conservative byte-fallback token upper bound plus output allowance. */
+  maximumCombinedUnits: number;
+}
+
+/** A completed model response failed the bounded output/decision contract, not the network. */
+export class ReasoningOutputValidationError extends Error {}
+
+/** Only transport boundaries may label a statusless failure as network/timeout. */
+export class ReasoningTransportError extends Error {
+  constructor(readonly category: "network" | "timeout") { super(`Reasoning transport ${category}`); }
 }
 
 export type ReasoningStep =
@@ -36,11 +52,13 @@ export interface ReasoningAttempt {
   attempt: number;
   startedAt: number;
   durationMs: number;
-  outcome: "served" | "failed" | "circuit-open";
+  outcome: "served" | "failed" | "circuit-open" | "input-limited";
   /** Remaining shared cooldown/half-open lease when this attempt was skipped. */
   retryAfterMs?: number;
   status?: number;
-  error?: "timeout" | "rate_limited" | "provider" | "network" | "invalid_request";
+  error?: "timeout" | "rate_limited" | "provider" | "network" | "invalid_request" | "output_validation" | "input_limit" | "internal";
+  /** Present only for a proved local refusal; never contains prompt or provider response text. */
+  inputBounds?: ReasoningInputBounds;
 }
 
 /** Provider-reported token usage for one completed (or billable truncated) model response.
@@ -80,14 +98,14 @@ export interface SourceCandidate {
   preview: string; // free preview (recent item titles + summaries)
   /**
    * Present only on endpoints discovered in the live external x402 marketplace (Circle services).
-   * They settle on other chains, not Keryx's Arc rail, so they are discovery-only: the agent
-   * reasons over them but the orchestrator never purchases them.
+   * All remain discovery-only, regardless of their advertised payment networks: the agent
+   * reasons over them but the orchestrator never purchases them. Metadata is not payment authority.
    */
   external?: {
     resource: string; // the paid endpoint URL
-    chains: string[]; // human chain labels it settles on (e.g. "Base", "Ethereum")
-    payTo: string; // seller wallet
-    onArc: boolean; // true only if it settles on Keryx's Arc rail (none today)
+    chains: string[]; // human labels for advertised payment networks (e.g. "Base", "Arc mainnet")
+    payTo: string; // advertised seller wallet, not trusted payout authority
+    onArc: boolean; // advertises acceptance on Keryx's selected Arc profile; discovery-only
   };
 }
 
@@ -103,6 +121,8 @@ export interface DecideInput {
 
 /** Content the agent has unlocked, ready to read. */
 export interface GatheredContent extends Partial<SourceItemIdentity> {
+  /** Trusted read-time policy can withhold rewards without discarding useful evidence. */
+  creatorRewardEligible?: boolean;
   /** Reasoning candidate that produced this read; distinct from registry sourceId for articles. */
   assetId?: string;
   sourceId: string;
@@ -135,6 +155,8 @@ export interface SynthInput {
   question: string;
   subClaims: string[];
   gathered: GatheredContent[];
+  /** Internal staged delivery contract; source/payment authority is unchanged. */
+  answerFormat?: "decision-brief";
 }
 
 /** A factual disagreement the agent found between sources while writing the answer,
@@ -157,6 +179,8 @@ export interface ProposedEvidence {
   marker: string; // S1, S2, ...
   quote: string; // short verbatim span copied from the gathered source
   support: number; // 0..1 estimate of how directly the span supports the claim
+  /** Server-resolved UTF-16 source offsets; private proposal metadata, not a receipt field. */
+  quoteSpan?: import("./evidence-span").EvidenceSpan;
 }
 
 /** Result of synthesis: the grounded answer, which markers it cited, and any source
@@ -168,6 +192,8 @@ export interface SynthResult {
   evidence: ProposedEvidence[];
   /** Optional second-pass relevance check; engines without this pass leave it absent. */
   evidenceReview?: "completed" | "unavailable";
+  /** Server-local reviewed rows/context; never serialize this packet in public receipts. */
+  decisionBrief?: import("./decision-brief").ReviewedDecisionBrief;
 }
 
 export interface AttributeInput {

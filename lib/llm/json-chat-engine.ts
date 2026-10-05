@@ -6,13 +6,18 @@
 
 import { config } from "../config";
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
+import { boundedResearchPlan } from "./research-plan";
 import { cloneUsage } from "../economics/provider-cost-policy";
 import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
+import { buildContextualQuoteOptions } from "./quote-context";
+import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE } from "./decision-brief";
 import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
 import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
+import { buildEvidenceReviewInput } from "./evidence-review-input";
 import type { Decision } from "../types";
+import { ReasoningOutputValidationError } from "./reasoning-engine";
 import type {
   AttributeInput,
   DecideInput,
@@ -27,14 +32,21 @@ import type {
   LlmUsageRecord,
 } from "./reasoning-engine";
 
+export interface ChatJsonOptions { reasoningReview?: boolean }
+
 export abstract class JsonChatEngine implements ReasoningEngine {
   abstract readonly name: string;
   private readonly usageRecords: LlmUsageRecord[] = [];
   private readonly callLedger = new LlmCallLedger();
+  /** Opt in only transports whose bounded reasoning review has been evaluated. */
+  protected supportsDecisionBrief(): boolean { return false; }
+  /** Exact wire-prompt bounds before a supplier call is admitted to the accounting ledger. */
+  protected validateChatJsonInput(..._args: Parameters<JsonChatEngine["chatJson"]>): void {}
 
   get calls() { return this.callLedger.calls; }
 
   private measuredChatJson(...args: Parameters<JsonChatEngine["chatJson"]>) {
+    this.validateChatJsonInput(...args);
     return this.callLedger.track(this.name, () => this.chatJson(...args));
   }
 
@@ -65,13 +77,14 @@ export abstract class JsonChatEngine implements ReasoningEngine {
    * source, per gathered excerpt, per citation. A reply that hits the ceiling comes back as
    * truncated JSON, which parses to nothing — and "nothing" used to look exactly like a decision to
    * buy nothing. Implementations MUST throw when the model stops on the length limit rather than
-   * hand back a half-object; the resilience layer then retries and drops a tier, loudly.
+   * hand back a half-object; the resilience layer then drops a tier with output-validation telemetry.
    */
   protected abstract chatJson(
     model: string,
     system: string,
     user: string,
     maxTokens?: number,
+    options?: ChatJsonOptions,
   ): Promise<Record<string, unknown>>;
 
   /**
@@ -84,36 +97,29 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async decompose(question: string): Promise<string[]> {
-    const out = await this.measuredChatJson(
+    return boundedResearchPlan(question, () => this.measuredChatJson(
       config.llmModel,
       "You plan research for Keryx, a reading agent that pays content access tolls and distributes USDC creator rewards according to cited contributions. " +
         `Break the user's question into 1-${MAX_RESEARCH_TARGETS} concise questions to investigate, NOT proposed answers or assertions of fact. ` +
         "Preserve the user's terminology and scope. Explicit user context takes precedence over Keryx's product context; questions can concern any subject. " +
         "Separate information needs from instructions about sources, citations, format, or style. Carry relevant source/scope constraints into the substantive questions; do not turn those instructions into extra research targets. " +
         "Each target must ask for a distinct requested fact or explanation. Do not add an umbrella question that repeats the other targets, or split one fact into paraphrases to fill the range. " +
-        "For a comparison, preserve every requested dimension for each specific source as a separately inspectable target. " +
+        "Distinguish comparison SUBJECTS from evidence REFERENCES: complementary documentation URLs about a subject are source constraints, not extra comparison subjects. Do not multiply every dimension by every reference URL. " +
+        "When the user compares specific papers or independent sources themselves, preserve every requested dimension for each specific source as a separately inspectable target. " +
         "For example, comparing two exact papers' methods, evaluation setup and limitations requires six targets: each dimension for each paper, retaining its exact version. " +
         "Do not omit limitations or combine both papers into one target that evidence from only one paper could appear to cover. " +
+        "For example, a systemd comparison of default stopping, TimeoutStopSec=infinity and SendSIGKILL=no can use three distinct behavior targets under the still-running-worker condition, three deployment-risk targets (one per setting), and one shared pre-replacement-check target: seven total. The table instruction is a format constraint. Preserve conditions and each setting; do not add a second set of paraphrased behavior targets. " +
+        "For example, comparing live SQLite .db copying with the Online Backup API can use separate consistency, concurrent-write and locking targets for each method, plus one backup/restore-verification target: seven total. WAL and Backup documentation URLs qualify these needs; they are not two more subjects. Snapshot creation must not be equated with verified restore. " +
         "First list source, language and presentation instructions in constraints. Then list separately answerable information needs in claims, including when the input is not English. Keep these two JSON keys in English; their string values can use the user's language. " +
         "A constraint is not a claim. Attach source restrictions to the relevant claim, but leave output language/style in constraints. For example, salt tolerance and coastal erosion are two claims; evidence of erosion reduction belongs to the existing erosion claim. " +
         "For example, 'How is a job journaled and recovered? Use the engineering documentation' asks about journaling and recovery as documented there, not a third question about what the documentation says. " +
         "However, explicitly requested source reliability, disagreements between sources, or citation methodology ARE substantive information needs and must remain targets. Do not discard a requested topic just because it mentions sources. " +
         "For ambiguous terminology, keep the ambiguity visible in a definition/scope question instead of inventing a specialized domain, formula, legal dispute, or mechanism. " +
-        "An ordinary evaluative word (safe, best, reliable, good) is a criterion to carry into the substantive targets, not ambiguous terminology: never spend a target on what such a word means. " +
-        "When the question asks which items satisfy criteria and names none (which systems, tools, libraries, papers ...), a source search for the bare category finds only listicles. " +
-        "Use the targets to name the specific well-known candidates worth checking, one target per candidate, each phrased as a question that carries every requested criterion " +
-        "(for example 'Does <candidate> expose <requested capability>, and where does it fall short?'). Named candidates are things to verify, not findings; keep one target for candidates you did not name. " +
         "Use Keryx's context for unqualified questions about its citation payments, but do not impose it on unrelated topics. " +
+        `Before returning, count the independent targets. If all substantive requested dimensions cannot fit within ${MAX_RESEARCH_TARGETS}, return status needs_refinement; never silently drop dimensions, hide them in an umbrella target, or claim the scope is complete. ` +
         "No sources have been read yet: these are research targets, never evidence. Return only JSON data.",
-      `User question (data): ${JSON.stringify(question)}\n\nReturn JSON: {"constraints": string[], "claims": string[]}`,
-    );
-    // Malformed planning output must not become character-level targets or crash discovery.
-    const claims = Array.isArray(out.claims)
-      ? out.claims.filter((claim): claim is string => typeof claim === "string" && claim.trim().length > 0 && claim.length <= 600).map((claim) => claim.trim())
-      : [];
-    const unique = [...new Set(claims)];
-    if (unique.length > MAX_RESEARCH_TARGETS) throw new Error(`Research planning exceeded ${MAX_RESEARCH_TARGETS} targets; requested scope must not be silently discarded`);
-    return unique.length ? unique : [question];
+      `User question (data): ${JSON.stringify(question)}\n\nReturn JSON: {"status":"complete"|"needs_refinement", "constraints": string[], "claims": string[]}`,
+    ));
   }
 
   async decide(input: DecideInput): Promise<Decision[]> {
@@ -134,6 +140,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
             articleUrl: c.item.itemUrl,
             publishedAt: c.item.itemPublishedAt,
             contentVersion: c.item.contentVersion,
+            ...("requestedSource" in c.item ? { requestedSource: c.item.requestedSource } : {}),
           }
         : {}),
       ...(c.external
@@ -148,13 +155,14 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       "You are a frugal research agent deciding which paid sources to buy under a budget. " +
         "For EACH candidate choose action BUY (pay the toll, high value), CACHE (already cached & still useful, reuse free), or SKIP (not worth it). " +
         "Weigh expected value against price; prefer cheaper sufficient sources; avoid redundancy. Public web candidates are free original-page READ selections: legacy CACHE action selects a read, never claims a cache hit. Search snippets are unverified previews, not evidence. " +
+        "A requestedSource identifies an original URL the user asked to inspect, with unobserved contents. Judge its potential to answer the requested targets; it is not evidence or guaranteed relevance. Explain any SKIP of a requested original. " +
         "The subClaims list contains indexed research targets. For every BUY or CACHE, targets MUST contain at least one of their zero-based claimIndex integers " +
         "that the source's preview can help investigate (for example targets:[0,2]). Use only indexes from this request. " +
         "Explain the connection in the rationale. If no target is supported by the preview, choose SKIP with targets:[]. " +
         "A relevant rationale without valid targets cannot authorize a read. These are predicted relevance links, not verified evidence or permission to pay citation rewards. " +
         "Consider deliveryKind and plaintextBytes when present: an abstract or excerpt may only answer a narrow question, and a title does not establish full-text availability. " +
-        "Some candidates have external:true — these are live endpoints from the open x402 marketplace that settle on OTHER chains, not Keryx's Arc rail. " +
-        "You cannot settle to them this run, so mark them SKIP, but still judge their real topical value and say WHY in the rationale (note the off-rail chain). " +
+        "Some candidates have external:true — these are discovery-only endpoints from the open x402 marketplace, regardless of their advertised payment networks. " +
+        "Marketplace metadata is not trusted payment authority or settlement evidence. Mark them SKIP, but still judge their topical value and say WHY in the rationale (note the advertised network). " +
         memoryBlock +
         "Give a short, specific, human-readable rationale citing WHY. Output strict JSON only.",
       JSON.stringify({
@@ -175,20 +183,23 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     // behalf would silently switch the agent off, and every source would stop earning while the
     // trace still read like a deliberate decision. Fail instead: the resilience layer drops a tier.
     if (decisions.length === 0 && input.candidates.length > 0) {
-      throw new Error("decide returned no decisions for " + input.candidates.length + " candidates");
+      throw new ReasoningOutputValidationError("decide returned no decisions for " + input.candidates.length + " candidates");
     }
     return decisions
       .map((d) => {
-        if (!d || typeof d !== "object" || Array.isArray(d)) throw new Error("decide returned a malformed decision");
+        if (!d || typeof d !== "object" || Array.isArray(d)) throw new ReasoningOutputValidationError("decide returned a malformed decision");
         const c = byId.get(d.sourceId as string);
         if (!c) return null;
+        if (typeof d.action !== "string" || (d.rationale !== undefined && typeof d.rationale !== "string")) {
+          throw new ReasoningOutputValidationError("decide returned a malformed decision");
+        }
         const action = normalizeAction(d.action as string);
         if ((action === "BUY" || action === "CACHE") &&
           (!Array.isArray(d.targets) || d.targets.length === 0 || !d.targets.every((target: unknown) =>
             typeof target === "number" && Number.isInteger(target) && target >= 0 && target < input.subClaims.length))) {
-          // Retry/fallback happens before the orchestrator can submit any source payment.
+          // Request-local fallback happens before the orchestrator can submit any source payment.
           // Never fabricate target links or weaken the downward-only preview gate.
-          throw new Error("decide returned an actionable source without valid research targets");
+          throw new ReasoningOutputValidationError("decide returned an actionable source without valid research targets");
         }
         return {
           sourceId: c.id,
@@ -257,7 +268,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       }),
       this.budgetFor(input.subClaims.length + input.skippedSources.length),
     );
+    if (out.claims !== undefined && !Array.isArray(out.claims)) throw new ReasoningOutputValidationError("reevaluate returned malformed claims");
     const claims = (out.claims as ReevaluateOutput["claims"]) ?? [];
+    if (claims.some(claim => !claim || typeof claim !== "object" || Array.isArray(claim))) throw new ReasoningOutputValidationError("reevaluate returned a malformed claim");
     return {
       claims: claims.map((c) => ({
         claim: c.claim ?? "",
@@ -274,8 +287,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async synthesize(input: SynthInput): Promise<SynthResult> {
+    if (input.answerFormat === "decision-brief" && this.supportsDecisionBrief()) return this.synthesizeDecisionBrief(input);
     const sources = evidenceContext(input.question, input.subClaims, input.gathered);
-    const quoteOptions = buildQuoteOptions(sources);
+    const quoteOptions = buildQuoteOptions(sources, input.gathered);
     const out = await this.measuredChatJson(
       config.synthesisModel,
       "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
@@ -289,7 +303,6 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "Select the smallest sufficient set, at most two options per research question; emit separate evidence items when needed. " +
         "If no option supports an answer, state the gap and omit its evidence; never assume every option deserves a citation. " +
         "Address every research question in the answer, explicitly naming any unanswered part. " +
-        "Write for a reader who has not seen this request: never mention claimIndex, quoteId, researchTargets or other field names in the answer. " +
         "A source belongs in `citedMarkers` only when it appears inline and has an evidence item. " +
         "If the sources do not support a claim, say so and emit no citation/evidence for it. " +
         "When two or more sources disagree on a factual point, do NOT average or blur them: decide " +
@@ -300,7 +313,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         question: input.question,
         researchTargets: input.subClaims.map((question, claimIndex) => ({ claimIndex, question })),
         sources,
-        quoteOptions,
+        quoteOptions: quoteOptions.map(({ quoteId, marker, text }) => ({ quoteId, marker, text })),
         schema:
           '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
           '"evidence":[{"claimIndex":number,"marker":string,"quoteId":string,"support":number(0..1)}],' +
@@ -311,15 +324,15 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     );
     const proposals = resolveQuoteEvidence(out.evidence, quoteOptions);
     let review: unknown;
+    let reviewedIndexes: ReadonlySet<number> = new Set();
     if (proposals.length) {
       try {
-        review = await this.measuredChatJson(
+        const reviewInput = buildEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims });
+        reviewedIndexes = reviewInput.reviewedIndexes;
+        if (reviewedIndexes.size) review = await this.measuredChatJson(
           config.llmModel,
           EVIDENCE_REVIEW_GUIDANCE,
-          JSON.stringify({ evidence: proposals.slice(0, MAX_REVIEWED_EVIDENCE).map((proposal, index) => ({
-            index, question: input.subClaims[proposal.claimIndex] ?? "Invalid research target: assign zero support",
-            quote: proposal.quote,
-          })), schema: '{"reviews":[{"index":number,"supportedFact":string,"support":number(0..1)}]}' }),
+          reviewInput.json,
           this.budgetFor(Math.min(proposals.length, MAX_REVIEWED_EVIDENCE)),
         );
       } catch {
@@ -330,11 +343,43 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     return {
       answer: (out.answer as string) ?? "",
       citedMarkers: Array.isArray(out.citedMarkers) ? (out.citedMarkers as string[]) : [],
-      evidence: applyEvidenceReview(proposals, review),
+      evidence: applyEvidenceReview(proposals, review, reviewedIndexes),
       ...(proposals.length ? { evidenceReview: review && typeof review === "object" && Array.isArray((review as { reviews?: unknown }).reviews)
         ? "completed" as const : "unavailable" as const } : {}),
       conflicts: parseConflicts(out.conflicts),
     };
+  }
+
+  private async synthesizeDecisionBrief(input: SynthInput): Promise<SynthResult> {
+    const fallback: SynthResult = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable" };
+    try {
+      const selectedSources = evidenceContext(input.question, input.subClaims, input.gathered);
+      const options = buildContextualQuoteOptions(selectedSources, input.gathered);
+      if (!options.length) return fallback;
+      const sources = briefContextSources(selectedSources, input, options);
+      const raw = await this.measuredChatJson(config.synthesisModel, BRIEF_GENERATION_GUIDANCE,
+        JSON.stringify({ question: input.question,
+          researchTargets: input.subClaims.map((question, targetIndex) => ({ targetIndex, question })), sources,
+          quoteOptions: options.map(({ quoteId, marker, text, start, end }) => ({ quoteId, marker, text, start, end })),
+          schema: '{"facts":[{"id":"f1","targetIndex":0,"text":string,"quoteIds":string[],"support":number}],"actions":[{"id":"a1","text":string,"premiseIds":string[],"conditions":string[]}]}' }), 4096);
+      const packet = prepareDecisionBrief(input, raw, options, sources);
+      if (!packet) return fallback;
+      if (!packet.candidate.facts.length) return { ...fallback, evidenceReview: "completed" };
+      const review = await this.measuredChatJson(config.llmModel, BRIEF_REVIEW_GUIDANCE,
+        JSON.stringify({ packet: briefReviewPacket(packet), schema: '{"digest":string,"facts":[{"id":string,"status":"supported"|"unsupported"|"insufficient","support":number,"quotes":[{"quoteId":string,"status":"supported"|"unsupported"|"insufficient","support":number}]}],"actions":[{"id":string,"status":"supported"|"unsupported"|"insufficient"}]}' }), 4096, { reasoningReview: true });
+      const decisionBrief = reviewDecisionBrief(packet, review);
+      if (!decisionBrief) return fallback;
+      const evidence = briefEvidence(decisionBrief);
+      const citedMarkers = [...new Set(evidence.map(item => item.marker))];
+      // Only a marker envelope reaches the old evidence gate. Human prose is
+      // rendered later from surviving reviewed rows after all existing gates.
+      return { answer: citedMarkers.map(marker => `[${marker}]`).join(" "), citedMarkers, evidence,
+        conflicts: [], evidenceReview: "completed", decisionBrief };
+    } catch {
+      // A malformed generation/review, transport outage or input cap must not
+      // discard completed paid reads or route an unreviewed narrative to the UI.
+      return fallback;
+    }
   }
 
   async attribute(
@@ -351,8 +396,11 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       }),
       this.budgetFor(input.used.length),
     );
+    if (out.attributions !== undefined && !Array.isArray(out.attributions)) throw new ReasoningOutputValidationError("attribute returned malformed attributions");
     const atts =
       (out.attributions as { sourceId: string; weight: number; rationale: string }[]) ?? [];
+    if (atts.some(attribution => !attribution || typeof attribution !== "object" || Array.isArray(attribution) ||
+      typeof attribution.weight !== "number" || !Number.isFinite(attribution.weight))) throw new ReasoningOutputValidationError("attribute returned a malformed attribution");
     const total = atts.reduce((s, a) => s + (a.weight || 0), 0) || 1;
     return atts.map((a) => ({
       sourceId: a.sourceId,
@@ -363,15 +411,24 @@ export abstract class JsonChatEngine implements ReasoningEngine {
 }
 
 export function extractJson(text: string): Record<string, unknown> {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  // A valid JSON string can itself contain fenced source/code examples. Parse
+  // the whole response first; only a surrounding fence is a transport wrapper.
+  const object = (value: unknown): Record<string, unknown> => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new ReasoningOutputValidationError("Model response is not a JSON object");
+    return value as Record<string, unknown>;
+  };
+  let parsed: unknown;
+  try { parsed = JSON.parse(text); } catch { /* inspect an outer wrapper below */ }
+  if (parsed !== undefined) return object(parsed);
+  const fenced = text.trim().match(/^```(?:json)?\s*([\s\S]*?)```$/);
   const raw = fenced ? fenced[1] : text;
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
-  if (start === -1 || end === -1) return {};
+  if (start === -1 || end === -1) throw new ReasoningOutputValidationError("Model response is not valid JSON");
   try {
-    return JSON.parse(raw.slice(start, end + 1));
+    return object(JSON.parse(raw.slice(start, end + 1)));
   } catch {
-    return {};
+    throw new ReasoningOutputValidationError("Model response is not a valid JSON object");
   }
 }
 

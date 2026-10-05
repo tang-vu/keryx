@@ -12,6 +12,7 @@ import { ARC_MAINNET_PROFILE } from "@/lib/arc-network-profile";
 import { assertMainnetHostedResearchReady } from "@/lib/payments/mainnet-hosted-gateway";
 import { makePayment } from "@/lib/payments/payment-gateway";
 import { settleThenServe, challengeResponse } from "@/lib/x402-server";
+import { paidResearchAdmissionResponse } from "@/lib/research/paid-admission";
 import { a2aDiscovery } from "@/lib/x402-discovery";
 import { verifyApiKey } from "@/lib/api-keys";
 import { hasScope, parseScopes } from "@/lib/api-key-scopes";
@@ -199,6 +200,7 @@ export async function GET(req: NextRequest) {
     }
     return Response.json(pendingResponse(order));
   }
+  const paused = paidResearchAdmissionResponse(); if (paused) return paused;
   if (!config.sellerAddress || (config.networkId !== ARC_MAINNET_PROFILE.networkId && !config.funderKey) || process.env.KERYX_FORCE_OFFLINE === "1") {
     return Response.json({ error: "real A2A treasury is unavailable" }, { status: 503 });
   }
@@ -230,6 +232,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const paused = paidResearchAdmissionResponse(); if (paused) return paused;
   const authHeader = req.headers.get("authorization");
   const rawKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
   if (rawKey) {

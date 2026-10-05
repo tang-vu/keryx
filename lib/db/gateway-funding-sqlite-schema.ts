@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { GATEWAY_FUNDING_TABLES } from "./gateway-funding-ledger-types";
+import { sqliteSchemaMatches, type SqliteSchemaExpectation } from "./sqlite-schema-match";
 
 const DATA = "TEXT NOT NULL CHECK(json_valid(data) AND length(CAST(data AS BLOB))<=32768)";
 export const GATEWAY_FUNDING_SCHEMA: Readonly<Record<string, string>> = Object.freeze({
@@ -25,12 +26,13 @@ export function gatewayFundingFenceStatements(db: DatabaseSync, required = false
   const present = db.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name GLOB 'gateway_funding_*' LIMIT 10").all();
   if (!present.length && !required) return {};
   if (present.length !== GATEWAY_FUNDING_TABLES.length) fail();
-  for (const [name, sql] of Object.entries(GATEWAY_FUNDING_INDEXES)) {
-    if (db.prepare("SELECT sql=? AS matches FROM sqlite_schema WHERE type='index' AND name=?").get(sql, name)?.matches !== 1) fail();
-  }
+  const definitions: SqliteSchemaExpectation[] = [
+    ...Object.entries(GATEWAY_FUNDING_INDEXES).map(([name, sql]): SqliteSchemaExpectation => [name, "index", sql]),
+    ...GATEWAY_FUNDING_TABLES.map((name): SqliteSchemaExpectation => [name, "table", GATEWAY_FUNDING_SCHEMA[name]]),
+  ];
+  if (!sqliteSchemaMatches(db, definitions)) fail();
   const result: Record<string, string> = {};
   for (const table of GATEWAY_FUNDING_TABLES) {
-    if (db.prepare("SELECT sql=? AS matches FROM sqlite_schema WHERE type='table' AND name=?").get(GATEWAY_FUNDING_SCHEMA[table], table)?.matches !== 1) fail();
     for (const verb of ["INSERT", "UPDATE", "DELETE"]) {
       const name = `funding_domain_${createHash("sha256").update(table).digest("hex").slice(0, 16)}_${verb.toLowerCase()}`;
       const allowed = verb === "INSERT" || table === "gateway_funding_namespaces" && verb === "UPDATE";
@@ -43,7 +45,5 @@ export function gatewayFundingFenceStatements(db: DatabaseSync, required = false
   return result;
 }
 export function assertGatewayFundingSchema(db: DatabaseSync): void {
-  for (const [name, sql] of Object.entries(gatewayFundingFenceStatements(db, true))) {
-    if (db.prepare("SELECT sql=? AS matches FROM sqlite_schema WHERE type='trigger' AND name=?").get(sql, name)?.matches !== 1) fail();
-  }
+  if (!sqliteSchemaMatches(db, Object.entries(gatewayFundingFenceStatements(db, true)).map(([name, sql]) => [name, "trigger", sql]))) fail();
 }

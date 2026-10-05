@@ -1,24 +1,137 @@
 # Keryx Project Changelog
 
-## October 5, 2026 — Research usefulness, bounded sponsorship and recurring tolls
+## October 5, 2026 — Bounded sponsorship, recurring tolls and accurate unread receipts
 
-- Deep research searches once per research target, in parallel, sharing the candidate
-  cap between queries; shows the model 4000 characters per source; and may read one
-  source per target (default attention limit 6; pinned A2A package limits unchanged).
-  Planning names specific candidates to verify for an unnamed "which X" comparison.
-- Optional `KERYX_ANSWER_DELIVERY=cited-synthesis` delivers the model-written answer
-  with rejected citation markers removed, followed by the excerpt ledger and the
-  computed evidence verdict. Default remains `qualified-excerpts`; reward gating is
-  unchanged. Not enabled in production by this change.
 - Receipts record a selection that was never read as SKIP and release its toll
-  reservation. A reasoning failure after a paid read, or a client disconnect after a
-  payment, no longer discards the dispatch.
+  reservation. A client disconnect after a creator payment no longer discards the
+  dispatch. The final coverage check reuses an identical interim assessment.
 - Paid reads expire from the cache after `KERYX_CACHE_TTL_SECONDS` (default 7 days)
   and browser-funded reads are cached per paying wallet.
 - A run the asker does not fund leaves out sources that pay the asker's verified
   wallet. Sponsored research has daily dispatch caps per caller and service-wide.
-- Remaining limits: three of eight public page reads failed in the recorded local
-  trial; no browser-path service fee or A2A reserve refund. See `DECISIONS.md`.
+- No change to planning, context, attention or search limits, answer delivery,
+  fees or custody. See `DECISIONS.md`.
+
+### Public Google onboarding policies (2026-10-05, v0.26.18 candidate)
+
+- Publish a linked terms page covering research, content rights, visible prices,
+  payment evidence and wallet recovery without changing spending consent.
+- Disclose optional Google/Circle identity and token processing in the privacy
+  policy, including temporary device continuation and separate browser custody.
+- Document External/In production Google setup and the basic-identity Testing
+  exception. Public policies do not establish vendor acceptance or activate Google
+  wallets; live sign-in/signing/recovery remain gated.
+- The hosted policy pages serve web, desktop, extensions, CLI/MCP and bot callers
+  of the same service. No API, package, installer or payment contract changes.
+
+### Bounded planning refusals and heading recall (2026-10-05, v0.26.17 candidate)
+
+- Distinguish comparison subjects from source references while preserving independently
+  inspectable targets and the existing eight-target cap.
+- Stop malformed or overexpanded plans before discovery and extra paid planning tiers.
+  Return bounded original-caller refinement guidance; preserve actual usage and circuits.
+- Prefer uniquely matching extracted heading hints and contiguous context within existing
+  selection bounds, retaining exact quote/source provenance and reward gates.
+- The closed browser round remains 0/3 useful. Useful synthesis and a new finite live
+  acceptance remain open. See [scope, surfaces and gates](engineering/research-planning-2026-10-05.md).
+
+### Preserve zero source budgets and bound browser acceptance (2026-10-05, v0.26.16 candidate)
+
+- Preserve an explicit zero source budget across web/SSE, OpenAI API and remote MCP;
+  withhold gateway delivery and signing authority for free-only research.
+- Add a separate protected, dated browser allowance for three exact questions, bounded
+  model plus basic search attempts and zero source payments. Failed/unknown holds remain
+  consumed; previous closed allowances stay closed.
+- Remote MCP advances to 0.3.1. Caller-funded MCP 0.4.5, Operator 0.4.6 and extension
+  0.1.1 retain their existing custody and distribution roles. Actual live usefulness,
+  schedule activation and deployed-source verification remain gates.
+  See [authority and acceptance](engineering/bounded-live-research-2026-10-05.md).
+
+### Original scope, typed reasoning failures and release isolation (2026-10-05, v0.26.15 candidate)
+
+- Consider supplied original URLs independently of search; retain per-source skips,
+  failures, bounded reads and section limitations in the answer and receipt.
+- Distinguish invalid model output, internal errors and ineligible fallbacks from
+  transport failures; expose recorded per-step serving to MCP consumers.
+- Retain the full funding inspection/unseal path after the native schema timing
+  repair in v0.26.12; add diagnostics, post-issuance drift and fresh-custody Windows coverage.
+- Stage immutable-release preparation and synthetic no-spend rehearsal. The current
+  reviewed maintenance deployment remains authoritative.
+- Publish distinct MCP 0.4.5 and desktop 0.4.6 bytes after exact-source acceptance.
+- No new paid evaluation or circuit reset. #128, #158's historical/live gates and
+  #164's real deployment gates remain open. See [scope and audit](engineering/issue-followups-2026-10-05.md).
+
+### Reusable research budgets and optional Google wallet onboarding (2026-10-05, v0.26.14)
+
+- Select a research allowance, per-question maximum and 1-hour/24-hour/7-day
+  duration; reuse an active budget across conversations and reloads.
+- Show remaining authorization capacity, held amounts and a direct stop control.
+  Renewal retains the old ceiling; reviewed funding and consent increase it.
+- Preserve original v1 proofs/custody and exact durable liabilities. Version 2
+  policy is enforced independently by server admission and browser signing.
+- Add a configuration-gated Circle Google wallet connector and authenticated
+  wallet onboarding. Production credentials and live vendor acceptance are separate
+  activation gates. See [setup and surface boundaries](research-budget-onboarding.md).
+
+### Align mainnet runtime guidance and recovery UX (2026-10-05, v0.26.12 candidate)
+
+- Correct Slack/OpenAI, Monthly MCP/API and external marketplace guidance without inferring
+  settlement or changing the network of historical records.
+- Default new Operator desktop tasks to Arc mainnet and expose creator claim-control
+  freshness with deliberate verification recovery. Existing task networks and the
+  24-hour proof policy remain intact.
+- Expose missing and stale financial-monitor observations separately from service
+  availability. Preserve held schedules, payment reservations and signing authority.
+- Admit bounded caller-supplied source URLs as unread leads when search omits them;
+  retain normal public-read and evidence gates, and show refusal or selection skips.
+- Expose recorded source-selection engines and fallback telemetry in shared results
+  and remote MCP. Unknown history stays unknown; no circuit reset or paid retest occurs.
+- Batch exact SQLite schema comparisons in native code without caching authority or
+  weakening freshness. Record empty-ledger observations without claiming settlement.
+- Coordinate MCP 0.4.4 and desktop 0.4.5 distribution; extension and remote protocol
+  retain their existing roles, with remote MCP's additive result labelled 0.3.0.
+  See [scope and open gates](engineering/mainnet-consistency-2026-10-05.md).
+
+### Preserve source qualifications and complete quotations (2026-10-05, v0.26.11 candidate)
+
+- Review quotations with exact source positions, URL/version and neighboring text.
+  Withhold cut or unbound excerpts before admitting citations or creator rewards.
+- Preserve read slots when an official-document request encounters recognized
+  discussion pages, including cached/paid candidates and final read redirects.
+- Keep historical reports and payment authority unchanged, with no additional model
+  calls or retries. The completed client round accepted 0/3 useful answers; this
+  correction has only offline validation. See [scope and gates](engineering/source-context-2026-10-05.md).
+
+### Public source claims and explicit future earnings (2026-10-05, v0.26.10)
+
+- Add `/claim-source` for wallet-bound website or RSS publisher proof, challenge recovery,
+  exact registry linking and a separate free/citation-only/paid policy with rights consent.
+- Keep public discovery and historical public citations free. Read exact zero-price creator
+  articles without an access payment; reward only qualified citations when separately enabled.
+- Bind new charges to the selected policy and retained original nonce. Pause unavailable or
+  stale authority, preserve public evidence and report uncertain funding without retrying it.
+- Show claim mode/control status on source listings. Validate both profiles and mobile/desktop
+  flows with a hermetic Chromium journey and native concurrent policy-admission tests.
+- Claim management is web/API; shared readers retain their existing surface roles. See
+  [public source claims](public-source-claims.md). No fake mainnet paid sources or real spending
+  are part of this release validation.
+- Preserve captured claim policy and free-read provenance in shared research and portable
+  receipts. Operator desktop 0.4.4 updates its receipt read model; MCP 0.4.3 and extension
+  0.1.1 keep their unchanged compatible distribution roles.
+
+### Retain research when model calls fail (2026-10-05, v0.26.9)
+
+- Preserve completed reads and payment receipts when later model assessment,
+  synthesis or attribution is unavailable. Stop additional purchases when reading
+  assessment fails; retain existing evidence/reward authority and allocation rules.
+- Add an optional fact/action brief with exact contextual quotes, complete row and
+  quote-contribution review, and dependency rejection. It remains gated:
+  all three independent usefulness attempts failed. The feature stays disabled.
+- Add a protected finite model allowance for ordinary production-client acceptance,
+  with durable failed-request holds and an exact supplier scope. Source USDC and
+  search remain separate costs. See [evidence and pending delivery gates](engineering/decision-brief-2026-10-05.md).
+- Bind reviewed deployment to the exact accepted remote commit and preserve retained
+  build directories. CLI labels distinguish planned allocation from evidenced settlement.
 
 ## October 4, 2026 — Mainnet documentation refresh
 

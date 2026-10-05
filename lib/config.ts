@@ -127,7 +127,7 @@ export const config = {
   // reads independently from USDC so a cheap/noisy catalog cannot dilute the evidence set.
   maxAttentionSources: Math.max(
     1,
-    Math.round(num(process.env.KERYX_MAX_ATTENTION_SOURCES, 6)),
+    Math.round(num(process.env.KERYX_MAX_ATTENTION_SOURCES, 4)),
   ),
   // Cached content is free in money, not in attention. Only reuse it when the engine predicts
   // material value and names at least one sub-claim it can support.
@@ -140,12 +140,6 @@ export const config = {
   // an article version is the last one that version ever earns, however often it is read. 0 disables
   // expiry. Browser-funded reads are additionally cached per paying wallet (see run-agent).
   cacheTtlSeconds: Math.max(0, Math.round(num(process.env.KERYX_CACHE_TTL_SECONDS, 604_800))),
-  // "qualified-excerpts" delivers only source-matched quotes with a fixed Low label. "cited-synthesis"
-  // delivers the model-written answer with rejected citation markers removed, followed by the same
-  // excerpt ledger, and reports the computed evidence verdict. Reward gating is identical in both.
-  answerDelivery: (process.env.KERYX_ANSWER_DELIVERY === "cited-synthesis"
-    ? "cited-synthesis"
-    : "qualified-excerpts") as "cited-synthesis" | "qualified-excerpts",
 
   // Original public reads have no toll and no pre-read evidence. Keep their preview
   // ranking floor aligned with the heuristic's positive selection threshold; cached
@@ -158,7 +152,8 @@ export const config = {
   // ── Open x402 marketplace discovery ──
   // When on, the agent probes the live Circle x402 service bazaar (`circle services search`) during
   // discovery and reasons over real external endpoints alongside its registered creators. These
-  // settle on other chains (Base/ETH/… mainnet), not Keryx's Arc rail, so they are DISCOVERY-ONLY:
+  // advertise their own payment networks. They remain DISCOVERY-ONLY even when an endpoint
+  // advertises the selected Arc rail; listing metadata is not payment or delivery authority:
   // evaluated and logged, never purchased (the orchestrator enforces this, mirroring the budget cap).
   externalDiscovery: (process.env.KERYX_EXTERNAL_DISCOVERY ?? "1") !== "0",
   webSearchUrl: process.env.KERYX_WEB_SEARCH_URL ?? "",

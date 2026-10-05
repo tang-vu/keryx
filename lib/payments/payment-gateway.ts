@@ -19,6 +19,7 @@ import type {
   Source,
   SourceItem,
   SourceItemIdentity,
+  SourceClaimReceipt,
 } from "../types";
 import type { KeryxDB } from "../db";
 import type { RequestSignatureFn } from "./browser-cosign-gateway";
@@ -41,6 +42,7 @@ export interface PaymentGateway {
     /** Trusted discovery price, independently checked against the x402 challenge. */
     priceUsdc?: number;
     offer?: ArticleOfferRef;
+    sourceClaim?: SourceClaimReceipt;
   }): Promise<FetchResult>;
   /** Settle a weighted citation reward to one author wallet. */
   payCitation(args: {
@@ -51,6 +53,7 @@ export interface PaymentGateway {
     weight: number;
     queryId: string;
     rationale: string;
+    sourceClaim?: SourceClaimReceipt;
   }): Promise<PaymentRecord>;
   agentAddress(): string;
 }

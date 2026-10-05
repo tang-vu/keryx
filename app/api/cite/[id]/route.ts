@@ -17,6 +17,9 @@ import { config } from "@/lib/config";
 import { settleThenServe } from "@/lib/x402-server";
 import { allowedPayTo, isAllowed } from "@/lib/registry/payto-guard";
 import { sourceFetchTerms } from "@/lib/registry/source-fetch-payto";
+import { sourceClaimAccess } from "@/lib/sources/source-claim-access";
+import { assertSourceClaimRequest, sourceClaimPath } from "@/lib/sources/source-claim-request";
+import type { SourceClaimReceipt } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,6 +38,18 @@ export async function POST(
   const source = await db.getSource(id);
   if (!source) return Response.json({ error: "source not found" }, { status: 404 });
   if (source.active === false || source.verified === false) return Response.json({ error: "Source is not active on the earning rail" }, { status: 410 });
+  let claimSnapshot: SourceClaimReceipt | undefined;
+  try {
+    const claim = await db.getSourceClaimForSource?.(source.id);
+    if (claim || source.sourceClaimId) {
+      const terms = await sourceFetchTerms(source, { refresh: true });
+      const access = await sourceClaimAccess(db, source, terms);
+      if (!access.rewardAllowed) return Response.json({ error: "Citation rewards have not been enabled by this source owner" }, { status: 410 });
+      claimSnapshot = access.snapshot;
+    }
+  } catch { return Response.json({ error: "Current source claim authority is unavailable" }, { status: 503 }); }
+  try { assertSourceClaimRequest(url.searchParams, claimSnapshot); }
+  catch { return Response.json({ error: "Source policy changed; rediscover before paying" }, { status: 409 }); }
 
   // payTo must be a real wallet of this source (the source itself or one of its authors)
   const valid =
@@ -96,7 +111,10 @@ export async function POST(
     {
       priceUsdc: amount,
       payTo,
-      endpoint: `/api/cite/${id}`,
+      endpoint: sourceClaimPath(`/api/cite/${id}`, claimSnapshot),
+      resourceSourceId: id,
+      resourceKind: "citation",
+      ...(claimSnapshot ? { sourceClaim: { sourceId: id, receipt: claimSnapshot, kind: "citation" as const } } : {}),
       description: `Citation reward for ${source.name}`,
     },
     () => ({ ok: true, source: source.name, network: config.networkId }),

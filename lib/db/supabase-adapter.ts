@@ -5,7 +5,7 @@ import { publicReferenceSchema, type PublicReference } from "../public-reference
 import type { StorageDeploymentManifest } from "./runtime-storage-config";
 import { SupabaseAuthority } from "./supabase-authority";
 import { canonicalJson } from "../canonical-json";
-import { refuseStorage } from "./storage-identity";
+import { refuseStorage, StorageIdentityRefused } from "./storage-identity";
 import { SUPABASE_RUNTIME_CONTRACT } from "./supabase-runtime-contract";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { admitSupabaseBrowserQueryPolicy,admitSupabaseBrowserSigningOriginal,admitSupabaseBrowserSourceSigningOriginal,readSupabaseBrowserSigningSnapshot,readExposedSupabaseBrowserSigningSnapshotForSigner,signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
@@ -282,6 +282,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
+    if (s.sourceClaimId) throw new Error("Managed source claims require accepted atomic SQLite claim storage; Supabase imports are unsupported");
     if (s.scholarlyEnrolled) throw new Error("Scholarly enrolled sources cannot migrate to the unsupported Supabase backend");
     if (s.id.startsWith("public:")) throw new Error("Reserved public-reference source ID");
     // active defaults to true for offline/DB-direct rows that predate the flag.
@@ -1425,10 +1426,18 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async settlementLedger(): Promise<LedgerAccount[]> {
-    const [{ data: pays }, { data: outs }] = await Promise.all([
+    const [{ data: pays, error: payError }, { data: outs, error: withdrawalError }] = await Promise.all([
       this.domainCall("settlement_ledger", {}, () => this.#sb.from("payment_events").select("payee,source_name,amount_usdc,kind,settled")),
       this.domainCall("settlement_ledger_2", {}, () => this.#sb.from("withdrawals").select("wallet,amount_usdc")),
-    ]);
+    ]).catch((error: unknown) => {
+      if (error instanceof StorageIdentityRefused) throw error;
+      throw new Error("Settlement ledger unavailable");
+    });
+    // A failed/missing read is unknown, never evidence of an empty creator ledger.
+    // Keep vendor response bodies out of monitor logs and public errors.
+    if (payError || withdrawalError || !Array.isArray(pays) || !Array.isArray(outs)) {
+      throw new Error("Settlement ledger unavailable");
+    }
 
     // Keyed lowercased: the two tables were written by different code paths and disagree on
     // checksum casing. The display address is whichever casing the payment ledger recorded.

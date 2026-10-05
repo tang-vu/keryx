@@ -1,31 +1,40 @@
 import type { SourceCandidate } from "../llm";
 import { digest, publisherGroup } from "./url-identity";
 import type { SearchProvider } from "./search-provider";
+import { discussionDoesNotMeetDocumentRequest } from "../research/source-requirements";
+import { requestedSources, sourceUrlRefusal, type RequestedSourceLead } from "./requested-sources";
+import { canonicalUrl } from "./url-identity";
+export type { RequestedSourceLead } from "./requested-sources";
 
-const MAX_CANDIDATES = 24;
-const MAX_DEEP_QUERIES = 9; // the question plus MAX_RESEARCH_TARGETS
+function documentCandidateId(raw: string): string {
+  return `public:web:${digest(canonicalUrl(raw) ?? raw)}`;
+}
 
-export async function discoverWeb(provider: SearchProvider, question: string, claims: string[], quick: boolean, signal?: AbortSignal) {
-  // Deep research searches once per research target: a cap below the target count left the later
-  // targets (typically the named candidates of a comparison) with no discovery at all.
-  const queries = [...new Set([question, ...claims].map(query => query.trim().slice(0, 500)))].filter(Boolean).slice(0, quick ? 2 : MAX_DEEP_QUERIES);
-  // Share the candidate cap between queries so the first broad query cannot fill it alone.
-  const perQuery = Math.max(2, Math.floor(MAX_CANDIDATES / Math.max(1, queries.length)));
+export async function discoverWeb(provider: SearchProvider | null, question: string, claims: string[], quick: boolean, signal?: AbortSignal) {
+  const queries = provider ? [...new Set([question, ...claims].map(query => query.trim().slice(0, 500)))].filter(Boolean).slice(0, quick ? 2 : 4) : [];
   const candidates = new Map<string, SourceCandidate>(); const hosts = new Map<string, number>(); let failedQueries = 0, attemptedQueries = 0, succeededQueries = 0;
-  // Searches run together: one per research target in sequence would spend most of the run's web
-  // time budget before a single page is read. Hits are admitted in query order, so the result is
-  // the same as a sequential pass.
-  const searches = signal?.aborted ? [] : await Promise.allSettled(queries.map(query => provider.search(query, signal)));
-  for (const search of searches) {
+  const withheldDiscussions = new Set<string>();
+  const supplied = requestedSources(question);
+  const leads: RequestedSourceLead[] = supplied.leads.map(lead => signal?.aborted && !lead.refusal
+    ? { url: lead.url, refusal: "cancelled" } : lead);
+  for (const lead of leads) if (lead.refusal === "discussion-does-not-meet-document-request") withheldDiscussions.add(lead.url);
+  if (!signal?.aborted) for (const [id, candidate] of supplied.candidates) {
+    candidates.set(id, candidate);
+  }
+  // Explicit requests have their own finite eight-lead limit. Search publisher
+  // slots constrain additional previews, not the caller's named originals.
+  for (const query of queries) {
     if (signal?.aborted) break;
     try {
       attemptedQueries++;
-      if (search.status === "rejected") throw search.reason;
-      let admitted = 0;
-      for (const hit of search.value) {
-        const id = `public:web:${digest(hit.url)}`; const group = publisherGroup(hit.url);
-        if (candidates.has(id) || (hosts.get(group) ?? 0) >= 2 || candidates.size >= MAX_CANDIDATES || admitted >= perQuery) continue;
-        admitted++;
+      for (const hit of await provider!.search(query, signal)) {
+        // A search response cannot re-admit a URL refused by the caller-lead path.
+        if (sourceUrlRefusal(hit.url)) continue;
+        // Apply the negative document-role requirement before per-publisher slots are consumed.
+        // This never invents a replacement URL or makes another search request.
+        if (discussionDoesNotMeetDocumentRequest(question, hit.url)) { withheldDiscussions.add(hit.url); continue; }
+        const id = documentCandidateId(hit.url); const group = publisherGroup(hit.url);
+        if (candidates.has(id) || (hosts.get(group) ?? 0) >= 2 || candidates.size >= 24) continue;
         hosts.set(group, (hosts.get(group) ?? 0) + 1);
         candidates.set(id, { id, sourceId: id, sourceKind: "public-reference", name: hit.title,
           description: `Public web discovery from ${group}. Search snippet is an unverified preview; original page must be read. No creator payment.`,
@@ -36,5 +45,7 @@ export async function discoverWeb(provider: SearchProvider, question: string, cl
     } catch { if (signal?.aborted) break; failedQueries++; }
   }
   return { candidates, queries: queries.length, attemptedQueries, succeededQueries, failedQueries, cancelled: !!signal?.aborted,
+    requestedSources: leads, omittedRequestedSources: supplied.omitted,
+    withheldDiscussionPreviews: withheldDiscussions.size,
     truncatedQueries: [question, ...claims].some(query => query.trim().length > 500) };
 }

@@ -34,7 +34,7 @@ beforeAll(async () => {
     function Probe(){const [,render]=useState(0);window.changeOwner=()=>{window.wallet={...window.wallet,account:{address:'0x2222222222222222222222222222222222222222'}};render(v=>v+1)};
       window.disconnect=()=>{window.wallet=undefined;render(v=>v+1)};
       const grant=useMainnetSessionGrant();window.grant=grant;return <><output id="state">{JSON.stringify(grant.state)}</output>
-        <GrantSpendDialog grantState={grant.state} onActivate={grant.generateAndFund} onTopUp={grant.topUp} onExtend={grant.extend}
+        <GrantSpendDialog grantState={grant.state} onActivate={(amount,options)=>grant.generateAndFund(amount,false,options)} onTopUp={grant.topUp} onExtend={grant.extend}
           onRevoke={grant.revoke} onTryRecover={grant.tryRecover} onRecoverViaSignature={grant.recoverViaSignature}/></>}
     createRoot(document.getElementById('root')).render(window.strict?<React.StrictMode><Probe/></React.StrictMode>:<Probe/>);
   ` }, bundle: true, write: false, platform: "browser", format: "esm",
@@ -84,7 +84,7 @@ it("blocks duplicate lifecycle actions and never derives on unavailable custody"
   const { page, context } = await mount();
   try {
     expect((await state(page)).status).toBe("restoring");
-    expect(await page.getByRole("button", { name: "Activate session" }).count()).toBe(0);
+    expect(await page.getByRole("button", { name: "Enable research budget" }).count()).toBe(0);
     expect(await page.getByText("Restoring saved session in this browser…").count()).toBe(1);
     await page.evaluate(async () => {
       const { grant } = window as unknown as Fixture;
@@ -95,13 +95,13 @@ it("blocks duplicate lifecycle actions and never derives on unavailable custody"
     await expect.poll(async () => (await state(page)).status).toBe("error");
     expect((await state(page)).error).toBe("Recovery storage unavailable");
     // Explicit retry still cannot reinterpret a failed read as a missing key.
-    await page.getByRole("button", { name: "Activate session" }).click();
+    await page.getByRole("button", { name: "Enable research budget" }).click();
     await expect.poll(() => page.evaluate(() => (window as unknown as Fixture).restores.length)).toBe(1);
     await release(page, "failed");
     await expect.poll(async () => (await state(page)).status).toBe("error");
     expect(await page.evaluate(() => (window as unknown as Fixture).signatures)).toBe(0);
     // A successful empty read permits exactly one first-creation signature.
-    await page.getByRole("button", { name: "Activate session" }).click();
+    await page.getByRole("button", { name: "Enable research budget" }).click();
     await expect.poll(() => page.evaluate(() => (window as unknown as Fixture).restores.length)).toBe(1);
     await release(page, "missing");
     await expect.poll(async () => (await state(page)).status).toBe("error");
@@ -131,7 +131,7 @@ it("restores an expired funded key with a readable consent-renewal message", asy
     await expect.poll(async () => (await state(page)).status).toBe("paused");
     expect((await state(page)).error).toContain("Review a new spending consent");
     expect((await state(page)).sessAddr).toBe("0x3333333333333333333333333333333333333333");
-    expect(await page.getByRole("button", { name: "Resume session" }).count()).toBe(1);
+    expect(await page.getByRole("button", { name: "Continue with saved budget" }).count()).toBe(1);
     expect(await page.evaluate(() => (window as unknown as Fixture).signatures)).toBe(0);
   } finally { await context.close(); }
 });
@@ -142,7 +142,7 @@ it("switches owners during a wallet prompt without replaying the old funding act
     await release(page, "missing");
     await expect.poll(async () => (await state(page)).status).toBe("idle");
     await page.evaluate(() => { (window as unknown as Fixture).holdSignature = true; });
-    await page.getByRole("button", { name: "Activate session" }).click();
+    await page.getByRole("button", { name: "Enable research budget" }).click();
     await expect.poll(() => page.evaluate(() => (window as unknown as Fixture).restores.length)).toBe(1);
     await release(page, "missing");
     await expect.poll(() => page.evaluate(() => (window as unknown as Fixture).signatures)).toBe(1);

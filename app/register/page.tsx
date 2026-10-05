@@ -136,7 +136,7 @@ export default function RegisterPage() {
             Become a source
           </div>
           <h1 className="letterpress mt-2.5 max-w-[16ch] font-display text-[clamp(34px,6vw,68px)] font-medium leading-[0.96] tracking-[-0.01em] text-ink">
-            Set your <em className="italic text-paid">toll.</em>
+            {prefill?.sourceClaimId ? <>Register your <em className="italic text-paid">source.</em></> : <>Set your <em className="italic text-paid">toll.</em></>}
           </h1>
           <p className="mt-3 max-w-[54ch] text-[18px] leading-relaxed text-ink-2">
             List an RSS feed you control to offer articles to Keryx. Set a price per read,
@@ -146,9 +146,10 @@ export default function RegisterPage() {
             An agent may skip a source after reading its public preview. A paid read and a cited answer
             are separate payment events. Track sources and earnings in <Link href="/me/sources" className="underline">My sources</Link> or inspect public settlements in <Link href="/dashboard" className="underline">Payments & proof</Link>.
           </p>
+          <p className="mt-3 text-sm text-ink-2">Own a website or document already read as a free public source? <Link href="/claim-source" className="underline">Claim your source</Link>, then separately choose free reads, citation rewards or paid access.</p>
         </header>
 
-        <section className="mb-8 max-w-2xl border border-ink bg-paper-2 p-5" aria-labelledby="feed-first-title">
+        {prefill?.sourceClaimId ? <section className="mb-8 max-w-2xl border border-ink bg-paper-2 p-5"><h2 className="font-display text-xl">Register this claimed source</h2><p className="mt-2 text-sm text-ink-2">The source URL and wallet are bound to your verified claim. Review the read price below. After confirmation and indexing, <Link href={`/claim-source?claimId=${encodeURIComponent(prefill.sourceClaimId)}`} className="underline">return to the claim</Link> to connect this listing and explicitly activate its policy. Registration alone does not enable earnings.</p></section> : <section className="mb-8 max-w-2xl border border-ink bg-paper-2 p-5" aria-labelledby="feed-first-title">
           <h2 id="feed-first-title" className="font-display text-xl text-ink">Start with your feed URL</h2>
           <p className="mt-1 text-sm text-ink-2">Check the URL format and carry it into registration. Keryx reads the feed after you sign in; this step does not fetch or verify its contents.</p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -157,7 +158,7 @@ export default function RegisterPage() {
           </div>
           {feedError && <p role="alert" className="mt-2 text-sm text-seal">{feedError}</p>}
           {prefill?.rssUrl && !feedError && <p className="mt-2 break-all text-sm text-ink-2">Ready to register: {prefill.rssUrl}. Connect your wallet below to continue.</p>}
-        </section>
+        </section>}
 
         <div className="grid gap-10 lg:grid-cols-[minmax(0,440px)_1fr]">
           <div className="lg:sticky lg:top-24 lg:self-start">
@@ -209,7 +210,7 @@ export default function RegisterPage() {
                 {address && <WithdrawEarningsPanel address={address} />}
                 {/* Sources this wallet listed before the registry existed — one click pre-fills
                     the form below with the source's own feed/URL and price to claim it on-chain. */}
-                <ClaimOnchainPanel
+                {!prefill?.sourceClaimId && <ClaimOnchainPanel
                   sources={sources}
                   address={address}
                   onClaim={(s) => {
@@ -224,7 +225,7 @@ export default function RegisterPage() {
                     setFormKey((k) => k + 1);
                     setMode("single"); // a claim pre-fills the single form
                   }}
-                />
+                />}
                 {/* Registering writes the source to the on-chain registry from the creator's own
                     wallet, so it costs gas. A wallet arriving here empty would dead-end at the
                     signature prompt; the drip is one click and one claim per address. */}
@@ -232,7 +233,7 @@ export default function RegisterPage() {
                   <FaucetPanel />
                 </div>
                 {/* One source at a time, or paste a whole list of feeds at once. */}
-                <div className="mb-4 flex gap-1 border border-line bg-paper-2 p-1">
+                {!prefill?.sourceClaimId && <div className="mb-4 flex gap-1 border border-line bg-paper-2 p-1">
                   {(["single", "bulk"] as const).map((m) => (
                     <button
                       key={m}
@@ -247,7 +248,7 @@ export default function RegisterPage() {
                       {m === "single" ? "One source" : "Bulk import"}
                     </button>
                   ))}
-                </div>
+                </div>}
                 {mode === "single" ? (
                   <RegisterForm
                     key={`${formKey}:${session?.address.toLowerCase()}`}

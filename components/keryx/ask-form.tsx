@@ -12,6 +12,7 @@ import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 interface AskFormProps {
   disabled?: boolean;
+  questionCapUsdc?: number;
   parentId?: string | null;
   conversation?: boolean;
   clearOnSubmit?: boolean;
@@ -55,7 +56,7 @@ function readSharedAsk(): {
   const p = new URLSearchParams(window.location.search);
   const q = p.get("q")?.trim().slice(0, MAX_SHARED_Q) || null;
   const b = parseFloat(p.get("budget") ?? "");
-  const budget = Number.isFinite(b) && b >= 0.01 && b <= 0.08 ? b : null;
+  const budget = Number.isFinite(b) && b >= 0 && b <= 0.08 ? b : null;
   // Follow-up link from a dispatch permalink: the server re-reads this run and anchors the
   // question to it. An unknown id degrades to a standalone ask server-side.
   const rawParent = p.get("parent")?.trim() ?? "";
@@ -78,9 +79,12 @@ const SUGGESTIONS = [
   },
 ];
 
-export function AskForm({ disabled, onAsk, payer = "treasury", parentId, conversation = false, clearOnSubmit = false }: AskFormProps) {
+export function AskForm({ disabled, onAsk, payer = "treasury", parentId, conversation = false, clearOnSubmit = false, questionCapUsdc }: AskFormProps) {
   const [question, setQuestion] = useState("");
   const [budget, setBudget] = useState(0.05);
+  const maximumBudget = payer === "session" && questionCapUsdc !== undefined && Number.isFinite(questionCapUsdc) && questionCapUsdc > 0
+    ? Math.min(0.08, questionCapUsdc) : 0.08;
+  const effectiveBudget = Math.min(budget, maximumBudget);
   // Reasoning-model pick, chat-app style. "" = server default (DeepSeek). The picker only
   // renders when the server offers more than one model; every pick falls back server-side.
   const [model, setModel] = useState("");
@@ -121,7 +125,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
       // Opt-in auto-dispatch: only when the link explicitly asks for it and a question is present.
       // Treasury free-trial rate limits still apply, so this can't be turned into a spend amplifier.
       if (q && run && !disabled) {
-        onAsk(q, b ?? 0.05, parent ?? undefined, m ?? undefined, mode);
+        onAsk(q, Math.min(b ?? 0.05, maximumBudget), parent ?? undefined, m ?? undefined, mode);
         if (clearOnSubmit) setQuestion("");
       }
     }, 0);
@@ -132,7 +136,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
   const submit = () => {
     const q = question.trim();
     if (!q || disabled || payer === "paused") return;
-    onAsk(q, budget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode, scholarly, paidScholarly && payer === "session");
+    onAsk(q, effectiveBudget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode, scholarly, paidScholarly && payer === "session");
     if (clearOnSubmit) setQuestion("");
   };
 
@@ -180,7 +184,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
           </fieldset>
           <div className="mt-2 border-t border-line pt-3">
             <p className="mb-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-source-cap">
-              Source cap: {budget.toFixed(3)} USDC · {payer === "treasury" ? "Keryx pays" : payer === "session" ? "Your session" : payer === "expired" ? "Session expired" : "Session paused"}
+              Source cap: {effectiveBudget.toFixed(6)} USDC · {payer === "treasury" ? "Keryx pays" : payer === "session" ? "Your research budget" : payer === "expired" ? "Budget expired" : "Budget paused"}
             </p>
             <button type="button" onClick={submit} disabled={disabled || payer === "paused" || question.trim().length === 0}
               data-tour="dispatch-btn"
@@ -189,7 +193,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
             </button>
             <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
               {payer === "session"
-                ? `Your funded session pays on ${currentArcLabel}. Question budget: $${budget.toFixed(3)} USDC; your session cap also applies.`
+                ? `Your research budget pays on ${currentArcLabel}. This question can use up to ${effectiveBudget.toFixed(6)} USDC; your remaining total also applies.`
                 : payer === "paused"
                   ? "Session status unavailable. Recover your funded session below before another question."
                 : payer === "expired"
@@ -207,17 +211,17 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
           <p className="text-xs text-ink-3">Requires your funded browser session. Uses the question budget for access and supported citation rewards. Public scholarly references stay free; only approved exact versions can be paid.</p>
           <details ref={advancedRef} className="mt-3 border-t border-line pt-2">
             <summary className="flex min-h-11 cursor-pointer items-center font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2 marker:text-seal hover:text-ink">
-              Budget and model: ${budget.toFixed(3)} USDC
+              Budget and model: ${effectiveBudget.toFixed(6)} USDC
             </summary>
             <div className="pb-2 pt-1">
               <div className="flex flex-wrap items-center justify-between gap-2" data-tour="budget">
                 <label htmlFor="ask-budget" className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">Maximum budget</label>
-                <span className="font-display text-[25px] font-semibold tabular-nums text-seal">${budget.toFixed(3)}</span>
+                <span className="font-display text-[25px] font-semibold tabular-nums text-seal">${effectiveBudget.toFixed(6)}</span>
               </div>
-              <input id="ask-budget" type="range" min={0.01} max={0.08} step={0.005} value={budget}
+              <input id="ask-budget" type="range" min={0} max={maximumBudget} step={maximumBudget < 0.01 ? 0.000001 : 0.005} value={effectiveBudget}
                 disabled={disabled} onChange={(e) => setBudget(parseFloat(e.target.value))}
                 className="mt-2 w-full" aria-label="Maximum budget in USDC" />
-              <p className="mt-2 font-serif text-[13px] text-ink-2">The agent cannot spend more than this amount on one question.</p>
+              <p className="mt-2 font-serif text-[13px] text-ink-2">The agent cannot spend more than this amount on one question. Choose 0 for free sources without source purchases or creator rewards. Model and search costs remain separate.</p>
               {models.length > 1 && (
                 <label className="mt-3 flex flex-col gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">
                   AI model

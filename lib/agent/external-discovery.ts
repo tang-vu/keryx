@@ -6,8 +6,9 @@
  * query. One CLI call snapshots the whole marketplace (cached); each query then ranks it locally by
  * topical relevance and surfaces the best matches as candidates.
  *
- * These endpoints settle on other chains (Base/ETH/… mainnet), not Keryx's Arc testnet rail, so they
- * are DISCOVERY-ONLY: the agent evaluates and logs them, but the orchestrator never purchases them.
+ * Endpoints advertise acceptance on various chains, which may include the selected Arc profile.
+ * All are DISCOVERY-ONLY: the agent evaluates and logs them, but never purchases them. Marketplace
+ * metadata alone does not establish trusted payment authority or settlement.
  * This module only READS the marketplace; it moves no money.
  */
 
@@ -18,7 +19,7 @@ import type { SourceCandidate } from "../llm";
 
 const pexec = promisify(exec);
 
-/** CAIP-2 eip155 chain ids → human labels. Arc testnet is Keryx's own rail. */
+/** CAIP-2 eip155 chain ids → human labels; retain each advertised network's identity. */
 const CHAINS: Record<string, string> = {
   "eip155:1": "Ethereum",
   "eip155:10": "Optimism",
@@ -28,7 +29,8 @@ const CHAINS: Record<string, string> = {
   "eip155:84532": "Base Sepolia",
   "eip155:42161": "Arbitrum",
   "eip155:43114": "Avalanche",
-  "eip155:5042002": "Arc",
+  "eip155:5042": "Arc mainnet",
+  "eip155:5042002": "Arc testnet",
 };
 
 export interface ExternalEndpoint {
@@ -39,7 +41,7 @@ export interface ExternalEndpoint {
   price: number; // USDC per call (min across accepted chains)
   chains: string[]; // human labels
   payTo: string;
-  onArc: boolean;
+  onArc: boolean; // advertises acceptance on the trusted selected Arc profile; not purchase authority
 }
 
 interface RawItem {
@@ -98,7 +100,7 @@ function parseItem(it: RawItem): ExternalEndpoint | null {
     price: prices.length ? Math.min(...prices) : 0,
     chains,
     payTo: accepts.find((a) => a.payTo)?.payTo ?? "",
-    onArc: networks.includes("eip155:5042002"),
+    onArc: networks.includes(config.networkId),
   };
 }
 
@@ -257,8 +259,8 @@ export async function discoverExternalCandidates(
       description:
         `[Live x402 marketplace · ${method === "semantic" ? `semantic match ${Math.round(s * 100)}%` : `keyword match`}] ` +
         `${e.description || e.category || "External paid API"}. ` +
-        `Settles on ${chainStr} — ${e.onArc ? "Arc-compatible" : "NOT on Keryx's Arc testnet rail"}. ` +
-        `~$${e.price.toFixed(4)}/call. Discovery-only: evaluated but not purchased on Arc.`,
+        `Advertises payment acceptance on ${chainStr} — ${e.onArc ? "includes Keryx's selected network" : "does not include Keryx's selected network"}. ` +
+        `~$${e.price.toFixed(4)}/call. Discovery-only: evaluated but never purchased by Keryx.`,
       tags: ["external", "x402-marketplace", ...(e.category ? [e.category.toLowerCase()] : [])],
       fetchPrice: e.price,
       cached: false,

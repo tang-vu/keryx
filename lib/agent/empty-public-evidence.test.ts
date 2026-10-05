@@ -8,6 +8,16 @@ const empty = { question: "What supports this decision?", outcomes: [], skipped,
   pendingPayments: 0, settledPayments: 0, fetchFailures: 0 };
 
 describe("empty evidence details", () => {
+  it("recognizes already-supplied originals and directs recovery to the recorded refusal or failure", () => {
+    const answer = emptyEvidenceAnswer({ ...empty, question: "Use https://www.sqlite.org/wal.html to decide.",
+      outcomes: [{ name: "Requested SQLite original", code: "html-extraction-unavailable" }] });
+    expect(answer).toContain("Source URLs were already supplied in the question");
+    expect(answer).toContain("html-extraction-unavailable");
+    expect(answer).toContain("recorded discovery refusal, SKIP or read failure");
+    expect(answer).not.toContain("supply a relevant original source URL");
+    const vi = emptyPublicEvidenceDetail([], [], { question: "Use https://docs.example/manual. Answer in Vietnamese." });
+    expect(vi).toContain("URL nguồn đã được cung cấp");
+  });
   it("keeps unavailable search distinct from evidence absence and extraction failure", () => {
     const unavailable = emptyEvidenceAnswer({ ...empty, discovery: { status: "completed", attemptedQueries: 2, succeededQueries: 0, failedQueries: 2 } });
     expect(unavailable).toContain("2 queries attempted, 0 succeeded, 2 unavailable");
@@ -78,4 +88,13 @@ describe("empty evidence details", () => {
     expect(emptyPublicEvidenceDetail([], [], { discovery: { status: "withheld" } })).toContain("withheld");
     expect(emptyPublicEvidenceDetail([], [], { discovery: { status: "not-configured" } })).toContain("not configured");
   });
+
+  it.each(["https://www.sqlite.org/pragma.html#pragma_synchronous", "http://example.org/original", "https://["])(
+    "recognizes supplied URL text without claiming admission for %s", url => {
+      const answer = emptyPublicEvidenceDetail([], [], { question: `Use ${url}` });
+      expect(answer).toContain("Source URLs were already supplied in the question");
+      expect(answer).toContain("SKIP or read failure");
+      expect(answer).not.toContain("supply a relevant original source URL");
+    },
+  );
 });

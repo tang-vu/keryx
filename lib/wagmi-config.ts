@@ -15,6 +15,8 @@ import { injected, metaMask, walletConnect } from "wagmi/connectors";
 import { arcChain } from "./chains";
 import { browserPaymentProfile } from "./browser-payment-profile";
 import { deferredWalletConnector } from "./deferred-wallet-connector";
+import { circleGoogleWallet } from "./circle-wallet-connector";
+import { circleWalletPublicConfigured } from "./circle-wallet-config";
 
 export function makeConfig() {
   const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "";
@@ -23,6 +25,7 @@ export function makeConfig() {
   // support with zero registration). WalletConnect is added only when a project ID
   // is configured — initialising it without one throws at runtime.
   const connectors = [
+    ...(circleWalletPublicConfigured() ? [circleGoogleWallet()] : []),
     injected(),
     deferredWalletConnector(metaMask({ dapp: { name: "Keryx", url: "https://keryx.cc" } })),
     // Browser-only: WalletConnect Core is a process-wide singleton, so building

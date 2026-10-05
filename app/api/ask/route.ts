@@ -22,6 +22,7 @@ import { BROWSER_AUTHORIZATION_PROTOCOL } from "@/lib/payments/browser-authoriza
 import { getSession } from "@/lib/auth";
 import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
+import { researchFailureMessage } from "@/lib/llm/research-plan";
 import { config } from "@/lib/config";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
@@ -37,6 +38,7 @@ import type { QueryRun, ResearchMode } from "@/lib/types";
 import { MAX_ASK_QUESTION_CHARS, parseAskQuestion, parseResearchMode } from "@/lib/ask-input";
 import { recordActivationEvent } from "@/lib/activation";
 import { isAddress } from "viem";
+import { readRetainedMainnetSessionAuthority } from "@/lib/payments/retained-session-authority";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -151,6 +153,17 @@ export async function POST(req: NextRequest) {
     );
   }
   const useBrowserCoSign = Boolean(sessionId);
+  let questionCapUsdc = config.sessionAskMaxBudget;
+  if (useBrowserCoSign && grant && config.profile.name === "arc") {
+    try {
+      const { consent } = await readRetainedMainnetSessionAuthority(await getDb(), grant.ownerAddr.toLowerCase(), grant.grantEpoch, grant.sessAddr.toLowerCase());
+      if (Number(consent.capMicroUsdc) !== Math.round(grant.cap*1e6) || Number(consent.expirySeconds)*1000 !== grant.expiry)
+        throw new Error("Research budget changed");
+      if (consent.format === "keryx-session-grant-consent-v2") questionCapUsdc = Math.min(questionCapUsdc, Number(consent.questionCapMicroUsdc)/1e6);
+    } catch {
+      return Response.json({ error: "session_policy_unavailable", message: "Your signed research budget could not be verified. Restore it before asking again." }, { status: 503 });
+    }
+  }
 
   // Anonymous requests are IP-limited against treasury drain. Browser co-sign payments are
   // grant-funded, but their model/search compute is separately limited by verified owner wallet.
@@ -166,7 +179,7 @@ export async function POST(req: NextRequest) {
   }
 
   const coercedBudget =
-    typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget > 0
+    typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget >= 0
       ? body.budget
       : config.defaultBudget;
   const remainingGrantUsdc = grant
@@ -175,7 +188,7 @@ export async function POST(req: NextRequest) {
         Math.round(grant.cap * 1_000_000) - Math.round(grant.spent * 1_000_000),
       ) / 1_000_000
     : undefined;
-  if (useBrowserCoSign && (!remainingGrantUsdc || remainingGrantUsdc <= 0)) {
+  if (useBrowserCoSign && coercedBudget > 0 && (!remainingGrantUsdc || remainingGrantUsdc <= 0)) {
     return Response.json(
       {
         error: "session_budget_exhausted",
@@ -185,7 +198,7 @@ export async function POST(req: NextRequest) {
     );
   }
   const askBudget = useBrowserCoSign
-    ? Math.min(coercedBudget, remainingGrantUsdc!, config.sessionAskMaxBudget)
+    ? Math.min(coercedBudget, remainingGrantUsdc!, questionCapUsdc)
     : Math.min(coercedBudget, config.anonMaxBudget);
 
   const isBot = !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
@@ -320,7 +333,7 @@ export async function POST(req: NextRequest) {
           send("done", run);
         }
       } catch (err) {
-        send("error", { message: err instanceof Error ? err.message : String(err) });
+        send("error", { message: researchFailureMessage(err) });
       } finally {
         controller.close();
       }

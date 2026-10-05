@@ -11,6 +11,7 @@ import { loadPersistentTreasuryWallet } from "../lib/payments/persistent-treasur
 import { GuardedArcSubmissionUnknownError } from "../lib/payments/guarded-arc-transaction.ts";
 import { payForResearch, readPending, recoverResearch } from "./local-payment.mts";
 import { ensureLocalFunding, readFunding, recoverFunding } from "./local-funding.mts";
+import type { ReasoningSurface } from "../lib/llm/reasoning-telemetry.ts";
 
 const RPC = callerConfig.rpcUrl;
 const BASE_URL = (process.env.KERYX_BASE_URL ?? "https://keryx.cc").replace(/\/$/, "");
@@ -99,7 +100,7 @@ export async function getStatus(): Promise<WalletStatus> {
 }
 
 export type KeryxCitation = { source: string; reward: number; weight?: number };
-export type KeryxAnswer = { answer: string; citations: KeryxCitation[]; creatorsPaid: number | null; totalToCreators: number; feePaid: number;
+export type KeryxAnswer = Partial<ReasoningSurface> & { answer: string; citations: KeryxCitation[]; creatorsPaid: number | null; totalToCreators: number; feePaid: number;
   researchExports?: { bibtex: { content: string; count: number; omitted: number }; ris: { content: string; count: number; omitted: number }; evidenceCsv: string };
   settlementId?: string; amountPaid?: string };
 

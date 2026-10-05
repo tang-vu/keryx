@@ -3,28 +3,38 @@ import { buildEvidenceLedger } from "./evidence-ledger";
 import { finalizeGroundedAnswer } from "./answer-grounding";
 import type { GatheredContent } from "../llm/reasoning-engine";
 
-// Short retained R09 excerpt: its occurrence does not make it evidence for Weng.
-const quote = "CAVA receipts can remain local hash receipts, or they can be extended with stronger substrates:";
+// Preserve the historical R09 proposal exactly; its unfinished colon and missing original
+// offsets must not be repaired into qualifying evidence for either paper.
+const retainedR09Quote = "CAVA receipts can remain local hash receipts, or they can be extended with stronger substrates:";
+// Synthetic full sentence isolates paper identity from sentence/span admission. This is
+// fixture text, not a retained scientific claim from either real paper.
+const quote = "The fixture protocol records approval as a local hash receipt.";
+const quoteSpan = { start: 0, end: quote.length };
 const requestedId = "2606.02668v1";
 function read(itemUrl: string, extra: Partial<GatheredContent> = {}): GatheredContent {
-  return { marker: "S1", sourceId: "paper", sourceName: "Original paper", sourceKind: "public-reference", itemUrl, text: quote, ...extra };
+  return { marker: "S1", sourceId: "paper", sourceName: "Synthetic paper-identity fixture", sourceKind: "public-reference", itemUrl, text: quote, ...extra };
 }
 function ledger(source: GatheredContent, target = `What does arXiv ${requestedId} state about audit evidence?`) {
   return buildEvidenceLedger({ subClaims: [target], gathered: [source], answer: `${quote} [S1]`, declaredMarkers: ["S1"],
-    proposedEvidence: [{ claimIndex: 0, marker: "S1", quote, support: 0.9 }],
+    proposedEvidence: [{ claimIndex: 0, marker: "S1", quote, quoteSpan, support: 0.9 }],
     finalAssessment: [{ claim: target, coverage: 0.9, coveredBy: ["S1"] }] });
 }
 
-it("rejects the retained R09 CAVA HTML quote assigned to the Weng exact-paper target", () => {
-  const result = ledger(read("https://arxiv.org/html/2607.13716v1"));
+it("preserves the original retained R09 rejection without inventing a sentence or source offsets", () => {
+  const target = `What does arXiv ${requestedId} state about audit evidence?`;
+  const result = buildEvidenceLedger({ subClaims: [target],
+    gathered: [read("https://arxiv.org/html/2607.13716v1", { text: retainedR09Quote })],
+    answer: `${retainedR09Quote} [S1]`, declaredMarkers: ["S1"],
+    proposedEvidence: [{ claimIndex: 0, marker: "S1", quote: retainedR09Quote, support: 0.9 }],
+    finalAssessment: [{ claim: target, coverage: 0.9, coveredBy: ["S1"] }] });
   expect(result.evidence).toEqual([]);
   expect(result.acceptedMarkers.size).toBe(0);
   expect(result.claimCoverage[0]).toMatchObject({ coverage: 0, coveredBy: [] });
   expect(result.droppedEvidence).toBe(1);
-  expect(finalizeGroundedAnswer({ question: "Compare exact papers", answer: `${quote} [S1]`, ledger: result })).not.toContain(quote);
+  expect(finalizeGroundedAnswer({ question: "Compare exact papers", answer: `${retainedR09Quote} [S1]`, ledger: result })).not.toContain(retainedR09Quote);
 });
 
-it.each(["abs", "pdf", "html"])("retains legitimate same-paper %s evidence and exact version", format => {
+it.each(["abs", "pdf", "html"])("retains synthetic same-paper %s evidence and exact version", format => {
   const source = read(`https://arxiv.org/${format}/${requestedId}`);
   const result = ledger(source);
   expect(result.evidence[0]).toMatchObject({ qualifiesForAnswer: true, qualifiesForReward: false, itemUrl: source.itemUrl });
@@ -98,7 +108,7 @@ it("does not let a marker admitted for its own paper qualify a different paper's
   const subClaims = [`Audit evidence in arXiv:${requestedId}`, "Audit evidence in arXiv:2607.13716v1"];
   const result = buildEvidenceLedger({ subClaims, gathered: [read("https://arxiv.org/html/2607.13716v1")],
     answer: `Both papers [S1].`, declaredMarkers: ["S1"],
-    proposedEvidence: subClaims.map((_, claimIndex) => ({ claimIndex, marker: "S1", quote, support: 0.9 })),
+    proposedEvidence: subClaims.map((_, claimIndex) => ({ claimIndex, marker: "S1", quote, quoteSpan, support: 0.9 })),
     finalAssessment: subClaims.map(claim => ({ claim, coverage: 0.9, coveredBy: ["S1"] })) });
   expect(result.acceptedMarkers.has("S1")).toBe(true);
   expect(result.evidence.map(item => item.claimIndex)).toEqual([1]);

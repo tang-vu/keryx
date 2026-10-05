@@ -174,9 +174,9 @@ export function SignedInStep({
       </div>
 
       {returnBlocked ? (
-        <p role="alert" className="text-sm text-seal">This registration draft belongs to the wallet that started sign-in. Switch back to that wallet or <Link href="/register" className="underline">start a new draft</Link>.</p>
+        <p role="alert" className="text-sm text-seal">This registration draft belongs to the wallet that started sign-in. Switch back to that wallet or <Link href={returnTo?.startsWith('/claim-source') ? '/claim-source' : '/register'} className="underline">start a new draft</Link>.</p>
       ) : returnTo ? (
-        <Link href={returnTo} className="flex w-full justify-center border border-ink bg-seal px-4 py-3.5 font-mono text-xs text-cream">Resume source registration</Link>
+        <Link href={returnTo} className="flex w-full justify-center border border-ink bg-seal px-4 py-3.5 font-mono text-xs text-cream">{returnTo.startsWith('/claim-source') ? 'Resume source claim' : 'Resume source registration'}</Link>
       ) : session.role === "creator" || session.role === "dev" ? (
         <Link
           href="/register"

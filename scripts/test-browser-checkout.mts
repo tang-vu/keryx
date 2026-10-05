@@ -1,5 +1,6 @@
 /** Real React/IndexedDB/signature path with an unfunded synthetic wallet and intercepted HTTP. */
 import { build } from "esbuild";
+import { circleSdkBrowserPlugin } from "./circle-sdk-browser-plugin.mts";
 import { chromium } from "playwright";
 import { privateKeyToAccount } from "viem/accounts";
 import { readFile } from "node:fs/promises";
@@ -33,7 +34,7 @@ const bundle = await build({ stdin: { contents: `
   createRoot(document.getElementById('root')).render(React.createElement(ResearchWorkspace,null,
     React.createElement(ResearchRequest,{mode:'quick',budget:0.03,version:'1.0.0',total:0.05,payee:'${payee}'}),React.createElement(ResearchSavedJobs)));
   `, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false, metafile: true,
-  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "synthetic-wagmi", setup(b) {
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' }, plugins: [circleSdkBrowserPlugin(), { name: "synthetic-wagmi", setup(b) {
     b.onResolve({ filter: /^(wagmi|next\/image)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onLoad({ filter: /.*/, namespace: "synthetic" }, args => ({ contents: args.path === "next/image" ? "export default function Image(){return null;}" : `
       import {useSyncExternalStore} from 'react';

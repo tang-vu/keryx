@@ -5,10 +5,25 @@ import type { AddressInfo } from "node:net";
 
 class TransportEngine extends OpenAICompatibleEngine {
   request(model = "deepseek-v4-flash") { return this.chatJson(model, "Return JSON", "test", 2048); }
+  review() { return this.chatJson("deepseek-v4-flash", "Review JSON", "test", 8192, { reasoningReview: true }); }
+  briefSupported() { return this.supportsDecisionBrief(); }
 }
 afterEach(() => vi.unstubAllGlobals());
 
 describe("bounded provider JSON requests", () => {
+  it("enables bounded reasoning only for the separate review and retains ordinary request behavior", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ choices: [{ message: { content: '{"ok":true}' }, finish_reason: "stop" }] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const engine = new TransportEngine({ provider: "deepseek", name: "test", baseUrl: "https://api.deepseek.com", model: "deepseek-v4-flash", apiKey: "test-only" });
+    expect(engine.briefSupported()).toBe(true);
+    await engine.review(); await engine.request();
+    const bodies = fetchMock.mock.calls.map(call => JSON.parse((call as unknown as [string, RequestInit])[1].body as string));
+    expect(bodies[0]).toMatchObject({ max_tokens: 8192, thinking: { type: "enabled" }, reasoning_effort: "low" });
+    expect(bodies[1].thinking).toEqual({ type: "disabled" });
+    expect(bodies[1].reasoning_effort).toBeUndefined();
+    expect(new TransportEngine({ provider: "mimo", name: "test", baseUrl: "https://provider.test", model: "mimo-v2.5", apiKey: "test-only" }).briefSupported()).toBe(false);
+    expect(new TransportEngine({ provider: "deepseek", name: "test", baseUrl: "https://proxy.test", model: "deepseek-v4-flash", apiKey: "test-only" }).briefSupported()).toBe(false);
+  });
   it("prohibits redirect delivery under the private transport policy with a real local HTTP server", async () => {
     let redirectedRequests = 0;
     const server = createServer((request, response) => {

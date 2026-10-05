@@ -1,4 +1,5 @@
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
+import { completeEvidenceSpans, type EvidenceSpan } from "./evidence-span";
 /**
  * HeuristicEngine — deterministic, offline reasoning. No API key required.
  *
@@ -44,13 +45,6 @@ function overlap(query: Set<string>, doc: Set<string>): number {
 
 function sharedTerms(query: Set<string>, doc: Set<string>): string[] {
   return [...query].filter((t) => doc.has(t)).slice(0, 5);
-}
-
-function sentences(text: string): string[] {
-  return text
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 20);
 }
 
 export class HeuristicEngine implements ReasoningEngine {
@@ -217,11 +211,12 @@ export class HeuristicEngine implements ReasoningEngine {
     for (let claimIndex = 0; claimIndex < claims.length; claimIndex++) {
       const claim = claims[claimIndex]!;
       const ct = tokenize(claim);
-      let best = { score: 0, sentence: "", marker: "" };
+      let best: { score: number; sentence: string; marker: string; span?: EvidenceSpan } = { score: 0, sentence: "", marker: "" };
       for (const g of input.gathered) {
-        for (const s of sentences(g.text)) {
+        for (const span of completeEvidenceSpans(g)) {
+          const s = g.text.slice(span.start, span.end);
           const score = overlap(ct, tokenize(s));
-          if (score > best.score) best = { score, sentence: s, marker: g.marker };
+          if (score > best.score) best = { score, sentence: s, marker: g.marker, span };
         }
       }
       if (best.sentence) {
@@ -230,7 +225,8 @@ export class HeuristicEngine implements ReasoningEngine {
         evidence.push({
           claimIndex,
           marker: best.marker,
-          quote: best.sentence.slice(0, 240).trim(),
+          quote: best.sentence,
+          quoteSpan: best.span,
           support: round(best.score),
         });
       }

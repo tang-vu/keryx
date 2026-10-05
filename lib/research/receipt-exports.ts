@@ -1,6 +1,7 @@
 import { hasKnownSyntheticFingerprint } from "./evidence-provenance";
 import { z } from "zod";
 import { researchExports } from "./surface-result";
+import { sourceClaimReceiptSchema } from "../sources/public-source-claim";
 
 const text = z.string().max(4096);
 const scholarly = z.object({
@@ -11,7 +12,8 @@ const scholarly = z.object({
   journal: text.optional(), publishedDate: text.optional(), volume: text.optional(), issue: text.optional(), pages: text.optional(),
   peerReview: z.literal("unknown"), evidenceScope: z.enum(["paper-text", "abstract-page", "publisher-page"]).optional(),
 });
-const identity = { contentReceipt: z.object({ bodyHash: text.optional(), deliveryKind: z.enum(["full_text", "excerpt", "abstract", "metadata_only"]),
+const identity = { sourceClaim: sourceClaimReceiptSchema.optional(), accessKind: z.literal("creator-free").optional(),
+  contentReceipt: z.object({ bodyHash: text.optional(), deliveryKind: z.enum(["full_text", "excerpt", "abstract", "metadata_only"]),
   storageMode: z.enum(["ipfs_encrypted", "db_encrypted", "db_plaintext"]), plaintextBytes: z.number().int().nonnegative() }).optional(), evidenceProvenance: z.literal("synthetic-demo").optional(), itemId: text.optional(), itemTitle: text.optional(), itemUrl: text.optional(),
   contentVersion: text.optional(), itemPublishedAt: text.optional(), sourceKind: z.literal("public-reference").optional(), scholarly: scholarly.optional() };
 const citation = z.object({ marker: text, sourceId: text.default(""), sourceName: text, ...identity,

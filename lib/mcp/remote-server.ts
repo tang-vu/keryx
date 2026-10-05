@@ -8,6 +8,8 @@ import { resolveModelChoice } from "../llm";
 import type { McpClientChannel, QueryRun } from "../types";
 import { registerMonthlyDiscovery } from "../monthly/mcp-discovery";
 import { quoteResearchMonthly } from "../monthly/quote";
+import { reasoningServingText } from "../llm/reasoning-telemetry";
+import { researchFailureMessage } from "../llm/research-plan";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
@@ -28,7 +30,6 @@ export function remoteResearchResult(run: QueryRun) {
     totalToCreatorsUsdc: run.totalToCreators,
     confidence: run.confidence,
     engine: run.engine,
-    paymentMode: run.paymentMode,
     paymentAttempts: run.paymentAttempts ?? 0,
     settledPayments: run.settledPayments ?? 0,
     dispatchUrl: `${config.baseUrl}/dispatch/${run.id}`,
@@ -45,15 +46,23 @@ function researchText(result: ReturnType<typeof remoteResearchResult>): string {
   const settlement =
     result.paymentMode === "real"
       ? `${result.settledPayments}/${result.paymentAttempts} payment attempts settled`
-      : "offline payment simulation";
+      : result.paymentMode === "offline" ? "offline payment simulation" : "payment mode unknown; no simulation or settlement inferred";
+  const selection = result.reasoning.sourceSelection;
+  const engines = selection.servingEngines.slice(0, 4).join(", ") || "none recorded";
+  const engineRemainder = selection.servingEngines.length > 4 ? ` + ${selection.servingEngines.length - 4} more` : "";
+  const selectionText = `Recorded source selection: ${selection.state} · ${engines}${engineRemainder} · ` +
+    (selection.fallbackUsed === true ? "fallback served" : selection.fallbackUsed === false ? "requested tier served" : "fallback use unknown") +
+    ` (${result.reasoning.telemetry} attempt telemetry)`;
   const groundedClaims = result.claimCoverage.filter(
     (claim) => claim.coverage >= 0.4,
   ).length;
 
   return (
     `${result.answer}\n\n` +
+    `${reasoningServingText(result)}\n\n` +
     `Citations and planned creator rewards\n${rewards}\n\n` +
     `Evidence: ${groundedClaims}/${result.claimCoverage.length} research targets meet the recorded excerpt-support threshold; this does not verify entailment or complete synthesis\n` +
+    `${selectionText}\n` +
     `Total recorded to creators: $${result.totalToCreatorsUsdc.toFixed(4)} USDC · ${settlement}\n` +
     `Confidence: ${result.confidence?.level ?? "Low"} · ${result.dispatchUrl}`
   );
@@ -66,7 +75,7 @@ export function createRemoteMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: "keryx",
-    version: "0.2.0",
+    version: "0.3.1",
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
@@ -82,9 +91,9 @@ export function createRemoteMcpServer(
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
         budget: z
           .number()
-          .positive()
+          .nonnegative()
           .optional()
-          .describe("Maximum creator-payment budget in USDC; clamped to the caller's tier."),
+          .describe("Maximum creator-payment budget in USDC; 0 allows free sources without purchases or rewards. Clamped to the caller's tier."),
         scholarly: z.boolean().optional().describe("Opt in to bounded Crossref/arXiv paper discovery; sends the question to those providers."),
         mode: z.enum(["quick", "deep"]).optional().describe("Research depth; default deep."),
         model: z
@@ -102,7 +111,7 @@ export function createRemoteMcpServer(
     async ({ question, budget, model, scholarly, mode }) => {
       try {
         const requested =
-          typeof budget === "number" && Number.isFinite(budget) && budget > 0
+          typeof budget === "number" && Number.isFinite(budget) && budget >= 0
             ? budget
             : config.defaultBudget;
         const modelChoice = resolveModelChoice(model);
@@ -122,7 +131,7 @@ export function createRemoteMcpServer(
           structuredContent: result,
         };
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = researchFailureMessage(error);
         return {
           isError: true,
           content: [{ type: "text" as const, text: `Keryx research failed: ${message}` }],

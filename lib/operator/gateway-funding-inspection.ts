@@ -44,6 +44,7 @@ function readCanonical(held: ReturnType<typeof holdStorageTarget>) {
  * minimal-environment child; V8 heap limits do not bound native SQLite RSS. */
 async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: typeof observeGatewayFundingReadiness) {
   const started = now();
+  let phase = "open";
   let storageHeld: ReturnType<typeof holdStorageTarget> | undefined, operationHeld: typeof storageHeld;
   let ledger: ReturnType<typeof openGatewayFundingSqliteLedger> | undefined;
   const elapsed = () => { const n = now() - started; if (!Number.isFinite(n) || n < 0 || n >= TOTAL_MS) refuse(); };
@@ -82,6 +83,7 @@ async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: t
       }
       return { operation, namespaces, steps, originals };
     };
+    phase = "initial-load";
     const initial = await load(), { namespaces, steps } = initial;
     let availability: Readonly<{ status: string; availableMicros?: string; minimumAvailableMicros?: string }> = Object.freeze({ status: options.currentAvailability ? "unknown" : "not-requested" });
     const request: GatewayFundingReadinessRequest = { ledger, operationId: proof.operationId, expectedIdentity: storage.identity,
@@ -89,19 +91,27 @@ async function inspect(inputOptions: GatewayFundingInspectionOptions, observe: t
     let currentToken: VerifiedGatewayFundingReadiness | undefined;
     if (options.currentAvailability && steps.deposit === "finalized-success") {
       try {
-        guard(); const token = await observe(request); guard();
-        if (token) { const evidence = await unsealVerifiedGatewayFundingReadiness(token, request); guard(); assertVerifiedGatewayFundingReadinessCurrent(token, request);
+        phase = "observe"; guard(); const token = await observe(request); guard();
+        if (token) { phase = "unseal"; const evidence = await unsealVerifiedGatewayFundingReadiness(token, request); guard(); assertVerifiedGatewayFundingReadinessCurrent(token, request);
           availability = Object.freeze({ status: "observed-available-meets-minimum", availableMicros: evidence.availableMicros, minimumAvailableMicros: evidence.minimumAvailableMicros }); currentToken = token; }
       } catch { guard(); }
     }
-    const refreshed = await load();
+    phase = "refreshed-load"; const refreshed = await load();
     if (canonicalJson(initial) !== canonicalJson(refreshed)) refuse();
     const report = Object.freeze({ format: "keryx-funding-inspection-report-v1", status: "inspected-originals", readOnly: true, signingResumeAuthorized: false,
       steps: Object.freeze(steps), namespaces: Object.freeze(namespaces.map(ns => Object.freeze({ role: ns.role, nextReservedNonce: ns.nextNonce, nextCryptoNonce: ns.nextCryptoNonce,
         lifetimeLimits: ns.limits, retainedExposure: ns.used, nativeAggregateLimitWei: ns.nativeAggregateLimitWei, nativeAggregateUsedWei: ns.nativeAggregateUsedWei }))), availability });
     guard(); if (Buffer.byteLength(JSON.stringify(report)) > MAX_BYTES) refuse(); guard();
-    if (currentToken) assertVerifiedGatewayFundingReadinessCurrent(currentToken, request); return report;
-  } catch { return refuse(); }
+    phase = "publish"; if (currentToken) assertVerifiedGatewayFundingReadinessCurrent(currentToken, request); return report;
+  } catch (error) {
+    const cause = error instanceof Error ? Object.getOwnPropertyDescriptor(error, "cause")?.value : undefined;
+    const tokenAgeMs = cause && Object.getOwnPropertyDescriptor(cause, "phase")?.value === "readiness-token-freshness"
+      ? Object.getOwnPropertyDescriptor(cause, "tokenAgeMs")?.value : null;
+    throw new Error("Funding inspection unavailable; private details omitted", { cause: Object.freeze({ phase,
+      elapsedMs: Math.max(0, Math.round(now() - started)),
+      tokenAgeMs: Number.isSafeInteger(tokenAgeMs) && tokenAgeMs >= 0 ? tokenAgeMs : null,
+    }) });
+  }
   finally { try { ledger?.close(); } finally { try { operationHeld?.close(); } finally { storageHeld?.close(); } } }
 }
 export function inspectGatewayFundingSqliteOperation(options: GatewayFundingInspectionOptions) { return inspect(options, observeGatewayFundingReadiness); }

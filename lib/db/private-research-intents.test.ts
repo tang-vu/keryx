@@ -694,7 +694,7 @@ it("runs one complete private job with durable source/reward receipts and no sha
     sufficiency: async input => ({ sufficient: true, rationale: "Synthetic evidence is sufficient", perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.9, coveredBy: input.gathered.map(g => g.marker) })) }),
     reevaluate: async () => ({ claims: [], shouldBuyMore: false, recommendedIds: [], rationale: "No further sources" }),
     synthesize: async input => ({ answer: `Synthetic cited answer ${input.gathered.map(g => `[${g.marker}]`).join(" ")}`,
-      citedMarkers: input.gathered.map(g => g.marker), conflicts: [], evidence: input.gathered.map(g => ({ claimIndex: 0, marker: g.marker, quote: g.text, support: 0.9 })) }),
+      citedMarkers: input.gathered.map(g => g.marker), conflicts: [], evidence: input.gathered.map(g => ({ claimIndex: 0, marker: g.marker, quote: g.text, quoteSpan: { start: 0, end: g.text.length }, support: 0.9 })) }),
     attribute: async input => input.used.map(source => ({ sourceId: source.sourceId, weight: 1 / input.used.length, rationale: "Synthetic contribution" })),
   };
   let nonceIndex = 80;

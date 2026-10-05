@@ -18,6 +18,7 @@ import { arcProfileLabel, recordedArcProfile } from "@/lib/arc-network-display";
 
 /** Mirrors the `settlement` object /api/health returns. */
 export interface SettlementHealth {
+  basis?: "empty-ledger";
   network?: string;
   checkedAt: string;
   owedUsdc: number;
@@ -46,6 +47,15 @@ const usd = (n: number) => `$${n.toFixed(6)}`;
 
 export function SettlementProofSection({ settlement }: { settlement: SettlementHealth }) {
   const { counts, accounts } = settlement;
+  if (settlement.basis === "empty-ledger" && accounts.length === 0 &&
+      settlement.owedUsdc === 0 && settlement.confirmedUsdc === 0 && settlement.cashedOutUsdc === 0 &&
+      Object.values(counts).every(count => count === 0)) {
+    return <section className="mt-8 border-t border-line pt-5">
+      <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">Settlement — empty ledger</h2>
+      <p className="mt-3 text-sm text-ink-3">No settled creator payouts were recorded at this check. Circle balances were not queried; this does not prove payment readiness or settlement.</p>
+      <p className="mt-2 font-mono text-[10px] text-faint">Checked {ago(settlement.checkedAt)}</p>
+    </section>;
+  }
   // "Backed" includes wallets whose money the creator has since moved out to their own address:
   // the payout is still accounted for, just not by Circle. Only `short` is unaccounted for.
   const backed = counts.confirmed + counts.surplus + counts.cashedOut;

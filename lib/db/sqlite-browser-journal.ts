@@ -2,6 +2,8 @@ import { verifyBrowserSigningHeader } from "../payments/browser-signing-original
 import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import type { DatabaseSync } from "node:sqlite";
 import type { SessionGrantRecord } from "./keryx-db";
+import { canonicalJson } from "../canonical-json";
+import { assertSqliteSourceClaimPaymentPolicy } from "./public-source-claims";
 import {
   BrowserGrantRecoveryRefused,
   prepareBrowserJournal,
@@ -260,7 +262,7 @@ export function admitSqliteBrowserJournal(
     hooks?.before();
     try {
       const result = admitSqliteBrowserJournalInTransaction(db, input, j);
-      if (result.status === "admitted" && j.paymentContext) {
+      if (result.status === "admitted" && j.paymentContext && db.prepare("PRAGMA table_info(browser_journal_bindings)").all().some(column => column.name === "payment_context")) {
         db.prepare("UPDATE browser_journal_bindings SET payment_context=? WHERE nonce=?")
           .run(JSON.stringify(j.paymentContext), j.nonce);
       }
@@ -274,6 +276,14 @@ export function admitSqliteBrowserJournal(
 export function admitSqliteBrowserJournalInTransaction(db:DatabaseSync,input:BrowserJournalAdmission,j:BrowserAuthorizationJournal):BrowserJournalAdmissionResult {
     if (!db.isTransaction || !db.prepare("SELECT 1 FROM browser_journal_writer WHERE id=1").get()) throw new Error("Browser journal transaction required");
     if (!sqliteJournalActive(db)) return {status:"inactive"};
+    const contextClaim = input.paymentContext?.sourceClaim ?? input.paymentContext?.item?.sourceClaim;
+    if (input.paymentContext?.sourceClaim && input.paymentContext.item?.sourceClaim &&
+      canonicalJson(input.paymentContext.sourceClaim) !== canonicalJson(input.paymentContext.item.sourceClaim))
+      throw new Error("Browser journal source claim differs from original item context");
+    if (canonicalJson(input.payment.sourceClaim ?? null) !== canonicalJson(contextClaim ?? null))
+      throw new Error("Browser journal source claim differs from original payment context");
+    assertSqliteSourceClaimPaymentPolicy(db, { sourceId: input.sourceId, expected: contextClaim,
+      kind: input.kind, network: input.network });
     const signer = j.signer.toLowerCase();
     const g = db
       .prepare(

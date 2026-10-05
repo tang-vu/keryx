@@ -38,6 +38,7 @@ import {
 } from "@/lib/openai-compat";
 import type { PaymentOrigin } from "@/lib/types";
 import { parseAskQuestion } from "@/lib/ask-input";
+import { ResearchPlanningError, researchFailureMessage } from "@/lib/llm/research-plan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest) {
   // Budget: a caller may pass a Keryx `budget` extension (extra_body); coerce + clamp to the cap
   // for this tier. Missing/invalid → default budget, still clamped.
   const requested =
-    typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget > 0
+    typeof body.budget === "number" && Number.isFinite(body.budget) && body.budget >= 0
       ? body.budget
       : config.defaultBudget;
   const budget = Math.min(requested, budgetCap);
@@ -137,8 +138,13 @@ export async function POST(req: NextRequest) {
 
   // ── Non-streaming: run to completion, return one ChatCompletion object. ──
   if (!body.stream) {
-    const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep", ...(keyIdentity ? { asker: keyIdentity.walletAddress } : {}) });
-    return Response.json(buildCompletion(run, modelName), { headers: CORS });
+    try {
+      const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep", ...(keyIdentity ? { asker: keyIdentity.walletAddress } : {}) });
+      return Response.json(buildCompletion(run, modelName), { headers: CORS });
+    } catch (error) {
+      if (!(error instanceof ResearchPlanningError)) throw error;
+      return openaiError(researchFailureMessage(error), error.status, error.code);
+    }
   }
 
   // ── Streaming: emit reasoning live as `reasoning_content`, then the answer as `content`. ──
@@ -171,7 +177,7 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         send(
           buildChunk(id, modelName, {
-            content: `\n\n[keryx error] ${err instanceof Error ? err.message : String(err)}`,
+            content: `\n\n[keryx error] ${researchFailureMessage(err)}`,
           }),
         );
       } finally {

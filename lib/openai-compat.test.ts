@@ -61,12 +61,14 @@ describe("lastUserQuestion", () => {
 });
 
 describe("buildAnswerContent", () => {
-  it("appends a creators-paid footer naming each cited source and reward", () => {
+  it("appends planned allocations with original payment mode and receipt guidance", () => {
     const c = buildAnswerContent(makeRun());
     expect(c).toContain("Arc is an EVM L1");
     expect(c).toContain("Latent Space — $0.0120");
     expect(c).toContain("Agent Weekly — $0.0080");
-    expect(c).toContain("Total to creators: $0.0200");
+    expect(c).toContain("Recorded to creators: $0.0200");
+    expect(c).toContain("do not establish settlement");
+    expect(c).not.toContain("Arc testnet");
   });
 
   it("omits the footer when nothing was cited", () => {

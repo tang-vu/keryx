@@ -1,11 +1,55 @@
 # Current Arc mainnet deployment
 
+October 5 planning-repair baseline: read-only public health at
+`2026-10-05T08:20:26.904Z` reported operational, database ok, Arc and real settlement
+mode at `31286250`; SSH source identity was
+`3128625054836e51aaace3310bda426bbe06da14`, application **0.26.16**. Public roles used
+the reviewed steady brief-disabled definitions, no allowance environment, zero active
+root-crontab entries, and an idle A2A queue. Separately installed system cron jobs
+were activated by the other authorized delivery at 08:02 UTC; they require an explicit
+hold/drain and reviewed source/storage repinning before this maintenance deployment.
+The existing private worker was active with
+infinite graceful stop and no forced kill. This establishes baseline identity and
+availability, not useful research or a new settlement.
+
+The **0.26.17 candidate** addresses [bounded planning and heading recall](engineering/research-planning-2026-10-05.md).
+It retains remote MCP **0.3.1**, accepted caller-funded MCP **0.4.5**, desktop **0.4.6**
+and extension **0.1.1**. Its deployment and independent publication readbacks remain
+release steps. The closed browser round remains 0/3 useful; #128 and #169 live
+acceptance gates remain open.
+
+October 5 release observation: [PR 166](https://github.com/tang-vu/keryx/pull/166)
+was merged and app **0.26.12**, commit `a85bc1b6f75138ede9980d1123d5449a0da9693f`,
+was deployed. Public health at `2026-10-05T04:12:43.013Z` reported operational,
+database ok, Arc and real settlement mode at `a85bc1b6`. This establishes service
+availability and release identity, not a new settled payment or complete usefulness.
+Steady public controls retained brief0, the old closed allowance/journal, held schedules
+and unchanged custody; the previously active private worker was restored.
+
+Public distribution readback at `2026-10-05T04:30:40.677Z` verified all six assets in
+[v0.26.12](https://github.com/tang-vu/keryx/releases/tag/v0.26.12), Operator **0.4.5**
+with source/embedded commit `a85bc1b`, public npm **keryx-mcp 0.4.4** with bytes equal
+to the GitHub tarball, and official MCP Registry exact/latest **0.4.4**. The MCP tarball
+SHA-256 is `74b3e2c564b4100fc3ac9e0d170096e77999b6db16da8f180c001d3f0f5a1f77`.
+Subsequent main commits and the **0.26.16 / remote MCP 0.3.1 candidate** have their own
+deployment gates; recheck health before treating any source version as live.
+
 Updated October 4, 2026. Keryx production at [keryx.cc](https://keryx.cc) is on
 **Arc mainnet**. The owner confirmed the launch, and a read-only
 [/api/health](https://keryx.cc/api/health) observation at
 `2026-10-04T16:42:30.685Z` reported `operational`, database `ok`, network `arc`,
 settlement mode `real`, and deployed commit `1297d43`. This is a dated deployment
 observation; recheck health for the current release.
+
+## October 5 reliability candidate
+
+Application 0.26.15, stdio MCP 0.4.5 and Operator desktop 0.4.6 coordinate
+[the open-issue repairs](engineering/issue-followups-2026-10-05.md). They require
+exact-source CI/review, separate accepted package publication and deployed-health
+readback. The dated observations below remain historical. Remote MCP protocol
+0.3.0 from the merged v0.26.12 correction and extension 0.1.1 retain their roles. This candidate does not
+reopen paid evaluation, clear durable circuits, activate richer briefs or admit
+immutable production cutover.
 
 ## Network and public contracts
 
@@ -74,11 +118,16 @@ the public Monthly quote returned HTTP 503 during this documentation check, so
 purchase readiness and its current merchant were not verified here. Preserve these
 unknowns instead of importing old testnet figures.
 
-One runtime-copy follow-up remains outside this documentation-only refresh:
+At that documentation-only refresh, one runtime-copy follow-up remained:
 `research_monthly` tool metadata in `lib/monthly/mcp-discovery.ts` and the immutable
 MCP 0.4.3 package still says “Arc-testnet Monthly quote”. The selected payment
 profile/API determines the actual network; correcting distributed runtime metadata
-requires its own coordinated release. See [surface parity](surface-parity.md).
+requires its own coordinated release. The October 5 **0.26.12 / MCP 0.4.4**
+candidate corrects that metadata and related Slack/API/discovery copy; exact-source
+publication and deployment remain separate gates. Its unpaid Monthly quote check
+returned mainnet successfully, superseding the earlier unavailable observation
+for current availability only. See [scope and open gates](engineering/mainnet-consistency-2026-10-05.md)
+and [surface parity](surface-parity.md).
 
 Routine changes follow [the post-mainnet update flow](mainnet-update-flow.md).
 Documentation-only changes require review and CI, without redeploying unchanged

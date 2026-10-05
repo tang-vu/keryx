@@ -1,5 +1,7 @@
 import { arxivDocumentId, targetArxivIds } from "../scholarly/arxiv-identity";
 import { hasKnownSyntheticFingerprint } from "../research/evidence-provenance";
+import { discussionDoesNotMeetDocumentRequest } from "../research/source-requirements";
+import { isCompleteEvidenceSpan } from "../llm/evidence-span";
 /**
  * Deterministic evidence gate between model prose and creator money.
  *
@@ -42,6 +44,8 @@ export interface EvidenceLedger {
  * the final assessment.
  */
 export function buildEvidenceLedger(input: {
+  /** Original request, so decomposition cannot erase an explicit source requirement. */
+  question?: string;
   subClaims: string[];
   gathered: GatheredContent[];
   answer: string;
@@ -71,7 +75,9 @@ export function buildEvidenceLedger(input: {
       claimIndex < 0 ||
       claimIndex >= input.subClaims.length ||
       !source ||
-      !quoteOccursInSource(quote, source.text)
+      !quoteOccursInSource(quote, source.text) ||
+      !isCompleteEvidenceSpan(source, quote, proposal.quoteSpan) ||
+      discussionDoesNotMeetDocumentRequest(input.question ?? "", source.itemUrl, input.subClaims[claimIndex])
     ) {
       droppedEvidence++;
       continue;
@@ -100,6 +106,7 @@ export function buildEvidenceLedger(input: {
       sourceKind: source.sourceKind,
       publicDeliveryKind: source.publicDeliveryKind,
       webProvenance: source.webProvenance,
+      requestedSource: source.requestedSource,
       scholarly: source.scholarly,
       itemId: source.itemId,
       itemTitle: source.itemTitle,
@@ -107,10 +114,12 @@ export function buildEvidenceLedger(input: {
       contentVersion: source.contentVersion,
       itemPublishedAt: source.itemPublishedAt,
       contentReceipt: source.contentReceipt,
+      sourceClaim: source.sourceClaim,
+      accessKind: source.accessKind,
       quote,
       support,
       qualifiesForAnswer,
-      qualifiesForReward: qualifiesForAnswer && source.sourceKind !== "public-reference",
+      qualifiesForReward: qualifiesForAnswer && source.sourceKind !== "public-reference" && source.creatorRewardEligible !== false,
     });
   }
 

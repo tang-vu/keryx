@@ -1,5 +1,5 @@
 /** Recorded read failures are operations metadata, never evidence about the document. */
-export interface PublicReadOutcome { name: string; code: string }
+export interface PublicReadOutcome { name: string; code: string; assetId?: string }
 
 export function reportLabel(value: string): string {
   return value.normalize("NFC").replace(/[\p{Cc}\p{Cf}]+/gu, " ")

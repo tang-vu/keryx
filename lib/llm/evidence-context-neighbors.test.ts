@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { MAX_CONTEXT_CHARACTERS, selectEvidencePassages } from "./evidence-context";
+import { evidenceContext, selectEvidencePassages } from "./evidence-context";
 import { buildQuoteOptions } from "./quote-options";
+
+function selectedOptions(text: string, selection: ReturnType<typeof selectEvidencePassages>) {
+  const gathered = [{ sourceId: "synthetic", sourceName: "Fixture", marker: "S1", text }];
+  const sources = evidenceContext("", [], gathered);
+  Object.assign(sources[0], selection);
+  return buildQuoteOptions(sources, gathered);
+}
 
 // Bounded adjacent paragraphs from the retained 2026-10-04 public captures.
 // These fixtures test context availability, never semantic support or model selection.
@@ -16,9 +23,9 @@ describe("bounded adjacent source context", () => {
     const text = "Introduction. ".repeat(40) + "\n" + paragraph + "\n" + competing.join("\n");
     const result = selectEvidencePassages(text, topic, [topic, ...competing.map((_, i) => `Dimension${i}`)]);
     expect(result.passages.some(p => p.text.includes(paragraph))).toBe(true);
-    expect(buildQuoteOptions([{ marker: "S1", passages: result.passages }]).some(q => q.text.includes(qualifier))).toBe(true);
+    expect(selectedOptions(text, result).some(q => q.text.includes(qualifier))).toBe(true);
     for (const p of result.passages) expect(p.text).toBe(text.slice(p.start, p.end));
-    expect(result.passages.reduce((n, p) => n + p.text.length, 0)).toBeLessThanOrEqual(MAX_CONTEXT_CHARACTERS);
+    expect(result.passages.reduce((n, p) => n + p.text.length, 0)).toBeLessThanOrEqual(2000);
   });
 
   it("marks omitted neighboring text when a source block cannot fit whole", () => {
@@ -26,9 +33,9 @@ describe("bounded adjacent source context", () => {
     const result = selectEvidencePassages(text, "visibility timeout standard FIFO", ["visibility timeout standard FIFO"]);
     expect(result.passages.some(p => p.text.includes(sqs))).toBe(true);
     expect(result.contextOmissions).toContainEqual(expect.objectContaining({ start: 0, blockSuffixOmitted: true }));
-    expect(result.passages.reduce((n, p) => n + p.text.length, 0)).toBeLessThanOrEqual(MAX_CONTEXT_CHARACTERS);
+    expect(result.passages.reduce((n, p) => n + p.text.length, 0)).toBeLessThanOrEqual(2000);
     for (const p of result.passages) expect(p.text).toBe(text.slice(p.start, p.end));
-    const options = buildQuoteOptions([{ marker: "S1", passages: result.passages }]);
+    const options = selectedOptions(text, result);
     expect(options.every(q => q.text.length <= 240 && text.includes(q.text))).toBe(true);
   });
 
@@ -59,7 +66,7 @@ describe("bounded adjacent source context", () => {
     expect(result.candidateSelection!.nominated).toBeLessThanOrEqual(5000);
     expect(result.candidateSelection!.retained).toBeLessThanOrEqual(145);
     expect(result.candidateSelection!.sampled).toBe(true);
-    expect(result.passages.reduce((n, p) => n + p.text.length, 0)).toBeLessThanOrEqual(MAX_CONTEXT_CHARACTERS);
+    expect(result.passages.reduce((n, p) => n + p.text.length, 0)).toBeLessThanOrEqual(2000);
   });
 
   it("reports candidate retention limits separately from source scan limits", () => {
@@ -77,6 +84,6 @@ describe("bounded adjacent source context", () => {
     const result = selectEvidencePassages(text, "Hi research dimensions", facts.map((_, i) => `Hi Dimension${i}`));
     for (const fact of facts) expect(result.passages.some(p => p.text.includes(fact))).toBe(true);
     expect(result.candidateSelection!.retained).toBeLessThanOrEqual(145);
-    expect(result.passages.reduce((n, p) => n + p.text.length, 0)).toBeLessThanOrEqual(MAX_CONTEXT_CHARACTERS);
+    expect(result.passages.reduce((n, p) => n + p.text.length, 0)).toBeLessThanOrEqual(2000);
   });
 });

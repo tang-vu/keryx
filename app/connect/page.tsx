@@ -27,23 +27,23 @@ import {
 } from "@/components/keryx/connect-steps";
 import { useArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
-import { registrationDraft, registrationTarget, safeRegistrationReturn, registrationOwnerMatches } from "@/lib/registration-return";
+import { sourceReturnWithOwner, safeRegistrationReturn, registrationOwnerMatches } from "@/lib/registration-return";
 import { AccountSessions } from "@/components/keryx/account-sessions";
+import { CircleGoogleCallback, CircleGoogleWalletButton } from "@/components/keryx/circle-google-wallet";
 
 export default function ConnectPage() {
   const { disconnect, disconnectAsync } = useDisconnect();
   const chainGuard = useArcChainGuard();
-  const { address, isConnected, session, authState, signIn, signOut } = useSiweAuth();
+  const { address, isConnected, session, authState, signIn, signOut, refresh } = useSiweAuth();
+  const handleGoogleConnected = useCallback(() => { void refresh(); }, [refresh]);
 
   const [returnTo, setReturnTo] = useState<string | null | undefined>(undefined);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const target = safeRegistrationReturn(new URLSearchParams(window.location.search).get("returnTo"));
       if (!target) { setReturnTo(null); return; }
-      const draft = registrationDraft(new URL(target, window.location.origin).searchParams);
-      // Bind once to the wallet that starts this flow, retaining it across reloads and switches.
-      if (address && !draft.owner) draft.owner = address.toLowerCase();
-      const bound = registrationTarget(draft);
+      // Bind once to the initiating wallet, retaining it across reloads and switches.
+      const bound = sourceReturnWithOwner(target, address);
       const params = new URLSearchParams({ returnTo: bound });
       window.history.replaceState(window.history.state, "", `/connect?${params}`);
       setReturnTo(bound);
@@ -83,16 +83,17 @@ export default function ConnectPage() {
     <div className="min-h-screen bg-paper">
       <SiteHeader />
       <main className="mx-auto max-w-5xl px-4 py-16 sm:px-8">
+        <CircleGoogleCallback onConnected={handleGoogleConnected} />
         <header className="mb-12 max-w-2xl">
           <div className="font-mono text-[12px] uppercase tracking-[0.2em] text-seal">
-            Wallet authentication
+            Your Keryx account
           </div>
           <h1 className="letterpress mt-2.5 font-display text-[clamp(34px,6vw,68px)] font-medium leading-[0.96] tracking-[-0.01em] text-ink">
-            Connect your <em className="italic text-paid">wallet.</em>
+            Sign in to <em className="italic text-paid">Keryx.</em>
           </h1>
           <p className="mt-3 max-w-[54ch] text-[18px] leading-relaxed text-ink-2">
-            Your wallet is your identity on Keryx. Sign in with Ethereum to
-            register sources, earn tolls, and manage your creator profile.
+            Sign in to research, publish sources, and manage your account.
+            Your wallet holds your USDC; you choose how much the agent can spend.
           </p>
         </header>
 
@@ -118,6 +119,7 @@ export default function ConnectPage() {
                 chainGuard={chainGuard}
               />
             )}
+            {isConnected && <div className="mt-4"><CircleGoogleWalletButton reconnectOnly onConnected={handleGoogleConnected} /></div>}
 
             {isConnected && session && identityMatches && returnTo === undefined && <p role="status" className="text-sm">Checking sign-in return context...</p>}
             {isConnected && session && identityMatches && returnTo !== undefined && (

@@ -45,6 +45,50 @@ test('exact clean roles: arbitrary ENV, arguments, paths and duplicates refuse',
     const c = config(); mutate(c); assert.throws(() => validateReviewedRoles(c));
   }
 });
+
+const modelFile = 'KERYX_MODEL_ALLOWANCE_FILE=/root/.local/share/release/model-allowance.json';
+const modelHash = `KERYX_MODEL_ALLOWANCE_SHA256=${'a'.repeat(64)}`;
+const controlled = (...controls) => {
+  const c = config(); for (const app of c.apps) app.args.splice(3, 0, ...controls); return c;
+};
+
+test('only paired model allowance and boolean brief controls may precede the fixed binary', () => {
+  for (const controls of [[], ['KERYX_DECISION_BRIEF=0'], ['KERYX_DECISION_BRIEF=1'],
+    [modelFile, modelHash], ['KERYX_DECISION_BRIEF=0', modelFile, modelHash]]) {
+    const c = controlled(...controls); assert.equal(validateReviewedRoles(c), c);
+    for (const app of c.apps) {
+      const binary = app.args.indexOf('/usr/bin/node');
+      assert.equal(app.args[binary + 1], '--env-file=/root/keryx/.env.local');
+    }
+  }
+  for (const controls of [[modelFile], [modelHash], [modelFile, modelFile, modelHash],
+    ['KERYX_DECISION_BRIEF=1', 'KERYX_DECISION_BRIEF=0'], ['KERYX_DECISION_BRIEF=true'],
+    ['KERYX_DECISION_BRIEF=1\nPRIVATE_KEY=x'], ['NODE_OPTIONS=--import=/tmp/unsafe.mjs'],
+    ['PRIVATE_KEY=x'], ['KERYX_NETWORK=arcTestnet'], ['KERYX_SETTLEMENT_MODE=offline'],
+    [modelFile.replace('/root/.local/share/release/', '/tmp/'), modelHash],
+    [modelFile.replace('release/', 'release/../'), modelHash],
+    [modelFile.replace('release/', 'release//'), modelHash],
+    [modelFile, 'KERYX_MODEL_ALLOWANCE_SHA256=invalid']])
+    assert.throws(() => validateReviewedRoles(controlled(...controls)));
+  const mismatch = controlled(modelFile, modelHash); mismatch.apps[1] = config().apps[1];
+  assert.throws(() => validateReviewedRoles(mismatch));
+  const tail = config(); for (const app of tail.apps) app.args.push('KERYX_DECISION_BRIEF=1');
+  assert.throws(() => validateReviewedRoles(tail));
+});
+
+test('controlled stopped roles can restore the ordinary chain without exporting arbitrary environment', () => {
+  const previous = controlled('KERYX_DECISION_BRIEF=0', modelFile, modelHash).apps[0];
+  const h = harness([{ name: previous.name, pid: 0, pm2_env: { status: 'stopped',
+    pm_exec_path: previous.script, pm_cwd: previous.cwd, exec_interpreter: previous.interpreter,
+    args: previous.args, autorestart: previous.autorestart, kill_timeout: previous.kill_timeout,
+    env: { PRIVATE_KEY: 'not-for-export' } } }]);
+  h.c.apps = controlled('KERYX_DECISION_BRIEF=0').apps;
+  deploy(h);
+  assert.deepEqual(h.retained[0].row.args, previous.args);
+  assert.ok(!JSON.stringify(h.retained).includes('not-for-export'));
+  assert.deepEqual(h.events.filter(e => e[0] === 'start'),
+    [['start', '/root/.local/share/release/roles.json', '--only', 'keryx']]);
+});
 test('new web launcher requires exact public server and production port; stopped prior launchers recover', () => {
   const priorTail = ['/root/keryx/node_modules/next/dist/bin/next', 'start', '-p', '3939'];
   for (const mutate of [a => a.args.splice(-3), a => a.args[a.args.length - 1] = '3940',

@@ -173,7 +173,16 @@ export function createGatewayFundingReadinessObserverForTrustedSyntheticComposit
 /** Last synchronous consumer boundary. Does not claim a new DB/Circle snapshot. */
 export function assertVerifiedGatewayFundingReadinessCurrent(token: VerifiedGatewayFundingReadiness, request: GatewayFundingReadinessRequest): void {
   const saved = issued.get(token); if (!saved) refuse();
-  const elapsed = () => { const n = now() - saved.observed; if (!Number.isFinite(n) || n < 0 || n >= TTL_MS) refuse(); };
+  const elapsed = () => {
+    const n = now() - saved.observed;
+    if (!Number.isFinite(n) || n < 0 || n >= TTL_MS) {
+      // Safe timing evidence for trusted callers; never include the token or its
+      // retained operation, ledger, identity or custody material.
+      throw new Error("Gateway funding readiness unknown; inspect original operation", { cause: Object.freeze({
+        phase: "readiness-token-freshness", tokenAgeMs: Number.isFinite(n) && n >= 0 ? Math.round(n) : null,
+      }) });
+    }
+  };
   elapsed(); const b = binding(request); b.check(); elapsed();
   if (b.ledger !== saved.ledger || b.guard !== saved.guard || b.key !== saved.metadata) refuse();
 }

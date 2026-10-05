@@ -1,5 +1,133 @@
 # Keryx — Decision Log
 
+**Monitoring observations and mainnet defaults — 2026-10-05.** Describe service
+availability separately from recorded financial checks. Add bounded freshness for
+the four existing summary records without vendor requests, scheduler changes or
+financial transitions in health. A missing, invalid, future or stale timestamp is
+unavailable/currently unobserved, never an inferred successful check. A recent
+summary dates an observation and does not prove a pass, active scheduling or settlement.
+New desktop tasks target the public mainnet service; persisted task networks remain
+immutable history. Creator proof keeps the 24-hour control boundary and manual
+refresh, with clear owner recovery rather than implicit renewal or earnings activation.
+Monthly/Slack/external discovery copy reflects its actual role; marketplace metadata
+does not authorize payments. See [release scope](docs/engineering/mainnet-consistency-2026-10-05.md).
+
+**Caller source leads, serving visibility and native authority checks — 2026-10-05.**
+URLs in the original question are bounded unread discovery leads even without a search
+provider. Never manufacture a source from a domain or model-created target, force a BUY,
+or treat a supplied URL as document contents, official authorship or creator authority.
+Keep existing public transport, final identity, evidence and portfolio bounds; fragment
+requests share a document read and do not claim section-specific extraction. Retain
+refusal and omission reasons so discovery failure does not become another request for
+the same already-supplied URLs. Private and unattended external-effect gates remain.
+
+Expose allowlisted recorded reasoning attempts and step-specific serving/fallback state
+through shared results. Aggregate engine names or model synthesis cannot certify model
+source selection; missing, invalid and bounded-out telemetry remains unknown. This is
+observability, not a circuit reset, provider policy change or recovered usefulness claim.
+
+Batch trusted exact schema triples in one native SQLite statement per guard. Compare the
+first matching stored definition with binary exact SQL semantics, preserving missing,
+null and drift refusals. Do not materialize stored SQL into JavaScript or cache authority.
+Keep storage enrollment, authorizers, markers, counts and observation deadlines intact.
+Windows acceptance and Linux CI must verify both correctness and the reported improvement.
+
+**Bind legacy evidence to complete source spans and private neighboring context — 2026-10-05.**
+Ordinary-client results exposed an unconfirmed proposal without its qualification
+and a mid-sentence excerpt. Bind new internal proposals to exact read offsets,
+refuse structurally cut quotes independently of model support, and include bounded
+neighbors plus source identity in the existing review. Never reconstruct runtime
+offsets by text lookup or add paid retries. Withhold known discussion pages from
+targets that explicitly require official documentation, retaining mixed-source
+research. This negative gate does not certify other URLs. Keep payout authority,
+allocation, public schemas and historical answers unchanged. Lower recall is an
+explicit limit; usefulness remains unproven. See [design and evidence](docs/engineering/source-context-2026-10-05.md).
+
+
+**Public discovery, verified control and explicit future earnings — 2026-10-05.**
+Keep public RSS and on-demand broad-web evidence readable without a creator account,
+wallet, price or payout authority. Do not attempt to pre-crawl the entire internet or
+populate an empty mainnet marketplace with simulated paid creators. A public reference
+keeps its original identity and archived receipts after a publisher claims control.
+
+Claims prove control of an exact HTTPS source using an expiring, wallet/network/origin
+bound challenge in an origin-root file or publisher-controlled RSS/Atom channel metadata.
+Post bodies, comments and redirects cannot establish control. Store one owner atomically,
+retain proof and revision history, and bind a separate creator listing to its exact
+on-chain source ID and reviewed registry address. Strong proof may verify that listing
+only after fresh live creator authority agrees. Verification and linking default to free;
+earning requires a separate explicit distribution permission and policy selection.
+Citation-only requires an owner-set zero registry toll; paid access requires a positive
+registry toll. On-chain payout and author splits remain authoritative.
+
+A zero-price article is a current version-bound free delivery, with no access signature,
+deposit, simulated settlement or paid-cache receipt. Only a qualified actual citation may
+trigger a later citation reward when enabled. Preserve the original free public candidate
+until a creator read succeeds, and admit an exact URL/body only once. Disabled or unavailable
+creator delivery cannot erase public evidence. A first uncertain funding boundary blocks
+further automatic payments and stays visible alongside the completed answer.
+
+Capture the policy revision before reading and bind new financial admission to that snapshot.
+Managed paid endpoints require the selected claim ID/revision, but unsigned URL metadata
+alone is insufficient: atomic SQLite admission compares the current policy and the nonce's
+retained browser/hosted original. Existing economic originals keep their policy for recovery;
+policy updates never bill old reads or rewrite exposed authorization/settlement evidence.
+Pause new managed earnings when control proof is over 24 hours old, the registry changes,
+permission is disabled, or authority cannot be verified. Refresh proof manually; disabling
+earnings remains available during outages. Unsupported storage refuses claim writes and
+managed admission. Use existing sealed storage without adding a mainnet schema migration.
+
+Claim management belongs to the wallet web flow and its authenticated API. Shared research
+behavior and original policy checks apply to hosted API/A2A/MCP/bots and the headless browser
+Session runtime. Existing stdio buyer, desktop and extension protocols keep their roles;
+their packaged reader contracts do not become claim-management or payout authority. Scholarly
+rights enrollment remains separately gated. Acceptance requires native concurrent admission,
+real React/browser journeys, original-signature substitution tests, existing payment checks,
+TypeScript/lint/build, independent review and verified production commit. See
+[the source claim guide](docs/public-source-claims.md).
+
+**Stage a bounded brief behind measured usefulness and contribution review — 2026-10-05.**
+The owner authorized ordinary mainnet client use within one USD 2 round, at most
+three questions and 0.15 source USDC, with no topup. Keep external compute/search
+costs separate from source payees and count both against the finite allowance.
+Use protected durable per-request reservations for the exact supplier transport;
+failed/unknown requests retain their holds. An expired policy cannot fall through
+to another provider. Preserve explicit private-provider role boundaries.
+
+D-300 remains the default. An opt-in bounded fact/action contract requires exact
+quote provenance, the same neighboring context for generation/review, immutable
+packet binding, complete whole-row AND per-quote contribution review, dependency
+closure and a final downward-only projection through existing evidence gates.
+Missing optional generation actions normalize to an empty set before review;
+no invalid present row, unknown field or incomplete review is repaired. Duplicate
+context may be omitted on the wire only when identical bytes remain at their exact
+offsets in the shared source context. No arbitrary prose gains evidence/reward
+authority. Retain the original full packet privately and publish only bounded
+excerpts/finalized output. Model review estimates support; it does not certify truth.
+
+The initial independent set failed at 3/12 useful with six material unsupported
+rows. A separate high-effort review set exhausted its output cap and was stopped
+after four failures made its gate unreachable. Neither result authorizes richer
+production answers. The final lower-effort candidate also failed: five completed
+cases yielded no useful brief, with four exhausted reviews and one malformed
+generation. Keep the feature disabled. Future activation still needs a fresh
+independently authored set with at least 10/12 useful artifacts and zero material
+errors, plus separately graded insufficient cases. Keep all
+failures, unknown costs and versioned evidence. See
+[the bounded-brief findings and release gates](docs/engineering/decision-brief-2026-10-05.md).
+
+Compute failure after a paid read must preserve the final dispatch and receipts.
+Stop extra purchases after an unavailable reading assessment, retain existing
+final-assessment reward withholding, and let attribution outages reach the already
+documented equal-share fallback only over admitted delivered contributions. Keep
+unreviewed conflict and attribution prose outside the brief's delivery boundary.
+
+Reviewed deployment binds the fetched remote main to an explicit accepted full
+commit before source mutation, then resets that immutable object. Preserve every
+retained temporary/backup build until its operator-reviewed archive is verified;
+refuse a new temporary build appearing between preflight and build. These checks
+prevent a moving main branch or stale build cleanup from changing a reviewed release.
+
 **Current-network documentation convention — 2026-10-04.** The owner confirmed
 that production is already mainnet and requested a documentation-wide refresh.
 [Current status](docs/mainnet-status.md) records the direct `arc`/`real` health
@@ -4933,18 +5061,132 @@ Private economics reporting selects its reviewed read-only adapter through the s
 
 Hermetic browser fixtures compile explicit public profile/registry pins as Next does, rather than installing a Node `process` global or accepting request-selected authority. Historical testnet signing, clock and malicious-parent assertions retain their original rail and limits. Faithful gateway/route fixtures provide inherited methods, canonical profiles and the required native authority interface; successful setup must not remove nonce, privacy or durable-issuance assertions. The desktop question remains visible in the first reading area with the original layout/keyboard acceptance thresholds.
 
-## Research usefulness, bounded sponsorship and recurring tolls - 2026-10-05
 
-A local trial of a comparison question ("which open source accounting systems have an API an agent can safely write payments to") returned vendor listicles and named none of the expected systems. Four causes were measured in the trace: only the first three research targets were searched, one broad query filled the candidate cap, each source showed the model 2000 characters, and planning spent a target on the meaning of "safely". Deep research now searches once per target in parallel with the candidate cap shared between queries, shows 4000 characters per source, reads up to one source per target unless the caller pinned its execution limits, and planning names specific candidates to verify for an unnamed "which X" question. The default attention limit is 6. A2A packages keep their pinned limits. The same question then read sources for seven named systems; three of eight page reads still failed in the article reader, which remains open.
+## Explicit originals and request-local reasoning failures - 2026-10-05
 
-Answer delivery gains an opt-in `KERYX_ANSWER_DELIVERY=cited-synthesis`: the model-written answer with every rejected citation marker removed, followed by the unchanged excerpt ledger, with the computed evidence verdict instead of a fixed Low label. The default stays `qualified-excerpts`; the reward gate is the ledger in both modes. Production enablement is a separate owner decision after reviewing answers on real questions.
+A caller-supplied URL is a bounded discovery requirement, independent of search
+ranking; it is never document evidence, publisher authority or payment permission.
+Preserve each original and its fragment scope through decisions and final status,
+including model omission. Retain whole-document read limits, attention selection,
+exact arXiv identity and private/unattended disclosure boundaries. Secondary reads
+cannot silently satisfy an unread requested original. Optional receipt metadata
+adds scope without rewriting historical records or changing reward eligibility.
 
-Money-path corrections, all downward or neutral for treasury exposure except the cache window:
+Distinguish post-response output validation, internal errors and proven local
+input limits from supplier transport/health failures. Request-specific failures
+must not poison a shared provider-step circuit. Test the actual bounded prompt
+before claiming a fallback usable, retain all required input, and expose per-step
+serving to consumers. Preserve returned-call usage and existing durable failures;
+neither a new release nor an offline reproduction authorizes clearing circuits
+or reopening a closed paid evaluation. See the issue-followup scope document.
 
-- A selection that was never read (early stop, or a purchase that failed before any authorization) is recorded as SKIP and its query-local toll reservation is released; receipts previously counted it as bought.
-- A reasoning failure after a paid read no longer discards the dispatch: interim assessment, gap re-evaluation, synthesis and attribution each degrade (no admitted evidence means no citation reward; failed attribution uses the existing equal split).
-- A client disconnect cancels research only while no creator payment has been observed; afterwards the run completes and is saved so receipts keep their dispatch.
+Immutable source/artifact staging is independent preparation, not production
+admission. Keep the reviewed early writer drain until clean immutable role bindings,
+economic compatibility/rollback, off-box evidence and measured no-spend plus ordinary
+production rollout pass. Synthetic process timing establishes only that fixture.
+
+After the parallel v0.26.12 native-schema batching repair, retain the complete
+keyless inspection path: async unseal/fresh backend, semantic manifest reread,
+full assembled original comparison and final five-second freshness check. Exact
+schema guards still run on every operation; no authority cache or new issuance
+API is needed. The native Windows mutation/drift checks pass with the stronger
+original path. Timings are fixture evidence, not production performance guarantees.
+Browser fixtures model concurrent work at the synthetic wallet boundary, outside
+the production transport deadline, with fresh state for each journey and unchanged
+assertions. Windows timing failures do not justify weakening the deployed limits.
+
+
+### Reconcile parallel issue and mainnet releases - 2026-10-05
+
+v0.26.12 merged while issue repairs were in CI. v0.26.15 must retain its mainnet
+surface/monitor/schema fixes and resolve overlap through one URL-admission helper
+and one bounded public `reasoning` contract, preserving remote protocol0.3.0.
+Named originals have the existing eight-lead cap and independent admission from
+search publisher slots; actual attention, public transport, evidence and spend
+limits remain. Canonical bodies retain up to four requested fragment URLs as
+scope metadata, with truthful final read status. New MCP 0.4.5 / desktop 0.4.6 identities
+avoid reuse of already selected 0.4.4 / 0.4.5 bytes. Combined regressions, independent
+review, exact-source CI and serialized deployment/publication remain required.
+
+## Reusable research budgets and optional Google wallets - 2026-10-05
+
+The owner authorized reducing repeated wallet confirmations and adding a Google-linked
+user-controlled wallet. Model mainnet delegation as an explicit research budget reused
+across conversations, with signed 1-hour/24-hour/7-day duration and per-question limit.
+Use a versioned v2 consent with independent server and worker checks; preserve v1
+message/proof bytes, original networks, retained custody and all cumulative liabilities.
+Renewal verifies the retained original and cannot increase its ceiling from external
+funding. A reviewed top-up and fresh owner signature are required for an increase.
+
+Circle user-controlled EOA wallets keep the owner-wallet interface compatible with
+existing payment/funding checks. Authenticate the actual Circle wallet server-side;
+Google authentication alone is not spending consent. Optional configuration and vendor
+acceptance gate activation. Research session custody remains same-browser storage;
+longer delegation is not an on-chain/XSS-proof policy wallet or portable recovery.
+See docs/research-budget-onboarding.md for setup, compatibility and surface roles.
+
+## Separate zero-source research from finite compute authority - 2026-10-05
+
+Preserve an explicit zero source budget end to end instead of replacing it with a positive
+default. Zero authorizes no source purchase, creator reward or browser signing scope; model
+and search costs remain separate. Shared hosted and local execution applies the same payment
+guard, while caller-funded checkout products retain their independently positive fee contracts.
+
+For the owner's new USD 1 / three-question acceptance, use a distinct strict dated v2 policy
+with exact public-web question hashes and atomic durable model/search/question reservations.
+Bind transport to the admitted execution context and retain failed, interrupted and unknown
+holds. Keep the old model-only policy unchanged and closed. Pause direct private inference
+and watchdog schedules during the round instead of claiming the public factory covers them.
+No automatic renewal, retry, refund, new custody or scheduler activation follows from this
+policy. Technical completion and useful complete answers are separate acceptance criteria.
+See docs/engineering/bounded-live-research-2026-10-05.md for scope and release gates.
+
+## Preserve atomic targets and make planning refusal terminal - 2026-10-05
+
+The 0.26.16 ordinary-browser round graded 0/3 useful; two comparisons exceeded eight
+planning targets before discovery. Raw plans were not retained, so their exact expansion
+cause remains unproved. Distinguish compared subjects from complementary references in
+the existing planning call. Preserve every independently inspectable information need;
+neither a larger target/context/cost limit nor semantic grouping is an accepted repair.
+Malformed/excess/incomplete planning is a terminal request-local output refusal, retaining
+usage and circuit history instead of paid tier fanout or an aggregate heuristic answer.
+Caller-only narrowing excerpts are private error state, absent from ordinary inspection/logs.
+
+A unique normalized short extracted heading matching a supplied fragment may prioritize
+contiguous already-read text under existing context/candidate/scan bounds. This improves
+cross-language recall without certifying an HTML anchor or full section. Preserve literal
+quote/source/version/reward checks and D-300. Offline fixtures do not replace ordinary-client
+usefulness, prove the historical Next.js loss point or reopen the closed paid scope.
+See docs/engineering/research-planning-2026-10-05.md for adapter and release gates.
+
+## Public Google wallet rollout and disclosures - 2026-10-05
+
+Publish hosted terms and accurate optional Google/Circle processing disclosures,
+with homepage/footer links, before enabling the configured Google wallet path.
+Distinguish Keryx account storage from provider identity processing, short-lived
+device continuation from in-memory signing credentials, and wallet identity from
+the separate retained browser research key. Login validity does not guarantee
+automatic removal of abandoned SDK OAuth metadata from browser storage.
+
+The owner selected direct mainnet activation and product acceptance on keryx.cc
+after publishing the Google audience and configuring Circle. This replaces the
+default isolated-testnet-first rollout for this setup, not the need to verify
+real Google return, wallet initialization, message/typed/raw signing and repeated
+recovery derivation. Keep each unverified operation open. Configuration deployment
+does not fund a wallet, issue spending consent or authorize automatic paid research;
+existing caps, journals, schedules and custody remain authoritative. Mainnet
+funding/spending acceptance still needs its applicable finite authorization.
+See docs/research-budget-onboarding.md for setup and supported-surface boundaries.
+
+## Bounded sponsorship, recurring tolls and accurate unread receipts - 2026-10-05
+
+Money-path corrections found in an orchestrator review. All are downward or neutral for treasury exposure except the cache window.
+
+- A selection that was never read (early stop, or a purchase that failed before any authorization) is recorded as SKIP and its query-local toll reservation is released; receipts previously counted it as bought and the gap-expansion pass saw less budget than remained.
+- A client disconnect cancels research only while no creator payment has been observed; afterwards the run completes and is saved so payment receipts keep their dispatch.
+- The final coverage check reuses the interim assessment when nothing was read since, instead of repeating an identical model call.
 - Paid reads expire from the cache after `KERYX_CACHE_TTL_SECONDS` (default seven days), and a browser-funded read is cached per paying wallet. Without expiry an article version earned one toll for the life of the platform. This raises treasury toll spend on sponsored runs within the existing per-query and lifetime caps; the window is an owner-tunable business parameter.
-- A run not funded by the asker's own browser grant leaves out sources whose payout or author wallet is the verified asker. Anonymous callers cannot be matched to a payee, so sponsored research also has durable daily dispatch caps per caller and service-wide (`KERYX_SPONSORED_DISPATCHES_PER_CALLER_PER_DAY`, `KERYX_SPONSORED_DISPATCHES_PER_DAY`), making sponsorship a bounded daily cost instead of a per-minute rate.
+- A run not funded by the asker's own browser grant leaves out sources whose payout or author wallet is the verified asker (`/api/ask`, keyed chat completions, remote MCP). Chat bots and anonymous callers have no wallet identity, so sponsored research also has durable daily dispatch caps per caller and service-wide (`KERYX_SPONSORED_DISPATCHES_PER_CALLER_PER_DAY`, `KERYX_SPONSORED_DISPATCHES_PER_DAY`), making sponsorship a bounded daily cost instead of a per-minute rate.
+- Source passages carry an instruction to disregard embedded requests to cite, score or weight a source, since their authors are paid when cited.
 
-Not changed: no service fee on browser-funded research and no refund of an unused A2A creator reserve. Both add a new mainnet money movement through the signing worker, payee allowlist and journals and need their own design and review. Surfaces: the orchestrator, admission and discovery changes apply to every entry point that calls `runAgent`/`collectRun`; `/api/ask`, keyed chat completions and remote MCP supply the verified wallet for the own-source exclusion; chat bots and anonymous callers have no wallet identity and rely on the daily caps.
+Deliberately not changed. A local trial of a "which systems ..." comparison improved when Deep research searched once per target, showed 4000 characters per source and read one source per target, but the same-day planning decision records that a larger target, context or cost limit is not an accepted repair, and bounded live acceptance reserves model and search usage atomically. Those changes were withdrawn from this update and remain an owner decision. No service fee on browser-funded research and no refund of an unused A2A creator reserve: both add a new mainnet money movement and need their own design and review.

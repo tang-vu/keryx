@@ -98,7 +98,7 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
         </ul>
       )}
       <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
-        Hourly read of the agent&apos;s own dispatches. A failed provider crosses to another
+        Recorded inspection of the agent&apos;s own dispatches. A failed provider crosses to another
         configured model before the deterministic heuristic; every attempt and circuit skip is
         carried on the completed run receipt. Worker and settlement health are monitored separately;
         requests that fail before saving a receipt are outside this window.

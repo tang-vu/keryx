@@ -26,6 +26,10 @@ export interface PaidOptions {
   /** Durable debit admission binds a research request or the exact seller resource. */
   purchasePurpose?: "a2a" | "monthly";
   purchaseRequestHash?: string;
+  /** Source-managed admission is checked atomically with the original nonce purpose. */
+  resourceSourceId?: string;
+  resourceKind?: "fetch" | "citation";
+  sourceClaim?: import("./db/research-monthly").ResearchPurchaseClaim["sourceClaim"];
   /**
    * Bazaar discovery metadata (x402 discovery extension). When set, the 402 challenge advertises
    * `extensions.bazaar.info` and the payload forwarded to the facilitator carries it, so the
@@ -194,7 +198,7 @@ export async function settleThenServe(
       payee: authorization.to, authorizationId: authorization.nonce,
       purpose: opts.purchasePurpose ?? "resource",
       requestHash: opts.purchaseRequestHash ?? createHash("sha256").update(opts.endpoint).digest("hex"),
-      amountMicros: Number(requirements.amount) });
+      amountMicros: Number(requirements.amount), resourceSourceId: opts.resourceSourceId, resourceKind: opts.resourceKind, sourceClaim: opts.sourceClaim });
     let settle;
     try {
       settle = await withRetry(() => facilitator.settle(activePayload, requirements), "settle", opts.endpoint);

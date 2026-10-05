@@ -52,6 +52,8 @@ jobs:
           node --test scripts/redeploy-economic-migration.test.mjs
           node --test scripts/dependency-state.check.mjs
           node --test scripts/release-ops-preflight.test.mjs
+          node --test scripts/immutable-release-staging.test.mjs
+          node scripts/rehearse-immutable-release.mjs
           node scripts/dependency-state.mjs record
           node scripts/dependency-state.mjs check
 
@@ -105,6 +107,9 @@ jobs:
       - name: Scholarly creator rights (hermetic wallet and HTTP, no settlement)
         run: npm run test:browser-scholarly-rights
 
+      - name: Public source claims (both profiles, mobile/desktop, hermetic wallet and HTTP)
+        run: npm run test:browser-public-source-claim
+
       - name: Browser checkout UI (hermetic, no settlement)
         run: npm run test:browser-checkout
 
@@ -113,6 +118,7 @@ jobs:
 
       - name: Built stdio Monthly discovery (hermetic, no settlement)
         run: |
+          node --test scripts/mcp-registry-release.test.mjs
           npm --prefix mcp run build
           node --import tsx scripts/test-monthly-mcp-package.mts
 
@@ -121,6 +127,8 @@ jobs:
 
       - name: Browser sign-out (hermetic, no signing)
         run: npm run test:browser-auth
+      - name: Circle Google SDK and OAuth return (synthetic vendor transport, no wallet or funds)
+        run: npm run test:browser-circle-wallet
       - name: Session revoke and concurrent recovery (synthetic custody, no funds)
         run: node --import tsx scripts/test-browser-session-revoke.mts
       - name: Browser clock skew (synthetic login, no payment)
@@ -179,6 +187,9 @@ jobs:
 
       - name: Empty evidence (actual minified production orchestrator, no network)
         run: npm run test:built-empty-evidence
+
+      - name: Bounded research allowance (actual minified factory and orchestrator, synthetic providers)
+        run: npm run test:built-research-allowance
 
       - name: Bounded document readers (assembled production trace, no network)
         run: node scripts/test-web-readers-traced.mjs

@@ -7,9 +7,9 @@
  */
 
 import { config } from "../config";
-import { extractJson, JsonChatEngine } from "./json-chat-engine";
+import { extractJson, JsonChatEngine, type ChatJsonOptions } from "./json-chat-engine";
 import { capturePricePolicy } from "../economics/provider-cost-policy";
-import { ReasoningInputLimitError } from "./reasoning-engine";
+import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
 
 export interface OpenAICompatibleOpts {
   /** Explicit provider identity; vendor options must not leak to generic compatible hosts. */
@@ -28,9 +28,20 @@ function tokenCount(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
+function transportFailure(error: unknown): ReasoningTransportError {
+  const name = (error as { name?: string })?.name;
+  return new ReasoningTransportError(name === "TimeoutError" || name === "AbortError" ? "timeout" : "network");
+}
+
 export class OpenAICompatibleEngine extends JsonChatEngine {
   readonly name: string;
   private readonly opts: OpenAICompatibleOpts;
+
+  protected supportsDecisionBrief(): boolean {
+    const flash = (model: string) => /^(deepseek-v4-flash|deepseek-flash)$/.test(model);
+    return this.opts.provider === "deepseek" && this.opts.baseUrl === "https://api.deepseek.com" &&
+      (this.opts.model ? flash(this.opts.model) : flash(config.llmModel) && flash(config.synthesisModel));
+  }
 
   constructor(opts?: OpenAICompatibleOpts) {
     super();
@@ -43,21 +54,27 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     this.name = this.opts.name;
   }
 
+  protected validateChatJsonInput(_model: string, system: string, user: string, maxTokens = 2048): void {
+    if (this.opts.provider !== "cloudflare") return;
+    const promptUtf8Bytes = new TextEncoder().encode(system + " Respond with a single JSON object." + user).length;
+    if (maxTokens > 8192 || promptUtf8Bytes + maxTokens > 23000) {
+      // Keep every target and candidate; an ineligible tier cannot acquire source/payment authority.
+      throw new ReasoningInputLimitError("Cloudflare research exceeds the bounded context", {
+        promptUtf8Bytes, requestedOutputTokens: maxTokens, maximumCombinedUnits: 23000,
+      });
+    }
+  }
+
   protected async chatJson(
     model: string,
     system: string,
     user: string,
     maxTokens = 2048,
+    options?: ChatJsonOptions,
   ): Promise<Record<string, unknown>> {
     const wireModel = this.opts.model ?? model;
-    if (this.opts.provider === "cloudflare") {
-      // Llama 3.3's context is 24k tokens. UTF-8 bytes conservatively bound byte-fallback
-      // tokenization, with 1k tokens reserved for role/framing overhead. Refuse before HTTP;
-      // no prompt truncation or partial-source reasoning. The chain can try another provider.
-      if (maxTokens > 8192 || new TextEncoder().encode(system + " Respond with a single JSON object." + user).length + maxTokens > 23000) {
-        throw new ReasoningInputLimitError("Cloudflare research exceeds the bounded context");
-      }
-    }
+    // Also enforce this bound for operational direct-transport callers outside the ledger wrapper.
+    this.validateChatJsonInput(model, system, user, maxTokens);
     const requestStartedAt = new Date().toISOString();
     const pricing = capturePricePolicy(this.opts.provider, wireModel);
     const res = await fetch(`${this.opts.baseUrl}/chat/completions`, {
@@ -72,8 +89,9 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
         model: wireModel,
         // V4 defaults to thinking, which can consume a bounded JSON step's entire output
         // allowance before producing content. Keep the existing token cap and failover.
-        ...(this.opts.provider === "deepseek" && /^deepseek-v4-(flash|pro)$/.test(wireModel)
-          ? { thinking: { type: "disabled" } }
+        ...(this.opts.provider === "deepseek" && /^(deepseek-v4-(flash|pro)|deepseek-flash)$/.test(wireModel)
+          ? { thinking: { type: options?.reasoningReview ? "enabled" : "disabled" },
+            ...(options?.reasoningReview ? { reasoning_effort: "low" } : {}) }
           : {}),
         messages: [
           { role: "system", content: system + " Respond with a single JSON object." },
@@ -83,7 +101,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
         temperature: 0.3,
         max_tokens: maxTokens,
       }),
-    });
+    }).catch((error: unknown) => { throw transportFailure(error); });
     if (!res.ok) {
       // Surface the HTTP status so the resilience layer can classify transient vs hard failures.
       const err = new Error(
@@ -92,7 +110,12 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
       err.status = res.status;
       throw err;
     }
-    const data = (await res.json()) as {
+    const body: unknown = await res.json().catch((error: unknown) => {
+      if (error instanceof SyntaxError) throw new ReasoningOutputValidationError("Provider response is not valid JSON");
+      throw transportFailure(error);
+    });
+    if (!body || typeof body !== "object" || Array.isArray(body)) throw new ReasoningOutputValidationError("Provider response is not a JSON object");
+    const data = body as {
       choices?: { message?: { content?: string }; finish_reason?: string }[];
       usage?: {
         prompt_tokens?: number;
@@ -128,17 +151,19 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     }
     const choice = data.choices?.[0];
     // A reply cut off at the token ceiling is truncated JSON, which parses to nothing — and
-    // "nothing" reads downstream as a decision rather than a failure. Surface it with a retryable
-    // status so the resilience layer treats it like any other provider hiccup: retry, then drop a
-    // tier. This is exactly how a 20-source corpus against a flat 2048-token cap turned into runs
+    // "nothing" reads downstream as a decision rather than a failure. Keep usage and the historic
+    // status, but classify it as request-local output validation and drop a tier without retrying
+    // identical caps or poisoning a shared circuit. A 20-source corpus with a flat cap caused runs
     // that bought nothing while their traces looked deliberate.
     if (choice?.finish_reason === "length") {
-      const err = new Error(
+      const err = new ReasoningOutputValidationError(
         `LLM reply hit the ${maxTokens}-token ceiling before closing its JSON`,
       ) as Error & { status?: number };
       err.status = 503;
       throw err;
     }
-    return extractJson(choice?.message?.content ?? "{}");
+    const content = choice?.message?.content;
+    if (content !== undefined && typeof content !== "string") throw new ReasoningOutputValidationError("Model completion is not text");
+    return extractJson(content ?? "{}");
   }
 }

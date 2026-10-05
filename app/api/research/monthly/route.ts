@@ -11,6 +11,7 @@ import { a2aResearchPackageForVersion } from "@/lib/a2a/research-package";
 import { settleThenServe } from "@/lib/x402-server";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { makePayment } from "@/lib/payments/payment-gateway";
+import { paidResearchAdmissionResponse } from "@/lib/research/paid-admission";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const paused = paidResearchAdmissionResponse(); if (paused) return paused;
   const limited = await checkRateLimit(clientIp(req), "a2aPublic"); if (limited) return limited;
   if (!monthlyConfigured()) return response({ error: "Monthly unavailable" }, 503);
   try {

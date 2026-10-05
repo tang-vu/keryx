@@ -10,6 +10,8 @@
 import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
+import { MonitoringStatusSection } from "@/components/keryx/monitoring-status-section";
+import type { MonitoringObservations } from "@/lib/ops/monitoring-observations";
 import {
   RegistryStatusSection,
   type RegistryHealth,
@@ -42,6 +44,7 @@ interface Health {
   dispatches?: DispatchHealth | null;
   settlement?: SettlementHealth | null;
   reconciliation?: PendingReconciliationHealth | null;
+  monitoring?: MonitoringObservations;
   traction?: {
     totalPayments: number;
     creatorPayoutsUsdc: number;
@@ -80,20 +83,20 @@ export default function StatusPage() {
     let alive = true;
     const poll = async () => {
       try {
-        const r = await fetch("/api/health", { cache: "no-store" });
+        const r = await fetch("/api/health", { cache: "no-store", signal: AbortSignal.timeout(8_000) });
         const j = (await r.json()) as Health;
         if (alive) {
           setHealth(j);
           setReachable(true);
         }
       } catch {
-        if (alive) setReachable(false);
+        if (alive) { setReachable(false); setHealth(null); }
       }
     };
     // Gateway balance moves per-settlement, not per-second — poll it gently.
     const pollTreasury = async () => {
       try {
-        const r = await fetch("/api/treasury", { cache: "no-store" });
+        const r = await fetch("/api/treasury", { cache: "no-store", signal: AbortSignal.timeout(8_000) });
         if (alive) {
           if (r.ok) setTreasury((await r.json()) as Treasury);
           else setTreasury(null);
@@ -115,7 +118,7 @@ export default function StatusPage() {
   }, []);
 
   const up = reachable && health?.ok && health.status !== "degraded";
-  const label = up ? "All systems operational" : reachable ? "Degraded" : "Unreachable";
+  const label = !reachable ? "Unreachable" : !health ? "Checking service" : up ? "Service available" : "Degraded";
 
   return (
     <div className="min-h-screen bg-paper-2">
@@ -160,6 +163,8 @@ export default function StatusPage() {
                 </dl>
               </>
             )}
+
+            {health?.monitoring && <MonitoringStatusSection monitoring={health.monitoring} />}
 
             {health?.dispatches && <DispatchHealthSection dispatches={health.dispatches} />}
 

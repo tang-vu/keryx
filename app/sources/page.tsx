@@ -17,6 +17,8 @@ import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { Source } from "@/lib/types";
 import { safeInlineJson } from "@/lib/safe-json";
 import type { PublicReference } from "@/lib/public-references/catalog";
+import { claimControlIsFresh, sourceClaimSchema, type SourceClaim } from "@/lib/sources/public-source-claim";
+import { sourceClaimPolicyForSource } from "@/lib/sources/public-source-claim-service";
 
 // Recompute a few times an hour — new registrations arrive via the indexer.
 export const dynamic = "force-dynamic";
@@ -38,6 +40,9 @@ interface RegistryEntry {
   source: Source;
   totalEarnedUsdc: number;
   citationCount: number;
+  claim: SourceClaim | null;
+  claimPolicyUnavailable: boolean;
+  controlFresh: boolean;
 }
 
 async function loadRegistry(): Promise<RegistryEntry[]> {
@@ -45,15 +50,23 @@ async function loadRegistry(): Promise<RegistryEntry[]> {
     const db = await getDb();
     const [sources, leaderboard] = await Promise.all([db.listSources(), db.creatorLeaderboard()]);
     const earningsById = new Map(leaderboard.map((e) => [e.sourceId, e]));
-    return sources
-      .map((source) => {
+    return (await Promise.all(sources
+      .map(async (source) => {
         const e = earningsById.get(source.id);
+        let claim: SourceClaim | null = null, claimPolicyUnavailable = false;
+        try {
+          const value = await sourceClaimPolicyForSource(db, source.id);
+          claim = value ? sourceClaimSchema.parse(value) : null;
+          if (claim && (claim.linkedSourceId !== source.id || claim.onchainId?.toLowerCase() !== source.onchainId?.toLowerCase())) throw new Error("Claim listing identity differs");
+          claimPolicyUnavailable = !!source.sourceClaimId && (!claim || claim.id !== source.sourceClaimId);
+        } catch { claim = null; claimPolicyUnavailable = true; }
         return {
           source,
           totalEarnedUsdc: e?.totalEarnedUsdc ?? 0,
           citationCount: e?.citationCount ?? 0,
+          claim, claimPolicyUnavailable, controlFresh: !!claim && claimControlIsFresh(claim),
         };
-      })
+      })))
       .sort(
         (a, b) =>
           b.totalEarnedUsdc - a.totalEarnedUsdc ||
@@ -136,6 +149,9 @@ export default async function SourcesPage() {
                 source={e.source}
                 totalEarnedUsdc={e.totalEarnedUsdc}
                 citationCount={e.citationCount}
+                claim={e.claim}
+                claimPolicyUnavailable={e.claimPolicyUnavailable}
+                controlFresh={e.controlFresh}
               />
             ))}
           </div>
@@ -144,10 +160,9 @@ export default async function SourcesPage() {
         <section className="mt-12 border-t border-ink pt-6" aria-labelledby="public-references-title">
           <h2 id="public-references-title" className="font-display text-2xl text-ink">Free public references</h2>
           <p className="mt-3 max-w-[62ch] font-serif text-[15px] leading-relaxed text-ink-2">
-            Public RSS feed bodies supplement the creator corpus. Keryx reads only what the feed supplies;
-            an excerpt or abstract may omit parts of the article. Follow the publisher link for the original.
-            These references carry no publisher ownership verification or creator payment.
+            Keryx discovers supported public websites, feeds and PDFs in response to questions and reads available content for free. This page shows retained public feeds, not a complete index of the internet. An excerpt, abstract or video description may omit the full work. Follow the publisher link for the original. These public reference identities carry no creator payment.
           </p>
+          <p className="mt-3 text-sm text-ink-2">Publishers can <Link href="/claim-source" className="underline">claim a supported HTTPS source</Link> and separately activate a registered listing. Ownership verification alone earns nothing; past public reads stay free.</p>
           <div className="mt-5 flex flex-col gap-4">
             {publicReferences.map((reference) => (
               <article key={reference.id} className="border border-line bg-paper p-5">
@@ -157,6 +172,7 @@ export default async function SourcesPage() {
                 <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.08em] text-ink-3">Free public reference · no creator payment</p>
                 <p className="mt-3 font-serif text-[14px] leading-relaxed text-ink-2">{reference.description}</p>
                 <p className="mt-3 font-mono text-[10px] text-ink-3">{reference.items.length} recent feed item{reference.items.length === 1 ? "" : "s"} available</p>
+                {!/^(?:www\.)?(?:youtube\.com|youtu\.be)$/.test(new URL(reference.url).hostname) && <Link href={`/claim-source?referenceId=${encodeURIComponent(reference.id)}`} className="mt-3 inline-block min-h-11 py-2 text-sm text-seal underline">This is my source</Link>}
               </article>
             ))}
             {publicReferences.length === 0 && <p className="font-mono text-xs text-ink-3">No public references are available yet.</p>}
@@ -171,8 +187,7 @@ export default async function SourcesPage() {
             List your writing ▸
           </Link>
           <p className="mt-3 font-mono text-[10.5px] leading-relaxed text-ink-3">
-            Listing is permissionless — paste an RSS feed, prove you own it, and every citation
-            pays your wallet directly. Not sure what to list?{" "}
+            Listing is permissionless. Paid reads and qualified citation rewards require the relevant ownership, registry and evidence checks. Not sure what to list?{" "}
             <Link href="/wanted" className="underline underline-offset-4 hover:text-seal">
               See what the corpus couldn&apos;t answer
             </Link>

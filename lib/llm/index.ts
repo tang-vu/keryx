@@ -25,9 +25,13 @@ import {
 import { createModelEngine } from "./model-engine";
 import { endpointFor } from "./provider-endpoints";
 import type { ReasoningEngine } from "./reasoning-engine";
+import { BoundedProductionEngine, configuredProductionModelAllowance, ProductionModelAllowance } from "./bounded-production-engine";
 
 /** Catalog entries usable with credentials configured on this process. */
 export function availableModels(): ModelChoice[] {
+  if (configuredProductionModelAllowance()) {
+    return process.env.DEEPSEEK_API_KEY?.trim() ? MODEL_CATALOG.filter(model => model.id === DEFAULT_MODEL_ID) : [];
+  }
   return MODEL_CATALOG.filter((model) => endpointFor(model.provider) !== null);
 }
 
@@ -93,6 +97,12 @@ function buildChoiceEngine(choice: ModelChoice): ReasoningEngine {
 }
 
 export function getReasoningEngine(modelId?: string): ReasoningEngine {
+  const bounded = configuredProductionModelAllowance();
+  if (bounded) {
+    if (modelId && findModelChoice(modelId)?.id !== DEFAULT_MODEL_ID)
+      throw new Error("Bounded model allowance permits only DeepSeek Flash; no provider fallback");
+    return new BoundedProductionEngine(process.env.DEEPSEEK_API_KEY ?? "", new ProductionModelAllowance(bounded));
+  }
   const choice = resolveModelChoice(modelId);
   return choice ? buildChoiceEngine(choice) : buildDefaultEngine();
 }

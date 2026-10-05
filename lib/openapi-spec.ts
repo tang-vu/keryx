@@ -8,6 +8,7 @@
 
 import { config } from "./config";
 import { monthlyOpenApiPath } from "./monthly/openapi";
+import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
   supportedA2aPackageVersions,
@@ -32,6 +33,10 @@ export const openapiSpec = {
   servers: [{ url: "https://keryx.cc", description: "Production (Arc mainnet; verify /api/health for active mode)" }],
   components: {
     securitySchemes: {
+      WebSession: {
+        type: "apiKey", in: "cookie", name: "keryx_session",
+        description: "Revocable SIWE web session. Creator claim writes also require exact same-origin Origin header; API keys and research payment signatures cannot manage claims.",
+      },
       ApiKeyAuth: {
         type: "http",
         scheme: "bearer",
@@ -52,6 +57,7 @@ export const openapiSpec = {
       },
     },
     schemas: {
+      ...sourceClaimOpenApiSchemas,
       DashboardGroundingStatus: {
         type: "object",
         required: ["groundedClaimRate", "evidenceQuality"],
@@ -557,6 +563,65 @@ export const openapiSpec = {
     },
   },
   paths: {
+    ...sourceClaimOpenApiPaths,
+    "/api/source/{id}": {
+      get: {
+        operationId: "readRegisteredSource", summary: "Read an eligible registered source bundle",
+        description: "Fresh registry supplies creator and read toll. Claim-managed sources require current opt-in policy and fresh control. Eligible zero-price reads return creator-free content without x402 or access-settlement receipt; free bundles are limited to five articles and 1 MiB. Paid requests bind expected claim id/revision before settlement. Public reference IDs retain their separate free discovery path.",
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }, ...sourceClaimFinancialQueryParameters],
+        responses: {
+          "200": { description: "Source content and read provenance; zero-price response includes access=creator-free and current sourceClaim snapshot when managed." },
+          "402": { description: "Registered positive toll requires payment-signature; exact managed claim selectors must accompany the original authorization." },
+          "409": { description: "Expected policy differs; rediscover explicitly before a new payment." },
+          "410": { description: "Inactive/unverified source, public reference, or owner policy does not enable access at current price." },
+          "413": { description: "Free bundle exceeds its article/byte limit; use article reads." },
+          "503": { description: "Current claim/registry authority or exact free content unavailable." },
+        },
+      },
+    },
+    "/api/source/{id}/item/{itemId}": {
+      get: {
+        operationId: "readRegisteredArticle", summary: "Read an exact registered article version",
+        description: "Captures exact content version, valid creator offer and managed policy. Zero-price registered reads need no x402 access signature. A changed version, offer, ceiling or claim revision declines payment; cached public/free identity never becomes retroactively payable.",
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" } },
+          { in: "path", name: "itemId", required: true, schema: { type: "string" } },
+          { in: "query", name: "version", required: true, schema: { type: "string" }, description: "Exact discovered contentVersion." },
+          { in: "query", name: "offer", required: false, schema: { type: "string" }, description: "Exact signed discount offer id." },
+          { in: "query", name: "listPriceUsdc6", required: false, schema: { type: "string", pattern: "^[0-9]+$" }, description: "Required with offer; integer micro-USDC live registry ceiling." },
+          ...sourceClaimFinancialQueryParameters,
+        ],
+        responses: {
+          "200": { description: "Exact content, item identity and pricing; creator-free managed identity includes sourceClaim receipt snapshot." },
+          "402": { description: "Positive exact article price requires payment-signature." },
+          "404": { description: "Source or item not found." },
+          "409": { description: "Content version, offer, price or managed policy changed." },
+          "410": { description: "Source or owner policy ineligible for current access." },
+          "503": { description: "Current authority or exact free content unavailable." },
+        },
+      },
+    },
+    "/api/cite/{id}": {
+      post: {
+        operationId: "settleCreatorCitation", summary: "Authorize a bounded citation reward to an allowed source creator",
+        description: "Separate x402 citation payment. Managed sources require active citation-only/paid policy, current control and expected original policy selectors. Free policy cannot earn. Mainnet payee must be allowed by fresh live registry. The shared research pipeline separately requires qualified evidence from content actually read; verification and historical public citations do not grant rewards.",
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" } },
+          { in: "query", name: "author", required: false, schema: { type: "string", pattern: "^0x[0-9a-fA-F]{40}$" }, description: "Source-owned registry-authorized recipient; omitted uses source payee." },
+          { in: "query", name: "amount", required: true, schema: { type: "number", exclusiveMinimum: 0 }, description: "USDC reward bounded by deployment citation ceiling and admitted budget." },
+          ...sourceClaimFinancialQueryParameters,
+        ],
+        responses: {
+          "200": { description: "Circle-evidenced citation settlement acknowledgment." },
+          "400": { description: "Invalid or excessive citation amount." },
+          "402": { description: "Separate citation payment-signature required." },
+          "403": { description: "Recipient is not source-owned registry payout authority." },
+          "409": { description: "Expected original policy differs; no automatic re-admission." },
+          "410": { description: "Source inactive/unverified, free public identity or citation policy disabled." },
+          "503": { description: "Current managed policy or mainnet registry authority unavailable." },
+        },
+      },
+    },
     "/api/metrics": {
       get: {
         operationId: "getDashboardMetrics",
@@ -809,7 +874,8 @@ export const openapiSpec = {
         responses: {
           "200": {
             description:
-              "ChatCompletion object, or an SSE stream of chat.completion.chunk when stream=true.",
+              "ChatCompletion object, or an SSE stream of chat.completion.chunk when stream=true. " +
+              "A terminal planning refusal in a started stream is emitted as [keryx error] content, without a successful completion or automatic retry.",
             content: {
               "application/json": { schema: { $ref: "#/components/schemas/ChatCompletion" } },
             },
@@ -821,6 +887,18 @@ export const openapiSpec = {
           "401": {
             description: "A kx_live_ key was supplied but is invalid or revoked.",
             content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+          },
+          "422": {
+            description: "Non-streaming research could not prepare a valid complete plan within eight independent targets. " +
+              "Code research_plan_refinement_required supplies original-caller guidance; a model call may already have incurred compute cost. No automatic paid retry or completed report follows.",
+            content: { "application/json": { schema: {
+              type: "object", required: ["error"], properties: { error: {
+                type: "object", required: ["message", "type", "code"], properties: {
+                  message: { type: "string" }, type: { type: "string", enum: ["invalid_request_error"] },
+                  code: { type: "string", enum: ["research_plan_refinement_required"] },
+                },
+              } },
+            } } },
           },
           "429": {
             description: "Shared sponsored allowance exceeded (anonymous IP, verified wallet, direct IP or global capacity).",
@@ -1130,7 +1208,7 @@ export const openapiSpec = {
                 schema: {
                   type: "object",
                   properties: {
-                    sources: { type: "array", items: { type: "object" } },
+                    sources: { type: "array", items: { $ref: "#/components/schemas/Source" } },
                     total: {
                       type: "integer",
                       description: "Total active sources (paginated form only).",

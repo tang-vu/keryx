@@ -31,7 +31,7 @@ const feed = await ingestRssXml(readFileSync('docs/engineering/feed.xml','utf8')
 const gathered = feed.items.map((item,i) => ({sourceId:`engineering-${i}`,sourceName:'Keryx Engineering (first-party)',marker:`S${i+1}`,text:item.content,itemTitle:item.title}));
 const subClaims = ['How does the buyer preserve the original job before submission?', 'What does resume do after response loss, and what payment actions does it avoid?'];
 const question = 'How can a Keryx buyer recover a job after losing the submission response without paying again?';
-const options = buildQuoteOptions(evidenceContext(question, subClaims, gathered));
+const options = buildQuoteOptions(evidenceContext(question, subClaims, gathered), gathered);
 const expected = options.find(option => option.marker === 'S2' && option.text === expectedQuote);
 if (!expected) throw new Error('The pre-submission journal evidence is missing from the model quote menu.');
 if (!args.includes('--live')) {
@@ -51,7 +51,7 @@ for (let repeat = 0; repeat < 3; repeat++) {
     const engine = new Experiment(variant);
     const assessment = await engine.sufficiency({question,subClaims,gathered});
     const synthesis = await engine.synthesize({question,subClaims,gathered});
-    const ledger = buildEvidenceLedger({subClaims,gathered,answer:synthesis.answer,declaredMarkers:synthesis.citedMarkers,proposedEvidence:synthesis.evidence,finalAssessment:assessment.perClaim});
+    const ledger = buildEvidenceLedger({question,subClaims,gathered,answer:synthesis.answer,declaredMarkers:synthesis.citedMarkers,proposedEvidence:synthesis.evidence,finalAssessment:assessment.perClaim});
     const row = {repeat,variant:variant?'evidence-first':'baseline',model:engine.name,
       selectedExpectedQuote: synthesis.evidence.some(item => item.claimIndex === 0 && item.quote === expectedQuote),
       originalEvidence: engine.originalEvidence,

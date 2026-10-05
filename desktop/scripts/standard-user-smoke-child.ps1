@@ -180,6 +180,10 @@ if ($userRuntime -isnot [string]) { $userRuntime = $null }
   webView2UserVersion = $userRuntime
 } | ConvertTo-Json -Compress | Write-Output
 Set-Location ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+# Fresh packaged tasks default to mainnet. Match only this disposable, fully
+# intercepted buyer fixture; saved testnet tasks retain their original profile.
+$env:KERYX_NETWORK = 'arc'
+$env:NEXT_PUBLIC_KERYX_NETWORK = 'arc'
 & $NodePath --import tsx desktop/scripts/tauri-smoke.mjs (Join-Path $Package 'KeryxOperator.exe')
 if ($LASTEXITCODE -ne 0) { throw "Portable package smoke failed: $LASTEXITCODE" }
 

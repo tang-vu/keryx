@@ -23,7 +23,12 @@ export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, paym
     const url = safeUrl(citation.itemUrl);
     lines.push(`${citation.marker}: ${citation.itemTitle ?? citation.sourceName}${url ? ` — ${url}` : ""}`);
     if (citation.contentVersion) lines.push(`Document version: ${citation.contentVersion}`);
+    if (citation.accessKind === "creator-free") lines.push("Access: creator-authorized free read; no access-settlement receipt.");
+    if (citation.sourceClaim) lines.push(`Captured creator policy: ${JSON.stringify({ id: citation.sourceClaim.id,
+      revision: citation.sourceClaim.revision, mode: citation.sourceClaim.mode, effectiveAt: citation.sourceClaim.effectiveAt,
+      verifiedAt: citation.sourceClaim.verifiedAt })}. This is historical context, not current payout authority.`);
     if (citation.webProvenance) lines.push(`Observed provenance: ${JSON.stringify(citation.webProvenance)}`);
+    if (citation.requestedSource) lines.push(`Supplied original scope: ${JSON.stringify(citation.requestedSource)}`);
     if (citation.scholarly) lines.push(`Observed scholarly metadata and read scope (peer review unknown): ${JSON.stringify(citation.scholarly)}`);
   }
   lines.push("", "## Evidence and limitations", "");

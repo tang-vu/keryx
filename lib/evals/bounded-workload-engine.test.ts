@@ -44,6 +44,23 @@ describe("one retained live workload allowance", () => {
     budget.close();
   });
 
+  it("retains a smaller sub-budget and refuses reopening it with a larger ceiling", () => {
+    const budget = new WorkloadModelBudget(file, 10_000);
+    budget.reserve("a", "b", 2048);
+    const before = budget.snapshot();
+    expect(before.ceilingMicroUsd).toBe(10_000);
+    expect(() => budget.reserve("a", "b", 8192)).toThrow("exhausted");
+    expect(budget.snapshot()).toEqual(before);
+    budget.close();
+    expect(() => new WorkloadModelBudget(file, 1_000_000)).toThrow("Invalid retained");
+  });
+
+  it.each([0, -1, 1.5, 1_000_001, NaN])("rejects invalid sub-budget %s before creating state", ceiling => {
+    expect(() => new WorkloadModelBudget(file, ceiling)).toThrow("Invalid workload ceiling");
+    expect(fs.existsSync(file)).toBe(false);
+    expect(fs.existsSync(`${file}.lock`)).toBe(false);
+  });
+
   it("retains a failed call and halts after an authorization error without retrying", async () => {
     const budget = new WorkloadModelBudget(file);
     const network = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("private provider body", { status: 401 }));

@@ -33,12 +33,12 @@ in a separate job without OIDC publishing permission.
 
 ## Release
 
-1. Update `mcp/package.json` and package documentation in the reviewed release PR.
+1. Update `mcp/package.json`, `mcp/server.json` and package documentation in the reviewed release PR.
 2. Merge the PR and wait for successful `CI` on that exact current `main` commit.
-3. Run **Publish MCP to npm** from `main`, entering the committed package version:
+3. Run **Publish MCP to npm and official Registry** from `main`, entering the committed package version:
 
    ```sh
-   gh workflow run publish-mcp.yml --ref main -f version=0.4.2
+   gh workflow run publish-mcp.yml --ref main -f version=0.4.4
    ```
 
 The manual workflow checks the current main commit and its successful push CI,
@@ -54,6 +54,16 @@ integrity metadata as a retained release artifact. The publish job checks its
 SHA-256 checksum and publishes that exact archive with provenance, then checks
 the registry version and tarball integrity. It does not rebuild during publish.
 
+The same manual workflow then publishes the exact official MCP Registry manifest
+using GitHub OIDC for `io.github.tang-vu/keryx`. The official publisher is pinned to
+v1.8.1 and its archive SHA-256; no new stored credential, trigger or schedule is added.
+The manifest must match the repository owner, npm namespace/version/integrity and
+the fixed hosted `/mcp` endpoint. Preflight skips an already published matching version,
+allows one submission only for a definite absent version, and refuses conflicting or
+unknown state. Verify both the exact and latest active public registry records.
+On a partial failure, inspect readback before retrying; the workflow must reuse an
+identical published npm archive rather than attempt to publish its immutable version again.
+
 There is no automatic PR, tag, or push publication to npm. The existing
 `mcp-release.yml` workflow separately provides an exact-source, acceptance-tested
 GitHub release tarball and source manifest when its release and CI gates pass.
@@ -68,3 +78,4 @@ provenance before claiming MCP distribution is synchronized with the web release
 
 Official requirements and connection instructions:
 [npm Trusted Publishers](https://docs.npmjs.com/trusted-publishers/).
+[Official MCP publisher authentication](https://github.com/modelcontextprotocol/registry/blob/v1.8.1/docs/reference/cli/commands.md).

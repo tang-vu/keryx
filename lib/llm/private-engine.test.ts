@@ -26,7 +26,7 @@ it("pins one explicit model and endpoint across planning and synthesis and snaps
 
 it("fails over locally without another provider and keeps circuit decisions local to each job", async () => {
   const log = vi.spyOn(console, "warn").mockImplementation(() => {});
-  const http = vi.fn<typeof fetch>().mockImplementation(async () => new Response("synthetic-private-body", { status: 400 }));
+  const http = vi.fn<typeof fetch>().mockImplementation(async () => new Response("synthetic-private-body", { status: 401 }));
   vi.stubGlobal("fetch", http);
   const first = privateReasoningEngine(policy).engine, second = privateReasoningEngine(policy).engine;
   await first.decompose("Synthetic private question");

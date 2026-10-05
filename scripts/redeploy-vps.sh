@@ -26,13 +26,18 @@ HEALTH_CURL="curl -fsS -H 'Host: keryx.cc' -H 'X-Forwarded-Proto: https' $HEALTH
 PRESERVE_HELD=${KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER:-0}
 REVIEWED_CONFIG=${KERYX_REDEPLOY_REVIEWED_PM2_CONFIG:-}
 REVIEWED_SHA=${KERYX_REDEPLOY_REVIEWED_PM2_SHA256:-}
+EXPECTED_COMMIT=${KERYX_REDEPLOY_EXPECTED_COMMIT:-}
 ECONOMIC_CONFIG=${KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG:-}
 ECONOMIC_SHA=${KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256:-}
 case "$PRESERVE_HELD" in 0|1) ;; *) echo "Invalid scheduler preservation input" >&2; exit 1 ;; esac
 if [[ -n "$REVIEWED_CONFIG" || -n "$REVIEWED_SHA" ]]; then
   [[ "$REVIEWED_CONFIG" =~ ^/root/\.local/share/[a-zA-Z0-9_./-]+\.json$ &&
-     "$REVIEWED_CONFIG" != *..* && "$REVIEWED_SHA" =~ ^[a-f0-9]{64}$ ]] \
-    || { echo "Invalid paired reviewed PM2 inputs" >&2; exit 1; }
+     "$REVIEWED_CONFIG" != *..* && "$REVIEWED_SHA" =~ ^[a-f0-9]{64}$ &&
+     "$EXPECTED_COMMIT" =~ ^[a-f0-9]{40}$ ]] \
+    || { echo "Reviewed PM2 deployment requires paired protected inputs and an exact expected commit" >&2; exit 1; }
+fi
+if [[ -n "$EXPECTED_COMMIT" && ! "$EXPECTED_COMMIT" =~ ^[a-f0-9]{40}$ ]]; then
+  echo "Invalid expected deployment commit" >&2; exit 1
 fi
 if [[ -n "$ECONOMIC_CONFIG" || -n "$ECONOMIC_SHA" ]]; then
   [[ "$ECONOMIC_CONFIG" =~ ^/root/\.local/share/[a-zA-Z0-9_./-]+\.json$ &&
@@ -112,11 +117,13 @@ run_ssh -o BatchMode=yes -o ConnectTimeout=10 "$SSH" true 2>/dev/null \
 
 # Validate protected bytes and positively exited definitions before any source or
 # scheduler mutation. The operator must drain all owned writers beforehand.
-if [[ -n "$REVIEWED_CONFIG" ]]; then reviewed_role validate; fi
+if [[ -n "$REVIEWED_CONFIG" ]]; then
+  reviewed_role validate
+  # Retained output is recovery evidence in every reviewed deployment, not just migration.
+  run_ssh "$SSH" "cd $APP_DIR && test ! -e .next.tmp && test ! -L .next.tmp && test ! -e .next.bak && test ! -L .next.bak"
+fi
 if [[ -n "$ECONOMIC_CONFIG" ]]; then
   economic_migration validate
-  # Never replace retained output from an earlier migration attempt.
-  run_ssh "$SSH" "cd $APP_DIR && test ! -e .next.tmp && test ! -L .next.tmp && test ! -e .next.bak && test ! -L .next.bak"
 fi
 
 PREVIOUS_COMMIT=$(run_ssh "$SSH" "$HEALTH_CURL" 2>/dev/null \
@@ -140,7 +147,13 @@ elif [[ -n "$REVIEWED_CONFIG" ]]; then
 else
   say "1/5 syncing source at $APP_DIR (live build keeps serving)"
 fi
-run_ssh "$SSH" "cd $APP_DIR && git fetch -q origin && git reset -q --hard origin/main && git log -1 --oneline"
+if [[ -n "$EXPECTED_COMMIT" ]]; then
+  # Bind the fetched remote branch before any reset, then use the immutable reviewed object.
+  # A branch advance after this check cannot substitute another commit at the reset boundary.
+  run_ssh "$SSH" "cd $APP_DIR && git fetch -q origin && test \"\$(git rev-parse origin/main)\" = '$EXPECTED_COMMIT' && git reset -q --hard '$EXPECTED_COMMIT' && git log -1 --oneline"
+else
+  run_ssh "$SSH" "cd $APP_DIR && git fetch -q origin && git reset -q --hard origin/main && git log -1 --oneline"
+fi
 COMMIT=$(run_ssh "$SSH" "cd $APP_DIR && git rev-parse --short HEAD")
 # Next can inline server env while bundling, so the commit must be present BEFORE the build.
 run_ssh "$SSH" "cd $APP_DIR \
@@ -172,12 +185,14 @@ fi
 # The full TypeScript graph now exceeds 1536 MiB. Keep its separate, finite
 # 2560 MiB allowance; Next and its static worker retain the reviewed 1536 MiB cap.
 # These phases run sequentially, and a failed check cannot reach the build/swap.
-if [[ -n "$ECONOMIC_CONFIG" ]]; then
+if [[ -n "$REVIEWED_CONFIG" ]]; then
   run_ssh "$SSH" "cd $APP_DIR && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=2560 npm run typecheck && test ! -e .next.tmp && test ! -L .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
-  # A lost response may follow committed DDL. Arm the hold before making the call;
-  # no subsequent failure may restart the old exact-profile runtime.
-  MIGRATION_ATTEMPTED=1
-  economic_migration migrate
+  if [[ -n "$ECONOMIC_CONFIG" ]]; then
+    # A lost response may follow committed DDL. Arm the hold before making the call;
+    # no subsequent failure may restart the old exact-profile runtime.
+    MIGRATION_ATTEMPTED=1
+    economic_migration migrate
+  fi
 else
   run_ssh "$SSH" "cd $APP_DIR && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=2560 npm run typecheck && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
 fi

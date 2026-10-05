@@ -3,6 +3,11 @@
 Production uses Arc mainnet. [Current status](mainnet-status.md) records network/
 contracts and dated delivery; explicit testnet entries below are development or history.
 
+October 5 bounded-research release candidate: application 0.26.16, caller MCP 0.4.5, remote MCP 0.3.1
+and desktop 0.4.6. The map's older version stamp and distribution counts are historical;
+use [supported-surface parity](surface-parity.md) and [MCP distribution](mcp-distribution.md)
+for current identities and the separate npm, registry, installer and deployment gates.
+
 **Version:** 0.19.0 (exact authorization expiry and pending ownership, updated 2026-08-25)
 
 This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.

@@ -14,6 +14,7 @@ import { useEffect, useState, useRef } from "react";
 import type { WalletClient } from "viem";
 import { useSessionGrant } from "@/lib/hooks/use-session-grant";
 import { GrantSpendDialog } from "@/components/keryx/grant-spend-dialog";
+import { CircleGoogleWalletButton } from "./circle-google-wallet";
 import { FaucetPanel } from "@/components/keryx/faucet-panel";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { SessionCashoutPanel } from "./session-cashout-panel";
@@ -30,6 +31,8 @@ export interface SessionGrantBinding {
    * independently of any server-side guard.
    */
   grantCap?: number;
+  /** The owner-signed maximum for each research question. */
+  questionCapUsdc?: number;
   /** True when a known session has lapsed (TTL) — UI should prompt recovery. */
   expired?: boolean;
   /** Status could not be confirmed; retain the session and block new questions. */
@@ -83,25 +86,27 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
       getSessionWalletClient,
       authorizeSessionPayment,
       grantCap: isActive ? state.cap : undefined,
+      questionCapUsdc: isActive ? state.researchBudget?.questionCapUsdc : undefined,
       expired: isExpired,
       paused: isPaused,
       markExpired,
     };
     bindingRef.current = binding;
     onBindingChange(binding);
-  }, [state.status, state.sessionId, state.cap, getSessionWalletClient, markExpired, authorizeSessionPayment, onBindingChange]);
+  }, [state.status, state.sessionId, state.cap, state.researchBudget?.questionCapUsdc, getSessionWalletClient, markExpired, authorizeSessionPayment, onBindingChange]);
 
   if (!authed) return null;
 
   return (
     <div className="space-y-2">
+      <CircleGoogleWalletButton reconnectOnly />
       {/* Faucet drip panel — shown when session grant is idle/revoked (user may need USDC first) */}
       {browserPaymentProfile().testnet && (state.status === "idle" || state.status === "revoked" || state.status === "error") && (
         <FaucetPanel />
       )}
       <GrantSpendDialog
         grantState={state}
-        onActivate={generateAndFund}
+        onActivate={(amount, options) => generateAndFund(amount, false, options)}
         onTopUp={topUp}
         onExtend={extend}
         onRevoke={revoke}

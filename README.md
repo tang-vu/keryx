@@ -158,6 +158,29 @@ Historical testnet trace (recorded output; not current mainnet traction):
   ([`0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb))
   with creator-scoped IDs and on-chain multi-author splits.
 
+### Public sources and owner claims
+
+Public web discovery finds supported websites, feeds and PDFs for the question at
+hand and reads available content for free. `/sources` shows retained feeds and creator
+listings, rather than a bulk index of the internet. A publisher can choose **This is
+my source** or open `/claim-source`, sign in with its wallet, and prove control using
+a dedicated website file or publisher-controlled RSS/Atom channel token.
+
+Verification earns nothing by itself. Connect the exact owner-created registry listing
+and explicitly choose free reads with no rewards, zero-price reads with qualified
+citation rewards, or positive-price paid reads. Earning activation requires separate
+distribution-rights consent and fresh control proof; registry registration is an
+owner-reviewed network transaction with possible native gas, using no agent funds.
+Control expires after 24 hours and earning eligibility pauses until explicitly refreshed.
+Old public reference identities and free receipts remain free, and no activation bills
+past uses. Zero-price reads require no x402 access authorization or settlement receipt.
+
+The shared reading pipeline applies the same policy and evidence gates across web,
+API and agent clients. Claim management uses the web and its authenticated API;
+scholarly-rights enrollment remains separately gated. See the
+[public-source claim guide](docs/public-source-claims.md) for proof, listing, policy
+and recovery steps and deployment capability requirements.
+
 ## For developers & agents
 
 - **Free, no-wallet trial** — [keryx.cc](https://keryx.cc) answers without any setup, with a

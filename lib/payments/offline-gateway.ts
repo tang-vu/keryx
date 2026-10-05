@@ -4,7 +4,7 @@
  * and clearly excluded from "real settlement" claims. Dev only.
  */
 
-import type { ArticleOfferRef, Author, PaymentRecord, Source, SourceItem, SourceItemIdentity } from "../types";
+import type { ArticleOfferRef, Author, PaymentRecord, Source, SourceItem, SourceItemIdentity, SourceClaimReceipt } from "../types";
 import type { KeryxDB } from "../db";
 import { sourceItemIdentity } from "../sources/source-item-asset";
 import { resolveSourceItemContent } from "../sources/resolve-source-item-content";
@@ -30,12 +30,14 @@ export class OfflineGateway implements PaymentGateway {
     queryId,
     priceUsdc = source.fetchPrice,
     offer,
+    sourceClaim,
   }: {
     source: Source;
     item?: SourceItem;
     queryId: string;
     priceUsdc?: number;
     offer?: ArticleOfferRef;
+    sourceClaim?: SourceClaimReceipt;
   }): Promise<FetchResult> {
     const items = item ? [item] : await this.db.getItems(source.id);
     const settle = { payer: this.address, transaction: "offline-simulation" };
@@ -56,6 +58,7 @@ export class OfflineGateway implements PaymentGateway {
       sourceId: source.id,
       sourceName: source.name,
       ...itemIdentity,
+      sourceClaim,
       offerId: offer?.id,
       listPriceUsdc: offer?.listPriceUsdc,
       payer: this.address,
@@ -77,6 +80,7 @@ export class OfflineGateway implements PaymentGateway {
     weight,
     queryId,
     rationale,
+    sourceClaim,
   }: {
     source: Source;
     author: Author;
@@ -85,6 +89,7 @@ export class OfflineGateway implements PaymentGateway {
     weight: number;
     queryId: string;
     rationale: string;
+    sourceClaim?: SourceClaimReceipt;
   }): Promise<PaymentRecord> {
     return makePayment({
       kind: "citation",
@@ -92,6 +97,7 @@ export class OfflineGateway implements PaymentGateway {
       sourceId: source.id,
       sourceName: source.name,
       ...item,
+      sourceClaim,
       payer: this.address,
       payee: author.walletAddress,
       amountUsdc: amount,

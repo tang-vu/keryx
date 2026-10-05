@@ -1,5 +1,89 @@
 # Supported-surface release parity
 
+## Bounded planning and heading recall, October 5, 2026
+
+Application **0.26.17 candidate** changes shared planning/context and original-caller
+failure guidance in web SSE, OpenAI API, hosted remote MCP and repository ask CLI.
+Non-streaming OpenAI refusals use 422; remote MCP preserves protocol **0.3.1** and
+its existing error-text shape. Paid A2A/private jobs and bots keep original-order
+failure/recovery and disclosure boundaries. Extension **0.1.1** keeps its hosted handoff.
+
+The actual stdio MCP runtime graph (31 local files) and desktop helper graph (46),
+renderer and bridge do not reach these changed modules. Caller-funded MCP **0.4.5**
+and Operator **0.4.6** retain accepted 0.26.15 artifact provenance; broad CI path
+filters do not establish that package bytes changed. Verify their published versions
+separately from the new hosted commit. See [scope and remaining acceptance](engineering/research-planning-2026-10-05.md).
+The closed 0.26.16 browser round remains 0/3 useful; no paid retest follows this release.
+
+## Bounded browser acceptance, October 5, 2026
+
+App **0.26.16 candidate** and hosted remote MCP **0.3.1** preserve explicit zero-source
+budgets in web, SSE, OpenAI API and remote MCP. Shared execution blocks payment-gateway
+deliveries/rewards at zero. Bots and hosted clients inherit the shared guard. The optional
+finite compute allowance admits only three exact public-web Quick questions; it grants
+no trial authority to CLI, bots, A2A, remote/stdio MCP, local Operator or private jobs.
+Caller-funded MCP **0.4.5**, Operator **0.4.6** and extension **0.1.1** keep their existing
+custody, paid-checkout and browser-handoff contracts, with unchanged authored packages.
+See [implementation and separate acceptance gates](engineering/bounded-live-research-2026-10-05.md).
+
+## Mainnet consistency, October 5, 2026
+
+Application **0.26.12**, MCP **0.4.4** and desktop **0.4.5** were coordinated in
+[PR 166](https://github.com/tang-vu/keryx/pull/166) for corrected runtime metadata, supplied-source discovery, explicit
+monitoring observations, native schema-guard performance and creator/desktop recovery UX.
+Remote MCP exposes Monthly metadata and recorded source-selection/fallback telemetry
+with protocol 0.3.0. Shared hosted API/A2A/OpenAI results and stdio forwarding expose
+the additive telemetry; extension 0.1.1 and bots retain their thin client roles.
+Slack/OpenAI distinguish planned rewards and original settlement modes. Buyer CLI
+and private research preserve their selected-profile and external-effect gates.
+Exact-source CI and packaged desktop acceptance passed. October 5 public readback
+verified the six v0.26.12 assets, matching npm bytes, Registry exact/latest 0.4.4 and
+deployed health at `a85bc1b6`. [Current evidence](mainnet-status.md) and
+[scope and remaining gates](engineering/mainnet-consistency-2026-10-05.md).
+
+The earlier stale official MCP Registry observation is superseded by the verified
+0.4.4 publication. Hosted MCP protocol, npm bytes and registry metadata remain
+distinct release evidence.
+
+## Source context correction, October 5, 2026
+
+App **0.26.11 candidate** changes new research in the shared server/engine pipeline:
+exact complete quote spans, bounded private context review and narrow negative
+documentation-source requirements. Web/SSE/history, API, A2A, remote MCP, OpenAI,
+Discord/Telegram/Slack and extension receive the same finalized hosted result.
+Repository CLI execution uses the shared engine; caller buyer/stdio MCP retains
+its hosted purchase role. Private research keeps external-search isolation.
+Archived receipts, schemas, custody, source-owned payout and allocation are unchanged.
+
+Paired builds against d6332a1 show identical emitted desktop helper/renderer/bridge/
+CSS and MCP bundles, with source stamps held constant; extension's ten package
+inputs are unchanged. Desktop **0.4.4**, MCP **0.4.3**, extension **0.1.1** and remote
+protocol **0.2.0** retain their roles. Exact-source CI, release assets and public
+deployment health remain distinct verification gates; installed clients are not
+assumed upgraded. [Evidence and remaining usefulness gates](engineering/source-context-2026-10-05.md).
+
+## Public source claims, October 5, 2026
+
+Application **0.26.10** adds wallet-bound website/RSS control verification and separate
+prospective earnings policies. Web and authenticated API own claim management.
+The shared research pipeline, hosted API/A2A, remote MCP, OpenAI, bots and browser
+Session runtime retain selected-policy admission and free-read evidence. Portable
+receipts and Operator exports preserve that captured policy as historical evidence,
+not current payout authority. See [the claim protocol and gates](public-source-claims.md).
+
+An esbuild runtime-input audit against `1297d43` found the desktop helper's receipt
+read model changed, requiring **desktop 0.4.4** and its installed-app acceptance.
+The caller MCP bundle's 30 runtime inputs and emitted hash are unchanged, so
+**MCP 0.4.3** remains compatible; stdio forwards the hosted structured result.
+The extension's 10 allowlisted inputs and packer are unchanged, retaining **0.1.1**.
+Remote MCP keeps its separate protocol identity **0.2.0**. CLI, desktop, extension
+and bots gain no publisher administration or new payment authority.
+
+Versions are source candidates until CI, exact-source downloadable desktop/MCP
+artifacts and production `/api/health` commit are verified. Existing immutable
+distributions retain their original source provenance; unchanged package versions
+do not imply they were republished from this web commit.
+
 User-confirmed policy, October 1, 2026: every update audits every applicable surface and ships its shared contracts, adapters, tests, documentation and distribution together. No applicable surface may be skipped. Intentional role boundaries remain explicit; identical UI and payment authority are not required across distinct roles.
 
 ## October 4 documentation and current release status

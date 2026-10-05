@@ -38,7 +38,7 @@ try {
       const input = { question: entry.question, subClaims, gathered: sources };
       const assessment = await engine.sufficiency(input);
       const synthesis = await engine.synthesize(input);
-      const ledger = buildEvidenceLedger({ subClaims, gathered: sources, answer: synthesis.answer, declaredMarkers: synthesis.citedMarkers, proposedEvidence: synthesis.evidence, finalAssessment: assessment.perClaim });
+      const ledger = buildEvidenceLedger({ question: entry.question, subClaims, gathered: sources, answer: synthesis.answer, declaredMarkers: synthesis.citedMarkers, proposedEvidence: synthesis.evidence, finalAssessment: assessment.perClaim });
       results.push({ ...entry, round, model: engine.name, corpusSha256: createHash('sha256').update(JSON.stringify(sources)).digest('hex'), subClaims, context: evidenceContext(entry.question, subClaims, sources), assessment, synthesis, claimCoverage: ledger.claimCoverage, evidence: ledger.evidence, usage: engine.usage });
       writeFileSync(artifact, JSON.stringify({ scope: 'Ten model-only runs on two first-party articles or empty input. Real planning, assessment, synthesis/review and evidence ledger; no discovery, purchase, settlement or automatic semantic pass assertion.', results }, null, 2));
       console.log(JSON.stringify({ id: entry.id, round, targets: subClaims, coverage: ledger.claimCoverage.map(claim => claim.coverage), evidence: ledger.evidence.length }));

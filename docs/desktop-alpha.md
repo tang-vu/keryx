@@ -7,6 +7,15 @@ Arc mainnet; task preparation supports mainnet and retained testnet originals.
 GitHub `v0.26.8` published desktop **0.4.3** artifacts from `1297d43` on October 4,
 2026. See [current deployment and distribution evidence](mainnet-status.md).
 
+Desktop **0.4.5** defaults newly created tasks to Arc mainnet, matching the public
+service. Explicit testnet selection and all saved task networks remain intact.
+Its claim-aware receipt reader is retained from **0.4.4** for [public source claims](public-source-claims.md).
+Its receipt reader and exports preserve the captured claim policy and creator-free
+delivery status. Claim verification, linking and earnings management remain in the
+hosted wallet flow; the desktop does not acquire signing or publisher authority.
+Exact-source packaged and fresh standard-user installer acceptance, downloadable
+assets and production readback remain release gates.
+
 The Windows desktop uses a Tauri 2/WebView2 shell under
 [D-260](../DECISIONS.md). The shell bundles a pinned Node runtime and a bounded
 stdio helper using the existing TypeScript WorkspaceStore for inspection, private
@@ -130,6 +139,8 @@ For the complete-file publisher and packaged Windows app, run from the repositor
 ```powershell
 npx vitest run lib/operator/private-text-export.test.ts
 npm run desktop:package
+$env:KERYX_NETWORK='arc'
+$env:NEXT_PUBLIC_KERYX_NETWORK='arc'
 node --import tsx desktop/scripts/tauri-smoke.mjs desktop/release/KeryxOperator-win32-x64/KeryxOperator.exe
 ```
 
@@ -151,7 +162,7 @@ artifact needs a new verified release source, not an unverified replacement buil
 
 Assets include the portable ZIP, installer, source manifest and SHA-256 checksums.
 Asset names include the full source commit, and uploads refuse to overwrite existing
-assets. Desktop package version 0.4.3 is independent of the web release version;
+assets. The desktop package version is independent of the web release version;
 the release tag and manifest establish the shared source identity. The alpha has
 no automatic updater, so installed users must deliberately install a newer package.
 These packaging gates do not authorize mainnet or establish payment readiness.
