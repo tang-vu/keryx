@@ -13,6 +13,7 @@ import { JsonChatEngine, extractJson } from "./json-chat-engine";
 import type { DecideInput } from "./reasoning-engine";
 import { ResilientEngine, reasoningAttempts } from "./resilient-engine";
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
+import { ResearchSelectionError } from "./research-selection";
 
 /** A test engine that returns whatever JSON the case wants, and records the ceiling it was given. */
 class StubEngine extends JsonChatEngine {
@@ -117,7 +118,8 @@ describe("decide", () => {
   it("refuses to read an empty reply as a decision to buy nothing", async () => {
     // What a truncated or off-schema reply looks like after parsing.
     const engine = new StubEngine({});
-    await expect(engine.decide(decideInput(20))).rejects.toThrow(/no decisions for 20 candidates/);
+    await expect(engine.decide(decideInput(20))).rejects.toBeInstanceOf(ResearchSelectionError);
+    expect(engine.selectionDiagnostics[0]).toMatchObject({ counts: { candidateCount: 20 }, reasons: [{ code: "no_decisions" }] });
   });
 
   it("accepts a real reply and keeps the model's action and rationale", async () => {
@@ -140,7 +142,7 @@ describe("decide", () => {
     "rejects actionable decisions with invalid targets %j before spend", async (targets) => {
       for (const action of ["BUY", "CACHE"]) {
         const engine = new StubEngine({ decisions: [{ sourceId: "s0", action, expectedValue: 0.9, confidence: 0.8, rationale: "relevant", targets }] });
-        await expect(engine.decide(decideInput(1))).rejects.toThrow(/without valid research targets/);
+        await expect(engine.decide(decideInput(1))).rejects.toBeInstanceOf(ResearchSelectionError);
       }
     },
   );
@@ -150,23 +152,25 @@ describe("decide", () => {
     expect(await engine.decide(decideInput(1))).toMatchObject([{ action: "SKIP", targets: [] }]);
   });
 
-  it("recovers missing target links through a valid fallback rather than dropping every source", async () => {
+  it("refuses missing target links without calling another paid tier", async () => {
     const primary = new StubEngine({ decisions: [{ sourceId: "s0", action: "BUY", expectedValue: 1, confidence: 1, rationale: "relevant" }] });
     const fallback = new StubEngine({ decisions: [{ sourceId: "s0", action: "BUY", expectedValue: 1, confidence: 1, rationale: "supports target 0", targets: [0] }] });
     const engine = new ResilientEngine(primary, fallback);
-    expect(await engine.decide(decideInput(1))).toMatchObject([{ action: "BUY", targets: [0] }]);
-    expect(reasoningAttempts(engine)).toEqual(expect.arrayContaining([
-      expect.objectContaining({ step: "decide", outcome: "failed" }),
-      expect.objectContaining({ step: "decide", outcome: "served", tier: 1 }),
-    ]));
+    await expect(engine.decide(decideInput(1))).rejects.toBeInstanceOf(ResearchSelectionError);
+    expect(fallback.calls).toHaveLength(0);
+    expect(reasoningAttempts(engine)).toEqual([
+      expect.objectContaining({ step: "decide", outcome: "failed", error: "output_validation", status: 422, tier: 0 }),
+    ]);
   });
 
-  it("drops a decision naming a source that was never a candidate", async () => {
+  it("refuses a selection naming no caller-owned candidate", async () => {
     const engine = new StubEngine({
       decisions: [{ sourceId: "ghost", action: "BUY", expectedValue: 1, confidence: 1, rationale: "" }],
     });
-    // The reply was non-empty, so it is a real answer — it just does not survive validation.
-    await expect(engine.decide(decideInput(2))).resolves.toEqual([]);
+    await expect(engine.decide(decideInput(2))).rejects.toBeInstanceOf(ResearchSelectionError);
+    expect(engine.selectionDiagnostics[0].reasons).toEqual([
+      { code: "unknown_source", rowIndex: 0 }, { code: "no_matched_decisions" },
+    ]);
   });
 
   it("asks for an output ceiling that grows with the candidate list", async () => {

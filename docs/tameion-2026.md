@@ -85,7 +85,7 @@ with provenance and access scope, a controlled tool catalog, permissions, durabl
 and inspectable receipts. Extract cohesive shared pieces gradually; avoid a monolith
 rewrite or a second payment authority.
 An ERP, payroll, yield engine, multichain launch, and plugin marketplace are outside
-this two-week scope.
+this event scope.
 
 The event schedule is a scope constraint, not a lower quality bar. Prefer the design
 with demonstrated security, reliability, maintainability, and product quality for the
@@ -163,7 +163,8 @@ limits. The [buyer documentation](./buyer-agent.md) and
 ## Event sequence and release gates
 
 The [official Tameion page](https://tameion.thecanteenapp.com/) lists September 27–
-October 10, 2026. Its five RFBs are prompts, not separate tracks; RFB 04, Autonomous
+October 17, 2026 (observed October 5; the page was last modified that day and earlier
+listed October 10 and two weeks). Its five RFBs are prompts, not separate tracks; RFB 04, Autonomous
 Business Operator, is the closest fit. Published judging guidance is 30% agency,
 30% traction, 20% Circle usage, and 20% innovation. Genuine testnet use is accepted;
 real customers using real mainnet USDC may be favored. A genuine own-business or
@@ -177,11 +178,16 @@ should be presented as new for this existing project.
 | Oct 2–4 | Run Windows alpha and real pilots; use the [Oct 2 showcase preparation](./tameion-showcase-and-fireside.md) to present verified state only. |
 | Oct 5–7 | Verify launched mainnet workflows and remaining acceptance evidence; retain isolated testnet drills and honest open gates. |
 | Oct 8–9 | Collect feedback and evidence, prepare a public repo and video under three minutes. |
-| Oct 10 | Submit early; schedule slippage never waives a release gate. |
+| Oct 10 | Original deadline: submit a first complete entry early; repeated submissions are allowed. |
+| Oct 11–14 | Extension week: usefulness on real business questions, one complete receipt-backed workflow, pilot evidence by origin. |
+| Oct 15–16 | Re-record the video on the accepted workflow, refresh the submission pack and dated observations. |
+| Oct 17 | Final submission; schedule slippage never waives a release gate. |
 
-The website deadline is October 10 at 23:59 America/New_York (October 11 at
-10:59 Asia/Ho_Chi_Minh). A Luma listing showed October 11 at 10:30 local time, so
-the internal target is October 10. Submission requires a public repository and a
+The website deadline is now October 17 at 23:59 America/New_York (October 18 at
+10:59 Asia/Ho_Chi_Minh). Recheck the page and the Luma listing before relying on it;
+the internal target for a first complete entry stays October 10 and the final one
+October 16. Judging is asynchronous with no demo day: judges read the repository and
+use the live product without the builder present. Submission requires a public repository and a
 video shorter than three minutes; a deployed link is encouraged. Use the
 [official submission form](https://forms.gle/BBWrdfuircrKiG2i6). Canteen updates are
 progress reports, not the submission. Repeated form submissions are allowed before the deadline; see the [submission pack](./tameion-submission.md).

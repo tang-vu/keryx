@@ -170,6 +170,15 @@ In `~/.continue/config.json`:
 
 ## Notes
 
+- **Source-selection refusals.** Invalid model target/source mappings with no valid
+  actionable selection return HTTP `422`, code `research_source_selection_invalid`
+  and bounded `error.selectionDiagnostic`. This is an application contract failure,
+  not evidence that the user's question was invalid. A started stream retains
+  HTTP `200`, adds `keryx_error` diagnostic metadata to the error chunk and emits no
+  successful completion metadata or `[DONE]`. Preserve the diagnostic when
+  reporting the failure; no automatic extra model attempt is made for that output.
+  Supplier calls can still have a cost. See [the contract](engineering/source-selection-2026-10-05.md).
+
 - **Rate limits.** Free tier: 5 requests / 60s per IP. Keyed (`kx_live_…`): 10 / 60s. A `429`
   carries `Retry-After`.
 - **Errors** use the OpenAI envelope: `{"error": {"message", "type", "code"}}`. A `kx_live_`-shaped

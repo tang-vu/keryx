@@ -239,6 +239,8 @@ export interface ReasoningEngine {
   /** Run-local provider usage. Absent on engines that predate/support no usage telemetry. */
   readonly usage?: readonly LlmUsageRecord[];
   readonly calls?: readonly import("./call-ledger").LlmCallRecord[];
+  /** Bounded request-local selection refusals, including isolated rows in a served selection. */
+  readonly selectionDiagnostics?: readonly import("../research/selection-diagnostic").SelectionDiagnostic[];
 
   /** Break a question into the atomic sub-claims an answer must support. */
   decompose(question: string): Promise<string[]>;

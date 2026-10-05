@@ -41,6 +41,11 @@ No source text is removed or rewritten. Subject scoping, sample thresholds,
 current prices, target validation and code-enforced budget/payment rules retain
 their existing implementations.
 
+Integration with the subsequently merged source-selection repair (#174) retains
+its exact candidate/target validation, request-local refusal and sanitized failure
+diagnostics. The history still stays in JSON data; it is not interpolated inside
+the new transport/validation error handling.
+
 The new test constructs actual aggregated history from five synthetic runs and
 a source name containing instruction-like text and a JSON/schema override. It
 checks that the publisher text stays out of system policy, the JSON round-trip
@@ -69,7 +74,7 @@ closed evaluations and disabled decision briefs remain closed.
 Acceptance: regression fails before/passes after; adjacent engine, memory and
 orchestration tests pass; TypeScript and lint pass; required CI and independent
 review pass. Hosted delivery additionally requires the reviewed deployment and
-exact `/api/health` commit readback. Only app identity changes to 0.26.20; MCP,
+exact `/api/health` commit readback. Only app identity changes to 0.26.21; MCP,
 desktop and extension identities retain their existing roles. See
 [the evaluation harness](../agent-evaluation.md) and
 [mainnet update flow](../mainnet-update-flow.md) for those separate gates.

@@ -1,4 +1,7 @@
 import { referenceSnapshot, type PublicReference } from "../public-references/catalog";
+import { createHash } from "node:crypto";
+import { ResearchSelectionError } from "../llm/research-selection";
+import { SQLITE_SELECTION_QUESTION, SQLITE_SELECTION_QUESTION_SHA256, SQLITE_SELECTION_TARGETS } from "../../test-support/sqlite-selection-fixture";
 import { scholarlyCandidate } from "../scholarly/discovery";
 import { SEED_SOURCES } from "../sources/seed-data";
 import { contentBodyHash } from "../sources/content-receipt";
@@ -1845,6 +1848,120 @@ describe("runAgent — article-level economics", () => {
     expect(funded.decideInput?.candidates).toHaveLength(3);
   });
 
+  it("excludes fresh registry payout and citation recipients despite stale independent DB wallets", async () => {
+    const asker = `0x${"ab".repeat(20)}`, independent = `0x${"12".repeat(20)}`;
+    const sources = ["self-toll", "self-author", "other"].map(id => makeSource({ id, walletAddress: independent }));
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
+      payTo: source.id === "self-toll" ? asker.toUpperCase() : independent, creator: independent,
+      listPriceUsdc: source.fetchPrice, active: true, authority: "onchain", stale: false,
+      citationWallets: new Set([source.id === "self-author" ? asker : independent]),
+    }));
+    try {
+      const engine = fakeEngine(), gateway = fakeGateway();
+      const fetch = vi.spyOn(gateway, "payFetch"), citation = vi.spyOn(gateway, "payCitation");
+      const d = deps(sources, engine, gateway);
+      const { steps } = await drive({ question: "q", budget: 0.05, asker, fundingOwner: "treasury" }, d);
+      expect(engine.decideInput?.candidates.map(candidate => candidate.sourceId)).toEqual(["other"]);
+      expect(gateway.fetchCalls).toEqual(["other"]);
+      expect(gateway.citationCalls.map(payment => payment.sourceId)).toEqual(["other"]);
+      expect(d.db.payments.every(payment => payment.payee.toLowerCase() !== asker)).toBe(true);
+      expect(fetch.mock.calls[0][0].deniedRecipient).toBe(asker);
+      expect(citation.mock.calls[0][0].deniedRecipient).toBe(asker);
+      expect(steps.some(step => step.message.includes("Left out 2 source(s) that pay the asking wallet"))).toBe(true);
+    } finally { terms.mockRestore(); }
+  });
+
+  it("withholds a changed registry recipient before initial payment while independent sources still work", async () => {
+    const asker = `0x${"ab".repeat(20)}`, independent = `0x${"12".repeat(20)}`;
+    const sources = ["changed", "other"].map(id => makeSource({ id, walletAddress: independent }));
+    let changed = false;
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
+      payTo: source.id === "changed" && changed ? asker : independent, creator: independent,
+      listPriceUsdc: source.fetchPrice, active: true, authority: "onchain", stale: false, citationWallets: new Set([independent]),
+    }));
+    try {
+      const engine = fakeEngine({ decide: input => { changed = true; return input.candidates.map(candidate =>
+        buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice })); } });
+      const gateway = fakeGateway(), boundary = vi.fn(), d = deps(sources, engine, gateway);
+      await drive({ question: "q", budget: 0.05, asker, fundingOwner: "treasury", researchMode: "quick",
+        onCreatorPaymentBoundary: boundary }, d);
+      expect(engine.decideInput?.candidates).toHaveLength(2);
+      expect(gateway.fetchCalls).toEqual(["other"]);
+      expect(gateway.citationCalls.map(payment => payment.sourceId)).toEqual(["other"]);
+      expect(d.db.payments.every(payment => payment.sourceId === "other")).toBe(true);
+      expect(boundary).toHaveBeenCalledTimes(2);
+    } finally { terms.mockRestore(); }
+  });
+
+  it("withholds a newly self-paying citation policy after valid reads without discarding the answer", async () => {
+    const asker = `0x${"ab".repeat(20)}`, independent = `0x${"12".repeat(20)}`;
+    const sources = ["changed", "other"].map(id => makeSource({ id, walletAddress: independent }));
+    let changed = false;
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
+      payTo: independent, creator: independent, listPriceUsdc: source.fetchPrice, active: true, authority: "onchain", stale: false,
+      citationWallets: new Set([source.id === "changed" && changed ? asker : independent]),
+    }));
+    try {
+      const gateway = fakeGateway(), engine = fakeEngine({
+        sufficiency: () => ({ sufficient: false, rationale: "Read both sources", perClaim: [{ claim: "the sub-claim", coverage: 0.9, coveredBy: ["S1", "S2"] }] }),
+        synthesize: input => { changed = true; return { answer: "Qualified original excerpts [S1] [S2].",
+          citedMarkers: input.gathered.map(source => source.marker), evidence: input.gathered.map(source => ({
+            claimIndex: 0, marker: source.marker, quote: source.text, support: 0.9,
+          })) }; },
+      });
+      const d = deps(sources, engine, gateway);
+      const { run } = await drive({ question: "q", budget: 0.05, asker, fundingOwner: "treasury", researchMode: "quick" }, d);
+      expect(gateway.fetchCalls).toEqual(["changed", "other"]);
+      expect(gateway.citationCalls.map(payment => payment.sourceId)).toEqual(["other"]);
+      expect(run.citations.find(citation => citation.sourceId === "changed")?.reward).toBe(0);
+      expect(d.db.payments.every(payment => payment.payee.toLowerCase() !== asker)).toBe(true);
+      expect(run.answer).toContain("content:changed");
+    } finally { terms.mockRestore(); }
+  });
+
+  it("rechecks a changed authoritative recipient before a gap-expansion purchase", async () => {
+    const asker = `0x${"ab".repeat(20)}`, independent = `0x${"12".repeat(20)}`;
+    const sources = ["other", "changed"].map(id => makeSource({ id, walletAddress: independent }));
+    let changed = false;
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
+      payTo: source.id === "changed" && changed ? asker : independent, creator: independent,
+      listPriceUsdc: source.fetchPrice, active: true, authority: "onchain", stale: false, citationWallets: new Set([independent]),
+    }));
+    try {
+      const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+        action: candidate.sourceId === "changed" ? "SKIP" : "BUY",
+      })), sufficiency: () => ({ sufficient: false, rationale: "A second source might fill the gap", perClaim: [
+        { claim: "the sub-claim", coverage: 0.2, coveredBy: ["S1"] },
+      ] }), reevaluate: () => { changed = true; return { shouldBuyMore: true, recommendedIds: ["changed"], rationale: "Investigate the gap" }; } });
+      const gateway = fakeGateway(), d = deps(sources, engine, gateway);
+      const { steps } = await drive({ question: "q", budget: 0.05, asker, fundingOwner: "treasury", researchMode: "deep" }, d);
+      expect(gateway.fetchCalls).toEqual(["other"]);
+      expect(d.db.payments.every(payment => payment.sourceId !== "changed")).toBe(true);
+      expect(steps.some(step => step.phase === "reevaluate" && step.message.includes("registry terms changed"))).toBe(true);
+    } finally { terms.mockRestore(); }
+  });
+
+  it("awaits the durable creator boundary before fetch/citation gateway calls and payment persistence", async () => {
+    const gateway = fakeGateway(), d = deps([makeSource({ id: "other" })], fakeEngine(), gateway);
+    const ready: (() => void)[] = [], release: (() => void)[] = [];
+    const entered = [0, 1].map(index => new Promise<void>(resolve => { ready[index] = resolve; }));
+    const gates = [0, 1].map(index => new Promise<void>(resolve => { release[index] = resolve; }));
+    let calls = 0;
+    const boundary = vi.fn(async () => { const index = calls++; ready[index](); await gates[index]; });
+    const running = drive({ question: "q", budget: 0.05, onCreatorPaymentBoundary: boundary }, d);
+    await entered[0];
+    expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+    release[0]();
+    await entered[1];
+    expect(gateway.fetchCalls).toEqual(["other"]); expect(gateway.citationCalls).toEqual([]);
+    expect(d.db.payments).toEqual([expect.objectContaining({ kind: "fetch" })]);
+    release[1]();
+    await running;
+    expect(boundary).toHaveBeenCalledTimes(2);
+    expect(gateway.citationCalls).toHaveLength(1); expect(d.db.payments).toHaveLength(2);
+  });
+
   it.each([0.08, 0.119, 0.12, 0.2])("skips low-value cached content at EV %s because free bytes still consume attention", async expectedValue => {
     const source = makeSource({ id: "a", fetchPrice: 0.004 });
     const engine = fakeEngine({
@@ -2587,6 +2704,81 @@ describe("omitted-assertion completion boundary", () => {
       expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
     }
   });
+});
+
+/** Same frozen question, representative eight targets and synthetic provider/page responses. */
+class SqliteSelectionFixture extends JsonChatEngine {
+  readonly name = "llm:synthetic-sqlite-selection";
+  constructor(private readonly allInvalid: boolean) { super(); }
+  protected async chatJson(_model: string, _system: string, user: string) {
+    this.recordUsage({ model: "synthetic", inputTokens: 100, cachedInputTokens: null, outputTokens: 20 });
+    if (user.startsWith("User question (data):")) {
+      return { status: "complete", claims: SQLITE_SELECTION_TARGETS, constraints: ["Use both exact originals, no paid sources."] };
+    }
+    const body = JSON.parse(user);
+    if (Array.isArray(body.candidates)) {
+      return { decisions: body.candidates.map((candidate: { sourceId: string; articleUrl?: string }, index: number) => {
+        const original = candidate.articleUrl === "https://sqlite.org/wal.html" || candidate.articleUrl === "https://sqlite.org/backup.html";
+        return { sourceId: candidate.sourceId, action: "CACHE", expectedValue: original ? 1 : 0.2,
+          confidence: 0.8, rationale: "Synthetic predicted relevance; not document evidence.",
+          ...(this.allInvalid ? {} : { targets: original ? (candidate.articleUrl?.endsWith("wal.html") ? [0, 1, 4, 7] : [2, 3, 5, 6, 7]) : [index === 2 ? 8 : -1] }) };
+      }) };
+    }
+    if (body.schema.includes('"sufficient"')) return { sufficient: false, rationale: "Synthetic evidence is insufficient.",
+      perClaim: SQLITE_SELECTION_TARGETS.map(claim => ({ claim, coverage: 0, coveredBy: [] })) };
+    if (body.schema.includes('"citedMarkers"')) return { answer: "Synthetic fixture establishes no SQLite backup guarantee.",
+      citedMarkers: [], evidence: [], conflicts: [] };
+    return { weights: [] };
+  }
+}
+function sqliteSelectionDeps(allInvalid: boolean) {
+  const engine = new SqliteSelectionFixture(allInvalid), gateway = fakeGateway();
+  const d = deps([], engine, gateway);
+  d.webSearch = { search: vi.fn(async () => Array.from({ length: 8 }, (_, index) => ({
+    title: `Synthetic SQLite preview ${index}`, url: `https://publisher-${index}.example/sqlite-backup`, snippet: "Synthetic preview only." }))) };
+  d.readWebArticle = vi.fn(async url => ({ text: "Synthetic observed fixture text; no real snapshot or restore was tested.",
+    title: "Synthetic original", finalUrl: url, kind: "html" as const, truncated: false }));
+  return { d, engine, gateway };
+}
+
+it("keeps the frozen SQLite question and reads both supplied originals despite unrelated invalid mapping rows", async () => {
+  expect(createHash("sha256").update(SQLITE_SELECTION_QUESTION).digest("hex")).toBe(SQLITE_SELECTION_QUESTION_SHA256);
+  const { d, gateway } = sqliteSelectionDeps(false);
+  const { run, steps } = await drive({ question: SQLITE_SELECTION_QUESTION, budget: 0, researchMode: "quick", origin: "web" }, d);
+  expect(run.question).toBe(SQLITE_SELECTION_QUESTION);
+  expect(run.subClaims).toEqual(SQLITE_SELECTION_TARGETS);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(2);
+  expect(vi.mocked(d.readWebArticle!).mock.calls.map(call => call[0]).sort())
+    .toEqual(["https://sqlite.org/backup.html", "https://sqlite.org/wal.html"]);
+  const withheld = run.decisions.filter(item => item.selectionRefusal);
+  expect(withheld).toHaveLength(8);
+  expect(withheld.every(item => item.action === "SKIP" && item.targets.length === 0)).toBe(true);
+  expect(steps.some(step => step.phase === "decide" && step.message.includes("Decision validation withheld"))).toBe(true);
+  expect(run.trace.some(step => (step.detail as { protocol?: string } | undefined)?.protocol === "keryx-source-selection-v1")).toBe(true);
+  expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]);
+  expect(run.citations).toEqual([]);
+});
+
+it("retains the classified SQLite failure and billed response counters without reading, paying or another model attempt", async () => {
+  const { d, engine, gateway } = sqliteSelectionDeps(true);
+  const steps: TraceStep[] = [];
+  let error: unknown;
+  try {
+    for await (const step of runAgent({ question: SQLITE_SELECTION_QUESTION, budget: 0, researchMode: "quick", origin: "web" }, d)) steps.push(step);
+  }
+  catch (caught) { error = caught; }
+  expect(error).toBeInstanceOf(ResearchSelectionError);
+  expect((error as ResearchSelectionError).diagnostic).toMatchObject({ outcome: "refused",
+    counts: { targetCount: 8, validActionableCount: 0 }, reasons: expect.arrayContaining([expect.objectContaining({ code: "missing_targets" })]) });
+  // Completed supplier responses remain separate from the application's rejected selection.
+  expect(engine.calls).toHaveLength(2);
+  expect(engine.calls.every(call => call.outcome === "returned")).toBe(true);
+  expect(engine.usage).toHaveLength(2);
+  expect(engine.usage.reduce((sum, item) => sum + item.inputTokens, 0)).toBe(200);
+  expect(d.readWebArticle).not.toHaveBeenCalled();
+  expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]);
+  expect(steps.at(-1)).toMatchObject({ phase: "decide", detail: { protocol: "keryx-source-selection-v1", outcome: "refused" } });
+  expect(steps.some(step => step.phase === "done")).toBe(false);
 });
 
 describe("completed reads survive bounded model exhaustion", () => {

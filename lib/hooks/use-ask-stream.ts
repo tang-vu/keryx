@@ -32,6 +32,7 @@ import { isPaymentRecord } from "@/lib/payments/payment-state";
 import { readSession } from "@/lib/session/session-storage";
 import { BrowserSignBudget } from "./browser-sign-budget";
 import { browserPaymentProfile } from "../browser-payment-profile";
+import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/selection-diagnostic";
 
 export type StreamMode = "real" | "offline";
 
@@ -60,6 +61,8 @@ export interface AskStreamState {
   payments: PaymentRecord[];
   run: QueryRun | null;
   error: string | null;
+  /** Caller-local diagnostic; never a completed research or payment record. */
+  selectionDiagnostic?: SelectionDiagnostic;
   /** What kind of error this is, when status === "error". null otherwise. */
   errorKind: AskErrorKind | null;
   /** Seconds until the free-trial throttle resets, when errorKind === "rate-limit". */
@@ -337,8 +340,10 @@ export function useAskStream(opts?: AskStreamOpts) {
     }
 
     if (event === "error") {
-      const { message } = data as { message: string };
-      setState((s) => ({ ...s, status: "error", errorKind: "generic", error: message }));
+      const { message, selectionDiagnostic } = data as { message: string; selectionDiagnostic?: unknown };
+      const diagnostic = parseSelectionDiagnostic(selectionDiagnostic);
+      setState((s) => ({ ...s, status: "error", errorKind: "generic", error: message,
+        selectionDiagnostic: diagnostic?.outcome === "refused" ? diagnostic : undefined }));
     }
   // opts is an object reference — destructure the primitive/stable values into the dep array
   // so the hook re-creates handleEvent when the grant activates or the cap changes.

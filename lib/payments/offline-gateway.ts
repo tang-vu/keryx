@@ -9,6 +9,7 @@ import type { KeryxDB } from "../db";
 import { sourceItemIdentity } from "../sources/source-item-asset";
 import { resolveSourceItemContent } from "../sources/resolve-source-item-content";
 import { makePayment, type FetchResult, type PaymentGateway } from "./payment-gateway";
+import { assertRecipientAllowed, type RecipientExclusion } from "./recipient-exclusion";
 
 export class OfflineGateway implements PaymentGateway {
   readonly mode = "offline" as const;
@@ -31,6 +32,7 @@ export class OfflineGateway implements PaymentGateway {
     priceUsdc = source.fetchPrice,
     offer,
     sourceClaim,
+    deniedRecipient,
   }: {
     source: Source;
     item?: SourceItem;
@@ -38,7 +40,9 @@ export class OfflineGateway implements PaymentGateway {
     priceUsdc?: number;
     offer?: ArticleOfferRef;
     sourceClaim?: SourceClaimReceipt;
-  }): Promise<FetchResult> {
+  } & RecipientExclusion): Promise<FetchResult> {
+    const payee = source.walletAddress;
+    assertRecipientAllowed(payee, deniedRecipient);
     const items = item ? [item] : await this.db.getItems(source.id);
     const settle = { payer: this.address, transaction: "offline-simulation" };
     const content = item
@@ -62,7 +66,7 @@ export class OfflineGateway implements PaymentGateway {
       offerId: offer?.id,
       listPriceUsdc: offer?.listPriceUsdc,
       payer: this.address,
-      payee: source.walletAddress,
+      payee,
       amountUsdc: priceUsdc,
       txHash: null,
       settled: false,
@@ -81,6 +85,7 @@ export class OfflineGateway implements PaymentGateway {
     queryId,
     rationale,
     sourceClaim,
+    deniedRecipient,
   }: {
     source: Source;
     author: Author;
@@ -90,7 +95,8 @@ export class OfflineGateway implements PaymentGateway {
     queryId: string;
     rationale: string;
     sourceClaim?: SourceClaimReceipt;
-  }): Promise<PaymentRecord> {
+  } & RecipientExclusion): Promise<PaymentRecord> {
+    assertRecipientAllowed(author.walletAddress, deniedRecipient);
     return makePayment({
       kind: "citation",
       queryId,

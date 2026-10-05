@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**Isolate invalid source proposals and retain classified caller failures — 2026-10-05.**
+An actionable model decision needs a complete valid target list and exact input
+candidate identity. Reject the entire invalid proposal, withhold every duplicate
+candidate group, and retain independently valid proposals through existing read,
+evidence and payment gates. Never infer links from the rationale, filter invalid
+targets into a usable subset, rewrite the plan or promote a model SKIP. A genuine
+all-SKIP remains valid; invalid output with no valid actionable proposal ends as a
+terminal request-local refusal without another paid tier or circuit mutation.
+
+Keep bounded allowlisted reason/count/index diagnostics, supplier call/token
+counters and explicit withheld-source rationales. Export terminal diagnostic JSON
+to the caller without creating a completed dispatch or financial receipt; omit
+question/provider/source/custody values. Missing historical payloads stay unknown
+and representative offline fixtures do not prove live usefulness. See
+[selection repair and gates](docs/engineering/source-selection-2026-10-05.md).
+
 **Monitoring observations and mainnet defaults — 2026-10-05.** Describe service
 availability separately from recorded financial checks. Add bounded freshness for
 the four existing summary records without vendor requests, scheduler changes or
@@ -5190,6 +5206,26 @@ Money-path corrections found in an orchestrator review. All are downward or neut
 - Source passages carry an instruction to disregard embedded requests to cite, score or weight a source, since their authors are paid when cited.
 
 Deliberately not changed. A local trial of a "which systems ..." comparison improved when Deep research searched once per target, showed 4000 characters per source and read one source per target, but the same-day planning decision records that a larger target, context or cost limit is not an accepted repair, and bounded live acceptance reserves model and search usage atomically. Those changes were withdrawn from this update and remain an owner decision. No service fee on browser-funded research and no refund of an unused A2A creator reserve: both add a new mainnet money movement and need their own design and review.
+
+## Authoritative sponsored recipients and pre-gateway history retention - 2026-10-05
+
+The combined source-selection review found that DB-only self-recipient exclusion
+could miss a fresh registry payout, and a payment trace arrives after asynchronous
+ledger/cache writes. Use the existing current registry toll/citation authority at
+discovery and revalidation, then pass the verified outside-funded asker as a
+trusted denied recipient to every creator payment adapter. Deny resolved,
+challenged and signed recipients before signing/admission/submission. An immutable
+independent signed payee cannot be redirected by a later registry change. DB author
+fallback applies only without registry citation authority; a browser-funded owner
+keeps existing authorization to pay their own sources.
+
+For web SSE, retain history from the trusted pre-gateway callback, before payment
+or persistence can suspend. Retention means an attempt may exist, not that it
+settled. Cancel browser signing on connection loss and deny further creator
+payment boundaries while allowing the in-flight attempt and its truthful pending
+or settled receipt to finish recording. Cancellation before any boundary creates
+no completed dispatch. Existing spend caps, custody, nonce and financial evidence
+rules remain authoritative; the closed live allowance is not reopened.
 
 ## Align Google continuation with durable authentication limits - 2026-10-05
 
