@@ -10,6 +10,7 @@ import { registerMonthlyDiscovery } from "../monthly/mcp-discovery";
 import { quoteResearchMonthly } from "../monthly/quote";
 import { reasoningServingText } from "../llm/reasoning-telemetry";
 import { researchFailureMessage } from "../llm/research-plan";
+import { ResearchSelectionError } from "../llm/research-selection";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
@@ -134,7 +135,9 @@ export function createRemoteMcpServer(
         const message = researchFailureMessage(error);
         return {
           isError: true,
-          content: [{ type: "text" as const, text: `Keryx research failed: ${message}` }],
+          content: [{ type: "text" as const, text: `Keryx research failed: ${message}` },
+            ...(error instanceof ResearchSelectionError ? [{ type: "text" as const,
+              text: `Source-selection diagnostic (not a completed report or payment receipt):\n${JSON.stringify(error.diagnostic)}` }] : [])],
         };
       }
     },

@@ -1,5 +1,6 @@
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { ReasoningOutputValidationError } from "./reasoning-engine";
+import { ResearchSelectionError } from "./research-selection";
 
 export type PlanningRefusalReason = "expanded_output" | "invalid_output" | "needs_refinement";
 
@@ -74,6 +75,11 @@ export async function boundedResearchPlan(question: string, call: () => Promise<
 
 /** Render only for the original caller; suggestions are not copied into accounting or logs. */
 export function researchFailureMessage(error: unknown): string {
+  if (error instanceof ResearchSelectionError) {
+    const diagnostic = error.diagnostic;
+    const reasons = [...new Set(diagnostic.reasons.map(item => item.code))].join(", ");
+    return `${error.message}\nDiagnostic: ${diagnostic.id}${reasons ? ` (${reasons})` : ""}`;
+  }
   if (!(error instanceof ResearchPlanningError)) return error instanceof Error ? error.message : String(error);
   if (!error.scopeChoices.length) return error.message;
   return error.message + "\n\n" + error.scopeChoices.map((choice, index) => `${index + 1}. ${choice}`).join("\n") +

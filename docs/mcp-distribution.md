@@ -1,5 +1,14 @@
 # MCP package distribution
 
+The **0.26.20 source-selection candidate** adds hosted request-local diagnostic
+text on terminal `isError` results; remote protocol stays **0.3.1**. Its actual
+stdio runtime graph retains all 31 canonical Git input blobs from 0.26.18, so
+caller-funded package **0.4.5** needs no new npm identity. The Operator helper's
+46 project inputs and renderer/bridge inputs are also unchanged. Fresh release
+archives and their exact-source manifests still require separate CI/public
+readback; unchanged runtime inputs do not establish artifact publication or an
+installed-client upgrade. See [scope and remaining gates](engineering/source-selection-2026-10-05.md).
+
 The 0.26.17 bounded-planning/context candidate updates hosted research and caller-only
 error guidance while retaining remote MCP protocol **0.3.1**. Its changed modules are
 outside the caller-funded stdio package's 31-file runtime graph. Keep accepted **0.4.5**

@@ -20,6 +20,7 @@ import { TraceRow } from "@/components/keryx/trace-row";
 import { AnswerMarkdown } from "@/components/keryx/answer-markdown";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
+import { SelectionFailureDownload } from "@/components/keryx/selection-failure-download";
 import { useBrowserOrigin } from "@/lib/hooks/use-browser-origin";
 
 const CANONICAL = "https://keryx.cc";
@@ -136,6 +137,7 @@ export function EmbedClient() {
           ) : (
             <div className="border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12.5px] text-destructive">
               {state.error ?? "Something went wrong — please try again."}
+              <SelectionFailureDownload diagnostic={state.selectionDiagnostic} />
             </div>
           ))}
 

@@ -1,5 +1,28 @@
 # Supported-surface release parity
 
+## Source selection and failure diagnostics, October 5, 2026
+
+Application **0.26.20 candidate** isolates invalid source proposals and shares a
+bounded diagnostic contract; source/target/evidence/payment authority stays in
+the existing validators. The closed v0.26.17 Chrome round remains 0/3 useful.
+See [design, offline fixtures and remaining gates](engineering/source-selection-2026-10-05.md).
+
+| Surface | Coordinated behavior and boundary |
+| --- | --- |
+| Web/chat/embed | Shared selector and SSE expose classified terminal failures; actual hook/React controls offer an explicit failure JSON download. Mixed selections retain withheld reasons and diagnostic trace. Retain dispatch history from the trusted pre-gateway boundary on disconnect, while refusing new creator attempts and cancelling browser signatures. No fabricated receipt. |
+| OpenAI-compatible API | Non-streaming 422 includes code/diagnostic; started streams carry `keryx_error`, never successful completion metadata for the failed request. Existing authentication, treasury budgets and model/search bounds apply. |
+| Remote MCP | Shared hosted research returns `isError` plus diagnostic text. No successful structured result is manufactured; protocol identity stays 0.3.1. |
+| Repository buyer CLI | Shared selector and formatted error exit one; diagnostic JSON goes to stderr. Original caller custody and external-web consent remain. |
+| A2A/private tasks and bots | Shared selection refusal propagates through existing failed-order/job handling and keeps payment history. Bot readers preserve readable error text; no automatic resubmission, refund inference or new task authority. |
+| Desktop/Operator, stdio MCP and extension | Existing task/custody/reader contracts and package identities remain. Hosted research uses the shared service; browser failure export is a web/embed control. Verify unchanged runtime package graphs/bytes and fresh release artifact provenance separately. |
+
+Shared payment adapters enforce the verified outside-funded asker's denied recipient
+against current registry terms and final resolved/challenged/signed payees before
+authorization. Browser-funded self-payment keeps its existing consent. This change
+adds no financial/storage schema or schedule. Published artifacts,
+installed-client upgrades, deployed commit and useful live output each require
+their own evidence; a passing synthetic fixture establishes the bounded contract.
+
 ## Bounded planning and heading recall, October 5, 2026
 
 Application **0.26.17 candidate** changes shared planning/context and original-caller

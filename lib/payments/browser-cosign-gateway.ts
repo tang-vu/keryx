@@ -29,6 +29,7 @@ import {
   sourceItemIdentity,
 } from "../sources/source-item-asset";
 import { sourceFetchPayTo } from "../registry/source-fetch-payto";
+import { assertRecipientAllowed, type RecipientExclusion } from "./recipient-exclusion";
 import { articlePaidPath } from "../offers/resolve-article-offer";
 import { sourceClaimPath } from "../sources/source-claim-request";
 import { assertCreatorPaymentClaim } from "./source-claim-payment";
@@ -138,6 +139,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     priceUsdc = source.fetchPrice,
     offer,
     sourceClaim,
+    deniedRecipient,
   }: {
     source: Source;
     item?: SourceItem;
@@ -145,7 +147,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     priceUsdc?: number;
     offer?: ArticleOfferRef;
     sourceClaim?: SourceClaimReceipt;
-  }): Promise<FetchResult> {
+  } & RecipientExclusion): Promise<FetchResult> {
     const path = item
       ? articlePaidPath({
           sourceId: source.id,
@@ -158,6 +160,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     const url = `${config.baseUrl}${sourceClaimPath(path, sourceClaim)}`;
     const identity = item ? sourceItemIdentity(item) : undefined;
     const fetchPayee = await sourceFetchPayTo(source);
+    assertRecipientAllowed(fetchPayee, deniedRecipient);
     const { content, payment } = await this.buyWithCoSign(
       url,
       source,
@@ -170,7 +173,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
       identity,
       fetchPayee,
       offer,
-      sourceClaim
+      sourceClaim,
+      deniedRecipient
     );
     return { content, payment };
   }
@@ -184,6 +188,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     queryId,
     rationale,
     sourceClaim,
+    deniedRecipient,
   }: {
     source: Source;
     author: Author;
@@ -193,7 +198,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
     queryId: string;
     rationale: string;
     sourceClaim?: SourceClaimReceipt;
-  }): Promise<PaymentRecord> {
+  } & RecipientExclusion): Promise<PaymentRecord> {
+    assertRecipientAllowed(author.walletAddress, deniedRecipient);
     const path = `/api/cite/${
       source.id
     }?author=${encodeURIComponent(
@@ -212,7 +218,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
       item,
       undefined,
       undefined,
-      sourceClaim
+      sourceClaim,
+      deniedRecipient
     );
     return payment;
   }
@@ -231,7 +238,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
     item?: SourceItemIdentity,
     payeeOverride?: string,
     offer?: ArticleOfferRef,
-    sourceClaim?: SourceClaimReceipt
+    sourceClaim?: SourceClaimReceipt,
+    deniedRecipient?: string
   ): Promise<{ content: string; payment: PaymentRecord }> {
     // Guard: abort if client disconnected or grant revoked.
     if (this.abortSignal?.aborted) {
@@ -251,6 +259,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
     const requirements = await this.fetchRequirements(url, method);
     const payee =
       payeeOverride ?? author?.walletAddress ?? source.walletAddress;
+    assertRecipientAllowed(payee, deniedRecipient);
+    assertRecipientAllowed(requirements.payTo, deniedRecipient);
     assertExpectedRequirements(requirements, payee, amount);
 
     const db = await getDb();
@@ -365,6 +375,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
         requirements,
         this.sessAddr
       );
+      assertRecipientAllowed(signed.authorization.to, deniedRecipient);
       await verifyBrowserSignature(paymentHeader, {
         requirements,
         expectedSigner: this.sessAddr,

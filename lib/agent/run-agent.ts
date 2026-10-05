@@ -31,6 +31,7 @@ import { isPublicReferenceId } from "../public-references/catalog";
 
 import { researchVerdict } from "./research-verdict";
 import { config } from "../config";
+import { ResearchSelectionError, readSelectionDiagnostics } from "../llm/research-selection";
 import type {
   ClaimCoverageRecord,
   Citation,
@@ -80,6 +81,7 @@ import {
   sourceItemIdentity,
 } from "../sources/source-item-asset";
 import { sourceFetchTerms } from "../registry/source-fetch-payto";
+import { assertRecipientAllowed, sourceRecipientIsExcluded } from "../payments/recipient-exclusion";
 import { sourceClaimAccess, publicDuplicateOfOwnedItem } from "../sources/source-claim-access";
 import { resolveFreeSourceItemContent } from "../sources/resolve-source-item-content";
 import { contentBodyHash } from "../sources/content-receipt";
@@ -272,11 +274,8 @@ async function* runAdmittedAgent(
   // A verified asker cannot draw someone else's money to their own wallet: when the run is not
   // funded by the asker's browser grant, sources that pay the asker are left out of discovery.
   const outsideFundedAsker = input.fundingOwner !== "browser" ? input.asker?.toLowerCase() : undefined;
-  const paysAsker = (s: Source) => Boolean(outsideFundedAsker) &&
-    [s.walletAddress, ...s.authors.map((author) => author.walletAddress)]
-      .some((wallet) => wallet?.toLowerCase() === outsideFundedAsker);
-  const selfOwnedCount = allSources.filter(paysAsker).length;
-  const eligible = allSources.filter((s) => s.verified !== false && !paysAsker(s) && !isPublicReferenceId(s.id) && (gateway.mode === "offline" || s.evidenceProvenance !== "synthetic-demo"));
+  let selfOwnedCount = 0;
+  const eligible = allSources.filter((s) => s.verified !== false && !isPublicReferenceId(s.id) && (gateway.mode === "offline" || s.evidenceProvenance !== "synthetic-demo"));
   const rights = await Promise.all(eligible.map(s => paperCanResearch(db, s, input.paidScholarly === true && origin === "web")));
   const sources = eligible.filter((_s, index) => rights[index]);
   const unverifiedCount = allSources.filter((source) => source.verified === false).length;
@@ -431,6 +430,7 @@ async function* runAdmittedAgent(
       continue;
     }
     if (!terms.active) continue;
+    if (sourceRecipientIsExcluded(s, terms, outsideFundedAsker)) { selfOwnedCount++; continue; }
     let claimAccess;
     try { claimAccess = await sourceClaimAccess(db, s, terms, { now: startedAt }); }
     catch {
@@ -631,7 +631,20 @@ async function* runAdmittedAgent(
   }
   // Combine memory + reputation into a single context string for the decide prompt
   const fullContext = [memoryContext, reputationContext].filter(Boolean).join("\n\n") || undefined;
-  const proposed = await engine.decide({ question: input.question, subClaims, candidates, budget, spentSoFar: 0, memoryContext: fullContext });
+  const priorSelectionIds = new Set(readSelectionDiagnostics(engine).map(item => item.id));
+  let proposed: Decision[];
+  try {
+    proposed = await engine.decide({ question: input.question, subClaims, candidates, budget, spentSoFar: 0, memoryContext: fullContext });
+  } catch (error) {
+    if (error instanceof ResearchSelectionError) {
+      yield emit("decide", "Source selection was refused by the decision validator. No invalid proposal authorizes a read or payment; this is an incomplete request, not a completed report.", error.diagnostic);
+    }
+    throw error;
+  }
+  for (const diagnostic of readSelectionDiagnostics(engine)) {
+    if (priorSelectionIds.has(diagnostic.id) || diagnostic.outcome !== "partial") continue;
+    yield emit("decide", `Decision validation withheld ${diagnostic.counts.withheldCandidateCount} candidate(s) and rejected ${diagnostic.counts.invalidRowCount} row(s). Independently valid proposals continue through the existing read and payment gates. All research targets remain; proposed relevance is not verified evidence.`, diagnostic);
+  }
   const sourceById = new Map(sources.map((s) => [s.id, s]));
   const assetBySourceId = new Map(
     [...assetById.values()].map((asset) => [asset.source.id, asset]),
@@ -885,6 +898,7 @@ async function* runAdmittedAgent(
     const { source, item, cacheKey } = asset;
     try {
       const currentTerms = await sourceFetchTerms(source, { refresh: true });
+      if (sourceRecipientIsExcluded(source, currentTerms, outsideFundedAsker)) throw new Error("Source recipient is excluded");
       const currentAccess = await sourceClaimAccess(db, source, currentTerms, { expected: asset.claimPolicy ?? null });
       if (!currentAccess.readAllowed || currentTerms.listPriceUsdc !== asset.listPriceUsdc) throw new Error("Source terms changed");
     } catch {
@@ -949,6 +963,7 @@ async function* runAdmittedAgent(
           priceUsdc: asset.priceUsdc,
           offer: asset.offer,
           sourceClaim: asset.claimPolicy,
+          deniedRecipient: outsideFundedAsker,
         });
         if (payment.settled) settledPayments++;
         if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
@@ -1194,6 +1209,7 @@ async function* runAdmittedAgent(
         }
         try {
           const currentTerms = await sourceFetchTerms(source, { refresh: true });
+          if (sourceRecipientIsExcluded(source, currentTerms, outsideFundedAsker)) throw new Error("Source recipient is excluded");
           const access = await sourceClaimAccess(db, source, currentTerms, { expected: asset.claimPolicy ?? null });
           if (!access.readAllowed || currentTerms.listPriceUsdc !== asset.listPriceUsdc) throw new Error("Source terms changed");
         } catch { yield emit("reevaluate", `SKIP ${source.name}: claim or registry terms changed; no new payment.`); continue; }
@@ -1258,6 +1274,7 @@ async function* runAdmittedAgent(
             priceUsdc: asset.priceUsdc,
             offer: asset.offer,
             sourceClaim: asset.claimPolicy,
+            deniedRecipient: outsideFundedAsker,
           });
           if (payment.settled) settledPayments++;
           if (paymentSettlementStatus(payment) === "pending") pendingPayments++;
@@ -1578,6 +1595,7 @@ async function* runAdmittedAgent(
     if (!source || c.reward <= 0) continue;
     try {
       const terms = await sourceFetchTerms(source, { refresh: true });
+      if (sourceRecipientIsExcluded(source, terms, outsideFundedAsker)) throw new Error("Source recipient is excluded");
       const access = await sourceClaimAccess(db, source, terms, { expected: c.sourceClaim ?? null });
       if (!access.rewardAllowed) throw new Error("Creator rewards are disabled");
     } catch (error) {
@@ -1610,6 +1628,7 @@ async function* runAdmittedAgent(
       if (amount <= 0) continue;
       const rationale = `Citation reward (${(c.weight * 100).toFixed(0)}% contribution${authors.length > 1 ? `, ${(author.splitWeight * 100).toFixed(0)}% author split` : ""}).`;
       try {
+        assertRecipientAllowed(author.walletAddress, outsideFundedAsker);
         paymentAttempts++;
         await input.onCreatorPaymentBoundary?.();
         const item =
@@ -1634,6 +1653,7 @@ async function* runAdmittedAgent(
           queryId,
           rationale,
           sourceClaim: c.sourceClaim,
+          deniedRecipient: outsideFundedAsker,
         });
         if (payment.settled) settledPayments++;
         if (paymentSettlementStatus(payment) === "pending") pendingPayments++;

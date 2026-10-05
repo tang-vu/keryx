@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { KeryxDB } from "../db";
 import { encryptContent } from "../ipfs/content-crypto";
@@ -14,6 +14,17 @@ afterEach(() => {
 });
 
 describe("OfflineGateway encrypted storage compatibility", () => {
+  it("does not record even a simulated self-toll or citation when the trusted recipient is excluded", async () => {
+    const asker = `0x${"11".repeat(20)}`;
+    const source: Source = { id: "self", name: "Self", url: "https://synthetic.invalid", description: "Original", walletAddress: asker,
+      authors: [], fetchPrice: 0.002, tags: [], createdAt: "2026-10-05T00:00:00.000Z" };
+    const getItems = vi.fn();
+    const gateway = new OfflineGateway({ getItems } as unknown as KeryxDB);
+    await expect(gateway.payFetch({ source, queryId: "q", deniedRecipient: asker })).rejects.toThrow(/recipient is excluded/);
+    await expect(gateway.payCitation({ source, author: { name: "Self", walletAddress: asker, splitWeight: 1 },
+      queryId: "q", amount: 0.002, weight: 1, rationale: "Qualified", deniedRecipient: asker })).rejects.toThrow(/recipient is excluded/);
+    expect(getItems).not.toHaveBeenCalled();
+  });
   it("simulates payment but still decrypts a db_encrypted article before reasoning", async () => {
     process.env.CONTENT_MASTER_KEY = "9a".repeat(32);
     const plaintext = "Encrypted article used by an explicit offline simulation.";

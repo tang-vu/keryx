@@ -16,6 +16,8 @@ import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextS
 import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
 import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
 import { buildEvidenceReviewInput } from "./evidence-review-input";
+import { MAX_SELECTION_DIAGNOSTIC_HISTORY, ResearchSelectionError, invalidResearchSelectionOutput, parseResearchSelection } from "./research-selection";
+import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/selection-diagnostic";
 import type { Decision } from "../types";
 import { ReasoningOutputValidationError } from "./reasoning-engine";
 import type {
@@ -38,12 +40,22 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   abstract readonly name: string;
   private readonly usageRecords: LlmUsageRecord[] = [];
   private readonly callLedger = new LlmCallLedger();
+  private readonly selectionRecords: SelectionDiagnostic[] = [];
   /** Opt in only transports whose bounded reasoning review has been evaluated. */
   protected supportsDecisionBrief(): boolean { return false; }
   /** Exact wire-prompt bounds before a supplier call is admitted to the accounting ledger. */
   protected validateChatJsonInput(..._args: Parameters<JsonChatEngine["chatJson"]>): void {}
 
   get calls() { return this.callLedger.calls; }
+
+  get selectionDiagnostics(): readonly SelectionDiagnostic[] {
+    return this.selectionRecords.map(value => parseSelectionDiagnostic(value)!);
+  }
+
+  private recordSelectionDiagnostic(value: SelectionDiagnostic): void {
+    this.selectionRecords.push(parseSelectionDiagnostic(value)!);
+    if (this.selectionRecords.length > MAX_SELECTION_DIAGNOSTIC_HISTORY) this.selectionRecords.shift();
+  }
 
   private measuredChatJson(...args: Parameters<JsonChatEngine["chatJson"]>) {
     this.validateChatJsonInput(...args);
@@ -77,7 +89,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
    * source, per gathered excerpt, per citation. A reply that hits the ceiling comes back as
    * truncated JSON, which parses to nothing — and "nothing" used to look exactly like a decision to
    * buy nothing. Implementations MUST throw when the model stops on the length limit rather than
-   * hand back a half-object; the resilience layer then drops a tier with output-validation telemetry.
+   * hand back a half-object. Planning and selection classify this as a terminal local refusal;
+   * other stages retain their existing fallback behavior and output-validation telemetry.
    */
   protected abstract chatJson(
     model: string,
@@ -150,15 +163,18 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     const memoryBlock = input.memoryContext
       ? `\n\n${input.memoryContext}\n\n`
       : "";
-    const out = await this.measuredChatJson(
+    let out: Record<string, unknown>;
+    try { out = await this.measuredChatJson(
       config.llmModel,
       "You are a frugal research agent deciding which paid sources to buy under a budget. " +
         "For EACH candidate choose action BUY (pay the toll, high value), CACHE (already cached & still useful, reuse free), or SKIP (not worth it). " +
         "Weigh expected value against price; prefer cheaper sufficient sources; avoid redundancy. Public web candidates are free original-page READ selections: legacy CACHE action selects a read, never claims a cache hit. Search snippets are unverified previews, not evidence. " +
         "A requestedSource identifies an original URL the user asked to inspect, with unobserved contents. Judge its potential to answer the requested targets; it is not evidence or guaranteed relevance. Explain any SKIP of a requested original. " +
-        "The subClaims list contains indexed research targets. For every BUY or CACHE, targets MUST contain at least one of their zero-based claimIndex integers " +
-        "that the source's preview can help investigate (for example targets:[0,2]). Use only indexes from this request. " +
-        "Explain the connection in the rationale. If no target is supported by the preview, choose SKIP with targets:[]. " +
+        "Return exactly one decision row per candidate. Copy its sourceId exactly; do not return a URL, name, new ID or duplicate row. " +
+        "The subClaims list contains indexed research targets. allowedTargetIndexes is the complete list of permitted integers for this request. " +
+        "For every BUY or CACHE, targets MUST be a nonempty JSON array of those zero-based integers, never claim text, strings, one-based numbers or an empty array. " +
+        "Select targets the source could help investigate using its preview, description and caller-supplied requestedSource scope. An unread requested original may be worth inspecting even when its preview has no substantive evidence. " +
+        "Explain predicted relevance in the rationale; a source title or preview is not proof. If no target is worth investigating with this source, choose SKIP with targets:[]. " +
         "A relevant rationale without valid targets cannot authorize a read. These are predicted relevance links, not verified evidence or permission to pay citation rewards. " +
         "Consider deliveryKind and plaintextBytes when present: an abstract or excerpt may only answer a narrow question, and a title does not establish full-text availability. " +
         "Some candidates have external:true — these are discovery-only endpoints from the open x402 marketplace, regardless of their advertised payment networks. " +
@@ -168,51 +184,42 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       JSON.stringify({
         question: input.question,
         subClaims: input.subClaims.map((claim, claimIndex) => ({ claimIndex, question: claim })),
+        allowedTargetIndexes: input.subClaims.map((_, claimIndex) => claimIndex),
+        allowedSourceIds: input.candidates.map(candidate => candidate.id),
+        expectedDecisionRows: input.candidates.length,
         budget: input.budget,
         spentSoFar: input.spentSoFar,
         candidates,
         schema:
           '{"decisions":[{"sourceId":string,"action":"BUY"|"CACHE"|"SKIP","expectedValue":number(0..1),"confidence":number(0..1),"rationale":string,"targets":number[]}]}',
+        examples: candidates.length > 0 ? {
+          ...(input.subClaims.length > 0 ? { actionableRow: { sourceId: candidates[0].sourceId,
+            action: candidates[0].cached || candidates[0].sourceKind === "public-reference" ? "CACHE" : "BUY", expectedValue: 0.7,
+            confidence: 0.6, rationale: "Potential to investigate target 0; content remains unverified.", targets: [0] } } : {}),
+          skipRow: { sourceId: candidates[0].sourceId, action: "SKIP", expectedValue: 0, confidence: 0.7,
+            rationale: "No requested target is worth investigating with this source.", targets: [] },
+        } : {},
+        exampleInstruction: "Examples are alternative row shapes, not decisions or instructions to select a source. Use only the current allowed indexes and IDs.",
       }),
       this.budgetFor(candidates.length),
-    );
-    const byId = new Map(input.candidates.map((c) => [c.id, c]));
-    const decisions = Array.isArray(out.decisions) ? out.decisions : [];
-    // A reply with no decisions at all, when candidates were offered, is not a frugal choice — it is
-    // a reply that did not survive (capped, malformed, off-schema). Saying "buy nothing" on its
-    // behalf would silently switch the agent off, and every source would stop earning while the
-    // trace still read like a deliberate decision. Fail instead: the resilience layer drops a tier.
-    if (decisions.length === 0 && input.candidates.length > 0) {
-      throw new ReasoningOutputValidationError("decide returned no decisions for " + input.candidates.length + " candidates");
+    ); } catch (error) {
+      if (error instanceof ResearchSelectionError) {
+        this.recordSelectionDiagnostic(error.diagnostic);
+        throw error;
+      }
+      if (!(error instanceof ReasoningOutputValidationError)) throw error;
+      const refusal = invalidResearchSelectionOutput(input);
+      this.recordSelectionDiagnostic(refusal.diagnostic);
+      throw refusal;
     }
-    return decisions
-      .map((d) => {
-        if (!d || typeof d !== "object" || Array.isArray(d)) throw new ReasoningOutputValidationError("decide returned a malformed decision");
-        const c = byId.get(d.sourceId as string);
-        if (!c) return null;
-        if (typeof d.action !== "string" || (d.rationale !== undefined && typeof d.rationale !== "string")) {
-          throw new ReasoningOutputValidationError("decide returned a malformed decision");
-        }
-        const action = normalizeAction(d.action as string);
-        if ((action === "BUY" || action === "CACHE") &&
-          (!Array.isArray(d.targets) || d.targets.length === 0 || !d.targets.every((target: unknown) =>
-            typeof target === "number" && Number.isInteger(target) && target >= 0 && target < input.subClaims.length))) {
-          // Request-local fallback happens before the orchestrator can submit any source payment.
-          // Never fabricate target links or weaken the downward-only preview gate.
-          throw new ReasoningOutputValidationError("decide returned an actionable source without valid research targets");
-        }
-        return {
-          sourceId: c.id,
-          sourceName: c.name,
-          action,
-          expectedValue: clamp01(d.expectedValue as number),
-          price: c.fetchPrice,
-          confidence: clamp01(d.confidence as number),
-          rationale: (d.rationale as string) ?? "",
-          targets: Array.isArray(d.targets) ? (d.targets as number[]) : [],
-        } satisfies Decision;
-      })
-      .filter((d): d is Decision => d !== null);
+    try {
+      const selection = parseResearchSelection(input, out);
+      if (selection.diagnostic) this.recordSelectionDiagnostic(selection.diagnostic);
+      return selection.decisions;
+    } catch (error) {
+      if (error instanceof ResearchSelectionError) this.recordSelectionDiagnostic(error.diagnostic);
+      throw error;
+    }
   }
 
   async sufficiency(input: SufficiencyInput): Promise<SufficiencyResult> {
@@ -430,11 +437,6 @@ export function extractJson(text: string): Record<string, unknown> {
   } catch {
     throw new ReasoningOutputValidationError("Model response is not a valid JSON object");
   }
-}
-
-function normalizeAction(a: string): Decision["action"] {
-  const up = (a ?? "").toUpperCase();
-  return up === "BUY" || up === "CACHE" || up === "SKIP" ? up : "SKIP";
 }
 
 function clamp01(n: number): number {
