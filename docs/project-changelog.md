@@ -12,6 +12,20 @@
 - No change to planning, context, attention or search limits, answer delivery,
   fees or custody. See `DECISIONS.md`.
 
+### Google login challenge expiry repair (2026-10-05, v0.26.19 candidate)
+
+- Match Google's Keryx continuation and cookie to the shared five-minute durable
+  authentication limit, fixing a 503 before OAuth on the real SQLite schema.
+- Preserve the existing database ceiling and single-use challenge consumption;
+  expired continuation requires a fresh explicit login.
+- Add real-schema device-route coverage for issuance, expiry and replay, plus
+  browser rejection/cleanup before any operation outside the login window.
+- Web, browser API and hosted privacy disclosures change together. CLI, desktop,
+  remote/stdio MCP, extensions and bots keep their deliberate browser handoff;
+  no new native Google authority or protocol/package identity is introduced.
+  Live Google return/wallet/signing acceptance and release distribution remain
+  separately verified gates.
+
 ### Public Google onboarding policies (2026-10-05, v0.26.18 candidate)
 
 - Publish a linked terms page covering research, content rights, visible prices,
