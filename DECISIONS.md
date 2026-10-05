@@ -5098,12 +5098,29 @@ assertions. Windows timing failures do not justify weakening the deployed limits
 
 ### Reconcile parallel issue and mainnet releases - 2026-10-05
 
-v0.26.12 merged while issue repairs were in CI. v0.26.13 must retain its mainnet
+v0.26.12 merged while issue repairs were in CI. v0.26.15 must retain its mainnet
 surface/monitor/schema fixes and resolve overlap through one URL-admission helper
 and one bounded public `reasoning` contract, preserving remote protocol0.3.0.
 Named originals have the existing eight-lead cap and independent admission from
 search publisher slots; actual attention, public transport, evidence and spend
 limits remain. Canonical bodies retain up to four requested fragment URLs as
-scope metadata, with truthful final read status. New MCP0.4.5/desktop0.4.6 identities
-avoid reuse of already selected0.4.4/0.4.5 bytes. Combined regressions, independent
+scope metadata, with truthful final read status. New MCP 0.4.5 / desktop 0.4.6 identities
+avoid reuse of already selected 0.4.4 / 0.4.5 bytes. Combined regressions, independent
 review, exact-source CI and serialized deployment/publication remain required.
+
+## Reusable research budgets and optional Google wallets - 2026-10-05
+
+The owner authorized reducing repeated wallet confirmations and adding a Google-linked
+user-controlled wallet. Model mainnet delegation as an explicit research budget reused
+across conversations, with signed 1-hour/24-hour/7-day duration and per-question limit.
+Use a versioned v2 consent with independent server and worker checks; preserve v1
+message/proof bytes, original networks, retained custody and all cumulative liabilities.
+Renewal verifies the retained original and cannot increase its ceiling from external
+funding. A reviewed top-up and fresh owner signature are required for an increase.
+
+Circle user-controlled EOA wallets keep the owner-wallet interface compatible with
+existing payment/funding checks. Authenticate the actual Circle wallet server-side;
+Google authentication alone is not spending consent. Optional configuration and vendor
+acceptance gate activation. Research session custody remains same-browser storage;
+longer delegation is not an on-chain/XSS-proof policy wallet or portable recovery.
+See docs/research-budget-onboarding.md for setup, compatibility and surface roles.

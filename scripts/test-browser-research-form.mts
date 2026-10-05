@@ -82,7 +82,7 @@ try {
   const paidScholarly = page.getByRole("checkbox", { name: paidManuscriptLabel });
   assert.equal(await paidScholarly.isDisabled(), true);
   await page.locator("#payer-session").click();
-  await page.getByText(/Your funded session pays/).waitFor();
+  await page.getByText(/Your research budget pays/).waitFor();
   assert.equal(await paidScholarly.isDisabled(), false);
   await paidScholarly.check();
   await page.getByRole("button", { name: "Ask Keryx" }).click();

@@ -30,6 +30,7 @@ import { recordActivationEvent } from "@/lib/activation";
 import { accountSessionContext } from "@/lib/account-sessions";
 import { consumeMainnetSessionGrant, mainnetGrantPolicy, requireMainnetGrantOrigin } from "@/lib/payments/mainnet-session-grants";
 import { readBoundedJson } from "@/lib/read-bounded-json";
+import { sessionGrantDurationSeconds } from "@/lib/payments/session-grant-consent";
 
 export const runtime = "nodejs";
 
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
         capMicroUsdc: proof.consent.capMicroUsdc, consent: proof.consent, ownerSignature: proof.ownerSignature, sessionSignature: proof.sessionSignature,
         spentMicroUsdc: String(Math.round(row.spent * 1e6)),
         expiresAt: new Date(row.expiry).toISOString(), serverNow: new Date(now).toISOString(),
-        remainingMs: row.expiry - now, ttlMs }, { headers });
+        remainingMs: row.expiry - now, ttlMs: sessionGrantDurationSeconds(proof.consent, ttlMs / 1000) * 1000 }, { headers });
     }
     return Response.json({ active: true, sessionId: row.sessionId, ownerAddr: row.ownerAddr, sessAddr: row.sessAddr,
       grantEpoch: row.grantEpoch, expiresAt: new Date(row.expiry).toISOString(), serverNow: new Date(now).toISOString(),
@@ -95,7 +96,8 @@ export async function POST(req: NextRequest) {
         capMicroUsdc: consent.capMicroUsdc,
         spentMicroUsdc: String(Math.round(current.spent * 1e6)),
         expiresAt: new Date(Number(consent.expirySeconds) * 1000).toISOString(), serverNow: new Date(now).toISOString(),
-        remainingMs: Number(consent.expirySeconds) * 1000 - now, ttlMs: config.sessionGrantTtlSeconds * 1000 }, { headers });
+        remainingMs: Number(consent.expirySeconds) * 1000 - now,
+        ttlMs: sessionGrantDurationSeconds(consent, config.sessionGrantTtlSeconds) * 1000 }, { headers });
     } catch { return Response.json({ error: "Owner consent is invalid, expired, unavailable or already consumed" }, { status: 409, headers }); }
   }
 

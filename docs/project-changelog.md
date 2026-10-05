@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Original scope, typed reasoning failures and release isolation (2026-10-05, v0.26.13 candidate)
+### Original scope, typed reasoning failures and release isolation (2026-10-05, v0.26.15 candidate)
 
 - Consider supplied original URLs independently of search; retain per-source skips,
   failures, bounded reads and section limitations in the answer and receipt.
@@ -13,6 +13,19 @@
 - Publish distinct MCP 0.4.5 and desktop 0.4.6 bytes after exact-source acceptance.
 - No new paid evaluation or circuit reset. #128, #158's historical/live gates and
   #164's real deployment gates remain open. See [scope and audit](engineering/issue-followups-2026-10-05.md).
+
+### Reusable research budgets and optional Google wallet onboarding (2026-10-05, v0.26.14)
+
+- Select a research allowance, per-question maximum and 1-hour/24-hour/7-day
+  duration; reuse an active budget across conversations and reloads.
+- Show remaining authorization capacity, held amounts and a direct stop control.
+  Renewal retains the old ceiling; reviewed funding and consent increase it.
+- Preserve original v1 proofs/custody and exact durable liabilities. Version 2
+  policy is enforced independently by server admission and browser signing.
+- Add a configuration-gated Circle Google wallet connector and authenticated
+  wallet onboarding. Production credentials and live vendor acceptance are separate
+  activation gates. See [setup and surface boundaries](research-budget-onboarding.md).
+
 ### Align mainnet runtime guidance and recovery UX (2026-10-05, v0.26.12 candidate)
 
 - Correct Slack/OpenAI, Monthly MCP/API and external marketplace guidance without inferring

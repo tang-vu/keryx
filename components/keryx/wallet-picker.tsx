@@ -24,6 +24,7 @@ import { useConnect, type Connector } from "wagmi";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useSyncExternalStore } from "react";
+import { CircleGoogleWalletButton } from "./circle-google-wallet";
 
 const subscribeHydration = () => () => {};
 const clientSnapshot = () => true;
@@ -96,6 +97,7 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
   if (injectedWallets.length === 0 && !showMetaMask && !walletConnectConn) {
     return (
       <div className="space-y-3">
+        <CircleGoogleWalletButton disabled={busy} onSelect={onSelect} onConnected={_onConnected} />
         <div className="flex items-start gap-3 border border-ink/40 bg-paper-2 px-4 py-3.5">
           <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" />
           <p className="font-mono text-[11px] leading-relaxed text-ink-2">
@@ -112,6 +114,7 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
 
   return (
     <div className="space-y-2">
+      <CircleGoogleWalletButton disabled={busy} onSelect={onSelect} onConnected={_onConnected} />
       {injectedWallets.map((connector) => (
         <button
           key={connector.id}

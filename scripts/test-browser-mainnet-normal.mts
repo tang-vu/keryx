@@ -63,7 +63,7 @@ let requestedAmount = "1000";
 const reqId = "00000000-0000-4000-8000-000000000002";
 let epoch = "00000000-0000-4000-8000-000000000001";
 let preparation:SessionWithdrawalPreparation|null=null,withdrawalPhase="prepared";
-let publicationAbort:SessionWithdrawalAbort|null=null,loseAuthorizeAck=false,loseAbortAck=false,abortPosts=0,liabilityReads=0,rpcReads=0;
+let publicationAbort:SessionWithdrawalAbort|null=null,loseAuthorizeAck=false,loseAbortAck=false,abortPosts=0,liabilityReads=0,rpcReads=0,challengeReads=0;
 const challenges=new Map<string,BrowserSessionAuthorizationBinding>(),paymentJournals:unknown[]=[];
 const withdrawalStatus=()=>({preparation,signingPhase:withdrawalPhase,cancellation:null,...(publicationAbort?{publicationAbort}:{}),
   progress:{status:publicationAbort?"aborted-before-publication":"prepared",retryAuthorized:false,chainFinalityVerified:false},attestation:null,mint:null,completion:null});
@@ -119,7 +119,7 @@ try {
       return route.fulfill({ json: { sourceId, item: { itemId: "article", itemTitle: "A reviewed mainnet article", itemUrl: "https://creator.test/article",
         contentVersion: `sha256:${"77".repeat(32)}` }, payTo: payout, listPriceMicroUsdc: price.toString() } });
     }
-    assert.equal(url.pathname, "/api/ask/challenge"); assert.deepEqual(request.postDataJSON(), { reqId });
+    assert.equal(url.pathname, "/api/ask/challenge"); assert.deepEqual(request.postDataJSON(), { reqId });challengeReads++;
     const challenge:BrowserSessionAuthorizationBinding={ sessionId: owner.address.toLowerCase(), reqId, grantEpoch: epoch,
       sessAddr: String(grant!.sessAddr), sourceId, kind: "fetch", expectedNonce: `0x${nonceIndex.toString(16).padStart(64,"0")}`,
       browserAuthorizationProtocol: "durable-v1", requirements: { scheme: "exact", network: profile.networkId,
@@ -278,11 +278,58 @@ try {
   const finishedAbort=await exposure(first,interrupted.requestId);
   assert.equal(finishedAbort.abortPending,false);assert.equal(finishedAbort.cancelled,true);assert.equal(finishedAbort.exposed,true);
   assert.equal(finishedAbort.hasSignature,false);assert.equal(finishedAbort.barrier,null);
+  // Upgrade only the signed public policy. The emitted worker keeps the same original
+  // custody, nonce journal and lifetime exposure already exercised by the v1 cases.
+  const beforeResearch=await exposure(first);assert.equal(beforeResearch.total,"13000");
+  let researchEpochIndex=16;
+  async function publishResearchBudget(capMicroUsdc:string) {
+    epoch=`00000000-0000-4000-8000-${String(researchEpochIndex++).padStart(12,"0")}`;
+    const researchConsent={...consent,format:"keryx-session-grant-consent-v2" as const,grantEpoch:epoch,capMicroUsdc,
+      durationSeconds:604800,questionCapMicroUsdc:"1000",expirySeconds:String(Math.floor(Date.now()/1000)+604800)};
+    const researchOwnerSignature=await owner.signMessage({message:createSessionGrantConsentMessage(researchConsent,profile)});
+    const researchSessionSignature=await call(first,"signGrantConsentProof",{consent:researchConsent,ownerSignature:researchOwnerSignature});
+    grant={...grant,grantEpoch:epoch,capMicroUsdc,spentMicroUsdc:(await exposure(first)).total,consent:researchConsent,
+      ownerSignature:researchOwnerSignature,sessionSignature:researchSessionSignature};
+    assert.deepEqual((await call(first,"bindGrant") as {consent:unknown}).consent,researchConsent,
+      "Actual emitted worker verifies the owner and session proofs for an explicit seven-day budget");
+    return researchConsent;
+  }
+  await publishResearchBudget("15000");
+  const researchQuestion={id:"00000000-0000-4000-8000-000000000015",budgetMicroUsdc:"1000"};
+  price=BigInt(1000);requestedAmount="1000";nonceIndex=50;
+  const challengesBeforeOversized=challengeReads;
+  await assert.rejects(call(first,"authorizePayment",{reqId,question:{...researchQuestion,budgetMicroUsdc:"1001"}}),
+    "Signed per-question maximum refuses even when cumulative capacity is larger");
+  assert.equal(challengeReads,challengesBeforeOversized,"Oversized questions refuse before authenticated challenge lookup");
+  assert.deepEqual(await exposure(first),beforeResearch,"Policy publication and refused questions cannot reset retained exposure");
+  assert.ok((await call(first,"authorizePayment",{reqId,question:researchQuestion}) as {paymentHeader:string}).paymentHeader);
+  assert.equal((await exposure(first)).total,"14000");
+  await publishResearchBudget("15000");
+  const renewedResearchQuestion={id:"00000000-0000-4000-8000-000000000017",budgetMicroUsdc:"1000"};
+  await assert.rejects(call(second,"authorizePayment",{reqId,question:renewedResearchQuestion}),
+    "Renewal cannot reuse a v2 nonce even though its fresh question and remaining capacity fit");
+  nonceIndex=2;
+  await assert.rejects(call(first,"authorizePayment",{reqId,question:renewedResearchQuestion}),
+    "A v1 nonce remains consumed after the v2 transition and renewal");
+  assert.equal((await exposure(second)).total,"14000");
+  nonceIndex=51;
+  assert.ok((await call(second,"authorizePayment",{reqId,question:renewedResearchQuestion}) as {paymentHeader:string}).paymentHeader);
+  assert.equal((await exposure(first)).total,"15000");
+  nonceIndex=52;
+  await assert.rejects(call(first,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000018",budgetMicroUsdc:"1000"}}),
+    "Renewed seven-day budgets retain the exact lifetime ceiling across tabs");
+  await call(first,"lock");await mount(first);await call(first,"initializeOwner",{owner:owner.address});await call(first,"restoreRetained");
+  assert.equal((await exposure(first)).total,"15000","Reload and lock keep the v1 plus v2 lifetime exposure");
+  await call(first,"bindGrant");
+  // Explicitly signed spare capacity lets the later cashout test isolate its withdrawal
+  // barrier rather than reject because this newly exercised research cap is exhausted.
+  await publishResearchBudget("20000");
   // A new reviewed original remains independently signable. Reset only the synthetic
   // chain snapshot and server fixture; leave both workers' actual retained history intact.
   block.number="0x64";withdrawalPhase="prepared";publicationAbort=null;
   const freshBurn={...prepareWithdrawIntentForProfile(profile,expired.sessAddr,"100000",expired.ownerAddr,"1000"),maxBlockHeight:"110"};
-  preparation={...interrupted,burnIntent:freshBurn,requestId:hashTypedData(withdrawTypedData(freshBurn))};
+  preparation={...interrupted,burnIntent:freshBurn,requestId:hashTypedData(withdrawTypedData(freshBurn)),
+    balance:{...interrupted.balance,heldPaymentMicroUsdc:"15000"}};
   assert.notEqual(preparation.requestId,interrupted.requestId);
   const cashout=await call(first,"signWithdrawal",{requestId:preparation.requestId,review:{amountMicroUsdc:"100000",maxFeeMicroUsdc:"1000"}}) as {signature:Hex};
   assert.equal((await recoverTypedDataAddress({...withdrawTypedData(freshBurn),signature:cashout.signature})).toLowerCase(),expired.sessAddr);
@@ -290,9 +337,10 @@ try {
   await assert.rejects(call(first,"abortWithdrawal",{requestId:preparation.requestId}),"An already returned burn signature can never be aborted");
   assert.equal(abortPosts,abortPostsBeforePublished,"Published burns refuse before any abort request");
   assert.equal((await exposure(first,preparation.requestId)).hasSignature,true);
-  nonceIndex=8;await assert.rejects(call(second,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000011",budgetMicroUsdc:"10000"}}),"Retained withdrawal barrier blocks other tabs");
+  nonceIndex=53;await assert.rejects(call(second,"authorizePayment",{reqId,question:{id:"00000000-0000-4000-8000-000000000019",budgetMicroUsdc:"1000"}}),"Retained withdrawal barrier blocks other tabs with otherwise available research capacity");
   assert.equal(withdrawalPhase,"exposed");
   console.log(JSON.stringify({status:"passed",realChromium:true,realIndexedDB:true,worker:nextDist?"Next production packaged":"production source",requests,
     authenticatedChallenge:true,ownerAndSessionProof:true,nonceAndCapRetained:true,logoutRecovery:true,expiredOwnerCashout:true,
-    failedPaymentCapacityRecovery:true,interruptedSigningAbort:true,abortLostAckRestart:true,publishedBurnAbortRefused:true,liveFunds:false}));
+    failedPaymentCapacityRecovery:true,interruptedSigningAbort:true,abortLostAckRestart:true,publishedBurnAbortRefused:true,
+    sevenDayResearchBudget:true,signedQuestionMaximum:true,v1AndV2NonceRetention:true,researchRenewalCapRetained:true,liveFunds:false}));
 } finally { await browser.close(); }

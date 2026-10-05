@@ -33,7 +33,7 @@ import {
   writeSession,
 } from "@/lib/session/session-storage";
 import { browserPaymentProfile } from "../browser-payment-profile";
-import { useMainnetSessionGrant } from "./use-mainnet-session-grant";
+import { useMainnetSessionGrant, type ResearchBudgetOptions } from "./use-mainnet-session-grant";
 
 // Extra native USDC sent to the session EOA on top of the funded budget so it can pay gas for its
 // own approve + Gateway-deposit txs (Arc gas is tiny). Leftover stays in the session EOA and is
@@ -75,8 +75,9 @@ export interface GrantState {
   expiresAt: string | null;
   grantEpoch: string | null;
   error: string | null;
+  researchBudget?: ResearchBudgetOptions;
   consentReview?: { cumulativeCapUsdc: number; confirmedSpentUsdc: number; retainedSpentUsdc: number;
-    remainingCapacityUsdc: number; availableUsdc: number };
+    remainingCapacityUsdc: number; availableUsdc: number; durationSeconds?: number; questionCapUsdc?: number };
 }
 
 const INITIAL: GrantState = {

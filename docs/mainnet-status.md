@@ -9,7 +9,7 @@ observation; recheck health for the current release.
 
 ## October 5 reliability candidate
 
-Application 0.26.13, stdio MCP 0.4.5 and Operator desktop 0.4.6 coordinate
+Application 0.26.15, stdio MCP 0.4.5 and Operator desktop 0.4.6 coordinate
 [the open-issue repairs](engineering/issue-followups-2026-10-05.md). They require
 exact-source CI/review, separate accepted package publication and deployed-health
 readback. The dated observations below remain historical. Remote MCP protocol

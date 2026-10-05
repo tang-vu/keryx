@@ -8,7 +8,7 @@ Verify exact-source archive, npm bytes/provenance and installer separately.
 The October 5 v0.26.12 correction selected package 0.4.4 and added manual official
 MCP Registry publication with short-lived GitHub OIDC. The then-observed registry
 server0.2.0 pointed to npm0.1.1; that dated inventory is independent of npm/GitHub.
-The current source manifest selects0.4.5. Registry publication/readback remain
+The current source manifest selects 0.4.5. Registry publication/readback remain
 separate gates after its exact npm bytes are verified.
 
 The caller-funded stdio package is distributed separately from the hosted remote
@@ -52,7 +52,7 @@ in your MCP client:
 
 ```text
 npx --yes --package=keryx-mcp@0.4.5 keryx-mcp
-npx --yes --package=https://github.com/tang-vu/keryx/releases/download/v0.26.13/keryx-mcp-0.4.5.tgz keryx-mcp
+npx --yes --package=https://github.com/tang-vu/keryx/releases/download/v0.26.15/keryx-mcp-0.4.5.tgz keryx-mcp
 ```
 
 Follow the wallet and funding setup in [the package README](../mcp/README.md).

@@ -3,6 +3,10 @@
  * so the origin (rather than one unversioned path) must be allowed.
  */
 import { configuredPaymentProfile } from "./arc-network-profile";
+import { circleWalletPublicConfigured } from "./circle-wallet-config";
+/** Circle Web SDK 1.1.11 hosts device identification and user confirmation in this iframe.
+ * API calls stay server-side; Google OAuth uses a top-level redirect. */
+export const CIRCLE_WALLET_AUTH_FRAME_ORIGIN = "https://pw-auth.circle.com";
 export const CLOUDFLARE_WEB_ANALYTICS_SCRIPT_ORIGIN =
   "https://static.cloudflareinsights.com";
 
@@ -15,6 +19,8 @@ export function contentSecurityPolicy(
   additionalScriptSources: readonly string[] = [],
 ): string {
   const profile = configuredPaymentProfile(process.env.KERYX_NETWORK, process.env.NEXT_PUBLIC_KERYX_NETWORK);
+  const circleFrames = process.env.KERYX_CIRCLE_GOOGLE_ENABLED === "true" && circleWalletPublicConfigured()
+    ? ` ${CIRCLE_WALLET_AUTH_FRAME_ORIGIN}` : "";
   const script = [
     "'self'",
     "'unsafe-inline'",
@@ -44,7 +50,7 @@ export function contentSecurityPolicy(
       "wss://*.metamask.io",
     ].join(" "),
     "worker-src 'self' blob:",
-    "frame-src 'self' https://*.walletconnect.com https://*.walletconnect.org https://*.metamask.io",
+    `frame-src 'self' https://*.walletconnect.com https://*.walletconnect.org https://*.metamask.io${circleFrames}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

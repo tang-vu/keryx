@@ -1,8 +1,9 @@
 # Open-issue reliability repairs
 
-This v0.26.13 candidate extends the merged v0.26.12 repairs with complete original
-scope/status, typed reasoning isolation and staging tools. #163 was closed by
-v0.26.12; this release retains its full authority checks and adds regression assurance. It does not reopen the completed paid evaluation or claim #128's
+This v0.26.15 candidate retains the merged v0.26.12 repairs and v0.26.14 budget
+onboarding, and adds complete original scope/status, typed reasoning isolation and
+staging tools. #163 was closed by v0.26.12; this release retains its full authority
+checks and adds regression assurance. It does not reopen the completed paid evaluation or claim #128's
 useful research, independent settlement or user-recording gates passed. Historical
 dispatches, receipts and provider circuits are preserved.
 
@@ -10,7 +11,7 @@ dispatches, receipts and provider circuits are preserved.
 
 Recognize at most eight distinct explicit URL leads from the original question,
 independently of search results and publisher slots. Scan at most sixteen URLs in
-the first30,000 question characters; never admit a URL cut at that boundary.
+the first 30,000 question characters; never admit a URL cut at that boundary.
 Visibly refuse oversized (2,000 characters), credential-bearing, non-public literal
 host, unsupported port, official-document discussion and unsupported HTTP links. HTTP is recognized but the existing reader still requires HTTPS; no
 replacement URL is invented. Actual reads retain public-only DNS pinning, redirect,

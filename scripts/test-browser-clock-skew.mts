@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { build } from "esbuild";
 import { chromium, type Route } from "playwright";
 import { SiweMessage } from "siwe";
+import { circleSdkBrowserPlugin } from "./circle-sdk-browser-plugin.mts";
 const owner = `0x${"1".repeat(40)}`, signer = `0x${"2".repeat(40)}`;
 const utc = Date.parse("2026-10-01T00:00:00.000Z");
 const authDates = { nonce: "syntheticNonce12345", issuedAt: new Date(utc).toISOString(),
@@ -18,13 +19,13 @@ const fixture = await build({ stdin: { contents: `
  <button onClick={()=>{void auth.signIn();}}>Sign in</button><output id="tick">{tick}</output></>}
  createRoot(document.getElementById('root')).render(<Probe/>);
 `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife",
-  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "synthetic-clock-boundaries", setup(b) {
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' }, plugins: [circleSdkBrowserPlugin(), { name: "synthetic-clock-boundaries", setup(b) {
     b.onResolve({ filter: /^(wagmi)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /^@\/lib\/config$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /^@\/components\/keryx\/(grant-spend-dialog|faucet-panel)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /(session-signer-client|session-storage|gateway-deposit|gateway\/read-credit)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onLoad({ filter: /.*/, namespace: "synthetic" }, args => ({ loader: "jsx", resolveDir: process.cwd(), contents:
-      args.path === "wagmi" ? `export const useAccount=()=>({address:'${owner}',isConnected:true});export const useWalletClient=()=>({data:window.fixtureWallet});export const usePublicClient=()=>null;export const useSwitchChain=()=>({switchChainAsync:async()=>{throw Error('Network switch forbidden')}});export const useSignMessage=()=>({signMessageAsync:async({message})=>{window.loginMessages.push(message);return 'synthetic-login-signature'}});`
+      args.path === "wagmi" ? `export const useConnect=()=>({connectors:[],isPending:false,connectAsync:async()=>{throw Error("Unexpected Google connector in external-wallet fixture")}});export const useAccount=()=>({address:'${owner}',isConnected:true});export const useWalletClient=()=>({data:window.fixtureWallet});export const usePublicClient=()=>null;export const useSwitchChain=()=>({switchChainAsync:async()=>{throw Error('Network switch forbidden')}});export const useSignMessage=()=>({signMessageAsync:async({message})=>{window.loginMessages.push(message);return 'synthetic-login-signature'}});`
       : args.path.endsWith("grant-spend-dialog") ? `import React from 'react';export const GrantSpendDialog=({grantState,onTryRecover,onRecoverViaSignature})=><><output id="state">{JSON.stringify(grantState)}</output><button onClick={()=>{void onTryRecover()}}>Recover</button><button onClick={()=>{void onRecoverViaSignature()}}>Signature recovery</button></>;`
       : args.path.endsWith("faucet-panel") ? `export const FaucetPanel=()=>null;`
       : args.path === "@/lib/config" ? `export const config={sessionGrantTtlSeconds:3600,rpcUrl:'https://rpc.invalid'};`
