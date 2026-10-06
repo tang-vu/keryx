@@ -5,6 +5,7 @@ import { z } from "zod";
 import { FLASH_POLICY } from "../economics/provider-cost-policy";
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
 import type { ChatJsonOptions } from "./json-chat-engine";
+import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
 import { ResearchAllowance, RESEARCH_ALLOWANCE_REVIEW, validateResearchAllowancePolicy,
   type ConfiguredResearchAllowance } from "../research/research-allowance";
 
@@ -177,9 +178,23 @@ export class BoundedProductionEngine extends OpenAICompatibleEngine {
   protected async chatJson(model: string, system: string, user: string, maxTokens = 2048, options?: ChatJsonOptions) {
     this.allowance.reserve(system, user, maxTokens);
     try { return await super.chatJson(model, system, user, maxTokens, options); }
-    catch (error) {
-      const status = error && typeof error === "object" && "status" in error && typeof error.status === "number" ? error.status : undefined;
-      throw Object.assign(new Error(`Bounded model provider request failed${status ? ` (${status})` : ""}; reservation retained`), { status });
-    }
+    catch (error) { throw boundedFailure(error); }
   }
+}
+
+/** A supplier error body can echo request context, so the original message never leaves this
+ * wrapper. Its bounded category does: planning and selection turn invalid output into their own
+ * request-local refusals, and a timeout must stay distinguishable from a rejected reply. */
+function boundedFailure(error: unknown): Error {
+  if (error instanceof ReasoningInputLimitError) return error;
+  const status = error && typeof error === "object" && "status" in error && typeof error.status === "number" ? error.status : undefined;
+  const retained = `${status ? ` (${status})` : ""}; reservation retained`;
+  if (error instanceof ReasoningOutputValidationError)
+    return Object.assign(new ReasoningOutputValidationError(`Bounded model output failed validation${retained}`), { status });
+  if (error instanceof ReasoningTransportError) {
+    const failure = new ReasoningTransportError(error.category);
+    failure.message = `Bounded model provider request failed (${error.category}); reservation retained`;
+    return failure;
+  }
+  return Object.assign(new Error(`Bounded model provider request failed${retained}`), { status });
 }

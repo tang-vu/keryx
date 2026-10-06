@@ -6,6 +6,8 @@ import { spawn } from "node:child_process";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BoundedProductionEngine, configuredProductionModelAllowance, ProductionModelAllowance,
   type ProductionModelAllowancePolicy } from "./bounded-production-engine";
+import { ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
+import { ResearchPlanningError } from "./research-plan";
 
 const roots: string[] = [];
 const now = "2026-10-04T12:00:00.000Z";
@@ -77,6 +79,33 @@ describe("production model allowance", () => {
     await expect(new BoundedProductionEngine("synthetic-test-key", allowance()).decompose("Recovery?"))
       .rejects.toThrow("exhausted");
     expect(attempted).toBe(2);
+  });
+
+  it("keeps a bounded failure category without the supplier's private detail or another attempt", async () => {
+    const { policy } = fixture(4); let attempted = 0;
+    const length = { choices: [{ message: { content: '{"claims":["Cut' }, finish_reason: "length" }] };
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      attempted++;
+      if (attempted === 1) throw Object.assign(Error("private timeout detail"), { name: "TimeoutError" });
+      if (attempted === 2) throw Error("private network detail");
+      if (attempted === 3) return new Response("private provider body", { status: 500 });
+      return Response.json(length);
+    }));
+    const failure = () => new BoundedProductionEngine("synthetic-test-key", allowance()).decompose("Recovery?")
+      .then(() => { throw Error("expected a refusal"); }, (error: unknown) => error as Error & { status?: number });
+    const timeout = await failure();
+    expect(timeout).toBeInstanceOf(ReasoningTransportError);
+    expect(timeout).toMatchObject({ category: "timeout", message: "Bounded model provider request failed (timeout); reservation retained" });
+    expect(await failure()).toMatchObject({ category: "network", message: "Bounded model provider request failed (network); reservation retained" });
+    const provider = await failure();
+    expect(provider).not.toBeInstanceOf(ReasoningOutputValidationError);
+    expect(provider).toMatchObject({ status: 500, message: "Bounded model provider request failed (500); reservation retained" });
+    // A reply cut at the output ceiling is a completed, billed response: planning refuses it
+    // locally instead of reporting an unreachable provider.
+    const truncated = await failure();
+    expect(truncated).toBeInstanceOf(ResearchPlanningError);
+    expect(truncated).toMatchObject({ reason: "invalid_output", status: 422 });
+    expect([attempted, slots(policy.journalDirectory).length]).toEqual([4, 4]);
   });
 
   it("refuses excessive UTF-8 input/output, expiry, policy mutation and filesystem failures without HTTP", async () => {
