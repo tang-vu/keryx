@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { browseLibrary, libraryBrowseHref, libraryPublisherGroups, librarySearchMatches, libraryTopicHints, parseLibraryFilters, type LibraryRecord } from "./library-browse";
+import { browseLibrary, libraryBrowseHref, libraryPublisherGroups, librarySearchMatches, libraryTopicHints, parseLibraryFilters, spreadLibraryTopics, type LibraryRecord } from "./library-browse";
 
 const records: LibraryRecord[] = [
   { id: "docs", name: "PostgreSQL", url: "https://www.postgresql.org/docs/", tags: ["database", "SQL"], topic: "data-infrastructure", kind: "explore" },
@@ -10,6 +10,19 @@ const records: LibraryRecord[] = [
 const all = parseLibraryFilters({});
 
 describe("source library browsing", () => {
+  it("shows different directory topics before repeating a topic, retaining within-topic order", () => {
+    const grouped = [
+      { ...records[0], id: "a1", topic: "ai-agents" as const },
+      { ...records[0], id: "a2", topic: "ai-agents" as const },
+      { ...records[0], id: "d1", topic: "data-infrastructure" as const },
+      { ...records[0], id: "d2", topic: "data-infrastructure" as const },
+      { ...records[0], id: "p1", topic: "payments" as const },
+      { ...records[0], id: "c1", topic: "creator-research" as const },
+    ];
+    expect(spreadLibraryTopics(grouped).map(row => row.id)).toEqual(["a1", "d1", "p1", "c1", "a2", "d2"]);
+    expect(grouped.map(row => row.id)).toEqual(["a1", "a2", "d1", "d2", "p1", "c1"]);
+    expect(spreadLibraryTopics([])).toEqual([]);
+  });
   it("combines literal title, domain, tag and retained-item search with collection and topic filters", () => {
     expect(browseLibrary(records, { ...all, q: "postgresql SQL", topic: "data-infrastructure", kind: "explore" }).map(row => row.id)).toEqual(["docs"]);
     expect(browseLibrary(records, { ...all, q: "example.com", kind: "cited" }).map(row => row.id)).toEqual(["cited"]);

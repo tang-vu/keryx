@@ -15,7 +15,7 @@ import { fmtUsdc } from "@/components/keryx/phase-style";
 import { safeInlineJson } from "@/lib/safe-json";
 import { loadSourceDirectory, unavailableSourceDirectory } from "@/lib/sources/source-directory";
 import { EXPLORE_SOURCES } from "@/lib/public-references/explore-catalog";
-import { browseLibrary, libraryBrowseHref, libraryPublisherGroups, parseLibraryFilters, type LibraryRecord } from "@/lib/sources/library-browse";
+import { browseLibrary, libraryBrowseHref, libraryPublisherGroups, parseLibraryFilters, spreadLibraryTopics, type LibraryRecord } from "@/lib/sources/library-browse";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +50,7 @@ export default async function SourcesPage({ searchParams }: {
   const onchainCount = entries.filter((entry) => entry.source.onchainId).length;
   const totalPaid = entries.reduce((sum, entry) => sum + (entry.totalEarnedUsdc ?? 0), 0);
   const retainedItemCount = references.reduce((sum, reference) => sum + reference.items.length, 0);
-  const exploreRecords = EXPLORE_SOURCES.map(source => ({ ...source, kind: "explore" as const, data: source }));
+  const exploreRecords = spreadLibraryTopics(EXPLORE_SOURCES.map(source => ({ ...source, kind: "explore" as const, data: source })));
   const citedRecords = citedSources.entries.map(entry => ({ id: entry.url, name: entry.title, url: entry.url,
     kind: "cited" as const, observedAt: entry.citedAt, data: entry }));
   const feedRecords = references.map(reference => ({ ...reference, kind: "feed" as const,
@@ -149,7 +149,7 @@ export default async function SourcesPage({ searchParams }: {
         {showCollection("explore") && visibleExplore.length > 0 && <section id="publisher-directory" className="mt-10 scroll-mt-6" aria-labelledby="publisher-directory-title">
           <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ink pb-3">
             <h2 id="publisher-directory-title" className="font-display text-2xl text-ink">Publisher directory</h2>
-            <span className="font-mono text-[11px] text-ink-3">{visibleExplore.length} publisher links</span>
+            <span className="font-mono text-[11px] text-ink-3">{visibleExplore.length} publisher link{visibleExplore.length === 1 ? "" : "s"}</span>
           </div>
           <p className="mt-3 max-w-[75ch] font-serif text-[15px] leading-relaxed text-ink-2">Starting points for AI and agents, data and infrastructure, payments, and creator research. These are links to original publishers, not retained article evidence. Open the publisher or draft a question with its URL; available content still needs to be read and assessed.</p>
           <div className="mt-5 grid gap-4 md:grid-cols-2">{visibleExplore.slice(0, 12).map(({ data }) => <ExploreSourceCard key={data.id} source={data} />)}</div>

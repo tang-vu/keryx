@@ -77,6 +77,22 @@ export function browseLibrary<T extends LibraryRecord>(records: readonly T[], fi
     || a.name.localeCompare(b.name, "en") || a.id.localeCompare(b.id));
   return selected;
 }
+
+/** Show each directory topic near the top without changing order within a topic. */
+export function spreadLibraryTopics<T extends LibraryRecord>(records: readonly T[]): T[] {
+  const groups = new Map<LibraryTopic, T[]>();
+  for (const record of records) {
+    const topic = record.topic ?? "other";
+    const group = groups.get(topic) ?? [];
+    group.push(record);
+    groups.set(topic, group);
+  }
+  const result: T[] = [];
+  for (let index = 0; index < Math.max(0, ...[...groups.values()].map(group => group.length)); index++) {
+    for (const group of groups.values()) if (group[index]) result.push(group[index]);
+  }
+  return result;
+}
 function observationTime(record: LibraryRecord): number {
   const value = Date.parse(record.observedAt ?? "");
   return Number.isFinite(value) ? value : Number.NEGATIVE_INFINITY;
