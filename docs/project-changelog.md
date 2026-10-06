@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### Sharp/librsvg security patch (2026-10-06, v0.27.8 candidate)
+
+- Advance the existing Next-scoped sharp override to 0.35.5 and its locked native
+  closure for the maintainer's librsvg CVE-2026-96889 fix. Next, payment SDKs,
+  decoder configuration and the required high-severity audit gate remain unchanged.
+- Add a bounded real-child SVG/Next image-optimizer/desktop-brand compatibility
+  fixture. The dated production dependency audit has zero high/critical findings;
+  seven low and nineteen moderate findings remain.
+- App metadata advances to 0.27.8; exact unaffected runtime bundle comparisons
+  support retained desktop 0.4.7, stdio MCP 0.4.6, remote MCP 0.3.2 and extension
+  0.1.1 roles. No deployment, installer or package publication is claimed.
+- [Scope, primary advisory and verification](engineering/sharp-security-2026-10-06.md).
+
 ### One-shot same-original delivery fulfillment (2026-10-06, v0.27.7 candidate)
 
 - Add a private recovery lane for the exactly settled, failed owner canary;
