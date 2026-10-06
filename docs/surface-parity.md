@@ -1,5 +1,20 @@
 # Supported-surface release parity
 
+## Sharp/librsvg dependency patch, October 6, 2026
+
+Application **0.27.8 candidate** changes the hosted native image dependency
+closure and app version metadata. Image configuration, API/research/payment
+contracts, custody, workers and schedules stay in their existing roles. Controlled
+runtime bundle comparisons against 2593023 are byte-identical and contain no
+sharp/Next image-optimizer input for desktop helper/renderer/bridge/style and
+stdio MCP. Desktop **0.4.7**, caller MCP **0.4.6**, remote MCP **0.3.2** and
+extension **0.1.1** retain their separate versions. The desktop build-only icon
+generator uses the patched library and its API fixture passed; static icon assets
+are unchanged. Source-bound client publications retain their accepted original
+attestations; these comparisons do not re-attest an installer at the new server
+source or establish synchronized installed-client upgrades. See
+[primary advisory, graph hashes and release gates](engineering/sharp-security-2026-10-06.md).
+
 ## Reading activity and source library, October 5, 2026
 
 Application **0.26.22 candidate** changes web `/dashboard`, `/sources`, linked creator identity labels, navigation
