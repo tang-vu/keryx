@@ -617,6 +617,22 @@ describe("aggregate context budget across several reads", () => {
     }
   });
 
+  it("reports reads that received no context instead of trimming one to fit", () => {
+    const { input, offered, sources, menu } = budgeted(12);
+    expect(characters(sources)).toBeLessThanOrEqual(12_000);
+    const empty = sources.filter(source => !source.quoteContexts!.length);
+    expect(empty.length).toBeGreaterThan(0);
+    for (const source of empty) {
+      expect(source.withheldQuoteOptions).toBe(offered.filter(quote => quote.marker === source.marker).length);
+      expect(menu.some(quote => quote.marker === source.marker)).toBe(false);
+      expect(source.passages.length).toBeGreaterThan(0);
+    }
+    for (const source of sources) {
+      const original = input.gathered.find(read => read.marker === source.marker)!;
+      for (const span of source.quoteContexts!) expect(original.text.slice(span.start, span.end)).toBe(span.text);
+    }
+  });
+
   it("cannot cite a withheld quote", () => {
     const { input, offered, sources, menu } = budgeted(7);
     const withheld = offered.find(quote => !menu.includes(quote))!;

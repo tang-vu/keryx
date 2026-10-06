@@ -24,7 +24,9 @@ const covers = (spans: { start: number; end: number }[], quote: ContextualQuoteO
  * overlapping source spans; never concatenate a gap or trim a quote's context.
  * Contexts are admitted whole, one quote per source in turn and in document
  * order, so one long read cannot crowd out the others. A quote whose context
- * does not fit is withheld, and the count stays visible to both passes. */
+ * does not fit is withheld, and the count stays visible to both passes. Whole
+ * contexts reach 1,200 characters, so reads past about the tenth can be left
+ * with no selectable quote; they keep their passages and their withheld count. */
 export function briefContextSources(sources: ReturnType<typeof evidenceContext>, input: SynthInput,
   options: ContextualQuoteOption[]): BriefSources {
   const offered = sources.map(source => options.filter(quote => quote.marker === source.marker)

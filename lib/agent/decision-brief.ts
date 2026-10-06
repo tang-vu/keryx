@@ -1,4 +1,4 @@
-import { validBriefPacket } from "../llm/decision-brief";
+import { MAX_BRIEF_FACTS, validBriefPacket } from "../llm/decision-brief";
 import type { ReviewedDecisionBrief } from "../llm/decision-brief";
 import type { EvidenceLedger } from "./evidence-ledger";
 import { researchResponseLanguage } from "./empty-public-evidence";
@@ -50,11 +50,15 @@ export function deliverDecisionBrief(brief: ReviewedDecisionBrief | undefined, l
   if (!facts.length) return { answer: "", ledger: restricted, digest: brief.packet.digest, facts: 0, actions: 0 };
   const vi = researchResponseLanguage(question) === "vi";
   const references = (quoteIds: string[]) => [...new Set(quoteIds.map(id => quoteById.get(id)!.marker))].map(marker => `[${marker}]`).join(" ");
+  // A generation that used every row may have left a target out for space, not for lack of evidence.
+  const capped = brief.packet.candidate.facts.length >= MAX_BRIEF_FACTS;
   const sections = restricted.claimCoverage.map(claim => {
     const rows = facts.filter(fact => fact.targetIndex === claim.claimIndex);
     return [ `### ${vi ? "Yêu cầu" : "Research target"} ${claim.claimIndex + 1}`,
       `${vi ? "Câu hỏi" : "Question"}: “${literal(claim.claim)}”`,
       rows.length ? rows.map(fact => `- ${literal(fact.text)} ${references(fact.quoteIds)}`).join("\n")
+        : capped ? vi ? `Bản phân tích giới hạn ${MAX_BRIEF_FACTS} nhận định nên không có nhận định cho yêu cầu này; đây không phải kết luận về bằng chứng.`
+          : `This brief is limited to ${MAX_BRIEF_FACTS} statements and has none for this target; that is not a finding about the evidence.`
         : vi ? "Chưa đủ bằng chứng cho yêu cầu này." : "Insufficient evidence for this target.",
       ...(rows.length && claim.coverage < 0.4 ? [vi ? "Đánh giá độ bao phủ vẫn dưới ngưỡng hỗ trợ." : "Recorded coverage remains below the support threshold."] : []) ].join("\n\n");
   });

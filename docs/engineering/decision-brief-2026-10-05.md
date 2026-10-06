@@ -110,14 +110,19 @@ to ordinary Deep reading rather than to unusual inputs. The bound stays at
 quote per source in turn, in document order. A context that does not fit is
 withheld with its quote and counted per source as `withheldQuoteOptions`, which
 both passes receive. No context is trimmed, a withheld quote has no selectable
-ID, and the selected passages remain in the packet.
+ID, and the selected passages remain in the packet. A whole context can reach
+1,200 characters, so reads past about the tenth can end with no selectable
+quote. They are cut by read order, not relevance, and cannot be cited or earn a
+citation reward from that brief; their withheld count stays visible.
 
 Row caps are four facts and two actions, down from sixteen and six. The review
 reply carries the model's thinking as well as one verdict per row, and raising
 its output budget could be refused by the dated allowance after generation was
 paid for. The cap follows one observation and is not a measured fit. The next
 authorized brief evaluation must record review completion at this cap alongside
-usefulness. Until then the feature stays disabled and the earlier failed sets
+usefulness, and how often generation exceeds four rows, which refuses the
+whole packet. A target left without a row by a full brief is labelled as a
+brief limit rather than as insufficient evidence. Until then the feature stays disabled and the earlier failed sets
 keep their denominators.
 
 ## Retain completed work when compute fails
