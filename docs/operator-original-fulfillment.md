@@ -146,16 +146,38 @@ objects, and grant no storage or signing authority. The native implementation is
 backup and manifest CAS boundary of the existing economic migration. Its
 `inspect` command reads only the exact admitted predecessor/current catalog.
 
-Before migration, independently review and bind a standalone artifact from the
-new commit, its checksum, the protected runtime manifest and unchanged storage
-identity. Positively drain public roles, private workers and all existing
+Before migration, independently review the exact new source and deployment
+helper, the protected runtime manifest and unchanged storage identity.
+Positively drain public roles, private workers and all existing
 scheduler/other writers under the same maintenance lease. Retain original role,
 unit, environment, cadence and cap bindings. Neither this CLI nor
 `--writers-stopped` discovers or drains a process. Do not invoke it from a
-still-running ordinary role or modify the redeploy script to bypass admission.
+still-running ordinary role or bypass reviewed deployment admission.
 
-With the reviewed artifact/runtime bound, use these exact argument shapes; paths
-and private digests are supplied by the protected maintenance controller:
+The primary release path is the existing source-bound `npm run redeploy` with
+reviewed PM2 inputs, an exact accepted `origin/main` commit and held schedulers.
+The paired `KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG` and
+`KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256` inputs retain their historical names.
+Their root-owned `0600`, singly linked protected JSON has exactly six fields:
+`format`, `manifest`, `expectedManifestDigest`, `expectedIdentityDigest`, `backup`
+and `receipt`. Select `format: "keryx-redeploy-original-fulfillment-migration-v1"`;
+all other values come from the protected inspection/maintenance evidence. The
+legacy economic format continues to select only its existing economic migration.
+Neither format accepts a caller-selected script or command.
+
+The helper validates protected bytes and positively stopped public role definitions
+before source sync. With every writer still drained, redeploy builds the exact new
+source, validates stopped roles and the protected config again, then invokes the
+fixed `scripts/mainnet-original-fulfillment-storage-migrate.mts` **before starting
+either new public role**. No old runtime starts against the upgraded catalog.
+Any migration attempt arms failure containment: retain all builds, backup/receipt
+and held writers, with no automatic old-build rollback after uncertain DDL.
+The operator separately verifies/drains private and scheduled writers; neither
+preservation nor the public-role validator performs that work.
+
+The direct native CLI remains available for read-only inspection and separately
+reviewed controlled migration. Use these exact argument shapes with an accepted
+source/runtime binding; paths and private digests come from the protected controller:
 
 ```text
 node --import <reviewed-tsx-loader> <reviewed-source>/scripts/mainnet-original-fulfillment-storage-migrate.mts inspect --manifest <protected-manifest>

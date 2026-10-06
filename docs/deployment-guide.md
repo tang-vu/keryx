@@ -174,6 +174,37 @@ worker, configuration and database compatibility. These changes affect VPS
 deployment orchestration only; web/API, desktop, CLI, MCP, extensions and bots keep
 their application contracts and distribution versions.
 
+### Explicit stopped-writer schema migration
+
+The reviewed-role invocation can additionally supply the paired
+`KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG` and
+`KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256` inputs. These historical selector names
+are retained for compatibility. They require the protected PM2 pair, exact expected
+commit and `KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER=1` from the invocation above.
+The operator must positively drain private/scheduled writers as well as both public
+roles and verify the actual selected database/identity before using this path.
+
+The protected config is root-owned, mode `0600`, singly linked and beneath root-owned
+non-writable ancestors. It contains exactly `format`, `manifest`,
+`expectedManifestDigest`, `expectedIdentityDigest`, `backup` and `receipt`.
+`keryx-redeploy-economic-migration-v1` retains the existing economic migration;
+`keryx-redeploy-original-fulfillment-migration-v1` selects only the fixed
+`scripts/mainnet-original-fulfillment-storage-migrate.mts`. Arbitrary script paths,
+extra fields, changed hashes and active public roles refuse.
+
+Protected config and positively stopped public definitions are checked before source
+sync. Redeploy builds the exact new source while all writers remain stopped, then
+rechecks the protected config/stopped definitions and performs the native verified
+backup/manifest/catalog transition before starting either new public role. A migration
+attempt arms the existing failure hold even if its response is lost; no automatic
+rollback may restart the predecessor against an upgraded sealed schema. Private
+workers and schedules remain controlled by the external maintenance procedure.
+Preserve every build, backup and receipt after failure and inspect the original attempt.
+
+See [same-original fulfillment](operator-original-fulfillment.md) for exact predecessor
+and current schema pins, the native inspection/migration arguments, retained delivery
+hold, supported-role boundaries and separate prepared-result acceptance gates.
+
 ### Successful dependency installation state
 
 `scripts/dependency-state.mjs` uses only Node built-ins, so it can run before installation.
@@ -269,7 +300,7 @@ npm run redeploy
 ```
 The legacy non-reviewed path attempts an automatic build rollback when its health
 gate fails. **Reviewed-role deployment does not:** it retains builds and stops for
-inspection. After an economic migration attempt it holds public writers and
+inspection. After either supported explicit migration attempt it holds public writers and
 forbids automatic rollback, including when the response is lost. Inspect actual
 original migration evidence and worker/config/database compatibility before a
 reviewed forward fix or rollback; never overwrite newer financial state with an
@@ -285,7 +316,9 @@ selects the enrolled mainnet target. Use the reviewed identity-aware backup and
 migration procedure, retain manifest/policy/custody bindings privately, and verify
 restoration separately. The economic migration's native snapshot/receipt checks
 are described in [economic recovery](engineering/mainnet-economic-recovery.md).
-Do not rerun that migration to obtain an unrelated backup.
+The [same-original fulfillment transition](operator-original-fulfillment.md) reuses
+that verified backup boundary through its distinct native migration. Do not rerun
+an unrelated migration merely to obtain a backup.
 
 The remaining path/cron examples in this section describe the legacy ordinary
 SQLite deployment. Neither their path nor hourly scheduling is asserted for
