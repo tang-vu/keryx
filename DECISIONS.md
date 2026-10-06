@@ -18,6 +18,14 @@ links where appropriate. Import is an explicit one-time operation. Existing upke
 budgets, deactivation, historical reads and creator payment boundaries remain
 authoritative. See [catalog audit and release scope](docs/engineering/source-catalog-2026-10-06.md).
 
+The existing CI audit discovered critical/high transitive findings during this
+release. Apply compatible proxy-addr 2.0.8 and source-map-js 1.2.2 lock patches,
+including the desktop's development source-map entry, and retain the audit gate
+with behavior regressions. Keep the moderate stream-json residual explicit:
+its patched major changes the caller API and cannot safely replace Jayson's 1.x
+range without separate compatibility work. Payment SDK declarations and policy
+remain unchanged. See [dependency evidence and surface boundaries](docs/engineering/dependency-audit-2026-10-06.md).
+
 **Audit frozen evidence independently of reported agent scores — 2026-10-06.**
 Use a native evaluation helper, separate from the production evidence gate, to
 validate retained quote/source/item/claim/marker consistency and this run's paid

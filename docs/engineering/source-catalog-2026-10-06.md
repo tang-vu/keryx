@@ -246,3 +246,12 @@ claiming an installed-client upgrade. To withdraw a reference, set its retained 
 through the validated catalog interface; the importer preserves that deactivation. Remove a
 directory suggestion from the static catalog independently. Past citation/evidence records
 remain historical. Reverting these catalog files changes no financial records.
+
+The release also includes compatible transitive security lock patches required by
+the existing CI audit: proxy-addr 2.0.8 and source-map-js 1.2.2 in the root, and
+source-map-js 1.2.2 in desktop development tooling. No payment dependency declaration
+or packaged client module changes. The production high/critical audit gate remains
+intact, with behavior regressions added. Moderate findings remain explicitly
+recorded in the [dependency audit](dependency-audit-2026-10-06.md). Because the root
+lock changes, deployment must establish a fresh successful installation; the prior
+version-only dependency reuse assumption is no longer valid.
