@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Hosted MCP SDK security dependency (2026-10-07, v0.27.10 candidate)
+
+- Pin the app's MCP SDK to 1.31.0, the maintainer's fixed version for
+  GHSA-6qxp-vccf-f47h and the version already used by the caller-funded package.
+- Preserve the high-severity dependency audit and existing server/stdio roles;
+  no OAuth client, payment contract or new provider/custody authority is added.
+- Keep source-inspection functionality. Actual release, deployment and separate
+  installed-client identities remain gated; see
+  [scope and validation](engineering/mcp-sdk-security-2026-10-07.md).
+
 ### Inspect a report without one source (2026-10-06, v0.27.9 candidate)
 
 - Completed web answers and saved public reports offer **What if a source were

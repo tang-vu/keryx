@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**Pin the hosted MCP SDK to the reviewed fixed release — 2026-10-07.**
+Exact-main CI for the source-inspection release failed the high production audit
+after GHSA-6qxp-vccf-f47h entered the advisory feed. Require root SDK 1.31.0,
+matching the stdio package's existing pin, with a scoped lock update and real SDK
+server/transport compatibility checks. An exact pin avoids silently taking a
+later minor release while repairing this gate. Existing server/stdio roles do
+not use the affected OAuth client flow; preserve them and the audit threshold.
+No new OAuth authority, payment, provider, custody, schedule or installed-client
+version is introduced. Source-bound deployment acceptance must separately admit
+the new main; previous source and UI-only comparisons do not do that.
+See [security scope and gates](docs/engineering/mcp-sdk-security-2026-10-07.md).
+
 **Inspect a recorded report without one source — 2026-10-06.**
 The owner requested one memorable small UX improvement after a deep Tameion
 assessment, then authorized an autonomous delivery goal. Reuse the exact excerpt
