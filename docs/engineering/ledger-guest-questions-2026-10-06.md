@@ -31,7 +31,7 @@ publishing zero or a partial question aggregate, matching enrolled scan behavior
 | Surface | Impact and boundary |
 | --- | --- |
 | Web | `/dashboard` gains the guest question aggregate and definition. Responsive layout and existing account labels stay covered. |
-| Public API / A2A | `/api/metrics` adds optional nullable `guestQuestions`; only a count, no account/run rows. Research, receipts and checkout keep their contracts. |
+| Public API / A2A | `/api/metrics` and its OpenAPI response add optional nullable `guestQuestions`; only a count, no account/run rows. Research, receipts and checkout keep their contracts. |
 | Remote MCP / OpenAI | Hosted research/output/payment contracts retain their roles; no metric tool is added. |
 | Buyer / Operator CLI and stdio MCP | No runtime/package changes; public ledger remains reachable through hosted links. |
 | Windows desktop | Task/receipt/export and buyer handoff retain their roles; no installer change. |
