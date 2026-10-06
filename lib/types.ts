@@ -467,6 +467,8 @@ export type McpClientChannel = "codex" | "claude" | "cursor" | "direct" | "other
 
 /** Complete record of one agent run over a question. */
 export interface QueryRun {
+  /** Private same-original recovery provenance; public response builders omit this packet. */
+  originalFulfillment?: import("./a2a/failed-original-fulfillment-protocol").FulfilledOriginalRunMetadata;
   id: string;
   question: string;
   budget: number;

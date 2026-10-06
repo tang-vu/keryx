@@ -39,6 +39,9 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
   private readonly opts: OpenAICompatibleOpts;
 
   protected assertSupplierAdmission(): void { assertOrdinaryCanarySupplierAdmission(); }
+  /** Specialized finite callers can add an earlier retained authority deadline.
+   * The ordinary transport keeps its existing configured timeout. */
+  protected supplierAbortSignal(): AbortSignal { return AbortSignal.timeout(config.llmTimeoutMs); }
 
   protected supportsDecisionBrief(): boolean {
     const flash = (model: string) => /^(deepseek-v4-flash|deepseek-flash)$/.test(model);
@@ -84,7 +87,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     const res = await fetch(`${this.opts.baseUrl}/chat/completions`, {
       method: "POST",
       ...(this.opts.redirect || this.opts.provider === "cloudflare" ? { redirect: this.opts.redirect ?? "error" } : {}),
-      signal: AbortSignal.timeout(config.llmTimeoutMs),
+      signal: this.supplierAbortSignal(),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.opts.apiKey}`,

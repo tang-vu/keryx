@@ -25,13 +25,17 @@ export interface A2aResolutionEvidence {
 }
 
 export interface A2aOrderResolution {
-  action: "repair_completed" | "close_failed";
+  action: "repair_completed" | "close_failed" | "fulfill_failed_original";
   actor: "automatic-poll" | "operator-cli";
   reason:
     | "saved_real_query_run"
+    | "verified_failed_original_fulfilled"
     | "no_saved_run_before_execution_boundaries";
   evidence: A2aResolutionEvidence;
   resolvedAt: string;
+  /** Private immutable original failure and one-shot completion provenance. */
+  fulfillment?: { claimId: string; originalFailureSha256: string; authoritySha256: string;
+    providerLedgerSha256: string; runSha256: string };
 }
 
 export type A2aOrderResolutionUpdate =

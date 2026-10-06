@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { publicQueryRun } from "@/lib/research/public-query-run";
 
 export async function GET(
   _req: NextRequest,
@@ -23,7 +24,7 @@ export async function GET(
     if (!run) {
       return NextResponse.json({ error: "not found" }, { status: 404 });
     }
-    return NextResponse.json(run);
+    return NextResponse.json(publicQueryRun(run));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });

@@ -11,6 +11,7 @@ import { a2aRequestHash } from "../a2a/order";
 import { a2aResearchPackageForVersion, a2aResearchPackageFingerprint } from "../a2a/research-package";
 import { matchesA2aOriginalBinding, type A2aOriginalClaim } from "../a2a/original-claim";
 import type { KeryxDB } from "../db/keryx-db";
+import { retainedFulfillmentDeliveryResolution } from "./fulfillment-policy";
 
 /** One reviewed owner canary, not permission to renew historical allowances or fund wallets. */
 export const BUSINESS_CANARY_REVIEW = Object.freeze({
@@ -313,6 +314,9 @@ const failedClosureSchema = failedProofSchema.extend({ format: z.literal("keryx-
 export type FailedBusinessCanaryProof = z.infer<typeof failedProofSchema>;
 export type BusinessCanaryClosure = FailedBusinessCanaryProof | {
   outcome: "verified-completed-original"; admissionPaused: false; paidDeliveryObligation: "resolved";
+} | {
+  outcome: "verified-fulfilled-original"; admissionPaused: false; paidDeliveryObligation: "resolved";
+  deliveryCompleted: true; refunded: false; noNewInboundPayment: true;
 };
 export type FailedBusinessCanaryProofDb = Pick<KeryxDB,
   "getA2aOrder" | "getQueryRun" | "hasA2aOriginalSettlement" | "listCreatorPaymentAttemptsByQuery">;
@@ -382,10 +386,27 @@ export function retainedBusinessCanaryClosure(): BusinessCanaryClosure | null {
     return refuse("terminal closure record refused");
   const current = terminalCanaryContext(), providerLedger = retainedProviderLedger(current);
   if (!equal(parsed.data.providerLedger, providerLedger)) return refuse("closed provider ledger changed");
+  const delivered = retainedFulfillmentDeliveryResolution(retainedFailedBusinessCanaryAuthority());
+  if (delivered) return delivered;
   return failedProofSchema.parse({ outcome: parsed.data.outcome, paidDeliveryObligation: parsed.data.paidDeliveryObligation,
     deliveryCompleted: parsed.data.deliveryCompleted, refunded: parsed.data.refunded, admissionPaused: parsed.data.admissionPaused,
     originalEvidenceSha256: parsed.data.originalEvidenceSha256, providerLedger });
 }
+/** Historical failed authority is observed independently of any later delivery marker.
+ * No selector, native writer, supplier permission or financial retry is granted. */
+export function retainedFailedBusinessCanaryAuthority() {
+  const current = terminalCanaryContext();
+  const bytes = readProtected(path.join(current.directory, "closed.json"));
+  const closed = failedClosureSchema.parse(JSON.parse(bytes.toString("utf8")));
+  const providerLedger = retainedProviderLedger(current);
+  if (closed.policySha256 !== current.digest || closed.queryId !== current.policy.original.queryId ||
+      !equal(closed.providerLedger, providerLedger)) return refuse("failed retained authority changed");
+  return { original: originalClaimForPolicy(current.policy), question: current.policy.original.request.question,
+    policySha256: current.digest, failedClosureSha256: sha(bytes),
+    originalEvidenceSha256: closed.originalEvidenceSha256, originalProviderLedgerSha256: providerLedger.sha256,
+    providerLedger };
+}
+export type RetainedFailedCanaryAuthority = ReturnType<typeof retainedFailedBusinessCanaryAuthority>;
 function assertNoFailedCanaryAdmission() {
   if (retainedBusinessCanaryClosure()?.admissionPaused) refuse("unresolved paid delivery holds admission");
 }

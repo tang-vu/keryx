@@ -617,6 +617,12 @@ export interface KeryxDB {
   /** Exact native purchase+settled inbound proof, readonly. False is not replay/refund authority;
    * unsupported or unknown storage/transport throws. */
   hasA2aOriginalSettlement?(expected: A2aOriginalClaim): Promise<boolean>;
+  /** Private finite recovery, never a requeue. Optional lanes explicitly refuse unsupported backends. */
+  claimA2aFailedOriginalFulfillment?(input: import("../a2a/failed-original-fulfillment-protocol").FulfillmentClaimInput): Promise<import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentClaim | null>;
+  getA2aFailedOriginalFulfillment?(originalId: string): Promise<import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentRecord | null>;
+  /** Atomic insert-only QueryRun + exact failed-original completion; no financial write. */
+  completeA2aFailedOriginalFulfillment?(input: import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentCompletion): Promise<boolean>;
+  hasA2aFailedOriginalFulfillment?(authority: import("../a2a/failed-original-fulfillment-protocol").FulfillmentAuthority): Promise<boolean>;
   /** Durably crosses the creator-payment boundary before any gateway authorization can begin. */
   markA2aOrderPaymentStarted(id: string, startedAt: string): Promise<boolean>;
   /** Durably crosses the QueryRun-save boundary before a no-payment result can appear. */

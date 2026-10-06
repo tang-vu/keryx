@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { QueryRun } from "../types";
 import { calculateEconomics, calculateTestnetEconomics, economicsRunSample } from "./testnet-economics";
 import { FLASH_POLICY } from "./provider-cost-policy";
+import { syntheticFailedOriginal, syntheticFulfilledRun } from "../db/a2a-fulfillment-fixture";
 
 function run(
   id: string,
@@ -35,6 +36,14 @@ function run(
 }
 
 describe("testnet economics", () => {
+  it("does not call same-original recovery costs complete when the original provider bill remains unknown", () => {
+    const fixture = syntheticFailedOriginal(), completion = syntheticFulfilledRun({ ...fixture.input, failedOrder: fixture.order });
+    const measured = run("measured", "treasury");
+    expect(economicsRunSample(measured as QueryRun)?.usageCoverage).toBe("complete");
+    const recovered = { ...measured, originalFulfillment: completion.run.originalFulfillment };
+    expect(economicsRunSample(recovered as QueryRun)?.usageCoverage).toBe("unknown");
+    expect(calculateTestnetEconomics([economicsRunSample(recovered as QueryRun)!], []).pricedRuns).toBe(0);
+  });
   it("rejects old complete projections and mismatched, duplicate or pending call evidence", () => {
     const measured = run("measured", "treasury");
     expect(calculateTestnetEconomics([{ ...measured, usageCoverage: "complete" }], []).pricedRuns).toBe(0);
