@@ -4,7 +4,8 @@ import type { A2aOrder } from "../a2a/order";
 import { matchesA2aOriginalBinding, matchesA2aOriginalClaim, validateA2aClaimWorker, validateA2aOriginalClaim, type A2aOriginalClaim } from "../a2a/original-claim";
 import { assertSqliteResearchAuthority } from "./research-monthly";
 
-function hasSettledProof(db: DatabaseSync, order: A2aOrder, binding: A2aOriginalClaim): boolean {
+/** Internal native proof; caller must already own its verified read/write transaction. */
+export function hasSettledProof(db: DatabaseSync, order: A2aOrder, binding: A2aOriginalClaim): boolean {
   return Boolean(db.prepare(`SELECT 1 FROM research_purchase_authorizations c
     JOIN payment_events p ON p.id=? AND p.kind='inbound' AND p.source_id='a2a'
       AND p.query_id=c.purchase_id AND lower(p.payer)=c.payer AND lower(p.payee)=c.payee

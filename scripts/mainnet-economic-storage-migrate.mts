@@ -12,19 +12,22 @@ import { encodeStorageValue, STORAGE_SNAPSHOT_LIMITS as limits } from "../lib/db
 import { installMainnetApplicationSchema } from "../lib/db/mainnet-application-schema";
 import { sqliteApplicationSchemaProfile } from "../lib/db/sqlite-application-schema-profile";
 import { migrateSessionWithdrawalAbortStorage } from "../lib/db/session-withdrawal-abort-migration";
+import { originalFulfillmentSchemaProfiles, migrateFailedOriginalFulfillmentStorage } from "../lib/db/a2a-fulfillment-migration";
 
 function fail(): never { throw new Error("Economic storage migration refused; retain all original and backup evidence"); }
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
 const digestPattern = /^[a-f0-9]{64}$/;
-const abortTable = "session_withdrawal_publication_aborts";
+type MigrationKind = "economic" | "original-fulfillment";
+const migrationFormat = (kind: MigrationKind) => kind === "economic" ? "keryx-economic-storage-migration-v1" : "keryx-original-fulfillment-storage-migration-v1";
 type Snapshot = { schemaDigest: string; rows: number; tables: Record<string, { rows: number; digest: string }> };
 
 function schemaProfile(db: DatabaseSync, identity: StorageIdentity): string {
   return sqliteApplicationSchemaProfile(db, new Set([STORAGE_IDENTITY_TABLE, "storage_identity_no_update",
     "storage_identity_no_delete", "storage_identity_no_insert", ...Object.keys(storageFenceStatements(db, identity))]));
 }
-function approvedProfiles(): string[] {
+function approvedProfiles(kind: MigrationKind = "economic"): readonly string[] {
+  if (kind === "original-fulfillment") return originalFulfillmentSchemaProfiles();
   return [false, true].map(publicationAbort => {
     const db = new DatabaseSync(":memory:");
     try { installMainnetApplicationSchema(db, { publicationAbort }); return sqliteApplicationSchemaProfile(db, new Set()); }
@@ -104,21 +107,23 @@ export interface EconomicMigrationOptions {
 }
 
 /** Explicit read-only inventory. Never loads env files, adopts identity, or opens custody. */
-export function inspectEconomicStorage(manifestFile: string) {
+function inspectBoundStorage(manifestFile: string, kind: MigrationKind) {
   const manifest = inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: manifestFile });
   if (manifest.backend.kind !== "sqlite" || manifest.identity.authorityMode !== "mainnet-real") fail();
-  const source = openSnapshot(manifest.backend.databasePath, manifest.identity, approvedProfiles());
+  const source = openSnapshot(manifest.backend.databasePath, manifest.identity, approvedProfiles(kind));
   try {
-    return { format: "keryx-economic-storage-inspection-v1", manifestDigest: sha(canonicalJson(manifest)),
+    return { format: kind === "economic" ? "keryx-economic-storage-inspection-v1" : "keryx-original-fulfillment-storage-inspection-v1", manifestDigest: sha(canonicalJson(manifest)),
       identityDigest: storageIdentityDigest(manifest.identity), targetDigest: source.held.identity,
       schemaDigest: source.value.schemaDigest, snapshotDigest: sha(canonicalJson(source.value)),
       rows: source.value.rows, signingResumeAuthorized: false };
   } finally { source.close(); }
 }
+export function inspectEconomicStorage(manifestFile: string) { return inspectBoundStorage(manifestFile, "economic"); }
+export function inspectOriginalFulfillmentStorage(manifestFile: string) { return inspectBoundStorage(manifestFile, "original-fulfillment"); }
 
 /** Operator must stop and verify every writer before calling. BEGIN EXCLUSIVE in
  * the migration refuses an occupied database; this flag is not process discovery. */
-export async function migrateEconomicStorage(options: EconomicMigrationOptions) {
+async function migrateBoundStorage(options: EconomicMigrationOptions, kind: MigrationKind) {
   if (options.writersStopped !== true || !digestPattern.test(options.expectedManifestDigest) ||
       !digestPattern.test(options.expectedIdentityDigest)) fail();
   const manifest = inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: options.manifest });
@@ -128,7 +133,9 @@ export async function migrateEconomicStorage(options: EconomicMigrationOptions) 
   const recheckManifest = () => {
     if (canonicalJson(inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: options.manifest })) !== canonicalJson(manifest)) fail();
   };
-  const profiles = approvedProfiles(), file = manifest.backend.databasePath;
+  const profiles = approvedProfiles(kind), file = manifest.backend.databasePath;
+  const addedTables = kind === "economic" ? ["session_withdrawal_publication_aborts"] :
+    ["a2a_failed_original_fulfillments", "a2a_fulfillment_completions"];
   const source = openSnapshot(file, manifest.identity, profiles);
   let receiptFd: number | undefined, outputFd: number | undefined;
   let outputHeld: ReturnType<typeof holdStorageTarget> | undefined;
@@ -153,7 +160,7 @@ export async function migrateEconomicStorage(options: EconomicMigrationOptions) 
     const copied = openSnapshot(options.backup, manifest.identity, profiles);
     try { if (canonicalJson(copied.value) !== canonicalJson(source.value)) fail(); } finally { copied.close(); }
     recheckManifest();
-    append({ format: "keryx-economic-storage-migration-v1", phase: "backup-verified",
+    append({ format: migrationFormat(kind), phase: "backup-verified",
       manifestDigest: options.expectedManifestDigest, identityDigest: options.expectedIdentityDigest,
       sourceTargetDigest: source.held.identity, backupTargetDigest: outputHeld.identity,
       beforeSchemaDigest: source.value.schemaDigest, beforeSnapshotDigest: sha(canonicalJson(source.value)),
@@ -162,10 +169,11 @@ export async function migrateEconomicStorage(options: EconomicMigrationOptions) 
     // Recheck the backed-up snapshot under the migration's EXCLUSIVE lock. A
     // racing old writer must never leave upgraded history absent from the backup.
     const migrationTarget = holdStorageTarget(file);
-    let migration: ReturnType<typeof migrateSessionWithdrawalAbortStorage>;
+    let migration: ReturnType<typeof migrateSessionWithdrawalAbortStorage> | ReturnType<typeof migrateFailedOriginalFulfillmentStorage>;
     try {
       if (migrationTarget.identity !== source.held.identity) fail();
-      migration = migrateSessionWithdrawalAbortStorage(file, manifest.identity, db => {
+      const migrate = kind === "economic" ? migrateSessionWithdrawalAbortStorage : migrateFailedOriginalFulfillmentStorage;
+      migration = migrate(file, manifest.identity, db => {
         migrationTarget.verify(); recheckManifest(); outputHeld!.verify();
         if (canonicalJson(snapshot(db, manifest.identity, profiles)) !== canonicalJson(source.value)) fail();
         const retainedBackup = openSnapshot(options.backup, manifest.identity, profiles);
@@ -176,13 +184,13 @@ export async function migrateEconomicStorage(options: EconomicMigrationOptions) 
     const after = openSnapshot(file, manifest.identity, [profiles[1]]);
     try {
       const retained = { ...after.value.tables };
-      if (!(abortTable in source.value.tables)) {
-        if (retained[abortTable]?.rows !== 0) fail();
-        delete retained[abortTable];
+      for (const added of addedTables) if (!(added in source.value.tables)) {
+        if (retained[added]?.rows !== 0) fail();
+        delete retained[added];
       }
       if (canonicalJson(retained) !== canonicalJson(source.value.tables)) fail();
       recheckManifest(); outputHeld.verify();
-      const result = { ...migration, format: "keryx-economic-storage-migration-v1", phase: "migration-verified",
+      const result = { ...migration, format: migrationFormat(kind), phase: "migration-verified",
         manifestDigest: options.expectedManifestDigest, identityDigest: options.expectedIdentityDigest,
         originalRowsPreserved: true, beforeSnapshotDigest: sha(canonicalJson(source.value)),
         afterSnapshotDigest: sha(canonicalJson(after.value)), rows: after.value.rows,
@@ -198,6 +206,8 @@ export async function migrateEconomicStorage(options: EconomicMigrationOptions) 
     }
   }
 }
+export async function migrateEconomicStorage(options: EconomicMigrationOptions) { return migrateBoundStorage(options, "economic"); }
+export async function migrateOriginalFulfillmentStorage(options: EconomicMigrationOptions) { return migrateBoundStorage(options, "original-fulfillment"); }
 
 export async function runEconomicStorageCli(args: string[]) {
   if (args.length === 3 && args[0] === "inspect" && args[1] === "--manifest") return inspectEconomicStorage(args[2]);

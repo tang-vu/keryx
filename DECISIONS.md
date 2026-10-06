@@ -5538,3 +5538,34 @@ reviewed, properly authorized fulfillment/refund resolution. No blind replay,
 automatic refund from another custody, fabricated success or new schedule occurs.
 
 See [finite failure policy](docs/operator-canary.md#failed-delivery-and-retained-admission).
+
+**Fulfill one paid failed original through a distinct retained claim — 2026-10-06.**
+
+The owner authorized useful fulfillment of the same original within its retained
+limits. A failed order has no saved answer or recoverable discovery/decomposition;
+requeueing it would silently grant another research/payment attempt. Instead use
+a separate protected, source/host-bound additive authorization over reviewed
+reconstructed targets and genuine frozen whole official public documents. Keep
+the original failed closure, charge and all old model/search holds immutable.
+Current cited statements, deterministic source-span checks and separate model
+statement review remain authoritative; decision briefs stay disabled.
+
+SQLite grants one permanent UNIQUE claim by original, retaining the complete
+failed snapshot. A finite private CLI can only run sufficiency, synthesis and
+review, with three durable fixed model holds and the original supplier deadline;
+no search, new inbound payment, creator/source spending, fallback, takeover or
+retry is admitted. PostgreSQL fulfillment is explicitly unsupported. Execution
+stages an immutable result for exact-digest human review. Native metadata
+completion inserts the same-id result and completes only that exact failed
+original in one transaction, with a distinct historical resolution. Only fresh
+native proof and unchanged old/new ledgers can create a separate delivered
+marker and resolve the admission hold. Useful delivery with visible evidence
+gaps does not establish independent quality acceptance or new customer traction.
+
+Enrolled startup never repairs its schema. A positively drained, source-bound
+explicit migration verifies a no-replace flushed backup, manifest, identity,
+historical rows and exact predecessor/current catalogs under the native exclusive
+transaction; old runtime code cannot restart after upgrade. Public API/client
+projections omit private recovery authority hashes. New usage counters cannot
+erase the original provider bill's unknown status. See
+[same-original fulfillment](docs/operator-original-fulfillment.md).

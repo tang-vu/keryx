@@ -10,12 +10,18 @@ const protectedPath = (value, suffix) => typeof value === 'string' &&
   /^\/root\/\.local\/share\/[a-zA-Z0-9_./-]+$/.test(value) &&
   !value.includes('..') && path.posix.normalize(value) === value && value.endsWith(suffix);
 const signature = s => [s.dev, s.ino, s.size, s.mtimeNs, s.ctimeNs].join('|');
+// This protected format selects one reviewed source-owned entry point. It never
+// accepts a script path or an arbitrary migration command from the caller.
+const migrationScripts = {
+  'keryx-redeploy-economic-migration-v1': '/root/keryx/scripts/mainnet-economic-storage-migrate.mts',
+  'keryx-redeploy-original-fulfillment-migration-v1': '/root/keryx/scripts/mainnet-original-fulfillment-storage-migrate.mts',
+};
 
 export function validateEconomicMigrationConfig(value) {
   const fields = ['format', 'manifest', 'expectedManifestDigest', 'expectedIdentityDigest', 'backup', 'receipt'];
   if (!value || typeof value !== 'object' || Array.isArray(value) ||
       Object.keys(value).length !== fields.length || fields.some(key => !Object.hasOwn(value, key)) ||
-      value.format !== 'keryx-redeploy-economic-migration-v1' ||
+      typeof value.format !== 'string' || !Object.hasOwn(migrationScripts, value.format) ||
       !protectedPath(value.manifest, '.json') || !protectedPath(value.backup, '.sqlite') ||
       !protectedPath(value.receipt, '.jsonl') ||
       typeof value.expectedManifestDigest !== 'string' || typeof value.expectedIdentityDigest !== 'string' ||
@@ -64,7 +70,7 @@ export function runEconomicDeployMigration(mode, config, reviewedFile, reviewedS
   recheck();
   if (mode === 'validate') return;
   return run('/usr/bin/env', [...cleanNode, '--import', '/root/keryx/node_modules/tsx/dist/loader.mjs',
-    '/root/keryx/scripts/mainnet-economic-storage-migrate.mts', 'migrate',
+    migrationScripts[config.format], 'migrate',
     '--manifest', config.manifest, '--expected-manifest', config.expectedManifestDigest,
     '--expected-identity', config.expectedIdentityDigest, '--backup', config.backup,
     '--receipt', config.receipt, '--writers-stopped']);

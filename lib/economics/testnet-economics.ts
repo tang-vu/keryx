@@ -64,6 +64,8 @@ export type EconomicsRunSample = Pick<
 
 /** Require one valid usage record for every completed instrumented call. */
 function completeUsage(run: Partial<QueryRun>): boolean {
+  // New recovery counters cannot erase the first failed execution's unknown bill.
+  if (run.originalFulfillment?.originalProviderBilling === "unknown") return false;
   if (!Array.isArray(run.reasoningAttempts) || !Array.isArray(run.llmUsage)) return false;
   const realAttempts = run.reasoningAttempts.filter(
     (attempt) => attempt.engine !== "heuristic" && attempt.outcome !== "circuit-open" && attempt.outcome !== "input-limited",

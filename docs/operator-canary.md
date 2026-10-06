@@ -104,7 +104,7 @@ not observed provider invoices. The owner trial establishes neither delivered
 usefulness nor independent revenue. Its original is never re-signed, requeued
 or submitted again.
 
-App 0.27.4 adds distinct private `verify-failed` and `close-failed` operations.
+App 0.27.6 provides distinct private `verify-failed` and `close-failed` operations.
 They require the exact settled failed original, journal version 1, an existing
 start, no payment/result boundary, no saved run and no creator attempts. Closure
 commits the complete protected provider-file inventory and retains every hold.
@@ -118,6 +118,11 @@ transports held.** It does not release business admission or erase the customer'
 charge. A separate reviewed fulfillment/refund resolution with its applicable
 authority is required before that hold can be lifted. Do not replace this marker
 with a completed marker, clear provider slots or renew the expired allowance.
+
+The additive [same-original fulfillment lane](operator-original-fulfillment.md)
+is separate from failed closure. It requires its own reviewed authority, explicit
+stopped-writer SQLite migration, one permanent original claim and exact prepared
+output review. Publishing that code does not establish delivery or release this hold.
 
 Worker failures now retain only closed stage/category diagnostics in the private
 Operator outcome audit and sanitized worker log. Raw exception messages, stack,

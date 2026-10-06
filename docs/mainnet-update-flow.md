@@ -70,6 +70,12 @@ offline reproduction. No shadow production payment is permitted.
    zero-downtime release.
    Storage/custody/policy changes require their explicit migration procedure,
    verified backups and positive drain of all affected writers/signers.
+   The [same-original fulfillment transition](operator-original-fulfillment.md)
+   uses the protected six-field redeploy migration config with its distinct
+   `keryx-redeploy-original-fulfillment-migration-v1` format. Under the held-writer
+   maintenance boundary, new source builds first and its fixed native migration
+   runs before any new role starts. A migration attempt forbids automatic old-source
+   rollback; do not substitute startup schema repair or restart the predecessor.
 8. **Verify hosted and distributed delivery.** Match public health to the merged
    commit and expected network; inspect safe UI/API behavior and worker readiness.
    Check schemas/identities and retained-original recovery as applicable. Publish

@@ -7,8 +7,8 @@ import { installMainnetResearchSchema } from "./research-monthly";
 import { CREATOR_OWNER_WITHDRAWAL_SQL } from "./creator-owner-withdrawal-journal";
 import { SESSION_WITHDRAWAL_ABORT_SQL } from "./session-withdrawal-abort";
 /** Fresh mainnet namespace only. Existing deployed stores require a separately reviewed migration. */
-export function installMainnetApplicationSchema(db: DatabaseSync, options: { publicationAbort?: boolean } = {}): void {
-  installSqliteApplicationSchema(db);
+export function installMainnetApplicationSchema(db: DatabaseSync, options: { publicationAbort?: boolean; originalFulfillment?: boolean } = {}): void {
+  installSqliteApplicationSchema(db, options);
   db.exec(SESSION_GRANT_CONSENTS_SQL);
   db.exec(SESSION_WITHDRAWAL_PREPARATIONS_SQL);
   db.exec(HOSTED_TREASURY_SQL);

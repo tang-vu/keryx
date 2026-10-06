@@ -1,5 +1,25 @@
 # Keryx Project Changelog
 
+### One-shot same-original delivery fulfillment (2026-10-06, v0.27.7 candidate)
+
+- Add a private recovery lane for the exactly settled, failed owner canary;
+  permanently claim the same original and preserve its failure, payment and old
+  supplier reservations. No requeue, second purchase, search or creator payment.
+- Use two frozen official public documents for three bounded model requests:
+  sufficiency, cited statements and separate review. Stage the complete result
+  for private human review; missing requested details stay visible beside supported
+  target answers. Only its exact approved digest permits atomic metadata delivery.
+- SQLite requires an explicit verified-backup schema transition while every writer
+  is stopped. Enrolled startup never upgrades authority; PostgreSQL refuses this
+  lane. Retain ordinary paid admission until distinct verified delivery.
+- Web/API remove private recovery provenance; desktop, CLI, remote/stdio MCP,
+  extensions and bots retain existing saved-answer and receipt contracts. Their
+  package versions remain independent; no installer/package publication is claimed.
+- [Release procedure and remaining gates](operator-original-fulfillment.md).
+  Source tests do not establish live delivery, actual billing, autonomous-business
+  usefulness or Tameion acceptance. Migration, deployment and reviewed output remain
+  required before claiming delivery.
+
 ### Retained failed delivery and bounded selection (2026-10-06, v0.27.6 candidate)
 
 - Preflight source-selection batches using complete serialized message bytes;

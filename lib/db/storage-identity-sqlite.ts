@@ -12,7 +12,7 @@ export const STORAGE_APPLICATION_TABLES = Object.freeze([
   ...GATEWAY_FUNDING_TABLES,
   "sources", "source_meta", "source_notify", "source_notify_email", "source_items", "article_offers", "gap_intents", "cache_items",
   "payment_events", "browser_authorization_intents", "browser_journal_bindings", "browser_journal_control", "browser_journal_writer",
-  "browser_retained_grants", "browser_signer_capacity", "query_runs", "a2a_orders", "activation_events", "withdrawals", "api_keys",
+  "browser_retained_grants", "browser_signer_capacity", "query_runs", "a2a_orders", "a2a_failed_original_fulfillments", "a2a_fulfillment_completions", "activation_events", "withdrawals", "api_keys",
   "browser_signing_v2_control", "browser_signing_v2_barrier", "browser_signing_v2_writer",
   "browser_signing_namespaces", "browser_signing_queries", "browser_signing_originals", "browser_signing_v3_writer",
   "api_key_usage", "users", "answer_feedback", "query_memories", "session_grants", "rate_limit_counters", "reasoning_circuits",
@@ -194,7 +194,7 @@ export function storageFenceStatements(db: DatabaseSync, identity: Readonly<Stor
       }
     }
     if (identity.authorityMode === "testnet-offline" && (table.startsWith("browser_") && !["browser_journal_control", "browser_journal_writer"].includes(table) ||
-        ["session_grants", "withdrawals", "creator_withdrawal_requests", "creator_withdrawal_transfer_attempts", "creator_withdrawal_attestations", "a2a_orders"].includes(table) || table.startsWith("private_"))) {
+        ["session_grants", "withdrawals", "creator_withdrawal_requests", "creator_withdrawal_transfer_attempts", "creator_withdrawal_attestations", "a2a_orders", "a2a_failed_original_fulfillments", "a2a_fulfillment_completions"].includes(table) || table.startsWith("private_"))) {
       for (const operation of ["INSERT", "UPDATE"]) {
         const name = `storage_offline_${table}_${operation.toLowerCase()}`;
         result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} BEGIN SELECT RAISE(ABORT,'offline storage denies financial authorization'); END`;

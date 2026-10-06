@@ -1110,6 +1110,19 @@ export class SupabaseAdapter implements KeryxDB {
     return row ? rowToA2aOrder(row as Record<string, unknown>) : null;
   }
 
+  async claimA2aFailedOriginalFulfillment(input: import("../a2a/failed-original-fulfillment-protocol").FulfillmentClaimInput): Promise<import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentClaim | null> {
+    void input; throw new Error("PostgreSQL failed original fulfillment is not admitted");
+  }
+  async getA2aFailedOriginalFulfillment(originalId: string): Promise<import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentRecord | null> {
+    void originalId; throw new Error("PostgreSQL failed original fulfillment is not admitted");
+  }
+  async completeA2aFailedOriginalFulfillment(input: import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentCompletion): Promise<boolean> {
+    void input; throw new Error("PostgreSQL failed original fulfillment is not admitted");
+  }
+  async hasA2aFailedOriginalFulfillment(authority: import("../a2a/failed-original-fulfillment-protocol").FulfillmentAuthority): Promise<boolean> {
+    void authority; throw new Error("PostgreSQL failed original fulfillment is not admitted");
+  }
+
   async markA2aOrderPaymentStarted(id: string, startedAt: string): Promise<boolean> {
     const { data, error } = await this.domainRpc("mark_a2a_payment_started", {
       p_id: id,

@@ -16,6 +16,7 @@ import { deriveConfidence } from "@/lib/agent/confidence";
 import { breadcrumbJsonLd, crumbLabel } from "@/lib/seo-structured-data";
 import { safeInlineJson } from "@/lib/safe-json";
 import { DispatchView } from "./dispatch-view";
+import { publicQueryRun } from "@/lib/research/public-query-run";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
@@ -182,7 +183,7 @@ export default async function DispatchPage({ params }: PageProps) {
           </Link>
         ) : null}
 
-        <DispatchView run={run} payments={payments} />
+        <DispatchView run={publicQueryRun(run)} payments={payments} />
 
         <PortableReceiptPanel dispatchId={id} />
 

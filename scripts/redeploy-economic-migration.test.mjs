@@ -12,27 +12,36 @@ import { validateEconomicMigrationConfig, readEconomicMigrationConfig, runEconom
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const configFile = '/root/.local/share/release/economic.json';
 const rolesFile = '/root/.local/share/release/roles.json';
-const config = () => ({ format: 'keryx-redeploy-economic-migration-v1',
+const migrations = [
+  ['keryx-redeploy-economic-migration-v1', '/root/keryx/scripts/mainnet-economic-storage-migrate.mts'],
+  ['keryx-redeploy-original-fulfillment-migration-v1', '/root/keryx/scripts/mainnet-original-fulfillment-storage-migrate.mts'],
+];
+const config = (format = migrations[0][0]) => ({ format,
   manifest: '/root/.local/share/storage/manifest.json', expectedManifestDigest: 'a'.repeat(64),
   expectedIdentityDigest: 'b'.repeat(64), backup: '/root/.local/share/release/original.sqlite',
   receipt: '/root/.local/share/release/migration.jsonl' });
 
 test('configuration exposes only original identity bindings and fresh evidence destinations', () => {
-  assert.deepEqual(validateEconomicMigrationConfig(config()), config());
-  for (const mutate of [c => c.command = 'touch /tmp/unsafe', c => c.format = 'v2',
-    c => delete c.expectedIdentityDigest, c => c.expectedManifestDigest = 'A'.repeat(64),
-    c => c.manifest = '/tmp/manifest.json', c => c.backup = '/root/.local/share/../old.sqlite',
-    c => c.receipt = '/root/.local/share/a;touch.jsonl', c => c.backup = '/root/.local/share/a//b.sqlite',
-    c => c.receipt = '/root/.local/share/x.sqlite', c => c.expectedIdentityDigest = null,
-    c => c.expectedIdentityDigest = ['b'.repeat(64)]]) {
-    const c = config(); mutate(c); assert.throws(() => validateEconomicMigrationConfig(c));
+  for (const [format] of migrations) {
+    assert.deepEqual(validateEconomicMigrationConfig(config(format)), config(format));
+    for (const mutate of [c => c.command = 'touch /tmp/unsafe', c => c.script = '/tmp/migrate.mts',
+      c => c.format = 'v2', c => c.format = '__proto__', c => c.format = [format],
+      c => c.format = '/root/keryx/scripts/mainnet-original-fulfillment-storage-migrate.mts',
+      c => delete c.expectedIdentityDigest, c => c.expectedManifestDigest = 'A'.repeat(64),
+      c => c.manifest = '/tmp/manifest.json', c => c.backup = '/root/.local/share/../old.sqlite',
+      c => c.receipt = '/root/.local/share/a;touch.jsonl', c => c.backup = '/root/.local/share/a//b.sqlite',
+      c => c.receipt = '/root/.local/share/x.sqlite', c => c.expectedIdentityDigest = null,
+      c => c.expectedIdentityDigest = ['b'.repeat(64)]]) {
+      const c = config(format); mutate(c); assert.throws(() => validateEconomicMigrationConfig(c));
+    }
   }
 });
 
-test('protected reader hashes real bytes and refuses wrong hash, metadata, target race and host', t => {
+for (const [format, script] of migrations) {
+test(`protected ${format} reader hashes real bytes and refuses wrong hash, metadata, target race and host`, t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'keryx-economic-config-'));
   t.after(() => fs.rmSync(directory, { recursive: true }));
-  const file = path.join(directory, 'fixture.json'), bytes = Buffer.from(JSON.stringify(config()));
+  const file = path.join(directory, 'fixture.json'), bytes = Buffer.from(JSON.stringify(config(format)));
   fs.writeFileSync(file, bytes);
   let metadata = {}, parent = {}, changedTarget = false, reads = 0;
   const host = { platform: 'linux', uid: 0, fs: {
@@ -47,7 +56,7 @@ test('protected reader hashes real bytes and refuses wrong hash, metadata, targe
     fstatSync: (...args) => fs.fstatSync(...args), readFileSync: (...args) => fs.readFileSync(...args),
     closeSync: (...args) => fs.closeSync(...args),
   } };
-  assert.deepEqual(readEconomicMigrationConfig(configFile, sha(bytes), host), config());
+  assert.deepEqual(readEconomicMigrationConfig(configFile, sha(bytes), host), config(format));
   assert.throws(() => readEconomicMigrationConfig(configFile, '0'.repeat(64), host));
   for (const bad of ['/tmp/c.json', '/root/.local/share/../c.json', '/root/.local/share/c;echo.json'])
     assert.throws(() => readEconomicMigrationConfig(bad, sha(bytes), host));
@@ -62,13 +71,13 @@ test('protected reader hashes real bytes and refuses wrong hash, metadata, targe
   changedTarget = false;
   for (const extra of [{ uid: 1000 }, { platform: 'win32' }])
     assert.throws(() => readEconomicMigrationConfig(configFile, sha(bytes), { ...host, ...extra }));
-  fs.writeFileSync(file, JSON.stringify({ ...config(), manifest: configFile }));
+  fs.writeFileSync(file, JSON.stringify({ ...config(format), manifest: configFile }));
   assert.throws(() => readEconomicMigrationConfig(configFile, sha(fs.readFileSync(file)), host));
 });
 
-test('migration runs only fixed clean Node after positively reviewed roles and a protected-byte recheck', () => {
+test(`${format} runs only its fixed clean Node after positively reviewed roles and a protected-byte recheck`, () => {
   const calls = [], run = (...args) => { calls.push(args); return 'verified'; };
-  assert.equal(runEconomicDeployMigration('migrate', config(), rolesFile, 'c'.repeat(64), run,
+  assert.equal(runEconomicDeployMigration('migrate', config(format), rolesFile, 'c'.repeat(64), run,
     () => calls.push(['recheck'])), 'verified');
   assert.equal(calls.length, 3);
   assert.deepEqual(calls[0], ['/usr/bin/env', ['-i', 'PATH=/usr/bin:/bin', 'NODE_ENV=production',
@@ -76,23 +85,30 @@ test('migration runs only fixed clean Node after positively reviewed roles and a
   assert.deepEqual(calls[1], ['recheck']);
   assert.deepEqual(calls[2], ['/usr/bin/env', ['-i', 'PATH=/usr/bin:/bin', 'NODE_ENV=production',
     '/usr/bin/node', '--import', '/root/keryx/node_modules/tsx/dist/loader.mjs',
-    '/root/keryx/scripts/mainnet-economic-storage-migrate.mts', 'migrate', '--manifest', config().manifest,
-    '--expected-manifest', 'a'.repeat(64), '--expected-identity', 'b'.repeat(64), '--backup', config().backup,
-    '--receipt', config().receipt, '--writers-stopped']]);
+    script, 'migrate', '--manifest', config(format).manifest,
+    '--expected-manifest', 'a'.repeat(64), '--expected-identity', 'b'.repeat(64), '--backup', config(format).backup,
+    '--receipt', config(format).receipt, '--writers-stopped']]);
   for (const args of [['migrate', '', 'c'.repeat(64)], ['migrate', rolesFile, 'bad'], ['rollback', rolesFile, 'c'.repeat(64)]])
-    assert.throws(() => runEconomicDeployMigration(args[0], config(), args[1], args[2], () => assert.fail(), () => assert.fail()));
+    assert.throws(() => runEconomicDeployMigration(args[0], config(format), args[1], args[2], () => assert.fail(), () => assert.fail()));
+  for (const mutate of [c => c.format = 'unreviewed', c => c.script = '/tmp/migrate.mts',
+    c => delete c.expectedIdentityDigest]) {
+    const invalid = config(format); mutate(invalid);
+    assert.throws(() => runEconomicDeployMigration('migrate', invalid, rolesFile, 'c'.repeat(64),
+      () => assert.fail('invalid configuration dispatched'), () => assert.fail('invalid configuration rechecked')));
+  }
   const validation = [];
-  runEconomicDeployMigration('validate', config(), rolesFile, 'c'.repeat(64), (...a) => validation.push(a), () => {});
+  runEconomicDeployMigration('validate', config(format), rolesFile, 'c'.repeat(64), (...a) => validation.push(a), () => {});
   assert.equal(validation.length, 1);
   let runs = 0;
-  assert.throws(() => runEconomicDeployMigration('migrate', config(), rolesFile, 'c'.repeat(64),
+  assert.throws(() => runEconomicDeployMigration('migrate', config(format), rolesFile, 'c'.repeat(64),
     () => { runs++; throw Error('active role'); }, () => assert.fail()));
   assert.equal(runs, 1);
   runs = 0;
-  assert.throws(() => runEconomicDeployMigration('migrate', config(), rolesFile, 'c'.repeat(64),
+  assert.throws(() => runEconomicDeployMigration('migrate', config(format), rolesFile, 'c'.repeat(64),
     () => { runs++; }, () => { throw Error('changed bytes'); }));
   assert.equal(runs, 1);
 });
+}
 
 test('failure hold stops both fixed roles even if the first stop fails; never starts or touches builds', () => {
   for (const broken of [false, true]) {

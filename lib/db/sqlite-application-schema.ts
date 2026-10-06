@@ -1,4 +1,5 @@
 import { backfillSqliteSeedProvenance } from "../sources/seed-provenance";
+import { A2A_FULFILLMENT_SQL } from "./a2a-fulfillment-schema";
 import { DatabaseSync } from "node:sqlite";
 import { PRIVATE_CREATOR_CONFIRMATIONS_SQL } from "./private-creator-confirmations";
 import { PRIVATE_CREATOR_SUBMISSIONS_SQL } from "./private-creator-submissions";
@@ -189,6 +190,7 @@ CREATE TABLE IF NOT EXISTS a2a_orders (
   updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS a2a_orders_payer_history ON a2a_orders(LOWER(payer), created_at DESC, id DESC);
+${A2A_FULFILLMENT_SQL}
 CREATE TABLE IF NOT EXISTS activation_events (
   day TEXT NOT NULL,
   event TEXT NOT NULL CHECK (event IN (
@@ -302,8 +304,10 @@ ${CREATOR_WITHDRAWAL_ATTESTATIONS_SQL}
 `;
 
 /** Legacy installer only; enrolled runtime validates without migrating. */
-export function installSqliteApplicationSchema(db: DatabaseSync): void {
- db.exec(SQLITE_APPLICATION_SCHEMA);
+export function installSqliteApplicationSchema(db: DatabaseSync, options: { originalFulfillment?: boolean } = {}): void {
+ // The predecessor is constructed only for an exact explicit migration contract.
+ // Ordinary startup and fresh enrollment always include the current schema.
+ db.exec(options.originalFulfillment === false ? SQLITE_APPLICATION_SCHEMA.replace(A2A_FULFILLMENT_SQL, "") : SQLITE_APPLICATION_SCHEMA);
  ensureSqliteApplicationColumns(db);
 }
 

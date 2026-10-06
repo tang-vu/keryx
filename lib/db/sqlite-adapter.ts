@@ -89,6 +89,9 @@ import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
 import type { A2aOriginalClaim } from "../a2a/original-claim";
 import { claimSqliteA2aOriginal, hasSqliteA2aOriginalSettlement } from "./a2a-original-claim";
+import { claimSqliteA2aFulfillment, getSqliteA2aFulfillment, completeSqliteA2aFulfillment, hasSqliteA2aFulfillment } from "./a2a-failed-original-fulfillment";
+import type { FulfillmentClaimInput, A2aFulfillmentCompletion, FulfillmentAuthority } from "../a2a/failed-original-fulfillment-protocol";
+import { writeSqliteQueryRun } from "./query-run-record";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
 import { claimSqlitePrivatePayment, getSqlitePrivatePayment, confirmSqlitePrivatePayment } from "./private-research-payments";
@@ -128,6 +131,7 @@ export class SqliteAdapter implements KeryxDB {
   private enrolledIdentity?: Readonly<StorageIdentity>;
   private enrolledGuard?: () => void;
   private paymentProfile: ArcNetworkProfile = ARC_TESTNET_PROFILE;
+  private readOnly = false;
 
   /** Core assembly only: the caller owns the connection; this issues no runtime provenance. */
   static assembleConnectionCore(db: DatabaseSync, identity: Readonly<StorageIdentity>, guard: () => void): SqliteAdapter {
@@ -144,6 +148,7 @@ export class SqliteAdapter implements KeryxDB {
     const dbPath = file ?? path.resolve(process.cwd(), "data", "keryx.sqlite");
     if (!options.readOnly) fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     this.db = new DatabaseSync(dbPath, { readOnly: options.readOnly ?? false });
+    this.readOnly = options.readOnly ?? false;
   }
 
   /** Release the file handle. The long-lived server never calls this; short-lived callers
@@ -1479,41 +1484,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {
-    const evidenceTelemetry = runEvidenceMetrics(run);
-    const economicsSample = economicsRunSample(run);
-    this.db
-      .prepare(
-        `INSERT OR REPLACE INTO query_runs (
-           id,created_at,question,budget,engine,total_spent,total_to_creators,answer,data,
-           parent_id,asker,origin,duration_ms,payment_mode,payment_attempts,settled_payments,
-           confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,
-           rewarded_citation_count,economics_data
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      )
-      .run(
-        run.id,
-        run.createdAt,
-        run.question,
-        run.budget,
-        run.engine,
-        run.totalSpent,
-        run.totalToCreators,
-        run.answer,
-        JSON.stringify(run),
-        run.parentId ?? null,
-        run.asker?.toLowerCase() ?? null,
-        run.origin ?? "engine",
-        run.durationMs ?? null,
-        run.paymentMode ?? null,
-        run.paymentAttempts ?? null,
-        run.settledPayments ?? null,
-        run.confidence?.level ?? null,
-        run.mcpClient ?? null,
-        evidenceTelemetry.evidenceClaimCount,
-        evidenceTelemetry.groundedClaimCount,
-        evidenceTelemetry.rewardedCitationCount,
-        economicsSample ? JSON.stringify(economicsSample) : null,
-      );
+    writeSqliteQueryRun(this.db, run, true);
   }
 
   private async readEvidenceProvenance(lookup: EvidenceProvenanceLookup): Promise<ReadonlySet<string>> {
@@ -1684,6 +1655,21 @@ export class SqliteAdapter implements KeryxDB {
 
   async hasA2aOriginalSettlement(expected: A2aOriginalClaim): Promise<boolean> {
     return hasSqliteA2aOriginalSettlement(this.db, expected, this.paymentProfile, rowToA2aOrder);
+  }
+
+  async claimA2aFailedOriginalFulfillment(input: FulfillmentClaimInput) {
+    if (this.readOnly) throw new Error("Readonly fulfillment mutation refused");
+    return claimSqliteA2aFulfillment(this.db, input, this.paymentProfile, rowToA2aOrder);
+  }
+  async getA2aFailedOriginalFulfillment(originalId: string) {
+    return getSqliteA2aFulfillment(this.db, originalId, this.paymentProfile);
+  }
+  async completeA2aFailedOriginalFulfillment(input: A2aFulfillmentCompletion): Promise<boolean> {
+    if (this.readOnly) throw new Error("Readonly fulfillment mutation refused");
+    return completeSqliteA2aFulfillment(this.db, input, this.paymentProfile, rowToA2aOrder);
+  }
+  async hasA2aFailedOriginalFulfillment(authority: FulfillmentAuthority): Promise<boolean> {
+    return hasSqliteA2aFulfillment(this.db, authority, this.paymentProfile, rowToA2aOrder);
   }
 
   async claimNextA2aOrder(workerId: string, startedAt: string, expectedOriginal?: A2aOriginalClaim): Promise<A2aOrder | null> {
