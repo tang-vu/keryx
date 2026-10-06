@@ -1,5 +1,18 @@
 # Supported-surface release parity
 
+## Source excerpt inspection, October 6, 2026
+
+Application **0.27.9 candidate** adds a local source-omission view to shared web
+answers and saved public dispatches. It reads the already-authorized excerpt
+matrix, making no new request and changing no report, payment or public schema.
+Caller-funded/private web recovery retains its minimal result view because its
+contract lacks full source/marker/article identities. API/SSE, OpenAI-compatible,
+remote MCP, CLI, stdio MCP, desktop, extension and bots keep their existing roles;
+accessible reports and current exports remain their inspection path. No changed
+native/stdio runtime import, installer or package publication is claimed. Existing
+distribution versions/source pins require their own readbacks if reported.
+See [supported roles and limits](research-source-inspection.md).
+
 ## Sharp/librsvg dependency patch, October 6, 2026
 
 Application **0.27.8 candidate** changes the hosted native image dependency

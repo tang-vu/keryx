@@ -1,5 +1,19 @@
 # Keryx Project Changelog
 
+### Inspect a report without one source (2026-10-06, v0.27.9 candidate)
+
+- Completed web answers and saved public reports offer **What if a source were
+  missing?**: temporarily omit a source to inspect the remaining recorded excerpts.
+- Distinguish newly missing excerpts from gaps already present and unavailable
+  historical ledgers. Match recorded asset versions and omit synthetic evidence.
+- Selection and restore stay local. Answers, confidence, payments, receipts and
+  public API contracts retain their original values. No new model or source request.
+- Minimal private/paid recovery clients retain their existing views because they
+  do not expose the complete source identity graph. Native/stdio distributions
+  retain separate source pins and versions; no client upgrade is claimed.
+- [How to inspect a source](research-source-inspection.md) and
+  [verification, surface boundaries and remaining gates](engineering/research-source-inspection-2026-10-06.md).
+
 ### Sharp/librsvg security patch (2026-10-06, v0.27.8 candidate)
 
 - Advance the existing Next-scoped sharp override to 0.35.5 and its locked native
