@@ -21,14 +21,20 @@ describe("source inspection local interaction", () => {
       const select = container.querySelector("select")!;
       await act(async () => { select.value = "A"; select.dispatchEvent(new dom.window.Event("change", { bubbles: true })); });
       expect(container.textContent).toContain("1 research target loses its last recorded excerpt without Source A");
-      await act(async () => { (container.querySelector("button") as HTMLButtonElement).click(); });
+      const restore = container.querySelector("button") as HTMLButtonElement;
+      restore.focus(); expect(dom.window.document.activeElement).toBe(restore);
+      await act(async () => { restore.click(); });
       expect(container.textContent).toContain("Showing the original excerpt ledger.");
       expect(container.textContent).toContain("Recorded audit excerpt.");
       expect(container.querySelector("select")!.value).toBe("");
+      expect(dom.window.document.activeElement).toBe(select);
       await act(async () => { select.value = "A"; select.dispatchEvent(new dom.window.Event("change", { bubbles: true })); });
       await act(async () => { root.render(createElement(SourceEvidenceLens, { run: { ...run, evidence: [] } })); });
       expect(container.textContent).toContain("No inspectable non-demo excerpts");
       expect(container.querySelector("select")).toBeNull();
+      await act(async () => { root.render(createElement(SourceEvidenceLens, { run })); });
+      expect(container.querySelector("select")!.value).toBe("");
+      expect(container.textContent).toContain("Showing the original excerpt ledger.");
       expect(fetch).not.toHaveBeenCalled(); expect(JSON.stringify(run)).toBe(original);
     } finally {
       await act(async () => { root.unmount(); }); dom.window.close(); vi.unstubAllGlobals();

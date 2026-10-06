@@ -1,20 +1,30 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState, type RefObject } from "react";
 import type { EvidenceMatrixInput } from "@/lib/research/evidence-matrix";
 import { buildSourceEvidenceLens, type SourceEvidenceLensModel } from "@/lib/research/source-evidence-lens";
 
 const excerptCount = (count: number) => `${count} recorded excerpt${count === 1 ? "" : "s"}`;
 
 export function SourceEvidenceLens({ run }: { run: EvidenceMatrixInput }) {
-  const [omittedSourceId, setOmittedSourceId] = useState<string | null>(null);
-  const id = useId();
-  const model = buildSourceEvidenceLens(run, omittedSourceId);
-  return <SourceEvidenceLensView model={model} selectId={id} onOmit={setOmittedSourceId} />;
+  const sourceKey = JSON.stringify(buildSourceEvidenceLens(run).sources.map(source => source.sourceId).sort());
+  return <SourceEvidenceLensSelection key={sourceKey} run={run} />;
 }
 
-export function SourceEvidenceLensView({ model, selectId, onOmit }: {
-  model: SourceEvidenceLensModel; selectId: string; onOmit: (sourceId: string | null) => void;
+function SourceEvidenceLensSelection({ run }: { run: EvidenceMatrixInput }) {
+  const [omittedSourceId, setOmittedSourceId] = useState<string | null>(null);
+  const id = useId();
+  const selectRef = useRef<HTMLSelectElement>(null);
+  const model = buildSourceEvidenceLens(run, omittedSourceId);
+  const onOmit = (sourceId: string | null) => {
+    if (sourceId === null) selectRef.current?.focus();
+    setOmittedSourceId(sourceId);
+  };
+  return <SourceEvidenceLensView model={model} selectId={id} selectRef={selectRef} onOmit={onOmit} />;
+}
+
+export function SourceEvidenceLensView({ model, selectId, selectRef, onOmit }: {
+  model: SourceEvidenceLensModel; selectId: string; selectRef?: RefObject<HTMLSelectElement | null>; onOmit: (sourceId: string | null) => void;
 }) {
   if (!model.available) return <p className="mt-5 text-sm text-ink-3">Source inspection unavailable: this report has no stored excerpt ledger.</p>;
   if (!model.sources.length) return <p className="mt-5 text-sm text-ink-3">No inspectable non-demo excerpts are recorded for source inspection.</p>;
@@ -25,7 +35,7 @@ export function SourceEvidenceLensView({ model, selectId, onOmit }: {
     <div className="mt-4 flex flex-wrap items-end gap-3">
       <label htmlFor={selectId} className="min-w-0 flex-1 text-sm text-ink">
         Inspect without
-        <select id={selectId} value={model.omittedSourceId ?? ""} onChange={event => onOmit(event.target.value || null)}
+        <select ref={selectRef} id={selectId} value={model.omittedSourceId ?? ""} onChange={event => onOmit(event.target.value || null)}
           className="mt-1 block min-h-11 w-full min-w-0 max-w-full border border-line bg-paper px-3 py-2 font-serif text-base text-ink focus-visible:outline-2 focus-visible:outline-seal">
           <option value="">Keep every source</option>
           {model.sources.map(source => <option key={source.sourceId} value={source.sourceId}>{source.sourceName}</option>)}

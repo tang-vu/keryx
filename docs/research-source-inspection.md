@@ -5,6 +5,9 @@ missing?** and choose a source under **Inspect without**. Keryx shows which
 research targets still have recorded excerpts in that report. **Restore source**
 returns to the original view. This is a local inspection: it makes no new research
 request and leaves the answer, confidence, receipts and payments unchanged.
+Restore returns keyboard focus to the selector. If the report's inspectable source
+identities change, the view returns to every source rather than retaining a hidden
+omission for a source that may reappear later.
 
 Targets are requested topics, not verified assertions. A missing excerpt is a
 gap in this stored record, not proof that an answer is false. Several excerpts or
