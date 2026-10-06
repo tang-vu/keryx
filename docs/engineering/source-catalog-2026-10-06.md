@@ -216,11 +216,33 @@ that public subset alone needs at least 16 such slots, before creator feeds are 
 This is an arithmetic bound, not evidence that a scheduler is active or that every visit
 succeeds. No schedule or budget increase is authorized by this catalog expansion.
 
-Web Sources can browse the directory and current retained catalog. Existing web/desktop
-research, CLI, API, remote and stdio MCP, extensions and bots use the same approved retained
-reference discovery after actual import; they do not acquire evidence from directory links.
-Package/installer identities and production import evidence belong to the coordinated release
-record, not this read-only audit. To withdraw a reference, set its retained 'active=false'
+## Browsing and supported surfaces
+
+The Sources page uses a shareable GET form for bounded literal search across names,
+domains, tags and retained item titles, topic and collection filters, and name or
+recorded-observation sorting. A combined publisher/article query must match one
+retained item with that publisher's metadata; words from different item titles
+cannot manufacture a match. Applied URL filters remount the form so client navigation
+and back navigation cannot retain stale dropdown values. The default directory view
+interleaves the four topics; expansion controls keep long collections manageable.
+Domain groups use registrable domains (including private hosting suffixes) as a
+breadth proxy, not proof of independent publishers. Unread directory records carry
+no observation date. 'Ask with this source' opens an editable question without
+automatic submission, payment or provider work.
+
+A larger feed catalog increases the source-selection prompt. Existing source
+attention, decision output and deterministic portfolio bounds still apply. Catalog
+transport and browser acceptance do not establish useful live model selection or
+answer quality with the larger candidate pool. No new paid/provider trial is included.
+
+Web Sources owns publisher browsing. Hosted research used by web, public API, remote MCP,
+A2A and bots discovers the production database's retained feed snapshots after import.
+Desktop, buyer/Operator CLI, stdio MCP and extensions retain their hosted-service handoff
+and custody roles; a separate local research database needs its own explicit catalog
+import. The creator-only '/api/sources' contract is unchanged. Directory links do not
+become model evidence automatically. No packaged client bytes or protocol changes are
+required; verify existing package/installer identities in the release record without
+claiming an installed-client upgrade. To withdraw a reference, set its retained 'active=false'
 through the validated catalog interface; the importer preserves that deactivation. Remove a
 directory suggestion from the static catalog independently. Past citation/evidence records
 remain historical. Reverting these catalog files changes no financial records.

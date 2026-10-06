@@ -41,7 +41,10 @@ try {
       const mode=new URL(location.href).searchParams.get('mode');
       window.fixtureDb={listSources:async()=>{if(mode==='partial')throw Error('registry unavailable');return mode==='history-only'?[]:[source]},listPublicReferences:async()=>mode==='history-only'?[]:[reference],listRecentQueries:async()=>{if(mode==='history-error')throw Error('history unavailable');return[run]},creatorLeaderboard:async()=>[],getSourceClaimForSource:async()=>null};
       const root=createRoot(document.getElementById('root'));
-      if(location.pathname==='/sources')SourcesPage({searchParams:Promise.resolve(Object.fromEntries(new URL(location.href).searchParams))}).then(page=>root.render(page));
+      if(location.pathname==='/sources'){
+        window.fixtureRenderSources=params=>SourcesPage({searchParams:Promise.resolve(params)}).then(page=>root.render(page));
+        window.fixtureRenderSources(Object.fromEntries(new URL(location.href).searchParams));
+      }
       else root.render(<DashboardView sourcePreview={<SourceDirectoryPreview directory={directory}/>}/>);
     `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife", plugins: [chrome], define: { "process.env": "{}", "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(network), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' } });
     for (const width of [320, 768, 1440]) {
@@ -132,6 +135,18 @@ try {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `Sources overflow ${width}`);
       await page.screenshot({ path: path.join(screenshots, `sources-${network}-${width}.png`), fullPage: true });
       await page.getByRole("heading", { name: "Find a source" }).waitFor();
+      // Next query navigations retain the same route component. Exercise its existing root
+      // instead of replacing the document so uncontrolled fields cannot keep stale filters.
+      await page.evaluate(() => (window as unknown as { fixtureRenderSources: (params: object) => Promise<void> }).fixtureRenderSources({ q: "Stripe", topic: "payments", kind: "explore", sort: "name" }));
+      await page.waitForFunction(() => (document.querySelector('select[name="topic"]') as HTMLSelectElement)?.value === "payments");
+      assert.equal(await page.getByLabel("Collection", { exact: true }).inputValue(), "explore");
+      assert.equal(await page.getByLabel("Sort", { exact: true }).inputValue(), "name");
+      assert.equal(await page.getByLabel("Search titles, publishers, domains or tags").inputValue(), "Stripe");
+      await page.evaluate(() => (window as unknown as { fixtureRenderSources: (params: object) => Promise<void> }).fixtureRenderSources({}));
+      await page.waitForFunction(() => (document.querySelector('select[name="topic"]') as HTMLSelectElement)?.value === "all");
+      assert.equal(await page.getByLabel("Collection", { exact: true }).inputValue(), "all");
+      assert.equal(await page.getByLabel("Sort", { exact: true }).inputValue(), "default");
+      assert.equal(await page.getByLabel("Search titles, publishers, domains or tags").inputValue(), "");
       await page.getByLabel("Search titles, publishers, domains or tags").fill("postgresql.org");
       await page.getByLabel("Collection", { exact: true }).selectOption("explore");
       await page.getByLabel("Topic", { exact: true }).selectOption("data-infrastructure");
