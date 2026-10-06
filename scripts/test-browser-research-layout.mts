@@ -149,7 +149,7 @@ try {
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
       }
       if (width === 320 || width === 768 || width === 1440) {
-        await page.goto(`${base}/sources`, { waitUntil: "networkidle" });
+        await page.goto(`${base}/sources`, { waitUntil: "domcontentloaded" });
         await page.getByRole("heading", { name: "Find a source" }).waitFor();
         await page.evaluate(() => { (window as unknown as { sourceDocument: string }).sourceDocument = "same-next-document"; });
         await page.getByRole("navigation", { name: "Browse source topics" }).getByRole("link", { name: "Payments", exact: true }).click();
