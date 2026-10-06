@@ -11,6 +11,7 @@ import { cloneUsage } from "../economics/provider-cost-policy";
 import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
+import { STATEMENT_GENERATION_GUIDANCE } from "./cited-statement";
 import { buildContextualQuoteOptions } from "./quote-context";
 import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE, BRIEF_COMPACT_REVIEW_SCHEMA } from "./decision-brief";
 import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
@@ -317,6 +318,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "the claimIndex explicitly supplied in researchTargets and the option's exact marker. " +
         "Reuse that same claimIndex for multiple quotes answering one target; do not number answer sentences or evidence items. " +
         "Do not output raw quote text or invent IDs. " +
+        STATEMENT_GENERATION_GUIDANCE +
         "Each option is already a bounded verbatim excerpt; choose only options that directly answer that question. " +
         "A related warning or shared topic is not evidence for an unmentioned procedure. " +
         "Select the smallest sufficient set, at most two options per research question; emit separate evidence items when needed. " +
@@ -335,7 +337,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         quoteOptions: quoteOptions.map(({ quoteId, marker, text }) => ({ quoteId, marker, text })),
         schema:
           '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
-          '"evidence":[{"claimIndex":number,"marker":string,"quoteId":string,"support":number(0..1)}],' +
+          '"evidence":[{"claimIndex":number,"marker":string,"quoteId":string,"support":number(0..1),"statement":string}],' +
           '"conflicts":[{"point":string,"positions":[{"marker":string,"stance":string}],"trusted":string,"reason":string}]}',
       }),
       // The answer itself is prose, so this floor carries the write-up on top of the per-source parts.

@@ -1,4 +1,5 @@
 import type { ProposedEvidence } from "./reasoning-engine";
+import { STATEMENT_REVIEW_GUIDANCE } from "./cited-statement";
 
 export const MAX_REVIEWED_EVIDENCE = 32;
 
@@ -19,7 +20,8 @@ export const EVIDENCE_REVIEW_GUIDANCE =
   "Before scoring, state in supportedFact one brief clause describing what the quote explicitly establishes. " +
   "Compare that fact with the requested action, actor and timing. Equivalent meaning does not require identical vocabulary. " +
   "An explicit mechanism can answer a how-question without repeating its purpose verb. Do not demand unasked implementation details. " +
-  "A directly described action that answers part of the question merits partial support; merely discussing the topic or a different stage does not.";
+  "A directly described action that answers part of the question merits partial support; merely discussing the topic or a different stage does not." +
+  STATEMENT_REVIEW_GUIDANCE;
 
 /** Review may only reduce the model's original support. Missing/ambiguous reviews fail closed. */
 export function applyEvidenceReview(proposals: ProposedEvidence[], response: unknown,
@@ -27,6 +29,7 @@ export function applyEvidenceReview(proposals: ProposedEvidence[], response: unk
   const rows = response && typeof response === "object" && Array.isArray((response as { reviews?: unknown }).reviews)
     ? (response as { reviews: unknown[] }).reviews : [];
   const scores = new Map<number, number>();
+  const statementScores = new Map<number, number>();
   const duplicates = new Set<number>();
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;
@@ -36,9 +39,14 @@ export function applyEvidenceReview(proposals: ProposedEvidence[], response: unk
     if (scores.has(item.index)) duplicates.add(item.index);
     scores.set(item.index, typeof item.support === "number" && Number.isFinite(item.support)
       ? Math.max(0, Math.min(1, item.support)) : 0);
+    statementScores.set(item.index, typeof item.statementSupport === "number" && Number.isFinite(item.statementSupport)
+      ? Math.max(0, Math.min(1, item.statementSupport)) : 0);
   }
-  return proposals.map((proposal, index) => ({ ...proposal,
+  // A sentence gains delivery authority only from an unambiguous review of its own row;
+  // any caller-supplied statementSupport is discarded.
+  return proposals.map(({ statementSupport: _unreviewed, ...proposal }, index) => ({ ...proposal,
     support: Math.min(Number.isFinite(proposal.support) ? Math.max(0, proposal.support) : 0,
       duplicates.has(index) ? 0 : scores.get(index) ?? 0),
+    ...(proposal.statement ? { statementSupport: duplicates.has(index) ? 0 : statementScores.get(index) ?? 0 } : {}),
   }));
 }

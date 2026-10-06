@@ -5440,3 +5440,34 @@ retry invalid generation or activate production brief delivery from fixtures alo
 A protected worker-only format choice stages rollout behind live usefulness gates.
 Real complete business proof, genuine creators, external adoption and a general
 contract-enforced policy wallet remain open; never claim them from implementation.
+
+## Deliver sentence-cited summaries in place of excerpt-only answers - 2026-10-06
+
+Owner decision: supersede D-300's unconditional extractive delivery. The last closed
+ordinary-client round graded 0/3 useful and readers received only quoted excerpts,
+while the reviewed decision brief stays disabled after three failed evaluations.
+
+D-300 withheld prose because a source marker gave no assertion-to-evidence mapping.
+Supply that mapping at the smallest unit instead of withholding all prose: one
+model-written sentence per server-resolved quote, proposed in the existing synthesis
+call and scored in the existing evidence review call. Deliver a sentence only when
+its quote passed every ledger gate for the same target and marker and the review
+scored the sentence itself at 0.7 or more; missing, duplicate or failed review is 0.
+Render each sentence in the same paragraph as its verbatim source text. When no
+sentence survives, delivery is byte-identical to the previous excerpt answer.
+
+Unchanged: the evidence ledger, reward eligibility, payees, spend caps, custody,
+receipts and exports; the eight-target limit and terminal planning refusal; the
+2,000-character source context; the Low confidence cap; no added model call, retry
+or fallback tier. D-300's rule against a lexical compatibility parser stands: the
+check is a model review of one sentence against one quote, not string overlap.
+The decision brief keeps its fail-closed contract and remains disabled.
+
+Three local single runs (real model and search, forced offline payment, source
+budget 0) delivered 4, 11 and 2 sentences; one accepted sentence carried a short
+gloss its quote implies but does not state. That is an observation by the
+developer, not a rate, independent grading or ordinary-client acceptance, and no
+closed live allowance was reopened. Sentences stay close to their quotes, so
+cross-source comparison and checklists remain gaps, and reading limits (an arXiv
+PDF over the byte limit) bound the result more than synthesis does.
+See [sentence-cited summaries](docs/engineering/cited-summary-2026-10-06.md).

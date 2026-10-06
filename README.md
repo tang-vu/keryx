@@ -49,8 +49,9 @@ rail underneath it. Give it a question and a budget:
    with a human-readable rationale for every choice.
 3. It **pays the x402 toll** only for what it buys, checks **sufficiency** after each read, and
    stops early when it has enough.
-4. The claim-grounding candidate returns **qualified source excerpts with inline citations**
-   and explicitly labelled research targets/gaps. It withholds arbitrary synthesis,
+4. It returns a **summary cited sentence by sentence**: each sentence is written from one
+   verbatim source excerpt, checked against it, and shown beside it, with explicitly
+   labelled research targets/gaps. Uncited prose is withheld; the answer
    retains a **Low/incomplete** boundary, and allocates bounded citation rewards only
    to eligible accepted sources. Creator payouts are settled only when recorded
    payment evidence confirms settlement; multi-author rewards follow their payout split.
@@ -68,12 +69,14 @@ the model reasons about money and shows its work, streamed live to the UI:
 - **Source comparisons**: recorded exact excerpts let readers inspect differing sources.
   The current claim-grounding candidate does not certify an independent synthesized
   conclusion about which source is correct.
-- **Confidence boundary**: the current extractive answer is labelled Low/incomplete.
+- **Confidence boundary**: the answer is labelled Low/incomplete.
   Qualified source excerpts provide recorded support; target coverage estimates do not
   verify each assertion or establish complete useful synthesis.
-- **Qualified excerpt answers**: evidence-bearing answers project qualified literal
-  source excerpts and explicitly labelled quoted research targets/gaps. Arbitrary synthesis
-  is withheld because marker-level support cannot prove every assertion. Accepted excerpt
+- **Sentence-cited summaries**: each summary sentence is written from one qualified literal
+  source excerpt, scored against that excerpt by a separate model review, and rendered
+  beside the verbatim source text. Sentences without a qualifying excerpt or review are
+  removed, and the answer falls back to excerpts alone when none survives. The review is
+  a model judgment, not proof; cross-source conclusions are not written. Accepted excerpt
   citations still support rewards, with original paid-fetch debits, article bindings and
   settlement identities. Production now uses Arc mainnet; see the
   [current deployment and evidence limits](docs/mainnet-status.md).

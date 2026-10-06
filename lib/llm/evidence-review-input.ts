@@ -7,7 +7,7 @@ export const MAX_EVIDENCE_REVIEW_INPUT_BYTES = 32_000;
 // Bound both authored messages and reserve framing space; provider transport
 // policies remain separate and may impose a smaller cap. Never raise those caps.
 const REVIEW_FRAMING_BYTES = 1024;
-const schema = '{"reviews":[{"index":number,"supportedFact":string,"support":number(0..1)}]}';
+const schema = '{"reviews":[{"index":number,"supportedFact":string,"support":number(0..1),"statementSupport":number(0..1) when the row has a statement}]}';
 
 /** Build the private verifier input. Unbound/over-budget rows never gain review authority. */
 export function buildEvidenceReviewInput(input: {
@@ -42,6 +42,7 @@ export function buildEvidenceReviewInput(input: {
         option.prefixOmitted !== (option.contextStart > 0) || option.suffixOmitted !== (option.contextEnd < source.text.length)) continue;
     const entry = {
       index, question: target, quote: proposal.quote, quoteId: option.quoteId,
+      ...(proposal.statement ? { statement: proposal.statement } : {}),
       source: { marker: source.marker, sourceId: source.sourceId, name: source.sourceName,
         itemUrl: source.itemUrl, contentVersion: source.contentVersion,
         sourceKind: source.sourceKind ?? "creator",
