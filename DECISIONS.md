@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**Inspect a recorded report without one source — 2026-10-06.**
+The owner requested one memorable small UX improvement after a deep Tameion
+assessment, then authorized an autonomous delivery goal. Reuse the exact excerpt
+matrix to show which research targets retain recorded excerpts when a source is
+temporarily omitted. Keep all original prose, confidence, coverage and payment
+fields unchanged; selection never runs research, recalculates rewards or refunds.
+Exclude synthetic identities, retain exact article versions and distinguish new
+gaps, old gaps and missing historical ledgers. Targets are requested topics, not
+verified assertions; the view is not a counterfactual answer or factual grade.
+Minimal private/paid result clients lack the full identity graph and retain their
+existing roles, rather than reconstructing source IDs from names. No API/payment
+contract or native/stdio artifact changes. See [guide and surface roles](docs/research-source-inspection.md).
+
 **Freeze a finite business acceptance original before any signature — 2026-10-06.**
 The owner authorized a 24-hour bounded mainnet canary and separately creating a
 local buyer wallet. Narrow the first run to one Quick original, an empty creator
