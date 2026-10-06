@@ -310,9 +310,10 @@ older snapshot or resume an old writer against a new sealed schema.
 
 **Mainnet boundary:** first resolve the actual enrolled storage target, identity
 and schema from the protected runtime manifest. Do not assume the legacy path
-below is the financial database. The generic backup command reads
-KERYX_SQLITE_PATH with a data/keryx.sqlite fallback; this is not proof that it
-selects the enrolled mainnet target. Use the reviewed identity-aware backup and
+below is the financial database. A KERYX_SQLITE_PATH value alone does not prove
+the enrolled mainnet target. The guarded backup command requires the protected
+enrolled manifest and verifies stored identity/target before capture; legacy fallback
+is restricted to explicit isolated offline/testnet input. Use the reviewed identity-aware backup and
 migration procedure, retain manifest/policy/custody bindings privately, and verify
 restoration separately. The economic migration's native snapshot/receipt checks
 are described in [economic recovery](engineering/mainnet-economic-recovery.md).
@@ -324,14 +325,19 @@ The remaining path/cron examples in this section describe the legacy ordinary
 SQLite deployment. Neither their path nor hourly scheduling is asserted for
 current mainnet. Its retained held schedules must not be activated by this text.
 
-The legacy ordinary SQLite deployment uses `/root/keryx/data/keryx.sqlite`. `npm run backup` takes a
-consistent snapshot of the LIVE db (`VACUUM INTO`, safe under WAL — no downtime), gzips it, rotates the
-last `KERYX_BACKUP_KEEP` (default 48) under `data/backups/`, and — when configured — copies it off-box.
+The historical legacy ordinary SQLite deployment used `/root/keryx/data/keryx.sqlite`. `npm run backup` takes a
+consistent readonly native snapshot and gzips it within the fixed 2 GiB usable reserve,
+conservative staging and 512 MiB aggregate budget. `KERYX_BACKUP_KEEP` (default 48) also
+limits admission. Without independently verified offhost receipts, it does not prune
+prior copies; it holds new capture at the boundary. The optional separately configured
+encrypted off-box path retains its request limits.
 `npm run deploy` installs an **hourly cron** that runs it automatically.
 
 ```bash
-# manual snapshot (local or on the VPS)
-ssh keryx-vps "cd /root/keryx && npm run backup"
+# Explicit isolated legacy fixture only; never the enrolled financial store.
+KERYX_NETWORK=arcTestnet NEXT_PUBLIC_KERYX_NETWORK=arcTestnet \
+  KERYX_FORCE_OFFLINE=1 KERYX_STORAGE_MANIFEST= \
+  KERYX_SQLITE_PATH=/absolute/isolated/legacy.sqlite npm run backup
 ```
 
 Restore requires a maintenance window: stop the web process, A2A worker, automation
@@ -350,7 +356,7 @@ requires its reviewed schema/identity-aware procedure; do not apply legacy SQL o
 initialization directly to an enrolled financial store. See
 [revocable-session recovery](./engineering/revocable-sessions-2026-09-09.md).
 
-**Encrypted off-box copy** uses a dedicated private Cloudflare R2 Standard bucket and AES-256-GCM. The job uploads at most once per UTC day, retains 24 encrypted snapshots (32 MiB each maximum), reserves a bounded monthly request budget before network operations, and refuses legacy plaintext rclone configuration. Account alerts are notifications, not spending caps; other projects share the free allowance. See [encrypted backup setup, job limits and offline restore drills](encrypted-backups.md).
+**Encrypted off-box copy** uses a dedicated private Cloudflare R2 Standard bucket and AES-256-GCM. The job uploads at most once per UTC day, holds at 24 encrypted snapshots (32 MiB each maximum) without deleting prior objects, reserves a bounded monthly request budget before network operations, and refuses legacy plaintext rclone configuration. A PUT acknowledgement is not verified offhost recovery. Account alerts are notifications, not spending caps; other projects share the free allowance. See [encrypted backup setup, job limits and offline restore drills](encrypted-backups.md).
 
 ## Monitoring & alerts
 
