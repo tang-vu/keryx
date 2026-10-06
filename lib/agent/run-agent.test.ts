@@ -2704,6 +2704,45 @@ describe("omitted-assertion completion boundary", () => {
       expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
     }
   });
+
+  it.each([["reviewed", 0.9], ["unreviewed", undefined], ["rejected", 0.3]] as const)(
+    "delivers a %s sentence only beside its checked excerpt, without changing rewards or receipts", async (variant, statementSupport) => {
+    const quote = "The protocol binds approval to canonical action identity.";
+    const statement = "Approval is bound to the canonical identity of the action.";
+    const unsupported = "All attacks are eliminated";
+    const item: SourceItem = { id: "observed-item", sourceId: "owned-paper", title: "Observed article",
+      link: "https://owned.example/article", summary: "Approval protocol", content: `${quote} The benchmark includes ten commands.` };
+    const source = makeSource({ id: item.sourceId, fetchPrice: 0.004 });
+    const engine = fakeEngine({
+      sufficiency: input => ({ sufficient: false, rationale: "Synthetic assessment",
+        perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.9, coveredBy: ["S1"] })) }),
+      synthesize: () => ({ answer: `The protocol binds approval [S1]. ${unsupported} [S1].`, citedMarkers: ["S1"],
+        evidence: [{ claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport }] }),
+    });
+    engine.decompose = async () => ["Methods"];
+    const gateway = fakeGateway(), effects = isolatedTestEffects();
+    const run = await collectRun({ question: "Compare methods", budget: 0.03,
+      executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } },
+      { deps: { ...deps([source], engine, gateway, { items: { [source.id]: [item] } }), effects } });
+    const delivered = variant === "reviewed";
+    expect(run.answer.includes(`${statement} [S1] Source text: “${quote}”`)).toBe(delivered);
+    expect(run.answer.includes("Source excerpts only.")).toBe(!delivered);
+    expect(run.answer).toContain(quote);
+    expect(run.answer).not.toContain(unsupported);
+    expect(run.confidence?.level).toBe("Low");
+    expect(run.trace.some(step => (step.detail as { answerDelivery?: string })?.answerDelivery ===
+      (delivered ? "cited-summary" : "qualified-excerpts"))).toBe(true);
+    // The sentence changes presentation only: one excerpt, one citation reward, same receipt contract.
+    expect(run.evidence).toHaveLength(1);
+    expect(run.evidence?.[0]).not.toHaveProperty("statement");
+    expect(run.citations).toHaveLength(1);
+    expect(gateway.citationCalls).toHaveLength(1);
+    expect(run.totalSpent).toBeCloseTo(0.004 + 0.03 * config.citationPoolRatio, 8);
+    const payments = vi.mocked(effects.recordPayment).mock.calls.map(([payment]) => payment);
+    const receipt = buildResearchReceipt(run, payments);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.dispatch.answer).toBe(run.answer);
+  });
 });
 
 /** Same frozen question, representative eight targets and synthetic provider/page responses. */

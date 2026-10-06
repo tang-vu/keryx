@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### Sentence-cited summaries (2026-10-06, v0.27.4 candidate)
+
+- Answers now carry a model-written summary cited sentence by sentence. Each
+  sentence is written from one verbatim excerpt, checked against it in the
+  existing evidence review, and shown in the same paragraph as that source text.
+  Sentences whose excerpt or review does not qualify are removed.
+- When no sentence survives, the previous excerpt-only answer is delivered
+  unchanged. Confidence stays Low and missing targets stay visible.
+- No added model call. Evidence ledger, creator rewards, receipts, exports, spend
+  limits and custody are unchanged; the reviewed decision brief remains disabled.
+- [Contract, local observations and limits](engineering/cited-summary-2026-10-06.md).
+  Three local single runs are not a usefulness rate or ordinary-client acceptance.
+
 ### Research-paper discovery library (2026-10-06, v0.27.3 candidate)
 
 - Add 40 observed individual papers from arXiv, OpenReview, PMLR and ACL Anthology,

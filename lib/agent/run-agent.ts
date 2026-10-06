@@ -3,6 +3,7 @@ import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../re
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
 import { finalizeGroundedAnswer } from "./answer-grounding";
+import { selectCitedStatements } from "./cited-statements";
 import { deliverDecisionBrief } from "./decision-brief";
 import { discoverPublicReferences } from "./public-reference-evidence";
 import { discoverScholarly } from "../scholarly/discovery";
@@ -1492,13 +1493,19 @@ async function* runAdmittedAgent(
     });
   }
   evidenceMeasured = true;
-  answer = brief?.answer ?? finalizeGroundedAnswer({ question: input.question, answer, ledger });
+  // Sentences are admitted against the final ledger, after every source, quote and review gate.
+  const citedStatements = brief ? [] : selectCitedStatements(synthesized.evidence ?? [], ledger);
+  answer = brief?.answer ?? finalizeGroundedAnswer({ question: input.question, answer, ledger, statements: citedStatements });
   const vi = researchResponseLanguage(input.question) === "vi";
+  const citedSummary = citedStatements.length > 0;
   yield emit("evidence", brief ? (vi ? "Đã kiểm tra riêng từng nhận định và bước tiếp theo; vẫn còn giới hạn của trích đoạn và đánh giá model."
-    : "Statements and conditional next steps received separate review; excerpt and model-assessment limitations remain.") : vi
+    : "Statements and conditional next steps received separate review; excerpt and model-assessment limitations remain.") : citedSummary ? (vi
+    ? `Cung cấp ${citedStatements.length} câu tóm tắt, mỗi câu gắn với một trích đoạn nguyên văn đã kiểm tra; chưa xác minh được tổng hợp đầy đủ.`
+    : `Delivering ${citedStatements.length} summary sentence(s), each tied to one checked verbatim excerpt; complete synthesis remains unverified.`) : vi
     ? "Chỉ cung cấp trích đoạn nguồn đủ điều kiện; chưa xác minh được tổng hợp đầy đủ và hỗ trợ cho từng nhận định."
     : "Delivering qualified source excerpts; complete synthesis and per-assertion support remain unverified.",
-    { answerDelivery: brief ? "reviewed-decision-brief" : "qualified-excerpts", completeness: "unverified",
+    { answerDelivery: brief ? "reviewed-decision-brief" : citedSummary ? "cited-summary" : "qualified-excerpts", completeness: "unverified",
+      ...(citedSummary ? { citedStatements: citedStatements.length } : {}),
       ...(brief ? { briefDigest: brief.digest, facts: brief.facts, actions: brief.actions } : {}) });
   const used = gathered.filter((g) =>
     ledger.acceptedMarkers.has(g.marker),
@@ -1540,7 +1547,9 @@ async function* runAdmittedAgent(
   // Coverage estimates describe the excerpt ledger, never a verified complete synthesis.
   const verdict: Confidence = { level: "Low", reason: brief ? (vi
     ? "Bản phân tích đã qua kiểm tra bằng model trên trích đoạn có giới hạn; chưa xác minh tính đầy đủ hoặc tính đúng đắn độc lập."
-    : "The brief received model review over bounded excerpts; completeness and independent factual correctness remain unverified.") : vi
+    : "The brief received model review over bounded excerpts; completeness and independent factual correctness remain unverified.") : citedSummary ? (vi
+    ? "Mỗi câu tóm tắt gắn với một trích đoạn nguyên văn và đã qua kiểm tra bằng mô hình; chưa xác minh tính đầy đủ hoặc tính đúng đắn độc lập."
+    : `Each summary sentence is tied to a verbatim excerpt and model-checked; completeness and independent factual correctness remain unverified. Evidence assessment: ${evidenceVerdict.reason}`) : vi
     ? `Chỉ cung cấp trích đoạn nguồn; chưa xác minh được tổng hợp đầy đủ và hỗ trợ cho từng nhận định. Có ${claimCoverage.filter(claim => !(claim.coverage >= MIN_REWARD_SUPPORT)).length} yêu cầu dưới ngưỡng hỗ trợ theo đánh giá ghi nhận; độ bao phủ không chứng minh tính đúng đắn hoặc giải quyết mâu thuẫn nguồn.`
     : `Only source excerpts are delivered; complete synthesis and per-assertion support remain unverified. Evidence assessment: ${evidenceVerdict.reason}` };
   runConfidence = verdict;
@@ -1551,7 +1560,9 @@ async function* runAdmittedAgent(
   }
 
   yield emit("synthesize", brief ? (vi ? `Đã chuẩn bị bản phân tích có dẫn nguồn từ ${used.length} nguồn`
-    : `Prepared a cited decision brief from ${used.length} source(s)`) : vi ? `Đã chuẩn bị trích đoạn từ ${used.length} nguồn; chưa xác minh được tổng hợp đầy đủ`
+    : `Prepared a cited decision brief from ${used.length} source(s)`) : citedSummary ? (vi
+    ? `Đã chuẩn bị tóm tắt có trích dẫn từng câu từ ${used.length} nguồn`
+    : `Prepared a sentence-cited summary from ${used.length} source(s)`) : vi ? `Đã chuẩn bị trích đoạn từ ${used.length} nguồn; chưa xác minh được tổng hợp đầy đủ`
     : `Prepared source excerpts citing ${used.length} source(s); complete synthesis is unverified`, { answer });
   yield emit("verdict", `Confidence: ${verdict.level} — ${verdict.reason}.`, verdict);
 

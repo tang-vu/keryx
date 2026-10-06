@@ -1,6 +1,7 @@
 import type { GatheredContent, ProposedEvidence } from "./reasoning-engine";
 import type { evidenceContext } from "./evidence-context";
 import { buildContextualQuoteOptions, type ContextualQuoteOption } from "./quote-context";
+import { normalizeStatement } from "./cited-statement";
 
 /** Private binding/context; generation receives only quoteId, marker and text. */
 export interface QuoteOption extends ContextualQuoteOption {
@@ -29,7 +30,10 @@ export function resolveQuoteEvidence(value: unknown, options: QuoteOption[]): Pr
     const option = typeof item.quoteId === "string" ? byId.get(item.quoteId) : undefined;
     const bound = option?.marker === marker ? option : undefined;
     const support = Number(item.support);
+    // A sentence without its exact server-resolved quote has nothing to be checked against.
+    const statement = bound ? normalizeStatement(item.statement) : undefined;
     return {
+      ...(statement ? { statement } : {}),
       claimIndex: typeof item.claimIndex === "number" ? item.claimIndex : NaN,
       marker,
       quote: bound?.text ?? "",

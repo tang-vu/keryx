@@ -181,6 +181,10 @@ export interface ProposedEvidence {
   support: number; // 0..1 estimate of how directly the span supports the claim
   /** Server-resolved UTF-16 source offsets; private proposal metadata, not a receipt field. */
   quoteSpan?: import("./evidence-span").EvidenceSpan;
+  /** Model-written sentence bound to this exact quote; private until review admits it. */
+  statement?: string;
+  /** Reviewer's 0..1 estimate that the quote in context establishes the whole statement. */
+  statementSupport?: number;
 }
 
 /** Result of synthesis: the grounded answer, which markers it cited, and any source
