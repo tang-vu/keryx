@@ -173,6 +173,8 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   failA2aOrder: "write",
   resolveA2aOrder: "write",
   a2aOperationsSnapshot: "read",
+  operatorInventory: "read",
+  operatorPublicSnapshot: "read",
   listPayments: "read",
   recordActivationEvent: "write",
   activationFunnel: "read",

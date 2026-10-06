@@ -12,7 +12,7 @@ import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
 import { buildContextualQuoteOptions } from "./quote-context";
-import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefQuoteMenu, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE } from "./decision-brief";
+import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE, BRIEF_COMPACT_REVIEW_SCHEMA } from "./decision-brief";
 import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
 import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
 import { buildEvidenceReviewInput } from "./evidence-review-input";
@@ -373,20 +373,27 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     const fallback: SynthResult = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable" };
     try {
       const selectedSources = evidenceContext(input.question, input.subClaims, input.gathered);
-      const offered = buildContextualQuoteOptions(selectedSources, input.gathered);
-      const sources = briefContextSources(selectedSources, input, offered);
-      const options = briefQuoteMenu(offered, sources);
+      const options = buildContextualQuoteOptions(selectedSources, input.gathered);
       if (!options.length) return fallback;
+      // Reserve the complete selected corpus first. Eagerly expanding every menu
+      // alternative could exceed the bound before the model selected any quote.
+      // No selected passage, target or adverse source is removed to admit a call.
+      const sources = briefContextSources(selectedSources, input, []);
       const raw = await this.measuredChatJson(config.synthesisModel, BRIEF_GENERATION_GUIDANCE,
         JSON.stringify({ question: input.question,
           researchTargets: input.subClaims.map((question, targetIndex) => ({ targetIndex, question })), sources,
           quoteOptions: options.map(({ quoteId, marker, text, start, end }) => ({ quoteId, marker, text, start, end })),
           schema: '{"facts":[{"id":"f1","targetIndex":0,"text":string,"quoteIds":string[],"support":number}],"actions":[{"id":"a1","text":string,"premiseIds":string[],"conditions":string[]}]}' }), 4096);
-      const packet = prepareDecisionBrief(input, raw, options, sources);
-      if (!packet) return fallback;
-      if (!packet.candidate.facts.length) return { ...fallback, evidenceReview: "completed" };
+      const candidate = prepareDecisionBrief(input, raw, options, sources);
+      if (!candidate) return fallback;
+      if (!candidate.candidate.facts.length) return { ...fallback, evidenceReview: "completed" };
+      // Review keeps the generator's entire base corpus and gains the full
+      // neighborhoods of its selected quotes. Actual union overflow still fails
+      // closed; there is no second generation or provider repair call.
+      const reviewedSources = briefContextSources(selectedSources, input, candidate.quotes);
+      const packet = prepareDecisionBrief(input, candidate.candidate, options, reviewedSources)!;
       const review = await this.measuredChatJson(config.llmModel, BRIEF_REVIEW_GUIDANCE,
-        JSON.stringify({ packet: briefReviewPacket(packet), schema: '{"digest":string,"facts":[{"id":string,"status":"supported"|"unsupported"|"insufficient","support":number,"quotes":[{"quoteId":string,"status":"supported"|"unsupported"|"insufficient","support":number}]}],"actions":[{"id":string,"status":"supported"|"unsupported"|"insufficient"}]}' }), 4096, { reasoningReview: true });
+        JSON.stringify({ packet: briefReviewPacket(packet), schema: BRIEF_COMPACT_REVIEW_SCHEMA }), 4096, { reasoningReview: true });
       const decisionBrief = reviewDecisionBrief(packet, review);
       if (!decisionBrief) return fallback;
       const evidence = briefEvidence(decisionBrief);
@@ -396,7 +403,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       return { answer: citedMarkers.map(marker => `[${marker}]`).join(" "), citedMarkers, evidence,
         conflicts: [], evidenceReview: "completed", decisionBrief };
     } catch {
-      // A malformed generation/review or transport outage must not
+      // A malformed generation/review, transport outage or input cap must not
       // discard completed paid reads or route an unreviewed narrative to the UI.
       return fallback;
     }

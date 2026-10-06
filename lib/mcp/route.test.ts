@@ -90,7 +90,10 @@ describe("/mcp", () => {
       "research",
       "keryx_status",
       "research_monthly",
+      "keryx_operator_status",
     ]);
+    expect(body.result.tools.find((tool: { name: string }) => tool.name === "keryx_operator_status").annotations)
+      .toEqual(expect.objectContaining({ readOnlyHint: true, destructiveHint: false }));
   });
 
   it("rejects a batch that would run more than one treasury-funded research call", async () => {

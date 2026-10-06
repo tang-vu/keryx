@@ -17,7 +17,12 @@ const client = new Client({ name: "monthly-distribution-test", version: "1.0.0" 
 try {
   await client.connect(transport);
   const tools = await client.listTools();
-  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["ask_keryx", "keryx_wallet_status", "keryx_recover", "research_monthly"].sort());
+  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["ask_keryx", "keryx_wallet_status", "keryx_recover", "research_monthly", "keryx_operator_status"].sort());
+  const operator=tools.tools.find(tool=>tool.name==="keryx_operator_status")!;
+  assert.equal(operator.annotations?.readOnlyHint,true);
+  assert.equal(operator.annotations?.destructiveHint,false);
+  const unavailable=await client.callTool({name:"keryx_operator_status",arguments:{}});
+  assert.equal(unavailable.isError,true); // Monthly JSON must not fabricate business state.
   const tool = tools.tools.find(tool => tool.name === "research_monthly")!;
   assert.equal(tool.annotations?.readOnlyHint, true);
   assert.doesNotMatch(tool.description ?? "", /Arc[- ]testnet/i);

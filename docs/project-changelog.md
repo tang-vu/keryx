@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Bounded failure categories and brief context budget (2026-10-06, v0.26.25 candidate)
+### Bounded failure categories (2026-10-06, v0.27.1 candidate)
 
 - The finite-allowance production engine now keeps a bounded failure category
   (output validation, timeout, network or HTTP status) instead of one generic
@@ -8,14 +8,23 @@
   reaches the existing planning and source-selection refusals rather than
   appearing as an unreachable provider. Supplier error bodies stay private;
   reservations, the single attempt and no-fallback behavior are unchanged.
-- The opt-in decision brief (still disabled in production) no longer refuses
-  every run whose reads exceed its 12,000-character context bound. Complete quote
-  contexts are admitted one per source in turn; quotes that do not fit are
-  withheld whole and counted for both generation and review. Row caps drop to
-  four facts and two actions so the reasoning review has room inside its
-  4,096-token reply. Review completion at that cap is not yet measured.
 - No live question, model or search call, funding, custody or schedule change.
-  Ordinary-client usefulness and the brief's 10/12 activation gate stay open.
+
+### Hosted business Operator (2026-10-06, v0.27.0 candidate)
+
+- Supervise every mainnet prepaid research original through the durable queue:
+  complete order/Monthly obligations, original-policy liquidity, private audit before
+  execution and explicit holds/review without rebuying an ambiguous job.
+- Add `/operator`, public status API, read-only CLI and MCP observations with complete
+  aggregates and unknown/stale states. Exact books and customer jobs stay private.
+- Fix decision brief menu expansion and compact per-clause review under unchanged
+  context/evidence gates. Worker-only brief rollout remains behind live usefulness.
+- Caller-funded MCP 0.4.6 adds original GET-only async waiting; remote protocol 0.3.2
+  adds public observation. Desktop 0.4.6 and extension 0.1.1 retain their existing
+  roles/bytes. Release identities, CI/deployment/publication and real business proof
+  remain gates; no new custody, cap increase, funding or schedule is granted.
+- [Business cycle and acceptance](operator-business.md) records the supported
+  surfaces, SQLite/ordinary Supabase support and sealed PostgreSQL enrollment gate.
 
 ### Deep discovery accounting and comparison scope (2026-10-06, v0.26.23 candidate)
 

@@ -3,8 +3,7 @@ import { evidenceContext } from "./evidence-context";
 import { buildContextualQuoteOptions } from "./quote-context";
 import { buildEvidenceLedger } from "../agent/evidence-ledger";
 import {
-  briefEvidence, briefContextSources, briefQuoteMenu, briefReviewPacket, prepareDecisionBrief, reviewDecisionBrief, validBriefPacket,
-  MAX_BRIEF_ACTIONS, MAX_BRIEF_FACTS,
+  briefEvidence, briefContextSources, briefReviewPacket, prepareDecisionBrief, reviewDecisionBrief, validBriefPacket,
   type BriefCandidate, type BriefPacket,
 } from "./decision-brief";
 import type { SynthInput } from "./reasoning-engine";
@@ -89,13 +88,13 @@ describe("strict decision-brief candidate contract", () => {
   it("accepts exact structural caps without rejecting every candidate", () => {
     const value = fixture();
     value.input.subClaims = Array.from({ length: 8 }, (_, index) => `Target ${index}`);
-    value.candidate.facts = Array.from({ length: MAX_BRIEF_FACTS }, (_, index) => ({ id: `f${index + 1}`,
+    value.candidate.facts = Array.from({ length: 16 }, (_, index) => ({ id: `f${index + 1}`,
       targetIndex: index % 8, text: "x".repeat(360), quoteIds: ["q0_0", "q0_1", "q0_2"], support: 1 }));
-    value.candidate.actions = Array.from({ length: MAX_BRIEF_ACTIONS }, (_, index) => ({ id: `a${index + 1}`,
+    value.candidate.actions = Array.from({ length: 6 }, (_, index) => ({ id: `a${index + 1}`,
       text: "x".repeat(360), premiseIds: ["f1", "f2", "f3", "f4"], conditions: ["x".repeat(180), "y".repeat(180)] }));
     const packet = prepareDecisionBrief(value.input, value.candidate, value.options, value.sources);
-    expect(packet?.candidate.facts).toHaveLength(MAX_BRIEF_FACTS);
-    expect(packet?.candidate.actions).toHaveLength(MAX_BRIEF_ACTIONS);
+    expect(packet?.candidate.facts).toHaveLength(16);
+    expect(packet?.candidate.actions).toHaveLength(6);
     // Structural acceptance is not a claim that these boundary strings are useful facts.
     expect(validBriefPacket(packet!)).toBe(true);
   });
@@ -245,9 +244,9 @@ describe("strict decision-brief candidate contract", () => {
 
   it.each(["facts", "actions", "targets", "premises"])("refuses the %s count above its cap", kind => {
     const value = fixture();
-    if (kind === "facts" || kind === "premises") value.candidate.facts = Array.from({ length: MAX_BRIEF_FACTS + 1 },
+    if (kind === "facts" || kind === "premises") value.candidate.facts = Array.from({ length: kind === "facts" ? 17 : 5 },
       (_, index) => ({ ...value.candidate.facts[0], id: `f${index + 1}` }));
-    if (kind === "actions") value.candidate.actions = Array.from({ length: MAX_BRIEF_ACTIONS + 1 }, (_, index) => ({ ...value.candidate.actions[0], id: `a${index + 1}` }));
+    if (kind === "actions") value.candidate.actions = Array.from({ length: 7 }, (_, index) => ({ ...value.candidate.actions[0], id: `a${index + 1}` }));
     if (kind === "targets") value.input.subClaims = Array.from({ length: 9 }, (_, index) => `Target ${index}`);
     if (kind === "premises") value.candidate.actions[0].premiseIds = ["f1", "f2", "f3", "f4", "f5"];
     expect(prepareDecisionBrief(value.input, value.candidate, value.options, value.sources)).toBeUndefined();
@@ -564,81 +563,6 @@ describe("separate quote contribution admission", () => {
     expect(reviewed.facts.map(fact => fact.id)).toEqual(["f2"]);
     expect(reviewed.actions).toEqual([]);
     expect(briefEvidence(reviewed).map(row => row.claimIndex)).toEqual([1]);
-  });
-});
-
-describe("aggregate context budget across several reads", () => {
-  const targets = ["Does the accounting API support writing payments?", "What authorization safeguards protect payment writes?",
-    "Where does the payment API fall short?"];
-  const filler = (seed: number) => Array.from({ length: 6 }, (_, index) =>
-    `Section ${seed}.${index} describes installation, configuration and reporting screens in ordinary detail for administrators.`).join(" ");
-  // Fictional documentation pages: relevant sentences spread between unrelated paragraphs.
-  const page = (seed: number) => Array.from({ length: 6 }, (_, index) => filler(seed * 10 + index) + "\n\n" +
-    `The accounting API ${seed} supports writing payments through a REST endpoint with idempotency keys. ` +
-    `Authorization safeguards for payment writes include scoped tokens and approval workflows. ` +
-    `The payment API falls short on bulk reconciliation and has limitations for multi-currency writes.`).join("\n\n");
-  function budgeted(reads: number) {
-    const input: SynthInput = { question: "Which accounting systems have an API an agent can safely write payments to?", subClaims: targets,
-      gathered: Array.from({ length: reads }, (_, index) => ({ sourceId: `doc-${index}`, sourceName: `Fictional doc ${index}`,
-        marker: `S${index + 1}`, text: page(index + 1) })) };
-    const selected = evidenceContext(input.question, input.subClaims, input.gathered);
-    const offered = buildContextualQuoteOptions(selected, input.gathered);
-    const sources = briefContextSources(selected, input, offered);
-    return { input, offered, sources, menu: briefQuoteMenu(offered, sources) };
-  }
-  const characters = (sources: ReturnType<typeof budgeted>["sources"]) =>
-    sources.flatMap(source => source.quoteContexts!).reduce((sum, span) => sum + span.text.length, 0);
-
-  it("admits every offered quote while the reads fit", () => {
-    const { offered, sources, menu } = budgeted(4);
-    expect(characters(sources)).toBeLessThanOrEqual(12_000);
-    expect(menu).toEqual(offered);
-    expect(sources.some(source => "withheldQuoteOptions" in source)).toBe(false);
-  });
-
-  it("keeps untrimmed context from every read inside the bound and counts the quotes it withheld", () => {
-    const { input, offered, sources, menu } = budgeted(7);
-    expect(characters(sources)).toBeLessThanOrEqual(12_000);
-    for (const source of sources) {
-      const original = input.gathered.find(read => read.marker === source.marker)!;
-      const mine = offered.filter(quote => quote.marker === source.marker);
-      expect(source.quoteContexts!.length).toBeGreaterThan(0);
-      for (const span of source.quoteContexts!) expect(original.text.slice(span.start, span.end)).toBe(span.text);
-      expect(source.withheldQuoteOptions ?? 0).toBe(mine.filter(quote => !menu.includes(quote)).length);
-      // Selected passages stay visible to both passes even when their quotes are withheld.
-      expect(source.passages.length).toBeGreaterThan(0);
-    }
-    expect(menu.length).toBeGreaterThan(0);
-    expect(menu.length).toBeLessThan(offered.length);
-    for (const quote of menu) {
-      const span = sources.find(source => source.marker === quote.marker)!.quoteContexts!
-        .find(span => span.start <= quote.contextStart && span.end >= quote.contextEnd)!;
-      expect(span.text.slice(quote.contextStart - span.start, quote.contextEnd - span.start)).toBe(quote.context);
-    }
-  });
-
-  it("reports reads that received no context instead of trimming one to fit", () => {
-    const { input, offered, sources, menu } = budgeted(12);
-    expect(characters(sources)).toBeLessThanOrEqual(12_000);
-    const empty = sources.filter(source => !source.quoteContexts!.length);
-    expect(empty.length).toBeGreaterThan(0);
-    for (const source of empty) {
-      expect(source.withheldQuoteOptions).toBe(offered.filter(quote => quote.marker === source.marker).length);
-      expect(menu.some(quote => quote.marker === source.marker)).toBe(false);
-      expect(source.passages.length).toBeGreaterThan(0);
-    }
-    for (const source of sources) {
-      const original = input.gathered.find(read => read.marker === source.marker)!;
-      for (const span of source.quoteContexts!) expect(original.text.slice(span.start, span.end)).toBe(span.text);
-    }
-  });
-
-  it("cannot cite a withheld quote", () => {
-    const { input, offered, sources, menu } = budgeted(7);
-    const withheld = offered.find(quote => !menu.includes(quote))!;
-    const fact = (quoteId: string) => ({ facts: [{ id: "f1", targetIndex: 0, text: "The API supports writing payments.", quoteIds: [quoteId], support: 0.8 }] });
-    expect(prepareDecisionBrief(input, fact(menu[0].quoteId), menu, sources)).toBeDefined();
-    expect(prepareDecisionBrief(input, fact(withheld.quoteId), menu, sources)).toBeUndefined();
   });
 });
 

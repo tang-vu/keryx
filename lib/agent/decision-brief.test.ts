@@ -50,25 +50,6 @@ describe("reviewed decision brief delivery", () => {
     expect(result.answer).toContain("Insufficient evidence for this target.");
     expect(result.ledger.claimCoverage[1]).toMatchObject({ coverage: 0, coveredBy: [] });
   });
-  it("labels a target left out of a full brief as a brief limit, not as missing evidence", () => {
-    const { input, ledger } = scenario();
-    input.subClaims.push("What else matters?");
-    const sources = evidenceContext(input.question, input.subClaims, input.gathered);
-    const options = buildContextualQuoteOptions(sources, input.gathered);
-    const lock = options[0].quoteId, commit = options.find(q => q.marker === "S2")!.quoteId;
-    const packet = prepareDecisionBrief(input, { facts: [
-      { id: "f1", targetIndex: 0, text: "The lock prevents concurrent writes.", quoteIds: [lock], support: 0.8 },
-      { id: "f2", targetIndex: 1, text: "The transaction provides atomic commits.", quoteIds: [commit], support: 0.7 },
-      { id: "f3", targetIndex: 0, text: "Concurrent writes are prevented by the lock.", quoteIds: [lock], support: 0.8 },
-      { id: "f4", targetIndex: 1, text: "Atomic commits come from the transaction.", quoteIds: [commit], support: 0.7 },
-    ] }, options, sources)!;
-    const brief = reviewDecisionBrief(packet, { digest: packet.digest, actions: [], facts: packet.candidate.facts.map(fact =>
-      ({ id: fact.id, status: "supported", support: 0.7, quotes: fact.quoteIds.map(quoteId => ({ quoteId, status: "supported", support: 0.7 })) })) })!;
-    const result = deliverDecisionBrief(brief, { ...ledger, claimCoverage: [...ledger.claimCoverage,
-      { ...ledger.claimCoverage[0], claimIndex: 2, claim: input.subClaims[2], coverage: 0, coveredBy: [] }] }, input.question)!;
-    expect(result.answer).toContain("limited to 4 statements and has none for this target");
-    expect(result.answer).not.toContain("Insufficient evidence for this target.");
-  });
   it("requires every quote, not just one accepted source of a multi-quote fact", () => {
     const { input, brief, ledger } = scenario();
     // Build a legitimate rehashed packet through the parser, then reject one quote.

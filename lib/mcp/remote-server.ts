@@ -11,6 +11,9 @@ import { quoteResearchMonthly } from "../monthly/quote";
 import { reasoningServingText } from "../llm/reasoning-telemetry";
 import { researchFailureMessage } from "../llm/research-plan";
 import { ResearchSelectionError } from "../llm/research-selection";
+import { registerOperatorDiscovery } from "../business-operator/mcp";
+import { readOperatorStatus } from "../business-operator/status";
+import { getDb } from "../db";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
@@ -76,7 +79,7 @@ export function createRemoteMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: "keryx",
-    version: "0.3.1",
+    version: "0.3.2",
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
@@ -170,5 +173,6 @@ export function createRemoteMcpServer(
   );
 
   registerMonthlyDiscovery(server, async () => process.env.KERYX_MONTHLY_ENABLED === "1" ? quoteResearchMonthly() : null);
+  registerOperatorDiscovery(server, async () => readOperatorStatus(await getDb(), config.networkId));
   return server;
 }

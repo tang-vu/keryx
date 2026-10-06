@@ -1,35 +1,14 @@
 # Keryx — Decision Log
 
-**Budget the bounded brief's context instead of refusing every multi-page read — 2026-10-06.**
-The owner chose whole-unit budgeting for the opt-in brief over an excerpt fallback or
-leaving the refusal in place. Three local Deep runs ended empty, each through a
-different fail-closed exit, and a synthetic fixture shows why the first is structural:
-about 2,500 neighboring-context characters per read cross the 12,000-character
-aggregate bound at five reads, so the brief could never follow ordinary Deep reading.
-Keep the 12,000 bound. Admit each offered quote's complete context one quote per
-source in turn, in document order; a context that does not fit is withheld together
-with its quote, never trimmed, and the per-source count reaches generation and review.
-A withheld quote cannot be cited, so the reviewer still reads the surroundings of
-every selectable quote. Selected passages stay visible to both passes.
-
-The reasoning review must answer every row inside one 4,096-token reply that also
-carries its thinking; one observed six-fact packet exhausted it. Lower the row caps
-to four facts and two actions rather than raise the output budget, which the dated
-model allowance may refuse after generation was already paid for, or split the
-review into further paid calls. Four is a conservative reading of a single
-observation, not a measured fit: review completion at this cap is unverified until
-the next separately authorized brief evaluation. No fallback to excerpt synthesis,
-no retry, and D-300 stays the default. The brief remains disabled in production
-until a fresh set reaches 10/12 useful with zero material errors.
-
+**Keep a bounded failure category in the finite-allowance engine — 2026-10-06.**
 The bounded production engine replaced every supplier failure with one generic
 error, so a reply cut at the output ceiling or rejected as invalid JSON bypassed
 planning's and selection's request-local refusals and reached the client as an
 unreachable provider. Keep the bounded category instead: output validation,
 timeout, network, or the HTTP status. The original message still never leaves the
 wrapper because a provider body can echo request context. Reservations, the single
-attempt and the absence of provider fallback are unchanged.
-See [the brief follow-up](docs/engineering/decision-brief-2026-10-05.md#context-budget-and-row-caps-2026-10-06).
+attempt and the absence of provider fallback are unchanged. This does not explain
+the historical first-call failure, whose original exception was not retained.
 
 **Expand source discovery with separate unread publisher links — 2026-10-06.**
 The owner requested a substantial expansion across AI/agents, data/infrastructure,
@@ -5421,3 +5400,31 @@ public distribution readback remain independent gates. None of these repairs
 reopens the closed client/model/search scopes, creates a paid retry or circuit
 reset, authorizes funding/spending, changes custody or adds a schedule. Richer
 synthesis stays disabled and ordinary-client usefulness remains unaccepted.
+**Supervise prepaid research with existing financial authority — 2026-10-06.**
+
+Owner direction: resolve the current bottlenecks and develop Operator into an
+autonomous business for Tameion. Use the existing prepaid research service as
+the concrete revenue-to-delivery business. Route every mainnet paid A2A original
+through its durable queue; a wait preference must not bypass the business guard.
+Observe all running caps and unredeemed Monthly reserve together, retain pending
+treasury exposure, and hold unknown/insufficient/stale capacity. Never infer
+spender credit from seller revenue. Original signer caps, nonces, registry authority
+and execution journals remain authoritative; no new custody, funding or schedule.
+
+Persist a private exclusive audit before claiming work. Preserve recovery identity
+before fallible outcome writes, and refresh observations without refreshing a false
+working state after errors. Public web/CLI/MCP share identifier-free observations;
+whole aggregates avoid REST-page truncation. Sealed PostgreSQL explicitly refuses
+new aggregate reads until separate domain enrollment. See [business Operator](docs/operator-business.md)
+for acceptance and surface boundaries.
+
+The prior brief context design eagerly expanded every quote before both model
+passes and could exhaust its unchanged 12,000-character cap with unused neighborhoods. Preserve
+the same complete selected base passages in both passes; add only candidate-used
+quote neighborhoods to the reviewer as a superset. This retains adverse material,
+offsets, per-clause review and the cap while avoiding menu-driven overflow. Compact
+review wire keys reduce repetition without reducing verdict granularity. Do not
+retry invalid generation or activate production brief delivery from fixtures alone.
+A protected worker-only format choice stages rollout behind live usefulness gates.
+Real complete business proof, genuine creators, external adoption and a general
+contract-enforced policy wallet remain open; never claim them from implementation.

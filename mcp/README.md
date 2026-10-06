@@ -1,10 +1,10 @@
 # Keryx MCP
 
-Candidate 0.4.5 adds typed failure/input-limit facts to the single recorded `reasoning`
-contract and retains per-original scope/status. It inherits v0.26.12's mainnet
-metadata corrections without a second telemetry shape. Preserve retained payment
-journals and legacy unavailable telemetry. The local fallback-input
-eligibility policy remains conservative, rather than an exact tokenizer count.
+Candidate0.4.6 adds read-only `keryx_operator_status` with the shared public
+business contract. Mainnet purchases explicitly request async execution and poll
+only their original result for at most 90 seconds; pending/review/error outcomes
+retain the existing journal for `keryx_recover`,never another debit. Existing
+reasoning provenance and conservative fallback-input limits remain unchanged.
 Verify release/npm acceptance for this archive before installation; publication
 is separate from hosted deployment. The observations below are dated.
 
@@ -45,7 +45,7 @@ Check hosted deployment and package publication separately before expecting this
 
 ## Research Monthly
 
-Stdio 0.4.5 and the remote service expose read-only `research_monthly` discovery.
+Stdio 0.4.6 and the remote service expose read-only `research_monthly` discovery.
 The four-request, 30-day package uses manual renewal and a 10% total-price
 discount with unchanged creator caps. Failed and pending jobs retain slots.
 Buy/redeem through the caller-wallet [web checkout](https://keryx.cc/research#monthly)
@@ -78,11 +78,11 @@ pinned to Circle x402 batching 3.5.0 and viem 2.55.19.
 
 On October 4, 2026, public npm readback confirmed `keryx-mcp` **0.4.3** and GitHub
 release `v0.26.8` provided the matching tarball from `1297d43`. For this release
-target, verify 0.4.5 publication and its exact source before installing. [Distribution evidence](../docs/mainnet-status.md)
+target, verify 0.4.6 publication and its exact source before installing. [Distribution evidence](../docs/mainnet-status.md)
 records artifact identity separately from hosted health and payment availability.
 
 ```bash
-npm install keryx-mcp@0.4.5
+npm install keryx-mcp@0.4.6
 ```
 
 Configure your MCP client to run `node /absolute/path/node_modules/keryx-mcp/dist/keryx-mcp.mjs`.
@@ -164,7 +164,7 @@ After the independent MCP install, also run `npm exec -- tsc --noEmit -p mcp/tsc
 from the repository root. This checks MCP and imported shared source against the MCP package's
 installed viem/Circle declarations, matching the single external dependency closure used by the
 bundled consumer. Run the packed acceptance with
-`node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.4.5.tgz /absolute/path/to/pinned/npm-cli.js`.
+`node mcp/scripts/test-packed.mjs /absolute/path/keryx-mcp-0.4.6.tgz /absolute/path/to/pinned/npm-cli.js`.
 
 Mainnet purchase and original recovery require HTTPS without URL credentials or fragments. This is transport protection, not a seller host allowlist. Plain HTTP remains available for deliberate testnet local development.
 

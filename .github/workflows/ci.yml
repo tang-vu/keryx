@@ -75,8 +75,14 @@ jobs:
       - name: Synthetic research provenance (isolated PostgreSQL 17, synthetic data)
         run: node --import tsx scripts/test-synthetic-provenance-postgres.mts
 
+      - name: Business Operator whole inventory (isolated PostgreSQL 17, no payments)
+        run: node --import tsx scripts/test-operator-business-postgres.mts
+
       - name: Unit tests (economic invariants)
         run: npm test
+
+      - name: Stdio MCP original paid-job polling (hermetic, no settlement)
+        run: npx vitest run --config mcp/vitest.config.mts
 
       - name: Private economics report (Linux CLI, synthetic database, no network)
         run: node --import tsx --no-warnings scripts/test-private-economics-report.mts
@@ -201,6 +207,9 @@ jobs:
           KERYX_FORCE_OFFLINE: "1"
           KERYX_UX_SCREENSHOT_DIR: ${{ runner.temp }}/research-ux-screenshots
         run: npm run test:browser-research-ux
+
+      - name: Business Operator production page (offline Chromium, synthetic status)
+        run: node --import tsx scripts/test-browser-operator-business.mts
 
       - name: Research reading UX screenshots
         if: always()
