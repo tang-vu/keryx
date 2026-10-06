@@ -163,6 +163,8 @@ try {
         await page.getByRole("button", { name: "Find sources" }).click();
         await page.waitForURL(url => url.searchParams.get("q") === "circle.com" && url.searchParams.get("kind") === "explore");
         await page.getByRole("heading", { name: "Publisher directory", exact: true }).waitFor();
+        assert.equal(await page.evaluate(() => (window as unknown as { sourceDocument?: string }).sourceDocument), "same-next-document",
+          "GET search submission must preserve Next history navigation");
         assert.equal(await page.getByLabel("Collection", { exact: true }).inputValue(), "explore");
         assert.equal(await page.getByLabel("Sort", { exact: true }).inputValue(), "name");
         assert.equal(await page.locator("#publisher-directory article").count(), 2);
