@@ -13,6 +13,8 @@ import { assertMainnetHostedResearchReady } from "@/lib/payments/mainnet-hosted-
 import { makePayment } from "@/lib/payments/payment-gateway";
 import { settleThenServe, challengeResponse } from "@/lib/x402-server";
 import { paidResearchAdmissionResponse } from "@/lib/research/paid-admission";
+import { businessCanaryPaidAdmission } from "@/lib/business-operator/canary-paid-admission";
+import { canaryExecutionPaused } from "@/lib/business-operator/canary-policy";
 import { a2aDiscovery } from "@/lib/x402-discovery";
 import { verifyApiKey } from "@/lib/api-keys";
 import { hasScope, parseScopes } from "@/lib/api-key-scopes";
@@ -232,7 +234,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const paused = paidResearchAdmissionResponse(); if (paused) return paused;
+  const paused = paidResearchAdmissionResponse({ allowBusinessCanary: true }); if (paused) return paused;
   const authHeader = req.headers.get("authorization");
   const rawKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
   if (rawKey) {
@@ -309,6 +311,13 @@ export async function POST(req: NextRequest) {
     model,
   });
 
+  const canaryInput = { body, signatureHeader: req.headers.get("payment-signature"),
+    network: config.networkId, payee: treasury, amountMicroUsdc: String(Math.round(quote.totalPriceUsdc * 1e6)),
+    creatorBudgetMicroUsdc: String(Math.round(quote.creatorBudgetUsdc * 1e6)), bot: req.nextUrl.searchParams.has("bot") };
+  const checkCanaryAdmission = () => businessCanaryPaidAdmission(canaryInput);
+  const canaryHeld = checkCanaryAdmission();
+  if (canaryHeld) return canaryHeld;
+
   if(config.networkId===ARC_MAINNET_PROFILE.networkId) {
     try { await mainnetA2aReady(quote.creatorBudgetUsdc); }
     catch { return Response.json({error:"research service unavailable"},{status:503,headers:{"Cache-Control":"no-store"}}); }
@@ -345,6 +354,9 @@ export async function POST(req: NextRequest) {
     } catch { /* The seller helper rejects malformed or unauthenticated envelopes. */ }
   }
   return settleThenServe(req, { ...requirements(quote.totalPriceUsdc, treasury),
+    admissionCheck: checkCanaryAdmission,
+    beforeSettlement: () => businessCanaryPaidAdmission({ ...canaryInput, reserveSettlement: true }),
+    singleSettlementAttempt: canaryExecutionPaused(),
     purchasePurpose: "a2a", purchaseRequestHash: admissionHash }, async (settle) => {
     const db = await getDb();
     const authorizationId = settle.authorizationId ?? `transaction:${settle.transaction}`;

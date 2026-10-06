@@ -7,6 +7,7 @@ import { APIConnectionError, APIConnectionTimeoutError } from "@anthropic-ai/sdk
 import { config } from "../config";
 import { extractJson, JsonChatEngine } from "./json-chat-engine";
 import { ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
+import { assertOrdinaryCanarySupplierAdmission } from "../business-operator/canary-policy";
 
 export class AnthropicEngine extends JsonChatEngine {
   readonly name = `llm:anthropic:${config.llmModel}`;
@@ -19,6 +20,7 @@ export class AnthropicEngine extends JsonChatEngine {
     user: string,
     maxTokens = 2048,
   ): Promise<Record<string, unknown>> {
+    assertOrdinaryCanarySupplierAdmission();
     const deadline = AbortSignal.timeout(config.llmTimeoutMs);
     const msg = await this.client.messages.create(
       {

@@ -51,10 +51,23 @@ export const CLOUDFLARE_POLICY = Object.freeze({
   upperRates: Object.freeze({ cachedInputUsdPerMillion: 0.293, inputUsdPerMillion: 0.293, outputUsdPerMillion: 2.253 }),
 } as const);
 const CLOUDFLARE_ALIASES = new Set(["@cf/meta/llama-3.3-70b-instruct-fp8-fast"]);
+/** Fresh official observation for the finite business canary. Keep the earlier
+ * Flash policy unchanged so retained v1/v2 reservations and captures still validate. */
+export const FLASH_POLICY_2026_10_06 = Object.freeze({
+  id: "deepseek-flash-observed-2026-10-06-v1",
+  observedAt: "2026-10-06",
+  source: "https://api-docs.deepseek.com/quick_start/pricing/",
+  effectiveFrom: null, effectiveUntil: null,
+  billingFamily: "DeepSeek-V4.1-Flash",
+  window: "offpeak-peak-interval",
+  lowerRates: Object.freeze({ cachedInputUsdPerMillion: 0.003, inputUsdPerMillion: 0.15, outputUsdPerMillion: 0.60 }),
+  upperRates: Object.freeze({ cachedInputUsdPerMillion: 0.006, inputUsdPerMillion: 0.30, outputUsdPerMillion: 1.20 }),
+} as const);
 // Retain entries when a future policy becomes the capture default.
 const PRICE_POLICIES = new Map<string, { provider: string; policy: Omit<CapturedPricePolicy, "wireModel">; aliases: Set<string> }>([
   [FLASH_POLICY.id, { provider: "deepseek", policy: FLASH_POLICY, aliases: FLASH_ALIASES }],
   [CLOUDFLARE_POLICY.id, { provider: "cloudflare", policy: CLOUDFLARE_POLICY, aliases: CLOUDFLARE_ALIASES }],
+  [FLASH_POLICY_2026_10_06.id, { provider: "deepseek", policy: FLASH_POLICY_2026_10_06, aliases: FLASH_ALIASES }],
 ]);
 
 /** Called before the HTTP request, not when a report is generated. No holiday/window guessing. */

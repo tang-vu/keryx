@@ -6,6 +6,8 @@
   },
   "include": [
     "scripts/operator-business.mts",
+    "scripts/operator-canary.mts",
+    "scripts/test-a2a-original-claim-postgres.mts",
     "scripts/a2a-research-worker.mts",
     "scripts/test-operator-business-postgres.mts",
     "scripts/test-browser-operator-business.mts",

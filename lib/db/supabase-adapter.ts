@@ -1,4 +1,5 @@
 import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
+import { matchesA2aOriginalBinding, validateA2aOriginalClaim, validateA2aClaimWorker, type A2aOriginalClaim } from "../a2a/original-claim";
 import { storagePaymentProfile } from "./storage-identity";
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
@@ -1071,7 +1072,35 @@ export class SupabaseAdapter implements KeryxDB {
     return (data ?? []).map(rowToA2aOrder);
   }
 
-  async claimNextA2aOrder(workerId: string, startedAt: string): Promise<A2aOrder | null> {
+  async hasA2aOriginalSettlement(expected: A2aOriginalClaim): Promise<boolean> {
+    if (this.#enrolled) throw new Error("Native PostgreSQL exact original settlement proof is not admitted");
+    const binding = validateA2aOriginalClaim(expected, ARC_TESTNET_PROFILE);
+    const { data, error } = await this.#sb.rpc("has_original_a2a_settlement_v1", { p_expected: binding });
+    if (error) throw error;
+    if (typeof data !== "boolean") throw new Error("Exact original settlement proof unavailable");
+    return data;
+  }
+
+  async claimNextA2aOrder(workerId: string, startedAt: string, expectedOriginal?: A2aOriginalClaim): Promise<A2aOrder | null> {
+    if (expectedOriginal !== undefined) {
+      // The additive ordinary RPC does not grant an enrolled native writer capability.
+      if (this.#enrolled) throw new Error("Native PostgreSQL exact original claim is not admitted");
+      const binding = validateA2aOriginalClaim(expectedOriginal, ARC_TESTNET_PROFILE);
+      validateA2aClaimWorker(workerId, startedAt);
+      const { data, error } = await this.#sb.rpc("claim_original_a2a_order_v1", {
+        p_expected: binding, p_worker_id: workerId, p_started_at: startedAt,
+      });
+      if (error) throw error;
+      if (!Array.isArray(data) || data.length > 1) throw new Error("Exact original claim result unavailable");
+      if (data.length === 0) return null;
+      const order = rowToA2aOrder(data[0] as Record<string, unknown>);
+      if (!matchesA2aOriginalBinding(order, binding) || order.status !== "running" || order.workerId !== workerId ||
+        order.startedAt === null || Date.parse(order.startedAt) !== Date.parse(startedAt) ||
+        order.executionJournalVersion !== 1 || order.paymentStartedAt !== null ||
+        order.resultSavingAt !== null || order.response !== null || order.errorCode !== null || order.resolution !== null)
+        throw new Error("Exact original claim result mismatch");
+      return order;
+    }
     const { data, error } = await this.domainRpc("claim_a2a_order", {
       p_worker_id: workerId,
       p_started_at: startedAt,

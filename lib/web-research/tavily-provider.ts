@@ -1,6 +1,7 @@
 import { canonicalUrl } from "./url-identity";
 import type { SearchProvider } from "./search-provider";
 import { reserveBoundedSearch } from "../research/research-allowance";
+import { reserveCanarySearch } from "../business-operator/canary-policy";
 
 /** Fixed vendor endpoint; secrets stay in the server header, never URLs or public errors. */
 export function tavilyProvider(apiKey: string): SearchProvider {
@@ -8,6 +9,7 @@ export function tavilyProvider(apiKey: string): SearchProvider {
   return { async search(query, signal) {
     const boundedQuery = query.slice(0, 500);
     // Other callers cannot consume the dated shared allowance without an admitted question.
+    reserveCanarySearch(boundedQuery);
     reserveBoundedSearch(boundedQuery);
     const boundedSignal = AbortSignal.any([signal ?? new AbortController().signal, AbortSignal.timeout(6000)]);
     try {

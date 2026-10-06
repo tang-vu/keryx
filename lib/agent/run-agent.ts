@@ -15,6 +15,8 @@ import { arxivDocumentId } from "../scholarly/arxiv-identity";
 import { searxngProvider } from "../web-research/search-provider";
 import { tavilyProvider } from "../web-research/tavily-provider";
 import { admitBoundedResearch, bindBoundedResearchAdmission } from "../research/research-allowance";
+import { admitBusinessCanaryRun, bindBusinessCanaryAdmission } from "../business-operator/canary-policy";
+import { BusinessCanaryEngine } from "../business-operator/canary-suppliers";
 import { ArticleReadError, articleFailureCode, gatheredArticle, readArticle } from "../web-research/article-reader";
 import { bodyIdentity, canonicalUrl } from "../web-research/url-identity";
 import { isPublicReferenceId } from "../public-references/catalog";
@@ -174,12 +176,22 @@ export async function* runAgent(
 ): AsyncGenerator<TraceStep, QueryRun, void> {
   const queryId = input.queryId ?? crypto.randomUUID();
   const effects = resolveResearchEffects(deps.db, deps.effects, deps.discoverExternal, queryId);
+  const canary = admitBusinessCanaryRun({ question: input.question, queryId, origin: input.origin,
+    researchMode: input.researchMode, budget: input.budget, fundingOwner: input.fundingOwner,
+    privateScope: effects.scope.kind !== "public", paidScholarly: input.paidScholarly });
+  if (canary && (!(deps.engine instanceof BusinessCanaryEngine) || deps.webSearch ||
+      config.webSearchProvider !== "tavily" || !config.tavilyApiKey.trim() || input.scholarly || deps.discoverScholarly))
+    throw new Error("Business canary requires its fixed model/search transports");
+  if (canary && (await deps.db.operatorPublicSnapshot(Date.now())).creatorCatalog.registered !== 0)
+    throw new Error("Business canary requires the verified empty creator catalog");
   const admission = admitBoundedResearch({ question: input.question, queryId, origin: input.origin,
     researchMode: input.researchMode, budget: input.budget, fundingOwner: input.fundingOwner,
     privateScope: effects.scope.kind !== "public", paidScholarly: input.paidScholarly });
   if (admission && (deps.webSearch || config.webSearchProvider !== "tavily" || !config.tavilyApiKey.trim()))
     throw new Error("Bounded research allowance requires the fixed basic Tavily transport");
-  const generator = runAdmittedAgent({ ...input, queryId }, { ...deps, effects });
+  const generator = runAdmittedAgent({ ...input, queryId }, { ...deps,
+    effects: canary ? { ...effects, discoverExternal: async () => [] } : effects });
+  if (canary) return yield* bindBusinessCanaryAdmission(canary, generator, input.signal);
   return yield* (admission ? bindBoundedResearchAdmission(admission, generator, input.signal) : generator);
 }
 

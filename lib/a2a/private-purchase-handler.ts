@@ -2,6 +2,7 @@ import { accountSessionContext, sessionMutationOrigin } from "../account-session
 import { authJson } from "../auth-challenge";
 import { readBoundedRequestJson } from "../read-bounded-request-json";
 import { readyPrivatePurchaseService, type PrivatePurchaseBootstrap } from "./private-purchase-readiness";
+import { canaryExecutionPaused } from "../business-operator/canary-policy";
 
 /** Authenticated private purchase boundary. The limiter and service bootstrap must be supplied
  * by server code, never selected from request data. */
@@ -15,6 +16,7 @@ export function privatePurchaseHandler(options: {
     if (context instanceof Response) return context;
     const originError = sessionMutationOrigin(req);
     if (originError) return originError;
+    if (canaryExecutionPaused()) return authJson({ error: "Private checkout is temporarily held. Recover existing originals." }, 503);
     try {
       const limited = await limit(context.wallet);
       if (limited) {
@@ -33,6 +35,7 @@ export function privatePurchaseHandler(options: {
       if (current.wallet !== context.wallet || current.currentId !== context.currentId)
         return authJson({ error: "Sign in again before submitting a private purchase." }, 401);
       if (req.signal.aborted) return authJson({ error: "Private checkout request was cancelled." }, 503);
+      if (canaryExecutionPaused()) return authJson({ error: "Private checkout is temporarily held. Recover existing originals." }, 503);
       const result = await service.submit(input, context.wallet);
       if (result.recoveryConfirmation) {
         // Retry only evidence persistence, never verification/settlement. If storage

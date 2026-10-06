@@ -10,12 +10,14 @@ import { privateResearchService } from "./private-research-service";
 import { inspectPrivateOperations } from "./private-operations-inspection";
 import { mainnetHostedPolicy, assertMainnetHostedResearchReady, assertMainnetHostedCustodyReady } from "../payments/mainnet-hosted-gateway";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
+import { canaryExecutionPaused } from "../business-operator/canary-policy";
 
 /** Operator-configured private purchase bootstrap, disabled by default. Observations limit
  * admission availability, not payment authority. Durable treasury reservation and
  * single-use incoming attempts remain inside the research service. Call through
  * readyPrivatePurchaseService to bound these read-only observations. */
 export async function privatePurchaseBootstrap(db: KeryxDB, signal: AbortSignal, authenticatedPayer?: string) {
+  if (canaryExecutionPaused()) return null;
   const env = { ...process.env };
   if (signal.aborted || env.KERYX_PRIVATE_PURCHASE_ENABLED === undefined || env.KERYX_PRIVATE_PURCHASE_ENABLED === "0") return null;
   try {
@@ -50,6 +52,7 @@ export async function privatePurchaseBootstrap(db: KeryxDB, signal: AbortSignal,
     return {
       quote: service.quote,
       async submit(submission: unknown, authenticatedPayer: string) {
+        if (canaryExecutionPaused()) throw new Error("Finite business canary holds new private admission");
         const payer = addressSchema.safeParse(authenticatedPayer);
         if (!payer.success || payers && !payers.has(payer.data.toLowerCase()))
           return Promise.reject(new Error("Private purchase is unavailable for this account"));

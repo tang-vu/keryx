@@ -89,7 +89,8 @@ export const SUPABASE_ENROLLED_METHODS = Object.freeze({
   createA2aOrder: "write",
   getA2aOrder: "read",
   listA2aOrdersByPayer: "read",
-  claimNextA2aOrder: "write",
+  claimNextA2aOrder: "write", // Exact-original bound mode remains explicitly unsupported by the native lane.
+  hasA2aOriginalSettlement: "unsupported",
   markA2aOrderPaymentStarted: "write",
   markA2aOrderResultSaving: "write",
   completeA2aOrder: "write",

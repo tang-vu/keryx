@@ -2,7 +2,7 @@ import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 import { describe, expect, it } from "vitest";
 import type { QueryRun } from "../types";
 import { calculateEconomics, calculateTestnetEconomics, economicsRunSample } from "./testnet-economics";
-import { capturePricePolicy, FLASH_POLICY } from "./provider-cost-policy";
+import { FLASH_POLICY } from "./provider-cost-policy";
 
 function run(
   id: string,
@@ -28,7 +28,7 @@ function run(
         outputTokens: 500_000,
         costCapture: { provider: model.startsWith("deepseek") ? "deepseek" : "mimo",
           requestStartedAt: "2026-09-30T01:00:00.000Z", responseReceivedAt: "2026-09-30T01:00:01.000Z",
-          pricing: capturePricePolicy(model.startsWith("deepseek") ? "deepseek" : "mimo", model) },
+          pricing: model.startsWith("deepseek") ? structuredClone({ ...FLASH_POLICY, wireModel: model }) : null },
       },
     ],
   };

@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
   const limited = await checkRateLimit(clientIp(req), "a2aPublic"); if (limited) return limited;
   try {
     if (req.nextUrl.searchParams.get("quote") === "1") {
+      const paused = paidResearchAdmissionResponse(); if (paused) return paused;
       try { return response({ quote: await monthlyAdmissionQuote(await getDb()) }); }
       catch { return response({ error: "Monthly unavailable" }, 503); }
     }
@@ -50,10 +51,12 @@ export async function POST(req: NextRequest) {
       to: quote.payee, value: String(quote.totalMicros), nonce: `0x${randomBytes(32).toString("hex")}`,
       validAfter: String(Math.floor(Date.now() / 1000) - 600), validBefore: String(Math.floor(Date.now() / 1000) + config.maxTimeoutSeconds) });
     const expiresAt = signed ? req.headers.get("x-keryx-monthly-expires") ?? "" : String(Math.floor(Date.now() / 1000) + 600);
+    const held = paidResearchAdmissionResponse(); if (held) return held;
     await db.claimResearchPurchase({ network: config.networkId, payer: issued.from, payee: issued.to,
       authorizationId: issued.nonce, purpose: "monthly", requestHash: quote.quoteId, amountMicros: quote.totalMicros,
       issued: { validAfter: issued.validAfter, validBefore: issued.validBefore, expiresAt }, requireExisting: !!signed });
     const result = await settleThenServe(req, { priceUsdc: quote.totalMicros / 1e6, payTo: quote.payee, endpoint: MONTHLY_PATH,
+      admissionCheck: () => paidResearchAdmissionResponse(),
       purchasePurpose: "monthly", purchaseRequestHash: quote.quoteId,
       description: "Research Monthly: four Deep requests, 30 days, manual renewal" }, async settle => {
       if (!authorization || settle.network !== config.profile.networkId || !settle.transaction || settle.payer.toLowerCase() !== authorization.from.toLowerCase()

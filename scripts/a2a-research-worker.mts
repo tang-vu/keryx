@@ -21,6 +21,8 @@ import { canonicalJson } from "../lib/canonical-json.ts";
 import type { OperatorDecision } from "../lib/business-operator/contracts.ts";
 import type { A2aWorkerOutcome } from "../lib/a2a/run-order.ts";
 import { recoverOperatorOriginal } from "../lib/business-operator/recovery.ts";
+import { canaryExecutionPaused, canaryOriginalClaim } from "../lib/business-operator/canary-policy.ts";
+import { matchesA2aOriginalClaim } from "../lib/a2a/original-claim.ts";
 
 const workerId = `${os.hostname()}:${process.pid}:${crypto.randomUUID()}`;
 let stopping = false;
@@ -84,6 +86,17 @@ async function loop() {
           continue;
         }
       }
+      let canaryReady = false;
+      try {
+        const expected = canaryOriginalClaim();
+        if (expected) {
+          const order = await db.getA2aOrder(expected.id);
+          const catalog = await db.operatorPublicSnapshot(Date.now());
+          canaryReady = !!order && matchesA2aOriginalClaim(order, expected) &&
+            !!db.hasA2aOriginalSettlement && await db.hasA2aOriginalSettlement(expected) &&
+            catalog.creatorCatalog.registered === 0;
+        }
+      } catch { /* A changed/expired/unknown finite window is held before any atomic claim. */ }
       const run = () => stopping ? Promise.resolve(null) : runNextA2aOrder(db, workerId, {
         expectedPayee: config.sellerAddress,
         ...(process.env.KERYX_OPERATOR_DECISION_BRIEF === "1" ? { answerFormat: "decision-brief" as const } : {}),
@@ -112,7 +125,7 @@ async function loop() {
             if (heartbeat) heartbeat = { ...heartbeat, phase: "outcome", outcome: result };
           }
         },
-        now: Date.now, acceptancePaused: () => configuredResearchAllowance() !== null,
+        now: Date.now, acceptancePaused: () => configuredResearchAllowance() !== null || canaryExecutionPaused() && !canaryReady,
       }) : await run();
       if (outcome?.status === "recovery_pending") recoveryOrderId = outcome.id;
       await db.setSyncState(

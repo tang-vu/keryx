@@ -10,6 +10,7 @@ import { config } from "../config";
 import { extractJson, JsonChatEngine, type ChatJsonOptions } from "./json-chat-engine";
 import { capturePricePolicy } from "../economics/provider-cost-policy";
 import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
+import { assertOrdinaryCanarySupplierAdmission } from "../business-operator/canary-policy";
 
 export interface OpenAICompatibleOpts {
   /** Explicit provider identity; vendor options must not leak to generic compatible hosts. */
@@ -36,6 +37,8 @@ function transportFailure(error: unknown): ReasoningTransportError {
 export class OpenAICompatibleEngine extends JsonChatEngine {
   readonly name: string;
   private readonly opts: OpenAICompatibleOpts;
+
+  protected assertSupplierAdmission(): void { assertOrdinaryCanarySupplierAdmission(); }
 
   protected supportsDecisionBrief(): boolean {
     const flash = (model: string) => /^(deepseek-v4-flash|deepseek-flash)$/.test(model);
@@ -75,6 +78,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     const wireModel = this.opts.model ?? model;
     // Also enforce this bound for operational direct-transport callers outside the ledger wrapper.
     this.validateChatJsonInput(model, system, user, maxTokens);
+    this.assertSupplierAdmission();
     const requestStartedAt = new Date().toISOString();
     const pricing = capturePricePolicy(this.opts.provider, wireModel);
     const res = await fetch(`${this.opts.baseUrl}/chat/completions`, {

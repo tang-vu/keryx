@@ -22,6 +22,7 @@ import type { PrivateExecutionClaim } from "./private-research-executions";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { EconomicsSnapshot } from "../economics/testnet-economics";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
+import type { A2aOriginalClaim } from "../a2a/original-claim";
 import type { MonthlyPurchase, MonthlyRedemption, MonthlyRedemptionInput, ResearchPurchaseClaim } from "./research-monthly";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivatePaymentConfirmation, PrivatePaymentState } from "../a2a/private-payment-state";
@@ -610,8 +611,12 @@ export interface KeryxDB {
   getA2aOrder(id: string): Promise<A2aOrder | null>;
   /** Payer-authorized inventory, newest first; 26 rows allow a 25-row page plus sentinel. */
   listA2aOrdersByPayer(wallet: string, before?: { createdAt: string; id: string }): Promise<A2aOrder[]>;
-  /** Atomically claims the oldest never-started job. Started jobs are never auto-requeued. */
-  claimNextA2aOrder(workerId: string, startedAt: string): Promise<A2aOrder | null>;
+  /** Atomically claims the oldest never-started job, or only the supplied bound original.
+   * A mismatch never claims another job; started jobs are never auto-requeued. */
+  claimNextA2aOrder(workerId: string, startedAt: string, expectedOriginal?: A2aOriginalClaim): Promise<A2aOrder | null>;
+  /** Exact native purchase+settled inbound proof, readonly. False is not replay/refund authority;
+   * unsupported or unknown storage/transport throws. */
+  hasA2aOriginalSettlement?(expected: A2aOriginalClaim): Promise<boolean>;
   /** Durably crosses the creator-payment boundary before any gateway authorization can begin. */
   markA2aOrderPaymentStarted(id: string, startedAt: string): Promise<boolean>;
   /** Durably crosses the QueryRun-save boundary before a no-payment result can appear. */

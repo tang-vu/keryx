@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
-import { FLASH_POLICY, usageCostBounds } from "../economics/provider-cost-policy";
+import { FLASH_POLICY_2026_10_06, usageCostBounds } from "../economics/provider-cost-policy";
 
 describe("OpenAI-compatible usage telemetry", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
@@ -55,10 +55,10 @@ describe("OpenAI-compatible usage telemetry", () => {
     { name: "null", split: { prompt_cache_hit_tokens: null }, expected: null },
     { name: "explicit zero", split: { prompt_cache_hit_tokens: 0, prompt_cache_miss_tokens: 120 }, expected: 0 },
   ])("keeps the valid answer while accounting for $name", async ({ split, expected }) => {
-    vi.useFakeTimers(); vi.setSystemTime(new Date("2026-09-30T01:00:00Z"));
+    vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-06T01:00:00Z"));
     const http = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, options) => {
       expect(JSON.parse(options!.body as string).model).toBe("deepseek-v4-flash");
-      vi.setSystemTime(new Date("2026-09-30T01:00:02Z"));
+      vi.setSystemTime(new Date("2026-10-06T01:00:02Z"));
       return Response.json({ choices: [{ message: { content: '{"claims":["one"]}' } }],
         usage: { prompt_tokens: 120, completion_tokens: 30, ...split } });
     });
@@ -69,8 +69,8 @@ describe("OpenAI-compatible usage telemetry", () => {
     expect(engine.calls[0].outcome).toBe("returned");
     expect(engine.usage[0]).toMatchObject({ callId: engine.calls[0].id, inputTokens: 120,
       outputTokens: 30, cachedInputTokens: expected, costCapture: { provider: "deepseek",
-        requestStartedAt: "2026-09-30T01:00:00.000Z", responseReceivedAt: "2026-09-30T01:00:02.000Z",
-        pricing: { id: FLASH_POLICY.id, wireModel: "deepseek-v4-flash" } } });
+        requestStartedAt: "2026-10-06T01:00:00.000Z", responseReceivedAt: "2026-10-06T01:00:02.000Z",
+        pricing: { id: FLASH_POLICY_2026_10_06.id, wireModel: "deepseek-v4-flash" } } });
     expect(usageCostBounds(engine.usage[0]) === null).toBe(expected === null);
     const serialized = JSON.stringify(engine.usage);
     expect(serialized).not.toContain("Synthetic private question");

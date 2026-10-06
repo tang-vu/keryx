@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**Freeze a finite business acceptance original before any signature — 2026-10-06.**
+The owner authorized a 24-hour bounded mainnet canary and separately creating a
+local buyer wallet. Narrow the first run to one Quick original, an empty creator
+catalog and no creator payments. Freeze quote/body/nonce/rail/host before signing;
+use one protected POSIX ledger for retained financial and provider holds, a local
+exclusive submission record, targeted native claim proof and GET-only recovery.
+Historical supplier allowances stay unchanged. Expiry/removing selectors cannot
+release holds; verified same-original completion is required to close. Generic
+model transports and watchdog probes remain held. Funding source authority,
+useful live delivery, creator rights, independent demand and a general on-chain
+policy wallet remain separate gates. See [finite acceptance](docs/operator-canary.md).
+
 **Keep a bounded failure category in the finite-allowance engine — 2026-10-06.**
 The bounded production engine replaced every supplier failure with one generic
 error, so a reply cut at the output ceiling or rejected as invalid JSON bypassed

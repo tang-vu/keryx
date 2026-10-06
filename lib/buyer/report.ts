@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resumeResearch } from "./client";
+import { resumeResearch } from "./resume";
 import { BUYER_NETWORK } from "./policy";
 import { buyerFetch, type BuyerFetch } from "./transport";
 

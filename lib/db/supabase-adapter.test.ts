@@ -10,6 +10,8 @@ import type { StorageDeploymentManifest } from "./runtime-storage-config";
 import { SUPABASE_RUNTIME_CONTRACT } from "./supabase-runtime-contract";
 import * as sourceAuthority from "../payments/browser-original-source-authority";
 import type { BrowserSourceOriginalAdmission } from "./browser-signing-originals";
+import { syntheticA2aOriginal } from "./a2a-original-fixture";
+import { monthlyOrderToRow } from "./research-monthly";
 
 vi.mock("@supabase/supabase-js", async (importOriginal) => ({
   ...await importOriginal<typeof import("@supabase/supabase-js")>(),
@@ -17,6 +19,65 @@ vi.mock("@supabase/supabase-js", async (importOriginal) => ({
 }));
 
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.clearAllMocks(); vi.restoreAllMocks(); });
+
+describe("ordinary Supabase exact original RPC", () => {
+  function ordinary(data: unknown, error: unknown = null) {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key-no-authority");
+    const rpc = vi.fn().mockResolvedValue({ data, error }), from = vi.fn();
+    vi.mocked(createClient).mockReturnValue({ rpc, from } as unknown as ReturnType<typeof createClient>);
+    return { db: new SupabaseAdapter(), rpc, from };
+  }
+  it("uses only the targeted RPC and retains its bound worker result", async () => {
+    const fixture = syntheticA2aOriginal(), at = "2026-10-06T03:24:02.000Z";
+    const storedAt = "2026-10-06T03:24:02+00:00";
+    const { db, rpc, from } = ordinary([monthlyOrderToRow({ ...fixture.order, workerId: "worker", startedAt: storedAt })]);
+    expect(await db.claimNextA2aOrder("worker", at, fixture.binding)).toMatchObject({ id: fixture.order.id, workerId: "worker", startedAt: storedAt });
+    expect(rpc).toHaveBeenCalledWith("claim_original_a2a_order_v1", { p_expected: fixture.binding, p_worker_id: "worker", p_started_at: at });
+    expect(from).not.toHaveBeenCalled();
+  });
+  it("does not fall back to REST after an empty claim or RPC failure", async () => {
+    const fixture = syntheticA2aOriginal(), at = "2026-10-06T03:24:02.000Z";
+    const empty = ordinary([]); expect(await empty.db.claimNextA2aOrder("worker", at, fixture.binding)).toBeNull();
+    expect(empty.from).not.toHaveBeenCalled();
+    const failure = new Error("synthetic failure"), failed = ordinary(null, failure);
+    await expect(failed.db.claimNextA2aOrder("worker", at, fixture.binding)).rejects.toBe(failure);
+    expect(failed.from).not.toHaveBeenCalled();
+  });
+  it.each([true, false])("requires a native boolean settlement proof (%s)", async value => {
+    const fixture = syntheticA2aOriginal(), { db, rpc, from } = ordinary(value);
+    expect(await db.hasA2aOriginalSettlement(fixture.binding)).toBe(value);
+    expect(rpc).toHaveBeenCalledWith("has_original_a2a_settlement_v1", { p_expected: fixture.binding });
+    expect(from).not.toHaveBeenCalled();
+  });
+  it.each([null, {}, [null], [monthlyOrderToRow(syntheticA2aOriginal(2).order)],
+    [monthlyOrderToRow(syntheticA2aOriginal().order), monthlyOrderToRow(syntheticA2aOriginal().order)]]
+    .map((data, index) => ({ data, index })))
+    ("holds an unknown or mismatched targeted RPC result ($index)", async ({ data }) => {
+      const fixture = syntheticA2aOriginal(), { db, from } = ordinary(data);
+      await expect(db.claimNextA2aOrder("worker", "2026-10-06T03:24:02.000Z", fixture.binding)).rejects.toThrow();
+      expect(from).not.toHaveBeenCalled();
+    });
+  it("refuses unknown proof, malformed bindings and sealed storage before any fallback", async () => {
+    const fixture = syntheticA2aOriginal(), unknown = ordinary(null);
+    await expect(unknown.db.hasA2aOriginalSettlement(fixture.binding)).rejects.toThrow();
+    unknown.rpc.mockClear();
+    await expect(unknown.db.claimNextA2aOrder("worker", "2026-10-06T03:24:02.000Z", { ...fixture.binding, amountMicroUsdc: "30001" })).rejects.toThrow();
+    expect(unknown.rpc).not.toHaveBeenCalled();
+    const deployment: StorageDeploymentManifest = { format: "keryx-storage-deployment-v1",
+      backend: { kind: "supabase", url: "https://synthetic-db.invalid" }, identity: {
+        format: "keryx-mainnet-storage-identity-v1", network: "eip155:5042", authorityMode: "mainnet-real",
+        deploymentId: "11111111-1111-4111-8111-111111111111", storageId: "22222222-2222-4222-8222-222222222222",
+        enrollmentId: "33333333-3333-4333-8333-333333333333", enrolledAt: "2026-01-01T00:00:00.000Z",
+        profileDigest: STORAGE_MAINNET_PROFILE_DIGEST, provenanceDigest: "0".repeat(64),
+      } };
+    const rpc = vi.fn(), from = vi.fn(), { adapter } = assembleAuthorityBoundSupabaseCore(
+      { from, rpc } as unknown as ReturnType<typeof createClient>, deployment, () => deployment);
+    await expect(adapter.claimNextA2aOrder("worker", "2026-10-06T03:24:02.000Z", fixture.binding)).rejects.toThrow(/not admitted/);
+    await expect(adapter.hasA2aOriginalSettlement(fixture.binding)).rejects.toThrow(/not admitted/);
+    expect(rpc).not.toHaveBeenCalled(); expect(from).not.toHaveBeenCalled();
+  });
+});
 
 describe("throwingSupabaseFetch", () => {
   it("returns successful responses unchanged", async () => {

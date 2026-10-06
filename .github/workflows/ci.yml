@@ -60,6 +60,9 @@ jobs:
       - name: Buyer CLI startup (no wallet or network)
         run: node --import tsx scripts/buyer-agent.mts --help
 
+      - name: Finite Operator canary CLI startup (no environment, wallet or network)
+        run: node --import tsx scripts/operator-canary.mts --help
+
       - name: Private economics CLI startup (no environment or database)
         run: node --import tsx scripts/economics-private-report.mts --help
 
@@ -77,6 +80,9 @@ jobs:
 
       - name: Business Operator whole inventory (isolated PostgreSQL 17, no payments)
         run: node --import tsx scripts/test-operator-business-postgres.mts
+
+      - name: Exact paid original claim (isolated PostgreSQL 17, no payments)
+        run: node --import tsx scripts/test-a2a-original-claim-postgres.mts
 
       - name: Unit tests (economic invariants)
         run: npm test

@@ -9,6 +9,7 @@ import { canonicalJson } from "../canonical-json";
 import { STORAGE_MAINNET_PROFILE_DIGEST, validateStorageIdentity, type StorageIdentity } from "./storage-identity";
 import { createSqliteStorage, enrollSqliteStorage } from "./storage-identity-provision";
 import type { BrowserJournalAdmission } from "./browser-authorization-journal";
+import { syntheticA2aOriginal, seedSyntheticA2aOriginal } from "./a2a-original-fixture";
 
 const cleanup: (() => void)[] = [];
 afterEach(() => { for (const close of cleanup.splice(0).reverse()) close(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.useRealTimers(); });
@@ -33,6 +34,21 @@ async function fixture() {
   cleanup.push(() => { if ("close" in adapter) (adapter.close as () => void)(); });
   return { adapter, file, identity, manifestPath };
 }
+it("claims only the bound native mainnet original and exposes its proof to a readonly enrolled snapshot", async () => {
+  const { adapter } = await fixture();
+  const original = await seedSyntheticA2aOriginal(adapter, syntheticA2aOriginal(1, ARC_MAINNET_PROFILE));
+  const foreign = await seedSyntheticA2aOriginal(adapter, syntheticA2aOriginal(2, ARC_MAINNET_PROFILE));
+  const readonly = await (await import("./enrolled-sqlite-adapter")).createReadonlyEnrolledSqliteAdapter();
+  cleanup.push(() => readonly.close());
+  expect(await readonly.hasA2aOriginalSettlement!(original.binding)).toBe(true);
+  expect(await readonly.hasA2aOriginalSettlement!({ ...original.binding, requestHash: "aa".repeat(32) })).toBe(false);
+  expect(() => readonly.claimNextA2aOrder("worker", "2026-10-06T03:24:02.000Z", original.binding)).toThrow(/Readonly/);
+  const claimed = await adapter.claimNextA2aOrder("worker", "2026-10-06T03:24:02.000Z", original.binding);
+  expect(claimed?.id).toBe(original.order.id);
+  expect(await adapter.claimNextA2aOrder("worker-2", "2026-10-06T03:24:02.000Z", original.binding)).toBeNull();
+  expect(await adapter.getA2aOrder(foreign.order.id)).toEqual(foreign.order);
+  expect(await readonly.hasA2aOriginalSettlement!(original.binding)).toBe(true);
+});
 it("uses a fresh native mainnet namespace and atomically retains its own nonce/cap history", async () => {
   const { adapter, file } = await fixture();
   await adapter.activateBrowserJournal();
