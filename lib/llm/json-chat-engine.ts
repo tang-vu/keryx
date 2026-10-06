@@ -145,6 +145,26 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     ));
   }
 
+  private selectionFailure(error: unknown, batchIndex: number, input?: DecideInput): unknown {
+    try {
+      if (error instanceof ResearchSelectionError) {
+        const refusal = new ResearchSelectionError(error.diagnostic);
+        this.recordSelectionDiagnostic(refusal.diagnostic);
+        return refusal;
+      }
+      if (input && error instanceof ReasoningOutputValidationError) {
+        const refusal = invalidResearchSelectionOutput(input);
+        this.recordSelectionDiagnostic(refusal.diagnostic);
+        return refusal;
+      }
+    } catch {
+      // A revoked proxy or hostile prototype/diagnostic must not escape classification and
+      // become a fresh ordinary failure that authorizes replay of already served batches.
+      if (batchIndex === 0) return new Error("Source selection failed before a validated batch");
+    }
+    return batchIndex > 0 ? new ResearchSelectionPartialBatchError(error, batchIndex) : error;
+  }
+
   async decide(input: DecideInput): Promise<Decision[]> {
     const batches = prepareSelectionBatches(input, items => this.budgetFor(items), batch =>
       this.validateChatJsonInput(config.llmModel, batch.system, batch.user, batch.maxTokens));
@@ -153,17 +173,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       let out: Record<string, unknown>;
       try { out = await this.measuredChatJson(config.llmModel, batch.system, batch.user, batch.maxTokens); }
       catch (error) {
-        if (error instanceof ResearchSelectionError) {
-          this.recordSelectionDiagnostic(error.diagnostic);
-          throw error;
-        }
-        if (!(error instanceof ReasoningOutputValidationError)) {
-          if (batchIndex > 0) throw new ResearchSelectionPartialBatchError(error, batchIndex);
-          throw error;
-        }
-        const refusal = invalidResearchSelectionOutput(batch.input);
-        this.recordSelectionDiagnostic(refusal.diagnostic);
-        throw refusal;
+        throw this.selectionFailure(error, batchIndex, batch.input);
       }
       try {
         const selection = parseResearchSelection(batch.input, out);
@@ -171,9 +181,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         // Merge validated rows only: another batch's ID cannot gain authority through a raw union.
         decisions.push(...selection.decisions);
       } catch (error) {
-        if (error instanceof ResearchSelectionError) this.recordSelectionDiagnostic(error.diagnostic);
-        else if (batchIndex > 0) throw new ResearchSelectionPartialBatchError(error, batchIndex);
-        throw error;
+        throw this.selectionFailure(error, batchIndex);
       }
     }
     return decisions;

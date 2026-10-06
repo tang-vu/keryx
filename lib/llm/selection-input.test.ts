@@ -3,7 +3,7 @@ import { JsonChatEngine } from "./json-chat-engine";
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
 import { BusinessCanaryEngine } from "../business-operator/canary-suppliers";
 import { ResearchSelectionInputLimitError, ResearchSelectionPartialBatchError } from "./selection-input";
-import { ResearchSelectionError } from "./research-selection";
+import { invalidResearchSelectionOutput, ResearchSelectionError } from "./research-selection";
 import { ResilientEngine, reasoningAttempts } from "./resilient-engine";
 import { MemoryReasoningCircuitStore } from "./reasoning-circuit-store";
 import { ReasoningTransportError, type DecideInput } from "./reasoning-engine";
@@ -237,6 +237,57 @@ describe("bounded source selection batches", () => {
       expect(primary.calls).toHaveLength(2); expect(fallback.calls).toHaveLength(0);
     }
     expect(getter).not.toHaveBeenCalled();
+  });
+
+  it.each(["throw", "parse"])("keeps revoked and prototype-trapping errors terminal after a served batch (%s)", async stage => {
+    const revoked = Proxy.revocable({}, {}); revoked.revoke();
+    const prototypeTrap = new Proxy({}, { getPrototypeOf: () => { throw Error("private prototype response"); } });
+    for (const failure of [revoked.proxy, prototypeTrap]) {
+      // The constructor must also be safe when called directly with the hostile value.
+      expect(new ResearchSelectionPartialBatchError(failure, 1)).toMatchObject({ category: "unknown", completedBatches: 1 });
+      const primary = new CaptureEngine((payload, call) => {
+        if (call !== 2) return { decisions: rows(payload.allowedSourceIds) };
+        if (stage === "throw") throw failure;
+        return new Proxy({}, { getPrototypeOf: () => { throw failure; } });
+      });
+      const fallback = new CaptureEngine(), engine = new ResilientEngine(primary, fallback, 0, new MemoryReasoningCircuitStore());
+      const error = await engine.decide(input(24)).catch(value => value);
+      expect(error).toBeInstanceOf(ResearchSelectionPartialBatchError);
+      expect(error).toMatchObject({ category: "unknown", completedBatches: 1 });
+      expect(JSON.stringify(error)).not.toContain("private");
+      expect(error).not.toHaveProperty("cause");
+      expect(primary.calls.map(call => call.outcome)).toEqual(["returned", stage === "throw" ? "failed" : "returned"]);
+      expect(fallback.calls).toHaveLength(0);
+      expect(reasoningAttempts(engine)).toEqual([expect.objectContaining({ outcome: "failed", error: "internal" })]);
+    }
+  });
+
+  it("treats an uninspectable first-batch failure as unknown under the ordinary fallback policy", async () => {
+    const revoked = Proxy.revocable({}, {}); revoked.revoke();
+    const primary = new CaptureEngine(() => { throw revoked.proxy; });
+    const fallback = new CaptureEngine(), engine = new ResilientEngine(primary, fallback, 0, new MemoryReasoningCircuitStore());
+    expect(await engine.decide(input(24))).toHaveLength(24);
+    expect(primary.calls).toHaveLength(1);
+    expect(fallback.calls.length).toBeGreaterThan(0);
+    expect(reasoningAttempts(engine)[0]).toMatchObject({ outcome: "failed", error: "internal" });
+  });
+
+  it("snapshots a recognized refusal before a proxy can change its later classification", async () => {
+    const refusal = invalidResearchSelectionOutput(input(24));
+    let prototypeReads = 0;
+    const failure = new Proxy(refusal, {
+      get: (target, key) => Reflect.get(target, key, target),
+      getPrototypeOf: () => ++prototypeReads === 1 ? ResearchSelectionError.prototype : null,
+    });
+    const primary = new CaptureEngine((payload, call) => { if (call === 2) throw failure; return { decisions: rows(payload.allowedSourceIds) }; });
+    const fallback = new CaptureEngine(), engine = new ResilientEngine(primary, fallback, 0, new MemoryReasoningCircuitStore());
+    const error = await engine.decide(input(24)).catch(value => value);
+    expect(error).toBeInstanceOf(ResearchSelectionError);
+    expect(error).not.toBe(failure);
+    expect(error.diagnostic).toEqual(refusal.diagnostic);
+    expect(prototypeReads).toBe(1);
+    expect(primary.calls).toHaveLength(2); expect(fallback.calls).toHaveLength(0);
+    expect(reasoningAttempts(engine)).toEqual([expect.objectContaining({ outcome: "failed", error: "output_validation" })]);
   });
 
   it("continues to consult the supplier hold before each distinct batch's HTTP", async () => {
