@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Bounded failure categories (2026-10-06, v0.27.1 candidate)
+
+- The finite-allowance production engine now keeps a bounded failure category
+  (output validation, timeout, network or HTTP status) instead of one generic
+  error. A model reply cut at its output ceiling or rejected as invalid JSON
+  reaches the existing planning and source-selection refusals rather than
+  appearing as an unreachable provider. Supplier error bodies stay private;
+  reservations, the single attempt and no-fallback behavior are unchanged.
+- No live question, model or search call, funding, custody or schedule change.
+
 ### Hosted business Operator (2026-10-06, v0.27.0 candidate)
 
 - Supervise every mainnet prepaid research original through the durable queue:

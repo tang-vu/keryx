@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+**Keep a bounded failure category in the finite-allowance engine — 2026-10-06.**
+The bounded production engine replaced every supplier failure with one generic
+error, so a reply cut at the output ceiling or rejected as invalid JSON bypassed
+planning's and selection's request-local refusals and reached the client as an
+unreachable provider. Keep the bounded category instead: output validation,
+timeout, network, or the HTTP status. The original message still never leaves the
+wrapper because a provider body can echo request context. Reservations, the single
+attempt and the absence of provider fallback are unchanged. This does not explain
+the historical first-call failure, whose original exception was not retained.
+
 **Expand source discovery with separate unread publisher links — 2026-10-06.**
 The owner requested a substantial expansion across AI/agents, data/infrastructure,
 payments and creator research, together with better browsing. Keep an audited
