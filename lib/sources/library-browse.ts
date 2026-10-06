@@ -1,5 +1,7 @@
 import { getDomain } from "tldts";
 import { EXPLORE_SOURCE_TOPICS } from "../public-references/explore-catalog";
+import type { PaperRecord } from "../papers/types";
+import { paperMatches } from "../papers/filters";
 
 export const LIBRARY_TOPICS = {
   ...EXPLORE_SOURCE_TOPICS,
@@ -10,6 +12,7 @@ export const LIBRARY_KINDS = {
   feed: "Retained feeds",
   cited: "Cited documents",
   creator: "Creator listings",
+  paper: "Research papers",
 } as const;
 export type LibraryTopic = keyof typeof LIBRARY_TOPICS;
 export type LibraryKind = keyof typeof LIBRARY_KINDS;
@@ -18,6 +21,9 @@ export interface LibraryFilters {
   topic: LibraryTopic | "all";
   kind: LibraryKind | "all";
   sort: "default" | "name" | "recent";
+  author?: string;
+  year?: string;
+  doi?: string;
 }
 export interface LibraryRecord {
   id: string;
@@ -29,6 +35,7 @@ export interface LibraryRecord {
   topic?: LibraryTopic;
   kind: LibraryKind;
   observedAt?: string;
+  papers?: readonly PaperRecord[];
 }
 
 /** Presentation hints from titles/tags only; never evidence or publisher authority. */
@@ -44,11 +51,14 @@ function first(value: string | string[] | undefined): string {
 }
 export function parseLibraryFilters(params: Record<string, string | string[] | undefined>): LibraryFilters {
   const topic = first(params.topic), kind = first(params.kind), sort = first(params.sort);
+  const author = first(params.author).trim().slice(0, 120), year = first(params.year).trim().slice(0, 4);
+  const doi = first(params.doi).trim().slice(0, 200);
   return {
     q: first(params.q).trim().slice(0, 120),
     topic: Object.hasOwn(LIBRARY_TOPICS, topic) ? topic as LibraryTopic : "all",
     kind: Object.hasOwn(LIBRARY_KINDS, kind) ? kind as LibraryKind : "all",
     sort: sort === "name" || sort === "recent" ? sort : "default",
+    ...(author ? { author } : {}), ...(year ? { year } : {}), ...(doi ? { doi } : {}),
   };
 }
 
@@ -73,7 +83,8 @@ export function librarySearchMatches(record: LibraryRecord, query: string): bool
 export function browseLibrary<T extends LibraryRecord>(records: readonly T[], filters: LibraryFilters): T[] {
   const selected = records.filter(record => (filters.kind === "all" || record.kind === filters.kind)
     && (filters.topic === "all" || libraryTopicHints(record).includes(filters.topic))
-    && librarySearchMatches(record, filters.q));
+    && librarySearchMatches(record, filters.q)
+    && (record.papers ? record.papers.some(paper => paperMatches(paper, filters)) : !(filters.author || filters.year || filters.doi)));
   if (filters.sort === "name") selected.sort((a, b) => a.name.localeCompare(b.name, "en") || a.id.localeCompare(b.id));
   if (filters.sort === "recent") selected.sort((a, b) => observationTime(b) - observationTime(a)
     || a.name.localeCompare(b.name, "en") || a.id.localeCompare(b.id));
@@ -119,5 +130,8 @@ export function libraryBrowseHref(filters: LibraryFilters, changes: Partial<Libr
   if (next.topic !== "all") params.set("topic", next.topic);
   if (next.kind !== "all") params.set("kind", next.kind);
   if (next.sort !== "default") params.set("sort", next.sort);
+  if (next.author) params.set("author", next.author);
+  if (next.year) params.set("year", next.year);
+  if (next.doi) params.set("doi", next.doi);
   return `/sources${params.size ? `?${params}` : ""}#browse-sources`;
 }

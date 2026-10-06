@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Sentence-cited summaries (2026-10-06, v0.27.3 candidate)
+### Sentence-cited summaries (2026-10-06, v0.27.4 candidate)
 
 - Answers now carry a model-written summary cited sentence by sentence. Each
   sentence is written from one verbatim excerpt, checked against it in the
@@ -12,6 +12,18 @@
   limits and custody are unchanged; the reviewed decision brief remains disabled.
 - [Contract, local observations and limits](engineering/cited-summary-2026-10-06.md).
   Three local single runs are not a usefulness rate or ordinary-client acceptance.
+
+### Research-paper discovery library (2026-10-06, v0.27.3 candidate)
+
+- Add 40 observed individual papers from arXiv, OpenReview, PMLR and ACL Anthology,
+  with original links, contributor/year/DOI filters and inspectable exact versions.
+- Add explicit, bounded arXiv/Crossref metadata search with visible provider failures,
+  cancellation, RAM admission and shared bibliography-only API/human CLI/OpenAPI.
+- Metadata and unread PDF links confer no reading evidence, peer-review certification,
+  publisher control or payment authority. Paid research and other client contracts
+  retain their existing roles; no schema, custody, spend or scheduler changes.
+- [Paper-library guide](paper-library.md) records collection provenance, bounds,
+  supported surfaces and acceptance gates.
 
 ### Finite business canary admission (2026-10-06, v0.27.2 candidate)
 

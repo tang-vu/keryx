@@ -21,6 +21,11 @@ Windows local Operator alpha: `npm run desktop:install` then `npm run desktop:st
 See the [desktop guide](docs/desktop-alpha.md) for the unpacked app build, offline
 saved results, private Markdown briefs, and limits.
 
+[Research-paper library](docs/paper-library.md): browse 40 observed paper records
+from arXiv, OpenReview, PMLR and ACL Anthology, filter by author/year/DOI, or explicitly
+search live arXiv/Crossref metadata. `/api/papers` and `npm run papers` share the
+bibliography-only contract. Links remain unread until a separate research run.
+
 [Research Monthly](docs/research-monthly.md): a bounded plan for four Deep
 requests over 30 days, 10% below four separate packages with unchanged creator
 caps. Manual renewal; no scheduling or unlimited use. Failed/pending jobs use a

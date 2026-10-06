@@ -1,6 +1,6 @@
 # Sentence-cited summaries
 
-Application 0.27.3 candidate, October 6, 2026. The owner chose to replace
+Application 0.27.4 candidate, October 6, 2026. The owner chose to replace
 excerpt-only delivery (D-300) with a model-written summary cited sentence by
 sentence, falling back to excerpts when no sentence survives. Payment authority,
 custody, spend limits and the excerpt ledger are unchanged.

@@ -119,6 +119,12 @@ jobs:
       - name: Scholarly creator rights (hermetic wallet and HTTP, no settlement)
         run: npm run test:browser-scholarly-rights
 
+      - name: Research-paper library (hermetic metadata, mobile and desktop)
+        run: |
+          npm run papers -- --q retrieval
+          npm run papers:collect -- --help
+          npm run test:browser-paper-library
+
       - name: Public source claims (both profiles, mobile/desktop, hermetic wallet and HTTP)
         run: npm run test:browser-public-source-claim
 

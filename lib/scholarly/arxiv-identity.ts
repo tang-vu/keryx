@@ -34,8 +34,8 @@ function referencedIds(text: string, prefix: string): string[] {
 /** Bounded explicit version intent; never infer a version or accept API operators.
  * Question text is intent, not authority for the identity of a fetched document.
  */
-export function questionArxivIds(question: string): string[] {
-  return referencedIds(question, EXPLICIT_PREFIX).slice(0, 2);
+export function questionArxivIds(question: string, maxResults = 2): string[] {
+  return referencedIds(question, EXPLICIT_PREFIX).slice(0, maxResults);
 }
 
 /** Decomposition may drop the arXiv prefix. Check every target ID, independently
