@@ -1,0 +1,1186 @@
+[
+  {
+    "title": "Attention Is All You Need",
+    "authors": [
+      "Ashish Vaswani",
+      "Noam Shazeer",
+      "Niki Parmar",
+      "Jakob Uszkoreit",
+      "Llion Jones",
+      "Aidan N. Gomez",
+      "Lukasz Kaiser",
+      "Illia Polosukhin"
+    ],
+    "authorCount": 8,
+    "authorsTruncated": false,
+    "publishedYear": 2017,
+    "arxivId": "1706.03762v7",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/1706.03762v7",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=1706.03762v7&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:17.364Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/1706.03762v7"
+      }
+    ]
+  },
+  {
+    "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+    "authors": [
+      "Shunyu Yao",
+      "Jeffrey Zhao",
+      "Dian Yu",
+      "Nan Du",
+      "Izhak Shafran",
+      "Karthik Narasimhan",
+      "Yuan Cao"
+    ],
+    "authorCount": 7,
+    "authorsTruncated": false,
+    "publishedYear": 2022,
+    "arxivId": "2210.03629v3",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2210.03629v3",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2210.03629v3&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:20.949Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2210.03629v3"
+      }
+    ]
+  },
+  {
+    "title": "Toolformer: Language Models Can Teach Themselves to Use Tools",
+    "authors": [
+      "Timo Schick",
+      "Jane Dwivedi-Yu",
+      "Roberto Dessì",
+      "Roberta Raileanu",
+      "Maria Lomeli",
+      "Luke Zettlemoyer",
+      "Nicola Cancedda",
+      "Thomas Scialom"
+    ],
+    "authorCount": 8,
+    "authorsTruncated": false,
+    "publishedYear": 2023,
+    "arxivId": "2302.04761v1",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2302.04761v1",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2302.04761v1&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:24.549Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2302.04761v1"
+      }
+    ]
+  },
+  {
+    "title": "Reflexion: Language Agents with Verbal Reinforcement Learning",
+    "authors": [
+      "Noah Shinn",
+      "Federico Cassano",
+      "Edward Berman",
+      "Ashwin Gopinath",
+      "Karthik Narasimhan",
+      "Shunyu Yao"
+    ],
+    "authorCount": 6,
+    "authorsTruncated": false,
+    "publishedYear": 2023,
+    "arxivId": "2303.11366v4",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2303.11366v4",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2303.11366v4&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:28.174Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2303.11366v4"
+      }
+    ]
+  },
+  {
+    "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+    "authors": [
+      "Patrick Lewis",
+      "Ethan Perez",
+      "Aleksandra Piktus",
+      "Fabio Petroni",
+      "Vladimir Karpukhin",
+      "Naman Goyal",
+      "Heinrich Küttler",
+      "Mike Lewis",
+      "Wen-tau Yih",
+      "Tim Rocktäschel",
+      "Sebastian Riedel",
+      "Douwe Kiela"
+    ],
+    "authorCount": 12,
+    "authorsTruncated": false,
+    "publishedYear": 2020,
+    "arxivId": "2005.11401v4",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2005.11401v4",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2005.11401v4&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:31.817Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2005.11401v4"
+      }
+    ]
+  },
+  {
+    "title": "AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation",
+    "authors": [
+      "Qingyun Wu",
+      "Gagan Bansal",
+      "Jieyu Zhang",
+      "Yiran Wu",
+      "Beibin Li",
+      "Erkang Zhu",
+      "Li Jiang",
+      "Xiaoyun Zhang",
+      "Shaokun Zhang",
+      "Jiale Liu",
+      "Ahmed Hassan Awadallah",
+      "Ryen W White",
+      "Doug Burger",
+      "Chi Wang"
+    ],
+    "authorCount": 14,
+    "authorsTruncated": false,
+    "publishedYear": 2023,
+    "arxivId": "2308.08155v2",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2308.08155v2",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2308.08155v2&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:35.412Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2308.08155v2"
+      }
+    ]
+  },
+  {
+    "title": "Lost in the Middle: How Language Models Use Long Contexts",
+    "authors": [
+      "Nelson F. Liu",
+      "Kevin Lin",
+      "John Hewitt",
+      "Ashwin Paranjape",
+      "Michele Bevilacqua",
+      "Fabio Petroni",
+      "Percy Liang"
+    ],
+    "authorCount": 7,
+    "authorsTruncated": false,
+    "publishedYear": 2023,
+    "arxivId": "2307.03172v3",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2307.03172v3",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2307.03172v3&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:38.980Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2307.03172v3"
+      }
+    ]
+  },
+  {
+    "title": "TensorFlow: Large-Scale Machine Learning on Heterogeneous Distributed Systems",
+    "authors": [
+      "Martín Abadi",
+      "Ashish Agarwal",
+      "Paul Barham",
+      "Eugene Brevdo",
+      "Zhifeng Chen",
+      "Craig Citro",
+      "Greg S. Corrado",
+      "Andy Davis",
+      "Jeffrey Dean",
+      "Matthieu Devin",
+      "Sanjay Ghemawat",
+      "Ian Goodfellow",
+      "Andrew Harp",
+      "Geoffrey Irving",
+      "Michael Isard",
+      "Yangqing Jia",
+      "Rafal Jozefowicz",
+      "Lukasz Kaiser",
+      "Manjunath Kudlur",
+      "Josh Levenberg",
+      "Dan Mane",
+      "Rajat Monga",
+      "Sherry Moore",
+      "Derek Murray",
+      "Chris Olah",
+      "Mike Schuster",
+      "Jonathon Shlens",
+      "Benoit Steiner",
+      "Ilya Sutskever",
+      "Kunal Talwar",
+      "Paul Tucker",
+      "Vincent Vanhoucke",
+      "Vijay Vasudevan",
+      "Fernanda Viegas",
+      "Oriol Vinyals",
+      "Pete Warden",
+      "Martin Wattenberg",
+      "Martin Wicke",
+      "Yuan Yu",
+      "Xiaoqiang Zheng"
+    ],
+    "authorCount": 40,
+    "authorsTruncated": false,
+    "publishedYear": 2016,
+    "arxivId": "1603.04467v2",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/1603.04467v2",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=1603.04467v2&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:42.545Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/1603.04467v2"
+      }
+    ]
+  },
+  {
+    "title": "Efficient Memory Management for Large Language Model Serving with PagedAttention",
+    "authors": [
+      "Woosuk Kwon",
+      "Zhuohan Li",
+      "Siyuan Zhuang",
+      "Ying Sheng",
+      "Lianmin Zheng",
+      "Cody Hao Yu",
+      "Joseph E. Gonzalez",
+      "Hao Zhang",
+      "Ion Stoica"
+    ],
+    "authorCount": 9,
+    "authorsTruncated": false,
+    "publishedYear": 2023,
+    "arxivId": "2309.06180v1",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2309.06180v1",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2309.06180v1&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:46.190Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2309.06180v1"
+      }
+    ]
+  },
+  {
+    "title": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
+    "authors": [
+      "Tri Dao",
+      "Daniel Y. Fu",
+      "Stefano Ermon",
+      "Atri Rudra",
+      "Christopher Ré"
+    ],
+    "authorCount": 5,
+    "authorsTruncated": false,
+    "publishedYear": 2022,
+    "arxivId": "2205.14135v2",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2205.14135v2",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2205.14135v2&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:49.777Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2205.14135v2"
+      }
+    ]
+  },
+  {
+    "title": "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?",
+    "authors": [
+      "Carlos E. Jimenez",
+      "John Yang",
+      "Alexander Wettig",
+      "Shunyu Yao",
+      "Kexin Pei",
+      "Ofir Press",
+      "Karthik Narasimhan"
+    ],
+    "authorCount": 7,
+    "authorsTruncated": false,
+    "publishedYear": 2023,
+    "arxivId": "2310.06770v3",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2310.06770v3",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2310.06770v3&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:53.455Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2310.06770v3"
+      }
+    ]
+  },
+  {
+    "title": "Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer",
+    "authors": [
+      "Colin Raffel",
+      "Noam Shazeer",
+      "Adam Roberts",
+      "Katherine Lee",
+      "Sharan Narang",
+      "Michael Matena",
+      "Yanqi Zhou",
+      "Wei Li",
+      "Peter J. Liu"
+    ],
+    "authorCount": 9,
+    "authorsTruncated": false,
+    "publishedYear": 2019,
+    "arxivId": "1910.10683v4",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/1910.10683v4",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=1910.10683v4&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:35:57.012Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/1910.10683v4"
+      }
+    ]
+  },
+  {
+    "title": "Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM",
+    "authors": [
+      "Deepak Narayanan",
+      "Mohammad Shoeybi",
+      "Jared Casper",
+      "Patrick LeGresley",
+      "Mostofa Patwary",
+      "Vijay Anand Korthikanti",
+      "Dmitri Vainbrand",
+      "Prethvi Kashinkunti",
+      "Julie Bernauer",
+      "Bryan Catanzaro",
+      "Amar Phanishayee",
+      "Matei Zaharia"
+    ],
+    "authorCount": 12,
+    "authorsTruncated": false,
+    "publishedYear": 2021,
+    "arxivId": "2104.04473v5",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2104.04473v5",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2104.04473v5&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:36:00.580Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2104.04473v5"
+      }
+    ]
+  },
+  {
+    "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+    "authors": [
+      "Edward J. Hu",
+      "Yelong Shen",
+      "Phillip Wallis",
+      "Zeyuan Allen-Zhu",
+      "Yuanzhi Li",
+      "Shean Wang",
+      "Lu Wang",
+      "Weizhu Chen"
+    ],
+    "authorCount": 8,
+    "authorsTruncated": false,
+    "publishedYear": 2021,
+    "arxivId": "2106.09685v2",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2106.09685v2",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2106.09685v2&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:36:04.180Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2106.09685v2"
+      }
+    ]
+  },
+  {
+    "title": "SGLang: Efficient Execution of Structured Language Model Programs",
+    "authors": [
+      "Lianmin Zheng",
+      "Liangsheng Yin",
+      "Zhiqiang Xie",
+      "Chuyue Sun",
+      "Jeff Huang",
+      "Cody Hao Yu",
+      "Shiyi Cao",
+      "Christos Kozyrakis",
+      "Ion Stoica",
+      "Joseph E. Gonzalez",
+      "Clark Barrett",
+      "Ying Sheng"
+    ],
+    "authorCount": 12,
+    "authorsTruncated": false,
+    "publishedYear": 2023,
+    "arxivId": "2312.07104v2",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/2312.07104v2",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=2312.07104v2&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:36:07.860Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/2312.07104v2"
+      }
+    ]
+  },
+  {
+    "title": "Ray: A Distributed Framework for Emerging AI Applications",
+    "authors": [
+      "Philipp Moritz",
+      "Robert Nishihara",
+      "Stephanie Wang",
+      "Alexey Tumanov",
+      "Richard Liaw",
+      "Eric Liang",
+      "Melih Elibol",
+      "Zongheng Yang",
+      "William Paul",
+      "Michael I. Jordan",
+      "Ion Stoica"
+    ],
+    "authorCount": 11,
+    "authorsTruncated": false,
+    "publishedYear": 2017,
+    "arxivId": "1712.05889v2",
+    "repository": "arxiv",
+    "url": "https://arxiv.org/abs/1712.05889v2",
+    "metadataUrl": "https://export.arxiv.org/api/query?id_list=1712.05889v2&max_results=1",
+    "metadataObservedAt": "2026-10-06T05:36:11.415Z",
+    "publicationKind": "preprint",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://arxiv.org/pdf/1712.05889v2"
+      }
+    ]
+  },
+  {
+    "title": "SuRe: Summarizing Retrievals using Answer Candidates for Open-domain QA of LLMs",
+    "authors": [
+      "Jaehyung Kim",
+      "Jaehyun Nam",
+      "Sangwoo Mo",
+      "Jongjin Park",
+      "Sang-Woo Lee",
+      "Minjoon Seo",
+      "Jung-Woo Ha",
+      "Jinwoo Shin"
+    ],
+    "authorCount": 8,
+    "authorsTruncated": false,
+    "publishedYear": 2024,
+    "venue": "ICLR 2024 poster",
+    "repository": "openreview",
+    "url": "https://openreview.net/forum?id=w4DW6qkRmt",
+    "metadataUrl": "https://api2.openreview.net/notes/search?term=SuRe%3A+Summarizing+Retrievals+using+Answer+Candidates+for+Open-domain+QA+of+LLMs&content=title&type=exact&source=forum&venueid=ICLR.cc%2F2024%2FConference&limit=3",
+    "metadataObservedAt": "2026-10-06T05:36:12.338Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://openreview.net/pdf/9192639fe8e3dbb64d5431c85984894b9e1b089d.pdf"
+      },
+      {
+        "label": "Reviews",
+        "url": "https://openreview.net/forum?id=w4DW6qkRmt"
+      }
+    ]
+  },
+  {
+    "title": "Neural Architecture Retrieval",
+    "authors": [
+      "Xiaohuan Pei",
+      "Yanxi Li",
+      "Minjing Dong",
+      "Chang Xu"
+    ],
+    "authorCount": 4,
+    "authorsTruncated": false,
+    "publishedYear": 2024,
+    "venue": "ICLR 2024 poster",
+    "repository": "openreview",
+    "url": "https://openreview.net/forum?id=1JtTPYBKqt",
+    "metadataUrl": "https://api2.openreview.net/notes/search?term=Neural+Architecture+Retrieval&content=title&type=exact&source=forum&venueid=ICLR.cc%2F2024%2FConference&limit=3",
+    "metadataObservedAt": "2026-10-06T05:36:13.649Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://openreview.net/pdf/180fb4a9f14dc5294394eb90e37c5a7daf41b195.pdf"
+      },
+      {
+        "label": "Reviews",
+        "url": "https://openreview.net/forum?id=1JtTPYBKqt"
+      }
+    ]
+  },
+  {
+    "title": "Retrieval is Accurate Generation",
+    "authors": [
+      "Bowen Cao",
+      "Deng Cai",
+      "Leyang Cui",
+      "Xuxin Cheng",
+      "Wei Bi",
+      "Yuexian Zou",
+      "Shuming Shi"
+    ],
+    "authorCount": 7,
+    "authorsTruncated": false,
+    "publishedYear": 2024,
+    "venue": "ICLR 2024 poster",
+    "repository": "openreview",
+    "url": "https://openreview.net/forum?id=oXYZJXDdo7",
+    "metadataUrl": "https://api2.openreview.net/notes/search?term=Retrieval+is+Accurate+Generation&content=title&type=exact&source=forum&venueid=ICLR.cc%2F2024%2FConference&limit=3",
+    "metadataObservedAt": "2026-10-06T05:36:14.968Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://openreview.net/pdf/43cec927ab0cd3dc1131d8926ce325c04b399236.pdf"
+      },
+      {
+        "label": "Reviews",
+        "url": "https://openreview.net/forum?id=oXYZJXDdo7"
+      }
+    ]
+  },
+  {
+    "title": "Retrieval-Enhanced Contrastive Vision-Text Models",
+    "authors": [
+      "Ahmet Iscen",
+      "Mathilde Caron",
+      "Alireza Fathi",
+      "Cordelia Schmid"
+    ],
+    "authorCount": 4,
+    "authorsTruncated": false,
+    "publishedYear": 2024,
+    "venue": "ICLR 2024 poster",
+    "repository": "openreview",
+    "url": "https://openreview.net/forum?id=b2UlHeyyC0",
+    "metadataUrl": "https://api2.openreview.net/notes/search?term=Retrieval-Enhanced+Contrastive+Vision-Text+Models&content=title&type=exact&source=forum&venueid=ICLR.cc%2F2024%2FConference&limit=3",
+    "metadataObservedAt": "2026-10-06T05:36:16.271Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://openreview.net/pdf/b371f58bea2f9afc74f7fadebd6a614edbb5eb6d.pdf"
+      },
+      {
+        "label": "Reviews",
+        "url": "https://openreview.net/forum?id=b2UlHeyyC0"
+      }
+    ]
+  },
+  {
+    "title": "AgentBench: Evaluating LLMs as Agents",
+    "authors": [
+      "Xiao Liu",
+      "Hao Yu",
+      "Hanchen Zhang",
+      "Yifan Xu",
+      "Xuanyu Lei",
+      "Hanyu Lai",
+      "Yu Gu",
+      "Hangliang Ding",
+      "Kaiwen Men",
+      "Kejuan Yang",
+      "Shudan Zhang",
+      "Xiang Deng",
+      "Aohan Zeng",
+      "Zhengxiao Du",
+      "Chenhui Zhang",
+      "Sheng Shen",
+      "Tianjun Zhang",
+      "Yu Su",
+      "Huan Sun",
+      "Minlie Huang",
+      "Yuxiao Dong",
+      "Jie Tang"
+    ],
+    "authorCount": 22,
+    "authorsTruncated": false,
+    "publishedYear": 2024,
+    "venue": "ICLR 2024 poster",
+    "repository": "openreview",
+    "url": "https://openreview.net/forum?id=zAdUB0aCTQ",
+    "metadataUrl": "https://api2.openreview.net/notes/search?term=AgentBench%3A+Evaluating+LLMs+as+Agents&content=title&type=exact&source=forum&venueid=ICLR.cc%2F2024%2FConference&limit=3",
+    "metadataObservedAt": "2026-10-06T05:36:17.590Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://openreview.net/pdf/6eee0bd1fd98c135372baedb2a5644233a013bb2.pdf"
+      },
+      {
+        "label": "Reviews",
+        "url": "https://openreview.net/forum?id=zAdUB0aCTQ"
+      }
+    ]
+  },
+  {
+    "title": "Beyond Reverse KL: Generalizing Direct Preference Optimization with Diverse Divergence Constraints",
+    "authors": [
+      "Chaoqi Wang",
+      "Yibo Jiang",
+      "Chenghao Yang",
+      "Han Liu",
+      "Yuxin Chen"
+    ],
+    "authorCount": 5,
+    "authorsTruncated": false,
+    "publishedYear": 2024,
+    "venue": "ICLR 2024 spotlight",
+    "repository": "openreview",
+    "url": "https://openreview.net/forum?id=2cRzmWXK9N",
+    "metadataUrl": "https://api2.openreview.net/notes/search?term=Beyond+Reverse+KL%3A+Generalizing+Direct+Preference+Optimization+with+Diverse+Divergence+Constraints&content=title&type=exact&source=forum&venueid=ICLR.cc%2F2024%2FConference&limit=3",
+    "metadataObservedAt": "2026-10-06T05:36:18.911Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://openreview.net/pdf/161cf92d489db9ea1ae0f43eab7797245e967c2c.pdf"
+      },
+      {
+        "label": "Reviews",
+        "url": "https://openreview.net/forum?id=2cRzmWXK9N"
+      }
+    ]
+  },
+  {
+    "title": "EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks",
+    "authors": [
+      "Mingxing Tan",
+      "Quoc Le"
+    ],
+    "authorCount": 2,
+    "authorsTruncated": false,
+    "publishedYear": 2019,
+    "venue": "International Conference on Machine Learning",
+    "repository": "pmlr",
+    "url": "https://proceedings.mlr.press/v97/tan19a.html",
+    "metadataUrl": "https://proceedings.mlr.press/v97/tan19a.html",
+    "metadataObservedAt": "2026-10-06T05:36:19.312Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://proceedings.mlr.press/v97/tan19a/tan19a.pdf"
+      }
+    ]
+  },
+  {
+    "title": "A Simple Framework for Contrastive Learning of Visual Representations",
+    "authors": [
+      "Ting Chen",
+      "Simon Kornblith",
+      "Mohammad Norouzi",
+      "Geoffrey Hinton"
+    ],
+    "authorCount": 4,
+    "authorsTruncated": false,
+    "publishedYear": 2020,
+    "venue": "International Conference on Machine Learning",
+    "repository": "pmlr",
+    "url": "https://proceedings.mlr.press/v119/chen20j.html",
+    "metadataUrl": "https://proceedings.mlr.press/v119/chen20j.html",
+    "metadataObservedAt": "2026-10-06T05:36:22.373Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://proceedings.mlr.press/v119/chen20j/chen20j.pdf"
+      }
+    ]
+  },
+  {
+    "title": "Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks",
+    "authors": [
+      "Chelsea Finn",
+      "Pieter Abbeel",
+      "Sergey Levine"
+    ],
+    "authorCount": 3,
+    "authorsTruncated": false,
+    "publishedYear": 2017,
+    "venue": "International Conference on Machine Learning",
+    "repository": "pmlr",
+    "url": "https://proceedings.mlr.press/v70/finn17a.html",
+    "metadataUrl": "https://proceedings.mlr.press/v70/finn17a.html",
+    "metadataObservedAt": "2026-10-06T05:36:25.204Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://proceedings.mlr.press/v70/finn17a/finn17a.pdf"
+      }
+    ]
+  },
+  {
+    "title": "Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning",
+    "authors": [
+      "Yarin Gal",
+      "Zoubin Ghahramani"
+    ],
+    "authorCount": 2,
+    "authorsTruncated": false,
+    "publishedYear": 2016,
+    "venue": "International Conference on Machine Learning",
+    "repository": "pmlr",
+    "url": "https://proceedings.mlr.press/v48/gal16.html",
+    "metadataUrl": "https://proceedings.mlr.press/v48/gal16.html",
+    "metadataObservedAt": "2026-10-06T05:36:28.793Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://proceedings.mlr.press/v48/gal16.pdf"
+      }
+    ]
+  },
+  {
+    "title": "Learning Transferable Visual Models From Natural Language Supervision",
+    "authors": [
+      "Alec Radford",
+      "Jong Wook Kim",
+      "Chris Hallacy",
+      "Aditya Ramesh",
+      "Gabriel Goh",
+      "Sandhini Agarwal",
+      "Girish Sastry",
+      "Amanda Askell",
+      "Pamela Mishkin",
+      "Jack Clark",
+      "Gretchen Krueger",
+      "Ilya Sutskever"
+    ],
+    "authorCount": 12,
+    "authorsTruncated": false,
+    "publishedYear": 2021,
+    "venue": "International Conference on Machine Learning",
+    "repository": "pmlr",
+    "url": "https://proceedings.mlr.press/v139/radford21a.html",
+    "metadataUrl": "https://proceedings.mlr.press/v139/radford21a.html",
+    "metadataObservedAt": "2026-10-06T05:36:32.006Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://proceedings.mlr.press/v139/radford21a/radford21a.pdf"
+      }
+    ]
+  },
+  {
+    "title": "Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor",
+    "authors": [
+      "Tuomas Haarnoja",
+      "Aurick Zhou",
+      "Pieter Abbeel",
+      "Sergey Levine"
+    ],
+    "authorCount": 4,
+    "authorsTruncated": false,
+    "publishedYear": 2018,
+    "venue": "International Conference on Machine Learning",
+    "repository": "pmlr",
+    "url": "https://proceedings.mlr.press/v80/haarnoja18b.html",
+    "metadataUrl": "https://proceedings.mlr.press/v80/haarnoja18b.html",
+    "metadataObservedAt": "2026-10-06T05:36:35.362Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://proceedings.mlr.press/v80/haarnoja18b/haarnoja18b.pdf"
+      }
+    ]
+  },
+  {
+    "title": "Improved Denoising Diffusion Probabilistic Models",
+    "authors": [
+      "Alexander Quinn Nichol",
+      "Prafulla Dhariwal"
+    ],
+    "authorCount": 2,
+    "authorsTruncated": false,
+    "publishedYear": 2021,
+    "venue": "International Conference on Machine Learning",
+    "repository": "pmlr",
+    "url": "https://proceedings.mlr.press/v139/nichol21a.html",
+    "metadataUrl": "https://proceedings.mlr.press/v139/nichol21a.html",
+    "metadataObservedAt": "2026-10-06T05:36:40.688Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://proceedings.mlr.press/v139/nichol21a/nichol21a.pdf"
+      }
+    ]
+  },
+  {
+    "title": "Theoretically Principled Trade-off between Robustness and Accuracy",
+    "authors": [
+      "Hongyang Zhang",
+      "Yaodong Yu",
+      "Jiantao Jiao",
+      "Eric Xing",
+      "Laurent El Ghaoui",
+      "Michael Jordan"
+    ],
+    "authorCount": 6,
+    "authorsTruncated": false,
+    "publishedYear": 2019,
+    "venue": "International Conference on Machine Learning",
+    "repository": "pmlr",
+    "url": "https://proceedings.mlr.press/v97/zhang19p.html",
+    "metadataUrl": "https://proceedings.mlr.press/v97/zhang19p.html",
+    "metadataObservedAt": "2026-10-06T05:36:44.073Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://proceedings.mlr.press/v97/zhang19p/zhang19p.pdf"
+      }
+    ]
+  },
+  {
+    "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+    "authors": [
+      "Jacob Devlin",
+      "Ming-Wei Chang",
+      "Kenton Lee",
+      "Kristina Toutanova"
+    ],
+    "authorCount": 4,
+    "authorsTruncated": false,
+    "publishedYear": 2019,
+    "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers)",
+    "doi": "10.18653/v1/n19-1423",
+    "repository": "acl-anthology",
+    "url": "https://aclanthology.org/N19-1423/",
+    "metadataUrl": "https://aclanthology.org/N19-1423/",
+    "metadataObservedAt": "2026-10-06T05:36:47.395Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://aclanthology.org/N19-1423.pdf"
+      }
+    ]
+  },
+  {
+    "title": "GloVe: Global Vectors for Word Representation",
+    "authors": [
+      "Jeffrey Pennington",
+      "Richard Socher",
+      "Christopher D. Manning"
+    ],
+    "authorCount": 3,
+    "authorsTruncated": false,
+    "publishedYear": 2014,
+    "venue": "Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+    "doi": "10.3115/v1/d14-1162",
+    "repository": "acl-anthology",
+    "url": "https://aclanthology.org/D14-1162/",
+    "metadataUrl": "https://aclanthology.org/D14-1162/",
+    "metadataObservedAt": "2026-10-06T05:36:49.416Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://aclanthology.org/D14-1162.pdf"
+      }
+    ]
+  },
+  {
+    "title": "Deep Contextualized Word Representations",
+    "authors": [
+      "Matthew E. Peters",
+      "Mark Neumann",
+      "Mohit Iyyer",
+      "Matt Gardner",
+      "Christopher Clark",
+      "Kenton Lee",
+      "Luke Zettlemoyer"
+    ],
+    "authorCount": 7,
+    "authorsTruncated": false,
+    "publishedYear": 2018,
+    "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long Papers)",
+    "doi": "10.18653/v1/n18-1202",
+    "repository": "acl-anthology",
+    "url": "https://aclanthology.org/N18-1202/",
+    "metadataUrl": "https://aclanthology.org/N18-1202/",
+    "metadataObservedAt": "2026-10-06T05:36:51.668Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://aclanthology.org/N18-1202.pdf"
+      }
+    ]
+  },
+  {
+    "title": "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks",
+    "authors": [
+      "Nils Reimers",
+      "Iryna Gurevych"
+    ],
+    "authorCount": 2,
+    "authorsTruncated": false,
+    "publishedYear": 2019,
+    "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+    "doi": "10.18653/v1/d19-1410",
+    "repository": "acl-anthology",
+    "url": "https://aclanthology.org/D19-1410/",
+    "metadataUrl": "https://aclanthology.org/D19-1410/",
+    "metadataObservedAt": "2026-10-06T05:36:53.959Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://aclanthology.org/D19-1410.pdf"
+      }
+    ]
+  },
+  {
+    "title": "Dense Passage Retrieval for Open-Domain Question Answering",
+    "authors": [
+      "Vladimir Karpukhin",
+      "Barlas Oguz",
+      "Sewon Min",
+      "Patrick Lewis",
+      "Ledell Wu",
+      "Sergey Edunov",
+      "Danqi Chen",
+      "Wen-tau Yih"
+    ],
+    "authorCount": 8,
+    "authorsTruncated": false,
+    "publishedYear": 2020,
+    "venue": "Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+    "doi": "10.18653/v1/2020.emnlp-main.550",
+    "repository": "acl-anthology",
+    "url": "https://aclanthology.org/2020.emnlp-main.550/",
+    "metadataUrl": "https://aclanthology.org/2020.emnlp-main.550/",
+    "metadataObservedAt": "2026-10-06T05:36:56.231Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://aclanthology.org/2020.emnlp-main.550.pdf"
+      }
+    ]
+  },
+  {
+    "title": "BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension",
+    "authors": [
+      "Mike Lewis",
+      "Yinhan Liu",
+      "Naman Goyal",
+      "Marjan Ghazvininejad",
+      "Abdelrahman Mohamed",
+      "Omer Levy",
+      "Veselin Stoyanov",
+      "Luke Zettlemoyer"
+    ],
+    "authorCount": 8,
+    "authorsTruncated": false,
+    "publishedYear": 2020,
+    "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+    "doi": "10.18653/v1/2020.acl-main.703",
+    "repository": "acl-anthology",
+    "url": "https://aclanthology.org/2020.acl-main.703/",
+    "metadataUrl": "https://aclanthology.org/2020.acl-main.703/",
+    "metadataObservedAt": "2026-10-06T05:36:58.541Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://aclanthology.org/2020.acl-main.703.pdf"
+      }
+    ]
+  },
+  {
+    "title": "ColBERTv2: Effective and Efficient Retrieval via Lightweight Late Interaction",
+    "authors": [
+      "Keshav Santhanam",
+      "Omar Khattab",
+      "Jon Saad-Falcon",
+      "Christopher Potts",
+      "Matei Zaharia"
+    ],
+    "authorCount": 5,
+    "authorsTruncated": false,
+    "publishedYear": 2022,
+    "venue": "Proceedings of the 2022 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+    "doi": "10.18653/v1/2022.naacl-main.272",
+    "repository": "acl-anthology",
+    "url": "https://aclanthology.org/2022.naacl-main.272/",
+    "metadataUrl": "https://aclanthology.org/2022.naacl-main.272/",
+    "metadataObservedAt": "2026-10-06T05:37:00.867Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://aclanthology.org/2022.naacl-main.272.pdf"
+      }
+    ]
+  },
+  {
+    "title": "Active Retrieval Augmented Generation",
+    "authors": [
+      "Zhengbao Jiang",
+      "Frank F. Xu",
+      "Luyu Gao",
+      "Zhiqing Sun",
+      "Qian Liu",
+      "Jane Dwivedi-Yu",
+      "Yiming Yang (杨亦鸣)",
+      "Jamie Callan",
+      "Graham Neubig"
+    ],
+    "authorCount": 9,
+    "authorsTruncated": false,
+    "publishedYear": 2023,
+    "venue": "Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing",
+    "doi": "10.18653/v1/2023.emnlp-main.495",
+    "repository": "acl-anthology",
+    "url": "https://aclanthology.org/2023.emnlp-main.495/",
+    "metadataUrl": "https://aclanthology.org/2023.emnlp-main.495/",
+    "metadataObservedAt": "2026-10-06T05:37:03.175Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://aclanthology.org/2023.emnlp-main.495.pdf"
+      }
+    ]
+  },
+  {
+    "title": "Bleu: a Method for Automatic Evaluation of Machine Translation",
+    "authors": [
+      "Kishore Papineni",
+      "Salim Roukos",
+      "Todd Ward",
+      "Wei-Jing Zhu"
+    ],
+    "authorCount": 4,
+    "authorsTruncated": false,
+    "publishedYear": 2002,
+    "venue": "Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics",
+    "doi": "10.3115/1073083.1073135",
+    "repository": "acl-anthology",
+    "url": "https://aclanthology.org/P02-1040/",
+    "metadataUrl": "https://aclanthology.org/P02-1040/",
+    "metadataObservedAt": "2026-10-06T05:37:05.223Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://aclanthology.org/P02-1040.pdf"
+      }
+    ]
+  },
+  {
+    "title": "ROUGE: A Package for Automatic Evaluation of Summaries",
+    "authors": [
+      "Chin-Yew Lin"
+    ],
+    "authorCount": 1,
+    "authorsTruncated": false,
+    "publishedYear": 2004,
+    "venue": "Text Summarization Branches Out",
+    "repository": "acl-anthology",
+    "url": "https://aclanthology.org/W04-1013/",
+    "metadataUrl": "https://aclanthology.org/W04-1013/",
+    "metadataObservedAt": "2026-10-06T05:37:07.229Z",
+    "publicationKind": "conference-paper",
+    "peerReview": "unknown",
+    "links": [
+      {
+        "label": "PDF",
+        "url": "https://aclanthology.org/W04-1013.pdf"
+      }
+    ]
+  }
+]

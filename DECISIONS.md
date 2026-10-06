@@ -5440,3 +5440,21 @@ retry invalid generation or activate production brief delivery from fixtures alo
 A protected worker-only format choice stages rollout behind live usefulness gates.
 Real complete business proof, genuine creators, external adoption and a general
 contract-enforced policy wallet remain open; never claim them from implementation.
+
+## D-307 — Observed research-paper bibliography (2026-10-06)
+
+The owner approved expanding Sources with actual paper records and better discovery.
+Use a checked-in, strictly validated metadata catalog plus an explicit bounded
+arXiv/Crossref lookup, separate from original-reading and creator/payment records.
+Repository homepages and blogs do not substitute for individual research papers.
+Preserve observed author names, DOI, exact arXiv versions and provenance; group only
+observed identities while keeping original snapshots inspectable. Unknown peer
+review remains explicit. Do not add metadata to citations or source payee allowlists.
+
+Use process-local bounded RAM admission instead of the database-backed public
+request limiter: browsing and metadata lookup need no durable database write.
+Provider failures and incomplete ranked samples remain visible. OpenAlex/DOAJ are
+external index links; their API integration retains its separate quota/provenance
+acceptance gate. Web/API/human CLI share this bibliography contract; MCP, desktop,
+extensions, bots and unattended jobs keep existing explicit research roles and
+unchanged distribution bytes. See [paper library](docs/paper-library.md).

@@ -10,6 +10,11 @@ import { PublicReferenceCard } from "@/components/keryx/public-reference-card";
 import { CitedSourceCard } from "@/components/keryx/cited-source-card";
 import { ExploreSourceCard } from "@/components/keryx/explore-source-card";
 import { SourceLibraryFilters } from "@/components/keryx/source-library-filters";
+import { PaperCard } from "@/components/keryx/paper-card";
+import { PaperSearchPanel } from "@/components/keryx/paper-search-panel";
+import { PAPER_CATALOG } from "@/lib/papers/catalog";
+import { groupPaperWorks } from "@/lib/papers/work-groups";
+import { paperMatches } from "@/lib/papers/filters";
 import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { safeInlineJson } from "@/lib/safe-json";
@@ -20,9 +25,9 @@ import { browseLibrary, libraryBrowseHref, libraryPublisherGroups, parseLibraryF
 export const dynamic = "force-dynamic";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
-const TITLE = "Sources — public references and creator listings";
+const TITLE = "Sources — research papers, public references and creator listings";
 const DESCRIPTION =
-  "Find sources by topic, publisher or domain across the publisher directory, public citation history, retained feeds and creator listings. Reading scope and payments remain separate.";
+  "Explore research papers by title, author, year and DOI alongside publishers, cited documents, retained feeds and creator listings. Bibliography, reading and payments remain separate.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -57,11 +62,21 @@ export default async function SourcesPage({ searchParams }: {
     itemTitles: reference.items.map(item => item.title), observedAt: reference.refreshedAt, data: reference }));
   const creatorRecords = entries.map(entry => ({ ...entry.source, kind: "creator" as const,
     observedAt: entry.source.createdAt, data: entry }));
-  const allRecords: LibraryRecord[] = [...exploreRecords, ...citedRecords, ...feedRecords, ...creatorRecords];
+  const paperGroups = groupPaperWorks(PAPER_CATALOG);
+  // Interleave repositories so the first screen includes more than one archive.
+  const repositories = [...new Set(paperGroups.map(group => group.record.repository))];
+  const grouped = repositories.map(repository => paperGroups.filter(group => group.record.repository === repository));
+  const balancedPapers = Array.from({ length: Math.max(0, ...grouped.map(group => group.length)) }, (_, index) => grouped.flatMap(group => group[index] ? [group[index]] : [])).flat();
+  const paperRecords = balancedPapers.map(group => ({ id: group.id, name: group.record.title, url: group.record.url,
+    kind: "paper" as const, tags: ["scholarly", ...group.records.flatMap(record => [...record.authors, record.doi ?? "", record.arxivId ?? "", record.venue ?? ""])],
+    itemTitles: group.records.map(record => record.title), observedAt: group.record.metadataObservedAt, papers: group.records, data: group }));
+  const allRecords: LibraryRecord[] = [...paperRecords, ...exploreRecords, ...citedRecords, ...feedRecords, ...creatorRecords];
   const visibleExplore = browseLibrary(exploreRecords, filters);
   const visibleCited = browseLibrary(citedRecords, filters);
   const visibleFeeds = browseLibrary(feedRecords, filters);
   const visibleCreators = browseLibrary(creatorRecords, filters);
+  const visiblePapers = browseLibrary(paperRecords, filters).map(({ data }) => ({ ...data,
+    record: data.records.find(record => paperMatches(record, filters)) ?? data.record }));
   const matches = browseLibrary(allRecords, filters);
   const showCollection = (kind: LibraryRecord["kind"]) => filters.kind === "all" || filters.kind === kind;
 
@@ -76,6 +91,7 @@ export default async function SourcesPage({ searchParams }: {
         "@type": "ItemList",
         ...(countsReady ? { numberOfItems: allRecords.length } : {}),
         itemListElement: [
+          ...paperGroups.map(group => ({ url: group.record.url, name: group.record.title })),
           ...EXPLORE_SOURCES.map(source => ({ url: source.url, name: source.name })),
           ...citedSources.entries.map(entry => ({ url: entry.url, name: entry.title })),
           ...references.map((reference) => ({ url: reference.url, name: reference.name })),
@@ -103,12 +119,17 @@ export default async function SourcesPage({ searchParams }: {
           Sources to <em className="italic text-paid">explore.</em>
         </h1>
         <p className="mt-4 max-w-[65ch] font-serif text-[17px] leading-[1.55] text-ink-2">
-          Explore publisher documentation and writing, follow documents cited in public answers, browse retained feeds and discover creator listings.
+          Explore original research-paper records, publisher documentation and writing, documents cited in public answers, retained feeds and creator listings.
           Sources remain visible without publisher verification. Reading scope, publisher control
           and creator payments are separate records.
         </p>
 
         <div className="mt-7 grid gap-px border border-line bg-line sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+          <Link href={libraryBrowseHref(filters, { kind: "paper" })} className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3">Research papers</p>
+            <p className="mt-1 font-display text-3xl text-ink">{paperGroups.length}</p>
+            <p className="mt-1 font-serif text-sm text-ink-2">Works · {PAPER_CATALOG.length} observed records · paper text unread</p>
+          </Link>
           <Link href={libraryBrowseHref(filters, { kind: "explore" })} className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
             <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3">Publisher directory</p>
             <p className="mt-1 font-display text-3xl text-ink">{EXPLORE_SOURCES.length}</p>
@@ -141,6 +162,20 @@ export default async function SourcesPage({ searchParams }: {
         )}
 
         <SourceLibraryFilters filters={filters} total={allRecords.length} matched={matches.length} publishers={libraryPublisherGroups(matches)} />
+
+        {showCollection("paper") && <section id="research-papers" className="mt-10 scroll-mt-6" aria-labelledby="research-papers-title">
+          <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ink pb-3">
+            <h2 id="research-papers-title" className="font-display text-2xl text-ink">Research papers</h2>
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-ink-3">Original records · free discovery</span>
+          </div>
+          <p className="mt-3 max-w-[75ch] font-serif text-[15px] leading-relaxed text-ink-2">A starter bibliography from arXiv, OpenReview, PMLR and ACL Anthology. Metadata identifies papers and observed versions; it does not establish full-text access, peer review or scientific accuracy. Matching DOI or arXiv work identifiers group records while preserving their original versions.</p>
+          <p className="mt-2 font-mono text-[11px] text-ink-3">{visiblePapers.length} matching works · {PAPER_CATALOG.length} starter records. Author, year and DOI filters apply to this bibliography.</p>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">{visiblePapers.slice(0, 8).map(group => <PaperCard key={group.id} group={group} />)}</div>
+          {visiblePapers.length > 8 && <details className="mt-5 border border-line bg-paper p-5"><summary className="min-h-11 cursor-pointer py-2 font-mono text-xs text-seal underline">Show {visiblePapers.length - 8} more paper references</summary><div className="mt-4 grid gap-4 md:grid-cols-2">{visiblePapers.slice(8).map(group => <PaperCard key={group.id} group={group} />)}</div></details>}
+          {visiblePapers.length === 0 && <p className="mt-4 font-serif text-sm text-ink-2">No starter paper matches these filters. You can search the repositories below.</p>}
+          <PaperSearchPanel key={JSON.stringify(filters)} initialQuery={filters.doi ?? filters.q} author={filters.author} year={filters.year} />
+          <p className="mt-4 font-serif text-sm text-ink-2">Explore broader scholarly indexes: <a href="https://openalex.org/" target="_blank" rel="noopener noreferrer" className="text-seal underline">OpenAlex ↗</a> · <a href="https://doaj.org/" target="_blank" rel="noopener noreferrer" className="text-seal underline">DOAJ ↗</a>. These external links open their indexes; Keryx makes no background queries to them.</p>
+        </section>}
         {matches.length === 0 && <div className="mt-5 border border-line bg-paper p-5">
           <h2 className="font-display text-xl text-ink">No sources match these filters</h2>
           <p className="mt-2 font-serif text-sm text-ink-2">Try a publisher name, a shorter search or another topic. <Link href="/sources#browse-sources" className="text-seal underline">Clear filters</Link> to browse all available records.</p>

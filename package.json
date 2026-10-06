@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.27.2",
+  "version": "0.27.3",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -8,6 +8,7 @@
   },
   "description": "Keryx — a citation-toll reading agent. Pays creators every time their work is cited, in USDC on Arc.",
   "scripts": {
+    "test:browser-paper-library": "node --import tsx scripts/test-browser-paper-library.mts",
     "eval:cloudflare": "node --import tsx --env-file-if-exists=.env.cloudflare.local scripts/eval-cloudflare.mts",
     "test:browser-isolated-session": "node --import tsx scripts/test-browser-isolated-session.mts",
     "test:built-empty-evidence": "node --test scripts/test-built-empty-evidence.test.cjs && node scripts/test-built-empty-evidence.cjs",
@@ -101,7 +102,9 @@
     "mainnet:unsigned-setup": "node --import tsx --no-warnings scripts/mainnet-unsigned-setup.mts",
     "test:built-research-allowance": "node scripts/test-built-research-allowance.cjs",
     "operator:business": "node --import tsx --no-warnings scripts/operator-business.mts",
-    "operator:canary": "node --import tsx --no-warnings scripts/operator-canary.mts"
+    "operator:canary": "node --import tsx --no-warnings scripts/operator-canary.mts",
+    "papers": "node --import tsx scripts/papers.mts",
+    "papers:collect": "node --import tsx scripts/collect-paper-catalog.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",

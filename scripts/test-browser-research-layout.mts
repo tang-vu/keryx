@@ -159,7 +159,7 @@ try {
           "The filter must reflect a real Next client transition, not merely a fresh document");
         await page.getByLabel("Collection", { exact: true }).selectOption("explore");
         await page.getByLabel("Sort", { exact: true }).selectOption("name");
-        await page.getByLabel("Search titles, publishers, domains or tags").fill("circle.com");
+        await page.getByLabel("Search titles, publishers, domains, authors or identifiers").fill("circle.com");
         await page.getByRole("button", { name: "Find sources" }).click();
         await page.waitForURL(url => url.searchParams.get("q") === "circle.com" && url.searchParams.get("kind") === "explore");
         await page.getByRole("heading", { name: "Publisher directory", exact: true }).waitFor();
@@ -171,7 +171,7 @@ try {
         await page.goBack();
         await page.waitForFunction(() => (document.querySelector('select[name="topic"]') as HTMLSelectElement)?.value === "payments"
           && (document.querySelector('select[name="kind"]') as HTMLSelectElement)?.value === "all");
-        assert.equal(await page.getByLabel("Search titles, publishers, domains or tags").inputValue(), "");
+        assert.equal(await page.getByLabel("Search titles, publishers, domains, authors or identifiers").inputValue(), "");
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
         await page.screenshot({ path: join(screenshotDir, `sources-navigation-${width}x${height}.png`) });
       }
