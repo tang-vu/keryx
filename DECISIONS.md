@@ -5489,3 +5489,24 @@ closed live allowance was reopened. Sentences stay close to their quotes, so
 cross-source comparison and checklists remain gaps, and reading limits (an arXiv
 PDF over the byte limit) bound the result more than synthesis does.
 See [sentence-cited summaries](docs/engineering/cited-summary-2026-10-06.md).
+
+## Read arXiv's HTML rendition when the PDF exceeds the byte limit - 2026-10-06
+
+The owner delegated two follow-ups to the sentence-cited summary. Observed need:
+the official PDF of arXiv 1706.03762v7 is 2,215,244 bytes, over the 2 MiB reader
+limit, so that run had abstract-only evidence and three of five targets stayed
+empty. The unchanged reader extracted 41,800 untruncated characters, including the
+results and conclusion, from arXiv's HTML rendition of the same version.
+
+On an `article-byte-limit` failure of an official versioned arXiv PDF, try
+`https://arxiv.org/html/<id>` once before the abstract fallback, for provider
+records and for the same PDF found by web search. Require the exact final URL and
+HTML delivery; count the attempt against the existing read cap and deadline; cite
+the HTML URL and state the substitution in the trace. Raising the PDF byte limit was
+not chosen: the parser runs in a 64 MB, five-second contained worker, and larger
+inputs need their own memory and timing evidence. Other PDF failures, page and
+character limits and the abstract labelling are unchanged. The rendition is arXiv's
+conversion and can omit or garble equations, tables and figures.
+
+The Low confidence cap stays. Three developer-read local runs are not grounds to
+raise a confidence claim; revisit it with an independently graded round.

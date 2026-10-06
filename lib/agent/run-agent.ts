@@ -388,26 +388,51 @@ async function* runAdmittedAgent(
     try {
       const metadata = candidate.item.scholarly;
       let abstractFallback = false;
+      let htmlFallback = false;
       let article;
       try {
         article = await (deps.readWebArticle ?? readArticle)(candidate.item.itemUrl, webSignal());
         if (metadata?.provider === "arxiv" && article.finalUrl === candidate.item.itemUrl && article.kind !== "pdf") throw new ArticleReadError("pdf-extraction-unavailable");
       }
       catch (error) {
-        if (metadata?.provider !== "arxiv") throw error;
-        scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: paper PDF unavailable (${articleFailureCode(error)}).`);
-        if (webAttempts >= (input.researchMode === "quick" ? 4 : 12) || webRemainingMs - (Date.now() - operationStarted) <= 0 || input.signal?.aborted) throw error;
-        webAttempts++;
-        abstractFallback = true;
-        article = await (deps.readWebArticle ?? readArticle)(`https://arxiv.org/abs/${metadata.arxivId}`,
-          AbortSignal.any([input.signal ?? new AbortController().signal, AbortSignal.timeout(Math.max(1, webRemainingMs - (Date.now() - operationStarted)))]));
+        // An official versioned arXiv PDF found by web search has no provider record but the same identity.
+        const pdfArxivId = metadata?.provider === "arxiv" ? metadata.arxivId
+          : /^https:\/\/arxiv\.org\/pdf\//u.test(candidate.item.itemUrl) ? arxivDocumentId(candidate.item.itemUrl) : undefined;
+        if (metadata?.provider !== "arxiv" && !(pdfArxivId && articleFailureCode(error) === "article-byte-limit")) throw error;
+        const exhausted = () => webAttempts >= (input.researchMode === "quick" ? 4 : 12) || webRemainingMs - (Date.now() - operationStarted) <= 0 || input.signal?.aborted;
+        const fallbackSignal = () => AbortSignal.any([input.signal ?? new AbortController().signal, AbortSignal.timeout(Math.max(1, webRemainingMs - (Date.now() - operationStarted)))]);
+        scholarlyReadFailures.push(`arXiv ${pdfArxivId}: paper PDF unavailable (${articleFailureCode(error)}).`);
+        if (exhausted()) throw error;
+        // A non-PDF body at the PDF URL was read before it was refused; it is never evidence.
+        article = undefined;
+        // A PDF over the byte limit usually carries figures, not more text. arXiv's own HTML
+        // rendition of the same version is full paper text within the unchanged HTML reader bounds.
+        if (pdfArxivId && articleFailureCode(error) === "article-byte-limit") {
+          webAttempts++;
+          const htmlUrl = `https://arxiv.org/html/${pdfArxivId}`;
+          try {
+            const rendition = await (deps.readWebArticle ?? readArticle)(htmlUrl, fallbackSignal());
+            if (rendition.finalUrl !== htmlUrl || rendition.kind !== "html") throw new ArticleReadError("document-identity-changed");
+            article = rendition;
+            htmlFallback = true;
+            scholarlyReadFailures.push(`arXiv ${pdfArxivId}: read arXiv's HTML rendition of the same version instead of the PDF.`);
+          } catch (htmlError) {
+            scholarlyReadFailures.push(`arXiv ${pdfArxivId}: HTML full text unavailable (${articleFailureCode(htmlError)}).`);
+            if (metadata?.provider !== "arxiv" || exhausted()) throw error;
+          }
+        }
+        if (!article) {
+          webAttempts++;
+          abstractFallback = true;
+          article = await (deps.readWebArticle ?? readArticle)(`https://arxiv.org/abs/${pdfArxivId}`, fallbackSignal());
+        }
       }
       // A provider's versioned repository identity must survive document redirects.
       const requestedArxivId = candidate.item.requestedSource && arxivDocumentId(candidate.item.itemUrl);
       if (requestedArxivId && arxivDocumentId(article.finalUrl) !== requestedArxivId) throw new ArticleReadError("document-identity-changed");
       if (metadata?.provider === "arxiv") {
-        const expected = `https://arxiv.org/${abstractFallback ? "abs" : "pdf"}/${metadata.arxivId}`;
-        if (article.finalUrl !== expected || (!abstractFallback && article.kind !== "pdf")) throw new ArticleReadError("document-identity-changed");
+        const expected = `https://arxiv.org/${abstractFallback ? "abs" : htmlFallback ? "html" : "pdf"}/${metadata.arxivId}`;
+        if (article.finalUrl !== expected || (!abstractFallback && article.kind !== (htmlFallback ? "html" : "pdf"))) throw new ArticleReadError("document-identity-changed");
       }
       const identity = bodyIdentity(article.text);
       lastWebFailure = "empty-or-duplicate-body";

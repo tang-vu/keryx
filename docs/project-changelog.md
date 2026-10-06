@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### arXiv full text when the PDF is too large (2026-10-06, v0.27.5 candidate)
+
+- When an official versioned arXiv PDF exceeds the 2 MiB read limit, research now
+  reads arXiv's HTML rendition of the same version before falling back to the
+  abstract page. Figure-heavy papers previously yielded abstract-only evidence.
+- Exact version and format are checked on the HTML URL; each attempt counts
+  against the existing read cap and deadline. PDF and HTML limits are unchanged.
+- The trace states which document was read. The rendition can omit or garble
+  equations, tables and figures; papers without one keep the abstract fallback.
+- See [scholarly research](scholarly-research.md). No payment, custody or schedule change.
+
 ### Sentence-cited summaries (2026-10-06, v0.27.4 candidate)
 
 - Answers now carry a model-written summary cited sentence by sentence. Each
