@@ -147,7 +147,7 @@ try {
       assert.equal(draft.searchParams.has("run"), false, "Source exploration must not auto-run a paid or provider request");
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `Filtered sources overflow ${width}`);
       await page.screenshot({ path: path.join(screenshots, `sources-filtered-${network}-${width}.png`), fullPage: true });
-      await open("/sources?kind=feed&q=Retained%20article%200");
+      await open("/sources?kind=feed&q=publisher%20Retained%20article%200");
       await page.getByRole("link", { name: "Retained article 0 ↗" }).waitFor();
       await page.getByText("Matching retained feed items · 1 of 4", { exact: true }).waitFor();
       assert.equal(await page.getByRole("link", { name: "Retained article 3 ↗" }).count(), 0);

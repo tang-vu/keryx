@@ -39,7 +39,9 @@ export function PublicReferenceCard({ reference, compact = false, matchingQuery 
   const refreshed = displayDate(reference.refreshedAt, true);
   const recentItems = [...reference.items].sort((a, b) =>
     (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0));
-  const matchingItems = matchingQuery ? recentItems.filter(item => librarySearchMatches({ id: item.id, name: item.title, url: item.link, kind: "feed" }, matchingQuery)) : [];
+  const metadata = { id: reference.id, name: reference.name, url: reference.url, description: reference.description, tags: reference.tags, kind: "feed" as const };
+  const matchingItems = matchingQuery && !librarySearchMatches(metadata, matchingQuery)
+    ? recentItems.filter(item => librarySearchMatches({ ...metadata, itemTitles: [item.title] }, matchingQuery)) : [];
   const items = matchingItems.length ? matchingItems : recentItems;
   const shownCount = compact ? 1 : 3;
   const remaining = items.slice(shownCount);

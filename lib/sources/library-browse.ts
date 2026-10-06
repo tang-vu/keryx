@@ -64,8 +64,10 @@ function normalize(value: string): string {
 }
 /** Literal AND-token matching, bounded and independent of regex syntax supplied by a visitor. */
 export function librarySearchMatches(record: LibraryRecord, query: string): boolean {
-  const text = normalize([record.name, record.url, record.description, ...record.tags ?? [], ...record.itemTitles ?? []].join(" "));
-  return normalize(query).split(/\s+/u).filter(Boolean).every(term => text.includes(term));
+  const text = normalize([record.name, record.url, record.description, ...record.tags ?? []].join(" "));
+  const terms = normalize(query).split(/\s+/u).filter(Boolean);
+  const matches = (candidate: string) => terms.every(term => candidate.includes(term));
+  return matches(text) || !!record.itemTitles?.some(title => matches(`${text} ${normalize(title)}`));
 }
 
 export function browseLibrary<T extends LibraryRecord>(records: readonly T[], filters: LibraryFilters): T[] {

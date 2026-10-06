@@ -27,6 +27,8 @@ describe("source library browsing", () => {
     expect(browseLibrary(records, { ...all, q: "postgresql SQL", topic: "data-infrastructure", kind: "explore" }).map(row => row.id)).toEqual(["docs"]);
     expect(browseLibrary(records, { ...all, q: "example.com", kind: "cited" }).map(row => row.id)).toEqual(["cited"]);
     expect(browseLibrary(records, { ...all, q: "cafe evaluation" }).map(row => row.id)).toEqual(["feed"]);
+    expect(browseLibrary(records, { ...all, q: "Agent cafe evaluation" }).map(row => row.id)).toEqual(["feed"]);
+    expect(librarySearchMatches({ ...records[1], itemTitles: ["joins", "transactions"] }, "joins transactions")).toBe(false);
     expect(browseLibrary(records, { ...all, q: "missing" })).toEqual([]);
     expect(browseLibrary(records, { ...all, q: "PostgreSQL", topic: "payments" })).toEqual([]);
     expect(librarySearchMatches(records[0], ".* (" )).toBe(false);
