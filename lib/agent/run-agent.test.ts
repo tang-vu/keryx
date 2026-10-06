@@ -394,6 +394,33 @@ it("does not admit scholarly discovery metadata when original content cannot be 
   const { run, steps } = await drive({ question: "Attention", scholarly: true, origin: "web" }, d);
   expect(run.citations).toEqual([]); expect(JSON.stringify(steps)).not.toContain("paywall internal");
 });
+it("reads arXiv's HTML rendition of the same version when the PDF exceeds the byte limit", async () => {
+  const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
+  d.readWebArticle = vi.fn(async (url: string) => { if (url.includes("/pdf/")) throw new ArticleReadError("article-byte-limit");
+    return { text: "The full paper text contains this evidence.", title: "Paper", finalUrl: url, kind: "html" as const, truncated: false }; });
+  const { run, steps } = await drive({ question: "Attention", scholarly: true, origin: "web" }, d);
+  expect(vi.mocked(d.readWebArticle!).mock.calls.map(([url]) => url)).toEqual(["https://arxiv.org/pdf/1706.03762v7", "https://arxiv.org/html/1706.03762v7"]);
+  expect(run.citations[0]).toMatchObject({ itemUrl: "https://arxiv.org/html/1706.03762v7", publicDeliveryKind: "excerpt", reward: 0,
+    scholarly: { arxivId: "1706.03762v7", evidenceScope: "paper-text" } });
+  expect(steps.some(step => step.message.includes("paper PDF unavailable (article-byte-limit)"))).toBe(true);
+  expect(steps.some(step => step.message.includes("read arXiv's HTML rendition of the same version"))).toBe(true);
+  expect(steps.some(step => step.message.includes("only the abstract page was read"))).toBe(false);
+});
+it.each([
+  ["is unavailable", async () => { throw new ArticleReadError("transport-unavailable"); }],
+  ["resolves to another version", async () => ({ text: "Another version.", title: "Paper", finalUrl: "https://arxiv.org/html/1706.03762v8", kind: "html" as const, truncated: false })],
+  ["is not delivered as HTML", async (url: string) => ({ text: "Unexpected document.", title: "Paper", finalUrl: url, kind: "pdf" as const, truncated: false })],
+])("falls back to the labelled abstract page when the HTML rendition %s", async (_name, html) => {
+  const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
+  d.readWebArticle = vi.fn(async (url: string) => { if (url.includes("/pdf/")) throw new ArticleReadError("article-byte-limit");
+    if (url.includes("/html/")) return html(url);
+    return { text: "Original abstract evidence.", title: "Abstract", finalUrl: url, kind: "html" as const, truncated: false }; });
+  const { run, steps } = await drive({ question: "Attention", scholarly: true, origin: "web" }, d);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(3);
+  expect(run.citations[0]).toMatchObject({ itemUrl: "https://arxiv.org/abs/1706.03762v7", publicDeliveryKind: "abstract", scholarly: { evidenceScope: "abstract-page" } });
+  expect(steps.some(step => step.message.includes("HTML full text unavailable"))).toBe(true);
+  expect(steps.some(step => step.message.includes("only the abstract page was read"))).toBe(true);
+});
 it("treats HTML at the unchanged PDF URL as unavailable PDF and explicitly reads the abstract fallback", async () => {
   const d = deps([], fakeEngine(), fakeGateway()); injectPapers(d);
   d.readWebArticle = vi.fn(async (url: string) => ({ text: url.includes("/pdf/") ? "Publisher challenge" : "Original abstract evidence.", title: "Page", finalUrl: url, kind: "html" as const, truncated: false }));

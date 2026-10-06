@@ -55,8 +55,20 @@ existing public-only, DNS-pinned reader and contained PDF parser. Its limits rem
 paper text within extraction limits; truncation stays visible. The final repository
 URL must retain the requested version and the delivered format must be PDF.
 
-If the PDF is unavailable, explicitly report its failure. Try the same version's
-abstract page only if a second actual read slot and aggregate deadline remain.
+If the PDF is unavailable, explicitly report its failure. When the failure is the
+2 MiB byte limit, first try arXiv's own HTML rendition of the same version
+(`https://arxiv.org/html/<id>v<n>`) through the unchanged HTML reader, if a read slot
+and aggregate deadline remain. The final URL must be that exact rendition and the
+delivered format HTML. A successful read is labelled paper text within extraction
+limits, cited at the HTML URL, and the trace states that the rendition replaced the
+PDF. The rendition is arXiv's conversion of the submitted source: it can omit or
+garble equations, tables and figures, and older or non-LaTeX submissions have none.
+The same step applies to an official versioned arXiv PDF found by web search.
+PDF limits are not raised. Other PDF failures keep the previous path.
+
+Try the same version's abstract page only if the PDF and any attempted HTML
+rendition failed, the paper came from a scholarly provider record, and a further
+actual read slot and aggregate deadline remain.
 The fallback is labelled **abstract page only; full paper unavailable** in source
 details, synthesis context, stored evidence, receipts and exports. Abstract evidence
 cannot establish details absent from the supplied abstract passages.
