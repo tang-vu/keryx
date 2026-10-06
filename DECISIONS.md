@@ -5569,3 +5569,35 @@ transaction; old runtime code cannot restart after upgrade. Public API/client
 projections omit private recovery authority hashes. New usage counters cannot
 erase the original provider bill's unknown status. See
 [same-original fulfillment](docs/operator-original-fulfillment.md).
+
+## Offer Circle's Arc Onramp as an optional card purchase into the owner wallet - 2026-10-06
+
+The owner asked whether Circle supports card payment into Arc and directed that it
+be built first, with eligibility questions settled afterwards. Circle's Onramp Kit
+(`@circle-fin/onramp-kit` 1.0.3) sells USDC on Arc for a debit card, Apple Pay or
+Google Pay through Transak, with identity verification inside Circle's hosted flow.
+
+Keryx mints a session for the authenticated web-session wallet and opens Circle's
+flow in a separate window. The destination is never taken from the request, the
+widget is scoped to USDC on Arc, the launch URL is pinned to `https://onramp.arc.io`
+on the server, and only modeled session fields reach the browser. Keryx holds no
+purchase ledger: widget events are best-effort text, and the wallet's on-chain
+balance is the evidence. Funding a Gateway balance or research budget stays the
+existing separate owner-signed operation, so custody, session caps and payment
+authority are unchanged.
+
+A separate window was chosen over the embedded iframe. The iframe needs new
+`frame-src`/`connect-src` origins, a `referrerDomain` allowlist entry, and camera
+access for identity checks that the site-wide `Permissions-Policy` denies; the
+kit also documents iOS Safari storage problems inside frames. The window needs
+none of these and keeps card and identity entry visibly on Circle's origin. The
+cost is a two-click flow, because the window must open synchronously in a click.
+
+Activation is explicit and mainnet-only with a production key, because that key
+buys with real money. Sandbox use is not wired: its endpoints and test-network
+delivery were not verified here. The existing Circle developer key is reused
+unless a dedicated `ARC_ONRAMP_API_KEY` is set. One production session was minted
+successfully with the owner's key on 2026-10-06 (no session id is returned, so it
+is optional). No purchase was made. Whether an individual can complete Circle's
+business verification, which countries are served, and provider fees and limits
+are unverified and remain gates. See [Arc card onramp](docs/arc-card-onramp.md).

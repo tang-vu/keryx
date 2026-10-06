@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.27.7",
+  "version": "0.27.8",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -109,6 +109,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",
     "@circle-fin/adapter-viem-v2": "^1.16.0",
+    "@circle-fin/onramp-kit": "1.0.3",
     "@circle-fin/unified-balance-kit": "^1.4.1",
     "@circle-fin/w3s-pw-web-sdk": "1.1.11",
     "@circle-fin/x402-batching": "3.5.0",

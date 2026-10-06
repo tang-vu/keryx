@@ -143,6 +143,9 @@ jobs:
       - name: Funding replacement recovery (synthetic RPC, no signing)
         run: node --import tsx scripts/test-browser-funding-replacement.mts
 
+      - name: Arc card onramp panel (real kit and popup, synthetic HTTP, no vendor call)
+        run: node --import tsx scripts/test-browser-arc-card-onramp.mts
+
       - name: Browser sign-out (hermetic, no signing)
         run: npm run test:browser-auth
       - name: Circle Google SDK and OAuth return (synthetic vendor transport, no wallet or funds)
