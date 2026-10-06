@@ -12,7 +12,7 @@ import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
 import { buildContextualQuoteOptions } from "./quote-context";
-import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE } from "./decision-brief";
+import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefQuoteMenu, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE } from "./decision-brief";
 import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
 import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
 import { buildEvidenceReviewInput } from "./evidence-review-input";
@@ -373,9 +373,10 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     const fallback: SynthResult = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable" };
     try {
       const selectedSources = evidenceContext(input.question, input.subClaims, input.gathered);
-      const options = buildContextualQuoteOptions(selectedSources, input.gathered);
+      const offered = buildContextualQuoteOptions(selectedSources, input.gathered);
+      const sources = briefContextSources(selectedSources, input, offered);
+      const options = briefQuoteMenu(offered, sources);
       if (!options.length) return fallback;
-      const sources = briefContextSources(selectedSources, input, options);
       const raw = await this.measuredChatJson(config.synthesisModel, BRIEF_GENERATION_GUIDANCE,
         JSON.stringify({ question: input.question,
           researchTargets: input.subClaims.map((question, targetIndex) => ({ targetIndex, question })), sources,
@@ -395,7 +396,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       return { answer: citedMarkers.map(marker => `[${marker}]`).join(" "), citedMarkers, evidence,
         conflicts: [], evidenceReview: "completed", decisionBrief };
     } catch {
-      // A malformed generation/review, transport outage or input cap must not
+      // A malformed generation/review or transport outage must not
       // discard completed paid reads or route an unreviewed narrative to the UI.
       return fallback;
     }

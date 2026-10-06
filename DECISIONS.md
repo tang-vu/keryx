@@ -1,5 +1,36 @@
 # Keryx — Decision Log
 
+**Budget the bounded brief's context instead of refusing every multi-page read — 2026-10-06.**
+The owner chose whole-unit budgeting for the opt-in brief over an excerpt fallback or
+leaving the refusal in place. Three local Deep runs ended empty, each through a
+different fail-closed exit, and a synthetic fixture shows why the first is structural:
+about 2,500 neighboring-context characters per read cross the 12,000-character
+aggregate bound at five reads, so the brief could never follow ordinary Deep reading.
+Keep the 12,000 bound. Admit each offered quote's complete context one quote per
+source in turn, in document order; a context that does not fit is withheld together
+with its quote, never trimmed, and the per-source count reaches generation and review.
+A withheld quote cannot be cited, so the reviewer still reads the surroundings of
+every selectable quote. Selected passages stay visible to both passes.
+
+The reasoning review must answer every row inside one 4,096-token reply that also
+carries its thinking; one observed six-fact packet exhausted it. Lower the row caps
+to four facts and two actions rather than raise the output budget, which the dated
+model allowance may refuse after generation was already paid for, or split the
+review into further paid calls. Four is a conservative reading of a single
+observation, not a measured fit: review completion at this cap is unverified until
+the next separately authorized brief evaluation. No fallback to excerpt synthesis,
+no retry, and D-300 stays the default. The brief remains disabled in production
+until a fresh set reaches 10/12 useful with zero material errors.
+
+The bounded production engine replaced every supplier failure with one generic
+error, so a reply cut at the output ceiling or rejected as invalid JSON bypassed
+planning's and selection's request-local refusals and reached the client as an
+unreachable provider. Keep the bounded category instead: output validation,
+timeout, network, or the HTTP status. The original message still never leaves the
+wrapper because a provider body can echo request context. Reservations, the single
+attempt and the absence of provider fallback are unchanged.
+See [the brief follow-up](docs/engineering/decision-brief-2026-10-05.md#context-budget-and-row-caps-2026-10-06).
+
 **Audit frozen evidence independently of reported agent scores — 2026-10-06.**
 Use a native evaluation helper, separate from the production evidence gate, to
 validate retained quote/source/item/claim/marker consistency and this run's paid

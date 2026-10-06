@@ -39,6 +39,26 @@ describe("two-pass bounded decision-brief engine", () => {
     const result = await new Engine("negative").synthesize(input);
     expect(result.decisionBrief?.actions).toEqual([]); expect(result.evidence).toEqual([]);
   });
+  it("still generates and reviews a brief when the reads exceed the shared context bound", async () => {
+    // Seven fictional pages offer more neighboring context than both passes may share.
+    const page = (seed: number) => Array.from({ length: 6 }, (_, index) =>
+      `Section ${seed}.${index} describes installation, configuration and reporting screens for administrators. `.repeat(6) + "\n\n" +
+      `Queue ${seed} permits duplicates when a consumer restarts. Handlers for queue ${seed} must tolerate duplicates during retries.`).join("\n\n");
+    const engine = new Engine();
+    const result = await engine.synthesize({ ...input, gathered: Array.from({ length: 7 }, (_, index) =>
+      ({ sourceId: `q${index}`, sourceName: `Queue ${index}`, marker: `S${index + 1}`, text: page(index + 1) })) });
+    expect(engine.requests).toHaveLength(2);
+    expect(result.decisionBrief?.facts.map(fact => fact.id)).toEqual(["f1"]);
+    expect(result.evidence).toHaveLength(1);
+    const generation = engine.requests[0].user as { quoteOptions: { marker: string }[];
+      sources: { marker: string; quoteContexts: { text: string }[]; withheldQuoteOptions?: number }[] };
+    expect(generation.sources.flatMap(source => source.quoteContexts).reduce((sum, span) => sum + span.text.length, 0)).toBeLessThanOrEqual(12_000);
+    expect(generation.sources.some(source => (source.withheldQuoteOptions ?? 0) > 0)).toBe(true);
+    // Every read keeps selectable quotes; the reviewer receives the same bounded contexts.
+    expect(new Set(generation.quoteOptions.map(option => option.marker)).size).toBe(7);
+    const review = engine.requests[1].user as { packet: { sources: unknown } };
+    expect(review.packet.sources).toEqual(generation.sources);
+  });
   it.each(["missing", "outage", "malformed", "extra"] as const)("fails closed on %s without leaking a draft or retrying generation", async mode => {
     const engine = new Engine(mode); const result = await engine.synthesize(input);
     expect(result.answer).toBe(""); expect(result.evidence).toEqual([]);

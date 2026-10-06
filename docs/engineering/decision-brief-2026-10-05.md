@@ -18,7 +18,7 @@ facts, unknown fields and excessive rows are refused. This adds no prose.
 Quote options retain exact UTF-16 offsets into the unlocked source and bounded
 contiguous neighboring text. Generation and review see the same merged neighboring
 contexts; gaps are never concatenated. Context expansion has a 12,000-character
-aggregate refusal bound. Original read truncation and content-version metadata
+aggregate bound, budgeted per quote since the 2026-10-06 follow-up below. Original read truncation and content-version metadata
 remain distinct from omissions in the selected context. On the wire, duplicate
 quote-context text can be omitted only when identical text at the same offsets
 already exists in a shared source context. The original packet remains immutable.
@@ -92,6 +92,33 @@ retained privately. The three ordinary-client questions later completed, with 0/
 accepted complete useful answers. The finite paid round is closed. See the
 [outcomes and unpaid correction](source-context-2026-10-05.md); neither release
 health nor these results turn the failed brief evaluations into a usefulness pass.
+
+## Context budget and row caps (2026-10-06)
+
+Three local Deep runs of one question with the brief enabled ended with no
+supported answer after five to seven public reads
+([#181](https://github.com/tang-vu/keryx/issues/181)). The exits were the
+aggregate context refusal, a review that reached its 4,096-token ceiling on a
+six-fact packet, and a generation that was not valid JSON. Three runs are not a
+rate, and the third exit is unchanged by this follow-up.
+
+A synthetic fixture of fictional documentation pages reproduces the first exit
+offline: each read contributes about 2,500 characters of merged neighboring
+context, so four reads fit and five exceed 12,000. The refusal therefore applied
+to ordinary Deep reading rather than to unusual inputs. The bound stays at
+12,000 characters. Each offered quote's complete context is now admitted one
+quote per source in turn, in document order. A context that does not fit is
+withheld with its quote and counted per source as `withheldQuoteOptions`, which
+both passes receive. No context is trimmed, a withheld quote has no selectable
+ID, and the selected passages remain in the packet.
+
+Row caps are four facts and two actions, down from sixteen and six. The review
+reply carries the model's thinking as well as one verdict per row, and raising
+its output budget could be refused by the dated allowance after generation was
+paid for. The cap follows one observation and is not a measured fit. The next
+authorized brief evaluation must record review completion at this cap alongside
+usefulness. Until then the feature stays disabled and the earlier failed sets
+keep their denominators.
 
 ## Retain completed work when compute fails
 
