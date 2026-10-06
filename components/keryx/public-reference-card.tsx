@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { PublicReference } from "@/lib/public-references/catalog";
+import { librarySearchMatches } from "@/lib/sources/library-browse";
 
 const CONTENT_LABELS: Record<PublicReference["items"][number]["deliveryKind"], string> = {
   full_text: "Full text in feed",
@@ -32,12 +33,16 @@ function FeedItem({ item }: { item: PublicReference["items"][number] }) {
 }
 
 /** Feed metadata only; this record carries neither publisher-control nor payment authority. */
-export function PublicReferenceCard({ reference, compact = false }: { reference: PublicReference; compact?: boolean }) {
+export function PublicReferenceCard({ reference, compact = false, matchingQuery = "" }: { reference: PublicReference; compact?: boolean; matchingQuery?: string }) {
   const domain = new URL(reference.url).hostname.replace(/^www\./, "");
   const supportsClaim = !/^(?:www\.)?(?:youtube\.com|youtu\.be)$/.test(new URL(reference.url).hostname);
   const refreshed = displayDate(reference.refreshedAt, true);
-  const items = [...reference.items].sort((a, b) =>
+  const recentItems = [...reference.items].sort((a, b) =>
     (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0));
+  const metadata = { id: reference.id, name: reference.name, url: reference.url, description: reference.description, tags: reference.tags, kind: "feed" as const };
+  const matchingItems = matchingQuery && !librarySearchMatches(metadata, matchingQuery)
+    ? recentItems.filter(item => librarySearchMatches({ ...metadata, itemTitles: [item.title] }, matchingQuery)) : [];
+  const items = matchingItems.length ? matchingItems : recentItems;
   const shownCount = compact ? 1 : 3;
   const remaining = items.slice(shownCount);
 
@@ -59,7 +64,7 @@ export function PublicReferenceCard({ reference, compact = false }: { reference:
 
       <div className="mt-4 border-t border-line pt-3">
         <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">
-          {compact ? "From the retained feed" : `Latest retained feed items · ${items.length} in snapshot`}
+          {compact ? "From the retained feed" : matchingItems.length ? `Matching retained feed items · ${items.length} of ${recentItems.length}` : `Latest retained feed items · ${items.length} in snapshot`}
         </p>
         {items.length > 0 ? (
           <>

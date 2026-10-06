@@ -6,7 +6,11 @@ verification, registry registration, access toll, or citation reward. Public ava
 does not establish an agreement with the publisher or authorize Keryx to monetize their
 writing. Existing verified creator sources keep their payment and registry authority.
 
-The approved batch contains Cloudflare Workers, Chip Huyen, Lilian Weng,
+The October 6 approved batch contains 31 public feeds, including 26 additions across
+AI/agents, data/infrastructure, payments and creator research. A separate 60-entry
+publisher directory contains unread links rather than retained article evidence.
+See [the exact feed audit and limits](engineering/source-catalog-2026-10-06.md).
+The original batch contains Cloudflare Workers, Chip Huyen, Lilian Weng,
 Vicki Boykis and Super Simple Songs. Official Circle RSS candidates returned 404 during the September 30
 endpoint audit and are deferred. No feed wrapper or publisher authorization is invented.
 Publication dates come from the publisher; older foundational articles are not labeled
@@ -93,9 +97,12 @@ catalog is immediately inspectable; verify all approved entries before reporting
 Scheduled upkeep uses one atomic allowance and round-robin cursor across BOTH catalogs:
 at most two feeds and twenty candidates per hour, with the existing 45-second job deadline
 and eligibility/URL recheck before writes. The Worker is unchanged. With thirteen
-verified feeds and five public references, a stable combined pool requires nine hourly
+verified feeds and five public references, the historical stable combined pool required nine hourly
 batches to visit each source. The combined bounds remain 48 feed fetches and at most
-480 candidates per day. A failed or interrupted slot stays consumed.
+480 candidates per day. A failed or interrupted slot stays consumed. With all 31 public
+feeds eligible and no creator feeds, a pass requires at least 16 hourly slots. More
+creator feeds lengthen that pass. This does not establish active scheduling or successful
+collection; the catalog expansion raises no hourly allowance.
 
 ## Acceptance and rollback
 

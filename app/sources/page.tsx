@@ -8,17 +8,21 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { SourceRegistryRow } from "@/components/keryx/source-registry-row";
 import { PublicReferenceCard } from "@/components/keryx/public-reference-card";
 import { CitedSourceCard } from "@/components/keryx/cited-source-card";
+import { ExploreSourceCard } from "@/components/keryx/explore-source-card";
+import { SourceLibraryFilters } from "@/components/keryx/source-library-filters";
 import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { safeInlineJson } from "@/lib/safe-json";
 import { loadSourceDirectory, unavailableSourceDirectory } from "@/lib/sources/source-directory";
+import { EXPLORE_SOURCES } from "@/lib/public-references/explore-catalog";
+import { browseLibrary, libraryBrowseHref, libraryPublisherGroups, parseLibraryFilters, spreadLibraryTopics, type LibraryRecord } from "@/lib/sources/library-browse";
 
 export const dynamic = "force-dynamic";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 const TITLE = "Sources — public references and creator listings";
 const DESCRIPTION =
-  "Explore sources cited in Keryx's public answers, retained public feeds and creator listings, with reading scope, publisher control and settled earnings shown separately.";
+  "Find sources by topic, publisher or domain across the publisher directory, public citation history, retained feeds and creator listings. Reading scope and payments remain separate.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -28,7 +32,10 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
 
-export default async function SourcesPage() {
+export default async function SourcesPage({ searchParams }: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+} = {}) {
+  const filters = parseLibraryFilters(await searchParams ?? {});
   let directory;
   try {
     directory = await loadSourceDirectory(await getDb());
@@ -43,6 +50,20 @@ export default async function SourcesPage() {
   const onchainCount = entries.filter((entry) => entry.source.onchainId).length;
   const totalPaid = entries.reduce((sum, entry) => sum + (entry.totalEarnedUsdc ?? 0), 0);
   const retainedItemCount = references.reduce((sum, reference) => sum + reference.items.length, 0);
+  const exploreRecords = spreadLibraryTopics(EXPLORE_SOURCES.map(source => ({ ...source, kind: "explore" as const, data: source })));
+  const citedRecords = citedSources.entries.map(entry => ({ id: entry.url, name: entry.title, url: entry.url,
+    kind: "cited" as const, observedAt: entry.citedAt, data: entry }));
+  const feedRecords = references.map(reference => ({ ...reference, kind: "feed" as const,
+    itemTitles: reference.items.map(item => item.title), observedAt: reference.refreshedAt, data: reference }));
+  const creatorRecords = entries.map(entry => ({ ...entry.source, kind: "creator" as const,
+    observedAt: entry.source.createdAt, data: entry }));
+  const allRecords: LibraryRecord[] = [...exploreRecords, ...citedRecords, ...feedRecords, ...creatorRecords];
+  const visibleExplore = browseLibrary(exploreRecords, filters);
+  const visibleCited = browseLibrary(citedRecords, filters);
+  const visibleFeeds = browseLibrary(feedRecords, filters);
+  const visibleCreators = browseLibrary(creatorRecords, filters);
+  const matches = browseLibrary(allRecords, filters);
+  const showCollection = (kind: LibraryRecord["kind"]) => filters.kind === "all" || filters.kind === kind;
 
   const jsonLd = [
     {
@@ -53,8 +74,9 @@ export default async function SourcesPage() {
       url: `${BASE}/sources`,
       mainEntity: {
         "@type": "ItemList",
-        ...(countsReady ? { numberOfItems: entries.length + references.length + citedSources.entries.length } : {}),
+        ...(countsReady ? { numberOfItems: allRecords.length } : {}),
         itemListElement: [
+          ...EXPLORE_SOURCES.map(source => ({ url: source.url, name: source.name })),
           ...citedSources.entries.map(entry => ({ url: entry.url, name: entry.title })),
           ...references.map((reference) => ({ url: reference.url, name: reference.name })),
           ...entries.map((entry) => ({ url: `${BASE}/creator/${encodeURIComponent(entry.source.id)}`, name: entry.source.name })),
@@ -81,31 +103,36 @@ export default async function SourcesPage() {
           Sources to <em className="italic text-paid">explore.</em>
         </h1>
         <p className="mt-4 max-w-[65ch] font-serif text-[17px] leading-[1.55] text-ink-2">
-          Follow documents cited in public answers, browse retained feeds and explore creator listings.
+          Explore publisher documentation and writing, follow documents cited in public answers, browse retained feeds and discover creator listings.
           Sources remain visible without publisher verification. Reading scope, publisher control
           and creator payments are separate records.
         </p>
 
         <div className="mt-7 grid gap-px border border-line bg-line sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
-          {(citedSources.status === "unavailable" || citedSources.entries.length > 0) && <a href="#cited-sources" className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
+          <Link href={libraryBrowseHref(filters, { kind: "explore" })} className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3">Publisher directory</p>
+            <p className="mt-1 font-display text-3xl text-ink">{EXPLORE_SOURCES.length}</p>
+            <p className="mt-1 font-serif text-sm text-ink-2">Original links · read when asked</p>
+          </Link>
+          {(citedSources.status === "unavailable" || citedSources.entries.length > 0) && <Link href={libraryBrowseHref(filters, { kind: "cited" })} className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
             <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3">Recently cited documents</p>
             <p className="mt-1 font-display text-3xl text-ink">{citedSources.status === "ready" ? citedSources.entries.length : "Unavailable"}</p>
             <p className="mt-1 font-serif text-sm text-ink-2">From public answer history</p>
-          </a>}
-          {(publicReferences.status === "unavailable" || references.length > 0 || !hasSources) && <a href="#public-references" className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
+          </Link>}
+          {(publicReferences.status === "unavailable" || references.length > 0 || !hasSources) && <Link href={libraryBrowseHref(filters, { kind: "feed" })} className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">Public references</p>
             <p className="mt-1 font-display text-3xl text-ink">
               {publicReferences.status === "ready" ? references.length : "Unavailable"}
             </p>
             <p className="mt-1 font-serif text-sm text-ink-2">Retained feeds · {publicReferences.status === "ready" ? `${retainedItemCount} feed items` : "item count unavailable"}</p>
-          </a>}
-          {(registry.status === "unavailable" || entries.length > 0 || !hasSources) && <a href="#creator-listings" className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
+          </Link>}
+          {(registry.status === "unavailable" || entries.length > 0 || !hasSources) && <Link href={libraryBrowseHref(filters, { kind: "creator" })} className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">Creator listings</p>
             <p className="mt-1 font-display text-3xl text-ink">
               {registry.status === "ready" ? entries.length : "Unavailable"}
             </p>
             <p className="mt-1 font-serif text-sm text-ink-2">Registration and payment policies</p>
-          </a>}
+          </Link>}
         </div>
         {!countsReady && (
           <p className="mt-3 font-serif text-sm text-ink-2">
@@ -113,16 +140,33 @@ export default async function SourcesPage() {
           </p>
         )}
 
-        {(citedSources.status === "unavailable" || citedSources.entries.length > 0) && <section id="cited-sources" className="mt-10 scroll-mt-6" aria-labelledby="cited-sources-title">
+        <SourceLibraryFilters filters={filters} total={allRecords.length} matched={matches.length} publishers={libraryPublisherGroups(matches)} />
+        {matches.length === 0 && <div className="mt-5 border border-line bg-paper p-5">
+          <h2 className="font-display text-xl text-ink">No sources match these filters</h2>
+          <p className="mt-2 font-serif text-sm text-ink-2">Try a publisher name, a shorter search or another topic. <Link href="/sources#browse-sources" className="text-seal underline">Clear filters</Link> to browse all available records.</p>
+        </div>}
+
+        {showCollection("explore") && visibleExplore.length > 0 && <section id="publisher-directory" className="mt-10 scroll-mt-6" aria-labelledby="publisher-directory-title">
+          <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ink pb-3">
+            <h2 id="publisher-directory-title" className="font-display text-2xl text-ink">Publisher directory</h2>
+            <span className="font-mono text-[11px] text-ink-3">{visibleExplore.length} publisher link{visibleExplore.length === 1 ? "" : "s"}</span>
+          </div>
+          <p className="mt-3 max-w-[75ch] font-serif text-[15px] leading-relaxed text-ink-2">Starting points for AI and agents, data and infrastructure, payments, and creator research. These are links to original publishers, not retained article evidence. Open the publisher or draft a question with its URL; available content still needs to be read and assessed.</p>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">{visibleExplore.slice(0, 12).map(({ data }) => <ExploreSourceCard key={data.id} source={data} />)}</div>
+          {visibleExplore.length > 12 && <details className="mt-5 border border-line bg-paper p-5"><summary className="min-h-11 cursor-pointer py-2 font-mono text-xs text-seal underline">Show {visibleExplore.length - 12} more publisher links</summary><div className="mt-4 grid gap-4 md:grid-cols-2">{visibleExplore.slice(12).map(({ data }) => <ExploreSourceCard key={data.id} source={data} />)}</div></details>}
+        </section>}
+
+        {showCollection("cited") && (citedSources.status === "unavailable" || visibleCited.length > 0) && <section id="cited-sources" className="mt-10 scroll-mt-6" aria-labelledby="cited-sources-title">
           <h2 id="cited-sources-title" className="border-b border-ink pb-3 font-display text-2xl text-ink">Cited in past answers</h2>
           {citedSources.status === "ready" ? <>
             <p className="mt-3 max-w-[75ch] font-serif text-[15px] leading-relaxed text-ink-2">Showing up to 40 public documents from the latest {citedSources.runCount} public question record{citedSources.runCount === 1 ? "" : "s"}. Open the original document or inspect its cited answer. Past citations do not certify publisher control or content accuracy; past public reads stay free.</p>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">{citedSources.entries.slice(0, 12).map(entry => <CitedSourceCard key={entry.url} entry={entry} />)}</div>
-            {citedSources.entries.length > 12 && <details className="mt-5 border border-line bg-paper p-5"><summary className="min-h-11 cursor-pointer py-2 font-mono text-xs text-seal underline">Show {citedSources.entries.length - 12} more cited documents</summary><div className="mt-4 grid gap-4 md:grid-cols-2">{citedSources.entries.slice(12).map(entry => <CitedSourceCard key={entry.url} entry={entry} />)}</div></details>}
+            <p className="mt-2 font-mono text-[11px] text-ink-3">{visibleCited.length} documents match this view.</p>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">{visibleCited.slice(0, 12).map(({ data }) => <CitedSourceCard key={data.url} entry={data} />)}</div>
+            {visibleCited.length > 12 && <details className="mt-5 border border-line bg-paper p-5"><summary className="min-h-11 cursor-pointer py-2 font-mono text-xs text-seal underline">Show {visibleCited.length - 12} more cited documents</summary><div className="mt-4 grid gap-4 md:grid-cols-2">{visibleCited.slice(12).map(({ data }) => <CitedSourceCard key={data.url} entry={data} />)}</div></details>}
           </> : <p role="status" className="mt-5 border border-line bg-paper p-5 font-serif text-[15px] text-ink-2">Public citation history is temporarily unavailable. Reload to retry; other source collections remain available.</p>}
         </section>}
 
-        {(publicReferences.status === "unavailable" || references.length > 0 || !hasSources) && <section id="public-references" className="mt-10 scroll-mt-6" aria-labelledby="public-references-title">
+        {showCollection("feed") && (publicReferences.status === "unavailable" || visibleFeeds.length > 0 || !hasSources) && <section id="public-references" className="mt-10 scroll-mt-6" aria-labelledby="public-references-title">
           <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ink pb-3">
             <h2 id="public-references-title" className="font-display text-2xl text-ink">Public references</h2>
             <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-ink-3">Free reading · original publisher links</span>
@@ -133,8 +177,9 @@ export default async function SourcesPage() {
             excerpt, abstract or video description may omit the full work. Listing here does not certify content accuracy.
           </p>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {references.map((reference) => <PublicReferenceCard key={reference.id} reference={reference} />)}
+            {visibleFeeds.slice(0, 12).map(({ data }) => <PublicReferenceCard key={data.id} reference={data} matchingQuery={filters.q} />)}
           </div>
+          {visibleFeeds.length > 12 && <details className="mt-5 border border-line bg-paper p-5"><summary className="min-h-11 cursor-pointer py-2 font-mono text-xs text-seal underline">Show {visibleFeeds.length - 12} more retained feeds</summary><div className="mt-4 grid gap-4 md:grid-cols-2">{visibleFeeds.slice(12).map(({ data }) => <PublicReferenceCard key={data.id} reference={data} matchingQuery={filters.q} />)}</div></details>}
           {publicReferences.status === "unavailable" ? (
             <p className="mt-5 border border-line bg-paper p-5 font-serif text-[15px] text-ink-2">
               Public references are temporarily unavailable. Try this page again to inspect the retained catalog.
@@ -146,7 +191,7 @@ export default async function SourcesPage() {
           )}
         </section>}
 
-        {(registry.status === "unavailable" || entries.length > 0 || !hasSources) && <section id="creator-listings" className="mt-12 scroll-mt-6" aria-labelledby="creator-listings-title">
+        {showCollection("creator") && (registry.status === "unavailable" || visibleCreators.length > 0 || !hasSources) && <section id="creator-listings" className="mt-12 scroll-mt-6" aria-labelledby="creator-listings-title">
           <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ink pb-3">
             <h2 id="creator-listings-title" className="font-display text-2xl text-ink">Creator listings</h2>
             {registry.status === "ready" && entries.length > 0 && (
@@ -166,7 +211,7 @@ export default async function SourcesPage() {
             </p>
           )}
           <div className="mt-5 flex flex-col gap-4">
-            {entries.map((entry) => <SourceRegistryRow key={entry.source.id} {...entry} />)}
+            {visibleCreators.map(({ data }) => <SourceRegistryRow key={data.source.id} {...data} />)}
           </div>
           {registry.status === "unavailable" ? (
             <p className="mt-5 border border-line bg-paper p-5 font-serif text-[15px] text-ink-2">
