@@ -12,7 +12,9 @@ const binary = "docker";
 const prefix: string[] = [];
 const docker = (args: string[], input?: string) => execFileSync(binary, [...prefix, ...args],
   { input, encoding: "utf8", timeout: 30000, maxBuffer: 8 * 1024 * 1024, stdio: ["pipe", "pipe", "pipe"] });
-const psql = ["exec", "-i", name, "psql", "-U", "postgres", "-qAt", "-v", "ON_ERROR_STOP=1"];
+// The image's temporary init server accepts Unix sockets before restarting.
+// TCP admission waits for the final server and also binds every later session.
+const psql = ["exec", "-i", name, "psql", "-h", "127.0.0.1", "-U", "postgres", "-qAt", "-v", "ON_ERROR_STOP=1"];
 const sql = (input: string) => docker(psql, input).trim();
 const literal = (value: string) => `'${value.replaceAll("'", "''")}'`;
 const json = (value: unknown) => `${literal(JSON.stringify(value))}::jsonb`;
