@@ -5,6 +5,7 @@
     "incremental": false
   },
   "include": [
+    "scripts/test-browser-paper-library.mts",
     "scripts/operator-business.mts",
     "scripts/operator-canary.mts",
     "scripts/test-a2a-original-claim-postgres.mts",
@@ -31,6 +32,8 @@
     "scripts/private-buyer-checkout.mts",
     "scripts/private-buyer-recover.mts",
     "scripts/operator.mts",
+    "scripts/papers.mts",
+    "scripts/collect-paper-catalog.mts",
     "scripts/economics-private-report.mts",
     "scripts/helpers/headless-mainnet-state.mts",
     "scripts/web-client.mts",

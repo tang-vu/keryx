@@ -7,6 +7,7 @@
  */
 
 import { config } from "./config";
+import { paperOpenApiPaths, paperOpenApiSchemas } from "./papers/openapi";
 import { operatorStatusOpenApiPath } from "./business-operator/openapi";
 import { monthlyOpenApiPath } from "./monthly/openapi";
 import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
@@ -58,6 +59,7 @@ export const openapiSpec = {
       },
     },
     schemas: {
+      ...paperOpenApiSchemas,
       ...sourceClaimOpenApiSchemas,
       DashboardGroundingStatus: {
         type: "object",
@@ -564,6 +566,7 @@ export const openapiSpec = {
     },
   },
   paths: {
+    ...paperOpenApiPaths,
     ...sourceClaimOpenApiPaths,
     "/api/source/{id}": {
       get: {

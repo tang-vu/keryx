@@ -9,7 +9,7 @@ export function normalizeDoi(raw: string): string | undefined {
   return value.toLowerCase();
 }
 
-export function questionDois(question: string): string[] {
+export function questionDois(question: string, maxResults = 2): string[] {
   // Prose punctuation is ambiguous; exact standalone DOI input preserves it.
   const exact = normalizeDoi(question);
   if (exact) return [exact];
@@ -19,7 +19,7 @@ export function questionDois(question: string): string[] {
       while (value.endsWith(")") && (value.match(/\)/g)?.length ?? 0) > (value.match(/\(/g)?.length ?? 0)) value = value.slice(0, -1);
       return normalizeDoi(value);
     })
-    .filter((value): value is string => !!value))].slice(0, 2);
+    .filter((value): value is string => !!value))].slice(0, maxResults);
 }
 
 export const doiUrl = (doi: string) => `https://doi.org/${doi.split("/").map(encodeURIComponent).join("/")}`;

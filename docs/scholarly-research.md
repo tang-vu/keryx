@@ -1,5 +1,9 @@
 # DOI and scholarly research
 
+The [research-paper library](paper-library.md) adds a separate metadata-only
+discovery surface on `/sources`, `/api/papers` and the human `papers` CLI. It does
+not change the research, original-reading or evidence rules below.
+
 October 1, 2026. The public research composer offers **Search scholarly papers
 (Crossref and arXiv)**, off by default. Enabling it sends the question to those
 official scholarly services, alongside the configured broad web search. A DOI in
