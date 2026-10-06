@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+**Expand source discovery with separate unread publisher links — 2026-10-06.**
+The owner requested a substantial expansion across AI/agents, data/infrastructure,
+payments and creator research, together with better browsing. Keep an audited
+publisher directory separate from retained feed snapshots and public citation
+history. A listed URL is an unread starting point; it supplies no evidence,
+ownership, price or payout authority. Question links open editable drafts without
+automatic submission. Existing original-read and evidence gates still decide
+whether the material supports an answer.
+
+Use bounded literal metadata search, topic hints, collection filters, recorded-date
+sorting and shareable GET URLs, rendered on the server without serializing private
+claim records. Count registrable domain groups as a breadth proxy, not verified
+independent publishers. Add feeds only after the existing bounded public transport
+and snapshot rules admit usable content; retain failed/oversized feeds as directory
+links where appropriate. Import is an explicit one-time operation. Existing upkeep
+budgets, deactivation, historical reads and creator payment boundaries remain
+authoritative. See [catalog audit and release scope](docs/engineering/source-catalog-2026-10-06.md).
+
 **Audit frozen evidence independently of reported agent scores — 2026-10-06.**
 Use a native evaluation helper, separate from the production evidence gate, to
 validate retained quote/source/item/claim/marker consistency and this run's paid
