@@ -5510,3 +5510,31 @@ conversion and can omit or garble equations, tables and figures.
 
 The Low confidence cap stays. Three developer-read local runs are not grounds to
 raise a confidence claim; revisit it with an independently graded round.
+
+**Retain paid failure obligations and preflight complete selection inputs — 2026-10-06.**
+
+The owner-authorized single original settled its inbound charge but failed before
+an answer was saved. Stock worker handling erased the underlying exception; the
+exact retrospective cause cannot be claimed. A pure actual selection harness
+demonstrated that legal discovery previews can exceed the unchanged 32,000-byte
+canary message ceiling before its next provider hold. Partition complete authored
+messages deterministically, preserving every candidate identity and full target
+list, and validate all batches before any request. Do not raise token/call caps,
+truncate evidence or treat a validation refusal as permission for a fallback tier.
+
+Keep only typed, closed stage/category failure diagnostics in private outcome
+audit/logs. Public errors remain generic and terminal originals never execute
+through a direct worker call. No raw prompts, exception bodies or secret values
+belong in diagnostics. This change cannot reconstruct evidence lost by the prior run.
+
+A positively drained, exactly settled failed original can close its finite
+execution lifecycle through a distinct metadata-only proof. Require journal v1,
+started execution, no result/payment boundary, no saved run/creator attempts, and
+an immutable commitment to every retained provider hold. Keep the failed order,
+charge and unresolved paid-delivery obligation unchanged. Restoring public
+observation/GET with selectors removed does not release new paid execution: the
+retained failed marker continues admission and supplier holds until a separately
+reviewed, properly authorized fulfillment/refund resolution. No blind replay,
+automatic refund from another custody, fabricated success or new schedule occurs.
+
+See [finite failure policy](docs/operator-canary.md#failed-delivery-and-retained-admission).

@@ -9,8 +9,9 @@ import {
 } from "./order";
 import { verifiedA2aResponseFromRun } from "./operator-resolution";
 import { exactA2aMicros } from "./amount-micros";
+import { a2aFailureDiagnostic, a2aTraceStage, type A2aFailureDiagnostic, type A2aFailureStage } from "./failure-diagnostic";
 import { configuredResearchAllowance } from "../research/research-allowance";
-import { canaryOriginalClaim, assertCanaryCreatorPayment, assertCanaryOriginalReserved } from "../business-operator/canary-policy";
+import { canaryOriginalClaim, canaryExecutionPaused, assertCanaryCreatorPayment, assertCanaryOriginalReserved } from "../business-operator/canary-policy";
 import {
   isSupportedA2aResearchPackage,
   type A2aResearchPackage,
@@ -20,6 +21,7 @@ type A2aWorkerDb = Pick<
   KeryxDB,
   | "claimNextA2aOrder"
   | "getA2aOrder"
+  | "getQueryRun"
   | "completeA2aOrder"
   | "failA2aOrder"
   | "markA2aOrderPaymentStarted"
@@ -27,7 +29,7 @@ type A2aWorkerDb = Pick<
   | "listCreatorPaymentAttemptsByQuery"
 > & Partial<Pick<KeryxDB, "operatorPublicSnapshot">>;
 
-type A2aCollector = (input: Parameters<typeof collectRun>[0]) => Promise<QueryRun>;
+type A2aCollector = (input: Parameters<typeof collectRun>[0], options?: Parameters<typeof collectRun>[1]) => Promise<QueryRun>;
 
 interface A2aRunOptions {
   /** Trusted operator rollout flag, never accepted from a paid request body. */
@@ -41,6 +43,18 @@ export interface A2aWorkerOutcome {
   id: string;
   status: "completed" | "failed" | "recovery_pending";
   errorCode?: "invalid_order_data" | "research_failed";
+  /** Private Operator audit/worker diagnostic; excluded from field-built public responses. */
+  diagnostic?: A2aFailureDiagnostic;
+}
+
+function existingOutcome(order: A2aOrder): A2aWorkerOutcome | null {
+  if (order.status === "completed" || order.status === "failed") return { id: order.id, status: order.status };
+  if (order.status !== "running" || !order.startedAt || !order.workerId ||
+    order.paymentStartedAt !== null || order.resultSavingAt !== null ||
+    order.response !== null || order.errorCode !== null || order.resolution !== null) {
+    return { id: order.id, status: "recovery_pending" };
+  }
+  return null;
 }
 
 function validRequest(
@@ -106,6 +120,8 @@ export async function runClaimedA2aOrder(
   order: A2aOrder,
   options: A2aRunOptions = {},
 ): Promise<A2aWorkerOutcome> {
+  const existing = existingOutcome(order);
+  if (existing) return existing;
   const valid = validRequest(order, options.expectedPayee);
   if (!valid) {
     await db.failA2aOrder(order.id, "invalid_order_data", new Date().toISOString());
@@ -113,7 +129,22 @@ export async function runClaimedA2aOrder(
   }
   const { request, executionLimits } = valid;
 
+  // A direct caller must prove this is still its claimed original and has no saved result.
+  // Read failures hold execution; recovery reads may repair it, never repeat paid research.
+  try {
+    const current = await db.getA2aOrder(order.id);
+    if (!current) return { id: order.id, status: "recovery_pending" };
+    const currentOutcome = existingOutcome(current);
+    if (currentOutcome) return currentOutcome;
+    if (current.queryId !== order.queryId || current.requestHash !== order.requestHash ||
+      current.workerId !== order.workerId || current.startedAt !== order.startedAt ||
+      !validRequest(current, options.expectedPayee) || await db.getQueryRun(order.queryId)) {
+      return { id: order.id, status: "recovery_pending" };
+    }
+  } catch { return { id: order.id, status: "recovery_pending" }; }
+
   let run: QueryRun;
+  let lastStage: A2aFailureStage = "unknown";
   try {
     run = await (options.collector ?? collectRun)({
       question: request.question,
@@ -136,10 +167,22 @@ export async function runClaimedA2aOrder(
           throw new Error("A2A QueryRun-save boundary could not be journaled");
         }
       },
-    });
-  } catch {
-    await db.failA2aOrder(order.id, "research_failed", new Date().toISOString()).catch(() => false);
-    return { id: order.id, status: "failed", errorCode: "research_failed" };
+    }, { onStep: (step) => { lastStage = a2aTraceStage(step); } });
+  } catch (error) {
+    const diagnostic = a2aFailureDiagnostic(error, lastStage);
+    let failed = false;
+    try { failed = await db.failA2aOrder(order.id, "research_failed", new Date().toISOString()) === true; }
+    catch { /* Keep the captured safe diagnostic; a failed write never retries research. */ }
+    if (!failed) {
+      // A lost write response may have committed. Observe once; never repeat the
+      // transition or claim a failed state from a false/ambiguous write result.
+      try {
+        const current = await db.getA2aOrder(order.id);
+        failed = current?.id === order.id && current.queryId === order.queryId &&
+          current.requestHash === order.requestHash && current.status === "failed";
+      } catch { /* The original stays explicitly recoverable when observation fails. */ }
+    }
+    return { id: order.id, status: failed ? "failed" : "recovery_pending", errorCode: "research_failed", diagnostic };
   }
 
   let response: Record<string, unknown>;
@@ -185,6 +228,7 @@ export async function runNextA2aOrder(
   // A finite web allowance cannot turn their confirmed debit into research_failed.
   if (configuredResearchAllowance()) return null;
   const original = canaryOriginalClaim();
+  if (!original && canaryExecutionPaused()) return null;
   if (original) {
     assertCanaryOriginalReserved();
     if (!db.operatorPublicSnapshot) throw new Error("Finite original catalog capability unavailable");

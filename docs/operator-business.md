@@ -1,11 +1,18 @@
 # Hosted research business Operator
 
-October 6, 2026 implementation candidate: app 0.27.2, remote MCP 0.3.2 and
+October 6, 2026 implementation candidate: app 0.27.4, remote MCP 0.3.2 and
 caller-funded MCP 0.4.6. Deployment/publication readbacks are release gates.
 
 The [finite acceptance window](operator-canary.md) freezes one owner's original
 and retains financial/provider ceilings before signing, claiming or supplier HTTP.
 It grants no funding source, recurring quota or creator payout authority.
+
+The first owner original settled its inbound charge but failed before delivering
+an answer. A distinct verified failed closure preserves that paid-delivery
+obligation and all supplier holds. Observation/GET recovery can be restored while
+new paid execution stays held. Private stage/category diagnostics and serialized
+source-selection batching address demonstrated reliability gaps; they do not
+turn the failed trial into successful business acceptance.
 
 The owner requested resolving the current bottlenecks and developing Operator
 into an autonomous business for Tameion. The concrete business is prepaid research:

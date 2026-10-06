@@ -7,6 +7,11 @@ public observation and bounded brief fix. Runtime/publication readbacks and a re
 complete paid workflow remain acceptance gates. Historical status below remains
 dated evidence, not the status of this candidate.
 
+The first finite owner business trial verified a settled inbound order but failed
+before delivery. [Retained failed closure](operator-canary.md#failed-delivery-and-retained-admission)
+keeps its obligation and spending holds visible; the complete useful workflow
+gate remains open. Do not count this owner-generated trial as independent traction.
+
 **Status (October 4, 2026): production is Arc mainnet; local CLI and Windows desktop task alphas available;
 the Tauri shell is implemented and subject to its release acceptance gates; the
 full Operator remains planned.** Keryx
