@@ -1,8 +1,18 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { operatorBusinessStatusSchema } from "./contracts";
 
+// Hosted and packaged stdio use independent SDK copies. Share the registration
+// capability, not the nominal SDK class with copy-specific private fields.
+interface DiscoveryRegistrar {
+  registerTool(name: string, options: {
+    title: string;
+    description: string;
+    inputSchema: Record<string, never>;
+    annotations: { readOnlyHint: boolean; destructiveHint: boolean; idempotentHint: boolean; openWorldHint: boolean };
+  }, handler: () => Promise<{ isError?: boolean; content: { type: "text"; text: string }[] }>): unknown;
+}
+
 /** Discovery only. The shared contract grants no signer, job or scheduler access. */
-export function registerOperatorDiscovery(server: McpServer, read: () => Promise<unknown>) {
+export function registerOperatorDiscovery(server: DiscoveryRegistrar, read: () => Promise<unknown>) {
   server.registerTool("keryx_operator_status", {
     title: "Keryx business Operator status",
     description: "Observe public prepaid research operations, queue and hold/review rationale. No spending or execution authority; exact books and customer jobs stay private.",
