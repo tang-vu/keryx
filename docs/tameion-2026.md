@@ -85,6 +85,22 @@ separately from independently initiated use. Owner-generated jobs or synthetic a
 are never independent traction. Existing package prices and terms require explicit,
 versioned buyer-visible changes; this plan does not change them.
 
+**October 5 outreach focus:** The owner named the two segments closest to their own
+network and committed that week's outreach to them: graduate students and PhD
+candidates writing a literature review, and web3 research analysts. Event mentor
+guidance was to choose one and go deep; which one leads is still the owner's open
+decision. Both remain hypotheses with no recorded independent user. The September
+Arc-founder hypothesis above is neither validated nor withdrawn. Two open calls in
+the builder channel (October 2 and 4) addressed "researchers, small teams and
+specialist writers" generally; no resulting participant is recorded, so treat broad
+calls as unproven and prefer direct one-to-one asks on a participant's own question
+under the [validation plan](./product-validation.md). Scholarly discovery, DOI/arXiv
+resolution and BibTeX/RIS export are therefore core to the first segment, not
+optional scope. A participant who has never held USDC must fund a wallet before a
+paid request; that onboarding barrier is unmeasured and has no accepted remedy. Any
+owner-prepaid trial budget is new mainnet spending requiring explicit authorization
+and must be reported as owner-funded, never as independent paid demand.
+
 ## One working system, staged delivery
 
 Long term, Keryx should expose one task and receipt engine across the web, Windows
