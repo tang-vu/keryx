@@ -5569,3 +5569,18 @@ transaction; old runtime code cannot restart after upgrade. Public API/client
 projections omit private recovery authority hashes. New usage counters cannot
 erase the original provider bill's unknown status. See
 [same-original fulfillment](docs/operator-original-fulfillment.md).
+
+## Recorded guest research is a question count - 2026-10-06
+
+The owner requested guest activity on the ledger and confirmed keeping the
+existing "recorded accounts" label. Add an independent `guestQuestions` aggregate
+from completed public `query_runs` with explicit `web` origin and no recorded
+signed-in wallet (NULL/missing/empty `asker`). Unknown historical origins,
+engine, MCP and A2A callers do not establish guest web activity. Non-empty legacy
+wallet values are not reclassified as guests.
+
+Guest questions are a subset of recorded questions, not additional accounts,
+visits, active users or unique people. Use existing SQLite/Supabase metric rows;
+no identity tracking, cookies, schema change or historical backfill is required.
+Missing/invalid API aggregates stay unavailable, independently of account and
+payment totals. See [release scope](docs/engineering/ledger-guest-questions-2026-10-06.md).

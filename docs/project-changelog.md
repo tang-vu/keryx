@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Guest question activity on the ledger (2026-10-06, v0.27.9 candidate)
+
+- Keep "recorded accounts" and add "guest questions" from completed web questions
+  without a recorded signed-in wallet. Guest questions are included in the total;
+  this is question activity, not a visitor or unique-user estimate.
+- SQLite and Supabase share the additive optional nullable `/api/metrics`
+  `guestQuestions` field. Missing/invalid counts remain explicitly unavailable;
+  confirmed zero and dated prior reads retain their meanings.
+- No tracking, authentication, payment, schema or schedule changes. Hosted links
+  expose the updated ledger; client package/installer contracts retain their roles.
+
 ### One-shot same-original delivery fulfillment (2026-10-06, v0.27.7 candidate)
 
 - Add a private recovery lane for the exactly settled, failed owner canary;

@@ -271,11 +271,15 @@ export class SupabaseAdapter implements KeryxDB {
         if (data.length < pageSize) return rows;
         continue;
       }
-      const { data } = await this.#sb
+      const { data, error } = await this.#sb
         .from(table)
         .select(columns)
         .order(orderBy, { ascending: true })
         .range(from, from + pageSize - 1);
+      // A failed question page cannot establish a zero or partial guest-question total.
+      if (table === "query_runs" && (error || !Array.isArray(data) || data.length > pageSize)) {
+        throw new Error("Question metrics unavailable");
+      }
       const page = (data ?? []) as unknown as Record<string, unknown>[];
       rows.push(...page);
       if (page.length < pageSize) return rows;

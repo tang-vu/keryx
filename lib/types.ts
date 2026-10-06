@@ -553,6 +553,9 @@ export interface DashboardMetrics {
    * Not unique humans, active users, current connections or a sign-in-provider split.
    * null/absent means the backend cannot supply an exact aggregate. */
   recordedAccounts?: number | null;
+  /** Completed web questions with no signed-in wallet recorded; a subset of totalQueries.
+   * Counts questions, not visits or unique people. null/absent means unavailable. */
+  guestQuestions?: number | null;
   payingQueries: number; // queries that produced >= 1 payment
   readerToPayerConversion: number; // payingQueries / totalQueries
   /** Recorded evidence-counter samples; not reassessed against current source provenance. */
