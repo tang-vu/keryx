@@ -6,6 +6,14 @@ import path from "node:path";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { chromium } from "playwright";
+import { PAPER_CATALOG } from "../lib/papers/catalog";
+import { groupPaperWorks } from "../lib/papers/work-groups";
+
+// This component harness also renders the async server page. Compute its Node-only
+// bibliography helper in Node, as Next does, rather than polyfilling crypto in a browser.
+const paperGroups = groupPaperWorks(PAPER_CATALOG);
+const paperCatalogJson = JSON.stringify(PAPER_CATALOG);
+const sourceSearchLabel = "Search titles, publishers, domains, authors or identifiers";
 
 const reference = { id: "public:fixture", name: "Public publisher fixture", url: "https://publisher.example/", rssUrl: "https://publisher.example/feed", description: "Retained public writing without payment authority.", tags: ["Engineering"], active: true, refreshedAt: "2026-10-05T00:00:00.000Z", items: Array.from({ length: 4 }, (_, index) => ({ id: `public-item:${String(index).repeat(64)}`, title: `Retained article ${index}`, summary: "Fixture excerpt", content: "Fixture content", link: `https://publisher.example/article-${index}`, publishedAt: `2026-10-0${index + 1}T00:00:00.000Z`, deliveryKind: "excerpt" })) };
 const source = { id: "fixture-creator", name: "Unverified creator fixture", url: "https://creator.example/", description: "An unverified registered listing.", verified: false, tags: ["Engineering"], authors: [], walletAddress: `0x${"1".repeat(40)}`, fetchPrice: 0.01, createdAt: "2026-10-05T00:00:00.000Z" };
@@ -24,6 +32,12 @@ const chrome: Plugin = {
     build.onLoad({ filter: /.*/, namespace: "fixture-db" }, () => ({ contents: "export const getDb=async()=>window.fixtureDb;", loader: "js" }));
     build.onResolve({ filter: /public-source-claim-service$/ }, () => ({ path: "claims", namespace: "fixture-claims" }));
     build.onLoad({ filter: /.*/, namespace: "fixture-claims" }, () => ({ contents: "export const sourceClaimPolicyForSource=async()=>null;", loader: "js" }));
+    build.onResolve({ filter: /^@\/lib\/papers\/work-groups$/ }, () => ({ path: "paper-groups", namespace: "fixture-server-papers" }));
+    build.onLoad({ filter: /.*/, namespace: "fixture-server-papers" }, () => ({ contents: `
+      export function groupPaperWorks(records) {
+        if (JSON.stringify(records) !== ${JSON.stringify(paperCatalogJson)}) throw Error('Unexpected server paper catalog');
+        return ${JSON.stringify(paperGroups)};
+      }`, loader: "js" }));
   },
 };
 const css = (await postcss([tailwind()]).process(await readFile("app/globals.css", "utf8"), { from: path.resolve("app/globals.css") })).css;
@@ -51,11 +65,15 @@ try {
       const page = await browser.newPage({ viewport: { width, height: 1000 } });
       await page.clock.install();
       const errors: string[] = [];
+      const paperRequests: string[] = [];
       page.on("pageerror", error => errors.push(error.message));
       let mode = "zero";
       await page.route("**/*", async route => {
         assert.equal(route.request().method(), "GET", "No write or payment request is permitted");
-        const pathname = new URL(route.request().url()).pathname;
+        const requested = new URL(route.request().url());
+        assert.equal(requested.origin, "https://ledger.fixture", "No external provider or wallet requests");
+        const pathname = requested.pathname;
+        if (pathname === "/api/papers") paperRequests.push(requested.href);
         if (pathname.startsWith("/api/")) {
           if (mode === "error" && pathname === "/api/metrics") return route.fulfill({ status: 503, json: { error: "unavailable" } });
           if (pathname === "/api/metrics") return route.fulfill({ json: mode === "malformed" ? { metrics: { totalQueries: 28 }, leaderboard: [] } : { metrics: { ...metrics, ...(mode === "account-unavailable" ? { recordedAccounts: null } : mode === "account-malformed" ? { recordedAccounts: 1.5 } : mode === "account-zero" ? { recordedAccounts: 0 } : mode === "account-legacy" ? { recordedAccounts: undefined } : {}), ...(mode === "pending" ? { pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.02, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.01 } : {}) }, leaderboard: [] } });
@@ -127,6 +145,7 @@ try {
 
       await open("/sources");
       await page.getByRole("heading", { name: "Sources to explore." }).waitFor();
+      assert.equal(await page.locator("#research-papers article").count(), paperGroups.length);
       await page.getByText("Publisher control unverified", { exact: true }).waitFor();
       await page.getByText("Excerpt in feed").first().waitFor();
       await page.getByText("Show 1 more retained item", { exact: true }).click();
@@ -141,13 +160,23 @@ try {
       await page.waitForFunction(() => (document.querySelector('select[name="topic"]') as HTMLSelectElement)?.value === "payments");
       assert.equal(await page.getByLabel("Collection", { exact: true }).inputValue(), "explore");
       assert.equal(await page.getByLabel("Sort", { exact: true }).inputValue(), "name");
-      assert.equal(await page.getByLabel("Search titles, publishers, domains or tags").inputValue(), "Stripe");
+      assert.equal(await page.getByLabel(sourceSearchLabel).inputValue(), "Stripe");
+      await page.evaluate(() => (window as unknown as { fixtureRenderSources: (params: object) => Promise<void> }).fixtureRenderSources({ kind: "paper", author: "Jacob Devlin", year: "2019", doi: "10.18653/v1/n19-1423" }));
+      await page.waitForFunction(() => (document.querySelector('input[name="author"]') as HTMLInputElement)?.value === "Jacob Devlin");
+      assert.equal(await page.getByLabel("Publication year", { exact: true }).inputValue(), "2019");
+      assert.equal(await page.getByLabel("Exact DOI", { exact: true }).inputValue(), "10.18653/v1/n19-1423");
+      assert.equal(await page.locator("#research-papers article").count(), 1);
+      assert.equal(await page.locator("#publisher-directory article").count(), 0);
       await page.evaluate(() => (window as unknown as { fixtureRenderSources: (params: object) => Promise<void> }).fixtureRenderSources({}));
       await page.waitForFunction(() => (document.querySelector('select[name="topic"]') as HTMLSelectElement)?.value === "all");
       assert.equal(await page.getByLabel("Collection", { exact: true }).inputValue(), "all");
       assert.equal(await page.getByLabel("Sort", { exact: true }).inputValue(), "default");
-      assert.equal(await page.getByLabel("Search titles, publishers, domains or tags").inputValue(), "");
-      await page.getByLabel("Search titles, publishers, domains or tags").fill("postgresql.org");
+      assert.equal(await page.getByLabel(sourceSearchLabel).inputValue(), "");
+      assert.equal(await page.getByLabel("Author", { exact: true }).inputValue(), "");
+      assert.equal(await page.getByLabel("Publication year", { exact: true }).inputValue(), "");
+      assert.equal(await page.getByLabel("Exact DOI", { exact: true }).inputValue(), "");
+      assert.equal(await page.locator("#research-papers article").count(), paperGroups.length);
+      await page.getByLabel(sourceSearchLabel).fill("postgresql.org");
       await page.getByLabel("Collection", { exact: true }).selectOption("explore");
       await page.getByLabel("Topic", { exact: true }).selectOption("data-infrastructure");
       await Promise.all([page.waitForURL(url => url.searchParams.get("q") === "postgresql.org"), page.getByRole("button", { name: "Find sources" }).click()]);
@@ -185,6 +214,7 @@ try {
       await open("/sources?mode=history-error");
       await page.getByText(/Public citation history is temporarily unavailable/).waitFor();
       await page.getByRole("heading", { name: "Public publisher fixture ↗" }).waitFor();
+      assert.deepEqual(paperRequests, [], "Browsing and filters must not start repository lookups");
       assert.deepEqual(errors, [], `Browser errors at ${network}/${width}`);
       await page.close();
     }
