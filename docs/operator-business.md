@@ -1,7 +1,11 @@
 # Hosted research business Operator
 
-October 6, 2026 implementation candidate: app 0.27.0, remote MCP 0.3.2 and
+October 6, 2026 implementation candidate: app 0.27.2, remote MCP 0.3.2 and
 caller-funded MCP 0.4.6. Deployment/publication readbacks are release gates.
+
+The [finite acceptance window](operator-canary.md) freezes one owner's original
+and retains financial/provider ceilings before signing, claiming or supplier HTTP.
+It grants no funding source, recurring quota or creator payout authority.
 
 The owner requested resolving the current bottlenecks and developing Operator
 into an autonomous business for Tameion. The concrete business is prepaid research:
@@ -102,7 +106,7 @@ fallback. No scope, token, support or payment cap was raised to make a test pass
 | CLI | New read-only business status; existing local task/purchase/recovery authority unchanged. |
 | Remote MCP 0.3.2 | New read-only public tool. Existing sponsored research is a separate treasury-bound role, not prepaid business revenue. |
 | Stdio MCP 0.4.6 | New public tool; explicitly async paid order with at most 90 seconds of original GET polling, then retained manual recovery. Fresh npm bytes/provenance/publication readback required. |
-| Desktop 0.4.6 | Existing immutable local task alpha already uses async purchases. Hosted status is available in the browser; shell navigation, signer and native authority remain unchanged. No new installer claim. |
+| Desktop 0.4.7 candidate | Existing local task alpha uses separate GET-only original recovery imports. Hosted status is available in the browser; shell navigation, signer and native authority remain unchanged. Exact-source CI/installer publication readback remains required. |
 | Extension 0.1.1 / bots | Existing hosted research adapters retain their roles. No new business scheduler or custody; public status is available by URL. No changed installer/bot publication claim. |
 
 ## Tameion acceptance still required

@@ -26,10 +26,12 @@ import { createModelEngine } from "./model-engine";
 import { endpointFor } from "./provider-endpoints";
 import type { ReasoningEngine } from "./reasoning-engine";
 import { BoundedProductionEngine, configuredProductionModelAllowance, ProductionModelAllowance } from "./bounded-production-engine";
+import { BusinessCanaryEngine } from "../business-operator/canary-suppliers";
+import { configuredBusinessCanary } from "../business-operator/canary-policy";
 
 /** Catalog entries usable with credentials configured on this process. */
 export function availableModels(): ModelChoice[] {
-  if (configuredProductionModelAllowance()) {
+  if (configuredBusinessCanary() || configuredProductionModelAllowance()) {
     return process.env.DEEPSEEK_API_KEY?.trim() ? MODEL_CATALOG.filter(model => model.id === DEFAULT_MODEL_ID) : [];
   }
   return MODEL_CATALOG.filter((model) => endpointFor(model.provider) !== null);
@@ -97,6 +99,11 @@ function buildChoiceEngine(choice: ModelChoice): ReasoningEngine {
 }
 
 export function getReasoningEngine(modelId?: string): ReasoningEngine {
+  if (configuredBusinessCanary()) {
+    if (modelId && findModelChoice(modelId)?.id !== DEFAULT_MODEL_ID)
+      throw new Error("Business canary permits only DeepSeek Flash; no provider fallback");
+    return new BusinessCanaryEngine(process.env.DEEPSEEK_API_KEY ?? "");
+  }
   const bounded = configuredProductionModelAllowance();
   if (bounded) {
     if (modelId && findModelChoice(modelId)?.id !== DEFAULT_MODEL_ID)

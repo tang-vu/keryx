@@ -1,5 +1,22 @@
 # Keryx Project Changelog
 
+### Finite business canary admission (2026-10-06, v0.27.2 candidate)
+
+- Freeze one prepared buyer original before signing; retain one submission attempt
+  and recover with original GET requests after uncertainty.
+- Gate hosted A2A payment before Circle and atomically claim only the bound paid
+  original with native settled proof. Ordinary Supabase uses private 0081 RPCs;
+  sealed PostgreSQL remains a separate enrollment gate.
+- Retain one-host financial/model/search ceilings, fixed supplier transports,
+  cancellation/expiry holds and evidence-checked closure. Hold other paid roles
+  and model probes while preserving stored delivery and historical allowances.
+- Separate GET-only buyer recovery from submission modules; advance desktop
+  source-bound artifacts to 0.4.7. Stdio MCP 0.4.6 and remote 0.3.2 retain their
+  unchanged contracts; exact package/installer publication readback remains a gate.
+- [Finite acceptance](operator-canary.md) records the owner envelope, narrower
+  one-original scope, supported surfaces and funding/usefulness/contract-wallet
+  gates. This release adds no recurring quota, new funding source or real traction.
+
 ### Bounded failure categories (2026-10-06, v0.27.1 candidate)
 
 - The finite-allowance production engine now keeps a bounded failure category

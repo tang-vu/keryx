@@ -6,11 +6,17 @@ import { BUYER_NETWORK, addressSchema } from "../buyer/protocol";
 import { readBoundedJson } from "../read-bounded-json";
 import type { PrivateTreasuryPolicy } from "../db/private-treasury-capacity";
 import { paymentRuntimeConfig } from "../payment-runtime-config";
+import { canaryExecutionPaused } from "../business-operator/canary-policy";
+
+function assertPrivateAdmissionOpen() {
+  if (canaryExecutionPaused()) throw new Error("Finite business canary holds new private payment");
+}
 
 const facilitatorUrl = `${paymentRuntimeConfig().gatewayApiUrl}/v1/x402/`;
 type PaymentBody = { paymentPayload: unknown; paymentRequirements: unknown };
 /** Captured selected-profile transport. No redirects, retries, discovery metadata or raw error logging. */
 export async function privateIncomingFacilitator(action: "verify" | "settle", body: PaymentBody) {
+  assertPrivateAdmissionOpen();
   const response = await fetch(`${facilitatorUrl}${action}`, { method: "POST", redirect: "error",
     headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
   if (!response.ok) { await response.body?.cancel(); throw new Error("Private payment facilitator unavailable"); }
@@ -41,15 +47,19 @@ export async function submitPrivateIncomingPayment(db: KeryxDB, id: string, paye
     description: "Private research job", mimeType: "application/json" }, accepted: intent.requirement,
     payload: intent.submission.payment }, paymentRequirements: intent.requirement };
   let verification: unknown;
+  assertPrivateAdmissionOpen();
   try { verification = await facilitator("verify", structuredClone(body)); }
   catch { throw new Error("Private payment verification unavailable"); }
   const verified = z.object({ isValid: z.literal(true), payer: addressSchema }).safeParse(verification);
   if (!verified.success || verified.data.payer.toLowerCase() !== authorization.from) return { status: "verification-rejected" as const, confirmation: null };
+  assertPrivateAdmissionOpen();
   if (!await db.reservePrivateTreasury(id, payer, treasury)) return { status: "capacity-unavailable" as const, confirmation: null };
+  assertPrivateAdmissionOpen();
   const claim = await db.claimPrivatePaymentSubmission(id, payer);
   if (!claim.claimed) return { status: claim.state.status, confirmation: claim.state.confirmation };
   let confirmation;
   try {
+    assertPrivateAdmissionOpen();
     const settled = z.object({ success: z.literal(true), payer: addressSchema, network: z.literal(BUYER_NETWORK), transaction: z.string() })
       .parse(await facilitator("settle", body));
     confirmation = privatePaymentConfirmation({ source: "circle-facilitator-success", transaction: settled.transaction,

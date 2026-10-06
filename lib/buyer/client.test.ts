@@ -45,6 +45,7 @@ describe("bounded buyer", () => {
     const path = await directory();
     const signer = vi.fn(async (a: Parameters<typeof sign>[0]) => {
       expect((await readBuyerJournal(path)).authorization.nonce).toBe(a.nonce);
+      expect(JSON.parse(await readFile(join(path, "submission.json"), "utf8")).state).toBe("submission_possible");
       return sign(a);
     });
     const http = vi.fn<typeof fetch>().mockResolvedValueOnce(quoteResponse()).mockImplementationOnce(async (_url, init) => {

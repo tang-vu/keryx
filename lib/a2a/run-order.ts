@@ -10,6 +10,7 @@ import {
 import { verifiedA2aResponseFromRun } from "./operator-resolution";
 import { exactA2aMicros } from "./amount-micros";
 import { configuredResearchAllowance } from "../research/research-allowance";
+import { canaryOriginalClaim, assertCanaryCreatorPayment, assertCanaryOriginalReserved } from "../business-operator/canary-policy";
 import {
   isSupportedA2aResearchPackage,
   type A2aResearchPackage,
@@ -24,7 +25,7 @@ type A2aWorkerDb = Pick<
   | "markA2aOrderPaymentStarted"
   | "markA2aOrderResultSaving"
   | "listCreatorPaymentAttemptsByQuery"
->;
+> & Partial<Pick<KeryxDB, "operatorPublicSnapshot">>;
 
 type A2aCollector = (input: Parameters<typeof collectRun>[0]) => Promise<QueryRun>;
 
@@ -125,6 +126,7 @@ export async function runClaimedA2aOrder(
       ...(options.answerFormat ? { answerFormat: options.answerFormat } : {}),
       ...(executionLimits ? { executionLimits } : {}),
       onCreatorPaymentBoundary: async () => {
+        assertCanaryCreatorPayment();
         if (!(await db.markA2aOrderPaymentStarted(order.id, new Date().toISOString()))) {
           throw new Error("A2A creator-payment boundary could not be journaled");
         }
@@ -182,7 +184,14 @@ export async function runNextA2aOrder(
   // Keep already-paid queued originals untouched until ordinary execution is restored.
   // A finite web allowance cannot turn their confirmed debit into research_failed.
   if (configuredResearchAllowance()) return null;
-  const order = await db.claimNextA2aOrder(workerId, new Date().toISOString());
+  const original = canaryOriginalClaim();
+  if (original) {
+    assertCanaryOriginalReserved();
+    if (!db.operatorPublicSnapshot) throw new Error("Finite original catalog capability unavailable");
+    const catalog = await db.operatorPublicSnapshot(Date.now());
+    if (catalog.creatorCatalog.registered !== 0) return null;
+  }
+  const order = await db.claimNextA2aOrder(workerId, new Date().toISOString(), original);
   if (!order) return null;
   try {
     await options.onClaim?.(order);

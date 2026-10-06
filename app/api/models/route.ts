@@ -13,6 +13,6 @@ export function GET() {
   const models = availableModels().map((m) => ({ id: m.id, label: m.label, note: m.note }));
   return Response.json(
     { default: DEFAULT_MODEL_ID, models },
-    { headers: { "Cache-Control": "public, max-age=300" } },
+    { headers: { "Cache-Control": "no-store" } },
   );
 }

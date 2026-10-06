@@ -1,5 +1,28 @@
 # Current Arc mainnet deployment
 
+October 6 distribution observation (`2026-10-06T04:05:21.690Z`):
+[v0.27.0](https://github.com/tang-vu/keryx/releases/tag/v0.27.0) binds source
+`df17c4243e87cb2ea7cefebe0e8f20befb1f9890` ([PR 185](https://github.com/tang-vu/keryx/pull/185));
+exact-main CI and package/desktop acceptance passed. Downloaded npm
+**keryx-mcp 0.4.6** equals the accepted Linux release tarball byte-for-byte,
+SHA256 `033bb67384a24ff5af8fe29dbde861a8e2e11b96b394f76df1b37eca419c0cc0`.
+Official MCP Registry exact/latest both read back 0.4.6. Npm exposes provenance
+attestations; downloaded attestation metadata was retained separately from byte
+verification.
+
+All six release assets were downloaded and checked against their accepted
+manifests/checksums. Desktop **0.4.6** setup SHA256 is
+`c00b6bb3b9fba483fc950211701778be5d21c60dfb9a69ee91bc9b24bf4e16ba`;
+portable ZIP is `36a8dd87d9c8b22ab1faf122c79378b4fef1ad771da2403d7ef5c00d67efa148`.
+The extracted executable hash and actual PE product/file version match acceptance;
+download verification did not install or run it on the owner's computer.
+
+These publication observations do not establish production availability or a
+completed paid business cycle. Source delivery was separately in a held
+maintenance transition on October 6. The [0.27.2 finite-canary candidate](operator-canary.md)
+and desktop 0.4.7 require their own exact-source CI/deployment/artifact readbacks;
+unchanged MCP 0.4.6 remains bound to its accepted publication above.
+
 October 5 planning-repair baseline: read-only public health at
 `2026-10-05T08:20:26.904Z` reported operational, database ok, Arc and real settlement
 mode at `31286250`; SSH source identity was

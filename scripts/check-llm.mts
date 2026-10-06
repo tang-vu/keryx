@@ -13,6 +13,7 @@ import { availableModels } from "../lib/llm/index.ts";
 import { createModelEngine } from "../lib/llm/model-engine.ts";
 import { sendAlert } from "../lib/notify/alert.ts";
 import type { ModelChoice } from "../lib/llm/model-catalog.ts";
+import { canaryExecutionPaused } from "../lib/business-operator/canary-policy.ts";
 
 const PROMPT = "Does a stablecoin settle instantly?";
 
@@ -44,6 +45,10 @@ async function probe(model: ProbeModel): Promise<{ ok: true } | { ok: false; err
 }
 
 async function main(): Promise<void> {
+  if (canaryExecutionPaused()) {
+    console.log("[llm] supplier probes held by the finite business canary; no provider requests.");
+    return;
+  }
   const models: ProbeModel[] = [
     ...(config.anthropicKey
       ? [

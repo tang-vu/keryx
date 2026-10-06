@@ -6,6 +6,10 @@ complete business workflow, accepted deliverable and contract-enforced general
 policy wallet still need evidence. Historical identities below are not candidate
 deployment/publication proof; update them from fresh release readbacks.
 
+The [finite canary](operator-canary.md) adds original-bound financial/provider
+admission and recovery. Its internal owner run, funding and useful result are
+still acceptance gates, not independent traction or a general on-chain wallet.
+
 Updated October 4, 2026 against deployed source `1297d43`. This is a preparation pack,
 not a submitted entry or a completed customer pilot. Update the dated observations
 before recording or submitting. [Active direction](tameion-2026.md),

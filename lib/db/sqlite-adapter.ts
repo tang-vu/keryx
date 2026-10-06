@@ -87,6 +87,8 @@ import type {
 } from "./keryx-db";
 import type { LedgerAccount } from "../gateway/settlement-parity";
 import type { A2aOrder, A2aOrderResolutionUpdate } from "../a2a/order";
+import type { A2aOriginalClaim } from "../a2a/original-claim";
+import { claimSqliteA2aOriginal, hasSqliteA2aOriginalSettlement } from "./a2a-original-claim";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
 import { claimSqlitePrivatePayment, getSqlitePrivatePayment, confirmSqlitePrivatePayment } from "./private-research-payments";
@@ -1680,7 +1682,12 @@ export class SqliteAdapter implements KeryxDB {
     return rows.map(rowToA2aOrder);
   }
 
-  async claimNextA2aOrder(workerId: string, startedAt: string): Promise<A2aOrder | null> {
+  async hasA2aOriginalSettlement(expected: A2aOriginalClaim): Promise<boolean> {
+    return hasSqliteA2aOriginalSettlement(this.db, expected, this.paymentProfile, rowToA2aOrder);
+  }
+
+  async claimNextA2aOrder(workerId: string, startedAt: string, expectedOriginal?: A2aOriginalClaim): Promise<A2aOrder | null> {
+    if (expectedOriginal !== undefined) return claimSqliteA2aOriginal(this.db, expectedOriginal, workerId, startedAt, this.paymentProfile, rowToA2aOrder);
     const row = this.db
       .prepare(
         `UPDATE a2a_orders SET started_at=?,worker_id=?,updated_at=?

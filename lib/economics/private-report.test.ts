@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
 import { calculateEconomics, calculateTestnetEconomics } from "./testnet-economics";
 import { privateEconomicsReport, writePrivateEconomicsReport } from "./private-report";
-import { capturePricePolicy, FLASH_POLICY } from "./provider-cost-policy";
+import { FLASH_POLICY } from "./provider-cost-policy";
 const directories: string[] = [], linux = it.skipIf(process.platform !== "linux");
 afterEach(() => { for (const path of directories.splice(0)) {
   if (dirname(resolve(path)) !== resolve(tmpdir()) || !basename(path).startsWith("keryx-private-economics-")) throw new Error("Unexpected test cleanup target");
@@ -82,7 +82,7 @@ describe("private operator economics", () => {
         engine: "llm:deepseek:deepseek-v4-flash", model: "deepseek-v4-flash", inputTokens: 1000000,
         cachedInputTokens: 0, outputTokens: 1000000, costCapture: { provider: "deepseek",
           requestStartedAt: "2026-09-30T01:00:00Z", responseReceivedAt: "2026-09-30T01:00:01Z",
-          pricing: capturePricePolicy("deepseek", "deepseek-v4-flash") } }] },
+          pricing: structuredClone({ ...FLASH_POLICY, wireModel: "deepseek-v4-flash" }) } }] },
       { id: "synthetic-unpriced", researchMode: "deep", usageCoverageVersion: 2, usageCoverage: "complete",
         llmUsage: [{ engine: "llm:mimo:mimo-v2.5", model: "mimo-v2.5", inputTokens: 100,
           outputTokens: 10, cachedInputTokens: null }] }], []);

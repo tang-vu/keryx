@@ -166,7 +166,8 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   createA2aOrder: "write",
   getA2aOrder: "read",
   listA2aOrdersByPayer: "read",
-  claimNextA2aOrder: "write",
+  claimNextA2aOrder: "write", // Includes exact-original binding; readonly cannot start a queued original.
+  hasA2aOriginalSettlement: "read", // Native settled proof does not grant a writer/claim capability.
   markA2aOrderPaymentStarted: "write",
   markA2aOrderResultSaving: "write",
   completeA2aOrder: "write",

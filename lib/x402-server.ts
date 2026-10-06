@@ -19,6 +19,12 @@ import { createHash } from "node:crypto";
 const facilitator = new BatchFacilitatorClient({ url: paymentRuntimeConfig().gatewayApiUrl });
 
 export interface PaidOptions {
+  /** Trusted mutable admission rechecked before every vendor attempt, never request metadata. */
+  admissionCheck?: () => Response | null;
+  /** Trusted retained attempt admission, after native purpose claim and before settlement HTTP. */
+  beforeSettlement?: () => Response | null;
+  /** Finite acceptance prohibits retries/fallback after possible settlement exposure. */
+  singleSettlementAttempt?: boolean;
   priceUsdc: number;
   payTo: string;
   endpoint: string;
@@ -113,6 +119,15 @@ export async function settleThenServe(
   if (deniedMerchant) return deniedMerchant;
   const requirements = buildRequirements(opts.priceUsdc, opts.payTo);
   const sig = req.headers.get("payment-signature");
+  const checkAdmission = () => { const held = opts.admissionCheck?.(); if (held) throw new PaidAdmissionHeld(held); };
+  const verifyPayment = (selected: typeof payload) => {
+    checkAdmission(); return facilitator.verify(selected, requirements);
+  };
+  const settlePayment = (selected: typeof payload) => {
+    checkAdmission();
+    const held = opts.beforeSettlement?.(); if (held) throw new PaidAdmissionHeld(held);
+    return facilitator.settle(selected, requirements);
+  };
 
   if (!sig) {
     return challengeResponse(opts);
@@ -170,17 +185,18 @@ export async function settleThenServe(
     // never receive this route's PAYMENT-RESPONSE retain the attempt as pending.
     let verify;
     try {
-      verify = await withRetry(() => facilitator.verify(activePayload, requirements), "verify", opts.endpoint);
+      verify = await withRetry(() => verifyPayment(activePayload), "verify", opts.endpoint);
     } catch (err) {
+      if (err instanceof PaidAdmissionHeld) throw err;
       if (activePayload === payload) throw err;
       console.warn(`[x402] verify rejected bazaar-extended payload ${opts.endpoint} — retrying bare`);
       activePayload = payload;
-      verify = await withRetry(() => facilitator.verify(payload, requirements), "verify", opts.endpoint);
+      verify = await withRetry(() => verifyPayment(payload), "verify", opts.endpoint);
     }
     if (!verify.isValid && activePayload !== payload) {
       // A soft rejection may also be extension-induced — try once bare before failing the call.
       activePayload = payload;
-      verify = await withRetry(() => facilitator.verify(payload, requirements), "verify", opts.endpoint);
+      verify = await withRetry(() => verifyPayment(payload), "verify", opts.endpoint);
     }
     if (!verify.isValid) {
       console.error(`[x402] verify FAILED ${opts.endpoint}: ${verify.invalidReason}`, JSON.stringify(requirements));
@@ -194,21 +210,23 @@ export async function settleThenServe(
       || String(authorization.value) !== requirements.amount) {
       return NextResponse.json({ error: "payment authorization disagrees with resource" }, { status: 400 });
     }
-    await (await getDb()).claimResearchPurchase({ network: requirements.network, payer: authorization.from,
+    const db = await getDb(); checkAdmission();
+    await db.claimResearchPurchase({ network: requirements.network, payer: authorization.from,
       payee: authorization.to, authorizationId: authorization.nonce,
       purpose: opts.purchasePurpose ?? "resource",
       requestHash: opts.purchaseRequestHash ?? createHash("sha256").update(opts.endpoint).digest("hex"),
       amountMicros: Number(requirements.amount), resourceSourceId: opts.resourceSourceId, resourceKind: opts.resourceKind, sourceClaim: opts.sourceClaim });
     let settle;
     try {
-      settle = await withRetry(() => facilitator.settle(activePayload, requirements), "settle", opts.endpoint);
+      settle = await withRetry(() => settlePayment(activePayload), "settle", opts.endpoint, opts.singleSettlementAttempt ? 1 : 2);
     } catch (err) {
+      if (err instanceof PaidAdmissionHeld || opts.singleSettlementAttempt) throw err;
       // No confirmation was received. Retrying the identical nonce cannot double-debit, but the
       // eventual caller still treats a missing success response as pending rather than failed.
       if (activePayload === payload) throw err;
       console.warn(`[x402] settle rejected bazaar-extended payload ${opts.endpoint} — retrying bare`);
       activePayload = payload;
-      settle = await withRetry(() => facilitator.settle(payload, requirements), "settle", opts.endpoint);
+      settle = await withRetry(() => settlePayment(payload), "settle", opts.endpoint);
     }
     if (!settle.success) {
       console.error(`[x402] settle FAILED ${opts.endpoint}: ${settle.errorReason}`);
@@ -264,19 +282,26 @@ export async function settleThenServe(
     res.headers.set("PAYMENT-RESPONSE", paymentResponse);
     return res;
   } catch (err) {
+    if (err instanceof PaidAdmissionHeld) return new NextResponse(err.response.body,
+      { status: err.response.status, headers: err.response.headers });
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: "payment processing error", message }, { status: 500 });
   }
 }
 
+class PaidAdmissionHeld extends Error {
+  constructor(readonly response: Response) { super("Paid admission held; preserve the original"); }
+}
+
 /** Retry an async facilitator call up to 2 attempts on a thrown transient error. */
-async function withRetry<T>(fn: () => Promise<T>, label: string, endpoint: string): Promise<T> {
-  const MAX_ATTEMPTS = 2;
+async function withRetry<T>(fn: () => Promise<T>, label: string, endpoint: string, maximumAttempts = 2): Promise<T> {
+  const MAX_ATTEMPTS = maximumAttempts;
   let lastErr: unknown;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       return await fn();
     } catch (err) {
+      if (err instanceof PaidAdmissionHeld) throw err;
       lastErr = err;
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[x402] ${label} threw (attempt ${attempt}/${MAX_ATTEMPTS}) ${endpoint}: ${msg}`);

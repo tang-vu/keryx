@@ -8,6 +8,7 @@ import { privateRuntimePolicy } from "./private-runtime-policy";
 import { createPrivateQuote } from "./private-quote";
 import { admitPrivateResearch } from "./admit-private-research";
 import { submitPrivateIncomingPayment, type privateIncomingFacilitator } from "../payments/private-incoming-payment";
+import { canaryExecutionPaused } from "../business-operator/canary-policy";
 
 /** Backend composition, not an enabled HTTP route. The HTTP layer must authenticate the
  * payer and enforce origin/body limits. All prices, merchants and provider policy come
@@ -27,12 +28,14 @@ export function privateResearchService(db: KeryxDB, env: Parameters<typeof priva
   return {
     quote,
     async submit(submission: unknown, authenticatedPayer: string) {
+      if (canaryExecutionPaused()) throw new Error("Finite business canary holds new private admission");
       const signed = z.object({ request: privateRequestSchema }).parse(submission).request;
       const input: BuyerRequest = { question: signed.question, budget: signed.budget, researchMode: signed.researchMode,
         packageVersion: signed.packageVersion, responseMode: signed.responseMode };
       const expected = quote(input);
       const admitted = await admitPrivateResearch(db, submission, authenticatedPayer,
         { provider: policy.provider, merchants: policy.merchants, requirement: expected.requirement });
+      if (canaryExecutionPaused()) throw new Error("Finite business canary holds new private settlement");
       const payment = await submitPrivateIncomingPayment(db, admitted.id, authenticatedPayer,
         { treasury: policy.treasury, facilitator, now: now?.() });
       // Only response is suitable for the authenticated HTTP response. Keep known success

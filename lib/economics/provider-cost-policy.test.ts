@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { LlmUsageRecord } from "../llm/reasoning-engine";
-import { capturePricePolicy, FLASH_POLICY, usageCostBounds } from "./provider-cost-policy";
+import { capturePricePolicy, FLASH_POLICY, FLASH_POLICY_2026_10_06, usageCostBounds } from "./provider-cost-policy";
 import { HISTORICAL_TOKEN_RATES_V1, HISTORICAL_ECONOMICS_POLICY_V1, calculateTestnetEconomics, economicsRunSample } from "./testnet-economics";
 import type { QueryRun } from "../types";
 
@@ -8,7 +8,20 @@ const usage = (model = "deepseek-v4-flash"): LlmUsageRecord => ({
   callId: "synthetic-local-call", engine: `llm:deepseek:${model}`, model,
   inputTokens: 1_000_000, cachedInputTokens: 250_000, outputTokens: 500_000,
   costCapture: { provider: "deepseek", requestStartedAt: "2026-09-30T01:59:59.000Z",
-    responseReceivedAt: "2026-09-30T02:00:01.000Z", pricing: capturePricePolicy("deepseek", model) },
+    responseReceivedAt: "2026-09-30T02:00:01.000Z", pricing: model.startsWith("deepseek")
+      ? structuredClone({ ...FLASH_POLICY, wireModel: model }) : null },
+});
+it("appends the dated canary observation without rewriting captured Flash history", () => {
+  expect(capturePricePolicy("deepseek", "deepseek-v4-flash")).toEqual({ ...FLASH_POLICY_2026_10_06, wireModel: "deepseek-v4-flash" });
+  expect(FLASH_POLICY.observedAt).toBe("2026-09-30");
+  expect(FLASH_POLICY.id).toBe("deepseek-flash-observed-2026-09-30-v1");
+  expect(usageCostBounds(usage())).toEqual({ lower: 0.41325, upper: 0.8265 });
+  const fresh = usage();
+  fresh.costCapture = { provider: "deepseek", requestStartedAt: "2026-10-06T10:00:00.000Z",
+    responseReceivedAt: "2026-10-06T10:00:01.000Z", pricing: capturePricePolicy("deepseek", fresh.model) };
+  expect(usageCostBounds(fresh)).toEqual({ lower: 0.41325, upper: 0.8265 });
+  expect(Math.ceil((32_000 + 4096) * FLASH_POLICY_2026_10_06.upperRates.inputUsdPerMillion +
+    8192 * FLASH_POLICY_2026_10_06.upperRates.outputUsdPerMillion)).toBe(20660);
 });
 const run = (record: LlmUsageRecord): QueryRun => ({
   id: "synthetic-policy-run", question: "Synthetic policy fixture", budget: 0,

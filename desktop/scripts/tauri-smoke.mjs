@@ -6,7 +6,7 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
 import { createBuyerJournal, readBuyerJournal } from "../../lib/buyer/journal.ts";
-import { resumeResearch } from "../../lib/buyer/client.ts";
+import { resumeResearch } from "../../lib/buyer/resume.ts";
 import { authorizationWithNonce, BUYER_GATEWAY, BUYER_NETWORK, BUYER_USDC } from "../../lib/buyer/protocol.ts";
 import { buyerJobId } from "../../lib/buyer/policy.ts";
 import { a2aResearchPackage } from "../../lib/a2a/research-package-definition.ts";

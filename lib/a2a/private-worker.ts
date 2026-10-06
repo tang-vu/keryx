@@ -4,6 +4,7 @@ import { addressSchema } from "../buyer/protocol";
 import { privateResearchIdSchema } from "./private-research-intent";
 import { privateReasoningEngine, type PrivateReasoningConfig } from "../llm/private-engine";
 import { runPrivateResearch } from "./run-private-research";
+import { canaryExecutionPaused } from "../business-operator/canary-policy";
 
 type ExecutionOptions = Parameters<typeof runPrivateResearch>[3];
 const pageSchema = z.array(z.object({ id: privateResearchIdSchema, payer: addressSchema }).strict()).max(25);
@@ -26,6 +27,7 @@ export function createPrivateWorker(db: KeryxDB, options: Omit<ExecutionOptions,
   let busy = false;
   return {
     async tick(signal?: AbortSignal) {
+      if (canaryExecutionPaused()) return { status: "paused" as const };
       if (busy) return { status: "busy" as const };
       if (signal?.aborted) return { status: "paused" as const };
       busy = true;

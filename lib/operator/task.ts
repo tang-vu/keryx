@@ -3,7 +3,7 @@ import { open, lstat, rename, unlink } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { buyerIntentSchemaForProfile, writeBuyerFile } from "../buyer/journal";
-import { resumeResearch } from "../buyer/client";
+import { resumeResearch } from "../buyer/resume";
 import { buildBuyerReport } from "../buyer/report";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { addressSchema, buyerRequestSchema, BUYER_NETWORK, type BuyerRequest } from "../buyer/protocol";
