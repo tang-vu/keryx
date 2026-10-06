@@ -1,11 +1,11 @@
 # Keryx at Tameion 2026 — planned direction
 
-October6 implementation increment: the owner requested resolving bottlenecks and
+October 6 implementation increment: the owner requested resolving bottlenecks and
 making Operator an autonomous research business. [Hosted business Operator](operator-business.md)
-records the whole-obligation financial gate,private audit,mainnet queued execution,
+records the whole-obligation financial gate, private audit, mainnet queued execution,
 public observation and bounded brief fix. Runtime/publication readbacks and a real
 complete paid workflow remain acceptance gates. Historical status below remains
-dated evidence,not the status of this candidate.
+dated evidence, not the status of this candidate.
 
 **Status (October 4, 2026): production is Arc mainnet; local CLI and Windows desktop task alphas available;
 the Tauri shell is implemented and subject to its release acceptance gates; the

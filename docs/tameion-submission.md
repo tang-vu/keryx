@@ -1,8 +1,8 @@
 # Tameion submission pack — working evidence
 
-October6 candidate increment: [hosted business Operator](operator-business.md)
-adds the prepaid revenue-to-delivery guard,audit and public observation. A real
-complete business workflow,accepted deliverable and contract-enforced general
+October 6 candidate increment: [hosted business Operator](operator-business.md)
+adds the prepaid revenue-to-delivery guard, audit and public observation. A real
+complete business workflow, accepted deliverable and contract-enforced general
 policy wallet still need evidence. Historical identities below are not candidate
 deployment/publication proof; update them from fresh release readbacks.
 

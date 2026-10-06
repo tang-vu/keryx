@@ -1,20 +1,20 @@
 # Keryx Project Changelog
 
-### Hosted business Operator (2026-10-06,v0.27.0 candidate)
+### Hosted business Operator (2026-10-06, v0.27.0 candidate)
 
 - Supervise every mainnet prepaid research original through the durable queue:
-  complete order/Monthly obligations,original-policy liquidity,private audit before
+  complete order/Monthly obligations, original-policy liquidity, private audit before
   execution and explicit holds/review without rebuying an ambiguous job.
-- Add `/operator`,public status API,read-only CLI and MCP observations with complete
+- Add `/operator`, public status API, read-only CLI and MCP observations with complete
   aggregates and unknown/stale states. Exact books and customer jobs stay private.
 - Fix decision brief menu expansion and compact per-clause review under unchanged
   context/evidence gates. Worker-only brief rollout remains behind live usefulness.
-- Caller-funded MCP0.4.6 adds original GET-only async waiting; remote protocol0.3.2
-  adds public observation. Desktop0.4.6 and extension0.1.1 retain their existing
-  roles/bytes. Release identities,CI/deployment/publication and real business proof
-  remain gates; no new custody,cap increase,funding or schedule is granted.
+- Caller-funded MCP 0.4.6 adds original GET-only async waiting; remote protocol 0.3.2
+  adds public observation. Desktop 0.4.6 and extension 0.1.1 retain their existing
+  roles/bytes. Release identities, CI/deployment/publication and real business proof
+  remain gates; no new custody, cap increase, funding or schedule is granted.
 - [Business cycle and acceptance](operator-business.md) records the supported
-  surfaces,SQLite/ordinary Supabase support and sealed PostgreSQL enrollment gate.
+  surfaces, SQLite/ordinary Supabase support and sealed PostgreSQL enrollment gate.
 
 ### Deep discovery accounting and comparison scope (2026-10-06, v0.26.23 candidate)
 

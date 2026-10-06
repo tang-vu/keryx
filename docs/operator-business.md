@@ -42,8 +42,10 @@ citation-toll product; it does not invent customer demand or settlement.
    retained before fallible metadata writes. The existing original GET recovery
    and the worker repair saved results without buying again; manual review remains explicit.
 
-The existing worker cadence is five seconds while idle/held. It does not add a
-new cron or run while a user's desktop is closed. Mainnet startup verifies the
+The existing hosted worker checks every five seconds while idle/held and can
+process prepaid service orders independently of the customer's desktop. Local
+desktop tasks retain their deliberate purchase flow; this release adds no local
+background scheduler or cron. Mainnet startup verifies the
 dedicated public custody, not a legacy testnet funder key. A private exclusive
 single-host lock prevents a second worker from executing. Crash locks are not
 reclaimed by age/PID. SIGINT/SIGTERM drain an already claimed job; heartbeat
