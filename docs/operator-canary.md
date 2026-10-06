@@ -1,6 +1,6 @@
 # Finite Operator business acceptance
 
-October 6, 2026 candidate: app 0.27.2. This implements a private, single-host
+October 6, 2026 candidate: app 0.27.4. This implements a private, single-host
 acceptance window for the [hosted business Operator](operator-business.md).
 Code, synthetic tests and publication do not establish funded acceptance.
 
@@ -94,6 +94,39 @@ requires review and does not automatically restore admission.
 
 ## Surfaces and remaining gates
 
+### Failed delivery and retained admission
+
+The October 6 owner canary settled its single 0.03 USDC inbound order, then
+failed research before saving an answer. Native original-settlement proof was
+verified; no creator attempt or result-save boundary occurred. One model and
+two search holds retain an upper bound of $0.03666. These are reserved maxima,
+not observed provider invoices. The owner trial establishes neither delivered
+usefulness nor independent revenue. Its original is never re-signed, requeued
+or submitted again.
+
+App 0.27.4 adds distinct private `verify-failed` and `close-failed` operations.
+They require the exact settled failed original, journal version 1, an existing
+start, no payment/result boundary, no saved run and no creator attempts. Closure
+commits the complete protected provider-file inventory and retains every hold.
+An ambiguous, malformed, changed or partially saved original cannot use this lane.
+The record explicitly says delivery is incomplete, no refund is proved, and the
+paid-delivery obligation remains unresolved. It changes no database/payment state.
+
+After a positive drain, this record permits restoring observation and original
+GET recovery with selectors removed. **It keeps new paid research and supplier
+transports held.** It does not release business admission or erase the customer's
+charge. A separate reviewed fulfillment/refund resolution with its applicable
+authority is required before that hold can be lifted. Do not replace this marker
+with a completed marker, clear provider slots or renew the expired allowance.
+
+Worker failures now retain only closed stage/category diagnostics in the private
+Operator outcome audit and sanitized worker log. Raw exception messages, stack,
+questions, prompts and provider response bodies are excluded. The prior canary
+did not retain its exact exception, so its retrospective cause remains unknown.
+Oversized source-selection inputs are a demonstrated failure mechanism: selection
+now partitions the actual serialized messages before any model request, preserving
+all candidate identities and targets under the same byte/token/provider ceilings.
+
 Web/API, OpenAI-compatible, remote MCP and sponsored bots share the hosted
 admission hold. Existing authenticated original GET/status/delivery recovery
 remains available. Private workers pause before scans/claims; previously stored
@@ -111,6 +144,15 @@ from submission/policy code, requiring fresh desktop 0.4.7 source-bound artifact
 Stdio MCP 0.4.6, remote protocol 0.3.2 and
 extension 0.1.1 retain their roles; distribution bytes/versions must be checked
 against the final source before claiming unchanged or synchronized delivery.
+
+The failure/selection fix does not enter the shipped stdio MCP or desktop GET
+recovery graphs. In-memory builds with their accepted source pins match the
+published MCP 0.4.6 and desktop 0.4.7 helper/renderer bytes. Retain the existing
+desktop installer at its `2acbf20` provenance. A new-source build changes embedded
+commit identity and requires its own artifact/publication readback; it must not
+be described as that unchanged installer. Repository buyer submission receives
+the new admission guard. Hosted web/API, remote execution, extensions and bots
+receive shared execution holds through the application deployment.
 
 Required acceptance includes protected-file/process concurrency and adverse
 tests, actual isolated PostgreSQL SQL/ACL checks, TypeScript/lint/build, exact

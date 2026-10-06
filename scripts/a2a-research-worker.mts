@@ -23,6 +23,7 @@ import type { A2aWorkerOutcome } from "../lib/a2a/run-order.ts";
 import { recoverOperatorOriginal } from "../lib/business-operator/recovery.ts";
 import { canaryExecutionPaused, canaryOriginalClaim } from "../lib/business-operator/canary-policy.ts";
 import { matchesA2aOriginalClaim } from "../lib/a2a/original-claim.ts";
+import { a2aFailureDiagnostic, formatA2aFailureDiagnostic } from "../lib/a2a/failure-diagnostic.ts";
 
 const workerId = `${os.hostname()}:${process.pid}:${crypto.randomUUID()}`;
 let stopping = false;
@@ -97,21 +98,27 @@ async function loop() {
             catalog.creatorCatalog.registered === 0;
         }
       } catch { /* A changed/expired/unknown finite window is held before any atomic claim. */ }
-      const run = () => stopping ? Promise.resolve(null) : runNextA2aOrder(db, workerId, {
-        expectedPayee: config.sellerAddress,
-        ...(process.env.KERYX_OPERATOR_DECISION_BRIEF === "1" ? { answerFormat: "decision-brief" as const } : {}),
-        onClaim: async (order) => {
-          await db.setSyncState(
-            "a2aWorker",
-            JSON.stringify({
-              workerId,
-              status: "processing",
-              orderId: order.id,
-              updatedAt: new Date().toISOString(),
-            }),
-          );
-        },
-      });
+      const run = async () => {
+        if (stopping) return null;
+        const result = await runNextA2aOrder(db, workerId, {
+          expectedPayee: config.sellerAddress,
+          ...(process.env.KERYX_OPERATOR_DECISION_BRIEF === "1" ? { answerFormat: "decision-brief" as const } : {}),
+          onClaim: async (order) => {
+            await db.setSyncState(
+              "a2aWorker",
+              JSON.stringify({
+                workerId,
+                status: "processing",
+                orderId: order.id,
+                updatedAt: new Date().toISOString(),
+              }),
+            );
+          },
+        });
+        // Emit only the closed private diagnostic before fallible outcome audit/sync writes.
+        if (result?.diagnostic) console.log(`[a2a-worker] research failure ${formatA2aFailureDiagnostic(result.diagnostic)}`);
+        return result;
+      };
       const outcome = businessOperator ? await runOperatorCycle({
         inventory: () => db.operatorInventory({ network: config.networkId, payee: config.sellerAddress, nowMs: Date.now() }),
         liquidity: () => observeOperatorLiquidity(db), run, audit,
@@ -147,8 +154,7 @@ async function loop() {
       // Stop refreshing a prior working state after a failed observation/audit.
       // A captured recovery outcome remains an explicit hold on the original.
       if (!recoveryOrderId) heartbeat = null;
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`[a2a-worker] loop error: ${message}`);
+      console.error(`[a2a-worker] loop failure ${formatA2aFailureDiagnostic(a2aFailureDiagnostic(error))}`);
       await delay(5_000);
     }
   }

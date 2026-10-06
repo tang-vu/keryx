@@ -1,6 +1,6 @@
 import { canonicalJson } from "../canonical-json";
 import { buyerRequestSchema, authorizationSchema, decodeHeader } from "../buyer/protocol";
-import { assertCanaryOriginalReserved, configuredBusinessCanary, reserveCanaryInboundSettlement } from "./canary-policy";
+import { assertCanaryOriginalReserved, canaryExecutionPaused, configuredBusinessCanary, reserveCanaryInboundSettlement } from "./canary-policy";
 
 export function canaryUnavailableResponse() {
   return Response.json({ error: "research_service_unavailable",
@@ -15,7 +15,8 @@ export function businessCanaryPaidAdmission(input: {
   reserveSettlement?: boolean;
 }): Response | null {
   try {
-    const policy = configuredBusinessCanary(); if (!policy) return null;
+    const policy = configuredBusinessCanary();
+    if (!policy) return canaryExecutionPaused() ? canaryUnavailableResponse() : null;
     const body = buyerRequestSchema.parse(input.body), expected = policy.original;
     if (input.bot || canonicalJson(body) !== canonicalJson(expected.request) ||
         input.network !== expected.requirement.network || input.payee.toLowerCase() !== expected.requirement.payTo.toLowerCase() ||

@@ -12,6 +12,7 @@ import { config } from "../config";
 import { HeuristicEngine } from "./heuristic-engine";
 import { ResearchPlanningError } from "./research-plan";
 import { MAX_SELECTION_DIAGNOSTIC_HISTORY, ResearchSelectionError, readSelectionDiagnostics } from "./research-selection";
+import { ResearchSelectionInputLimitError, ResearchSelectionPartialBatchError } from "./selection-input";
 import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
 import type {
   AttributeInput,
@@ -53,6 +54,9 @@ function isTimeout(err: unknown): boolean {
 
 /** Persist only a bounded category/status, never a provider body that may echo request context. */
 function errorTelemetry(err: unknown): Pick<ReasoningAttempt, "status" | "error" | "inputBounds"> {
+  if (err instanceof ResearchSelectionPartialBatchError) return {
+    ...(err.status === undefined ? {} : { status: err.status }), error: err.category === "unknown" ? "internal" : err.category,
+  };
   const candidate = (err as { status?: unknown })?.status;
   const status = typeof candidate === "number" && Number.isInteger(candidate) && candidate >= 100 && candidate <= 599 ? candidate : undefined;
   if (err instanceof ReasoningInputLimitError) return { status: 413, error: "input_limit", ...(err.bounds ? { inputBounds: err.bounds } : {}) };
@@ -251,7 +255,8 @@ export class ResilientEngine implements ReasoningEngine {
         });
         // A request-local planning/selection refusal cannot authorize another billable tier.
         // It supplies neither a provider failure nor proof to clear an existing half-open lease.
-        if (err instanceof ResearchPlanningError || err instanceof ResearchSelectionError) throw err;
+        if (err instanceof ResearchPlanningError || err instanceof ResearchSelectionError ||
+          err instanceof ResearchSelectionInputLimitError || err instanceof ResearchSelectionPartialBatchError) throw err;
         if (isTimeout(err) || !isTransient(err) || attempt === maxAttempts) break;
         await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** (attempt - 1)));
       }

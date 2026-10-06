@@ -9,6 +9,7 @@ import { DurableReasoningCircuitStore, MemoryReasoningCircuitStore } from "./rea
 import { ResilientEngine, reasoningAttempts, reasoningCalls, reasoningUsage } from "./resilient-engine";
 import { ReasoningOutputValidationError, type DecideInput } from "./reasoning-engine";
 import { ResearchSelectionError } from "./research-selection";
+import { ResearchSelectionInputLimitError } from "./selection-input";
 
 const opened: SqliteAdapter[] = [];
 const directories: string[] = [];
@@ -159,44 +160,65 @@ describe("response validation and durable client isolation", () => {
   });
 });
 
-it("preserves shared open circuits across sequential and concurrent clients while refusing the exact oversized fallback payload before HTTP", async () => {
+it.each(["eligible", "indivisible"])("preserves shared open circuits across sequential and concurrent clients with an %s Cloudflare selection", async mode => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-resilience-clients-")); directories.push(directory);
   const file = path.join(directory, "circuits.sqlite");
+  const heuristics: HeuristicEngine[] = [];
   const makeClient = async () => {
     const db = new SqliteAdapter(file); await db.init(); opened.push(db);
     const store = new DurableReasoningCircuitStore(async () => db);
+    const heuristic = new HeuristicEngine(); heuristics.push(heuristic); vi.spyOn(heuristic, "decide");
     return new ResilientEngine(provider("deepseek"), new ResilientEngine(provider("mimo"),
-      new ResilientEngine(provider("cloudflare"), new HeuristicEngine(), 2, store), 1, store), 0, store);
+      new ResilientEngine(provider("cloudflare"), heuristic, 2, store), 1, store), 0, store);
   };
   const transport = vi.fn(async (url: string) => {
     if (url.includes("deepseek")) throw new TypeError("synthetic connection refused");
     if (url.includes("mimo")) throw Object.assign(new Error("synthetic deadline"), { name: "TimeoutError" });
+    if (mode === "eligible") return reply();
     throw new Error("Cloudflare must be refused before HTTP");
   });
   vi.stubGlobal("fetch", transport);
-  const offered = input(48);
-  const first = await makeClient(); await first.decide(offered);
+  const offered = input();
+  // Candidate corpora can now split. This shared context is indivisible and fits the global
+  // 32k message ceiling while exceeding only Cloudflare's 23k input-plus-output ceiling.
+  if (mode === "indivisible") offered.memoryContext = "m".repeat(18000);
+  const run = async (client: ResilientEngine) => {
+    if (mode === "indivisible") await expect(client.decide(offered)).rejects.toBeInstanceOf(ResearchSelectionInputLimitError);
+    else expect(await client.decide(offered)).toMatchObject([{ sourceId: "source-0", targets: [0] }]);
+  };
+  const first = await makeClient(); await run(first);
   expect(reasoningAttempts(first).map(attempt => [attempt.engine, attempt.outcome, attempt.error])).toEqual([
     [names.deepseek, "failed", "network"], [names.mimo, "failed", "timeout"],
-    [names.cloudflare, "input-limited", "input_limit"], ["heuristic", "served", undefined],
+    [names.cloudflare, mode === "indivisible" ? "input-limited" : "served", mode === "indivisible" ? "input_limit" : undefined],
   ]);
-  expect(reasoningCalls(first)).toHaveLength(2);
-  expect(reasoningUsage(first)).toEqual([]);
-  const sequential = await makeClient(); await sequential.decide(offered);
+  expect(reasoningCalls(first)).toHaveLength(mode === "indivisible" ? 2 : 3);
+  expect(reasoningUsage(first)).toHaveLength(mode === "indivisible" ? 0 : 1);
+  const sequential = await makeClient(); await run(sequential);
   const concurrent = await Promise.all([makeClient(), makeClient(), makeClient()]);
-  await Promise.all(concurrent.map(client => client.decide(offered)));
+  await Promise.all(concurrent.map(run));
   for (const client of [sequential, ...concurrent]) {
     const attempts = reasoningAttempts(client);
+    expect(attempts).toHaveLength(3);
     expect(attempts.slice(0, 2)).toMatchObject([{ outcome: "circuit-open" }, { outcome: "circuit-open" }]);
-    expect(attempts[2]).toMatchObject({ outcome: "input-limited", error: "input_limit",
-      inputBounds: { maximumCombinedUnits: 23000, requestedOutputTokens: 8192 } });
-    const bounds = attempts[2].inputBounds!;
-    expect(bounds.promptUtf8Bytes + bounds.requestedOutputTokens).toBeGreaterThan(bounds.maximumCombinedUnits);
-    expect(reasoningCalls(client)).toEqual([]);
-    expect(reasoningUsage(client)).toEqual([]);
+    if (mode === "indivisible") {
+      expect(attempts[2]).toMatchObject({ outcome: "input-limited", error: "input_limit",
+        inputBounds: { maximumCombinedUnits: 23000, requestedOutputTokens: 1280 } });
+      const bounds = attempts[2].inputBounds!;
+      expect(bounds.promptUtf8Bytes).toBeLessThan(32000);
+      expect(bounds.promptUtf8Bytes + bounds.requestedOutputTokens).toBeGreaterThan(bounds.maximumCombinedUnits);
+      expect(reasoningCalls(client)).toEqual([]);
+      expect(reasoningUsage(client)).toEqual([]);
+    } else {
+      expect(attempts[2]).toMatchObject({ engine: names.cloudflare, outcome: "served" });
+      expect(reasoningCalls(client)).toEqual([expect.objectContaining({ engine: names.cloudflare, outcome: "returned" })]);
+      expect(reasoningUsage(client)).toHaveLength(1);
+    }
   }
-  expect(transport).toHaveBeenCalledTimes(2);
+  expect(transport.mock.calls.filter(([url]) => url.includes("deepseek"))).toHaveLength(1);
+  expect(transport.mock.calls.filter(([url]) => url.includes("mimo"))).toHaveLength(1);
+  expect(transport.mock.calls.filter(([url]) => url.includes("cloudflare"))).toHaveLength(mode === "indivisible" ? 0 : 5);
+  for (const heuristic of heuristics) expect(heuristic.decide).not.toHaveBeenCalled();
 });
 
 it("checks an eligible actual decide envelope without removing research targets, candidate identity or economic bounds", async () => {

@@ -80,7 +80,11 @@ describe("open comparison planning through synthetic transport", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
   function provider(name = "primary") {
-    return new OpenAICompatibleEngine({ name: `llm:open-comparison-${name}`,
+    // These cases test synthetic response contracts; retained local canary state is separate.
+    class SyntheticTransport extends OpenAICompatibleEngine {
+      protected assertSupplierAdmission(): void {}
+    }
+    return new SyntheticTransport({ name: `llm:open-comparison-${name}`,
       baseUrl: `https://${name}.synthetic.invalid`, apiKey: "synthetic", model: "synthetic" });
   }
   function response(output: Record<string, unknown>) {

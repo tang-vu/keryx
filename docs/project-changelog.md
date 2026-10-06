@@ -1,5 +1,20 @@
 # Keryx Project Changelog
 
+### Retained failed delivery and bounded selection (2026-10-06, v0.27.6 candidate)
+
+- Preflight source-selection batches using complete serialized message bytes;
+  preserve all candidates and targets within unchanged model/provider ceilings.
+  A terminal validation refusal cannot trigger another provider tier or retry.
+- Retain safe stage/category diagnostics in private worker outcome audits and
+  logs. Keep terminal orders from accidentally executing through a direct call.
+- Add distinct metadata-only verification/closure for an exactly settled failed
+  canary. Preserve its order, provider holds and unresolved delivery obligation;
+  restored observation keeps new paid work held. No refund, useful delivery or
+  real business acceptance is inferred from the failed owner trial.
+- Hosted execution/CLI share the fix; desktop GET recovery, stdio/remote MCP,
+  extension and bots keep their existing authority and public protocol contracts.
+  Exact-source CI, deployment and distribution readbacks remain release gates.
+
 ### arXiv full text when the PDF is too large (2026-10-06, v0.27.5 candidate)
 
 - When an official versioned arXiv PDF exceeds the 2 MiB read limit, research now

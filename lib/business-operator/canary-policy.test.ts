@@ -17,7 +17,10 @@ import {
   activateBusinessCanary, admitBusinessCanaryRun, assertCanaryCreatorPayment, assertPreparedCanarySubmission,
   bindBusinessCanaryAdmission, businessCanaryHostIdentity, canaryOriginalClaim, closeVerifiedBusinessCanary,
   configuredBusinessCanary, reserveCanaryInboundSettlement, reserveCanaryModel, reserveCanarySearch, type BusinessCanaryPolicy,
+  closeVerifiedFailedBusinessCanary, verifyFailedBusinessCanary, retainedBusinessCanaryClosure, canaryExecutionPaused,
+  assertOrdinaryCanarySupplierAdmission,
 } from "./canary-policy";
+import { businessCanaryPaidAdmission } from "./canary-paid-admission";
 
 const now = "2026-10-06T12:00:00.000Z", expiresAt = "2026-10-07T00:00:00.000Z";
 const fixtureParent = os.homedir(), roots: string[] = [];
@@ -125,11 +128,141 @@ function terminal(value: Fixture) {
   // proof result, while using the real saved-response/accounting verifier during closure.
   const db = { getA2aOrder: vi.fn(async () => order), getQueryRun: vi.fn(async () => run),
     hasA2aOriginalSettlement: vi.fn(async () => true), listCreatorPaymentAttemptsByQuery: vi.fn(async (): Promise<PaymentRecord[]> => []) };
-  return { db, run, binding, close: () => closeVerifiedBusinessCanary(db as unknown as KeryxDB, flush) };
+  return { db, run, order, binding, close: () => closeVerifiedBusinessCanary(db as unknown as KeryxDB, flush) };
+}
+function failedTerminal(value: Fixture) {
+  const proof = terminal(value);
+  Object.assign(proof.order, { status: "failed", errorCode: "research_failed", response: null, resultSavingAt: null });
+  proof.db.getQueryRun.mockResolvedValue(null as unknown as QueryRun);
+  return { ...proof, verify: () => verifyFailedBusinessCanary(proof.db),
+    close: () => closeVerifiedFailedBusinessCanary(proof.db, flush) };
+}
+async function failedHolds(value: Fixture) {
+  await admitted(value, () => { reserveCanaryModel("fixture policy", "fixture data", 2048);
+    reserveCanarySearch("first fixture query"); reserveCanarySearch("second fixture query"); });
 }
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(now); removeSelectors();
   vi.stubGlobal("fetch", vi.fn(() => { throw Error("Network is forbidden in retained-ledger fixtures"); }));
+});
+
+describe("verified failed canary lifecycle closure preserves paid delivery", () => {
+  it("verifies readonly exact native evidence and commits every raw retained hold without changing the failed row", async () => {
+    const value = fixture(), failed = failedTerminal(value); await failedHolds(value);
+    const row = structuredClone(failed.order), before = fs.readdirSync(value.directory).sort().map(name =>
+      ({ name, bytes: fs.readFileSync(path.join(value.directory, name), "utf8") }));
+    const proof = await failed.verify();
+    expect(proof).toMatchObject({ outcome: "verified-failed-original", paidDeliveryObligation: "unresolved", admissionPaused: true,
+      deliveryCompleted: false, refunded: false, providerLedger: { modelCalls: 1, searchCalls: 2, reservedMicroUsd: 36660 } });
+    expect(proof.providerLedger.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(failed.db.hasA2aOriginalSettlement).toHaveBeenCalledWith(failed.binding);
+    expect(failed.order).toEqual(row); expect(fs.existsSync(path.join(value.directory, "closed.json"))).toBe(false);
+    expect(fs.readdirSync(value.directory).sort().map(name => ({ name, bytes: fs.readFileSync(path.join(value.directory, name), "utf8") }))).toEqual(before);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("closes after expiry while retaining the failure, all holds and a persistent admission pause after selectors are removed", async () => {
+    const value = fixture(), failed = failedTerminal(value); await failedHolds(value);
+    const row = structuredClone(failed.order), names = holds(value), bytes = names.map(name => fs.readFileSync(path.join(value.directory, name), "utf8"));
+    vi.setSystemTime("2026-10-08T12:00:00.000Z"); const proof = await failed.close();
+    expect(JSON.parse(fs.readFileSync(path.join(value.directory, "closed.json"), "utf8"))).toMatchObject({ ...proof,
+      format: "keryx-business-canary-closed-v1", policySha256: value.digest, queryId: value.policy.original.queryId });
+    expect(() => configuredBusinessCanary()).toThrow("Business canary"); removeSelectors();
+    expect(configuredBusinessCanary()).toBeNull(); expect(retainedBusinessCanaryClosure()).toEqual(proof);
+    expect(canaryExecutionPaused()).toBe(true); expect(canaryOriginalClaim()).toBeUndefined();
+    expect(() => assertOrdinaryCanarySupplierAdmission()).toThrow("ordinary supplier transport is held");
+    for (const action of [() => reserveCanaryModel("policy", "new model", 1), () => reserveCanarySearch("new search"),
+      () => assertPreparedCanarySubmission(value.policy.original, flush), () => reserveCanaryInboundSettlement(flush),
+      () => admitBusinessCanaryRun(runInput(value), flush), () => assertCanaryCreatorPayment()]) expect(action).toThrow("Business canary");
+    expect(businessCanaryPaidAdmission({ body: value.policy.original.request, signatureHeader: null, network: ARC_MAINNET_PROFILE.networkId,
+      payee: value.policy.original.requirement.payTo, amountMicroUsdc: "30000", creatorBudgetMicroUsdc: "10000", bot: false })?.status).toBe(503);
+    vi.setSystemTime(now); expect(() => activateBusinessCanary(value.file, value.digest, flush)).toThrow("already closed");
+    await expect(failed.close()).rejects.toThrow("already closed");
+    expect(failed.order).toEqual(row); expect(holds(value)).toEqual(names);
+    expect(names.map(name => fs.readFileSync(path.join(value.directory, name), "utf8"))).toEqual(bytes); expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([{ status: "running" }, { status: "completed" }, { errorCode: "invalid_order_data" }, { executionJournalVersion: 0 },
+    { startedAt: null }, { workerId: null }, { paymentStartedAt: now }, { resultSavingAt: now }, { response: {} },
+    { id: "foreign-original" }, { payer: `0x${"3".repeat(40)}` }, { amountUsdc: 0.04 }, { transaction: "" },
+    { requestHash: "b".repeat(64) }, { researchMode: "deep" }, { resolution: {} }] as Partial<A2aOrder>[])
+    ("refuses wrong or uncertain original execution evidence %j", async change => {
+      const value = fixture(), failed = failedTerminal(value); Object.assign(failed.order, change);
+      await expect(failed.close()).rejects.toThrow(); expect(fs.existsSync(path.join(value.directory, "closed.json"))).toBe(false);
+    });
+
+  it.each(["settlement false", "settlement missing", "settlement error", "saved run", "creator attempt", "unknown run"] as const)
+    ("refuses %s without a closure write", async kind => {
+      const value = fixture(), failed = failedTerminal(value);
+      if (kind === "settlement false") failed.db.hasA2aOriginalSettlement.mockResolvedValue(false);
+      if (kind === "settlement missing") Object.assign(failed.db, { hasA2aOriginalSettlement: undefined });
+      if (kind === "settlement error") failed.db.hasA2aOriginalSettlement.mockRejectedValue(Error("Synthetic native uncertainty"));
+      if (kind === "saved run") failed.db.getQueryRun.mockResolvedValue(failed.run);
+      if (kind === "unknown run") failed.db.getQueryRun.mockResolvedValue(undefined as unknown as QueryRun);
+      if (kind === "creator attempt") failed.db.listCreatorPaymentAttemptsByQuery.mockResolvedValue([{} as PaymentRecord]);
+      await expect(failed.close()).rejects.toThrow(); expect(fs.existsSync(path.join(value.directory, "closed.json"))).toBe(false);
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+  it("refuses another execution origin even when the queue-neutral binding still matches", async () => {
+    const value = fixture(), failed = failedTerminal(value); failed.order.request!.origin = "engine";
+    await expect(failed.close()).rejects.toThrow("failed original proof incomplete");
+    expect(fs.existsSync(path.join(value.directory, "closed.json"))).toBe(false);
+  });
+
+  it.each(["empty", "malformed", "foreign", "wrong price", "extra", "gap", "missing inbound"] as const)
+    ("refuses %s retained provider/original records", async kind => {
+      const value = fixture(), failed = failedTerminal(value); await failedHolds(value);
+      const file = path.join(value.directory, "model-01.json"), record = JSON.parse(fs.readFileSync(file, "utf8"));
+      if (kind === "empty") write(value, "model-01.json", "");
+      if (kind === "malformed") write(value, "model-01.json", '{"interrupted":');
+      if (kind === "foreign") write(value, "model-01.json", JSON.stringify({ ...record, policySha256: "f".repeat(64) }));
+      if (kind === "wrong price") write(value, "model-01.json", JSON.stringify({ ...record, reserveMicroUsd: 1 }));
+      if (kind === "extra") write(value, "unexpected.json", "{}");
+      if (kind === "gap") { fs.unlinkSync(file); write(value, "model-02.json", JSON.stringify({ ...record, slot: 2 })); }
+      if (kind === "missing inbound") fs.unlinkSync(path.join(value.directory, "inbound-settlement.json"));
+      await expect(failed.close()).rejects.toThrow(); expect(fs.existsSync(path.join(value.directory, "closed.json"))).toBe(false);
+    });
+
+  it.each(["hold changed", "hold deleted", "hold added", "obligation forged", "native row changed", "creator appeared"] as const)
+    ("fails closed on post-closure %s and never releases admission", async kind => {
+      const value = fixture(), failed = failedTerminal(value); await failedHolds(value); await failed.close(); removeSelectors();
+      const file = path.join(value.directory, "model-01.json"), record = JSON.parse(fs.readFileSync(file, "utf8"));
+      if (kind === "hold changed") write(value, "model-01.json", JSON.stringify(record)); // Values same, committed raw bytes differ.
+      if (kind === "hold deleted") fs.unlinkSync(file);
+      if (kind === "hold added") write(value, "model-02.json", JSON.stringify({ ...record, slot: 2 }));
+      if (kind === "obligation forged") { const marker = JSON.parse(fs.readFileSync(path.join(value.directory, "closed.json"), "utf8"));
+        write(value, "closed.json", JSON.stringify({ ...marker, paidDeliveryObligation: "resolved" })); }
+      if (kind === "native row changed") failed.order.errorCode = "different_failure";
+      if (kind === "creator appeared") failed.db.listCreatorPaymentAttemptsByQuery.mockResolvedValue([{} as PaymentRecord]);
+      await expect(failed.verify()).rejects.toThrow(); expect(canaryExecutionPaused()).toBe(true);
+      if (!kind.startsWith("native") && kind !== "creator appeared") expect(() => configuredBusinessCanary()).toThrow("Business canary");
+    });
+
+  it("refuses evidence drift across native awaits before writing a marker", async () => {
+    const value = fixture(), failed = failedTerminal(value); await failedHolds(value);
+    failed.db.hasA2aOriginalSettlement.mockImplementationOnce(async () => {
+      const record = JSON.parse(fs.readFileSync(path.join(value.directory, "model-01.json"), "utf8"));
+      write(value, "model-01.json", JSON.stringify({ ...record, inputBytes: record.inputBytes + 1 })); return true;
+    });
+    await expect(failed.close()).rejects.toThrow("changed during inspection"); expect(fs.existsSync(path.join(value.directory, "closed.json"))).toBe(false);
+  });
+
+  it("has only one exclusive closure winner and retains interrupted fsync state", async () => {
+    const value = fixture(), failed = failedTerminal(value);
+    const results = await Promise.allSettled([failed.close(), failed.close()]);
+    expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter(result => result.status === "rejected")).toHaveLength(1);
+    removeSelectors(); expect(canaryExecutionPaused()).toBe(true); expect(failed.order.status).toBe("failed");
+  });
+
+  it("never reports a successful closure when directory durability failed, and preserves the marker and admission hold", async () => {
+    const value = fixture(), failed = failedTerminal(value);
+    await expect(closeVerifiedFailedBusinessCanary(failed.db, () => { throw Error("Synthetic directory fsync uncertainty"); })).rejects.toThrow("fsync uncertainty");
+    expect(fs.existsSync(path.join(value.directory, "closed.json"))).toBe(true); removeSelectors();
+    expect(configuredBusinessCanary()).toBeNull(); expect(canaryExecutionPaused()).toBe(true);
+    await expect(failed.close()).rejects.toThrow("already closed"); expect(fetch).not.toHaveBeenCalled();
+  });
 });
 afterEach(() => {
   vi.useRealTimers(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks();
@@ -401,7 +534,7 @@ describe("canary generator and terminal lifecycle", () => {
     })());
     await run.next(); await run.next(); vi.setSystemTime("2026-10-08T12:00:00.000Z");
     await proof.close(); expect(proof.db.hasA2aOriginalSettlement).toHaveBeenCalledWith(proof.binding);
-    removeSelectors(); expect(configuredBusinessCanary()).toBeNull();
+    removeSelectors(); expect(configuredBusinessCanary()).toBeNull(); expect(canaryExecutionPaused()).toBe(false);
     release(); expect(await late).toBeInstanceOf(Error); expect(holds(value)).toHaveLength(0);
     expect(() => reserveCanarySearch("ordinary context-free query")).not.toThrow();
   });

@@ -9,7 +9,7 @@ import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 import { buyerIntentSchemaForProfile, type BuyerIntent } from "../buyer/journal";
 import { a2aRequestHash } from "../a2a/order";
 import { a2aResearchPackageForVersion, a2aResearchPackageFingerprint } from "../a2a/research-package";
-import type { A2aOriginalClaim } from "../a2a/original-claim";
+import { matchesA2aOriginalBinding, type A2aOriginalClaim } from "../a2a/original-claim";
 import type { KeryxDB } from "../db/keryx-db";
 
 /** One reviewed owner canary, not permission to renew historical allowances or fund wallets. */
@@ -144,10 +144,7 @@ function configured(): ConfiguredCanary | null {
     if (exists(directory)) {
       protectedPath(directory, true);
       // Closing is an explicit, evidence-checked operation; expiry/removal never releases holds.
-      const retained = readWindow(directory);
-      const closeFile = path.join(directory, "closed.json");
-      if (!exists(closeFile) || !equal(readJson(closeFile), { format: "keryx-business-canary-closed-v1",
-        policySha256: retained.policySha256, queryId: retained.queryId, outcome: "verified-completed-original" }))
+      if (!retainedBusinessCanaryClosure())
         refuse("active registry requires its unchanged selectors");
     }
     return null;
@@ -164,6 +161,7 @@ export function configuredBusinessCanary(): BusinessCanaryPolicy | null { return
 export function activateBusinessCanary(file: string, digest: string, flush = syncDirectory) {
   const current = loadPolicy(file, digest);
   protectedPath(current.directory, true);
+  if (exists(path.join(current.directory, "closed.json"))) refuse("window already closed");
   createRetained(current.directory, "window.json", windowRecord(current), flush);
   if (!equal(readJson(path.join(current.directory, "window.json")), windowRecord(current))) refuse("window already belongs to another original");
   return current.policy;
@@ -177,7 +175,7 @@ function originalRecord(current: ConfiguredCanary) {
     reservedMicroUsdc: 60000, outcome: "held-regardless-of-original-outcome" };
 }
 export function assertPreparedCanarySubmission(intent: BuyerIntent, flush = syncDirectory): void {
-  const current = configured(); if (!current) return;
+  const current = configured(); if (!current) { assertNoFailedCanaryAdmission(); return; }
   if (!equal(intent, current.policy.original)) refuse("prepared original mismatch");
   createRetained(current.directory, "original.json", originalRecord(current), flush);
   if (!equal(readJson(path.join(current.directory, "original.json")), originalRecord(current))) refuse("original hold changed");
@@ -193,7 +191,7 @@ function settlementRecord(current: ConfiguredCanary) {
 }
 /** One possible inbound settlement exposure on the shared host, before vendor HTTP. */
 export function reserveCanaryInboundSettlement(flush = syncDirectory): void {
-  const current = configured(); if (!current) return;
+  const current = configured(); if (!current) { assertNoFailedCanaryAdmission(); return; }
   assertCanaryOriginalReserved();
   if (!createRetained(current.directory, "inbound-settlement.json", settlementRecord(current), flush))
     return refuse("inbound attempt already consumed; recover the original with GET");
@@ -209,7 +207,7 @@ interface AdmissionState { current: ConfiguredCanary; open: boolean; signal?: Ab
 const admitted = new WeakMap<BusinessCanaryAdmission, AdmissionState>();
 const context = new AsyncLocalStorage<BusinessCanaryAdmission>();
 export function admitBusinessCanaryRun(input: CanaryRunInput, flush = syncDirectory): BusinessCanaryAdmission | null {
-  const current = configured(); if (!current) return null;
+  const current = configured(); if (!current) { assertNoFailedCanaryAdmission(); return null; }
   const expected = current.policy.original;
   if (input.queryId !== expected.queryId || input.question !== expected.request.question || input.budget !== 0.01 ||
       input.origin !== "a2a" || input.researchMode !== "quick" || input.fundingOwner !== "treasury" ||
@@ -266,13 +264,13 @@ function reserve(kind: "model" | "search", detail: Record<string, string | numbe
   refuse("provider ceiling exhausted");
 }
 export function reserveCanaryModel(system: string, user: string, maxTokens: number): void {
-  if (!configuredBusinessCanary()) { if (context.getStore()) return refuse("retained execution admission revoked"); return; }
+  if (!configuredBusinessCanary()) { assertNoFailedCanaryAdmission(); if (context.getStore()) return refuse("retained execution admission revoked"); return; }
   const inputBytes = Buffer.byteLength(system + " Respond with a single JSON object." + user, "utf8");
   if (inputBytes > 32000 || !Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 8192) refuse("model input/output ceiling exceeded");
   reserve("model", { inputBytes, maximumOutputTokens: maxTokens });
 }
 export function reserveCanarySearch(query: string): void {
-  if (!configuredBusinessCanary()) { if (context.getStore()) return refuse("retained execution admission revoked"); return; }
+  if (!configuredBusinessCanary()) { assertNoFailedCanaryAdmission(); if (context.getStore()) return refuse("retained execution admission revoked"); return; }
   if (query.length > 500) refuse("search query ceiling exceeded");
   reserve("search", { querySha256: sha(query), searchDepth: "basic" });
 }
@@ -292,11 +290,152 @@ function originalClaimForPolicy(policy: BusinessCanaryPolicy): A2aOriginalClaim 
     network: ARC_MAINNET_PROFILE.networkId, asset: ARC_MAINNET_PROFILE.usdcAddress.toLowerCase(),
     gatewayContract: ARC_MAINNET_PROFILE.gatewayWallet.toLowerCase() };
 }
-export function assertCanaryCreatorPayment(): void { if (context.getStore() || configuredBusinessCanary()) refuse("creator payment forbidden for this catalog-empty original"); }
-export function canaryExecutionPaused(): boolean { try { return configuredBusinessCanary() !== null; } catch { return true; } }
+export function assertCanaryCreatorPayment(): void { if (context.getStore() || canaryExecutionPaused()) refuse("creator payment forbidden for this catalog-empty original"); }
+export function canaryExecutionPaused(): boolean {
+  try { return configuredBusinessCanary() !== null || retainedBusinessCanaryClosure()?.admissionPaused === true; }
+  catch { return true; }
+}
 /** Ordinary transports/probes cannot spend outside the fixed admitted canary engine. */
 export function assertOrdinaryCanarySupplierAdmission(): void {
   if (context.getStore() || canaryExecutionPaused()) refuse("ordinary supplier transport is held");
+}
+
+const digestSchema = z.string().regex(/^[a-f0-9]{64}$/);
+const providerLedgerSchema = z.object({ sha256: digestSchema,
+  modelCalls: z.number().int().min(0).max(BUSINESS_CANARY_REVIEW.maximumModelCalls),
+  searchCalls: z.number().int().min(0).max(BUSINESS_CANARY_REVIEW.maximumSearchCalls),
+  reservedMicroUsd: z.number().int().min(0).max(BUSINESS_CANARY_REVIEW.maximumMicroUsd) }).strict();
+const failedProofSchema = z.object({ outcome: z.literal("verified-failed-original"),
+  paidDeliveryObligation: z.literal("unresolved"), deliveryCompleted: z.literal(false), refunded: z.literal(false),
+  admissionPaused: z.literal(true), originalEvidenceSha256: digestSchema, providerLedger: providerLedgerSchema }).strict();
+const failedClosureSchema = failedProofSchema.extend({ format: z.literal("keryx-business-canary-closed-v1"),
+  policySha256: digestSchema, queryId: z.string().regex(/^a2a_[a-f0-9]{64}$/) }).strict();
+export type FailedBusinessCanaryProof = z.infer<typeof failedProofSchema>;
+export type BusinessCanaryClosure = FailedBusinessCanaryProof | {
+  outcome: "verified-completed-original"; admissionPaused: false; paidDeliveryObligation: "resolved";
+};
+export type FailedBusinessCanaryProofDb = Pick<KeryxDB,
+  "getA2aOrder" | "getQueryRun" | "hasA2aOriginalSettlement" | "listCreatorPaymentAttemptsByQuery">;
+
+function terminalCanaryContext(): ConfiguredCanary {
+  const directory = businessCanaryDirectory(); protectedPath(directory, true);
+  const retained = readWindow(directory);
+  // Metadata inspection grants no renewed supplier permission, including after expiry.
+  const current = loadPolicy(retained.policyFile, retained.policySha256,
+    new Date(Date.parse(BUSINESS_CANARY_REVIEW.supplierExpiresAt) - 1));
+  if (!equal(retained, windowRecord(current))) return refuse("terminal window changed");
+  return current;
+}
+const providerHoldBase = { format: z.literal("keryx-business-canary-provider-hold-v1"), policySha256: digestSchema,
+  queryId: z.string(), slot: z.number().int().positive(), reservedAt: z.string().datetime(),
+  outcome: z.literal("held-regardless-of-provider-outcome") };
+const providerHoldSchema = z.discriminatedUnion("kind", [
+  z.object({ ...providerHoldBase, kind: z.literal("model"), reserveMicroUsd: z.literal(BUSINESS_CANARY_REVIEW.modelReserveMicroUsd),
+    inputBytes: z.number().int().min(1).max(32000), maximumOutputTokens: z.number().int().min(1).max(8192) }).strict(),
+  z.object({ ...providerHoldBase, kind: z.literal("search"), reserveMicroUsd: z.literal(BUSINESS_CANARY_REVIEW.searchReserveMicroUsd),
+    querySha256: digestSchema, searchDepth: z.literal("basic") }).strict(),
+]);
+function retainedProviderLedger(current: ConfiguredCanary) {
+  const required = { "window.json": windowRecord(current), "original.json": originalRecord(current),
+    "inbound-settlement.json": settlementRecord(current) };
+  const names = fs.readdirSync(/* turbopackIgnore: true */ current.directory).sort();
+  const entries: Array<{ name: string; sha256: string }> = []; let modelCalls = 0, searchCalls = 0;
+  for (const name of names) {
+    if (name === "closed.json") continue;
+    const bytes = readProtected(path.join(current.directory, name)); let value: unknown;
+    try { value = JSON.parse(bytes.toString("utf8")); } catch { return refuse("provider ledger incomplete"); }
+    if (Object.hasOwn(required, name)) {
+      if (!equal(value, required[name as keyof typeof required])) return refuse("retained original ledger changed");
+    } else {
+      const match = /^(model|search)-([0-9]{2})\.json$/.exec(name), parsed = providerHoldSchema.safeParse(value);
+      if (!match || !parsed.success) return refuse("provider ledger record refused");
+      const hold = parsed.data, maximum = hold.kind === "model" ? BUSINESS_CANARY_REVIEW.maximumModelCalls : BUSINESS_CANARY_REVIEW.maximumSearchCalls;
+      const at = Date.parse(hold.reservedAt);
+      if (hold.kind !== match[1] || hold.slot !== Number(match[2]) || hold.slot > maximum ||
+        hold.policySha256 !== current.digest || hold.queryId !== current.policy.original.queryId ||
+        new Date(at).toISOString() !== hold.reservedAt || at < Date.parse(current.policy.approvedAt) ||
+        at >= Date.parse(current.policy.expiresAt) || at > Date.now()) return refuse("provider ledger binding refused");
+      if (hold.kind === "model") modelCalls++; else searchCalls++;
+    }
+    entries.push({ name, sha256: sha(bytes) });
+  }
+  if (!Object.keys(required).every(name => names.includes(name))) return refuse("retained original ledger incomplete");
+  for (const [kind, count] of [["model", modelCalls], ["search", searchCalls]] as const)
+    for (let slot = 1; slot <= count; slot++) if (!names.includes(`${kind}-${String(slot).padStart(2, "0")}.json`))
+      return refuse("provider ledger slot missing");
+  if (!equal(names, fs.readdirSync(/* turbopackIgnore: true */ current.directory).sort())) return refuse("provider ledger changed during inspection");
+  return providerLedgerSchema.parse({ sha256: sha(canonicalJson(entries)), modelCalls, searchCalls,
+    reservedMicroUsd: modelCalls * BUSINESS_CANARY_REVIEW.modelReserveMicroUsd + searchCalls * BUSINESS_CANARY_REVIEW.searchReserveMicroUsd });
+}
+/** Filesystem-only retained closure observation. Failed delivery remains a persistent
+ * admission hold even when selectors are removed; it is not completion or refund. */
+export function retainedBusinessCanaryClosure(): BusinessCanaryClosure | null {
+  const directory = businessCanaryDirectory(); if (!exists(directory)) return null;
+  protectedPath(directory, true); const retained = readWindow(directory), file = path.join(directory, "closed.json");
+  if (!exists(file)) return null;
+  const value = readJson(file);
+  if (equal(value, { format: "keryx-business-canary-closed-v1", policySha256: retained.policySha256,
+    queryId: retained.queryId, outcome: "verified-completed-original" }))
+    return { outcome: "verified-completed-original", admissionPaused: false, paidDeliveryObligation: "resolved" };
+  const parsed = failedClosureSchema.safeParse(value);
+  if (!parsed.success || parsed.data.policySha256 !== retained.policySha256 || parsed.data.queryId !== retained.queryId)
+    return refuse("terminal closure record refused");
+  const current = terminalCanaryContext(), providerLedger = retainedProviderLedger(current);
+  if (!equal(parsed.data.providerLedger, providerLedger)) return refuse("closed provider ledger changed");
+  return failedProofSchema.parse({ outcome: parsed.data.outcome, paidDeliveryObligation: parsed.data.paidDeliveryObligation,
+    deliveryCompleted: parsed.data.deliveryCompleted, refunded: parsed.data.refunded, admissionPaused: parsed.data.admissionPaused,
+    originalEvidenceSha256: parsed.data.originalEvidenceSha256, providerLedger });
+}
+function assertNoFailedCanaryAdmission() {
+  if (retainedBusinessCanaryClosure()?.admissionPaused) refuse("unresolved paid delivery holds admission");
+}
+/** Exact readonly terminal proof. Compatible with the enrolled observation facade;
+ * no ordinary initialization, schema migration, signer, provider or DB write. */
+export async function verifyFailedBusinessCanary(db: FailedBusinessCanaryProofDb): Promise<FailedBusinessCanaryProof> {
+  const current = terminalCanaryContext(), original = originalClaimForPolicy(current.policy);
+  const before = retainedProviderLedger(current);
+  if (typeof db.hasA2aOriginalSettlement !== "function") return refuse("terminal proof capability unavailable");
+  const inspect = async () => {
+    const order = await db.getA2aOrder(original.id);
+    if (!order || !matchesA2aOriginalBinding(order, original) || order.request?.origin !== "a2a" ||
+      order.request.question !== current.policy.original.request.question || order.status !== "failed" || order.errorCode !== "research_failed" ||
+      order.executionJournalVersion !== 1 || !order.startedAt || typeof order.workerId !== "string" ||
+      !order.workerId.trim() || order.workerId.length > 200 ||
+      order.paymentStartedAt !== null || order.resultSavingAt !== null || order.response !== null || order.resolution !== null)
+      return refuse("failed original proof incomplete");
+    const created = Date.parse(order.createdAt), started = Date.parse(order.startedAt), updated = Date.parse(order.updatedAt);
+    if (![created, started, updated].every(Number.isFinite) || new Date(started).toISOString() !== order.startedAt ||
+      created < Date.parse(current.policy.approvedAt) || started < created || started >= Date.parse(current.policy.expiresAt) ||
+      updated < started || updated > Date.now()) return refuse("failed original chronology refused");
+    const [run, attempts, settled] = await Promise.all([db.getQueryRun(original.queryId),
+      db.listCreatorPaymentAttemptsByQuery(original.queryId), db.hasA2aOriginalSettlement!(original)]);
+    if (run !== null || !Array.isArray(attempts) || attempts.length !== 0 || settled !== true)
+      return refuse("failed settled original proof incomplete");
+    return sha(canonicalJson({ order, nativeExactOriginalSettled: true, queryRunFound: false, creatorAttempts: 0 }));
+  };
+  const originalEvidenceSha256 = await inspect();
+  if (await inspect() !== originalEvidenceSha256 || !equal(before, retainedProviderLedger(current)))
+    return refuse("failed original proof changed during inspection");
+  const proof = failedProofSchema.parse({ outcome: "verified-failed-original", paidDeliveryObligation: "unresolved",
+    deliveryCompleted: false, refunded: false, admissionPaused: true, originalEvidenceSha256, providerLedger: before });
+  const closeFile = path.join(current.directory, "closed.json");
+  if (exists(closeFile) && !equal(readJson(closeFile), failedClosureRecord(current, proof))) return refuse("failed closure proof changed");
+  return proof;
+}
+function failedClosureRecord(current: ConfiguredCanary, proof: FailedBusinessCanaryProof) {
+  return { format: "keryx-business-canary-closed-v1", policySha256: current.digest,
+    queryId: current.policy.original.queryId, ...proof };
+}
+/** Lifecycle closure only: caller must positively drain all writers first. The
+ * unresolved paid-delivery obligation keeps admission paused after selector removal. */
+export async function closeVerifiedFailedBusinessCanary(db: FailedBusinessCanaryProofDb, flush = syncDirectory) {
+  const current = terminalCanaryContext(), file = path.join(current.directory, "closed.json");
+  if (exists(file)) return refuse("window already closed");
+  const proof = await verifyFailedBusinessCanary(db);
+  if (!createRetained(current.directory, "closed.json", failedClosureRecord(current, proof), flush)) return refuse("window already closed");
+  if (!equal(readJson(file), failedClosureRecord(current, proof)) || !equal(await verifyFailedBusinessCanary(db), proof))
+    return refuse("failed closure readback refused");
+  return proof;
 }
 
 /** Only the trusted terminal-proof CLI calls this after native settled-original verification. */
