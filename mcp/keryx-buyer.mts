@@ -113,8 +113,8 @@ export async function askKeryx(question: string, budget?: number): Promise<Keryx
   try {
     await ensureLocalFunding({ account, rpcUrl: RPC, file: FUNDING_FILE, required, deposit });
     const r = await payForResearch<KeryxAnswer>({ url: `${BASE_URL}/api/agent/ask`, account, journalFile: JOURNAL_FILE,
-      rpcUrl: RPC, maxAmountUsdc: MAX_TOTAL_USDC, expectedPayee: payee, expectedAmountMicros: required.toString(),
-      body: { question, budget: budget ?? DEFAULT_BUDGET_USDC, researchMode: "deep" } });
+      rpcUrl: RPC, maxAmountUsdc: MAX_TOTAL_USDC, expectedPayee: payee, expectedAmountMicros: required.toString(), waitForCompletionMs: 90000,
+      body: { question, budget: budget ?? DEFAULT_BUDGET_USDC, researchMode: "deep", responseMode: "async" } });
     return { ...r.data, settlementId: r.settlementId, amountPaid: r.amountPaid };
   } catch (error) {
     if (error instanceof GuardedArcSubmissionUnknownError) throw new Error(`Funding outcome unknown for original transaction ${error.transactionHash}. Use keryx_recover; do not deposit again`);

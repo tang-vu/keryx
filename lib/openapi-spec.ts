@@ -7,6 +7,7 @@
  */
 
 import { config } from "./config";
+import { operatorStatusOpenApiPath } from "./business-operator/openapi";
 import { monthlyOpenApiPath } from "./monthly/openapi";
 import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
 import {
@@ -18,7 +19,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.26.5",
+    version: "0.27.0",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -218,7 +219,7 @@ export const openapiSpec = {
             enum: ["wait", "async"],
             default: "wait",
             description:
-              "Use async for a durable 202 acknowledgement, then poll the returned URL. Prefer: respond-async is also supported.",
+              "Mainnet always returns a durable 202 original job, including wait; poll its returned URL without paying again. Testnet also supports request-local wait or async with Prefer: respond-async.",
           },
         },
       },
@@ -716,6 +717,7 @@ export const openapiSpec = {
         },
       },
     },
+    "/api/operator/status": operatorStatusOpenApiPath,
     "/api/agent/ask": {
       get: {
         operationId: "inspectOrPollAgentAsk",
@@ -757,8 +759,8 @@ export const openapiSpec = {
           "and settles weighted citation nanopayments to creators in USDC on Arc. " +
           "The body determines an exact all-in x402 price before settlement: a fixed Quick/Deep " +
           "orchestration fee plus the bounded creator-spend cap. The non-refundable receipt " +
-          "itemizes actual creator spend and unused reserve. Production callers can request a " +
-          "durable 202 job with responseMode=async or Prefer: respond-async. Each new order stores " +
+          "itemizes actual creator spend and unused reserve. Every mainnet original returns a " +
+          "durable 202 job through the business worker, including responseMode=wait. Each new order stores " +
           "a versioned execution contract and returns provisional latency/evidence-quality measurements; " +
           "these objectives have no contractual remedy.",
         security: [{ X402Payment: [] }, { ApiKeyAuth: [], X402Payment: [] }],

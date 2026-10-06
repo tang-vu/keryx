@@ -5390,3 +5390,31 @@ public distribution readback remain independent gates. None of these repairs
 reopens the closed client/model/search scopes, creates a paid retry or circuit
 reset, authorizes funding/spending, changes custody or adds a schedule. Richer
 synthesis stays disabled and ordinary-client usefulness remains unaccepted.
+**Supervise prepaid research with existing financial authority — 2026-10-06.**
+
+Owner direction: resolve the current bottlenecks and develop Operator into an
+autonomous business for Tameion. Use the existing prepaid research service as
+the concrete revenue-to-delivery business. Route every mainnet paid A2A original
+through its durable queue; a wait preference must not bypass the business guard.
+Observe all running caps and unredeemed Monthly reserve together, retain pending
+treasury exposure, and hold unknown/insufficient/stale capacity. Never infer
+spender credit from seller revenue. Original signer caps, nonces, registry authority
+and execution journals remain authoritative; no new custody, funding or schedule.
+
+Persist a private exclusive audit before claiming work. Preserve recovery identity
+before fallible outcome writes, and refresh observations without refreshing a false
+working state after errors. Public web/CLI/MCP share identifier-free observations;
+whole aggregates avoid REST-page truncation. Sealed PostgreSQL explicitly refuses
+new aggregate reads until separate domain enrollment. See [business Operator](docs/operator-business.md)
+for acceptance and surface boundaries.
+
+The prior brief context design eagerly expanded every quote before both model
+passes and could exhaust its unchanged 12,000-character cap with unused neighborhoods. Preserve
+the same complete selected base passages in both passes; add only candidate-used
+quote neighborhoods to the reviewer as a superset. This retains adverse material,
+offsets, per-clause review and the cap while avoiding menu-driven overflow. Compact
+review wire keys reduce repetition without reducing verdict granularity. Do not
+retry invalid generation or activate production brief delivery from fixtures alone.
+A protected worker-only format choice stages rollout behind live usefulness gates.
+Real complete business proof, genuine creators, external adoption and a general
+contract-enforced policy wallet remain open; never claim them from implementation.

@@ -54,7 +54,7 @@ describe("remote MCP server", () => {
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     try {
       await server.connect(serverTransport); await client.connect(clientTransport);
-      expect(client.getServerVersion()?.version).toBe("0.3.1");
+      expect(client.getServerVersion()?.version).toBe("0.3.2");
       const result = await client.callTool({ name: "research", arguments: { question: "What changed?" } });
       expect(result.structuredContent).toMatchObject({ engine: run.engine, reasoningAttempts: run.reasoningAttempts,
         reasoning: { sourceSelection: { state: "heuristic", servingEngines: ["heuristic"], fallbackUsed: true } } });
@@ -93,7 +93,7 @@ describe("remote MCP server", () => {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const tools = await client.listTools();
-    expect(tools.tools.map((tool) => tool.name)).toEqual(["research", "keryx_status", "research_monthly"]);
+    expect(tools.tools.map((tool) => tool.name)).toEqual(["research", "keryx_status", "research_monthly", "keryx_operator_status"]);
 
     const result = await client.callTool({
       name: "research",

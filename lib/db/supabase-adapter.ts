@@ -1154,6 +1154,25 @@ export class SupabaseAdapter implements KeryxDB {
     return summarizeA2aOperations(rows, nowMs);
   }
 
+  async operatorInventory(raw: import("../business-operator/inventory").OperatorInventoryInput) {
+    const { operatorInventoryInputSchema } = await import("../business-operator/inventory");
+    const { operatorInventorySchema } = await import("../business-operator/contracts");
+    const input = operatorInventoryInputSchema.parse(raw);
+    // Whole-inventory SQL aggregation is required. A capped REST page must never
+    // be presented as all upcoming obligations. Enrolled PostgreSQL remains refused.
+    const { data, error } = await this.domainRpc("operator_inventory_v1", {
+      p_network: input.network, p_payee: input.payee, p_now: new Date(input.nowMs).toISOString(),
+    });
+    if (error) throw error;
+    return operatorInventorySchema.parse(data);
+  }
+  async operatorPublicSnapshot(nowMs: number) {
+    const { operatorPublicSnapshotSchema } = await import("../business-operator/contracts");
+    const { data, error } = await this.domainRpc("operator_public_snapshot_v1", { p_now: new Date(nowMs).toISOString() });
+    if (error) throw error;
+    return operatorPublicSnapshotSchema.parse(data);
+  }
+
   async listPayments(limit: number): Promise<PaymentRecord[]> {
     const { data } = await this.domainCall("list_payments", { p_limit: limit }, (_args) => this.#sb
       .from("payment_events")

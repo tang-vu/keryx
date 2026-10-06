@@ -5,6 +5,10 @@
     "incremental": false
   },
   "include": [
+    "scripts/operator-business.mts",
+    "scripts/a2a-research-worker.mts",
+    "scripts/test-operator-business-postgres.mts",
+    "scripts/test-browser-operator-business.mts",
     "scripts/ask.mts",
     "scripts/eval-decision-brief.mts",
     "scripts/eval-research-workload.mts",

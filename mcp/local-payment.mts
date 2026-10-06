@@ -90,8 +90,12 @@ export async function payForResearch<T>(input: {
   url: string; body: Record<string, unknown>; account: PrivateKeyAccount;
   expectedPayee: string; expectedAmountMicros: string;
   journalFile: string; maxAmountUsdc: number; rpcUrl?: string; fetchImpl?: typeof fetch;
+  /** Bounded GET-only wait for an already-paid original. Zero preserves immediate recovery. */
+  waitForCompletionMs?: number;
 }): Promise<{ data: T; settlementId: string; amountPaid: string }> {
   const origin = assertCallerTransport(input.url);
+  const waitMs=input.waitForCompletionMs??0;
+  if (!Number.isSafeInteger(waitMs) || waitMs<0 || waitMs>120000) throw new Error("Research wait limit refused");
   fs.mkdirSync(path.dirname(input.journalFile), { recursive: true });
   const lock = `${input.journalFile}.lock`;
   try { fs.mkdirSync(lock); } catch { throw new Error("Payment admission is held; inspect the original journal and lock before another purchase"); }
@@ -160,6 +164,16 @@ export async function payForResearch<T>(input: {
   let data: T;
   try { data = await readBoundedJson(paid, 1_048_576) as T; }
   catch { throw new Error(`Payment settled but response was invalid JSON; recover query ${payment.queryId}; settlement ${settlementId}`); }
+  const deadline=Date.now()+waitMs;
+  while ((data as {status?:string}).status!=="completed" && waitMs>0 && Date.now()<deadline) {
+    if ((data as {queryId?:string}).queryId!==payment.queryId) throw new Error("Queued response query identity mismatched; original journal retained");
+    if (["failed","review_required"].includes((data as {status?:string}).status??"")) break;
+    await new Promise(resolve=>setTimeout(resolve,Math.min(2000,Math.max(0,deadline-Date.now()))));
+    const polled=await fetchImpl(`${origin}/api/agent/ask?queryId=${encodeURIComponent(payment.queryId)}`,
+      {redirect:"error",cache:"no-store",signal:AbortSignal.timeout(Math.max(1,Math.min(30000,deadline-Date.now())))});
+    if (!polled.ok) throw new Error("Original research observation unavailable; payment journal retained");
+    data=await readBoundedJson(polled,1_048_576) as T;
+  }
   if ((data as { status?: string }).status !== "completed") {
     throw new Error(`Payment settled; research is ${String((data as { status?: string }).status ?? "pending")}. Recover query ${payment.queryId}; settlement ${settlementId}`);
   }

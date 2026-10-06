@@ -96,6 +96,9 @@ export const SUPABASE_ENROLLED_METHODS = Object.freeze({
   failA2aOrder: "write",
   resolveA2aOrder: "write",
   a2aOperationsSnapshot: "read",
+  // A new read RPC needs separate sealed PostgreSQL enrollment; never borrow legacy authority.
+  operatorInventory: "unsupported",
+  operatorPublicSnapshot: "unsupported",
   listPayments: "read",
   recordActivationEvent: "write",
   activationFunnel: "read",

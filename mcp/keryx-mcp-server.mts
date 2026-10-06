@@ -21,7 +21,10 @@ import { reasoningServingText } from "../lib/llm/reasoning-telemetry.ts";
 const server = new McpServer({ name: "keryx", version: packageInfo.version });
 import { registerMonthlyDiscovery } from "../lib/monthly/mcp-discovery.ts";
 import { fetchMonthlyQuote } from "../lib/monthly/client.ts";
+import { registerOperatorDiscovery } from "../lib/business-operator/mcp.ts";
+import { fetchOperatorStatus } from "../lib/business-operator/client.ts";
 registerMonthlyDiscovery(server, fetchMonthlyQuote);
+registerOperatorDiscovery(server, () => fetchOperatorStatus(meta.baseUrl));
 
 server.registerTool(
   "ask_keryx",

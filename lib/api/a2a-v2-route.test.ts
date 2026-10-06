@@ -24,6 +24,7 @@ vi.mock("@/lib/config", async () => ({
 }));
 vi.mock("@/lib/agent", () => ({ collectRun: mocks.collectRun, getAgentDeps: mocks.getAgentDeps }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.getDb }));
+vi.mock("@/lib/payments/mainnet-hosted-gateway", () => ({ assertMainnetHostedResearchReady: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/api-keys", () => ({ verifyApiKey: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: mocks.checkRateLimit,
@@ -36,6 +37,8 @@ vi.mock("@/lib/x402-server", () => ({
 }));
 
 import { GET, POST } from "@/app/api/agent/ask/route";
+import { config } from "@/lib/config";
+import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
 
 function request(body: unknown, signed = false) {
   return new NextRequest("http://localhost/api/agent/ask", {
@@ -79,6 +82,7 @@ describe("A2A v2 route", () => {
   };
 
   beforeEach(() => {
+    Object.assign(config, { profile: ARC_TESTNET_PROFILE, networkId: ARC_TESTNET_PROFILE.networkId });
     vi.clearAllMocks();
     vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
     mocks.checkRateLimit.mockResolvedValue(null);
@@ -101,6 +105,7 @@ describe("A2A v2 route", () => {
       return { created: true, order };
     });
     mocks.getDb.mockResolvedValue(db);
+    Object.assign(db, { assertResearchPurchaseAuthority: vi.fn().mockResolvedValue(undefined) });
     mocks.getAgentDeps.mockResolvedValue({ db, gateway: {}, engine: {} });
     mocks.collectRun.mockImplementation(async (input) => ({ ...run, id: input.queryId }));
     mocks.settleThenServe.mockImplementation(async (_req, opts, produce) => {
@@ -116,6 +121,15 @@ describe("A2A v2 route", () => {
         return Response.json({ error: "paid resource unavailable after settlement" }, { status: 500 });
       }
     });
+  });
+
+  it.each([undefined, "wait", "async"])("mainnet %s cannot bypass the durable business queue", async responseMode => {
+    Object.assign(config, { profile: ARC_MAINNET_PROFILE, networkId: ARC_MAINNET_PROFILE.networkId });
+    const response = await POST(request({ question: "q", responseMode }, true));
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({status:"queued"});
+    expect(db.createA2aOrder).toHaveBeenCalledWith(expect.objectContaining({ startedAt:null,workerId:null }));
+    expect(mocks.collectRun).not.toHaveBeenCalled();
   });
 
   it("checks the research runtime before submitting a signed payment for settlement", async () => {

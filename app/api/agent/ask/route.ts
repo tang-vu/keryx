@@ -223,7 +223,7 @@ export async function GET(req: NextRequest) {
       budget: `creator-spend cap in USDC (optional, max ${config.a2aMaxBudget})`,
       researchMode: "quick | deep (optional; default deep)",
       packageVersion: `${A2A_RESEARCH_PACKAGE_VERSION} (optional; pins the execution contract)`,
-      responseMode: "wait | async (optional; async returns 202 + poll URL)",
+      responseMode: "wait | async (optional; mainnet always returns 202 + original poll URL)",
     },
     response: "cited answer + itemized service fee, creator spend, and unused reserve",
     docs: "/api/docs",
@@ -295,7 +295,11 @@ export async function POST(req: NextRequest) {
     .get("prefer")
     ?.split(",")
     .some((value) => value.trim().toLowerCase() === "respond-async");
-  const respondAsync = body.responseMode === "async" || (body.responseMode === undefined && preferAsync);
+  // Every mainnet prepaid original uses the durable worker's financial/audit
+  // gate. A wait preference cannot bypass the business queue via request-local
+  // execution. Clients poll/recover the original; they never pay again to wait.
+  const respondAsync = config.networkId === ARC_MAINNET_PROFILE.networkId ||
+    body.responseMode === "async" || (body.responseMode === undefined && preferAsync);
   const requestHash = a2aRequestHash({
     question: parsedQuestion.question,
     creatorBudgetUsdc: quote.creatorBudgetUsdc,
