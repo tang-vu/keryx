@@ -5584,3 +5584,18 @@ visits, active users or unique people. Use existing SQLite/Supabase metric rows;
 no identity tracking, cookies, schema change or historical backfill is required.
 Missing/invalid API aggregates stay unavailable, independently of account and
 payment totals. See [release scope](docs/engineering/ledger-guest-questions-2026-10-06.md).
+
+## Focus first outreach on literature-review writers and web3 analysts - 2026-10-06
+
+On October 5 the owner named graduate students/PhD candidates and web3 research
+analysts as the segments closest to their own network and committed that week's
+outreach to them. This narrows who is asked first; it changes no price, payment
+authority, package term or release gate. The September Arc-founder hypothesis is
+neither validated nor withdrawn, and no segment has a recorded independent user.
+
+Rationale: the owner has first-hand experience of the literature-review task and
+direct contacts who perform it, and the shipped scholarly discovery, DOI/arXiv
+resolution and BibTeX/RIS export already serve it. Two general open calls produced
+no recorded participant, so direct asks on a participant's own question are
+preferred. Choosing a single lead segment, and any remedy for first-time USDC
+wallet funding, stay open. See [Tameion direction](docs/tameion-2026.md).
