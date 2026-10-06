@@ -626,6 +626,9 @@ export interface KeryxDB {
   resolveA2aOrder(id: string, update: A2aOrderResolutionUpdate): Promise<boolean>;
   /** Identifier-free aggregate queue, terminal outcome, and recent latency health. */
   a2aOperationsSnapshot(nowMs: number): Promise<A2aOperationsSnapshot>;
+  /** Private whole-inventory observation. It grants no claim, signature or funding authority. */
+  operatorInventory(input: import("../business-operator/inventory").OperatorInventoryInput): Promise<import("../business-operator/contracts").OperatorInventory>;
+  operatorPublicSnapshot(nowMs: number): Promise<import("../business-operator/contracts").OperatorPublicSnapshot>;
 
   // ── query memory (cross-query learning — agent remembers which sources work) ──
   /** Save a query memory entry after a successful run. */

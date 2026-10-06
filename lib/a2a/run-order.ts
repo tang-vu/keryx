@@ -29,6 +29,8 @@ type A2aWorkerDb = Pick<
 type A2aCollector = (input: Parameters<typeof collectRun>[0]) => Promise<QueryRun>;
 
 interface A2aRunOptions {
+  /** Trusted operator rollout flag, never accepted from a paid request body. */
+  answerFormat?: "decision-brief";
   collector?: A2aCollector;
   expectedPayee?: string;
   onClaim?: (order: A2aOrder) => Promise<void> | void;
@@ -120,6 +122,7 @@ export async function runClaimedA2aOrder(
       origin: request.origin,
       fundingOwner: "treasury",
       model: request.model,
+      ...(options.answerFormat ? { answerFormat: options.answerFormat } : {}),
       ...(executionLimits ? { executionLimits } : {}),
       onCreatorPaymentBoundary: async () => {
         if (!(await db.markA2aOrderPaymentStarted(order.id, new Date().toISOString()))) {

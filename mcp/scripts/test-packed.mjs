@@ -129,7 +129,7 @@ globalThis.fetch=async(input,init)=>{
     assert.equal(initialized.serverInfo.version, expectedPackage.version);
     child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
     const listed = await request("tools/list", {});
-    for (const name of ["ask_keryx", "keryx_wallet_status", "keryx_recover"]) assert(listed.tools.some(tool => tool.name === name));
+    for (const name of ["ask_keryx", "keryx_wallet_status", "keryx_recover", "keryx_operator_status"]) assert(listed.tools.some(tool => tool.name === name));
     return { call: (name, args = {}) => request("tools/call", { name, arguments: args }), counts,
       stop: async () => { await stopChild(child); children.delete(child); lines.close(); } };
   }

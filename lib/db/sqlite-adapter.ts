@@ -1,4 +1,5 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
+import { readSqliteOperatorInventory, type OperatorInventoryInput } from "../business-operator/inventory";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
 import { sqliteCreatorOwnerAccounting, admitSqliteCreatorOwnerWithdrawal, readSqliteCreatorOwnerCompletion, completeSqliteCreatorOwnerWithdrawal } from "./creator-owner-withdrawal-journal";
@@ -1883,6 +1884,15 @@ export class SqliteAdapter implements KeryxDB {
         startedAt: row.started_at == null ? null : String(row.started_at),
       })) satisfies A2aOperationsRow[];
     return summarizeA2aOperations(rows, nowMs);
+  }
+
+  async operatorInventory(input: OperatorInventoryInput) {
+    return readSqliteOperatorInventory(this.db, input, this.paymentProfile.networkId);
+  }
+  async operatorPublicSnapshot(nowMs: number) {
+    const { operatorPublicSnapshotSchema } = await import("../business-operator/contracts");
+    return operatorPublicSnapshotSchema.parse({ jobs: await this.a2aOperationsSnapshot(nowMs),
+      creatorCatalog: { registered: Number(this.db.prepare("SELECT COUNT(*) count FROM sources WHERE active=1").get()?.count) } });
   }
 
   async listPayments(limit: number): Promise<PaymentRecord[]> {

@@ -102,6 +102,8 @@ import {
 } from "./evidence-portfolio";
 
 export interface RunInput {
+  /** Trusted hosted-worker format selection; public request JSON cannot set it. */
+  answerFormat?: "decision-brief";
   /** Opt in to scholarly metadata search; this never authorizes payment. */
   scholarly?: boolean;
   /** Explicit opt-in for independently reviewed testnet manuscripts; browser journal only. */
@@ -1428,7 +1430,8 @@ async function* runAdmittedAgent(
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
   let synthesized: SynthResult;
   try { synthesized = await engine.synthesize({ question: input.question, subClaims, gathered,
-    ...(process.env.KERYX_DECISION_BRIEF === "1" ? { answerFormat: "decision-brief" as const } : {}) }); }
+    ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
+      ? { answerFormat: "decision-brief" as const } : {}) }); }
   catch {
     synthesized = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable" };
     yield emit("synthesize", "Synthesis unavailable; completed reads and payment receipts are retained, with unsupported conclusions withheld.");

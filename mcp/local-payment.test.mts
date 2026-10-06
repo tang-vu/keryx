@@ -18,7 +18,7 @@ const quote = Buffer.from(JSON.stringify({
       verifyingContract: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9" } }],
 })).toString("base64");
 
-afterEach(() => { vi.unstubAllGlobals(); for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true }); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true }); });
 
 function rpc() {
   vi.stubGlobal("fetch", async (_url: RequestInfo | URL, init?: RequestInit) => {
@@ -120,5 +120,28 @@ it("delayed recovery cannot clear a replacement journal and held recovery never 
   const held = await recoverResearch("https://example.test", journalFile,
     vi.fn().mockResolvedValue(Response.json({ status: "completed", queryId: replacement.queryId })) as typeof fetch);
   expect(held).toHaveProperty("instructions"); expect(readPending(journalFile)).toEqual(replacement);
+});
+
+it.each(["completed","review_required","observation-failed","wrong-original"])("queued paid original uses GET only through %s", async outcome=>{
+  rpc();const dir=fs.mkdtempSync(path.join(os.tmpdir(),"keryx-mcp-queued-"));dirs.push(dir);
+  const journalFile=path.join(dir,"payment.json");vi.useFakeTimers();
+  const fetchImpl=vi.fn().mockResolvedValueOnce(new Response("{}",{status:402,headers:{"PAYMENT-REQUIRED":quote}}))
+    .mockImplementationOnce(async()=>{
+      const payment=readPending(journalFile)!;
+      const receipt=Buffer.from(JSON.stringify({success:true,network:"eip155:5042002",payer:account.address,transaction:"circle-original"})).toString("base64");
+      return Response.json({queryId:payment.queryId,status:"queued"},{status:202,headers:{"PAYMENT-RESPONSE":receipt}});
+    }).mockImplementationOnce(async(_url,init)=>{
+      expect(init).not.toHaveProperty("method","POST");expect(init.redirect).toBe("error");
+      const payment=readPending(journalFile)!;
+      if(outcome==="observation-failed")return Response.json({error:"unavailable"},{status:503});
+      return Response.json({queryId:outcome==="wrong-original"?"substitution":payment.queryId,status:outcome==="review_required"?outcome:"completed",answer:"original"});
+    });
+  const attempt=payForResearch({url:"https://example.test/api/agent/ask",body:{question:"q",budget:0.03,responseMode:"async"},account,
+    journalFile,expectedPayee:payee,expectedAmountMicros:"80000",maxAmountUsdc:1,waitForCompletionMs:6000,fetchImpl:fetchImpl as typeof fetch});
+  const observed=attempt.then(value=>({value}),error=>({error}));
+  await vi.advanceTimersByTimeAsync(2000);const result=await observed;
+  expect(fetchImpl).toHaveBeenCalledTimes(3);
+  if(outcome==="completed"){expect(result).toHaveProperty("value");expect(readPending(journalFile)).toBeNull();}
+  else{expect(result).toHaveProperty("error");expect(readPending(journalFile)?.settlementId).toBe("circle-original");}
 });
 
