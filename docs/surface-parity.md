@@ -1,5 +1,17 @@
 # Supported-surface release parity
 
+## Hosted MCP SDK dependency, October 7, 2026
+
+Application **0.27.10 candidate** pins the root MCP SDK to 1.31.0 without changing
+hosted remote MCP 0.3.2 tools, transport/admission contracts, payment authority or
+provider policy. Existing real-SDK server/HTTP fixtures and adapter checks validate
+the integration. Caller-funded stdio MCP 0.4.6 already pins 1.31.0; its metadata,
+lock and implementation remain unchanged. Desktop 0.4.7, extension 0.1.1, repository
+CLI and hosted bot/API roles retain their contracts. Fresh source-bound CI assets
+retain their actual manifest/source pins; no installed upgrade or new client
+version is inferred. Current-main deployment must admit this successor separately.
+See [advisory, scope and remaining gates](engineering/mcp-sdk-security-2026-10-07.md).
+
 ## Source excerpt inspection, October 6, 2026
 
 Application **0.27.9 candidate** adds a local source-omission view to shared web
