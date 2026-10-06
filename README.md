@@ -432,6 +432,7 @@ and [maintenance and surface boundaries](docs/arc-primitives-maintenance.md).
 
 ## Project docs
 
+- [`docs/engineering/source-catalog-2026-10-06.md`](./docs/engineering/source-catalog-2026-10-06.md) — expanded source library, publisher links, feed audit and discovery filters
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — branch, pull request, validation and payment-safety workflow
 - [`docs/rust-engine-migration.md`](./docs/rust-engine-migration.md) — staged shared Rust engine and acceptance gates
 - [`docs/openai-compatible-api.md`](./docs/openai-compatible-api.md) — drop-in recipes for OpenAI SDK, LangChain, LlamaIndex, Open WebUI, LibreChat, Continue

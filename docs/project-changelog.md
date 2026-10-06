@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Bounded failure categories and brief context budget (2026-10-06, v0.26.24 candidate)
+### Bounded failure categories and brief context budget (2026-10-06, v0.26.25 candidate)
 
 - The finite-allowance production engine now keeps a bounded failure category
   (output validation, timeout, network or HTTP status) instead of one generic

@@ -16,7 +16,7 @@ describe("read-only source directory availability", () => {
     const result = await loadSourceDirectory(database());
     expect(result.registry.entries[0].source.verified).toBe(false);
     expect(result.registry.entries[0].controlFresh).toBe(false);
-    expect(result.publicReferences.entries).toHaveLength(5);
+    expect(result.publicReferences.entries).toHaveLength(APPROVED_PUBLIC_REFERENCES.length);
     expect(result.registry.entries[0].totalEarnedUsdc).toBe(0);
   });
   it("retains both source collections when earnings fail, with unknown earnings", async () => {
@@ -30,7 +30,7 @@ describe("read-only source directory availability", () => {
   it("retains public references when creator registry fails", async () => {
     const result = await loadSourceDirectory(database({ listSources: async () => { throw new Error("offline"); } }));
     expect(result.registry.status).toBe("unavailable");
-    expect(result.publicReferences.entries).toHaveLength(5);
+    expect(result.publicReferences.entries).toHaveLength(APPROVED_PUBLIC_REFERENCES.length);
   });
   it("keeps source collections available when public citation history fails", async () => {
     const result = await loadSourceDirectory(database({ listRecentQueries: async () => { throw new Error("history unavailable"); } }));
