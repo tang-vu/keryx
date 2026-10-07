@@ -76,6 +76,14 @@ try {
     await page.getByLabel("Show screening decisions").selectOption("all");
     await page.getByRole("checkbox", { name: `Compare ${savedTitles[0]}`, exact: true }).check();
     await page.getByRole("checkbox", { name: `Compare ${savedTitles[1]}`, exact: true }).check();
+    await page.getByLabel("Show screening decisions").selectOption("include");
+    const selection = page.getByRole("region", { name: "Comparison selection" });
+    assert.equal(await selection.locator("li").count(), 2);
+    for (const title of savedTitles) await selection.getByRole("link", { name: title, exact: true }).waitFor();
+    assert.equal(await selection.getByText("Outside the current screening filter; still selected.", { exact: true }).count(), 1);
+    await selection.getByText("Review prepared question", { exact: true }).click();
+    const preparedHref = await page.getByRole("link", { name: "Prepare comparison" }).getAttribute("href"); assert(preparedHref);
+    assert.equal(await selection.getByLabel("Prepared comparison question").textContent(), new URL(preparedHref, base).searchParams.get("q"));
     await page.getByText("Edit screening and notes", { exact: true }).first().click();
     await page.evaluate(() => document.fonts.ready);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
@@ -85,6 +93,7 @@ try {
     }
     await page.screenshot({ path: join(screenshots, `saved-${width}.png`), fullPage: true });
     await page.screenshot({ path: join(screenshots, `saved-viewport-${width}.png`) });
+    await selection.screenshot({ path: join(screenshots, `comparison-${width}.png`) });
     const comparison = page.getByRole("link", { name: "Prepare comparison" });
     const href = await comparison.getAttribute("href"); assert(href);
     const expected = new URL(href, base).searchParams.get("q")!;

@@ -88,6 +88,8 @@ See [scope, verification and release gates](engineering/research-availability-20
   keep a review question and personal inclusion/exclusion notes, and reopen the list.
 - Prepare an editable two-paper Deep comparison without automatic research. Full
   nonautomatic question drafts retain both links; legacy automatic limits stay intact.
+- Keep the selected pair and exact versions visible across screening filters;
+  inspect the prepared question and saved focus, or remove either selection.
 - Export screening CSV or a JSON backup. Preserve corrupt storage, reject invalid
   backups, coordinate concurrent tab writes and keep unsaved drafts through filtering.
 - Download the shown bibliography as RIS for a reference manager. Preserve exact

@@ -16,6 +16,10 @@ The candidate is not production delivery or evidence of independent demand.
 4. Select two papers and choose **Prepare comparison**. This opens an editable Deep
    question with the saved review question and both exact links. Notes and screening
    decisions are omitted. Review the question and visible budget before submitting.
+   The selected pair stays visible across screening filters, with exact record links,
+   arXiv versions and an outside-filter label. Remove either paper individually.
+   **Review prepared question** shows exactly the draft that will open, using the
+   saved focus rather than unsaved edits in the focus form.
    Existing research availability, model/search costs, original-reading and payment
    limits apply. Preparing a draft makes no research request.
 

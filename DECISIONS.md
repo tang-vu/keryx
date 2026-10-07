@@ -5730,6 +5730,11 @@ Deep draft. Preserve the full existing 2,000-character form limit for nonautomat
 prefill, while legacy automatic links keep their existing 500-character bound.
 No automatic research, private-note upload, cloud list, new database/schema,
 spending, custody or scheduler follows. Other surfaces keep their documented roles.
+Keep the chosen pair visible independently of the screening filter, label hidden
+selections and expose the exact prepared question/saved focus before navigation.
+Titles, versions and screening labels help local inspection; they do not add fields
+to the draft or acquire evidence authority. Individual removal changes selection
+only and starts no research or persistence mutation.
 Independent task usefulness, return use and the serialized Operator release gate
 remain open. See [behavior and acceptance](docs/literature-workspace.md).
 
