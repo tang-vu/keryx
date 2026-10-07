@@ -70,7 +70,7 @@ acknowledgement permits observation and exact metadata recovery, never repayment
 ## Surfaces and release gates
 
 Web/API, Operator status, CLI and remote/stdio MCP consume the existing
-identifier-free closure projection and original authenticated GET response.
+identifier-free closure projection and original query-ID-bound GET response.
 Desktop, extensions and bots retain their hosted adapters; no new installer,
 client package, scheduler, wallet role or public activation route is introduced.
 SQLite native/enrolled completion uses the existing reviewed schema; PostgreSQL
@@ -80,5 +80,5 @@ Focused adversarial tests, both TypeScript graphs, lint, production build,
 independent review and required PR checks gate release. Verify the actual merged
 commit at public health, serialize maintenance with positive writer drain and
 preserve every old journal/custody/build backup. Only actual same-original native
-completion and authenticated buyer recovery prove delivered acceptance; source
+completion and verified original buyer recovery prove delivered acceptance; source
 publication or successful model transport alone does not.
