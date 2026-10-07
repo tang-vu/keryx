@@ -17,7 +17,10 @@ const client = new Client({ name: "monthly-distribution-test", version: "1.0.0" 
 try {
   await client.connect(transport);
   const tools = await client.listTools();
-  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["ask_keryx", "keryx_wallet_status", "keryx_recover", "research_monthly", "keryx_operator_status"].sort());
+  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["paper_lookup", "ask_keryx", "keryx_wallet_status", "keryx_recover", "research_monthly", "keryx_operator_status"].sort());
+  const bibliography = tools.tools.find(tool => tool.name === "paper_lookup")!;
+  assert.equal(bibliography.annotations?.readOnlyHint, true);
+  assert.equal(bibliography.annotations?.destructiveHint, false);
   const operator=tools.tools.find(tool=>tool.name==="keryx_operator_status")!;
   assert.equal(operator.annotations?.readOnlyHint,true);
   assert.equal(operator.annotations?.destructiveHint,false);
