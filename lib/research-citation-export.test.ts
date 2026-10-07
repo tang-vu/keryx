@@ -22,9 +22,29 @@ it("exports only recorded scholarly metadata with structured Crossref author nam
 });
 it("exports preprints and abstract-only read limitations without claiming a reviewed or fully read paper", () => {
   const metadata: ScholarlyMetadata = { ...scholarly, provider: "arxiv", workType: "preprint", evidenceScope: "abstract-page", arxivId: "1706.03762v7", authorNames: undefined };
-  expect(buildCitationExport([citation({ scholarly: metadata })], "ris").content).toContain("TY  - UNPB");
+  expect(buildCitationExport([citation({ scholarly: metadata })], "ris").content).toContain("TY  - MANSCPT");
   const bib = buildCitationExport([citation({ scholarly: metadata })], "bibtex").content;
   expect(bib).toContain("@misc{"); expect(bib).toContain("archivePrefix = {arXiv}"); expect(bib).toContain("Read scope: abstract-page. Preprint.");
+});
+it("does not infer a journal from a source name when a scholarly record lacks one", () => {
+  for (const workType of ["preprint", "journal-article"] as const) {
+    const metadata = { ...scholarly, workType, journal: undefined };
+    const ris = buildCitationExport([citation({ scholarly: metadata, sourceName: "arxiv.org" })], "ris").content;
+    expect(ris).not.toMatch(/^(JO|T2)  -/m);
+    expect(ris).toContain("Source: arxiv.org.");
+  }
+});
+it("preserves literal scholarly provenance in HTML-aware RIS notes without changing links or BibTeX", () => {
+  const record = citation({ sourceName: 'Group <img src="https://tracker.invalid/pixel"> & research',
+    itemUrl: "https://example.org/article?a=1&b=2", contentVersion: "v7 <b>literal</b>", scholarly: {
+      ...scholarly, journal: undefined, recordUrl: 'https://example.org/record?value=<img src="https://tracker.invalid/pixel">',
+    } });
+  const ris = buildCitationExport([record], "ris").content;
+  const note = ris.split("\r\n").find(line => line.startsWith("N1  - "))!;
+  expect(note).toContain("Group &lt;img"); expect(note).toContain("&amp; research");
+  expect(note).toContain("v7 &lt;b&gt;literal&lt;/b&gt;"); expect(note).not.toMatch(/<[^>]+>/);
+  expect(ris).toContain("UR  - https://example.org/article?a=1&b=2");
+  expect(buildCitationExport([record], "bibtex").content).not.toContain("&lt;");
 });
 it("escapes scholarly field injection and ignores metadata that has not been bound to an actual read", () => {
   const attack = "Bad}\nER  - \n@article{inject,%";

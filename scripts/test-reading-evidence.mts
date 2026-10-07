@@ -121,6 +121,11 @@ try {
       assert(content.includes("1706.03762v7") && content.includes("Observed Author"));
       assert(content.includes("Read scope: abstract-page. Preprint. Peer review unknown"));
     }
+    if (filename.endsWith(".ris")) {
+      assert(content.includes("TY  - MANSCPT"), "preprints use the recognized manuscript type");
+      assert(!content.includes("TY  - UNPB"), "unsupported preprint tags must not become journal articles");
+      assert(content.includes("AN  - arXiv:1706.03762v7"), "RIS preserves the exact recorded arXiv version");
+    }
     if (filename.endsWith(".csv")) assert(content.includes("The original public document explicitly states this finding."), "answer-qualified public evidence remains inspectable without payout authority");
   }
   await page.getByText("Research evidence matrix", { exact: true }).click();

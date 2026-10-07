@@ -87,6 +87,12 @@ jobs:
       - name: Unit tests (economic invariants)
         run: npm test
 
+      - name: Zotero RIS parser compatibility (pinned source, synthetic metadata)
+        run: |
+          mkdir -p .artifacts/reference-export
+          curl --fail --silent --show-error --max-time 30 https://raw.githubusercontent.com/zotero/translators/c7551c1a4d5b9623273119c7fbadf8735731dc92/RIS.js -o .artifacts/reference-export/zotero-RIS.js
+          node --import tsx scripts/test-zotero-ris.mts .artifacts/reference-export/zotero-RIS.js
+
       - name: Stdio MCP original paid-job polling (hermetic, no settlement)
         run: npx vitest run --config mcp/vitest.config.mts
 
