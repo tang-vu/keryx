@@ -27,11 +27,14 @@ function metricBody(body: unknown): MetricsResponse {
   }
   if (!Array.isArray(value.leaderboard)) throw new Error("Invalid leaderboard");
   const recordedAccounts = metrics.recordedAccounts;
+  const guestQuestions = metrics.guestQuestions;
   return {
     ...value,
     metrics: {
       ...metrics,
       recordedAccounts: typeof recordedAccounts === "number" && Number.isSafeInteger(recordedAccounts) && recordedAccounts >= 0 ? recordedAccounts : null,
+      guestQuestions: typeof guestQuestions === "number" && Number.isSafeInteger(guestQuestions)
+        && guestQuestions >= 0 && guestQuestions <= (metrics.totalQueries as number) ? guestQuestions : null,
     },
   } as unknown as MetricsResponse;
 }
@@ -81,10 +84,12 @@ export function DashboardView({ sourcePreview }: { sourcePreview: ReactNode }) {
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
           <span className="font-mono text-sm text-ink">{metrics ? <><span className="font-display text-2xl">{metrics.totalQueries}</span> recorded questions{metricsResource.status === "error" && " · last successful read"}</> : metricsResource.status === "error" ? "Question total unavailable" : "Loading question total…"}</span>
           <span className="font-mono text-sm text-ink">{metrics?.recordedAccounts != null ? <><span className="font-display text-2xl">{metrics.recordedAccounts}</span> recorded accounts{metricsResource.status === "error" && " · last successful read"}</> : metrics || metricsResource.status === "error" ? "Account total unavailable" : "Loading account total…"}</span>
+          <span className="font-mono text-sm text-ink">{metrics?.guestQuestions != null ? <><span className="font-display text-2xl">{metrics.guestQuestions}</span> guest questions{metricsResource.status === "error" && " · last successful read"}</> : metrics || metricsResource.status === "error" ? "Guest question total unavailable" : "Loading guest question total…"}</span>
           <span className="font-mono text-xs text-paid">{currentArcLabel}</span>
           <Link href="/" className="min-h-11 border border-ink bg-ink px-4 py-3 font-mono text-xs text-paper hover:underline">Ask a question →</Link>
         </div>
         <p className="mt-3 max-w-2xl text-xs leading-relaxed text-ink-3">Account totals include verified Google and wallet sign-ins. Each wallet is counted once; one person may use several wallets.</p>
+        <p className="mt-2 max-w-2xl text-xs leading-relaxed text-ink-3">Guest questions are included in recorded questions: completed web questions with no signed-in wallet recorded. This counts questions, not visits or unique people.</p>
       </header>
 
       <div className="mt-8 grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_300px]">

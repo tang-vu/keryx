@@ -43,6 +43,7 @@ it("shares exact indexed-account metrics with the sealed mainnet readonly SQLite
   const metrics = await reader.metrics();
   expect(metrics.recordedAccounts).toBe(1);
   expect(metrics.totalQueries).toBe(0);
+  expect(metrics.guestQuestions).toBe(0);
   expect(JSON.stringify(metrics)).not.toContain(wallet.toLowerCase());
   expect(readFileSync(file)).toEqual(before);
 }, 30_000);

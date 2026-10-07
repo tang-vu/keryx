@@ -48,27 +48,30 @@ describe("R2 job safety", () => {
     expect(network).toHaveBeenCalledTimes(1);
     expect(JSON.parse(fs.readFileSync(ledger, "utf8")).reservedRequests).toBe(32);
   });
-  it("preserves prior backups until single PUT succeeds then deletes only recognized oldest snapshot", async () => {
+  it("holds full or historical ambiguous remote inventory without PUT or deletion and retains the consumed day", async () => {
     const { directory } = setup(); const source = path.join(directory, name); fs.writeFileSync(source, Buffer.alloc(100));
     const existing = Array.from({ length: 24 }, (_, index) => object(`keryx-2026-09-${String(index + 1).padStart(2, "0")}T01-00-00-000Z.sqlite.enc`));
     const network = vi.fn().mockResolvedValueOnce(new Response(listing(existing))).mockResolvedValue(new Response(null, { status: 200 }));
     vi.stubGlobal("fetch", network);
-    expect(await uploadR2Backup(source, directory, config)).toBe("uploaded");
-    expect(network.mock.calls.map((call) => call[1].method)).toEqual(["GET", "PUT", "DELETE"]);
+    expect(await uploadR2Backup(source, directory, config)).toBe("retention-limit");
+    expect(network.mock.calls.map((call) => call[1].method)).toEqual(["GET"]);
     expect(String(network.mock.calls[0][0])).toContain("max-keys=26");
-    expect(String(network.mock.calls[2][0])).toContain("2026-09-01");
+    expect(await uploadR2Backup(source, directory, config)).toBe("daily-limit");
+    expect(network).toHaveBeenCalledTimes(1);
+    const next = setup(), nextSource = path.join(next.directory, name); fs.writeFileSync(nextSource, Buffer.alloc(100));
+    network.mockReset().mockResolvedValueOnce(new Response(listing([...existing, object("keryx-2026-09-25T01-00-00-000Z.sqlite.enc")])));
+    expect(await uploadR2Backup(nextSource, next.directory, config)).toBe("retention-limit");
+    expect(network.mock.calls.map((call) => call[1].method)).toEqual(["GET"]);
   });
-  it("does not delete good backups when PUT fails, and reconciles a previous 25-object uncertain PUT", async () => {
+  it("does not delete good backups or retry when PUT fails with spare remote capacity", async () => {
     const { directory } = setup(); const source = path.join(directory, name); fs.writeFileSync(source, Buffer.alloc(100));
-    const existing = Array.from({ length: 24 }, (_, index) => object(`keryx-2026-09-${String(index + 1).padStart(2, "0")}T01-00-00-000Z.sqlite.enc`));
+    const existing = Array.from({ length: 23 }, (_, index) => object(`keryx-2026-09-${String(index + 1).padStart(2, "0")}T01-00-00-000Z.sqlite.enc`));
     const network = vi.fn().mockResolvedValueOnce(new Response(listing(existing))).mockResolvedValue(new Response(null, { status: 503 }));
     vi.stubGlobal("fetch", network);
     await expect(uploadR2Backup(source, directory, config)).rejects.toThrow();
     expect(network.mock.calls.map((call) => call[1].method)).toEqual(["GET", "PUT"]);
-    const next = setup(); const nextSource = path.join(next.directory, name); fs.writeFileSync(nextSource, Buffer.alloc(100));
-    network.mockReset().mockResolvedValueOnce(new Response(listing([...existing, object("keryx-2026-09-25T01-00-00-000Z.sqlite.enc")]))).mockResolvedValue(new Response(null));
-    expect(await uploadR2Backup(nextSource, next.directory, config)).toBe("uploaded");
-    expect(network.mock.calls.map((call) => call[1].method)).toEqual(["GET", "DELETE", "PUT", "DELETE"]);
+    expect(await uploadR2Backup(source, directory, config)).toBe("daily-limit");
+    expect(network).toHaveBeenCalledTimes(2);
   });
   it("does not PUT after truncated listing and bounds downloaded bytes", async () => {
     const { directory } = setup(); const source = path.join(directory, name); fs.writeFileSync(source, Buffer.alloc(100));
