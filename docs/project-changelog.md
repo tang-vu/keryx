@@ -100,6 +100,9 @@ See [scope, verification and release gates](engineering/research-availability-20
 - Keep the selected pair and exact versions visible across screening filters;
   inspect the prepared question and saved focus, or remove either selection.
 - Keep the comparison action readable with distinct text and background colors.
+- Recognize exact arXiv pairs with a shared prefix in adjacent comparison lists.
+  Rank already-read paper context against every exact target identity, including
+  bare target IDs, independently of the discovery request cap.
 - Export screening CSV or a JSON backup. Preserve corrupt storage, reject invalid
   backups, coordinate concurrent tab writes and keep unsaved drafts through filtering.
 - Download the shown bibliography as RIS for a reference manager. Preserve exact

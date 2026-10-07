@@ -46,6 +46,8 @@ adjacent to the submit button. Live results are ephemeral, not stored in the dat
 Keyword search admits one arXiv and one Crossref request. Exact DOI lookup admits
 at most two distinct DOIs; versioned arXiv lookup batches at most two distinct
 identifiers into one request. A bare standalone versioned arXiv ID is supported.
+An explicit arXiv prefix also carries through an adjacent list, such as
+`arXiv 2606.02668v1 and 2607.13716v1`; unrelated prose ends that list.
 One DOI plus up to two versioned arXiv identifiers resolves both types in two requests.
 More than two DOIs, more than two arXiv identifiers, or exact intent needing more
 than two provider requests is refused before a request rather than dropping targets.

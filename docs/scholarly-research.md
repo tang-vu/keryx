@@ -7,13 +7,18 @@ not change the research, original-reading or evidence rules below.
 October 1, 2026. The public research composer offers **Search scholarly papers
 (Crossref and arXiv)**, off by default. Enabling it sends the question to those
 official scholarly services, alongside the configured broad web search. A DOI in
-the question triggers exact Crossref lookup even without the checkbox. Explicit modern
+the question triggers exact Crossref lookup even without the checkbox. Explicit
 versioned arXiv identifiers (for example, `arXiv 2606.02668v1` or an official
-versioned PDF/abstract URL) likewise trigger one bounded exact lookup for at most
+versioned PDF/abstract/HTML URL) likewise trigger one bounded exact lookup for at most
 two distinct identifiers. Requested versions must match the returned provider
 records; a latest-version replacement is rejected. Exact targets replace the arXiv
-keyword search for that run. Unversioned and legacy arXiv identifier forms are not
-resolved by this exact-intent parser. Metadata search is free of source USDC; model, search and infrastructure costs remain separate.
+keyword search for that run. An explicit prefix carries through an adjacent
+comparison list, such as `arXiv 2606.02668v1 and 2607.13716v1`, including English
+and Vietnamese comparison words. Unrelated prose ends the inherited prefix.
+Versioned legacy identifiers such as `arXiv:hep-th/9901001v2` are supported;
+unversioned identifiers and bare identifiers without an explicit list prefix are
+not resolved by research discovery. Metadata search is free of source USDC; model,
+search and infrastructure costs remain separate.
 
 ## Observed records and read content
 
@@ -93,13 +98,22 @@ Scholarly references remain `public-reference` assets with no creator rewards.
 Metadata never changes registered payout wallets, source ownership, signing or caps.
 Author opt-in payments are a separate [proposed staged plan](paid-scholarly-papers.md).
 
-The October 3 #128 follow-up adds a staged extractive delivery boundary for new
+## Current delivery and historical boundary
+
+The owner-confirmed October 6 update permits
+[reviewed sentence-cited summaries](engineering/cited-summary-2026-10-06.md)
+with their inspectable excerpts. Completion confidence remains Low; unsupported
+dimensions remain gaps. Complete comparisons and independent usefulness retain
+separate acceptance gates. Decision briefs remain disabled. Qualified excerpts and gaps
+remain the fallback; metadata never supplies manuscript findings or creator rewards.
+
+The historical October 3 #128 follow-up added a staged extractive delivery boundary for new
 evidence-bearing completions. An accepted paper marker does not prove every draft
 assertion carrying it, and complete target coverage does not detect an omitted
-unsupported assertion. Deliver only openly quoted qualifying source excerpts, with
+unsupported assertion. That baseline delivered only openly quoted qualifying source excerpts, with
 explicit gaps and numbered **research targets** labelled as unverified requested
-topics. The synthesized draft is withheld as a conclusion even when no proposal
-was rejected. Completion confidence stays Low: source matching and model-estimated
+topics. It withheld the synthesized draft as a conclusion even when no proposal
+was rejected. Completion confidence stayed Low: source matching and model-estimated
 support/coverage do not establish entailment, factual truth, contradiction resolution
 or a complete useful paper comparison. Original source statements may be incorrect.
 Qualified free-paper excerpts remain reusable references with zero creator reward.

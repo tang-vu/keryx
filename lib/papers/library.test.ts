@@ -57,6 +57,24 @@ describe("bibliography-only paper library", () => {
 
 vi.mock("./catalog", () => ({ PAPER_CATALOG: [] }));
 describe("explicit bounded paper search", () => {
+  it("resolves an adjacent arXiv pair only on explicit search and refuses an oversized list before fetching", async () => {
+    const { searchPaperLibrary } = await import("./search");
+    const ids = ["2606.02668v1", "2607.13716v1"];
+    const fetcher = vi.fn(async (_url: string) => '<feed xmlns="http://www.w3.org/2005/Atom">' +
+      ids.map(id => `<entry><id>http://arxiv.org/abs/${id}</id><title>Synthetic metadata ${id}</title></entry>`).join("") + '</feed>');
+    const filters = { q: `arXiv ${ids[0]} and ${ids[1]}` };
+    await searchPaperLibrary(filters, { fetcher, catalog: [] });
+    expect(fetcher).not.toHaveBeenCalled();
+    const result = await searchPaperLibrary(filters, { live: true, fetcher, catalog: [] });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(new URL(fetcher.mock.calls[0][0]).searchParams.get("id_list")).toBe(ids.join(","));
+    expect(result.groups.map(group => group.record.arxivId)).toEqual(ids);
+    expect(result.scope).toBe("bibliography-only");
+    fetcher.mockClear();
+    await expect(searchPaperLibrary({ q: `arXiv ${ids[0]}, ${ids[1]}, and 2503.18666v3` }, { live: true, fetcher, catalog: [] })).rejects.toThrow("Split identifiers");
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("preserves mixed exact intent and refuses more than two provider operations", async () => {
     expect(paperLookupIntent("2601.12345v2")).toEqual({ query: "arXiv 2601.12345v2", dois: [], arxivIds: ["2601.12345v2"] });
     expect(() => paperLookupIntent("10.1234/a 10.1234/b arxiv 2601.12345v1")).toThrow();

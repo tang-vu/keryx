@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+**Separate exact-paper discovery intent from already-read target identity — 2026-10-07.**
+An explicit arXiv prefix can carry through a locally adjacent comparison list;
+each inherited identifier must still state its exact version. Keep fixed official
+metadata transport and request limits, deduplicate in question order, and stop
+inheritance at unrelated prose. Library overflow detection must still see a third
+identifier and refuse the oversized lookup. For already-read context, use every
+exact target identity, including identifiers whose prefix was omitted during decomposition,
+instead of discovery's two-ID cap. This aligns ranking with the ledger's target
+grammar without turning ranking or metadata into citation, payout or document
+authority. Extraction/context ceilings, private/unattended disclosure policy,
+reviewed sentence/excerpt delivery and remaining usefulness gates stay intact.
+
 **Use an importer-recognized RIS type and literal provenance notes — 2026-10-07.**
 The active literature-review segment depends on reusable citation exports. A pinned
 Zotero translator reproduction showed our preprint `UNPB` tag defaults to

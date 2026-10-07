@@ -1,5 +1,5 @@
 import type { GatheredContent } from "./reasoning-engine";
-import { questionArxivIds } from "../scholarly/arxiv";
+import { targetArxivIds } from "../scholarly/arxiv-identity";
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 
 const MAX_SOURCE_CHARACTERS = 200_000;
@@ -314,7 +314,8 @@ export function evidenceContext(question: string, subClaims: string[], gathered:
   return gathered.map((source) => {
     const exactVersion = source.scholarly?.provider === "arxiv" ? source.scholarly.arxivId : undefined;
     const sourceClaims = exactVersion ? subClaims.filter(claim => {
-      const requestedVersions = questionArxivIds(claim);
+      // Already-read target identities are independent of discovery's two-ID cap.
+      const requestedVersions = targetArxivIds(claim);
       // Untargeted/general dimensions and unversioned intent remain applicable. Only a
       // positively identified different exact version is excluded from this source's ranker.
       return requestedVersions.length === 0 || requestedVersions.includes(exactVersion);
