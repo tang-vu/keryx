@@ -207,11 +207,11 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
             className="mt-2 min-h-[76px] w-full resize-y border border-ink bg-paper px-3 py-2 font-serif text-[17px] leading-snug text-ink outline-none placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50"
           />
           <p className="mt-1 text-xs text-ink-3">Enter for a new line · Ctrl/⌘ + Enter to ask</p>
-          <a href={paperLibraryHref(question)} className="inline-flex min-h-11 items-center py-2 font-serif text-sm text-seal underline" data-testid="paper-metadata-handoff">
-            Only need a paper’s title, authors or DOI? Look up free metadata
+          <a href={paperLibraryHref(question)} aria-label="Look up free paper metadata: title, authors or DOI" className="inline-flex min-h-11 items-center font-serif text-sm text-seal underline" data-testid="paper-metadata-handoff">
+            Look up free paper metadata
           </a>
           {researchPaused && availabilityPanel}
-          <fieldset className="mt-3">
+          <fieldset className="mt-1">
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">Research depth</legend>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
               {(["quick", "deep"] as const).map((mode) => (

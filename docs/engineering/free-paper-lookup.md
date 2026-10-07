@@ -13,6 +13,11 @@ search field. The user's full question is not copied into that URL. Multiple
 identifiers or a general topic open the library without copying private prose.
 Following the link never submits research or external metadata search.
 
+The concise handoff retains a 44px touch target before the research action. The
+mobile composer keeps that action within the first 320x640 viewport even when
+fallback fonts wrap the source-cap disclosure. Budget text and question controls
+remain visible; the free lookup does not displace or submit research.
+
 Both remote and stdio MCP expose `paper_lookup(query, searchRepositories?)`.
 The default returns retained catalog bibliography. `searchRepositories: true`
 explicitly sends the query to existing fixed arXiv/Crossref metadata services,
@@ -87,4 +92,10 @@ publication must pass before release claims. This is a focused response to
 page-specific status extraction, complete synthesis, independent usefulness and
 participant/return/demand evidence remain open.
 
-Release ordering: this candidate integrates PR220's app0.27.28 source, including PR226's app0.27.27 guard and main7b45190c/PR224–225. Merge PR226 then PR220, and reconcile this branch against the resulting main before publishing app0.27.29. Hosted/stdio/desktop candidate versions above are unchanged; source integration does not establish publication or installed/deployed synchronization.
+Release ordering: this candidate integrates PR220's app0.27.28 source, including
+PR226's app0.27.27 guard and main7b45190c/PR224–225. PR227 independently reserves
+app0.27.27 for Operator quality recovery. Reconcile that source first, then PR226,
+PR220 and this branch against fresh main/version ordering before publication.
+The current app numbers remain conditional candidates. Hosted/stdio/desktop
+candidate versions above are unchanged; source integration does not establish
+publication or installed/deployed synchronization.

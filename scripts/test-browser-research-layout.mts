@@ -122,6 +122,41 @@ try {
       }
       assert.equal(await page.locator('[data-tour="budget"]').isVisible(), false);
 
+      if (width === 320 && height === 640) {
+        const cap = page.getByTestId("composer-source-cap");
+        const previousStyle = await cap.getAttribute("style");
+        try {
+          // The Linux CI capture wrapped this disclosure into two lines. Keep the
+          // action reachable with wider fallback glyphs even on a narrower host font.
+          await cap.evaluate(element => {
+            element.style.fontFamily = "monospace";
+            element.style.maxWidth = "200px";
+          });
+          const wrapped = await cap.evaluate(element => ({
+            height: element.getBoundingClientRect().height,
+            width: element.getBoundingClientRect().width,
+            font: getComputedStyle(element).fontFamily,
+            lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
+            text: element.textContent,
+          }));
+          assert(wrapped.height >= wrapped.lineHeight * 2 - 1,
+            `Fallback fixture must positively wrap the source cap: ${JSON.stringify(wrapped)}`);
+          const action = await page.locator('[data-tour="dispatch-btn"]').boundingBox();
+          const metadata = await page.getByTestId("paper-metadata-handoff").boundingBox();
+          await page.screenshot({ path: join(screenshotDir, "home-320x640-wrapped-cap.png") });
+          assert(action && action.y + action.height <= height,
+            `Mobile action is cut off with a wrapped source cap: ${action && action.y + action.height}`);
+          assert(metadata && metadata.height >= 44 && metadata.y + metadata.height <= action.y,
+            "Free metadata must retain a 44px target before research");
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
+        } finally {
+          await cap.evaluate((element, style) => {
+            if (style === null) element.removeAttribute("style");
+            else element.setAttribute("style", style);
+          }, previousStyle);
+        }
+      }
+
       if (width === 320 || width === 1366) {
         await page.getByText(/Budget and model:/).click();
         assert.equal(await page.locator('[data-tour="budget"]').isVisible(), true);

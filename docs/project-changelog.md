@@ -7,6 +7,8 @@ stdio MCP add `paper_lookup`: retained catalog metadata by default, explicitly
 requested repository lookup, exact version and recorded contributors, and visible
 unknown DOI/status and provider failures. This path does not run research or pay
 creators. Existing bibliography v1 and saved-workspace data remain compatible.
+The free handoff keeps its 44px touch target without pushing Ask off a small phone's
+first viewport when the source-cap disclosure wraps.
 See [scope, surface roles and release gates](engineering/free-paper-lookup.md).
 
 App0.27.29, hosted MCP0.3.5, stdio MCP0.4.8 and desktop0.4.10 identify candidates;
