@@ -99,6 +99,7 @@ See [scope, verification and release gates](engineering/research-availability-20
   nonautomatic question drafts retain both links; legacy automatic limits stay intact.
 - Keep the selected pair and exact versions visible across screening filters;
   inspect the prepared question and saved focus, or remove either selection.
+- Keep the comparison action readable with distinct text and background colors.
 - Export screening CSV or a JSON backup. Preserve corrupt storage, reject invalid
   backups, coordinate concurrent tab writes and keep unsaved drafts through filtering.
 - Download the shown bibliography as RIS for a reference manager. Preserve exact

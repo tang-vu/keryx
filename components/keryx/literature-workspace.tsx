@@ -11,7 +11,8 @@ import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES
   SCREENING_STATES, serializeLiteratureWorkspace, type LiteratureEntry, type LiteratureWorkspace as Workspace } from "@/lib/papers/literature-workspace";
 
 const field = "mt-1 block min-h-11 w-full min-w-0 border border-line bg-paper-2 px-3 py-2 font-serif text-base text-ink";
-const button = "inline-flex min-h-11 items-center justify-center border border-line px-3 py-2 font-mono text-xs text-seal hover:border-ink disabled:opacity-50";
+const buttonBase = "inline-flex min-h-11 items-center justify-center border px-3 py-2 font-mono text-xs hover:border-ink disabled:opacity-50";
+const button = `${buttonBase} border-line text-seal`;
 type Action = (action: () => void | Promise<void>, success: string) => Promise<void>;
 
 function ReviewFocus({ workspace, act }: { workspace: Workspace; act: Action }) {
@@ -152,7 +153,7 @@ export function LiteratureWorkspace() {
           <LiteratureComparisonPreview entries={active.flatMap(url => workspace.entries.filter(entry => entry.paper.url === url)
             .map(({ paper, screening }) => ({ paper, screening })))} filter={filter} savedQuestion={workspace.question} draft={draft}
             onRemove={url => setSelected(active.filter(selectedUrl => selectedUrl !== url))} />
-          <div className="mt-3 flex flex-wrap gap-3">{draft ? <Link prefetch={false} href={`/?q=${encodeURIComponent(draft)}&mode=deep`} className={`${button} border-ink bg-seal text-paper`}>Prepare comparison →</Link> : <button disabled className={button}>Select two papers to compare</button>}
+          <div className="mt-3 flex flex-wrap gap-3">{draft ? <Link prefetch={false} href={`/?q=${encodeURIComponent(draft)}&mode=deep`} className={`${buttonBase} border-ink bg-seal text-paper`}>Prepare comparison →</Link> : <button disabled className={button}>Select two papers to compare</button>}
             {active.length > 0 && <button type="button" className={button} onClick={() => setSelected([])}>Clear comparison selection</button>}
           </div>
           <p className="mt-2 font-serif text-xs text-ink-3">Opens the question composer for your review. The question and links enter its URL and browser history. Nothing is submitted automatically; paper text has not been read by this workspace.</p>

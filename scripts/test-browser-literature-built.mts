@@ -84,6 +84,30 @@ try {
     await selection.getByText("Review prepared question", { exact: true }).click();
     const preparedHref = await page.getByRole("link", { name: "Prepare comparison" }).getAttribute("href"); assert(preparedHref);
     assert.equal(await selection.getByLabel("Prepared comparison question").textContent(), new URL(preparedHref, base).searchParams.get("q"));
+    const comparison = page.getByRole("link", { name: "Prepare comparison" });
+    const contrast = await comparison.evaluate(element => {
+      const styles = getComputedStyle(element), canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 1;
+      const context = canvas.getContext("2d")!;
+      const luminances: number[] = [], weights = [0.2126, 0.7152, 0.0722];
+      for (const color of [styles.color, styles.backgroundColor]) {
+        context.clearRect(0, 0, 1, 1); context.fillStyle = color; context.fillRect(0, 0, 1, 1);
+        const pixels = context.getImageData(0, 0, 1, 1).data;
+        if (pixels[3] !== 255) throw new Error("Comparison colors must be opaque for this contrast measurement");
+        let luminance = 0;
+        for (let index = 0; index < 3; index++) {
+          const channel = pixels[index] / 255;
+          luminance += weights[index] * (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+        }
+        luminances.push(luminance);
+      }
+      const [foreground, background] = luminances;
+      return { color: styles.color, background: styles.backgroundColor, ratio: (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05) };
+    });
+    assert(contrast.ratio >= 4.5, `Prepare comparison must retain readable text contrast: ${JSON.stringify(contrast)}`);
+    console.log(`PASS: ${width}px comparison text contrast ${contrast.ratio.toFixed(2)}:1`);
+    await comparison.evaluate(element => element.scrollIntoView({ block: "center" }));
+    await comparison.screenshot({ path: join(screenshots, `prepare-${width}.png`) });
     await page.getByText("Edit screening and notes", { exact: true }).first().click();
     await page.evaluate(() => document.fonts.ready);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
@@ -94,7 +118,6 @@ try {
     await page.screenshot({ path: join(screenshots, `saved-${width}.png`), fullPage: true });
     await page.screenshot({ path: join(screenshots, `saved-viewport-${width}.png`) });
     await selection.screenshot({ path: join(screenshots, `comparison-${width}.png`) });
-    const comparison = page.getByRole("link", { name: "Prepare comparison" });
     const href = await comparison.getAttribute("href"); assert(href);
     const expected = new URL(href, base).searchParams.get("q")!;
     await comparison.click();

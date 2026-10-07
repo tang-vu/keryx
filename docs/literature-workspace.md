@@ -100,7 +100,8 @@ Existing cited-reference BibTeX/RIS and evidence exports remain separate.
 No schema, payment authority, custody, budget or scheduler changes.
 
 Release requires focused model/store/UI regressions, both TypeScript projects,
-lint, built Next navigation and responsive screenshots, independent review and CI.
+lint, built Next navigation, readable action contrast and responsive screenshots,
+independent review and CI.
 The operational owner's paid-original transition retains its serialized source gate;
 do not merge/deploy while that gate is unresolved. Reconcile the app version at merge,
 then verify the deployed commit and publish the authorized product update.
