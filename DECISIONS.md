@@ -5868,3 +5868,19 @@ Epoch3 transfers only the five unused holds from the six-call repair scope:26392
 Native result-v2 keeps the original authority/input hashes and existing completion CAS. A protected reader mints an opaque runtime evidence capability bound to that exact claim, run and supplemental context. SQLite completion, transactional readback, idempotency and historical readonly proof all revalidate the full source identities, verbatim quotes and provenance. No JSON/user API can grant this capability. Historical evidence validation survives supplier expiry but grants no dispatch permission. Legacy result-v1 remains bounded to the original sources; Supabase remains unsupported. All five original targets still require coverage>=0.4, every delivered statement independent review>=0.7, canonical rendering and explicit gaps. No new migration, client package, funding, purchase, creator payment or scheduler follows. Actual reviewed same-original delivery and buyer GET/receipt verification remain release gates.
 
 Protected supplemental tables require exact header-bearing contiguous quotes, not rewritten vendor prose. A separate opaque span capability enrolls only verbatim units inside one recorded raw section. Generation, independent review and the evidence ledger share that runtime authority; ordinary sentence-only checks have no new JSON override. Adjacent context may expose limitations but never substitutes for a quoted fact. Shared span helpers remain filesystem-free. Constructor or predispatch evidence failures close the known attempt before any model reservation.
+
+## Source-scoped recency eligibility - proposed, 2026-10-08
+
+Issue #217 and a frozen synthetic counterexample show that one-article topical
+ranking can buy an older release despite an explicit newest-entry request. Apply
+immutable original source/version/temporal eligibility before ranking, with a
+validated structured per-call contract preferred over a general latest regex or
+model-generated targets. Stage a visible refusal of unresolved current-newest
+paid selection before adding explicit retained-set ordering and coherent bounded
+feed observations. Paid catalog accumulation has no collection cohort; publication
+dates and public-reference refreshedAt alone cannot prove current newest. Preserve
+wanted-response item/version/offer binding, registry payout authority, every
+execution/payment bound and original recovery. Independent architecture review
+supports this direction; runtime, intent recognition, freshness/completeness,
+storage/adapters and useful-answer gates remain open. See
+[the staged proposal](docs/engineering/source-recency-2026-10-08.md).
