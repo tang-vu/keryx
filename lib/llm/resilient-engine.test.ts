@@ -13,6 +13,7 @@ import {
   resetReasoningCircuitBreakers,
 } from "./resilient-engine";
 import type { ReasoningEngine } from "./reasoning-engine";
+import { ResearchAdmissionHeldError } from "../research/availability-contract";
 
 /** An engine whose every call rejects with the given status (undefined = network error). */
 function brokenEngine(name: string, status?: number): ReasoningEngine {
@@ -41,6 +42,20 @@ function workingEngine(name: string): ReasoningEngine {
 }
 
 describe("ResilientEngine labelling", () => {
+  it("stops a local admission pause without retry, fallback or provider circuit mutation", async () => {
+    const held = new ResearchAdmissionHeldError("private retained original diagnostic");
+    const primary = workingEngine("llm:held-fixture");
+    primary.decompose = vi.fn(async () => { throw held; });
+    const fallback = workingEngine("llm:fallback-fixture");
+    fallback.decompose = vi.fn();
+    const circuit = { acquire: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })), succeeded: vi.fn(), failed: vi.fn() };
+    const engine = new ResilientEngine(primary, fallback, 0, circuit);
+    await expect(engine.decompose("original question")).rejects.toBe(held);
+    expect(primary.decompose).toHaveBeenCalledOnce(); expect(fallback.decompose).not.toHaveBeenCalled();
+    expect(circuit.failed).not.toHaveBeenCalled(); expect(circuit.succeeded).not.toHaveBeenCalled();
+    expect(engine.telemetry).toMatchObject([{ outcome: "failed", error: "internal" }]);
+    expect(JSON.stringify(engine.telemetry)).not.toContain("private retained");
+  });
   beforeEach(() => {
     resetReasoningCircuitBreakers();
     vi.restoreAllMocks();

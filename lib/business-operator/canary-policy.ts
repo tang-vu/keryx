@@ -12,6 +12,7 @@ import { a2aResearchPackageForVersion, a2aResearchPackageFingerprint } from "../
 import { matchesA2aOriginalBinding, type A2aOriginalClaim } from "../a2a/original-claim";
 import type { KeryxDB } from "../db/keryx-db";
 import { retainedFulfillmentDeliveryResolution } from "./fulfillment-policy";
+import { ResearchAdmissionHeldError } from "../research/availability-contract";
 
 /** One reviewed owner canary, not permission to renew historical allowances or fund wallets. */
 export const BUSINESS_CANARY_REVIEW = Object.freeze({
@@ -43,7 +44,7 @@ const policySchema = z.object({
 }).strict();
 export type BusinessCanaryPolicy = z.infer<typeof policySchema>;
 interface ConfiguredCanary { policy: BusinessCanaryPolicy; file: string; digest: string; directory: string }
-const refuse = (reason: string): never => { throw new Error(`Business canary ${reason}; retained originals and holds must be preserved`); };
+const refuse = (reason: string): never => { throw new ResearchAdmissionHeldError(`Business canary ${reason}; retained originals and holds must be preserved`); };
 const sha = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const equal = (a: unknown, b: unknown) => canonicalJson(a) === canonicalJson(b);
 

@@ -41,6 +41,8 @@ import { MAX_ASK_QUESTION_CHARS, parseAskQuestion, parseResearchMode } from "@/l
 import { recordActivationEvent } from "@/lib/activation";
 import { isAddress } from "viem";
 import { readRetainedMainnetSessionAuthority } from "@/lib/payments/retained-session-authority";
+import { readResearchAvailability } from "@/lib/research/availability";
+import { researchAdmissionError } from "@/lib/research/availability-contract";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,6 +75,9 @@ export async function POST(req: NextRequest) {
   // A present session id means "spend my browser-funded grant". Never coerce a malformed value or
   // silently reinterpret an empty one as the anonymous treasury path.
   let sessionId: string | undefined;
+  const availability = readResearchAvailability();
+  if (availability.state === "paused") return Response.json({ error: "research_paused",
+    message: availability.message, availability }, { status: 503, headers: { "Cache-Control": "no-store" } });
   if (body.sessionId !== undefined) {
     if (typeof body.sessionId !== "string" || !isAddress(body.sessionId.trim())) {
       return Response.json({ error: "sessionId must be a valid wallet address" }, { status: 400 });
@@ -342,6 +347,7 @@ export async function POST(req: NextRequest) {
         }
       } catch (err) {
         send("error", { message: researchFailureMessage(err),
+          ...(researchAdmissionError(err) ? { code: "research_paused" } : {}),
           ...(err instanceof ResearchSelectionError ? { code: err.code, selectionDiagnostic: err.diagnostic } : {}) });
       } finally {
         req.signal.removeEventListener("abort", disconnect);

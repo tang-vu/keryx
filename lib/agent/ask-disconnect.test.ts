@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RunInput } from "./run-agent";
 import type { PaymentRecord, QueryRun, TraceStep } from "../types";
+import { ResearchAdmissionHeldError, RESEARCH_PAUSED_MESSAGE } from "../research/availability-contract";
 
 const mocks = vi.hoisted(() => ({ runAgent: vi.fn(), getAgentDeps: vi.fn(), saveQueryRun: vi.fn(),
   recordActivationEvent: vi.fn() }));
@@ -37,6 +38,15 @@ beforeEach(() => {
 });
 
 describe("web disconnect at the creator payment boundary", () => {
+  it("uses a safe structured SSE category when a hold races with request admission", async () => {
+    mocks.getAgentDeps.mockRejectedValue(new ResearchAdmissionHeldError("private journal instruction"));
+    const response = await POST(request(new AbortController().signal));
+    const text = await response.text();
+    expect(text).toContain('"code":"research_paused"');
+    expect(text).toContain(RESEARCH_PAUSED_MESSAGE);
+    expect(text).not.toContain("private journal");
+    expect(mocks.runAgent).not.toHaveBeenCalled(); expect(mocks.saveQueryRun).not.toHaveBeenCalled();
+  });
   it.each(["ledger write", "cache write", "pending delivery ledger write"])(
     "retains the dispatch while %s is suspended before the first payment trace", async stage => {
       const suspended = deferred();

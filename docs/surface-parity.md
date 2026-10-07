@@ -1,5 +1,16 @@
 # Supported-surface release parity
 
+## Ordinary admission availability, October 7, 2026
+
+Application **0.27.14 candidate**, hosted Remote MCP **0.3.3 candidate**, distinguishes
+connected read-only surfaces from paused research. Web/widget questions and failed
+turns are retained; HTTP/SSE, OpenAI and hosted bot errors use safe public copy.
+Paid A2A and caller-funded desktop/stdio clients keep their current payment and
+original-recovery contracts. Desktop **0.4.7**, stdio MCP **0.4.6** and extension
+**0.1.1** retain their versions pending actual graph/distribution checks; app
+deployment cannot prove installed client upgrades. See
+[coordinated roles and remaining gates](engineering/research-availability-2026-10-07.md).
+
 ## Explicit supplier window, October 7, 2026
 
 Application **0.27.11 candidate** adds a distinct private v2 same-original

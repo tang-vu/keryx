@@ -5633,3 +5633,15 @@ fallback or public recovery endpoint is added. Independent usefulness, actual
 billing, ordinary-service restoration and Tameion acceptance remain separate gates.
 See [procedure](docs/operator-original-fulfillment.md) and
 [release scope](docs/engineering/operator-fulfillment-window-2026-10-07.md).
+
+## 2026-10-07: Observe admission separately from connectivity
+
+MCP discovery and service health can succeed while new research is held by an
+unresolved original delivery. Public availability reads the existing fail-closed
+hold without granting permission, initializing storage or consuming quota.
+Keep request authority checks in their current paths. Use a typed local refusal
+for safe public categories and terminal reasoning behavior, while retaining the
+private diagnostic for operations. A manual availability refresh never retries a
+question; the composer keeps the original draft and failure context. Hosted MCP
+advances its own version for this additive status/error contract. See
+[scope and release gates](docs/engineering/research-availability-2026-10-07.md).
