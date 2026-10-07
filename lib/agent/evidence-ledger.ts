@@ -2,6 +2,7 @@ import { arxivDocumentId, targetArxivIds } from "../scholarly/arxiv-identity";
 import { hasKnownSyntheticFingerprint } from "../research/evidence-provenance";
 import { discussionDoesNotMeetDocumentRequest } from "../research/source-requirements";
 import { isCompleteEvidenceSpan } from "../llm/evidence-span";
+import type { SupplementalSpanCapability } from "../llm/supplemental-span-capability";
 /**
  * Deterministic evidence gate between model prose and creator money.
  *
@@ -56,6 +57,8 @@ export function buildEvidenceLedger(input: {
   rewardAuthorizationAvailable?: boolean;
   /** Explicit offline illustration only; public factual projection still demotes these records. */
   allowIllustrativeDemo?: boolean;
+  /** Protected private original only; never supplied by model/JSON/source metadata. */
+  supplementalCapability?: SupplementalSpanCapability;
 }): EvidenceLedger {
   const byMarker = new Map(input.gathered.map((g) => [g.marker, g]));
   const answerMarkers = extractAnswerMarkers(input.answer);
@@ -76,7 +79,7 @@ export function buildEvidenceLedger(input: {
       claimIndex >= input.subClaims.length ||
       !source ||
       !quoteOccursInSource(quote, source.text) ||
-      !isCompleteEvidenceSpan(source, quote, proposal.quoteSpan) ||
+      !isCompleteEvidenceSpan(source, quote, proposal.quoteSpan, input.supplementalCapability) ||
       discussionDoesNotMeetDocumentRequest(input.question ?? "", source.itemUrl, input.subClaims[claimIndex])
     ) {
       droppedEvidence++;

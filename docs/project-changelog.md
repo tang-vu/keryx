@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Explain a model output limit (2026-10-08, v0.27.24 candidate)
+### Explain a model output limit (2026-10-08, v0.27.28 candidate)
 
 Reports distinguish an explicitly stopped model response from a provider outage,
 retain its billable token usage, and explain when to inspect saved evidence and
@@ -9,8 +9,31 @@ keep the same safe diagnostic through saved trace. CLI, APIs and MCP use the sha
 contract; output caps and payment authority are unchanged. Historical 503s are not
 reinterpreted. See [scope and remaining acceptance](engineering/model-output-limits.md).
 
-App 0.27.24, MCP 0.4.7, desktop 0.4.9 and hosted MCP 0.3.4 identify this candidate;
+App 0.27.28, MCP 0.4.7, desktop 0.4.9 and hosted MCP 0.3.4 identify this candidate;
 published packages, installed clients and production must be verified separately.
+
+### Hold unqualified newest-feed article selection (2026-10-08, v0.27.27 candidate)
+
+Recognized English/Vietnamese newest-release instructions now retain their original
+feed constraint before model decomposition. Affected retained paid/free/cache and
+legacy candidates are held before article selection, and the answer explains the
+unresolved scope even when no catalog feed matches. Web follow-up preserves the
+validated child question; model proposals cannot restore withheld articles.
+An empty-read report leads with the feed gap, and long URLs wrap on mobile.
+Ordinary topical research keeps existing ranking. This is a narrow safety repair;
+current-feed observation, supported newest-release delivery and service pre-charge
+qualification remain open. Existing payments and incoming service/model costs are
+separate. See [coverage and release gates](engineering/source-recency-2026-10-08.md).
+
+### Free primary evidence for retained Operator completion (2026-10-08, v0.27.26 candidate)
+
+A private continuation can supplement an acknowledged evidence gap with protected,
+verbatim official sections. Original sources, payment, question and native claim stay
+intact. Complete source provenance and independent statement review gate native
+completion and historical readback. Only the five unused repair calls transfer to
+the new journal; earlier reservations and the original deadline remain unchanged.
+Ordinary research and existing public buyer contracts retain their roles.
+See [authority and acceptance](engineering/operator-original-continuation.md).
 
 ### Full-source checks for retained Operator completion (2026-10-08, v0.27.23 candidate)
 

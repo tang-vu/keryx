@@ -2,6 +2,7 @@ import type { GatheredContent, ProposedEvidence } from "./reasoning-engine";
 import type { QuoteOption } from "./quote-options";
 import { isCompleteEvidenceSpan } from "./evidence-span";
 import { EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
+import type { SupplementalSpanCapability } from "./supplemental-span-capability";
 
 export const MAX_EVIDENCE_REVIEW_INPUT_BYTES = 32_000;
 // Bound both authored messages and reserve framing space; provider transport
@@ -15,6 +16,7 @@ export function buildEvidenceReviewInput(input: {
   options: QuoteOption[];
   gathered: GatheredContent[];
   subClaims: string[];
+  supplementalCapability?: SupplementalSpanCapability;
 }): { json: string; reviewedIndexes: ReadonlySet<number> } {
   const sources = new Map(input.gathered.map(source => [source.marker, source]));
   const ids = new Set(input.options.map(option => option.quoteId));
@@ -27,7 +29,7 @@ export function buildEvidenceReviewInput(input: {
     const source = sources.get(proposal.marker);
     const target = input.subClaims[proposal.claimIndex];
     if (!source || !Number.isInteger(proposal.claimIndex) || typeof target !== "string" ||
-        !isCompleteEvidenceSpan(source, proposal.quote, proposal.quoteSpan)) continue;
+        !isCompleteEvidenceSpan(source, proposal.quote, proposal.quoteSpan, input.supplementalCapability)) continue;
     const matches = input.options.filter(option => option.marker === proposal.marker &&
       option.start === proposal.quoteSpan!.start && option.end === proposal.quoteSpan!.end);
     if (matches.length !== 1) continue;

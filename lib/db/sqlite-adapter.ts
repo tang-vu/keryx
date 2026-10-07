@@ -91,6 +91,7 @@ import type { A2aOriginalClaim } from "../a2a/original-claim";
 import { claimSqliteA2aOriginal, hasSqliteA2aOriginalSettlement } from "./a2a-original-claim";
 import { claimSqliteA2aFulfillment, getSqliteA2aFulfillment, completeSqliteA2aFulfillment, hasSqliteA2aFulfillment } from "./a2a-failed-original-fulfillment";
 import type { FulfillmentClaimInput, A2aFulfillmentCompletion, FulfillmentAuthority } from "../a2a/failed-original-fulfillment-protocol";
+import type { FulfillmentEvidenceCapability } from "../a2a/fulfillment-supplement-evidence";
 import { writeSqliteQueryRun } from "./query-run-record";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
@@ -1664,12 +1665,12 @@ export class SqliteAdapter implements KeryxDB {
   async getA2aFailedOriginalFulfillment(originalId: string) {
     return getSqliteA2aFulfillment(this.db, originalId, this.paymentProfile);
   }
-  async completeA2aFailedOriginalFulfillment(input: A2aFulfillmentCompletion): Promise<boolean> {
+  async completeA2aFailedOriginalFulfillment(input: A2aFulfillmentCompletion, evidenceCapability?: FulfillmentEvidenceCapability): Promise<boolean> {
     if (this.readOnly) throw new Error("Readonly fulfillment mutation refused");
-    return completeSqliteA2aFulfillment(this.db, input, this.paymentProfile, rowToA2aOrder);
+    return completeSqliteA2aFulfillment(this.db, input, this.paymentProfile, rowToA2aOrder, evidenceCapability);
   }
-  async hasA2aFailedOriginalFulfillment(authority: FulfillmentAuthority): Promise<boolean> {
-    return hasSqliteA2aFulfillment(this.db, authority, this.paymentProfile, rowToA2aOrder);
+  async hasA2aFailedOriginalFulfillment(authority: FulfillmentAuthority, evidenceCapability?: FulfillmentEvidenceCapability): Promise<boolean> {
+    return hasSqliteA2aFulfillment(this.db, authority, this.paymentProfile, rowToA2aOrder, evidenceCapability);
   }
 
   async claimNextA2aOrder(workerId: string, startedAt: string, expectedOriginal?: A2aOriginalClaim): Promise<A2aOrder | null> {

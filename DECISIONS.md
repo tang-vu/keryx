@@ -5874,3 +5874,65 @@ shared public projection validates, bounds and deduplicates those diagnostics;
 early terminal callers receive a safe ceiling sentence through their current
 error adapters. Private/native reduced projections retain their existing roles.
 See [scope and acceptance gates](docs/engineering/model-output-limits.md).
+
+## Supplemental primary evidence for the same retained Operator original — 2026-10-08
+
+The full original source bodies still produced an acknowledged negative assessment for Arc-profile and acceptance checks. Retrying unchanged context cannot repair a documented evidence gap. Add a separately protected manifest of bounded free official verbatim sections, retaining raw body hashes, exact offsets, retrieval times and requested/final URLs. Keep original S1/S2, question, targets, payer, native claim and settled inbound untouched. Distinct S3+ public references have zero spending and reward authority; selected sections remain visibly bounded, and no official documentation proves that a live acceptance check has run.
+
+Epoch3 transfers only the five unused holds from the six-call repair scope:263920microUSD historical reservation, maximum5 additional calls and367220 at full use within the existing400000 outer ceiling. Keep the same received owner instruction and expiry; bind epoch2 authorization, external active/frontier, full journal and acknowledged negative checkpoint/diagnostic/closed attempt. A missing, pending or rolled-back third epoch refuses earlier fallback. New context gets a fresh sufficiency assessment with the same complete source union throughout generation, quote binding and independent review; prior checkpoints are not reused across contexts.
+
+Native result-v2 keeps the original authority/input hashes and existing completion CAS. A protected reader mints an opaque runtime evidence capability bound to that exact claim, run and supplemental context. SQLite completion, transactional readback, idempotency and historical readonly proof all revalidate the full source identities, verbatim quotes and provenance. No JSON/user API can grant this capability. Historical evidence validation survives supplier expiry but grants no dispatch permission. Legacy result-v1 remains bounded to the original sources; Supabase remains unsupported. All five original targets still require coverage>=0.4, every delivered statement independent review>=0.7, canonical rendering and explicit gaps. No new migration, client package, funding, purchase, creator payment or scheduler follows. Actual reviewed same-original delivery and buyer GET/receipt verification remain release gates.
+
+Protected supplemental tables require exact header-bearing contiguous quotes, not rewritten vendor prose. A separate opaque span capability enrolls only verbatim units inside one recorded raw section. Generation, independent review and the evidence ledger share that runtime authority; ordinary sentence-only checks have no new JSON override. Adjacent context may expose limitations but never substitutes for a quoted fact. Shared span helpers remain filesystem-free. Constructor or predispatch evidence failures close the known attempt before any model reservation.
+
+## Source-scoped recency eligibility - proposed, 2026-10-08
+
+Issue #217 and a frozen synthetic counterexample show that one-article topical
+ranking can buy an older release despite an explicit newest-entry request. Apply
+immutable original source/version/temporal eligibility before ranking, with a
+validated structured per-call contract preferred over a general latest regex or
+model-generated targets. Stage a visible refusal of unresolved current-newest
+paid selection before adding explicit retained-set ordering and coherent bounded
+feed observations. Paid catalog accumulation has no collection cohort; publication
+dates and public-reference refreshedAt alone cannot prove current newest. Preserve
+wanted-response item/version/offer binding, registry payout authority, every
+execution/payment bound and original recovery. Independent architecture review
+supports this direction; runtime, intent recognition, freshness/completeness,
+storage/adapters and useful-answer gates remain open. See
+[the staged proposal](docs/engineering/source-recency-2026-10-08.md).
+
+## Explicit Ubuntu browser CI dependency bootstrap - 2026-10-08
+
+A required Ubuntu browser job exceeded its existing 15-minute limit while APT
+repeatedly ignored the first Azure HTTP mirror; no test assertions had run.
+Keep browser checks and deadlines intact. Pin both affected Linux jobs to Ubuntu
+24.04 and prepare their existing official HTTPS archive/security mirrors with
+bounded APT transport timeouts/retries and a stricter five-minute install-step
+limit; per-acquisition timeouts alone do not bound the whole installation.
+A shared Node builtin helper guards the
+GitHub-hosted runner, OS and expected configuration before any privileged write.
+It preserves source/keyring/TLS trust and reads back the two fixed files. Windows
+coverage remains. Local adverse tests and actual full runner CI are required;
+the successful same-head rerun is separate evidence, not proof of the original
+network cause. This CI-only change has no production/runtime/distribution version
+change. See [runner setup and boundaries](docs/deployment-guide.md#browser-dependencies-on-github-hosted-runners).
+
+## Withhold unqualified newest-feed articles before ranking - 2026-10-08
+
+Stage1 freezes a narrow positive original-text requirement before model targets
+exist. Known unsupported temporal/multiple-feed forms remain explicit gaps;
+unresolved bounded binding refuses retained catalog candidates conservatively.
+Exact RSS/registered resource identity scopes refusal without granting feed or
+payment authority. Hold paid/free/cache/legacy candidates before item ranking and
+omit them from every purchase/reevaluation asset map. Preserve the validated raw
+web follow-up child separately from parent context; public overrides cannot set
+this trusted copy. An unmatched request still receives a visible gap.
+
+This staged repair favors an honest unresolved task over buying an older topical
+article for the recognized newest-feed request. It neither orders a retained set
+nor proves a coherent current-feed observation, and it preserves unrelated targets,
+exact wanted-response binding, incoming service charges and all existing payment
+limits/history. Shared TypeScript callers inherit the diagnostic; unchanged thin
+client contracts and reduced Operator/Rust roles do not establish pre-admission
+qualification. Build/CI/deployment and useful delivery remain separate gates. See
+[coverage and acceptance](docs/engineering/source-recency-2026-10-08.md#stage1-safety-candidate).

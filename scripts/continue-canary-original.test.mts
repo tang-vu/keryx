@@ -24,9 +24,21 @@ describe("private original continuation CLI boundaries", () => {
     await runContinueCanaryOriginal(["preflight", "--authorization", "/protected/grant.json", "--sha256", digest]);
     expect(calls.binding).toHaveBeenCalledWith("/protected/grant.json", digest, false);
     expect(calls.inspect).toHaveBeenCalledWith(db, "/protected/grant.json", digest);
-    expect(calls.preflight).toHaveBeenCalledWith(original); expect(calls.identity).toHaveBeenCalledWith(db, "read");
+    expect(calls.preflight).toHaveBeenCalledWith(original, undefined); expect(calls.identity).toHaveBeenCalledWith(db, "read");
     expect(calls.writer).not.toHaveBeenCalled(); expect(calls.close).toHaveBeenCalledOnce(); expect(fetch).not.toHaveBeenCalled();
     expect(vi.mocked(console.log).mock.calls[0][0]).not.toContain("PRIVATE-FIXTURE");
+  });
+  it("preflights the protected supplemental context without supplier or writer admission", async () => {
+    const supplement = Object.freeze({ contextSha256: digest, privateEvidence: "PRIVATE-SUPPLEMENT" });
+    calls.binding.mockReturnValue({ original, supplement });
+    await runContinueCanaryOriginal(["preflight", "--authorization", "/protected/epoch3.json", "--sha256", digest]);
+    expect(calls.preflight).toHaveBeenCalledWith(original, supplement);
+    expect(calls.preflight.mock.calls[0][1]).toBe(supplement);
+    expect(calls.identity).toHaveBeenCalledWith(db, "read");
+    expect(calls.writer).not.toHaveBeenCalled(); expect(calls.execute).not.toHaveBeenCalled();
+    expect(calls.complete).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
+    expect(calls.close).toHaveBeenCalledOnce();
+    expect(JSON.stringify(vi.mocked(console.log).mock.calls)).not.toContain("PRIVATE-SUPPLEMENT");
   });
   it("execute prepares using existing native claim without automatically delivering", async () => {
     calls.execute.mockResolvedValue({ prepared: true, paidDeliveryObligation: "unresolved" });

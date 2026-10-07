@@ -406,6 +406,35 @@ separately. Keep `.env.local` private.
 - **Alert channel** — configure a dedicated Telegram operations bot and private "Keryx ops" group using `KERYX_ALERT_TELEGRAM_BOT_TOKEN` and `KERYX_ALERT_TELEGRAM_CHAT_ID`; follow [the setup and delivery acceptance guide](telegram-ops-alerts.md). `KERYX_ALERT_WEBHOOK` remains supported for Discord/Slack. Process logs alone are not delivered alert evidence.
 - **Uptime/health** — point an external monitor (UptimeRobot, etc.) at [`/api/health`](https://keryx.cc/api/health); a same-box check can't catch the box being down.
 
+## Browser dependencies on GitHub-hosted runners
+
+The main build/test job and Linux SQLite browser-originals job use Ubuntu 24.04.
+Before the unchanged `playwright install --with-deps chromium`,
+`scripts/ci-browser-apt.mjs` selects the runner's existing official Ubuntu HTTPS
+archive/security mirrors and sets APT connection/data timeouts to 60 seconds
+with two per-file retries. The setup refuses local/self-hosted runners, other
+OS/architecture profiles, unexpected mirror/source configuration and conflicting
+configuration files. Sources, signing keyrings, TLS verification and package
+integrity checks stay intact. Each Chromium install step has a five-minute
+wall-clock limit; APT's timeouts/retries alone are per-acquisition bounds. Observed
+successful installs took 22 seconds (main), 48 seconds (Ubuntu rerun) and
+3 minutes 25 seconds (Windows). The SQLite job keeps its 15-minute deadline and
+Windows coverage. `node --test scripts/ci-browser-apt.test.mjs` checks the setup
+without changing system files.
+
+This addresses the observed dependency-install stall before tests in
+[PR222's first Ubuntu run](https://github.com/tang-vu/keryx/actions/runs/37681094309/attempts/1).
+The same-head rerun passed; that recovery does not erase the timeout or establish
+the cause of the network failure. Actual runner installation and all subsequent
+checks remain release gates. The configuration is limited to ephemeral CI
+runners. Web/API, CLI, hosted/stdio MCP, desktop, extensions, bots and deployment
+runtime contracts and distributed versions are unchanged by this CI-only update.
+
+The mirror layout follows the [official runner-image configuration](https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/configure-apt-sources.sh).
+APT documents [HTTP connection/data timeouts](https://manpages.ubuntu.com/manpages/noble/man1/apt-transport-http.1.html),
+[HTTPS inheritance and TLS defaults](https://manpages.ubuntu.com/manpages/noble/man1/apt-transport-https.1.html)
+and [per-file retries](https://manpages.ubuntu.com/manpages/noble/man5/apt.conf.5.html).
+
 ## Troubleshooting
 - **Build OOM on VPS** — ensure swap is active (`ssh keryx-vps "swapon --show"`); the script creates 2 GB on KVM. Containers can't swap → build locally and ship `.next`.
 - **App logs** — `ssh keryx-vps "pm2 logs keryx --lines 60"`; status `pm2 status`.

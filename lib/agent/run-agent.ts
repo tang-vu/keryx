@@ -90,6 +90,7 @@ import { assertRecipientAllowed, sourceRecipientIsExcluded } from "../payments/r
 import { sourceClaimAccess, publicDuplicateOfOwnedItem } from "../sources/source-claim-access";
 import { resolveFreeSourceItemContent } from "../sources/resolve-source-item-content";
 import { contentBodyHash } from "../sources/content-receipt";
+import { recognizeSourceRecency, sourceRecencyGap, sourceRecencyReport, sourceRecencyRequestGaps } from "../sources/source-recency";
 import type { SourceClaimReceipt } from "../types";
 import { resolveValidArticleOffer } from "../offers/resolve-article-offer";
 import {
@@ -117,6 +118,9 @@ export interface RunInput {
   /** Trusted manual CLI opt-in only; never populate from public request JSON. */
   allowExternalWeb?: boolean;
   question: string;
+  /** Trusted adapter copy of validated caller text before follow-up/context augmentation.
+   * Never populate this from a public originalQuestion field or model-created prompt. */
+  originalQuestion?: string;
   budget?: number;
   /** Quick bounds attention/expansion for latency; Deep preserves the full research pass. */
   researchMode?: ResearchMode;
@@ -271,7 +275,11 @@ async function* runAdmittedAgent(
   }
 
   // 1) DECOMPOSE
+  // Freeze this original-text constraint before the engine creates or omits research targets.
+  const recencyRequirement = recognizeSourceRecency(input.originalQuestion ?? input.question);
+  const requestRecencyGaps = sourceRecencyRequestGaps(recencyRequirement);
   yield emit("decompose", `Breaking down: "${input.question}"`);
+  for (const gap of requestRecencyGaps) yield emit("decompose", "Newest-feed requirement retained from the caller; selection is unqualified and affected catalog articles will be withheld before BUY/CACHE.", gap);
   const subClaims = await engine.decompose(input.question);
   // A comparison names one target per candidate. Unless the caller pinned its limits, Deep research
   // may read one source per target, so the last candidates are not left without any evidence.
@@ -308,7 +316,10 @@ async function* runAdmittedAgent(
   // the first purchase of a source would be the last toll it ever earned, and every later answer
   // would be built from text the source has moved on from. See ./cache-freshness.ts.
   const freshCache = new Set<string>();
-  const { publicReads, publicCandidates } = await discoverPublicReferences(db, input.question, subClaims);
+  const { publicReads, publicCandidates, recencyGaps } = await discoverPublicReferences(db, input.question, subClaims, recencyRequirement);
+  for (const gap of recencyGaps) yield emit("discover",
+    `WITHHELD ${gap.sourceName}: retained feed metadata does not establish the requested newest entry; no older cached article substituted.`, gap);
+  recencyGaps.push(...requestRecencyGaps);
   const webCandidates = new Map<string, SourceCandidate>();
   const gathered: GatheredContent[] = [];
   const requested = requestedSources(input.question);
@@ -466,6 +477,12 @@ async function* runAdmittedAgent(
   }
   let signedOfferCount = 0;
   for (const s of sources) {
+    const recencyGap = sourceRecencyGap(recencyRequirement, s);
+    if (recencyGap) {
+      recencyGaps.push(recencyGap);
+      yield emit("discover", `WITHHELD ${s.name}: newest-entry criterion, source scope or observation is unqualified. No BUY/CACHE or legacy source-level article is admitted.`, recencyGap);
+      continue;
+    }
     if (await paperDuplicatesPublicBody(db, s, [...publicReads.values()].map(read => read.text))) {
       yield emit("discover", `SKIP paid manuscript ${s.name}: identical exact-version body is already available as a free public reference.`);
       continue;
@@ -1883,6 +1900,8 @@ async function* runAdmittedAgent(
       decisions: finalDecisions, gathered, evidence, outcomes: publicReadOutcomes,
       vi: researchResponseLanguage(input.question) === "vi", withheld: externalDocumentsWithheld });
     if (originals) answer += `\n\n${originals}`;
+    const recency = sourceRecencyReport(recencyGaps, researchResponseLanguage(input.question) === "vi");
+    if (recency) answer = gathered.length === 0 ? `${recency}\n\n${answer}` : `${answer}\n\n${recency}`;
     if (fundingUnavailable) answer = `> ${fundingNotice}\n\n${answer}`;
     const totalSpent = round(
       payments

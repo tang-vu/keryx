@@ -35,6 +35,7 @@ on:
       - "tsconfig.json"
       - "eslint.config.*"
       - "package*.json"
+      - "scripts/ci-browser-apt*"
       - ".github/workflows/browser-signing-originals-sqlite.yml"
   workflow_dispatch:
 jobs:
@@ -42,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-24.04, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     permissions:
@@ -54,7 +55,13 @@ jobs:
           node-version: "24.21.0"
           cache: npm
       - run: npm ci
+      - name: Browser runner APT setup tests (no system changes)
+        run: node --test scripts/ci-browser-apt.test.mjs
+      - name: Prepare official Ubuntu HTTPS mirrors for browser dependencies
+        if: runner.os == 'Linux'
+        run: node scripts/ci-browser-apt.mjs
       - name: Install actual Chromium
+        timeout-minutes: 5
         run: npx playwright install --with-deps chromium
       - name: Focused originals, exposed observation and legacy recovery
         run: npx vitest run lib/db/sqlite-browser-signing-originals.test.ts lib/payments/browser-query-policy.test.ts lib/payments/browser-signing-original.test.ts lib/db/sqlite-browser-journal.test.ts lib/payments/browser-authorization-recovery.test.ts lib/payments/browser-original-observation-protocol.test.ts lib/payments/browser-original-observation-server.test.ts lib/session/browser-original-observation-client.test.ts
