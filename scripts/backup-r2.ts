@@ -109,27 +109,19 @@ async function listR2Objects(config: Config) {
   return parseR2Listing(await boundedText(await r2Request(config, "GET", "", "list-type=2&max-keys=26")));
 }
 
-/** Caller holds exclusive backup lock through reservation, listing, rotation and upload. */
-export async function uploadR2Backup(source: string, directory: string, config: Config): Promise<"uploaded" | "daily-limit"> {
+/** Caller holds exclusive backup lock through reservation, listing and upload.
+ * No independently verified recovery receipt exists here: a PUT acknowledgement
+ * cannot authorize removal of any previous remote recovery object. */
+export async function uploadR2Backup(source: string, directory: string, config: Config): Promise<"uploaded" | "daily-limit" | "retention-limit"> {
   const key = path.basename(source);
   const size = fs.lstatSync(source);
   if (!objectPattern.test(key) || !size.isFile() || size.isSymbolicLink() || size.size > r2Limits.objectBytes) throw new Error("R2 upload object rejected (32 MiB maximum).");
   if (!reserveR2Budget(path.join(directory, "r2-budget.json"), r2Limits.attemptRequests, true)) return "daily-limit";
   const objects = await listR2Objects(config);
   if (objects.some((object) => object.key === key)) throw new Error("R2 upload key already exists.");
-  // Reconcile a previous ambiguous PUT/failed DELETE before adding a 26th object.
-  while (objects.length > r2Limits.retainedObjects) {
-    const oldest = objects.shift()!;
-    if (oldest.key >= key) throw new Error("R2 snapshot timestamp rejected.");
-    await (await r2Request(config, "DELETE", oldest.key)).body?.cancel();
-  }
-  // Keep all prior backups until PUT succeeds. 25 * 32 MiB = 800 MiB transient maximum.
+  // A historical ambiguous 25th object also remains untouched for inspection.
+  if (objects.length >= r2Limits.retainedObjects) return "retention-limit";
   await (await r2Request(config, "PUT", key, "", fs.readFileSync(source))).body?.cancel();
-  if (objects.length === r2Limits.retainedObjects) {
-    const oldest = objects[0];
-    if (oldest.key >= key) throw new Error("R2 snapshot timestamp rejected.");
-    await (await r2Request(config, "DELETE", oldest.key)).body?.cancel();
-  }
   return "uploaded";
 }
 
