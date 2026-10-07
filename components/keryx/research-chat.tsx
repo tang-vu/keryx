@@ -79,7 +79,8 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
         {!streaming && parentId && <button type="button" onClick={() => { setRootRequest(true); setAnchor(undefined); }} className="min-h-11 px-2 font-mono text-xs underline underline-offset-4">New research</button>}
         {streaming && <button type="button" onClick={stop} className="min-h-11 border border-seal px-3 py-2 font-mono text-xs text-seal">Stop research</button>}
       </div>}
-      <AskForm disabled={streaming} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit />
+      <AskForm disabled={streaming} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit
+        restoreQuestion={state.errorKind === "research-paused" && request ? request : undefined} />
       <div className="mt-3"><SessionGrantPanel onBindingChange={handleBindingChange} /></div>
       <p className="mt-3 text-xs text-ink-3">Conversation stays in this tab while the page is open. Completed reports have a saved link; signed-in reports appear in My saved reports. Download a report to keep a local copy.</p>
       <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs text-ink-2" aria-label="Research tools">

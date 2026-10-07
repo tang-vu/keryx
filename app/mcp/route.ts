@@ -18,6 +18,7 @@ import { clientIp } from "@/lib/rate-limit";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { readMcpBody } from "@/lib/mcp/request-body";
 import { isAllowedMcpOrigin, normalizeMcpClient, researchCallCount } from "@/lib/mcp/route-helpers";
+import { readResearchAvailability } from "@/lib/research/availability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,11 +40,11 @@ function corsHeaders(req: NextRequest): Headers {
   return headers;
 }
 
-function jsonRpcHttpError(req: NextRequest, status: number, code: number, message: string) {
+function jsonRpcHttpError(req: NextRequest, status: number, code: number, message: string, data?: unknown) {
   const headers = corsHeaders(req);
   if (status === 401) headers.set("WWW-Authenticate", 'Bearer realm="Keryx MCP"');
   return Response.json(
-    { jsonrpc: "2.0", error: { code, message }, id: null },
+    { jsonrpc: "2.0", error: { code, message, ...(data ? { data } : {}) }, id: null },
     { status, headers },
   );
 }
@@ -52,6 +53,11 @@ async function resolveAccess(
   req: NextRequest,
   researchCall: boolean,
 ): Promise<RemoteMcpAccess | Response> {
+  const heldResponse = () => {
+    const availability = readResearchAvailability();
+    return availability.state === "paused" ? jsonRpcHttpError(req, 503, -32000, availability.message,
+      { code: "research_paused", availability }) : null;
+  };
   const auth = req.headers.get("authorization");
   const rawKey = auth?.startsWith("Bearer ") ? auth.slice(7).trim() : undefined;
 
@@ -62,6 +68,7 @@ async function resolveAccess(
       return jsonRpcHttpError(req, 403, -32003, "API key is not scoped for research.");
     }
     if (researchCall) {
+      const held = heldResponse(); if (held) return held;
       const limited = await checkSponsoredResearchAdmission({ kind: "key", wallet: key.walletAddress, ip: clientIp(req) });
       if (limited) return limited;
       const db = await getDb();
@@ -75,6 +82,7 @@ async function resolveAccess(
   }
 
   if (researchCall) {
+    const held = heldResponse(); if (held) return held;
     const limited = await checkSponsoredResearchAdmission({ kind: "anonymous", ip: clientIp(req) });
     if (limited) return limited;
   }

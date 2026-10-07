@@ -26,6 +26,7 @@ export function finalizeGroundedAnswer(input: {
   answer: string;
   ledger: EvidenceLedger;
   statements?: CitedStatement[];
+  synthesisUnavailable?: boolean;
 }): string {
   const { ledger } = input;
   const qualifies = (item: EvidenceLedger["evidence"][number]) => item.qualifiesForAnswer ?? item.qualifiesForReward;
@@ -37,12 +38,18 @@ export function finalizeGroundedAnswer(input: {
   const intro = qualifying.length
     ? vi ? "Bản nháp không được giữ như kết luận. Dưới đây chỉ giữ các trích đoạn nguồn đủ điều kiện; chưa xác minh được câu trả lời tổng hợp đầy đủ. Các chủ đề nghiên cứu không phải kết luận đã được chứng minh."
       : "Source excerpts only. The draft is withheld as a conclusion; complete synthesis is unverified. Qualifying source excerpts are quoted below. Research targets are topics to investigate, not established conclusions."
+    : input.synthesisUnavailable ? vi
+      ? "Chưa có câu trả lời được bằng chứng hỗ trợ. Bước tổng hợp hoặc kiểm tra bằng chứng chưa hoàn tất; chưa thể đánh giá bằng chứng cho các yêu cầu nghiên cứu. Kết quả đọc và biên nhận gốc vẫn được giữ."
+      : "No supported answer. Synthesis or evidence review did not complete; evidence for the research targets could not be assessed. Original reads and receipts are retained."
     : vi ? "Chưa có câu trả lời được bằng chứng hỗ trợ. Nội dung đã đọc chưa cung cấp trích đoạn đủ điều kiện cho các yêu cầu nghiên cứu; bản nháp không được giữ như kết luận."
       : "No supported answer. The read content supplied no qualifying excerpts for the research targets; the draft is withheld as a conclusion.";
   const sections = ledger.claimCoverage.map(claim => {
     const quotes = qualifying.filter(item => item.claimIndex === claim.claimIndex);
     const rows = quotes.map(item => `- “${literal(item.quote)}” [${item.marker}]`);
-    const gap = vi
+    const gap = input.synthesisUnavailable && !qualifying.length ? vi
+      ? "Chưa đánh giá được bằng chứng cho yêu cầu này trong lượt nghiên cứu."
+      : "Evidence assessment was unavailable for this research target in this run."
+    : vi
       ? "Thiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này."
       : "Evidence gap: no qualifying excerpt for this research target.";
     const target = vi ? "Yêu cầu nghiên cứu" : "Research target";

@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**Use an importer-recognized RIS type and literal provenance notes — 2026-10-07.**
+The active literature-review segment depends on reusable citation exports. A pinned
+Zotero translator reproduction showed our preprint `UNPB` tag defaults to
+`journalArticle`. Use `MANSCPT`, mapped to manuscript, while preserving the explicit
+preprint/read-scope/unknown-peer-review note and exact arXiv version. Escape literal
+N1 text for the translator's HTML-note path and do not substitute a source name
+for an absent scholarly journal. Leave BibTeX and recorded evidence/receipt/payment
+contracts intact. Check actual browser downloads, shared transport/checked-receipt
+parity and the digest-pinned upstream parser; the minimal host is not Zotero
+application acceptance or a complete field-validation test. The actual desktop
+helper imports this formatter, requiring a separate 0.4.8 candidate and package
+verification. Original paid snapshots stay immutable. See
+[compatibility evidence and release gates](docs/engineering/reference-export-2026-10-07.md).
+
 **Pin the hosted MCP SDK to the reviewed fixed release — 2026-10-07.**
 Exact-main CI for the source-inspection release failed the high production audit
 after GHSA-6qxp-vccf-f47h entered the advisory feed. Require root SDK 1.31.0,
@@ -5648,3 +5662,60 @@ fallback or public recovery endpoint is added. Independent usefulness, actual
 billing, ordinary-service restoration and Tameion acceptance remain separate gates.
 See [procedure](docs/operator-original-fulfillment.md) and
 [release scope](docs/engineering/operator-fulfillment-window-2026-10-07.md).
+
+## Retain synthesis failure stages without implying absent document evidence - 2026-10-07
+
+Completed reads and unavailable synthesis are different observations. Preserve
+only an application-assigned input/generation/review stage; a thrown engine call
+whose internal stage is unknown stays unknown. Empty output after such a failure
+means assessment unavailable, not that the source lacks evidence. Valid no-fact
+generation and negative review retain their original assessed-result semantics.
+
+Expose fixed diagnostic wording and retained-read count through the existing
+trace and final answer. Direct delivery review to the original job and receipts;
+do not retry generation, buy again, infer a refund or relax evidence/reward gates.
+See [scope and verification](docs/engineering/synthesis-failure-2026-10-07.md).
+
+## Offer Circle's Arc Onramp as an optional card purchase into the owner wallet - 2026-10-06
+
+The owner asked whether Circle supports card payment into Arc and directed that it
+be built first, with eligibility questions settled afterwards. Circle's Onramp Kit
+(`@circle-fin/onramp-kit` 1.0.3) sells USDC on Arc for a debit card, Apple Pay or
+Google Pay through Transak, with identity verification inside Circle's hosted flow.
+
+Keryx mints a session for the authenticated web-session wallet and opens Circle's
+flow in a separate window. The destination is never taken from the request, the
+widget is scoped to USDC on Arc, the launch URL is pinned to `https://onramp.arc.io`
+on the server, and only modeled session fields reach the browser. Keryx holds no
+purchase ledger: widget events are best-effort text, and the wallet's on-chain
+balance is the evidence. Funding a Gateway balance or research budget stays the
+existing separate owner-signed operation, so custody, session caps and payment
+authority are unchanged.
+
+A separate window was chosen over the embedded iframe. The iframe needs new
+`frame-src`/`connect-src` origins, a `referrerDomain` allowlist entry, and camera
+access for identity checks that the site-wide `Permissions-Policy` denies; the
+kit also documents iOS Safari storage problems inside frames. The window needs
+none of these and keeps card and identity entry visibly on Circle's origin. The
+cost is a two-click flow, because the window must open synchronously in a click.
+
+Activation is explicit and mainnet-only with a production key, because that key
+buys with real money. Sandbox use is not wired: its endpoints and test-network
+delivery were not verified here. The existing Circle developer key is reused
+unless a dedicated `ARC_ONRAMP_API_KEY` is set. One production session was minted
+successfully with the owner's key on 2026-10-06 (no session id is returned, so it
+is optional). No purchase was made. Whether an individual can complete Circle's
+business verification, which countries are served, and provider fees and limits
+are unverified and remain gates. See [Arc card onramp](docs/arc-card-onramp.md).
+
+## 2026-10-07: Observe admission separately from connectivity
+
+MCP discovery and service health can succeed while new research is held by an
+unresolved original delivery. Public availability reads the existing fail-closed
+hold without granting permission, initializing storage or consuming quota.
+Keep request authority checks in their current paths. Use a typed local refusal
+for safe public categories and terminal reasoning behavior, while retaining the
+private diagnostic for operations. A manual availability refresh never retries a
+question; the composer keeps the original draft and failure context. Hosted MCP
+advances its own version for this additive status/error contract. See
+[scope and release gates](docs/engineering/research-availability-2026-10-07.md).

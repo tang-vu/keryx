@@ -14,6 +14,8 @@ import { ResearchSelectionError } from "../llm/research-selection";
 import { registerOperatorDiscovery } from "../business-operator/mcp";
 import { readOperatorStatus } from "../business-operator/status";
 import { getDb } from "../db";
+import { assertOrdinaryResearchAvailable, readResearchAvailability } from "../research/availability";
+import { researchAdmissionError } from "../research/availability-contract";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
@@ -79,7 +81,7 @@ export function createRemoteMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: "keryx",
-    version: "0.3.2",
+    version: "0.3.3",
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
@@ -114,6 +116,7 @@ export function createRemoteMcpServer(
     },
     async ({ question, budget, model, scholarly, mode }) => {
       try {
+        assertOrdinaryResearchAvailable();
         const requested =
           typeof budget === "number" && Number.isFinite(budget) && budget >= 0
             ? budget
@@ -136,8 +139,11 @@ export function createRemoteMcpServer(
         };
       } catch (error) {
         const message = researchFailureMessage(error);
+        const held = researchAdmissionError(error);
         return {
           isError: true,
+          ...(held ? { structuredContent: { error: held.code, message: held.message,
+            availability: readResearchAvailability() } } : {}),
           content: [{ type: "text" as const, text: `Keryx research failed: ${message}` },
             ...(error instanceof ResearchSelectionError ? [{ type: "text" as const,
               text: `Source-selection diagnostic (not a completed report or payment receipt):\n${JSON.stringify(error.diagnostic)}` }] : [])],
@@ -159,17 +165,16 @@ export function createRemoteMcpServer(
         openWorldHint: false,
       },
     },
-    async () => ({
-      content: [
-        {
-          type: "text" as const,
-          text:
-            `Keryx Remote MCP is ready. Research calls are treasury-funded and creators receive ` +
-            `real Arc USDC when settlement is configured. Budget cap: $${access.budgetCap} USDC. ` +
-            `Caller: ${access.actor ? "verified API-key wallet" : "anonymous free trial"}.`,
-        },
-      ],
-    }),
+    async () => {
+      const availability = readResearchAvailability();
+      return {
+        structuredContent: { endpoint: "connected", researchAvailability: availability },
+        content: [{ type: "text" as const, text:
+          `Keryx Remote MCP is connected. ${availability.message} Research calls are treasury-funded and creators receive ` +
+          `real Arc USDC when settlement is configured. Budget cap: $${access.budgetCap} USDC. ` +
+          `Caller: ${access.actor ? "verified API-key wallet" : "anonymous free trial"}.` }],
+      };
+    },
   );
 
   registerMonthlyDiscovery(server, async () => process.env.KERYX_MONTHLY_ENABLED === "1" ? quoteResearchMonthly() : null);

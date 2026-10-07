@@ -2872,6 +2872,48 @@ describe("completed reads survive bounded model exhaustion", () => {
       expect(run.citations[0].rationale).toContain("equal split");
     }
     if (stage === "synthesize" || stage === "sufficiency") expect(gateway.citationCalls).toHaveLength(0);
+    if (stage === "synthesize") {
+      expect(run.answer).toContain("Read 1 source(s), but synthesis did not complete");
+      expect(run.answer).toContain("original reads and receipts");
+      expect(steps.some(step => step.phase === "synthesize" &&
+        (step.detail as Record<string, unknown> | undefined)?.synthesisFailureStage === "synthesis")).toBe(true);
+    }
+  });
+
+  it.each(["input", "generation", "review"] as const)("delivers the %s failure and original paid-read receipt across shared surfaces without another purchase", async stage => {
+    const engine = fakeEngine({ synthesize: () => ({ answer: "", citedMarkers: [], evidence: [], conflicts: [],
+      evidenceReview: "unavailable", synthesisFailure: stage }) });
+    const synthesize = vi.spyOn(engine, "synthesize");
+    const gateway = fakeGateway(); const d = deps([makeSource({ id: "alpha" })], engine, gateway);
+    const { run, steps } = await drive({ question: "Inspect the original evidence. Answer in Vietnamese.", budget: 0.04 }, d);
+    expect(synthesize).toHaveBeenCalledTimes(1);
+    expect(gateway.fetchCalls).toEqual(["alpha"]);
+    expect(gateway.citationCalls).toEqual([]);
+    expect(run.totalSpent).toBe(0.002);
+    expect(run.answer).toContain("Đã đọc 1 nguồn");
+    expect(run.answer).toContain("đơn gốc");
+    expect(run.answer).toContain("Chưa đánh giá được bằng chứng");
+    expect(run.answer).not.toContain("Nội dung đã đọc chưa cung cấp trích đoạn");
+    expect(run.confidence?.reason).toContain("chưa đánh giá được mức hỗ trợ");
+    expect(steps.some(step => step.phase === "synthesize" && step.message.startsWith("Đã chuẩn bị trích đoạn"))).toBe(false);
+    expect(steps.some(step => step.phase === "evidence" && step.message.startsWith("Chỉ cung cấp trích đoạn"))).toBe(false);
+    expect(steps.some(step => step.phase === "evidence" &&
+      (step.detail as Record<string, unknown> | undefined)?.assessmentStatus === "unavailable")).toBe(true);
+    expect(run.citations).toEqual([]);
+    expect(steps.some(step => step.phase === "synthesize" &&
+      (step.detail as Record<string, unknown> | undefined)?.synthesisFailureStage === stage)).toBe(true);
+    const receipt = buildResearchReceipt(run, d.db.payments);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.dispatch.answer).toBe(run.answer);
+    expect(researchReportMarkdown(run, null, d.db.payments)).toContain(run.answer);
+    expect(buildAnswerContent(run)).toContain(run.answer);
+    for (const result of [remoteResearchResult(run),
+      a2aResponseFromRun(run, quoteA2aResearch(0.04, "quick"))]) {
+      expect(JSON.stringify(result)).toContain("Đã đọc 1 nguồn");
+      expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
+    }
+    expect(keryxMeta(run).researchExports).toEqual(exportsFromCheckedReceipt(receipt));
+    expect(surfaceResearch(run).researchExports).toEqual(exportsFromCheckedReceipt(receipt));
   });
 
   it("delivers the reviewed brief consistently across SSE, receipts and shared exports without private context or attribution prose", async () => {

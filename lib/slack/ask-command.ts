@@ -10,6 +10,7 @@
  */
 
 import { config } from "../config";
+import { researchAdmissionError } from "../research/availability-contract";
 import type { QueryRun } from "../types";
 
 /** Slack renders a message's `text` up to 40k chars; keep the whole payload well under that and the
@@ -86,7 +87,7 @@ export function buildAnswerText(run: QueryRun): string {
 
 /** Failure text for the response_url post — the run died, say so instead of leaving it silent. */
 export function buildErrorText(err: unknown): string {
-  const detail = err instanceof Error ? err.message : String(err);
+  const detail = researchAdmissionError(err)?.message ?? (err instanceof Error ? err.message : String(err));
   return truncate(`⚠️ Keryx could not finish this dispatch: ${escapeSlack(detail)}`, MESSAGE_MAX);
 }
 

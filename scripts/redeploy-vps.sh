@@ -169,7 +169,24 @@ if node scripts/dependency-state.mjs check; then
 else
   echo "install inputs changed (or unverified) → npm ci"
   node scripts/dependency-state.mjs invalidate
-  npm ci --no-audit --no-fund
+  # npm ci removes node_modules before it fetches, so one dropped registry connection
+  # leaves the host with no dependencies at all. Repeat the idempotent install only for
+  # a recognized transient network code; integrity, lockfile and lifecycle failures
+  # stop at the first attempt. The success stamp is still written only after exit 0.
+  npm_log=$(mktemp)
+  trap 'rm -f -- "$npm_log"' EXIT
+  attempt=1
+  while true; do
+    if npm ci --no-audit --no-fund 2> "$npm_log"; then cat "$npm_log" >&2; break; fi
+    cat "$npm_log" >&2
+    if (( attempt >= 3 )) || ! grep -Eq '^npm (error|ERR!) code (ECONNRESET|ETIMEDOUT|EAI_AGAIN|ECONNREFUSED|ENETUNREACH|ERR_SOCKET_TIMEOUT)$' "$npm_log"; then
+      echo "npm ci failed on attempt $attempt; dependencies are not installed" >&2
+      exit 1
+    fi
+    echo "transient registry failure on attempt $attempt → retrying npm ci in $((attempt * 15))s" >&2
+    sleep "$((attempt * 15))"
+    attempt=$((attempt + 1))
+  done
   node scripts/dependency-state.mjs record
 fi
 REMOTE

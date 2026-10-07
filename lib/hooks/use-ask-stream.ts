@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
+import { RESEARCH_PAUSED_MESSAGE } from "@/lib/research/availability-contract";
 import { BROWSER_AUTHORIZATION_PROTOCOL } from "@/lib/payments/browser-authorization-protocol";
 import type { WalletClient } from "viem";
 import type { BrowserPaymentContext } from "@/lib/payments/browser-cosign-gateway";
@@ -48,7 +49,7 @@ export interface AskMeta {
  * wallet), `session-expired` (grant lapsed → recover prompt), `generic` (any
  * other failure → plain error box).
  */
-export type AskErrorKind = "generic" | "rate-limit" | "session-expired";
+export type AskErrorKind = "generic" | "rate-limit" | "session-expired" | "research-paused";
 
 export interface AskStreamState {
   status: "idle" | "streaming" | "done" | "error";
@@ -340,9 +341,10 @@ export function useAskStream(opts?: AskStreamOpts) {
     }
 
     if (event === "error") {
-      const { message, selectionDiagnostic } = data as { message: string; selectionDiagnostic?: unknown };
+      const { message, code, selectionDiagnostic } = data as { message: string; code?: string; selectionDiagnostic?: unknown };
       const diagnostic = parseSelectionDiagnostic(selectionDiagnostic);
-      setState((s) => ({ ...s, status: "error", errorKind: "generic", error: message,
+      setState((s) => ({ ...s, status: "error", errorKind: code === "research_paused" ? "research-paused" : "generic",
+        error: code === "research_paused" ? RESEARCH_PAUSED_MESSAGE : message,
         selectionDiagnostic: diagnostic?.outcome === "refused" ? diagnostic : undefined }));
     }
   // opts is an object reference — destructure the primitive/stable values into the dep array
@@ -420,6 +422,11 @@ export function useAskStream(opts?: AskStreamOpts) {
             errMsg = j.message ?? j.error ?? bodyText;
             if (typeof j.retryAfter === "number") retryAfter = j.retryAfter;
           } catch { /* not JSON — keep the raw text */ }
+
+          if (errCode === "research_paused") {
+            setState((s) => ({ ...s, status: "error", errorKind: "research-paused", error: RESEARCH_PAUSED_MESSAGE }));
+            return;
+          }
 
           if (res.status === 401 && errCode === "session_expired") {
             // Flip the grant UI to "expired" so the user gets the recover prompt.

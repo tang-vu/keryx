@@ -5,6 +5,7 @@
     "incremental": false
   },
   "include": [
+    "scripts/test-zotero-ris.mts",
     "scripts/test-browser-paper-library.mts",
     "scripts/operator-business.mts",
     "scripts/operator-canary.mts",
