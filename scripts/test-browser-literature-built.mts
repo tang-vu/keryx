@@ -137,7 +137,7 @@ try {
     await exactCard.getByRole("heading", { name: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks", exact: true }).waitFor();
     assert.equal(await exactCard.count(), 1);
     assert((await exactCard.innerText()).includes("Patrick Lewis"));
-    assert.equal(await page.getByRole("textbox", { name: "Title, topic, DOI or versioned arXiv identifier" }).inputValue(), "2005.11401v4");
+    assert.equal(await page.getByRole("searchbox", { name: "Title, topic, DOI or versioned arXiv identifier" }).inputValue(), "2005.11401v4");
     assert.equal(metadataRequests.length, 0, "Opening a metadata handoff must not search external repositories");
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     assert.equal(researchRequests.length, 0, "Preparing a comparison never runs research");
