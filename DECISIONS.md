@@ -5743,6 +5743,18 @@ checks establish only their specified synthetic import behavior, not application
 independent participant acceptance. The paid citation formatter owned by PR204 is
 unchanged by this browser-local adapter.
 
+An October 7 bounded read of the saved SuRe OpenReview landing URL redirected to
+`openreview.net/challenge` and extracted 146 characters of verification instructions,
+not paper text. The saved PDF also failed transport in that observation. Reject this
+exact publisher route before parsing with a fixed `publisher-verification-required`
+category and deterministic English/Vietnamese recovery. Keep successful originals
+readable even if their prose discusses verification. Do not turn the access page
+into evidence or silently replace a landing identity with an imported PDF link;
+the bibliography does not attest that relationship. Existing public DNS/byte/time
+limits, one-source failure containment and research response structures stay intact.
+This closes the observed false-read path, not every publisher interstitial or the
+remaining full-paper comparison/usefulness gates.
+
 ## 2026-10-07: Observe admission separately from connectivity
 
 MCP discovery and service health can succeed while new research is held by an

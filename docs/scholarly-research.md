@@ -49,6 +49,15 @@ citations or author payees just because metadata matches the question. For selec
 Crossref records, the public reader follows the DOI link to a publisher page. This
 does not establish that full paper text was delivered. Paywalls are not bypassed.
 
+The shared public reader rejects an OpenReview final URL at `/challenge` (including
+its trailing-slash form) as `publisher-verification-required`. A successful HTTP
+response containing browser-verification instructions is not a read of the paper.
+The result identifies the original as unread and asks for an accessible public
+original of the same document/version. Recovery is guidance only; existing bounded
+read/reevaluation limits continue to apply. The guard adds no sign-in, verification
+bypass or automatic bibliography-PDF substitution. This is a guard for the
+observed route, not a general classifier for every publisher access page.
+
 For selected arXiv records, first try the exact versioned official PDF with the
 existing public-only, DNS-pinned reader and contained PDF parser. Its limits remain
 2 MiB, 20 pages and 60,000 extracted characters. A successful PDF read is labelled

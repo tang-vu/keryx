@@ -76,6 +76,9 @@ See [scope, verification and release gates](engineering/research-availability-20
   backups, coordinate concurrent tab writes and keep unsaved drafts through filtering.
 - Download the shown bibliography as RIS for a reference manager. Preserve exact
   versions and observed publication kinds; omit private notes and review focus.
+- Treat the observed OpenReview browser-verification redirect as an unread-source
+  failure, with recovery guidance in English and Vietnamese. Its instructions do
+  not enter synthesis, citations or evidence on any shared research result surface.
 - Browser-only role; no cloud sync, payment/schema change or native client release.
   [Guide and remaining gates](literature-workspace.md). Production delivery and
   independent usefulness/return demand remain separate acceptance work.

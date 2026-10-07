@@ -19,6 +19,15 @@ The candidate is not production delivery or evidence of independent demand.
    Existing research availability, model/search costs, original-reading and payment
    limits apply. Preparing a draft makes no research request.
 
+An exact paper link can still be unreadable. The shared reader rejects OpenReview's
+browser-verification redirect as `publisher-verification-required`, rather than
+using its instructions as paper evidence. Recovery asks for an accessible original
+of the same document/version. Recovery is guidance only; existing bounded run
+reevaluation retains its policy. The guard adds no sign-in, verification bypass or
+saved-PDF substitution; imported links do not prove paper identity.
+This guard covers the observed OpenReview `/challenge` route, not every publisher
+access page. A two-paper draft does not prove that either original can be read.
+
 The list holds up to 50 exact paper records, one review focus and 2,000 characters
 of notes per record. Different arXiv versions remain separate. Re-saving an exact
 landing URL retains its first metadata snapshot and existing notes; mutable work
@@ -75,8 +84,14 @@ This is a browser workflow. Web navigation, Sources cards and ordinary nonautoma
 question prefill change; editable drafts retain the existing 2,000-character form
 limit. Legacy `run=1` links retain their 500-character limit and behavior. Public and
 private research APIs, remote/stdio MCP, CLI, desktop, extensions and bots retain
-their roles, contracts and package bytes. They do not receive or synchronize this
-local list. Existing cited-reference BibTeX/RIS and evidence exports remain separate.
+their roles and response structures. They do not receive or synchronize this local
+list. The shared reader's fixed OpenReview failure and recovery text apply to all
+research callers; answer-bearing adapters and receipts retain the failure. The
+refused original is excluded from citation/evidence exports; successful reads in
+the same run remain exportable. With no usable reads, those exports stay empty.
+Desktop, extension and bot client packages need no reader implementation changes;
+verify their published versions at release.
+Existing cited-reference BibTeX/RIS and evidence exports remain separate.
 No schema, payment authority, custody, budget or scheduler changes.
 
 Release requires focused model/store/UI regressions, both TypeScript projects,
