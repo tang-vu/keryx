@@ -101,6 +101,30 @@ paid request; that onboarding barrier is unmeasured and has no accepted remedy. 
 owner-prepaid trial budget is new mainnet spending requiring explicit authorization
 and must be reported as owner-funded, never as independent paid demand.
 
+**October 6 lead segment:** The owner chose one segment to lead: computer-science and
+blockchain graduate students and PhD candidates who are writing a literature review
+or related-work section now, with a paper or thesis deadline in the next one to two
+months. Web3 research analysts are deferred, not withdrawn. Recruitment starts with
+the owner's former co-authors and labmates through one-to-one asks, then university
+research groups in Vietnam; public graduate-research forums are the wider circle.
+Each session runs the participant's own question live, leaves them the report and
+BibTeX, and asks three things: whether the evidence helped, what was missing, and
+what they still had to check by hand. This remains a hypothesis with no recorded
+independent user. The owner reported that first-time wallet funding is the main
+obstacle and that the [Arc card on-ramp](./arc-card-onramp.md) is hindered by Circle's
+business-verification requirement; neither is resolved.
+
+Event mentor guidance on October 7: use by a real participant on testnet counts as
+traction and mainnet counts more; sponsored credits that keep the wallet out of the
+participant's view are an acceptable first step. Mentor feedback to other teams
+that week asked for an identifiable participant, a real need, a delivered outcome,
+and outside wallet addresses with transaction links. The existing free trial already
+pays from the Keryx treasury within its reviewed caps and is labelled as
+Keryx-paid in the composer, so a first session needs no participant wallet and no
+new spending authority. Report those sessions as sponsored use, never as independent
+paid demand. Whether to pause the on-ramp work, relabel budgets as credits, or prepay
+participant budgets is the owner's open decision.
+
 ## One working system, staged delivery
 
 Long term, Keryx should expose one task and receipt engine across the web, Windows

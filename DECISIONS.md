@@ -5639,6 +5639,20 @@ no recorded participant, so direct asks on a participant's own question are
 preferred. Choosing a single lead segment, and any remedy for first-time USDC
 wallet funding, stay open. See [Tameion direction](docs/tameion-2026.md).
 
+## Lead first outreach with literature-review writers - 2026-10-07
+
+On October 6 the owner chose computer-science and blockchain graduate students and
+PhD candidates with a literature review due in one to two months as the single lead
+segment. Web3 research analysts are deferred, not withdrawn. This changes no price,
+payment authority, package term or release gate, and no independent user is recorded.
+
+Rationale: the owner has done this task for a published paper and can ask former
+co-authors and labmates directly, which the earlier general calls could not reach.
+First sessions use the existing treasury-paid free trial, so they need no participant
+wallet and no new spending authority; they are sponsored use, not paid demand.
+Pausing the card on-ramp, relabelling budgets as credits and prepaying participant
+budgets stay open. See [Tameion direction](docs/tameion-2026.md).
+
 ## Freeze explicit supplier extensions in a distinct authority - 2026-10-07
 
 The same-original recovery lane's historical v1 deadline expired before useful
