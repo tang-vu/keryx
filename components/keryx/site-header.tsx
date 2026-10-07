@@ -21,6 +21,7 @@ const NAV = [
   { href: "/operator", label: "Operator" },
   { href: "/answers", label: "Past answers" },
   { href: "/sources", label: "Sources" },
+  { href: "/literature", label: "Literature workspace" },
   { href: "/market", label: "Market" },
   { href: "/integrations/mcp", label: "MCP" },
   { href: "/wanted", label: "Wanted" },

@@ -88,6 +88,28 @@ describe("scholarly discovery boundaries", () => {
 
 
 describe("explicit versioned arXiv intent", () => {
+  it("looks up a conjoined exact pair once and excludes substituted versions and unrelated records", async () => {
+    const ids = ["2606.02668v1", "2607.13716v1"];
+    const response = '<feed xmlns="http://www.w3.org/2005/Atom">' +
+      [...ids, "2607.13716v2", "2503.18666v3"].map(id => `<entry><id>http://arxiv.org/abs/${id}</id><title>Synthetic metadata ${id}</title></entry>`).join("") + '</feed>';
+    const fetcher = vi.fn(async (_url: string) => response);
+    const result = await discoverScholarly(`Compare arXiv ${ids[0]} and ${ids[1]} on approval binding.`, false, undefined, fetcher);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    const url = new URL(fetcher.mock.calls[0][0]);
+    expect(url.origin + url.pathname).toBe("https://export.arxiv.org/api/query");
+    expect(url.searchParams.get("id_list")).toBe(ids.join(","));
+    expect(url.searchParams.get("max_results")).toBe("2");
+    expect(url.searchParams.has("search_query")).toBe(false);
+    expect([...result.candidates.values()].map(candidate => candidate.item?.scholarly?.arxivId)).toEqual(ids);
+    for (const candidate of result.candidates.values()) {
+      expect(candidate).toMatchObject({ sourceKind: "public-reference", fetchPrice: 0, cached: false, item: { contentVersion: "unread" } });
+      expect(candidate.item?.scholarly).not.toHaveProperty("evidenceScope");
+    }
+    const wrongVersion = response.replace('<entry><id>http://arxiv.org/abs/2607.13716v1</id><title>Synthetic metadata 2607.13716v1</title></entry>', "");
+    const partial = await discoverScholarly(`Compare arXiv ${ids[0]} and ${ids[1]}`, false, undefined, async () => wrongVersion);
+    expect([...partial.candidates.values()].map(candidate => candidate.item?.scholarly?.arxivId)).toEqual([ids[0]]);
+  });
+
   it("accepts punctuation and PDF URLs, deduplicates and bounds two modern versions", () => {
     expect(questionArxivIds("arXiv 2606.02668v1. https://arxiv.org/pdf/2607.13716v1.pdf; arXiv:2606.02668v1 and arXiv 2503.18666v3")).toEqual(["2606.02668v1", "2607.13716v1"]);
     for (const text of ["arXiv 2606.02668", "arXiv 2606.02668v0", "arXiv 2606.02668v1evil", "arXiv 2606.02668v1.other", "arXiv 2606.02668v1.pdfx", "id_list=2606.02668v1"]) expect(questionArxivIds(text)).toEqual([]);

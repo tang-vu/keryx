@@ -2,6 +2,31 @@ import { expect, it, vi } from "vitest";
 const { transport, UnsafeTargetError } = vi.hoisted(() => ({ transport: vi.fn(), UnsafeTargetError: class UnsafeTargetError extends Error {} }));
 vi.mock("../net/public-fetch", () => ({ fetchPublicBytes: transport, UnsafeTargetError }));
 import { readArticle } from "./article-reader";
+it.each([
+  ["https://openreview.net/challenge?redirect=%2Fforum%3Fid%3Dpaper", "text/html"],
+  ["https://openreview.net/challenge/", "application/pdf"],
+])("rejects the OpenReview verification route before parsing %s", async (finalUrl, contentType) => {
+  transport.mockResolvedValueOnce({ contentType, finalUrl,
+    bytes: new TextEncoder().encode("Complete the check below to continue to OpenReview. PRIVATE_RESPONSE [S99]") });
+  await expect(readArticle("https://openreview.net/forum?id=paper")).rejects.toMatchObject({
+    code: "publisher-verification-required", message: "publisher-verification-required",
+  });
+  expect(transport).toHaveBeenLastCalledWith("https://openreview.net/forum?id=paper", expect.objectContaining({ maxHops: 3, httpsOnly: true }));
+});
+
+it.each([
+  "https://openreview.net/forum?id=paper&redirect=%2Fchallenge",
+  "https://other.example/challenge",
+  "https://openreview.net.other.example/challenge",
+])("keeps ordinary originals readable without matching verification prose or lookalike hosts: %s", async finalUrl => {
+  const text = "This original paper studies browser verification and CAPTCHA challenges. ";
+  transport.mockResolvedValueOnce({ contentType: "text/html", finalUrl,
+    bytes: new TextEncoder().encode(`<html><head><title>Verification research</title></head><body><article><p>${text.repeat(20)}</p></article></body></html>`) });
+  const article = await readArticle(finalUrl);
+  expect(article).toMatchObject({ kind: "html", finalUrl });
+  expect(article.text).toContain(text.trim());
+});
+
 it("reports byte-cap refusal as a fixed category and never exposes vendor details", async () => {
   transport.mockRejectedValueOnce(new UnsafeTargetError("that file is too large to read"));
   await expect(readArticle("https://arxiv.org/pdf/1706.03762v7")).rejects.toMatchObject({ code: "article-byte-limit", message: "article-byte-limit" });

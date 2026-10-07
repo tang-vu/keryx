@@ -2,6 +2,8 @@
 import assert from "node:assert/strict";
 import { build } from "esbuild";
 import { chromium } from "playwright";
+import { PAPER_CATALOG } from "../lib/papers/catalog";
+import { emptyLiteratureWorkspace, literatureComparisonDraft, saveLiteraturePaper } from "../lib/papers/literature-workspace";
 
 async function fixtureBundle(network: "arcTestnet" | "arc") { return build({
   stdin: {
@@ -105,6 +107,22 @@ try {
   assert.equal(sharedCall[1], 0.04);
   assert.equal(sharedCall[3], "other");
   assert.equal(sharedCall[4], "deep");
+  const comparison = await context.newPage();
+  const workspace = saveLiteraturePaper(saveLiteraturePaper(emptyLiteratureWorkspace(), PAPER_CATALOG[0], "2026-10-07T00:00:00.000Z"), PAPER_CATALOG[1], "2026-10-07T00:00:00.000Z");
+  workspace.question = "A".repeat(600);
+  const comparisonDraft = literatureComparisonDraft(workspace, workspace.entries.map(entry => entry.paper.url));
+  assert(comparisonDraft.length > 500);
+  await comparison.goto(`https://research-form.test/?q=${encodeURIComponent(comparisonDraft)}&mode=deep`);
+  await comparison.addScriptTag({ content: bundle.outputFiles[0].text });
+  await comparison.waitForFunction(expected => (document.querySelector("textarea") as HTMLTextAreaElement)?.value === expected, comparisonDraft);
+  assert.equal(await comparison.getByLabel("What do you want to know?").inputValue(), comparisonDraft);
+  assert.equal(await comparison.locator('input[name="research-depth"][value="deep"]').isChecked(), true);
+  assert.equal(await comparison.evaluate(() => (window as unknown as { calls: unknown[][] }).calls.length), 0, "Draft handoff never runs research");
+  const boundedAutomatic = await context.newPage();
+  await boundedAutomatic.goto(`https://research-form.test/?q=${encodeURIComponent("B".repeat(700))}&run=1`);
+  await boundedAutomatic.addScriptTag({ content: bundle.outputFiles[0].text });
+  await boundedAutomatic.waitForFunction(() => (window as unknown as { calls: unknown[][] }).calls.length === 1);
+  assert.equal(await boundedAutomatic.evaluate(() => (window as unknown as { calls: unknown[][] }).calls[0][0]), "B".repeat(500));
   // Public mainnet research never admits the experimental testnet rights role.
   const mainnet = await context.newPage();mainnet.on("pageerror", error => errors.push(error.message));
   await mainnet.goto("https://research-form.test/");

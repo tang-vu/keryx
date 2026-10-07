@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PAPER_REPOSITORIES, type PaperGroup, type PaperRecord } from "@/lib/papers/types";
+import { PaperSaveButton } from "./paper-save-button";
 
 function RecordDetails({ record }: { record: PaperRecord }) {
   return <div className="min-w-0 space-y-2 text-sm">
@@ -22,10 +23,11 @@ export function PaperCard({ group }: { group: PaperGroup }) {
       {(record.links ?? []).map(link => <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center font-mono text-[11px] text-seal underline">{link.label} ↗</a>)}
     </div>
     {group.records.length > 1 && <details className="mt-3 border-t border-line pt-2"><summary className="min-h-11 cursor-pointer py-2 font-mono text-[11px] text-seal underline">Inspect all {group.records.length} observed records</summary>
-      <ul className="space-y-4">{group.records.map((alternative, index) => <li key={`${alternative.url}:${index}`} className="border-t border-line pt-3"><a href={alternative.url} target="_blank" rel="noopener noreferrer" className="break-words font-serif text-sm text-seal underline">{alternative.title}</a><RecordDetails record={alternative} /></li>)}</ul>
+      <ul className="space-y-4">{group.records.map((alternative, index) => <li key={`${alternative.url}:${index}`} className="border-t border-line pt-3"><a href={alternative.url} target="_blank" rel="noopener noreferrer" className="break-words font-serif text-sm text-seal underline">{alternative.title}</a><RecordDetails record={alternative} /><PaperSaveButton paper={alternative} /></li>)}</ul>
     </details>}
     <div className="mt-auto pt-4"><Link prefetch={false} href={`/?q=${encodeURIComponent(`Explain the research in ${record.url}, with citations to the original paper and explicit abstract-only or extraction limitations.`)}`} className="inline-block min-h-11 py-2 font-mono text-[11px] text-seal underline">Ask with this paper →</Link>
       <p className="font-serif text-xs leading-relaxed text-ink-3">Opens an editable question draft. Paper text has not been read here; abstract-only and bounded full-text reads are labelled when research runs.</p>
     </div>
+    <PaperSaveButton paper={record} />
   </article>;
 }

@@ -130,6 +130,10 @@ jobs:
           npm run papers -- --q retrieval
           npm run papers:collect -- --help
           npm run test:browser-paper-library
+          npm run test:browser-literature
+
+      - name: Saved paper references through pinned Zotero RIS parser (synthetic metadata)
+        run: node --import tsx scripts/test-paper-ris-import.mts .artifacts/reference-export/zotero-RIS.js
 
       - name: Public source claims (both profiles, mobile/desktop, hermetic wallet and HTTP)
         run: npm run test:browser-public-source-claim
@@ -231,6 +235,19 @@ jobs:
 
       - name: Business Operator production page (offline Chromium, synthetic status)
         run: node --import tsx scripts/test-browser-operator-business.mts
+
+      - name: Literature workspace built navigation and responsive UI (offline, no research)
+        env:
+          KERYX_LITERATURE_SCREENSHOT_DIR: ${{ runner.temp }}/literature-ux-screenshots
+        run: npm run test:browser-literature-built
+
+      - name: Literature workspace screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: literature-ux-screenshots
+          path: ${{ runner.temp }}/literature-ux-screenshots
+          if-no-files-found: ignore
 
       - name: Research reading UX screenshots
         if: always()

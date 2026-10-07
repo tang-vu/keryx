@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.27.18",
+  "version": "0.27.19",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -8,6 +8,8 @@
   },
   "description": "Keryx — a citation-toll reading agent. Pays creators every time their work is cited, in USDC on Arc.",
   "scripts": {
+    "test:browser-literature": "node --import tsx scripts/test-browser-literature-workspace.mts",
+    "test:browser-literature-built": "node --import tsx scripts/test-browser-literature-built.mts",
     "test:browser-paper-library": "node --import tsx scripts/test-browser-paper-library.mts",
     "eval:cloudflare": "node --import tsx --env-file-if-exists=.env.cloudflare.local scripts/eval-cloudflare.mts",
     "test:browser-isolated-session": "node --import tsx scripts/test-browser-isolated-session.mts",

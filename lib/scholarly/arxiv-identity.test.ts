@@ -7,6 +7,22 @@ it("recognizes bounded explicit HTML intent and legacy versioned identity", () =
   expect(questionArxivIds("Read arXiv:hep-th/9901001v2.")).toEqual(["hep-th/9901001v2"]);
 });
 
+it("carries an explicit arXiv prefix through an adjacent comparison list", () => {
+  const first = "2606.02668v1", second = "2607.13716v1", third = "2503.18666v3";
+  expect(questionArxivIds(`Compare arXiv ${first} and ${second} on approval/action binding, runtime-state changes, expiry/replay and audit evidence.`)).toEqual([first, second]);
+  expect(questionArxivIds(`So sánh arXiv ${first} với ${second}.`)).toEqual([first, second]);
+  expect(questionArxivIds(`arXiv:hep-th/9901001v2 vs. math.gt/0307245v1`)).toEqual(["hep-th/9901001v2", "math.GT/0307245v1"]);
+  expect(questionArxivIds(`arXiv ${first}, ${first}, and ${second}, ${third}`)).toEqual([first, second]);
+  expect(questionArxivIds(`arXiv ${first}, ${second}, and ${third}`, 3)).toEqual([first, second, third]);
+});
+
+it("does not extend arXiv intent to unrelated, unversioned or malformed identifiers", () => {
+  const first = "2606.02668v1";
+  for (const tail of [". Read 2607.13716v1", " and release 2607.13716v1", " and 2607.13716", " and 2607.13716v0", " and 2607.13716v1evil", " and 2607.13716v1.other", " and id_list=2607.13716v1"])
+    expect(questionArxivIds(`arXiv ${first}${tail}`)).toEqual([first]);
+  expect(questionArxivIds("Compare 2606.02668v1 and 2607.13716v1")).toEqual([]);
+});
+
 it("parses an observed URL independently of free-text question intent", () => {
   expect(arxivDocumentId("https://ARXIV.ORG:443/html/2606.02668v1?download=true#S1")).toBe("2606.02668v1");
   for (const value of ["see https://arxiv.org/abs/2606.02668v1", " https://arxiv.org/abs/2606.02668v1", "https://arxiv.org\\@evil.example/abs/2606.02668v1", "https://arxiv.org/html/2606.02668v1\n", "https://arxiv.org/search?query=arxiv:2606.02668v1"]) expect(arxivDocumentId(value)).toBeUndefined();

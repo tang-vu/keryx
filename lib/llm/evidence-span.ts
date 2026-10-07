@@ -1,9 +1,9 @@
 import type { GatheredContent } from "./reasoning-engine";
 import { isWellFormedUtf16 } from "./well-formed-utf16";
+import { sourceSentenceSegments } from "./source-sentences";
 
 export interface EvidenceSpan { start: number; end: number }
 const MAX_SOURCE_CHARACTERS = 200_000;
-let segmenter: Intl.Segmenter | undefined;
 
 /** Complete structural sentence spans, not a claim of semantic independence. */
 export function completeEvidenceSpans(source: GatheredContent): EvidenceSpan[] {
@@ -18,8 +18,8 @@ export function completeEvidenceSpans(source: GatheredContent): EvidenceSpan[] {
   if (!isWellFormedUtf16(scanned)) return [];
   const cutEnd = scanned.length < source.text.length || source.webProvenance?.truncated === true;
   const spans: EvidenceSpan[] = [];
-  for (const sentence of (segmenter ??= new Intl.Segmenter("en", { granularity: "sentence" })).segment(scanned)) {
-    const body = sentence.segment;
+  for (const sentence of sourceSentenceSegments(scanned, source.webProvenance?.extraction)) {
+    const body = scanned.slice(sentence.index, sentence.index + sentence.segment.length);
     const start = sentence.index + body.length - body.trimStart().length;
     const end = sentence.index + body.trimEnd().length;
     if (end - start < 8 || end - start > 240) continue;

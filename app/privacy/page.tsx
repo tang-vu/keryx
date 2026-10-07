@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "October 5, 2026";
+const UPDATED = "October 7, 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -75,6 +75,24 @@ export default function PrivacyPage() {
             The free, no-wallet tier is rate-limited by a one-way bucket derived from the IP address.
             The raw IP is not written to the database or joined to your questions; expired limiter
             buckets are deleted automatically.
+          </p>
+        </Section>
+
+        <Section title="Personal literature workspace">
+          <p>
+            The <Link href="/literature" className="text-seal underline">literature workspace</Link> stores
+            saved paper metadata, your review question and screening notes on this browser.
+            It requires no account and has no cloud sync. Keryx does not upload these records
+            when you save, screen, export or restore them. Anyone controlling this browser
+            profile or scripts running on this site can access its local data.
+          </p>
+          <p>
+            Preparing a comparison puts the saved review question and two paper links in an
+            editable question URL; browser history can retain that URL. Notes and screening
+            decisions are omitted. Submitting the question uses the ordinary research policy
+            described above. Downloaded CSV/JSON files contain your personal notes; keep them
+            in appropriate storage. Clearing the workspace removes its browser record but
+            does not delete exports, browser history or disk remnants.
           </p>
         </Section>
 

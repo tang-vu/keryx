@@ -112,6 +112,21 @@ describe("bounded evidence context", () => {
     expect(result.passages.reduce((sum, p) => sum + p.text.length, 0)).toBeLessThanOrEqual(2000);
   });
 
+  it.each([
+    "What approval boundary beacon do arXiv 2606.02668v1, arXiv 2607.13716v1 and arXiv 2503.18666v3 describe?",
+    "What approval boundary beacon do 2606.02668v1, 2607.13716v1 and 2503.18666v3 describe?",
+  ])("ranks every exact paper in a comparison target independently of the discovery cap: %s", target => {
+    const fact = "The approval boundary beacon requires a synthetic local runtime check.";
+    const text = "Introduction. ".repeat(180) + "\n" + "Background. ".repeat(180) + "\n" + fact;
+    const scholarly = { provider: "arxiv" as const, recordUrl: "https://export.arxiv.org/api/query?id_list=2503.18666v3",
+      retrievedAt: "2026-10-07T00:00:00Z", title: "Synthetic context fixture", authors: [], arxivId: "2503.18666v3", workType: "preprint" as const, peerReview: "unknown" as const };
+    const context = evidenceContext("Compare papers", [target], [{ ...gathered[0], text, scholarly }])[0];
+    expect(context.passages.some(passage => passage.text.includes(fact))).toBe(true);
+    expect(context.passages.reduce((total, passage) => total + passage.text.length, 0)).toBeLessThanOrEqual(2000);
+    const differentVersion = evidenceContext("Compare papers", [target], [{ ...gathered[0], text, scholarly: { ...scholarly, arxivId: "2503.18666v2" } }])[0];
+    expect(differentVersion.passages.some(passage => passage.text.includes(fact))).toBe(false);
+  });
+
   it("refuses excess target input instead of dropping late dimensions", () => {
     expect(() => selectEvidencePassages(longText, "Compare", Array.from({ length: MAX_RESEARCH_TARGETS + 1 }, (_, index) => `Target ${index}`)))
       .toThrow(/exceeded 8 research targets/);
