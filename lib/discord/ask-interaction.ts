@@ -9,6 +9,7 @@
  */
 
 import { config } from "../config";
+import { researchAdmissionError } from "../research/availability-contract";
 import type { QueryRun } from "../types";
 
 // Discord wire constants — the two interaction types and three callback types this flow uses.
@@ -140,7 +141,7 @@ export function buildAnswerMessage(run: QueryRun) {
 
 /** Failure text for the deferred placeholder — the run died, say so instead of hanging forever. */
 export function buildErrorMessage(err: unknown) {
-  const detail = err instanceof Error ? err.message : String(err);
+  const detail = researchAdmissionError(err)?.message ?? (err instanceof Error ? err.message : String(err));
   return { content: truncate(`⚠️ Keryx could not finish this dispatch: ${detail}`, 2000) };
 }
 

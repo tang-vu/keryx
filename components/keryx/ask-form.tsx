@@ -9,6 +9,8 @@ import { MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
 import type { ResearchMode } from "@/lib/types";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { useResearchAvailability } from "@/lib/hooks/use-research-availability";
+import { RESEARCH_AVAILABILITY_UNKNOWN, RESEARCH_PAUSED_MESSAGE } from "@/lib/research/availability-contract";
 
 interface AskFormProps {
   disabled?: boolean;
@@ -16,6 +18,7 @@ interface AskFormProps {
   parentId?: string | null;
   conversation?: boolean;
   clearOnSubmit?: boolean;
+  restoreQuestion?: { id: number; question: string };
   payer?: "treasury" | "session" | "expired" | "paused";
   onAsk: (
     question: string,
@@ -79,8 +82,23 @@ const SUGGESTIONS = [
   },
 ];
 
-export function AskForm({ disabled, onAsk, payer = "treasury", parentId, conversation = false, clearOnSubmit = false, questionCapUsdc }: AskFormProps) {
+export function AskForm({ disabled, onAsk, payer = "treasury", parentId, conversation = false, clearOnSubmit = false, questionCapUsdc, restoreQuestion }: AskFormProps) {
   const [question, setQuestion] = useState("");
+  const { availability, checking, refresh } = useResearchAvailability();
+  const [dismissedRejection, setDismissedRejection] = useState<number | null>(null);
+  const researchPaused = availability?.state === "paused" ||
+    (restoreQuestion !== undefined && restoreQuestion.id !== dismissedRejection);
+  const checkAvailability = async () => {
+    const observed = await refresh();
+    if (observed?.state === "not-paused" && restoreQuestion) setDismissedRejection(restoreQuestion.id);
+  };
+  const restored = useRef<number | null>(null);
+  useEffect(() => {
+    if (!restoreQuestion || restored.current === restoreQuestion.id) return;
+    restored.current = restoreQuestion.id;
+    const timer = window.setTimeout(() => setQuestion(current => current.trim() ? current : restoreQuestion.question), 0);
+    return () => window.clearTimeout(timer);
+  }, [restoreQuestion]);
   const [budget, setBudget] = useState(0.05);
   const maximumBudget = payer === "session" && questionCapUsdc !== undefined && Number.isFinite(questionCapUsdc) && questionCapUsdc > 0
     ? Math.min(0.08, questionCapUsdc) : 0.08;
@@ -112,6 +130,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
   // Survives an edit: a reader can land from a follow-up link, reword the question, and the
   // dispatch still threads onto the parent.
   const parentRef = useRef<string | undefined>(undefined);
+  const sharedAutoRef = useRef<ReturnType<typeof readSharedAsk> | null>(null);
   useEffect(() => {
     if (prefilled.current) return;
     prefilled.current = true;
@@ -124,21 +143,41 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
       parentRef.current = parent ?? undefined;
       // Opt-in auto-dispatch: only when the link explicitly asks for it and a question is present.
       // Treasury free-trial rate limits still apply, so this can't be turned into a spend amplifier.
-      if (q && run && !disabled) {
-        onAsk(q, Math.min(b ?? 0.05, maximumBudget), parent ?? undefined, m ?? undefined, mode);
-        if (clearOnSubmit) setQuestion("");
-      }
+      if (q && run) sharedAutoRef.current = { q, budget: b, run, parent, model: m, mode };
     }, 0);
     return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const shared = sharedAutoRef.current;
+    if (!shared || checking) return;
+    sharedAutoRef.current = null;
+    if (availability?.state !== "not-paused" || researchPaused || disabled || payer === "paused") return;
+    const timer = window.setTimeout(() => {
+      onAsk(shared.q!, Math.min(shared.budget ?? 0.05, maximumBudget), shared.parent ?? undefined,
+        shared.model ?? undefined, shared.mode);
+      if (clearOnSubmit) setQuestion("");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [availability, checking, question, researchPaused, disabled, payer, onAsk, maximumBudget, clearOnSubmit]);
 
   const submit = () => {
     const q = question.trim();
-    if (!q || disabled || payer === "paused") return;
+    if (!q || disabled || payer === "paused" || checking || researchPaused) return;
     onAsk(q, effectiveBudget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode, scholarly, paidScholarly && payer === "session");
     if (clearOnSubmit) setQuestion("");
   };
+
+  const availabilityPanel = (
+    <div className="mt-3 border border-line bg-paper p-3 text-sm text-ink-2" role="status">
+      <p>{checking ? "Checking research availability…" : researchPaused ? RESEARCH_PAUSED_MESSAGE :
+        availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}</p>
+      <div className="flex flex-wrap gap-x-3">
+        <a href="/me/asks" className="inline-flex min-h-11 items-center py-3 underline">My saved reports</a>
+        <button type="button" onClick={() => void checkAvailability()} disabled={checking} className="min-h-11 py-3 underline">Check availability</button>
+      </div>
+    </div>
+  );
 
   return (
     <div data-tour="ask-form">
@@ -154,7 +193,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
           <textarea
             id="ask-question"
             value={question}
-            onChange={(e) => setQuestion(e.target.value)}
+            onChange={(e) => { sharedAutoRef.current = null; setQuestion(e.target.value); }}
             onKeyDown={(e) => {
               if (!e.nativeEvent.isComposing && (e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); submit(); }
             }}
@@ -165,6 +204,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
             className="mt-2 min-h-[76px] w-full resize-y border border-ink bg-paper px-3 py-2 font-serif text-[17px] leading-snug text-ink outline-none placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50"
           />
           <p className="mt-1 text-xs text-ink-3">Enter for a new line · Ctrl/⌘ + Enter to ask</p>
+          {researchPaused && availabilityPanel}
           <fieldset className="mt-3">
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">Research depth</legend>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
@@ -186,10 +226,10 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
             <p className="mb-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-source-cap">
               Source cap: {effectiveBudget.toFixed(6)} USDC · {payer === "treasury" ? "Keryx pays" : payer === "session" ? "Your research budget" : payer === "expired" ? "Budget expired" : "Budget paused"}
             </p>
-            <button type="button" onClick={submit} disabled={disabled || payer === "paused" || question.trim().length === 0}
+            <button type="button" onClick={submit} disabled={disabled || payer === "paused" || checking || researchPaused || question.trim().length === 0}
               data-tour="dispatch-btn"
               className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
-              {disabled ? "Researching..." : "Ask Keryx"}
+              {disabled ? "Researching..." : researchPaused ? "Research paused" : "Ask Keryx"}
             </button>
             <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
               {payer === "session"
@@ -201,6 +241,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
                   : `Free trial: Keryx's treasury pays on ${currentArcLabel}. Question budget: up to $${budget.toFixed(3)} USDC.`}
             </p>
           </div>
+          {!researchPaused && availabilityPanel}
           <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-2 font-mono text-xs text-ink">
             <input type="checkbox" checked={scholarly} disabled={disabled} onChange={event => setScholarly(event.target.checked)} />
             Search scholarly papers (Crossref and arXiv)

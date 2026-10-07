@@ -15,6 +15,8 @@ import {
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { cn } from "@/lib/utils";
+import { useResearchAvailability } from "@/lib/hooks/use-research-availability";
+import { RESEARCH_AVAILABILITY_UNKNOWN } from "@/lib/research/availability-contract";
 
 type ClientId = "codex" | "claude" | "cursor";
 type Health = "checking" | "ready" | "unavailable";
@@ -45,7 +47,7 @@ const CLIENTS: ClientSetup[] = [
   {
     id: "codex",
     name: "Codex",
-    detail: "Add once from your terminal. Codex will discover both Keryx tools.",
+    detail: "Add once from your terminal. Codex will discover Keryx's four tools.",
     command: `codex mcp add keryx --url "${ENDPOINT}?client=codex"`,
     keyed:
       `codex mcp add keryx --url "${ENDPOINT}?client=codex" ` +
@@ -90,15 +92,15 @@ async function probeConnection() {
         },
       }),
     }),
-    fetch("/api/metrics", { cache: "no-store" }),
+    fetch("/api/metrics", { cache: "no-store" }).catch(() => null),
   ]);
   if (!mcpResponse.ok) throw new Error("MCP endpoint unavailable");
   const mcp = (await mcpResponse.json()) as {
     result?: { serverInfo?: { name?: string; version?: string } };
   };
   if (mcp.result?.serverInfo?.name !== "keryx") throw new Error("Unexpected MCP response");
-  const metrics = metricsResponse.ok
-    ? ((await metricsResponse.json()) as MetricsResponse).metrics
+  const metrics = metricsResponse?.ok
+    ? ((await metricsResponse.json().catch(() => ({}))) as MetricsResponse).metrics
     : undefined;
   return { version: mcp.result.serverInfo.version, metrics };
 }
@@ -125,6 +127,7 @@ function CopyButton({ value, label = "Copy" }: { value: string; label?: string }
 }
 
 export function McpIntegrationClient() {
+  const { availability, checking, refresh } = useResearchAvailability();
   const [selected, setSelected] = useState<ClientId>("codex");
   const [health, setHealth] = useState<Health>("checking");
   const [serverVersion, setServerVersion] = useState<string>();
@@ -132,6 +135,7 @@ export function McpIntegrationClient() {
   const active = CLIENTS.find((client) => client.id === selected)!;
 
   async function checkConnection() {
+    void refresh();
     setHealth("checking");
     try {
       const result = await probeConnection();
@@ -222,7 +226,7 @@ export function McpIntegrationClient() {
                     {health === "checking"
                       ? "Checking connection..."
                       : health === "ready"
-                        ? "Keryx is ready"
+                        ? "MCP endpoint connected"
                         : "Connection unavailable"}
                   </div>
                   <div className="mt-1 font-mono text-[10px] text-ink-3">
@@ -231,6 +235,10 @@ export function McpIntegrationClient() {
                   </div>
                 </div>
               </div>
+              <p role="status" className="mt-4 text-sm text-ink-2">
+                {checking ? "Checking research availability…" : availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}
+              </p>
+              <Link href="/me/asks" className="mt-2 inline-block min-h-11 py-3 text-sm underline">Saved reports</Link>
               <div className="mt-6 grid grid-cols-2 border-t border-line pt-5">
                 <div>
                   <div className="font-display text-[28px] text-ink">{totalMcpQueries}</div>

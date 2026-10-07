@@ -10,11 +10,91 @@
   A full remote catalog holds without PUT or DELETE; no verified offhost-copy receipt
   or new pruning authority is claimed.
 - App metadata advances to 0.27.17 for a distinct source release after merged
-  v0.27.11. Dependencies and client package versions stay unchanged. This affects
+  v0.27.16. Dependencies and client package versions stay unchanged. This affects
   the administrative backup CLI and existing scheduler; research/payment contracts,
   custody and scheduler cadences remain unchanged.
 - [Backup limits and release gates](encrypted-backups.md). Production capacity,
   deployment and genuine offhost recovery remain separate acceptance gates.
+
+### Guest question activity on the ledger (2026-10-06, v0.27.16 candidate)
+
+- Keep "recorded accounts" and add "guest questions" from completed web questions
+  without a recorded signed-in wallet. Guest questions are included in the total;
+  this is question activity, not a visitor or unique-user estimate.
+- SQLite and Supabase share the additive optional nullable `/api/metrics`
+  `guestQuestions` field. Missing/invalid counts remain explicitly unavailable;
+  confirmed zero and dated prior reads retain their meanings.
+- No tracking, authentication, payment, schema or schedule changes. Hosted links
+  expose the updated ledger; client package/installer contracts retain their roles.
+
+### Preserve preprint identity in reference exports (2026-10-07, v0.27.15 candidate)
+
+- Use the recognized RIS manuscript type for preprints, preserving exact arXiv
+  versions, recorded read scope and unknown peer review. The former unsupported
+  tag silently became a journal article in the pinned Zotero parser.
+- Keep RIS provenance notes literal and leave a missing scholarly journal absent.
+  BibTeX, article identities, stored receipts and payment authority retain their contracts.
+- Share the correction across web, hosted research exports and checked Operator
+  receipt exports. Desktop helper changes require candidate **0.4.8** and its
+  separate installer/package verification; no installed upgrade is claimed.
+- [Guide](researcher-exports.md) and [parser, download, surface and release gates](engineering/reference-export-2026-10-07.md).
+
+### Research availability and retained questions (2026-10-07, v0.27.14 candidate)
+
+Web and widget composers show a known research pause before submission and retain
+the attempted question after a raced rejection. MCP connectivity stays available
+and is labeled separately from research admission. Hosted Remote MCP 0.3.3 adds
+read-only availability and a structured public pause category, shared with web,
+OpenAI and bot errors. Local admission refusals do not retry or rotate providers.
+Existing original-payment obligations and authority checks remain in force.
+The normal mobile composer keeps the question, source cap and action in view;
+known pauses remain prominent above the research controls.
+See [scope, verification and release gates](engineering/research-availability-2026-10-07.md).
+
+### Optional card purchase of USDC on Arc (2026-10-06, v0.27.13 candidate)
+
+- Add an optional mainnet step that lets a signed-in owner buy USDC with a debit
+  card, Apple Pay or Google Pay through Circle's Arc Onramp. The purchase runs in
+  Circle's own window; USDC is delivered to the signed-in wallet on Arc.
+- Keryx mints only a short-lived widget session. The delivery address is the
+  authenticated wallet and the request body is ignored. Keryx never receives the
+  funds, card or identity data, and stores no purchase state. Gateway deposit and
+  research budgets remain separate, unchanged, owner-signed steps.
+- Disabled by default: `KERYX_ARC_CARD_ONRAMP_ENABLED=true`, the mainnet profile
+  and a production Circle key are all required; otherwise the option is hidden and
+  its API refuses. No Content-Security-Policy change is needed.
+- Web only. Desktop, CLI, remote/stdio MCP, API clients, extensions and bots have
+  no card flow and keep their existing contracts and package versions.
+- [Configuration and remaining gates](arc-card-onramp.md). One production session
+  was minted with the owner's key; no purchase, identity check or delivery has
+  been observed. Circle business verification, regional availability and a real
+  owner purchase remain acceptance gates. Credit cards are not supported by Circle.
+
+### Retain the reason when paid research cannot be synthesized (2026-10-07, v0.27.12 candidate)
+
+- Distinguish unavailable bounded input, written synthesis and evidence review
+  after successful source reads. Empty results describe unavailable assessment
+  rather than claiming the documents contain no evidence.
+- Keep the original reads, charges and receipts visible with delivery-review
+  guidance in the trace, saved answer, hosted API/MCP and report exports. No
+  automatic supplier request, purchase or refund is added.
+- [Scope, verification and remaining live gates](engineering/synthesis-failure-2026-10-07.md).
+  This closes a failure-reporting gap; useful completed business delivery remains
+  a separate acceptance requirement.
+
+### Bounded dependency install retry on redeploy (2026-10-07, deployment tooling)
+
+- `npm run redeploy` repeats `npm ci` at most three times, 15 and 30 seconds apart,
+  when npm reports a transient network code (`ECONNRESET`, `ETIMEDOUT`, `EAI_AGAIN`,
+  `ECONNREFUSED`, `ENETUNREACH`, `ERR_SOCKET_TIMEOUT`). `npm ci` removes
+  `node_modules` before fetching, so one dropped registry connection previously
+  ended a deployment with no dependencies installed.
+- Integrity, lockfile and lifecycle failures still stop at the first attempt. The
+  successful-install stamp is written only after an install exits 0; drain order,
+  commit binding, build, role start and health gates are unchanged.
+- Hermetic coverage in `scripts/redeploy-vps.check.sh`. No application version,
+  payment, custody or schedule change; staging a release before draining writers
+  remains open in issue 164.
 
 ### Explicit same-original supplier window (2026-10-07, v0.27.11 candidate)
 

@@ -7,16 +7,60 @@ existing scheduled child. Bounded local snapshot admission and held/staleness
 metadata do not add a public monitoring contract. Web/API research, payment,
 Operator/buyer CLI, hosted and stdio MCP, desktop, extensions and bots retain
 their existing contracts; no backup safeguard module enters their runtime graph.
-Dependencies and separate package versions remain desktop **0.4.7**, caller MCP
-**0.4.6**, remote MCP **0.3.2** and extension **0.1.1**. No npm republish is needed
+Dependencies and separate package versions remain desktop **0.4.8**, caller MCP
+**0.4.6**, remote MCP **0.3.3** and extension **0.1.1**. No npm republish is needed
 for this scope. Existing limits, custody, providers and five scheduler cadences
 are preserved.
 
 The app version gives the backup source a distinct GitHub release identity from
-merged v0.27.11 source 8c6f95d2. Automatic client publishers require the release tag
+the merged v0.27.16 source. Automatic client publishers require the release tag
 to match their source; previous release assets retain their dated source evidence.
 New-source CI, deployment, asset publication and installed-client identity remain
 separate gates. See [backup admission and recovery](encrypted-backups.md).
+
+## Guest question activity, October 6, 2026
+
+Application **0.27.16 candidate** adds a web ledger count and optional nullable
+`/api/metrics` `guestQuestions` aggregate, shared by SQLite and Supabase.
+Only completed web runs without a recorded signed-in wallet count; total recorded
+questions already include them. The existing account label/count is preserved.
+No visitor/person estimate, identity tracking, account rows or schema change.
+API/A2A and remote MCP/OpenAI retain research/payment contracts; buyer/Operator
+CLI, stdio MCP, Windows desktop, extension and Telegram/Discord/Slack retain their
+runtime roles and reach the ledger through existing hosted links. Their package
+bytes/contracts do not change, so no new installer/package version is warranted.
+Hosted deployment and independent distribution identities remain separate gates.
+See [scope and checks](engineering/ledger-guest-questions-2026-10-06.md).
+
+## Reference export compatibility, October 7, 2026
+
+Application **0.27.15 candidate** fixes preprint RIS type mapping, literal N1
+provenance notes and missing journal handling in the shared formatter. Web/chat,
+embed and archived public readings use it locally; hosted API/A2A/OpenAI/remote
+MCP use the shared research projection. Repository Operator CLI and desktop rebuild
+new exports from integrity-checked, task-bound receipts without changing their bytes.
+Existing paid response/export snapshots remain immutable. Caller-funded stdio MCP
+forwards its server result; extension and bots retain their link/answer roles.
+
+Actual four-entry bundle graphs include the formatter only in the desktop helper,
+so desktop advances to **0.4.8 candidate**. Renderer/bridge and stdio do not import
+it. Stdio **0.4.6** and extension **0.1.1** keep their existing protocol identities.
+Remote MCP stays at the **0.3.3** identity already merged with the 0.27.14
+availability release; this format-only change does not advance it. Fresh native/package CI,
+publication readback and installed versions are separate gates. No new research,
+provider/payment request or fulfilled business use is inferred from these exports.
+See [verification and release limits](engineering/reference-export-2026-10-07.md).
+
+## Ordinary admission availability, October 7, 2026
+
+Application **0.27.14 candidate**, hosted Remote MCP **0.3.3 candidate**, distinguishes
+connected read-only surfaces from paused research. Web/widget questions and failed
+turns are retained; HTTP/SSE, OpenAI and hosted bot errors use safe public copy.
+Paid A2A and caller-funded desktop/stdio clients keep their current payment and
+original-recovery contracts. Desktop **0.4.7**, stdio MCP **0.4.6** and extension
+**0.1.1** retain their versions pending actual graph/distribution checks; app
+deployment cannot prove installed client upgrades. See
+[coordinated roles and remaining gates](engineering/research-availability-2026-10-07.md).
 
 ## Explicit supplier window, October 7, 2026
 
