@@ -27,8 +27,10 @@ lifetime cap. Model/search costs are separate. No withheld share is redistribute
 
 The recipient comes from a protected reviewed policy bound to mainnet storage,
 origin and expiry. Request JSON and model output cannot choose it. Exact page
-claims and the retained public feed's claim URL are checked before allocation and
-again inside atomic original admission. A retained claim/history blocks that share;
+claims and known article-to-feed/homepage associations are checked before allocation
+and again inside atomic original admission. Retained public reference items and
+already-loaded registered items carry the same association across catalog and web
+IDs. All exact matches are unioned, including inactive public references. A retained claim/history blocks that share;
 unavailable ownership withholds it. No domain-wide ownership is inferred.
 
 A verified creator claim affects future originals, retaining historical payees.

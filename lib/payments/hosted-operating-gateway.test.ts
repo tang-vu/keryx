@@ -53,3 +53,19 @@ it("refuses changed fee terms before any payment transport", async () => {
   await expect(gateway.payOperatingFee({ queryId: "query", operatingFee: { ...fee, policyDigest: "c".repeat(64) } })).rejects.toThrow("policy changed");
   expect(state.transport).not.toHaveBeenCalled();
 });
+it("retains real receipt evidence and marks durable confirmation recovery after a failed journal write", async () => {
+  const db = { admitHostedTreasuryPolicy: vi.fn(), hostedTreasuryAccounting: vi.fn(async () => ({ retainedMicroUsdc: "0", confirmedMicroUsdc: "0" })),
+    submitHostedAuthorization: vi.fn(), confirmHostedAuthorization: vi.fn().mockRejectedValue(new Error("write unavailable")) };
+  const nonce = `0x${"33".repeat(32)}`;
+  state.transport.mockImplementationOnce(async input => {
+    await input.beforeSignedSubmit({ authorizationId: nonce }, `0x${"44".repeat(32)}`);
+    return { delivered: true, settlementStatus: "settled", transaction: "synthetic-circle-reference",
+      authorizationId: nonce, authorizationExpiresAt: "2030-01-01T00:00:00.000Z", amountUsdc: 0.025 };
+  });
+  const gateway = await createMainnetHostedGateway(db as unknown as KeryxDB);
+  await gateway.ensureFunded(0.05);
+  const payment = await gateway.payOperatingFee({ queryId: "query", operatingFee: fee });
+  expect(payment).toMatchObject({ settled: true, txHash: "synthetic-circle-reference", authorizationId: nonce });
+  expect(payment.rationale).toContain("Durable confirmation requires recovery");
+  expect(state.transport).toHaveBeenCalledOnce();
+});

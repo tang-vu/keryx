@@ -6,7 +6,7 @@ import { applicationSqliteIdentity } from "../db/application-storage";
 import { canonicalJson } from "../canonical-json";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 import { configuredHostedTreasuryPolicy, type HostedTreasuryPolicy } from "./hosted-treasury-policy";
-import { ServerPaymentGateway, paymentFromAttempt, throwIfDeliveryFailed, type PaymentJournalContext } from "./server-payment-gateway";
+import { ServerPaymentGateway, paymentFromAttempt, checkJournalOutcome, throwIfDeliveryFailed, type PaymentJournalContext } from "./server-payment-gateway";
 import { configuredOperatingFeePolicy, operatingFeeContextSchema, operatingFeePolicyDigest, operatingFeeEndpointPath, OPERATING_FEE_SOURCE_ID, type OperatingFeeContext } from "./operating-fee-policy";
 import { payWithServerSigner } from "./server-x402-client";
 import { createPinnedArcBatchSigner } from "./pinned-arc-batch-signer";
@@ -127,6 +127,7 @@ class MainnetHostedGateway extends ServerPaymentGateway {
     const payment = paymentFromAttempt(observed, { kind: "operating-fee", queryId: args.queryId,
       sourceId: OPERATING_FEE_SOURCE_ID, sourceName: "Keryx operating fee", payer: this.policy.signer, payee: policy.beneficiary,
       settledRationale: "Keryx operating fee for evidence-qualified unclaimed public citations." });
+    checkJournalOutcome(outcome.journalStatus, payment, observed);
     throwIfDeliveryFailed(observed, payment, "Keryx operating service");
     return payment;
   }

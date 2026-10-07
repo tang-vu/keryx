@@ -88,7 +88,7 @@ import { sourceFetchTerms } from "../registry/source-fetch-payto";
 import { assertRecipientAllowed, sourceRecipientIsExcluded } from "../payments/recipient-exclusion";
 import { sourceClaimAccess, publicDuplicateOfOwnedItem } from "../sources/source-claim-access";
 import { sourceClaimForUrl } from "../sources/public-source-claim-service";
-import { prepareOperatingFee } from "./operating-fee";
+import { prepareOperatingFee, retainExactItemClaimUrls } from "./operating-fee";
 import { resolveFreeSourceItemContent } from "../sources/resolve-source-item-content";
 import { contentBodyHash } from "../sources/content-receipt";
 import type { SourceClaimReceipt } from "../types";
@@ -310,7 +310,7 @@ async function* runAdmittedAgent(
   // the first purchase of a source would be the last toll it ever earned, and every later answer
   // would be built from text the source has moved on from. See ./cache-freshness.ts.
   const freshCache = new Set<string>();
-  const { publicReads, publicCandidates, publicClaimUrls } = await discoverPublicReferences(db, input.question, subClaims);
+  const { publicReads, publicCandidates, itemClaimUrls } = await discoverPublicReferences(db, input.question, subClaims);
   const webCandidates = new Map<string, SourceCandidate>();
   const gathered: GatheredContent[] = [];
   const requested = requestedSources(input.question);
@@ -492,6 +492,8 @@ async function* runAdmittedAgent(
     }
     const catalogItems = (await db.getItems(s.id)).map(item => hasKnownSeedFingerprint(item.title, item.link, item.bodyHash)
       ? { ...item, evidenceProvenance: "synthetic-demo" as const } : item);
+    for (const knownItem of catalogItems) retainExactItemClaimUrls(itemClaimUrls, knownItem.link,
+      [s.url, ...(s.rssUrl ? [s.rssUrl] : [])]);
     const items = catalogItems.filter(item => gateway.mode === "offline" || item.evidenceProvenance !== "synthetic-demo");
     if (catalogItems.length > 0 && items.length === 0) continue;
     // Honor the creator's preview-depth: the agent scores on exactly what a paying reader would see
@@ -1666,7 +1668,7 @@ async function* runAdmittedAgent(
       && citations.some(citation => citation.sourceKind === "public-reference")) {
     try {
       const plan = await prepareOperatingFee({ queryId, poolUsdc: Math.min(round(citationPool), Math.floor(budget * 1e6 / 2) / 1e6),
-        citations, policy: gateway.operatingFeePolicy(), readClaim: url => sourceClaimForUrl(db, url), sourceClaimUrls: publicClaimUrls });
+        citations, policy: gateway.operatingFeePolicy(), readClaim: url => sourceClaimForUrl(db, url), itemClaimUrls });
       if (plan) {
         operatingFee = plan.snapshot;
         yield emit("attribute", `Keryx operating allocation $${plan.snapshot.amountUsdc.toFixed(6)} for unclaimed public citations; sponsored by Keryx, separate from creator rewards.`, plan.snapshot);

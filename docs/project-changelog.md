@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### Sponsored research and distinct operating settlements (2026-10-08, v0.27.25 candidate)
+
+- Explain the bounded no-wallet trial in research and literature workflows, with
+  public-report visibility, manual preparation and wait guidance after throttling.
+- Add reviewed public-hosted x402 operating fees for the original contribution
+  shares of unclaimed public citations. Keep source ownership, creator rewards,
+  query/lifetime caps and all historical payees intact. One retained original per
+  query prevents another fee after a lost response or terminal failure.
+- Separate operating fees from creator rewards in payment proof, receipt integrity,
+  metrics, creator exports and shared API/MCP/CLI/answer renderers. Existing browser
+  grants and fixed-price A2A/private jobs receive no additional service charge.
+- [Policy, supported surfaces and remaining release gates](sponsored-research-trial.md).
+
 ### Full-source checks for retained Operator completion (2026-10-08, v0.27.23 candidate)
 
 The private same-original continuation now reads both complete selected documents
@@ -25,19 +38,6 @@ review. Phase diagnostics remain useful without publishing private provider data
 
 The Windows redeploy launcher now verifies reviewed controls reach WSL unchanged
 before source sync/build. See [continuation authority and delivery gates](engineering/operator-original-continuation.md).
-
-### Sponsored research and distinct operating settlements (2026-10-07, v0.27.21 candidate)
-
-- Explain the bounded no-wallet trial in research and literature workflows, with
-  public-report visibility, manual preparation and wait guidance after throttling.
-- Add reviewed public-hosted x402 operating fees for the original contribution
-  shares of unclaimed public citations. Keep source ownership, creator rewards,
-  query/lifetime caps and all historical payees intact. One retained original per
-  query prevents another fee after a lost response or terminal failure.
-- Separate operating fees from creator rewards in payment proof, receipt integrity,
-  metrics, creator exports and shared API/MCP/CLI/answer renderers. Existing browser
-  grants and fixed-price A2A/private jobs receive no additional service charge.
-- [Policy, supported surfaces and remaining release gates](sponsored-research-trial.md).
 
 ### Isolate an expired failed Operator trial (2026-10-07, v0.27.18)
 

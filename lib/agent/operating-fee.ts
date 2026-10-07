@@ -5,11 +5,19 @@ import { operatingFeeContextSchema, operatingFeePolicyDigest, type OperatingFeeC
 import { canonicalSourceUrl } from "../sources/public-source-claim";
 import type { Citation, OperatingFeeSnapshot } from "../types";
 
+/** Preserve exact retained article associations across catalog/web IDs, without host inference. */
+export function retainExactItemClaimUrls(map: Map<string, string[]>, itemUrl: string, claimUrls: readonly string[]) {
+  try {
+    const exactUrl = canonicalSourceUrl(itemUrl);
+    map.set(exactUrl, [...new Set([...(map.get(exactUrl) ?? []), ...claimUrls])]);
+  } catch { /* An invalid article URL cannot authorize an operating fee. */ }
+}
+
 /** Allocate only an unclaimed public citation's original share. Claimed/unknown shares stay unspent. */
 export async function prepareOperatingFee(input: {
   queryId: string; poolUsdc: number; citations: Citation[]; policy: OperatingFeePolicy;
   readClaim: (url: string) => Promise<unknown>;
-  sourceClaimUrls?: ReadonlyMap<string, readonly string[]>;
+  itemClaimUrls?: ReadonlyMap<string, readonly string[]>;
 }): Promise<{ snapshot: OperatingFeeSnapshot; context: OperatingFeeContext } | null> {
   const amounts = allocateSplit(input.poolUsdc, input.citations.map(citation => citation.weight));
   const allocations: OperatingFeeSnapshot["allocations"] = [];
@@ -19,7 +27,7 @@ export async function prepareOperatingFee(input: {
     try {
       const itemUrl = canonicalSourceUrl(citation.itemUrl);
       if (await input.readClaim(itemUrl)) continue;
-      const claimUrls = (input.sourceClaimUrls?.get(citation.sourceId) ?? []).map(canonicalSourceUrl);
+      const claimUrls = (input.itemClaimUrls?.get(itemUrl) ?? []).map(canonicalSourceUrl);
       let claimed = false;
       for (const claimUrl of claimUrls) if (await input.readClaim(claimUrl)) { claimed = true; break; }
       if (claimed) continue;

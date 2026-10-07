@@ -162,7 +162,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
   }
 }
 
-function checkJournalOutcome(status: string | undefined, payment: PaymentRecord, attempt: ServerX402Attempt<unknown>) {
+export function checkJournalOutcome(status: string | undefined, payment: PaymentRecord, attempt: ServerX402Attempt<unknown>) {
   if (status === "receipt-mismatch") {
     if (payment.settled) throw new PaymentSettledError("Private receipt requires reconciliation", payment);
     throw new PaymentPendingError("Private receipt requires reconciliation", payment);
