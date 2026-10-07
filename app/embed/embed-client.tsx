@@ -20,6 +20,8 @@ import { TraceRow } from "@/components/keryx/trace-row";
 import { AnswerMarkdown } from "@/components/keryx/answer-markdown";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
+import { useResearchAvailability } from "@/lib/hooks/use-research-availability";
+import { RESEARCH_AVAILABILITY_UNKNOWN, RESEARCH_PAUSED_MESSAGE } from "@/lib/research/availability-contract";
 import { SelectionFailureDownload } from "@/components/keryx/selection-failure-download";
 import { useBrowserOrigin } from "@/lib/hooks/use-browser-origin";
 
@@ -46,7 +48,15 @@ export function EmbedClient() {
   }, [sourceId]);
 
   const { state, ask } = useAskStream();
+  const { availability, checking, refresh } = useResearchAvailability();
   const [question, setQuestion] = useState("");
+  const [dismissedPause, setDismissedPause] = useState(false);
+  const researchPaused = availability?.state === "paused" || (state.errorKind === "research-paused" && !dismissedPause);
+  const checkAvailability = async () => {
+    const reviewingRejection = state.errorKind === "research-paused" && state.status !== "streaming";
+    const observed = await refresh();
+    if (reviewingRejection && observed?.state === "not-paused") setDismissedPause(true);
+  };
   const streaming = state.status === "streaming";
   const started = state.status !== "idle";
 
@@ -60,7 +70,7 @@ export function EmbedClient() {
     e.preventDefault();
     const q = question.trim();
     // budget 0 → the server applies its default, clamped to the anonymous cap
-    if (q && !streaming) void ask(q, 0);
+    if (q && !streaming && !checking && !researchPaused) { setDismissedPause(false); void ask(q, 0); }
   };
 
   return (
@@ -96,6 +106,11 @@ export function EmbedClient() {
           </p>
         )}
 
+        <div role="status" className="text-sm text-ink-2">
+          <p>{checking ? "Checking research availability…" : researchPaused ? RESEARCH_PAUSED_MESSAGE : availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}</p>
+          <a href={`${origin}/me/asks`} target="_blank" rel="noopener noreferrer" className="mr-3 underline">Saved reports</a>
+          <button type="button" onClick={() => void checkAvailability()} disabled={checking} className="min-h-11 underline">Check availability</button>
+        </div>
         <form onSubmit={submit} className="flex gap-2">
           <input
             value={question}
@@ -106,7 +121,7 @@ export function EmbedClient() {
           />
           <button
             type="submit"
-            disabled={streaming || !question.trim()}
+            disabled={streaming || checking || researchPaused || !question.trim()}
             className="shrink-0 border border-ink bg-ink px-3.5 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-paper transition-opacity disabled:opacity-50"
           >
             {streaming ? "…" : "Ask ▸"}

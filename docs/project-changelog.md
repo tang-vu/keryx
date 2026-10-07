@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Research availability and retained questions (2026-10-07, v0.27.14 candidate)
+
+Web and widget composers show a known research pause before submission and retain
+the attempted question after a raced rejection. MCP connectivity stays available
+and is labeled separately from research admission. Hosted Remote MCP 0.3.3 adds
+read-only availability and a structured public pause category, shared with web,
+OpenAI and bot errors. Local admission refusals do not retry or rotate providers.
+Existing original-payment obligations and authority checks remain in force.
+The normal mobile composer keeps the question, source cap and action in view;
+known pauses remain prominent above the research controls.
+See [scope, verification and release gates](engineering/research-availability-2026-10-07.md).
+
 ### Optional card purchase of USDC on Arc (2026-10-06, v0.27.13 candidate)
 
 - Add an optional mainnet step that lets a signed-in owner buy USDC with a debit

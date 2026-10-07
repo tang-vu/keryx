@@ -41,6 +41,8 @@ import { parseAskQuestion } from "@/lib/ask-input";
 import { ResearchPlanningError, researchFailureMessage } from "@/lib/llm/research-plan";
 import { ResearchSelectionError } from "@/lib/llm/research-selection";
 import type { SelectionDiagnostic } from "@/lib/research/selection-diagnostic";
+import { readResearchAvailability } from "@/lib/research/availability";
+import { researchAdmissionError } from "@/lib/research/availability-contract";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,6 +101,8 @@ export async function POST(req: NextRequest) {
     return openaiError(parsedQuestion.error, 400, "invalid_request");
   }
   const question = parsedQuestion.question;
+  const availability = readResearchAvailability();
+  if (availability.state === "paused") return openaiError(availability.message, 503, "research_paused");
 
   // Model routing: "keryx" (default) or "keryx:<catalog-id>" (see GET /v1/models) runs the agent
   // with that reasoning model. Unknown/unconfigured ids run the default — never a client error —
@@ -144,6 +148,8 @@ export async function POST(req: NextRequest) {
       const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep", ...(keyIdentity ? { asker: keyIdentity.walletAddress } : {}) });
       return Response.json(buildCompletion(run, modelName), { headers: CORS });
     } catch (error) {
+      const held = researchAdmissionError(error);
+      if (held) return openaiError(held.message, 503, held.code);
       if (!(error instanceof ResearchPlanningError) && !(error instanceof ResearchSelectionError)) throw error;
       return openaiError(researchFailureMessage(error), error.status, error.code,
         error instanceof ResearchSelectionError ? error.diagnostic : undefined);
@@ -181,8 +187,9 @@ export async function POST(req: NextRequest) {
         send(
           buildChunk(id, modelName, {
             content: `\n\n[keryx error] ${researchFailureMessage(err)}`,
-          }, null, err instanceof ResearchSelectionError
-            ? { keryx_error: { code: err.code, selectionDiagnostic: err.diagnostic } } : undefined),
+          }, null, researchAdmissionError(err)
+            ? { keryx_error: { code: "research_paused" } }
+            : err instanceof ResearchSelectionError ? { keryx_error: { code: err.code, selectionDiagnostic: err.diagnostic } } : undefined),
         );
       } finally {
         controller.close();

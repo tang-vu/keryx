@@ -11,6 +11,7 @@
 import { config } from "../config";
 import { HeuristicEngine } from "./heuristic-engine";
 import { ResearchPlanningError } from "./research-plan";
+import { ResearchAdmissionHeldError } from "../research/availability-contract";
 import { MAX_SELECTION_DIAGNOSTIC_HISTORY, ResearchSelectionError, readSelectionDiagnostics } from "./research-selection";
 import { ResearchSelectionInputLimitError, ResearchSelectionPartialBatchError } from "./selection-input";
 import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
@@ -253,9 +254,9 @@ export class ResilientEngine implements ReasoningEngine {
           outcome: err instanceof ReasoningInputLimitError ? "input-limited" : "failed",
           ...errorTelemetry(err),
         });
-        // A request-local planning/selection refusal cannot authorize another billable tier.
+        // An admission hold or local planning/selection refusal cannot authorize another tier.
         // It supplies neither a provider failure nor proof to clear an existing half-open lease.
-        if (err instanceof ResearchPlanningError || err instanceof ResearchSelectionError ||
+        if (err instanceof ResearchAdmissionHeldError || err instanceof ResearchPlanningError || err instanceof ResearchSelectionError ||
           err instanceof ResearchSelectionInputLimitError || err instanceof ResearchSelectionPartialBatchError) throw err;
         if (isTimeout(err) || !isTransient(err) || attempt === maxAttempts) break;
         await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** (attempt - 1)));

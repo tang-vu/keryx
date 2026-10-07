@@ -9,6 +9,7 @@
  */
 
 import { config } from "../config";
+import { researchAdmissionError } from "../research/availability-contract";
 import type { QueryRun } from "../types";
 
 /** Telegram caps any message text at 4096 chars; leave room for the citations block + link. */
@@ -112,7 +113,7 @@ export function buildAnswerText(run: QueryRun): string {
 
 /** Failure text for the placeholder — the run died, say so instead of hanging forever. */
 export function buildErrorText(err: unknown): string {
-  const detail = err instanceof Error ? err.message : String(err);
+  const detail = researchAdmissionError(err)?.message ?? (err instanceof Error ? err.message : String(err));
   return truncate(`⚠️ Keryx could not finish this dispatch: ${escapeHtml(detail)}`, MESSAGE_MAX);
 }
 

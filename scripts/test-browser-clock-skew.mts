@@ -50,6 +50,10 @@ try {
       if (request.url() === "https://clock.test/") return route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' });
       if (path === "/api/auth/session") return route.fulfill({ json: { session: { address: owner, role: "asker" } } });
       if (path === "/api/models") return route.fulfill({ json: { models: [] } });
+      if (path === "/api/research/availability") {
+        assert.equal(request.method(), "GET", "Availability is read-only");
+        return route.fulfill({ json: { state: "not-paused" } });
+      }
       if (path === "/api/auth/nonce") return route.fulfill({ json: authDates });
       if (path === "/api/auth/verify") { verifyCount++; return route.fulfill({ json: { ok: true, address: owner, role: "asker" } }); }
       if (path === "/api/session/grant" && request.method() === "POST") {
