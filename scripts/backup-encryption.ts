@@ -54,27 +54,28 @@ export async function fileDigest(source: string): Promise<string> {
   return hash.digest("hex");
 }
 
-function boundedStream(limit: number) {
+function boundedStream(limit: number, guard?: () => void) {
   let size = 0;
   return new Transform({ transform(chunk: Buffer, _encoding, callback) {
+    try { guard?.(); } catch (error) { callback(error as Error); return; }
     size += chunk.length;
     callback(size > limit ? new Error("Backup size limit exceeded.") : null, chunk);
   } });
 }
 
-export async function compressSnapshot(source: string, destination: string): Promise<void> {
-  await pipeline(fs.createReadStream(source), boundedStream(maxDatabaseBytes), createGzip(),
+export async function compressSnapshot(source: string, destination: string, guard?: () => void): Promise<void> {
+  await pipeline(fs.createReadStream(source), boundedStream(maxDatabaseBytes, guard), createGzip(),
     fs.createWriteStream(destination, { flags: "wx", mode: 0o600 }));
 }
 
-export async function encryptSnapshot(source: string, destination: string, key: Buffer): Promise<void> {
+export async function encryptSnapshot(source: string, destination: string, key: Buffer, guard?: () => void): Promise<void> {
   const nonce = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, nonce);
   cipher.setAAD(magic);
   const fd = fs.openSync(destination, "wx", 0o600);
   try {
     fs.writeSync(fd, Buffer.concat([magic, nonce, Buffer.alloc(16)]));
-    await pipeline(fs.createReadStream(source), boundedStream(maxDatabaseBytes), createGzip(), cipher,
+    await pipeline(fs.createReadStream(source), boundedStream(maxDatabaseBytes, guard), createGzip(), cipher,
       boundedStream(maxEnvelopeBytes - headerBytes), fs.createWriteStream(destination, { fd, start: headerBytes, autoClose: false }));
     fs.writeSync(fd, cipher.getAuthTag(), 0, 16, 20);
     fs.fsyncSync(fd);

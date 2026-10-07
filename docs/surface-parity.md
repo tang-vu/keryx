@@ -1,5 +1,23 @@
 # Supported-surface release parity
 
+## Administrative backup safeguards, October 7, 2026
+
+Application **0.27.17 candidate** changes the administrative backup CLI and its
+existing scheduled child. Bounded local snapshot admission and held/staleness
+metadata do not add a public monitoring contract. Web/API research, payment,
+Operator/buyer CLI, hosted and stdio MCP, desktop, extensions and bots retain
+their existing contracts; no backup safeguard module enters their runtime graph.
+Dependencies and separate package versions remain desktop **0.4.8**, caller MCP
+**0.4.6**, remote MCP **0.3.3** and extension **0.1.1**. No npm republish is needed
+for this scope. Existing limits, custody, providers and five scheduler cadences
+are preserved.
+
+The app version gives the backup source a distinct GitHub release identity from
+the merged v0.27.16 source. Automatic client publishers require the release tag
+to match their source; previous release assets retain their dated source evidence.
+New-source CI, deployment, asset publication and installed-client identity remain
+separate gates. See [backup admission and recovery](encrypted-backups.md).
+
 ## Guest question activity, October 6, 2026
 
 Application **0.27.16 candidate** adds a web ledger count and optional nullable

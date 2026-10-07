@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Isolate an expired failed Operator trial (2026-10-07, v0.27.17)
+### Isolate an expired failed Operator trial (2026-10-07, v0.27.18)
 
 A verified expired, unprepared Operator claim can be isolated through a private
 metadata command so unrelated interactive research resumes under its existing
@@ -8,6 +8,22 @@ limits. The original remains unresolved, its settlement and model reservations
 remain intact, and new Operator/private paid admission stays held. Failed or
 changed isolation evidence keeps research paused. See the [authority and native
 restoration gates](engineering/failed-canary-research-isolation.md).
+
+### Bounded backup capacity and retained recovery history (2026-10-07, v0.27.17 candidate)
+
+- Admit identity-bound readonly snapshots before output against a 512 MiB aggregate
+  retained/staging budget and a 2 GiB usable disk reserve. Preserve plaintext,
+  encrypted, partial and unknown recovery artifacts; capacity or retention limits
+  produce truthful local held/staleness metadata rather than unverified deletion.
+- Preserve the existing encryption, daily R2 attempt and request-accounting limits.
+  A full remote catalog holds without PUT or DELETE; no verified offhost-copy receipt
+  or new pruning authority is claimed.
+- App metadata advances to 0.27.17 for a distinct source release after merged
+  v0.27.16. Dependencies and client package versions stay unchanged. This affects
+  the administrative backup CLI and existing scheduler; research/payment contracts,
+  custody and scheduler cadences remain unchanged.
+- [Backup limits and release gates](encrypted-backups.md). Production capacity,
+  deployment and genuine offhost recovery remain separate acceptance gates.
 
 ### Guest question activity on the ledger (2026-10-06, v0.27.16 candidate)
 
