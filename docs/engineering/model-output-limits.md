@@ -1,6 +1,6 @@
 # Model output-limit diagnostics
 
-Candidate app 0.27.24, hosted MCP 0.3.4, stdio MCP 0.4.7 and desktop 0.4.9.
+Candidate app 0.27.28, hosted MCP 0.3.4, stdio MCP 0.4.7 and desktop 0.4.9.
 Publication, installation and hosted deployment are separate acceptance gates.
 
 The owner-operated SQLite observation in [issue #212](https://github.com/tang-vu/keryx/issues/212)
@@ -46,7 +46,8 @@ prompt, draft, private result or supplier reservation is added to public metadat
 | Hosted and stdio MCP | Shared structured diagnostics and bounded text, including when serving telemetry is unavailable; hosted JSON is validated again before formatting. |
 | Desktop | Hosted research handoff and updated embedded shared helper; private/native Operator projections retain their existing narrow roles. |
 | Extension and bots | Hosted research/report links expose the notice. Unchanged thin-client bundles and bot summaries do not synthesize another answer or parse supplier failures. |
-| Finite canary and retained-original engines | Redactors preserve the numeric ceiling without private response text. Their current capabilities, journals, source bindings and completion/replay gates remain authoritative; no live original is retried by this update. |
+| Finite canary and one-shot `OriginalFulfillmentEngine` | Redactors preserve the numeric ceiling without private response text. Their current capabilities, journals, source bindings and completion/replay gates remain authoritative; no live original is retried by this update. |
+| Private `OriginalContinuationEngine` | Supplier failures intentionally retain only phase/category through `ContinuationFailure`; this continuation diagnostic does not expose the numeric output ceiling. Billing ledgers, supplement capability and exact original completion/replay gates retain their existing roles. |
 | Private research/result views and Rust read-only Operator domains | Existing reduced projections intentionally omit trace/attempt diagnostics. This update does not widen private/native contracts. |
 | Canonical portable research receipt | Its existing evidence/payment payload omits reasoning attempts/trace. Keep that v1 boundary and retained original digests; the report and public metadata carry the diagnostic. |
 
@@ -57,3 +58,5 @@ two-read ceiling; swallowed review/direct-engine paths; terminal caller errors;
 malformed/historical metadata; retained receipts; packed MCP and responsive actual
 components. A separately authorized live task and independent useful deliverable
 remain open, along with the original deployment/maintenance gates.
+
+Release ordering: this combined-source candidate includes PR226's app0.27.27 recency guard and current main7b45190c/PR224–225. Merge PR226 first, then reconcile this source against the resulting main before publishing app0.27.28. Client package versions remain the output-limit candidate values above. No active original executor/grant is rebound by this branch integration.

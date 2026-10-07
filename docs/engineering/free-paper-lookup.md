@@ -1,6 +1,6 @@
 # Free paper metadata lookup
 
-October 8, 2026. Candidate app0.27.25, hosted MCP0.3.5, stdio MCP0.4.8,
+October 8, 2026. Candidate app0.27.29, hosted MCP0.3.5, stdio MCP0.4.8,
 desktop0.4.10. These identify source candidates; deployment, publication and
 installed-client readback remain separate gates. This branch is stacked above
 the unmerged output-limit PR220; neither candidate is deployed by this change.
@@ -86,3 +86,5 @@ publication must pass before release claims. This is a focused response to
 [issue218](https://github.com/tang-vu/keryx/issues/218); French narrative and
 page-specific status extraction, complete synthesis, independent usefulness and
 participant/return/demand evidence remain open.
+
+Release ordering: this candidate integrates PR220's app0.27.28 source, including PR226's app0.27.27 guard and main7b45190c/PR224–225. Merge PR226 then PR220, and reconcile this branch against the resulting main before publishing app0.27.29. Hosted/stdio/desktop candidate versions above are unchanged; source integration does not establish publication or installed/deployed synchronization.

@@ -43,7 +43,7 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
       return (
         <code
           key={key}
-          className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[0.82em] text-ink"
+          className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[0.82em] text-ink [overflow-wrap:anywhere]"
         >
           {part.slice(1, -1)}
         </code>

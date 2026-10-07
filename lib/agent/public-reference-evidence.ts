@@ -2,14 +2,19 @@ import type { PublicReferenceDb } from "../public-references/catalog";
 import { referenceItems, publicReferenceSchema } from "../public-references/catalog";
 import type { GatheredContent, SourceCandidate } from "../llm";
 import { selectRelevantSourceItem, sourceItemIdentity } from "../sources/source-item-asset";
+import { recognizeSourceRecency, sourceRecencyGap, type SourceRecencyRequirement, type SourceRecencyGap } from "../sources/source-recency";
 
 /** Snapshot public evidence once before reasoning. Refreshes cannot substitute content mid-run. */
-export async function discoverPublicReferences(db: PublicReferenceDb, question: string, subClaims: string[]) {
+export async function discoverPublicReferences(db: PublicReferenceDb, question: string, subClaims: string[],
+  recency: SourceRecencyRequirement | null = recognizeSourceRecency(question)) {
   const publicReads = new Map<string, GatheredContent>();
   const publicCandidates = new Map<string, SourceCandidate>();
+  const recencyGaps: SourceRecencyGap[] = [];
   for (const stored of await db.listPublicReferences?.() ?? []) {
     const reference = publicReferenceSchema.parse(stored);
     if (!reference.active) continue;
+    const gap = sourceRecencyGap(recency, reference);
+    if (gap) { recencyGaps.push(gap); continue; }
     const item = selectRelevantSourceItem(question, subClaims, reference.tags, referenceItems(reference));
     if (!item || !item.content.trim()) continue;
     const identity = { ...sourceItemIdentity(item), contentReceipt: undefined, sourceKind: "public-reference" as const,
@@ -26,5 +31,5 @@ export async function discoverPublicReferences(db: PublicReferenceDb, question: 
       sourceName: reference.name, ...identity, marker: "", text: item.content });
 
   }
-  return { publicReads, publicCandidates };
+  return { publicReads, publicCandidates, recencyGaps };
 }
