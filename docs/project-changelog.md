@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Isolate an expired failed Operator trial (2026-10-07, v0.27.15)
+
+A verified expired, unprepared Operator claim can be isolated through a private
+metadata command so unrelated interactive research resumes under its existing
+limits. The original remains unresolved, its settlement and model reservations
+remain intact, and new Operator/private paid admission stays held. Failed or
+changed isolation evidence keeps research paused. See the [authority and native
+restoration gates](engineering/failed-canary-research-isolation.md).
+
 ### Research availability and retained questions (2026-10-07, v0.27.14 candidate)
 
 Web and widget composers show a known research pause before submission and retain

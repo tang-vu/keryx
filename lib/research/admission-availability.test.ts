@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ paused: vi.fn(() => true), deps: vi.fn(), run: vi.fn(), quota: vi.fn(), db: vi.fn() }));
-vi.mock("../business-operator/canary-policy", () => ({ canaryExecutionPaused: mocks.paused }));
+vi.mock("../business-operator/canary-policy", () => ({ canaryExecutionPaused: mocks.paused, canaryResearchPaused: mocks.paused }));
 vi.mock("../agent", () => ({ getAgentDeps: mocks.deps, collectRun: mocks.run }));
 vi.mock("../agent/run-agent", () => ({ runAgent: mocks.run }));
 vi.mock("../db", () => ({ getDb: mocks.db }));

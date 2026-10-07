@@ -5690,3 +5690,7 @@ private diagnostic for operations. A manual availability refresh never retries a
 question; the composer keeps the original draft and failure context. Hosted MCP
 advances its own version for this additive status/error contract. See
 [scope and release gates](docs/engineering/research-availability-2026-10-07.md).
+
+
+**Isolate an expired failed Operator claim from interactive research ? 2026-10-07.**
+A permanent unprepared same-original claim with fewer than three additive model holds and expired supplier authority cannot recover through a generative retry. Keep its paid obligation unresolved, original settlement and both provider ledgers immutable, and Operator/new paid/private admission held. After fresh native verification and explicit private metadata acceptance, allow unrelated public interactive runs/search/model transports under their existing compute, quota, session and payment authority. This reduces the failed trial?s impact without claiming delivery, refund, new funding or supplier permission. Pending/changed evidence fails closed; positive writer drain and actual accepted metadata/role restoration receipts are required. See docs/engineering/failed-canary-research-isolation.md for surfaces and gates.

@@ -12,6 +12,7 @@ import { a2aResearchPackageForVersion, a2aResearchPackageFingerprint } from "../
 import { matchesA2aOriginalBinding, type A2aOriginalClaim } from "../a2a/original-claim";
 import type { KeryxDB } from "../db/keryx-db";
 import { retainedFulfillmentDeliveryResolution } from "./fulfillment-policy";
+import { retainedCanaryResearchIsolation } from "./canary-research-isolation";
 import { ResearchAdmissionHeldError } from "../research/availability-contract";
 
 /** One reviewed owner canary, not permission to renew historical allowances or fund wallets. */
@@ -209,7 +210,13 @@ interface AdmissionState { current: ConfiguredCanary; open: boolean; signal?: Ab
 const admitted = new WeakMap<BusinessCanaryAdmission, AdmissionState>();
 const context = new AsyncLocalStorage<BusinessCanaryAdmission>();
 export function admitBusinessCanaryRun(input: CanaryRunInput, flush = syncDirectory): BusinessCanaryAdmission | null {
-  const current = configured(); if (!current) { assertNoFailedCanaryAdmission(); return null; }
+  const current = configured();
+  if (!current) {
+    if (canaryExecutionPaused() && (input.privateScope || input.paidScholarly ||
+      !["engine", "web", "mcp"].includes(input.origin ?? "engine") ||
+      input.queryId === retainedFailedBusinessCanaryAuthority().original.queryId)) assertNoFailedCanaryAdmission();
+    assertOrdinaryCanarySupplierAdmission(); return null;
+  }
   const expected = current.policy.original;
   if (input.queryId !== expected.queryId || input.question !== expected.request.question || input.budget !== 0.01 ||
       input.origin !== "a2a" || input.researchMode !== "quick" || input.fundingOwner !== "treasury" ||
@@ -272,7 +279,7 @@ export function reserveCanaryModel(system: string, user: string, maxTokens: numb
   reserve("model", { inputBytes, maximumOutputTokens: maxTokens });
 }
 export function reserveCanarySearch(query: string): void {
-  if (!configuredBusinessCanary()) { assertNoFailedCanaryAdmission(); if (context.getStore()) return refuse("retained execution admission revoked"); return; }
+  if (!configuredBusinessCanary()) { assertOrdinaryCanarySupplierAdmission(); return; }
   if (query.length > 500) refuse("search query ceiling exceeded");
   reserve("search", { querySha256: sha(query), searchDepth: "basic" });
 }
@@ -297,9 +304,18 @@ export function canaryExecutionPaused(): boolean {
   try { return configuredBusinessCanary() !== null || retainedBusinessCanaryClosure()?.admissionPaused === true; }
   catch { return true; }
 }
+/** The Operator's unresolved paid obligation remains held. Unrelated research
+ * can resume only after explicit native verification of an expired failed claim. */
+export function canaryResearchPaused(): boolean {
+  try {
+    if (configuredBusinessCanary() !== null) return true;
+    const closed = retainedBusinessCanaryClosure();
+    return closed?.admissionPaused === true && !retainedCanaryResearchIsolation(retainedFailedBusinessCanaryAuthority());
+  } catch { return true; }
+}
 /** Ordinary transports/probes cannot spend outside the fixed admitted canary engine. */
 export function assertOrdinaryCanarySupplierAdmission(): void {
-  if (context.getStore() || canaryExecutionPaused()) refuse("ordinary supplier transport is held");
+  if (context.getStore() || canaryResearchPaused()) refuse("ordinary supplier transport is held");
 }
 
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/);

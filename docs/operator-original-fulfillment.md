@@ -134,12 +134,18 @@ the claim and all reservations; `execute` cannot run again. Only an already-prep
 immutable result may use idempotent metadata completion or read-only recovery.
 
 The old failed marker remains unchanged. Removing old selectors alone keeps
-ordinary admission held. A distinct, truthful delivered marker permits ordinary
+ordinary admission held by default. A distinct, truthful delivered marker permits ordinary
 admission after selector removal, while continuing to bind the raw old and additive
 ledgers. Any changed/missing file fails closed. Retained filesystem observation is
 not a continuous native database audit; the trusted controller must positively
 drain writers and obtain fresh native proof before restoration. Privileged operator
 tampering remains outside the protected-file threat model.
+
+An expired unprepared permanent claim with fewer than three additive model holds
+may instead use the explicit [interactive research isolation](engineering/failed-canary-research-isolation.md)
+operation. The original stays unresolved and Operator/new paid/private admission
+stays held; unrelated public interactive research retains its own existing caps
+and payment authority. This operation does not retry, fulfill or refund the order.
 
 ## Surfaces and release gates
 
@@ -147,7 +153,8 @@ The web, desktop, CLI, API, remote/stdio MCP, extension and bots receive the sam
 saved original and existing response/receipt projections. Fulfillment authority,
 question reconstruction and private source bodies are not added to public controls
 or responses. The private CLI owns execution; ordinary surfaces remain held until
-verified delivery. No new public replay or paid retry route is introduced.
+verified delivery or separately accepted expired-claim isolation. No new public
+replay or paid retry route is introduced.
 
 Synthetic tests cover permanent claims, exact hashes, expiry, bounds, failures,
 visible gaps, useful reviewed statements, tampered ledgers, lost acknowledgements
