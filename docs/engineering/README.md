@@ -63,7 +63,11 @@ Do not interpret API preparation alone as an on-chain registered source.
 
 The owner requested a dedicated Arc-testnet publisher wallet, now identified in the feed
 by `keryx-verify:0x6644A7C63C559454e77D5834554DCa3a60fcFDA2`. Publishing this token
-does not by itself complete registry registration. A later publisher-signed content manifest is a separate feature; RSS delivery
+does not by itself complete registry registration. On October 7, 2026 the owner requested
+a separate Arc-mainnet publisher wallet for owner-operated sources; the feed also carries
+`keryx-verify:0x3d609eF127094624cC434aAd5A9fAcA0851dAa2D`. The testnet token and its
+registration evidence are unchanged, and no mainnet registration or payment is recorded
+here. Any mainnet use of this source is first-party, never external creator traction. A later publisher-signed content manifest is a separate feature; RSS delivery
 depth alone is not a cryptographic publisher signature.
 
 For revisions, add a new dated article and feed entry rather than rewriting a published
