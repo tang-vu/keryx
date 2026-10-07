@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { PAPER_REPOSITORIES } from "@/lib/papers/types";
+import { paperReferencesRis } from "@/lib/papers/reference-export";
 import { changeLiteratureWorkspace, clearLiteratureWorkspace, replaceLiteratureWorkspace, useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES, parseLiteratureWorkspace,
   SCREENING_STATES, serializeLiteratureWorkspace, type LiteratureEntry, type LiteratureWorkspace as Workspace } from "@/lib/papers/literature-workspace";
@@ -136,8 +137,15 @@ export function LiteratureWorkspace() {
           <label className="font-mono text-xs text-ink-2">Show screening decisions<select value={filter} onChange={event => setFilter(event.target.value)} className={field}>
             <option value="all">All saved papers</option>{Object.entries(SCREENING_STATES).map(([value, label]) => <option key={value} value={value}>{label} ({workspace.entries.filter(entry => entry.screening === value).length})</option>)}
           </select></label>
-          <p role="status" className="font-serif text-sm text-ink-2">{visible.length} shown · {active.length}/2 selected for comparison</p>
+          <div className="space-y-2">
+            <p role="status" className="font-serif text-sm text-ink-2">{visible.length} shown · {active.length}/2 selected for comparison</p>
+            <button type="button" disabled={visible.length === 0} className={button} onClick={() => act(() => {
+              const exported = paperReferencesRis(visible.map(entry => entry.paper));
+              downloadBrowserText(exported.content, "keryx-literature-references.ris", "application/x-research-info-systems;charset=utf-8");
+            }, `RIS download prepared for ${visible.length} shown papers.`)}>Download shown references (RIS)</button>
+          </div>
         </div>
+        <p className="mt-2 font-serif text-xs text-ink-3">RIS exports only the papers shown by this filter, for a reference manager such as Zotero. It keeps saved metadata and exact versions; your review question, screening decisions and personal notes stay out of this file.</p>
         <div className="mt-4 border border-line bg-panel p-4">
           <p className="font-serif text-sm text-ink-2">Select two saved papers to prepare an editable comparison using your saved review question. Deep research can inspect more targets; its existing reading, evidence, availability and budget limits still apply.</p>
           <div className="mt-3 flex flex-wrap gap-3">{draft ? <Link prefetch={false} href={`/?q=${encodeURIComponent(draft)}&mode=deep`} className={`${button} border-ink bg-seal text-paper`}>Prepare comparison →</Link> : <button disabled className={button}>Select two papers to compare</button>}

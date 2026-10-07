@@ -54,6 +54,17 @@ try {
     assert(!draft.includes("PRIVATE NOTE")); assert(!new URL(href, "https://literature.test").searchParams.has("run"));
     await page.getByLabel("Show screening decisions").selectOption("exclude");
     await page.getByText("No papers have this screening decision.", { exact: false }).waitFor();
+    assert(await page.getByRole("button", { name: "Download shown references (RIS)" }).isDisabled());
+    await page.getByLabel("Show screening decisions").selectOption("include");
+    const risDownload = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download shown references (RIS)" }).click();
+    const download = await risDownload;
+    assert.equal(download.suggestedFilename(), "keryx-literature-references.ris");
+    const ris = await readFile((await download.path())!, "utf8");
+    assert.equal((ris.match(/^TY  - /gm) ?? []).length, 1);
+    assert(ris.includes(papers[0].url) && !ris.includes(papers[1].url));
+    assert(ris.includes("no Keryx read, citation or settlement evidence"));
+    assert(!ris.includes("PRIVATE NOTE") && !ris.includes("Grounding methods") && !ris.includes("Grounding review"));
     await page.getByLabel("Show screening decisions").selectOption("all");
 
     const csvDownload = page.waitForEvent("download"); await page.getByRole("button", { name: "Download screening CSV" }).click();

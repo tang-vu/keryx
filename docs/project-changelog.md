@@ -39,6 +39,8 @@
   nonautomatic question drafts retain both links; legacy automatic limits stay intact.
 - Export screening CSV or a JSON backup. Preserve corrupt storage, reject invalid
   backups, coordinate concurrent tab writes and keep unsaved drafts through filtering.
+- Download the shown bibliography as RIS for a reference manager. Preserve exact
+  versions and observed publication kinds; omit private notes and review focus.
 - Browser-only role; no cloud sync, payment/schema change or native client release.
   [Guide and remaining gates](literature-workspace.md). Production delivery and
   independent usefulness/return demand remain separate acceptance work.

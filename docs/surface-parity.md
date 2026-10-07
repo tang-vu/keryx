@@ -3,7 +3,7 @@
 ## Literature workspace candidate, October 7, 2026
 
 Web gains a local paper shortlist, review focus, personal screening/notes,
-CSV/JSON portability and a deliberate two-paper draft handoff. Sources and
+CSV/JSON portability, shown-reference RIS and a deliberate two-paper draft handoff. Sources and
 ordinary editable question prefill share that workflow; no research is submitted
 automatically. The [workspace guide](literature-workspace.md) records its bounds,
 privacy, lock/conflict behavior and acceptance gates. Legacy automatic links

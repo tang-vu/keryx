@@ -36,6 +36,23 @@ personal notes, exact links/versions, contributor limitations and metadata prove
 Formula-like cells are neutralized for spreadsheet import; stored notes stay literal.
 This is a screening list, not the answer's evidence matrix or a settlement receipt.
 
+Choose a screening filter, then **Download shown references (RIS)** to move that
+subset into a reference manager. The visible count is the export scope; comparison
+checkboxes do not change it. Only saved bibliography metadata is exported, with
+exact URLs/arXiv versions, supplied names/year/DOI/venue and a provenance note.
+Your review focus, screening labels and personal notes are omitted. Select **All
+saved papers** for the full bibliography. This file is separate from CSV and JSON.
+
+Import through your reference manager's file import. The exporter uses the types
+recognized by [Zotero's RIS translator](https://github.com/zotero/translators/blob/c7551c1a4d5b9623273119c7fbadf8735731dc92/RIS.js):
+preprint as manuscript, observed conference/journal as their matching types and
+unknown publication type as a web record with the unknown status retained in its
+note. Publication type never verifies peer review. Incomplete author lists remain
+explicit; missing data is omitted. Review the imported title, author names, venue
+and version before academic use. No attachment, enrichment or synchronization is
+requested. A pinned translator check covers synthetic type/identity/author/year/note
+handling under a minimal host; Zotero application acceptance remains open.
+
 Download **JSON backup** before moving devices or clearing data. Restore accepts a
 strict version-1 personal-bibliography file, up to 1 MiB. The preview precedes an
 explicit replacement of the entire current list, focus and notes; it does not merge.

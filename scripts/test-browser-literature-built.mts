@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
@@ -28,7 +28,7 @@ try {
   }
   assert(ready, `Built offline server failed: ${output}`);
   for (const width of [320, 390, 768, 1440]) {
-    const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
+    const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce", acceptDownloads: true });
     const errors: string[] = [], researchRequests: string[] = [];
     await context.route("**/*", route => {
       const request = route.request(), url = new URL(request.url());
@@ -64,6 +64,16 @@ try {
     await entries.first().getByRole("button", { name: "Save screening and notes" }).click();
     await page.getByText("Screening and notes saved on this browser.", { exact: true }).waitFor();
     await page.reload(); await page.getByText("User notes: verify methods", { exact: false }).first().waitFor();
+    await page.getByLabel("Show screening decisions").selectOption("include");
+    const downloadEvent = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download shown references (RIS)" }).click();
+    const download = await downloadEvent;
+    assert.equal(download.suggestedFilename(), "keryx-literature-references.ris");
+    const references = await readFile((await download.path())!, "utf8");
+    assert.equal((references.match(/^TY  - /gm) ?? []).length, 1);
+    assert(references.includes(savedTitles[0]) && !references.includes(savedTitles[1]));
+    assert(!references.includes("User notes: verify methods") && !references.includes("A".repeat(600)));
+    await page.getByLabel("Show screening decisions").selectOption("all");
     await page.getByRole("checkbox", { name: `Compare ${savedTitles[0]}`, exact: true }).check();
     await page.getByRole("checkbox", { name: `Compare ${savedTitles[1]}`, exact: true }).check();
     await page.getByText("Edit screening and notes", { exact: true }).first().click();

@@ -27,7 +27,7 @@ search live arXiv/Crossref metadata. `/api/papers` and `npm run papers` share th
 bibliography-only contract. Links remain unread until a separate research run.
 
 [Literature workspace](docs/literature-workspace.md): save exact paper records on
-this browser, screen against a review question, keep personal notes, export CSV/JSON
+this browser, screen against a review question, keep personal notes, export CSV/JSON/RIS
 and prepare an editable two-paper comparison. No account, cloud sync or automatic ask.
 
 [Research Monthly](docs/research-monthly.md): a bounded plan for four Deep

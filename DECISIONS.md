@@ -5703,3 +5703,13 @@ No automatic research, private-note upload, cloud list, new database/schema,
 spending, custody or scheduler follows. Other surfaces keep their documented roles.
 Independent task usefulness, return use and the serialized Operator release gate
 remain open. See [behavior and acceptance](docs/literature-workspace.md).
+
+The saved shortlist also needs a usable reference-manager handoff. Export RIS from
+the explicitly shown filter, with its count visible, using only validated saved
+PaperRecords. Keep this adapter separate from cited-reference serialization: these
+records have no read scope or Citation authority. Preserve exact versions, observed
+publication kinds and metadata/author limitations; omit review focus, screening and
+personal notes. No PDF attachment or enrichment is requested. Pinned Zotero parser
+checks establish only their specified synthetic import behavior, not application or
+independent participant acceptance. The paid citation formatter owned by PR204 is
+unchanged by this browser-local adapter.

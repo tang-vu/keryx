@@ -126,6 +126,12 @@ jobs:
           npm run test:browser-paper-library
           npm run test:browser-literature
 
+      - name: Saved paper references through pinned Zotero RIS parser (synthetic metadata)
+        run: |
+          mkdir -p .artifacts/literature-import
+          curl --fail --silent --show-error --max-time 30 https://raw.githubusercontent.com/zotero/translators/c7551c1a4d5b9623273119c7fbadf8735731dc92/RIS.js -o .artifacts/literature-import/zotero-RIS.js
+          node --import tsx scripts/test-paper-ris-import.mts .artifacts/literature-import/zotero-RIS.js
+
       - name: Public source claims (both profiles, mobile/desktop, hermetic wallet and HTTP)
         run: npm run test:browser-public-source-claim
 
