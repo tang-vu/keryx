@@ -13,7 +13,7 @@ afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); vi.restoreAllMocks(); 
 type CountResult = { data: unknown; count: unknown; error: unknown };
 type CountRead = CountResult | Error | ((signal: AbortSignal) => Promise<CountResult>);
 function legacy(canonical: CountRead, noncanonical: CountRead = { data: null, error: null, count: 0 },
-  coreRows: Record<string, Record<string, unknown>[]> = {}) {
+  coreRows: Record<string, Record<string, unknown>[]> = {}, coreReads: Record<string, CountResult[]> = {}) {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-account-fixture-no-authority");
   const selects = vi.fn();
@@ -21,7 +21,8 @@ function legacy(canonical: CountRead, noncanonical: CountRead = { data: null, er
   const from = vi.fn((table: string) => ({
     select(columns: string, options?: unknown) {
       selects(table, columns, options);
-      if (table !== "users") return { order: () => ({ range: async () => ({ data: coreRows[table] ?? [], error: null }) }) };
+      if (table !== "users") return { order: () => ({ range: async (offset: number) =>
+        coreReads[table]?.[Math.floor(offset / 1_000)] ?? { data: coreRows[table] ?? [], error: null } }) };
       return { filter(column: string, operator: string, pattern: string) {
         filters(column, operator, pattern);
         return { not(column: string, operator: string, pattern: string) {
@@ -41,6 +42,40 @@ function legacy(canonical: CountRead, noncanonical: CountRead = { data: null, er
 }
 
 describe("Supabase recorded account aggregates", () => {
+  it.each([
+    { data: null, count: null, error: new Error("Synthetic failed query page") },
+    { data: null, count: null, error: null },
+    { data: {}, count: null, error: null },
+  ])("rejects unavailable question pages instead of claiming zero guest questions", async page => {
+    const { adapter } = legacy({ data: null, count: 0, error: null }, undefined, {}, { query_runs: [page] });
+    await expect(adapter.metrics()).rejects.toThrow("Question metrics unavailable");
+  });
+
+  it("rejects a failed later question page instead of publishing a partial guest count", async () => {
+    const firstPage = Array.from({ length: 1_000 }, (_, index) => ({ id: `guest-${index}`, origin: "web" }));
+    const { adapter } = legacy({ data: null, count: 0, error: null }, undefined, {}, { query_runs: [
+      { data: firstPage, count: null, error: null },
+      { data: null, count: null, error: new Error("Synthetic failed second page") },
+    ] });
+    await expect(adapter.metrics()).rejects.toThrow("Question metrics unavailable");
+  });
+
+  it("shares guest-question counts from existing query metrics without exposing identities", async () => {
+    const wallet = `0x${"a".repeat(40)}`;
+    const metrics = await legacy({ data: null, error: null, count: 1 }, undefined, {
+      query_runs: [
+        { id: "guest", origin: "web", asker: null },
+        { id: "signed-in", origin: "web", asker: wallet },
+        { id: "a2a", origin: "a2a", asker: null },
+        { id: "legacy", origin: null, asker: null },
+      ],
+    }).adapter.metrics();
+    expect(metrics.guestQuestions).toBe(1);
+    expect(metrics.totalQueries).toBe(4);
+    expect(metrics.recordedAccounts).toBe(1);
+    expect(JSON.stringify(metrics)).not.toContain(wallet);
+  });
+
   it.each([0, 7])("returns an exact metadata-only count of %s canonical indexed wallets", async count => {
     const { adapter, selects, filters } = legacy({ data: null, error: null, count });
     const metrics = await adapter.metrics();
@@ -138,6 +173,7 @@ describe("Supabase recorded account aggregates", () => {
     const metrics = await adapter.metrics();
     expect(metrics.recordedAccounts).toBeNull();
     expect(from).not.toHaveBeenCalled();
+    expect(metrics.guestQuestions).toBe(0);
     expect(rpc.mock.calls.map(([name]) => name).filter(name => name.startsWith("storage_scan_"))).toEqual([
       "storage_scan_payment_metrics", "storage_scan_query_metrics", "storage_scan_feedback_metrics", "storage_scan_gap_metrics",
     ]);
