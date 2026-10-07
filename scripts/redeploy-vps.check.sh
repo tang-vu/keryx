@@ -34,6 +34,30 @@ case "$args" in
     }
     export -f node npm
     bash -c "${2#cd /root/keryx && }" ;;
+  *'bash -se')
+    # Execute the actual remote install block against stubbed node/npm. Each word of
+    # DEPLOY_TEST_INSTALL is one npm ci outcome: `ok` or the npm error code it reports.
+    # Other remote heredocs keep their previous inert handling.
+    [[ "$input" == *'dependency-state.mjs check'* ]] || exit 0
+    cd "$DEPLOY_TEST_DIR"
+    node() {
+      printf 'NODE %s
+' "$*" >> "$DEPLOY_TEST_TRACE"
+      [[ "$*" != *' check' || -z "${DEPLOY_TEST_INSTALL:-}" ]]
+    }
+    npm() {
+      printf 'NPM %s
+' "$*" >> "$DEPLOY_TEST_TRACE"
+      local count outcome
+      count=$(( $(cat "$DEPLOY_TEST_DIR/npm-ci-count" 2>/dev/null || echo 0) + 1 ))
+      echo "$count" > "$DEPLOY_TEST_DIR/npm-ci-count"
+      outcome=$(cut -d' ' -f"$count" <<< "$DEPLOY_TEST_INSTALL")
+      [[ "$outcome" != ok ]] || return 0
+      echo "npm error code $outcome" >&2
+      return 1
+    }
+    export -f node npm
+    bash -c "${input//cd \/root\/keryx/cd .}" ;;
   *'/usr/bin/node --input-type=module - '*)
     [[ "$input" == *'export function deployReviewedRole'* ]] || exit 1
     [[ "${DEPLOY_TEST_BAD_CONFIG:-0}" != 1 ]] || exit 1 ;;
@@ -59,7 +83,8 @@ esac
 FAKE
 cat > "$fixture/sleep" <<'FAKE'
 #!/usr/bin/env bash
-exit 0
+printf 'SLEEP %s
+' "$*" >> "$DEPLOY_TEST_TRACE"
 FAKE
 chmod +x "$fixture/ssh" "$fixture/git" "$fixture/sleep"
 export PATH="$fixture:$PATH" KERYX_SSH_BIN="$fixture/ssh"
@@ -124,6 +149,30 @@ clear_trace
 if DEPLOY_TEST_BAD_HEALTH=1 managed; then exit 1; fi
 grep -q 'hold current processes' "$fixture/output"
 ! grep -Eq 'rm -rf .next|pm2 (restart|reload)|bash -s -- resume|crontab' "$DEPLOY_TEST_TRACE"
+# One dropped registry connection is repeated; the stamp follows the successful install.
+install() { rm -f "$fixture/npm-ci-count"; clear_trace; DEPLOY_TEST_INSTALL="$1" managed; }
+install 'ECONNRESET ok'
+[[ $(grep -cx 'NPM ci --no-audit --no-fund' "$DEPLOY_TEST_TRACE") == 2 ]]
+grep -qx 'SLEEP 15' "$DEPLOY_TEST_TRACE"
+[[ $(grep -cx 'NODE scripts/dependency-state.mjs record' "$DEPLOY_TEST_TRACE") == 1 ]]
+last_install=$(grep -nx 'NPM ci --no-audit --no-fund' "$DEPLOY_TEST_TRACE" | tail -1 | cut -d: -f1)
+recorded=$(grep -nx 'NODE scripts/dependency-state.mjs record' "$DEPLOY_TEST_TRACE" | cut -d: -f1)
+invalidated=$(grep -nx 'NODE scripts/dependency-state.mjs invalidate' "$DEPLOY_TEST_TRACE" | cut -d: -f1)
+(( invalidated < last_install && last_install < recorded ))
+grep -q 'roles.json .* web' "$DEPLOY_TEST_TRACE"
+# Integrity or lockfile failures are never repeated, and nothing is recorded, built or started.
+if install 'EINTEGRITY ok'; then exit 1; fi
+[[ $(grep -cx 'NPM ci --no-audit --no-fund' "$DEPLOY_TEST_TRACE") == 1 ]]
+! grep -Eq '^SLEEP|dependency-state.mjs record|npm run typecheck|roles.json .* (a2a|web)|mv .next' "$DEPLOY_TEST_TRACE"
+# Persistent network failure stops after three attempts with the same retained refusal.
+if install 'ECONNRESET ETIMEDOUT EAI_AGAIN ok'; then exit 1; fi
+[[ $(grep -cx 'NPM ci --no-audit --no-fund' "$DEPLOY_TEST_TRACE") == 3 ]]
+grep -q 'npm ci failed on attempt 3' "$fixture/output"
+! grep -Eq 'dependency-state.mjs record|npm run typecheck|roles.json .* (a2a|web)|mv .next' "$DEPLOY_TEST_TRACE"
+# A verified unchanged install is still reused without touching the registry.
+clear_trace
+managed
+! grep -Eq '^NPM ci|dependency-state.mjs (invalidate|record)' "$DEPLOY_TEST_TRACE"
 # Default path still pauses/resumes workers and uses its existing reload behavior.
 clear_trace
 if DEPLOY_TEST_BAD_TYPECHECK=1 managed; then exit 1; fi
@@ -149,4 +198,4 @@ done
 clear_trace
 if KERYX_REDEPLOY_REVIEWED_PM2_SHA256=$(printf 'a%.0s' {1..64}) run; then exit 1; fi
 [[ ! -s "$DEPLOY_TEST_TRACE" ]]
-echo 'Redeploy orchestration checks passed: exact remote commit, retained builds, managed starts, held schedules, prevalidation, health hold and legacy defaults.'
+echo 'Redeploy orchestration checks passed: exact remote commit, retained builds, managed starts, held schedules, prevalidation, bounded install retry, health hold and legacy defaults.'
