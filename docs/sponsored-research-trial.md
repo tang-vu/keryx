@@ -64,9 +64,14 @@ separate measurements.
 | Surface | Behavior |
 | --- | --- |
 | Web/literature | Sponsored/public-report messaging, manual preparation, visible payer, wait/retry guidance after quota refusal. |
-| Public hosted API/CLI/MCP/extensions/bots | Shared pipeline may use the reviewed public treasury fee. Responses and receipts distinguish operating fees. |
+| Public hosted API/CLI, remote MCP, extensions and bots | Shared pipeline may use the reviewed public treasury fee. Responses and receipts distinguish operating fees; a browser-funded caller retains its original grant. |
 | Browser-funded research | Existing source/creator grants retain authority; no service charge is added to those grants. |
 | A2A/private/desktop Operator | Existing fixed package fees/reserves remain authoritative; no second operating debit. Receipt/export readers classify fees separately. |
+| Stdio MCP buyer | Caller-funded A2A research retains its package price and creator reserve; no additional operating fee. |
+
+This changes the hosted application and shared result contracts. The stdio MCP,
+desktop Operator and extension binaries keep their existing roles; no new binary
+version or synchronized distribution is claimed by this candidate.
 
 Unsupported roles withhold the fee. Missing/changed policy closes new operating
 transfers while existing research and creator gates remain intact. No schema
