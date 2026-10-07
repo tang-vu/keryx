@@ -1,11 +1,67 @@
 # Source recency before a paid article read
 
-Status: reviewed architecture proposal; no runtime repair or current-newest
-acceptance is claimed. This is a separate follow-up to
+Status: Stage1 safety candidate; current-newest qualification and useful-answer
+acceptance remain open. This is a separate follow-up to
 [issue #217](https://github.com/tang-vu/keryx/issues/217), under B06/B07 of the
 [research workload](../research-workload.md). Production remains on the deployed
 TypeScript payment and research paths. Implementation, caller parity and release
-gates below remain open.
+gates below remain open until their actual release evidence is recorded.
+
+## Stage1 safety candidate
+
+[The caller constraint](../../lib/sources/source-recency.ts) is frozen before
+model decomposition. It covers positive instructions beginning with English
+`name/identify/find the newest/latest release in <URL>` and Vietnamese
+`nêu/xác định/tìm bản phát hành mới nhất trong/từ <URL>` (optional polite prefixes).
+The recognized family also retains unsupported compare, stable/prerelease,
+cutoff, cached-set and multiple-URL forms as gaps. This is bounded recognition,
+not general temporal-language understanding; other paraphrases remain uncovered.
+Quoted/example/negated prefixes and model-generated claims do not create authority.
+
+An exact RSS or registered resource URL match withholds the affected retained
+paid, creator-free, public-reference and legacy source candidates before article
+ranking, cache selection or payment. URL equality defines refusal scope only;
+it does not prove feed identity, observation completeness or evidence. Exhausted
+or unresolved binding within the recognized positive family withholds retained
+catalog candidates conservatively. Withheld assets never enter the maps used for
+portfolio selection and reevaluation, so model BUY/recommended IDs cannot restore
+them. Discovery-only external marketplace endpoints remain unpurchased. Ordinary
+topical research retains existing ranking and payment gates.
+
+The answer and trace preserve an unresolved request even when no catalog source
+matches. Request-only diagnostics do not claim that a catalog article was held.
+When no content was read, the task-specific gap leads the report. Inline feed URLs
+wrap within narrow screens; the downloaded report retains the same limitation.
+Unrelated sources and bounded public web reads may support other question targets;
+they do not qualify current-newest selection. A conflict with an exact wanted
+article refuses the existing binding rather than substituting another article.
+Service/model costs, prior access payments and incoming service settlement remain
+separate; this guard makes no refund or zero-total-charge promise.
+
+Web follow-up passes the validated raw child question separately from augmented
+parent context. Public `originalQuestion` overrides are ignored. OpenAI, hosted
+MCP, human CLI, bots, public A2A and private enrolled workers already pass their
+validated question directly to the shared TypeScript agent. They inherit its
+trace/answer diagnostic without a new public schema. Saved runs and portable
+results preserve that text; historical runs are not reclassified. Buyer/stdio
+MCP and desktop remain consumers of hosted original results, extensions retain
+their thin handoff, and private Operator/Rust keep their documented reduced
+roles. No client binary/package or Rust cutover follows this server repair.
+Qualification in paid service quotes/admission is still a separate gate; do not
+advertise this downstream article guard as full pre-charge qualification.
+
+Focused synthetic acceptance covers exact identity, multi-feed/unresolved scan
+refusal, cache and legacy fallback, positively observed reevaluation, spoofed
+public raw-question input, actual follow-up augmentation and ordinary topical
+behavior. The latest five-file corpus passed200tests; root/operational TypeScript,
+scoped lint and production build passed. Minified built-agent checks preserve
+English/Vietnamese follow-up constraints with no catalog read/payment effects.
+Eight built chat cases at320/390/768/1440px preserve the visible gap and exact
+downloaded report without overflow, automatic retry or payment API calls. Earlier
+fixture and build failures remain retained as local verification history.
+Independent read-only review supports the narrow refusal scope. Exact-head CI,
+source-bound operational release and deployed/distribution identities remain
+required. Stages2–4 below and issue217 useful delivery remain open.
 
 ## Observed problem and limits
 

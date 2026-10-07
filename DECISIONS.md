@@ -5900,3 +5900,23 @@ coverage remains. Local adverse tests and actual full runner CI are required;
 the successful same-head rerun is separate evidence, not proof of the original
 network cause. This CI-only change has no production/runtime/distribution version
 change. See [runner setup and boundaries](docs/deployment-guide.md#browser-dependencies-on-github-hosted-runners).
+
+## Withhold unqualified newest-feed articles before ranking - 2026-10-08
+
+Stage1 freezes a narrow positive original-text requirement before model targets
+exist. Known unsupported temporal/multiple-feed forms remain explicit gaps;
+unresolved bounded binding refuses retained catalog candidates conservatively.
+Exact RSS/registered resource identity scopes refusal without granting feed or
+payment authority. Hold paid/free/cache/legacy candidates before item ranking and
+omit them from every purchase/reevaluation asset map. Preserve the validated raw
+web follow-up child separately from parent context; public overrides cannot set
+this trusted copy. An unmatched request still receives a visible gap.
+
+This staged repair favors an honest unresolved task over buying an older topical
+article for the recognized newest-feed request. It neither orders a retained set
+nor proves a coherent current-feed observation, and it preserves unrelated targets,
+exact wanted-response binding, incoming service charges and all existing payment
+limits/history. Shared TypeScript callers inherit the diagnostic; unchanged thin
+client contracts and reduced Operator/Rust roles do not establish pre-admission
+qualification. Build/CI/deployment and useful delivery remain separate gates. See
+[coverage and acceptance](docs/engineering/source-recency-2026-10-08.md#stage1-safety-candidate).

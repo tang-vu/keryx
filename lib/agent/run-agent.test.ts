@@ -29,6 +29,7 @@ import { describe, it, expect, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { runAgent, type RunInput } from "./run-agent";
 import { collectRun } from "./index";
+import { buildFollowUpQuestion } from "./follow-up-question";
 import type { ResearchEffects } from "./research-effects";
 import { config } from "../config";
 import { HeuristicEngine } from "../llm/heuristic-engine";
@@ -2375,6 +2376,116 @@ describe("claim-managed free creator reading", () => {
       expect(run.citations).toHaveLength(1); expect(run.citations[0]).toMatchObject({ sourceId: reference.id, sourceKind: "public-reference", reward: 0 });
       expect(f.gateway.fetchCalls).toEqual([]); expect(f.gateway.citationCalls).toEqual([]);
     } finally { f.terms.mockRestore(); }
+  });
+});
+
+describe("original newest-feed requirement before article purchase", () => {
+  const feed = "https://creator.example/releases.atom";
+  const question = `Name the newest release in ${feed}, state one change and one compatibility fact not established by that entry.`;
+
+  it("withholds a stronger older match and its fresh cache even when model targets omit newest", async () => {
+    const source = makeSource({ id: "creator", rssUrl: feed, tags: ["old API compatibility"] });
+    const older: SourceItem = { id: "v10", sourceId: source.id, title: "Release change compatibility API", summary: "Newest release changes compatibility deployment fact", content: "Old release retained content.", link: "https://creator.example/v10", publishedAt: "2026-07-01T00:00:00.000Z" };
+    const newer: SourceItem = { ...older, id: "v18", title: "v18", summary: "New entry", link: "https://creator.example/v18", publishedAt: "2026-07-02T00:00:00.000Z" };
+    const engine = fakeEngine();
+    engine.decompose = async () => ["old API compatibility changes"];
+    const gateway = fakeGateway();
+    const d = deps([source], engine, gateway, { items: { [source.id]: [newer, older] }, cachedByKey: { [sourceItemCacheKey(source.id, older)]: new Date().toISOString() } });
+    const catalog = vi.spyOn(d.db, "getItems"), cache = vi.spyOn(d.db, "getCached"), funding = vi.spyOn(gateway, "ensureFunded");
+    const { run, steps } = await drive({ question, budget: 0.05 }, d);
+    expect(engine.decideInput?.candidates ?? []).toEqual([]);
+    expect(catalog).not.toHaveBeenCalled(); expect(cache).not.toHaveBeenCalled(); expect(funding).not.toHaveBeenCalled();
+    expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+    expect(run.answer).toContain("Newest-release limitation");
+    expect(run.answer).toContain("criterion and scope remain unverified");
+    expect(steps).toEqual(expect.arrayContaining([expect.objectContaining({ phase: "discover", detail: expect.objectContaining({ feedUrl: feed, reason: "newest-feed-observation-unqualified" }) })]));
+  });
+
+  it("blocks the historical source-level path with no item rows", async () => {
+    const gateway = fakeGateway();
+    const d = deps([makeSource({ id: "legacy", rssUrl: feed })], fakeEngine(), gateway);
+    const { run } = await drive({ question, budget: 0.05 }, d);
+    expect(gateway.fetchCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+    expect(run.answer).toContain("before BUY/CACHE selection");
+  });
+
+  it.each([
+    `Name the newest stable release in ${feed}.`,
+    `Name the newest release before 2026-10-01 in ${feed}.`,
+    `Compare the newest release in ${feed} with the older API.`,
+    `Name the newest release in ${feed} and name the newest release in https://second.example/feed.atom`,
+    `Name the newest release in ${feed} ` + "x".repeat(30000),
+  ])("does not turn a known unsupported temporal form into ordinary paid selection", async temporal => {
+    const gateway = fakeGateway();
+    const d = deps([makeSource({ id: "creator", rssUrl: feed }), makeSource({ id: "second", rssUrl: "https://second.example/feed.atom" })], fakeEngine(), gateway);
+    const { run } = await drive({ question: temporal, budget: 0.05 }, d);
+    expect(gateway.fetchCalls).not.toContain("creator");
+    if (temporal.includes("and name") || temporal.length > 30000) expect(gateway.fetchCalls).not.toContain("second");
+    expect(run.answer).toContain("Newest-release limitation");
+  });
+
+  it("retains a request-level gap when no source/reference matches the caller feed", async () => {
+    const gateway = fakeGateway(), d = deps([], fakeEngine(), gateway);
+    const { run, steps } = await drive({ question, budget: 0.05 }, d);
+    expect(run.answer).toContain(feed);
+    expect(run.answer).toContain("Newest-release limitation");
+    expect(steps).toEqual(expect.arrayContaining([expect.objectContaining({ phase: "decompose", detail: expect.objectContaining({ scope: "request", feedUrl: feed }) })]));
+    expect(gateway.fetchCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+  });
+
+  it("preserves the raw child requirement before a referring follow-up gains parent context", async () => {
+    const originalQuestion = `Name the newest release in ${feed} and state its change.`;
+    const question = buildFollowUpQuestion("How does the older API work?", originalQuestion);
+    expect(question).toMatch(/^Following on/);
+    const gateway = fakeGateway(), d = deps([makeSource({ id: "creator", rssUrl: feed })], fakeEngine(), gateway);
+    const { run } = await drive({ question, originalQuestion, budget: 0.05 }, d);
+    expect(gateway.fetchCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+    expect(run.answer).toContain("Newest-release limitation");
+  });
+
+  it("does not inherit a quoted parent's newest requirement into an ordinary child request", async () => {
+    const originalQuestion = "Explain its compatibility facts.";
+    const gateway = fakeGateway(), d = deps([makeSource({ id: "creator", rssUrl: feed })], fakeEngine(), gateway);
+    const { run } = await drive({ question: buildFollowUpQuestion(question, originalQuestion), originalQuestion, budget: 0.05 }, d);
+    expect(gateway.fetchCalls).toEqual(["creator"]);
+    expect(run.answer).not.toContain("Newest-release limitation");
+  });
+
+  it("cannot resurrect the withheld source through malicious decisions or reevaluation", async () => {
+    const gateway = fakeGateway();
+    const engine = fakeEngine({ decide: input => [buy({ id: "creator", name: "forged old feed", price: 0.002 }), ...input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }), action: candidate.id === "unused" ? "SKIP" as const : "BUY" as const }))] });
+    engine.sufficiency = async input => ({ sufficient: false, perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.1, coveredBy: [] })), rationale: "try old creator source" });
+    const reevaluate = vi.fn(async () => ({ claims: [], shouldBuyMore: true, recommendedIds: ["creator", "item:v10"], rationale: "try again" }));
+    engine.reevaluate = reevaluate;
+    const d = deps([makeSource({ id: "creator", rssUrl: feed }), makeSource({ id: "other" }), makeSource({ id: "unused" })], engine, gateway);
+    await drive({ question, budget: 0.05, executionLimits: { attentionLimit: 2, reevaluateRounds: 1 } }, d);
+    expect(reevaluate).toHaveBeenCalled();
+    expect(gateway.fetchCalls).toEqual(["other"]);
+    expect(gateway.fetchCalls).not.toContain("creator");
+    expect(d.db.payments.every(payment => payment.sourceId !== "creator")).toBe(true);
+  });
+
+  it("withholds the public ten-item snapshot without promoting refreshedAt to observation proof", async () => {
+    const gateway = fakeGateway(), d = deps([], fakeEngine(), gateway);
+    d.db.listPublicReferences = async () => [{ ...publicRef(), rssUrl: feed, refreshedAt: new Date().toISOString() }];
+    const { run } = await drive({ question, budget: 0.05 }, d);
+    expect(run.citations).toEqual([]); expect(gateway.fetchCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+    expect(run.answer).toContain("Newest-release limitation");
+  });
+
+  it("does not create newest authority from model targets/tags during ordinary topical research", async () => {
+    const source = makeSource({ id: "creator", rssUrl: feed, tags: [question] });
+    const engine = fakeEngine(); engine.decompose = async () => [question];
+    const gateway = fakeGateway(), d = deps([source], engine, gateway);
+    const { run } = await drive({ question: "How does this API preserve old compatibility?", budget: 0.05 }, d);
+    expect(gateway.fetchCalls).toEqual([source.id]);
+    expect(run.answer).not.toContain("Newest-release limitation");
+  });
+
+  it("refuses a conflicting exact wanted-response candidate instead of replacing or buying it", async () => {
+    const gateway = fakeGateway(), d = deps([makeSource({ id: "creator", rssUrl: feed })], fakeEngine(), gateway);
+    await expect(drive({ question, targetAsset: { sourceId: "creator", itemId: "v10", contentVersion: "sha256:old" } }, d)).rejects.toThrow("wanted response source is not active, verified, or payable");
+    expect(gateway.fetchCalls).toEqual([]); expect(d.db.payments).toEqual([]);
   });
 });
 

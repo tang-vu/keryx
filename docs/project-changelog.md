@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### Hold unqualified newest-feed article selection (2026-10-08, v0.27.27 candidate)
+
+Recognized English/Vietnamese newest-release instructions now retain their original
+feed constraint before model decomposition. Affected retained paid/free/cache and
+legacy candidates are held before article selection, and the answer explains the
+unresolved scope even when no catalog feed matches. Web follow-up preserves the
+validated child question; model proposals cannot restore withheld articles.
+An empty-read report leads with the feed gap, and long URLs wrap on mobile.
+Ordinary topical research keeps existing ranking. This is a narrow safety repair;
+current-feed observation, supported newest-release delivery and service pre-charge
+qualification remain open. Existing payments and incoming service/model costs are
+separate. See [coverage and release gates](engineering/source-recency-2026-10-08.md).
+
 ### Free primary evidence for retained Operator completion (2026-10-08, v0.27.26 candidate)
 
 A private continuation can supplement an acknowledged evidence gap with protected,
