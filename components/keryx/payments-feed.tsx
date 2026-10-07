@@ -78,7 +78,7 @@ export function PaymentsFeed({
                     {p.sourceName}
                   </p>
                   <p className="mt-0.5 font-mono text-[10px] text-ink-3">
-                    {timeAgo(p.createdAt)} · {recordedArcLabel(p.network)} · {p.kind} ·{" "}
+                    {timeAgo(p.createdAt)} · {recordedArcLabel(p.network)} · {p.kind === "operating-fee" ? "Keryx operating fee" : p.kind} ·{" "}
                     {status === "settled"
                       ? "settled in batch"
                       : status === "failed"
@@ -145,6 +145,7 @@ export function PaymentsFeed({
                     <TableCell className="max-w-[180px] truncate text-sm font-medium">
                       {p.sourceName}
                       <span className="mt-1 block font-mono text-[11px] font-normal text-muted-foreground">{recordedArcLabel(p.network)}</span>
+                      {p.kind === "operating-fee" && <span className="mt-1 block whitespace-normal text-[11px] font-normal text-muted-foreground">Operating fee for research; recorded separately from creator rewards.</span>}
                     </TableCell>
                     <TableCell
                       className={cn(
@@ -219,7 +220,7 @@ function KindBadge({ kind }: { kind: PaymentRecord["kind"] }) {
           : "border-ink-3/40 bg-paper-2 text-ink-2"
       )}
     >
-      {kind}
+      {kind === "operating-fee" ? "operating fee" : kind}
     </span>
   );
 }

@@ -34,7 +34,7 @@ export interface PaidOptions {
   purchaseRequestHash?: string;
   /** Source-managed admission is checked atomically with the original nonce purpose. */
   resourceSourceId?: string;
-  resourceKind?: "fetch" | "citation";
+  resourceKind?: "fetch" | "citation" | "operating-fee";
   sourceClaim?: import("./db/research-monthly").ResearchPurchaseClaim["sourceClaim"];
   /**
    * Bazaar discovery metadata (x402 discovery extension). When set, the 402 challenge advertises

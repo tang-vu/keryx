@@ -2072,7 +2072,7 @@ export class SqliteAdapter implements KeryxDB {
   async metrics(): Promise<DashboardMetrics> {
     const payments = this.db
       .prepare(
-        `SELECT amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer
+        `SELECT amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer,tx_hash
            FROM payment_events`,
       )
       .all()
@@ -2080,12 +2080,13 @@ export class SqliteAdapter implements KeryxDB {
         amountUsdc: Number(p.amount_usdc),
         sourceId: String(p.source_id ?? ""),
         queryId: String(p.query_id ?? ""),
-        kind: p.kind as "fetch" | "citation" | "inbound",
+        kind: p.kind as PaymentRecord["kind"],
         origin: (p.origin as import("../types").PaymentOrigin | null) ?? null,
         settled: Number(p.settled) === 1,
         settlementStatus:
           (p.settlement_status as import("../types").PaymentSettlementStatus | null) ?? null,
         payer: (p.payer as string | null) ?? null,
+        txHash: (p.tx_hash as string | null) ?? null,
       }));
     const runs = this.db
       .prepare(
@@ -2169,7 +2170,7 @@ export class SqliteAdapter implements KeryxDB {
       .map((row) => ({
         queryId: String(row.query_id ?? ""),
         ...(!profile.testnet ? { network: String(row.network), txHash: typeof row.tx_hash === "string" ? row.tx_hash : null } : {}),
-        kind: row.kind as "fetch" | "citation" | "inbound",
+        kind: row.kind as PaymentRecord["kind"],
         amountUsdc: Number(row.amount_usdc),
         settled: Number(row.settled) === 1,
         settlementStatus:
@@ -2394,7 +2395,7 @@ export class SqliteAdapter implements KeryxDB {
                 COALESCE(SUM(amount_usdc),0) total, COUNT(*) cnt,
                 SUM(CASE WHEN kind='citation' THEN 1 ELSE 0 END) cites
          FROM payment_events
-         WHERE kind != 'inbound' AND settled = 1
+         WHERE kind IN ('fetch','citation') AND settled = 1
          GROUP BY source_id ORDER BY total DESC`,
       )
       .all();

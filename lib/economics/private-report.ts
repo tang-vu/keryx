@@ -24,6 +24,7 @@ function legacyPrivateEconomicsReport(s: EconomicsSnapshot) {
         pricingSource: s.policy.pricingSource, infraAllowanceUsdPerRun: s.policy.infraAllowanceUsdPerRun,
         serviceFeeUsdc: { quick: s.policy.serviceFeeUsdc.quick, deep: s.policy.serviceFeeUsdc.deep } } },
     testnetLedger: { settledInboundUsdc: s.settledInboundRevenueUsdc, settledA2aServiceFeesUsdc: s.settledA2aV2ServiceFeesUsdc,
+      settledOperatingFeeUsdc: s.settledOperatingFeeUsdc ?? null, pendingOperatingFeeUsdc: s.pendingOperatingFeeUsdc ?? null,
       prepaidCreatorCapsUsdc: s.prepaidA2aCreatorCapsUsdc, prepaidCreatorSpendUsdc: s.prepaidA2aCreatorSpendUsdc,
       completedUnusedReserveUsdc: s.completedA2aUnusedReserveUsdc, browserCreatorSpendUsdc: s.browserCreatorSpendUsdc,
       treasuryCreatorSubsidyUsdc: s.treasuryCreatorSubsidyUsdc, unknownFundingCreatorSpendUsdc: s.unknownFundingCreatorSpendUsdc,

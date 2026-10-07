@@ -580,7 +580,7 @@ export interface KeryxDB {
   /** Citation payouts for one dispatch, oldest→newest. Carries real settlement
    *  state (settled / tx) so permalinks reflect on-chain truth, not a reconstruction. */
   listPaymentsByQuery(queryId: string): Promise<PaymentRecord[]>;
-  /** Creator accounting and portable receipts: every fetch/citation attempt for one dispatch. */
+  /** Portable receipts: all outbound attempts, including separately classified operating fees. */
   listCreatorPaymentAttemptsByQuery(queryId: string): Promise<PaymentRecord[]>;
   /** All earning payouts for one source (newest first), excluding inbound funding.
    *  Full-table — the creator page derives its totals from this so they match the

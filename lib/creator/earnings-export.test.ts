@@ -27,6 +27,13 @@ function payment(over: Partial<PaymentRecord> = {}): PaymentRecord {
 }
 
 describe("buildEarningsRows", () => {
+  it("does not include sponsored operator charges or inbound service revenue in creator earnings", () => {
+    const rows = [payment(), payment({ kind: "operating-fee", amountUsdc: 0.02 }),
+      payment({ kind: "inbound", amountUsdc: 0.03 })];
+    expect(buildEarningsRows(rows, new Map(), "https://keryx.cc")).toHaveLength(1);
+    expect(summariseEarnings(rows)).toMatchObject({ paymentCount: 1, citationCount: 1,
+      totalUsdc: 0.0001, settledUsdc: 0.0001 });
+  });
   it("carries the question and a resolvable dispatch link", () => {
     const rows = buildEarningsRows(
       [payment({ queryId: "abc" })],

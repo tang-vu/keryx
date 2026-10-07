@@ -1391,7 +1391,7 @@ export class SupabaseAdapter implements KeryxDB {
     const reads = [
       () => this.allRows(
         "payment_events",
-        "amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer",
+        "amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer,tx_hash",
       ),
       () => this.allRows(
         "query_runs",
@@ -1410,12 +1410,13 @@ export class SupabaseAdapter implements KeryxDB {
         amountUsdc: Number(p.amount_usdc),
         sourceId: String(p.source_id ?? ""),
         queryId: String(p.query_id ?? ""),
-        kind: p.kind as "fetch" | "citation" | "inbound",
+        kind: p.kind as PaymentRecord["kind"],
         origin: (p.origin as import("../types").PaymentOrigin | null) ?? null,
         settled: Boolean(p.settled),
         settlementStatus:
           (p.settlement_status as import("../types").PaymentSettlementStatus | null) ?? null,
         payer: (p.payer as string | null) ?? null,
+        txHash: (p.tx_hash as string | null) ?? null,
       })),
       runRows.map((r) => ({
         id: String(r.id),
@@ -1501,7 +1502,7 @@ export class SupabaseAdapter implements KeryxDB {
       paymentRows.map((row) => ({
         queryId: String(row.query_id ?? ""),
         ...(!profile.testnet ? { network: String(row.network), txHash: typeof row.tx_hash === "string" ? row.tx_hash : null } : {}),
-        kind: row.kind as "fetch" | "citation" | "inbound",
+        kind: row.kind as PaymentRecord["kind"],
         amountUsdc: Number(row.amount_usdc),
         settled: Boolean(row.settled),
         settlementStatus:
@@ -2173,7 +2174,7 @@ export class SupabaseAdapter implements KeryxDB {
     );
     const map = new Map<string, CreatorEarnings>();
     for (const r of data) {
-      if (r.kind === "inbound" || !r.settled) continue;
+      if ((r.kind !== "fetch" && r.kind !== "citation") || !r.settled) continue;
       const e =
         map.get(String(r.source_id)) ??
         ({

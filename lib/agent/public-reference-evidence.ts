@@ -7,6 +7,7 @@ import { selectRelevantSourceItem, sourceItemIdentity } from "../sources/source-
 export async function discoverPublicReferences(db: PublicReferenceDb, question: string, subClaims: string[]) {
   const publicReads = new Map<string, GatheredContent>();
   const publicCandidates = new Map<string, SourceCandidate>();
+  const publicClaimUrls = new Map<string, string[]>();
   for (const stored of await db.listPublicReferences?.() ?? []) {
     const reference = publicReferenceSchema.parse(stored);
     if (!reference.active) continue;
@@ -22,9 +23,10 @@ export async function discoverPublicReferences(db: PublicReferenceDb, question: 
     };
 
     publicCandidates.set(reference.id, candidate);
+    publicClaimUrls.set(reference.id, [reference.url, ...(reference.rssUrl ? [reference.rssUrl] : [])]);
     publicReads.set(reference.id, { assetId: reference.id, sourceId: reference.id,
       sourceName: reference.name, ...identity, marker: "", text: item.content });
 
   }
-  return { publicReads, publicCandidates };
+  return { publicReads, publicCandidates, publicClaimUrls };
 }

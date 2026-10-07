@@ -527,7 +527,7 @@ export const openapiSpec = {
               settlement: {
                 type: "object",
                 description:
-                  "Sanitized creator-payment snapshot. Only Circle-evidenced rows enter settled totals; " +
+                  "Sanitized outbound-payment snapshot. Creator rewards and Keryx operating fees are separate. Only Circle-evidenced rows enter settled totals; " +
                   "payer and authorization correlation data are omitted.",
                 properties: {
                   mode: { type: "string", enum: ["real", "offline", "legacy"] },
@@ -546,6 +546,11 @@ export const openapiSpec = {
                   failedCreatorUsdc: { type: "number" },
                   simulatedCreatorUsdc: { type: "number" },
                   creatorPayments: { type: "array", items: { type: "object" } },
+                  operatingPayments: { type: "array", description: "Keryx operating fees, separate from creator rewards. Absent in historical receipts.", items: { type: "object" } },
+                  settledOperatingFeeUsdc: { type: "number" },
+                  pendingOperatingFeeUsdc: { type: "number" },
+                  failedOperatingFeeUsdc: { type: "number" },
+                  simulatedOperatingFeeUsdc: { type: "number" },
                 },
               },
               limits: { type: "array", items: { type: "string" } },

@@ -181,5 +181,6 @@ function settledCreatorTotal(run: QueryRun, payments: PaymentRecord[]): number |
     if (run.paymentMode === "offline" || run.totalSpent === 0) return 0;
     return null;
   }
-  return settled.reduce((sum, payment) => sum + payment.amountUsdc, 0);
+  return settled.filter(payment => payment.kind === "fetch" || payment.kind === "citation")
+    .reduce((sum, payment) => sum + payment.amountUsdc, 0);
 }

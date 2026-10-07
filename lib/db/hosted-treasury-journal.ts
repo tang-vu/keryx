@@ -2,7 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { sourceClaimReceiptSchema } from "../sources/source-claim-request";
-import { assertSqliteSourceClaimPaymentPolicy } from "./public-source-claims";
+import { assertSqliteSourceClaimPaymentPolicy, getSqliteSourceClaim, publicSourceClaimId } from "./public-source-claims";
 import { canonicalJson } from "../canonical-json";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 import { createSessionSigningPolicy } from "../session/session-signing-policy";
@@ -11,6 +11,8 @@ import { hostedTreasuryPolicyDigest, validateHostedTreasuryPolicy, type HostedTr
 import type { StorageIdentity } from "./storage-identity";
 import { sqliteJournalTransaction } from "./sqlite-browser-journal";
 import type { ServerX402Submission } from "../payments/server-x402-client";
+import { configuredOperatingFeePolicy, operatingFeeContextSchema, operatingFeeMaxMicroUsdc,
+ operatingFeePolicyDigest, OPERATING_FEE_SOURCE_ID, OPERATING_FEE_POLICY_KEY_PREFIX } from "../payments/operating-fee-policy";
 
 export const HOSTED_TREASURY_SQL = `
 CREATE TABLE hosted_treasury_policies(digest TEXT PRIMARY KEY, signer TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN('public','private')),
@@ -52,10 +54,14 @@ CREATE TRIGGER hosted_signer_grant_update_refused BEFORE UPDATE ON session_grant
  BEGIN SELECT RAISE(ABORT,'dedicated hosted signer cannot become browser authority'); END;
 `;
 const text = z.string().min(1).max(256), micro = z.string().regex(/^(0|[1-9][0-9]{0,15})$/).refine(v => BigInt(v) <= BigInt(Number.MAX_SAFE_INTEGER));
-export const hostedPaymentContextSchema = z.object({ queryId: text, kind: z.enum(["fetch", "citation"]), sourceId: text,
- itemId: text.nullable(), queryBudgetMicroUsdc: micro.refine(v => BigInt(v) > BigInt(0)),
- sourceClaim: sourceClaimReceiptSchema.optional(),
- privateJob: z.object({id:text,owner:z.string().regex(/^0x[0-9a-f]{40}$/),workerId:text}).strict().nullable() }).strict();
+const hostedContextFields = { queryId: text, queryBudgetMicroUsdc: micro.refine(v => BigInt(v) > BigInt(0)) };
+export const hostedPaymentContextSchema = z.discriminatedUnion("kind", [
+ z.object({ ...hostedContextFields, kind: z.enum(["fetch", "citation"]), sourceId: text,
+  itemId: text.nullable(), sourceClaim: sourceClaimReceiptSchema.optional(),
+  privateJob: z.object({id:text,owner:z.string().regex(/^0x[0-9a-f]{40}$/),workerId:text}).strict().nullable() }).strict(),
+ z.object({ ...hostedContextFields, kind: z.literal("operating-fee"), sourceId: z.literal(OPERATING_FEE_SOURCE_ID),
+  itemId: z.null(), privateJob: z.null(), operatingFee: operatingFeeContextSchema }).strict(),
+]);
 export type HostedPaymentContext = z.infer<typeof hostedPaymentContextSchema>;
 export type HostedTreasuryAccounting = { retainedMicroUsdc: string; confirmedMicroUsdc: string };
 export type HostedAuthorizationAdmission = { policy: HostedTreasuryPolicy; context: HostedPaymentContext; payload: TypedDataPayload;
@@ -121,9 +127,31 @@ export function admitSqliteHostedAuthorization(db: DatabaseSync, input: HostedAu
  const p=validateHostedTreasuryPolicy(input.policy,identity), c=hostedPaymentContextSchema.parse(input.context), payload=originalPayload(input.payload,p.signer);
  const nonce=String(payload.message.nonce).toLowerCase(), amount=checked(payload.message.value), digest=hostedTreasuryPolicyDigest(p);
  const available=BigInt(micro.parse(input.availableMicroUsdc)), original=canonicalJson({context:c,payload});
+ if(Buffer.byteLength(original)>8192) throw new Error("Hosted original context limit exceeded");
  if (amount<=0 || p.expiresAtSeconds<=Math.floor(Date.now()/1000) || BigInt(c.queryBudgetMicroUsdc)>BigInt(p.queryCapMicroUsdc)) throw new Error("Hosted authority refused");
  sqliteJournalTransaction(db,()=>{
-  assertSqliteSourceClaimPaymentPolicy(db, { sourceId: c.sourceId, expected: c.sourceClaim ?? null, kind: c.kind, network: ARC_MAINNET_PROFILE.networkId });
+  if(c.kind === "operating-fee") {
+   const feePolicy = configuredOperatingFeePolicy(identity, p.origin, p.signer);
+   if(c.operatingFee.policyDigest !== operatingFeePolicyDigest(feePolicy) || String(payload.message.to).toLowerCase() !== feePolicy.beneficiary ||
+      String(amount) !== c.operatingFee.amountMicroUsdc || BigInt(amount) > BigInt(operatingFeeMaxMicroUsdc(c.queryBudgetMicroUsdc)))
+    throw new Error("Operating fee terms refused");
+   for(const url of c.operatingFee.sourceUrls) {
+    const claimId = publicSourceClaimId(url, p.origin, p.network);
+    // A lost current claim with retained history remains claimed; missing policy is never owner authority.
+    if(getSqliteSourceClaim(db, claimId) || db.prepare("SELECT 1 FROM sync_state WHERE key LIKE ? LIMIT 1")
+       .get(`keryx:source-claims:v1:history:${claimId}:%`))
+     throw new Error("Operating fee source has a retained owner claim");
+   }
+   // One retained fee original per query, including failed/pending originals and signer/policy renewal.
+   if(db.prepare("SELECT 1 FROM hosted_treasury_authorizations WHERE query_id=? AND json_extract(original,'$.context.kind')='operating-fee' LIMIT 1").get(c.queryId))
+    throw new Error("Operating fee original already admitted; recover it instead of paying again");
+   const feePolicyKey = OPERATING_FEE_POLICY_KEY_PREFIX + c.operatingFee.policyDigest, policyJson = canonicalJson(feePolicy);
+   db.prepare("INSERT OR IGNORE INTO sync_state(key,value,updated_at) VALUES(?,?,?)").run(feePolicyKey, policyJson, new Date().toISOString());
+   if(db.prepare("SELECT value FROM sync_state WHERE key=?").get(feePolicyKey)?.value !== policyJson)
+    throw new Error("Retained operating fee policy conflict");
+  } else {
+   assertSqliteSourceClaimPaymentPolicy(db, { sourceId: c.sourceId, expected: c.sourceClaim ?? null, kind: c.kind, network: ARC_MAINNET_PROFILE.networkId });
+  }
   const admittedPolicy=db.prepare("SELECT data,role FROM hosted_treasury_policies WHERE digest=?").get(digest);
   if(admittedPolicy?.data!==canonicalJson(p) || admittedPolicy.role!==(c.privateJob?"private":"public")) throw new Error("Hosted policy not admitted for this role");
   if(db.prepare("SELECT 1 FROM hosted_treasury_authorizations WHERE nonce=?").get(nonce) ||

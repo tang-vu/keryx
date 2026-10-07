@@ -12,6 +12,7 @@
  */
 
 import type { PaymentRecord } from "../types";
+import { isCreatorPayment } from "../payments/payment-kind";
 import {
   EARNINGS_COLUMNS,
   buildEarningsRows,
@@ -35,6 +36,7 @@ export function buildPortfolioRows(
   questionById: Map<string, string>,
   baseUrl: string,
 ): PortfolioExportRow[] {
+  payments = payments.filter(isCreatorPayment);
   const rows = buildEarningsRows(payments, questionById, baseUrl);
   return rows.map((row, i) => ({
     source_id: payments[i].sourceId,
@@ -58,6 +60,7 @@ export function summarisePortfolioBySource(
 ): PortfolioSourceTotal[] {
   const bySource = new Map<string, PortfolioSourceTotal>();
   for (const p of payments) {
+    if (!isCreatorPayment(p)) continue;
     const entry = bySource.get(p.sourceId) ?? {
       sourceId: p.sourceId,
       sourceName: p.sourceName,

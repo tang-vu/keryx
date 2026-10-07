@@ -71,9 +71,9 @@ export default async function DispatchPage({ params }: PageProps) {
   const db = await getDb();
   const run = await db.getQueryRun(id);
   if (!run) notFound();
-  // Load the real citation payouts so the permalink reflects on-chain settlement
-  // truth (settled / batched) instead of reconstructing a "simulated" view.
-  const payments = await db.listPaymentsByQuery(id);
+  // Original outbound rows include creator payments and separate operating fees.
+  // Their ledger states, rather than allocations, establish settlement truth.
+  const payments = await db.listCreatorPaymentAttemptsByQuery(id);
 
   // The thread this dispatch sits in: what it followed from, and what followed from it — plus
   // whether the sources it cited have published since it settled (see lib/answers-freshness).
@@ -81,7 +81,7 @@ export default async function DispatchPage({ params }: PageProps) {
   // an hour-old count of new posts still tells a reader the same thing.
   const [parent, parentPayments, followUps, freshness] = await Promise.all([
     run.parentId ? db.getQueryRun(run.parentId) : Promise.resolve(null),
-    run.parentId ? db.listPaymentsByQuery(run.parentId) : Promise.resolve([]),
+    run.parentId ? db.listCreatorPaymentAttemptsByQuery(run.parentId) : Promise.resolve([]),
     db.listFollowUps(id),
     loadFreshness(db, run),
   ]);

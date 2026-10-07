@@ -31,7 +31,7 @@ export interface ResearchPurchaseClaim {
   issued?: { validAfter: string; validBefore: string; expiresAt: string };
   /** Exact seller source even when a managed caller omits its required expected policy. */
   resourceSourceId?: string;
-  resourceKind?: "fetch" | "citation";
+  resourceKind?: "fetch" | "citation" | "operating-fee";
   sourceClaim?: { sourceId: string; receipt: SourceClaimReceipt; kind: "fetch" | "citation" };
 }
 function trustedProfile(profile: ArcNetworkProfile) {
@@ -266,7 +266,7 @@ function claimRow(value: ResearchPurchaseClaim, profile: ArcNetworkProfile = ARC
   trustedProfile(profile);
   const claim = z.object({ network: z.literal(profile.networkId), asset: z.literal(profile.usdcAddress.toLowerCase()).optional(), payer: address, payee: address,
     authorizationId: z.string().min(1).max(256), purpose: z.enum(["a2a", "monthly", "resource"]), requestHash: z.string().regex(/^[0-9a-f]{64}$/), amountMicros: micros,
-    requireExisting: z.boolean().optional(), issued: issuedSchema.optional(), resourceSourceId: z.string().min(1).max(256).optional(), resourceKind: z.enum(["fetch", "citation"]).optional(),
+    requireExisting: z.boolean().optional(), issued: issuedSchema.optional(), resourceSourceId: z.string().min(1).max(256).optional(), resourceKind: z.enum(["fetch", "citation", "operating-fee"]).optional(),
     sourceClaim: z.object({ sourceId: z.string().min(1).max(256), receipt: sourceClaimReceiptSchema, kind: z.enum(["fetch", "citation"]) }).strict().optional() }).strict().parse(value);
   if (claim.sourceClaim && (claim.purpose !== "resource" || claim.resourceSourceId && claim.resourceSourceId !== claim.sourceClaim.sourceId ||
     claim.resourceKind && claim.resourceKind !== claim.sourceClaim.kind))
@@ -291,7 +291,7 @@ export function claimSqliteResearchPurchase(db: DatabaseSync, value: ResearchPur
     const existing = db.prepare("SELECT 1 FROM research_purchase_authorizations WHERE network=? AND asset=? AND payer=? AND authorization_id=?").get(row.network,row.asset,row.payer,row.authorization_id);
     admitSqliteSourceClaimPurchasePolicy(db, { identity: { network: row.network, payer: row.payer, authorizationId: row.authorization_id },
       existing: Boolean(existing), sourceId: value.resourceSourceId ?? value.sourceClaim?.sourceId,
-      receipt: value.sourceClaim?.receipt, kind: value.sourceClaim?.kind ?? value.resourceKind, payee: row.payee, amountMicros: row.amount_micros });
+      receipt: value.sourceClaim?.receipt, kind: value.sourceClaim?.kind ?? value.resourceKind, payee: row.payee, amountMicros: row.amount_micros, requestHash: row.request_hash });
     if (!required) db.prepare("INSERT OR IGNORE INTO research_purchase_authorizations (network,asset,payer,payee,authorization_id,product,purchase_id,request_hash,amount_micros,issued_data) VALUES (?,?,?,?,?,?,?,?,?,?)")
       .run(...Object.values(row).map(value => value !== null && typeof value === "object" ? JSON.stringify({...value,submitted:false}) : value));
     const stored = db.prepare("SELECT * FROM research_purchase_authorizations WHERE network=? AND asset=? AND payer=? AND authorization_id=?").get(row.network,row.asset,row.payer,row.authorization_id);

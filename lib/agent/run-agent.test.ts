@@ -25,7 +25,7 @@ import { contentBodyHash } from "../sources/content-receipt";
  * deterministic control flow only — no LLM, no network, no chain.
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { runAgent, type RunInput } from "./run-agent";
 import { collectRun } from "./index";
@@ -2378,7 +2378,57 @@ describe("claim-managed free creator reading", () => {
   });
 });
 
-describe("public feed references remain off the payment rail", () => {
+describe("sponsored operating fees", () => {
+  let previousOrigin: string;
+  beforeEach(() => { previousOrigin = config.baseUrl; Object.assign(config, { baseUrl: "https://keryx.cc" }); });
+  afterEach(() => { Object.assign(config, { baseUrl: previousOrigin }); });
+  function fixture() {
+    const gateway = fakeGateway();
+    const policy = { format: "keryx-operating-fee-policy-v1" as const, network: "eip155:5042" as const,
+      origin: "https://keryx.cc", storageIdentityDigest: "a".repeat(64), beneficiary: `0x${"22".repeat(20)}`, expiresAtSeconds: 2_000_000_000 };
+    gateway.operatingFeePolicy = () => policy;
+    const settle = vi.fn(async ({ queryId, operatingFee }: Parameters<NonNullable<PaymentGateway["payOperatingFee"]>>[0]) => makePayment({
+      kind: "operating-fee", id: "synthetic-fee", queryId, sourceId: "keryx:operating-fee", sourceName: "Keryx operating fee",
+      payer: "synthetic-treasury", payee: policy.beneficiary, amountUsdc: Number(operatingFee.amountMicroUsdc) / 1e6,
+      settled: true, settlementStatus: "settled", txHash: "synthetic-circle-reference" }));
+    gateway.payOperatingFee = settle;
+    const d = deps([], fakeEngine(), gateway);
+    d.db.listPublicReferences = async () => [publicRef()];
+    d.db.getSourceClaim = async () => null;
+    return { d, gateway, settle };
+  }
+  it("settles only the public share and preserves free citation identity and separate creator totals", async () => {
+    const f = fixture();
+    const { run } = await drive({ question: "What evidence do agents need?", budget: 0.03, fundingOwner: "treasury" }, f.d);
+    expect(f.settle).toHaveBeenCalledOnce();
+    expect(f.settle.mock.lastCall?.[0].operatingFee).toMatchObject({ amountMicroUsdc: "15000",
+      sourceUrls: ["https://public.test/public-free", "https://public.test/", "https://public.test/feed"] });
+    expect(run.citations[0]).toMatchObject({ sourceKind: "public-reference", reward: 0 });
+    expect(run.operatingFee).toMatchObject({ status: "settled", amountUsdc: 0.015, paymentId: "synthetic-fee" });
+    expect(run.totalSpent).toBe(0.015); expect(run.totalToCreators).toBe(0);
+    expect(f.gateway.citationCalls).toEqual([]);
+  });
+  it.each(["browser", "a2a", "claimed"])("adds no second charge for %s", async boundary => {
+    const f = fixture();
+    if (boundary === "claimed") f.d.db.getSourceClaim = async () => ({ mode: "free" }) as never;
+    await drive({ question: "What evidence do agents need?", budget: 0.03,
+      ...(boundary === "browser" ? { fundingOwner: "browser" as const } : {}), ...(boundary === "a2a" ? { origin: "a2a" as const } : {}) }, f.d);
+    expect(f.settle).not.toHaveBeenCalled();
+  });
+  it("preserves the completed answer and unresolved fee original after a lost acknowledgement", async () => {
+    const f = fixture();
+    f.settle.mockImplementationOnce(async ({ queryId }) => { throw new PaymentPendingError("Synthetic lost response", makePayment({
+      id: "synthetic-pending-fee", kind: "operating-fee", queryId, sourceId: "keryx:operating-fee", sourceName: "Keryx operating fee",
+      payer: "synthetic-treasury", payee: `0x${"22".repeat(20)}`, amountUsdc: 0.015, settled: false, settlementStatus: "pending" })); });
+    const { run } = await drive({ question: "What evidence do agents need?", budget: 0.03 }, f.d);
+    expect(f.settle).toHaveBeenCalledOnce();
+    expect(run.answer).toContain("Public agents require honest evidence");
+    expect(run.operatingFee?.status).toBe("pending"); expect(run.totalSpent).toBe(0);
+    expect(run.pendingSpendUsdc).toBe(0.015); expect(run.pendingPayments).toBe(1);
+  });
+});
+
+describe("public feed references remain off the creator payment rail", () => {
   it("grounds public citations after a malicious BUY without gateway, cache or settlement rows", async () => {
     const gateway = fakeGateway();
     gateway.ensureFunded = async () => { throw new Error("Free-only research must never fund/deposit"); };

@@ -70,6 +70,7 @@ function researchText(result: ReturnType<typeof remoteResearchResult>): string {
     `Evidence: ${groundedClaims}/${result.claimCoverage.length} research targets meet the recorded excerpt-support threshold; this does not verify entailment or complete synthesis\n` +
     `${selectionText}\n` +
     `Total recorded to creators: $${result.totalToCreatorsUsdc.toFixed(4)} USDC · ${settlement}\n` +
+    (result.operatingFee ? `Keryx operating fee allocation: $${result.operatingFee.amountUsdc.toFixed(6)} USDC · ${result.operatingFee.status}. Separate from creator rewards; inspect the payment ledger for settlement evidence.\n` : "") +
     `Confidence: ${result.confidence?.level ?? "Low"} · ${result.dispatchUrl}`
   );
 }

@@ -52,6 +52,8 @@ try {
     await page.evaluate(() => document.fonts.ready);
     const question = page.getByLabel("What do you want to know?");
     await question.waitFor();
+    await page.getByRole("complementary", { name: "Sponsored research trial" }).waitFor();
+    assert.equal(calls.length, 0, "Opening the sponsored composer never starts research");
     await page.screenshot({ path: join(screenshots, `chat-idle-${width}.png`) });
     const ask = page.locator('[data-tour="dispatch-btn"]');
     await page.getByText(/Budget and model:/).click();
@@ -143,6 +145,18 @@ try {
       await page.getByRole("heading", { name: "Give your agent a research budget." }).waitFor();
       assert.equal(new URL(page.url()).hash, "#paid-research");
     }
+    const quotaPage = await context.newPage();
+    await quotaPage.route("**/api/ask", route => route.fulfill({ status: 429, headers: { "Retry-After": "60" }, json: {} }));
+    await quotaPage.goto(base, { waitUntil: "domcontentloaded" });
+    await quotaPage.getByLabel("What do you want to know?").fill("A question held by trial capacity");
+    await quotaPage.locator('[data-tour="dispatch-btn"]').click();
+    const quotaAlert = quotaPage.getByRole("alert");
+    await quotaAlert.getByText("Try again in 60s.", { exact: false }).waitFor();
+    assert.equal(await quotaAlert.getByText(/connect.*funded|deposit|top.up/i).count(), 0,
+      "Trial throttling gives a wait path without treating wallet funding as quota recovery");
+    assert.equal(await quotaPage.getByLabel("What do you want to know?").inputValue(), "A question held by trial capacity");
+    await quotaPage.screenshot({ path: join(screenshots, `chat-quota-${width}.png`), fullPage: true });
+    await quotaPage.close();
     console.log(`PASS ${width}px: natural progress/Stop visibility, older-report scroll retained on steps, two turns, follow-up/settings, export, errors and stop isolation; synthetic requests only.`);
     await context.close();
   }

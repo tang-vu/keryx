@@ -6,7 +6,9 @@ import { applicationSqliteIdentity } from "../db/application-storage";
 import { canonicalJson } from "../canonical-json";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 import { configuredHostedTreasuryPolicy, type HostedTreasuryPolicy } from "./hosted-treasury-policy";
-import { ServerPaymentGateway, type PaymentJournalContext } from "./server-payment-gateway";
+import { ServerPaymentGateway, paymentFromAttempt, throwIfDeliveryFailed, type PaymentJournalContext } from "./server-payment-gateway";
+import { configuredOperatingFeePolicy, operatingFeeContextSchema, operatingFeePolicyDigest, operatingFeeEndpointPath, OPERATING_FEE_SOURCE_ID, type OperatingFeeContext } from "./operating-fee-policy";
+import { payWithServerSigner } from "./server-x402-client";
 import { createPinnedArcBatchSigner } from "./pinned-arc-batch-signer";
 import { getGatewayAvailableAtomic } from "../gateway/gateway-balance";
 import type { BatchPayloadSigner } from "./server-x402-client";
@@ -81,8 +83,9 @@ class MainnetHostedGateway extends ServerPaymentGateway {
     private readonly policy: HostedTreasuryPolicy, private readonly role: "public" | "private", private readonly job?: { id: string; owner: string; workerId: string }) {
     super(); this.spend = { address: policy.signer };
     this.paymentJournal = context => {
+      if (context.kind === "operating-fee" && (role !== "public" || job)) throw new Error("Operating fees require public hosted authority");
       if (job && context.queryId !== job.id) throw new Error("Hosted private authority belongs to another job");
-      const privateJournal = job ? privateCreatorJournal(db, { id: job.id, payer: job.owner, workerId: job.workerId,
+      const privateJournal = job && context.kind !== "operating-fee" ? privateCreatorJournal(db, { id: job.id, payer: job.owner, workerId: job.workerId,
         kind: context.kind, sourceId: context.sourceId, itemId: context.itemId }) : null;
       let nonce: string | undefined;
       return {
@@ -106,6 +109,27 @@ class MainnetHostedGateway extends ServerPaymentGateway {
   private assertPolicy() {
     if (canonicalJson(mainnetHostedPolicy(this.db, this.role)) !== canonicalJson(this.policy)) throw new Error("Hosted policy changed");
   }
+  operatingFeePolicy() {
+    this.assertPolicy();
+    if (this.role !== "public" || this.job) throw new Error("Operating fees require public hosted authority");
+    return configuredOperatingFeePolicy(applicationSqliteIdentity(this.db, "write"), this.policy.origin, this.policy.signer);
+  }
+  async payOperatingFee(args: { queryId: string; operatingFee: OperatingFeeContext }) {
+    const policy = this.operatingFeePolicy(), fee = operatingFeeContextSchema.parse(args.operatingFee);
+    if (fee.policyDigest !== operatingFeePolicyDigest(policy)) throw new Error("Operating fee policy changed");
+    const context: PaymentJournalContext = { queryId: args.queryId, kind: "operating-fee", sourceId: OPERATING_FEE_SOURCE_ID, itemId: null, operatingFee: fee };
+    const journal = this.paymentJournal!(context), amount = Number(fee.amountMicroUsdc) / 1e6;
+    const attempt = await payWithServerSigner<{ ok?: boolean }>({ url: `${config.baseUrl}${operatingFeeEndpointPath(args.queryId, fee)}`, method: "POST",
+      expectedPayee: policy.beneficiary, expectedAmount: amount, payer: this.policy.signer,
+      signer: this.signerForPayment(context), beforeSubmit: journal.beforeSubmit, beforeSignedSubmit: journal.beforeSignedSubmit });
+    const outcome = await journal.recordOutcome(attempt);
+    const observed = outcome.attempt ?? attempt;
+    const payment = paymentFromAttempt(observed, { kind: "operating-fee", queryId: args.queryId,
+      sourceId: OPERATING_FEE_SOURCE_ID, sourceName: "Keryx operating fee", payer: this.policy.signer, payee: policy.beneficiary,
+      settledRationale: "Keryx operating fee for evidence-qualified unclaimed public citations." });
+    throwIfDeliveryFailed(observed, payment, "Keryx operating service");
+    return payment;
+  }
   protected signerForPayment(context: PaymentJournalContext) {
     const captured = { ...context }; this.assertPolicy();
     if (!this.budget) throw new Error("Hosted query budget not admitted");
@@ -116,7 +140,10 @@ class MainnetHostedGateway extends ServerPaymentGateway {
       const available = await getGatewayAvailableAtomic(this.policy.signer, ARC_MAINNET_PROFILE);
       if (available === null) throw new Error("Hosted prefunded balance unavailable");
       this.assertPolicy();
-      await this.db.admitHostedAuthorization({ policy: this.policy, context: { ...captured, queryBudgetMicroUsdc, privateJob: this.job ?? null },
+      const admittedContext = captured.kind === "operating-fee"
+        ? { ...captured, queryBudgetMicroUsdc, privateJob: null }
+        : { ...captured, queryBudgetMicroUsdc, privateJob: this.job ?? null };
+      await this.db.admitHostedAuthorization({ policy: this.policy, context: admittedContext,
         payload, accounting: before, availableMicroUsdc: String(available) });
     });
   }

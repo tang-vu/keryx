@@ -20,6 +20,8 @@ interface ProofHealth {
   traction?: {
     totalPayments: number;
     creatorPayoutsUsdc: number;
+    settledOperatingFeeUsdc?: number | null;
+    settledOperatingFeePayments?: number | null;
     creatorsEarning: number;
     totalQueries: number;
   };
@@ -122,14 +124,16 @@ export function ProofDashboard() {
             <dl className="mt-7 grid grid-cols-2 gap-6 sm:grid-cols-4">
               <Metric label="Total queries" value={t.totalQueries.toLocaleString()} />
               <Metric label="Settled payments" value={t.totalPayments.toLocaleString()} />
-              <Metric label="To creators" value={money(t.creatorPayoutsUsdc)} />
+              <Metric label="Creator rewards" value={money(t.creatorPayoutsUsdc)} />
               <Metric label="Creators earning" value={t.creatorsEarning.toLocaleString()} />
+              <Metric label="Keryx operating fees" value={t.settledOperatingFeeUsdc != null ? money(t.settledOperatingFeeUsdc) : "Unavailable"} />
+              <Metric label="Operating fee transfers" value={t.settledOperatingFeePayments?.toLocaleString() ?? "Unavailable"} />
             </dl>
           ) : (
             <p className="mt-6 font-mono text-[11px] text-ink-3">Traction ledger unavailable.</p>
           )}
           <p className="mt-6 font-mono text-[10px] leading-relaxed text-faint">
-            Query count includes all recorded use. Payment and payout totals include only settled records.
+            Query count includes all recorded use. Only settled records count. Keryx operating fees and creator rewards are shown separately.
           </p>
         </div>
       </section>

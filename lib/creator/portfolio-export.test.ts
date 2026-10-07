@@ -25,6 +25,15 @@ function payment(over: Partial<PaymentRecord> = {}): PaymentRecord {
 }
 
 describe("buildPortfolioRows", () => {
+  it("excludes operating fees without shifting the remaining source and payout columns", () => {
+    const payments = [payment({ kind: "operating-fee", sourceId: "keryx:operating-fee", amountUsdc: 0.02 }),
+      payment({ sourceId: "writer", sourceName: "Writer", amountUsdc: 0.003 }),
+      payment({ kind: "inbound", sourceId: "customer", amountUsdc: 0.03 })];
+    expect(buildPortfolioRows(payments, new Map(), "https://keryx.cc")).toMatchObject([
+      { source_id: "writer", source_name: "Writer", amount_usdc: "0.003000" },
+    ]);
+    expect(summarisePortfolioBySource(payments)).toMatchObject([{ sourceId: "writer", totalUsdc: 0.003 }]);
+  });
   it("labels each payout with the source that earned it", () => {
     const rows = buildPortfolioRows(
       [payment({ sourceId: "s2", sourceName: "Stablecoin Ledger" })],

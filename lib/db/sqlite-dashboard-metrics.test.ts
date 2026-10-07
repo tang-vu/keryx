@@ -66,6 +66,24 @@ function payment(
 }
 
 describe("SQLite dashboard metrics", () => {
+  it("round-trips operating fee rows, excludes them from creator leaderboard, and preserves gross settlement accounting", async () => {
+    const isolated = new SqliteAdapter(":memory:");
+    await isolated.init();
+    try {
+      await isolated.saveQueryRun(run("sponsored-fee", "web"));
+      const fee = { ...payment("sponsored-fee", "web"), kind: "operating-fee" as const,
+        sourceId: "keryx:operating-fee", sourceName: "Keryx operating fee", payee: "0xfounder",
+        settlementStatus: "settled" as const, txHash: "circle-operating-original" };
+      await isolated.recordPayment(fee);
+      await isolated.recordPayment({ ...fee, id: "fee-pending", settled: false, settlementStatus: "pending", authorizationId: "original-pending", txHash: null });
+      expect(await isolated.metrics()).toMatchObject({ totalPayments: 1, totalVolumeUsdc: 0.01,
+        totalCreatorPayoutsUsdc: 0, creatorsEarning: 0, payingQueries: 0,
+        settledOperatingFeeUsdc: 0.01, settledOperatingFeePayments: 1, pendingPaymentConfirmations: 1 });
+      expect(await isolated.creatorLeaderboard()).toEqual([]);
+      expect(await isolated.listCreatorPaymentAttemptsByQuery("sponsored-fee")).toHaveLength(2);
+      expect(await isolated.settlementLedger()).toMatchObject([{ address: "0xfounder", paidUsdc: 0.01 }]);
+    } finally { isolated.close(); }
+  });
   it("persists run telemetry and excludes simulated money", async () => {
     await db.saveQueryRun(run("web-1", "web", "0xAlice"));
     await db.saveQueryRun(run("web-2", "web", "0xAlice"));
