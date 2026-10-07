@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const calls = vi.hoisted(() => ({ binding: vi.fn(), inspect: vi.fn(), preflight: vi.fn(), execute: vi.fn(), verify: vi.fn(), complete: vi.fn(),
-  writer: vi.fn(), readonly: vi.fn(), identity: vi.fn(), close: vi.fn() }));
+  activate: vi.fn(), writer: vi.fn(), readonly: vi.fn(), identity: vi.fn(), close: vi.fn() }));
 vi.mock("../lib/business-operator/fulfillment-continuation-policy.ts", () => ({ readContinuationAuthorization: calls.binding,
-  inspectOriginalContinuation: calls.inspect, completePreparedContinuation: calls.complete, verifyPreparedContinuation: calls.verify }));
-vi.mock("../lib/a2a/continue-original.ts", () => ({ completeOriginalContinuation: calls.execute }));
-vi.mock("../lib/a2a/fulfill-original.ts", () => ({ preflightOriginalFulfillment: calls.preflight }));
+  inspectOriginalContinuation: calls.inspect, completePreparedContinuation: calls.complete, verifyPreparedContinuation: calls.verify,
+  activateOriginalContinuationEpoch: calls.activate }));
+vi.mock("../lib/a2a/continue-original.ts", () => ({ completeOriginalContinuation: calls.execute,
+  preflightOriginalContinuation: calls.preflight }));
 vi.mock("../lib/db/application-storage.ts", () => ({ createApplicationStorage: calls.writer, createReadonlyApplicationStorage: calls.readonly,
   applicationSqliteIdentity: calls.identity }));
 import { continuationCliFailure, runContinueCanaryOriginal } from "./continue-canary-original.mts";
@@ -34,6 +35,14 @@ describe("private original continuation CLI boundaries", () => {
     expect(calls.identity).toHaveBeenCalledWith(db, "write");
     expect(calls.execute).toHaveBeenCalledWith(db, "/protected/grant.json", digest, "synthetic-fixture-key");
     expect(calls.complete).not.toHaveBeenCalled(); expect(calls.close).toHaveBeenCalledOnce();
+  });
+  it("activates a separate episode with readonly native proof and no supplier credential", async () => {
+    vi.stubEnv("DEEPSEEK_API_KEY", ""); calls.activate.mockResolvedValue({ activated: true, nativeClaimChanged: false });
+    await runContinueCanaryOriginal(["activate-epoch", "--authorization", "/protected/epoch.json", "--sha256", digest]);
+    expect(calls.binding).toHaveBeenCalledWith("/protected/epoch.json", digest, true);
+    expect(calls.activate).toHaveBeenCalledWith(db, "/protected/epoch.json", digest); expect(calls.identity).toHaveBeenCalledWith(db, "read");
+    expect(calls.writer).not.toHaveBeenCalled(); expect(calls.execute).not.toHaveBeenCalled(); expect(calls.complete).not.toHaveBeenCalled();
+    expect(calls.close).toHaveBeenCalledOnce(); expect(fetch).not.toHaveBeenCalled();
   });
   it("verify-prepared never prints raw result or opens a writer", async () => {
     calls.verify.mockResolvedValue({ preparedResultSha256: digest, completion: { runSha256: digest, providerLedgerSha256: digest,

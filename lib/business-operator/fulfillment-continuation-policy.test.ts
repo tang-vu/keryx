@@ -9,7 +9,8 @@ import { beginOriginalContinuation, closeContinuationCapability, continuationAut
   assertContinuationSupplierAdmission, continuationSupplierSignal, prepareContinuationResult,
   completePreparedContinuation, verifyPreparedContinuation, retainedContinuationDeliveryResolution,
   recordContinuationDiagnostic, type ContinuationAuthorization, type ContinuationCapability } from "./fulfillment-continuation-policy";
-import { inspectOriginalContinuation } from "./fulfillment-continuation-policy";
+import { inspectOriginalContinuation, activateOriginalContinuationEpoch } from "./fulfillment-continuation-policy";
+import { fixedPaths } from "./continuation-epoch";
 import { businessCanaryHostIdentity, retainedBusinessCanaryClosure } from "./canary-policy";
 import { fulfillmentSha256 as hash, fulfillmentObjectSha256 as hashObject } from "../a2a/failed-original-fulfillment-protocol";
 import { syntheticFulfilledRun } from "../db/a2a-fulfillment-fixture";
@@ -49,6 +50,31 @@ async function fixture() {
   const file = path.join(value.root, "continuation-authorization.json");
   fs.writeFileSync(file, JSON.stringify(authorization), { mode: 0o600 });
   return { ...value, original, file, sha256: hash(fs.readFileSync(file)), continuationAuthorization: authorization };
+}
+async function epochFixture() {
+  const value = await fixture(), parentDirectory = continuationDirectory();
+  for (let index = 0; index < 4; index++) {
+    const admitted = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
+    await continuationModel(admitted.capability, "sufficiency", "Fixture system", "sufficiency fixture", 1, async () => ({ fixture: true }));
+    await continuationModel(admitted.capability, "synthesize", "Fixture system", "synthesize fixture", 1, async () => ({ fixture: true }));
+    if (index < 3) {
+      await continuationModel(admitted.capability, "review", "Fixture system", "review fixture", 1, async () => ({ fixture: true }));
+      recordContinuationDiagnostic(admitted.capability, { phase: "assemble", category: "quality" });
+    }
+    closeContinuationCapability(admitted.capability);
+  }
+  const parent = continuationProviderLedger(), parentBytes = bytes(parentDirectory), nextCommit = "d".repeat(40);
+  git.mockImplementation((_command, args) => args?.[0] === "status" ? "" : `${nextCommit}\n`);
+  const authorization: ContinuationAuthorization = { ...value.continuationAuthorization,
+    format: "keryx-original-continuation-authorization-v2", executorCommit: nextCommit,
+    historicalReservedMicroUsd: 243_260, maximumNewModelCalls: 6, maximumCombinedMicroUsd: 400_000,
+    parentAuthorizationFile: value.file, parentAuthorizationSha256: value.sha256,
+    parentProviderLedgerSha256: parent.sha256,
+    parentLedgerHeadSha256: hash(fs.readFileSync(path.join(parentDirectory, "ledger-head.json"))),
+    contextProtocol: "full-selected-bodies-required-sufficiency-v1" };
+  const epochFile = path.join(value.root, "epoch-authorization.json");
+  fs.writeFileSync(epochFile, JSON.stringify(authorization), { mode: 0o600 });
+  return { ...value, parentDirectory, parentBytes, parent, epochFile, epochSha256: hash(fs.readFileSync(epochFile)), epochAuthorization: authorization };
 }
 function bytes(directory: string) {
   return fs.readdirSync(directory).sort().map(name => [name, fs.readFileSync(path.join(directory, name), "hex")]);
@@ -160,6 +186,15 @@ describe("additive same-original supplier continuation", () => {
     const value = await fixture(), admitted = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
     expect(() => recordContinuationDiagnostic(admitted.capability, { phase: "assemble", category: "quality" })).toThrow("completed independent review");
     expect(continuationProviderLedger().diagnostics).toEqual([]); closeContinuationCapability(admitted.capability);
+  });
+  it("stops an acknowledged low mandatory assessment without another attempt or generation hold", async () => {
+    const value = await fixture(), admitted = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
+    expect(() => recordContinuationDiagnostic(admitted.capability, { phase: "sufficiency", category: "quality" })).toThrow("acknowledged assessment");
+    await continuationModel(admitted.capability, "sufficiency", "s", "u", 1, async () => ({ perClaim: [{ coverage: 0.1 }] }));
+    recordContinuationDiagnostic(admitted.capability, { phase: "sufficiency", category: "quality" }); closeContinuationCapability(admitted.capability);
+    const retained = bytes(continuationDirectory());
+    await expect(beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush)).rejects.toThrow("unchanged context");
+    expect(bytes(continuationDirectory())).toEqual(retained); expect(continuationProviderLedger().newModelCalls).toBe(1);
   });
   it("keeps the rejected-checkpoint barrier after an intervening fresh-generation transport failure", async () => {
     const value = await fixture(), first = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
@@ -301,4 +336,95 @@ describe("additive same-original supplier continuation", () => {
     expect(retainedBusinessCanaryClosure()).toEqual(retainedContinuationDeliveryResolution(value.old));
     expect(value.db.claimA2aFailedOriginalFulfillment).toHaveBeenCalledOnce(); expect(fetch).not.toHaveBeenCalled();
   });
+});
+
+describe("separate source-bound additive supplier epoch", () => {
+  it("retains every exhausted parent byte and claim while accounting for a fresh request", async () => {
+    const value = await epochFixture(), old = bytes(value.oldDirectory), original = bytes(fulfillmentDirectory());
+    expect(await inspectOriginalContinuation(value.db, value.epochFile, value.epochSha256)).toMatchObject({ newModelCalls: 0,
+      combinedReservedMicroUsd: 243_260, nativeCompleted: false, providerRequests: 0, payments: 0 });
+    await expect(beginOriginalContinuation(value.db, value.epochFile, value.epochSha256, fixtureFlush)).rejects.toThrow("not active");
+    expect(await activateOriginalContinuationEpoch(value.db, value.epochFile, value.epochSha256, fixtureFlush)).toMatchObject({ activated: true,
+      newModelCalls: 0, combinedReservedMicroUsd: 243_260, nativeClaimChanged: false });
+    git.mockImplementation((_command, args) => args?.[0] === "status" ? "" : `${fixtureCommit}\n`);
+    await expect(beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush)).rejects.toThrow("superseded");
+    git.mockImplementation((_command, args) => args?.[0] === "status" ? "" : `${"d".repeat(40)}\n`);
+    const admitted = await beginOriginalContinuation(value.db, value.epochFile, value.epochSha256, fixtureFlush), action = vi.fn(async () => ({ fresh: true }));
+    await continuationModel(admitted.capability, "sufficiency", "Fixture system", "sufficiency fixture", 1, action); closeContinuationCapability(admitted.capability);
+    expect(action).toHaveBeenCalledOnce();
+    expect(continuationProviderLedger()).toMatchObject({ newModelCalls: 1, oldAdditiveModelCalls: 10, combinedReservedMicroUsd: 263_920 });
+    expect(bytes(value.parentDirectory)).toEqual(value.parentBytes); expect(bytes(value.oldDirectory)).toEqual(old);
+    expect(bytes(fulfillmentDirectory())).toEqual(original); expect(value.db.claimA2aFailedOriginalFulfillment).toHaveBeenCalledOnce();
+    expect(value.db.completeA2aFailedOriginalFulfillment).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
+    await expect(activateOriginalContinuationEpoch(value.db, value.epochFile, value.epochSha256, fixtureFlush)).rejects.toThrow();
+  }, 60_000);
+  it("consumes six fresh failures without releasing or borrowing the parent's eight holds", async () => {
+    const value = await epochFixture();
+    await activateOriginalContinuationEpoch(value.db, value.epochFile, value.epochSha256, fixtureFlush);
+    for (let index = 0; index < 6; index++) {
+      const admitted = await beginOriginalContinuation(value.db, value.epochFile, value.epochSha256, fixtureFlush);
+      await expect(continuationModel(admitted.capability, "sufficiency", "s", "u", 1, async () => { throw Error("Synthetic fresh failure"); })).rejects.toThrow();
+      closeContinuationCapability(admitted.capability);
+    }
+    const retained = bytes(continuationDirectory());
+    expect(continuationProviderLedger()).toMatchObject({ newModelCalls: 6, combinedReservedMicroUsd: 367_220 });
+    await expect(beginOriginalContinuation(value.db, value.epochFile, value.epochSha256, fixtureFlush)).rejects.toThrow("exhausted");
+    expect(bytes(continuationDirectory())).toEqual(retained); expect(bytes(value.parentDirectory)).toEqual(value.parentBytes);
+  }, 60_000);
+  it("refuses parent changes, grant inflation and missing active journal instead of parent fallback", async () => {
+    const value = await epochFixture();
+    expect(continuationAuthorizationSchema.safeParse({ ...value.epochAuthorization, maximumNewModelCalls: 7 }).success).toBe(false);
+    expect(continuationAuthorizationSchema.safeParse({ ...value.epochAuthorization, maximumCombinedMicroUsd: 500_000 }).success).toBe(false);
+    await activateOriginalContinuationEpoch(value.db, value.epochFile, value.epochSha256, fixtureFlush);
+    const paths = fixedPaths(value.root);
+    fs.unlinkSync(path.join(paths.epochDirectory, "authorization.json"));
+    expect(() => continuationDirectory()).toThrow();
+    await expect(beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush)).rejects.toThrow();
+    expect(bytes(value.parentDirectory)).toEqual(value.parentBytes);
+  }, 60_000);
+  it("rejects a changed parent raw ledger before any new epoch intent or model dispatch", async () => {
+    const value = await epochFixture(); fs.unlinkSync(path.join(value.parentDirectory, "call-01.json"));
+    await expect(activateOriginalContinuationEpoch(value.db, value.epochFile, value.epochSha256, fixtureFlush)).rejects.toThrow("ledger head");
+    expect(fs.existsSync(fixedPaths(value.root).anchorDirectory)).toBe(false); expect(fetch).not.toHaveBeenCalled();
+  }, 60_000);
+  it("rejects a whole journal restored to its initial snapshot against the external frontier", async () => {
+    const value = await epochFixture(); await activateOriginalContinuationEpoch(value.db, value.epochFile, value.epochSha256, fixtureFlush);
+    const directory = continuationDirectory(), initial = bytes(directory);
+    expect(directory).toBe(fixedPaths(value.root).epochDirectory);
+    const admitted = await beginOriginalContinuation(value.db, value.epochFile, value.epochSha256, fixtureFlush);
+    await continuationModel(admitted.capability, "sufficiency", "s", "u", 1, async () => ({ fixture: true })); closeContinuationCapability(admitted.capability);
+    for (const name of fs.readdirSync(directory)) {
+      const file = path.join(directory, name); expect(path.dirname(file)).toBe(directory);
+      expect(fs.lstatSync(file).isFile()).toBe(true); fs.unlinkSync(file);
+    }
+    for (const [name, raw] of initial) fs.writeFileSync(path.join(directory, name), Buffer.from(raw, "hex"), { mode: 0o600 });
+    expect(() => continuationDirectory()).toThrow();
+    await expect(beginOriginalContinuation(value.db, value.epochFile, value.epochSha256, fixtureFlush)).rejects.toThrow();
+    expect(bytes(value.parentDirectory)).toEqual(value.parentBytes); expect(fetch).not.toHaveBeenCalled();
+  }, 60_000);
+  it("keeps an external update fence and execution lock when held-byte publication is uncertain", async () => {
+    const value = await epochFixture(); await activateOriginalContinuationEpoch(value.db, value.epochFile, value.epochSha256, fixtureFlush);
+    const paths = fixedPaths(value.root), action = vi.fn(async () => ({ fixture: true }));
+    const admitted = await beginOriginalContinuation(value.db, value.epochFile, value.epochSha256, directory => {
+      if (directory === paths.epochDirectory && fs.existsSync(path.join(directory, "call-01.json"))) throw Error("Synthetic hold publication lost");
+    });
+    await expect(continuationModel(admitted.capability, "sufficiency", "s", "u", 1, action)).rejects.toThrow("publication lost");
+    expect(action).not.toHaveBeenCalled(); expect(fs.existsSync(paths.ledgerUpdateLockFile)).toBe(true);
+    expect(fs.existsSync(path.join(paths.epochDirectory, "execution-lock.json"))).toBe(true);
+    expect(() => continuationDirectory()).toThrow();
+    await expect(beginOriginalContinuation(value.db, value.epochFile, value.epochSha256, fixtureFlush)).rejects.toThrow();
+    expect(bytes(value.parentDirectory)).toEqual(value.parentBytes);
+  }, 60_000);
+  it("delivers the exact same original after fresh reviewed stages, preserving every parent hold", async () => {
+    const value = await epochFixture();
+    await activateOriginalContinuationEpoch(value.db, value.epochFile, value.epochSha256, fixtureFlush);
+    const admitted = await beginOriginalContinuation(value.db, value.epochFile, value.epochSha256, fixtureFlush);
+    await stages(admitted.capability); const run = preparedRun(admitted);
+    prepareContinuationResult(admitted.capability, run);
+    const proof = await verifyPreparedContinuation(value.db);
+    vi.setSystemTime("2026-10-09T12:00:00.000Z");
+    expect(await completePreparedContinuation(value.db, proof.preparedResultSha256, fixtureFlush)).toMatchObject({ deliveryCompleted: true, noNewInboundPayment: true });
+    expect(retainedContinuationDeliveryResolution(value.old)).toMatchObject({ deliveryCompleted: true, admissionPaused: false });
+    expect(bytes(value.parentDirectory)).toEqual(value.parentBytes); expect(value.db.claimA2aFailedOriginalFulfillment).toHaveBeenCalledOnce();
+  }, 60_000);
 });

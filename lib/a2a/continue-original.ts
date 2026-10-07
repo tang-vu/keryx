@@ -1,9 +1,9 @@
 import { config } from "../config";
 import type { KeryxDB } from "../db/keryx-db";
 import { OpenAICompatibleEngine } from "../llm/openai-compatible-engine";
-import type { ChatJsonOptions } from "../llm/json-chat-engine";
+import { JsonChatEngine, type ChatJsonOptions } from "../llm/json-chat-engine";
 import { ReasoningInputLimitError, ReasoningOutputValidationError, type ReasoningEngine, type SufficiencyInput } from "../llm/reasoning-engine";
-import { evidenceContext } from "../llm/evidence-context";
+import { originalFulfillmentContext } from "./original-fulfillment-context";
 import { buildQuoteOptions, resolveQuoteEvidence } from "../llm/quote-options";
 import { buildEvidenceReviewInput } from "../llm/evidence-review-input";
 import { MAX_REVIEWED_EVIDENCE } from "../llm/evidence-review";
@@ -41,6 +41,7 @@ class OriginalContinuationEngine extends OpenAICompatibleEngine {
   get failure() { return this.diagnostic; }
   protected supportsDecisionBrief(): boolean { return false; }
   protected synthesisGenerationTokens(): number { return LIMITS.maximumOutputTokens; }
+  protected evidenceSources(input: SufficiencyInput) { return originalFulfillmentContext(input); }
   protected assertSupplierAdmission(): void { assertContinuationSupplierAdmission(this.capability); }
   protected supplierAbortSignal(): AbortSignal { return continuationSupplierSignal(this.capability, config.llmTimeoutMs); }
   protected validateChatJsonInput(_model: string, system: string, user: string, maxTokens = 2048) {
@@ -57,7 +58,7 @@ class OriginalContinuationEngine extends OpenAICompatibleEngine {
       !result.evidence.length || result.evidence.length > MAX_REVIEWED_EVIDENCE) failed("synthesize", "output-validation");
     if (result.evidence.some(row => !row || typeof row !== "object" || !score((row as Record<string, unknown>).support)))
       failed("synthesize", "output-validation");
-    const options = buildQuoteOptions(evidenceContext(this.input.question, this.input.subClaims, this.input.gathered), this.input.gathered);
+    const options = buildQuoteOptions(this.evidenceSources(this.input), this.input.gathered);
     const proposals = resolveQuoteEvidence(result.evidence, options);
     const review = buildEvidenceReviewInput({ proposals, options, gathered: this.input.gathered, subClaims: this.input.subClaims });
     // Never checkpoint an invalid/partial review packet as successful generation.
@@ -115,6 +116,29 @@ class OriginalContinuationEngine extends OpenAICompatibleEngine {
   }
 }
 
+class ContinuationPromptPreflight extends JsonChatEngine {
+  readonly name = "continuation-readonly-preflight";
+  readonly prompts: ReturnType<typeof validateOriginalFulfillmentPrompt>[] = [];
+  protected evidenceSources(input: SufficiencyInput) { return originalFulfillmentContext(input); }
+  protected synthesisGenerationTokens(): number { return LIMITS.maximumOutputTokens; }
+  protected async chatJson(_model: string, system: string, user: string, maxTokens = 2048) {
+    this.prompts.push(validateOriginalFulfillmentPrompt(system, user, maxTokens));
+    return {};
+  }
+}
+
+/** Build the same full-body sufficiency/generation wire prompts without a supplier,
+ * credential, claim or mutation. The complete generated review remains separately bounded. */
+export async function preflightOriginalContinuation(binding: Parameters<typeof reasoningInput>[0]) {
+  const engine = new ContinuationPromptPreflight(), input = reasoningInput(binding);
+  await engine.sufficiency(input);
+  await engine.synthesize(input);
+  if (engine.prompts.length !== 2) failed("assemble", "unknown");
+  return { packetSha256: binding.packet.packetSha256, inputSemanticSha256: binding.packet.inputSemanticSha256,
+    targets: input.subClaims.length, selectedSources: input.gathered.length, prompts: engine.prompts,
+    providerRequests: 0, searches: 0, payments: 0 };
+}
+
 /** Prepare a fully reviewed result for the existing native claim. Delivery remains a
  * separate exact-digest metadata operation; this function starts no order or payment. */
 export async function completeOriginalContinuation(db: KeryxDB, authorizationFile: string, authorizationSha256: string, apiKey: string) {
@@ -125,6 +149,12 @@ export async function completeOriginalContinuation(db: KeryxDB, authorizationFil
   let phase: Phase = "sufficiency";
   try {
     const assessment = await engine.sufficiency(input);
+    // A genuine negative assessment is retained by policy. Generation/review cannot
+    // raise final coverage above this assessment, so refuse before consuming their holds.
+    if (binding.authorization.requiredSupportedTargetIndexes.some(index => {
+      const row = assessment.perClaim?.[index];
+      return !row || row.coverage < 0.4 || !row.coveredBy.some(marker => input.gathered.some(source => source.marker === marker));
+    })) failed("sufficiency", "quality");
     phase = "synthesize";
     const synthesized = await engine.synthesize(input);
     if (engine.failure) failed(engine.failure.phase, engine.failure.category);

@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { completeOriginalContinuation } from "./continue-original";
+import { completeOriginalContinuation, preflightOriginalContinuation } from "./continue-original";
 import { JsonChatEngine } from "../llm/json-chat-engine";
+import { evidenceContext } from "../llm/evidence-context";
+import { reasoningInput } from "./fulfill-original";
+import { ORIGINAL_FULFILLMENT_LIMITS } from "./failed-original-fulfillment-protocol";
 import { cleanFulfillmentFixtures, fixtureCommit, fixtureNow, fulfillmentFixture } from "../business-operator/fulfillment-test-fixture";
 import { fulfillmentObjectSha256, validateFulfilledQueryRun, type A2aFulfillmentClaim } from "./failed-original-fulfillment-protocol";
 import type { QueryRun } from "../types";
@@ -89,6 +92,122 @@ function provider(mode: "success" | "failure2" | "truncated2" | "malformed2" | "
 }
 
 describe("explicit same-original continuation engine", () => {
+  it.each(["low", "unbound"] as const)("retains a successful %s fifth assessment and stops before generation or review", async mode => {
+    const value = await admittedFixture(true);
+    const fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      const wire = JSON.parse(String(init?.body));
+      const assessment = replies(JSON.parse(wire.messages[1].content), 1) as { perClaim: Array<{
+        coverage: number; coveredBy: string[]; missingRequestedParts: string[];
+      }> };
+      assessment.perClaim[4].coverage = mode === "low" ? 0.1 : 0.9;
+      assessment.perClaim[4].coveredBy = mode === "unbound" ? [] : ["S1"];
+      assessment.perClaim[4].missingRequestedParts = ["Synthetic deployment and delivery checks remain unverified."];
+      return Response.json({ choices: [{ message: { content: JSON.stringify(assessment) }, finish_reason: "stop" }] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    await expect(completeOriginalContinuation(value.db, "private-authorization", "a".repeat(64), "synthetic-fixture-key"))
+      .rejects.toThrow("sufficiency quality");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(policy.model.mock.calls.map(call => call[1])).toEqual(["sufficiency"]);
+    // The valid negative assessment completed the checkpoint action, rather than
+    // being classified as a failed provider output or silently replaced.
+    expect(await policy.model.mock.results[0].value).toMatchObject({ perClaim: [
+      {}, {}, {}, {}, { coverage: mode === "low" ? 0.1 : 0.9,
+        missingRequestedParts: ["Synthetic deployment and delivery checks remain unverified."] },
+    ] });
+    expect(policy.diagnostic).toHaveBeenCalledTimes(1);
+    expect(policy.diagnostic).toHaveBeenCalledWith(value.capability, { phase: "sufficiency", category: "quality" });
+    expect(policy.prepare).not.toHaveBeenCalled();
+    expect(policy.close).toHaveBeenCalledWith(value.capability);
+    expect(value.db.claimA2aFailedOriginalFulfillment).not.toHaveBeenCalled();
+    expect(value.db.completeA2aFailedOriginalFulfillment).not.toHaveBeenCalled();
+  });
+
+  it("uses complete selected bodies through preflight, generation binding and independent review while retaining partial gaps", async () => {
+    const value = await admittedFixture(true);
+    const filler = Array.from({ length: 30 }, (_, index) =>
+      `Synthetic section ${index} discusses contract-wallet support, EOA payment flow, authorization, revocation limits and acceptance checks.`).join("\n");
+    const facts = [
+      "The synthetic contract uses contractSigner:true with a contract signature.",
+      "The synthetic vendor returns 402 before EIP-3009 signing, a retry, signature verification and item delivery.",
+      "The synthetic enclave asks a two-of-three RPC quorum for the recent validation result.",
+      "The synthetic TEE runs isValidSignature in read-only mode and forbids state changes.",
+      "The synthetic batch credits the seller account only after the signatures pass verification.",
+    ];
+    const bodies = [`${filler}\n${facts[0]}\n${facts[2]}\n${facts[3]}`,
+      `${filler}\n${facts[1]}\n${facts[4]}`];
+    value.binding.packet.gathered.forEach((source, index) => { source.text = bodies[index]; });
+    const input = reasoningInput(value.binding);
+    const sampled = evidenceContext(input.question, input.subClaims, input.gathered);
+    expect(sampled.every(source => source.excerpted)).toBe(true);
+    expect(sampled.flatMap(source => source.passages.map(passage => passage.text)).join("\n")).not.toContain("contractSigner:true");
+    const fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      const wire = JSON.parse(String(init?.body)), user = JSON.parse(wire.messages[1].content);
+      let output: object;
+      if (fetch.mock.calls.length === 1) {
+        const assessment = replies(user, 1) as { perClaim: Array<{ coverage: number; missingRequestedParts: string[] }> };
+        assessment.perClaim[4].coverage = 0.4;
+        assessment.perClaim[4].missingRequestedParts = ["Synthetic deployment details and observed delivery receipts remain unverified."];
+        output = assessment;
+      } else if (fetch.mock.calls.length === 2) {
+        output = { answer: "UNREVIEWED_SYNTHETIC_DRAFT [S1] [S2].", citedMarkers: ["S1", "S2"], conflicts: [],
+          evidence: facts.map((statement, claimIndex) => {
+            const option = (user.quoteOptions as Array<{ text: string; quoteId: string; marker: string }>).find(row => row.text === statement)!;
+            expect(option).toBeDefined();
+            return { claimIndex, marker: option.marker, quoteId: option.quoteId, support: 0.9, statement };
+          }) };
+      } else output = replies(user, 3);
+      return Response.json({ choices: [{ message: { content: JSON.stringify(output) }, finish_reason: "stop" }] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const preflight = await preflightOriginalContinuation(value.binding);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(policy.begin).not.toHaveBeenCalled();
+    expect(preflight).toMatchObject({ targets: 5, selectedSources: 2, providerRequests: 0, searches: 0, payments: 0 });
+    await completeOriginalContinuation(value.db, "private-authorization", "a".repeat(64), "synthetic-fixture-key");
+    expect(fetch).toHaveBeenCalledTimes(3);
+    const wires = fetch.mock.calls.map(call => JSON.parse(String(call[1]?.body)));
+    expect(wires.slice(0, 2).map(wire => Buffer.byteLength(wire.messages[0].content + wire.messages[1].content)))
+      .toEqual(preflight.prompts.map(prompt => prompt.promptUtf8Bytes));
+    expect(preflight.prompts.every(prompt => prompt.promptUtf8Bytes <= ORIGINAL_FULFILLMENT_LIMITS.maximumInputBytes)).toBe(true);
+    const sufficiency = JSON.parse(wires[0].messages[1].content), generation = JSON.parse(wires[1].messages[1].content);
+    for (const sources of [sufficiency.gathered, generation.sources]) {
+      expect(sources.map((source: { passages: object[] }) => source.passages)).toEqual(bodies.map(text => [{ start: 0, end: text.length, text }]));
+      expect(sources.every((source: { excerpted: boolean; contextOmissions?: unknown; candidateSelection?: unknown }) =>
+        source.excerpted === false && source.contextOmissions === undefined && source.candidateSelection === undefined)).toBe(true);
+    }
+    const review = JSON.parse(wires[2].messages[1].content);
+    expect(review.evidence).toHaveLength(5);
+    expect(review.evidence.map((row: { quote: string }) => row.quote)).toEqual(facts);
+    for (const row of review.evidence) {
+      const source = input.gathered.find(source => source.marker === row.source.marker)!;
+      expect(source.text.slice(row.quoteSpan.start, row.quoteSpan.end)).toBe(row.quote);
+      expect(source.text.slice(row.context.start, row.context.end)).toBe(row.context.text);
+      expect(row.context.text.length).toBeLessThanOrEqual(1200);
+    }
+    const run = policy.prepare.mock.calls[0][1] as QueryRun;
+    expect(run.claimCoverage!.map(row => row.coverage)).toEqual([0.9, 0.9, 0.9, 0.9, 0.4]);
+    expect(run.originalFulfillment!.statements.map(row => row.claimIndex)).toEqual([0, 1, 2, 3, 4]);
+    expect(run.originalFulfillment!.evidenceGaps).toEqual([{ claimIndex: 4,
+      missingRequestedParts: ["Synthetic deployment details and observed delivery receipts remain unverified."] }]);
+    expect(run.answer).toContain("remain unverified");
+    expect(run.answer).not.toContain("UNREVIEWED_SYNTHETIC_DRAFT");
+  });
+
+  it("refuses an over-bound complete body in readonly preflight and execution without excerpt fallback or supplier reservation", async () => {
+    const value = await admittedFixture(true), fetch = provider();
+    value.binding.packet.gathered[0].text = "x".repeat(ORIGINAL_FULFILLMENT_LIMITS.maximumInputBytes);
+    await expect(preflightOriginalContinuation(value.binding)).rejects.toThrow("prompt exceeds supplier bounds");
+    expect(policy.begin).not.toHaveBeenCalled();
+    await expect(completeOriginalContinuation(value.db, "private-authorization", "a".repeat(64), "synthetic-fixture-key"))
+      .rejects.toThrow("sufficiency input-limit");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(policy.model).not.toHaveBeenCalled();
+    expect(policy.prepare).not.toHaveBeenCalled();
+    expect(policy.diagnostic).toHaveBeenCalledWith(value.capability, { phase: "sufficiency", category: "input-limit" });
+    expect(policy.close).toHaveBeenCalledWith(value.capability);
+  });
+
   it("requires complete independent support for all five retained mandatory targets with only two sources", async () => {
     const value = await admittedFixture(true), fetch = provider();
     await completeOriginalContinuation(value.db, "private-authorization", "a".repeat(64), "synthetic-fixture-key");
