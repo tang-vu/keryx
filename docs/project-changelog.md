@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Retain the reason when paid research cannot be synthesized (2026-10-07, v0.27.12 candidate)
+
+- Distinguish unavailable bounded input, written synthesis and evidence review
+  after successful source reads. Empty results describe unavailable assessment
+  rather than claiming the documents contain no evidence.
+- Keep the original reads, charges and receipts visible with delivery-review
+  guidance in the trace, saved answer, hosted API/MCP and report exports. No
+  automatic supplier request, purchase or refund is added.
+- [Scope, verification and remaining live gates](engineering/synthesis-failure-2026-10-07.md).
+  This closes a failure-reporting gap; useful completed business delivery remains
+  a separate acceptance requirement.
+
 ### Bounded dependency install retry on redeploy (2026-10-07, deployment tooling)
 
 - `npm run redeploy` repeats `npm ci` at most three times, 15 and 30 seconds apart,

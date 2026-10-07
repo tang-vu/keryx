@@ -93,6 +93,7 @@ describe("selected-quote decision brief context admission", () => {
     const result = await engine.synthesize(input);
     expect(engine.requests).toHaveLength(0);
     expect(result).toMatchObject({ answer: "", evidence: [], evidenceReview: "unavailable" });
+    expect(result.synthesisFailure).toBe("input");
   });
 
   it("refuses actual selected-neighborhood overflow after one generation without trimming or retrying", async () => {
@@ -100,6 +101,7 @@ describe("selected-quote decision brief context admission", () => {
     const result = await engine.synthesize(channelResearch());
     expect(engine.requests).toHaveLength(1);
     expect(result).toMatchObject({ answer: "", evidence: [], evidenceReview: "unavailable" });
+    expect(result.synthesisFailure).toBe("input");
     expect(result.decisionBrief).toBeUndefined();
   });
 
