@@ -13,6 +13,7 @@ examples below do not establish the active mainnet configuration.
 - **VPS** (`root@`, app at `/root/keryx`) runs the Next.js app under **pm2** (process `keryx`, port **3939**).
 - **Cloudflare named tunnel** maps `https://keryx.cc` → `http://localhost:3939` on the VPS (already configured).
 - Routine deploys use `npm run redeploy` (`scripts/redeploy-vps.sh`), which SSHes in and checks out `origin/main`. `npm run deploy` is the separate provisioning path.
+- When install inputs changed, the redeploy repeats `npm ci` up to three times for transient registry network errors only; any other install failure stops immediately and leaves no successful-install stamp.
 - ⇒ **The VPS serves whatever is on `origin/main`.** Local edits are invisible until committed **and pushed**.
 
 ## One-time prereqs (already set up on this machine)
