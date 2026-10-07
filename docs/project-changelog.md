@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Guest question activity on the ledger (2026-10-06, v0.27.9 candidate)
+### Guest question activity on the ledger (2026-10-06, v0.27.12 candidate)
 
 - Keep "recorded accounts" and add "guest questions" from completed web questions
   without a recorded signed-in wallet. Guest questions are included in the total;
@@ -10,6 +10,55 @@
   confirmed zero and dated prior reads retain their meanings.
 - No tracking, authentication, payment, schema or schedule changes. Hosted links
   expose the updated ledger; client package/installer contracts retain their roles.
+
+### Explicit same-original supplier window (2026-10-07, v0.27.11 candidate)
+
+- Add a private v2 authority with a supplied, frozen window of at most 90 minutes
+  from permission receipt. Keep expired v1 records and their fixed deadline intact.
+- Bind the window to the permanent native original claim. Preserve three model
+  calls, the same tariff and old holds; prepared metadata can complete after expiry.
+- No new order, charge, search, creator payment, retry or automatic renewal.
+  Public answers and receipts retain their existing contracts.
+- [Procedure](operator-original-fulfillment.md) and
+  [validation, distribution boundaries and live gates](engineering/operator-fulfillment-window-2026-10-07.md).
+  Source validation does not establish deployment, useful delivery or traction.
+
+### Hosted MCP SDK security dependency (2026-10-07, v0.27.10 candidate)
+
+- Pin the app's MCP SDK to 1.31.0, the maintainer's fixed version for
+  GHSA-6qxp-vccf-f47h and the version already used by the caller-funded package.
+- Preserve the high-severity dependency audit and existing server/stdio roles;
+  no OAuth client, payment contract or new provider/custody authority is added.
+- Keep source-inspection functionality. Actual release, deployment and separate
+  installed-client identities remain gated; see
+  [scope and validation](engineering/mcp-sdk-security-2026-10-07.md).
+
+### Inspect a report without one source (2026-10-06, v0.27.9 candidate)
+
+- Completed web answers and saved public reports offer **What if a source were
+  missing?**: temporarily omit a source to inspect the remaining recorded excerpts.
+- Distinguish newly missing excerpts from gaps already present and unavailable
+  historical ledgers. Match recorded asset versions and omit synthetic evidence.
+- Selection and restore stay local. Answers, confidence, payments, receipts and
+  public API contracts retain their original values. No new model or source request.
+- Minimal private/paid recovery clients retain their existing views because they
+  do not expose the complete source identity graph. Native/stdio distributions
+  retain separate source pins and versions; no client upgrade is claimed.
+- [How to inspect a source](research-source-inspection.md) and
+  [verification, surface boundaries and remaining gates](engineering/research-source-inspection-2026-10-06.md).
+
+### Sharp/librsvg security patch (2026-10-06, v0.27.8 candidate)
+
+- Advance the existing Next-scoped sharp override to 0.35.5 and its locked native
+  closure for the maintainer's librsvg CVE-2026-96889 fix. Next, payment SDKs,
+  decoder configuration and the required high-severity audit gate remain unchanged.
+- Add a bounded real-child SVG/Next image-optimizer/desktop-brand compatibility
+  fixture. The dated production dependency audit has zero high/critical findings;
+  seven low and nineteen moderate findings remain.
+- App metadata advances to 0.27.8; exact unaffected runtime bundle comparisons
+  support retained desktop 0.4.7, stdio MCP 0.4.6, remote MCP 0.3.2 and extension
+  0.1.1 roles. No deployment, installer or package publication is claimed.
+- [Scope, primary advisory and verification](engineering/sharp-security-2026-10-06.md).
 
 ### One-shot same-original delivery fulfillment (2026-10-06, v0.27.7 candidate)
 

@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { CitationEvidencePanel } from "./citation-evidence-panel";
 import { ResearchCitationExport } from "./research-citation-export";
 import { EvidenceMatrixExport } from "./evidence-matrix-export";
+import { SourceEvidenceLens } from "./source-evidence-lens";
 
 export function AnswerCard({ run, meta, permalink, payments = [] }: { run: QueryRun; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[] }) {
   run = demoteSyntheticEvidence(run);
@@ -84,6 +85,8 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
           {run.claimCoverage?.length ? (
             <EvidenceLedger run={run} />
           ) : null}
+
+          <SourceEvidenceLens key={run.id} run={run} />
 
           <EvidenceMatrixExport run={run} />
           <ResearchCitationExport citations={run.citations} />

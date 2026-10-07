@@ -5,7 +5,8 @@ import { fulfillCanaryOriginal, preflightOriginalFulfillment } from "./fulfill-o
 import { completePreparedFulfillment, fulfillmentDirectory, fulfillmentProviderLedger, verifyPreparedFulfillment,
   readFrozenFulfillmentPacket } from "../business-operator/fulfillment-policy";
 import { canaryExecutionPaused, configuredBusinessCanary, retainedBusinessCanaryClosure } from "../business-operator/canary-policy";
-import { fulfillmentFixture, fixtureNow, fixtureCommit, fixtureFlush, cleanFulfillmentFixtures } from "../business-operator/fulfillment-test-fixture";
+import { fulfillmentFixture, fixtureNow, fixtureCommit, fixtureFlush, cleanFulfillmentFixtures,
+  withFulfillmentSupplierWindow } from "../business-operator/fulfillment-test-fixture";
 import { fulfillmentSha256, fulfillmentObjectSha256 } from "./failed-original-fulfillment-protocol";
 import { finalizeGroundedAnswer } from "../agent/answer-grounding";
 import { a2aResponseFromRun, quoteFromA2aOrder } from "./result";
@@ -54,6 +55,18 @@ function provider(options: { failureAt?: number; omitStatements?: boolean; unsup
 }
 
 describe("same-paid-original finite cited-statement fulfillment", () => {
+  it("verifies and metadata-completes the same v2 prepared result after expiry without another supplier request", async () => {
+    const window = { approvalReceivedAt: fixtureNow, expiresAt: "2026-10-06T13:30:00.000Z", maximumDurationMs: 5_400_000 as const };
+    const value = withFulfillmentSupplierWindow(await fulfillmentFixture(), window, fixtureNow), fetch = provider();
+    await fulfillCanaryOriginal(value.db, value.authorizationFile, value.authorizationDigest, "synthetic-fixture-key", fixtureFlush);
+    const before = await verifyPreparedFulfillment(value.db); vi.setSystemTime("2026-10-06T13:30:01.000Z");
+    expect(await verifyPreparedFulfillment(value.db)).toEqual(before);
+    expect(await completePreparedFulfillment(value.db, before.preparedResultSha256, fixtureFlush)).toMatchObject({ deliveryCompleted: true });
+    expect(fetch).toHaveBeenCalledTimes(3); expect(fulfillmentProviderLedger().combinedReservedMicroUsd).toBe(98640);
+    await expect(fulfillCanaryOriginal(value.db, value.authorizationFile, value.authorizationDigest,
+      "synthetic-fixture-key", fixtureFlush)).rejects.toThrow("expired");
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
   it("renders all five supported themes and concrete checks while keeping the missing Arc profile explicit", async () => {
     const value = await fulfillmentFixture(true), fetch = provider({ fiveTargets: true });
     await fulfillCanaryOriginal(value.db, value.authorizationFile, value.authorizationDigest, "synthetic-fixture-key", fixtureFlush);

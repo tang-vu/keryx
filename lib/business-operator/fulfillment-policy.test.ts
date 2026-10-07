@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fulfillmentFixture, fixtureNow, fixtureCommit, fixtureFlush, cleanFulfillmentFixtures } from "./fulfillment-test-fixture";
+import { fulfillmentFixture, fixtureNow, fixtureCommit, fixtureFlush, cleanFulfillmentFixtures,
+  withFulfillmentSupplierWindow } from "./fulfillment-test-fixture";
 import { beginFailedOriginalFulfillment, closeFulfillmentCapability, fulfillmentDirectory, fulfillmentProviderLedger,
   fulfillmentStep, readFulfillmentAuthorization, reserveFulfillmentModel, retainedFulfillmentDeliveryResolution } from "./fulfillment-policy";
 import { fulfillmentSupplierSignal, assertFulfillmentSupplierAdmission } from "./fulfillment-policy";
@@ -17,6 +18,50 @@ beforeEach(() => {
 afterEach(() => { cleanFulfillmentFixtures(); vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe("one-shot failed-original fulfillment authority", () => {
+  it("freezes an explicit v2 window in the native authority and keeps the same three-call ceiling", async () => {
+    const window = { approvalReceivedAt: fixtureNow, expiresAt: "2026-10-06T13:30:00.000Z", maximumDurationMs: 5_400_000 as const };
+    const value = withFulfillmentSupplierWindow(await fulfillmentFixture(), window, fixtureNow);
+    const admitted = await beginFailedOriginalFulfillment(value.db, value.binding, fixtureFlush);
+    expect(admitted.claim.authority).toMatchObject({ format: "keryx-a2a-failed-original-fulfillment-authority-v2", supplierWindow: window });
+    await fulfillmentStep(admitted.capability, "sufficiency", async () => reserveFulfillmentModel(admitted.capability, "fixture", "data", 1));
+    await fulfillmentStep(admitted.capability, "synthesize", async () => {
+      reserveFulfillmentModel(admitted.capability, "fixture", "generation", 1);
+      reserveFulfillmentModel(admitted.capability, "fixture", "review", 1);
+      expect(() => reserveFulfillmentModel(admitted.capability, "fixture", "fourth", 1)).toThrow("opaque");
+    });
+    expect(fulfillmentProviderLedger()).toMatchObject({ newModelCalls: 3, combinedReservedMicroUsd: 98640 });
+    await expect(beginFailedOriginalFulfillment(value.db, value.binding, fixtureFlush)).rejects.toThrow("already retained");
+    expect(value.db.claimA2aFailedOriginalFulfillment).toHaveBeenCalledOnce(); expect(fetch).not.toHaveBeenCalled();
+  });
+  it("rejects a future approval before any intent and keeps expired v2 metadata readable", async () => {
+    const value = await fulfillmentFixture(), window = { approvalReceivedAt: "2026-10-06T12:01:00.000Z",
+      expiresAt: "2026-10-06T13:31:00.000Z", maximumDurationMs: 5_400_000 as const };
+    expect(() => withFulfillmentSupplierWindow(value, window, window.approvalReceivedAt)).toThrow("host or tariff");
+    expect(fs.readdirSync(fulfillmentDirectory())).toEqual([]);
+    vi.setSystemTime(window.approvalReceivedAt);
+    const current = withFulfillmentSupplierWindow(value, window, window.approvalReceivedAt);
+    vi.setSystemTime(window.expiresAt);
+    expect(readFulfillmentAuthorization(current.authorizationFile, current.authorizationDigest).authority).toEqual(current.binding.authority);
+    await expect(beginFailedOriginalFulfillment(current.db, current.binding, fixtureFlush)).rejects.toThrow("expired");
+    expect(current.db.claimA2aFailedOriginalFulfillment).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
+  });
+  it("aborts v2 dispatch at its supplied expiry without releasing or renewing the model hold", async () => {
+    const window = { approvalReceivedAt: fixtureNow, expiresAt: "2026-10-06T13:30:00.000Z", maximumDurationMs: 5_400_000 as const };
+    const value = withFulfillmentSupplierWindow(await fulfillmentFixture(), window, fixtureNow);
+    const admitted = await beginFailedOriginalFulfillment(value.db, value.binding, fixtureFlush);
+    vi.setSystemTime("2026-10-06T13:29:59.990Z"); const deadline = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(duration => {
+      setTimeout(() => deadline.abort(), duration); return deadline.signal;
+    });
+    await fulfillmentStep(admitted.capability, "sufficiency", async () => {
+      reserveFulfillmentModel(admitted.capability, "fixture", "data", 1);
+      const signal = fulfillmentSupplierSignal(admitted.capability, 120000);
+      expect(timeout).toHaveBeenCalledWith(10); await vi.advanceTimersByTimeAsync(10); expect(signal.aborted).toBe(true);
+      expect(() => assertFulfillmentSupplierAdmission(admitted.capability)).toThrow("expired");
+    });
+    expect(fulfillmentProviderLedger()).toMatchObject({ newModelCalls: 1, combinedReservedMicroUsd: 57320 });
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it("accepts only the reviewed three-call additive authorization, irrespective of the historical ceiling", async () => {
     const value = await fulfillmentFixture();
     fs.writeFileSync(value.authorizationFile, JSON.stringify({ ...value.authorization, maximumNewModelCalls: 10 }));

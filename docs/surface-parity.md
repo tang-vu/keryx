@@ -2,7 +2,7 @@
 
 ## Guest question activity, October 6, 2026
 
-Application **0.27.9 candidate** adds a web ledger count and optional nullable
+Application **0.27.12 candidate** adds a web ledger count and optional nullable
 `/api/metrics` `guestQuestions` aggregate, shared by SQLite and Supabase.
 Only completed web runs without a recorded signed-in wallet count; total recorded
 questions already include them. The existing account label/count is preserved.
@@ -13,6 +13,59 @@ runtime roles and reach the ledger through existing hosted links. Their package
 bytes/contracts do not change, so no new installer/package version is warranted.
 Hosted deployment and independent distribution identities remain separate gates.
 See [scope and checks](engineering/ledger-guest-questions-2026-10-06.md).
+
+## Explicit supplier window, October 7, 2026
+
+Application **0.27.11 candidate** adds a distinct private v2 same-original
+fulfillment authority with an explicitly supplied frozen window of at most
+90 minutes. Shared server/database policy receives this update; public web,
+API/SSE, A2A, remote MCP and bot answer/receipt contracts remain unchanged. The
+private CLI uses the same schema and grants no public retry or automatic renewal.
+Desktop **0.4.7**, caller-funded stdio MCP **0.4.6**, remote MCP **0.3.2**,
+extension **0.1.1** and repository CLI retain their existing roles and separate
+release identities. Runtime closure/byte comparisons, published artifacts and
+installed clients are distinct evidence; app deployment never proves client
+upgrades. See [scope and remaining gates](engineering/operator-fulfillment-window-2026-10-07.md).
+
+## Hosted MCP SDK dependency, October 7, 2026
+
+Application **0.27.10 candidate** pins the root MCP SDK to 1.31.0 without changing
+hosted remote MCP 0.3.2 tools, transport/admission contracts, payment authority or
+provider policy. Existing real-SDK server/HTTP fixtures and adapter checks validate
+the integration. Caller-funded stdio MCP 0.4.6 already pins 1.31.0; its metadata,
+lock and implementation remain unchanged. Desktop 0.4.7, extension 0.1.1, repository
+CLI and hosted bot/API roles retain their contracts. Fresh source-bound CI assets
+retain their actual manifest/source pins; no installed upgrade or new client
+version is inferred. Current-main deployment must admit this successor separately.
+See [advisory, scope and remaining gates](engineering/mcp-sdk-security-2026-10-07.md).
+
+## Source excerpt inspection, October 6, 2026
+
+Application **0.27.9 candidate** adds a local source-omission view to shared web
+answers and saved public dispatches. It reads the already-authorized excerpt
+matrix, making no new request and changing no report, payment or public schema.
+Caller-funded/private web recovery retains its minimal result view because its
+contract lacks full source/marker/article identities. API/SSE, OpenAI-compatible,
+remote MCP, CLI, stdio MCP, desktop, extension and bots keep their existing roles;
+accessible reports and current exports remain their inspection path. No changed
+native/stdio runtime import, installer or package publication is claimed. Existing
+distribution versions/source pins require their own readbacks if reported.
+See [supported roles and limits](research-source-inspection.md).
+
+## Sharp/librsvg dependency patch, October 6, 2026
+
+Application **0.27.8 candidate** changes the hosted native image dependency
+closure and app version metadata. Image configuration, API/research/payment
+contracts, custody, workers and schedules stay in their existing roles. Controlled
+runtime bundle comparisons against 2593023 are byte-identical and contain no
+sharp/Next image-optimizer input for desktop helper/renderer/bridge/style and
+stdio MCP. Desktop **0.4.7**, caller MCP **0.4.6**, remote MCP **0.3.2** and
+extension **0.1.1** retain their separate versions. The desktop build-only icon
+generator uses the patched library and its API fixture passed; static icon assets
+are unchanged. Source-bound client publications retain their accepted original
+attestations; these comparisons do not re-attest an installer at the new server
+source or establish synchronized installed-client upgrades. See
+[primary advisory, graph hashes and release gates](engineering/sharp-security-2026-10-06.md).
 
 ## Reading activity and source library, October 5, 2026
 

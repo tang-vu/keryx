@@ -1,6 +1,6 @@
 # Guest question activity on the ledger
 
-Application **0.27.9 candidate**, October 6, 2026. The owner requested guest
+Application **0.27.12 candidate**, October 6, 2026. The owner requested guest
 activity and confirmed retaining the "recorded accounts" label.
 
 ## Definition and behavior
