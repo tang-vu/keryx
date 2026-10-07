@@ -1,7 +1,7 @@
 /**
- * Unit test for the backup snapshot-rotation logic. The filesystem/VACUUM path is exercised by
- * running `npm run backup`; this locks the pure "which snapshots to prune" rule that decides what
- * gets deleted — the part where an off-by-one would silently discard a good backup.
+ * Historical pure snapshot-classification compatibility. The guarded capture CLI
+ * no longer invokes this pruning helper: count/byte bounds hold admission and never
+ * authorize deleting prior recovery history without a verified copy receipt.
  */
 
 import { describe, it, expect } from "vitest";

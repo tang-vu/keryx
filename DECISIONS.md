@@ -5766,3 +5766,25 @@ private diagnostic for operations. A manual availability refresh never retries a
 question; the composer keeps the original draft and failure context. Hosted MCP
 advances its own version for this additive status/error contract. See
 [scope and release gates](docs/engineering/research-availability-2026-10-07.md).
+
+## Bound backup capture without discarding unverified recovery history - 2026-10-06
+
+The source audit found that count-only retention could allow 48 gzip plus 48 encrypted
+copies and create a full snapshot before pruning, exhausting usable VPS space.
+The reviewed mainnet scheduler already identity-routes storage and disables R2/alerts;
+retain that authority, custody and cadence. Before snapshot output, admit bounded
+conservative staging while protecting 2 GiB usable space and a shared 512 MiB budget over
+all regular retained/staging bytes. Existing count limits are additional admission fences.
+
+Reuse the readonly identity/fence/snapshot primitive for enrolled stores, including
+its 64 MiB ceiling, and require explicit isolated offline/testnet selection for the
+legacy 256 MiB path. Never omit a manifest to treat a marked store as legacy. Preserve
+prior/unknown/financial artifacts. PUT acknowledgement is not independently verified
+offhost durability, so this release grants no automatic local or remote pruning.
+R2 holds at 24 recognized objects without PUT/DELETE; a historical 25th object
+remains untouched and request/day accounting stays consumed. Capacity,
+retention or an interrupted original holds new capture. Private status preserves the
+genuine successful capture time without claiming public monitoring or restore/signing
+authority. Exclusive durable publication and retained uncertainty are preferable to
+silently discarding recovery history to sustain a cadence. Receipt-based cleanup,
+deployment and offhost drills remain gates. See [backup limits](docs/encrypted-backups.md).

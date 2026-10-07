@@ -88,7 +88,8 @@ their roles and response structures. They do not receive or synchronize this loc
 list. The shared reader's fixed OpenReview failure and recovery text apply to all
 research callers; answer-bearing adapters and receipts retain the failure. The
 refused original is excluded from citation/evidence exports; successful reads in
-the same run remain exportable. With no usable reads, those exports stay empty.
+the same run remain exportable. With no usable reads, exports contain no cited or
+quoted source.
 Desktop, extension and bot client packages need no reader implementation changes;
 verify their published versions at release.
 Existing cited-reference BibTeX/RIS and evidence exports remain separate.

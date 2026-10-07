@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { decryptBackup, encryptBackup, readBackupKey } from "./backup-encryption";
@@ -34,6 +35,7 @@ describe("authenticated backups", () => {
     db.close();
     const before = fs.readFileSync(source);
     const env = { ...process.env, KERYX_SQLITE_PATH: source, KERYX_BACKUP_ENCRYPTION_KEY: key.toString("hex"),
+      KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "1", KERYX_STORAGE_MANIFEST: "",
       KERYX_BACKUP_KEEP: "2", KERYX_BACKUP_REMOTE: "", KERYX_R2_UPLOAD: "0" };
     const run = (script: string, args: string[] = [], overrides = {}) => spawnSync(process.execPath,
       ["--import", "tsx", "--no-warnings", script, ...args], { cwd: process.cwd(), env: { ...env, ...overrides }, encoding: "utf8", timeout: 30_000 });
@@ -63,5 +65,23 @@ describe("authenticated backups", () => {
     expect(fs.readFileSync(source)).toEqual(before);
     expect(run("scripts/backup-db.mts", [], { KERYX_BACKUP_REMOTE: "r2:legacy" }).status).toBe(1);
     expect(fs.readdirSync(path.join(directory, "backups")).filter((file) => file.endsWith(".gz"))).toHaveLength(2);
+  });
+  it("retrieves only an encrypted recovery object using the retained ledger when the live DB is missing", () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-backup-test-")); temporary.push(directory);
+    const source = path.join(directory, "missing.sqlite"), backups = path.join(directory, "backups"), target = path.join(directory, "retrieved.enc");
+    fs.mkdirSync(backups, { mode: 0o700 });
+    const ledger = path.join(backups, "r2-budget.json");
+    fs.writeFileSync(ledger, JSON.stringify({ version: 1, month: new Date().toISOString().slice(0, 7), reservedRequests: 0, lastUploadDay: null }), { mode: 0o600 });
+    const bytes = encryptBackup(Buffer.from("isolated offline recovery fixture"), key);
+    const preloader = path.join(directory, "fixture-network.mjs");
+    fs.writeFileSync(preloader, `globalThis.fetch = async (_url, options) => { if(options.method !== 'GET') throw Error('unexpected method'); return new Response(Buffer.from('${bytes.toString("base64")}','base64')); };`, { mode: 0o600 });
+    const child = spawnSync(process.execPath, ["--import", "tsx", "--import", pathToFileURL(preloader).href, "--no-warnings", "scripts/backup-db.mts", "--download-r2", "keryx-2026-09-30T01-00-00-000Z.sqlite.enc", target], {
+      cwd: process.cwd(), encoding: "utf8", timeout: 30_000, env: { ...process.env, KERYX_SQLITE_PATH: source, KERYX_STORAGE_MANIFEST: "",
+        KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "1",
+        KERYX_R2_ENDPOINT: `https://${"a".repeat(32)}.r2.cloudflarestorage.com`, KERYX_R2_BUCKET: "fixture-backups",
+        KERYX_R2_ACCESS_KEY_ID: "fixture-id", KERYX_R2_SECRET_ACCESS_KEY: "fixture-secret" } });
+    expect(child.status, child.stderr).toBe(0); expect(fs.readFileSync(target)).toEqual(bytes);
+    expect(fs.existsSync(source)).toBe(false); expect(fs.readdirSync(backups)).toEqual(["r2-budget.json"]);
+    expect(JSON.parse(fs.readFileSync(ledger, "utf8"))).toMatchObject({ reservedRequests: 1, lastUploadDay: null });
   });
 });

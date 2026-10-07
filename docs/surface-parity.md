@@ -11,13 +11,35 @@ retain their 500-character ceiling; editable drafts retain the form's existing
 2,000-character limit.
 
 Public/private APIs, remote and stdio MCP, CLI, desktop, extension and bots keep
-their existing contracts and roles. The browser-local list is not synchronized
-or exported through those adapters. Their package bytes and versions are unchanged;
-no new artifact publication is required for this web-only feature. New hosted
+their response structures and roles. The browser-local list is not synchronized
+or exported through those adapters. The shared public reader also rejects the
+observed OpenReview verification route; its fixed failure and bilingual guidance
+reach hosted/repository research answers and receipts without admitting the access
+page as evidence. Successful reads in mixed runs remain available. Forwarding
+stdio/desktop clients, extensions and bots need no reader implementation changes;
+their separate package versions remain unchanged. New hosted
 commit/version delivery remains unverified until the serialized Operator source
 gate clears, review/CI pass and production health is read back. No schema, registry,
 custody, model allowance, spend cap or schedule changes. Independent useful task
 completion and returning participants are separate evidence gates.
+
+## Administrative backup safeguards, October 7, 2026
+
+Application **0.27.17 candidate** changes the administrative backup CLI and its
+existing scheduled child. Bounded local snapshot admission and held/staleness
+metadata do not add a public monitoring contract. Web/API research, payment,
+Operator/buyer CLI, hosted and stdio MCP, desktop, extensions and bots retain
+their existing contracts; no backup safeguard module enters their runtime graph.
+Dependencies and separate package versions remain desktop **0.4.8**, caller MCP
+**0.4.6**, remote MCP **0.3.3** and extension **0.1.1**. No npm republish is needed
+for this scope. Existing limits, custody, providers and five scheduler cadences
+are preserved.
+
+The app version gives the backup source a distinct GitHub release identity from
+the merged v0.27.16 source. Automatic client publishers require the release tag
+to match their source; previous release assets retain their dated source evidence.
+New-source CI, deployment, asset publication and installed-client identity remain
+separate gates. See [backup admission and recovery](encrypted-backups.md).
 
 ## Guest question activity, October 6, 2026
 
