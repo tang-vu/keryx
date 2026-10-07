@@ -2,6 +2,7 @@ import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../research/source-requirements";
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
+import { synthesisFailureDetail } from "./synthesis-failure";
 import { finalizeGroundedAnswer } from "./answer-grounding";
 import { selectCitedStatements } from "./cited-statements";
 import { deliverDecisionBrief } from "./decision-brief";
@@ -1471,9 +1472,13 @@ async function* runAdmittedAgent(
     ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
       ? { answerFormat: "decision-brief" as const } : {}) }); }
   catch {
-    synthesized = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable" };
+    synthesized = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable", synthesisFailure: "synthesis" };
     yield emit("synthesize", "Synthesis unavailable; completed reads and payment receipts are retained, with unsupported conclusions withheld.");
   }
+  const synthesisFailure = synthesisFailureDetail(synthesized.synthesisFailure, gathered.length,
+    researchResponseLanguage(input.question) === "vi");
+  if (synthesisFailure) yield emit("synthesize", synthesisFailure,
+    { synthesisFailureStage: synthesized.synthesisFailure, retainedReads: gathered.length });
   if (synthesized.evidenceReview) {
     yield emit("evidence", synthesized.evidenceReview === "unavailable"
       ? "Evidence relevance review unavailable; only qualified excerpts may be delivered, with unsupported prose and rewards withheld."
@@ -1520,16 +1525,21 @@ async function* runAdmittedAgent(
   evidenceMeasured = true;
   // Sentences are admitted against the final ledger, after every source, quote and review gate.
   const citedStatements = brief ? [] : selectCitedStatements(synthesized.evidence ?? [], ledger);
-  answer = brief?.answer ?? finalizeGroundedAnswer({ question: input.question, answer, ledger, statements: citedStatements });
+  answer = brief?.answer ?? finalizeGroundedAnswer({ question: input.question, answer, ledger, statements: citedStatements,
+    synthesisUnavailable: Boolean(synthesisFailure) });
   const vi = researchResponseLanguage(input.question) === "vi";
   const citedSummary = citedStatements.length > 0;
-  yield emit("evidence", brief ? (vi ? "Đã kiểm tra riêng từng nhận định và bước tiếp theo; vẫn còn giới hạn của trích đoạn và đánh giá model."
+  const unavailableAssessment = Boolean(synthesisFailure) && ledger.acceptedMarkers.size === 0;
+  yield emit("evidence", unavailableAssessment ? (vi
+    ? "Chưa đánh giá được bằng chứng vì bước tổng hợp hoặc kiểm tra không hoàn tất; không cung cấp kết luận hay trích đoạn chưa được kiểm tra."
+    : "Evidence assessment was unavailable because synthesis or review did not complete; unchecked conclusions and excerpts are withheld.") : brief ? (vi ? "Đã kiểm tra riêng từng nhận định và bước tiếp theo; vẫn còn giới hạn của trích đoạn và đánh giá model."
     : "Statements and conditional next steps received separate review; excerpt and model-assessment limitations remain.") : citedSummary ? (vi
     ? `Cung cấp ${citedStatements.length} câu tóm tắt, mỗi câu gắn với một trích đoạn nguyên văn đã kiểm tra; chưa xác minh được tổng hợp đầy đủ.`
     : `Delivering ${citedStatements.length} summary sentence(s), each tied to one checked verbatim excerpt; complete synthesis remains unverified.`) : vi
     ? "Chỉ cung cấp trích đoạn nguồn đủ điều kiện; chưa xác minh được tổng hợp đầy đủ và hỗ trợ cho từng nhận định."
     : "Delivering qualified source excerpts; complete synthesis and per-assertion support remain unverified.",
     { answerDelivery: brief ? "reviewed-decision-brief" : citedSummary ? "cited-summary" : "qualified-excerpts", completeness: "unverified",
+      ...(unavailableAssessment ? { assessmentStatus: "unavailable" } : {}),
       ...(citedSummary ? { citedStatements: citedStatements.length } : {}),
       ...(brief ? { briefDigest: brief.digest, facts: brief.facts, actions: brief.actions } : {}) });
   const used = gathered.filter((g) =>
@@ -1570,7 +1580,9 @@ async function* runAdmittedAgent(
     citedMarkers: [...ledger.acceptedMarkers], sourceMarkers: gathered.map(source => source.marker),
     conflicts: synthesized.conflicts ?? [], finalAssessmentSufficient: finalSufficiency.sufficient });
   // Coverage estimates describe the excerpt ledger, never a verified complete synthesis.
-  const verdict: Confidence = { level: "Low", reason: brief ? (vi
+  const verdict: Confidence = { level: "Low", reason: unavailableAssessment ? (vi
+    ? "Bước tổng hợp hoặc kiểm tra bằng chứng chưa hoàn tất; chưa đánh giá được mức hỗ trợ của nguồn hay câu trả lời hữu ích."
+    : "Synthesis or evidence review did not complete; source support and a useful answer remain unassessed.") : brief ? (vi
     ? "Bản phân tích đã qua kiểm tra bằng model trên trích đoạn có giới hạn; chưa xác minh tính đầy đủ hoặc tính đúng đắn độc lập."
     : "The brief received model review over bounded excerpts; completeness and independent factual correctness remain unverified.") : citedSummary ? (vi
     ? "Mỗi câu tóm tắt gắn với một trích đoạn nguyên văn và đã qua kiểm tra bằng mô hình; chưa xác minh tính đầy đủ hoặc tính đúng đắn độc lập."
@@ -1584,7 +1596,9 @@ async function* runAdmittedAgent(
       : `> ⚠ Low confidence — ${verdict.reason.replace(/[.!?]$/, "")}. Treat this as provisional.\n\n${answer}`;
   }
 
-  yield emit("synthesize", brief ? (vi ? `Đã chuẩn bị bản phân tích có dẫn nguồn từ ${used.length} nguồn`
+  yield emit("synthesize", unavailableAssessment ? (vi
+    ? "Đã giữ kết quả chưa hoàn chỉnh để kiểm tra việc giao kết quả; bước tổng hợp hoặc đánh giá bằng chứng không khả dụng."
+    : "Retained an incomplete result for delivery review; synthesis or evidence assessment was unavailable.") : brief ? (vi ? `Đã chuẩn bị bản phân tích có dẫn nguồn từ ${used.length} nguồn`
     : `Prepared a cited decision brief from ${used.length} source(s)`) : citedSummary ? (vi
     ? `Đã chuẩn bị tóm tắt có trích dẫn từng câu từ ${used.length} nguồn`
     : `Prepared a sentence-cited summary from ${used.length} source(s)`) : vi ? `Đã chuẩn bị trích đoạn từ ${used.length} nguồn; chưa xác minh được tổng hợp đầy đủ`
@@ -1815,7 +1829,8 @@ async function* runAdmittedAgent(
   // Follow-up guidance describes observed limits after attribution and settlement. It must
   // not change model-assigned contribution weights or confer evidence/payment authority.
   const followUp = researchFollowUp({ vi, outcomes: publicReadOutcomes, gathered, conflicts: synthesized.conflicts ?? [],
-    paymentReviewRequired: fundingUnavailable || pendingPayments > 0 || fetchFailures > 0 });
+    paymentReviewRequired: fundingUnavailable || pendingPayments > 0 || fetchFailures > 0,
+    synthesisFailure: synthesized.synthesisFailure });
   if (followUp) answer += `\n\n${followUp}`;
   return finish(answer);
 

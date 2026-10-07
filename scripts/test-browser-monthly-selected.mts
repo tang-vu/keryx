@@ -53,6 +53,8 @@ try {
     const request = route.request(); const url = new URL(request.url());
     if (url.pathname === "/fixture") return route.fulfill({ contentType: "text/html", body: "<div id='root'></div><script src='/bundle.js'></script>" });
     if (url.pathname === "/bundle.js") return route.fulfill({ contentType: "application/javascript", body: bundle.outputFiles[0].text });
+    // Card funding is unconfigured in this fixture; the funding panel only reads its availability.
+    if (url.pathname === "/api/onramp/session" && request.method() === "GET") return route.fulfill({ json: { available: false } });
     if (request.method() === "POST") {
       if (request.headers()["payment-signature"]) { paid++; return route.abort(); }
       return route.fulfill({ status: 402, headers: { "payment-required": Buffer.from(JSON.stringify({ x402Version: 2, resource: { url: "/api/research/monthly" }, accepts: [requirement] })).toString("base64"), "x-keryx-monthly-authorization": JSON.stringify({ ...authorization, validAfter: String(Math.floor(Date.now()/1000)-600), validBefore: String(Math.floor(Date.now()/1000)+691200) }), "x-keryx-monthly-expires": String(Math.floor(Date.now()/1000)+600) }, body: "{}" });

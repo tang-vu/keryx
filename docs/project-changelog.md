@@ -12,6 +12,51 @@ The normal mobile composer keeps the question, source cap and action in view;
 known pauses remain prominent above the research controls.
 See [scope, verification and release gates](engineering/research-availability-2026-10-07.md).
 
+### Optional card purchase of USDC on Arc (2026-10-06, v0.27.13 candidate)
+
+- Add an optional mainnet step that lets a signed-in owner buy USDC with a debit
+  card, Apple Pay or Google Pay through Circle's Arc Onramp. The purchase runs in
+  Circle's own window; USDC is delivered to the signed-in wallet on Arc.
+- Keryx mints only a short-lived widget session. The delivery address is the
+  authenticated wallet and the request body is ignored. Keryx never receives the
+  funds, card or identity data, and stores no purchase state. Gateway deposit and
+  research budgets remain separate, unchanged, owner-signed steps.
+- Disabled by default: `KERYX_ARC_CARD_ONRAMP_ENABLED=true`, the mainnet profile
+  and a production Circle key are all required; otherwise the option is hidden and
+  its API refuses. No Content-Security-Policy change is needed.
+- Web only. Desktop, CLI, remote/stdio MCP, API clients, extensions and bots have
+  no card flow and keep their existing contracts and package versions.
+- [Configuration and remaining gates](arc-card-onramp.md). One production session
+  was minted with the owner's key; no purchase, identity check or delivery has
+  been observed. Circle business verification, regional availability and a real
+  owner purchase remain acceptance gates. Credit cards are not supported by Circle.
+
+### Retain the reason when paid research cannot be synthesized (2026-10-07, v0.27.12 candidate)
+
+- Distinguish unavailable bounded input, written synthesis and evidence review
+  after successful source reads. Empty results describe unavailable assessment
+  rather than claiming the documents contain no evidence.
+- Keep the original reads, charges and receipts visible with delivery-review
+  guidance in the trace, saved answer, hosted API/MCP and report exports. No
+  automatic supplier request, purchase or refund is added.
+- [Scope, verification and remaining live gates](engineering/synthesis-failure-2026-10-07.md).
+  This closes a failure-reporting gap; useful completed business delivery remains
+  a separate acceptance requirement.
+
+### Bounded dependency install retry on redeploy (2026-10-07, deployment tooling)
+
+- `npm run redeploy` repeats `npm ci` at most three times, 15 and 30 seconds apart,
+  when npm reports a transient network code (`ECONNRESET`, `ETIMEDOUT`, `EAI_AGAIN`,
+  `ECONNREFUSED`, `ENETUNREACH`, `ERR_SOCKET_TIMEOUT`). `npm ci` removes
+  `node_modules` before fetching, so one dropped registry connection previously
+  ended a deployment with no dependencies installed.
+- Integrity, lockfile and lifecycle failures still stop at the first attempt. The
+  successful-install stamp is written only after an install exits 0; drain order,
+  commit binding, build, role start and health gates are unchanged.
+- Hermetic coverage in `scripts/redeploy-vps.check.sh`. No application version,
+  payment, custody or schedule change; staging a release before draining writers
+  remains open in issue 164.
+
 ### Explicit same-original supplier window (2026-10-07, v0.27.11 candidate)
 
 - Add a private v2 authority with a supplied, frozen window of at most 90 minutes
