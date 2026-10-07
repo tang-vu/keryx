@@ -12,6 +12,7 @@
     "scripts/operator-canary.mts",
     "scripts/operator-canary.test.mts",
     "scripts/fulfill-canary-original.mts",
+    "scripts/isolate-failed-canary-research.mts",
     "scripts/fulfill-canary-original.test.mts",
     "scripts/mainnet-original-fulfillment-storage-migrate.mts",
     "scripts/mainnet-original-fulfillment-storage-migrate.test.mts",

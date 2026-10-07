@@ -200,6 +200,19 @@ function localClaim(binding: ReviewedBinding) {
     Date.parse(claim.claimedAt) >= Date.parse(binding.authorization.expiresAt) || Date.parse(claim.claimedAt) > Date.now()) refuse("local claim changed");
   return claim;
 }
+/** Inspection only: the unique failed execution remains consumed. An expired,
+ * unprepared claim can be isolated from unrelated interactive research; this
+ * never creates or restores an execution capability. */
+export function inspectExpiredUnpreparedFulfillment() {
+  const binding = retainedBinding(), local = localClaim(binding);
+  if (Date.now() < Date.parse(binding.authorization.expiresAt) ||
+    exists(path.join(fulfillmentDirectory(), "prepared-result.json")) ||
+    exists(path.join(fulfillmentDirectory(), "delivered.json"))) refuse("claim is not expired and unprepared");
+  const providerLedger = fulfillmentProviderLedger(binding);
+  if (providerLedger.newModelCalls >= 3) refuse("completed supplier calls require prepared-result recovery");
+  return { claim: { authority: local.authority, claimId: local.claimId, claimedAt: local.claimedAt },
+    authorizationSha256: binding.authorizationSha256, expiresAt: binding.authorization.expiresAt, providerLedger };
+}
 /** Commit raw bytes of every additive authorization, claim and model hold. Results/markers
  * commit this digest, while old ledger/closure bytes remain separately bound and unchanged. */
 export function fulfillmentProviderLedger(binding = retainedBinding()) {
