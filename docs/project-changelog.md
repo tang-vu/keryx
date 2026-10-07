@@ -1,5 +1,19 @@
 # Keryx Project Changelog
 
+### Full-source checks for retained Operator completion (2026-10-08, v0.27.23 candidate)
+
+The private same-original continuation now reads both complete selected documents
+through sufficiency, generation and independent quote review. An insufficient
+mandatory target stops before spending on generation/review, and that acknowledged
+negative assessment blocks unchanged-context retries. Existing support thresholds
+and ordinary research behavior remain intact.
+
+A separately bounded supplier episode preserves every exhausted parent reservation,
+the original payment and permanent native claim. External activation and journal
+commitments refuse partial publication and rollback instead of resetting spend.
+Actual reviewed delivery and buyer recovery remain deployment acceptance gates.
+See [authority and evidence gates](engineering/operator-original-continuation.md).
+
 ### Complete a retained paid Operator original (2026-10-07, v0.27.20 candidate)
 
 Fresh bounded owner authority can continue the same failed paid original using

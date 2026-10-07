@@ -17,6 +17,7 @@ import { ResearchSelectionError } from "./research-selection";
 import { ResearchPlanningError, researchFailureMessage } from "./research-plan";
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
 import { MemoryReasoningCircuitStore } from "./reasoning-circuit-store";
+import { evidenceContext } from "./evidence-context";
 
 /** A test engine that returns whatever JSON the case wants, and records the ceiling it was given. */
 class StubEngine extends JsonChatEngine {
@@ -301,6 +302,27 @@ describe("output ceiling", () => {
 });
 
 describe("synthesis evidence contract", () => {
+  it("keeps the ordinary sampled context identical in sufficiency and synthesis", async () => {
+    const prompts: Array<Record<string, unknown>> = [];
+    class Capture extends JsonChatEngine {
+      readonly name = "offline-context-contract";
+      protected async chatJson(_model: string, _system: string, user: string) {
+        prompts.push(JSON.parse(user)); return {};
+      }
+    }
+    const input = { question: "What constraints apply to this synthetic mechanism?", subClaims: ["Which constraints apply?"],
+      gathered: [{ sourceId: "synthetic-source", sourceName: "Synthetic bounded reference", marker: "S1",
+        text: Array.from({ length: 45 }, (_, index) => `Section ${index} records the synthetic mechanism and its constraint details.`).join("\n") }] };
+    const expected = evidenceContext(input.question, input.subClaims, input.gathered);
+    const engine = new Capture();
+    await engine.sufficiency(input);
+    await engine.synthesize(input);
+    expect(prompts[0].gathered).toEqual(expected);
+    expect(prompts[1].sources).toEqual(expected);
+    expect(expected[0].excerpted).toBe(true);
+    expect(expected[0].passages.reduce((sum, passage) => sum + passage.text.length, 0)).toBeLessThan(input.gathered[0].text.length);
+  });
+
   it("parses claim-indexed exact-quote evidence for orchestrator validation", async () => {
     const engine = new StubEngine({
       answer: "USDC is burned on the source domain [S1].",

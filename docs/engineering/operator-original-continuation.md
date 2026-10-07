@@ -38,10 +38,35 @@ deletion cannot grant automatic takeover. Known completed attempts retain their
 closure before releasing only their own lock. Deleting or changing catalogue
 entries fails validation rather than resetting the budget.
 
+When that first allowance is exhausted, the owner's later repair-to-completion
+instruction can authorize a **separate**, exact-source V2 supplier episode. It
+does not amend either historical grant or its cap. V2 requires all eight parent
+holds and attempts to have acknowledged outcomes, binds their raw ledger and
+head, and preserves **243,260 micro-USD** as historical reservations. The next
+episode permits at most **six** additional holds, for **367,220 micro-USD** at
+full use, within an explicitly recorded **400,000 micro-USD aggregate ceiling**.
+This is the agent's conservative staged implementation of the owner's broad
+repair authorization, not a numeric amount quoted from the owner. Its deadline
+remains anchored to the same received instruction; it cannot be renewed by a
+new approval timestamp. Other financial permissions remain forbidden.
+
+`activate-epoch` validates the same fresh native failed claim using readonly
+storage, then durably publishes an external activation intent before initializing
+`~/.local/share/keryx-business-canary-continuation-epoch-2`. The parent journal is
+immutable. Separate protected authority records retain the exact grant and latest
+journal-head commitment; missing, partial or rolled-back journals refuse both
+new dispatch and fallback to the consumed parent allowance. Uncertain activation
+or head publication retains its own lock. Capture the real activation exit0,
+complete stdout/stderr and exact authority/native readback before execution.
+
 ## Evidence and recovery
 
 Only the same frozen two official sources and all five requested targets are
-used. Each attempt has three semantic stages: sufficiency, cited-statement
+used. The original continuation supplies the **complete selected bodies** to
+sufficiency, generation, quote binding and independent review. If a complete
+prompt exceeds its existing bound, it refuses before dispatch; there is no
+implicit excerpt fallback. Ordinary research keeps its existing context policy.
+Each attempt has three semantic stages: sufficiency, cited-statement
 generation and separate complete evidence review. Generation uses the existing
 authorized **8,192 output-token** ceiling instead of the ordinary two-source
 2,560 allowance. Ordinary research budgets are unchanged. Input, quote, review,
@@ -54,6 +79,16 @@ gets a new hold if finite allowance remains; its old hold is never reused.
 A retained final quality rejection invalidates that generation/review pair across
 later failures. Sufficiency can reuse its checkpoint; a new generation receives
 a fresh independent review, with both requests charged to the same finite cap.
+A normalized assessment below 0.4 coverage, or without a bound source marker,
+for any mandatory target is retained as an acknowledged sufficiency/quality
+failure and stops **before generation or review**. The final evidence ledger
+cannot raise coverage above that assessment. A later attempt with the unchanged
+context is refused before creating a lock or model hold; negative evidence is
+not refreshed merely to seek a more favorable score. The ordinary sufficiency
+boolean and its stricter complete-answer threshold are not required for a useful
+partial result: every mandatory target still needs reviewed support and explicit
+gaps. Final statement/support thresholds and native identity checks are unchanged.
+
 Fixed phase/category diagnostics expose useful failure location while retaining
 provider bodies, prompts and credentials privately. They do not retrospectively
 identify the old execution's lost exception.

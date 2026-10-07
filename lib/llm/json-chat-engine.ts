@@ -118,6 +118,12 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     return this.budgetFor(4 + input.gathered.length);
   }
 
+  /** Specialized finite callers may retain a complete, already-admitted corpus.
+   * Ordinary research keeps its bounded passage selection and metadata. */
+  protected evidenceSources(input: SufficiencyInput): ReturnType<typeof evidenceContext> {
+    return evidenceContext(input.question, input.subClaims, input.gathered);
+  }
+
   async decompose(question: string): Promise<string[]> {
     return boundedResearchPlan(question, () => this.measuredChatJson(
       config.llmModel,
@@ -204,7 +210,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       JSON.stringify({
         question: input.question,
         subClaims: input.subClaims,
-        gathered: evidenceContext(input.question, input.subClaims, input.gathered),
+        gathered: this.evidenceSources(input),
         schema:
           '{"rationale":string,"perClaim":[{"claim":string,"supportedAnswer":string,"missingRequestedParts":string[],"coverage":number(0..1),"coveredBy":string[]}]}',
       }),
@@ -234,7 +240,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       JSON.stringify({
         question: input.question,
         subClaims: input.subClaims,
-        gathered: evidenceContext(input.question, input.subClaims, input.gathered),
+        gathered: this.evidenceSources(input),
         skippedSources: input.skippedSources.map((s) => ({
           id: s.id,
           name: s.name,
@@ -267,7 +273,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
 
   async synthesize(input: SynthInput): Promise<SynthResult> {
     if (input.answerFormat === "decision-brief" && this.supportsDecisionBrief()) return this.synthesizeDecisionBrief(input);
-    const sources = evidenceContext(input.question, input.subClaims, input.gathered);
+    const sources = this.evidenceSources(input);
     const quoteOptions = buildQuoteOptions(sources, input.gathered);
     const out = await this.measuredChatJson(
       config.synthesisModel,
@@ -335,7 +341,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     let failureStage: SynthesisFailureStage = "input";
     const unavailable = (): SynthResult => ({ ...fallback, synthesisFailure: failureStage });
     try {
-      const selectedSources = evidenceContext(input.question, input.subClaims, input.gathered);
+      const selectedSources = this.evidenceSources(input);
       const options = buildContextualQuoteOptions(selectedSources, input.gathered);
       if (!options.length) return unavailable();
       // Reserve the complete selected corpus first. Eagerly expanding every menu
