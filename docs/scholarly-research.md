@@ -107,7 +107,7 @@ Archived runs are not silently enriched with a newer metadata response.
 [BibTeX and RIS exports](researcher-exports.md) reuse this snapshot in the browser.
 Crossref given/family names retain those supplied parts; arXiv full names have an
 explicit literal-name fallback rather than invented surname splits. Journal records
-use BibTeX `article` / RIS `JOUR`, preprints use `misc` / `UNPB`, and ordinary web
+use BibTeX `article` / RIS `JOUR`, preprints use `misc` / `MANSCPT`, and ordinary web
 references retain their existing format. Provenance notes retain read limitations
 and unknown peer review. Review imported records before academic use. Exporting does
 not upload to Zotero or synchronize an account.

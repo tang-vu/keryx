@@ -1,5 +1,24 @@
 # Supported-surface release parity
 
+## Reference export compatibility, October 7, 2026
+
+Application **0.27.15 candidate** fixes preprint RIS type mapping, literal N1
+provenance notes and missing journal handling in the shared formatter. Web/chat,
+embed and archived public readings use it locally; hosted API/A2A/OpenAI/remote
+MCP use the shared research projection. Repository Operator CLI and desktop rebuild
+new exports from integrity-checked, task-bound receipts without changing their bytes.
+Existing paid response/export snapshots remain immutable. Caller-funded stdio MCP
+forwards its server result; extension and bots retain their link/answer roles.
+
+Actual four-entry bundle graphs include the formatter only in the desktop helper,
+so desktop advances to **0.4.8 candidate**. Renderer/bridge and stdio do not import
+it. Stdio **0.4.6** and extension **0.1.1** keep their existing protocol identities.
+Remote MCP stays at the **0.3.3** identity already merged with the 0.27.14
+availability release; this format-only change does not advance it. Fresh native/package CI,
+publication readback and installed versions are separate gates. No new research,
+provider/payment request or fulfilled business use is inferred from these exports.
+See [verification and release limits](engineering/reference-export-2026-10-07.md).
+
 ## Ordinary admission availability, October 7, 2026
 
 Application **0.27.14 candidate**, hosted Remote MCP **0.3.3 candidate**, distinguishes
