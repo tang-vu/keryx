@@ -189,6 +189,8 @@ export interface ProposedEvidence {
 
 /** Result of synthesis: the grounded answer, which markers it cited, and any source
  *  conflicts the agent adjudicated on the way to writing it. */
+export type SynthesisFailureStage = "input" | "generation" | "review" | "synthesis";
+
 export interface SynthResult {
   answer: string;
   citedMarkers: string[];
@@ -196,6 +198,8 @@ export interface SynthResult {
   evidence: ProposedEvidence[];
   /** Optional second-pass relevance check; engines without this pass leave it absent. */
   evidenceReview?: "completed" | "unavailable";
+  /** Application-assigned stage only; never a provider error, draft or prompt. */
+  synthesisFailure?: SynthesisFailureStage;
   /** Server-local reviewed rows/context; never serialize this packet in public receipts. */
   decisionBrief?: import("./decision-brief").ReviewedDecisionBrief;
 }

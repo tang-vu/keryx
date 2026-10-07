@@ -2,6 +2,7 @@ import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../research/source-requirements";
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
+import { synthesisFailureDetail } from "./synthesis-failure";
 import { finalizeGroundedAnswer } from "./answer-grounding";
 import { selectCitedStatements } from "./cited-statements";
 import { deliverDecisionBrief } from "./decision-brief";
@@ -1471,9 +1472,13 @@ async function* runAdmittedAgent(
     ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
       ? { answerFormat: "decision-brief" as const } : {}) }); }
   catch {
-    synthesized = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable" };
+    synthesized = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable", synthesisFailure: "synthesis" };
     yield emit("synthesize", "Synthesis unavailable; completed reads and payment receipts are retained, with unsupported conclusions withheld.");
   }
+  const synthesisFailure = synthesisFailureDetail(synthesized.synthesisFailure, gathered.length,
+    researchResponseLanguage(input.question) === "vi");
+  if (synthesisFailure) yield emit("synthesize", synthesisFailure,
+    { synthesisFailureStage: synthesized.synthesisFailure, retainedReads: gathered.length });
   if (synthesized.evidenceReview) {
     yield emit("evidence", synthesized.evidenceReview === "unavailable"
       ? "Evidence relevance review unavailable; only qualified excerpts may be delivered, with unsupported prose and rewards withheld."
@@ -1520,7 +1525,8 @@ async function* runAdmittedAgent(
   evidenceMeasured = true;
   // Sentences are admitted against the final ledger, after every source, quote and review gate.
   const citedStatements = brief ? [] : selectCitedStatements(synthesized.evidence ?? [], ledger);
-  answer = brief?.answer ?? finalizeGroundedAnswer({ question: input.question, answer, ledger, statements: citedStatements });
+  answer = brief?.answer ?? finalizeGroundedAnswer({ question: input.question, answer, ledger, statements: citedStatements,
+    synthesisUnavailable: Boolean(synthesisFailure) });
   const vi = researchResponseLanguage(input.question) === "vi";
   const citedSummary = citedStatements.length > 0;
   yield emit("evidence", brief ? (vi ? "Đã kiểm tra riêng từng nhận định và bước tiếp theo; vẫn còn giới hạn của trích đoạn và đánh giá model."
@@ -1815,7 +1821,8 @@ async function* runAdmittedAgent(
   // Follow-up guidance describes observed limits after attribution and settlement. It must
   // not change model-assigned contribution weights or confer evidence/payment authority.
   const followUp = researchFollowUp({ vi, outcomes: publicReadOutcomes, gathered, conflicts: synthesized.conflicts ?? [],
-    paymentReviewRequired: fundingUnavailable || pendingPayments > 0 || fetchFailures > 0 });
+    paymentReviewRequired: fundingUnavailable || pendingPayments > 0 || fetchFailures > 0,
+    synthesisFailure: synthesized.synthesisFailure });
   if (followUp) answer += `\n\n${followUp}`;
   return finish(answer);
 

@@ -44,6 +44,25 @@ describe("two-pass bounded decision-brief engine", () => {
     expect(result.answer).toBe(""); expect(result.evidence).toEqual([]);
     expect(result.citedMarkers).toEqual([]); expect(result.decisionBrief).toBeUndefined();
     expect(result.evidenceReview).toBe("unavailable");
+    expect(result.synthesisFailure).toBe(mode === "malformed" ? "generation" : "review");
+    expect(JSON.stringify(result)).not.toContain("Private supplier error");
     expect(engine.requests).toHaveLength(mode === "malformed" ? 1 : 2);
+  });
+  it("distinguishes missing input from generation and review without making a supplier call", async () => {
+    const engine = new Engine();
+    const result = await engine.synthesize({ ...input, gathered: [] });
+    expect(result.synthesisFailure).toBe("input");
+    expect(result.evidence).toEqual([]);
+    expect(engine.requests).toHaveLength(0);
+  });
+  it("does not report a failure when a valid generation finds no facts", async () => {
+    class NoFactsEngine extends Engine {
+      protected async chatJson(_model: string, _system: string, _user: string) {
+        return { facts: [], actions: [] };
+      }
+    }
+    const result = await new NoFactsEngine().synthesize(input);
+    expect(result.evidenceReview).toBe("completed");
+    expect(result.synthesisFailure).toBeUndefined();
   });
 });
