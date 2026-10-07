@@ -16,6 +16,25 @@ const citation = (overrides: Partial<Citation> = {}): Citation => ({
 });
 
 describe("calculateDashboardMetrics", () => {
+  it("counts only completed web questions without a recorded wallet as guest questions", () => {
+    const metrics = calculateDashboardMetrics([], [
+      { id: "guest-1", origin: "web", asker: null },
+      { id: "guest-2", origin: "web" },
+      { id: "guest-empty", origin: "web", asker: "" },
+      { id: "signed-in", origin: "web", asker: `0x${"a".repeat(40)}` },
+      { id: "unrecognized-wallet", origin: "web", asker: "legacy-wallet" },
+      { id: "engine", origin: "engine" },
+      { id: "mcp", origin: "mcp" },
+      { id: "a2a", origin: "a2a" },
+      { id: "legacy", origin: null },
+      { id: "unknown" },
+    ]);
+    expect(metrics.guestQuestions).toBe(3);
+    expect(metrics.totalQueries).toBe(10);
+    expect(JSON.stringify(metrics)).not.toContain(`0x${"a".repeat(40)}`);
+    expect(calculateDashboardMetrics([], []).guestQuestions).toBe(0);
+  });
+
   it("combines every origin in headline totals", () => {
     const metrics = calculateDashboardMetrics(
       [

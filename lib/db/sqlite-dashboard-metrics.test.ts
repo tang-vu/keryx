@@ -84,6 +84,7 @@ describe("SQLite dashboard metrics", () => {
     expect(metrics.recordedAccounts).toBe(0);
     expect(metrics.totalPayments).toBe(2);
     expect(metrics.totalQueries).toBe(3);
+    expect(metrics.guestQuestions).toBe(0);
     expect(metrics.payingQueries).toBe(2);
     expect(metrics.feedbackTotal).toBe(1);
     expect(metrics.satisfactionRate).toBe(1);
@@ -140,5 +141,14 @@ describe("SQLite dashboard metrics", () => {
       native.exec("ALTER TABLE fixture_users_unavailable RENAME TO users");
       native.close();
     }
+  });
+
+  it("reads persisted guest questions independently of account indexing and other origins", async () => {
+    await db.saveQueryRun(run("guest-web", "web"));
+    await db.saveQueryRun(run("anonymous-a2a", "a2a"));
+    const metrics = await db.metrics();
+    expect(metrics.totalQueries).toBe(6);
+    expect(metrics.guestQuestions).toBe(1);
+    expect(metrics.recordedAccounts).toBe(2);
   });
 });

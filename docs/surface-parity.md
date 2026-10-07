@@ -1,5 +1,19 @@
 # Supported-surface release parity
 
+## Guest question activity, October 6, 2026
+
+Application **0.27.16 candidate** adds a web ledger count and optional nullable
+`/api/metrics` `guestQuestions` aggregate, shared by SQLite and Supabase.
+Only completed web runs without a recorded signed-in wallet count; total recorded
+questions already include them. The existing account label/count is preserved.
+No visitor/person estimate, identity tracking, account rows or schema change.
+API/A2A and remote MCP/OpenAI retain research/payment contracts; buyer/Operator
+CLI, stdio MCP, Windows desktop, extension and Telegram/Discord/Slack retain their
+runtime roles and reach the ledger through existing hosted links. Their package
+bytes/contracts do not change, so no new installer/package version is warranted.
+Hosted deployment and independent distribution identities remain separate gates.
+See [scope and checks](engineering/ledger-guest-questions-2026-10-06.md).
+
 ## Reference export compatibility, October 7, 2026
 
 Application **0.27.15 candidate** fixes preprint RIS type mapping, literal N1
