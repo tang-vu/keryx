@@ -2894,6 +2894,11 @@ describe("completed reads survive bounded model exhaustion", () => {
     expect(run.answer).toContain("đơn gốc");
     expect(run.answer).toContain("Chưa đánh giá được bằng chứng");
     expect(run.answer).not.toContain("Nội dung đã đọc chưa cung cấp trích đoạn");
+    expect(run.confidence?.reason).toContain("chưa đánh giá được mức hỗ trợ");
+    expect(steps.some(step => step.phase === "synthesize" && step.message.startsWith("Đã chuẩn bị trích đoạn"))).toBe(false);
+    expect(steps.some(step => step.phase === "evidence" && step.message.startsWith("Chỉ cung cấp trích đoạn"))).toBe(false);
+    expect(steps.some(step => step.phase === "evidence" &&
+      (step.detail as Record<string, unknown> | undefined)?.assessmentStatus === "unavailable")).toBe(true);
     expect(run.citations).toEqual([]);
     expect(steps.some(step => step.phase === "synthesize" &&
       (step.detail as Record<string, unknown> | undefined)?.synthesisFailureStage === stage)).toBe(true);
