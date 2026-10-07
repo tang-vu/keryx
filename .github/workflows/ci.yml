@@ -12,7 +12,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -76,7 +76,14 @@ jobs:
           node --import tsx scripts/creator-cashout-batch-sign.mts --help
           node --import tsx scripts/creator-cashout-batch-funding.mts --help
 
+      - name: Browser runner APT setup tests (no system changes)
+        run: node --test scripts/ci-browser-apt.test.mjs
+
+      - name: Prepare official Ubuntu HTTPS mirrors for browser dependencies
+        run: node scripts/ci-browser-apt.mjs
+
       - name: Install Chromium for unit and browser checks
+        timeout-minutes: 5
         run: npx playwright install --with-deps chromium
 
       - name: Synthetic research provenance (isolated PostgreSQL 17, synthetic data)

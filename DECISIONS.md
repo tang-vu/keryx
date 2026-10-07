@@ -5884,3 +5884,19 @@ execution/payment bound and original recovery. Independent architecture review
 supports this direction; runtime, intent recognition, freshness/completeness,
 storage/adapters and useful-answer gates remain open. See
 [the staged proposal](docs/engineering/source-recency-2026-10-08.md).
+
+## Explicit Ubuntu browser CI dependency bootstrap - 2026-10-08
+
+A required Ubuntu browser job exceeded its existing 15-minute limit while APT
+repeatedly ignored the first Azure HTTP mirror; no test assertions had run.
+Keep browser checks and deadlines intact. Pin both affected Linux jobs to Ubuntu
+24.04 and prepare their existing official HTTPS archive/security mirrors with
+bounded APT transport timeouts/retries and a stricter five-minute install-step
+limit; per-acquisition timeouts alone do not bound the whole installation.
+A shared Node builtin helper guards the
+GitHub-hosted runner, OS and expected configuration before any privileged write.
+It preserves source/keyring/TLS trust and reads back the two fixed files. Windows
+coverage remains. Local adverse tests and actual full runner CI are required;
+the successful same-head rerun is separate evidence, not proof of the original
+network cause. This CI-only change has no production/runtime/distribution version
+change. See [runner setup and boundaries](docs/deployment-guide.md#browser-dependencies-on-github-hosted-runners).
