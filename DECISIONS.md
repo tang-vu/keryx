@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**List the first-party engineering feed on mainnet as an owner-operated source — 2026-10-07.**
+Production mainnet had no registered source or offer, so every question read only free
+public references and no access toll or citation reward could occur. The owner asked
+for Keryx's own writing to be listed from a dedicated publisher wallet. This supersedes
+the part of D-68 that left the feed without a payout wallet; the rest of D-68 stands.
+The source is listed like any other and carries no special interface label. Its
+ownership is recorded in the [publisher kit](docs/engineering/README.md), and the feed
+itself states that it is first-party. Treasury-sponsored payments to it move funds
+between owner-controlled wallets: they exercise the paid path but are not independent
+creator adoption, creator earnings or external traction, and traction reports must
+exclude them. One payout wallet serves every owner-operated source so the public
+creator count cannot exceed one for the owner. Not decided: whether the public
+"Creators earning" and "Creator payouts" totals should exclude owner-operated sources.
+
 **Keep PDF physical wraps out of evidence sentence boundaries — 2026-10-07.**
 An offline reproduction showed a newline-separated sentence tail passing the
 complete-span gate and strict quote menu. For observed PDF extractions, compute
