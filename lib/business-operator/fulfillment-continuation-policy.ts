@@ -5,6 +5,9 @@ import { randomBytes } from "node:crypto";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { z } from "zod";
 import { canonicalJson } from "../canonical-json";
+import { continuationEpochAuthorizationFields, fixedPaths, readActiveEpochAnchor, activateEpochAnchor,
+  beginEpochLedgerUpdate, completeEpochLedgerUpdate,
+  type ContinuationEpochIO, type ContinuationEpochBinding } from "./continuation-epoch";
 import { businessCanaryHostIdentity, verifyFailedBusinessCanary,
   type FailedBusinessCanaryProofDb, type RetainedFailedCanaryAuthority } from "./canary-policy";
 import { fulfillmentDirectory, fulfillmentExecutorCommit, fulfillmentProviderLedger,
@@ -27,7 +30,7 @@ const same = (a: unknown, b: unknown) => canonicalJson(a) === canonicalJson(b);
 const now = () => new Date().toISOString();
 
 /** New supplier permission is additive. Neither the old claim nor its expired window changes. */
-export const continuationAuthorizationSchema = z.object({
+const continuationAuthorizationObject = z.object({
   format: z.literal("keryx-original-continuation-authorization-v1"),
   approvalId: z.literal("operator-business-20261006"), approvedAt: timestamp,
   ownerAuthorizationSha256: digest, ownerAuthorizationReceivedAt: timestamp,
@@ -45,12 +48,17 @@ export const continuationAuthorizationSchema = z.object({
   maximumNewModelCalls: z.number().int().min(3).max(8),
   historicalReservedMicroUsd: z.literal(77_980), maximumCombinedMicroUsd: z.literal(LIMITS.maximumCombinedMicroUsd),
   searches: z.literal("forbidden"), creatorPayments: z.literal("forbidden"), newInboundPayment: z.literal("forbidden"),
-}).strict().refine(value => Date.parse(value.ownerAuthorizationReceivedAt) <= Date.parse(value.approvedAt) &&
+}).strict();
+export const continuationAuthorizationSchema = z.union([continuationAuthorizationObject,
+  continuationAuthorizationObject.extend(continuationEpochAuthorizationFields)]).refine(value =>
+  Date.parse(value.ownerAuthorizationReceivedAt) <= Date.parse(value.approvedAt) &&
   Date.parse(value.approvedAt) < Date.parse(value.expiresAt) &&
   Date.parse(value.expiresAt) - Date.parse(value.ownerAuthorizationReceivedAt) <= value.maximumDurationMs,
 "Continuation outside explicit owner window");
 export type ContinuationAuthorization = z.infer<typeof continuationAuthorizationSchema>;
-export function continuationDirectory() { return path.join(os.homedir(), ".local", "share", "keryx-business-canary-continuation"); }
+export function continuationDirectory() {
+  return readActiveEpochAnchor(os.homedir(), epochIo()) ? fixedPaths(os.homedir()).epochDirectory : fixedPaths(os.homedir()).parentDirectory;
+}
 function exists(file: string) {
   try { fs.lstatSync(file); return true; } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return false;
@@ -91,14 +99,41 @@ const json = (file: string) => JSON.parse(read(file).toString("utf8")) as unknow
 function syncDirectory(directory: string) {
   const fd = fs.openSync(directory, "r"); try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
 }
-const nonLedgerNames = new Set(["execution-lock.json", "ledger-head.json", "prepared-result.json", "delivered.json"]);
-function rawEntries() {
-  return fs.readdirSync(continuationDirectory()).sort().filter(name => !nonLedgerNames.has(name))
-    .map(name => ({ name, sha256: hash(read(path.join(continuationDirectory(), name))) }));
+function epochIo(flush = syncDirectory): ContinuationEpochIO {
+  return { exists, read, assertProtectedPath: protectedPath, list: directory => fs.readdirSync(directory),
+    ensureDirectory(directory) {
+      if (!exists(directory)) { fs.mkdirSync(directory, { mode: 0o700 }); flush(path.dirname(directory)); }
+      protectedPath(directory, true);
+    },
+    retainRecord(file, value) {
+      protectedPath(path.dirname(file), true);
+      const bytes = Buffer.from(`${canonicalJson(value)}\n`), fd = fs.openSync(file, "wx", 0o600);
+      try { fs.writeFileSync(fd, bytes); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+      flush(path.dirname(file));
+      if (!read(file).equals(bytes)) refuse("epoch publication acknowledgement uncertain");
+    },
+    releaseRecordExact(file, sha256) {
+      if (hash(read(file)) !== sha256) refuse("epoch activation lock changed");
+      fs.unlinkSync(file); flush(path.dirname(file));
+    },
+    replaceRecordExact(file, previousSha256, value) {
+      if (hash(read(file)) !== previousSha256) refuse("epoch frontier publication raced");
+      const bytes = Buffer.from(`${canonicalJson(value)}\n`), directory = path.dirname(file);
+      const temporary = path.join(directory, `frontier-next-${randomBytes(16).toString("hex")}.json`);
+      const fd = fs.openSync(temporary, "wx", 0o600);
+      try { fs.writeFileSync(fd, bytes); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+      if (hash(read(file)) !== previousSha256 || !read(temporary).equals(bytes)) refuse("epoch frontier publication raced");
+      fs.renameSync(temporary, file); flush(directory);
+      if (!read(file).equals(bytes)) refuse("epoch frontier acknowledgement uncertain");
+    } };
 }
-function assertLedgerHead() {
-  const directory = continuationDirectory(), file = path.join(directory, "ledger-head.json");
-  const entries = rawEntries();
+const nonLedgerNames = new Set(["execution-lock.json", "ledger-head.json", "prepared-result.json", "delivered.json"]);
+function rawEntries(directory = continuationDirectory()) {
+  return fs.readdirSync(directory).sort().filter(name => !nonLedgerNames.has(name))
+    .map(name => ({ name, sha256: hash(read(path.join(directory, name))) }));
+}
+function assertLedgerHead(directory = continuationDirectory()) {
+  const file = path.join(directory, "ledger-head.json"), entries = rawEntries(directory);
   if (!exists(file)) {
     if (entries.length) refuse("durable ledger head missing");
     return null;
@@ -108,10 +143,10 @@ function assertLedgerHead() {
   if (!same(head.entries, entries) || head.entriesSha256 !== hashObject(entries)) refuse("durable ledger head changed");
   return hash(read(file));
 }
-function publishLedgerHead(previous: string | null, flush: (directory: string) => void) {
-  const directory = continuationDirectory(), file = path.join(directory, "ledger-head.json");
+function publishLedgerHead(previous: string | null, flush: (directory: string) => void, directory = continuationDirectory()) {
+  const file = path.join(directory, "ledger-head.json");
   if (previous === null ? exists(file) : !exists(file) || hash(read(file)) !== previous) refuse("ledger head publication raced");
-  const entries = rawEntries(), value = { format: "keryx-original-continuation-ledger-head-v1", entries, entriesSha256: hashObject(entries) };
+  const entries = rawEntries(directory), value = { format: "keryx-original-continuation-ledger-head-v1", entries, entriesSha256: hashObject(entries) };
   const bytes = Buffer.from(`${canonicalJson(value)}\n`), temporary = path.join(directory, "ledger-head-next.json");
   const fd = fs.openSync(temporary, "wx", 0o600);
   try { fs.writeFileSync(fd, bytes); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
@@ -119,15 +154,21 @@ function publishLedgerHead(previous: string | null, flush: (directory: string) =
   fs.renameSync(temporary, file); flush(directory);
   if (!read(file).equals(bytes)) refuse("ledger head acknowledgement uncertain");
 }
-function retain(name: string, value: unknown, flush = syncDirectory) {
-  const directory = continuationDirectory(); protectedPath(directory, true);
-  const previousHead = assertLedgerHead();
+function retain(name: string, value: unknown, flush = syncDirectory, directory = continuationDirectory()) {
+  protectedPath(directory, true);
+  const previousHead = assertLedgerHead(directory);
+  const epochPaths = fixedPaths(os.homedir()), io = epochIo(flush);
+  const epochUpdate = !nonLedgerNames.has(name) && directory === epochPaths.epochDirectory && exists(epochPaths.frontierFile)
+    ? beginEpochLedgerUpdate(os.homedir(), io) : null;
   const bytes = Buffer.from(`${canonicalJson(value)}\n`);
   const file = path.join(directory, name), fd = fs.openSync(file, "wx", 0o600);
   try { fs.writeFileSync(fd, bytes); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
   flush(directory);
   if (!read(file).equals(bytes)) refuse("durable publication acknowledgement uncertain");
-  if (!nonLedgerNames.has(name)) publishLedgerHead(previousHead, flush);
+  if (!nonLedgerNames.has(name)) {
+    publishLedgerHead(previousHead, flush, directory);
+    if (epochUpdate) completeEpochLedgerUpdate(epochUpdate, hash(read(path.join(directory, "ledger-head.json"))), io);
+  }
 }
 const retainedSchema = z.object({ format: z.literal("keryx-original-continuation-retained-authorization-v1"),
   authorizationFile: z.string().min(1), authorizationSha256: digest }).strict();
@@ -161,7 +202,11 @@ const deliverySchema = z.object({ format: z.literal("keryx-original-continuation
   preparedResultSha256: digest, completedAt: timestamp, outcome: z.literal("verified-fulfilled-original"),
   admissionPaused: z.literal(false), paidDeliveryObligation: z.literal("resolved"), deliveryCompleted: z.literal(true),
   refunded: z.literal(false), noNewInboundPayment: z.literal(true) }).strict();
-export function readContinuationAuthorization(file: string, expectedSha256: string, supplier = false) {
+export interface ContinuationBinding {
+  authorization: ContinuationAuthorization; authorizationFile: string; authorizationSha256: string; directory: string;
+  original: ReturnType<typeof readRetainedFulfillmentBinding>; local: ReturnType<typeof readRetainedFulfillmentClaim>;
+}
+export function readContinuationAuthorization(file: string, expectedSha256: string, supplier = false): ContinuationBinding {
   digest.parse(expectedSha256); const bytes = read(file, 65_536);
   if (hash(bytes) !== expectedSha256) refuse("authorization changed");
   const authorization = continuationAuthorizationSchema.parse(JSON.parse(bytes.toString("utf8")));
@@ -170,7 +215,7 @@ export function readContinuationAuthorization(file: string, expectedSha256: stri
   if (authorization.originalAuthorizationSha256 !== original.authorizationSha256 ||
     authorization.originalClaimSha256 !== hash(read(path.join(fulfillmentDirectory(), "claim.json"))) ||
     authorization.originalFulfillmentProviderLedgerSha256 !== oldLedger.sha256 || oldLedger.newModelCalls !== 2 ||
-    oldLedger.combinedReservedMicroUsd !== authorization.historicalReservedMicroUsd ||
+    oldLedger.combinedReservedMicroUsd !== 77_980 ||
     authorization.policySha256 !== original.authority.policySha256 || authorization.failedClosureSha256 !== original.authority.failedClosureSha256 ||
     authorization.originalEvidenceSha256 !== original.authority.originalEvidenceSha256 ||
     authorization.originalProviderLedgerSha256 !== original.authority.originalProviderLedgerSha256 ||
@@ -183,15 +228,40 @@ export function readContinuationAuthorization(file: string, expectedSha256: stri
     authorization.tariffRetrievedAt.slice(0, 10) !== authorization.approvedAt.slice(0, 10) ||
     hash(read(authorization.tariffFile, 200_000)) !== authorization.tariffBodySha256)
     refuse("host, approval or current tariff refused");
+  const paths = fixedPaths(os.homedir());
+  if (authorization.format === "keryx-original-continuation-authorization-v2") {
+    const parent = readContinuationAuthorization(authorization.parentAuthorizationFile, authorization.parentAuthorizationSha256);
+    if (parent.authorization.format !== "keryx-original-continuation-authorization-v1" ||
+      parent.directory !== paths.parentDirectory || authorization.executorCommit === parent.authorization.executorCommit ||
+      authorization.ownerAuthorizationSha256 !== parent.authorization.ownerAuthorizationSha256 ||
+      authorization.ownerAuthorizationReceivedAt !== parent.authorization.ownerAuthorizationReceivedAt ||
+      Date.parse(authorization.expiresAt) > Date.parse(parent.authorization.expiresAt)) refuse("additive epoch authority changed");
+    const parentLedger = continuationProviderLedger(parent);
+    if (parentLedger.newModelCalls !== 8 || parentLedger.combinedReservedMicroUsd !== authorization.historicalReservedMicroUsd ||
+      parentLedger.sha256 !== authorization.parentProviderLedgerSha256 ||
+      assertLedgerHead(parent.directory) !== authorization.parentLedgerHeadSha256 ||
+      parentLedger.attempts.some(attempt => !exists(path.join(parent.directory, `attempt-${numberName(attempt.attempt)}-outcome.json`))) ||
+      parentLedger.holds.some(item => !exists(path.join(parent.directory, `call-${numberName(item.hold.slot)}-outcome.json`))) ||
+      ["execution-lock.json", "prepared-result.json", "delivered.json"].some(name => exists(path.join(parent.directory, name))))
+      refuse("parent epoch is changed, uncertain or incomplete");
+  }
   if (supplier && (Date.now() >= Date.parse(authorization.expiresAt) ||
     fulfillmentExecutorCommit() !== authorization.executorCommit)) refuse("supplier authority expired or source changed");
-  return { authorization, authorizationFile: file, authorizationSha256: expectedSha256, original, local };
+  const directory = authorization.format === "keryx-original-continuation-authorization-v1" ? paths.parentDirectory : paths.epochDirectory;
+  if (supplier && authorization.format === "keryx-original-continuation-authorization-v1" &&
+    readActiveEpochAnchor(os.homedir(), epochIo())) refuse("parent supplier epoch superseded");
+  return { authorization, authorizationFile: file, authorizationSha256: expectedSha256, directory, original, local };
 }
-export type ContinuationBinding = ReturnType<typeof readContinuationAuthorization>;
 function retainedBinding() {
   protectedPath(continuationDirectory(), true);
   const retained = retainedSchema.parse(json(path.join(continuationDirectory(), "authorization.json")));
   return readContinuationAuthorization(retained.authorizationFile, retained.authorizationSha256);
+}
+function requireActiveBinding(binding: ContinuationBinding) {
+  if (binding.directory !== continuationDirectory()) refuse("supplier epoch is not active");
+  const active = readActiveEpochAnchor(os.homedir(), epochIo());
+  if (active && (active.binding.authorizationFile !== binding.authorizationFile ||
+    active.binding.authorizationSha256 !== binding.authorizationSha256)) refuse("active additive authority changed");
 }
 function normalizeJson(value: Record<string, unknown>) {
   const visit = (item: unknown, depth: number): void => {
@@ -212,8 +282,8 @@ function normalizeJson(value: Record<string, unknown>) {
 const numberName = (value: number) => String(value).padStart(2, "0");
 /** Raw-hash commitment to all grant, attempt, hold, checkpoint, outcome and fixed diagnostic bytes. */
 export function continuationProviderLedger(binding = retainedBinding()) {
-  const directory = continuationDirectory(); protectedPath(directory, true);
-  assertLedgerHead();
+  const directory = binding.directory; protectedPath(directory, true);
+  assertLedgerHead(directory);
   const names = fs.readdirSync(directory).sort(), entries: Array<{ name: string; sha256: string }> = [];
   const attempts = new Map<string, z.infer<typeof attemptSchema>>();
   const diagnostics: Array<z.infer<typeof diagnosticRecordSchema>> = [];
@@ -279,7 +349,8 @@ export function continuationProviderLedger(binding = retainedBinding()) {
   if (holds.length > binding.authorization.maximumNewModelCalls || attempts.size > 8 ||
     binding.authorization.historicalReservedMicroUsd + holds.length * LIMITS.modelReserveMicroUsd > binding.authorization.maximumCombinedMicroUsd ||
     !same(names, fs.readdirSync(directory).sort())) refuse("ledger changed or exceeded bounds");
-  return { sha256: hashObject(entries), newModelCalls: holds.length, oldAdditiveModelCalls: 2,
+  return { sha256: hashObject(entries), newModelCalls: holds.length,
+    oldAdditiveModelCalls: binding.authorization.format === "keryx-original-continuation-authorization-v2" ? 10 : 2,
     reservedMicroUsd: holds.length * LIMITS.modelReserveMicroUsd,
     combinedReservedMicroUsd: binding.authorization.historicalReservedMicroUsd + holds.length * LIMITS.modelReserveMicroUsd,
     holds, attempts: [...attempts.values()], diagnostics };
@@ -308,7 +379,7 @@ export async function inspectOriginalContinuation(db: NativeDb, file: string, ex
     const failure = await verifyFailedBusinessCanary(db);
     if (failure.originalEvidenceSha256 !== binding.authorization.originalEvidenceSha256) refuse("fresh native failure changed");
   } else if (await db.hasA2aFailedOriginalFulfillment?.(binding.original.authority) !== true) refuse("native completion proof unavailable");
-  const directory = continuationDirectory(); let ledger = null;
+  const directory = binding.directory; let ledger = null;
   if (exists(directory)) {
     protectedPath(directory, true);
     if (fs.readdirSync(directory).length) ledger = continuationProviderLedger(binding);
@@ -322,14 +393,56 @@ export async function inspectOriginalContinuation(db: NativeDb, file: string, ex
     deliveredMarker: exists(path.join(directory, "delivered.json")), nativeCompleted: record.completion !== null,
     providerRequests: 0, payments: 0 };
 }
+/** Explicit one-time additive episode activation. It changes no native claim,
+ * parent journal, payment or supplier state; uncertainty permanently blocks fallback. */
+export async function activateOriginalContinuationEpoch(db: NativeDb, file: string, expectedSha256: string, flush = syncDirectory) {
+  const binding = readContinuationAuthorization(file, expectedSha256, true), authorization = binding.authorization;
+  if (authorization.format !== "keryx-original-continuation-authorization-v2") refuse("epoch activation requires separate v2 authority");
+  const authority: ContinuationEpochBinding = {
+    format: authorization.format, authorizationFile: file, authorizationSha256: expectedSha256,
+    historicalReservedMicroUsd: authorization.historicalReservedMicroUsd, maximumNewModelCalls: authorization.maximumNewModelCalls,
+    maximumCombinedMicroUsd: authorization.maximumCombinedMicroUsd, parentAuthorizationFile: authorization.parentAuthorizationFile,
+    parentAuthorizationSha256: authorization.parentAuthorizationSha256, parentProviderLedgerSha256: authorization.parentProviderLedgerSha256,
+    parentLedgerHeadSha256: authorization.parentLedgerHeadSha256, contextProtocol: authorization.contextProtocol,
+    originalAuthorizationSha256: authorization.originalAuthorizationSha256, nativeClaimSha256: authorization.nativeClaimSha256,
+    inputSemanticSha256: authorization.inputSemanticSha256, packetSha256: authorization.packetSha256,
+    executionHostSha256: authorization.executionHostSha256, executorCommit: authorization.executorCommit,
+    ownerAuthorizationSha256: authorization.ownerAuthorizationSha256, ownerAuthorizationReceivedAt: authorization.ownerAuthorizationReceivedAt,
+    approvedAt: authorization.approvedAt, expiresAt: authorization.expiresAt, maximumDurationMs: authorization.maximumDurationMs };
+  const result = await activateEpochAnchor(os.homedir(), authority, epochIo(flush), {
+    async validateAuthority() {
+      const current = readContinuationAuthorization(file, expectedSha256, true);
+      if (!same(current, binding)) refuse("epoch authority changed during activation");
+      const proof = await inspectOriginalContinuation(db, file, expectedSha256);
+      if (!proof.supplierWindowLive || proof.nativeCompleted || proof.prepared || proof.deliveredMarker ||
+        proof.executionIntentRetained || proof.newModelCalls !== 0) refuse("fresh native epoch activation refused");
+    },
+    initializeJournal(paths) {
+      epochIo(flush).ensureDirectory(paths.epochDirectory);
+      retain("authorization.json", { format: "keryx-original-continuation-retained-authorization-v1",
+        authorizationFile: file, authorizationSha256: expectedSha256 }, flush, paths.epochDirectory);
+    },
+  });
+  requireActiveBinding(binding);
+  return { activated: true, authorizationSha256: expectedSha256, parentProviderLedgerSha256: authorization.parentProviderLedgerSha256,
+    activeSha256: result.activeSha256, newModelCalls: 0, combinedReservedMicroUsd: authorization.historicalReservedMicroUsd,
+    nativeClaimChanged: false, providerRequests: 0, payments: 0 };
+}
 /** A new additive attempt uses the existing permanent native claim; it never reclaims or requeues it. */
 export async function beginOriginalContinuation(db: NativeDb, file: string, expectedSha256: string, flush = syncDirectory) {
   const binding = readContinuationAuthorization(file, expectedSha256, true);
+  requireActiveBinding(binding);
   const failure = await verifyFailedBusinessCanary(db), record = await db.getA2aFailedOriginalFulfillment?.(binding.original.authority.original.id);
   if (!record || record.completion !== null || !nativeClaimMatches(binding, record.claim) ||
     failure.originalEvidenceSha256 !== binding.authorization.originalEvidenceSha256) refuse("fresh native retained claim changed");
   const directory = continuationDirectory(); protectedPath(directory, true);
   if (exists(path.join(directory, "prepared-result.json")) || exists(path.join(directory, "delivered.json"))) refuse("execution already prepared");
+  if (exists(path.join(directory, "authorization.json"))) {
+    const prior = continuationProviderLedger(binding);
+    if (prior.newModelCalls >= binding.authorization.maximumNewModelCalls || prior.attempts.length >= 8) refuse("supplier allowance exhausted");
+    if (prior.diagnostics.some(item => item.diagnostic.phase === "sufficiency" && item.diagnostic.category === "quality"))
+      refuse("unchanged context has acknowledged insufficient mandatory evidence");
+  }
   // A retained lock is uncertainty, never a PID/age-based takeover opportunity.
   const lock = { format: "keryx-original-continuation-lock-v1", authorizationSha256: expectedSha256,
     attemptId: randomBytes(32).toString("hex"), startedAt: now() };
@@ -392,6 +505,8 @@ export function recordContinuationDiagnostic(capability: ContinuationCapability,
   const value = diagnosticSchema.parse(diagnostic), ledger = continuationProviderLedger(state.binding);
   if (value.phase === "assemble" && value.category === "quality" && state.nextStage !== 3)
     refuse("quality diagnostic requires completed independent review");
+  if (value.phase === "sufficiency" && value.category === "quality" && state.nextStage !== 1)
+    refuse("sufficiency quality diagnostic requires an acknowledged assessment");
   const number = fs.readdirSync(continuationDirectory()).filter(name => /^diagnostic-[0-9]{2}\.json$/.test(name)).length + 1;
   if (number > 32 || ledger.attempts.every(item => item.attemptId !== state.attempt.attemptId)) refuse("diagnostic limit refused");
   retain(`diagnostic-${numberName(number)}.json`, { format: "keryx-original-continuation-diagnostic-v1",

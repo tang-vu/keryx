@@ -2,19 +2,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { readContinuationAuthorization, inspectOriginalContinuation, verifyPreparedContinuation,
-  completePreparedContinuation } from "../lib/business-operator/fulfillment-continuation-policy.ts";
-import { completeOriginalContinuation } from "../lib/a2a/continue-original.ts";
-import { preflightOriginalFulfillment } from "../lib/a2a/fulfill-original.ts";
+  completePreparedContinuation, activateOriginalContinuationEpoch } from "../lib/business-operator/fulfillment-continuation-policy.ts";
+import { completeOriginalContinuation, preflightOriginalContinuation } from "../lib/a2a/continue-original.ts";
 import { ORIGINAL_FULFILLMENT_LIMITS } from "../lib/a2a/failed-original-fulfillment-protocol.ts";
 import type { KeryxDB } from "../lib/db/keryx-db.ts";
 
 const usage = `Private additive continuation of the same already-paid retained original
   preflight --authorization <protected-file> --sha256 <reviewed-digest>
   execute --authorization <protected-file> --sha256 <reviewed-digest>
+  activate-epoch --authorization <separate-v2-file> --sha256 <reviewed-digest>
   verify-prepared
   complete-prepared --prepared-sha256 <exact-reviewed-result-digest>
 
-Provision an empty root-only continuation directory and a fresh source-bound owner grant.
+Provision an empty root-only first continuation directory and a source-bound owner grant.
+An exhausted first episode requires a separately approved V2 grant and activate-epoch;
+its irreversible external anchor initializes a fresh additive journal, retaining the old one.
 Preserve the expired original authorization, permanent native claim and all old holds.
 Execute uses only frozen evidence, checkpointed sufficiency/generation/separate review.
 Every new request is durably reserved within one aggregate finite allowance. A known
@@ -32,7 +34,7 @@ export async function runContinueCanaryOriginal(argv: string[]) {
   const [command, ...args] = argv;
   if (!command || command === "--help") { console.log(usage); return; }
   let authorizationFile: string | undefined, authorizationSha256: string | undefined, preparedSha256: string | undefined;
-  if (command === "preflight" || command === "execute") {
+  if (command === "preflight" || command === "execute" || command === "activate-epoch") {
     const { values } = parseArgs({ args, strict: true, options: { authorization: { type: "string" }, sha256: { type: "string" } } });
     authorizationFile = values.authorization; authorizationSha256 = values.sha256;
     if (!authorizationFile || !authorizationSha256 || !/^[a-f0-9]{64}$/.test(authorizationSha256)) throw new Error("Missing reviewed continuation binding");
@@ -42,7 +44,7 @@ export async function runContinueCanaryOriginal(argv: string[]) {
     if (!preparedSha256 || !/^[a-f0-9]{64}$/.test(preparedSha256)) throw new Error("Missing exact reviewed result digest");
   } else if (command !== "verify-prepared" || args.length) throw new Error("Unknown continuation command or arguments");
   const binding = authorizationFile && authorizationSha256
-    ? readContinuationAuthorization(authorizationFile, authorizationSha256, command === "execute") : undefined;
+    ? readContinuationAuthorization(authorizationFile, authorizationSha256, command === "execute" || command === "activate-epoch") : undefined;
   const credential = command === "execute" ? process.env.DEEPSEEK_API_KEY : undefined;
   if (command === "execute" && !credential?.trim()) throw new Error("Explicit supplier credential unavailable");
   const { createApplicationStorage, createReadonlyApplicationStorage, applicationSqliteIdentity } = await import("../lib/db/application-storage.ts");
@@ -52,7 +54,7 @@ export async function runContinueCanaryOriginal(argv: string[]) {
   try {
     applicationSqliteIdentity(db, writing ? "write" : "read");
     if (command === "preflight") {
-      const prompt = await preflightOriginalFulfillment(binding!.original);
+      const prompt = await preflightOriginalContinuation(binding!.original);
       const proof = await inspectOriginalContinuation(db, authorizationFile!, authorizationSha256!);
       console.log(JSON.stringify({ command, readOnly: true, newModelCalls: proof.newModelCalls,
         combinedReservedMicroUsd: proof.combinedReservedMicroUsd, supplierWindowLive: proof.supplierWindowLive,
@@ -61,6 +63,8 @@ export async function runContinueCanaryOriginal(argv: string[]) {
         promptInputBytes: prompt.prompts.map(item => item.promptUtf8Bytes),
         continuationGenerationMaximumOutputTokens: ORIGINAL_FULFILLMENT_LIMITS.maximumOutputTokens,
         payments: 0, searches: 0, providerRequests: 0 }));
+    } else if (command === "activate-epoch") {
+      console.log(JSON.stringify({ command, ...await activateOriginalContinuationEpoch(db, authorizationFile!, authorizationSha256!) }));
     } else if (command === "execute") {
       console.log(JSON.stringify({ command, ...await completeOriginalContinuation(db, authorizationFile!, authorizationSha256!, credential!) }));
     } else if (command === "verify-prepared") {

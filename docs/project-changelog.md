@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Explain a model output limit (2026-10-08, v0.27.22 candidate)
+### Explain a model output limit (2026-10-08, v0.27.24 candidate)
 
 Reports distinguish an explicitly stopped model response from a provider outage,
 retain its billable token usage, and explain when to inspect saved evidence and
@@ -9,8 +9,22 @@ keep the same safe diagnostic through saved trace. CLI, APIs and MCP use the sha
 contract; output caps and payment authority are unchanged. Historical 503s are not
 reinterpreted. See [scope and remaining acceptance](engineering/model-output-limits.md).
 
-App 0.27.22, MCP 0.4.7, desktop 0.4.9 and hosted MCP 0.3.4 identify this candidate;
+App 0.27.24, MCP 0.4.7, desktop 0.4.9 and hosted MCP 0.3.4 identify this candidate;
 published packages, installed clients and production must be verified separately.
+
+### Full-source checks for retained Operator completion (2026-10-08, v0.27.23 candidate)
+
+The private same-original continuation now reads both complete selected documents
+through sufficiency, generation and independent quote review. An insufficient
+mandatory target stops before spending on generation/review, and that acknowledged
+negative assessment blocks unchanged-context retries. Existing support thresholds
+and ordinary research behavior remain intact.
+
+A separately bounded supplier episode preserves every exhausted parent reservation,
+the original payment and permanent native claim. External activation and journal
+commitments refuse partial publication and rollback instead of resetting spend.
+Actual reviewed delivery and buyer recovery remain deployment acceptance gates.
+See [authority and evidence gates](engineering/operator-original-continuation.md).
 
 ### Complete a retained paid Operator original (2026-10-07, v0.27.20 candidate)
 

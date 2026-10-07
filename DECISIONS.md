@@ -5854,6 +5854,12 @@ The retained one-shot execution lost its exception and has no prepared result. D
 
 A Windows redeploy previously lost reviewed environment controls entering WSL and selected the legacy path. The Node launcher now forwards and verifies all nonsecret reviewed-role and optional economic-migration controls before mutation, preserving explicit native paths. This is transport validation, not authority to drain, migrate, deploy unreviewed code or call suppliers.
 
+## Complete source context and additive supplier episodes — 2026-10-08
+
+Observed new continuation attempts reused an acknowledged assessment with mandatory target coverage0.1, while final evidence coverage is capped by that assessment. Later generation/review could never pass the existing0.4 threshold. The ordinary context sampler also omitted relevant lines from the already selected frozen documents. Give this private original-completion engine both complete selected bodies consistently through sufficiency, quote options, generation and review; refuse oversized full prompts before dispatch. Retain an actual negative mandatory assessment and stop before generation/review, then block unchanged-context retries. Preserve ordinary research context selection and all evidence/support thresholds.
+
+The owner explicitly requested repair to same-original completion without routine confirmation. Stage any additional supplier episode under a fresh reviewed source and immutable parent-ledger binding rather than extending, deleting or reusing the exhausted grant. The next fixed episode has six fresh holds,243260 microUSD history and400000 microUSD aggregate ceiling (367220 at full use); those conservative staged numbers are agent-chosen within that repair instruction, not an owner quotation or supplier invoice. External activation intent precedes the new journal, and a separately retained latest-head frontier prevents restoring an old journal snapshot from resetting its allowance. Uncertain publication blocks both new dispatch and parent fallback. Native same-claim completion remains exact-digest metadata after private reviewed answer acceptance, with no new payment, funding, search or schedule. Applicable web/API/MCP/client adapters continue to use the existing shared closure and original buyer GET contract; no new client package or native schema is introduced.
+
 ## Explicit output stops without invented provider outages - 2026-10-08
 
 A completed length/max_tokens response can be billable and still fail the output

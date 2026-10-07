@@ -1,6 +1,6 @@
 # Model output-limit diagnostics
 
-Candidate app 0.27.22, hosted MCP 0.3.4, stdio MCP 0.4.7 and desktop 0.4.9.
+Candidate app 0.27.24, hosted MCP 0.3.4, stdio MCP 0.4.7 and desktop 0.4.9.
 Publication, installation and hosted deployment are separate acceptance gates.
 
 The owner-operated SQLite observation in [issue #212](https://github.com/tang-vu/keryx/issues/212)
