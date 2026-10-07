@@ -154,6 +154,13 @@ jobs:
           npm --prefix mcp run build
           node --import tsx scripts/test-monthly-mcp-package.mts
 
+      - name: Packed stdio research diagnostics, signing and recovery (synthetic)
+        working-directory: mcp
+        run: |
+          mkdir -p "$RUNNER_TEMP/keryx-mcp-acceptance"
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/keryx-mcp-acceptance"
+          node scripts/test-packed.mjs "$(find "$RUNNER_TEMP/keryx-mcp-acceptance" -name '*.tgz' -type f)" "$(npm root -g)/npm/bin/npm-cli.js"
+
       - name: Funding replacement recovery (synthetic RPC, no signing)
         run: node --import tsx scripts/test-browser-funding-replacement.mts
 
