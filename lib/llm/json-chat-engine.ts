@@ -11,7 +11,7 @@ import { boundedResearchPlan } from "./research-plan";
 import { cloneUsage } from "../economics/provider-cost-policy";
 import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
-import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
+import { buildQuoteOptions, resolveQuoteEvidence, type QuoteOption } from "./quote-options";
 import { STATEMENT_GENERATION_GUIDANCE } from "./cited-statement";
 import { buildContextualQuoteOptions } from "./quote-context";
 import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE, BRIEF_COMPACT_REVIEW_SCHEMA } from "./decision-brief";
@@ -274,7 +274,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   async synthesize(input: SynthInput): Promise<SynthResult> {
     if (input.answerFormat === "decision-brief" && this.supportsDecisionBrief()) return this.synthesizeDecisionBrief(input);
     const sources = this.evidenceSources(input);
-    const quoteOptions = buildQuoteOptions(sources, input.gathered);
+    const quoteOptions = this.synthesisQuoteOptions(input, sources);
     const out = await this.measuredChatJson(
       config.synthesisModel,
       "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
@@ -313,7 +313,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     let reviewedIndexes: ReadonlySet<number> = new Set();
     if (proposals.length) {
       try {
-        const reviewInput = buildEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims });
+        const reviewInput = this.synthesisEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims });
         reviewedIndexes = reviewInput.reviewedIndexes;
         if (reviewedIndexes.size) review = await this.measuredChatJson(
           config.llmModel,
@@ -334,6 +334,13 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         ? "completed" as const : "unavailable" as const } : {}),
       conflicts: parseConflicts(out.conflicts),
     };
+  }
+
+  protected synthesisQuoteOptions(input: SynthInput, sources: ReturnType<typeof evidenceContext>): QuoteOption[] {
+    return buildQuoteOptions(sources, input.gathered);
+  }
+  protected synthesisEvidenceReviewInput(input: Parameters<typeof buildEvidenceReviewInput>[0]) {
+    return buildEvidenceReviewInput(input);
   }
 
   private async synthesizeDecisionBrief(input: SynthInput): Promise<SynthResult> {

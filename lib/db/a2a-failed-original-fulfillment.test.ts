@@ -10,6 +10,7 @@ import { seedSyntheticA2aOriginal } from "./a2a-original-fixture";
 import { syntheticFailedOriginal, syntheticFulfilledRun } from "./a2a-fulfillment-fixture";
 import { fulfillmentObjectSha256, fulfillmentAuthoritySchema } from "../a2a/failed-original-fulfillment-protocol";
 import { finalizeGroundedAnswer } from "../agent/answer-grounding";
+import type { FulfillmentEvidenceCapability } from "../a2a/fulfillment-supplement-evidence";
 
 const cleanup: Array<() => void> = [];
 afterEach(() => { for (const close of cleanup.splice(0).reverse()) close(); vi.useRealTimers(); });
@@ -210,6 +211,9 @@ describe("same failed original native fulfillment", () => {
     await expect(postgres.getA2aFailedOriginalFulfillment(fixture.order.id)).rejects.toThrow(/not admitted/);
     await expect(postgres.completeA2aFailedOriginalFulfillment(syntheticFulfilledRun(claim))).rejects.toThrow(/not admitted/);
     await expect(postgres.hasA2aFailedOriginalFulfillment(fixture.authority)).rejects.toThrow(/not admitted/);
+    const counterfeit = Object.freeze({}) as FulfillmentEvidenceCapability;
+    await expect(postgres.completeA2aFailedOriginalFulfillment(syntheticFulfilledRun(claim), counterfeit)).rejects.toThrow(/not admitted/);
+    await expect(postgres.hasA2aFailedOriginalFulfillment(fixture.authority, counterfeit)).rejects.toThrow(/not admitted/);
     for (const method of ["claimA2aFailedOriginalFulfillment", "getA2aFailedOriginalFulfillment", "completeA2aFailedOriginalFulfillment", "hasA2aFailedOriginalFulfillment"] as const)
       expect(SUPABASE_ENROLLED_METHODS[method]).toBe("unsupported");
   });

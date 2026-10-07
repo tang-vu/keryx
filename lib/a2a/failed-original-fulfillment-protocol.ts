@@ -7,6 +7,8 @@ import type { A2aOrder } from "./order";
 import type { QueryRun } from "../types";
 import { renderFulfilledOriginalAnswer, type FulfillmentEvidenceGap } from "./original-fulfillment-answer";
 import { fulfillmentSupplierWindowSchema, fulfillmentTimestampSchema, matchesFulfillmentSupplierWindow } from "./fulfillment-window";
+import { supplementalRunSources, type FulfillmentEvidenceCapability } from "./fulfillment-supplement-evidence";
+import type { GatheredContent } from "../llm/reasoning-engine";
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const timestamp = z.string().datetime().refine(value => Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value);
@@ -94,17 +96,25 @@ export function matchesFailedFulfillmentOriginal(order: A2aOrder, authority: Ful
 }
 
 /** Private provenance stored with the new result. Historical failed execution/cost stays explicit. */
-export interface FulfilledOriginalRunMetadata {
-  format: "keryx-a2a-original-fulfillment-result-v1";
+interface FulfilledOriginalRunMetadataBase {
   claimId: string; authoritySha256: string; inputSha256: string;
   originalFailureSha256: string; providerLedgerSha256: string;
   originalProviderBilling: "unknown"; noNewInboundPayment: true;
   statements: import("../agent/cited-statements").CitedStatement[];
   evidenceGaps: FulfillmentEvidenceGap[];
 }
+export type FulfilledOriginalRunMetadata = FulfilledOriginalRunMetadataBase & ({
+  format: "keryx-a2a-original-fulfillment-result-v1";
+} | {
+  format: "keryx-a2a-original-fulfillment-result-v2";
+  supplementaryInputSha256: string; contextSha256: string;
+  statementReviews: Array<import("../agent/cited-statements").CitedStatement & { support: number }>;
+});
 export function validateFulfilledQueryRun(run: QueryRun, claim: A2aFulfillmentClaim,
-  completion: FulfillmentCompletionInput): void {
+  completion: FulfillmentCompletionInput, evidenceCapability?: FulfillmentEvidenceCapability): void {
   const metadata = run.originalFulfillment;
+  const supplementalSources = metadata?.format === "keryx-a2a-original-fulfillment-result-v2"
+    ? supplementalRunSources(run, claim, evidenceCapability) : undefined;
   if (completion.originalId !== claim.authority.original.id || completion.claimId !== claim.claimId ||
     run.id !== claim.authority.original.queryId || run.question !== claim.authority.question ||
     run.budget !== 0.01 || run.engine !== "llm:deepseek:deepseek-v4-flash" ||
@@ -113,7 +123,7 @@ export function validateFulfilledQueryRun(run: QueryRun, claim: A2aFulfillmentCl
     run.paymentAttempts !== 0 || run.settledPayments !== 0 || run.pendingPayments !== 0 ||
     run.parentId !== undefined || run.retryOf !== undefined || !run.answer?.trim() ||
     !Array.isArray(run.subClaims) || canonicalJson(run.subClaims) !== canonicalJson(claim.authority.input.targets) ||
-    !metadata || metadata.format !== "keryx-a2a-original-fulfillment-result-v1" || metadata.claimId !== claim.claimId ||
+    !metadata || !["keryx-a2a-original-fulfillment-result-v1", "keryx-a2a-original-fulfillment-result-v2"].includes(metadata.format) || metadata.claimId !== claim.claimId ||
     metadata.authoritySha256 !== fulfillmentObjectSha256(claim.authority) ||
     metadata.inputSha256 !== fulfillmentObjectSha256(claim.authority.input) ||
     metadata.originalFailureSha256 !== claim.authority.originalEvidenceSha256 ||
@@ -127,18 +137,19 @@ export function validateFulfilledQueryRun(run: QueryRun, claim: A2aFulfillmentCl
   const gaps = fulfillmentEvidenceGapsSchema.safeParse(metadata.evidenceGaps);
   if (!gaps.success || canonicalJson(gaps.data) !== canonicalJson(metadata.evidenceGaps) ||
     gaps.data.some(gap => gap.claimIndex >= run.subClaims.length)) throw new Error("Failed original fulfillment gaps refused");
-  const selected = new Set(claim.authority.input.selectedDocumentIds.map(id => `public:fulfillment:${id}`));
-  if (!Array.isArray(citations) || citations.length < 1 || citations.length > ORIGINAL_FULFILLMENT_LIMITS.attentionLimit ||
+  const selectedIds = supplementalSources?.map(source => source.sourceId) ?? claim.authority.input.selectedDocumentIds.map(id => `public:fulfillment:${id}`);
+  const selected = new Set(selectedIds);
+  if (!Array.isArray(citations) || citations.length < 1 || citations.length > selectedIds.length ||
     new Set(citations.map(item => item.marker)).size !== citations.length ||
     new Set(citations.map(item => item.sourceId)).size !== citations.length ||
     citations.some(item => item.sourceKind !== "public-reference" || item.reward !== 0 || !selected.has(item.sourceId) ||
-      !/^S[1-2]$/.test(item.marker) || !Number.isFinite(item.weight) || item.weight < 0 || item.weight > 1) ||
+      item.marker !== `S${selectedIds.indexOf(item.sourceId) + 1}` || !Number.isFinite(item.weight) || item.weight < 0 || item.weight > 1) ||
     !Array.isArray(evidence) || !evidence.some(item => item.qualifiesForAnswer === true) ||
     evidence.some(item => item.sourceKind !== "public-reference" || item.qualifiesForReward !== false ||
       !Number.isInteger(item.claimIndex) || item.claimIndex < 0 || item.claimIndex >= run.subClaims.length ||
       item.claim !== run.subClaims[item.claimIndex] || typeof item.quote !== "string" || !item.quote.trim() ||
       !Number.isFinite(item.support) || item.support < 0 || item.support > 1 ||
-      !selected.has(item.sourceId) || item.marker !== `S${claim.authority.input.selectedDocumentIds.indexOf(item.sourceId.slice("public:fulfillment:".length)) + 1}` ||
+      !selected.has(item.sourceId) || item.marker !== `S${selectedIds.indexOf(item.sourceId) + 1}` ||
       item.qualifiesForAnswer === true && !citations.some(citation => citation.marker === item.marker && citation.sourceId === item.sourceId && citation.sourceName === item.sourceName)) ||
     citations.some(citation => !evidence.some(item => item.qualifiesForAnswer === true && item.marker === citation.marker)) ||
     !Array.isArray(coverage) || coverage.length !== run.subClaims.length || coverage.some((item, index) =>
@@ -148,6 +159,24 @@ export function validateFulfilledQueryRun(run: QueryRun, claim: A2aFulfillmentCl
         !evidence.some(e => e.claimIndex === index && e.marker === marker && e.qualifiesForAnswer === true)) ||
       item.coverage > Math.max(0, ...evidence.filter(e => e.claimIndex === index && e.qualifiesForAnswer === true).map(e => e.support))))
     throw new Error("Failed original fulfillment evidence refused");
+  if (supplementalSources && metadata.format === "keryx-a2a-original-fulfillment-result-v2") {
+    const matchesSource = (item: typeof citations[number] | typeof evidence[number], source: GatheredContent) =>
+      item.marker === source.marker && item.sourceId === source.sourceId && item.sourceName === source.sourceName &&
+      item.itemId === source.itemId && item.itemTitle === source.itemTitle && item.itemUrl === source.itemUrl &&
+      item.contentVersion === source.contentVersion && canonicalJson(item.webProvenance) === canonicalJson(source.webProvenance) &&
+      canonicalJson(item.requestedSource) === canonicalJson(source.requestedSource);
+    if (citations.some(item => item.weight !== 0 || !supplementalSources.some(source => matchesSource(item, source))) ||
+      evidence.some(item => !supplementalSources.some(source => matchesSource(item, source) &&
+        item.quote.length >= 8 && item.quote.length <= 240 && source.text.includes(item.quote))) ||
+      !Array.isArray(metadata.statementReviews) || metadata.statementReviews.length !== metadata.statements.length ||
+      metadata.statements.some((statement, index) => {
+        const review = metadata.statementReviews[index];
+        return !review || !Number.isFinite(review.support) || review.support < 0.7 || review.support > 1 ||
+          canonicalJson({ claimIndex: review.claimIndex, marker: review.marker, quote: review.quote, text: review.text }) !== canonicalJson(statement);
+      }) || claim.authority.input.targets.some((_, index) => (coverage[index]?.coverage ?? 0) < 0.4 ||
+        !metadata.statements.some(statement => statement.claimIndex === index)))
+      throw new Error("Failed original supplemental provenance or review refused");
+  }
   for (const statement of metadata.statements) {
     if (!Number.isInteger(statement.claimIndex) || statement.claimIndex < 0 || statement.claimIndex >= run.subClaims.length ||
       typeof statement.text !== "string" || !statement.text.trim() ||

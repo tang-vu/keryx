@@ -13,6 +13,7 @@ import { hasSettledProof } from "./a2a-original-claim";
 import { assertSqliteResearchAuthority } from "./research-monthly";
 import { writeSqliteQueryRun } from "./query-run-record";
 import type { QueryRun } from "../types";
+import type { FulfillmentEvidenceCapability } from "../a2a/fulfillment-supplement-evidence";
 import { a2aResponseFromRun, quoteFromA2aOrder } from "../a2a/result";
 
 const same = (a: unknown, b: unknown) => canonicalJson(a) === canonicalJson(b);
@@ -79,7 +80,7 @@ function resolution(claim: A2aFulfillmentClaim, completion: FulfillmentCompletio
       runSha256: completion.runSha256 } };
 }
 function hasCompletion(db: DatabaseSync, authority: FulfillmentAuthority,
-  readOrder: (row: Record<string, unknown>) => A2aOrder): boolean {
+  readOrder: (row: Record<string, unknown>) => A2aOrder, evidenceCapability?: FulfillmentEvidenceCapability): boolean {
   const record = readRecord(db, authority.original.id);
   if (!record?.completion || !same(record.claim.authority, authority)) return false;
   const row = db.prepare("SELECT * FROM a2a_orders WHERE id=?").get(authority.original.id);
@@ -92,7 +93,7 @@ function hasCompletion(db: DatabaseSync, authority: FulfillmentAuthority,
     order.resultSavingAt !== record.completion.completedAt || order.updatedAt !== record.completion.completedAt ||
     !same(order.resolution, resolution(record.claim, record.completion)) || !hasSettledProof(db, order, authority.original) ||
     !noCreatorAttempts(db, order.id)) return false;
-  try { validateFulfilledQueryRun(run, record.claim, record.completion); }
+  try { validateFulfilledQueryRun(run, record.claim, record.completion, evidenceCapability); }
   catch { return false; }
   const expected = { ...record.claim.failedOrder, status: "completed", errorCode: null,
     resultSavingAt: record.completion.completedAt, updatedAt: record.completion.completedAt,
@@ -104,7 +105,8 @@ function hasCompletion(db: DatabaseSync, authority: FulfillmentAuthority,
 /** One native transaction inserts the actual run once and commits only the matching failed
  * original. A rollback cannot strand a saved run or erase the immutable failure snapshot. */
 export function completeSqliteA2aFulfillment(db: DatabaseSync, raw: A2aFulfillmentCompletion,
-  profile: ArcNetworkProfile, readOrder: (row: Record<string, unknown>) => A2aOrder): boolean {
+  profile: ArcNetworkProfile, readOrder: (row: Record<string, unknown>) => A2aOrder,
+  evidenceCapability?: FulfillmentEvidenceCapability): boolean {
   const completion = fulfillmentCompletionInputSchema.parse({ claimId: raw.claimId, originalId: raw.originalId,
     runSha256: raw.runSha256, providerLedgerSha256: raw.providerLedgerSha256, completedAt: raw.completedAt });
   if (Date.parse(completion.completedAt) > Date.now()) throw new Error("Fulfillment completion chronology refused");
@@ -116,8 +118,8 @@ export function completeSqliteA2aFulfillment(db: DatabaseSync, raw: A2aFulfillme
     const record = readRecord(db, completion.originalId);
     if (!record || record.claim.claimId !== completion.claimId) return false;
     validateA2aOriginalClaim(record.claim.authority.original, profile);
-    validateFulfilledQueryRun(run, record.claim, completion);
-    if (record.completion) return same(record.completion, completion) && hasCompletion(db, record.claim.authority, readOrder);
+    validateFulfilledQueryRun(run, record.claim, completion, evidenceCapability);
+    if (record.completion) return same(record.completion, completion) && hasCompletion(db, record.claim.authority, readOrder, evidenceCapability);
     const row = db.prepare("SELECT * FROM a2a_orders WHERE id=?").get(completion.originalId);
     const order = row ? readOrder(row) : null;
     if (!order || !matchesFailedFulfillmentOriginal(order, record.claim.authority) ||
@@ -132,14 +134,15 @@ export function completeSqliteA2aFulfillment(db: DatabaseSync, raw: A2aFulfillme
     if (changed.changes !== 1) throw new Error("Fulfillment completion original CAS refused");
     db.prepare(`INSERT INTO a2a_fulfillment_completions(original_id,claim_id,run_sha256,provider_ledger_sha256,completed_at)
       VALUES(?,?,?,?,?)`).run(order.id, completion.claimId, completion.runSha256, completion.providerLedgerSha256, completion.completedAt);
-    if (!hasCompletion(db, record.claim.authority, readOrder)) throw new Error("Fulfillment completion readback refused");
+    if (!hasCompletion(db, record.claim.authority, readOrder, evidenceCapability)) throw new Error("Fulfillment completion readback refused");
     return true;
   });
 }
 /** Exact native delivered proof only. It cannot claim, initialize or mutate a result. */
 export function hasSqliteA2aFulfillment(db: DatabaseSync, raw: FulfillmentAuthority,
-  profile: ArcNetworkProfile, readOrder: (row: Record<string, unknown>) => A2aOrder): boolean {
+  profile: ArcNetworkProfile, readOrder: (row: Record<string, unknown>) => A2aOrder,
+  evidenceCapability?: FulfillmentEvidenceCapability): boolean {
   const authority = fulfillmentAuthoritySchema.parse(raw); validateA2aOriginalClaim(authority.original, profile);
   assertSqliteResearchAuthority(db, profile);
-  return transact(db, false, () => { assertSqliteResearchAuthority(db, profile); return hasCompletion(db, authority, readOrder); });
+  return transact(db, false, () => { assertSqliteResearchAuthority(db, profile); return hasCompletion(db, authority, readOrder, evidenceCapability); });
 }

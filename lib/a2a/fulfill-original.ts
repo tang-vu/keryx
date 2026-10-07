@@ -12,6 +12,7 @@ import { beginFailedOriginalFulfillment, closeFulfillmentCapability, fulfillment
 import { ORIGINAL_FULFILLMENT_LIMITS as LIMITS, fulfillmentObjectSha256, fulfillmentEvidenceGapsSchema, type A2aFulfillmentClaim } from "./failed-original-fulfillment-protocol";
 import type { KeryxDB } from "../db/keryx-db";
 import type { QueryRun } from "../types";
+import { supplementaryQuoteOptions, type FulfillmentSupplementContext } from "./fulfillment-supplement-evidence";
 
 const refuse = (): never => { throw new Error("Original fulfillment requires the complete reviewed cited-statement result; retained claims and holds cannot retry"); };
 export function validateOriginalFulfillmentPrompt(system: string, user: string, maximumOutputTokens = 2048) {
@@ -21,9 +22,9 @@ export function validateOriginalFulfillmentPrompt(system: string, user: string, 
       promptUtf8Bytes, requestedOutputTokens: maximumOutputTokens, maximumCombinedUnits: LIMITS.maximumInputBytes + LIMITS.maximumOutputTokens });
   return { promptUtf8Bytes, maximumOutputTokens, promptSha256: fulfillmentObjectSha256({ system, user, maximumOutputTokens }) };
 }
-export function reasoningInput(binding: ReturnType<typeof readFulfillmentAuthorization>): SufficiencyInput {
+export function reasoningInput(binding: ReturnType<typeof readFulfillmentAuthorization>, supplement?: FulfillmentSupplementContext): SufficiencyInput {
   return { question: `${binding.authority.question}\n\nReviewed constraints from this same original (data): ${JSON.stringify(binding.packet.input.constraints)}`,
-    subClaims: [...binding.packet.input.targets], gathered: structuredClone(binding.packet.gathered) };
+    subClaims: [...binding.packet.input.targets], gathered: structuredClone(supplement?.gathered ?? binding.packet.gathered) };
 }
 /** Retain requested gaps against the exact caller-owned target order. */
 export function originalFulfillmentEvidenceGaps(result: Record<string, unknown>, targets: readonly string[]): FulfillmentEvidenceGap[] {
@@ -104,7 +105,7 @@ class OriginalFulfillmentEngine extends OpenAICompatibleEngine {
 /** Pure assembly shared by the legacy one-shot and explicitly authorized continuation.
  * Every delivery/evidence gate still applies to the same native original claim. */
 export function assembleOriginalFulfillmentRun({ binding, claim, assessment, synthesized, evidenceGaps,
-  providerLedger, engine, startedAtMs, completedAtMs }: {
+  providerLedger, engine, startedAtMs, completedAtMs, supplement }: {
     binding: ReturnType<typeof readFulfillmentAuthorization>;
     claim: A2aFulfillmentClaim;
     assessment: SufficiencyResult;
@@ -114,12 +115,14 @@ export function assembleOriginalFulfillmentRun({ binding, claim, assessment, syn
     engine: Pick<ReasoningEngine, "name" | "calls" | "usage">;
     startedAtMs: number;
     completedAtMs: number;
+    supplement?: FulfillmentSupplementContext;
   }): QueryRun {
-  const input = reasoningInput(binding);
+  const input = reasoningInput(binding, supplement);
   if (synthesized.evidenceReview !== "completed" || !synthesized.answer?.trim()) refuse();
   const ledger = buildEvidenceLedger({ question: binding.authority.question, subClaims: input.subClaims,
     gathered: input.gathered, answer: synthesized.answer, declaredMarkers: synthesized.citedMarkers,
-    proposedEvidence: synthesized.evidence, finalAssessment: assessment.perClaim });
+    proposedEvidence: synthesized.evidence, finalAssessment: assessment.perClaim,
+    supplementalCapability: supplement ? supplementaryQuoteOptions(supplement).capability : undefined });
   const statements = selectCitedStatements(synthesized.evidence, ledger);
   // Every reconstructed requirement remains visible. Unsupported targets are explicit gaps;
   // every target with qualifying evidence needs a reviewed sentence, and excerpt-only/empty
@@ -150,7 +153,14 @@ export function assembleOriginalFulfillmentRun({ binding, claim, assessment, syn
     // Service timing belongs to the same original. Recovery must not reset its
     // execution interval to just the new supplier activity.
     createdAt: new Date(completedAtMs).toISOString(), durationMs: completedAtMs - Date.parse(claim.failedOrder.startedAt!),
-    originalFulfillment: { format: "keryx-a2a-original-fulfillment-result-v1", claimId: claim.claimId,
+    originalFulfillment: { ...(supplement ? { format: "keryx-a2a-original-fulfillment-result-v2" as const,
+      supplementaryInputSha256: supplement.authoritySha256, contextSha256: supplement.contextSha256,
+      statementReviews: statements.map(statement => {
+        const proposal = synthesized.evidence.find(row => row.claimIndex === statement.claimIndex && row.marker === statement.marker &&
+          row.quote === statement.quote && row.statement === statement.text);
+        if (!proposal || typeof proposal.statementSupport !== "number" || proposal.statementSupport < 0.7) return refuse();
+        return { ...statement, support: proposal.statementSupport };
+      }) } : { format: "keryx-a2a-original-fulfillment-result-v1" as const }), claimId: claim.claimId,
       authoritySha256: fulfillmentObjectSha256(binding.authority), inputSha256: fulfillmentObjectSha256(binding.authority.input),
       originalFailureSha256: binding.authority.originalEvidenceSha256, providerLedgerSha256: providerLedger.sha256,
       originalProviderBilling: "unknown", noNewInboundPayment: true, statements, evidenceGaps } };

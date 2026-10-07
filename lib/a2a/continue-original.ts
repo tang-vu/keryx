@@ -9,6 +9,7 @@ import { buildEvidenceReviewInput } from "../llm/evidence-review-input";
 import { MAX_REVIEWED_EVIDENCE } from "../llm/evidence-review";
 import { ORIGINAL_FULFILLMENT_LIMITS as LIMITS } from "./failed-original-fulfillment-protocol";
 import type { FulfillmentEvidenceGap } from "./original-fulfillment-answer";
+import { supplementaryQuoteOptions, type FulfillmentSupplementContext } from "./fulfillment-supplement-evidence";
 import { assembleOriginalFulfillmentRun, originalFulfillmentEvidenceGaps, reasoningInput, validateOriginalFulfillmentPrompt } from "./fulfill-original";
 import { assertContinuationSupplierAdmission, beginOriginalContinuation, closeContinuationCapability,
   continuationModel, continuationProviderLedger, continuationSupplierSignal, prepareContinuationResult,
@@ -32,16 +33,25 @@ class OriginalContinuationEngine extends OpenAICompatibleEngine {
   private proposedRows = 0;
   private retainedGaps: FulfillmentEvidenceGap[] = [];
   private diagnostic?: { phase: Phase; category: Category };
+  private readonly supplementalQuotes?: ReturnType<typeof supplementaryQuoteOptions>;
   constructor(apiKey: string, private readonly capability: ContinuationCapability,
-    private readonly input: SufficiencyInput, private readonly requiredTargets: readonly number[]) {
+    private readonly input: SufficiencyInput, private readonly requiredTargets: readonly number[], supplement?: FulfillmentSupplementContext) {
     super({ provider: "deepseek", name: "llm:deepseek:deepseek-v4-flash", model: "deepseek-v4-flash",
       baseUrl: "https://api.deepseek.com", apiKey, redirect: "error" });
+    this.supplementalQuotes = supplement ? supplementaryQuoteOptions(supplement) : undefined;
   }
   get evidenceGaps() { return structuredClone(this.retainedGaps); }
   get failure() { return this.diagnostic; }
   protected supportsDecisionBrief(): boolean { return false; }
   protected synthesisGenerationTokens(): number { return LIMITS.maximumOutputTokens; }
   protected evidenceSources(input: SufficiencyInput) { return originalFulfillmentContext(input); }
+  protected synthesisQuoteOptions(input: SufficiencyInput, sources: ReturnType<typeof originalFulfillmentContext>) {
+    return this.supplementalQuotes ? [...buildQuoteOptions(sources.filter(source => !source.sourceId.startsWith("public:fulfillment:supplement:")), input.gathered),
+      ...this.supplementalQuotes.options] : super.synthesisQuoteOptions(input, sources);
+  }
+  protected synthesisEvidenceReviewInput(input: Parameters<typeof buildEvidenceReviewInput>[0]) {
+    return buildEvidenceReviewInput({ ...input, supplementalCapability: this.supplementalQuotes?.capability });
+  }
   protected assertSupplierAdmission(): void { assertContinuationSupplierAdmission(this.capability); }
   protected supplierAbortSignal(): AbortSignal { return continuationSupplierSignal(this.capability, config.llmTimeoutMs); }
   protected validateChatJsonInput(_model: string, system: string, user: string, maxTokens = 2048) {
@@ -58,9 +68,9 @@ class OriginalContinuationEngine extends OpenAICompatibleEngine {
       !result.evidence.length || result.evidence.length > MAX_REVIEWED_EVIDENCE) failed("synthesize", "output-validation");
     if (result.evidence.some(row => !row || typeof row !== "object" || !score((row as Record<string, unknown>).support)))
       failed("synthesize", "output-validation");
-    const options = buildQuoteOptions(this.evidenceSources(this.input), this.input.gathered);
+    const options = this.synthesisQuoteOptions(this.input, this.evidenceSources(this.input));
     const proposals = resolveQuoteEvidence(result.evidence, options);
-    const review = buildEvidenceReviewInput({ proposals, options, gathered: this.input.gathered, subClaims: this.input.subClaims });
+    const review = this.synthesisEvidenceReviewInput({ proposals, options, gathered: this.input.gathered, subClaims: this.input.subClaims });
     // Never checkpoint an invalid/partial review packet as successful generation.
     // The same exact raw proposal set must survive server binding and review bounds.
     if (review.reviewedIndexes.size !== result.evidence.length || proposals.some(row => !row.statement) ||
@@ -119,7 +129,13 @@ class OriginalContinuationEngine extends OpenAICompatibleEngine {
 class ContinuationPromptPreflight extends JsonChatEngine {
   readonly name = "continuation-readonly-preflight";
   readonly prompts: ReturnType<typeof validateOriginalFulfillmentPrompt>[] = [];
+  private readonly supplementalQuotes?: ReturnType<typeof supplementaryQuoteOptions>;
+  constructor(supplement?: FulfillmentSupplementContext) { super(); this.supplementalQuotes = supplement ? supplementaryQuoteOptions(supplement) : undefined; }
   protected evidenceSources(input: SufficiencyInput) { return originalFulfillmentContext(input); }
+  protected synthesisQuoteOptions(input: SufficiencyInput, sources: ReturnType<typeof originalFulfillmentContext>) {
+    return this.supplementalQuotes ? [...buildQuoteOptions(sources.filter(source => !source.sourceId.startsWith("public:fulfillment:supplement:")), input.gathered),
+      ...this.supplementalQuotes.options] : super.synthesisQuoteOptions(input, sources);
+  }
   protected synthesisGenerationTokens(): number { return LIMITS.maximumOutputTokens; }
   protected async chatJson(_model: string, system: string, user: string, maxTokens = 2048) {
     this.prompts.push(validateOriginalFulfillmentPrompt(system, user, maxTokens));
@@ -129,8 +145,8 @@ class ContinuationPromptPreflight extends JsonChatEngine {
 
 /** Build the same full-body sufficiency/generation wire prompts without a supplier,
  * credential, claim or mutation. The complete generated review remains separately bounded. */
-export async function preflightOriginalContinuation(binding: Parameters<typeof reasoningInput>[0]) {
-  const engine = new ContinuationPromptPreflight(), input = reasoningInput(binding);
+export async function preflightOriginalContinuation(binding: Parameters<typeof reasoningInput>[0], supplement?: FulfillmentSupplementContext) {
+  const engine = new ContinuationPromptPreflight(supplement), input = reasoningInput(binding, supplement);
   await engine.sufficiency(input);
   await engine.synthesize(input);
   if (engine.prompts.length !== 2) failed("assemble", "unknown");
@@ -144,10 +160,12 @@ export async function preflightOriginalContinuation(binding: Parameters<typeof r
 export async function completeOriginalContinuation(db: KeryxDB, authorizationFile: string, authorizationSha256: string, apiKey: string) {
   if (!apiKey.trim()) throw new Error("Original continuation requires the explicit DeepSeek credential");
   const admitted = await beginOriginalContinuation(db, authorizationFile, authorizationSha256);
-  const binding = admitted.binding.original, input = reasoningInput(binding), startedAtMs = Date.now();
-  const engine = new OriginalContinuationEngine(apiKey, admitted.capability, input, binding.authorization.requiredSupportedTargetIndexes);
+  const binding = admitted.binding.original, startedAtMs = Date.now();
+  let engine: OriginalContinuationEngine | undefined;
   let phase: Phase = "sufficiency";
   try {
+    const input = reasoningInput(binding, admitted.binding.supplement);
+    engine = new OriginalContinuationEngine(apiKey, admitted.capability, input, binding.authorization.requiredSupportedTargetIndexes, admitted.binding.supplement);
     const assessment = await engine.sufficiency(input);
     // A genuine negative assessment is retained by policy. Generation/review cannot
     // raise final coverage above this assessment, so refuse before consuming their holds.
@@ -161,14 +179,14 @@ export async function completeOriginalContinuation(db: KeryxDB, authorizationFil
     phase = "assemble";
     const providerLedger = continuationProviderLedger(admitted.binding);
     const run = assembleOriginalFulfillmentRun({ binding, claim: admitted.claim, assessment, synthesized,
-      evidenceGaps: engine.evidenceGaps, providerLedger, engine, startedAtMs, completedAtMs: Date.now() });
+      evidenceGaps: engine.evidenceGaps, providerLedger, engine, startedAtMs, completedAtMs: Date.now(), supplement: admitted.binding.supplement });
     const prepared = prepareContinuationResult(admitted.capability, run);
     return { prepared: true, runSha256: prepared.runSha256, providerLedgerSha256: prepared.providerLedgerSha256,
       selectedSources: run.citations.length, reviewedStatements: run.originalFulfillment!.statements.length,
       newModelCalls: providerLedger.newModelCalls, combinedReservedMicroUsd: providerLedger.combinedReservedMicroUsd,
       originalProviderBilling: "unknown", paidDeliveryObligation: "unresolved", payments: 0, searches: 0 };
   } catch (error) {
-    if (!engine.failure) recordContinuationDiagnostic(admitted.capability, { phase, category: error instanceof ContinuationFailure
+    if (!engine?.failure) recordContinuationDiagnostic(admitted.capability, { phase, category: error instanceof ContinuationFailure
       ? error.category : error instanceof ReasoningInputLimitError ? "input-limit" : phase === "assemble" ? "quality" : "unknown" });
     throw error instanceof ContinuationFailure ? error : new ContinuationFailure(phase,
       error instanceof ReasoningInputLimitError ? "input-limit" : phase === "assemble" ? "quality" : "unknown");

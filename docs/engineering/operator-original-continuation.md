@@ -117,3 +117,47 @@ commit at public health, serialize maintenance with positive writer drain and
 preserve every old journal/custody/build backup. Only actual same-original native
 completion and verified original buyer recovery prove delivered acceptance; source
 publication or successful model transport alone does not.
+
+## Free supplemental evidence and the unused remainder
+
+An acknowledged negative full-source assessment is terminal for its exact context.
+A third source-bound episode may use at most five unused repair calls, with263920
+microUSD history and367220 fully reserved, preserving the same owner expiry and
+400000 outer ceiling. Its separately anchored journal binds every epoch2 authority,
+frontier, hold, acknowledged negative result, diagnostic and closed attempt. Missing,
+partial or rolled-back state blocks parent fallback. Activation still requires actual
+CLI0/full captures before suppliers; this is not a fresh six-call allowance.
+
+The protected supplementary manifest adds at most four official Arc/Circle references,
+with at most4800 UTF-8 bytes of verbatim sections in total. Retain complete raw inputs
+(up to200000bytes each), exact ordered offsets, both URLs and retrieval time; section
+bodies must reproduce those offsets exactly. The original two bodies stay unchanged.
+Each selected section is a distinct S3+ public-reference with bounded provenance,
+zero payment and reward authority. The complete union goes through fresh sufficiency,
+generation, exact quote binding, independent review and final assembly; every full
+wire prompt stays below32000bytes and generation below8192tokens. Documentation
+supports proposed acceptance checks, never an assertion that Keryx executed them.
+
+Official configuration tables also need usable evidence options. The protected reader
+enrolls exact contiguous table prefixes retaining their headers, code URL lines and
+completed short paragraphs within a single recorded verbatim section. The opaque
+span capability survives generation, separate review and ledger validation; unknown
+objects, changed spans/bodies and detached values refuse. Quotes remain at most240
+characters, with bounded adjacent review context. Raw vendor text is never rewritten
+or joined across sections to create a quote. Ordinary sentence-only gates stay intact.
+
+Result-v2 retains the original native authority/input hashes and completion tuple.
+An opaque runtime capability from protected provenance binds the exact claim and run.
+Native complete, transaction readback, idempotent recovery and readonly has all
+revalidate it; a forged/copied object or changed/missing body refuses. Historical
+readback can revalidate after supplier expiry without granting model access. All five
+targets require>=0.4 coverage, statements require independent review>=0.7 and the
+canonical answer preserves explicit gaps. Legacy result-v1 remains unchanged.
+
+The application version advances for coordinated web/API/Operator/CLI deployment.
+Hosted/stdio MCP, desktop, extensions and bots use their existing status and original
+buyer GET/receipt adapters; no new public activation, signing field, package or installer
+is introduced. SQLite/enrolled adapters forward the opaque object internally; Supabase
+continues to refuse this private domain. No database migration or ordinary research
+budget change is introduced. Source/CI/review/deployment and actual reviewed original
+recovery remain separate gates.
