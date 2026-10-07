@@ -112,6 +112,12 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     return Math.min(8192, 1024 + items * 256);
   }
 
+  /** Specialized finite callers can budget the complete generated result within their
+   * own authority. Ordinary synthesis keeps its existing per-source budget. */
+  protected synthesisGenerationTokens(input: SynthInput): number {
+    return this.budgetFor(4 + input.gathered.length);
+  }
+
   async decompose(question: string): Promise<string[]> {
     return boundedResearchPlan(question, () => this.measuredChatJson(
       config.llmModel,
@@ -294,7 +300,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
           '"conflicts":[{"point":string,"positions":[{"marker":string,"stance":string}],"trusted":string,"reason":string}]}',
       }),
       // The answer itself is prose, so this floor carries the write-up on top of the per-source parts.
-      this.budgetFor(4 + input.gathered.length),
+      this.synthesisGenerationTokens(input),
     );
     const proposals = resolveQuoteEvidence(out.evidence, quoteOptions);
     let review: unknown;

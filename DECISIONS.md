@@ -5833,3 +5833,9 @@ genuine successful capture time without claiming public monitoring or restore/si
 authority. Exclusive durable publication and retained uncertainty are preferable to
 silently discarding recovery history to sustain a cadence. Receipt-based cleanup,
 deployment and offhost drills remain gates. See [backup limits](docs/encrypted-backups.md).
+
+## Additive continuation for the same retained paid original - 2026-10-07
+
+The retained one-shot execution lost its exception and has no prepared result. Do not reinterpret its reservations as successful requests or change the old claim/window. A new explicit owner instruction permits repair and same-original completion under a distinct finite source/host/old-evidence-bound supplier grant. Preserve every expired hold and the permanent native claim; reserve each new dispatch before transport, checkpoint only complete validated normalized JSON, and serialize attempts with durable uncertainty retained on crash/fsync failure. Exact successful stages may be reused only under identical grant/source/packet/prompt bounds. Generation uses the already-authorized8192 output ceiling while ordinary research remains unchanged. Complete the same claim through exact prepared-result metadata only after all five targets have reviewed support and gaps remain explicit. New payments, searches, creator rewards, funding and general schedules are outside this lane. The separate ledger catalogue detects deletion or replacement instead of silently resetting consumed allowance. See docs/engineering/operator-original-continuation.md.
+
+A Windows redeploy previously lost reviewed environment controls entering WSL and selected the legacy path. The Node launcher now forwards and verifies all nonsecret reviewed-role and optional economic-migration controls before mutation, preserving explicit native paths. This is transport validation, not authority to drain, migrate, deploy unreviewed code or call suppliers.

@@ -14,6 +14,8 @@
     "scripts/fulfill-canary-original.mts",
     "scripts/isolate-failed-canary-research.mts",
     "scripts/fulfill-canary-original.test.mts",
+    "scripts/continue-canary-original.mts",
+    "scripts/continue-canary-original.test.mts",
     "scripts/mainnet-original-fulfillment-storage-migrate.mts",
     "scripts/mainnet-original-fulfillment-storage-migrate.test.mts",
     "scripts/test-a2a-original-claim-postgres.mts",

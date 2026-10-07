@@ -50,6 +50,7 @@ jobs:
           bash scripts/redeploy-vps.check.sh
           node --test scripts/redeploy-reviewed-roles.test.mjs
           node --test scripts/redeploy-economic-migration.test.mjs
+          node --test scripts/redeploy.test.mjs
           node --test scripts/dependency-state.check.mjs
           node --test scripts/release-ops-preflight.test.mjs
           node --test scripts/immutable-release-staging.test.mjs
@@ -62,6 +63,9 @@ jobs:
 
       - name: Finite Operator canary CLI startup (no environment, wallet or network)
         run: node --import tsx scripts/operator-canary.mts --help
+
+      - name: Retained original continuation CLI startup (no environment, wallet or network)
+        run: node --import tsx scripts/continue-canary-original.mts --help
 
       - name: Private economics CLI startup (no environment or database)
         run: node --import tsx scripts/economics-private-report.mts --help

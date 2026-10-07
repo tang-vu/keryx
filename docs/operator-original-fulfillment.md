@@ -6,6 +6,12 @@ failed closure and every old reservation. It does not requeue that original,
 submit another payment, issue a refund or count a second customer. Publication,
 tests and a prepared result do not establish delivered acceptance.
 
+The October 7 unprepared v2 execution cannot be replayed. A separately authorized
+[bounded continuation](engineering/operator-original-continuation.md) preserves
+its permanent claim and all holds, checkpoints new supplier stages, and completes
+only that same original after full review. The historical one-shot rules below
+remain authoritative for their retained v1/v2 records.
+
 The native SQLite claim is unique by original and permanent. Enrolled SQLite uses
 the same native transaction and storage fences; PostgreSQL remains unsupported.
 A stopped-writer, verified schema transition is required before activation. Runtime

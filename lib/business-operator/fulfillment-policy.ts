@@ -15,6 +15,7 @@ import type { KeryxDB } from "../db/keryx-db";
 import type { GatheredContent } from "../llm/reasoning-engine";
 import type { QueryRun } from "../types";
 import { fulfillmentSupplierWindowSchema, fulfillmentTimestampSchema, matchesFulfillmentSupplierWindow } from "../a2a/fulfillment-window";
+import { retainedContinuationDeliveryResolution } from "./fulfillment-continuation-policy";
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const timestamp = z.string().datetime().refine(value => Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value);
@@ -200,6 +201,10 @@ function localClaim(binding: ReviewedBinding) {
     Date.parse(claim.claimedAt) >= Date.parse(binding.authorization.expiresAt) || Date.parse(claim.claimedAt) > Date.now()) refuse("local claim changed");
   return claim;
 }
+/** Readonly original bindings for a separately authorized additive continuation.
+ * These helpers neither renew supplier permission nor recreate the native claim. */
+export function readRetainedFulfillmentBinding() { return retainedBinding(); }
+export function readRetainedFulfillmentClaim(binding: ReturnType<typeof readFulfillmentAuthorization>) { return localClaim(binding); }
 /** Inspection only: the unique failed execution remains consumed. An expired,
  * unprepared claim can be isolated from unrelated interactive research; this
  * never creates or restores an execution capability. */
@@ -390,6 +395,9 @@ export async function completePreparedFulfillment(db: NativeDb, expectedPrepared
 /** Filesystem observation of a separately proved delivered resolution. Old failed closure and
  * both raw provider ledgers remain immutable. Native proof is required to create this marker. */
 export function retainedFulfillmentDeliveryResolution(old: RetainedFailedCanaryAuthority) {
+  return retainedLegacyFulfillmentDeliveryResolution(old) ?? retainedContinuationDeliveryResolution(old);
+}
+function retainedLegacyFulfillmentDeliveryResolution(old: RetainedFailedCanaryAuthority) {
   const directory = fulfillmentDirectory();
   if (!exists(directory)) return null;
   protectedPath(directory, true); if (!exists(path.join(directory, "delivered.json"))) return null;
