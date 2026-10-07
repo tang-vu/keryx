@@ -23,8 +23,15 @@ beforeEach(() => {
 });
 afterEach(() => { cleanFulfillmentFixtures(); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.useRealTimers(); });
 
-async function admittedFixture() {
+async function admittedFixture(fiveRequiredTargets = false) {
   const value = await fulfillmentFixture();
+  if (fiveRequiredTargets) {
+    const targets = ["Contract-wallet support", "EOA payment flow", "Standard contract-wallet transfer flow",
+      "Authorization and revocation limits", "Payment and delivery acceptance checks"];
+    value.binding.packet.input.targets = [...targets];
+    value.binding.authority.input.targets = [...targets];
+    value.binding.authorization.requiredSupportedTargetIndexes = [0, 1, 2, 3, 4];
+  }
   const claim: A2aFulfillmentClaim = { authority: value.binding.authority, claimId: "1".repeat(64),
     claimedAt: fixtureNow, failedOrder: structuredClone(value.order) };
   const capability = Object.freeze({});
@@ -39,18 +46,21 @@ async function admittedFixture() {
 }
 function replies(user: Record<string, unknown>, call: number) {
   if (call === 1) return { rationale: "Synthetic assessment.", perClaim: (user.subClaims as string[]).map((claim, index) => ({
-    claim, supportedAnswer: "The frozen reference describes the mechanism.", missingRequestedParts: [], coverage: 0.9, coveredBy: [`S${index + 1}`] })) };
+    claim, supportedAnswer: "The frozen reference describes the mechanism.", missingRequestedParts: [], coverage: 0.9, coveredBy: [`S${index % 2 + 1}`] })) };
   if (call === 2) return { answer: "Synthetic draft [S1] [S2].", citedMarkers: ["S1", "S2"], conflicts: [],
     evidence: (user.researchTargets as Array<{ claimIndex: number }>).map(({ claimIndex }) => {
-      const option = (user.quoteOptions as Array<{ quoteId: string; marker: string }>).find(item => item.marker === `S${claimIndex + 1}`)!;
+      const option = (user.quoteOptions as Array<{ quoteId: string; marker: string }>).find(item => item.marker === `S${claimIndex % 2 + 1}`)!;
       return { claimIndex, marker: option.marker, quoteId: option.quoteId, support: 0.9,
-        statement: claimIndex === 0 ? "The authorization contract checks the signature before permitting a transfer."
-          : "The settlement service records a confirmed transfer before delivering the paid response." };
+        statement: ["The authorization contract checks the signature before permitting a transfer.",
+          "The settlement service records a confirmed transfer before delivering the paid response.",
+          "A transfer requires the authorization contract to validate its signature.",
+          "The paid response follows the settlement service's confirmed transfer record.",
+          "Checking the signature is a prerequisite for the authorization contract to permit the transfer."][claimIndex] };
     }) };
   return { reviews: (user.evidence as Array<{ index: number }>).map(({ index }) => ({
     index, supportedFact: "The exact quote describes the mechanism.", support: 0.9, statementSupport: 0.9 })) };
 }
-function provider(mode: "success" | "failure2" | "truncated2" | "malformed2" | "mixed" | "oversized" | "duplicate-review" = "success") {
+function provider(mode: "success" | "failure2" | "truncated2" | "malformed2" | "mixed" | "oversized" | "duplicate-review" | "missing-fifth" = "success") {
   let call = 0;
   const fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body)), user = JSON.parse(body.messages[1].content), index = ++call;
@@ -64,6 +74,10 @@ function provider(mode: "success" | "failure2" | "truncated2" | "malformed2" | "
       const generation = result as { evidence: object[] };
       generation.evidence = Array.from({ length: 32 }, () => ({ ...generation.evidence[0] }));
     }
+    if (index === 2 && mode === "missing-fifth") {
+      const generation = result as { evidence: Array<{ claimIndex: number }> };
+      generation.evidence = generation.evidence.filter(row => row.claimIndex !== 4);
+    }
     if (index === 3 && mode === "duplicate-review") {
       const review = result as { reviews: object[] }; review.reviews[1] = review.reviews[0];
     }
@@ -75,6 +89,24 @@ function provider(mode: "success" | "failure2" | "truncated2" | "malformed2" | "
 }
 
 describe("explicit same-original continuation engine", () => {
+  it("requires complete independent support for all five retained mandatory targets with only two sources", async () => {
+    const value = await admittedFixture(true), fetch = provider();
+    await completeOriginalContinuation(value.db, "private-authorization", "a".repeat(64), "synthetic-fixture-key");
+    expect(fetch).toHaveBeenCalledTimes(3);
+    const run = policy.prepare.mock.calls[0][1] as QueryRun;
+    expect(run.subClaims).toEqual(value.binding.packet.input.targets);
+    expect(run.originalFulfillment!.statements.map(row => row.claimIndex)).toEqual([0, 1, 2, 3, 4]);
+    expect(run.claimCoverage!.map(row => row.coverage)).toEqual([0.9, 0.9, 0.9, 0.9, 0.9]);
+    expect(fetch.mock.calls.map(call => JSON.parse(String(call[1]?.body)).max_tokens)).toEqual([2816, 8192, 2304]);
+  });
+  it("refuses a missing fifth mandatory target before reserving the independent review", async () => {
+    const value = await admittedFixture(true), fetch = provider("missing-fifth");
+    await expect(completeOriginalContinuation(value.db, "private-authorization", "a".repeat(64), "synthetic-fixture-key"))
+      .rejects.toThrow("synthesize incomplete-review");
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(policy.prepare).not.toHaveBeenCalled();
+    expect(policy.diagnostic).toHaveBeenCalledWith(value.capability, { phase: "synthesize", category: "incomplete-review" });
+  });
   it("prepares the same claim with complete independent review, original timing and no new order/payment", async () => {
     const value = await admittedFixture(), fetch = provider();
     const result = await completeOriginalContinuation(value.db, "private-authorization", "a".repeat(64), "synthetic-fixture-key");

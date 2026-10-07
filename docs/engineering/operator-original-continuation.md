@@ -51,6 +51,9 @@ truncated or incompletely reviewed output cannot become a prepared delivery.
 An exact normalized successful checkpoint may be reused only within the same
 grant/source/packet and identical stage/prompt/token bounds. A failed request
 gets a new hold if finite allowance remains; its old hold is never reused.
+A retained final quality rejection invalidates that generation/review pair across
+later failures. Sufficiency can reuse its checkpoint; a new generation receives
+a fresh independent review, with both requests charged to the same finite cap.
 Fixed phase/category diagnostics expose useful failure location while retaining
 provider bodies, prompts and credentials privately. They do not retrospectively
 identify the old execution's lost exception.

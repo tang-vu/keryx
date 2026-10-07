@@ -13,6 +13,7 @@ import { inspectOriginalContinuation } from "./fulfillment-continuation-policy";
 import { businessCanaryHostIdentity, retainedBusinessCanaryClosure } from "./canary-policy";
 import { fulfillmentSha256 as hash, fulfillmentObjectSha256 as hashObject } from "../a2a/failed-original-fulfillment-protocol";
 import { syntheticFulfilledRun } from "../db/a2a-fulfillment-fixture";
+import { renderFulfilledOriginalAnswer } from "../a2a/original-fulfillment-answer";
 
 const git = vi.hoisted(() => vi.fn());
 vi.mock("node:child_process", async importOriginal => ({ ...await importOriginal<typeof import("node:child_process")>(), execFileSync: git }));
@@ -55,6 +56,17 @@ function bytes(directory: string) {
 async function stages(capability: ContinuationCapability) {
   for (const stage of ["sufficiency", "synthesize", "review"] as const)
     await continuationModel(capability, stage, "Fixture system", `${stage} fixture`, 1, async () => ({ fixture: stage }));
+}
+function preparedRun(admitted: Awaited<ReturnType<typeof beginOriginalContinuation>>, coverage = 0.9) {
+  const run = syntheticFulfilledRun(admitted.claim).run;
+  run.createdAt = receipt; run.durationMs = Date.parse(receipt) - Date.parse(admitted.claim.failedOrder.startedAt!);
+  run.citations[0].sourceId = run.evidence![0].sourceId = "public:fulfillment:document-1";
+  run.claimCoverage![0].coverage = coverage;
+  run.originalFulfillment!.providerLedgerSha256 = continuationProviderLedger().sha256;
+  run.answer = renderFulfilledOriginalAnswer({ question: run.question, answer: "", statements: run.originalFulfillment!.statements,
+    evidenceGaps: run.originalFulfillment!.evidenceGaps,
+    ledger: { evidence: run.evidence!, claimCoverage: run.claimCoverage!, acceptedMarkers: new Set(["S1"]), droppedEvidence: 0, droppedCitations: [] } });
+  return run;
 }
 describe("additive same-original supplier continuation", () => {
   it("observes fresh native authority and window without creating an execution intent", async () => {
@@ -124,6 +136,64 @@ describe("additive same-original supplier continuation", () => {
     const second = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
     await continuationModel(second.capability, "sufficiency", "s", "u", 1, async () => ({ fixture: true })); closeContinuationCapability(second.capability);
     expect(continuationProviderLedger()).toMatchObject({ newModelCalls: 2, combinedReservedMicroUsd: 119_300 });
+  });
+  it("refreshes a quality-rejected generation and reviews it independently even when the prompt is identical", async () => {
+    const value = await fixture(), originalBytes = bytes(value.oldDirectory), oldAdditiveBytes = bytes(fulfillmentDirectory());
+    const action = vi.fn(async () => ({ fixture: "normalized stage output" }));
+    const first = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
+    for (const stage of ["sufficiency", "synthesize", "review"] as const)
+      await continuationModel(first.capability, stage, "system", stage, 1, action);
+    expect(() => prepareContinuationResult(first.capability, preparedRun(first, 0.1))).toThrow("required support");
+    recordContinuationDiagnostic(first.capability, { phase: "assemble", category: "quality" });
+    closeContinuationCapability(first.capability);
+    const retainedCalls = bytes(continuationDirectory()).filter(([name]) => name.startsWith("call-"));
+    const second = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
+    for (const stage of ["sufficiency", "synthesize", "review"] as const)
+      await continuationModel(second.capability, stage, "system", stage, 1, action);
+    expect(action).toHaveBeenCalledTimes(5); // Sufficiency cached; generation and independent review are fresh.
+    expect(continuationProviderLedger()).toMatchObject({ newModelCalls: 5, combinedReservedMicroUsd: 181_280 });
+    expect(prepareContinuationResult(second.capability, preparedRun(second)).claimId).toBe(value.original.claim.claimId);
+    expect(bytes(continuationDirectory()).filter(([name]) => retainedCalls.some(([oldName]) => oldName === name))).toEqual(retainedCalls);
+    expect(bytes(value.oldDirectory)).toEqual(originalBytes); expect(bytes(fulfillmentDirectory())).toEqual(oldAdditiveBytes);
+  });
+  it("cannot manufacture a quality-refresh diagnostic before the three reviewed stages are complete", async () => {
+    const value = await fixture(), admitted = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
+    expect(() => recordContinuationDiagnostic(admitted.capability, { phase: "assemble", category: "quality" })).toThrow("completed independent review");
+    expect(continuationProviderLedger().diagnostics).toEqual([]); closeContinuationCapability(admitted.capability);
+  });
+  it("keeps the rejected-checkpoint barrier after an intervening fresh-generation transport failure", async () => {
+    const value = await fixture(), first = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
+    await stages(first.capability); recordContinuationDiagnostic(first.capability, { phase: "assemble", category: "quality" });
+    closeContinuationCapability(first.capability);
+    const second = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
+    await continuationModel(second.capability, "sufficiency", "Fixture system", "sufficiency fixture", 1, async () => ({}));
+    await expect(continuationModel(second.capability, "synthesize", "Fixture system", "synthesize fixture", 1,
+      async () => { throw Error("fixture generation transport failure"); })).rejects.toThrow();
+    recordContinuationDiagnostic(second.capability, { phase: "synthesize", category: "transport" }); closeContinuationCapability(second.capability);
+    const third = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush), action = vi.fn(async () => ({ fixture: "new pair" }));
+    for (const stage of ["sufficiency", "synthesize", "review"] as const)
+      await continuationModel(third.capability, stage, "Fixture system", `${stage} fixture`, 1, action);
+    expect(action).toHaveBeenCalledTimes(2); // Never falls back to the quality-rejected first pair.
+    expect(continuationProviderLedger()).toMatchObject({ newModelCalls: 6, combinedReservedMicroUsd: 201_940 });
+    closeContinuationCapability(third.capability);
+  });
+  it("charges every quality refresh and refuses the ninth hold without reusing a rejected reviewer", async () => {
+    const value = await fixture();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const admitted = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
+      await stages(admitted.capability); recordContinuationDiagnostic(admitted.capability, { phase: "assemble", category: "quality" });
+      closeContinuationCapability(admitted.capability);
+      expect(continuationProviderLedger().newModelCalls).toBe(3 + attempt * 2);
+    }
+    const fourth = await beginOriginalContinuation(value.db, value.file, value.sha256, fixtureFlush);
+    await continuationModel(fourth.capability, "sufficiency", "Fixture system", "sufficiency fixture", 1, async () => ({}));
+    await continuationModel(fourth.capability, "synthesize", "Fixture system", "synthesize fixture", 1, async () => ({ fixture: "fresh eighth call" }));
+    const review = vi.fn(async () => ({ fixture: "unfunded review" }));
+    await expect(continuationModel(fourth.capability, "review", "Fixture system", "review fixture", 1, review)).rejects.toThrow("exhausted");
+    closeContinuationCapability(fourth.capability);
+    expect(review).not.toHaveBeenCalled();
+    expect(continuationProviderLedger()).toMatchObject({ newModelCalls: 8, combinedReservedMicroUsd: 243_260 });
+    expect(fs.existsSync(path.join(continuationDirectory(), "prepared-result.json"))).toBe(false);
   });
   it("bounds eight additive holds by all historical reservations without releasing failures", async () => {
     const value = await fixture();

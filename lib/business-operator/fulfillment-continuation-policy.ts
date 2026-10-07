@@ -136,6 +136,8 @@ const attemptSchema = z.object({ format: z.literal("keryx-original-continuation-
   attemptId: digest, startedAt: timestamp }).strict();
 const attemptOutcomeSchema = z.object({ format: z.literal("keryx-original-continuation-attempt-outcome-v1"),
   attemptId: digest, endedAt: timestamp, outcome: z.enum(["review-completed", "failed", "revoked"]) }).strict();
+const diagnosticRecordSchema = z.object({ format: z.literal("keryx-original-continuation-diagnostic-v1"), attemptId: digest,
+  recordedAt: timestamp, diagnostic: diagnosticSchema }).strict();
 const holdSchema = z.object({ format: z.literal("keryx-original-continuation-model-hold-v1"),
   authorizationSha256: digest, claimId: digest, attemptId: digest,
   slot: z.number().int().min(1).max(8), stage: stageSchema, promptSha256: digest,
@@ -214,6 +216,7 @@ export function continuationProviderLedger(binding = retainedBinding()) {
   assertLedgerHead();
   const names = fs.readdirSync(directory).sort(), entries: Array<{ name: string; sha256: string }> = [];
   const attempts = new Map<string, z.infer<typeof attemptSchema>>();
+  const diagnostics: Array<z.infer<typeof diagnosticRecordSchema>> = [];
   const holds: Array<{ hold: z.infer<typeof holdSchema>; sha256: string; checkpoint?: z.infer<typeof checkpointSchema> }> = [];
   const parsed = new Map<string, unknown>();
   for (const name of names) {
@@ -268,9 +271,9 @@ export function continuationProviderLedger(binding = retainedBinding()) {
       if (!attempt || name !== `attempt-${numberName(attempt.attempt)}-outcome.json` ||
         Date.parse(outcome.endedAt) < Date.parse(attempt.startedAt) || Date.parse(outcome.endedAt) > Date.now()) refuse("attempt outcome binding refused");
     } else if (/^diagnostic-[0-9]{2}\.json$/.test(name)) {
-      const record = z.object({ format: z.literal("keryx-original-continuation-diagnostic-v1"), attemptId: digest,
-        recordedAt: timestamp, diagnostic: diagnosticSchema }).strict().parse(value);
+      const record = diagnosticRecordSchema.parse(value);
       if (!attempts.has(record.attemptId) || Date.parse(record.recordedAt) > Date.now()) refuse("diagnostic binding refused");
+      diagnostics.push(record);
     }
   }
   if (holds.length > binding.authorization.maximumNewModelCalls || attempts.size > 8 ||
@@ -279,7 +282,7 @@ export function continuationProviderLedger(binding = retainedBinding()) {
   return { sha256: hashObject(entries), newModelCalls: holds.length, oldAdditiveModelCalls: 2,
     reservedMicroUsd: holds.length * LIMITS.modelReserveMicroUsd,
     combinedReservedMicroUsd: binding.authorization.historicalReservedMicroUsd + holds.length * LIMITS.modelReserveMicroUsd,
-    holds, attempts: [...attempts.values()] };
+    holds, attempts: [...attempts.values()], diagnostics };
 }
 
 declare const capabilityBrand: unique symbol;
@@ -288,7 +291,8 @@ type NativeDb = FailedBusinessCanaryProofDb & Pick<KeryxDB,
   "getA2aFailedOriginalFulfillment" | "completeA2aFailedOriginalFulfillment" | "hasA2aFailedOriginalFulfillment">;
 interface State { binding: ContinuationBinding; claim: A2aFulfillmentClaim; open: boolean; busy: boolean;
   attempt: z.infer<typeof attemptSchema>; nextStage: number; revocation: AbortController;
-  flush: (directory: string) => void; lockSha256: string; uncertain: boolean; releaseRequested: boolean }
+  flush: (directory: string) => void; lockSha256: string; uncertain: boolean; releaseRequested: boolean;
+  rejectedThroughAttempt: number; freshSynthesis: boolean }
 const capabilities = new WeakMap<ContinuationCapability, State>();
 const dispatch = new AsyncLocalStorage<{ capability: ContinuationCapability; slot: number; holdSha256: string }>();
 function nativeClaimMatches(binding: ContinuationBinding, claim: A2aFulfillmentClaim) {
@@ -340,13 +344,20 @@ export async function beginOriginalContinuation(db: NativeDb, file: string, expe
     const ledger = continuationProviderLedger(binding);
     if (ledger.newModelCalls >= binding.authorization.maximumNewModelCalls || ledger.attempts.length >= 8) refuse("supplier allowance exhausted");
     for (const attempt of ledger.attempts) if (!exists(path.join(directory, `attempt-${numberName(attempt.attempt)}-outcome.json`))) refuse("previous attempt acknowledgement uncertain");
+    // A quality-rejected pair must never become reusable again merely because a
+    // subsequent refresh failed in transport. Keep the acknowledged diagnostic
+    // barrier across all later attempts; every prior hold remains consumed.
+    const rejectedThroughAttempt = Math.max(0, ...ledger.diagnostics
+      .filter(record => record.diagnostic.phase === "assemble" && record.diagnostic.category === "quality")
+      .map(record => ledger.attempts.find(attempt => attempt.attemptId === record.attemptId)!.attempt));
     const attempt = attemptSchema.parse({ format: "keryx-original-continuation-attempt-v1", authorizationSha256: expectedSha256,
       claimId: record.claim.claimId, attempt: ledger.attempts.length + 1, attemptId: lock.attemptId, startedAt: lock.startedAt });
     retain(`attempt-${numberName(attempt.attempt)}.json`, attempt, flush);
     readContinuationAuthorization(file, expectedSha256, true); continuationProviderLedger(binding);
     const capability = Object.freeze({}) as ContinuationCapability;
     capabilities.set(capability, { binding: structuredClone(binding), claim: structuredClone(record.claim), open: true, busy: false, attempt, nextStage: 0,
-      revocation: new AbortController(), flush, lockSha256, uncertain: false, releaseRequested: false });
+      revocation: new AbortController(), flush, lockSha256, uncertain: false, releaseRequested: false,
+      rejectedThroughAttempt, freshSynthesis: false });
     return { capability, binding, claim: record.claim };
   }
 }
@@ -379,6 +390,8 @@ export function recordContinuationDiagnostic(capability: ContinuationCapability,
   if (!state || state.uncertain || state.releaseRequested || exists(path.join(continuationDirectory(), "prepared-result.json"))) refuse("diagnostic capability unavailable");
   lockMatches(state);
   const value = diagnosticSchema.parse(diagnostic), ledger = continuationProviderLedger(state.binding);
+  if (value.phase === "assemble" && value.category === "quality" && state.nextStage !== 3)
+    refuse("quality diagnostic requires completed independent review");
   const number = fs.readdirSync(continuationDirectory()).filter(name => /^diagnostic-[0-9]{2}\.json$/.test(name)).length + 1;
   if (number > 32 || ledger.attempts.every(item => item.attemptId !== state.attempt.attemptId)) refuse("diagnostic limit refused");
   retain(`diagnostic-${numberName(number)}.json`, { format: "keryx-original-continuation-diagnostic-v1",
@@ -401,7 +414,9 @@ export function continuationSupplierSignal(capability: ContinuationCapability, t
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || remaining < 1) refuse("supplier deadline exhausted");
   return AbortSignal.any([state.revocation.signal, AbortSignal.timeout(Math.min(timeoutMs, remaining))]);
 }
-/** Exact successful normalized checkpoints are reusable; failed/unknown holds stay consumed. */
+/** Exact successful normalized checkpoints are reusable. Acknowledged quality failures
+ * invalidate their generation/review prefix, and fresh generation gets a fresh review.
+ * Failed/unknown and superseded holds remain consumed and immutable. */
 export async function continuationModel(capability: ContinuationCapability, stage: ContinuationStage,
   system: string, user: string, maximumOutputTokens: number, action: () => Promise<Record<string, unknown>>) {
   const state = capabilities.get(capability);
@@ -412,8 +427,10 @@ export async function continuationModel(capability: ContinuationCapability, stag
     maximumOutputTokens < 1 || maximumOutputTokens > LIMITS.maximumOutputTokens) refuse("model input/output limit exceeded");
   const promptSha256 = hashObject({ stage, system, user, maximumOutputTokens });
   const ledger = continuationProviderLedger(state.binding);
-  const reusable = [...ledger.holds].reverse().find(item => item.hold.stage === stage && item.hold.promptSha256 === promptSha256 &&
-    item.checkpoint && exists(path.join(continuationDirectory(), `call-${numberName(item.hold.slot)}-outcome.json`)));
+  const reusable = stage === "review" && state.freshSynthesis ? undefined : [...ledger.holds].reverse().find(item =>
+    item.hold.stage === stage && item.hold.promptSha256 === promptSha256 && item.checkpoint &&
+    (stage === "sufficiency" || ledger.attempts.find(attempt => attempt.attemptId === item.hold.attemptId)!.attempt > state.rejectedThroughAttempt) &&
+    exists(path.join(continuationDirectory(), `call-${numberName(item.hold.slot)}-outcome.json`)));
   if (reusable?.checkpoint) {
     state.nextStage++;
     if (stage === "review") endAttempt(state, "review-completed");
@@ -445,6 +462,7 @@ export async function continuationModel(capability: ContinuationCapability, stag
       checkpointSha256: hash(read(path.join(continuationDirectory(), `${stem}-checkpoint.json`))), completedAt: now(),
       outcome: "normalized-json-checkpoint" }, state.flush);
     state.uncertain = false; state.nextStage++;
+    if (stage === "synthesize") state.freshSynthesis = true;
     if (stage === "review") endAttempt(state, "review-completed");
     continuationProviderLedger(state.binding);
     return result;
