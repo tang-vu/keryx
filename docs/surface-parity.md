@@ -1,5 +1,24 @@
 # Supported-surface release parity
 
+## Literature workspace candidate, October 7, 2026
+
+Web gains a local paper shortlist, review focus, personal screening/notes,
+CSV/JSON portability and a deliberate two-paper draft handoff. Sources and
+ordinary editable question prefill share that workflow; no research is submitted
+automatically. The [workspace guide](literature-workspace.md) records its bounds,
+privacy, lock/conflict behavior and acceptance gates. Legacy automatic links
+retain their 500-character ceiling; editable drafts retain the form's existing
+2,000-character limit.
+
+Public/private APIs, remote and stdio MCP, CLI, desktop, extension and bots keep
+their existing contracts and roles. The browser-local list is not synchronized
+or exported through those adapters. Their package bytes and versions are unchanged;
+no new artifact publication is required for this web-only feature. New hosted
+commit/version delivery remains unverified until the serialized Operator source
+gate clears, review/CI pass and production health is read back. No schema, registry,
+custody, model allowance, spend cap or schedule changes. Independent useful task
+completion and returning participants are separate evidence gates.
+
 ## Explicit supplier window, October 7, 2026
 
 Application **0.27.11 candidate** adds a distinct private v2 same-original

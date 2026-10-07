@@ -31,6 +31,18 @@
   This closes a failure-reporting gap; useful completed business delivery remains
   a separate acceptance requirement.
 
+### Personal literature workspace (2026-10-07, v0.27.18 candidate)
+
+- Save exact paper records from the starter library or explicit repository search,
+  keep a review question and personal inclusion/exclusion notes, and reopen the list.
+- Prepare an editable two-paper Deep comparison without automatic research. Full
+  nonautomatic question drafts retain both links; legacy automatic limits stay intact.
+- Export screening CSV or a JSON backup. Preserve corrupt storage, reject invalid
+  backups, coordinate concurrent tab writes and keep unsaved drafts through filtering.
+- Browser-only role; no cloud sync, payment/schema change or native client release.
+  [Guide and remaining gates](literature-workspace.md). Production delivery and
+  independent usefulness/return demand remain separate acceptance work.
+
 ### Bounded dependency install retry on redeploy (2026-10-07, deployment tooling)
 
 - `npm run redeploy` repeats `npm ci` at most three times, 15 and 30 seconds apart,

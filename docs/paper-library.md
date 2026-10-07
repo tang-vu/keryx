@@ -33,6 +33,11 @@ become registered creators, payment recipients or past citations through metadat
 
 ## Explicit live bibliography
 
+The [literature workspace](literature-workspace.md) adds a browser-local shortlist,
+personal screening notes, backup/CSV export and an editable two-paper comparison.
+Save actions retain exact records, including individually inspected versions;
+neither saving nor preparing a draft reads a paper or submits research.
+
 The separate **Search repositories** button sends the entered title/topic or exact
 identifier to arXiv/Crossref as applicable. Page load, local filters, topic links and
 collection changes make no external metadata requests. A privacy explanation is

@@ -5678,3 +5678,28 @@ successfully with the owner's key on 2026-10-06 (no session id is returned, so i
 is optional). No purchase was made. Whether an individual can complete Circle's
 business verification, which countries are served, and provider fees and limits
 are unverified and remain gates. See [Arc card onramp](docs/arc-card-onramp.md).
+
+## Browser-local literature screening and deliberate research handoff - 2026-10-07
+
+The owner requested deeper practical utility, traction-oriented product work and
+UI/UX while another session owns Operator. The owner-confirmed outreach segments
+include literature-review researchers. The paper library already offers bounded
+metadata discovery; a personal shortlist connects that entry point to screening,
+revisiting and exporting an actual review without initiating model or payment work.
+This is a usefulness hypothesis, not observed demand.
+
+Keep one bounded local review with exact landing-URL snapshots, user-authored
+decisions/notes, explicit saves, formula-safe screening CSV and a strict portable
+backup. Retain different repository versions and the first saved observation;
+mutable grouping IDs never overwrite a saved paper. Metadata and personal notes
+gain no read, citation or payout authority. All cooperating tab mutations share an
+exclusive Web Lock; unsupported browsers refuse writes. Preserve dirty editors
+through filtering and external changes and refuse stale same-field updates.
+
+Only the saved review question and two chosen links enter a deliberate editable
+Deep draft. Preserve the full existing 2,000-character form limit for nonautomatic
+prefill, while legacy automatic links keep their existing 500-character bound.
+No automatic research, private-note upload, cloud list, new database/schema,
+spending, custody or scheduler follows. Other surfaces keep their documented roles.
+Independent task usefulness, return use and the serialized Operator release gate
+remain open. See [behavior and acceptance](docs/literature-workspace.md).
