@@ -14,12 +14,13 @@ import { ORIGINAL_FULFILLMENT_LIMITS as LIMITS, fulfillmentInputSchema, fulfillm
 import type { KeryxDB } from "../db/keryx-db";
 import type { GatheredContent } from "../llm/reasoning-engine";
 import type { QueryRun } from "../types";
+import { fulfillmentSupplierWindowSchema, fulfillmentTimestampSchema, matchesFulfillmentSupplierWindow } from "../a2a/fulfillment-window";
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const timestamp = z.string().datetime().refine(value => Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value);
 function refuse(reason: string): never { throw new Error(`Original fulfillment ${reason}; preserve all claims and reservations`); }
 const same = (a: unknown, b: unknown) => canonicalJson(a) === canonicalJson(b);
-export const fulfillmentAuthorizationSchema = z.object({
+const fulfillmentAuthorizationV1Schema = z.object({
   format: z.literal("keryx-canary-original-fulfillment-authorization-v1"),
   approvalId: z.literal("operator-business-20261006"), approvedAt: timestamp,
   executionHostSha256: digest, executorCommit: z.string().regex(/^[a-f0-9]{40}$/),
@@ -36,6 +37,14 @@ export const fulfillmentAuthorizationSchema = z.object({
   reserveMicroUsd: z.literal(LIMITS.modelReserveMicroUsd), originalReservedMicroUsd: z.literal(LIMITS.originalReservedMicroUsd),
   creatorPayments: z.literal("forbidden"), searches: z.literal("forbidden"),
 }).strict();
+const fulfillmentAuthorizationV2Schema = fulfillmentAuthorizationV1Schema.extend({
+  format: z.literal("keryx-canary-original-fulfillment-authorization-v2"),
+  expiresAt: fulfillmentTimestampSchema,
+  supplierWindow: fulfillmentSupplierWindowSchema,
+});
+export const fulfillmentAuthorizationSchema = z.discriminatedUnion("format", [fulfillmentAuthorizationV1Schema, fulfillmentAuthorizationV2Schema])
+  .refine(value => value.format === "keryx-canary-original-fulfillment-authorization-v1" ||
+    matchesFulfillmentSupplierWindow(value), "Supplier approval or expiry outside explicit window");
 export type FulfillmentAuthorization = z.infer<typeof fulfillmentAuthorizationSchema>;
 const documentSchema = z.object({ id: z.string().regex(/^[a-z0-9-]{1,80}$/), requestedUrl: z.string().url(),
   finalUrl: z.string().url(), title: z.string().min(1).max(1000), retrievedAt: timestamp,
@@ -155,11 +164,13 @@ export function readFulfillmentAuthorization(file: string, expectedSha256: strin
     authorization.requiredSupportedTargetIndexes.some(index => index >= packet.input.targets.length)) refuse("reviewed packet changed");
   if (supplier && (Date.now() >= Date.parse(authorization.expiresAt) || Date.now() < Date.parse(authorization.approvedAt) ||
     fulfillmentExecutorCommit() !== authorization.executorCommit)) refuse("supplier authority expired or source changed");
-  const authority = fulfillmentAuthoritySchema.parse({ format: "keryx-a2a-failed-original-fulfillment-authority-v1",
+  const authority = fulfillmentAuthoritySchema.parse({ format: authorization.format === "keryx-canary-original-fulfillment-authorization-v2"
+    ? "keryx-a2a-failed-original-fulfillment-authority-v2" : "keryx-a2a-failed-original-fulfillment-authority-v1",
     original: old.original, question: old.question, input: packet.input, authorizationSha256: expectedSha256,
     policySha256: old.policySha256, failedClosureSha256: old.failedClosureSha256,
     originalEvidenceSha256: old.originalEvidenceSha256, originalProviderLedgerSha256: old.originalProviderLedgerSha256,
-    executorCommit: authorization.executorCommit, expiresAt: authorization.expiresAt });
+    executorCommit: authorization.executorCommit, expiresAt: authorization.expiresAt,
+    ...(authorization.format === "keryx-canary-original-fulfillment-authorization-v2" ? { supplierWindow: authorization.supplierWindow } : {}) });
   return { authorization, authorizationFile: file, authorizationSha256: expectedSha256, authority, packet };
 }
 const retainedAuthorizationSchema = z.object({ format: z.literal("keryx-original-fulfillment-retained-authorization-v1"),

@@ -1,5 +1,30 @@
 # Keryx — Decision Log
 
+**Pin the hosted MCP SDK to the reviewed fixed release — 2026-10-07.**
+Exact-main CI for the source-inspection release failed the high production audit
+after GHSA-6qxp-vccf-f47h entered the advisory feed. Require root SDK 1.31.0,
+matching the stdio package's existing pin, with a scoped lock update and real SDK
+server/transport compatibility checks. An exact pin avoids silently taking a
+later minor release while repairing this gate. Existing server/stdio roles do
+not use the affected OAuth client flow; preserve them and the audit threshold.
+No new OAuth authority, payment, provider, custody, schedule or installed-client
+version is introduced. Source-bound deployment acceptance must separately admit
+the new main; previous source and UI-only comparisons do not do that.
+See [security scope and gates](docs/engineering/mcp-sdk-security-2026-10-07.md).
+
+**Inspect a recorded report without one source — 2026-10-06.**
+The owner requested one memorable small UX improvement after a deep Tameion
+assessment, then authorized an autonomous delivery goal. Reuse the exact excerpt
+matrix to show which research targets retain recorded excerpts when a source is
+temporarily omitted. Keep all original prose, confidence, coverage and payment
+fields unchanged; selection never runs research, recalculates rewards or refunds.
+Exclude synthetic identities, retain exact article versions and distinguish new
+gaps, old gaps and missing historical ledgers. Targets are requested topics, not
+verified assertions; the view is not a counterfactual answer or factual grade.
+Minimal private/paid result clients lack the full identity graph and retain their
+existing roles, rather than reconstructing source IDs from names. No API/payment
+contract or native/stdio artifact changes. See [guide and surface roles](docs/research-source-inspection.md).
+
 **Freeze a finite business acceptance original before any signature — 2026-10-06.**
 The owner authorized a 24-hour bounded mainnet canary and separately creating a
 local buyer wallet. Narrow the first run to one Quick original, an empty creator
@@ -5569,6 +5594,45 @@ transaction; old runtime code cannot restart after upgrade. Public API/client
 projections omit private recovery authority hashes. New usage counters cannot
 erase the original provider bill's unknown status. See
 [same-original fulfillment](docs/operator-original-fulfillment.md).
+
+## Focus first outreach on literature-review writers and web3 analysts - 2026-10-06
+
+On October 5 the owner named graduate students/PhD candidates and web3 research
+analysts as the segments closest to their own network and committed that week's
+outreach to them. This narrows who is asked first; it changes no price, payment
+authority, package term or release gate. The September Arc-founder hypothesis is
+neither validated nor withdrawn, and no segment has a recorded independent user.
+
+Rationale: the owner has first-hand experience of the literature-review task and
+direct contacts who perform it, and the shipped scholarly discovery, DOI/arXiv
+resolution and BibTeX/RIS export already serve it. Two general open calls produced
+no recorded participant, so direct asks on a participant's own question are
+preferred. Choosing a single lead segment, and any remedy for first-time USDC
+wallet funding, stay open. See [Tameion direction](docs/tameion-2026.md).
+
+## Freeze explicit supplier extensions in a distinct authority - 2026-10-07
+
+The same-original recovery lane's historical v1 deadline expired before useful
+delivery. Changing its literal would rewrite retained authority; changing only an
+environment or private helper would disagree with native admission. Preserve v1
+exactly and introduce a discriminated v2 carrying the actual permission-receipt
+time and explicit expiry, with a positive interval bounded to 90 minutes. Build
+and deployment time consume this interval. No clock default or automatic renewal
+creates financial permission.
+
+Copy the exact window into the hashed native authority and validate the recorded
+claim time inside it. The existing permanent unique original claim prevents a
+renewed window from replacing an unfinished execution. No database schema change
+is needed. Fresh host, source, protected-file, ledger and deadline-abort checks
+remain required for supplier calls. Historical verification and exact-digest
+metadata completion after expiry remain valid without reopening admission.
+
+The same three-call limit, fixed tariff, old holds, original settlement and frozen
+public evidence stay bound. No new order/payment, search, reward, retry, provider
+fallback or public recovery endpoint is added. Independent usefulness, actual
+billing, ordinary-service restoration and Tameion acceptance remain separate gates.
+See [procedure](docs/operator-original-fulfillment.md) and
+[release scope](docs/engineering/operator-fulfillment-window-2026-10-07.md).
 
 ## Offer Circle's Arc Onramp as an optional card purchase into the owner wallet - 2026-10-06
 

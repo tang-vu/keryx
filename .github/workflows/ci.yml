@@ -202,7 +202,7 @@ jobs:
 
       - name: Production dependency audit (high gate)
         run: |
-          node --test scripts/security-dependencies.test.mjs
+          node --test scripts/security-dependencies.test.mjs scripts/sharp-security.test.mjs
           npm audit --omit=dev --audit-level=high
 
       - name: Build (Next.js)

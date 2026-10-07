@@ -6,6 +6,7 @@ import { matchesA2aOriginalBinding, a2aOriginalClaimSchema } from "./original-cl
 import type { A2aOrder } from "./order";
 import type { QueryRun } from "../types";
 import { renderFulfilledOriginalAnswer, type FulfillmentEvidenceGap } from "./original-fulfillment-answer";
+import { fulfillmentSupplierWindowSchema, fulfillmentTimestampSchema, matchesFulfillmentSupplierWindow } from "./fulfillment-window";
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const timestamp = z.string().datetime().refine(value => Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value);
@@ -40,7 +41,7 @@ export const fulfillmentEvidenceGapsSchema = z.array(z.object({
 
 /** This native tuple grants no supplier authority by itself. The private controller must
  * also prove its protected source-bound authorization and opaque execution capability. */
-export const fulfillmentAuthoritySchema = z.object({
+const fulfillmentAuthorityV1Schema = z.object({
   format: z.literal("keryx-a2a-failed-original-fulfillment-authority-v1"),
   original: a2aOriginalClaimSchema,
   question: z.string().min(1).max(10000),
@@ -49,11 +50,22 @@ export const fulfillmentAuthoritySchema = z.object({
   originalEvidenceSha256: digest, originalProviderLedgerSha256: digest,
   executorCommit: z.string().regex(/^[a-f0-9]{40}$/),
   expiresAt: z.literal(ORIGINAL_FULFILLMENT_LIMITS.expiresAt),
-}).strict().refine(value => fulfillmentSha256(value.question) === value.input.questionSha256, "Original question changed");
+}).strict();
+const fulfillmentAuthorityV2Schema = fulfillmentAuthorityV1Schema.extend({
+  format: z.literal("keryx-a2a-failed-original-fulfillment-authority-v2"),
+  expiresAt: fulfillmentTimestampSchema,
+  supplierWindow: fulfillmentSupplierWindowSchema,
+});
+export const fulfillmentAuthoritySchema = z.discriminatedUnion("format", [fulfillmentAuthorityV1Schema, fulfillmentAuthorityV2Schema])
+  .refine(value => fulfillmentSha256(value.question) === value.input.questionSha256, "Original question changed")
+  .refine(value => value.format === "keryx-a2a-failed-original-fulfillment-authority-v1" ||
+    matchesFulfillmentSupplierWindow(value), "Supplier window expiry changed");
 export type FulfillmentAuthority = z.infer<typeof fulfillmentAuthoritySchema>;
 export const fulfillmentClaimInputSchema = z.object({
   authority: fulfillmentAuthoritySchema, claimId: digest, claimedAt: timestamp,
-}).strict();
+}).strict().refine(value => value.authority.format === "keryx-a2a-failed-original-fulfillment-authority-v1" ||
+  Date.parse(value.claimedAt) >= Date.parse(value.authority.supplierWindow.approvalReceivedAt) &&
+  Date.parse(value.claimedAt) < Date.parse(value.authority.expiresAt), "Claim outside explicit supplier window");
 export type FulfillmentClaimInput = z.infer<typeof fulfillmentClaimInputSchema>;
 export interface A2aFulfillmentClaim extends FulfillmentClaimInput { failedOrder: A2aOrder }
 export const fulfillmentCompletionInputSchema = z.object({
