@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Complete a retained paid Operator original (2026-10-07, v0.27.20 candidate)
+
+Fresh bounded owner authority can continue the same failed paid original using
+checkpointed sufficiency, generation and complete independent evidence review.
+The permanent native claim, inbound payment and all previous reservations remain
+intact. Generation uses its already-authorized token ceiling; ordinary budgets
+are unchanged. Exact-digest native metadata completion follows private answer
+review. Phase diagnostics remain useful without publishing private provider data.
+
+The Windows redeploy launcher now verifies reviewed controls reach WSL unchanged
+before source sync/build. See [continuation authority and delivery gates](engineering/operator-original-continuation.md).
+
 ### Isolate an expired failed Operator trial (2026-10-07, v0.27.18)
 
 A verified expired, unprepared Operator claim can be isolated through a private

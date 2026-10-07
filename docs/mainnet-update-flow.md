@@ -68,6 +68,11 @@ offline reproduction. No shadow production payment is permitted.
    and A2A before source sync/build; the helper validates that state rather than
    performing the stop. Plan a maintenance window rather than promising a
    zero-downtime release.
+   The Node redeploy launcher forwards and reads back the four reviewed
+   maintenance controls and optional economic-migration pair through Windows
+   `WSLENV`, without translating native Linux paths. Partial controls or a lost
+   value refuse before deployment begins. Keep all reviewed values explicit;
+   this transport check does not drain roles or create supplier authority.
    Storage/custody/policy changes require their explicit migration procedure,
    verified backups and positive drain of all affected writers/signers.
    The [same-original fulfillment transition](operator-original-fulfillment.md)

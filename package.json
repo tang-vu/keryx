@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.27.18",
+  "version": "0.27.20",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -68,7 +68,8 @@
     "mcp": "node --import tsx --no-warnings --env-file-if-exists=.env.local mcp/keryx-mcp-server.mts",
     "web": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/web-client.mts",
     "deploy": "bash scripts/deploy-vps.sh",
-    "redeploy": "bash scripts/redeploy-vps.sh",
+    "redeploy": "node scripts/redeploy.mjs",
+    "operator:continue-original": "node --import tsx --env-file-if-exists=.env.local scripts/continue-canary-original.mts",
     "tunnel": "cloudflared tunnel --url http://localhost:3939",
     "backup": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/backup-db.mts",
     "backup:restore": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/restore-backup.mts",

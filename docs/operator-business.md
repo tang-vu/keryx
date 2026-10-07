@@ -89,6 +89,12 @@ fallback bypasses that boundary. Mainnet hosted custody remains SQLite-only.
 
 ## Research delivery
 
+For the already-paid, unprepared failed canary original, the private
+[continuation lane](engineering/operator-original-continuation.md) requires fresh
+explicit bounded supplier authority and retains all old claims/reservations.
+It checkpoints the three evidence stages and completes the same native claim
+after full review; it does not authorize a new order or general scheduler.
+
 The decision brief previously expanded neighborhoods for every offered quote
 before generation, exhausting the 12,000-character context cap even when selected
 base passages fit. Both generation and review now retain all selected base
