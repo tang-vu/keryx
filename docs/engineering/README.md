@@ -5,6 +5,24 @@ Both full articles are indexed and RSS ownership is verified. The subsequent
 [paid pilot](./pilot-2026-09-08.md) verified access and citation payments, with partial
 research-quality coverage.
 
+**Registered on Arc mainnet (October 7, 2026):** the owner asked for this feed to be
+listed on mainnet from a dedicated publisher wallet so the paid path has something to
+buy. Observed that day:
+
+- Publisher and payout wallet: `0x3d609eF127094624cC434aAd5A9fAcA0851dAa2D`, created for
+  owner-operated sources. It received 0.015 USDC of gas from the owner's QA caller wallet
+  in `0x988ce7fd55aa899f01e225263ab10aefec79e0059e5a54c475ba367fa19254b0`.
+- Registry `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`, `register` transaction
+  `0x47548c084c9302d1b917cd18696c76b7253036ad5cbabab0c248f9b2ad0ffb77`, block 24759104.
+- Source id `0x1881535394a6c36b638933dc7f398897d2ceba32e052f3484c4295290dacffc7`, read
+  price 0.002 USDC, feed ownership verified through the channel token.
+- `/api/sources` listed it as verified after indexing.
+
+No purchase, citation reward or research-quality result on mainnet is recorded here. The
+publisher is the Keryx owner: payments to this wallet from the Keryx treasury are
+first-party activity and must never be reported as independent creator adoption or
+creator earnings.
+
 A [September 9 paid follow-up](./pilot-2026-09-09.md) reached the evidence threshold
 on both substantive targets using the cached article, with a new citation reward.
 It is one owner-operated result, not a broad reliability claim.
