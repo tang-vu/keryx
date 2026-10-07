@@ -42,6 +42,24 @@ function completedRun(): QueryRun {
 }
 
 describe("remote MCP server", () => {
+  it("delivers exact retained paper metadata without a research dispatch or external request", async () => {
+    const research = vi.fn(async () => completedRun());
+    const http = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("No network allowed"));
+    const server = createRemoteMcpServer({ budgetCap: 0, clientChannel: "other" }, research);
+    const client = new Client({ name: "free-bibliography-client", version: "1" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await server.connect(serverTransport); await client.connect(clientTransport);
+      const tools = await client.listTools(); const tool = tools.tools.find(item => item.name === "paper_lookup");
+      expect(tool?.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
+      const response = await client.callTool({ name: "paper_lookup", arguments: { query: "2005.11401v4" } });
+      expect(response.isError).not.toBe(true);
+      expect(response.structuredContent).toMatchObject({ scope: "bibliography-only", totalWorks: 1, providers: [],
+        groups: [{ record: { arxivId: "2005.11401v4", authors: ["Patrick Lewis", "Ethan Perez", "Aleksandra Piktus", "Fabio Petroni", "Vladimir Karpukhin", "Naman Goyal", "Heinrich Küttler", "Mike Lewis", "Wen-tau Yih", "Tim Rocktäschel", "Sebastian Riedel", "Douwe Kiela"] } }] });
+      expect(response).toMatchObject({ content: [{ type: "text", text: expect.stringContaining("First listed author in the recorded complete list: Patrick Lewis") }] });
+      expect(research).not.toHaveBeenCalled(); expect(http).not.toHaveBeenCalled();
+    } finally { await client.close(); await server.close(); http.mockRestore(); }
+  });
   it("reports the actual heuristic decide tier over MCP while preserving the original model label", async () => {
     const run = completedRun(); run.engine = "llm:deepseek:recorded-model";
     run.reasoningAttempts = [
@@ -56,7 +74,7 @@ describe("remote MCP server", () => {
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     try {
       await server.connect(serverTransport); await client.connect(clientTransport);
-      expect(client.getServerVersion()?.version).toBe("0.3.4");
+      expect(client.getServerVersion()?.version).toBe("0.3.5");
       const result = await client.callTool({ name: "research", arguments: { question: "What changed?" } });
       expect(result.structuredContent).toMatchObject({ engine: run.engine, reasoningAttempts: run.reasoningAttempts,
         reasoning: { sourceSelection: { state: "heuristic", servingEngines: ["heuristic"], fallbackUsed: true } } });
@@ -96,7 +114,7 @@ describe("remote MCP server", () => {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const tools = await client.listTools();
-    expect(tools.tools.map((tool) => tool.name)).toEqual(["research", "keryx_status", "research_monthly", "keryx_operator_status"]);
+    expect(tools.tools.map((tool) => tool.name)).toEqual(["paper_lookup", "research", "keryx_status", "research_monthly", "keryx_operator_status"]);
 
     const result = await client.callTool({
       name: "research",

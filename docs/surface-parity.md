@@ -474,3 +474,16 @@ old-writer refusal. Desktop/MCP 0.4.3 are refreshed source candidates; extension
 0.1.1 remains a thin chat adapter and remote MCP keeps protocol identity 0.2.0.
 Actual production commit, accepted installer/tarball manifests, npm publication and
 CI must be recorded separately before synchronized delivery is claimed.
+
+## Free bibliography candidate - October 8, 2026
+
+App0.27.25 adds an Ask link to free exact-identifier metadata and shared remote/
+stdio paper_lookup. Public API and human papers CLI retain bibliography v1;
+standalone versioned arXiv prefixes/official URLs now normalize for local lookup.
+Hosted MCP0.3.5 and stdio0.4.8 are candidate versions. Desktop0.4.10 retains the
+private Operator role; A2A/OpenAI/buyer research remain research surfaces and can
+use /api/papers first. Extensions and bots retain thin hosted handoffs. No new
+metadata body, citation, signer or scheduler reaches reduced native/Rust roles.
+Current production health, npm/Registry/installer publication and installed-client
+source require separate readback; candidate source and synthetic tests do not
+claim synchronized delivery. See [release boundaries](engineering/free-paper-lookup.md).

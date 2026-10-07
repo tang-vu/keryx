@@ -47,7 +47,7 @@ const CLIENTS: ClientSetup[] = [
   {
     id: "codex",
     name: "Codex",
-    detail: "Add once from your terminal. Codex will discover Keryx's four tools.",
+    detail: "Add once from your terminal. Discover free paper metadata, research and service-status tools.",
     command: `codex mcp add keryx --url "${ENDPOINT}?client=codex"`,
     keyed:
       `codex mcp add keryx --url "${ENDPOINT}?client=codex" ` +
@@ -239,6 +239,11 @@ export function McpIntegrationClient() {
                 {checking ? "Checking research availability…" : availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}
               </p>
               <Link href="/me/asks" className="mt-2 inline-block min-h-11 py-3 text-sm underline">Saved reports</Link>
+              <p className="mt-2 font-serif text-sm leading-relaxed text-ink-2">
+                Need a paper’s title, authors or DOI? Use <code>paper_lookup</code> with its exact identifier.
+                Catalog metadata is free; repository search requires <code>searchRepositories: true</code>.
+              </p>
+              <Link prefetch={false} href="/sources?kind=paper#research-papers" className="inline-block min-h-11 py-3 text-sm underline">Browse free paper metadata</Link>
               <div className="mt-6 grid grid-cols-2 border-t border-line pt-5">
                 <div>
                   <div className="font-display text-[28px] text-ink">{totalMcpQueries}</div>

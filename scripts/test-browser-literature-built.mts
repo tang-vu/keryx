@@ -29,11 +29,12 @@ try {
   assert(ready, `Built offline server failed: ${output}`);
   for (const width of [320, 390, 768, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce", acceptDownloads: true });
-    const errors: string[] = [], researchRequests: string[] = [];
+    const errors: string[] = [], researchRequests: string[] = [], metadataRequests: string[] = [];
     await context.route("**/*", route => {
       const request = route.request(), url = new URL(request.url());
       if (url.origin !== base) return route.abort();
       if (url.pathname.startsWith("/api/")) {
+        if (url.pathname === "/api/papers") metadataRequests.push(url.search);
         if (/\/ask(?:\/|$)|\/source(?:\/|$)|\/cite(?:\/|$)/.test(url.pathname)) researchRequests.push(url.pathname);
         return route.fulfill({ json: url.pathname === "/api/models" ? { models: [] } : {} });
       }
@@ -125,10 +126,24 @@ try {
     await composer.waitFor(); await page.waitForFunction(value => (document.querySelector('[data-tour="ask-form"] textarea') as HTMLTextAreaElement)?.value === value, expected);
     assert.equal(await composer.inputValue(), expected, "Actual Next navigation preserves every paper URL and the full comparison draft");
     assert.equal(await page.locator('input[name="research-depth"][value="deep"]').isChecked(), true);
+    await composer.fill("Private draft: identify the title and first author of arXiv 2005.11401v4");
+    const metadataLink = page.getByTestId("paper-metadata-handoff");
+    await metadataLink.waitFor();
+    assert.equal(await metadataLink.getAttribute("href"), "/sources?kind=paper&q=2005.11401v4#research-papers");
+    const box = await metadataLink.boundingBox(); assert(box && box.height >= 43 && box.x >= 0 && box.x + box.width <= width + 1);
+    await metadataLink.screenshot({ path: join(screenshots, `metadata-handoff-${width}.png`) });
+    await metadataLink.click();
+    const exactCard = page.locator("#research-papers article");
+    await exactCard.getByRole("heading", { name: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks", exact: true }).waitFor();
+    assert.equal(await exactCard.count(), 1);
+    assert((await exactCard.innerText()).includes("Patrick Lewis"));
+    assert.equal(await page.getByRole("textbox", { name: "Title, topic, DOI or versioned arXiv identifier" }).inputValue(), "2005.11401v4");
+    assert.equal(metadataRequests.length, 0, "Opening a metadata handoff must not search external repositories");
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     assert.equal(researchRequests.length, 0, "Preparing a comparison never runs research");
     assert.deepEqual(errors, []); await context.close();
   }
-  console.log(`PASS: actual built Sources → save → literature → notes/reload → full draft composer navigation, responsive controls/no overflow at 320/390/768/1440px. Screenshots: ${screenshots}`);
+  console.log(`PASS: actual built Sources → literature → full draft composer → exact free metadata, responsive controls/no overflow at 320/390/768/1440px; no research or provider search. Screenshots: ${screenshots}`);
 } finally {
   await browser.close();
   if (server.exitCode === null) server.kill();

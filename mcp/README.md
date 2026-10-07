@@ -1,5 +1,10 @@
 # Keryx MCP
 
+Candidate0.4.8 adds keyless free `paper_lookup` before paid research. Retained
+catalog is the default; repository lookup requires explicit opt-in. Exact version,
+observation time and unknown metadata remain visible. See **Free paper metadata**
+below. Published package and hosted deployment require separate verification.
+
 Candidate 0.4.7 preserves explicit model output-limit diagnostics and bounded
 guidance in research/recovery results. Historical 503s and token counters alone
 do not establish truncation. It keeps existing paid-original polling/recovery and
@@ -186,3 +191,22 @@ A different wallet cannot recover the balance, and the package does not expose a
 separate key-only cashout command. Keep custody protected locally; do not paste or
 export private keys into chat or a web form. Preserve unknown originals rather than
 repeating a burn or payment.
+
+## Free paper metadata
+
+`paper_lookup({query: "2005.11401v4"})` returns retained catalog bibliography with
+its observation time. It works without a configured wallet, makes one GET to
+Keryx's public `/api/papers` endpoint, and never runs research, reads a paper,
+signs, funds or pays. Exact DOI and versioned arXiv ID/official URLs are supported.
+Title/topic queries are bounded to 120 characters, exact DOI to 200.
+
+Set `searchRepositories: true` only to explicitly send the query through Keryx
+to arXiv/Crossref metadata services. This admits at most two provider requests;
+there is no pagination or retry. A failed provider may leave a retained catalog
+snapshot in the result; each record's observation time remains visible. Missing
+DOI, peer review and withdrawal/replacement status stay unknown. Incomplete
+contributor names do not establish the first author. These metadata records grant
+no read, citation, payout or reward authority.
+
+Candidate0.4.8 adds this tool; publication and hosted availability require separate
+verification. Existing paid tools keep their own custody and recovery requirements.

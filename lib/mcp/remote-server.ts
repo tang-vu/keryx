@@ -16,6 +16,8 @@ import { readOperatorStatus } from "../business-operator/status";
 import { getDb } from "../db";
 import { assertOrdinaryResearchAvailable, readResearchAvailability } from "../research/availability";
 import { researchAdmissionError } from "../research/availability-contract";
+import { createPaperLookupHandler, paperLookupToolOptions } from "../papers/lookup";
+import { readHostedPaperLookup } from "../papers/hosted-lookup";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
@@ -23,6 +25,9 @@ export interface RemoteMcpAccess {
   actor?: string;
   /** Self-declared setup URL channel. Telemetry only; never identity or payment authority. */
   clientChannel: McpClientChannel;
+  /** Request-bound metadata admission identity and cancellation; never payment authority. */
+  paperCaller?: string;
+  signal?: AbortSignal;
 }
 
 type ResearchRunner = typeof collectRun;
@@ -81,10 +86,13 @@ export function createRemoteMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: "keryx",
-    version: "0.3.4",
+    version: "0.3.5",
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
+
+  server.registerTool("paper_lookup", paperLookupToolOptions,
+    createPaperLookupHandler(input => readHostedPaperLookup(input, access.paperCaller ?? "unknown", access.signal)));
 
   server.registerTool(
     "research",

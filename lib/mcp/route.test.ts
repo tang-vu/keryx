@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { POST } from "../../app/mcp/route";
-import { isAllowedMcpOrigin, normalizeMcpClient, researchCallCount } from "./route-helpers";
+import { isAllowedMcpOrigin, isPaperLookupCall, normalizeMcpClient, researchCallCount } from "./route-helpers";
+import * as apiKeys from "../api-keys";
+import * as database from "../db";
 
 const headers = {
   "content-type": "application/json",
@@ -21,6 +23,22 @@ function request(
 }
 
 describe("/mcp", () => {
+  it("serves a public metadata call without research key resolution or database access", async () => {
+    const verify = vi.spyOn(apiKeys, "verifyApiKey").mockImplementation(async () => { throw new Error("Metadata must not verify research credentials"); });
+    const db = vi.spyOn(database, "getDb").mockImplementation(async () => { throw new Error("Metadata must not open the database"); });
+    const http = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Metadata must not use external transport"));
+    const call = { jsonrpc: "2.0", id: 21, method: "tools/call", params: { name: "paper_lookup", arguments: { query: "2005.11401v4" } } };
+    try {
+      const response = await POST(request(call, { authorization: `Bearer ${["kx", "live", "synthetic"].join("_")}` }));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ result: { structuredContent: { scope: "bibliography-only", totalWorks: 1, providers: [] } } });
+      expect(verify).not.toHaveBeenCalled(); expect(db).not.toHaveBeenCalled(); expect(http).not.toHaveBeenCalled();
+      expect(isPaperLookupCall(call)).toBe(true);
+      expect(isPaperLookupCall([call, { ...call, params: { name: "research" } }])).toBe(false);
+      expect(isPaperLookupCall({ ...call, method: "tools/list" })).toBe(false);
+      expect(isPaperLookupCall({ ...call, params: { name: "research" } })).toBe(false);
+    } finally { verify.mockRestore(); db.mockRestore(); http.mockRestore(); }
+  });
   it("rejects oversized bodies before tool dispatch and contains malformed JSON", async () => {
     const response = await POST(request({ jsonrpc: "2.0", method: "tools/call", params: { name: "research", arguments: { question: "x".repeat(65536) } } }));
     expect(response.status).toBe(400);
@@ -87,6 +105,7 @@ describe("/mcp", () => {
 
     expect(response.status).toBe(200);
     expect(body.result.tools.map((tool: { name: string }) => tool.name)).toEqual([
+      "paper_lookup",
       "research",
       "keryx_status",
       "research_monthly",

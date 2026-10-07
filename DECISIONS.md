@@ -5874,3 +5874,23 @@ shared public projection validates, bounds and deduplicates those diagnostics;
 early terminal callers receive a safe ceiling sentence through their current
 error adapters. Private/native reduced projections retain their existing roles.
 See [scope and acceptance gates](docs/engineering/model-output-limits.md).
+
+## Free bibliography before research - 2026-10-08
+
+A bibliographic question should have a direct metadata path that requires no model,
+original read, buyer custody or creator payment. Reuse the bounded paper library
+rather than send a metadata-only request through paid research. Ask carries one
+explicit DOI/versioned arXiv identity to a local library link; it never copies the
+whole question or auto-submits. Remote and stdio MCP share paper_lookup with a
+catalog-only default and explicit repository-search opt-in. Hosted MCP and HTTP
+share the same RAM admission and normalized caller identity; a single public
+metadata call does not verify research credentials or open the database.
+
+Preserve the closed bibliography v1 and saved-workspace contracts. The new tool
+validates exact selected identity, version despite a matching DOI, retained snapshot
+membership, observed-alias grouping, total snapshot bounds and exact provenance
+links. It keeps legitimate alternate versions and their observation times.
+Incomplete names cannot establish first-slot authorship; missing DOI and page
+status remain unknown. Metadata grants no evidence, payout or reward authority.
+Reduced private/native and thin integration roles remain explicit. See
+[scope and release gates](docs/engineering/free-paper-lookup.md).

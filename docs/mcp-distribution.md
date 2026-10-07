@@ -1,5 +1,18 @@
 # MCP package distribution
 
+## Free bibliography candidate - October 8, 2026
+
+Candidate app0.27.25/hosted MCP0.3.5 and stdio0.4.8 add shared paper_lookup with
+a retained-catalog default, explicit provider search and keyless GET transport.
+Desktop0.4.10 retains its reduced private Operator role. Public bibliography v1,
+human CLI and existing research/payment adapters retain their documented roles.
+Packed consumer and CI acceptance precede publication; registry/npm bytes, hosted
+health and installer readback remain separate gates. See
+[scope and release boundaries](engineering/free-paper-lookup.md). Earlier dated
+observations below remain historical.
+
+## Earlier dated observations
+
 The **0.26.20 source-selection candidate** adds hosted request-local diagnostic
 text on terminal `isError` results; remote protocol stays **0.3.1**. Its actual
 stdio runtime graph retains all 31 canonical Git input blobs from 0.26.18, so

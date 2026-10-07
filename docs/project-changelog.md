@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Free bibliography before research (2026-10-08, v0.27.25 candidate)
+
+Ask now links to free paper metadata with a single exact identifier. Remote and
+stdio MCP add `paper_lookup`: retained catalog metadata by default, explicitly
+requested repository lookup, exact version and recorded contributors, and visible
+unknown DOI/status and provider failures. This path does not run research or pay
+creators. Existing bibliography v1 and saved-workspace data remain compatible.
+See [scope, surface roles and release gates](engineering/free-paper-lookup.md).
+
+App0.27.25, hosted MCP0.3.5, stdio MCP0.4.8 and desktop0.4.10 identify candidates;
+production, published packages and installed clients require separate verification.
+
 ### Explain a model output limit (2026-10-08, v0.27.24 candidate)
 
 Reports distinguish an explicitly stopped model response from a provider outage,

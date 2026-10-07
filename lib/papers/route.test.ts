@@ -24,6 +24,11 @@ describe("public bibliography route", () => {
     const blocked = await GET(request("search=1&q=agents", "quota-caller"));
     expect(blocked.status).toBe(429); expect(Number(blocked.headers.get("retry-after"))).toBeGreaterThan(0);
     expect(search).toHaveBeenCalledTimes(3);
+    const { readHostedPaperLookup } = await import("./hosted-lookup");
+    expect(() => readHostedPaperLookup({ query: "agents", searchRepositories: true }, "quota-caller")).toThrow("admission busy");
+    expect(search).toHaveBeenCalledTimes(3);
+    await readHostedPaperLookup({ query: "agents" }, "quota-caller");
+    expect(search).toHaveBeenCalledTimes(4);
     expect((await GET(request("q=agents", "quota-caller"))).status).toBe(200);
   });
 });
