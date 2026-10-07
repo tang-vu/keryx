@@ -633,7 +633,13 @@ export const openapiSpec = {
         description: "Public aggregate telemetry and settled payment totals. Recorded historical evidence samples do not establish current factual support; groundedClaimRate is null with an explicit unreassessed basis. This endpoint neither reads paid bodies nor reassesses archived evidence.",
         responses: { "200": { description: "Dashboard metrics, leaderboard, topics and daily settled volume.", content: {
           "application/json": { schema: { type: "object", required: ["metrics"], properties: {
-            metrics: { $ref: "#/components/schemas/DashboardGroundingStatus" },
+            metrics: { allOf: [
+              { $ref: "#/components/schemas/DashboardGroundingStatus" },
+              { type: "object", properties: {
+                guestQuestions: { type: ["integer", "null"], minimum: 0,
+                  description: "Optional count of recorded web questions without a recorded signed-in wallet, included in totalQueries. Counts questions, not visits or unique people; null or absent means unavailable." },
+              } },
+            ] },
           } } },
         } } },
       },

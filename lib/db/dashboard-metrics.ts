@@ -142,6 +142,8 @@ export function calculateDashboardMetrics(
     creatorsEarning: new Set(creatorPayments.map((p) => p.sourceId)).size,
     avgPaymentUsdc: payments.length ? round(volume / payments.length) : 0,
     totalQueries: runRows.length,
+    guestQuestions: runRows.filter(run => run.origin === "web"
+      && (run.asker == null || run.asker === "")).length,
     payingQueries: payingQueryIds.size,
     readerToPayerConversion: runRows.length ? round(payingQueryIds.size / runRows.length) : 0,
     evidenceRunSamples: evidenceRuns.length,
