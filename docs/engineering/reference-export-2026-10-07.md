@@ -1,6 +1,7 @@
 # Reference export compatibility — October 7, 2026
 
-Application 0.27.15 and desktop 0.4.8 are candidates based on main `8c6f95d2`.
+Application 0.27.15 and desktop 0.4.8 are candidates, first verified on main `8c6f95d2`
+and integrated after the merged 0.27.12 to 0.27.14 releases.
 This fixes an observed interoperability defect in a core literature-review flow;
 it does not establish useful live research or independent business usage.
 
@@ -69,10 +70,9 @@ TypeScript. Desktop CI must pass source-bound Windows packaging, portable/instal
 identity and a fresh-consumer check. Publication readback and an owner-installed
 upgrade are separate evidence, never inferred from server deployment.
 
-Remote MCP retains the base 0.3.2 protocol identity for this format-only change;
-the separately pending 0.3.3 admission release requires integration by actual
-merge order. Reconcile app candidate versions with other pending PRs before merge.
-The original operation still pins main at `8c6f95d2`; do not merge/deploy over that
-gate without its genuine closure/restoration handoff. After clearance, follow
-normal merge, current-main deployment/health, distribution verification and Canteen
-product-update steps. No simulated figures may be reported as settled traction.
+Remote MCP keeps the 0.3.3 protocol identity merged with the 0.27.14 admission
+release; this format-only change does not advance it. The owner chose to merge the
+held candidates while production stays on `8c6f95d2` for the original operation; do
+not deploy over that gate without its genuine closure/restoration handoff. After
+clearance, follow current-main deployment/health, distribution verification and
+Canteen product-update steps. No simulated figures may be reported as settled traction.

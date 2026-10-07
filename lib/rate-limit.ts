@@ -34,6 +34,9 @@ const tiers = {
   // fetch an address the caller chose, so it is deliberately tighter than the public read tier —
   // room to try a handful of feeds, none to sweep a network through us.
   feedProbe: 6,
+  // Card-onramp widget sessions, keyed by the signed-in owner wallet. Each one is an outbound
+  // Circle call on Keryx's API key; a person retrying a purchase needs only a few.
+  cardOnramp: 6,
 } as const;
 
 export type RateLimitTier = keyof typeof tiers;

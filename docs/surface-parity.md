@@ -12,12 +12,23 @@ forwards its server result; extension and bots retain their link/answer roles.
 
 Actual four-entry bundle graphs include the formatter only in the desktop helper,
 so desktop advances to **0.4.8 candidate**. Renderer/bridge and stdio do not import
-it. Stdio **0.4.6**, remote MCP **0.3.2** and extension **0.1.1** keep their existing
-protocol identities; the separately pending remote MCP 0.3.3 availability release
-must be integrated according to actual merge order. Fresh native/package CI,
+it. Stdio **0.4.6** and extension **0.1.1** keep their existing protocol identities.
+Remote MCP stays at the **0.3.3** identity already merged with the 0.27.14
+availability release; this format-only change does not advance it. Fresh native/package CI,
 publication readback and installed versions are separate gates. No new research,
 provider/payment request or fulfilled business use is inferred from these exports.
 See [verification and release limits](engineering/reference-export-2026-10-07.md).
+
+## Ordinary admission availability, October 7, 2026
+
+Application **0.27.14 candidate**, hosted Remote MCP **0.3.3 candidate**, distinguishes
+connected read-only surfaces from paused research. Web/widget questions and failed
+turns are retained; HTTP/SSE, OpenAI and hosted bot errors use safe public copy.
+Paid A2A and caller-funded desktop/stdio clients keep their current payment and
+original-recovery contracts. Desktop **0.4.7**, stdio MCP **0.4.6** and extension
+**0.1.1** retain their versions pending actual graph/distribution checks; app
+deployment cannot prove installed client upgrades. See
+[coordinated roles and remaining gates](engineering/research-availability-2026-10-07.md).
 
 ## Explicit supplier window, October 7, 2026
 

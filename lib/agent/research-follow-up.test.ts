@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { publicReadRecoveryLines } from "./read-recovery";
 import { researchFollowUp } from "./research-follow-up";
 import { emptyEvidenceAnswer } from "./empty-public-evidence";
+import { synthesisFailureDetail } from "./synthesis-failure";
 import type { GatheredContent } from "../llm/reasoning-engine";
 
 const source: GatheredContent = { sourceId: "original", sourceName: "Original", marker: "S1", text: "Actual read text.",
@@ -9,6 +10,25 @@ const source: GatheredContent = { sourceId: "original", sourceName: "Original", 
   webProvenance: { retrievedAt: "2026-10-04T00:00:00Z", publisherGroup: "example.org", normalizedBodyHash: "body", extraction: "pdf", truncated: true } };
 
 describe("bounded research follow-up", () => {
+  it.each(["input", "generation", "review", "synthesis"] as const)("keeps completed reads distinct from a %s failure in both languages", stage => {
+    for (const vi of [false, true]) {
+      const text = researchFollowUp({ vi, outcomes: [], gathered: [{ ...source, webProvenance: undefined }], conflicts: [],
+        synthesisFailure: stage, paymentReviewRequired: true });
+      expect(text).toContain(vi ? "Đã đọc 1 nguồn" : "Read 1 source(s)");
+      expect(text).toContain(vi ? "không chứng minh rằng tài liệu thiếu bằng chứng" : "does not establish that the documents lack evidence");
+      expect(text).toContain(vi ? "đơn gốc" : "original reads and receipts");
+      expect(text.indexOf(vi ? "Trước bất kỳ lượt trả phí mới" : "Before any new paid attempt"))
+        .toBeLessThan(text.indexOf(vi ? "Đã đọc 1 nguồn" : "Read 1 source(s)"));
+      expect(text).not.toMatch(/\[S1\]|No original public document|PDF text extraction failed|Please try again/);
+    }
+  });
+
+  it("does not expose unknown stage strings or invent retained reads", () => {
+    expect(synthesisFailureDetail("PRIVATE_ERROR" as never, 1, false)).toBe("");
+    for (const count of [0, -1, NaN, Infinity, 0.5]) expect(synthesisFailureDetail("review", count, false)).toBe("");
+    expect(researchFollowUp({ vi: false, outcomes: [], gathered: [{ ...source, webProvenance: undefined }], conflicts: [] })).toBe("");
+  });
+
   it("retains a specific PDF recovery step even when another source supplied usable evidence", () => {
     const text = researchFollowUp({ vi: false, outcomes: [{ name: "Scanned appendix", code: "pdf-extraction-unavailable" }],
       gathered: [source], conflicts: [] });

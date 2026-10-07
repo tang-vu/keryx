@@ -36,6 +36,7 @@ async function mount() {
     if (path === "/") return route.fulfill({ contentType: "text/html", body: '<div id="root"></div><script type="module" src="/fixture.js"></script>' });
     if (path === "/fixture.js") return route.fulfill({ contentType: "text/javascript", body: bundle });
     if (path === "/api/models") return route.fulfill({ json: { models: [] } });
+    if (path === "/api/research/availability") return route.fulfill({ json: { state: "not-paused" } });
     throw new Error(`Unexpected UI fixture request: ${path}`);
   });
   const page = await context.newPage();

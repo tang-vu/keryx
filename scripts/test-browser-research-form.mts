@@ -33,6 +33,10 @@ const browser = await chromium.launch({ headless: true });
 try {
   const context = await browser.newContext({ viewport: { width: 320, height: 640 } });
   await context.route("**/*", route => {
+    if (new URL(route.request().url()).pathname === "/api/research/availability") {
+      assert.equal(route.request().method(), "GET", "Availability is read-only");
+      return route.fulfill({ json: { state: "not-paused" } });
+    }
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/models") return route.fulfill({ json: { models: [
       { id: "deepseek", label: "DeepSeek", note: "Default" },

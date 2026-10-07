@@ -10,6 +10,7 @@ import { fundingAmountSchema, type FundingRecord, type FundingStep } from "@/lib
 import { BUYER_GATEWAY } from "@/lib/buyer/protocol";
 import { fundingReadiness, hasUncertainFunding } from "@/lib/buyer/funding-readiness";
 import { ResearchFundingActivity } from "./research-funding-activity";
+import { ArcCardOnrampPanel } from "./arc-card-onramp-panel";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "@/lib/arc-network-profile";
 
@@ -174,6 +175,7 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
     <summary className="cursor-pointer font-mono text-xs">Add USDC to Gateway</summary>
     <p className="mt-3 font-serif text-sm">Approve an exact amount, then deposit it into your own Gateway balance. Each transaction needs a wallet confirmation and costs gas. This does not buy research or pay Keryx.</p>
     <p className="mt-2 break-all font-mono text-xs">{browserPaymentProfile().label} Gateway: {BUYER_GATEWAY}</p>
+    {!profile.testnet && <div className="mt-3"><ArcCardOnrampPanel /></div>}
     {!active && <div className="mt-4 space-y-3">
       <label className="grid gap-2 font-mono text-xs">Deposit amount ({profile.label} USDC)<input value={amount} disabled={busy || disabled} onChange={event => { setAmount(event.target.value); setAccepted(false); }} inputMode="decimal" className="w-full border border-line bg-paper p-3 sm:w-48" /></label>
       <label className="flex items-start gap-3 font-serif text-sm"><input type="checkbox" checked={accepted} disabled={busy || disabled} onChange={event => setAccepted(event.target.checked)} className="mt-1" /><span>I want to add this amount to my own Gateway balance, plus transaction gas. I will keep my wallet transaction hashes for recovery.</span></label>
