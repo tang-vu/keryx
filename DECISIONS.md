@@ -5858,3 +5858,19 @@ A Windows redeploy previously lost reviewed environment controls entering WSL an
 Observed new continuation attempts reused an acknowledged assessment with mandatory target coverage0.1, while final evidence coverage is capped by that assessment. Later generation/review could never pass the existing0.4 threshold. The ordinary context sampler also omitted relevant lines from the already selected frozen documents. Give this private original-completion engine both complete selected bodies consistently through sufficiency, quote options, generation and review; refuse oversized full prompts before dispatch. Retain an actual negative mandatory assessment and stop before generation/review, then block unchanged-context retries. Preserve ordinary research context selection and all evidence/support thresholds.
 
 The owner explicitly requested repair to same-original completion without routine confirmation. Stage any additional supplier episode under a fresh reviewed source and immutable parent-ledger binding rather than extending, deleting or reusing the exhausted grant. The next fixed episode has six fresh holds,243260 microUSD history and400000 microUSD aggregate ceiling (367220 at full use); those conservative staged numbers are agent-chosen within that repair instruction, not an owner quotation or supplier invoice. External activation intent precedes the new journal, and a separately retained latest-head frontier prevents restoring an old journal snapshot from resetting its allowance. Uncertain publication blocks both new dispatch and parent fallback. Native same-claim completion remains exact-digest metadata after private reviewed answer acceptance, with no new payment, funding, search or schedule. Applicable web/API/MCP/client adapters continue to use the existing shared closure and original buyer GET contract; no new client package or native schema is introduced.
+
+## Source-scoped recency eligibility - proposed, 2026-10-08
+
+Issue #217 and a frozen synthetic counterexample show that one-article topical
+ranking can buy an older release despite an explicit newest-entry request. Apply
+immutable original source/version/temporal eligibility before ranking, with a
+validated structured per-call contract preferred over a general latest regex or
+model-generated targets. Stage a visible refusal of unresolved current-newest
+paid selection before adding explicit retained-set ordering and coherent bounded
+feed observations. Paid catalog accumulation has no collection cohort; publication
+dates and public-reference refreshedAt alone cannot prove current newest. Preserve
+wanted-response item/version/offer binding, registry payout authority, every
+execution/payment bound and original recovery. Independent architecture review
+supports this direction; runtime, intent recognition, freshness/completeness,
+storage/adapters and useful-answer gates remain open. See
+[the staged proposal](docs/engineering/source-recency-2026-10-08.md).
