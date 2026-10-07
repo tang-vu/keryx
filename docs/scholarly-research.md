@@ -100,6 +100,12 @@ Author opt-in payments are a separate [proposed staged plan](paid-scholarly-pape
 
 ## Current delivery and historical boundary
 
+Observed PDF extractions use shared
+[sentence-boundary handling](engineering/pdf-evidence-boundaries-2026-10-07.md)
+that keeps physical line wraps from admitting sentence tails. Quotes and context
+retain exact original text and offsets within existing limits. This does not
+certify PDF reading order, complete context or manuscript coverage.
+
 The owner-confirmed October 6 update permits
 [reviewed sentence-cited summaries](engineering/cited-summary-2026-10-06.md)
 with their inspectable excerpts. Completion confidence remains Low; unsupported

@@ -103,6 +103,9 @@ See [scope, verification and release gates](engineering/research-availability-20
 - Recognize exact arXiv pairs with a shared prefix in adjacent comparison lists.
   Rank already-read paper context against every exact target identity, including
   bare target IDs, independently of the discovery request cap.
+- For observed PDF extractions, retain whole wrapped sentence spans and their
+  contiguous context; reject sentence tails without changing original text,
+  offsets, hashes or evidence limits. See [PDF boundary validation](engineering/pdf-evidence-boundaries-2026-10-07.md).
 - Export screening CSV or a JSON backup. Preserve corrupt storage, reject invalid
   backups, coordinate concurrent tab writes and keep unsaved drafts through filtering.
 - Download the shown bibliography as RIS for a reference manager. Preserve exact

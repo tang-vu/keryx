@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**Keep PDF physical wraps out of evidence sentence boundaries — 2026-10-07.**
+An offline reproduction showed a newline-separated sentence tail passing the
+complete-span gate and strict quote menu. For observed PDF extractions, compute
+boundaries on an equal-length CR/LF-to-space view while retaining exact original
+text, UTF-16 offsets and hashes. Share those boundaries across span validation,
+strict menus, passage nomination and bounded review context; preserve independent
+physical-line heading hints. Keep existing caps, cut/Unicode rejection, non-PDF
+behavior and evidence/payment authority. This repairs structural selection, not
+reading order, semantic completeness, target coverage or independent usefulness.
+See [the validation and residual-risk record](docs/engineering/pdf-evidence-boundaries-2026-10-07.md).
+
 **Separate exact-paper discovery intent from already-read target identity — 2026-10-07.**
 An explicit arXiv prefix can carry through a locally adjacent comparison list;
 each inherited identifier must still state its exact version. Keep fixed official
