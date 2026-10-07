@@ -26,6 +26,7 @@ try {
     const request = route.request(); const path = new URL(request.url()).pathname;
     if (path === "/api/ask") { calls.push(request.postDataJSON()); return route.fulfill({ status: 401, json: { error: "session_expired", message: "Fixture session requires recovery" } }); }
     assert.equal(request.method(), "GET", "Only the synthetic ask may write");
+    if (path === "/api/research/availability") return route.fulfill({ json: { state: "not-paused" } });
     if (path.startsWith("/api/")) return route.fulfill({ json: { sources: [], models: [] } });
     return route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' });
   });

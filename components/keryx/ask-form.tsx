@@ -168,6 +168,17 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
     if (clearOnSubmit) setQuestion("");
   };
 
+  const availabilityPanel = (
+    <div className="mt-3 border border-line bg-paper p-3 text-sm text-ink-2" role="status">
+      <p>{checking ? "Checking research availability…" : researchPaused ? RESEARCH_PAUSED_MESSAGE :
+        availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}</p>
+      <div className="flex flex-wrap gap-x-3">
+        <a href="/me/asks" className="inline-flex min-h-11 items-center py-3 underline">My saved reports</a>
+        <button type="button" onClick={() => void checkAvailability()} disabled={checking} className="min-h-11 py-3 underline">Check availability</button>
+      </div>
+    </div>
+  );
+
   return (
     <div data-tour="ask-form">
       <div className="border border-ink bg-paper-2">
@@ -193,12 +204,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
             className="mt-2 min-h-[76px] w-full resize-y border border-ink bg-paper px-3 py-2 font-serif text-[17px] leading-snug text-ink outline-none placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50"
           />
           <p className="mt-1 text-xs text-ink-3">Enter for a new line · Ctrl/⌘ + Enter to ask</p>
-          <div className="mt-3 border border-line bg-paper p-3 text-sm text-ink-2" role="status">
-            <p>{checking ? "Checking research availability…" : researchPaused ? RESEARCH_PAUSED_MESSAGE :
-              availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}</p>
-            <a href="/me/asks" className="mr-4 inline-block min-h-11 py-3 underline">My saved reports</a>
-            <button type="button" onClick={() => void checkAvailability()} disabled={checking} className="min-h-11 py-3 underline">Check availability</button>
-          </div>
+          {researchPaused && availabilityPanel}
           <fieldset className="mt-3">
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">Research depth</legend>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
@@ -235,6 +241,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
                   : `Free trial: Keryx's treasury pays on ${currentArcLabel}. Question budget: up to $${budget.toFixed(3)} USDC.`}
             </p>
           </div>
+          {!researchPaused && availabilityPanel}
           <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-2 font-mono text-xs text-ink">
             <input type="checkbox" checked={scholarly} disabled={disabled} onChange={event => setScholarly(event.target.checked)} />
             Search scholarly papers (Crossref and arXiv)

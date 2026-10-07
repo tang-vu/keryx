@@ -20,6 +20,8 @@ dismiss the UI rejection latch; another question still requires an explicit
 submission and all server controls. Shared `run=1` links wait for the initial
 observation and cannot dispatch during a known pause or an unknown observation.
 Manual submission when observation is unavailable remains subject to the server.
+Known holds appear above the research controls. Other observations appear below
+the action so the question, source cap and action still fit small mobile screens.
 
 Remote MCP **0.3.3 candidate** keeps initialize and four-tool discovery available.
 The setup page says the endpoint is connected and separately shows research
@@ -52,6 +54,12 @@ skip); the final six browser fixtures also passed after the embed race correctio
 Application/operations TypeScript, scoped lint and production build passed.
 Independent final source review found no blocking findings. A test pass is not
 ordinary live research acceptance.
+
+Browser harnesses explicitly intercept the new availability GET without permitting
+extra writes. Compiled responsive checks retain first-viewport actions at mobile
+320–430px and desktop widths; chat fixtures retain progress, stop, older-report
+scroll and follow-up behavior. The status panel's mobile regression was corrected
+without relaxing the layout assertions.
 
 Actual four-entry esbuild input graphs contain none of the changed hosted
 modules: desktop helper 45 inputs, renderer 1, bridge 1 and stdio MCP 34.

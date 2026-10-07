@@ -8,6 +8,8 @@ and is labeled separately from research admission. Hosted Remote MCP 0.3.3 adds
 read-only availability and a structured public pause category, shared with web,
 OpenAI and bot errors. Local admission refusals do not retry or rotate providers.
 Existing original-payment obligations and authority checks remain in force.
+The normal mobile composer keeps the question, source cap and action in view;
+known pauses remain prominent above the research controls.
 See [scope, verification and release gates](engineering/research-availability-2026-10-07.md).
 
 ### Explicit same-original supplier window (2026-10-07, v0.27.11 candidate)
