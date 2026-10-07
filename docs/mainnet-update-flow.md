@@ -38,8 +38,12 @@ offline reproduction. No shadow production payment is permitted.
 
 1. **Specify one outcome.** Pick a bounded backlog item, its task IDs and acceptance
    criteria from [the workload](research-workload.md). Record the baseline, affected
-   surfaces, proposed change and residual limitations. Preserve D-300 until a
-   separately reviewed assertion-completeness design passes its own gates.
+   surfaces, proposed change and residual limitations. Preserve the evidence
+   ledger, [sentence-cited summary contract](engineering/cited-summary-2026-10-06.md)
+   and excerpt/gap fallback. The owner's October 6 decision superseded D-300's
+   unconditional excerpt-only delivery; broader comparisons, recommendations and
+   checklists still require their separately reviewed assertion-completeness and
+   actual-usefulness gates. The reviewed decision brief remains disabled.
 2. **Branch from current origin/main.** Fetch/prune; preserve unrelated changes and
    active worktrees. Develop on a focused branch. Do not push changes directly to
    main. Record network, schema, custody and public-contract impact.

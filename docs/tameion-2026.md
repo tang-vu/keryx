@@ -223,6 +223,28 @@ real customers using real mainnet USDC may be favored. A genuine own-business or
 open-source use case can count, but only product and traction change during the event
 should be presented as new for this existing project.
 
+Event mentor guidance in the builder channels (October 2–7) on how traction is
+evidenced; the judges, not the mentor, decide the score:
+
+- The measures named for every RFB are the number of real businesses or users, total
+  funds moved, and the quality of the agent's money decisions. A freelancer or a
+  one-person business counts as a business.
+- Counts alone are not persuasive. Each claim needs who is on the other side: an
+  identifiable person or business (site, X or LinkedIn), the need they had, the
+  delivered outcome, and wallet addresses with transaction links. A short video of
+  them using the product was described as the strongest form.
+- Transactions between the builder's own wallets do not count as external use. Report
+  owner-run and treasury-sponsored activity separately from independently paid use.
+- A participant who is not ready to pay in USDC may still count when each decision
+  they approve produces a real payment on Arc, testnet included. Record how often they
+  agreed with the agent's decisions. For Keryx that means the participant's verdict on
+  each BUY/SKIP decision and citation; this is not yet collected.
+- Documented refusals may be reported next to transactions. For Keryx these are SKIP
+  decisions and withheld rewards.
+- Traction is submitted through `arc-canteen update-traction`, with contract and
+  wallet addresses also listed in the repository README. The event label on Keryx's
+  submitted updates is unconfirmed.
+
 | Dates | Planned checkpoint; all work remains open |
 | --- | --- |
 | Sep 28–29 | Record pre-event baseline, discover first candidates, design Operator authority and evidence model. |

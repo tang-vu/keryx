@@ -27,10 +27,22 @@ Do not replace missing paper evidence with the model-only fixture corpus.
 R20-R23 are fault-injection scenarios, not permission to trigger adverse mainnet
 payments. R24 must label unsupported adapter operations as handoffs.
 
-Current D-300 output is qualified excerpts with Low/incomplete synthesis.
-A task may pass source-provenance checks while failing to deliver its intended
-decision brief. Record both outcomes. Do not weaken that boundary or grade
-completed HTTP requests as completed research.
+The October 4 baseline used D-300's qualified-excerpt delivery. On October 6 the
+owner superseded unconditional excerpt-only output with
+[sentence-cited summaries](engineering/cited-summary-2026-10-06.md). Current
+checked-in JSON-engine delivery can retain a model-written sentence only when its
+one excerpt passes the evidence ledger and the separate review accepts the whole
+sentence; the sentence is paired with that verbatim excerpt. If no sentence
+survives, or the engine does not implement this contract, qualified excerpts and
+gaps remain. These model judgments do not certify correctness or complete synthesis.
+Confidence remains Low and creator reward authority stays in the evidence ledger.
+
+The reviewed decision brief remains disabled. Cross-source comparisons,
+recommendations and complete checklists are still unmet deliverables, even when
+every target has an excerpt or a summary sentence. Record provenance, intended
+artifact acceptance and independent usefulness separately; completed HTTP requests
+are not completed research. These code facts do not establish current production
+availability, new live acceptance or an additional model/search allowance.
 
 ## Prioritized development backlog
 
@@ -42,8 +54,8 @@ says otherwise. Each is a separate bounded update with its own acceptance eviden
 | B01 | P0, first | Correct the post-mainnet update/deploy documentation; remove direct-main and legacy provisioning shortcuts. Reviewed commands must agree with the current script. |
 | B02 | P0, first | Freeze these 24 internal task specifications and review criteria. Structure validation is not execution or usefulness acceptance. |
 | B03 | P0, before output changes | Record current offline regression results and a bounded staging baseline for R01/R09/R11/R15. Keep missing staging, inputs and quota open. |
-| B04 | P0, after baseline | Design complete assertion-to-evidence handling for useful synthesis, including omitted claims, negation/numbers, contradictory sources and unsupported recommendations. Independent review; no D-300 removal from a model score alone. |
-| B05 | P0, after B04 | Implement the accepted bounded synthesis slice; retain excerpt/gap fallback. Pass adversarial fixtures and actual task acceptance before enabling richer output. |
+| B04 | P0, after baseline | Design assertion-complete handling beyond the current sentence-cited summary for the requested comparisons, decisions and checklists: omitted claims, negation/numbers, contradictory sources and unsupported recommendations. Independent review; coverage or a model score alone cannot establish a complete useful artifact. |
+| B05 | P0, after B04 | Implement the accepted bounded synthesis slice beyond sentence-cited summaries; retain excerpt/gap fallback and existing payment authority. Pass adversarial fixtures and actual task acceptance before enabling that richer output. The current summary and disabled decision brief do not close this gate. |
 | B06 | P0, parallel scope | Improve original-document discovery/read yield using observed R09/R10/R13 failures. Preserve exact versions, bounded reading and explicit unavailable/truncated states. |
 | B07 | P1, after baseline | Make empty/partial outputs actionable with task-specific next steps. No automatic paid retry or suggestion that more USDC fixes unreadable free documents. |
 | B08 | P1 | Deliver a reusable comparison/evidence export from R09/R11/R14 with exact source/version and missing fields; no new purchase on export. |
