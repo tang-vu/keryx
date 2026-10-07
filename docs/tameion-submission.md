@@ -1,5 +1,32 @@
 # Tameion submission pack — working evidence
 
+## October 7 read-only evidence checkpoint
+
+At `2026-10-07T02:04:31.538Z`, [public health](https://keryx.cc/api/health)
+reported operational/database ok, Arc mainnet and real settlement mode at
+`c1cb8626`. [Public metrics](https://keryx.cc/api/metrics) subsequently reported
+one settled payment totaling **0.03 USDC**, zero creator payouts and 28 stored
+queries. The retained original is an owner-operated paid trial with unresolved
+delivery; these figures establish neither independent business demand nor a
+completed useful workflow. [Operator status](https://keryx.cc/api/operator/status)
+at `2026-10-07T02:05:06.516Z` reported held/acceptance-paused, zero registered
+creator sources and, over 24 hours, zero completed/one failed job. Recheck these
+dated projections before recording or submission.
+
+The organizer's three entry priorities are actual USDC flow on Arc through the
+Circle stack, a project the builder intends to continue, and genuine business
+use. [The official FAQ](https://tameion.thecanteenapp.com/) accepts an own-business
+or maintained open-source use case; RFBs are prompts, not mandatory tracks.
+That permits a genuine own-business research pilot, but does not make an internal
+trial an accepted business outcome or independent traction. The immediate gate
+remains delivery of the original paid task, owner acceptance against its actual
+business decision, exact receipt/recovery evidence and a short recorded workflow.
+All missing pilot proof fields below remain open; do not fill them from counts.
+
+The 0.27.12 [failure-reporting candidate](engineering/synthesis-failure-2026-10-07.md)
+makes unavailable synthesis distinguishable from missing document evidence. Its
+code checks are not original fulfillment, a new settlement or usefulness proof.
+
 October 6 candidate increment: [hosted business Operator](operator-business.md)
 adds the prepaid revenue-to-delivery guard, audit and public observation. A real
 complete business workflow, accepted deliverable and contract-enforced general

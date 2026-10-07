@@ -19,6 +19,32 @@
   been observed. Circle business verification, regional availability and a real
   owner purchase remain acceptance gates. Credit cards are not supported by Circle.
 
+### Retain the reason when paid research cannot be synthesized (2026-10-07, v0.27.12 candidate)
+
+- Distinguish unavailable bounded input, written synthesis and evidence review
+  after successful source reads. Empty results describe unavailable assessment
+  rather than claiming the documents contain no evidence.
+- Keep the original reads, charges and receipts visible with delivery-review
+  guidance in the trace, saved answer, hosted API/MCP and report exports. No
+  automatic supplier request, purchase or refund is added.
+- [Scope, verification and remaining live gates](engineering/synthesis-failure-2026-10-07.md).
+  This closes a failure-reporting gap; useful completed business delivery remains
+  a separate acceptance requirement.
+
+### Bounded dependency install retry on redeploy (2026-10-07, deployment tooling)
+
+- `npm run redeploy` repeats `npm ci` at most three times, 15 and 30 seconds apart,
+  when npm reports a transient network code (`ECONNRESET`, `ETIMEDOUT`, `EAI_AGAIN`,
+  `ECONNREFUSED`, `ENETUNREACH`, `ERR_SOCKET_TIMEOUT`). `npm ci` removes
+  `node_modules` before fetching, so one dropped registry connection previously
+  ended a deployment with no dependencies installed.
+- Integrity, lockfile and lifecycle failures still stop at the first attempt. The
+  successful-install stamp is written only after an install exits 0; drain order,
+  commit binding, build, role start and health gates are unchanged.
+- Hermetic coverage in `scripts/redeploy-vps.check.sh`. No application version,
+  payment, custody or schedule change; staging a release before draining writers
+  remains open in issue 164.
+
 ### Explicit same-original supplier window (2026-10-07, v0.27.11 candidate)
 
 - Add a private v2 authority with a supplied, frozen window of at most 90 minutes

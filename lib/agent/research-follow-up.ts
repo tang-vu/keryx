@@ -1,5 +1,6 @@
-import type { Conflict, GatheredContent } from "../llm/reasoning-engine";
+import type { Conflict, GatheredContent, SynthesisFailureStage } from "../llm/reasoning-engine";
 import { publicReadRecoveryLines, reportLabel, type PublicReadOutcome } from "./read-recovery";
+import { synthesisFailureDetail } from "./synthesis-failure";
 
 /** Only observed reading limits and an explicitly unverified conflict flag become next steps.
  * No draft assertions, new citation markers, evidence eligibility or payment authority. */
@@ -9,9 +10,12 @@ export function researchFollowUp(input: {
   gathered: GatheredContent[];
   conflicts: Conflict[];
   paymentReviewRequired?: boolean;
+  synthesisFailure?: SynthesisFailureStage;
 }): string {
   const { vi } = input;
   const rows = publicReadRecoveryLines(input.outcomes, vi);
+  const synthesis = synthesisFailureDetail(input.synthesisFailure, input.gathered.length, vi);
+  if (synthesis) rows.unshift(`- ${synthesis}`);
   const limited = input.gathered.filter(source => source.webProvenance?.truncated ||
     source.publicDeliveryKind === "abstract" || source.scholarly?.evidenceScope === "abstract-page");
   for (const source of limited.slice(0, 8)) {

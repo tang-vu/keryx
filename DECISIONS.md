@@ -5634,6 +5634,19 @@ billing, ordinary-service restoration and Tameion acceptance remain separate gat
 See [procedure](docs/operator-original-fulfillment.md) and
 [release scope](docs/engineering/operator-fulfillment-window-2026-10-07.md).
 
+## Retain synthesis failure stages without implying absent document evidence - 2026-10-07
+
+Completed reads and unavailable synthesis are different observations. Preserve
+only an application-assigned input/generation/review stage; a thrown engine call
+whose internal stage is unknown stays unknown. Empty output after such a failure
+means assessment unavailable, not that the source lacks evidence. Valid no-fact
+generation and negative review retain their original assessed-result semantics.
+
+Expose fixed diagnostic wording and retained-read count through the existing
+trace and final answer. Direct delivery review to the original job and receipts;
+do not retry generation, buy again, infer a refund or relax evidence/reward gates.
+See [scope and verification](docs/engineering/synthesis-failure-2026-10-07.md).
+
 ## Offer Circle's Arc Onramp as an optional card purchase into the owner wallet - 2026-10-06
 
 The owner asked whether Circle supports card payment into Arc and directed that it

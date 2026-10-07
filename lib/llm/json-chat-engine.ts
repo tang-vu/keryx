@@ -32,6 +32,7 @@ import type {
   SufficiencyResult,
   SynthInput,
   SynthResult,
+  SynthesisFailureStage,
   Conflict,
   LlmUsageRecord,
 } from "./reasoning-engine";
@@ -325,31 +326,36 @@ export abstract class JsonChatEngine implements ReasoningEngine {
 
   private async synthesizeDecisionBrief(input: SynthInput): Promise<SynthResult> {
     const fallback: SynthResult = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable" };
+    let failureStage: SynthesisFailureStage = "input";
+    const unavailable = (): SynthResult => ({ ...fallback, synthesisFailure: failureStage });
     try {
       const selectedSources = evidenceContext(input.question, input.subClaims, input.gathered);
       const options = buildContextualQuoteOptions(selectedSources, input.gathered);
-      if (!options.length) return fallback;
+      if (!options.length) return unavailable();
       // Reserve the complete selected corpus first. Eagerly expanding every menu
       // alternative could exceed the bound before the model selected any quote.
       // No selected passage, target or adverse source is removed to admit a call.
       const sources = briefContextSources(selectedSources, input, []);
+      failureStage = "generation";
       const raw = await this.measuredChatJson(config.synthesisModel, BRIEF_GENERATION_GUIDANCE,
         JSON.stringify({ question: input.question,
           researchTargets: input.subClaims.map((question, targetIndex) => ({ targetIndex, question })), sources,
           quoteOptions: options.map(({ quoteId, marker, text, start, end }) => ({ quoteId, marker, text, start, end })),
           schema: '{"facts":[{"id":"f1","targetIndex":0,"text":string,"quoteIds":string[],"support":number}],"actions":[{"id":"a1","text":string,"premiseIds":string[],"conditions":string[]}]}' }), 4096);
       const candidate = prepareDecisionBrief(input, raw, options, sources);
-      if (!candidate) return fallback;
+      if (!candidate) return unavailable();
       if (!candidate.candidate.facts.length) return { ...fallback, evidenceReview: "completed" };
       // Review keeps the generator's entire base corpus and gains the full
       // neighborhoods of its selected quotes. Actual union overflow still fails
       // closed; there is no second generation or provider repair call.
+      failureStage = "input";
       const reviewedSources = briefContextSources(selectedSources, input, candidate.quotes);
       const packet = prepareDecisionBrief(input, candidate.candidate, options, reviewedSources)!;
+      failureStage = "review";
       const review = await this.measuredChatJson(config.llmModel, BRIEF_REVIEW_GUIDANCE,
         JSON.stringify({ packet: briefReviewPacket(packet), schema: BRIEF_COMPACT_REVIEW_SCHEMA }), 4096, { reasoningReview: true });
       const decisionBrief = reviewDecisionBrief(packet, review);
-      if (!decisionBrief) return fallback;
+      if (!decisionBrief) return unavailable();
       const evidence = briefEvidence(decisionBrief);
       const citedMarkers = [...new Set(evidence.map(item => item.marker))];
       // Only a marker envelope reaches the old evidence gate. Human prose is
@@ -359,7 +365,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     } catch {
       // A malformed generation/review, transport outage or input cap must not
       // discard completed paid reads or route an unreviewed narrative to the UI.
-      return fallback;
+      return unavailable();
     }
   }
 
