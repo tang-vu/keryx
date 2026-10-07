@@ -2405,6 +2405,8 @@ describe("sponsored operating fees", () => {
     expect(f.settle.mock.lastCall?.[0].operatingFee).toMatchObject({ amountMicroUsdc: "15000",
       sourceUrls: ["https://public.test/public-free", "https://public.test/", "https://public.test/feed"] });
     expect(run.citations[0]).toMatchObject({ sourceKind: "public-reference", reward: 0 });
+    expect(run.trace.filter(step => step.phase === "attribute" && step.detail)
+      .map(step => (step.detail as { sourceId: string }).sourceId)).toEqual(run.citations.map(citation => citation.sourceId));
     expect(run.operatingFee).toMatchObject({ status: "settled", amountUsdc: 0.015, paymentId: "synthetic-fee" });
     expect(run.totalSpent).toBe(0.015); expect(run.totalToCreators).toBe(0);
     expect(f.gateway.citationCalls).toEqual([]);

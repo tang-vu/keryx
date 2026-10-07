@@ -1671,7 +1671,7 @@ async function* runAdmittedAgent(
         citations, policy: gateway.operatingFeePolicy(), readClaim: url => sourceClaimForUrl(db, url), itemClaimUrls });
       if (plan) {
         operatingFee = plan.snapshot;
-        yield emit("attribute", `Keryx operating allocation $${plan.snapshot.amountUsdc.toFixed(6)} for unclaimed public citations; sponsored by Keryx, separate from creator rewards.`, plan.snapshot);
+        yield emit("settle", `Keryx operating allocation $${plan.snapshot.amountUsdc.toFixed(6)} for unclaimed public citations; sponsored by Keryx, separate from creator rewards.`, plan.snapshot);
         if (fundingUnavailable) throw new Error("Funding readiness is unknown");
         if (!spendWalletReady) { await gateway.ensureFunded(budget); spendWalletReady = true; }
         paymentAttempts++;
