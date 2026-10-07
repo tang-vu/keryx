@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Isolate an expired failed Operator trial (2026-10-07, v0.27.15)
+### Isolate an expired failed Operator trial (2026-10-07, v0.27.16)
 
 A verified expired, unprepared Operator claim can be isolated through a private
 metadata command so unrelated interactive research resumes under its existing
@@ -8,6 +8,18 @@ limits. The original remains unresolved, its settlement and model reservations
 remain intact, and new Operator/private paid admission stays held. Failed or
 changed isolation evidence keeps research paused. See the [authority and native
 restoration gates](engineering/failed-canary-research-isolation.md).
+
+### Preserve preprint identity in reference exports (2026-10-07, v0.27.15 candidate)
+
+- Use the recognized RIS manuscript type for preprints, preserving exact arXiv
+  versions, recorded read scope and unknown peer review. The former unsupported
+  tag silently became a journal article in the pinned Zotero parser.
+- Keep RIS provenance notes literal and leave a missing scholarly journal absent.
+  BibTeX, article identities, stored receipts and payment authority retain their contracts.
+- Share the correction across web, hosted research exports and checked Operator
+  receipt exports. Desktop helper changes require candidate **0.4.8** and its
+  separate installer/package verification; no installed upgrade is claimed.
+- [Guide](researcher-exports.md) and [parser, download, surface and release gates](engineering/reference-export-2026-10-07.md).
 
 ### Research availability and retained questions (2026-10-07, v0.27.14 candidate)
 

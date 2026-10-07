@@ -12,7 +12,12 @@ into Zotero through **File → Import**. Ordinary web records use RIS `WEB` and 
 and a provenance note identifying the source and recorded content version.
 Bound-to-read [scholarly metadata](scholarly-research.md) also includes supplied authors,
 DOI, journal, volume, issue and pages. Journal records use `JOUR` / `@article`; preprints
-use `UNPB` / `@misc`, with exact arXiv versions and explicit read limitations.
+use `MANSCPT` / `@misc`, with exact arXiv versions and explicit read limitations.
+The pinned Zotero RIS parser maps `MANSCPT` to a manuscript; its unsupported `UNPB`
+tag falls back to a journal article. The provenance note still identifies the
+record as a preprint and keeps peer review unknown. RIS notes encode markup as
+literal text. A scholarly source name is retained in that note, never substituted
+for a missing journal. See [compatibility checks and limits](engineering/reference-export-2026-10-07.md).
 
 Only cited articles appear, not every discovered or purchased source. A citation without
 a usable HTTP(S) article link or title is omitted and the reading displays the omitted count.

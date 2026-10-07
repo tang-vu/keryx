@@ -79,25 +79,31 @@ function bibtexText(value: string): string {
   return value.replace(/[\\{}%&_#$^~]/g, char => replacements[char]);
 }
 
+// Zotero treats N1 as HTML. Preserve recorded metadata as literal note text.
+function risNote(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 export function buildCitationExport(citations: readonly Citation[], format: CitationExportFormat) {
   const { entries, omitted } = references(citations);
   const content = entries.map((entry) => {
     const metadata = entry.scholarly;
     const year = metadata?.publishedDate?.match(/^\d{4}(?:-\d{2})?(?:-\d{2})?$/)?.[0].slice(0, 4) ?? entry.date?.slice(0, 4);
     if (format === "ris") return [
-      `TY  - ${metadata?.workType === "journal-article" ? "JOUR" : metadata?.workType === "preprint" ? "UNPB" : "WEB"}`, `TI  - ${entry.title}`, `UR  - ${entry.url}`,
+      // MANSCPT is recognized by Zotero; UNPB silently becomes a journal article.
+      `TY  - ${metadata?.workType === "journal-article" ? "JOUR" : metadata?.workType === "preprint" ? "MANSCPT" : "WEB"}`, `TI  - ${entry.title}`, `UR  - ${entry.url}`,
       ...(metadata ? metadata.authors.map((author, index) => {
         const name = metadata.authorNames?.[index];
         return `AU  - ${name?.family ? `${text(name.family)}${name.given ? `, ${text(name.given)}` : ""}` : text(author)}`;
       }) : []),
       ...(metadata?.doi ? [`DO  - ${text(metadata.doi)}`] : []),
       ...(metadata?.arxivId ? [`AN  - arXiv:${text(metadata.arxivId)}`] : []),
-      ...(metadata?.journal ? [`JO  - ${text(metadata.journal)}`] : entry.source ? [`T2  - ${entry.source}`] : []),
+      ...(metadata?.journal ? [`JO  - ${text(metadata.journal)}`] : !metadata && entry.source ? [`T2  - ${entry.source}`] : []),
       ...(metadata?.volume ? [`VL  - ${text(metadata.volume)}`] : []),
       ...(metadata?.issue ? [`IS  - ${text(metadata.issue)}`] : []),
       ...(metadata?.pages ? [`SP  - ${text(metadata.pages)}`] : []),
       ...(metadata?.publishedDate ? [`PY  - ${text(metadata.publishedDate).replaceAll("-", "/")}`] : entry.date ? [`PY  - ${entry.date.replaceAll("-", "/")}`] : []),
-      `N1  - ${entry.note}`, "ER  - ",
+      `N1  - ${risNote(entry.note)}`, "ER  - ",
     ].join("\r\n");
     const fields = [
       ["title", `{${bibtexText(entry.title)}}`], ["url", bibtexText(entry.url)],
