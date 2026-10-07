@@ -1,5 +1,14 @@
 # Keryx Project Changelog
 
+### Isolate an expired failed Operator trial (2026-10-07, v0.27.18)
+
+A verified expired, unprepared Operator claim can be isolated through a private
+metadata command so unrelated interactive research resumes under its existing
+limits. The original remains unresolved, its settlement and model reservations
+remain intact, and new Operator/private paid admission stays held. Failed or
+changed isolation evidence keeps research paused. See the [authority and native
+restoration gates](engineering/failed-canary-research-isolation.md).
+
 ### Bounded backup capacity and retained recovery history (2026-10-07, v0.27.17 candidate)
 
 - Admit identity-bound readonly snapshots before output against a 512 MiB aggregate

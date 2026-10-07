@@ -1,9 +1,9 @@
-import { canaryExecutionPaused } from "../business-operator/canary-policy";
+import { canaryResearchPaused } from "../business-operator/canary-policy";
 import { parseResearchAvailability, ResearchAdmissionHeldError } from "./availability-contract";
 
 /** Filesystem-only, fail-closed observation. Never initializes DB, consumes quota or grants authority. */
 export function readResearchAvailability() {
-  return parseResearchAvailability({ state: canaryExecutionPaused() ? "paused" : "not-paused" })!;
+  return parseResearchAvailability({ state: canaryResearchPaused() ? "paused" : "not-paused" })!;
 }
 
 export function assertOrdinaryResearchAvailable() {

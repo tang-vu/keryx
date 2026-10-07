@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.27.17",
+  "version": "0.27.18",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -104,7 +104,8 @@
     "operator:business": "node --import tsx --no-warnings scripts/operator-business.mts",
     "operator:canary": "node --import tsx --no-warnings scripts/operator-canary.mts",
     "papers": "node --import tsx scripts/papers.mts",
-    "papers:collect": "node --import tsx scripts/collect-paper-catalog.mts"
+    "papers:collect": "node --import tsx scripts/collect-paper-catalog.mts",
+    "canary:isolate-research": "node --import tsx --env-file-if-exists=.env.local scripts/isolate-failed-canary-research.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",
