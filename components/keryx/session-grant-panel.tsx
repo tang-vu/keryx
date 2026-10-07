@@ -18,6 +18,7 @@ import { CircleGoogleWalletButton } from "./circle-google-wallet";
 import { FaucetPanel } from "@/components/keryx/faucet-panel";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { SessionCashoutPanel } from "./session-cashout-panel";
+import { ArcCardOnrampPanel } from "./arc-card-onramp-panel";
 
 export interface SessionGrantBinding {
   /** Retained sessionId for active, expired or paused grants; never fall back implicitly. */
@@ -104,6 +105,8 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
       {browserPaymentProfile().testnet && (state.status === "idle" || state.status === "revoked" || state.status === "error") && (
         <FaucetPanel />
       )}
+      {/* Optional mainnet card purchase into the owner wallet; hidden unless the server enables it. */}
+      {!browserPaymentProfile().testnet && <ArcCardOnrampPanel />}
       <GrantSpendDialog
         grantState={state}
         onActivate={(amount, options) => generateAndFund(amount, false, options)}

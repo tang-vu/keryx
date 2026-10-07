@@ -1,5 +1,24 @@
 # Keryx Project Changelog
 
+### Optional card purchase of USDC on Arc (2026-10-06, v0.27.13 candidate)
+
+- Add an optional mainnet step that lets a signed-in owner buy USDC with a debit
+  card, Apple Pay or Google Pay through Circle's Arc Onramp. The purchase runs in
+  Circle's own window; USDC is delivered to the signed-in wallet on Arc.
+- Keryx mints only a short-lived widget session. The delivery address is the
+  authenticated wallet and the request body is ignored. Keryx never receives the
+  funds, card or identity data, and stores no purchase state. Gateway deposit and
+  research budgets remain separate, unchanged, owner-signed steps.
+- Disabled by default: `KERYX_ARC_CARD_ONRAMP_ENABLED=true`, the mainnet profile
+  and a production Circle key are all required; otherwise the option is hidden and
+  its API refuses. No Content-Security-Policy change is needed.
+- Web only. Desktop, CLI, remote/stdio MCP, API clients, extensions and bots have
+  no card flow and keep their existing contracts and package versions.
+- [Configuration and remaining gates](arc-card-onramp.md). One production session
+  was minted with the owner's key; no purchase, identity check or delivery has
+  been observed. Circle business verification, regional availability and a real
+  owner purchase remain acceptance gates. Credit cards are not supported by Circle.
+
 ### Retain the reason when paid research cannot be synthesized (2026-10-07, v0.27.12 candidate)
 
 - Distinguish unavailable bounded input, written synthesis and evidence review
