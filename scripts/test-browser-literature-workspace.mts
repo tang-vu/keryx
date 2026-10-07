@@ -42,6 +42,7 @@ try {
     await entry.getByLabel("Your screening decision").selectOption("include");
     await entry.getByLabel("Why keep or exclude this paper? What needs checking?").fill('=1+1\nPRIVATE NOTE "literal" <script>');
     await entry.getByRole("button", { name: "Save screening and notes" }).click();
+    await page.getByText("Screening and notes saved on this browser.", { exact: true }).waitFor();
     await boot(page);
     assert.equal(await page.getByLabel("Review title", { exact: true }).inputValue(), "Grounding review");
     await page.locator("p").filter({ hasText: 'PRIVATE NOTE "literal" <script>' }).waitFor();
