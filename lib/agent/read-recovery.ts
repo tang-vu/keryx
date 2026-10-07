@@ -9,6 +9,9 @@ export function reportLabel(value: string): string {
 
 function recovery(code: string, vi: boolean): string {
   switch (code) {
+    case "publisher-verification-required": return vi
+      ? "Nhà xuất bản yêu cầu xác minh trình duyệt nên chưa đọc được tài liệu. Cung cấp bản gốc công khai có thể đọc của đúng tài liệu và phiên bản; trang xác minh không phải bằng chứng về bài báo."
+      : "The publisher requires browser verification, so the document was not read. Provide an accessible public original of the same document and version; the verification page is not evidence about the paper.";
     case "pdf-extraction-unavailable": return vi
       ? "Không trích xuất được văn bản PDF. Kiểm tra PDF có văn bản có thể chọn hay chỉ là ảnh; lấy bản PDF có lớp văn bản hoặc bản văn bản từ nhà xuất bản, giữ đúng tài liệu và phiên bản. Lượt này chưa thực hiện OCR."
       : "PDF text extraction failed. Check whether the PDF contains selectable text or only images; obtain a text-layer PDF or publisher text for the same document and version. This run did not perform OCR.";

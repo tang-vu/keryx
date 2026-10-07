@@ -509,6 +509,69 @@ it("reports supplied originals' read failures and existing URLs in empty recover
   expect(run.answer).not.toContain("supply a relevant original source URL");
 });
 
+it("finishes an OpenReview verification failure without synthesizing or paying and preserves it across result surfaces", async () => {
+  const engine = fakeEngine();
+  const synthesize = vi.spyOn(engine, "synthesize");
+  const d = deps([], engine, fakeGateway());
+  const fund = vi.spyOn(d.gateway, "ensureFunded");
+  d.webSearch = { search: async () => [] };
+  d.readWebArticle = vi.fn(async () => { throw new ArticleReadError("publisher-verification-required"); });
+  const { run } = await drive({ question: "Explain https://openreview.net/forum?id=w4DW6qkRmt using the original paper.", origin: "web" }, d);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(1);
+  expect(synthesize).not.toHaveBeenCalled();
+  expect(fund).not.toHaveBeenCalled();
+  expect((d.gateway as FakeGateway).fetchCalls).toEqual([]);
+  expect((d.gateway as FakeGateway).citationCalls).toEqual([]);
+  expect(run.totalSpent).toBe(0);
+  expect(run.citations).toEqual([]);
+  expect(run.evidence ?? []).toEqual([]);
+  expect(run.answer).toContain("Read failed: publisher-verification-required");
+  expect(run.answer).toContain("verification page is not evidence about the paper");
+  expect(run.trace.at(-1)?.phase).toBe("done");
+  const receipt = buildResearchReceipt(run, []);
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  expect(receipt.payload.dispatch.answer).toBe(run.answer);
+  expect(researchReportMarkdown(run, null, [])).toContain(run.answer);
+  expect(buildAnswerContent(run)).toContain(run.answer);
+  for (const result of [remoteResearchResult(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick"))]) {
+    expect(JSON.stringify(result)).toContain("publisher-verification-required");
+    expect(result.answer).toBe(run.answer);
+  }
+  for (const result of [remoteResearchResult(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick")), keryxMeta(run), surfaceResearch(run)]) {
+    expect(JSON.stringify(result)).not.toContain("Complete the check below");
+    expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
+  }
+});
+
+it("keeps a successful original and its exports when another paper requires publisher verification", async () => {
+  const d = deps([], fakeEngine(), fakeGateway());
+  const fund = vi.spyOn(d.gateway, "ensureFunded");
+  const readableUrl = "https://aclanthology.org/2020.acl-main.550/";
+  const original = "Exact original evidence from the readable public paper supports this synthetic research target.";
+  d.webSearch = { search: async () => [] };
+  d.readWebArticle = vi.fn(async url => {
+    if (new URL(url).hostname === "openreview.net") throw new ArticleReadError("publisher-verification-required");
+    return { text: original, title: "Readable original", finalUrl: url, kind: "html" as const, truncated: false };
+  });
+  const { run } = await drive({ question: `Compare https://openreview.net/forum?id=w4DW6qkRmt with ${readableUrl}`, origin: "web" }, d);
+  expect(run.citations.map(citation => citation.itemUrl)).toEqual([readableUrl]);
+  expect(run.evidence?.map(evidence => evidence.quote)).toEqual([original]);
+  expect(run.answer).toContain("verification page is not evidence about the paper");
+  expect(run.trace.at(-1)?.phase).toBe("done");
+  expect(run.totalSpent).toBe(0);
+  expect(fund).not.toHaveBeenCalled();
+  expect((d.gateway as FakeGateway).fetchCalls).toEqual([]);
+  expect((d.gateway as FakeGateway).citationCalls).toEqual([]);
+  const receipt = buildResearchReceipt(run, []);
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  for (const result of [remoteResearchResult(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick")), keryxMeta(run), surfaceResearch(run)]) {
+    expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
+    expect(result.researchExports?.ris.content).toContain(readableUrl);
+    expect(result.researchExports?.ris.content).not.toContain("openreview.net");
+    expect(result.researchExports?.evidenceCsv).toContain(original);
+  }
+});
+
 it("binds an extraction failure to the original asset after search changes its display title", async () => {
   const d = deps([], fakeEngine(), fakeGateway());
   d.webSearch = { search: async () => [{ title: "A renamed preview", url: "https://www.sqlite.org/wal.html", snippet: "preview" }] };

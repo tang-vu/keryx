@@ -1,5 +1,35 @@
 # Supported-surface release parity
 
+## Literature workspace candidate, October 7, 2026
+
+Web gains a local paper shortlist, review focus, personal screening/notes,
+CSV/JSON portability, shown-reference RIS and a deliberate two-paper draft handoff. Sources and
+ordinary editable question prefill share that workflow; no research is submitted
+automatically. The [workspace guide](literature-workspace.md) records its bounds,
+privacy, lock/conflict behavior and acceptance gates. Legacy automatic links
+retain their 500-character ceiling; editable drafts retain the form's existing
+2,000-character limit.
+
+Public/private APIs, remote and stdio MCP, CLI, desktop, extension and bots keep
+their response structures and roles. The browser-local list is not synchronized
+or exported through those adapters. The shared public reader also rejects the
+observed OpenReview verification route; its fixed failure and bilingual guidance
+reach hosted/repository research answers and receipts without admitting the access
+page as evidence. Successful reads in mixed runs remain available. Forwarding
+stdio/desktop clients, extensions and bots need no reader implementation changes;
+their separate package versions remain unchanged. Shared discovery recognizes
+adjacent exact-version comparison lists, and already-read targets use every
+explicit identity independently of discovery's cap. Observed PDF extraction
+uses [shared sentence boundaries](engineering/pdf-evidence-boundaries-2026-10-07.md)
+for span validation, strict menus, bounded nomination and review context; original
+text/offsets/hashes and all existing evidence/payment limits remain intact. The
+same shared code applies to hosted and repository research, including the
+heuristic engine; forwarding adapters contain no separate implementation. New hosted
+commit/version delivery remains unverified until the serialized Operator source
+gate clears, review/CI pass and production health is read back. No schema, registry,
+custody, model allowance, spend cap or schedule changes. Independent useful task
+completion and returning participants are separate evidence gates.
+
 ## Administrative backup safeguards, October 7, 2026
 
 Application **0.27.17 candidate** changes the administrative backup CLI and its

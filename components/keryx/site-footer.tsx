@@ -21,6 +21,7 @@ const HOUSE: FooterLink[] = [
   { label: "Ask a question", href: "/" },
   { label: "Past answers", href: "/answers" },
   { label: "Sources", href: "/sources" },
+  { label: "Literature workspace", href: "/literature" },
   { label: "Activity & proof", href: "/dashboard" },
   { label: "Public proof", href: "/proof" },
   { label: "For creators", href: "/register" },

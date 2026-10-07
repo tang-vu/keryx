@@ -103,6 +103,32 @@ See [scope, verification and release gates](engineering/research-availability-20
   This closes a failure-reporting gap; useful completed business delivery remains
   a separate acceptance requirement.
 
+### Personal literature workspace (2026-10-07, v0.27.19 candidate)
+
+- Save exact paper records from the starter library or explicit repository search,
+  keep a review question and personal inclusion/exclusion notes, and reopen the list.
+- Prepare an editable two-paper Deep comparison without automatic research. Full
+  nonautomatic question drafts retain both links; legacy automatic limits stay intact.
+- Keep the selected pair and exact versions visible across screening filters;
+  inspect the prepared question and saved focus, or remove either selection.
+- Keep the comparison action readable with distinct text and background colors.
+- Recognize exact arXiv pairs with a shared prefix in adjacent comparison lists.
+  Rank already-read paper context against every exact target identity, including
+  bare target IDs, independently of the discovery request cap.
+- For observed PDF extractions, retain whole wrapped sentence spans and their
+  contiguous context; reject sentence tails without changing original text,
+  offsets, hashes or evidence limits. See [PDF boundary validation](engineering/pdf-evidence-boundaries-2026-10-07.md).
+- Export screening CSV or a JSON backup. Preserve corrupt storage, reject invalid
+  backups, coordinate concurrent tab writes and keep unsaved drafts through filtering.
+- Download the shown bibliography as RIS for a reference manager. Preserve exact
+  versions and observed publication kinds; omit private notes and review focus.
+- Treat the observed OpenReview browser-verification redirect as an unread-source
+  failure, with recovery guidance in English and Vietnamese. Its instructions do
+  not enter synthesis, citations or evidence on any shared research result surface.
+- Personal list stays browser-only; no cloud sync, payment/schema change or native client release.
+  [Guide and remaining gates](literature-workspace.md). Production delivery and
+  independent usefulness/return demand remain separate acceptance work.
+
 ### Bounded dependency install retry on redeploy (2026-10-07, deployment tooling)
 
 - `npm run redeploy` repeats `npm ci` at most three times, 15 and 30 seconds apart,

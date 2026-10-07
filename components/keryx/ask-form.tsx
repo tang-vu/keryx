@@ -42,7 +42,7 @@ interface PickerModel {
 // visitor with the question (and budget) already filled — and, with run=1, dispatches
 // it automatically so the shared link opens straight onto a live run. Bounds mirror the
 // form's own limits so a crafted link can't smuggle an out-of-range budget or huge prompt.
-const MAX_SHARED_Q = 500;
+const MAX_AUTO_SHARED_Q = 500;
 /** A dispatch id is a UUID — pin the shape so a crafted link can't put arbitrary text on the wire. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -57,7 +57,9 @@ function readSharedAsk(): {
   if (typeof window === "undefined")
     return { q: null, budget: null, run: false, parent: null, model: null, mode: "quick" };
   const p = new URLSearchParams(window.location.search);
-  const q = p.get("q")?.trim().slice(0, MAX_SHARED_Q) || null;
+  // Editable drafts retain the form's full limit. Legacy automatic links keep
+  // their existing 500-character ceiling and authorization behavior.
+  const q = p.get("q")?.trim().slice(0, p.get("run") === "1" ? MAX_AUTO_SHARED_Q : MAX_ASK_QUESTION_CHARS) || null;
   const b = parseFloat(p.get("budget") ?? "");
   const budget = Number.isFinite(b) && b >= 0 && b <= 0.08 ? b : null;
   // Follow-up link from a dispatch permalink: the server re-reads this run and anchors the

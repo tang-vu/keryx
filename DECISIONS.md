@@ -1,5 +1,28 @@
 # Keryx — Decision Log
 
+**Keep PDF physical wraps out of evidence sentence boundaries — 2026-10-07.**
+An offline reproduction showed a newline-separated sentence tail passing the
+complete-span gate and strict quote menu. For observed PDF extractions, compute
+boundaries on an equal-length CR/LF-to-space view while retaining exact original
+text, UTF-16 offsets and hashes. Share those boundaries across span validation,
+strict menus, passage nomination and bounded review context; preserve independent
+physical-line heading hints. Keep existing caps, cut/Unicode rejection, non-PDF
+behavior and evidence/payment authority. This repairs structural selection, not
+reading order, semantic completeness, target coverage or independent usefulness.
+See [the validation and residual-risk record](docs/engineering/pdf-evidence-boundaries-2026-10-07.md).
+
+**Separate exact-paper discovery intent from already-read target identity — 2026-10-07.**
+An explicit arXiv prefix can carry through a locally adjacent comparison list;
+each inherited identifier must still state its exact version. Keep fixed official
+metadata transport and request limits, deduplicate in question order, and stop
+inheritance at unrelated prose. Library overflow detection must still see a third
+identifier and refuse the oversized lookup. For already-read context, use every
+exact target identity, including identifiers whose prefix was omitted during decomposition,
+instead of discovery's two-ID cap. This aligns ranking with the ledger's target
+grammar without turning ranking or metadata into citation, payout or document
+authority. Extraction/context ceilings, private/unattended disclosure policy,
+reviewed sentence/excerpt delivery and remaining usefulness gates stay intact.
+
 **Use an importer-recognized RIS type and literal provenance notes — 2026-10-07.**
 The active literature-review segment depends on reusable citation exports. A pinned
 Zotero translator reproduction showed our preprint `UNPB` tag defaults to
@@ -5721,6 +5744,58 @@ successfully with the owner's key on 2026-10-06 (no session id is returned, so i
 is optional). No purchase was made. Whether an individual can complete Circle's
 business verification, which countries are served, and provider fees and limits
 are unverified and remain gates. See [Arc card onramp](docs/arc-card-onramp.md).
+
+## Browser-local literature screening and deliberate research handoff - 2026-10-07
+
+The owner requested deeper practical utility, traction-oriented product work and
+UI/UX while another session owns Operator. The owner-confirmed outreach segments
+include literature-review researchers. The paper library already offers bounded
+metadata discovery; a personal shortlist connects that entry point to screening,
+revisiting and exporting an actual review without initiating model or payment work.
+This is a usefulness hypothesis, not observed demand.
+
+Keep one bounded local review with exact landing-URL snapshots, user-authored
+decisions/notes, explicit saves, formula-safe screening CSV and a strict portable
+backup. Retain different repository versions and the first saved observation;
+mutable grouping IDs never overwrite a saved paper. Metadata and personal notes
+gain no read, citation or payout authority. All cooperating tab mutations share an
+exclusive Web Lock; unsupported browsers refuse writes. Preserve dirty editors
+through filtering and external changes and refuse stale same-field updates.
+
+Only the saved review question and two chosen links enter a deliberate editable
+Deep draft. Preserve the full existing 2,000-character form limit for nonautomatic
+prefill, while legacy automatic links keep their existing 500-character bound.
+No automatic research, private-note upload, cloud list, new database/schema,
+spending, custody or scheduler follows. Other surfaces keep their documented roles.
+Keep the chosen pair visible independently of the screening filter, label hidden
+selections and expose the exact prepared question/saved focus before navigation.
+Titles, versions and screening labels help local inspection; they do not add fields
+to the draft or acquire evidence authority. Individual removal changes selection
+only and starts no research or persistence mutation.
+Independent task usefulness, return use and the serialized Operator release gate
+remain open. See [behavior and acceptance](docs/literature-workspace.md).
+
+The saved shortlist also needs a usable reference-manager handoff. Export RIS from
+the explicitly shown filter, with its count visible, using only validated saved
+PaperRecords. Keep this adapter separate from cited-reference serialization: these
+records have no read scope or Citation authority. Preserve exact versions, observed
+publication kinds and metadata/author limitations; omit review focus, screening and
+personal notes. No PDF attachment or enrichment is requested. Pinned Zotero parser
+checks establish only their specified synthetic import behavior, not application or
+independent participant acceptance. The paid citation formatter owned by PR204 is
+unchanged by this browser-local adapter.
+
+An October 7 bounded read of the saved SuRe OpenReview landing URL redirected to
+`openreview.net/challenge` and extracted 146 characters of verification instructions,
+not paper text. The saved PDF also failed transport in that observation. Reject this
+exact publisher route before parsing with a fixed `publisher-verification-required`
+category and deterministic English/Vietnamese recovery. Keep successful originals
+readable even if their prose discusses verification. Do not turn the access page
+into evidence or silently replace a landing identity with an imported PDF link;
+the bibliography does not attest that relationship. Existing public DNS/byte/time
+limits, one-source failure containment and research response structures stay intact.
+This closes the observed false-read path, not every publisher interstitial or the
+remaining full-paper comparison/usefulness gates.
 
 ## 2026-10-07: Observe admission separately from connectivity
 

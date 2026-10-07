@@ -163,6 +163,11 @@ export default async function SourcesPage({ searchParams }: {
 
         <SourceLibraryFilters filters={filters} total={allRecords.length} matched={matches.length} publishers={libraryPublisherGroups(matches)} />
 
+        <Link prefetch={false} href="/literature" className="mt-5 flex min-h-11 flex-wrap items-center justify-between gap-3 border border-line bg-panel p-5 text-ink">
+          <span><span className="block font-display text-xl">Working on a literature review?</span><span className="mt-1 block font-serif text-sm text-ink-2">Save papers, record screening notes and prepare a comparison. Your list stays on this browser.</span></span>
+          <span className="font-mono text-xs text-seal underline">Open literature workspace →</span>
+        </Link>
+
         {showCollection("paper") && <section id="research-papers" className="mt-10 scroll-mt-6" aria-labelledby="research-papers-title">
           <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ink pb-3">
             <h2 id="research-papers-title" className="font-display text-2xl text-ink">Research papers</h2>

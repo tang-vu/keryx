@@ -5,7 +5,7 @@ import { bodyIdentity, canonicalUrl, digest, publisherGroup } from "./url-identi
 import type { GatheredContent } from "../llm";
 
 export interface ArticleRead { text: string; title: string; finalUrl: string; kind: "html" | "text" | "pdf"; truncated: boolean }
-export type ArticleFailureCode = "invalid-url" | "document-identity-changed" | "transport-unavailable" | "article-byte-limit" | "html-extraction-unavailable" | "pdf-extraction-unavailable" | "cancelled";
+export type ArticleFailureCode = "invalid-url" | "document-identity-changed" | "publisher-verification-required" | "transport-unavailable" | "article-byte-limit" | "html-extraction-unavailable" | "pdf-extraction-unavailable" | "cancelled";
 export class ArticleReadError extends Error {
   constructor(readonly code: ArticleFailureCode) { super(code); this.name = "ArticleReadError"; }
 }
@@ -26,6 +26,12 @@ export const readArticle: ArticleReader = async (url, signal) => {
     httpsOnly: true, allowedContentTypes: ["text/html", "application/xhtml+xml", "text/plain", "text/markdown", "application/pdf"] }).catch(error => {
       throw new ArticleReadError(signal?.aborted ? "cancelled" : error instanceof UnsafeTargetError && error.message === "that file is too large to read" ? "article-byte-limit" : "transport-unavailable");
     });
+    // OpenReview can return a successful HTML response at this verification route.
+    // Its instructions are an access failure, never text from the requested paper.
+    const finalLocation = new URL(fetched.finalUrl);
+    if (finalLocation.hostname === "openreview.net" && /^\/challenge\/?$/u.test(finalLocation.pathname)) {
+      throw new ArticleReadError("publisher-verification-required");
+    }
     if (fetched.contentType === "application/pdf") {
       const result = await extractPdfText(fetched.bytes, { signal, maxPages: 20, maxChars: 60000, timeoutMs: 5000 }).catch(() => { throw new ArticleReadError(signal?.aborted ? "cancelled" : "pdf-extraction-unavailable"); });
       return { text: result.text, title: new URL(fetched.finalUrl).hostname, finalUrl: fetched.finalUrl, kind: "pdf", truncated: result.truncated };

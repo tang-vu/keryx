@@ -10,6 +10,15 @@ const source: GatheredContent = { sourceId: "original", sourceName: "Original", 
   webProvenance: { retrievedAt: "2026-10-04T00:00:00Z", publisherGroup: "example.org", normalizedBodyHash: "body", extraction: "pdf", truncated: true } };
 
 describe("bounded research follow-up", () => {
+  it("explains publisher verification as unread content in both languages without starting recovery", () => {
+    for (const vi of [false, true]) {
+      const text = researchFollowUp({ vi, outcomes: [{ name: "OpenReview paper", code: "publisher-verification-required" }], gathered: [], conflicts: [] });
+      expect(text).toContain(vi ? "chưa đọc được tài liệu" : "document was not read");
+      expect(text).toContain(vi ? "đúng tài liệu và phiên bản" : "same document and version");
+      expect(text).toContain(vi ? "trang xác minh không phải bằng chứng" : "verification page is not evidence");
+      expect(text).not.toMatch(/\[S1\]|Sign in|Complete the check|PRIVATE_RESPONSE/);
+    }
+  });
   it.each(["input", "generation", "review", "synthesis"] as const)("keeps completed reads distinct from a %s failure in both languages", stage => {
     for (const vi of [false, true]) {
       const text = researchFollowUp({ vi, outcomes: [], gathered: [{ ...source, webProvenance: undefined }], conflicts: [],
