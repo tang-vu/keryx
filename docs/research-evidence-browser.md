@@ -23,19 +23,25 @@ unknown, distinct from an empty list or empty preview. Failed reads can be retri
 Requests time out after 15 seconds and remain GET-only. Search stays in component
 memory and is not placed in the URL or sent to the API.
 
-The existing reading engine still selects evidence. Research uses registered
-creator sources and free public RSS references; external marketplace endpoints are
-discovery-only. It does not perform unrestricted web browsing. A corpus preview
-does not guarantee a useful or supported answer. The seller link goes to existing
+The existing reading engine still selects evidence. Configured research can also
+use [bounded web discovery and original-document reading](broad-web-research.md)
+beyond registered creator sources and free public RSS references; external
+marketplace endpoints remain discovery-only. This panel searches only its loaded
+source metadata, not the web. Search previews and a corpus preview do not establish
+document contents or guarantee a useful answer. The seller link goes to existing
 registration/ownership verification, without a promised purchase or citation.
 
-After reads, new evidence-bearing completions deliver openly quoted qualified
-source excerpts with unverified research topics and gaps. Complete synthesis stays
-unverified even if every target has an excerpt; source-marker admission cannot
-establish support for omitted draft assertions. Recorded support/coverage estimates
-are not factual accuracy or entailment. This staged delivery boundary neither proves
-source quality nor makes a preview purchase-worthy. See [scholarly research](scholarly-research.md)
-and [researcher exports](researcher-exports.md).
+After reads, the current JSON-engine contract can deliver
+[sentence-cited summaries](engineering/cited-summary-2026-10-06.md): each accepted
+model-written sentence is paired with the one verbatim excerpt it was reviewed
+against. Qualified excerpts and gaps remain when no sentence survives or the
+engine does not implement that contract. Complete synthesis stays unverified;
+source-marker admission and recorded support/coverage cannot establish factual
+accuracy, complete comparisons or support for omitted assertions. The reviewed
+decision brief remains disabled. This boundary neither proves source quality nor
+makes a preview purchase-worthy. See [scholarly research](scholarly-research.md)
+and [researcher exports](researcher-exports.md). Current production availability
+and real-user acceptance require their own evidence.
 
 Run `node --import tsx scripts/test-research-evidence-browser.mts` for the hermetic
 Chromium acceptance. It is also part of `npm run test:browser-research-ux` after the
