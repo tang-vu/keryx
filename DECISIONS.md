@@ -5609,3 +5609,27 @@ resolution and BibTeX/RIS export already serve it. Two general open calls produc
 no recorded participant, so direct asks on a participant's own question are
 preferred. Choosing a single lead segment, and any remedy for first-time USDC
 wallet funding, stay open. See [Tameion direction](docs/tameion-2026.md).
+
+## Freeze explicit supplier extensions in a distinct authority - 2026-10-07
+
+The same-original recovery lane's historical v1 deadline expired before useful
+delivery. Changing its literal would rewrite retained authority; changing only an
+environment or private helper would disagree with native admission. Preserve v1
+exactly and introduce a discriminated v2 carrying the actual permission-receipt
+time and explicit expiry, with a positive interval bounded to 90 minutes. Build
+and deployment time consume this interval. No clock default or automatic renewal
+creates financial permission.
+
+Copy the exact window into the hashed native authority and validate the recorded
+claim time inside it. The existing permanent unique original claim prevents a
+renewed window from replacing an unfinished execution. No database schema change
+is needed. Fresh host, source, protected-file, ledger and deadline-abort checks
+remain required for supplier calls. Historical verification and exact-digest
+metadata completion after expiry remain valid without reopening admission.
+
+The same three-call limit, fixed tariff, old holds, original settlement and frozen
+public evidence stay bound. No new order/payment, search, reward, retry, provider
+fallback or public recovery endpoint is added. Independent usefulness, actual
+billing, ordinary-service restoration and Tameion acceptance remain separate gates.
+See [procedure](docs/operator-original-fulfillment.md) and
+[release scope](docs/engineering/operator-fulfillment-window-2026-10-07.md).

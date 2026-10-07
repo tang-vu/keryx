@@ -1,5 +1,18 @@
 # Supported-surface release parity
 
+## Explicit supplier window, October 7, 2026
+
+Application **0.27.11 candidate** adds a distinct private v2 same-original
+fulfillment authority with an explicitly supplied frozen window of at most
+90 minutes. Shared server/database policy receives this update; public web,
+API/SSE, A2A, remote MCP and bot answer/receipt contracts remain unchanged. The
+private CLI uses the same schema and grants no public retry or automatic renewal.
+Desktop **0.4.7**, caller-funded stdio MCP **0.4.6**, remote MCP **0.3.2**,
+extension **0.1.1** and repository CLI retain their existing roles and separate
+release identities. Runtime closure/byte comparisons, published artifacts and
+installed clients are distinct evidence; app deployment never proves client
+upgrades. See [scope and remaining gates](engineering/operator-fulfillment-window-2026-10-07.md).
+
 ## Hosted MCP SDK dependency, October 7, 2026
 
 Application **0.27.10 candidate** pins the root MCP SDK to 1.31.0 without changing
