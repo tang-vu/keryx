@@ -31,6 +31,11 @@ product work. Internal evaluation is separate from independent customer demand.
    offline/testnet validation and bounded mainnet acceptance where authorized.
    Deployment does not close the remaining product/usefulness or financial gates.
 
+The private [same-original fulfillment window](operator-original-fulfillment.md)
+keeps explicitly approved supplier time separate from deployment and historical
+metadata completion. The held paid original must pass native delivery and ordinary
+service restoration before its canary is counted as delivered.
+
 The former long-range roadmap and version table are preserved in
 [Git history](https://github.com/tang-vu/keryx/blob/742454a/docs/project-roadmap.md).
 They are historical, not current deadlines.

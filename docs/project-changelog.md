@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Explicit same-original supplier window (2026-10-07, v0.27.11 candidate)
+
+- Add a private v2 authority with a supplied, frozen window of at most 90 minutes
+  from permission receipt. Keep expired v1 records and their fixed deadline intact.
+- Bind the window to the permanent native original claim. Preserve three model
+  calls, the same tariff and old holds; prepared metadata can complete after expiry.
+- No new order, charge, search, creator payment, retry or automatic renewal.
+  Public answers and receipts retain their existing contracts.
+- [Procedure](operator-original-fulfillment.md) and
+  [validation, distribution boundaries and live gates](engineering/operator-fulfillment-window-2026-10-07.md).
+  Source validation does not establish deployment, useful delivery or traction.
+
 ### Hosted MCP SDK security dependency (2026-10-07, v0.27.10 candidate)
 
 - Pin the app's MCP SDK to 1.31.0, the maintainer's fixed version for

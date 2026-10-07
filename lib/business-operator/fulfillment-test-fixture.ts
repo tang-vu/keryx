@@ -15,6 +15,7 @@ import { activateBusinessCanary, admitBusinessCanaryRun, assertPreparedCanarySub
   canaryOriginalClaim, closeVerifiedFailedBusinessCanary, retainedFailedBusinessCanaryAuthority, type BusinessCanaryPolicy } from "./canary-policy";
 import { fulfillmentDirectory, readFrozenFulfillmentPacket, readFulfillmentAuthorization,
   type FulfillmentAuthorization } from "./fulfillment-policy";
+import type { FulfillmentSupplierWindow } from "../a2a/fulfillment-window";
 
 export const fixtureNow = "2026-10-06T12:00:00.000Z", fixtureCommit = "c".repeat(40);
 export const fixtureFlush = process.platform === "win32" ? () => {} : undefined;
@@ -116,4 +117,16 @@ export async function fulfillmentFixture(fiveTargets = false) {
   const authorizationDigest = fulfillmentSha256(fs.readFileSync(authorizationFile));
   return { root, oldDirectory, order, db, packet, authorization, authorizationFile, authorizationDigest,
     binding: readFulfillmentAuthorization(authorizationFile, authorizationDigest), docs, old };
+}
+
+/** Explicit synthetic window only; never used to provision actual permission. */
+export function withFulfillmentSupplierWindow(value: Awaited<ReturnType<typeof fulfillmentFixture>>,
+  supplierWindow: FulfillmentSupplierWindow, approvedAt: string) {
+  const authorization: FulfillmentAuthorization = { ...value.authorization,
+    format: "keryx-canary-original-fulfillment-authorization-v2", supplierWindow,
+    approvedAt, expiresAt: supplierWindow.expiresAt };
+  fs.writeFileSync(value.authorizationFile, JSON.stringify(authorization));
+  const authorizationDigest = fulfillmentSha256(fs.readFileSync(value.authorizationFile));
+  return { ...value, authorization, authorizationDigest,
+    binding: readFulfillmentAuthorization(value.authorizationFile, authorizationDigest) };
 }

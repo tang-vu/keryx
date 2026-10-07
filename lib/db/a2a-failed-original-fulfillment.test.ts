@@ -8,7 +8,7 @@ import { SupabaseAdapter } from "./supabase-adapter";
 import { SUPABASE_ENROLLED_METHODS } from "./supabase-enrolled-methods";
 import { seedSyntheticA2aOriginal } from "./a2a-original-fixture";
 import { syntheticFailedOriginal, syntheticFulfilledRun } from "./a2a-fulfillment-fixture";
-import { fulfillmentObjectSha256 } from "../a2a/failed-original-fulfillment-protocol";
+import { fulfillmentObjectSha256, fulfillmentAuthoritySchema } from "../a2a/failed-original-fulfillment-protocol";
 import { finalizeGroundedAnswer } from "../agent/answer-grounding";
 
 const cleanup: Array<() => void> = [];
@@ -27,6 +27,51 @@ const getClaim = async (f: Awaited<ReturnType<typeof setup>>) => {
 };
 
 describe("same failed original native fulfillment", () => {
+  it("keeps a v1 native claim readable after its historical fixed expiry", async () => {
+    const f = await setup(), claim = await getClaim(f);
+    vi.setSystemTime("2026-10-07T04:00:00.000Z");
+    expect((await f.db.getA2aFailedOriginalFulfillment(f.fixture.order.id))?.claim).toEqual(claim);
+    expect(claim.authority.format).toBe("keryx-a2a-failed-original-fulfillment-authority-v1");
+  });
+  it("refuses native v2 admission before approval and never renews a permanent original claim", async () => {
+    const f = await setup(), supplierWindow = { approvalReceivedAt: "2026-10-07T01:30:00.000Z",
+      expiresAt: "2026-10-07T03:00:00.000Z", maximumDurationMs: 5_400_000 as const };
+    const authority = fulfillmentAuthoritySchema.parse({ ...f.fixture.authority,
+      format: "keryx-a2a-failed-original-fulfillment-authority-v2", expiresAt: supplierWindow.expiresAt, supplierWindow });
+    vi.setSystemTime("2026-10-07T01:29:59.999Z");
+    await expect(f.db.claimA2aFailedOriginalFulfillment({ ...f.fixture.input, authority,
+      claimedAt: new Date().toISOString() })).rejects.toThrow(/window/);
+    // A caller cannot use a future recorded time to cross the actual-time guard.
+    await expect(f.db.claimA2aFailedOriginalFulfillment({ ...f.fixture.input, authority,
+      claimedAt: supplierWindow.approvalReceivedAt })).rejects.toThrow(/window/);
+    expect(await f.db.getA2aFailedOriginalFulfillment(f.fixture.order.id)).toBeNull();
+    vi.setSystemTime("2026-10-07T01:30:05.000Z");
+    const claim = await f.db.claimA2aFailedOriginalFulfillment({ ...f.fixture.input, authority, claimedAt: new Date().toISOString() });
+    expect(claim).not.toBeNull();
+    vi.setSystemTime("2026-10-07T01:32:00.000Z");
+    const renewed = fulfillmentAuthoritySchema.parse({ ...authority, expiresAt: "2026-10-07T03:01:00.000Z",
+      supplierWindow: { ...supplierWindow, approvalReceivedAt: "2026-10-07T01:31:00.000Z", expiresAt: "2026-10-07T03:01:00.000Z" } });
+    expect(await f.db.claimA2aFailedOriginalFulfillment({ ...f.fixture.input, authority: renewed,
+      claimId: "bc".repeat(32), claimedAt: new Date().toISOString() })).toBeNull();
+    expect((await f.db.getA2aFailedOriginalFulfillment(f.fixture.order.id))?.claim).toEqual(claim);
+  });
+  it("allows exact v2 metadata completion after expiry but altered window authority cannot prove delivery", async () => {
+    const f = await setup(), supplierWindow = { approvalReceivedAt: "2026-10-07T01:30:00.000Z",
+      expiresAt: "2026-10-07T03:00:00.000Z", maximumDurationMs: 5_400_000 as const };
+    const authority = fulfillmentAuthoritySchema.parse({ ...f.fixture.authority,
+      format: "keryx-a2a-failed-original-fulfillment-authority-v2", expiresAt: supplierWindow.expiresAt, supplierWindow });
+    vi.setSystemTime("2026-10-07T01:30:05.000Z");
+    const claim = await f.db.claimA2aFailedOriginalFulfillment({ ...f.fixture.input, authority, claimedAt: new Date().toISOString() });
+    expect(claim).not.toBeNull(); const result = syntheticFulfilledRun(claim!);
+    result.run.createdAt = "2026-10-07T01:31:00.000Z"; result.runSha256 = fulfillmentObjectSha256(result.run);
+    result.completedAt = "2026-10-07T03:00:10.000Z";
+    vi.setSystemTime(result.completedAt);
+    expect(await f.db.completeA2aFailedOriginalFulfillment(result)).toBe(true);
+    expect(await f.db.hasA2aFailedOriginalFulfillment(authority)).toBe(true);
+    expect(await f.db.hasA2aFailedOriginalFulfillment(fulfillmentAuthoritySchema.parse({ ...authority,
+      supplierWindow: { ...supplierWindow, approvalReceivedAt: "2026-10-07T01:30:00.001Z" } }))).toBe(false);
+    expect((await f.db.getA2aFailedOriginalFulfillment(f.fixture.order.id))?.claim.authority).toEqual(authority);
+  });
   it("admits one permanent claimant, preserves the original and rejects a second connection or takeover", async () => {
     const f = await setup(), foreign = await seedSyntheticA2aOriginal(f.db, syntheticFailedOriginal(2));
     const other = new SqliteAdapter(f.file); cleanup.push(() => other.close()); await other.init();

@@ -40,8 +40,36 @@ tariff and model alias routing must be captured and checked before live executio
 The alias may route to a newer vendor model; the requested alias alone does not
 prove the exact serving model. The retained **20,660 micro-USD** reservation is a
 conservative ceiling, not a provider invoice. The original model/search billing
-remains unknown. Supplier permission still ends at **2026-10-07T00:00:00Z**;
-the later owner deadline does not extend it.
+remains unknown. The historical v1 supplier permission ended at
+**2026-10-07T00:00:00Z**. Its strict format and expiry remain unchanged for retained
+evidence. A later owner deadline never extends that v1 authorization.
+
+### Explicit bounded successor window
+
+The v2 private authorization and native authority require an explicitly supplied
+`supplierWindow`: canonical UTC `approvalReceivedAt`, canonical UTC `expiresAt`
+and `maximumDurationMs: 5400000`. The positive interval may be at most 90 minutes.
+Its expiry must equal the authorization's top-level expiry, and permission receipt
+must precede or equal authorization creation, which must precede expiry. There is
+no default window, clock-derived renewal or permission created by deployment.
+Freeze the actual receipt time of the applicable owner approval; build, deployment
+and staging consume that window rather than restarting it.
+
+The exact window is copied into the native authority and its canonical hash. The
+claim's recorded time must fall inside that window; the native store additionally
+rejects future claim times and expired live admission. The permanent unique claim
+by original prevents replacing a claimed window or taking over an unfinished
+execution. Historical reads validate the recorded times, allowing retained v1/v2
+records and genuinely prepared results to be reviewed and completed after expiry.
+They do not admit another supplier call. Live execution keeps its fresh protected
+file, host, clean commit, reservation and expiry checks, including the deadline
+abort signal.
+
+This source change alone grants no supplier authority. A reviewed, deployed source,
+fresh native original/ledger evidence, protected explicit owner-approved v2 tuple
+and remaining execution window are required before the single execution. Changing
+an environment date or a private helper cannot bypass the product schema. See
+[release validation and surface boundaries](engineering/operator-fulfillment-window-2026-10-07.md).
 
 The old one model and two searches retain **36,660 micro-USD**. The historical
 unused ceiling is ten model calls and **243,260 micro-USD** combined. The additive
