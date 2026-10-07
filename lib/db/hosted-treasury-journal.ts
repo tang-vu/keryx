@@ -173,7 +173,7 @@ export function admitSqliteHostedAuthorization(db: DatabaseSync, input: HostedAu
   db.prepare("INSERT INTO hosted_treasury_authorizations(nonce,policy_digest,signer,query_id,amount_micro,original) VALUES(?,?,?,?,?,?)").run(nonce,digest,p.signer,c.queryId,amount,original);
   if(!c.privateJob) db.prepare(`INSERT INTO payment_events(id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,network,settled,settlement_status,
    authorization_id,authorization_expires_at,item_id,origin,authorization_phase) VALUES(?,?,?,?,?,?,?,?,?,?,0,'pending',?,?,?,'engine','prepared')`)
-   .run('x402:'+nonce,new Date().toISOString(),c.kind,c.queryId,c.sourceId,c.sourceId,p.signer,String(payload.message.to).toLowerCase(),amount/1e6,
+   .run('x402:'+nonce,new Date().toISOString(),c.kind,c.queryId,c.sourceId,c.kind === "operating-fee" ? "Keryx operating fee" : c.sourceId,p.signer,String(payload.message.to).toLowerCase(),amount/1e6,
     ARC_MAINNET_PROFILE.networkId,nonce,new Date(Number(payload.message.validBefore)*1000).toISOString(),c.itemId);
  });
  return nonce;

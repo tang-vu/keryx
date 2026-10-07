@@ -61,8 +61,8 @@ function submit(value: ReturnType<typeof fixture>, input: HostedAuthorizationAdm
 
 it("retains sponsored operating fees in the existing public journal and confirms only the same submitted original", () => {
   const value = fixture(), input = admission(value), nonce = admitSqliteHostedAuthorization(value.db, input, value.identity);
-  expect(value.db.prepare("SELECT kind,source_id,settled,authorization_phase FROM payment_events WHERE authorization_id=?").get(nonce))
-    .toEqual({ kind: "operating-fee", source_id: OPERATING_FEE_SOURCE_ID, settled: 0, authorization_phase: "prepared" });
+  expect(value.db.prepare("SELECT kind,source_id,source_name,settled,authorization_phase FROM payment_events WHERE authorization_id=?").get(nonce))
+    .toEqual({ kind: "operating-fee", source_id: OPERATING_FEE_SOURCE_ID, source_name: "Keryx operating fee", settled: 0, authorization_phase: "prepared" });
   expect(sqliteHostedAccounting(value.db, signer)).toEqual({ retainedMicroUsdc: "25000", confirmedMicroUsdc: "0" });
   expect(() => confirmSqliteHostedAuthorization(value.db, signer, nonce, "synthetic-settlement")).toThrow();
   submit(value, input, nonce); confirmSqliteHostedAuthorization(value.db, signer, nonce, "synthetic-settlement");
