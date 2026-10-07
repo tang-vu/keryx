@@ -82,7 +82,7 @@ See [scope, verification and release gates](engineering/research-availability-20
   This closes a failure-reporting gap; useful completed business delivery remains
   a separate acceptance requirement.
 
-### Personal literature workspace (2026-10-07, v0.27.18 candidate)
+### Personal literature workspace (2026-10-07, v0.27.19 candidate)
 
 - Save exact paper records from the starter library or explicit repository search,
   keep a review question and personal inclusion/exclusion notes, and reopen the list.
