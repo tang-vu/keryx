@@ -1,4 +1,5 @@
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
+import { researchAdmissionError } from "../research/availability-contract";
 import { ReasoningOutputValidationError } from "./reasoning-engine";
 import { ResearchSelectionError } from "./research-selection";
 
@@ -75,6 +76,8 @@ export async function boundedResearchPlan(question: string, call: () => Promise<
 
 /** Render only for the original caller; suggestions are not copied into accounting or logs. */
 export function researchFailureMessage(error: unknown): string {
+  const held = researchAdmissionError(error);
+  if (held) return held.message;
   if (error instanceof ResearchSelectionError) {
     const diagnostic = error.diagnostic;
     const reasons = [...new Set(diagnostic.reasons.map(item => item.code))].join(", ");

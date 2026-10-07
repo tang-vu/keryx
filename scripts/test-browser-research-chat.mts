@@ -42,6 +42,7 @@ try {
       if (url.pathname === "/api/activation") return route.fulfill({ json: {} });
       assert.equal(request.method(), "GET", `Unexpected write: ${url.pathname}`);
       if (url.pathname === "/api/models") return route.fulfill({ json: { models: [{ id: "deepseek", label: "DeepSeek", note: "Default" }, { id: "fixture-model", label: "Fixture model", note: "Synthetic" }] } });
+      if (url.pathname === "/api/research/availability") return route.fulfill({ json: { state: "not-paused" } });
       if (url.pathname === "/api/auth/session") return route.fulfill({ json: { authenticated: false } });
       return route.fulfill({ json: { sources: [], payments: [], activity: [], runs: [], jobs: [] } });
     });
