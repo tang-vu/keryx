@@ -69,8 +69,25 @@ describe("public research availability", () => {
     expect(await refused.json()).toMatchObject({ error: { data: { code: "research_paused" }, message: RESEARCH_PAUSED_MESSAGE } });
     const discovered = await mcp(request("/mcp", { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }));
     expect(discovered.status).toBe(200);
-    expect((await discovered.json()).result.tools).toHaveLength(4);
+    expect((await discovered.json()).result.tools.map((tool: { name: string }) => tool.name)).toEqual([
+      "paper_lookup", "research", "keryx_status", "research_monthly", "keryx_operator_status",
+    ]);
     expect(mocks.run).not.toHaveBeenCalled(); expect(mocks.quota).not.toHaveBeenCalled(); expect(mocks.db).not.toHaveBeenCalled();
+  });
+  it("serves retained bibliography during a research hold without research, quota, database or network work", async () => {
+    const http = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Retained bibliography must not fetch"));
+    try {
+      const response = await mcp(request("/mcp", { jsonrpc: "2.0", id: 3, method: "tools/call",
+        params: { name: "paper_lookup", arguments: { query: "arXiv:2005.11401v4" } } }));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ result: { structuredContent: {
+        scope: "bibliography-only", totalWorks: 1, providers: [],
+        groups: [{ record: { arxivId: "2005.11401v4", authors: expect.arrayContaining(["Patrick Lewis"]) } }],
+      } } });
+      expect(mocks.deps).not.toHaveBeenCalled(); expect(mocks.run).not.toHaveBeenCalled();
+      expect(mocks.quota).not.toHaveBeenCalled(); expect(mocks.db).not.toHaveBeenCalled();
+      expect(http).not.toHaveBeenCalled();
+    } finally { http.mockRestore(); }
   });
   it("keeps real-SDK MCP connectivity truthful and refuses direct tool calls without invoking research", async () => {
     const runner = vi.fn();
