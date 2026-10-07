@@ -1,7 +1,7 @@
 import { JsonChatEngine, type ChatJsonOptions } from "../llm/json-chat-engine";
 import { config } from "../config";
 import { OpenAICompatibleEngine } from "../llm/openai-compatible-engine";
-import { ReasoningInputLimitError, ReasoningOutputValidationError, reasoningOutputTokenLimit, type ReasoningEngine, type SufficiencyInput, type SufficiencyResult, type SynthResult } from "../llm/reasoning-engine";
+import { ReasoningInputLimitError, ReasoningOutputValidationError, outputTokenLimitFromValidatedError, type ReasoningEngine, type SufficiencyInput, type SufficiencyResult, type SynthResult } from "../llm/reasoning-engine";
 import { buildEvidenceLedger } from "../agent/evidence-ledger";
 import { selectCitedStatements } from "../agent/cited-statements";
 import { renderFulfilledOriginalAnswer, type FulfillmentEvidenceGap } from "./original-fulfillment-answer";
@@ -96,7 +96,7 @@ class OriginalFulfillmentEngine extends OpenAICompatibleEngine {
       // Supplier bodies can echo private context. Only a bounded category leaves this path.
       closeFulfillmentCapability(this.capability);
       if (error instanceof ReasoningInputLimitError) throw error;
-      if (error instanceof ReasoningOutputValidationError) throw new ReasoningOutputValidationError("Original fulfillment output validation failed; reservation retained", reasoningOutputTokenLimit(error));
+      if (error instanceof ReasoningOutputValidationError) throw new ReasoningOutputValidationError("Original fulfillment output validation failed; reservation retained", outputTokenLimitFromValidatedError(error));
       throw new Error("Original fulfillment supplier failed; reservation retained");
     }
   }

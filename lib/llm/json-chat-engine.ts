@@ -21,7 +21,7 @@ import { buildEvidenceReviewInput } from "./evidence-review-input";
 import { MAX_SELECTION_DIAGNOSTIC_HISTORY, ResearchSelectionError, invalidResearchSelectionOutput, parseResearchSelection } from "./research-selection";
 import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/selection-diagnostic";
 import type { Decision } from "../types";
-import { ReasoningOutputValidationError, reasoningOutputTokenLimit } from "./reasoning-engine";
+import { ReasoningOutputValidationError, outputTokenLimitFromValidatedError } from "./reasoning-engine";
 import { synthesisOutputLimitFromError } from "./output-limit-diagnostic";
 import type {
   AttributeInput,
@@ -157,12 +157,12 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   private selectionFailure(error: unknown, batchIndex: number, input?: DecideInput): unknown {
     try {
       if (error instanceof ResearchSelectionError) {
-        const refusal = new ResearchSelectionError(error.diagnostic, reasoningOutputTokenLimit(error));
+        const refusal = new ResearchSelectionError(error.diagnostic, outputTokenLimitFromValidatedError(error));
         this.recordSelectionDiagnostic(refusal.diagnostic);
         return refusal;
       }
       if (input && error instanceof ReasoningOutputValidationError) {
-        const refusal = invalidResearchSelectionOutput(input, reasoningOutputTokenLimit(error));
+        const refusal = invalidResearchSelectionOutput(input, outputTokenLimitFromValidatedError(error));
         this.recordSelectionDiagnostic(refusal.diagnostic);
         return refusal;
       }

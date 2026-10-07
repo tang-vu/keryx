@@ -1,6 +1,6 @@
 import { OpenAICompatibleEngine } from "../llm/openai-compatible-engine";
 import type { ChatJsonOptions } from "../llm/json-chat-engine";
-import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError, reasoningOutputTokenLimit } from "../llm/reasoning-engine";
+import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError, outputTokenLimitFromValidatedError } from "../llm/reasoning-engine";
 import { configuredBusinessCanary, reserveCanaryModel } from "./canary-policy";
 
 const JSON_INSTRUCTION = " Respond with a single JSON object.";
@@ -45,7 +45,7 @@ function redactedCanaryFailure(error: unknown): Error {
     ? suppliedStatus : undefined;
   const retained = `${status ? ` (${status})` : ""}; reservation retained`;
   if (error instanceof ReasoningOutputValidationError)
-    return Object.assign(new ReasoningOutputValidationError(`Business canary output failed validation${retained}`, reasoningOutputTokenLimit(error)), { status });
+    return Object.assign(new ReasoningOutputValidationError(`Business canary output failed validation${retained}`, outputTokenLimitFromValidatedError(error)), { status });
   if (error instanceof ReasoningTransportError) {
     const failure = new ReasoningTransportError(error.category);
     failure.message = `Business canary provider request failed (${error.category}); reservation retained`;

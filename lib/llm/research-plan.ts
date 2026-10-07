@@ -1,6 +1,6 @@
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { researchAdmissionError } from "../research/availability-contract";
-import { ReasoningOutputValidationError, reasoningOutputTokenLimit } from "./reasoning-engine";
+import { ReasoningOutputValidationError, outputTokenLimitFromValidatedError } from "./reasoning-engine";
 import { ResearchSelectionError } from "./research-selection";
 
 export type PlanningRefusalReason = "expanded_output" | "invalid_output" | "needs_refinement";
@@ -69,25 +69,30 @@ export async function boundedResearchPlan(question: string, call: () => Promise<
     return parseResearchPlan(question, await call());
   } catch (error) {
     if (error instanceof ResearchPlanningError) throw error;
-    if (error instanceof ReasoningOutputValidationError) throw new ResearchPlanningError(question, "invalid_output", reasoningOutputTokenLimit(error));
+    if (error instanceof ReasoningOutputValidationError) throw new ResearchPlanningError(question, "invalid_output", outputTokenLimitFromValidatedError(error));
     throw error;
   }
+}
+
+function failureOutputLimitMessage(error: ReasoningOutputValidationError, language: "en" | "vi" = "en"): string {
+  const ceiling = outputTokenLimitFromValidatedError(error);
+  return ceiling === undefined ? "" : language === "vi"
+    ? `Phản hồi model đã chạm giới hạn ${ceiling.toLocaleString("en-US")} tokens. `
+    : `The model response reached its ${ceiling.toLocaleString("en-US")}-token output limit. `;
 }
 
 /** Render only for the original caller; suggestions are not copied into accounting or logs. */
 export function researchFailureMessage(error: unknown): string {
   const held = researchAdmissionError(error);
   if (held) return held.message;
-  const ceiling = reasoningOutputTokenLimit(error);
-  const limit = ceiling === undefined ? "" : error instanceof ResearchPlanningError && error.language === "vi"
-    ? `Phản hồi model đã chạm giới hạn ${ceiling.toLocaleString("en-US")} tokens. `
-    : `The model response reached its ${ceiling.toLocaleString("en-US")}-token output limit. `;
   if (error instanceof ResearchSelectionError) {
+    const limit = failureOutputLimitMessage(error);
     const diagnostic = error.diagnostic;
     const reasons = [...new Set(diagnostic.reasons.map(item => item.code))].join(", ");
     return `${limit}${error.message}\nDiagnostic: ${diagnostic.id}${reasons ? ` (${reasons})` : ""}`;
   }
   if (!(error instanceof ResearchPlanningError)) return error instanceof Error ? error.message : String(error);
+  const limit = failureOutputLimitMessage(error, error.language);
   if (!error.scopeChoices.length) return limit + error.message;
   return limit + error.message + "\n\n" + error.scopeChoices.map((choice, index) => `${index + 1}. ${choice}`).join("\n") +
     (error.language === "vi"

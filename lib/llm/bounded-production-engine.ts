@@ -5,7 +5,7 @@ import { z } from "zod";
 import { FLASH_POLICY } from "../economics/provider-cost-policy";
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
 import type { ChatJsonOptions } from "./json-chat-engine";
-import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError, reasoningOutputTokenLimit } from "./reasoning-engine";
+import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError, outputTokenLimitFromValidatedError } from "./reasoning-engine";
 import { ResearchAllowance, RESEARCH_ALLOWANCE_REVIEW, validateResearchAllowancePolicy,
   type ConfiguredResearchAllowance } from "../research/research-allowance";
 
@@ -190,7 +190,7 @@ function boundedFailure(error: unknown): Error {
   const status = error && typeof error === "object" && "status" in error && typeof error.status === "number" ? error.status : undefined;
   const retained = `${status ? ` (${status})` : ""}; reservation retained`;
   if (error instanceof ReasoningOutputValidationError)
-    return Object.assign(new ReasoningOutputValidationError(`Bounded model output failed validation${retained}`, reasoningOutputTokenLimit(error)), { status });
+    return Object.assign(new ReasoningOutputValidationError(`Bounded model output failed validation${retained}`, outputTokenLimitFromValidatedError(error)), { status });
   if (error instanceof ReasoningTransportError) {
     const failure = new ReasoningTransportError(error.category);
     failure.message = `Bounded model provider request failed (${error.category}); reservation retained`;

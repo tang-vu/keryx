@@ -40,13 +40,19 @@ export class ReasoningOutputLimitError extends ReasoningOutputValidationError {
   }
 }
 
-/** Read only the bounded own data field, never a supplier/accessor message. */
-export function reasoningOutputTokenLimit(error: unknown): number | undefined {
+/** Copy a previously classified failure without inspecting its prototype again. */
+export function outputTokenLimitFromValidatedError(error: ReasoningOutputValidationError): number | undefined {
   try {
-    if (!(error instanceof ReasoningOutputValidationError)) return undefined;
-    const value = Object.getOwnPropertyDescriptor(error, "outputTokenLimit")?.value;
+    const descriptor = Object.getOwnPropertyDescriptor(error, "outputTokenLimit");
+    const value = descriptor && "value" in descriptor ? descriptor.value : undefined;
     return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : undefined;
   } catch { return undefined; }
+}
+
+/** Unknown boundaries classify once; never read a supplier/accessor message. */
+export function reasoningOutputTokenLimit(error: unknown): number | undefined {
+  try { return error instanceof ReasoningOutputValidationError ? outputTokenLimitFromValidatedError(error) : undefined; }
+  catch { return undefined; }
 }
 
 /** Only transport boundaries may label a statusless failure as network/timeout. */

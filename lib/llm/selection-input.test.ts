@@ -272,8 +272,8 @@ describe("bounded source selection batches", () => {
     expect(reasoningAttempts(engine)[0]).toMatchObject({ outcome: "failed", error: "internal" });
   });
 
-  it("snapshots a recognized refusal before a proxy can change its later classification", async () => {
-    const refusal = invalidResearchSelectionOutput(input(24));
+  it.each([undefined, 2048])("snapshots a recognized refusal and cap %s before a proxy can change its later classification", async outputTokenLimit => {
+    const refusal = invalidResearchSelectionOutput(input(24), outputTokenLimit);
     let prototypeReads = 0;
     const failure = new Proxy(refusal, {
       get: (target, key) => Reflect.get(target, key, target),
@@ -285,6 +285,7 @@ describe("bounded source selection batches", () => {
     expect(error).toBeInstanceOf(ResearchSelectionError);
     expect(error).not.toBe(failure);
     expect(error.diagnostic).toEqual(refusal.diagnostic);
+    expect(error.outputTokenLimit).toBe(outputTokenLimit);
     expect(prototypeReads).toBe(1);
     expect(primary.calls).toHaveLength(2); expect(fallback.calls).toHaveLength(0);
     expect(reasoningAttempts(engine)).toEqual([expect.objectContaining({ outcome: "failed", error: "output_validation" })]);
