@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Preserve preprint identity in reference exports (2026-10-07, v0.27.15 candidate)
+
+- Use the recognized RIS manuscript type for preprints, preserving exact arXiv
+  versions, recorded read scope and unknown peer review. The former unsupported
+  tag silently became a journal article in the pinned Zotero parser.
+- Keep RIS provenance notes literal and leave a missing scholarly journal absent.
+  BibTeX, article identities, stored receipts and payment authority retain their contracts.
+- Share the correction across web, hosted research exports and checked Operator
+  receipt exports. Desktop helper changes require candidate **0.4.8** and its
+  separate installer/package verification; no installed upgrade is claimed.
+- [Guide](researcher-exports.md) and [parser, download, surface and release gates](engineering/reference-export-2026-10-07.md).
+
 ### Research availability and retained questions (2026-10-07, v0.27.14 candidate)
 
 Web and widget composers show a known research pause before submission and retain

@@ -157,6 +157,29 @@ describe("research surface parity", () => {
     expect(exportsFromCheckedReceipt(receipt).bibtex.content).toContain("10.1234/example");
   });
 
+  it("preserves preprint RIS identity and literal notes across hosted and checked-receipt exports", () => {
+    const run = fixture();
+    for (const record of [run.citations[0], run.evidence![0]]) Object.assign(record, {
+      sourceId: "public:arxiv", sourceName: "Source <b>literal</b> & research", itemId: "1706.03762v7",
+      itemUrl: "https://arxiv.org/abs/1706.03762v7", contentVersion: "v7",
+    });
+    run.citations[0].scholarly = { provider: "arxiv", recordUrl: "https://export.arxiv.org/api/query",
+      retrievedAt: run.createdAt, title: "Observed paper", authors: [], workType: "preprint", peerReview: "unknown",
+      arxivId: "1706.03762v7", evidenceScope: "abstract-page" };
+    const original = JSON.stringify(run), receipt = buildResearchReceipt(run, []);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    const expected = surfaceResearch(run).researchExports;
+    for (const output of [remoteResearchResult(run), keryxMeta(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "deep"))]) {
+      expect(output.researchExports).toEqual(expected);
+      expect(output.researchExports.ris.content).toContain("TY  - MANSCPT");
+      expect(output.researchExports.ris.content).toContain("AN  - arXiv:1706.03762v7");
+      expect(output.researchExports.ris.content).toContain("Source &lt;b&gt;literal&lt;/b&gt; &amp; research");
+      expect(output.researchExports.ris.content).toContain("Read scope: abstract-page. Preprint. Peer review unknown");
+    }
+    expect(exportsFromCheckedReceipt(receipt)).toEqual(expected);
+    expect(JSON.stringify(run)).toBe(original);
+  });
+
   it("refuses mismatched and unbounded excerpts and strips unexpected internal fields", () => {
     const run = fixture();
     run.evidence = [run.evidence![0], { ...run.evidence![0], contentVersion: "other" },

@@ -1,5 +1,19 @@
 # Keryx — Decision Log
 
+**Use an importer-recognized RIS type and literal provenance notes — 2026-10-07.**
+The active literature-review segment depends on reusable citation exports. A pinned
+Zotero translator reproduction showed our preprint `UNPB` tag defaults to
+`journalArticle`. Use `MANSCPT`, mapped to manuscript, while preserving the explicit
+preprint/read-scope/unknown-peer-review note and exact arXiv version. Escape literal
+N1 text for the translator's HTML-note path and do not substitute a source name
+for an absent scholarly journal. Leave BibTeX and recorded evidence/receipt/payment
+contracts intact. Check actual browser downloads, shared transport/checked-receipt
+parity and the digest-pinned upstream parser; the minimal host is not Zotero
+application acceptance or a complete field-validation test. The actual desktop
+helper imports this formatter, requiring a separate 0.4.8 candidate and package
+verification. Original paid snapshots stay immutable. See
+[compatibility evidence and release gates](docs/engineering/reference-export-2026-10-07.md).
+
 **Pin the hosted MCP SDK to the reviewed fixed release — 2026-10-07.**
 Exact-main CI for the source-inspection release failed the high production audit
 after GHSA-6qxp-vccf-f47h entered the advisory feed. Require root SDK 1.31.0,
