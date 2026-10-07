@@ -1,5 +1,10 @@
 # Keryx MCP
 
+Candidate 0.4.7 preserves explicit model output-limit diagnostics and bounded
+guidance in research/recovery results. Historical 503s and token counters alone
+do not establish truncation. It keeps existing paid-original polling/recovery and
+spending authority. See [diagnostic scope and release gates](https://github.com/tang-vu/keryx/blob/main/docs/engineering/model-output-limits.md).
+
 Candidate0.4.6 adds read-only `keryx_operator_status` with the shared public
 business contract. Mainnet purchases explicitly request async execution and poll
 only their original result for at most 90 seconds; pending/review/error outcomes

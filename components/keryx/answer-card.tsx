@@ -24,6 +24,7 @@ import { CitationEvidencePanel } from "./citation-evidence-panel";
 import { ResearchCitationExport } from "./research-citation-export";
 import { EvidenceMatrixExport } from "./evidence-matrix-export";
 import { SourceEvidenceLens } from "./source-evidence-lens";
+import { reasoningOutputLimitText } from "@/lib/llm/reasoning-telemetry";
 
 export function AnswerCard({ run, meta, permalink, payments = [] }: { run: QueryRun; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[] }) {
   run = demoteSyntheticEvidence(run);
@@ -42,6 +43,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
   const skipped = run.decisions.filter((d) => d.action === "SKIP").length;
   const cached = run.decisions.filter((d) => d.action === "CACHE").length;
   const confidence = deriveConfidence(run);
+  const outputLimit = reasoningOutputLimitText(run.reasoningAttempts, /[ăâđêôơưĂÂĐÊÔƠƯ\u1ea0-\u1ef9]/u.test(run.question) ? "vi" : "en", run.trace);
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500">
@@ -72,6 +74,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
           ) : null}
         </div>
       ) : null}
+      {outputLimit && <p className="mb-4 border border-line bg-paper-2 px-4 py-3 text-sm leading-relaxed text-ink" role="status" data-testid="model-output-limit">{outputLimit}</p>}
       <div className="border border-ink bg-paper">
         <div className="px-6 py-6 sm:px-9">
           <div className="max-w-[64ch]">

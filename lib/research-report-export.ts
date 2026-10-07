@@ -1,5 +1,6 @@
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import type { PaymentRecord, QueryRun } from "@/lib/types";
+import { reasoningOutputLimitText } from "./llm/reasoning-telemetry";
 
 function safeUrl(value?: string): string | null {
   try {
@@ -18,7 +19,10 @@ function quotedReportLiteral(value: string): string {
 
 /** Export the observed report; a citation or proposed reward never implies settlement. */
 export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, payments: PaymentRecord[]): string {
-  const lines = ["# Keryx research report", "", run.question, "", `Source cap: ${run.budget} USDC. Mode: ${meta?.mode ?? run.paymentMode ?? "unknown"}.`, "", run.answer, "", "## Cited sources", ""];
+  const lines = ["# Keryx research report", "", run.question, "", `Source cap: ${run.budget} USDC. Mode: ${meta?.mode ?? run.paymentMode ?? "unknown"}.`, ""];
+  const limit = reasoningOutputLimitText(run.reasoningAttempts, /[ăâđêôơưĂÂĐÊÔƠƯ\u1ea0-\u1ef9]/u.test(run.question) ? "vi" : "en", run.trace);
+  if (limit) lines.push(`> ${limit}`, "");
+  lines.push(run.answer, "", "## Cited sources", "");
   for (const citation of run.citations) {
     const url = safeUrl(citation.itemUrl);
     lines.push(`${citation.marker}: ${citation.itemTitle ?? citation.sourceName}${url ? ` — ${url}` : ""}`);

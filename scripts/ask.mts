@@ -12,6 +12,7 @@ import { getReasoningEngine } from "../lib/llm/index.ts";
 import { c, printStep } from "./trace-console.mts";
 import { ResearchPlanningError, researchFailureMessage } from "../lib/llm/research-plan.ts";
 import { ResearchSelectionError } from "../lib/llm/research-selection.ts";
+import { reasoningOutputLimitText } from "../lib/llm/reasoning-telemetry.ts";
 
 // ── parse args ──
 const argv = process.argv.slice(2);
@@ -51,6 +52,8 @@ const run = await collectRun({ question, budget, model, origin: "engine", allowE
 console.log(c.dim("─".repeat(72)));
 console.log(c.bold("\n📝 Answer\n"));
 console.log(run.answer);
+const outputLimit = reasoningOutputLimitText(run.reasoningAttempts, /[ăâđêôơưĂÂĐÊÔƠƯ\u1ea0-\u1ef9]/u.test(question) ? "vi" : "en", run.trace);
+if (outputLimit) console.log(`\n${outputLimit}`);
 
 console.log(c.bold("\n💸 Planned citation allocations (USDC)"));
 if (run.citations.length === 0) {

@@ -5853,3 +5853,18 @@ deployment and offhost drills remain gates. See [backup limits](docs/encrypted-b
 The retained one-shot execution lost its exception and has no prepared result. Do not reinterpret its reservations as successful requests or change the old claim/window. A new explicit owner instruction permits repair and same-original completion under a distinct finite source/host/old-evidence-bound supplier grant. Preserve every expired hold and the permanent native claim; reserve each new dispatch before transport, checkpoint only complete validated normalized JSON, and serialize attempts with durable uncertainty retained on crash/fsync failure. Exact successful stages may be reused only under identical grant/source/packet/prompt bounds. Generation uses the already-authorized8192 output ceiling while ordinary research remains unchanged. Complete the same claim through exact prepared-result metadata only after all five targets have reviewed support and gaps remain explicit. New payments, searches, creator rewards, funding and general schedules are outside this lane. The separate ledger catalogue detects deletion or replacement instead of silently resetting consumed allowance. See docs/engineering/operator-original-continuation.md.
 
 A Windows redeploy previously lost reviewed environment controls entering WSL and selected the legacy path. The Node launcher now forwards and verifies all nonsecret reviewed-role and optional economic-migration controls before mutation, preserving explicit native paths. This is transport validation, not authority to drain, migrate, deploy unreviewed code or call suppliers.
+
+## Explicit output stops without invented provider outages - 2026-10-08
+
+A completed length/max_tokens response can be billable and still fail the output
+contract. Preserve usage and the observed requested ceiling, but stop assigning
+synthetic provider503 status. Equal counters or historical status cannot prove the
+stop reason. Ordinary caps, fallback/circuit and financial authority remain intact.
+
+An inner evidence-review failure must not relabel successful generation or invent
+a serving attempt. Retain only a closed stage and positive integer ceiling in the
+existing persisted synthesis trace; use it for direct bounded engines too. The
+shared public projection validates, bounds and deduplicates those diagnostics;
+early terminal callers receive a safe ceiling sentence through their current
+error adapters. Private/native reduced projections retain their existing roles.
+See [scope and acceptance gates](docs/engineering/model-output-limits.md).

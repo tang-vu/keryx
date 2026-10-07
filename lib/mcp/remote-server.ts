@@ -81,7 +81,7 @@ export function createRemoteMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: "keryx",
-    version: "0.3.3",
+    version: "0.3.4",
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });

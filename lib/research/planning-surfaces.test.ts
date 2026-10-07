@@ -28,7 +28,7 @@ import { POST as completion } from "@/app/api/v1/chat/completions/route";
 import { createRemoteMcpServer } from "../mcp/remote-server";
 import { boundedResearchPlan } from "../llm/research-plan";
 import { MAX_RESEARCH_TARGETS } from "../llm/research-target-limits";
-import { ReasoningOutputValidationError } from "../llm/reasoning-engine";
+import { ReasoningOutputValidationError, ReasoningOutputLimitError } from "../llm/reasoning-engine";
 
 const RAW_PROVIDER_OUTPUT = "RAW_PROVIDER_PLAN_NOT_CALLER_TEXT";
 const step: TraceStep = { phase: "decompose", message: "Preparing a bounded research plan", ts: 1 };
@@ -133,6 +133,15 @@ afterEach(() => {
 });
 
 describe("terminal planning refusals reach the original caller", () => {
+  it.each(surfaces)("%s retains an observed planning ceiling without retries, receipts or private output", async surface => {
+    mocks.provider.mockRejectedValue(new ReasoningOutputLimitError(2048));
+    const { message, wire } = await refusal(surface, englishQuestion);
+    singleDispatch(surface, englishQuestion);
+    expect(message).toContain("2,048-token output limit");
+    expect(message).not.toContain("saved evidence");
+    expect(wire).not.toContain("503");
+    expect(wire).not.toContain(RAW_PROVIDER_OUTPUT);
+  });
   it.each(surfaces)("%s preserves qualified caller excerpts without a completed report or retry", async surface => {
     const { message, wire } = await refusal(surface, englishQuestion);
     singleDispatch(surface, englishQuestion);

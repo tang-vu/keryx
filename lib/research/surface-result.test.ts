@@ -26,9 +26,26 @@ export function fixture(): QueryRun {
 }
 
 describe("research surface parity", () => {
+  it("retains trace-only inner review ceilings across hosted transports without inventing attempts or exporting private detail", () => {
+    const run = fixture();
+    run.trace = [{ phase: "synthesize", ts: 1, message: "Fixed diagnostic",
+      detail: { reasoningOutputLimit: { stage: "review", outputTokenLimit: 4096, body: "PRIVATE_REVIEW_BODY" } } }];
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run),
+      a2aResponseFromRun(run, quoteA2aResearch(0.03, "deep"))]) {
+      expect(result.reasoningAttempts).toEqual([]);
+      expect(result.reasoning.telemetry).toBe("unavailable");
+      expect(result.outputLimits).toEqual([{ step: "synthesize", stage: "review", outputTokenLimit: 4096 }]);
+      expect(result.citations).toHaveLength(1);
+      expect(JSON.stringify(result)).not.toContain("PRIVATE_REVIEW_BODY");
+    }
+    const receipt = buildResearchReceipt(run, []);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(JSON.stringify(receipt)).not.toMatch(/outputTokenLimit|PRIVATE_REVIEW_BODY/);
+  });
+
   it("retains typed request-local refusal metadata on the one shared bounded reasoning contract", () => {
     const run = fixture(); run.engine = "llm:deepseek:recorded-model";
-    run.reasoningAttempts = [attempt({ outcome: "failed", error: "output_validation" }),
+    run.reasoningAttempts = [attempt({ outcome: "failed", error: "output_validation", outputTokenLimit: 2560 }),
       attempt({ engine: "llm:cloudflare:recorded-model", tier: 1, outcome: "input-limited", error: "input_limit",
         inputBounds: { promptUtf8Bytes: 25000, requestedOutputTokens: 8192, maximumCombinedUnits: 23000 } }),
       attempt({ engine: "heuristic", tier: 2 })];

@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Explain a model output limit (2026-10-08, v0.27.22 candidate)
+
+Reports distinguish an explicitly stopped model response from a provider outage,
+retain its billable token usage, and explain when to inspect saved evidence and
+narrow a new request. Inner evidence-review and direct bounded-engine failures
+keep the same safe diagnostic through saved trace. CLI, APIs and MCP use the shared
+contract; output caps and payment authority are unchanged. Historical 503s are not
+reinterpreted. See [scope and remaining acceptance](engineering/model-output-limits.md).
+
+App 0.27.22, MCP 0.4.7, desktop 0.4.9 and hosted MCP 0.3.4 identify this candidate;
+published packages, installed clients and production must be verified separately.
+
 ### Complete a retained paid Operator original (2026-10-07, v0.27.20 candidate)
 
 Fresh bounded owner authority can continue the same failed paid original using

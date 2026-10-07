@@ -6,6 +6,7 @@ vi.mock("@anthropic-ai/sdk", () => ({ default: class {
 } }));
 import { AnthropicEngine } from "./anthropic-engine";
 import { APIConnectionError, APIConnectionTimeoutError, APIUserAbortError } from "@anthropic-ai/sdk/error";
+import { ReasoningOutputLimitError } from "./reasoning-engine";
 
 beforeEach(() => { sdk.create.mockReset(); sdk.options.mockClear(); });
 afterEach(() => { vi.restoreAllMocks(); });
@@ -37,4 +38,20 @@ it("recognizes the SDK's user-abort wrapper only when Keryx's own deadline has e
   vi.spyOn(AbortSignal, "timeout").mockReturnValue(deadline);
   sdk.create.mockRejectedValue(new APIUserAbortError());
   await expect(new AnthropicEngine().decompose("Synthetic question")).rejects.toMatchObject({ category: "timeout" });
+});
+
+it("retains billable usage and a proven output ceiling without inventing an HTTP outage", async () => {
+  sdk.create.mockResolvedValue({ stop_reason: "max_tokens", content: [{ type: "text", text: "synthetic private truncated body" }],
+    usage: { input_tokens: 100, output_tokens: 2560 } });
+  const engine = new AnthropicEngine();
+  const failure = await engine.synthesize({ question: "Synthetic question", subClaims: ["Synthetic target"],
+    gathered: [{ sourceId: "one", sourceName: "One", marker: "S1", text: "Synthetic source one." },
+      { sourceId: "two", sourceName: "Two", marker: "S2", text: "Synthetic source two." }] }).catch(error => error);
+  expect(failure).toBeInstanceOf(ReasoningOutputLimitError);
+  expect(failure.outputTokenLimit).toBe(2560);
+  expect(failure).not.toHaveProperty("status");
+  expect(engine.usage[0]).toMatchObject({ inputTokens: 100, outputTokens: 2560, callId: engine.calls[0].id });
+  expect(engine.calls[0].outcome).toBe("failed");
+  expect(sdk.create).toHaveBeenCalledOnce();
+  expect(JSON.stringify(failure)).not.toContain("synthetic private truncated body");
 });

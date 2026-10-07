@@ -37,6 +37,40 @@ function reply(sourceId = "source-0", targets: number[] | undefined = [0]) {
 }
 
 describe("response validation and durable client isolation", () => {
+  it("retains an eight-target two-read synthesis ceiling with one failed call, fallback and no circuit penalty", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const store = new MemoryReasoningCircuitStore();
+    const failed = vi.spyOn(store, "failed"), succeeded = vi.spyOn(store, "succeeded");
+    const transport = vi.fn(async () => Response.json({
+      // Even parseable JSON must not bypass the explicit length stop.
+      choices: [{ message: { content: '{"answer":"Do not deliver this partial draft","evidence":[]}' }, finish_reason: "length" }],
+      usage: { prompt_tokens: 4351, completion_tokens: 2560, prompt_tokens_details: { cached_tokens: 768 } },
+    }));
+    vi.stubGlobal("fetch", transport);
+    const primary = provider("deepseek"), fallback = new HeuristicEngine();
+    const synthesis = vi.spyOn(fallback, "synthesize");
+    const engine = new ResilientEngine(primary, fallback, 0, store);
+    const request = { question: "Compare synthetic live database copying with a synthetic snapshot API, retaining concurrency and restore gaps.",
+      subClaims: ["Copy consistency?", "Copy concurrency?", "Copy locking?", "API consistency?", "API concurrency?", "API locking?", "Snapshot creation?", "Restore verification?"],
+      gathered: [{ sourceId: "wal", sourceName: "Synthetic WAL", marker: "S1", text: "Synthetic concurrent writers append records to a journal." },
+        { sourceId: "backup", sourceName: "Synthetic Backup", marker: "S2", text: "A synthetic snapshot API produces a consistent snapshot when it completes." }] };
+    const result = await engine.synthesize(request);
+    expect(result.answer).not.toContain("Do not deliver this partial draft");
+    expect(synthesis).toHaveBeenCalledExactlyOnceWith(request);
+    expect(transport).toHaveBeenCalledOnce();
+    const wire = JSON.parse((transport.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(wire.max_tokens).toBe(2560);
+    expect(JSON.parse(wire.messages[1].content).researchTargets).toHaveLength(8);
+    expect(reasoningAttempts(engine)).toMatchObject([
+      { step: "synthesize", outcome: "failed", error: "output_validation", outputTokenLimit: 2560 },
+      { step: "synthesize", engine: "heuristic", tier: 1, outcome: "served" },
+    ]);
+    expect(reasoningAttempts(engine)[0]).not.toHaveProperty("status");
+    expect(reasoningUsage(engine)[0]).toMatchObject({ inputTokens: 4351, cachedInputTokens: 768, outputTokens: 2560, callId: primary.calls[0].id });
+    expect(reasoningCalls(engine)).toEqual([expect.objectContaining({ outcome: "failed" })]);
+    expect(failed).not.toHaveBeenCalled(); expect(succeeded).not.toHaveBeenCalled();
+    expect(JSON.stringify(reasoningAttempts(engine))).not.toContain("partial draft");
+  });
   it.each(["TimeoutError", "AbortError"])("preserves %s during response-body transport as timeout", async name => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const body = Response.json({});

@@ -9,7 +9,7 @@
 import { config } from "../config";
 import { extractJson, JsonChatEngine, type ChatJsonOptions } from "./json-chat-engine";
 import { capturePricePolicy } from "../economics/provider-cost-policy";
-import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
+import { ReasoningInputLimitError, ReasoningOutputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
 import { assertOrdinaryCanarySupplierAdmission } from "../business-operator/canary-policy";
 
 export interface OpenAICompatibleOpts {
@@ -158,16 +158,12 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     }
     const choice = data.choices?.[0];
     // A reply cut off at the token ceiling is truncated JSON, which parses to nothing — and
-    // "nothing" reads downstream as a decision rather than a failure. Keep usage and the historic
-    // status, but classify it as request-local output validation and drop a tier without retrying
+    // "nothing" reads downstream as a decision rather than a failure. Keep usage, but classify
+    // this as request-local output validation, without inventing a provider HTTP error or retrying
     // identical caps or poisoning a shared circuit. A 20-source corpus with a flat cap caused runs
     // that bought nothing while their traces looked deliberate.
     if (choice?.finish_reason === "length") {
-      const err = new ReasoningOutputValidationError(
-        `LLM reply hit the ${maxTokens}-token ceiling before closing its JSON`,
-      ) as Error & { status?: number };
-      err.status = 503;
-      throw err;
+      throw new ReasoningOutputLimitError(maxTokens);
     }
     const content = choice?.message?.content;
     if (content !== undefined && typeof content !== "string") throw new ReasoningOutputValidationError("Model completion is not text");

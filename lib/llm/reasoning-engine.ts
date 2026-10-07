@@ -25,7 +25,29 @@ export interface ReasoningInputBounds {
 }
 
 /** A completed model response failed the bounded output/decision contract, not the network. */
-export class ReasoningOutputValidationError extends Error {}
+export class ReasoningOutputValidationError extends Error {
+  constructor(message: string, readonly outputTokenLimit?: number) {
+    super(message);
+    if (outputTokenLimit !== undefined && (!Number.isSafeInteger(outputTokenLimit) || outputTokenLimit < 1))
+      throw new RangeError("Invalid model output-token limit");
+  }
+}
+
+/** The supplier completed a response but reported stopping at the requested ceiling. */
+export class ReasoningOutputLimitError extends ReasoningOutputValidationError {
+  constructor(outputTokenLimit: number) {
+    super("Model response reached its configured output-token limit", outputTokenLimit);
+  }
+}
+
+/** Read only the bounded own data field, never a supplier/accessor message. */
+export function reasoningOutputTokenLimit(error: unknown): number | undefined {
+  try {
+    if (!(error instanceof ReasoningOutputValidationError)) return undefined;
+    const value = Object.getOwnPropertyDescriptor(error, "outputTokenLimit")?.value;
+    return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : undefined;
+  } catch { return undefined; }
+}
 
 /** Only transport boundaries may label a statusless failure as network/timeout. */
 export class ReasoningTransportError extends Error {
@@ -59,6 +81,8 @@ export interface ReasoningAttempt {
   error?: "timeout" | "rate_limited" | "provider" | "network" | "invalid_request" | "output_validation" | "input_limit" | "internal";
   /** Present only for a proved local refusal; never contains prompt or provider response text. */
   inputBounds?: ReasoningInputBounds;
+  /** Requested ceiling only after an explicit provider length/max_tokens stop; no response text. */
+  outputTokenLimit?: number;
 }
 
 /** Provider-reported token usage for one completed (or billable truncated) model response.
@@ -190,6 +214,7 @@ export interface ProposedEvidence {
 /** Result of synthesis: the grounded answer, which markers it cited, and any source
  *  conflicts the agent adjudicated on the way to writing it. */
 export type SynthesisFailureStage = "input" | "generation" | "review" | "synthesis";
+export interface SynthesisOutputLimit { stage: "generation" | "review" | "synthesis"; outputTokenLimit: number }
 
 export interface SynthResult {
   answer: string;
@@ -200,6 +225,8 @@ export interface SynthResult {
   evidenceReview?: "completed" | "unavailable";
   /** Application-assigned stage only; never a provider error, draft or prompt. */
   synthesisFailure?: SynthesisFailureStage;
+  /** Safe diagnostic only; does not admit prose/evidence or alter payment authority. */
+  synthesisOutputLimit?: SynthesisOutputLimit;
   /** Server-local reviewed rows/context; never serialize this packet in public receipts. */
   decisionBrief?: import("./decision-brief").ReviewedDecisionBrief;
 }

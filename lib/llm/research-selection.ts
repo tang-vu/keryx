@@ -16,8 +16,8 @@ export class ResearchSelectionError extends ReasoningOutputValidationError {
   readonly name = "ResearchSelectionError";
   readonly #diagnostic: SelectionDiagnostic;
 
-  constructor(diagnostic: SelectionDiagnostic) {
-    super("Source selection could not be validated; this selection did not authorize a source read.");
+  constructor(diagnostic: SelectionDiagnostic, outputTokenLimit?: number) {
+    super("Source selection could not be validated; this selection did not authorize a source read.", outputTokenLimit);
     const safe = parseSelectionDiagnostic(diagnostic);
     if (!safe || safe.outcome !== "refused") throw new TypeError("Invalid source-selection diagnostic");
     this.#diagnostic = safe;
@@ -39,14 +39,14 @@ function clamp01(value: unknown): number {
 }
 
 /** The completed response yielded no parseable decision object; retain no response text. */
-export function invalidResearchSelectionOutput(input: DecideInput): ResearchSelectionError {
+export function invalidResearchSelectionOutput(input: DecideInput, outputTokenLimit?: number): ResearchSelectionError {
   return new ResearchSelectionError({ protocol: SELECTION_DIAGNOSTIC_PROTOCOL, id: randomUUID(),
     createdAt: new Date().toISOString(), stage: "decide", outcome: "refused",
     counts: { candidateCount: Math.min(input.candidates.length, MAX_SELECTION_DIAGNOSTIC_COUNT),
       targetCount: Math.min(input.subClaims.length, MAX_SELECTION_DIAGNOSTIC_COUNT), decisionCount: 0,
       matchedCandidateCount: 0, validActionableCount: 0, withheldCandidateCount: 0, invalidRowCount: 0 },
     reasons: [{ code: "invalid_output" }],
-    truncated: input.candidates.length > MAX_SELECTION_DIAGNOSTIC_COUNT || input.subClaims.length > MAX_SELECTION_DIAGNOSTIC_COUNT });
+    truncated: input.candidates.length > MAX_SELECTION_DIAGNOSTIC_COUNT || input.subClaims.length > MAX_SELECTION_DIAGNOSTIC_COUNT }, outputTokenLimit);
 }
 
 function rowObject(value: unknown): Record<string, unknown> | undefined {

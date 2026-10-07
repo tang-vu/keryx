@@ -21,7 +21,8 @@ import { buildEvidenceReviewInput } from "./evidence-review-input";
 import { MAX_SELECTION_DIAGNOSTIC_HISTORY, ResearchSelectionError, invalidResearchSelectionOutput, parseResearchSelection } from "./research-selection";
 import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/selection-diagnostic";
 import type { Decision } from "../types";
-import { ReasoningOutputValidationError } from "./reasoning-engine";
+import { ReasoningOutputValidationError, reasoningOutputTokenLimit } from "./reasoning-engine";
+import { synthesisOutputLimitFromError } from "./output-limit-diagnostic";
 import type {
   AttributeInput,
   DecideInput,
@@ -33,6 +34,7 @@ import type {
   SynthInput,
   SynthResult,
   SynthesisFailureStage,
+  SynthesisOutputLimit,
   Conflict,
   LlmUsageRecord,
 } from "./reasoning-engine";
@@ -155,12 +157,12 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   private selectionFailure(error: unknown, batchIndex: number, input?: DecideInput): unknown {
     try {
       if (error instanceof ResearchSelectionError) {
-        const refusal = new ResearchSelectionError(error.diagnostic);
+        const refusal = new ResearchSelectionError(error.diagnostic, reasoningOutputTokenLimit(error));
         this.recordSelectionDiagnostic(refusal.diagnostic);
         return refusal;
       }
       if (input && error instanceof ReasoningOutputValidationError) {
-        const refusal = invalidResearchSelectionOutput(input);
+        const refusal = invalidResearchSelectionOutput(input, reasoningOutputTokenLimit(error));
         this.recordSelectionDiagnostic(refusal.diagnostic);
         return refusal;
       }
@@ -305,6 +307,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     const proposals = resolveQuoteEvidence(out.evidence, quoteOptions);
     let review: unknown;
     let reviewedIndexes: ReadonlySet<number> = new Set();
+    let synthesisOutputLimit: SynthesisOutputLimit | undefined;
     if (proposals.length) {
       try {
         const reviewInput = buildEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims });
@@ -315,9 +318,10 @@ export abstract class JsonChatEngine implements ReasoningEngine {
           reviewInput.json,
           this.budgetFor(Math.min(proposals.length, MAX_REVIEWED_EVIDENCE)),
         );
-      } catch {
+      } catch (error) {
         // Keep the written answer after a review outage; unreviewed evidence cannot earn rewards.
         review = undefined;
+        synthesisOutputLimit = synthesisOutputLimitFromError(error, "review");
       }
     }
     return {
@@ -327,13 +331,16 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       ...(proposals.length ? { evidenceReview: review && typeof review === "object" && Array.isArray((review as { reviews?: unknown }).reviews)
         ? "completed" as const : "unavailable" as const } : {}),
       conflicts: parseConflicts(out.conflicts),
+      ...(synthesisOutputLimit ? { synthesisOutputLimit } : {}),
     };
   }
 
   private async synthesizeDecisionBrief(input: SynthInput): Promise<SynthResult> {
     const fallback: SynthResult = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable" };
     let failureStage: SynthesisFailureStage = "input";
-    const unavailable = (): SynthResult => ({ ...fallback, synthesisFailure: failureStage });
+    let synthesisOutputLimit: SynthesisOutputLimit | undefined;
+    const unavailable = (): SynthResult => ({ ...fallback, synthesisFailure: failureStage,
+      ...(synthesisOutputLimit ? { synthesisOutputLimit } : {}) });
     try {
       const selectedSources = evidenceContext(input.question, input.subClaims, input.gathered);
       const options = buildContextualQuoteOptions(selectedSources, input.gathered);
@@ -368,9 +375,10 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       // rendered later from surviving reviewed rows after all existing gates.
       return { answer: citedMarkers.map(marker => `[${marker}]`).join(" "), citedMarkers, evidence,
         conflicts: [], evidenceReview: "completed", decisionBrief };
-    } catch {
+    } catch (error) {
       // A malformed generation/review, transport outage or input cap must not
       // discard completed paid reads or route an unreviewed narrative to the UI.
+      synthesisOutputLimit = synthesisOutputLimitFromError(error, failureStage === "review" ? "review" : "generation");
       return unavailable();
     }
   }

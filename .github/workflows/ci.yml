@@ -245,6 +245,19 @@ jobs:
           KERYX_LITERATURE_SCREENSHOT_DIR: ${{ runner.temp }}/literature-ux-screenshots
         run: npm run test:browser-literature-built
 
+      - name: Model output-limit notice (built CSS, hermetic Chromium)
+        env:
+          KERYX_OUTPUT_LIMIT_SCREENSHOT_DIR: ${{ runner.temp }}/output-limit-ux-screenshots
+        run: npm run test:browser-output-limit
+
+      - name: Model output-limit screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: output-limit-ux-screenshots
+          path: ${{ runner.temp }}/output-limit-ux-screenshots
+          if-no-files-found: ignore
+
       - name: Literature workspace screenshots
         if: always()
         uses: actions/upload-artifact@v4

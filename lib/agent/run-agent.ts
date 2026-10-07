@@ -3,6 +3,7 @@ import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../re
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
 import { synthesisFailureDetail } from "./synthesis-failure";
+import { parseSynthesisOutputLimit, synthesisOutputLimitFromError } from "../llm/output-limit-diagnostic";
 import { finalizeGroundedAnswer } from "./answer-grounding";
 import { selectCitedStatements } from "./cited-statements";
 import { deliverDecisionBrief } from "./decision-brief";
@@ -1471,10 +1472,16 @@ async function* runAdmittedAgent(
   try { synthesized = await engine.synthesize({ question: input.question, subClaims, gathered,
     ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
       ? { answerFormat: "decision-brief" as const } : {}) }); }
-  catch {
+  catch (error) {
     synthesized = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable", synthesisFailure: "synthesis" };
+    const limit = synthesisOutputLimitFromError(error, "synthesis");
+    if (limit) synthesized.synthesisOutputLimit = limit;
     yield emit("synthesize", "Synthesis unavailable; completed reads and payment receipts are retained, with unsupported conclusions withheld.");
   }
+  const outputLimit = parseSynthesisOutputLimit(synthesized.synthesisOutputLimit);
+  if (outputLimit) yield emit("synthesize",
+    `Model response reached its configured ${outputLimit.outputTokenLimit}-token output limit during ${outputLimit.stage}; completed reads are retained.`,
+    { reasoningOutputLimit: outputLimit });
   const synthesisFailure = synthesisFailureDetail(synthesized.synthesisFailure, gathered.length,
     researchResponseLanguage(input.question) === "vi");
   if (synthesisFailure) yield emit("synthesize", synthesisFailure,

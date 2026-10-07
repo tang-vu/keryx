@@ -47,7 +47,8 @@ const fs=require('node:fs'), crypto=require('node:crypto'), viem=require('viem')
 const counts={paid:0,rpc:0,recovery:0};
 const reasoning={engine:'llm:deepseek:deepseek-v4-flash',
  reasoningAttempts:[{step:'decompose',engine:'llm:deepseek:deepseek-v4-flash',tier:0,attempt:1,startedAt:1,durationMs:0,outcome:'served'},
- {step:'decide',engine:'heuristic',tier:3,attempt:1,startedAt:2,durationMs:0,outcome:'served'}],
+ {step:'decide',engine:'heuristic',tier:3,attempt:1,startedAt:2,durationMs:0,outcome:'served'},
+ {step:'synthesize',engine:'llm:deepseek:deepseek-v4-flash',tier:0,attempt:1,startedAt:3,durationMs:0,outcome:'failed',error:'output_validation',outputTokenLimit:2560}],
  reasoning:{telemetry:'recorded',attemptsOmitted:0,
  steps:[{step:'decompose',state:'model',servingEngines:['llm:deepseek:deepseek-v4-flash'],fallbackUsed:false},
  {step:'decide',state:'heuristic',servingEngines:['heuristic'],fallbackUsed:true}],
@@ -147,6 +148,8 @@ globalThis.fetch=async(input,init)=>{
     { step: "decide", state: "heuristic", servingEngines: ["heuristic"], fallbackUsed: true });
   assert(!('reasoningTelemetry' in answer.structuredContent)); assert(!('reasoningServing' in answer.structuredContent));
   assert.equal(answer.structuredContent.reasoningAttempts.find(attempt => attempt.step === "decide").engine, "heuristic");
+  assert.equal(answer.structuredContent.reasoningAttempts.find(attempt => attempt.step === "synthesize").outputTokenLimit, 2560);
+  assert.match(answer.content[0].text, /Model output limit reached: answer preparation \(2,560 tokens\)/);
   await happy.stop(); const happyCounts = JSON.parse(await readFile(happy.counts, "utf8")); assert.equal(happyCounts.paid, 1);
   const journal = join(workspace, `${selectedNetwork}-unknown-payment.json`), unknown = await session("unknown", journal);
   assert((await unknown.call("ask_keryx", { question: "Synthetic response-loss research" })).isError);

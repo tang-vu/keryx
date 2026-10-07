@@ -33,6 +33,7 @@ import type { ResearchEffects } from "./research-effects";
 import { config } from "../config";
 import { HeuristicEngine } from "../llm/heuristic-engine";
 import { JsonChatEngine } from "../llm/json-chat-engine";
+import { ReasoningOutputLimitError } from "../llm/reasoning-engine";
 import { evidenceContext } from "../llm/evidence-context";
 import { buildContextualQuoteOptions } from "../llm/quote-context";
 import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence } from "../llm/decision-brief";
@@ -2911,6 +2912,24 @@ it("retains the classified SQLite failure and billed response counters without r
 });
 
 describe("completed reads survive bounded model exhaustion", () => {
+  it.each(["direct-error", "inner-review"] as const)("persists a %s output diagnostic with retained reads and no fabricated attempt or reward", async mode => {
+    const engine = fakeEngine({ synthesize: () => {
+      if (mode === "direct-error") throw new ReasoningOutputLimitError(2560);
+      return { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable",
+        synthesisFailure: "review", synthesisOutputLimit: { stage: "review", outputTokenLimit: 2560 } };
+    } });
+    const gateway = fakeGateway(), d = deps([makeSource({ id: "alpha" })], engine, gateway);
+    const { run, steps } = await drive({ question: "Inspect the original evidence", budget: 0.04 }, d);
+    expect(gateway.fetchCalls).toEqual(["alpha"]); expect(gateway.citationCalls).toEqual([]);
+    expect(run.reasoningAttempts ?? []).toEqual([]);
+    const diagnostic = { stage: mode === "direct-error" ? "synthesis" : "review", outputTokenLimit: 2560 };
+    expect(steps.some(step => step.phase === "synthesize" && JSON.stringify(step.detail) === JSON.stringify({ reasoningOutputLimit: diagnostic }))).toBe(true);
+    expect(run.trace.some(step => JSON.stringify(step.detail) === JSON.stringify({ reasoningOutputLimit: diagnostic }))).toBe(true);
+    const result = remoteResearchResult(run);
+    expect(result.outputLimits).toEqual([{ step: "synthesize", ...diagnostic }]);
+    expect(result.reasoning.telemetry).toBe("unavailable");
+    expect(verifyResearchReceipt(buildResearchReceipt(run, d.db.payments)).valid).toBe(true);
+  });
   it.each(["sufficiency", "reevaluate", "synthesize", "attribute"] as const)("retains the final dispatch and receipts after %s fails", async stage => {
     const sources = [makeSource({ id: "alpha" }), makeSource({ id: "beta" })];
     const engine = fakeEngine();
