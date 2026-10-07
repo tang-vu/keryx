@@ -10,7 +10,7 @@ import type { KeryxDB } from "../lib/db/keryx-db.ts";
 const usage = `Private additive continuation of the same already-paid retained original
   preflight --authorization <protected-file> --sha256 <reviewed-digest>
   execute --authorization <protected-file> --sha256 <reviewed-digest>
-  activate-epoch --authorization <separate-v2-file> --sha256 <reviewed-digest>
+  activate-epoch --authorization <separate-v2-or-v3-file> --sha256 <reviewed-digest>
   verify-prepared
   complete-prepared --prepared-sha256 <exact-reviewed-result-digest>
 
@@ -54,7 +54,7 @@ export async function runContinueCanaryOriginal(argv: string[]) {
   try {
     applicationSqliteIdentity(db, writing ? "write" : "read");
     if (command === "preflight") {
-      const prompt = await preflightOriginalContinuation(binding!.original);
+      const prompt = await preflightOriginalContinuation(binding!.original, binding!.supplement);
       const proof = await inspectOriginalContinuation(db, authorizationFile!, authorizationSha256!);
       console.log(JSON.stringify({ command, readOnly: true, newModelCalls: proof.newModelCalls,
         combinedReservedMicroUsd: proof.combinedReservedMicroUsd, supplierWindowLive: proof.supplierWindowLive,

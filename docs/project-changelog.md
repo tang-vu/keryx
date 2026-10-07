@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Free primary evidence for retained Operator completion (2026-10-08, v0.27.26 candidate)
+
+A private continuation can supplement an acknowledged evidence gap with protected,
+verbatim official sections. Original sources, payment, question and native claim stay
+intact. Complete source provenance and independent statement review gate native
+completion and historical readback. Only the five unused repair calls transfer to
+the new journal; earlier reservations and the original deadline remain unchanged.
+Ordinary research and existing public buyer contracts retain their roles.
+See [authority and acceptance](engineering/operator-original-continuation.md).
+
 ### Full-source checks for retained Operator completion (2026-10-08, v0.27.23 candidate)
 
 The private same-original continuation now reads both complete selected documents
