@@ -68,7 +68,7 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
         <div data-testid="hero-guide" className="sm:mr-[156px]"><OnboardingTour /></div>
       </div>
       <h1 className="mt-2 font-display text-[clamp(32px,5vw,46px)] leading-tight">Ask Keryx</h1>
-      <p className="mt-2 max-w-[calc(100%_-_84px)] font-serif text-base text-ink-2 sm:max-w-[64ch]">Ask a research question, inspect cited evidence, and see which sources were bought, skipped or reused.</p>
+      <p className="mt-2 max-w-[calc(100%_-_84px)] font-serif text-base text-ink-2 sm:max-w-[64ch]">Ask a question. Get a cited answer and inspect source decisions.</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label="Conversation turns">
       {history.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
