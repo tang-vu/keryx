@@ -39,6 +39,7 @@ import {
   type PaymentGateway,
 } from "./payment-gateway";
 import { PaymentPendingError, PaymentSettledError } from "./payment-state";
+import { readPaidArticleBody, selectedArticleBodyContract, type SelectedArticleBodyContract } from "./paid-article-body";
 import { getGrant } from "./session-grants";
 import { getDb } from "../db";
 import { createHash } from "node:crypto";
@@ -148,6 +149,7 @@ export class BrowserCoSignGateway implements PaymentGateway {
     offer?: ArticleOfferRef;
     sourceClaim?: SourceClaimReceipt;
   } & RecipientExclusion): Promise<FetchResult> {
+    const bodyContract = selectedArticleBodyContract(item);
     const path = item
       ? articlePaidPath({
           sourceId: source.id,
@@ -174,7 +176,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
       fetchPayee,
       offer,
       sourceClaim,
-      deniedRecipient
+      deniedRecipient,
+      bodyContract
     );
     return { content, payment };
   }
@@ -239,7 +242,8 @@ export class BrowserCoSignGateway implements PaymentGateway {
     payeeOverride?: string,
     offer?: ArticleOfferRef,
     sourceClaim?: SourceClaimReceipt,
-    deniedRecipient?: string
+    deniedRecipient?: string,
+    bodyContract: SelectedArticleBodyContract = {}
   ): Promise<{ content: string; payment: PaymentRecord }> {
     // Guard: abort if client disconnected or grant revoked.
     if (this.abortSignal?.aborted) {
@@ -558,15 +562,9 @@ export class BrowserCoSignGateway implements PaymentGateway {
       );
     }
 
-    const bodyJson = (await retryRes.json().catch(() => ({}))) as Record<
-      string,
-      unknown
-    >;
-    const content =
-      (bodyJson.content as string) ??
-      (bodyJson.text as string) ??
-      JSON.stringify(bodyJson);
-
+    const parsedBody: unknown = await retryRes.json().catch(() => undefined);
+    const bodyJson = parsedBody && typeof parsedBody === "object" && !Array.isArray(parsedBody)
+      ? parsedBody as Record<string, unknown> : {};
     const payment = makePayment({
       ...basePayment,
       txHash,
@@ -607,6 +605,9 @@ export class BrowserCoSignGateway implements PaymentGateway {
       );
     }
 
+    const content = kind === "fetch"
+      ? readPaidArticleBody(bodyJson.content ?? bodyJson.text, bodyContract, payment)
+      : JSON.stringify(bodyJson);
     return { content, payment };
   }
 

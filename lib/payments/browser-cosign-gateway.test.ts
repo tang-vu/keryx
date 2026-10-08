@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { config } from "../config";
 import type { Source, SourceItem } from "../types";
 import { sourceItemIdentity } from "../sources/source-item-asset";
+import { contentBodyHash, contentBytes } from "../sources/content-receipt";
 import {
   PaymentPendingError,
   pendingPaymentFrom,
@@ -628,6 +629,66 @@ describe("BrowserCoSignGateway", () => {
       itemId: item.id,
       contentVersion: sourceItemIdentity(item).contentVersion,
     });
+  });
+
+  it.each([true, false])("retains the original receipt/cap when hostile body delivery is settled=%s", async settled => {
+    const content = "Selected plaintext body: café 🌍.", item: SourceItem = { id: "integrity-article", sourceId: source.id,
+      title: "Committed article", summary: "Preview", content, link: "https://example.test/committed",
+      bodyHash: contentBodyHash(content), plaintextBytes: contentBytes(content) };
+    for (const hostile of ["", "  \n", 42, "Substituted content."]) {
+      const response = { content: hostile, item: sourceItemIdentity(item),
+        pricing: { offerId: null, priceUsdc: source.fetchPrice, listPriceUsdc: source.fetchPrice } };
+      const http = vi.fn().mockResolvedValueOnce(challenge()).mockResolvedValueOnce(settled ? settledResponse(200, response) : Response.json(response));
+      vi.stubGlobal("fetch", http);
+      const gateway = new BrowserCoSignGateway("session", SESSION, vi.fn().mockResolvedValue(signedHeader()));
+      let caught: unknown;
+      try { await gateway.payFetch({ source, item, queryId: "q-integrity" }); } catch (error) { caught = error; }
+      expect(String(caught)).toContain("paid article body");
+      expect(settled ? settledPaymentFrom(caught) : pendingPaymentFrom(caught)).toMatchObject({ authorizationId: NONCE,
+        settled, settlementStatus: settled ? "settled" : "pending", amountUsdc: source.fetchPrice, payee: PAYEE,
+        contentVersion: sourceItemIdentity(item).contentVersion });
+      expect(http).toHaveBeenCalledTimes(2); expect(grantMocks.releaseSpend).not.toHaveBeenCalled();
+      expect(grantMocks.cancelPreparedBrowserJournal).not.toHaveBeenCalled();
+    }
+  });
+
+  it("admits committed Unicode plaintext and legacy encrypted rows without inferred plaintext constraints", async () => {
+    const content = "Selected plaintext body: café 🌍.", base: SourceItem = { id: "integrity-article", sourceId: source.id,
+      title: "Committed article", summary: "Preview", content, link: "https://example.test/committed" };
+    for (const item of [{ ...base, bodyHash: contentBodyHash(content), plaintextBytes: contentBytes(content) },
+      { ...base, content: "unrelated-legacy-ciphertext-bytes", storageMode: "db_encrypted" as const }]) {
+      const http = vi.fn().mockResolvedValueOnce(challenge()).mockResolvedValueOnce(settledResponse(200, { content,
+        item: sourceItemIdentity(item), pricing: { offerId: null, priceUsdc: source.fetchPrice, listPriceUsdc: source.fetchPrice } }));
+      vi.stubGlobal("fetch", http);
+      const gateway = new BrowserCoSignGateway("session", SESSION, vi.fn().mockResolvedValue(signedHeader()));
+      expect((await gateway.payFetch({ source, item, queryId: "q-integrity" })).content).toBe(content);
+    }
+  });
+
+  it.each([true, false])("retains original payment evidence for non-object response envelopes settled=%s", async settled => {
+    for (const envelope of [null, [], "a root JSON string"]) {
+      const response = Response.json(envelope);
+      if (settled) response.headers.set("PAYMENT-RESPONSE", Buffer.from(JSON.stringify({ success: true,
+        transaction: "synthetic-fixture-receipt", payer: SESSION, network: config.networkId })).toString("base64"));
+      const http = vi.fn().mockResolvedValueOnce(challenge()).mockResolvedValueOnce(response);
+      vi.stubGlobal("fetch", http);
+      const gateway = new BrowserCoSignGateway("session", SESSION, vi.fn().mockResolvedValue(signedHeader()));
+      let caught: unknown;
+      try { await gateway.payFetch({ source, queryId: "q-integrity" }); } catch (error) { caught = error; }
+      expect(String(caught)).toContain("paid article body");
+      expect(settled ? settledPaymentFrom(caught) : pendingPaymentFrom(caught)).toMatchObject({ authorizationId: NONCE,
+        settled, settlementStatus: settled ? "settled" : "pending", amountUsdc: source.fetchPrice, payee: PAYEE });
+      expect(http).toHaveBeenCalledTimes(2); expect(grantMocks.releaseSpend).not.toHaveBeenCalled();
+    }
+  });
+
+  it("rejects conflicting selected commitments before browser journal admission or HTTP", async () => {
+    const item: SourceItem = { id: "malformed", sourceId: source.id, title: "Malformed", summary: "Preview", content: "Selected article",
+      link: "https://example.test/article", plaintextBytes: -1 };
+    const http = vi.fn(), sign = vi.fn(); vi.stubGlobal("fetch", http);
+    await expect(new BrowserCoSignGateway("session", SESSION, sign).payFetch({ source, item, queryId: "q-integrity" }))
+      .rejects.toThrow("selected paid article body byte count is malformed");
+    expect(http).not.toHaveBeenCalled(); expect(sign).not.toHaveBeenCalled(); expect(grantMocks.admitBrowserJournal).not.toHaveBeenCalled();
   });
 
   it("refuses excluded fetch/citation recipients before admission, signature exposure or HTTP", async () => {
