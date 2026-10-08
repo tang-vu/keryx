@@ -106,7 +106,7 @@ it.each([
   { status: 200, headers: { "content-range": "bytes 0-9/100" } },
   { status: 200, headers: { "content-range": "" } },
 ])("refuses known partial membership before reading its body: $status", async ({ status, headers }) => {
-  const response = new Response("partial XML", { status, headers });
+  const response = new Response("partial XML", { status, headers: new Headers(Object.entries(headers).filter((pair): pair is [string, string] => typeof pair[1] === "string")) });
   const cancel = vi.spyOn(response.body!, "cancel");
   const read = vi.spyOn(response.body!, "getReader");
   mocks.fetch.mockResolvedValue(response);
