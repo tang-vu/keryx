@@ -5985,8 +5985,11 @@ coherent outcome and its review corrections, with risk-proportionate local check
 and reuse of unchanged valid evidence. Preserve required acceptance and standing
 routine merge authorization. Split main CI into isolated parallel lanes, shard
 the complete Vitest suite three ways, and retain every prior assertion. An
-always-running stable aggregate refuses failed, cancelled, missing or unintended
-skipped lanes. Informational lint remains visible outside merge acceptance.
+stable aggregate runs after failures/skips unless its entire workflow is cancelled;
+it refuses failed, cancelled, missing or unintended skipped lanes. Require actual
+aggregate success, never a skipped/cancelled status. GitHub's `!cancelled()` status
+condition prevents an obsolete run's `always()` gate holding its concurrency slot.
+Informational lint remains visible outside merge acceptance.
 
 Only regular prose-only document PR changes use the lighter lane, with scope/gate
 regressions and feed integrity; unknown/mixed/runtime changes retain full coverage.

@@ -443,7 +443,8 @@ jobs:
 
   # Preserve the existing status name while refusing failed/missing required lanes.
   build-and-test:
-    if: always()
+    # Run after failures/skips, but let superseded workflow cancellation finish.
+    if: ${{ !cancelled() }}
     needs: [scope, checks, unit-tests, integration, browser-source, production]
     runs-on: ubuntu-24.04
     timeout-minutes: 5

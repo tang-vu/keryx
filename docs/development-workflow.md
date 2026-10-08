@@ -43,12 +43,17 @@ race across jobs. Browser and compiled-production checks retain their original
 assertions and settings. Sharding changes test allocation, not test isolation or
 selection. Within a lane, dependent steps remain sequential.
 
-The stable `build-and-test` status is an always-running aggregate gate. Every
-applicable lane must succeed. Failed, cancelled, missing or unexpectedly skipped
+The stable `build-and-test` status is an aggregate gate that runs after dependency
+failures/skips, unless the whole workflow is cancelled. Every applicable lane
+must succeed. Failed, cancelled, missing or unexpectedly skipped
 results refuse acceptance; docs-only skips are explicit. Applicable separate
 domain/platform statuses must also pass before merge. Informational lint is
 outside the merge gate, runs independently and remains visible. Publication
-jobs are post-merge delivery work, not PR acceptance.
+jobs are post-merge delivery work, not PR acceptance. Require the aggregate's
+actual `success` conclusion; a skipped/cancelled aggregate is never merge evidence.
+A cancelled workflow has no publication authority. The gate uses GitHub's
+recommended `!cancelled()` status condition, so an obsolete run cannot keep its
+concurrency slot while an `always()` aggregate waits for a runner.
 
 Only superseded validation runs for the same PR and workflow are cancelled.
 Main, scheduled, manual, package and installer publication runs retain their
@@ -99,4 +104,5 @@ runner acceptance. Compare equivalent workloads and include retries and fixes.
 
 References: [GitHub job dependencies](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idneeds),
 [PR concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency),
+[cancellable failure handling](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#always),
 [Vitest sharding](https://vitest.dev/guide/cli.html#shard).
