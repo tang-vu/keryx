@@ -5,6 +5,9 @@
     "incremental": false
   },
   "include": [
+    "mcp/keryx-buyer.mts",
+    "mcp/keryx-mcp-server.mts",
+    "mcp/keryx-buyer.test.mts",
     "scripts/test-paper-ris-import.mts",
     "scripts/test-zotero-ris.mts",
     "scripts/test-browser-paper-library.mts",

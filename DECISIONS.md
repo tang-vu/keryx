@@ -5984,3 +5984,14 @@ small renderer's existing block grammar, styling, safe text and citation callbac
 do not rewrite saved answers or exported Markdown. This shared visual change has
 no protocol or native-local rendering migration. Exact browser and release gates
 remain explicit in [reading UX](docs/research-reading-ux.md#answer-heading-navigation--october-8-2026).
+
+## Share paid-question validation before stdio funding — 2026-10-08
+
+The stdio buyer's 8192-character allowance exceeded the paid API's 2000-character
+canonical limit. A configured synthetic caller reached the funding boundary with
+a server-invalid question. Reuse the server parser before loading custody or
+funding and publish the maximum in the tool schema. Keep the earlier journal/lock
+recovery barriers, existing client minimum/raw transport bound and exact original
+recovery. Hosted direct research keeps its separate existing limit. No merchant,
+funding, settlement, quote or saved-request authority changes. See
+[scope and acceptance](docs/engineering/mcp-question-preflight.md).

@@ -142,12 +142,15 @@ globalThis.fetch=async(input,init)=>{
     const listed = await request("tools/list", {});
     for (const name of ["paper_lookup", "ask_keryx", "keryx_wallet_status", "keryx_recover", "keryx_operator_status"]) assert(listed.tools.some(tool => tool.name === name));
     assert.equal(listed.tools.find(tool => tool.name === "paper_lookup").annotations.readOnlyHint, true);
+    assert.equal(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.question.maxLength, 2000);
     return { call: (name, args = {}) => request("tools/call", { name, arguments: args }), counts,
       stop: async () => { await stopChild(child); children.delete(child); lines.close(); } };
   }
   for (selectedNetwork of ["arcTestnet", "arc"]) {
   const keyless = await session("keyless", join(workspace, `${selectedNetwork}-missing-payment.json`), false);
   const missing = await keyless.call("keryx_wallet_status"); assert.match(missing.content[0].text, /unconfigured/); assert.match(missing.content[0].text, /No wallet is created/);
+  const invalidQuestion = await keyless.call("ask_keryx", { question: "x".repeat(2001) });
+  assert(invalidQuestion.isError); assert.match(invalidQuestion.content[0].text, /2000/);
   const metadata = await keyless.call("paper_lookup", { query: "https://arxiv.org/pdf/2005.11401v4.pdf" });
   assert(!metadata.isError); assert.equal(metadata.structuredContent.scope, "bibliography-only");
   assert.equal(metadata.structuredContent.groups[0].record.arxivId, "2005.11401v4");
@@ -163,7 +166,7 @@ globalThis.fetch=async(input,init)=>{
   assert(!(await readdir(workspace)).some(name => /forbidden|missing-payment/.test(name)), "Missing custody created private state");
   const happy = await session("happy", join(workspace, `${selectedNetwork}-happy-payment.json`));
   const status = await happy.call("keryx_wallet_status"); assert.match(status.content[0].text, /ready:    yes/);
-  const answer = await happy.call("ask_keryx", { question: "Synthetic package research" }); assert(!answer.isError); assert.match(answer.content[0].text, /Synthetic cited answer/);
+  const answer = await happy.call("ask_keryx", { question: "Synthetic package research".padEnd(2000, "x") }); assert(!answer.isError); assert.match(answer.content[0].text, /Synthetic cited answer/);
   assert.match(answer.content[0].text, /decide: heuristic \(heuristic; fallback served\)/);
   assert.equal(answer.structuredContent.reasoning.telemetry, "recorded");
   assert.deepEqual(answer.structuredContent.reasoning.sourceSelection,

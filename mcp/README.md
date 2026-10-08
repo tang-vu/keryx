@@ -1,5 +1,13 @@
 # Keryx MCP
 
+Candidate 0.4.9 validates paid questions against the shared API's 2000-character
+limit before loading custody or entering funding. `ask_keryx` advertises 3–2000
+characters after trimming, using the server's JavaScript string-length convention.
+Within the buyer handler, payment journals, pending funding journals and crash locks require
+recovery first; MCP argument validation occurs before the handler. Recovery observes
+the retained original query or transaction, without a new question or replacement
+funding/payment. Publication and hosted deployment require separate verification.
+
 Candidate0.4.8 adds keyless free `paper_lookup` before paid research. Retained
 catalog is the default; repository lookup requires explicit opt-in. Exact version,
 observation time and unknown metadata remain visible. See **Free paper metadata**

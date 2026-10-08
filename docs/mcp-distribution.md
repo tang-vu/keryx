@@ -1,5 +1,16 @@
 # MCP package distribution
 
+## Paid-question preflight candidate - October 8, 2026
+
+App 0.27.32/stdio MCP 0.4.9 align new paid questions with the API's shared 2000-character
+canonical bound before custody/funding. The package, lockfile and repository-owned
+Registry descriptor select 0.4.9 together. The existing operational TypeScript
+check now includes the stdio entry point, buyer and buyer regressions, so ordinary
+CI checks their imported graph. Hosted MCP 0.3.5 and desktop 0.4.10 retain the parent
+candidate's roles. This does not establish package, registry or installer publication;
+packed acceptance, coordinated release and exact-source public readback remain
+gates. See [scope and acceptance](engineering/mcp-question-preflight.md).
+
 ## Free bibliography candidate - October 8, 2026
 
 Candidate app0.27.25/hosted MCP0.3.5 and stdio0.4.8 add shared paper_lookup with

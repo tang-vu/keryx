@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Validate a paid MCP question before funding (2026-10-08, v0.27.32 candidate)
+
+The caller-funded MCP buyer now checks the paid API's shared 2000-character limit
+before custody or funding. Its tool schema exposes the same upper limit, and
+accepted text is trimmed before submission. Within the buyer handler, original
+payment journals, pending funding journals and crash locks retain priority; recovery observes their
+original query or transaction without new-question validation or replacement payment.
+Stdio MCP 0.4.9 and app 0.27.32 are candidates, with publication and deployment still
+gated. See [scope and acceptance](engineering/mcp-question-preflight.md).
+
 ### Navigate report sections with assistive technology (2026-10-08, v0.27.31 candidate)
 
 Answer sections now expose native headings, starting at level two and retaining
