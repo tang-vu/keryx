@@ -101,3 +101,22 @@ it("times out DNS waits and avoids initiating lookups after prior cancellation",
   await expect(fetchPublicBytes("https://slow.example", { signal: controller.signal })).rejects.toMatchObject({ name: "AbortError" });
   expect(mocks.lookup).not.toHaveBeenCalled(); expect(mocks.fetch).not.toHaveBeenCalled();
 });
+it.each([
+  { status: 206, headers: {} },
+  { status: 200, headers: { "content-range": "bytes 0-9/100" } },
+  { status: 200, headers: { "content-range": "" } },
+])("refuses known partial membership before reading its body: $status", async ({ status, headers }) => {
+  const response = new Response("partial XML", { status, headers });
+  const cancel = vi.spyOn(response.body!, "cancel");
+  const read = vi.spyOn(response.body!, "getReader");
+  mocks.fetch.mockResolvedValue(response);
+  await expect(fetchPublicBytes("https://first.example/feed", { requireFullResponse: true })).rejects.toThrow("partial or ranged");
+  expect(cancel).toHaveBeenCalledOnce(); expect(read).not.toHaveBeenCalled();
+  expect(mocks.fetch).toHaveBeenCalledOnce();
+});
+it("keeps ordinary partial-body reads compatible and admits a whole 200 response", async () => {
+  mocks.fetch.mockResolvedValueOnce(new Response("bounded article", { status: 206 }))
+    .mockResolvedValueOnce(new Response("whole feed", { status: 200 }));
+  expect(new TextDecoder().decode((await fetchPublicBytes("https://first.example/article")).bytes)).toBe("bounded article");
+  expect(new TextDecoder().decode((await fetchPublicBytes("https://first.example/feed", { requireFullResponse: true })).bytes)).toBe("whole feed");
+});

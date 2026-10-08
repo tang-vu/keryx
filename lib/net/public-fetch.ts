@@ -33,6 +33,8 @@ export interface FetchLimits {
   signal?: AbortSignal;
   httpsOnly?: boolean;
   allowedContentTypes?: string[];
+  /** Whole-document membership callers refuse partial or ranged responses. */
+  requireFullResponse?: boolean;
 }
 
 export interface PublicRequestLimits {
@@ -257,6 +259,10 @@ export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): P
           continue;
         }
         if (!res.ok) throw new UnsafeTargetError(`the feed answered ${res.status}`);
+        if (limits.requireFullResponse && (res.status !== 200 || res.headers.has("content-range"))) {
+          await res.body?.cancel();
+          throw new UnsafeTargetError("the document response is partial or ranged");
+        }
         const contentType = (res.headers.get("content-type") ?? "").split(";", 1)[0]!.trim().toLowerCase();
         if (limits.allowedContentTypes && !limits.allowedContentTypes.includes(contentType)) {
           await res.body?.cancel();
