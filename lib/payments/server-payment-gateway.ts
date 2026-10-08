@@ -10,6 +10,7 @@ import { PaymentPendingError, PaymentSettledError } from "./payment-state";
 import { payWithServerSigner, type ServerX402Attempt, type BatchPayloadSigner, type ServerX402Submission } from "./server-x402-client";
 import type { privateCreatorJournal } from "./private-creator-journal";
 import { assertRecipientAllowed, type RecipientExclusion } from "./recipient-exclusion";
+import { readPaidArticleBody, selectedArticleBodyContract } from "./paid-article-body";
 
 export type PaymentJournalContext =
   | { queryId: string; kind: "fetch" | "citation"; sourceId: string; itemId: string | null; sourceClaim?: SourceClaimReceipt }
@@ -42,6 +43,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
     offer?: ArticleOfferRef;
     sourceClaim?: SourceClaimReceipt;
   } & RecipientExclusion): Promise<FetchResult> {
+    const bodyContract = selectedArticleBodyContract(item);
     const journal = this.paymentJournal?.({ queryId, kind: "fetch", sourceId: source.id, itemId: item?.id ?? null, sourceClaim });
     await assertCreatorPaymentClaim(source, sourceClaim, "fetch");
     const path = item
@@ -96,7 +98,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
     if (itemIdentity && !matchesArticlePricing(attempt.data?.pricing, priceUsdc, offer)) {
       throwPricingMismatch(payment, source.name);
     }
-    const content = attempt.data?.content ?? attempt.data?.text ?? JSON.stringify(attempt.data ?? {});
+    const content = readPaidArticleBody(attempt.data?.content ?? attempt.data?.text, bodyContract, payment);
     return { content, payment };
   }
 
