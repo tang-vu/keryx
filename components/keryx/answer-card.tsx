@@ -145,7 +145,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
                         )}
                         {c.scholarly && <ScholarlyMetadataDetails metadata={c.scholarly} />}
                       </span>
-                      <button type="button" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="font-mono text-xs text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">Evidence</button>
+                      <button type="button" aria-label={`Inspect evidence for citation ${c.marker}`} aria-haspopup="dialog" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center px-2 font-mono text-xs text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">Evidence</button>
                       <span className="shrink-0 font-mono text-[11px] text-ink-3">
                         {Math.round(c.weight * 100)}%
                       </span>
@@ -228,7 +228,7 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
                   {spans.map((item, index) => (
                     <blockquote
                       key={`${item.marker}-${index}`}
-                      className="font-serif text-[13px] italic leading-snug text-ink-2"
+                      className="whitespace-pre-wrap font-serif text-[13px] italic leading-snug text-ink-2 [overflow-wrap:anywhere]"
                     >
                       “{item.quote}”{" "}
                       <span className="not-italic text-paid">

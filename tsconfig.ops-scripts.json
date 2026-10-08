@@ -7,6 +7,7 @@
   "include": [
     "scripts/test-browser-source-recency.mts",
     "scripts/test-browser-answer-feedback.mts",
+    "scripts/test-browser-evidence-readability.mts",
     "mcp/keryx-buyer.mts",
     "mcp/keryx-mcp-server.mts",
     "mcp/keryx-buyer.test.mts",

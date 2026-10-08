@@ -1,5 +1,12 @@
 # Keryx Project Changelog
 
+### Read stored excerpts on small screens (2026-10-08, v0.27.36 candidate)
+
+Quote views retain stored line breaks and wrap long unbroken text. Citation Evidence
+actions have larger touch targets and contextual accessible names. Public/private
+results keep their recorded content, evidence and payment status unchanged.
+See [browser acceptance and surface roles](engineering/evidence-readability-2026-10-08.md).
+
 ### Preserve HTML evidence context (2026-10-08, v0.27.34 candidate)
 
 Observed preformatted regions now retain wrapped conditions and examples in

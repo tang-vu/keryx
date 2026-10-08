@@ -275,6 +275,19 @@ jobs:
           KERYX_LITERATURE_SCREENSHOT_DIR: ${{ runner.temp }}/literature-ux-screenshots
         run: npm run test:browser-literature-built
 
+      - name: Stored excerpt readability (built CSS, hermetic Chromium)
+        env:
+          KERYX_EVIDENCE_SCREENSHOT_DIR: ${{ runner.temp }}/evidence-readability
+        run: node --import tsx scripts/test-browser-evidence-readability.mts
+
+      - name: Stored excerpt readability screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-readability-screenshots
+          path: ${{ runner.temp }}/evidence-readability
+          if-no-files-found: ignore
+
       - name: Model output-limit notice (built CSS, hermetic Chromium)
         env:
           KERYX_OUTPUT_LIMIT_SCREENSHOT_DIR: ${{ runner.temp }}/output-limit-ux-screenshots

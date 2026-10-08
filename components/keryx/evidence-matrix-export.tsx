@@ -45,7 +45,7 @@ export function EvidenceMatrixExport({ run }: { run: QueryRun }) {
                     item.itemId === source.itemId && item.contentVersion === source.contentVersion);
                   return <td key={index} className="border-b border-line p-2 align-top">
                     {excerpts.length ? <details><summary className="cursor-pointer text-paid">Inspect {excerpts.length} {excerpts.length === 1 ? "excerpt" : "excerpts"}</summary>
-                      {excerpts.map((item, quoteIndex) => <blockquote key={quoteIndex} className="mt-2 whitespace-pre-wrap border-l-2 border-paid pl-3 font-serif">{item.quote}</blockquote>)}
+                      {excerpts.map((item, quoteIndex) => <blockquote key={quoteIndex} className="mt-2 whitespace-pre-wrap border-l-2 border-paid pl-3 font-serif [overflow-wrap:anywhere]">{item.quote}</blockquote>)}
                     </details> : <span className="text-xs text-ink-3">No excerpt recorded</span>}
                   </td>;
                 })}

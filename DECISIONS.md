@@ -6054,3 +6054,13 @@ new work and prior fallback. Operational executor/guardian lifetime closure is
 separately required. Source release, deployment and successful transport remain
 separate from actual reviewed native delivery and original buyer receipt recovery.
 See [the private recovery contract](docs/engineering/operator-original-continuation.md).
+
+## Preserve stored excerpt layout during inspection - 2026-10-08
+
+Actual components with built CSS exposed collapsed line breaks, unbroken-string
+horizontal overflow and a 16-pixel Evidence target. Preserve recorded whitespace
+and wrap long strings across all six web excerpt views; use a contextual 44-pixel
+citation inspection action. Keep original quote bytes, eligibility and payment
+status unchanged. Browser geometry and text fidelity are acceptance evidence,
+not factual or independent-usefulness validation. See
+[scope and surface roles](docs/engineering/evidence-readability-2026-10-08.md).
