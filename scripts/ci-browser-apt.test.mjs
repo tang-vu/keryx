@@ -103,7 +103,7 @@ test("actual CLI refuses ordinary local execution", () => {
 
 test("both browser-dependency workflows exercise the helper before the unchanged real install", () => {
   for (const name of ["ci.yml", "browser-signing-originals-sqlite.yml"]) {
-    const yaml = readFileSync(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8");
+    const yaml = readFileSync(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8").replace(/\r\n/g, "\n");
     const setup = yaml.indexOf("run: node scripts/ci-browser-apt.mjs");
     assert(setup > 0);
     assert(yaml.indexOf("node --test scripts/ci-browser-apt.test.mjs") < setup);

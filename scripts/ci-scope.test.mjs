@@ -74,7 +74,7 @@ test("aggregate gate rejects failed, cancelled, missing and unexpected skipped j
 });
 
 test("gate dependency inventory stays aligned with the workflow", () => {
-  const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8").replace(/\r\n/g, "\n");
   const gate = workflow.split("\n  build-and-test:\n")[1]?.split("\n  publish-release:\n")[0];
   assert(gate, "the stable build-and-test gate exists");
   assert.match(gate, /if: always\(\)/);
