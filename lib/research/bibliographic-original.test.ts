@@ -99,6 +99,28 @@ describe("explicit original bibliography primitive", () => {
     expect(bibliographicOriginalDeliverable(firstMissing).bibliographyExports.bibtex.content).not.toContain("author = {");
   });
 
+  it.each(["hidden", 'aria-hidden="true"', 'style="display:none"', 'style="visibility:hidden"'])
+  ("preserves a gap at a %s first head contributor instead of shifting later original names", async attribute => {
+    const body = html.replace('<meta name="citation_author" content="Patrick Lewis">', `<meta ${attribute} name="citation_author" content="Patrick Lewis">`);
+    const record = await readBibliographicOriginal(arxiv, async () => read(arxiv, body));
+    expect(record.failure).toBeUndefined(); expect(record.fields.firstAuthor).toMatchObject({ state: "missing", reason: "not-visible" });
+    expect(record.authors[0]).toMatchObject({ position: 2, name: "Ethan Perez" });
+    expect(record).toMatchObject({ authorCount: 12, authorsIncomplete: true, paper: { authors: [], authorsTruncated: true } });
+    const result = bibliographicOriginalDeliverable(record);
+    expect(result.text).toContain("1. nom non conservé à cette position; 2. Ethan Perez; 3. Aleksandra Piktus");
+    expect(result.text).not.toContain("Premier auteur à la position originale 1: Ethan Perez");
+    expect(result.bibliographyExports.ris.content).not.toContain("AU  - ");
+    expect(result.bibliographyExports.bibtex.content).not.toContain("author = {");
+  });
+
+  it.each(["hidden", 'style="visibility:hidden"'])
+  ("retains unavailable contributor slots under a %s head ancestor", async attribute => {
+    const record = await readBibliographicOriginal(arxiv, async () => read(arxiv, html.replace("<head>", `<head ${attribute}>`)));
+    expect(record.failure).toBeUndefined(); expect(record.fields.firstAuthor).toMatchObject({ state: "missing", reason: "not-visible" });
+    expect(record).toMatchObject({ authorCount: 12, authorsIncomplete: true, authors: [], paper: { authors: [], authorsTruncated: true } });
+    expect(record.fields.title).toMatchObject({ state: "observed", value: title });
+  });
+
   it("withholds complete over-bound or conflicting fields and refuses a reference with no complete title", async () => {
     const conflict = await readBibliographicOriginal(arxiv, async () => read(arxiv, html.replace(`<span class="descriptor">Title:</span> ${title}`, '<span class="descriptor">Title:</span> Contradictory title')));
     expect(conflict.fields.title).toMatchObject({ state: "conflict", reason: "inconsistent" }); expect(conflict.paper).toBeUndefined();

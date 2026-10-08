@@ -6,7 +6,7 @@ const labels = {
     scope: "Original-page bibliography only. Displayed metadata/abstract is distinct from full paper access; no scientific evidence or creator-payment authority.",
     title: "Title", firstAuthor: "First author in original slot 1", identifier: "Exact observed identifier", year: "Year", journal: "Recorded journal", doi: "DOI",
     status: "Explicit page status (literal statement)", absent: "not explicitly recorded in the accepted metadata", bound: "not retained: complete field exceeds the bound",
-    conflict: "withheld: original fields disagree", unavailable: "not established: original metadata read unavailable or identity unverified",
+    conflict: "withheld: original fields disagree", unavailable: "not established: original metadata read unavailable or identity unverified", hidden: "not established: original metadata slot is explicitly hidden",
     peer: "Peer review: unknown. Repository presence and publication type do not establish peer review.",
     authors: "First three original author positions", missingAuthor: "name not retained at this position", provenance: "Field provenance", source: "Original metadata",
     reference: "Short bibliography reference", incomplete: "incomplete contributor names; missing slots are not replaced", noYear: "year not recorded",
@@ -17,7 +17,7 @@ const labels = {
     scope: "Notice de la page originale uniquement. Les métadonnées/le résumé affichés se distinguent de l’accès au texte intégral ; aucune preuve scientifique ni autorité de paiement de créateur.",
     title: "Titre", firstAuthor: "Premier auteur à la position originale 1", identifier: "Identifiant exact observé", year: "Année", journal: "Revue enregistrée", doi: "DOI",
     status: "Statut explicitement affiché (énoncé littéral)", absent: "non explicitement enregistré dans les métadonnées acceptées", bound: "non conservé : le champ complet dépasse la limite",
-    conflict: "non affirmé : les champs originaux divergent", unavailable: "non établi : lecture des métadonnées originales indisponible ou identité non vérifiée",
+    conflict: "non affirmé : les champs originaux divergent", unavailable: "non établi : lecture des métadonnées originales indisponible ou identité non vérifiée", hidden: "non établi : la position originale des métadonnées est explicitement masquée",
     peer: "Évaluation par les pairs : inconnue. La présence dans un dépôt et le type de publication ne l’établissent pas.",
     authors: "Trois premières positions originales des auteurs", missingAuthor: "nom non conservé à cette position", provenance: "Provenance des champs", source: "Métadonnées originales",
     reference: "Référence bibliographique courte", incomplete: "noms incomplets ; aucune position manquante n’est remplacée", noYear: "année non enregistrée",
@@ -28,7 +28,7 @@ const labels = {
     scope: "Chỉ là thư mục từ trang gốc. Metadata/tóm tắt hiển thị khác với truy cập toàn văn; không có quyền bằng chứng khoa học hay thanh toán tác giả.",
     title: "Tiêu đề", firstAuthor: "Tác giả ở vị trí gốc 1", identifier: "Định danh chính xác đã quan sát", year: "Năm", journal: "Tạp chí ghi nhận", doi: "DOI",
     status: "Trạng thái trang nêu rõ (nguyên văn)", absent: "chưa ghi nhận rõ trong metadata được chấp nhận", bound: "không giữ: trường đầy đủ vượt giới hạn",
-    conflict: "không khẳng định: các trường gốc khác nhau", unavailable: "chưa xác lập: không đọc được metadata gốc hoặc chưa xác minh định danh",
+    conflict: "không khẳng định: các trường gốc khác nhau", unavailable: "chưa xác lập: không đọc được metadata gốc hoặc chưa xác minh định danh", hidden: "chưa xác lập: vị trí metadata gốc bị ẩn rõ ràng",
     peer: "Phản biện: chưa biết. Có trong kho và loại xuất bản không xác lập phản biện.",
     authors: "Ba vị trí tác giả gốc đầu tiên", missingAuthor: "không giữ được tên ở vị trí này", provenance: "Nguồn từng trường", source: "Metadata gốc",
     reference: "Tham chiếu thư mục ngắn", incomplete: "tên còn thiếu; không thay vị trí thiếu bằng người sau", noYear: "chưa ghi nhận năm",
@@ -44,7 +44,7 @@ export function bibliographicOriginalDeliverable(record: BibliographicOriginalRe
   const l = labels[record.requested.language], papers = record.paper ? [record.paper] : [];
   const bibtex = paperReferencesBibtex(papers), ris = paperReferencesRis(papers);
   const value = (field: BibliographicField) => field.state === "observed" ? field.value : field.state === "conflict" ? l.conflict
-    : field.reason === "over-bound" ? l.bound : field.reason === "read-unavailable" ? l.unavailable : l.absent;
+    : field.reason === "over-bound" ? l.bound : field.reason === "read-unavailable" ? l.unavailable : field.reason === "not-visible" ? l.hidden : l.absent;
   const lines = [l.scope, ...names.map(name => `${l[name]}: ${value(record.fields[name])}.`), l.peer,
     `${l.authors}: ${[1, 2, 3].map(position => `${position}. ${record.authors.find(author => author.position === position)?.name ?? l.missingAuthor}`).join("; ")}.`];
   if (record.authorsIncomplete) lines.push(l.incomplete);

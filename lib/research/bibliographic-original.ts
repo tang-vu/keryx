@@ -68,10 +68,11 @@ function attachExport(record: BibliographicOriginalRecord, extra: Pick<PaperReco
 }
 
 function htmlField(units: ArxivBibliographicUnit[], limit: number, normalize: (value: string) => string | undefined = value => completePlainText(value, limit)): BibliographicField {
-  const present = units.filter(unit => unit.overBound || unit.value?.trim());
+  const present = units.filter(unit => unit.unavailable || unit.overBound || unit.value?.trim());
   if (!present.length) return missingBibliographicField();
   const values = present.map(unit => unit.value !== undefined && completePlainText(unit.value, limit) ? normalize(unit.value) : undefined), source = present.map(provenance);
-  if (values.some(value => !value)) return { state: "missing", reason: present.some(unit => unit.overBound || (unit.value?.length ?? 0) > limit) ? "over-bound" : "not-explicit", provenance: source };
+  if (values.some(value => !value)) return { state: "missing", reason: present.some(unit => unit.unavailable) ? "not-visible"
+    : present.some(unit => unit.overBound || (unit.value?.length ?? 0) > limit) ? "over-bound" : "not-explicit", provenance: source };
   if (new Set(values).size > 1) return { state: "conflict", reason: "inconsistent", provenance: source };
   return observed(values[0]!, source);
 }

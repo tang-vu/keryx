@@ -34,7 +34,9 @@ it("kills excess output and stdin failures, and accepts only closed field/proven
   for (const invalid of [
     { ...page, scientificEvidence: "forbidden" }, { ...page, metadata: { unrelated: [unit] } },
     { ...page, titles: [{ ...unit, rawExcerpt: "forged" }] }, { ...page, titles: [{ ...unit, end: 9 }] },
+    { ...page, titles: [{ ...unit, rawExcerpt: undefined }] },
     { ...page, titles: [{ ...unit, overBound: true }] }, { ...page, titles: Array.from({ length: 150 }, () => unit) },
+    { ...page, titles: [{ ...unit, unavailable: "hidden" }] },
   ]) {
     const child = worker(), observed = observeArxivBibliographicPage(html), invalidFailure = expect(observed).rejects.toThrow("invalid-metadata-read");
     child.stdout.write(JSON.stringify(invalid)); child.emit("close", 0); await invalidFailure; released();

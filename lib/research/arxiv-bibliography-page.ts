@@ -6,9 +6,10 @@ import { acquireParserSlot } from "../web-research/parser-slots";
 import { BibliographicOriginalError } from "./bibliographic-original-types";
 
 const unitSchema = z.object({
-  value: z.string().max(1200).optional(), overBound: z.literal(true).optional(), path: z.string().max(200),
+  value: z.string().max(1200).optional(), overBound: z.literal(true).optional(), unavailable: z.literal("hidden").optional(), path: z.string().max(200),
   start: z.number().int().nonnegative(), end: z.number().int().nonnegative(), rawExcerpt: z.string().max(1600).optional(),
-}).strict().refine(unit => (unit.value !== undefined) !== (unit.overBound === true), "Exactly one observed value or bound failure");
+}).strict().refine(unit => Number(unit.value !== undefined) + Number(unit.overBound === true) + Number(unit.unavailable !== undefined) === 1,
+  "Exactly one observed value, bound failure or unavailable slot");
 const pageSchema = z.object({ metadata: z.record(z.enum(["citation_title", "citation_author", "citation_arxiv_id", "citation_date", "citation_doi", "citation_journal_title", "citation_publication_status"]), z.array(unitSchema).max(150)), versions: z.array(unitSchema).max(150),
   titles: z.array(unitSchema).max(150), statuses: z.array(unitSchema).max(150) }).strict();
 export type ArxivBibliographicUnit = z.infer<typeof unitSchema>;
@@ -38,7 +39,7 @@ export async function observeArxivBibliographicPage(html: string, signal?: Abort
           const page = pageSchema.parse(JSON.parse(output));
           const units = [...Object.values(page.metadata).flat(), ...page.versions, ...page.titles, ...page.statuses];
           if (units.length > 150 || units.some(unit => unit.end <= unit.start || unit.end > html.length ||
-            unit.rawExcerpt !== undefined && unit.rawExcerpt !== html.slice(unit.start, unit.end))) throw new Error();
+            (unit.end - unit.start <= 1600 || unit.rawExcerpt !== undefined) && unit.rawExcerpt !== html.slice(unit.start, unit.end))) throw new Error();
           resolve(page);
         } catch { reject(new BibliographicOriginalError("invalid-metadata-read")); }
       });
