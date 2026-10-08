@@ -77,7 +77,9 @@ test("gate dependency inventory stays aligned with the workflow", () => {
   const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8").replace(/\r\n/g, "\n");
   const gate = workflow.split("\n  build-and-test:\n")[1]?.split("\n  publish-release:\n")[0];
   assert(gate, "the stable build-and-test gate exists");
-  assert.match(gate, /if: \$\{\{ !cancelled\(\) \}\}/);
+  assert.match(gate, /if: always\(\)/);
+  assert(!gate.includes("concurrency:"), "the aggregate cannot hold a PR workflow lock");
+  assert.match(gate, /if: cancelled\(\)\s+run: exit 1/);
   assert.match(gate, /needs: \[scope, checks, unit-tests, integration, browser-source, production\]/);
   for (const name of requiredJobs) assert(workflow.includes(`\n  ${name}:\n`), name);
 });

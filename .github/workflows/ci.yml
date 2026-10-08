@@ -11,14 +11,13 @@ on:
 permissions:
   contents: read
 
-# Cancel superseded PR validation only; preserve every main/release run.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
+# Main validation cancels per lane; the aggregate cannot hold a shared workflow lock.
 jobs:
   scope:
     runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-scope-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 5
     outputs:
       scope: ${{ steps.changes.outputs.scope }}
@@ -40,6 +39,9 @@ jobs:
   checks:
     needs: scope
     runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-checks-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -85,6 +87,9 @@ jobs:
     needs: scope
     if: needs.scope.outputs.scope == 'full'
     runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-unit-tests-${{ matrix.shard }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -121,6 +126,9 @@ jobs:
     needs: scope
     if: needs.scope.outputs.scope == 'full'
     runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-integration-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -227,6 +235,9 @@ jobs:
     needs: scope
     if: needs.scope.outputs.scope == 'full'
     runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-browser-source-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -338,6 +349,9 @@ jobs:
     needs: scope
     if: needs.scope.outputs.scope == 'full'
     runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-production-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -421,6 +435,9 @@ jobs:
     needs: scope
     if: needs.scope.outputs.scope == 'full'
     runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-lint-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -443,8 +460,8 @@ jobs:
 
   # Preserve the existing status name while refusing failed/missing required lanes.
   build-and-test:
-    # Run after failures/skips, but let superseded workflow cancellation finish.
-    if: ${{ !cancelled() }}
+    # Ungrouped: failure/cancellation evidence cannot lock out the newer PR run.
+    if: always()
     needs: [scope, checks, unit-tests, integration, browser-source, production]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -458,6 +475,9 @@ jobs:
           CI_SCOPE: ${{ needs.scope.outputs.scope }}
           CI_RESULTS: ${{ toJSON(needs) }}
         run: node scripts/ci-gate.mjs
+      - name: Refuse whole-workflow cancellation
+        if: cancelled()
+        run: exit 1
 
   publish-release:
     name: Publish versioned GitHub release

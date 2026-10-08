@@ -43,21 +43,27 @@ race across jobs. Browser and compiled-production checks retain their original
 assertions and settings. Sharding changes test allocation, not test isolation or
 selection. Within a lane, dependent steps remain sequential.
 
-The stable `build-and-test` status is an aggregate gate that runs after dependency
-failures/skips, unless the whole workflow is cancelled. Every applicable lane
-must succeed. Failed, cancelled, missing or unexpectedly skipped
+The stable `build-and-test` status is an ungrouped, always-running aggregate gate.
+Every applicable lane must succeed. Failed, cancelled, missing or unexpectedly skipped
 results refuse acceptance; docs-only skips are explicit. Applicable separate
 domain/platform statuses must also pass before merge. Informational lint is
 outside the merge gate, runs independently and remains visible. Publication
 jobs are post-merge delivery work, not PR acceptance. Require the aggregate's
 actual `success` conclusion; a skipped/cancelled aggregate is never merge evidence.
-A cancelled workflow has no publication authority. The gate uses GitHub's
-recommended `!cancelled()` status condition, so an obsolete run cannot keep its
-concurrency slot while an `always()` aggregate waits for a runner.
+A cancelled workflow has no publication authority. A final cancellation-only
+failure step refuses whole-workflow cancellation even if all prior lanes finished.
 
-Only superseded validation runs for the same PR and workflow are cancelled.
+Main CI cancels superseded validation per job/lane, with a distinct key for each
+unit shard. Its aggregate has no concurrency group and cannot hold a workflow
+lock ahead of the newer PR. Other PR workflows retain workflow-level cancellation.
+Only validation for the same PR and workflow is eligible for cancellation.
 Main, scheduled, manual, package and installer publication runs retain their
 existing authority and are not cancelled by this optimization.
+
+A newer docs-only PR skips runtime lanes, so those lane groups do not cancel an
+older full run. That obsolete work may finish; it is not acceptance of the new
+candidate and cannot block it through a workflow concurrency lock. Runner queue
+time still depends on the repository's available hosted capacity.
 
 UI and shared-library changes retain full coverage. A narrower UI fast lane
 requires demonstrated dependency/affected-surface coverage and failure tests;

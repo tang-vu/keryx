@@ -5985,10 +5985,13 @@ coherent outcome and its review corrections, with risk-proportionate local check
 and reuse of unchanged valid evidence. Preserve required acceptance and standing
 routine merge authorization. Split main CI into isolated parallel lanes, shard
 the complete Vitest suite three ways, and retain every prior assertion. An
-stable aggregate runs after failures/skips unless its entire workflow is cancelled;
-it refuses failed, cancelled, missing or unintended skipped lanes. Require actual
-aggregate success, never a skipped/cancelled status. GitHub's `!cancelled()` status
-condition prevents an obsolete run's `always()` gate holding its concurrency slot.
+always-running stable aggregate refuses failed, cancelled, missing or unintended
+skipped lanes, with a final whole-workflow-cancellation failure step. Require
+actual aggregate success, never a skipped/cancelled status. Main validation cancels
+per lane/shard, leaving the aggregate ungrouped so an obsolete `always()` gate
+cannot hold a workflow concurrency lock ahead of the newer PR. Other PR workflows
+retain same-PR workflow cancellation. A newer docs-only candidate may leave old
+skipped runtime-lane work finishing; it supplies no acceptance for the new source.
 Informational lint remains visible outside merge acceptance.
 
 Only regular prose-only document PR changes use the lighter lane, with scope/gate
