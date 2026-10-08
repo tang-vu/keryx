@@ -1,9 +1,10 @@
 # Reviewed teaching proposal core - October 8, 2026
 
-This pure server-side helper slice implements the dependency and review contracts
-for issue [211](https://github.com/tang-vu/keryx/issues/211). It does not activate a
-new provider call or a teaching workflow. Shared engine/result integration and a
-complete rendered lesson remain separate gates in
+This server-side slice implements the dependency/review contracts and opt-in LLM
+packet integration for issue [211](https://github.com/tang-vu/keryx/issues/211).
+It does not add a provider call or activate an ordinary teaching workflow by
+itself. Shared orchestrator/result integration and a complete rendered lesson
+remain separate gates in
 [prospective-delivery-gates-2026-10-08.md](prospective-delivery-gates-2026-10-08.md).
 
 ## Original caller admission
@@ -97,3 +98,39 @@ labels, exact preserved factual excerpts and bounded mobile/desktop layout.
 Shared type checking, scoped lint, focused regressions and production build
 remain integration checks. A separately authorized bounded real lesson trial
 with inspected output is still needed before closing the issue as complete.
+
+## Engine checkpoint
+
+`SynthInput.teachingRequest?: TeachingProposalRequest` is an internal trusted
+opt-in. `JsonChatEngine` requires the original-question-bound request,
+`generationFormat: "evidence-only"` and no `answerFormat`. A stray teaching flag
+cannot change retained legacy/private-original or decision-brief packets.
+Absent/invalid requests preserve the historical schema, guidance and output caps.
+
+The engine owns generation, exact position-preserving quote resolution,
+preparation and independent proposal review in steps 2–4 above. The existing
+generation packet adds `teachingProposals`; the existing review response adds
+`teachingProposalReview: { digest, proposals }` alongside ordinary `reviews`.
+The final `SynthResult.teachingProposals` bundle contains optional runtime-issued
+`reviewed` and `preparationGaps`. Orchestration consumes that bundle only after
+the final ledger and cited-statement selector; it must never serialize the
+internal packet into public results or receipts.
+The review's language verdict also checks all packet premise statements against
+the requested explanation language; exact source excerpts retain their language.
+
+Both additions undergo provider input preflight before supplier admission, with
+the existing output allowances. Review retains every previously admitted
+factual row/context and the existing 32,000-byte bound including its 1,024-byte
+framing reserve. If an addition does not fit, the original factual generation or
+review packet runs once unchanged and proposals remain unavailable. Malformed
+proposal rows/judgments do not invalidate separately completed factual reviews.
+No unresolved-quote run gains a proposal-only review call. Truncation preserves
+existing failure/ceiling diagnostics; there is no proposal repair or retry.
+
+Checkpoint verification passed 19 focused files / 268 offline tests, TypeScript
+without incremental state and scoped lint. Coverage includes 33 new engine
+cases, the 52 helper tests, original fulfillment/continuation, private reasoning,
+resilience, decision briefs, ordinary evidence-only review and transport
+adapters. The synthetic legacy wire fixture was independently executed against
+unchanged `e9077764`; its two-call 2304/1536-token prompt hash remains
+`3348c662f608e6a0c4cbf1ec08c44118d949930c675828a1aa581228751dc186`.
