@@ -27,6 +27,66 @@ function decision(
 }
 
 describe("claim-aware evidence portfolio", () => {
+  it("chooses one free public channel for equal public/paid document aliases without corroboration inflation", () => {
+    const rows = [
+      { ...decision("registered", "BUY", 0.95, 0.002, [0]), itemUrl: "https://publisher.test/article" },
+      { ...decision("public", "CACHE", 0.95, 0, [0]), itemUrl: "https://publisher.test/article#section", sourceKind: "public-reference" as const },
+      { ...decision("independent", "CACHE", 0.7, 0, [1]), itemUrl: "https://other.test/article" },
+    ];
+    const input = { decisions: rows, claimCount: 2, attentionLimit: 2, fetchBudgetUsdc: 0.025 };
+    const selected = selectEvidencePortfolio(input);
+    expect(selected).toEqual(selectEvidencePortfolio({ ...input, decisions: [...rows].reverse() }));
+    expect(selected.selectedAssetIds).toEqual(["item:public", "item:independent"]);
+    expect(selected.selectedBuyUsdc).toBe(0);
+    expect(selected.claims.map(claim => claim.predictedCoverage)).toEqual([0.95, 0.7]);
+  });
+
+  it("keeps a stronger registered channel's own price and targets without borrowing public coverage", () => {
+    const result = selectEvidencePortfolio({ decisions: [
+      { ...decision("registered", "BUY", 0.9, 0.002, [0]), itemUrl: "https://publisher.test/article" },
+      { ...decision("public", "CACHE", 0.5, 0, [1]), itemUrl: "https://publisher.test/article", sourceKind: "public-reference" as const },
+    ], claimCount: 2, attentionLimit: 2, fetchBudgetUsdc: 0.01 });
+    expect(result.selectedAssetIds).toEqual(["item:registered"]);
+    expect(result.selectedBuyUsdc).toBe(0.002);
+    expect(result.claims.map(claim => claim.predictedCoverage)).toEqual([0.9, 0]);
+  });
+
+  it("prefers public over a paid cache alias only on an equivalent document and utility", () => {
+    const result = selectEvidencePortfolio({ decisions: [
+      { ...decision("registered-cache", "CACHE", 0.8, 0.002, [0]), itemUrl: "https://publisher.test/article" },
+      { ...decision("public", "CACHE", 0.8, 0, [0]), itemUrl: "https://publisher.test/article", sourceKind: "public-reference" as const },
+    ], claimCount: 1, attentionLimit: 2, fetchBudgetUsdc: 0 });
+    expect(result.selectedAssetIds).toEqual(["item:public"]);
+    expect(result.claims[0].predictedCoverage).toBe(0.8);
+  });
+
+  it("keeps cached-alias tie ranking deterministic with interleaved independent candidates", () => {
+    const rows = [
+      { ...decision("a-registered", "CACHE", 0.8, 0.002, [0]), itemUrl: "https://publisher.test/article" },
+      { ...decision("z-public", "CACHE", 0.8, 0, [0]), itemUrl: "https://publisher.test/article", sourceKind: "public-reference" as const },
+      { ...decision("m-independent", "CACHE", 0.8, 0, [0]), itemUrl: "https://other.test/article" },
+    ];
+    const select = (decisions: Decision[]) => selectEvidencePortfolio({ decisions, claimCount: 1,
+      attentionLimit: 2, fetchBudgetUsdc: 0 });
+    const result = select(rows);
+    expect(result).toEqual(select([...rows].reverse()));
+    expect(result).toEqual(select([rows[1], rows[2], rows[0]]));
+    expect(result.selectedAssetIds).toContain("item:z-public");
+    expect(result.selectedAssetIds).toContain("item:m-independent");
+  });
+
+  it("leaves bounded optimization room for independent documents before dozens of aliases", () => {
+    const aliases = Array.from({ length: 50 }, (_, index) => ({
+      ...decision(`alias-${index}`, "CACHE", 0.95, 0, [0]), itemUrl: "https://publisher.test/article",
+    }));
+    const result = selectEvidencePortfolio({ decisions: [...aliases,
+      { ...decision("independent", "CACHE", 0.7, 0, [1]), itemUrl: "https://other.test/article" },
+    ], claimCount: 2, attentionLimit: 2, fetchBudgetUsdc: 0 });
+    expect(result.selectedAssetIds).toContain("item:independent");
+    expect(result.selectedAssetIds).toHaveLength(2);
+    expect(result.claims[0].predictedCoverage).toBe(0.95);
+  });
+
   it("bounds broad-catalog work deterministically without enlarging money or attention caps", () => {
     const rows = Array.from({ length: 48 }, (_, index) => decision(String(index), "BUY", 0.8, 0.001, [index % 8]));
     const input = { decisions: rows, claimCount: 8, attentionLimit: 8, fetchBudgetUsdc: 0.005 };

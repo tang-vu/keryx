@@ -11,10 +11,13 @@
  *
  * Expected claim coverage uses diminishing returns, so corroboration can help while four nearly
  * identical sources do not automatically crowd out a source that covers a different claim.
+ * Canonical-location aliases are alternative delivery channels: choose at most one, retaining
+ * its own targets and cost. Location grouping never supplies ownership or evidence authority.
  */
 
 import type { Decision, EvidencePortfolio } from "../types";
 import { MIN_REWARD_SUPPORT } from "./evidence-ledger";
+import { documentSelectionKey } from "./document-selection";
 
 export const EVIDENCE_PORTFOLIO_POLICY = "claim-coverage-v1" as const;
 
@@ -25,6 +28,7 @@ const EPSILON = 1e-9;
 
 interface Candidate {
   id: string;
+  documentKey: string;
   decision: Decision;
   buyUsdc: number;
   expectedValue: number;
@@ -37,6 +41,7 @@ interface PortfolioState {
   predictedTotal: number;
   utility: number;
   buyUsdc: number;
+  publicReads: number;
   key: string;
 }
 
@@ -59,10 +64,18 @@ export function selectEvidencePortfolio(input: {
   // The live catalog is currently small. This guard keeps the exact subset search bounded if a
   // future/custom engine marks hundreds of candidates positive. The pre-rank is deterministic and
   // price-neutral for CACHE, so input order and a cache entry's list price cannot choose the set.
-  const candidates = [...allEligible]
-    .sort(compareStandalone)
-    .slice(0, MAX_OPTIMIZED_CANDIDATES)
-    .sort((a, b) => a.id.localeCompare(b.id));
+  const ranked = [...allEligible].sort(compareStandalone);
+  const seenDocuments = new Set<string>();
+  const representatives = ranked.filter(candidate => {
+    if (seenDocuments.has(candidate.documentKey)) return false;
+    seenDocuments.add(candidate.documentKey);
+    return true;
+  });
+  // Give distinct documents the bounded candidate slots before alternative delivery channels of
+  // the same location. Aliases remain separately priced/targeted choices when capacity permits.
+  const representativesSet = new Set(representatives);
+  const candidates = [...representatives, ...ranked.filter(candidate => !representativesSet.has(candidate))]
+    .slice(0, MAX_OPTIMIZED_CANDIDATES).sort((a, b) => a.id.localeCompare(b.id));
 
   let best = evaluate([], claimCount);
   let evaluations = 0;
@@ -72,7 +85,7 @@ export function selectEvidencePortfolio(input: {
   const seed: Candidate[] = [];
   let seedCost = 0;
   for (let slot = 0; slot < attentionLimit; slot++) {
-    const next = candidates.filter(candidate => !seed.includes(candidate) && seedCost + candidate.buyUsdc <= fetchBudgetUsdc + EPSILON)
+    const next = candidates.filter(candidate => !seed.some(selected => selected.documentKey === candidate.documentKey) && seedCost + candidate.buyUsdc <= fetchBudgetUsdc + EPSILON)
       .map(candidate => evaluate([...seed, candidate], claimCount)).sort((a, b) => betterState(a, b) ? -1 : betterState(b, a) ? 1 : 0)[0];
     if (!next || !betterState(next, evaluate(seed, claimCount))) break;
     seed.splice(0, seed.length, ...next.candidates); seedCost = next.buyUsdc;
@@ -88,6 +101,8 @@ export function selectEvidencePortfolio(input: {
 
     for (let index = start; index < candidates.length; index++) {
       const candidate = candidates[index]!;
+      // URL aliases never add a second attention slot or predicted independent corroboration.
+      if (selected.some(item => item.documentKey === candidate.documentKey)) continue;
       const nextBuyUsdc = buyUsdc + candidate.buyUsdc;
       if (nextBuyUsdc > fetchBudgetUsdc + EPSILON) continue;
       selected.push(candidate);
@@ -168,6 +183,7 @@ function toCandidate(decision: Decision, claimCount: number): Candidate | null {
   }
   return {
     id,
+    documentKey: documentSelectionKey(decision),
     decision,
     buyUsdc: decision.action === "BUY" ? decision.price : 0,
     expectedValue,
@@ -193,6 +209,7 @@ function evaluate(candidates: Candidate[], claimCount: number): PortfolioState {
     predictedTotal,
     utility: predictedTotal - ATTENTION_PENALTY * candidates.length,
     buyUsdc,
+    publicReads: candidates.filter(candidate => candidate.decision.sourceKind === "public-reference").length,
     key: ids.join("\u0000"),
   };
 }
@@ -207,6 +224,8 @@ function betterState(candidate: PortfolioState, incumbent: PortfolioState): bool
   }
   if (candidate.buyUsdc < incumbent.buyUsdc - EPSILON) return true;
   if (candidate.buyUsdc > incumbent.buyUsdc + EPSILON) return false;
+  // A total tie order also keeps bounded pre-ranking/input order from choosing an alias channel.
+  if (candidate.publicReads !== incumbent.publicReads) return candidate.publicReads > incumbent.publicReads;
   return candidate.key.localeCompare(incumbent.key) < 0;
 }
 
@@ -255,6 +274,9 @@ function compareStandalone(a: Candidate, b: Candidate): number {
   if (Math.abs(aCoverage - bCoverage) > EPSILON) return bCoverage - aCoverage;
   if (a.decision.action !== b.decision.action) return a.decision.action === "CACHE" ? -1 : 1;
   if (Math.abs(a.buyUsdc - b.buyUsdc) > EPSILON) return a.buyUsdc - b.buyUsdc;
+  if (a.decision.sourceKind !== b.decision.sourceKind) {
+    return a.decision.sourceKind === "public-reference" ? -1 : 1;
+  }
   return a.id.localeCompare(b.id);
 }
 
