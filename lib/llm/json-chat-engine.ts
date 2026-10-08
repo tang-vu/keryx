@@ -18,13 +18,16 @@ import { buildContextualQuoteOptions } from "./quote-context";
 import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE, BRIEF_COMPACT_REVIEW_SCHEMA } from "./decision-brief";
 import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
 import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
-import { buildEvidenceReviewInput } from "./evidence-review-input";
+import { buildEvidenceReviewInput, MAX_EVIDENCE_REVIEW_INPUT_BYTES } from "./evidence-review-input";
 import { MAX_SELECTION_DIAGNOSTIC_HISTORY, ResearchSelectionError, invalidResearchSelectionOutput, parseResearchSelection } from "./research-selection";
 import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/selection-diagnostic";
 import type { Decision } from "../types";
 import { ReasoningOutputValidationError, outputTokenLimitFromValidatedError } from "./reasoning-engine";
 import { synthesisOutputLimitFromError } from "./output-limit-diagnostic";
 import { EVIDENCE_ONLY_SCHEMA, evidenceOnlyEnvelope, evidenceOnlyGuidance } from "./evidence-only-synthesis";
+import { validTeachingProposalRequest } from "../research/teaching-proposals-request";
+import { prepareTeachingProposals, reviewTeachingProposals, teachingProposalReviewInput,
+  TEACHING_PROPOSAL_GENERATION_GUIDANCE, type PreparedTeachingProposals } from "../research/teaching-proposals";
 import type {
   AttributeInput,
   DecideInput,
@@ -279,36 +282,74 @@ export abstract class JsonChatEngine implements ReasoningEngine {
 
   async synthesize(input: SynthInput): Promise<SynthResult> {
     if (input.answerFormat === "decision-brief" && this.supportsDecisionBrief()) return this.synthesizeDecisionBrief(input);
+    // Protected originals have no ordinary generation opt-in. Even a stray
+    // teaching flag on a legacy/decision-brief input cannot alter their contract.
+    const teachingRequest = input.generationFormat === "evidence-only" && !input.answerFormat && input.teachingRequest &&
+      validTeachingProposalRequest(input.teachingRequest, input.question) ? input.teachingRequest : undefined;
     const sources = this.evidenceSources(input);
     const quoteOptions = this.synthesisQuoteOptions(input, sources);
-    const out = await this.measuredChatJson(
-      config.synthesisModel,
-      this.synthesisGenerationGuidance(input),
-      JSON.stringify({
-        question: input.question,
-        researchTargets: input.subClaims.map((question, claimIndex) => ({ claimIndex, question })),
-        sources,
-        quoteOptions: this.synthesisGenerationQuoteOptions(input, quoteOptions),
-        schema: input.generationFormat === "evidence-only" ? EVIDENCE_ONLY_SCHEMA :
-          '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
-          '"evidence":[{"claimIndex":number,"marker":string,"quoteId":string,"support":number(0..1),"statement":string}],' +
-          '"conflicts":[{"point":string,"positions":[{"marker":string,"stance":string}],"trusted":string,"reason":string}]}',
-      }),
-      // Retain the admitted ceiling even when the ordinary packet omits a redundant prose draft.
-      this.synthesisGenerationTokens(input),
-    );
+    const generation = {
+      question: input.question,
+      researchTargets: input.subClaims.map((question, claimIndex) => ({ claimIndex, question })),
+      sources,
+      quoteOptions: this.synthesisGenerationQuoteOptions(input, quoteOptions),
+      schema: input.generationFormat === "evidence-only" ? EVIDENCE_ONLY_SCHEMA :
+        '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
+        '"evidence":[{"claimIndex":number,"marker":string,"quoteId":string,"support":number(0..1),"statement":string}],' +
+        '"conflicts":[{"point":string,"positions":[{"marker":string,"stance":string}],"trusted":string,"reason":string}]}',
+    };
+    let generationSystem = this.synthesisGenerationGuidance(input), generationJson = JSON.stringify(generation);
+    const generationTokens = this.synthesisGenerationTokens(input);
+    let teachingGeneration = false;
+    if (teachingRequest) {
+      const system = generationSystem + " For this admitted teaching request, also return teachingProposals. " +
+        TEACHING_PROPOSAL_GENERATION_GUIDANCE +
+        `Write factual statements in ${teachingRequest.language === "vi" ? "Vietnamese" : "English"}, with at most ${teachingRequest.explanationMaximumWords} explanatory words collectively. ` +
+        "Preserve every factual qualification. Prioritize factual evidence; omit proposals rather than weakening facts to fit the unchanged output budget.";
+      const json = JSON.stringify({ ...generation, teachingRequest,
+        schema: generation.schema.slice(0, -1) + ',"teachingProposals":[{"id":string,"kind":"activity"|"classification-example"|"exit-question","text":string,"premiseIds":string[],"conditions":string[],"durationMinutes":number (activity only),"answer":string (examples/exit only)}]}' });
+      try {
+        // Local preflight only. Refusing the addition keeps the ordinary factual
+        // request intact; it is not a supplier retry or a second generation.
+        this.validateChatJsonInput(config.synthesisModel, system, json, generationTokens);
+        generationSystem = system; generationJson = json; teachingGeneration = true;
+      } catch { /* Keep the unchanged ordinary generation, with proposals withheld. */ }
+    }
+    // Retain the admitted ceiling even when the ordinary packet omits a redundant prose draft.
+    const out = await this.measuredChatJson(config.synthesisModel, generationSystem, generationJson, generationTokens);
     const proposals = resolveQuoteEvidence(out.evidence, quoteOptions);
+    const teaching: PreparedTeachingProposals | undefined = teachingRequest ? teachingGeneration
+      ? prepareTeachingProposals(teachingRequest, input.question, proposals, out.teachingProposals)
+      : { gaps: [{ reason: "invalid-proposals" }] } : undefined;
     let review: unknown;
     let reviewedIndexes: ReadonlySet<number> = new Set();
     let synthesisOutputLimit: SynthesisOutputLimit | undefined;
+    let teachingReview = false;
     if (proposals.length) {
       try {
         const reviewInput = this.synthesisEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims });
         reviewedIndexes = reviewInput.reviewedIndexes;
+        let reviewSystem = EVIDENCE_REVIEW_GUIDANCE, reviewJson = reviewInput.json;
+        if (teaching?.packet?.proposals.length) {
+          try {
+            const teachingInput = teachingProposalReviewInput(teaching.packet);
+            const factualInput = JSON.parse(reviewInput.json);
+            const system = reviewSystem + " " + teachingInput.guidance +
+              " Language also checks every packet premise statement against the requested explanation language; source quotes retain their original language.";
+            const json = JSON.stringify({ ...factualInput, teachingProposals: teachingInput.packet,
+              schema: factualInput.schema.slice(0, -1) + ',"teachingProposalReview":' + teachingInput.schema + '}' });
+            // Same 32KB bound and 1024-byte framing reserve as the factual review.
+            // Keep ALL already-admitted factual rows and source neighborhoods.
+            if (Buffer.byteLength(system + json, "utf8") + 1024 <= MAX_EVIDENCE_REVIEW_INPUT_BYTES) {
+              this.validateChatJsonInput(config.llmModel, system, json, this.budgetFor(Math.min(proposals.length, MAX_REVIEWED_EVIDENCE)));
+              reviewSystem = system; reviewJson = json; teachingReview = true;
+            }
+          } catch { /* Review facts once; the proposal addition has no authority. */ }
+        }
         if (reviewedIndexes.size) review = await this.measuredChatJson(
           config.llmModel,
-          EVIDENCE_REVIEW_GUIDANCE,
-          reviewInput.json,
+          reviewSystem,
+          reviewJson,
           this.budgetFor(Math.min(proposals.length, MAX_REVIEWED_EVIDENCE)),
         );
       } catch (error) {
@@ -327,6 +368,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         ? "completed" as const : "unavailable" as const } : {}),
       conflicts: parseConflicts(out.conflicts),
       ...(synthesisOutputLimit ? { synthesisOutputLimit } : {}),
+      ...(teaching ? { teachingProposals: { preparationGaps: teaching.gaps,
+        ...(teachingReview && teaching.packet ? { reviewed: reviewTeachingProposals(teaching.packet,
+          review && typeof review === "object" ? (review as Record<string, unknown>).teachingProposalReview : undefined) } : {}) } } : {}),
     };
   }
 
