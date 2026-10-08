@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
+import { EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { JsonChatEngine } from "./json-chat-engine";
 import { ReasoningOutputLimitError, type SynthInput } from "./reasoning-engine";
 import { evidenceOnlyEnvelope } from "./evidence-only-synthesis";
@@ -51,6 +53,12 @@ class PacketEngine extends JsonChatEngine {
 }
 
 describe("ordinary evidence-only synthesis", () => {
+  it("preserves shared sufficiency/private context guidance at the retained PR239 checkpoint", () => {
+    // Exact evaluated constant from 1f0de603, independent of current helper output.
+    expect(createHash("sha256").update(EVIDENCE_CONTEXT_GUIDANCE).digest("hex"))
+      .toBe("b1f2d58bc1895e3cf2609d40ff6186494a746d53e5883a5834cd4324df966ebf");
+  });
+
   it("combines the compact packet and requested Portuguese presentation without bypassing separate review", async () => {
     const statements = [
       "O botão submit envia os dados do formulário ao servidor.",

@@ -48,6 +48,10 @@ ceiling. It records the fixture's serialized bytes separately from token usage.
 Failure cases cover generation/review stops, returned usage, invalid targets,
 unknown markers, mismatched/invented quote IDs and unrequested draft injection.
 Legacy input and proposal/historical planning contracts have separate coverage.
+Independent combined-source review caught enumeration guidance in the shared
+sufficiency/private constant. It now belongs only to ordinary evidence-only
+generation. A retained PR239 evaluated-constant hash guards those shared prompt
+bytes; structural retrieval repairs remain documented separately.
 
 Web, hosted research APIs, remote MCP, CLI and hosted bots share orchestration and
 its ordinary result. Stdio MCP and buyer clients keep their hosted handoff; private

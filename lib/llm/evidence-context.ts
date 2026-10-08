@@ -383,7 +383,6 @@ export const EVIDENCE_CONTEXT_GUIDANCE =
   "Each passage is separate; never join text across gaps to make a quote. " +
   "An excerpted or abstract source may omit needed details: assess only the supplied passages and state remaining gaps. " +
   "contextOmissions identifies omitted text within a selected source block; ordinary blocks use lines, observed HTML preformatted wraps use blank-line-delimited groups, and physical PDF wraps use contiguous document windows. Complete blocks can still depend on unselected surrounding blocks. No context selection certifies that every qualification is present. " +
-  "Short adjacent same-format enumeration items can share bounded contiguous context; this is structural retrieval, not proof of their meaning or complete list coverage. " +
   "candidateSelection reports bounded retrieval sampling; retained candidates and lexical matches do not certify coverage of every research target. " +
   "Caller URL fragments can prioritize uniquely matching short extracted lines and following contiguous text; this is a heading hint, not a verified HTML anchor or complete section read. " +
   "Quoted short heading names can prioritize observed HTML h1–h6 and bounded following text; repeated headings remain ambiguous, and this does not prove complete section coverage or factual support. " +

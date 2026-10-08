@@ -11,6 +11,7 @@ export const EVIDENCE_ONLY_SCHEMA =
 export const evidenceOnlyGuidance =
   "Select grounded evidence for every supported research target using ONLY the supplied sources. " +
   EVIDENCE_CONTEXT_GUIDANCE +
+  "Short adjacent same-format enumeration items can share bounded contiguous context; this is structural retrieval, not proof of their meaning or complete list coverage. " +
   "Return only evidence and conflicts; do not write an answer, citedMarkers, raw quote text, " +
   "target restatements, or missing-evidence paragraphs. Delivery retains unsupported targets separately. " +
   "For each supported target, use its exact supplied claimIndex and select an existing quoteId " +
