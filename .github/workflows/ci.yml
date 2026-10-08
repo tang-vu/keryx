@@ -1,18 +1,48 @@
 name: CI
 
-# Build the Next.js app and run the SourceRegistry contract tests on every push
-# to main and on PRs. No secrets needed: the build degrades gracefully without
-# env (offline mode) and the contract tests run on Hardhat's in-process network.
-
+# Secret-free acceptance for the merged PR tree and exact main source.
+# See docs/development-workflow.md for scope, batching and release gates.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+# Main validation cancels per lane; the aggregate cannot hold a shared workflow lock.
 jobs:
-  build-and-test:
+  scope:
     runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-scope-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    timeout-minutes: 5
+    outputs:
+      scope: ${{ steps.changes.outputs.scope }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+      - name: Check scope and aggregate failure handling
+        run: node --test scripts/ci-scope.test.mjs scripts/ci-browser-apt.test.mjs
+      - name: Classify PR merged-tree changes (main and unknown mean full)
+        id: changes
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/ci-scope.mjs
+
+  checks:
+    needs: scope
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-checks-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -27,8 +57,92 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: CI scope and merge gate regression checks
+        run: node --test scripts/ci-scope.test.mjs
+
       - name: Typecheck (tsc)
+        if: needs.scope.outputs.scope == 'full'
         run: npm run typecheck
+
+      - name: Engineering feed integrity (no settlement)
+        run: node --import tsx scripts/build-engineering-feed.mts --check
+
+      - name: Compile contracts
+        if: needs.scope.outputs.scope == 'full'
+        run: npx hardhat compile
+
+      - name: Contract tests (SourceRegistry)
+        # ts-node needs the CommonJS tsconfig; the app tsconfig uses bundler/esnext.
+        if: needs.scope.outputs.scope == 'full'
+        run: npx hardhat --tsconfig tsconfig.hardhat.json test
+
+      - name: Production dependency audit (high gate)
+        if: needs.scope.outputs.scope == 'full'
+        run: |
+          node --test scripts/security-dependencies.test.mjs scripts/sharp-security.test.mjs
+          npm audit --omit=dev --audit-level=high
+
+  unit-tests:
+    name: Unit tests (${{ matrix.shard }}/3)
+    needs: scope
+    if: needs.scope.outputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-unit-tests-${{ matrix.shard }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+
+      - name: Pin project npm installer
+        run: npm install --global npm@11.19.0 --no-audit --no-fund
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Browser runner APT setup tests (no system changes)
+        run: node --test scripts/ci-browser-apt.test.mjs
+
+      - name: Prepare official Ubuntu HTTPS mirrors for browser dependencies
+        run: node scripts/ci-browser-apt.mjs
+
+      - name: Install Chromium for unit and browser checks
+        timeout-minutes: 5
+        run: npx playwright install --with-deps chromium
+
+      - name: Unit tests (economic invariants)
+        run: npm test -- --shard=${{ matrix.shard }}/3
+
+  integration:
+    needs: scope
+    if: needs.scope.outputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-integration-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+
+      - name: Pin project npm installer
+        run: npm install --global npm@11.19.0 --no-audit --no-fund
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
 
       - name: Tailwind authored source scope (synthetic retained builds)
         run: node scripts/test-tailwind-source-scope.mjs
@@ -76,16 +190,6 @@ jobs:
           node --import tsx scripts/creator-cashout-batch-sign.mts --help
           node --import tsx scripts/creator-cashout-batch-funding.mts --help
 
-      - name: Browser runner APT setup tests (no system changes)
-        run: node --test scripts/ci-browser-apt.test.mjs
-
-      - name: Prepare official Ubuntu HTTPS mirrors for browser dependencies
-        run: node scripts/ci-browser-apt.mjs
-
-      - name: Install Chromium for unit and browser checks
-        timeout-minutes: 5
-        run: npx playwright install --with-deps chromium
-
       - name: Synthetic research provenance (isolated PostgreSQL 17, synthetic data)
         run: node --import tsx scripts/test-synthetic-provenance-postgres.mts
 
@@ -94,15 +198,6 @@ jobs:
 
       - name: Exact paid original claim (isolated PostgreSQL 17, no payments)
         run: node --import tsx scripts/test-a2a-original-claim-postgres.mts
-
-      - name: Unit tests (economic invariants)
-        run: npm test
-
-      - name: Zotero RIS parser compatibility (pinned source, synthetic metadata)
-        run: |
-          mkdir -p .artifacts/reference-export
-          curl --fail --silent --show-error --max-time 30 https://raw.githubusercontent.com/zotero/translators/c7551c1a4d5b9623273119c7fbadf8735731dc92/RIS.js -o .artifacts/reference-export/zotero-RIS.js
-          node --import tsx scripts/test-zotero-ris.mts .artifacts/reference-export/zotero-RIS.js
 
       - name: Stdio MCP original paid-job polling (hermetic, no settlement)
         run: npx vitest run --config mcp/vitest.config.mts
@@ -118,11 +213,64 @@ jobs:
 
       - name: Research Monthly admission (isolated PostgreSQL, synthetic data)
         run: node --import tsx scripts/test-research-monthly-postgres.mts
-      - name: Browser authorization admission (isolated PostgreSQL, synthetic data)
-        run: node --import tsx scripts/test-browser-authorization-postgres.mts
 
       - name: Withdrawal backup and recovered copy (Linux CLI, synthetic data)
         run: node --import tsx --no-warnings scripts/test-withdrawal-backup-restore.mts
+
+      - name: Built stdio Monthly discovery (hermetic, no settlement)
+        run: |
+          node --test scripts/mcp-registry-release.test.mjs
+          npm --prefix mcp run build
+          node --import tsx scripts/test-monthly-mcp-package.mts
+
+      - name: Agent quality regression (hermetic, no settlement)
+        run: |
+          npm run eval:agent:ci
+          node --import tsx scripts/eval-research-boundary-corpus.mts --check
+          npm run eval:workload:research -- --capture --fixtures
+          npm run eval:workload:research -- --replay --fixtures
+          npm run eval:workload:commerce
+
+  browser-source:
+    needs: scope
+    if: needs.scope.outputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-browser-source-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+
+      - name: Pin project npm installer
+        run: npm install --global npm@11.19.0 --no-audit --no-fund
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Browser runner APT setup tests (no system changes)
+        run: node --test scripts/ci-browser-apt.test.mjs
+
+      - name: Prepare official Ubuntu HTTPS mirrors for browser dependencies
+        run: node scripts/ci-browser-apt.mjs
+
+      - name: Install Chromium for unit and browser checks
+        timeout-minutes: 5
+        run: npx playwright install --with-deps chromium
+
+      - name: Zotero RIS parser compatibility (pinned source, synthetic metadata)
+        run: |
+          mkdir -p .artifacts/reference-export
+          curl --fail --silent --show-error --max-time 30 https://raw.githubusercontent.com/zotero/translators/c7551c1a4d5b9623273119c7fbadf8735731dc92/RIS.js -o .artifacts/reference-export/zotero-RIS.js
+          node --import tsx scripts/test-zotero-ris.mts .artifacts/reference-export/zotero-RIS.js
+
+      - name: Browser authorization admission (isolated PostgreSQL, synthetic data)
+        run: node --import tsx scripts/test-browser-authorization-postgres.mts
 
       - name: Browser buyer recovery (hermetic, no settlement)
         run: npm run test:browser-buyer
@@ -155,12 +303,6 @@ jobs:
       - name: Monthly browser recovery (hermetic, no settlement)
         run: npm run test:browser-monthly
 
-      - name: Built stdio Monthly discovery (hermetic, no settlement)
-        run: |
-          node --test scripts/mcp-registry-release.test.mjs
-          npm --prefix mcp run build
-          node --import tsx scripts/test-monthly-mcp-package.mts
-
       - name: Funding replacement recovery (synthetic RPC, no signing)
         run: node --import tsx scripts/test-browser-funding-replacement.mts
 
@@ -169,10 +311,13 @@ jobs:
 
       - name: Browser sign-out (hermetic, no signing)
         run: npm run test:browser-auth
+
       - name: Circle Google SDK and OAuth return (synthetic vendor transport, no wallet or funds)
         run: npm run test:browser-circle-wallet
+
       - name: Session revoke and concurrent recovery (synthetic custody, no funds)
         run: node --import tsx scripts/test-browser-session-revoke.mts
+
       - name: Browser clock skew (synthetic login, no payment)
         run: node --import tsx scripts/test-browser-clock-skew.mts
 
@@ -184,9 +329,6 @@ jobs:
 
       - name: Isolated session worker and IndexedDB (synthetic, no funds)
         run: npm run test:browser-isolated-session
-
-      - name: Normal mainnet production worker and CSP (synthetic, no funds)
-        run: npm run test:browser-mainnet-normal-built
 
       - name: Private browser journal (hermetic, no settlement)
         run: npm run test:browser-private-journal
@@ -203,28 +345,40 @@ jobs:
       - name: Business calculator UI (local arithmetic, no settlement)
         run: npm run test:business-calculator
 
-      - name: Agent quality regression (hermetic, no settlement)
-        run: |
-          npm run eval:agent:ci
-          node --import tsx scripts/eval-research-boundary-corpus.mts --check
-          npm run eval:workload:research -- --capture --fixtures
-          npm run eval:workload:research -- --replay --fixtures
-          npm run eval:workload:commerce
+  production:
+    needs: scope
+    if: needs.scope.outputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-production-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Engineering feed integrity (no settlement)
-        run: node --import tsx scripts/build-engineering-feed.mts --check
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
 
-      - name: Compile contracts
-        run: npx hardhat compile
+      - name: Pin project npm installer
+        run: npm install --global npm@11.19.0 --no-audit --no-fund
 
-      - name: Contract tests (SourceRegistry)
-        # ts-node needs the CommonJS tsconfig; the app tsconfig uses bundler/esnext.
-        run: npx hardhat --tsconfig tsconfig.hardhat.json test
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
 
-      - name: Production dependency audit (high gate)
-        run: |
-          node --test scripts/security-dependencies.test.mjs scripts/sharp-security.test.mjs
-          npm audit --omit=dev --audit-level=high
+      - name: Browser runner APT setup tests (no system changes)
+        run: node --test scripts/ci-browser-apt.test.mjs
+
+      - name: Prepare official Ubuntu HTTPS mirrors for browser dependencies
+        run: node scripts/ci-browser-apt.mjs
+
+      - name: Install Chromium for unit and browser checks
+        timeout-minutes: 5
+        run: npx playwright install --with-deps chromium
+
+      - name: Normal mainnet production worker and CSP (synthetic, no funds)
+        run: npm run test:browser-mainnet-normal-built
 
       - name: Build (Next.js)
         run: npm run build
@@ -275,10 +429,55 @@ jobs:
           KERYX_FORCE_OFFLINE: "1"
         run: node --import tsx scripts/test-withdrawal-framework-headers.mts
 
+  lint:
+    name: Lint (informational, outside merge gate)
+    continue-on-error: true
+    needs: scope
+    if: needs.scope.outputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: ${{ github.workflow }}-lint-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+
+      - name: Pin project npm installer
+        run: npm install --global npm@11.19.0 --no-audit --no-fund
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
       - name: Lint (informational)
         # Non-blocking: surfaces issues without failing CI on pre-existing debt.
         run: npm run lint
         continue-on-error: true
+
+  # Preserve the existing status name while refusing failed/missing required lanes.
+  build-and-test:
+    # Ungrouped: failure/cancellation evidence cannot lock out the newer PR run.
+    if: always()
+    needs: [scope, checks, unit-tests, integration, browser-source, production]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+      - name: Require every applicable lane
+        env:
+          CI_SCOPE: ${{ needs.scope.outputs.scope }}
+          CI_RESULTS: ${{ toJSON(needs) }}
+        run: node scripts/ci-gate.mjs
+      - name: Refuse whole-workflow cancellation
+        if: cancelled()
+        run: exit 1
 
   publish-release:
     name: Publish versioned GitHub release

@@ -41,6 +41,11 @@ on:
       - "package-lock.json"
       - ".github/workflows/desktop.yml"
 
+# Superseded PR checks are cancelled; push/manual/release runs stay independent.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   packaged-smoke:
     runs-on: windows-latest
