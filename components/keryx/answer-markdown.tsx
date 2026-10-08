@@ -100,14 +100,20 @@ export function AnswerMarkdown({
   className,
   onCitationClick,
 }: AnswerMarkdownProps) {
-  const blocks = text.split(/\n{2,}/).filter((b) => b.trim().length > 0);
+  const blocks = text.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean)
+    .map((trimmed) => ({ trimmed, heading: /^(#{1,3})\s+(.*)$/.exec(trimmed) }));
+  // Each answer is a section within its host. Normalize the shallowest emitted
+  // heading to h2 while preserving the report's relative heading depths.
+  const shallowestHeading = blocks.reduce(
+    (depth, { heading }) => heading ? Math.min(depth, heading[1].length) : depth,
+    3,
+  );
   return (
     <div className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink", className)}>
-      {blocks.map((block, bi) => {
-        const trimmed = block.trim();
-        const heading = /^(#{1,3})\s+(.*)$/.exec(trimmed);
+      {blocks.map(({ trimmed, heading }, bi) => {
         if (heading) {
           const level = heading[1].length;
+          const Heading = `h${2 + level - shallowestHeading}` as "h2" | "h3" | "h4";
           const content = renderWithCitations(
             heading[2],
             citations,
@@ -121,9 +127,9 @@ export function AnswerMarkdown({
                 ? "font-serif text-lg tracking-tight text-ink"
                 : "font-mono text-xs font-semibold uppercase tracking-[0.12em] text-ink-3";
           return (
-            <p key={`b${bi}`} className={cls}>
+            <Heading key={`b${bi}`} className={cls}>
               {content}
-            </p>
+            </Heading>
           );
         }
         return (

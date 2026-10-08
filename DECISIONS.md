@@ -5973,3 +5973,14 @@ limits/history. Shared TypeScript callers inherit the diagnostic; unchanged thin
 client contracts and reduced Operator/Rust roles do not establish pre-admission
 qualification. Build/CI/deployment and useful delivery remain separate gates. See
 [coverage and acceptance](docs/engineering/source-recency-2026-10-08.md#stage1-safety-candidate).
+
+## Native section headings in shared report rendering — 2026-10-08
+
+Styled paragraphs concealed the answer's section structure from assistive heading
+navigation. Render recognized headings as native h2–h4 elements, normalizing the
+shallowest depth to h2 and retaining relative depth. A conversation can contain
+several reports, so report text does not acquire a new page-level h1. Keep the
+small renderer's existing block grammar, styling, safe text and citation callbacks;
+do not rewrite saved answers or exported Markdown. This shared visual change has
+no protocol or native-local rendering migration. Exact browser and release gates
+remain explicit in [reading UX](docs/research-reading-ux.md#answer-heading-navigation--october-8-2026).

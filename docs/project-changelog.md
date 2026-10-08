@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Navigate report sections with assistive technology (2026-10-08, v0.27.31 candidate)
+
+Answer sections now expose native headings, starting at level two and retaining
+their relative depth. This reaches chat, saved dispatches, desktop-hosted reports
+and the compact embed through the shared renderer. Typography and citation controls
+keep their existing behavior. CLI, API, MCP and exported Markdown retain their
+existing text contracts. See [scope and release gates](research-reading-ux.md#answer-heading-navigation--october-8-2026).
+
 ### Free bibliography before research (2026-10-08, v0.27.30 candidate)
 
 Ask now links to free paper metadata with a single exact identifier. Remote and
