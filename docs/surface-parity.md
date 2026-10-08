@@ -1,5 +1,22 @@
 # Supported-surface release parity
 
+## Coordinated issue batch, October 9, 2026
+
+Application **0.27.44 candidate** combines the contextual temporal-command boundary,
+mobile RelatedDispatches wrapping and a web Proof link to the Circle/Arc ledger.
+Web SSE, API, remote MCP, hosted A2A
+and bots inherit the shared research selector; repository CLI uses the same source
+eligibility helper. Negative/example text remains excluded. Broader conversational
+and live usefulness acceptance stays open. The ledger and treasury-float evaluation
+add no financial authority or activated wallet/sponsor/investment integration.
+
+Caller-funded stdio MCP **0.4.11**, remote protocol **0.3.7**, desktop **0.4.10** and
+extension **0.1.1** retain their role boundaries. Publication is distinct from
+installation; the owner's desktop installation is unverified. Release 43's published
+npm/official Registry and hosted commit `6e591603` were actually verified. Fresh 44
+artifact provenance, CI and hosted health are required before claiming this candidate
+delivered. Report mobile layout acceptance remains tracked in issue245.
+
 ## Issue-resolution source candidate - October 8, 2026
 
 [App0.27.41](engineering/open-issues-2026-10-08.md) retains the reading stack
