@@ -1,6 +1,6 @@
 # Free paper metadata lookup
 
-October 8, 2026. Candidate app0.27.29, hosted MCP0.3.5, stdio MCP0.4.8,
+October 8, 2026. Candidate app0.27.30, hosted MCP0.3.5, stdio MCP0.4.8,
 desktop0.4.10. These identify source candidates; deployment, publication and
 installed-client readback remain separate gates. This branch is stacked above
 the unmerged output-limit PR220; neither candidate is deployed by this change.
@@ -92,10 +92,10 @@ publication must pass before release claims. This is a focused response to
 page-specific status extraction, complete synthesis, independent usefulness and
 participant/return/demand evidence remain open.
 
-Release ordering: this candidate integrates PR220's app0.27.28 source, including
-PR226's app0.27.27 guard and main7b45190c/PR224–225. PR227 independently reserves
-app0.27.27 for Operator quality recovery. Reconcile that source first, then PR226,
-PR220 and this branch against fresh main/version ordering before publication.
-The current app numbers remain conditional candidates. Hosted/stdio/desktop
+Release ordering: this candidate integrates PR220's app0.27.29 source, including
+PR226's app0.27.28 guard and the reviewed Operator/security source from merged
+PR227/main28b071d6 (app0.27.27). Merge PR226, then PR220, and reconcile this branch
+against fresh main/version ordering before publishing app0.27.30. The source-bound
+original/operational lifetime and exact-head CI remain release gates. Hosted/stdio/desktop
 candidate versions above are unchanged; source integration does not establish
 publication or installed/deployed synchronization.

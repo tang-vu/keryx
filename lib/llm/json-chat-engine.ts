@@ -279,24 +279,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     const quoteOptions = this.synthesisQuoteOptions(input, sources);
     const out = await this.measuredChatJson(
       config.synthesisModel,
-      "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
-        "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
-        "For every supported research question, select a quoteId from quoteOptions in an evidence item with " +
-        "the claimIndex explicitly supplied in researchTargets and the option's exact marker. " +
-        "Reuse that same claimIndex for multiple quotes answering one target; do not number answer sentences or evidence items. " +
-        "Do not output raw quote text or invent IDs. " +
-        STATEMENT_GENERATION_GUIDANCE +
-        "Each option is already a bounded verbatim excerpt; choose only options that directly answer that question. " +
-        "A related warning or shared topic is not evidence for an unmentioned procedure. " +
-        "Select the smallest sufficient set, at most two options per research question; emit separate evidence items when needed. " +
-        "If no option supports an answer, state the gap and omit its evidence; never assume every option deserves a citation. " +
-        "Address every research question in the answer, explicitly naming any unanswered part. " +
-        "A source belongs in `citedMarkers` only when it appears inline and has an evidence item. " +
-        "If the sources do not support a claim, say so and emit no citation/evidence for it. " +
-        "When two or more sources disagree on a factual point, do NOT average or blur them: decide " +
-        "which to trust based on specificity, internal consistency, and recency; write the answer " +
-        "reflecting the trusted source; and record each disagreement in `conflicts` (use an empty " +
-        "array when the sources are consistent). Output strict JSON.",
+      this.synthesisGenerationGuidance(input),
       JSON.stringify({
         question: input.question,
         researchTargets: input.subClaims.map((question, claimIndex) => ({ claimIndex, question })),
@@ -339,6 +322,29 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       conflicts: parseConflicts(out.conflicts),
       ...(synthesisOutputLimit ? { synthesisOutputLimit } : {}),
     };
+  }
+
+  /** Private completion may replace generation guidance without changing the
+   * sufficiency prompt or ordinary research's existing contract. */
+  protected synthesisGenerationGuidance(_input: SynthInput): string {
+    return "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
+        "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
+        "For every supported research question, select a quoteId from quoteOptions in an evidence item with " +
+        "the claimIndex explicitly supplied in researchTargets and the option's exact marker. " +
+        "Reuse that same claimIndex for multiple quotes answering one target; do not number answer sentences or evidence items. " +
+        "Do not output raw quote text or invent IDs. " +
+        STATEMENT_GENERATION_GUIDANCE +
+        "Each option is already a bounded verbatim excerpt; choose only options that directly answer that question. " +
+        "A related warning or shared topic is not evidence for an unmentioned procedure. " +
+        "Select the smallest sufficient set, at most two options per research question; emit separate evidence items when needed. " +
+        "If no option supports an answer, state the gap and omit its evidence; never assume every option deserves a citation. " +
+        "Address every research question in the answer, explicitly naming any unanswered part. " +
+        "A source belongs in `citedMarkers` only when it appears inline and has an evidence item. " +
+        "If the sources do not support a claim, say so and emit no citation/evidence for it. " +
+        "When two or more sources disagree on a factual point, do NOT average or blur them: decide " +
+        "which to trust based on specificity, internal consistency, and recency; write the answer " +
+        "reflecting the trusted source; and record each disagreement in `conflicts` (use an empty " +
+        "array when the sources are consistent). Output strict JSON.";
   }
 
   protected synthesisQuoteOptions(input: SynthInput, sources: ReturnType<typeof evidenceContext>): QuoteOption[] {

@@ -30,6 +30,18 @@ function ledgerFor(proposals: ProposedEvidence[]) {
 }
 
 describe("cited statement delivery", () => {
+  it("keeps the ordinary four-sentence bound while a private complete flow can retain seven independently reviewed steps", () => {
+    const quoteRows = Array.from({ length: 7 }, (_, index) => `Synthetic documented payment step number ${index} is required.`);
+    const gathered = [{ ...sources[0], text: quoteRows.join(" ") }];
+    const proposals = quoteRows.map((quote, index) => ({ claimIndex: 0, marker: "S1", quote,
+      quoteSpan: { start: gathered[0].text.indexOf(quote), end: gathered[0].text.indexOf(quote) + quote.length }, support: 0.9,
+      statement: `The documented flow requires synthetic step ${index}.`, statementSupport: 0.9 }));
+    const ledger = buildEvidenceLedger({ subClaims: [claims[0]], gathered, answer: "Draft [S1].", declaredMarkers: ["S1"],
+      proposedEvidence: proposals, finalAssessment: [{ claim: claims[0], coverage: 0.9, coveredBy: ["S1"] }] });
+    expect(selectCitedStatements(proposals, ledger)).toHaveLength(4);
+    expect(selectCitedStatements(proposals, ledger, 32)).toHaveLength(7);
+    for (const limit of [0, 33, 1.5, NaN]) expect(() => selectCitedStatements(proposals, ledger, limit)).toThrow(/target bound/);
+  });
   it("delivers a reviewed sentence above its excerpt and withholds one the review did not accept", () => {
     const ledger = ledgerFor([bind, bench]);
     const statements = selectCitedStatements([bind, bench], ledger);
