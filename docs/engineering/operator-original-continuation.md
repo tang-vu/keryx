@@ -161,3 +161,42 @@ is introduced. SQLite/enrolled adapters forward the opaque object internally; Su
 continues to refuse this private domain. No database migration or ordinary research
 budget change is introduced. Source/CI/review/deployment and actual reviewed original
 recovery remain separate gates.
+
+## An immutable rejected prepared result
+
+A prepared answer can pass exact-quote and numerical support checks while omitting
+requested facts that the frozen documents supply. Such omissions are quality failures,
+not evidence gaps. Root and independent reviewers must reject that exact prepared/run
+tuple rather than deliver it or rewrite its retained bytes.
+
+V4 is a separately source-bound, externally anchored quality episode. It preserves
+the complete epoch3 grant, journal, three acknowledged model holds, prepared result
+and original native claim. Two distinct protected rejection records bind the same
+parent prepared result, run, ledger, source context and original input. History is
+325900 micro-USD; exactly two fresh calls can reserve at most 367220 in aggregate,
+within the existing 400000 owner ceiling and unchanged expiry. No parent generation
+or review can be reused, including after a subsequent failure.
+
+Only a genuine all-five positive sufficiency checkpoint can carry into the new journal.
+The authority binds its raw hold/checkpoint/result and exact wire prompt, complete
+four-source bodies, original question/targets and supplementary context. A different
+prompt, evidence set, partial publication or uncertain parent outcome refuses. A
+carried sufficiency observation performs no supplier action and consumes no new hold;
+fresh generation and independent review consume the two remaining reservations.
+
+Protected original guidance replaces the ordinary two-option limit for this quality
+episode. Statement selection can retain documented multi-step detail within the existing
+32-evidence bound; ordinary research retains its limits. Complete factual premises
+and direct independent statement review remain required. Canonical proposed acceptance
+checks are explicitly labeled inferences from those premises and are not executions,
+settlement evidence or documented vendor checklists. Missing Arc deployment addresses
+and executable parameter values remain gaps. Old result rendering and historical
+readback remain stable when the quality protocol is absent.
+
+This is private CLI/policy recovery; hosted web/API, desktop, MCP, extensions and bots
+continue to recover the original through their existing query-ID-bound GET and receipt
+adapters. No new public activation, schema, custody, inbound signing or schedule is
+introduced. Release requires adversarial policy and semantic completeness tests, both
+TypeScript graphs, lint, build, independent review and CI. A deployment alone does not
+prove the original delivered; review the actual new answer, complete its exact native
+metadata, restore public roles, and verify the original buyer job and receipt.

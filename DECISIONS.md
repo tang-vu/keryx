@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**Reject incomplete prepared originals without discarding their history — 2026-10-08.**
+The retained original produced an exactly grounded answer that omitted documented
+payment and validation steps. Per-target coverage and statement support scores
+cannot establish completion of the requested task. Keep the rejected prepared
+result and every parent reservation immutable, bind separate root and independent
+quality rejections, and activate a separate finite quality episode only after its
+previous command tree is positively closed. Carry a genuine positive sufficiency
+checkpoint only when the complete question, targets, four source bodies and exact
+sufficiency prompt remain unchanged. Never carry the rejected generation or review.
+Charge the two unused calls to fresh generation and independent review, retaining
+325900 micro-USD history, the 367220 full-use ceiling and original owner expiry.
+Protected original guidance and statement selection must cover available requested
+parts. Canonical proposed acceptance checks are explicitly labeled inferences from
+admitted factual premises, never assertions that those checks were executed.
+Ordinary research, native claims, inbound payments and schedules keep their authority.
+See [the recovery contract](docs/engineering/operator-original-continuation.md).
+
 **List the first-party engineering feed on mainnet as an owner-operated source — 2026-10-07.**
 Production mainnet had no registered source or offer, so every question read only free
 public references and no access toll or citation reward could occur. The owner asked

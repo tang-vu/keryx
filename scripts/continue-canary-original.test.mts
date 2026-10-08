@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const calls = vi.hoisted(() => ({ binding: vi.fn(), inspect: vi.fn(), preflight: vi.fn(), execute: vi.fn(), verify: vi.fn(), complete: vi.fn(),
-  activate: vi.fn(), writer: vi.fn(), readonly: vi.fn(), identity: vi.fn(), close: vi.fn() }));
+  activate: vi.fn(), qualityEvidence: vi.fn(), writer: vi.fn(), readonly: vi.fn(), identity: vi.fn(), close: vi.fn() }));
 vi.mock("../lib/business-operator/fulfillment-continuation-policy.ts", () => ({ readContinuationAuthorization: calls.binding,
   inspectOriginalContinuation: calls.inspect, completePreparedContinuation: calls.complete, verifyPreparedContinuation: calls.verify,
-  activateOriginalContinuationEpoch: calls.activate }));
+  activateOriginalContinuationEpoch: calls.activate, continuationReadOnlyQualityEvidenceCapability: calls.qualityEvidence }));
 vi.mock("../lib/a2a/continue-original.ts", () => ({ completeOriginalContinuation: calls.execute,
   preflightOriginalContinuation: calls.preflight }));
 vi.mock("../lib/db/application-storage.ts", () => ({ createApplicationStorage: calls.writer, createReadonlyApplicationStorage: calls.readonly,
@@ -24,7 +24,7 @@ describe("private original continuation CLI boundaries", () => {
     await runContinueCanaryOriginal(["preflight", "--authorization", "/protected/grant.json", "--sha256", digest]);
     expect(calls.binding).toHaveBeenCalledWith("/protected/grant.json", digest, false);
     expect(calls.inspect).toHaveBeenCalledWith(db, "/protected/grant.json", digest);
-    expect(calls.preflight).toHaveBeenCalledWith(original, undefined); expect(calls.identity).toHaveBeenCalledWith(db, "read");
+    expect(calls.preflight).toHaveBeenCalledWith(original, undefined, undefined); expect(calls.identity).toHaveBeenCalledWith(db, "read");
     expect(calls.writer).not.toHaveBeenCalled(); expect(calls.close).toHaveBeenCalledOnce(); expect(fetch).not.toHaveBeenCalled();
     expect(vi.mocked(console.log).mock.calls[0][0]).not.toContain("PRIVATE-FIXTURE");
   });
@@ -32,7 +32,7 @@ describe("private original continuation CLI boundaries", () => {
     const supplement = Object.freeze({ contextSha256: digest, privateEvidence: "PRIVATE-SUPPLEMENT" });
     calls.binding.mockReturnValue({ original, supplement });
     await runContinueCanaryOriginal(["preflight", "--authorization", "/protected/epoch3.json", "--sha256", digest]);
-    expect(calls.preflight).toHaveBeenCalledWith(original, supplement);
+    expect(calls.preflight).toHaveBeenCalledWith(original, supplement, undefined);
     expect(calls.preflight.mock.calls[0][1]).toBe(supplement);
     expect(calls.identity).toHaveBeenCalledWith(db, "read");
     expect(calls.writer).not.toHaveBeenCalled(); expect(calls.execute).not.toHaveBeenCalled();
@@ -47,6 +47,26 @@ describe("private original continuation CLI boundaries", () => {
     expect(calls.identity).toHaveBeenCalledWith(db, "write");
     expect(calls.execute).toHaveBeenCalledWith(db, "/protected/grant.json", digest, "synthetic-fixture-key");
     expect(calls.complete).not.toHaveBeenCalled(); expect(calls.close).toHaveBeenCalledOnce();
+  });
+  it("enrolls quality preflight evidence only after fresh native claim observation", async () => {
+    const supplement = Object.freeze({ contextSha256: digest });
+    const binding = { original, supplement, qualityProtocol: "same-evidence-prepared-quality-v1" };
+    const claim = Object.freeze({ claimId: "retained-native-claim" });
+    const token = Object.freeze({});
+    calls.binding.mockReturnValue(binding); calls.inspect.mockResolvedValue({ claim });
+    calls.qualityEvidence.mockReturnValue(token);
+    await runContinueCanaryOriginal(["preflight", "--authorization", "/protected/epoch4.json", "--sha256", digest]);
+    expect(calls.qualityEvidence).toHaveBeenCalledWith(binding, claim);
+    expect(calls.inspect.mock.invocationCallOrder[0]).toBeLessThan(calls.qualityEvidence.mock.invocationCallOrder[0]);
+    expect(calls.preflight).toHaveBeenCalledWith(original, supplement, token);
+    expect(calls.writer).not.toHaveBeenCalled(); expect(calls.execute).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
+  });
+  it("stops quality prompt preparation when protected native enrollment refuses", async () => {
+    calls.binding.mockReturnValue({ original, qualityProtocol: "same-evidence-prepared-quality-v1" });
+    calls.qualityEvidence.mockImplementation(() => { throw Error("Changed protected evidence tuple"); });
+    await expect(runContinueCanaryOriginal(["preflight", "--authorization", "/protected/epoch4.json", "--sha256", digest])).rejects.toThrow("Changed protected evidence");
+    expect(calls.preflight).not.toHaveBeenCalled(); expect(calls.writer).not.toHaveBeenCalled();
+    expect(calls.close).toHaveBeenCalledOnce(); expect(fetch).not.toHaveBeenCalled();
   });
   it("activates a separate episode with readonly native proof and no supplier credential", async () => {
     vi.stubEnv("DEEPSEEK_API_KEY", ""); calls.activate.mockResolvedValue({ activated: true, nativeClaimChanged: false });

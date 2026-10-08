@@ -141,7 +141,7 @@ arbitrary arguments are accepted. Optional fields are `exec_mode: "fork"`,
 ENV file supplies the rail, registry, identity, policy and secrets; this helper
 does not infer or change that authority.
 
-The reviewed launcher requires Node 24.16 or later and the pinned Next 16.3.6.
+The reviewed launcher requires Node 24.16 or later and the pinned Next 16.3.8.
 The reviewed server gives Next the public metadata `keryx.cc:443` while listening
 physically on `127.0.0.1:3939`. This preserves the normal HTTPS origin used by
 Session originals; supplying the physical loopback address as Next metadata caused
