@@ -25,3 +25,10 @@ export function cleanText(value: unknown, max = 300): string | undefined {
   return value.replace(/<[^>]*>/g, " ").replace(/[\u0000-\u001f\u007f-\u009f]/g, " ")
     .replace(/\s+/g, " ").trim().slice(0, max) || undefined;
 }
+
+/** Bibliographic fields must be complete within their bound, never silently sliced
+ * and then presented as an exact title, contributor name or venue. */
+export function completeMetadataText(value: unknown, max = 300): string | undefined {
+  const text = cleanText(value, max + 1);
+  return text && text.length <= max ? text : undefined;
+}

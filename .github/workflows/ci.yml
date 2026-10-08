@@ -155,11 +155,12 @@ jobs:
       - name: Monthly browser recovery (hermetic, no settlement)
         run: npm run test:browser-monthly
 
-      - name: Built stdio Monthly discovery (hermetic, no settlement)
+      - name: Built stdio Monthly and bibliography discovery (hermetic, no settlement)
         run: |
           node --test scripts/mcp-registry-release.test.mjs
           npm --prefix mcp run build
           node --import tsx scripts/test-monthly-mcp-package.mts
+          node --import tsx scripts/test-paper-lookup-mcp-package.mts
 
       - name: Packed stdio research diagnostics, signing and recovery (synthetic)
         working-directory: mcp

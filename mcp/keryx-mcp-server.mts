@@ -41,7 +41,8 @@ server.registerTool(
       `${meta.feeUsdc} USDC service fee + ${meta.defaultBudgetUsdc} USDC creator budget; the POST body sets the exact price. ` +
       `Paid from your own funded ${meta.networkLabel} wallet (${meta.network}; run keryx_wallet_status first). ` +
       `Public research may send your question to Keryx's search provider. The source USDC budget is separate from model and search operating costs. ` +
-      `Use when you want a grounded, source-cited answer AND the creators paid for their work.`,
+      `Use when you want a grounded, source-cited answer AND the creators paid for their work. ` +
+      `For title, ordered authors, year, journal, DOI or exact arXiv version without reading paper findings, use free paper_lookup with an exact identifier instead.`,
     inputSchema: {
       question: z.string().max(8192).trim().min(3).max(MAX_ASK_QUESTION_CHARS)
         .describe(`The research question to ask Keryx (3–${MAX_ASK_QUESTION_CHARS} characters after trimming).`),

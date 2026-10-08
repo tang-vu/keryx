@@ -8,7 +8,7 @@ const noteText = (value: string) => field(value).replace(/&/g, "&amp;").replace(
 /** Unread bibliography, never converted into a Citation or inferred read evidence.
  * Validate the complete bounded list before formatting; retain the first snapshot
  * of each exact landing URL and preserve different arXiv versions. */
-export function paperReferencesRis(records: readonly PaperRecord[]) {
+function referencePapers(records: readonly PaperRecord[]) {
   const parsed = paperRecordSchema.array().max(50).parse(records);
   const identities = new Map<string, PaperRecord>();
   for (const paper of parsed) {
@@ -18,13 +18,21 @@ export function paperReferencesRis(records: readonly PaperRecord[]) {
     if ([paper.title, ...paper.authors, ...(paper.venue ? [paper.venue] : [])].some(value => !field(value))) throw new Error("Invalid reference metadata");
     if (!identities.has(paper.url)) identities.set(paper.url, paper);
   }
-  const papers = [...identities.values()];
+  return [...identities.values()];
+}
+
+function provenanceNote(paper: PaperRecord) {
+  return `Saved bibliography metadata only; no Keryx read, citation or settlement evidence. Publication type: ${paper.publicationKind}. Peer review unknown. Withdrawal/replacement status unknown. Metadata from ${PAPER_REPOSITORIES[paper.repository]}, observed ${paper.metadataObservedAt} (${paper.metadataUrl}).` +
+    (paper.venue ? ` Recorded venue: ${paper.venue}.` : "") +
+    (paper.arxivId ? ` Exact arXiv version: ${paper.arxivId}.` : "") +
+    (paper.authorsTruncated ? ` Incomplete contributor list: ${paper.authors.length}/${paper.authorCount} provider entries have names here; missing positions are not established.` : "");
+}
+
+export function paperReferencesRis(records: readonly PaperRecord[]) {
+  const papers = referencePapers(records);
   const content = papers.map(paper => {
     const type = paper.publicationKind === "preprint" ? "MANSCPT" : paper.publicationKind === "conference-paper" ? "CONF" : paper.publicationKind === "journal-article" ? "JOUR" : "WEB";
-    const note = `Saved bibliography metadata only; no Keryx read, citation or settlement evidence. Publication type: ${paper.publicationKind}. Peer review unknown. Metadata from ${PAPER_REPOSITORIES[paper.repository]}, observed ${paper.metadataObservedAt} (${paper.metadataUrl}).` +
-      (paper.venue ? ` Recorded venue: ${paper.venue}.` : "") +
-      (paper.arxivId ? ` Exact arXiv version: ${paper.arxivId}.` : "") +
-      (paper.authorsTruncated ? ` Incomplete contributor list: ${paper.authors.length}/${paper.authorCount} provider entries have names here.` : "");
+    const note = provenanceNote(paper);
     return [`TY  - ${type}`, `TI  - ${field(paper.title)}`, `UR  - ${paper.url}`,
       ...paper.authors.map(author => `AU  - ${field(author)}`),
       ...(paper.publishedYear ? [`PY  - ${paper.publishedYear}`] : []),
@@ -35,4 +43,26 @@ export function paperReferencesRis(records: readonly PaperRecord[]) {
       `N1  - ${noteText(note)}`, "ER  - "].join("\r\n");
   }).join("\r\n\r\n");
   return { count: papers.length, content: content ? content + "\r\n" : "" };
+}
+
+/** Literal provider names, without guessed given/family splits or publication status. */
+export function paperReferencesBibtex(records: readonly PaperRecord[]) {
+  const papers = referencePapers(records);
+  const escape = (value: string) => field(value).replace(/[\\{}%&_#$^~]/g, char => ({
+    "\\": "\\textbackslash{}", "{": "\\{", "}": "\\}", "%": "\\%", "&": "\\&", "_": "\\_",
+    "#": "\\#", "$": "\\$", "^": "\\textasciicircum{}", "~": "\\textasciitilde{}",
+  })[char]!);
+  const content = papers.map((paper, index) => {
+    const fields: Array<[string, string]> = [["title", `{${escape(paper.title)}}`], ["url", escape(paper.url)]];
+    if (paper.authors.length) fields.push(["author", paper.authors.map(author => `{${escape(author)}}`).join(" and ")]);
+    if (paper.publishedYear) fields.push(["year", String(paper.publishedYear)]);
+    if (paper.doi) fields.push(["doi", escape(paper.doi)]);
+    if (paper.arxivId) fields.push(["eprint", escape(paper.arxivId)], ["archivePrefix", "arXiv"]);
+    if (paper.venue && paper.publicationKind === "journal-article") fields.push(["journal", escape(paper.venue)]);
+    if (paper.venue && paper.publicationKind === "conference-paper") fields.push(["booktitle", escape(paper.venue)]);
+    fields.push(["note", escape(provenanceNote(paper))]);
+    const kind = paper.publicationKind === "journal-article" ? "article" : paper.publicationKind === "conference-paper" ? "inproceedings" : "misc";
+    return `@${kind}{keryxPaper${index + 1},\n${fields.map(([key, value]) => `  ${key} = {${value}}`).join(",\n")}\n}`;
+  }).join("\n\n");
+  return { count: papers.length, content: content ? content + "\n" : "" };
 }

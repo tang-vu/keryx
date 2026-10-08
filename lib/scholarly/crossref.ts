@@ -1,5 +1,5 @@
 import type { ScholarlyMetadata } from "../types";
-import { cleanText, fetchMetadata, type MetadataFetch } from "./provider";
+import { completeMetadataText as cleanText, fetchMetadata, type MetadataFetch } from "./provider";
 import { normalizeDoi } from "./doi";
 
 function object(value: unknown): Record<string, unknown> {
@@ -8,7 +8,7 @@ function object(value: unknown): Record<string, unknown> {
 function first(value: unknown) { return Array.isArray(value) ? value[0] : undefined; }
 
 export function crossrefRecord(value: unknown, retrievedAt: string): ScholarlyMetadata | undefined {
-  const work = object(value), doi = normalizeDoi(typeof work.DOI === "string" ? work.DOI : ""), title = cleanText(first(work.title));
+  const work = object(value), doi = normalizeDoi(typeof work.DOI === "string" ? work.DOI : ""), title = cleanText(first(work.title), 1000);
   if (!doi || !title) return;
   const parts = first(object(work.published)["date-parts"]);
   let publishedDate: string | undefined;
@@ -23,7 +23,11 @@ export function crossrefRecord(value: unknown, retrievedAt: string): ScholarlyMe
   const contributors = Array.isArray(work.author) ? work.author : [];
   const authorNames = contributors.slice(0, 50).flatMap<NonNullable<ScholarlyMetadata["authorNames"]>[number]>(author => {
     const person = object(author), literal = cleanText(person.name), given = cleanText(person.given), family = cleanText(person.family);
-    return literal ? [{ literal }] : given || family ? [{ given, family }] : [];
+    if (typeof person.name === "string" && person.name.trim()) return literal ? [{ literal }] : [];
+    // An over-bound component cannot be dropped while the surviving surname is
+    // presented as the complete provider name.
+    const full = cleanText([person.given, person.family].filter(value => typeof value === "string").join(" "));
+    return full && (given || family) ? [{ given, family }] : [];
   });
   const authors = authorNames.map(name => name.literal ?? [name.given, name.family].filter(Boolean).join(" "));
   return { provider: "crossref", recordUrl: `https://api.crossref.org/works/${encodeURIComponent(doi)}`,
