@@ -116,6 +116,7 @@ async function runAndReply(cmd: AskMessage, budget: number) {
       budget,
       queryId: crypto.randomUUID(),
       origin: "web",
+      provenance: { version: 1, surface: "telegram", ownershipMethod: "unknown" },
     });
     text = buildAnswerText(run);
   } catch (err) {

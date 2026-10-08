@@ -137,6 +137,7 @@ export async function runClaimedA2aOrder(
     const currentOutcome = existingOutcome(current);
     if (currentOutcome) return currentOutcome;
     if (current.queryId !== order.queryId || current.requestHash !== order.requestHash ||
+      current.payer.toLowerCase() !== order.payer.toLowerCase() ||
       current.workerId !== order.workerId || current.startedAt !== order.startedAt ||
       !validRequest(current, options.expectedPayee) || await db.getQueryRun(order.queryId)) {
       return { id: order.id, status: "recovery_pending" };
@@ -153,6 +154,8 @@ export async function runClaimedA2aOrder(
       queryId: order.queryId,
       origin: request.origin,
       fundingOwner: "treasury",
+      asker: order.payer,
+      provenance: { version: 1, surface: "agent-to-agent", ownershipMethod: "verified-payer" },
       model: request.model,
       ...(options.answerFormat ? { answerFormat: options.answerFormat } : {}),
       ...(executionLimits ? { executionLimits } : {}),

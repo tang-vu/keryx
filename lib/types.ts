@@ -477,6 +477,8 @@ export interface OperatingFeeSnapshot {
 }
 
 export interface QueryRun {
+  /** Trusted ingress and owner-proof method. Absent historical metadata is unknown, not inferred. */
+  provenance?: import("./research/run-provenance").RunProvenance;
   /** Reviewed, hypothetical teaching suggestions; never factual/payment authority. */
   teachingProposals?: import("./research/teaching-proposals").TeachingProposalDelivery;
   /** Public exact-original bibliography, separate from scientific evidence/rewards. */
@@ -527,8 +529,8 @@ export interface QueryRun {
   /** How confident the agent is in this answer. Absent on runs recorded before it became a field;
    *  deriveConfidence() reconstructs it from the trace's verdict step for those. */
   confidence?: Confidence;
-  /** Lowercased wallet that dispatched this run, taken from a server-verified SIWE session or API
-   *  key — never from a client-supplied field. Absent on anonymous asks and unidentified agents. */
+  /** Lowercased wallet from a server-verified session, API key or original payer. Never from
+   *  client telemetry. Absent on anonymous asks and unidentified agents. */
   asker?: string;
   /** True when that wallet's own session key paid for the run; false/absent means the dispatch
    *  ran on Keryx's treasury (the free trial). Kept apart so a receipts page can never present

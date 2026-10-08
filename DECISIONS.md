@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**Record verified run ingress without inferring account ownership — 2026-10-09.**
+New shared research runs carry optional closed JSON provenance separately from
+payment origin and editable MCP client telemetry. Ownership continues to use the
+existing verified `asker`: session wallet, ask-scoped key wallet, or the original
+paid payer. Attribute synchronous and queued public A2A results to that payer;
+Monthly uses the same original-bound worker. Compare the retained claimed payer
+before execution. Ownership adds no budget, signer authority or downstream spend
+claim. Authenticated chat ingress does not establish a linked wallet account.
+
+Store the same metadata snapshot in existing SQLite/Supabase run JSON; no new
+columns, migration or backfill. Missing old fields remain absent/unknown, and
+old receipts/protected original projections retain their contracts. Record the
+verified hosted ingress for stdio/desktop/CLI/extension clients using a shared
+remote endpoint; a client name cannot prove the originating app. Defer account
+linking, later claims and admin reassignment. Scope and remaining acceptance are
+in [run ownership and ingress](docs/engineering/run-owner-provenance-261.md).
+
 **Project obligations before investing Operator float — 2026-10-09.**
 Stage a read-only ownership-scoped projection using the existing complete prepaid
 inventory and original payment, withdrawal, funding and supplier journals. Keep

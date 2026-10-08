@@ -473,6 +473,8 @@ export async function POST(req: NextRequest) {
         queryId,
         origin,
         fundingOwner: "treasury",
+        asker: settle.payer,
+        provenance: { version: 1, surface: "agent-to-agent", ownershipMethod: "verified-payer" },
         model,
         executionLimits: { ...researchPackage.execution },
         onCreatorPaymentBoundary: async () => {

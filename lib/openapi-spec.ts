@@ -10,11 +10,18 @@ import { config } from "./config";
 import { paperOpenApiPaths, paperOpenApiSchemas } from "./papers/openapi";
 import { operatorStatusOpenApiPath } from "./business-operator/openapi";
 import { monthlyOpenApiPath } from "./monthly/openapi";
+import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
 import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
   supportedA2aPackageVersions,
 } from "./a2a/research-package";
+
+const runProvenanceProperty = { provenance: { type: "object", additionalProperties: false,
+  description: "Optional closed server-recorded ingress/proof metadata for new runs. Absent historical metadata is unknown; no wallet, client telemetry or payment authority is exported here.",
+  required: ["version", "surface", "ownershipMethod"], properties: { version: { type: "integer", const: 1 },
+    surface: { type: "string", enum: [...RUN_SURFACES] },
+    ownershipMethod: { type: "string", enum: [...RUN_OWNERSHIP_METHODS] } } } };
 
 const outputLimitMetadataProperties = {
   outputLimits: {
@@ -283,6 +290,7 @@ export const openapiSpec = {
         type: "object",
         properties: {
           ...outputLimitMetadataProperties,
+          ...runProvenanceProperty,
           queryId: { type: "string" },
           status: { type: "string", enum: ["completed"] },
           researchPackage: { $ref: "#/components/schemas/A2aResearchPackage" },
@@ -417,6 +425,7 @@ export const openapiSpec = {
               dispatchUrl: { type: "string" },
               evidence: { type: "array", items: { type: "object" } },
               ...outputLimitMetadataProperties,
+              ...runProvenanceProperty,
               claimCoverage: {
                 type: "array",
                 items: { type: "object" },
@@ -791,7 +800,9 @@ export const openapiSpec = {
           "itemizes actual creator spend and unused reserve. Every mainnet original returns a " +
           "durable 202 job through the business worker, including responseMode=wait. Each new order stores " +
           "a versioned execution contract and returns provisional latency/evidence-quality measurements; " +
-          "these objectives have no contractual remedy.",
+          "these objectives have no contractual remedy. New completed public runs are attributed to the " +
+          "verified original payer, with agent-to-agent ingress recorded separately from payment origin. " +
+          "Client names cannot establish stdio, desktop, CLI or extension identity; ownership grants no new budget.",
         security: [{ X402Payment: [] }, { ApiKeyAuth: [], X402Payment: [] }],
         requestBody: {
           required: true,
@@ -894,7 +905,8 @@ export const openapiSpec = {
           "New keys add no quota; unavailable durable counters refuse admission. Keryx researches the last user " +
           "message over paid sources and pays every cited creator downstream in USDC on Arc. With " +
           "`stream:true`, live reasoning streams as `reasoning_content` deltas. This path is NOT " +
-          "x402 — no payment-signature required.",
+          "x402 — no payment-signature required. New runs record API ingress and API-key ownership when verified; " +
+          "anonymous runs remain ownerless. IPs, user agents and client telemetry never establish ownership.",
         security: [{}, { ApiKeyAuth: [] }],
         requestBody: {
           required: true,

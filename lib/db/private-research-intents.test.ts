@@ -724,6 +724,8 @@ it("runs one complete private job with durable source/reward receipts and no sha
     if (complete.status !== "completed") throw new Error("Expected completion");
     expect(complete.run.citations, complete.run.trace.map(step => step.message.replaceAll(value.id, "[synthetic job]")).join("\n")).toHaveLength(1);
     expect(complete.run.question).toBe(value.submission.request.question);
+    expect(complete.run.asker).toBe(account.address.toLowerCase());
+    expect(complete.run).not.toHaveProperty("provenance");
     expect(complete.run.totalSpent).toBeCloseTo(0.017, 6);
     expect(complete.diagnostics).toEqual({ alerts: 0, suppressedCitationNotifications: 1 });
     const ownerResult = await privateResultView(other, value.id, account.address);

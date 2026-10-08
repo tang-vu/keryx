@@ -4,6 +4,7 @@ import type { BibliographicTask } from "../research/bibliographic-task-request";
 import { readBibliographicTask } from "../research/bibliographic-task";
 import { bibliographicTaskAnswer } from "../research/bibliographic-task-presentation";
 import type { QueryRun, TracePhase, TraceStep } from "../types";
+import { newRunProvenance } from "../research/run-provenance";
 
 /** Public metadata-only delivery. No engine, gateway, cache, reward or catalog
  * method is called; normal request admission/persistence remains with its caller. */
@@ -27,6 +28,7 @@ export async function* runBibliographicAgent(input: RunInput, deps: AgentDeps, t
     researchMode: input.researchMode ?? "deep", engine: "metadata:original-page", subClaims: [], decisions: [], citations: [],
     answer, bibliography, totalSpent: 0, totalToCreators: 0, trace, createdAt: new Date().toISOString(),
     reasoningAttempts: [], llmUsage: [], llmCalls: [], origin: input.origin ?? "engine",
+    provenance: newRunProvenance(input),
     ...(input.origin === "mcp" && input.mcpClient ? { mcpClient: input.mcpClient } : {}),
     ...(input.asker ? { asker: input.asker.toLowerCase() } : {}),
     ...(input.retryOf ? { retryOf: input.retryOf } : {}),

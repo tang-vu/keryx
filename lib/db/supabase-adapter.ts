@@ -73,6 +73,7 @@ import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
 import { claimSupabasePrivatePayment, getSupabasePrivatePayment, confirmSupabasePrivatePayment } from "./private-research-payments";
 import { getSupabasePrivateResearchIntent, reserveSupabasePrivateResearchIntent, listSupabasePrivateResearchHistory, type PrivateHistoryCursor } from "./private-research-intents";
+import { recordedRunProvenance } from "../research/run-provenance";
 import {
   summarizeA2aOperations,
   type A2aOperationsRow,
@@ -892,6 +893,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {
+    run = recordedRunProvenance(run);
     const evidenceTelemetry = runEvidenceMetrics(run);
     await this.domainCall("save_query_run", { p_row: {
       id: run.id,
