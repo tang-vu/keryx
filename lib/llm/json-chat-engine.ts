@@ -284,7 +284,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         question: input.question,
         researchTargets: input.subClaims.map((question, claimIndex) => ({ claimIndex, question })),
         sources,
-        quoteOptions: quoteOptions.map(({ quoteId, marker, text }) => ({ quoteId, marker, text })),
+        quoteOptions: this.synthesisGenerationQuoteOptions(input, quoteOptions),
         schema:
           '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
           '"evidence":[{"claimIndex":number,"marker":string,"quoteId":string,"support":number(0..1),"statement":string}],' +
@@ -349,6 +349,12 @@ export abstract class JsonChatEngine implements ReasoningEngine {
 
   protected synthesisQuoteOptions(input: SynthInput, sources: ReturnType<typeof evidenceContext>): QuoteOption[] {
     return buildQuoteOptions(sources, input.gathered);
+  }
+  /** Specialized completion may carry server-owned required target bindings in
+   * its compact menu. Ordinary research's generation payload stays identical. */
+  protected synthesisGenerationQuoteOptions(_input: SynthInput, options: QuoteOption[]):
+    Array<Pick<QuoteOption, "quoteId" | "marker" | "text"> & { claimIndex?: number }> {
+    return options.map(({ quoteId, marker, text }) => ({ quoteId, marker, text }));
   }
   protected synthesisEvidenceReviewInput(input: Parameters<typeof buildEvidenceReviewInput>[0]) {
     return buildEvidenceReviewInput(input);

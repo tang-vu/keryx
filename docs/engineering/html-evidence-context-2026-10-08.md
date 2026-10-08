@@ -8,6 +8,11 @@ The full CI workflow runs on PRs targeting main. Keep the candidate main-based
 while preserving its parent-first merge dependencies; a feature-branch comparison
 does not supply that required CI gate.
 
+An unmergeable PR also cannot supply the main CI gate. The candidate includes the
+merged required-evidence Operator source; its compact-menu hook and ordinary HTML
+selection are checked together before publication. Earlier isolated build proofs
+remain historical and do not qualify this later integrated source.
+
 ## Problem and behavior
 
 The saved RFC4180 HTML reproduction selected physical lines, losing a quoted-field

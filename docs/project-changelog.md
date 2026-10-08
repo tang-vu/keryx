@@ -82,6 +82,19 @@ current-feed observation, supported newest-release delivery and service pre-char
 qualification remain open. Existing payments and incoming service/model costs are
 separate. See [coverage and release gates](engineering/source-recency-2026-10-08.md).
 
+### Require complete evidence before original-answer review (2026-10-08, v0.27.28)
+
+The retained original's generation selects one admitted quote for each required
+documented fact. Missing, duplicated or changed selections and omitted meanings
+stop before another independent-review request. Existing quote provenance, review
+thresholds and explicit acceptance-check labels remain required.
+
+A separate finite recovery episode preserves the exhausted predecessor, every
+reservation and the original payment. Its private owner receipt records when the
+existing repair instruction was retained; it does not invent a chat timestamp or
+replenish an earlier grant. Actual reviewed delivery, original buyer receipt
+verification and public service restoration remain release acceptance gates.
+
 ### Complete documented detail after a rejected prepared original (2026-10-08, v0.27.27)
 
 A separate quality episode preserves an incomplete prepared answer and its entire
