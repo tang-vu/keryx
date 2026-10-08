@@ -3,6 +3,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it, vi } from "vitest";
 import type { QueryRun } from "../types";
 import { createRemoteMcpServer } from "./remote-server";
+import { mdnModelReplay } from "../agent/fixtures/mdn-model-replay";
 
 function completedRun(): QueryRun {
   return {
@@ -42,6 +43,41 @@ function completedRun(): QueryRun {
 }
 
 describe("remote MCP server", () => {
+  it("preserves the retained MDN three-bullet answer and exact evidence through a hermetic SDK client", async () => {
+    const replay = mdnModelReplay();
+    const run: QueryRun = { ...completedRun(), id: "retained-mdn-local-replay", question: replay.question,
+      budget: 0, subClaims: replay.ledger.claimCoverage.map(row => row.claim), answer: replay.answer,
+      evidence: replay.ledger.evidence, claimCoverage: replay.ledger.claimCoverage,
+      citations: [{ marker: "S1", sourceId: replay.ledger.evidence[0].sourceId, sourceName: "mozilla.org",
+        itemId: replay.ledger.evidence[0].itemId, itemUrl: replay.ledger.evidence[0].itemUrl,
+        itemTitle: replay.ledger.evidence[0].itemTitle, contentVersion: replay.ledger.evidence[0].contentVersion,
+        publicDeliveryKind: "excerpt", webProvenance: replay.ledger.evidence[0].webProvenance,
+        sourceKind: "public-reference", weight: 1, reward: 0, rationale: "Retained public evidence, local replay" }],
+      totalSpent: 0, totalToCreators: 0, paymentAttempts: 0, settledPayments: 0, reasoningAttempts: [] };
+    const runner = vi.fn(async () => run);
+    const http = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("No external request allowed"));
+    const server = createRemoteMcpServer({ budgetCap: 0, clientChannel: "other" }, runner);
+    const client = new Client({ name: "retained-mdn-replay-client", version: "1" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await server.connect(serverTransport); await client.connect(clientTransport);
+      const result = await client.callTool({ name: "research", arguments: { question: replay.question, budget: 0 } });
+      expect(result.isError).not.toBe(true);
+      expect(result.structuredContent).toMatchObject({ answer: replay.answer,
+        evidence: replay.ledger.evidence.map(item => ({ claimIndex: item.claimIndex, marker: item.marker,
+          sourceId: item.sourceId, itemId: item.itemId, contentVersion: item.contentVersion, quote: item.quote,
+          qualifiesForAnswer: true, qualifiesForReward: false })),
+        claimCoverage: replay.ledger.claimCoverage, totalToCreatorsUsdc: 0, settledPayments: 0 });
+      const retained = JSON.parse(JSON.stringify(result.structuredContent));
+      expect(retained.answer.match(/^- /gm)).toHaveLength(3);
+      for (const sentence of replay.sentences) expect(retained.answer).toContain(sentence);
+      for (const quote of replay.quotes) expect(retained.answer).toContain(`“${quote}”`);
+      const text = (result.content as { type: string; text?: string }[]).map(item => item.text ?? "").join("\n");
+      expect(text.startsWith(replay.answer)).toBe(true);
+      expect(http).not.toHaveBeenCalled();
+      expect(runner).toHaveBeenCalledOnce();
+    } finally { await client.close(); await server.close(); http.mockRestore(); }
+  });
   it("delivers exact retained paper metadata without a research dispatch or external request", async () => {
     const research = vi.fn(async () => completedRun());
     const http = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("No network allowed"));

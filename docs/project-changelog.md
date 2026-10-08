@@ -7,7 +7,10 @@ retained MDN submit/default rule. Ordinary reviewed answers can retain supported
 requested language and short bullet layout while preserving every target,
 excerpt and cited contribution. Missing review or count mismatch keeps gaps and
 an unmet-format notice. Private original fulfillment and payment authority remain
-unchanged. Source tests do not establish live usefulness or deployment.
+unchanged. A bounded retained-body model trial recovered all four MDN facts but
+failed the requested format. A deterministic repair groups its five unchanged
+sentence/excerpt pairs into three items. The failed original stays retained;
+local replay does not establish a fresh production deliverable or deployment.
 See [scope and release gates](engineering/research-deliverable-quality-2026-10-08.md).
 
 ### Explain refused source choices in the decision log (2026-10-08, v0.27.37 candidate)

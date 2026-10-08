@@ -4,6 +4,7 @@ import { buildEvidenceLedger, extractAnswerMarkers } from "./evidence-ledger";
 import { selectCitedStatements } from "./cited-statements";
 import { answerPresentation } from "../research/answer-presentation";
 import type { ProposedEvidence } from "../llm/reasoning-engine";
+import { mdnModelReplay } from "./fixtures/mdn-model-replay";
 
 // Synthetic deterministic delivery fixture, not a live model/usefulness evaluation.
 const quotes = ["submit: O botão envia os dados do formulário para o servidor. Esse é o padrão se o atributo não for especificado.",
@@ -40,6 +41,37 @@ function deliver(data = fixture(), caller = question, optIn = true) {
 }
 
 describe("ordinary grounded presentation", () => {
+  it("replays the retained five-sentence MDN model output as three bullets, retaining all four targets and every original pairing", () => {
+    const data = mdnModelReplay();
+    const before = JSON.stringify(data.ledger, (_key, value) => value instanceof Set ? [...value] : value);
+    expect(data.ledger.droppedEvidence).toBe(0);
+    expect(data.statements).toHaveLength(5);
+    expect(data.ledger.claimCoverage.map(claim => claim.coverage)).toEqual([1, 1, 1, 1]);
+    expect(data.answer.match(/^- /gm)).toHaveLength(3);
+    for (const statement of data.statements) {
+      const item = data.answer.split("\n\n").find(row => row.includes(statement.text));
+      expect(item).toContain(`“${statement.quote}”`);
+      expect(item).toContain(`[${statement.marker}]`);
+    }
+    expect(data.answer).not.toContain("Não foi possível");
+    expect(data.answer).not.toContain("não executei"); // An unreviewed draft claim is never copied.
+    expect(data.ledger.evidence.every(item => item.qualifiesForAnswer && !item.qualifiesForReward)).toBe(true);
+    expect(JSON.stringify(data.ledger, (_key, value) => value instanceof Set ? [...value] : value)).toBe(before);
+    expect(finalizeGroundedAnswer({ question: data.question, answer: data.draft, ledger: data.ledger,
+      statements: data.statements })).toContain("Research target 4");
+  });
+
+  it("falls back for oversized components without dropping or splitting their pairs to force the requested count", () => {
+    for (const mode of ["sentences", "characters"]) {
+      const data = fixture();
+      if (mode === "sentences") data.selected.push(...Array.from({ length: 3 }, (_, index) => ({ ...data.selected[0], text: `Extra reviewed sentence ${index}.` })));
+      else data.selected[0].text = "An admitted long sentence ".repeat(70) + ".";
+      const answer = deliver(data);
+      expect(answer).toContain("Não foi possível apresentar 3 tópicos curtos");
+      for (const statement of data.selected) expect(answer).toContain(statement.text);
+      for (const quote of quotes) expect(answer).toContain(`“${quote}”`);
+    }
+  });
   it("keeps four independently reviewed facts and exact excerpts in three neutral bullet groups", () => {
     const data = fixture();
     const before = JSON.stringify(data.ledger, (_key, value) => value instanceof Set ? [...value] : value);

@@ -1,0 +1,125 @@
+{
+  "kind": "Retained owner-operated live-model output; original format failed. Deterministic replay is not another model trial or production acceptance.",
+  "completedAt": "2026-10-08T09:35:55.909Z",
+  "model": "llm:deepseek:deepseek-v4-flash",
+  "sourceSha": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e",
+  "originalNumberOfBullets": 0,
+  "evidenceReview": "completed",
+  "draft": "**1. `type=\"submit\"`** — O botão envia os dados do formulário para o servidor [S1].\n\n**2. `type=\"reset\"`** — O botão restaura todos os controles para seus valores iniciais [S1].\n\n**3. `type=\"button\"`** — O botão não possui comportamento padrão; ele pode ter scripts do lado do cliente associados aos eventos do elemento, acionados quando o evento ocorrer [S1].\n\n**Comportamento padrão quando `type` não é informado** — O valor padrão é `submit`: o botão envia os dados do formulário para o servidor, e esse também é o padrão se o atributo for dinamicamente mudado para um valor vazio ou inválido [S1].\n\nObservação: não executei os exemplos em um navegador; as informações acima se baseiam apenas nos trechos verificáveis da página indicada da MDN [S1].",
+  "evidence": [
+    {
+      "statement": "Segundo a página da MDN, um botão com type=\"submit\" envia os dados do formulário para o servidor.",
+      "claimIndex": 0,
+      "marker": "S1",
+      "quote": "submit: O botão envia os dados do formulário para o servidor.",
+      "quoteSpan": {
+        "start": 5280,
+        "end": 5341
+      },
+      "support": 1,
+      "statementSupport": 1
+    },
+    {
+      "statement": "Segundo a página da MDN, um botão com type=\"reset\" restaura todos os controles para seus valores iniciais.",
+      "claimIndex": 1,
+      "marker": "S1",
+      "quote": "reset: O botão restaura todos os controles para seus valores iniciais.",
+      "quoteSpan": {
+        "start": 5467,
+        "end": 5537
+      },
+      "support": 1,
+      "statementSupport": 1
+    },
+    {
+      "statement": "Segundo a página da MDN, um botão com type=\"button\" não possui comportamento padrão.",
+      "claimIndex": 2,
+      "marker": "S1",
+      "quote": "button: O botão não possui comportamento padrão.",
+      "quoteSpan": {
+        "start": 5538,
+        "end": 5586
+      },
+      "support": 1,
+      "statementSupport": 1
+    },
+    {
+      "statement": "Segundo a página da MDN, o botão com type=\"button\" pode ter scripts do lado do cliente associados aos eventos do elemento, acionados quando o evento ocorrer.",
+      "claimIndex": 2,
+      "marker": "S1",
+      "quote": "Ele pode ter scripts do lado do cliente associado com os eventos do elemento, no qual são acionados quando o evento ocorrer.",
+      "quoteSpan": {
+        "start": 5587,
+        "end": 5711
+      },
+      "support": 1,
+      "statementSupport": 1
+    },
+    {
+      "statement": "Segundo a página da MDN, o padrão quando o atributo type não é especificado (ou é mudado dinamicamente para valor vazio ou inválido) é submit, que envia os dados do formulário para o servidor.",
+      "claimIndex": 3,
+      "marker": "S1",
+      "quote": "submit: O botão envia os dados do formulário para o servidor. Esse é o padrão se o atributo não for especifidado, ou se o atributo é dinamicamente mudado para um valor vazio ou inválido.",
+      "quoteSpan": {
+        "start": 5280,
+        "end": 5466
+      },
+      "support": 1,
+      "statementSupport": 1
+    }
+  ],
+  "assessment": [
+    {
+      "claim": "Segundo a página indicada da MDN, qual é o comportamento de um botão com type=\"submit\"?",
+      "coverage": 1,
+      "coveredBy": [
+        "S1"
+      ]
+    },
+    {
+      "claim": "Segundo a página indicada da MDN, qual é o comportamento de um botão com type=\"reset\"?",
+      "coverage": 1,
+      "coveredBy": [
+        "S1"
+      ]
+    },
+    {
+      "claim": "Segundo a página indicada da MDN, qual é o comportamento de um botão com type=\"button\"?",
+      "coverage": 1,
+      "coveredBy": [
+        "S1"
+      ]
+    },
+    {
+      "claim": "Segundo a página indicada da MDN, qual é o comportamento padrão quando o atributo type não é informado em um elemento button?",
+      "coverage": 1,
+      "coveredBy": [
+        "S1"
+      ]
+    }
+  ],
+  "publicSource": {
+    "marker": "S1",
+    "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+    "sourceName": "mozilla.org",
+    "sourceKind": "public-reference",
+    "publicDeliveryKind": "excerpt",
+    "webProvenance": {
+      "retrievedAt": "2026-10-08T05:57:35.130Z",
+      "publisherGroup": "mozilla.org",
+      "normalizedBodyHash": "534bba29297913944202752c56d4f9856635e4505963c7ea1e1243bed55f1e50",
+      "extraction": "html",
+      "truncated": false
+    },
+    "requestedSource": {
+      "urls": [
+        "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button"
+      ],
+      "readScope": "bounded-whole-document"
+    },
+    "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+    "itemTitle": "<button> - HTML: Linguagem de Marcação de Hipertexto | MDN",
+    "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+    "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e"
+  }
+}

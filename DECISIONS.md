@@ -2,14 +2,20 @@
 
 **Retain ordinary presentation without weakening grounded delivery — 2026-10-08.**
 Derive supported language and compact layout from the trusted original caller,
-before sentence review. Group only identical qualified excerpts, retaining all
-reviewed sentences, targets and cited contributions; count mismatch or evidence
-gaps preserve target layout. Offer bounded whole visible enumeration items only
+before sentence review. Group source-bound sentence/excerpt pairs by their shared
+target or literal nested quote, retaining each original pair without connecting
+prose. Ambiguous identity, oversized components, count mismatch or evidence gaps
+preserve target layout. Offer bounded whole visible enumeration items only
 through an ordinary opt-in. Private continuation defaults and rendered originals
 remain unchanged. These presentation gates do not certify usefulness or complete
 synthesis; real task acceptance remains required. Prioritize useful delivered work
 and independent repeat use for competition quality without promising a rank.
 See [acceptance and coordinated release](docs/engineering/research-deliverable-quality-2026-10-08.md).
+
+The bounded MDN model trial recovered all four facts but failed the requested
+three-item format. Preserve that failure and its consumed three-call grant.
+Replay of those unchanged reviewed pairs validates the deterministic layout repair;
+it does not establish a fresh deployed end-to-end result or general brevity.
 
 **Reject incomplete prepared originals without discarding their history — 2026-10-08.**
 The retained original produced an exactly grounded answer that omitted documented

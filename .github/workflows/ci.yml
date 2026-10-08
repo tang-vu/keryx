@@ -248,7 +248,7 @@ jobs:
       - name: HTML evidence structure (actual minified reader and quote boundaries, no network)
         run: node scripts/test-built-html-evidence.cjs
 
-      - name: Ordinary answer presentation (production CSS, synthetic evidence, no spending)
+      - name: Ordinary answer presentation (production CSS, synthetic and retained replay, no spending)
         run: npm run test:answer-presentation
 
       - name: Ordinary answer presentation screenshots

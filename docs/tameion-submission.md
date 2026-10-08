@@ -16,7 +16,11 @@ reported two partial results and two no-answer results, with no complete accepte
 deliverable. They are QA, not four external customers or a population failure rate.
 The [app0.27.39 deliverable candidate](engineering/research-deliverable-quality-2026-10-08.md)
 repairs the retained MDN evidence omission and stages bounded ordinary presentation.
-It does not establish live usefulness, original Operator fulfillment or deployment.
+A separate three-call retained-body model trial recovered all four requested MDN
+facts in Portuguese, but initially failed the three-item format. Its unchanged
+reviewed output is used for a deterministic presentation regression; this is not a
+new full research/production acceptance trial or independent adoption. The candidate
+does not establish original Operator fulfillment or deployment.
 PR240 retains its separate owner, financial continuation and admitted source window.
 
 Before recording the competitive demo, require useful original-task delivery,
