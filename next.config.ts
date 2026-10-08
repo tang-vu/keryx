@@ -71,7 +71,9 @@ const nextConfig: NextConfig = {
     "@coral-xyz/anchor",
   ],
   outputFileTracingIncludes: {
-    "/*": ["./lib/web-research/*-worker.mjs", "./lib/web-research/html-visibility.mjs", "./node_modules/@mozilla/readability/**", "./node_modules/pdfjs-dist/legacy/build/*.mjs", "./node_modules/pdfjs-dist/package.json"],
+    // Explicitly scoped metadata primitive is staged, not route-activated. Keep
+    // its isolated parser available when a future typed adapter passes cutover.
+    "/*": ["./lib/web-research/*-worker.mjs", "./lib/web-research/html-visibility.mjs", "./lib/research/arxiv-bibliography-worker.mjs", "./node_modules/@mozilla/readability/**", "./node_modules/pdfjs-dist/legacy/build/*.mjs", "./node_modules/pdfjs-dist/package.json"],
   },
 };
 
