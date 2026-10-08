@@ -15,6 +15,12 @@ on:
       - "scripts/gateway-funding-postgres-readiness-fixture.mts"
       - ".github/workflows/gateway-funding-postgres.yml"
   workflow_dispatch:
+
+# Superseded PR checks are cancelled; push/manual/release runs stay independent.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   gateway-funding-postgres:
     runs-on: ubuntu-latest

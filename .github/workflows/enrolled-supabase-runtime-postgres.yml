@@ -26,6 +26,12 @@ on:
         type: boolean
         required: false
         default: false
+
+# Superseded PR checks are cancelled; push/manual/release runs stay independent.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   enrolled-supabase-postgres:
     runs-on: ubuntu-latest

@@ -36,6 +36,12 @@ offline reproduction. No shadow production payment is permitted.
 
 ## Release sequence
 
+Use [proportionate validation and release batching](development-workflow.md):
+one PR per coherent outcome, independent required CI lanes, an explicit docs-only
+lane, and informational lint outside merge acceptance. Keep runtime main-source
+acceptance and all applicable domain/platform gates. CI/docs-only maintenance
+does not require a runtime deploy or distribution version change.
+
 1. **Specify one outcome.** Pick a bounded backlog item, its task IDs and acceptance
    criteria from [the workload](research-workload.md). Record the baseline, affected
    surfaces, proposed change and residual limitations. Preserve the evidence

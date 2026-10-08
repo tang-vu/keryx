@@ -103,14 +103,29 @@ test("actual CLI refuses ordinary local execution", () => {
 
 test("both browser-dependency workflows exercise the helper before the unchanged real install", () => {
   for (const name of ["ci.yml", "browser-signing-originals-sqlite.yml"]) {
-    const yaml = readFileSync(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8");
+    const yaml = readFileSync(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8").replace(/\r\n/g, "\n");
     const setup = yaml.indexOf("run: node scripts/ci-browser-apt.mjs");
     assert(setup > 0);
     assert(yaml.indexOf("node --test scripts/ci-browser-apt.test.mjs") < setup);
     assert(yaml.indexOf("npx playwright install --with-deps chromium") > setup);
     assert.match(yaml, /- name: Install (?:Chromium for unit and browser checks|actual Chromium)\s+timeout-minutes: 5\s+run: npx playwright install --with-deps chromium/);
     assert(!yaml.includes("ubuntu-latest") || name === "ci.yml"); // release-only job may retain its image
-    if (name === "ci.yml") assert.match(yaml, /build-and-test:\s+runs-on: ubuntu-24\.04/);
+    if (name === "ci.yml") {
+      const boundaries = [...yaml.matchAll(/^  ([A-Za-z_][A-Za-z0-9_-]*):\n/gm)];
+      const browserJobs = boundaries.map((match, index) => ({
+        name: match[1],
+        body: yaml.slice(match.index, boundaries[index + 1]?.index ?? yaml.length),
+      })).filter(job => job.body.includes("npx playwright install --with-deps chromium"));
+      assert.deepEqual(browserJobs.map(job => job.name), ["unit-tests", "browser-source", "production"]);
+      for (const job of browserJobs) {
+        assert.match(job.body, /runs-on: ubuntu-24\.04/);
+        const check = job.body.indexOf("node --test scripts/ci-browser-apt.test.mjs");
+        const prepare = job.body.indexOf("run: node scripts/ci-browser-apt.mjs");
+        const install = job.body.indexOf("npx playwright install --with-deps chromium");
+        assert(check > 0 && prepare > check && install > prepare, job.name);
+        assert.match(job.body, /- name: Install Chromium for unit and browser checks\s+timeout-minutes: 5\s+run: npx playwright install --with-deps chromium/);
+      }
+    }
     else {
       assert.match(yaml, /os: \[ubuntu-24\.04, windows-latest\]/);
       assert.match(yaml, /timeout-minutes: 15/);

@@ -11,7 +11,11 @@ The owner explicitly confirmed that the separately active Operator original stil
 runs and requested preserving production. This session initially observed main
 at `ab2195d654b068f8213121b3abbfc281ec307350`; the separate Operator owner later
 merged PR240 to `3b839ccd75900eff3edc51913d30b924a9440db0`. This session inherits
-that current main source without advancing main or deploying it. Preserve the
+that main source without advancing main or deploying it. The separate CI owner
+then merged PR243 to `49b787c004f453826cf5c0a82f7ea3a409441616`; this aggregate
+also retains its independent CI lanes, strict aggregate and unchanged runtime
+identity. Neither merge establishes closure of the Operator's source window.
+Preserve the
 Operator owner's current admitted release/continuation window; a main commit is
 not proof of production deployment or native closure. Develop, review and run
 synthetic checks in isolated worktrees.
@@ -47,9 +51,12 @@ PR239/app0.27.37 and the complete preceding reading/client aggregate, then adds
 the enumerated context, canonical document, bounded generation/planning and
 metadata handoff changes. It retains PR241/app0.27.39's requested language,
 whole short-item quote alternatives, neutral grouping and semantic list renderer.
-App0.27.38 on PR240 is inherited through current main; its independently managed
+App0.27.38 on PR240 is inherited through main; its independently managed
 Operator release/continuation is not activated here. App0.27.40 is reserved by the
-separate Cloudflare manual-model candidate and is not included. The aggregate
+separate Cloudflare manual-model candidate and is not included. PR243's CI-only
+main update is inherited without a runtime version change. The metadata SDK and
+fresh packed consumer stay sequential after their stdio build in the integration
+lane; production presentation checks stay after the Next build. The aggregate
 retains PR241's post-trial deterministic presentation repair and unchanged reviewed
 MDN pairs; its separate three-call authorization is consumed and is not borrowed
 or repeated here. Earlier candidate version records remain historical.
