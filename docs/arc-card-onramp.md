@@ -72,7 +72,7 @@ keeps it off.
 - Card, Apple Pay and Google Pay are blocked until Keryx has a registered legal
   entity to complete business verification. That is not expected before the event
   deadline.
-- Bank transfer is not listed for Vietnam. Users in regions without a supported
+- Bank transfer is not listed for the regions where current mainnet users are. Users in regions without a supported
   method need sponsored credit or a cross-chain USDC deposit instead.
 - Sandbox operation is not wired; its endpoints and test-network delivery were not
   verified.
