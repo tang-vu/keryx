@@ -60,16 +60,43 @@ function feedIdentity(value: string | undefined): string | null {
   } catch { return null; }
 }
 
+/** Later sentence commands are refusal scope only, never a new native-feed capability. */
+function contextualRecencyStart(question: string, families: readonly RegExp[]): number | null {
+  let scanned = 0, quote: string | null = null;
+  for (const boundary of question.matchAll(/(?:^|[.!?]["'\u2019\u201d`]*\s+|\n)\s*/gu)) {
+    const start = boundary.index! + boundary[0].length;
+    // Track ordinary quoted/code examples. Apostrophes inside words are not quote delimiters.
+    while (scanned < start) {
+      const index = scanned++, char = question[index];
+      if (question[index - 1] === "\\") continue;
+      if (quote) {
+        if (char === quote && !((quote === "'" || quote === "\u2019") &&
+          /[\p{L}\p{N}]/u.test(question[index - 1] ?? "") && /[\p{L}\p{N}]/u.test(question[index + 1] ?? ""))) quote = null;
+      } else if (char === '"' || char === "`") quote = char;
+      else if (char === "\u201c") quote = "\u201d";
+      else if (char === "\u2018") quote = "\u2019";
+      else if (char === "'" && !/[\p{L}\p{N}]/u.test(question[index - 1] ?? "")) quote = char;
+    }
+    if (quote) continue;
+    const command = question.slice(start).replace(/^in\s+(?:English|Vietnamese),\s*/iu, "");
+    if (families.some(family => family.test(command))) return start;
+  }
+  return null;
+}
+
 /**
- * Stage one covers these explicit positive instructions at the beginning of the original
- * question. It does not claim general temporal-language understanding or infer ordering,
- * stable/prerelease status, freshness, completeness or an observation from retained rows.
+ * Qualified native forms stay at the beginning of the original question. A later positive
+ * sentence command preserves a visible hold without inferring scope from surrounding prose.
+ * This does not claim general temporal-language understanding or infer ordering, freshness,
+ * completeness, stable/prerelease status or an observation from retained rows.
  */
 export function recognizeSourceRecency(question: string): SourceRecencyRequirement | null {
   const bounded = question.slice(0, 30000);
   const family = /^\s*(?:please\s+)?(?:name|identify|find|compare)\s+(?:the\s+)?(?:newest|latest)\s+(?:(?:stable|prerelease|non-prerelease)\s+)?(?:releases?|versions?|entries|entry|articles?)\b/iu;
   const viFamily = /^\s*(?:hãy\s+)?(?:nêu|xác định|tìm|so sánh)\s+bản phát hành\s+(?:ổn định\s+)?mới nhất\b/iu;
-  if (!family.test(bounded) && !viFamily.test(bounded)) return null;
+  const initialCommand = family.test(bounded) || viFamily.test(bounded);
+  const contextualStart = initialCommand ? null : contextualRecencyStart(bounded, [family, viFamily]);
+  if (!initialCommand && contextualStart === null) return null;
   const forms = [
     /^\s*(?:please\s+)?(?:name|identify|find)\s+the\s+(?:newest|latest)\s+release\s+(?:actually\s+)?in\s+(https?:\/\/[^\s<>"'`]+)/iu,
     /^\s*(?:hãy\s+)?(?:nêu|xác định|tìm)\s+bản phát hành\s+mới nhất\s+(?:trong|từ)\s+(https?:\/\/[^\s<>"'`]+)/iu,
@@ -80,13 +107,13 @@ export function recognizeSourceRecency(question: string): SourceRecencyRequireme
   const feedUrls = [...new Set(identities.filter((url): url is string => url !== null))];
   const incomplete = question.length > bounded.length || !!supplied.scanTruncated || supplied.omitted > 0;
   const unresolved = incomplete || feedUrls.length === 0 || identities.some(url => url === null);
-  const unsupportedForm = !match || /\b(?:stable|prerelease|non-prerelease|before|after|cutoff|cached|retained|among|compare)\b|(?:^|[^\p{L}\p{N}])(?:trước|sau|ổn định|đã lưu)(?=$|[^\p{L}\p{N}])/iu.test(bounded);
+  const unsupportedForm = contextualStart !== null || !match || /\b(?:stable|prerelease|non-prerelease|before|after|cutoff|cached|retained|among|compare)\b|(?:^|[^\p{L}\p{N}])(?:trước|sau|ổn định|đã lưu)(?=$|[^\p{L}\p{N}])/iu.test(bounded);
   const reason: RecencyGapReason = incomplete ? "question-scan-limit" : unresolved ? "source-binding-unresolved"
     : feedUrls.length > 1 ? "ambiguous-feed-urls" : unsupportedForm ? "unsupported-temporal-form" : "newest-feed-observation-unqualified";
   const status = reason === "newest-feed-observation-unqualified" ? "explicit-single-feed" : "unsupported";
   return Object.freeze({ kind: "newest-feed-entry", status, binding: unresolved ? "unresolved" : "exact-feeds",
     feedUrls: Object.freeze(feedUrls), reason,
-    originalSpan: Object.freeze({ start: 0, end: status === "unsupported" ? bounded.length : match![0].length }) });
+    originalSpan: Object.freeze({ start: contextualStart ?? 0, end: status === "unsupported" ? bounded.length : match![0].length }) });
 }
 
 /** A missing catalog match cannot erase the caller's unresolved request. */

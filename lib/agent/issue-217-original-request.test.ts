@@ -6,9 +6,9 @@ import type { ReasoningEngine, DecideInput } from "../llm";
 import type { PaymentGateway } from "../payments/payment-gateway";
 import type { Source, SourceItem } from "../types";
 import { runAgent } from "./run-agent";
+import { ISSUE217_ORIGINAL_QUESTION as question } from "../../test-support/issue-217-request-fixture";
 
 // The full saved request matters: its temporal instruction is not the first sentence.
-const question = "I am a technical analyst deciding which Keryx release to evaluate for a small startup. Read the registered, verified creator release source associated with https://github.com/tang-vu/keryx/releases.atom. In English, name the newest release tag actually present in the feed and one explicit change stated for that release, with inspectable citations. Explain one compatibility or deployment fact the release entry does not establish. Use the eligible registered creator path within the admitted source/reward budget; disclose actual access and citation payment outcomes separately. Do not treat an unpaid public reference as a creator payment or treat a transfer alone as proof the answer is useful.";
 
 vi.mock("../net/public-fetch", () => ({ fetchPublicBytes: vi.fn(async () => { throw new Error("Live transport forbidden"); }),
   fetchPublicText: vi.fn(async () => { throw new Error("Live transport forbidden"); }) }));
@@ -41,7 +41,7 @@ it("preserves the exact issue217 later temporal instruction before an older crea
   const gateway = { mode: "real", agentAddress: () => `0x${"11".repeat(20)}`, ensureFunded: funding,
     payFetch: buy, payCitation: forbidden } as unknown as PaymentGateway;
   const deps: AgentDeps = { db, engine, gateway, effects, readWebArticle: forbidden,
-    webSearch: { search: forbidden } as unknown as AgentDeps["webSearch"] };
+    webSearch: { search: async () => [] } as unknown as AgentDeps["webSearch"] };
   const generator = runAgent({ queryId: "inert-issue217-fixture", question, origin: "web", budget: 0.1, researchMode: "quick" }, deps);
   let row = await generator.next(); while (!row.done) row = await generator.next();
   expect(buy).not.toHaveBeenCalled();
@@ -50,6 +50,8 @@ it("preserves the exact issue217 later temporal instruction before an older crea
   expect(decide).not.toHaveBeenCalled();
   expect(forbidden).not.toHaveBeenCalled();
   expect(row.value.answer).toContain("Newest-release limitation");
+  expect(row.value.sourceRecency).toMatchObject({ metadataReads: 0, observations: [],
+    gaps: expect.arrayContaining([expect.objectContaining({ sourceId: source.id, feedUrl: source.rssUrl, reason: "unsupported-temporal-form" })]) });
   expect(row.value.totalSpent).toBe(0);
   expect(row.value.totalToCreators).toBe(0);
 });
