@@ -48,6 +48,8 @@ interface Health {
   traction?: {
     totalPayments: number;
     creatorPayoutsUsdc: number;
+    settledOperatingFeeUsdc?: number | null;
+    settledOperatingFeePayments?: number | null;
     creatorsEarning: number;
     totalQueries: number;
   };
@@ -158,8 +160,10 @@ export default function StatusPage() {
                 <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
                   <Row k="Total queries" v={health.traction.totalQueries.toLocaleString()} />
                   <Row k="Settled payments" v={health.traction.totalPayments.toLocaleString()} />
-                  <Row k="Creator payouts" v={`$${health.traction.creatorPayoutsUsdc.toFixed(4)}`} />
+                  <Row k="Creator rewards" v={`$${health.traction.creatorPayoutsUsdc.toFixed(4)}`} />
                   <Row k="Creators earning" v={String(health.traction.creatorsEarning)} />
+                  <Row k="Keryx operating fees" v={health.traction.settledOperatingFeeUsdc != null ? `$${health.traction.settledOperatingFeeUsdc.toFixed(6)}` : "Unavailable"} />
+                  <Row k="Operating fee transfers" v={health.traction.settledOperatingFeePayments != null ? String(health.traction.settledOperatingFeePayments) : "Unavailable"} />
                 </dl>
               </>
             )}

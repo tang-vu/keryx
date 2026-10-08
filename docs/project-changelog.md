@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### Sponsored research and distinct operating settlements (2026-10-08, v0.27.35 candidate)
+
+- Explain the bounded no-wallet trial in research and literature workflows, with
+  public-report visibility, manual preparation and wait guidance after throttling.
+- Add reviewed public-hosted x402 operating fees for the original contribution
+  shares of unclaimed public citations. Keep source ownership, creator rewards,
+  query/lifetime caps and all historical payees intact. One retained original per
+  query prevents another fee after a lost response or terminal failure.
+- Separate operating fees from creator rewards in payment proof, receipt integrity,
+  metrics, creator exports and shared API/MCP/CLI/answer renderers. Existing browser
+  grants and fixed-price A2A/private jobs receive no additional service charge.
+- [Policy, supported surfaces and remaining release gates](sponsored-research-trial.md).
+
 ### Require complete evidence before original-answer review (2026-10-08, v0.27.28)
 
 The retained original's generation selects one admitted quote for each required

@@ -10,6 +10,7 @@
 
 import { Check, CircleX, Clock3 } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
+import { isCreatorPayment } from "@/lib/payments/payment-kind";
 import {
   paymentCountsAsSpent,
   paymentSettlementStatus,
@@ -31,6 +32,8 @@ export function CreatorsPaidPanel({
   mode,
   streaming,
 }: CreatorsPaidPanelProps) {
+  const operatingPayments = payments.filter(payment => payment.kind === "operating-fee");
+  payments = payments.filter(isCreatorPayment);
   const total = payments
     .filter(paymentCountsAsSpent)
     .reduce((sum, payment) => sum + (payment.amountUsdc ?? 0), 0);
@@ -55,6 +58,13 @@ export function CreatorsPaidPanel({
   return (
     <div className="relative flex h-full flex-col">
       <SectionHeading numeral="III" label="The settlement" right="weighted · USDC on Arc" />
+      {operatingPayments.length > 0 && <aside aria-label="Keryx operating fees" className="mb-3 border border-line bg-paper-2 px-4 py-3">
+        <p className="font-mono text-xs text-ink">Keryx operating fees</p>
+        <p className="mt-1 text-xs leading-relaxed text-ink-2">Research operating fees are recorded separately from creator rewards.</p>
+        {operatingPayments.map((payment, index) => <p key={payment.id ?? index} className="mt-2 break-all font-mono text-xs text-ink-2">
+          ${fmtUsdc(payment.amountUsdc)} USDC · {paymentSettlementStatus(payment)}{payment.txHash ? ` · Circle reference ${payment.txHash}` : ""}
+        </p>)}
+      </aside>}
       <div className="relative flex flex-1 flex-col overflow-hidden border border-ink bg-paper">
         {hasPayments && (
           <div className="flex h-7 border-b border-ink">

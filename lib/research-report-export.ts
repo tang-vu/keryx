@@ -35,7 +35,7 @@ export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, paym
   lines.push("Research targets are unverified topics. Recorded excerpt support and coverage are estimates, not proof of entailment, factual truth or complete synthesis.", "");
   for (const evidence of run.evidence ?? []) lines.push(`${evidence.marker} · Research target (unverified): ${quotedReportLiteral(evidence.claim)}`, `Quote: ${quotedReportLiteral(evidence.quote)}`, `Source excerpt admitted: ${evidence.qualifiesForAnswer === true}. Reward eligible: ${evidence.qualifiesForReward}.`, "");
   for (const coverage of run.claimCoverage ?? []) lines.push(`Research target (unverified): ${quotedReportLiteral(coverage.claim)}: ${coverage.coverage} recorded coverage estimate; ${coverage.coveredBy.join(", ") || "no admitted sources"}`);
-  lines.push("", "## Creator payment evidence", "", "A citation alone does not prove settlement. Search and model operating costs are separate from the source cap.");
+  lines.push("", "## Payment evidence", "", "A citation alone does not prove settlement. Keryx operating fees and creator rewards are recorded separately. Search and model operating costs are separate from the source cap.");
   if (!payments.length) lines.push("No payment records received in this conversation.");
   for (const payment of payments) {
     const recorded = payment.settlementStatus ?? (payment.settled ? "settled" : "unverified");

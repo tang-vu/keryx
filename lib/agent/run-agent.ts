@@ -87,6 +87,8 @@ import {
 import { sourceFetchTerms } from "../registry/source-fetch-payto";
 import { assertRecipientAllowed, sourceRecipientIsExcluded } from "../payments/recipient-exclusion";
 import { sourceClaimAccess, publicDuplicateOfOwnedItem } from "../sources/source-claim-access";
+import { sourceClaimForUrl } from "../sources/public-source-claim-service";
+import { prepareOperatingFee, retainExactItemClaimUrls } from "./operating-fee";
 import { resolveFreeSourceItemContent } from "../sources/resolve-source-item-content";
 import { contentBodyHash } from "../sources/content-receipt";
 import type { SourceClaimReceipt } from "../types";
@@ -217,6 +219,7 @@ async function* runAdmittedAgent(
   const fundingNotice = "Funding readiness is unknown. Paid source access and creator rewards are withheld for this run; any wallet funding activity remains unverified. Inspect the original funding records before another paid attempt.";
   let finalDecisions: Decision[] = [];
   let citations: Citation[] = [];
+  let operatingFee: QueryRun["operatingFee"];
   let evidence: EvidenceRecord[] = [];
   let claimCoverage: ClaimCoverageRecord[] = [];
   let previewCoverage: PreviewCoverage | undefined;
@@ -307,7 +310,7 @@ async function* runAdmittedAgent(
   // the first purchase of a source would be the last toll it ever earned, and every later answer
   // would be built from text the source has moved on from. See ./cache-freshness.ts.
   const freshCache = new Set<string>();
-  const { publicReads, publicCandidates } = await discoverPublicReferences(db, input.question, subClaims);
+  const { publicReads, publicCandidates, itemClaimUrls } = await discoverPublicReferences(db, input.question, subClaims);
   const webCandidates = new Map<string, SourceCandidate>();
   const gathered: GatheredContent[] = [];
   const requested = requestedSources(input.question);
@@ -489,6 +492,8 @@ async function* runAdmittedAgent(
     }
     const catalogItems = (await db.getItems(s.id)).map(item => hasKnownSeedFingerprint(item.title, item.link, item.bodyHash)
       ? { ...item, evidenceProvenance: "synthetic-demo" as const } : item);
+    for (const knownItem of catalogItems) retainExactItemClaimUrls(itemClaimUrls, knownItem.link,
+      [s.url, ...(s.rssUrl ? [s.rssUrl] : [])]);
     const items = catalogItems.filter(item => gateway.mode === "offline" || item.evidenceProvenance !== "synthetic-demo");
     if (catalogItems.length > 0 && items.length === 0) continue;
     // Honor the creator's preview-depth: the agent scores on exactly what a paying reader would see
@@ -1659,6 +1664,41 @@ async function* runAdmittedAgent(
   }
 
   // 7) SETTLE weighted citation rewards (split across authors)
+  if (gateway.operatingFeePolicy && gateway.payOperatingFee && origin !== "a2a" && input.fundingOwner !== "browser"
+      && citations.some(citation => citation.sourceKind === "public-reference")) {
+    try {
+      const plan = await prepareOperatingFee({ queryId, poolUsdc: Math.min(round(citationPool), Math.floor(budget * 1e6 / 2) / 1e6),
+        citations, policy: gateway.operatingFeePolicy(), readClaim: url => sourceClaimForUrl(db, url), itemClaimUrls });
+      if (plan) {
+        operatingFee = plan.snapshot;
+        yield emit("settle", `Keryx operating allocation $${plan.snapshot.amountUsdc.toFixed(6)} for unclaimed public citations; sponsored by Keryx, separate from creator rewards.`, plan.snapshot);
+        if (fundingUnavailable) throw new Error("Funding readiness is unknown");
+        if (!spendWalletReady) { await gateway.ensureFunded(budget); spendWalletReady = true; }
+        paymentAttempts++;
+        let payment: PaymentRecord;
+        try { payment = await gateway.payOperatingFee({ queryId, operatingFee: plan.context }); }
+        catch (error) {
+          const retained = settledPaymentFrom(error) ?? pendingPaymentFrom(error);
+          if (!retained) throw error;
+          payment = retained;
+        }
+        payment.origin = origin;
+        const status = paymentSettlementStatus(payment);
+        if (status === "settled") settledPayments++;
+        if (status === "pending") pendingPayments++;
+        payments.push(payment);
+        operatingFee = { ...plan.snapshot, status, paymentId: payment.id, reason: undefined };
+        await persistPaymentRecord(payment);
+        yield emit("settle", status === "settled"
+          ? `Settled $${payment.amountUsdc.toFixed(6)} Keryx operating fee for unclaimed public citations.`
+          : `Keryx operating authorization $${payment.amountUsdc.toFixed(6)} ${status}; not counted as settled.`, payment);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") throw error;
+      if (operatingFee) operatingFee = { ...operatingFee, status: "withheld", reason: "Operating fee could not be admitted; no new authorization may replace an unresolved original." };
+      yield emit("settle", "Keryx operating fee withheld: reviewed authority, unclaimed-source proof or funding capacity is unavailable. The answer remains available.");
+    }
+  }
   for (const c of citations) {
     if (publicReads.has(c.sourceId) || isPublicReferenceId(c.sourceId)) continue;
     const source = sourceById.get(c.sourceId);
@@ -1906,7 +1946,9 @@ async function* runAdmittedAgent(
       ...(evidenceMeasured ? { evidence, claimCoverage } : {}),
       answer,
       totalSpent,
-      totalToCreators: totalSpent, // 100% of spend reaches creator wallets
+      totalToCreators: round(payments.filter(payment => payment.kind !== "operating-fee" && paymentCountsAsSpent(payment))
+        .reduce((sum, payment) => sum + payment.amountUsdc, 0)),
+      ...(operatingFee ? { operatingFee } : {}),
       trace,
       createdAt: new Date().toISOString(),
       origin,
@@ -1927,7 +1969,7 @@ async function* runAdmittedAgent(
     };
     emit(
       "done",
-      `Done. Spent $${totalSpent} across ${payments.length - pendingPayments} confirmed/simulated payment(s) to creators${pendingPayments ? `; ${pendingPayments} authorization(s) await settlement confirmation` : ""}.${fundingUnavailable ? " Creator-payment amounts only; wallet funding effects remain unknown." : ""}`,
+      `Done. Spent $${totalSpent} across ${payments.length - pendingPayments} confirmed/simulated payment(s)${operatingFee ? "; Keryx operating fees are separate from creator rewards" : " to creators"}${pendingPayments ? `; ${pendingPayments} authorization(s) await settlement confirmation` : ""}.${fundingUnavailable ? " Creator-payment amounts only; wallet funding effects remain unknown." : ""}`,
     );
     return demoteSyntheticEvidence(run);
   }

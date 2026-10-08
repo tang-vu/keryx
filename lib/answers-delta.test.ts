@@ -185,6 +185,19 @@ describe("compareAnswerReceipts", () => {
     ).toBeNull();
   });
 
+  it("includes operating rows in completeness without adding their amounts to creator payout deltas", () => {
+    const previous = run({ paymentMode: "real", settledPayments: 2 });
+    const current = run({ paymentMode: "real", settledPayments: 2 });
+    const fee = (id: string): PaymentRecord => ({ ...payment(id, 0.04), kind: "operating-fee" });
+    expect(compareAnswerReceipts(previous, current, {
+      previous: [payment(previous.id, 0.002), fee(previous.id)],
+      current: [payment(current.id, 0.003), fee(current.id)],
+    })?.settlement).toMatchObject({ previousTotalUsdc: 0.002, currentTotalUsdc: 0.003, deltaUsdc: expect.closeTo(0.001) });
+    expect(compareAnswerReceipts(previous, current, {
+      previous: [payment(previous.id, 0.002)], current: [payment(current.id, 0.003), fee(current.id)],
+    })?.settlement).toBeNull();
+  });
+
   it("accepts a formerly pending row after exact Circle reconciliation promotes it", () => {
     const previous = run({
       paymentMode: "real",

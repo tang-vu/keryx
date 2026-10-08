@@ -24,6 +24,7 @@ export class PrivateServerGateway extends ServerPaymentGateway {
     this.getGatewayBalance = options.getGatewayBalance;
     const db = options.db;
     this.paymentJournal = input => {
+      if (input.kind === "operating-fee") throw new Error("Private research does not admit a second service fee");
       if (input.queryId !== id) throw new Error("Private gateway belongs to another job");
       return privateCreatorJournal(db, { id, payer, workerId, kind: input.kind, sourceId: input.sourceId, itemId: input.itemId });
     };

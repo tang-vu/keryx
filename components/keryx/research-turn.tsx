@@ -44,11 +44,11 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
       {!stopped && state.status === "error" && <div role="alert" className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
         <p>{state.error ?? "Research could not finish. Try another question."}</p>
         <SelectionFailureDownload diagnostic={state.selectionDiagnostic} />
-        {state.errorKind === "rate-limit" && <p className="mt-2">Connect a funded session or try again{state.retryAfter ? ` in ${state.retryAfter}s` : " shortly"}.</p>}
+        {state.errorKind === "rate-limit" && <p className="mt-2">Try again{state.retryAfter ? ` in ${state.retryAfter}s` : " shortly"}. Your saved reports remain available.</p>}
       </div>}
       <details className="mt-3 border border-line bg-paper" onToggle={event => setEvidenceOpen(event.currentTarget.open)}>
         <summary className="min-h-11 cursor-pointer break-words px-4 py-3 font-mono text-xs text-ink-2">
-          Decision log and creator payments · {state.steps.length} steps · {fmtUsdc(totals.settled)} USDC settled of {fmtUsdc(state.budget)} cap{unsettled && ` · ${unsettled}`}{state.meta?.mode === "offline" && " · offline simulation"}
+          Decision log and payments · {state.steps.length} steps · {fmtUsdc(totals.settled)} USDC settled of {fmtUsdc(state.budget)} cap{unsettled && ` · ${unsettled}`}{state.meta?.mode === "offline" && " · offline simulation"}
         </summary>
         {evidenceOpen && <div className="grid min-w-0 gap-6 border-t border-line p-4 lg:grid-cols-[1.6fr_1fr]">
           <ReasoningConsole steps={state.steps} streaming={streaming} budget={state.budget} />

@@ -18,7 +18,7 @@ interface AskFormProps {
   parentId?: string | null;
   conversation?: boolean;
   clearOnSubmit?: boolean;
-  restoreQuestion?: { id: number; question: string };
+  restoreQuestion?: { id: number; question: string; researchPaused?: boolean };
   payer?: "treasury" | "session" | "expired" | "paused";
   onAsk: (
     question: string,
@@ -89,7 +89,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
   const { availability, checking, refresh } = useResearchAvailability();
   const [dismissedRejection, setDismissedRejection] = useState<number | null>(null);
   const researchPaused = availability?.state === "paused" ||
-    (restoreQuestion !== undefined && restoreQuestion.id !== dismissedRejection);
+    (restoreQuestion !== undefined && restoreQuestion.researchPaused !== false && restoreQuestion.id !== dismissedRejection);
   const checkAvailability = async () => {
     const observed = await refresh();
     if (observed?.state === "not-paused" && restoreQuestion) setDismissedRejection(restoreQuestion.id);
@@ -240,7 +240,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
                   ? "Session status unavailable. Recover your funded session below before another question."
                 : payer === "expired"
                   ? "Session expired. Recover it below before another wallet funded question."
-                  : `Free trial: Keryx's treasury pays on ${currentArcLabel}. Question budget: up to $${budget.toFixed(3)} USDC.`}
+                  : `Sponsored trial on ${currentArcLabel}. No wallet or deposit required. Usage and spending limits apply.`}
             </p>
           </div>
           {!researchPaused && availabilityPanel}

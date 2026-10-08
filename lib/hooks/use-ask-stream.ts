@@ -45,8 +45,8 @@ export interface AskMeta {
 
 /**
  * Distinguishes an expected throttle from a real failure so the UI can respond
- * differently: `rate-limit` (anonymous free-trial used up → invite to connect a
- * wallet), `session-expired` (grant lapsed → recover prompt), `generic` (any
+ * differently: `rate-limit` (research capacity used up → wait before another
+ * request), `session-expired` (grant lapsed → recover prompt), `generic` (any
  * other failure → plain error box).
  */
 export type AskErrorKind = "generic" | "rate-limit" | "session-expired" | "research-paused";
@@ -415,12 +415,15 @@ export function useAskStream(opts?: AskStreamOpts) {
           if (!isCurrent()) return;
           let errCode: string | undefined;
           let errMsg = bodyText;
-          let retryAfter: number | null = null;
+          const retryHeader = res.headers.get("Retry-After");
+          let retryAfter: number | null = retryHeader && /^[0-9]{1,6}$/.test(retryHeader)
+            ? Number(retryHeader) : null;
           try {
             const j = JSON.parse(bodyText) as { error?: string; message?: string; retryAfter?: number };
             errCode = j.error;
             errMsg = j.message ?? j.error ?? bodyText;
-            if (typeof j.retryAfter === "number") retryAfter = j.retryAfter;
+            if (typeof j.retryAfter === "number" && Number.isFinite(j.retryAfter) && j.retryAfter >= 0)
+              retryAfter = j.retryAfter;
           } catch { /* not JSON — keep the raw text */ }
 
           if (errCode === "research_paused") {
@@ -442,7 +445,7 @@ export function useAskStream(opts?: AskStreamOpts) {
 
           if (res.status === 429) {
             // Free-trial throttle on the anonymous treasury path — an expected limit, not a
-            // failure. Surface it as an invitation to connect a wallet (handled by the page).
+            // failure. Keep recovery available without requiring wallet funding.
             setState((s) => ({
               ...s,
               status: "error",
@@ -450,7 +453,7 @@ export function useAskStream(opts?: AskStreamOpts) {
               retryAfter,
               error:
                 errMsg ||
-                "You've used your free dispatches for the moment. Connect a wallet to keep going.",
+                "Research capacity is temporarily full. Try again shortly.",
             }));
             return;
           }

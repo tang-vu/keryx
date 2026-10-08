@@ -29,7 +29,7 @@ const LAYERS = [
   },
   {
     source: "Circle Gateway API",
-    proves: "Creator balances back the settled ledger, wallet by wallet.",
+    proves: "Payee balances back the settled ledger, wallet by wallet.",
     limit: "Batched transfers have Circle IDs, not one ArcScan tx per citation.",
   },
 ] as const;

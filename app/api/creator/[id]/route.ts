@@ -42,7 +42,8 @@ export async function GET(
     const entry = leaderboard.find((e) => e.sourceId === id);
     const rank = leaderboard.findIndex((e) => e.sourceId === id) + 1;
 
-    const settledPayments = creatorPayments.filter((p) => p.settled);
+    const actualCreatorPayments = creatorPayments.filter((p) => p.kind === "fetch" || p.kind === "citation");
+    const settledPayments = actualCreatorPayments.filter((p) => p.settled);
     const settledTotal = settledPayments.reduce((sum, p) => sum + p.amountUsdc, 0);
     const totalEarned = entry?.totalEarnedUsdc ?? settledTotal;
     const paymentCount = entry?.paymentCount ?? settledPayments.length;
@@ -61,7 +62,7 @@ export async function GET(
     // Attach the question that triggered each payout so the creator sees WHAT work of
     // theirs was used, not an opaque query id — the tangible "you were cited for this".
     // Dedupe by queryId first so a creator cited several times in one query costs one read.
-    const recent = creatorPayments.slice(0, 25);
+    const recent = actualCreatorPayments.slice(0, 25);
     const uniqueQueryIds = [...new Set(recent.map((p) => p.queryId).filter(Boolean))];
     const questionById = new Map<string, string>();
     await Promise.all(

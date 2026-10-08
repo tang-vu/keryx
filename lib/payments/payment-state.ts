@@ -77,6 +77,7 @@ export function isPaymentRecord(value: unknown): value is PaymentRecord {
   return (
     (candidate.kind === "fetch" ||
       candidate.kind === "citation" ||
+      candidate.kind === "operating-fee" ||
       candidate.kind === "inbound") &&
     typeof candidate.queryId === "string" &&
     typeof candidate.amountUsdc === "number" &&

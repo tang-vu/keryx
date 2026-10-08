@@ -194,6 +194,8 @@ export async function GET() {
         traction: {
           totalPayments: m.totalPayments,
           creatorPayoutsUsdc: Number(m.totalCreatorPayoutsUsdc.toFixed(6)),
+          settledOperatingFeeUsdc: m.settledOperatingFeeUsdc ?? null,
+          settledOperatingFeePayments: m.settledOperatingFeePayments ?? null,
           creatorsEarning: m.creatorsEarning,
           totalQueries: m.totalQueries,
           groundedClaimRate: m.groundedClaimRate,

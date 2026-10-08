@@ -11,7 +11,9 @@ import { payWithServerSigner, type ServerX402Attempt, type BatchPayloadSigner, t
 import type { privateCreatorJournal } from "./private-creator-journal";
 import { assertRecipientAllowed, type RecipientExclusion } from "./recipient-exclusion";
 
-export interface PaymentJournalContext { queryId: string; kind: "fetch" | "citation"; sourceId: string; itemId: string | null; sourceClaim?: SourceClaimReceipt }
+export type PaymentJournalContext =
+  | { queryId: string; kind: "fetch" | "citation"; sourceId: string; itemId: string | null; sourceClaim?: SourceClaimReceipt }
+  | { queryId: string; kind: "operating-fee"; sourceId: "keryx:operating-fee"; itemId: null; operatingFee: import("./operating-fee-policy").OperatingFeeContext };
 
 /** Shared creator payment operations, with no key loading, wallet creation or automatic funding. */
 export abstract class ServerPaymentGateway implements PaymentGateway {
@@ -160,7 +162,7 @@ export abstract class ServerPaymentGateway implements PaymentGateway {
   }
 }
 
-function checkJournalOutcome(status: string | undefined, payment: PaymentRecord, attempt: ServerX402Attempt<unknown>) {
+export function checkJournalOutcome(status: string | undefined, payment: PaymentRecord, attempt: ServerX402Attempt<unknown>) {
   if (status === "receipt-mismatch") {
     if (payment.settled) throw new PaymentSettledError("Private receipt requires reconciliation", payment);
     throw new PaymentPendingError("Private receipt requires reconciliation", payment);
@@ -172,7 +174,7 @@ function checkJournalOutcome(status: string | undefined, payment: PaymentRecord,
 }
 
 interface AttemptPaymentContext extends Partial<SourceItemIdentity> {
-  kind: "fetch" | "citation";
+  kind: "fetch" | "citation" | "operating-fee";
   queryId: string;
   sourceId: string;
   sourceName: string;
@@ -184,7 +186,7 @@ interface AttemptPaymentContext extends Partial<SourceItemIdentity> {
   listPriceUsdc?: number;
 }
 
-function paymentFromAttempt(
+export function paymentFromAttempt(
   attempt: ServerX402Attempt<unknown>,
   context: AttemptPaymentContext,
 ): PaymentRecord {
@@ -219,7 +221,7 @@ function paymentFromAttempt(
   });
 }
 
-function throwIfDeliveryFailed(
+export function throwIfDeliveryFailed(
   attempt: ServerX402Attempt<unknown>,
   payment: PaymentRecord,
   sourceName: string,

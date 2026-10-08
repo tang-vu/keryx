@@ -375,12 +375,12 @@ export interface ActivationFunnel {
 /** One payment attempt's evidence state. */
 export type PaymentSettlementStatus = "settled" | "simulated" | "pending" | "failed";
 
-/** `inbound` = another agent paid Keryx (A2A); fetch/citation = Keryx paid a creator. */
+/** Inbound is a package receipt; fetch/citation pay creators; operating-fee pays Keryx. */
 export interface PaymentRecord extends Partial<SourceItemIdentity> {
   scholarlyDeclarationId?: string;
   scholarlyApprovalId?: string;
   id?: string;
-  kind: "fetch" | "citation" | "inbound";
+  kind: "fetch" | "citation" | "inbound" | "operating-fee";
   queryId: string;
   sourceId: string;
   sourceName: string;
@@ -466,7 +466,19 @@ export interface Confidence {
 export type McpClientChannel = "codex" | "claude" | "cursor" | "direct" | "other";
 
 /** Complete record of one agent run over a question. */
+export interface OperatingFeeSnapshot {
+  policy: "public-citation-operating-fee-v1";
+  beneficiary: string;
+  amountUsdc: number;
+  allocations: Array<{ marker: string; sourceId: string; itemUrl: string; amountUsdc: number }>;
+  status: PaymentSettlementStatus | "withheld";
+  paymentId?: string;
+  reason?: string;
+}
+
 export interface QueryRun {
+  /** Sponsored service allocation; canonical payment rows alone establish settlement. */
+  operatingFee?: OperatingFeeSnapshot;
   /** Private same-original recovery provenance; public response builders omit this packet. */
   originalFulfillment?: import("./a2a/failed-original-fulfillment-protocol").FulfilledOriginalRunMetadata;
   id: string;
@@ -543,6 +555,9 @@ export interface DashboardEvidenceQuality {
 
 /** Aggregate dashboard telemetry. Payment totals use settled rows; evidence counters are recorded history. */
 export interface DashboardMetrics {
+  /** Sponsored Keryx operating transfers, separate from creator payouts and external revenue. */
+  settledOperatingFeeUsdc?: number | null;
+  settledOperatingFeePayments?: number | null;
   totalPayments: number;
   totalVolumeUsdc: number;
   totalCreatorPayoutsUsdc: number;
