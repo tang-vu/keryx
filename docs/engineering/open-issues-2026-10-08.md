@@ -75,6 +75,7 @@ full provenance and delivery permit local cleanup.
 
 See [the inherited release record](research-reading-release-2026-10-08.md),
 [generation boundaries](evidence-only-synthesis-2026-10-08.md),
+[prospective teaching gates](prospective-delivery-gates-2026-10-08.md),
 [requested presentation](research-deliverable-quality-2026-10-08.md),
 [enumerated evidence](../issue-238-evidence.md) and
 [document channels](../issue-232-document-aliases.md).

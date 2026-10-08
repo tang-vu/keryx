@@ -37,6 +37,8 @@ remain targets. Explicit questions about activities NASA actually tested remain
 factual targets. This addresses a decomposition cause in
 [211](https://github.com/tang-vu/keryx/issues/211), but does not add reviewed proposed
 activity delivery to ordinary sentence summaries or certify a complete lesson.
+The required typed admission, premise/review and separate rendering boundaries
+are recorded in [the prospective delivery gates](prospective-delivery-gates-2026-10-08.md).
 
 ## Verification and remaining gates
 
