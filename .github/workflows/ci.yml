@@ -245,6 +245,9 @@ jobs:
       - name: Bounded document readers (assembled production trace, no network)
         run: node scripts/test-web-readers-traced.mjs
 
+      - name: HTML evidence structure (actual minified reader and quote boundaries, no network)
+        run: node scripts/test-built-html-evidence.cjs
+
       - name: Research reading UX (offline Chromium and responsive layout)
         env:
           KERYX_FORCE_OFFLINE: "1"

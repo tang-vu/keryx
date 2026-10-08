@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Preserve HTML evidence context (2026-10-08, v0.27.34 candidate)
+
+Observed preformatted regions now retain wrapped conditions and examples in
+selection, quotations and review context. Explicitly quoted short heading names
+can retrieve actual HTML headings and following prose across languages, while
+keeping room for lexical targets. TOC labels and CSS classes do not become
+heading roles. Exact text-bound metadata is internal; historical sources retain
+their prior behavior. Context and worker bounds remain, with optional role
+sampling labeled when limited. Useful live answers and deployment remain gates.
+See [scope and acceptance](engineering/html-evidence-context-2026-10-08.md).
+
 ### Confirm report feedback honestly (2026-10-08, v0.27.33 candidate)
 
 Helpful controls now retain observed counts while sending and select a rating only

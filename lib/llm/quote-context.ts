@@ -3,6 +3,8 @@ import type { GatheredContent } from "./reasoning-engine";
 import { isWellFormedUtf16 } from "./well-formed-utf16";
 import { completeEvidenceSpans } from "./evidence-span";
 import { sourceSentenceSegments, type SourceExtraction } from "./source-sentences";
+import { sourceHtmlLayout, sourceTextBlocks } from "./source-text-blocks";
+import type { HtmlTextLayout } from "../web-research/html-text-layout";
 
 export interface ContextualQuoteOption {
   quoteId: string;
@@ -60,12 +62,14 @@ function trimSpan(text: string, start: number, end: number): [number, number] {
   return [start, Math.max(start, end)];
 }
 
-function contextBoundaries(text: string, extraction?: SourceExtraction) {
+function contextBoundaries(text: string, extraction?: SourceExtraction, layout?: HtmlTextLayout) {
   const lines = [0];
-  if (extraction !== "pdf") for (const match of text.matchAll(/\n/g)) lines.push(match.index + 1);
+  if (layout) for (const block of sourceTextBlocks(text, extraction, layout)) lines.push(block.start, block.end);
+  else if (extraction !== "pdf") for (const match of text.matchAll(/\n/g)) lines.push(match.index + 1);
   if (lines.at(-1) !== text.length) lines.push(text.length);
+  lines.sort((a, b) => a - b);
   const sentences = [0];
-  for (const sentence of sourceSentenceSegments(text, extraction)) sentences.push(sentence.index + sentence.segment.length);
+  for (const sentence of sourceSentenceSegments(text, extraction, layout)) sentences.push(sentence.index + sentence.segment.length);
   // Both indexes are bounded by the already-unlocked 200k prefix. No source is
   // fetched, no gaps are joined, and structural boundaries do not prove completeness.
   const all = [...new Set([...lines, ...sentences])].sort((a, b) => a - b);
@@ -135,7 +139,7 @@ export function buildContextualQuoteOptions(sources: ReturnType<typeof evidenceC
   });
   return bindings.flatMap(({ source, original, scanned }, sourceIndex) => {
     if (!source.passages.length || !scanned.length) return [];
-    const boundaries = contextBoundaries(scanned, original.webProvenance?.extraction);
+    const boundaries = contextBoundaries(scanned, original.webProvenance?.extraction, sourceHtmlLayout(original));
     const options: ContextualQuoteOption[] = [];
     const offeredSpans = new Set<string>();
     const passages = policy.completeSentencesOnly

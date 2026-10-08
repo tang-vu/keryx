@@ -6013,3 +6013,18 @@ successful core metric reads; neither substitute zero nor discard the whole resp
 This improves the shared reading UI without inventing identity,
 server-side deduplication or independent-user traction. See
 [scope and acceptance](docs/engineering/report-feedback-confirmation.md).
+
+## Observe HTML structure for bounded evidence retrieval — 2026-10-08
+
+The saved RFC and NASA reproductions expose two structural losses: physical pre
+wraps discard conditions, while duplicate TOC/heading labels omit substantive
+following text. Record actual pre and h1–h6 ranges during inert extraction, bound
+them to the exact returned body and enroll frozen metadata only at the validated
+worker boundary. Use shared logical groups for selection, strict quote spans and
+review context. Keep historical JSON/layoutless behavior and PDF policy unchanged.
+Named quoted headings are retrieval cues; preserve both bytes and a slot for lexical
+targets, sample duplicate matches and label optional role limits without discarding
+a readable source. Preserve the 2,000-character context and all support/payment
+authority. Source replay proves retrieval behavior only; useful live answers and
+coordinated production delivery remain gates. See
+[scope and acceptance](docs/engineering/html-evidence-context-2026-10-08.md).

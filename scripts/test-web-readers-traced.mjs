@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 
 // Assemble only Next's traced /api/ask runtime. Children cannot reach the repository's modules
 // through NODE_PATH, cwd or inherited environment. This catches absent runtime worker assets.
@@ -24,6 +25,15 @@ try {
   const html = `<html><head><title>Fixture</title></head><body><article><h1>Fixture</h1><p>${passage.repeat(20)}</p></article></body></html>`;
   const extractedHtml = await worker("html-reader-worker.mjs", [], JSON.stringify({ text: html, finalUrl: "https://example.com/article" }));
   assert.ok(extractedHtml.text.includes(passage.trim())); assert.equal(extractedHtml.kind, "html");
+  assert.equal(extractedHtml.htmlTextLayout.textSha256, createHash("sha256").update(extractedHtml.text, "utf8").digest("hex"));
+  assert.equal(extractedHtml.htmlTextLayout.textCharacters, extractedHtml.text.length);
+  assert.equal(extractedHtml.text.slice(extractedHtml.htmlTextLayout.headings[0].start, extractedHtml.htmlTextLayout.headings[0].end), "Fixture");
+  const wrapped = "If a value is not enclosed, then a delimiter\n  must not appear inside that value.";
+  const layout = await worker("html-reader-worker.mjs", [], JSON.stringify({
+    text: `<main><a>Rules</a><h2>Rules</h2><pre>${wrapped}</pre><p>${passage}</p></main>`, finalUrl: "https://example.com/rules" }));
+  assert.equal(layout.htmlTextLayout.headings.length, 1);
+  assert.equal(layout.text.slice(layout.htmlTextLayout.headings[0].start, layout.htmlTextLayout.headings[0].end), "Rules");
+  assert.equal(layout.text.slice(layout.htmlTextLayout.preformatted[0].start, layout.htmlTextLayout.preformatted[0].end), wrapped);
   // Exercise normalization above the old raw-byte cap and semantic-region fidelity using
   // only the assembled trace: the actual document must beat an unrelated article card.
   const caveat = "Delivery can happen more than once; reconcile against the original event identifier.";

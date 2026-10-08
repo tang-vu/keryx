@@ -1,6 +1,7 @@
 import type { GatheredContent } from "./reasoning-engine";
 import { isWellFormedUtf16 } from "./well-formed-utf16";
 import { sourceSentenceSegments } from "./source-sentences";
+import { sourceHtmlLayout } from "./source-text-blocks";
 import { isSupplementaryStructuredSpan, type SupplementalSpanCapability } from "./supplemental-span-capability";
 
 export interface EvidenceSpan { start: number; end: number }
@@ -19,7 +20,7 @@ export function completeEvidenceSpans(source: GatheredContent): EvidenceSpan[] {
   if (!isWellFormedUtf16(scanned)) return [];
   const cutEnd = scanned.length < source.text.length || source.webProvenance?.truncated === true;
   const spans: EvidenceSpan[] = [];
-  for (const sentence of sourceSentenceSegments(scanned, source.webProvenance?.extraction)) {
+  for (const sentence of sourceSentenceSegments(scanned, source.webProvenance?.extraction, sourceHtmlLayout(source))) {
     const body = scanned.slice(sentence.index, sentence.index + sentence.segment.length);
     const start = sentence.index + body.length - body.trimStart().length;
     const end = sentence.index + body.trimEnd().length;
