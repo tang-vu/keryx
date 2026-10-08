@@ -1,6 +1,18 @@
 # Keryx Project Changelog
 
-### Free primary evidence for retained Operator completion (2026-10-08, v0.27.26 candidate)
+### Complete documented detail after a rejected prepared original (2026-10-08, v0.27.27)
+
+A separate quality episode preserves an incomplete prepared answer and its entire
+history. It carries only an exactly bound positive same-evidence assessment, then
+uses the two remaining calls for fresh synthesis and review. Original-only guidance
+and statement selection cover documented multi-step flows and limitations. Proposed
+acceptance checks are labeled inferences from reviewed source premises; missing
+deployment values remain explicit. Actual reviewed delivery and buyer recovery are
+still release acceptance gates.
+
+Next.js and its ESLint configuration are pinned to 16.3.8, the [September security release](https://nextjs.org/blog/september-2026-security-release), to address the image optimization SSRF and cache disclosure advisories.
+
+### Free primary evidence for retained Operator completion (2026-10-08, v0.27.26)
 
 A private continuation can supplement an acknowledged evidence gap with protected,
 verbatim official sections. Original sources, payment, question and native claim stay

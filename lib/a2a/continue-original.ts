@@ -2,18 +2,21 @@ import { config } from "../config";
 import type { KeryxDB } from "../db/keryx-db";
 import { OpenAICompatibleEngine } from "../llm/openai-compatible-engine";
 import { JsonChatEngine, type ChatJsonOptions } from "../llm/json-chat-engine";
-import { ReasoningInputLimitError, ReasoningOutputValidationError, type ReasoningEngine, type SufficiencyInput } from "../llm/reasoning-engine";
+import { ReasoningInputLimitError, ReasoningOutputValidationError, type ReasoningEngine, type SufficiencyInput, type SynthInput } from "../llm/reasoning-engine";
 import { originalFulfillmentContext } from "./original-fulfillment-context";
 import { buildQuoteOptions, resolveQuoteEvidence } from "../llm/quote-options";
 import { buildEvidenceReviewInput } from "../llm/evidence-review-input";
 import { MAX_REVIEWED_EVIDENCE } from "../llm/evidence-review";
+import { ORIGINAL_FULFILLMENT_GENERATION_GUIDANCE } from "../llm/original-fulfillment-quality";
+import { buildOriginalFulfillmentQualityReviewInput } from "../llm/original-fulfillment-review-input";
 import { ORIGINAL_FULFILLMENT_LIMITS as LIMITS } from "./failed-original-fulfillment-protocol";
 import type { FulfillmentEvidenceGap } from "./original-fulfillment-answer";
 import { supplementaryQuoteOptions, type FulfillmentSupplementContext } from "./fulfillment-supplement-evidence";
 import { assembleOriginalFulfillmentRun, originalFulfillmentEvidenceGaps, reasoningInput, validateOriginalFulfillmentPrompt } from "./fulfill-original";
 import { assertContinuationSupplierAdmission, beginOriginalContinuation, closeContinuationCapability,
   continuationModel, continuationProviderLedger, continuationSupplierSignal, prepareContinuationResult,
-  recordContinuationDiagnostic, type ContinuationCapability } from "../business-operator/fulfillment-continuation-policy";
+  recordContinuationDiagnostic, continuationQualityEvidenceCapability, continuationQualityEvidenceProtocol,
+  type ContinuationCapability, type ContinuationQualityEvidenceCapability } from "../business-operator/fulfillment-continuation-policy";
 
 type Stage = "sufficiency" | "synthesize" | "review";
 type Phase = Stage | "assemble";
@@ -35,22 +38,31 @@ class OriginalContinuationEngine extends OpenAICompatibleEngine {
   private diagnostic?: { phase: Phase; category: Category };
   private readonly supplementalQuotes?: ReturnType<typeof supplementaryQuoteOptions>;
   constructor(apiKey: string, private readonly capability: ContinuationCapability,
-    private readonly input: SufficiencyInput, private readonly requiredTargets: readonly number[], supplement?: FulfillmentSupplementContext) {
+    private readonly input: SufficiencyInput, private readonly requiredTargets: readonly number[], supplement?: FulfillmentSupplementContext,
+    private readonly qualityEvidence?: ContinuationQualityEvidenceCapability) {
     super({ provider: "deepseek", name: "llm:deepseek:deepseek-v4-flash", model: "deepseek-v4-flash",
       baseUrl: "https://api.deepseek.com", apiKey, redirect: "error" });
-    this.supplementalQuotes = supplement ? supplementaryQuoteOptions(supplement) : undefined;
+    if (qualityEvidence) {
+      if (!supplement) failed("assemble", "unknown");
+      continuationQualityEvidenceProtocol(qualityEvidence, supplement.contextSha256);
+    }
+    this.supplementalQuotes = supplement ? supplementaryQuoteOptions(supplement, qualityEvidence) : undefined;
   }
   get evidenceGaps() { return structuredClone(this.retainedGaps); }
   get failure() { return this.diagnostic; }
   protected supportsDecisionBrief(): boolean { return false; }
   protected synthesisGenerationTokens(): number { return LIMITS.maximumOutputTokens; }
+  protected synthesisGenerationGuidance(input: SynthInput): string {
+    return this.qualityEvidence ? ORIGINAL_FULFILLMENT_GENERATION_GUIDANCE : super.synthesisGenerationGuidance(input);
+  }
   protected evidenceSources(input: SufficiencyInput) { return originalFulfillmentContext(input); }
   protected synthesisQuoteOptions(input: SufficiencyInput, sources: ReturnType<typeof originalFulfillmentContext>) {
     return this.supplementalQuotes ? [...buildQuoteOptions(sources.filter(source => !source.sourceId.startsWith("public:fulfillment:supplement:")), input.gathered),
       ...this.supplementalQuotes.options] : super.synthesisQuoteOptions(input, sources);
   }
   protected synthesisEvidenceReviewInput(input: Parameters<typeof buildEvidenceReviewInput>[0]) {
-    return buildEvidenceReviewInput({ ...input, supplementalCapability: this.supplementalQuotes?.capability });
+    const bound = { ...input, supplementalCapability: this.supplementalQuotes?.capability };
+    return this.qualityEvidence ? buildOriginalFulfillmentQualityReviewInput(bound) : buildEvidenceReviewInput(bound);
   }
   protected assertSupplierAdmission(): void { assertContinuationSupplierAdmission(this.capability); }
   protected supplierAbortSignal(): AbortSignal { return continuationSupplierSignal(this.capability, config.llmTimeoutMs); }
@@ -130,13 +142,23 @@ class ContinuationPromptPreflight extends JsonChatEngine {
   readonly name = "continuation-readonly-preflight";
   readonly prompts: ReturnType<typeof validateOriginalFulfillmentPrompt>[] = [];
   private readonly supplementalQuotes?: ReturnType<typeof supplementaryQuoteOptions>;
-  constructor(supplement?: FulfillmentSupplementContext) { super(); this.supplementalQuotes = supplement ? supplementaryQuoteOptions(supplement) : undefined; }
+  constructor(supplement?: FulfillmentSupplementContext, private readonly qualityEvidence?: ContinuationQualityEvidenceCapability) {
+    super();
+    if (qualityEvidence) {
+      if (!supplement) failed("assemble", "unknown");
+      continuationQualityEvidenceProtocol(qualityEvidence, supplement.contextSha256);
+    }
+    this.supplementalQuotes = supplement ? supplementaryQuoteOptions(supplement, qualityEvidence) : undefined;
+  }
   protected evidenceSources(input: SufficiencyInput) { return originalFulfillmentContext(input); }
   protected synthesisQuoteOptions(input: SufficiencyInput, sources: ReturnType<typeof originalFulfillmentContext>) {
     return this.supplementalQuotes ? [...buildQuoteOptions(sources.filter(source => !source.sourceId.startsWith("public:fulfillment:supplement:")), input.gathered),
       ...this.supplementalQuotes.options] : super.synthesisQuoteOptions(input, sources);
   }
   protected synthesisGenerationTokens(): number { return LIMITS.maximumOutputTokens; }
+  protected synthesisGenerationGuidance(input: SynthInput): string {
+    return this.qualityEvidence ? ORIGINAL_FULFILLMENT_GENERATION_GUIDANCE : super.synthesisGenerationGuidance(input);
+  }
   protected async chatJson(_model: string, system: string, user: string, maxTokens = 2048) {
     this.prompts.push(validateOriginalFulfillmentPrompt(system, user, maxTokens));
     return {};
@@ -145,8 +167,9 @@ class ContinuationPromptPreflight extends JsonChatEngine {
 
 /** Build the same full-body sufficiency/generation wire prompts without a supplier,
  * credential, claim or mutation. The complete generated review remains separately bounded. */
-export async function preflightOriginalContinuation(binding: Parameters<typeof reasoningInput>[0], supplement?: FulfillmentSupplementContext) {
-  const engine = new ContinuationPromptPreflight(supplement), input = reasoningInput(binding, supplement);
+export async function preflightOriginalContinuation(binding: Parameters<typeof reasoningInput>[0], supplement?: FulfillmentSupplementContext,
+  qualityEvidence?: ContinuationQualityEvidenceCapability) {
+  const engine = new ContinuationPromptPreflight(supplement, qualityEvidence), input = reasoningInput(binding, supplement);
   await engine.sufficiency(input);
   await engine.synthesize(input);
   if (engine.prompts.length !== 2) failed("assemble", "unknown");
@@ -165,7 +188,10 @@ export async function completeOriginalContinuation(db: KeryxDB, authorizationFil
   let phase: Phase = "sufficiency";
   try {
     const input = reasoningInput(binding, admitted.binding.supplement);
-    engine = new OriginalContinuationEngine(apiKey, admitted.capability, input, binding.authorization.requiredSupportedTargetIndexes, admitted.binding.supplement);
+    const qualityEvidence = admitted.binding.qualityProtocol ? continuationQualityEvidenceCapability(admitted.capability) : undefined;
+    if (admitted.binding.qualityProtocol && !qualityEvidence) failed("assemble", "unknown");
+    engine = new OriginalContinuationEngine(apiKey, admitted.capability, input, binding.authorization.requiredSupportedTargetIndexes,
+      admitted.binding.supplement, qualityEvidence);
     const assessment = await engine.sufficiency(input);
     // A genuine negative assessment is retained by policy. Generation/review cannot
     // raise final coverage above this assessment, so refuse before consuming their holds.
@@ -179,7 +205,8 @@ export async function completeOriginalContinuation(db: KeryxDB, authorizationFil
     phase = "assemble";
     const providerLedger = continuationProviderLedger(admitted.binding);
     const run = assembleOriginalFulfillmentRun({ binding, claim: admitted.claim, assessment, synthesized,
-      evidenceGaps: engine.evidenceGaps, providerLedger, engine, startedAtMs, completedAtMs: Date.now(), supplement: admitted.binding.supplement });
+      evidenceGaps: engine.evidenceGaps, providerLedger, engine, startedAtMs, completedAtMs: Date.now(), supplement: admitted.binding.supplement,
+      qualityProtocol: admitted.binding.qualityProtocol, qualityEvidenceCapability: qualityEvidence });
     const prepared = prepareContinuationResult(admitted.capability, run);
     return { prepared: true, runSha256: prepared.runSha256, providerLedgerSha256: prepared.providerLedgerSha256,
       selectedSources: run.citations.length, reviewedStatements: run.originalFulfillment!.statements.length,

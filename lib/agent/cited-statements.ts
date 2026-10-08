@@ -18,7 +18,10 @@ const MAX_STATEMENTS_PER_TARGET = 4;
  * and the separate review scored the sentence itself as established by that quote.
  * Selection never adds evidence, raises support or changes reward eligibility.
  */
-export function selectCitedStatements(proposals: ProposedEvidence[], ledger: EvidenceLedger): CitedStatement[] {
+export function selectCitedStatements(proposals: ProposedEvidence[], ledger: EvidenceLedger,
+  maximumPerTarget = MAX_STATEMENTS_PER_TARGET): CitedStatement[] {
+  if (!Number.isInteger(maximumPerTarget) || maximumPerTarget < 1 || maximumPerTarget > 32)
+    throw new Error("Invalid cited-statement target bound");
   const qualifying = new Set(ledger.evidence
     .filter(item => (item.qualifiesForAnswer ?? item.qualifiesForReward) && ledger.acceptedMarkers.has(item.marker))
     .map(item => key(item.claimIndex, item.marker, item.quote)));
@@ -32,7 +35,7 @@ export function selectCitedStatements(proposals: ProposedEvidence[], ledger: Evi
     const id = key(proposal.claimIndex, proposal.marker, quote);
     if (!qualifying.has(id) || seen.has(id) || seen.has(text.toLocaleLowerCase("en-US"))) continue;
     const count = perTarget.get(proposal.claimIndex) ?? 0;
-    if (count >= MAX_STATEMENTS_PER_TARGET) continue;
+    if (count >= maximumPerTarget) continue;
     seen.add(id).add(text.toLocaleLowerCase("en-US"));
     perTarget.set(proposal.claimIndex, count + 1);
     statements.push({ claimIndex: proposal.claimIndex, marker: proposal.marker, quote, text });
