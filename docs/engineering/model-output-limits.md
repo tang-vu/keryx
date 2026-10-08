@@ -1,6 +1,6 @@
 # Model output-limit diagnostics
 
-Candidate app 0.27.28, hosted MCP 0.3.4, stdio MCP 0.4.7 and desktop 0.4.9.
+Candidate app 0.27.29, hosted MCP 0.3.4, stdio MCP 0.4.7 and desktop 0.4.9.
 Publication, installation and hosted deployment are separate acceptance gates.
 
 The owner-operated SQLite observation in [issue #212](https://github.com/tang-vu/keryx/issues/212)
@@ -59,4 +59,9 @@ malformed/historical metadata; retained receipts; packed MCP and responsive actu
 components. A separately authorized live task and independent useful deliverable
 remain open, along with the original deployment/maintenance gates.
 
-Release ordering: this combined-source candidate includes PR226's app0.27.27 recency guard and current main7b45190c/PR224–225. Merge PR226 first, then reconcile this source against the resulting main before publishing app0.27.28. Client package versions remain the output-limit candidate values above. No active original executor/grant is rebound by this branch integration.
+Release ordering: this combined-source candidate includes PR226's app0.27.28
+recency guard and reviewed Operator/security source from merged PR227/main28b071d6
+(app0.27.27). Merge PR226 first, then reconcile this source against fresh main before
+publishing app0.27.29. Client package versions remain the output-limit candidate
+values above. Existing source-bound original/operational lifetime and deployed/
+distribution readbacks remain gates; this integration rebinds no executor/grant.

@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Explain a model output limit (2026-10-08, v0.27.28 candidate)
+### Explain a model output limit (2026-10-08, v0.27.29 candidate)
 
 Reports distinguish an explicitly stopped model response from a provider outage,
 retain its billable token usage, and explain when to inspect saved evidence and
@@ -9,10 +9,10 @@ keep the same safe diagnostic through saved trace. CLI, APIs and MCP use the sha
 contract; output caps and payment authority are unchanged. Historical 503s are not
 reinterpreted. See [scope and remaining acceptance](engineering/model-output-limits.md).
 
-App 0.27.28, MCP 0.4.7, desktop 0.4.9 and hosted MCP 0.3.4 identify this candidate;
+App 0.27.29, MCP 0.4.7, desktop 0.4.9 and hosted MCP 0.3.4 identify this candidate;
 published packages, installed clients and production must be verified separately.
 
-### Hold unqualified newest-feed article selection (2026-10-08, v0.27.27 candidate)
+### Hold unqualified newest-feed article selection (2026-10-08, v0.27.28 candidate)
 
 Recognized English/Vietnamese newest-release instructions now retain their original
 feed constraint before model decomposition. Affected retained paid/free/cache and
@@ -25,7 +25,19 @@ current-feed observation, supported newest-release delivery and service pre-char
 qualification remain open. Existing payments and incoming service/model costs are
 separate. See [coverage and release gates](engineering/source-recency-2026-10-08.md).
 
-### Free primary evidence for retained Operator completion (2026-10-08, v0.27.26 candidate)
+### Complete documented detail after a rejected prepared original (2026-10-08, v0.27.27)
+
+A separate quality episode preserves an incomplete prepared answer and its entire
+history. It carries only an exactly bound positive same-evidence assessment, then
+uses the two remaining calls for fresh synthesis and review. Original-only guidance
+and statement selection cover documented multi-step flows and limitations. Proposed
+acceptance checks are labeled inferences from reviewed source premises; missing
+deployment values remain explicit. Actual reviewed delivery and buyer recovery are
+still release acceptance gates.
+
+Next.js and its ESLint configuration are pinned to 16.3.8, the [September security release](https://nextjs.org/blog/september-2026-security-release), to address the image optimization SSRF and cache disclosure advisories.
+
+### Free primary evidence for retained Operator completion (2026-10-08, v0.27.26)
 
 A private continuation can supplement an acknowledged evidence gap with protected,
 verbatim official sections. Original sources, payment, question and native claim stay

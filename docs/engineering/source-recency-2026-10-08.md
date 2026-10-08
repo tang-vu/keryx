@@ -59,6 +59,12 @@ English/Vietnamese follow-up constraints with no catalog read/payment effects.
 Eight built chat cases at320/390/768/1440px preserve the visible gap and exact
 downloaded report without overflow, automatic retry or payment API calls. Earlier
 fixture and build failures remain retained as local verification history.
+After integrating the reviewed Operator quality and Next16.3.8 security source,
+217 focused tests, both TypeScript graphs, scoped lint, the production build and
+the public-origin server check passed. The unchanged recency runtime also passed
+the bilingual minified/built cases above. The inherited Operator runtime and
+dependency closure remain equal to the reviewed source; the application candidate
+is0.27.28. These are local source checks, not delivery or production observations.
 Independent read-only review supports the narrow refusal scope. Exact-head CI,
 source-bound operational release and deployed/distribution identities remain
 required. Stages2–4 below and issue217 useful delivery remain open.

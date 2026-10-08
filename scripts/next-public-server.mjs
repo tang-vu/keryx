@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const PUBLIC_ORIGIN = 'https://keryx.cc';
-export const NEXT_VERSION = '16.3.6';
+export const NEXT_VERSION = '16.3.8';
 
 function singleHeader(req, name) {
   const values = [];

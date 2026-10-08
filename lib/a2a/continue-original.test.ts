@@ -9,14 +9,14 @@ import { fulfillmentObjectSha256, validateFulfilledQueryRun, type A2aFulfillment
 import type { QueryRun } from "../types";
 
 const policy = vi.hoisted(() => ({ begin: vi.fn(), model: vi.fn(), admission: vi.fn(), signal: vi.fn(), close: vi.fn(),
-  ledger: vi.fn(), prepare: vi.fn(), diagnostic: vi.fn() }));
+  ledger: vi.fn(), prepare: vi.fn(), diagnostic: vi.fn(), qualityEvidence: vi.fn() }));
 const git = vi.hoisted(() => vi.fn());
 vi.mock("node:child_process", async importOriginal => ({ ...await importOriginal<typeof import("node:child_process")>(), execFileSync: git }));
 vi.mock("../business-operator/fulfillment-continuation-policy", () => ({ beginOriginalContinuation: policy.begin,
   continuationModel: policy.model, assertContinuationSupplierAdmission: policy.admission,
   continuationSupplierSignal: policy.signal, closeContinuationCapability: policy.close,
   continuationProviderLedger: policy.ledger, prepareContinuationResult: policy.prepare,
-  recordContinuationDiagnostic: policy.diagnostic }));
+  recordContinuationDiagnostic: policy.diagnostic, continuationQualityEvidenceCapability: policy.qualityEvidence }));
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(fixtureNow); vi.resetAllMocks();
   git.mockImplementation((_command, args) => args?.[0] === "status" ? "" : `${fixtureCommit}\n`);
@@ -92,6 +92,15 @@ function provider(mode: "success" | "failure2" | "truncated2" | "malformed2" | "
 }
 
 describe("explicit same-original continuation engine", () => {
+  it("refuses a quality admission without its protected evidence token before any supplier call", async () => {
+    const value = await admittedFixture(true);
+    policy.begin.mockResolvedValue({ capability: value.capability,
+      binding: { original: value.binding, qualityProtocol: "same-evidence-prepared-quality-v1" }, claim: value.claim });
+    await expect(completeOriginalContinuation(value.db, value.authorizationFile, "a".repeat(64), "synthetic-key"))
+      .rejects.toThrow("assemble unknown");
+    expect(policy.model).not.toHaveBeenCalled(); expect(policy.prepare).not.toHaveBeenCalled();
+    expect(policy.close).toHaveBeenCalledWith(value.capability);
+  });
   it.each(["low", "unbound"] as const)("retains a successful %s fifth assessment and stops before generation or review", async mode => {
     const value = await admittedFixture(true);
     const fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {

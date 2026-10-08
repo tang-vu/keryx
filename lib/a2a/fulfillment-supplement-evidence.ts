@@ -6,6 +6,8 @@ import type { GatheredContent } from "../llm/reasoning-engine";
 import type { QueryRun } from "../types";
 import type { QuoteOption } from "../llm/quote-options";
 import { enrollSupplementalSpans, type SupplementalSpanCapability } from "../llm/supplemental-span-capability";
+import { continuationQualityEvidenceProtocol, type ContinuationQualityEvidenceCapability } from "../business-operator/fulfillment-continuation-policy";
+import { ORIGINAL_FULFILLMENT_QUALITY_PROTOCOL } from "../llm/original-fulfillment-quality";
 export type { SupplementalSpanCapability } from "../llm/supplemental-span-capability";
 import { fulfillmentObjectSha256 as objectHash, fulfillmentSha256 as hash,
   type FulfillmentAuthority, type FulfillmentInput, type A2aFulfillmentClaim } from "./failed-original-fulfillment-protocol";
@@ -37,7 +39,8 @@ export interface FulfillmentSupplementContext { readonly [contextBrand]: true;
 declare const capabilityBrand: unique symbol;
 export interface FulfillmentEvidenceCapability { readonly [capabilityBrand]: true }
 const contexts = new WeakMap<FulfillmentSupplementContext, { file: string; sha: string; base: Base; binding: Binding }>();
-const capabilities = new WeakMap<FulfillmentEvidenceCapability, { context: FulfillmentSupplementContext; claimSha: string; runSha: string }>();
+const capabilities = new WeakMap<FulfillmentEvidenceCapability, { context: FulfillmentSupplementContext; claimSha: string; runSha: string;
+  quality?: ContinuationQualityEvidenceCapability }>();
 const refuse = (): never => { throw new Error("Original supplemental evidence refused"); };
 const same = (a: unknown, b: unknown) => canonicalJson(a) === canonicalJson(b);
 
@@ -131,12 +134,18 @@ export function assertSupplementaryRunBinding(run: QueryRun, context: Fulfillmen
   if (!metadata || metadata.format !== "keryx-a2a-original-fulfillment-result-v2" ||
     metadata.supplementaryInputSha256 !== value.authoritySha256 || metadata.contextSha256 !== value.contextSha256) refuse();
 }
-export function fulfillmentEvidenceCapability(context: FulfillmentSupplementContext, claim: A2aFulfillmentClaim, run: QueryRun): FulfillmentEvidenceCapability {
+export function fulfillmentEvidenceCapability(context: FulfillmentSupplementContext, claim: A2aFulfillmentClaim, run: QueryRun,
+  quality?: ContinuationQualityEvidenceCapability): FulfillmentEvidenceCapability {
   const { state } = current(context);
   if (objectHash(claim) !== state.binding.nativeClaimSha256 || !same(claim.authority, state.base.authority)) refuse();
   assertSupplementaryRunBinding(run, context);
+  const metadata = run.originalFulfillment;
+  if (metadata?.format === "keryx-a2a-original-fulfillment-result-v2" && metadata.qualityProtocol !== undefined) {
+    if (!quality || metadata.qualityProtocol !== ORIGINAL_FULFILLMENT_QUALITY_PROTOCOL ||
+        continuationQualityEvidenceProtocol(quality, context.contextSha256) !== ORIGINAL_FULFILLMENT_QUALITY_PROTOCOL) refuse();
+  } else if (quality) refuse();
   const capability = Object.freeze({}) as FulfillmentEvidenceCapability;
-  capabilities.set(capability, { context, claimSha: objectHash(claim), runSha: objectHash(run) }); return capability;
+  capabilities.set(capability, { context, claimSha: objectHash(claim), runSha: objectHash(run), quality }); return capability;
 }
 /** Revalidate every protected body and the exact run/claim. Historical reads deliberately ignore supplier expiry. */
 export function supplementalRunSources(run: QueryRun, claim: A2aFulfillmentClaim, capability?: FulfillmentEvidenceCapability): GatheredContent[] {
@@ -145,9 +154,19 @@ export function supplementalRunSources(run: QueryRun, claim: A2aFulfillmentClaim
   assertSupplementaryRunBinding(run, state.context); return current(state.context).value.gathered;
 }
 
+/** Historical native verification uses the exact run/claim evidence token that
+ * policy minted after protected quality-episode validation, never a JSON flag. */
+export function supplementalRunQuoteOptions(run: QueryRun, claim: A2aFulfillmentClaim, capability?: FulfillmentEvidenceCapability) {
+  const state = capability && capabilities.get(capability);
+  if (!state || state.claimSha !== objectHash(claim) || state.runSha !== objectHash(run)) return refuse();
+  assertSupplementaryRunBinding(run, state.context);
+  return supplementaryQuoteOptions(state.context, state.quality);
+}
+
 /** Exact table prefixes retain their header; code lines and completed section-end
  * sentences stay verbatim. Only the protected official supplemental sections enroll. */
-export function supplementaryQuoteOptions(context: FulfillmentSupplementContext): { options: QuoteOption[]; capability: SupplementalSpanCapability } {
+export function supplementaryQuoteOptions(context: FulfillmentSupplementContext,
+  quality?: ContinuationQualityEvidenceCapability): { options: QuoteOption[]; capability: SupplementalSpanCapability } {
   const { state, value } = current(context), bytes = read(state.file, 65536);
   const manifest = supplementaryInputSchema.parse(JSON.parse(text(bytes))), options: QuoteOption[] = [];
   for (const [index, document] of manifest.sources.entries()) {
@@ -192,6 +211,38 @@ export function supplementaryQuoteOptions(context: FulfillmentSupplementContext)
       sectionStart = sectionEnd + 2;
     }
   }
+  if (quality) {
+    if (continuationQualityEvidenceProtocol(quality, value.contextSha256) !== ORIGINAL_FULFILLMENT_QUALITY_PROTOCOL ||
+        hash(state.base.authority.question) !== "44b1c28cb5e3f67711d8404a344f9c927864cad565d544d638a7578fb0aa0530" ||
+        !same(state.base.packet.input.selectedDocumentIds, ["erc-1271", "nanopayments"])) refuse();
+    const source = value.gathered[0];
+    if (source.marker !== "S1" || source.sourceId !== "public:fulfillment:erc-1271" ||
+        source.itemUrl !== "https://developers.circle.com/gateway/references/erc-1271" ||
+        source.contentVersion !== hash(source.text)) refuse();
+    // Exact original lines only. The RPC quote removes its label, preserving the
+    // complete qualified proposition, including both negative trust conditions.
+    // The adjacent label and whole original body remain in review context.
+    const originals = [
+      { line: "Contracts that enforce allowlists, spending limits, or compliance checks before approving an action", prefix: "" },
+      { line: "RPC trust assumptions: Gateway uses a quorum of multiple node operators on each request to mitigate incorrect responses, but Gateway can’t guarantee that each RPC performed the validation correctly or that an RPC’s network security wasn’t compromised.", prefix: "RPC trust assumptions: " },
+    ];
+    for (const { line, prefix } of originals) {
+      const occurrence = source.text.indexOf(line);
+      if (occurrence < 0 || source.text.indexOf(line, occurrence + 1) !== -1 ||
+          occurrence > 0 && source.text[occurrence - 1] !== "\n" ||
+          occurrence + line.length < source.text.length && !["\n", "\r"].includes(source.text[occurrence + line.length])) refuse();
+      const start = occurrence + prefix.length, end = occurrence + line.length, quote = source.text.slice(start, end);
+      if (quote.length < 8 || quote.length > 240) refuse();
+      const contextStart = Math.max(0, occurrence - 400), contextEnd = Math.min(source.text.length, end + 400);
+      options.push({ quoteId: `original-quality:${source.marker}:${start}:${end}`, marker: source.marker, text: quote, start, end,
+        sourceId: source.sourceId, itemUrl: source.itemUrl, contentVersion: source.contentVersion,
+        contextStart, contextEnd, context: source.text.slice(contextStart, contextEnd),
+        prefixOmitted: contextStart > 0, suffixOmitted: contextEnd < source.text.length });
+    }
+  }
   if (options.length > 32) refuse();
-  return { options, capability: enrollSupplementalSpans(value.gathered, options, () => { current(context); }) };
+  return { options, capability: enrollSupplementalSpans(value.gathered, options, () => {
+    current(context);
+    if (quality && continuationQualityEvidenceProtocol(quality, context.contextSha256) !== ORIGINAL_FULFILLMENT_QUALITY_PROTOCOL) refuse();
+  }) };
 }
