@@ -23,6 +23,15 @@ payments. A treasury-funded keyed request or prepaid A2A result cannot increase
 those browser-funded totals merely because it is in the wallet's history.
 Existing order history, caller limits and payer recovery remain separate.
 
+The history UI describes downstream creator funding rather than calling every
+non-browser-funded result a free trial. Original purchases, service fees and gas
+remain separate. The existing API names `trialDispatches` and
+`trialToCreatorsUsdc` are retained for compatibility: they count rows without
+recorded `askerFunded=true` and their recorded creator amounts, including keyed,
+prepaid A2A and older rows with a missing funding flag. Those names do not prove
+that the service was free or that each amount settled. Missing historical
+funding authority is not reconstructed from new ownership metadata.
+
 Private execution still saves through job-scoped effects to owner-scoped private
 results, never to public `query_runs`, payment events or cache. Its existing
 minimal private result projection remains unchanged. Old protected original
@@ -92,6 +101,9 @@ and matching SQLite/Supabase JSON/history behavior. Supabase HTTP is intercepted
 in a synthetic fixture; it is not a live database or hosted migration proof.
 Existing payment, evidence, reservation and original-recovery regressions remain
 applicable. No live model, search or payment acceptance was performed.
+The mixed-history regression checks actual session-only wallet filtering and
+unchanged browser-funded/legacy totals, then renders that API response in a
+network-blocked browser to check keyed, prepaid and legacy funding wording.
 
 Exact-source CI and independent review precede any merge. Deployment, app/package
 version coordination and actual deployed wallet-history acceptance belong to the

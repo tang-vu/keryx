@@ -75,6 +75,7 @@ export async function GET(req: NextRequest) {
         rewardUsdc: c.reward,
       })),
       confidence: r.confidence?.level ?? null,
+      // Browser-wallet creator funding only; this says nothing about the service's original price.
       funded: r.askerFunded === true,
       isFollowUp: Boolean(r.parentId),
       // True when a source this dispatch cited has published since it settled. A hint that a re-ask
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
   });
 
   const funded = asks.filter((a) => a.funded);
-  const trial = asks.filter((a) => !a.funded);
+  const otherFunding = asks.filter((a) => !a.funded);
 
   return NextResponse.json({
     wallet: session.address,
@@ -96,8 +97,10 @@ export async function GET(req: NextRequest) {
       spentUsdc: funded.reduce((n, a) => n + a.spentUsdc, 0),
       toCreatorsUsdc: funded.reduce((n, a) => n + a.toCreatorsUsdc, 0),
       citations: asks.reduce((n, a) => n + a.citationCount, 0),
-      trialDispatches: trial.length,
-      trialToCreatorsUsdc: trial.reduce((n, a) => n + a.toCreatorsUsdc, 0),
+      // Keep legacy field names. False/missing browser funding includes keyed and prepaid A2A
+      // results; it never proves a free service, the inbound purchase price, gas or settlement.
+      trialDispatches: otherFunding.length,
+      trialToCreatorsUsdc: otherFunding.reduce((n, a) => n + a.toCreatorsUsdc, 0),
     },
     // True when the page is looking at a capped window rather than the wallet's whole history.
     truncated: asks.length === limit,

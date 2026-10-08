@@ -532,9 +532,9 @@ export interface QueryRun {
   /** Lowercased wallet from a server-verified session, API key or original payer. Never from
    *  client telemetry. Absent on anonymous asks and unidentified agents. */
   asker?: string;
-  /** True when that wallet's own session key paid for the run; false/absent means the dispatch
-   *  ran on Keryx's treasury (the free trial). Kept apart so a receipts page can never present
-   *  Keryx's spend as the user's. */
+  /** Recorded browser-session funding for downstream creator payments. False/absent groups other
+   *  funding, including hosted keyed and prepaid A2A runs; it does not prove a free research
+   *  service, incoming price, gas, settlement or historical funding authority. */
   askerFunded?: boolean;
   /** Funding provenance set by the trusted server path, never by a public request body. */
   fundingOwner?: "browser" | "treasury" | "offline";

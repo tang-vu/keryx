@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The wallet's dispatch ledger: a summary strip (own spend vs free-trial dispatches, kept apart on
+ * The wallet's dispatch ledger: a summary strip (browser-wallet vs Keryx creator funding, kept apart on
  * purpose) over a list of every attributed dispatch, each showing the creators its toll reached.
  * Read-only — the dispatch permalink stays the place to re-read an answer and its trace.
  */
@@ -27,6 +27,7 @@ interface AskRow {
   citationCount: number;
   creators: AskCreator[];
   confidence: "High" | "Moderate" | "Low" | null;
+  /** Recorded browser-wallet creator funding; never the price of the original research service. */
   funded: boolean;
   isFollowUp: boolean;
   /** A cited source has published since this dispatch settled — a re-ask would read new material. */
@@ -38,6 +39,7 @@ interface Totals {
   spentUsdc: number;
   toCreatorsUsdc: number;
   citations: number;
+  /** Legacy names for rows without recorded browser-wallet funding, including prepaid A2A. */
   trialDispatches: number;
   trialToCreatorsUsdc: number;
 }
@@ -146,7 +148,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
             <div>
               <p className="font-serif text-xl text-ink">${fmtUsdc(totals.spentUsdc)}</p>
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                spent from your wallet
+                creator spend from your wallet
               </p>
             </div>
             <div>
@@ -164,8 +166,9 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
           </div>
           {totals.trialDispatches > 0 && (
             <p className="mt-4 border-t border-line pt-3 font-mono text-[10px] text-ink-3">
-              {totals.trialDispatches} of these ran on the free trial — Keryx&apos;s treasury paid
-              ${fmtUsdc(totals.trialToCreatorsUsdc)} to creators for them, not your wallet.
+              Creator payments for {totals.trialDispatches} of these used Keryx funding:
+              {" "}${fmtUsdc(totals.trialToCreatorsUsdc)} recorded to creators.
+              {" "}Original purchases, service fees and gas are separate.
             </p>
           )}
         </section>
@@ -184,7 +187,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
               </Link>
               <span className="font-mono text-[11px] text-ink-2">
                 ${fmtUsdc(a.spentUsdc)}
-                {!a.funded && <span className="text-ink-3"> · free trial</span>}
+                {!a.funded && <span className="text-ink-3"> · creator payments funded by Keryx</span>}
               </span>
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] text-ink-3">
