@@ -1,5 +1,58 @@
 # Tameion submission pack — working evidence
 
+## Event-period usage: testnet week, then mainnet
+
+Tameion began on September 27. Keryx ran on Arc testnet for the first week of the
+event and moved production to Arc mainnet on October 4. Both phases are event-period
+usage and are reported separately, never added together.
+
+| Phase | Window (UTC) | Research runs | Settled payments | USDC | Counting rule |
+| --- | --- | --- | --- | --- | --- |
+| Arc testnet | Sep 27 00:00 – Oct 2 17:01 | 258 completed | 304 source-access and citation-reward payments | 2.086750 | One read-only production snapshot; all caller origins, internal activity included. No pending, failed or simulated payments in the window. |
+| Arc mainnet | Oct 4 – Oct 8 15:05 | 50 recorded | 7 | 0.095, of which 0.065 to 2 creators | [Public metrics](https://keryx.cc/api/metrics) and [run history](https://keryx.cc/api/runs); all caller origins. |
+
+Testnet activity between October 2 17:01 and the October 4 cutover is not in the
+snapshot and is not counted. Cumulative lifetime figures include activity before
+the event and are not event traction.
+
+On mainnet, [Operator status](https://keryx.cc/api/operator/status) at
+`2026-10-08T15:05:07Z` reported one completed and zero failed jobs over 24 hours,
+with two registered creator sources.
+
+### Named external user: Hoàng, freelance developer
+
+Hoàng is a freelance developer building the Face Marker app. On October 2 he used
+Keryx through the MCP server inside Devin CLI to research questions for that app:
+facial-analysis methods, privacy and app-platform policies, and MediaPipe Face
+Landmarker. He is outside the Keryx team. His identity and workflow were published
+by the owner with a screen recording on X ([@tangvu_dev](https://x.com/tangvu_dev),
+October 2) and in the October 3 Canteen traction update.
+
+| Field | Value |
+| --- | --- |
+| Participant | Hoàng — [GitHub](https://github.com/Hoang130203), [LinkedIn](https://linkedin.com/in/ho%C3%A0ng-mai-minh-93a5852aa/) |
+| Origin | Independent freelancer; his own app and his own questions |
+| Surface | Keryx MCP in Devin CLI, Arc testnet |
+| Runs | Three research runs: `3a43c6c2-fddf-40ce-98a1-701a2a58b439`, `fe7c06fd-65da-41a6-867c-0597a63304df`, `2405a2ea-7ee3-4f0d-88b9-f221df791070` |
+| Payment | One source-access payment of 0.002 USDC to the Conzit Labs source; the other two runs bought nothing |
+| Payer | Keryx treasury. The run was sponsored; Hoàng did not fund a wallet |
+| Circle record | Transfer `09ab0e57-bb5e-43a0-90e4-194e181de1be`, completed, exact match on payer, payee, network, asset, amount and nonce |
+| Chain record | Batch `0x565dd6fbdaec636e8528dd8a0f72eb6fe6c68513c8e60b2993805f7756929b60`, finalized in Arc testnet block 65095204 |
+| Result quality | Real workflow with visible evidence gaps, as stated in the public post |
+
+Limits of this record:
+
+- The database row does not carry Hoàng's name or the Devin client; that attribution
+  comes from the owner's public account of the session and the recording.
+- The payment was sponsored, so it shows real use by an outside person, not an
+  outside wallet paying.
+- The three run pages were served from testnet storage and are not available on the
+  mainnet deployment. The Circle and chain records above remain checkable.
+- No repeat use by Hoàng after October 2 is recorded here.
+
+Other people have contacted the owner through X, LinkedIn and Product Hunt. Each is
+added here only once there is a named person, their own task and a matching run.
+
 ## October 8 current evidence and deliverable gate
 
 At `2026-10-08T09:02:01.625Z`, [public health](https://keryx.cc/api/health)
@@ -171,9 +224,14 @@ first run needs longer, record the genuine steps and disclose elapsed time/cuts.
 | 1:55–2:25 | Receipt, creator settlement and original recovery | Exact Circle references, settled/pending legs and GET-only recovery without repeat debit. |
 | 2:25–2:45 | What changed during Tameion and remaining gates | Baseline comparison; honest network/Operator/Monthly/mainnet limitations. |
 
-## Pilot intake and evidence record — unfilled
+## Pilot intake and evidence record
 
-Prepare all three intake tracks without implying that a participant is selected:
+The freelancer track has one recorded participant: Hoàng, in
+[Event-period usage](#event-period-usage-testnet-week-then-mainnet) above. The
+own-business and small-team tracks, and the blank record below for the next
+participant, remain open.
+
+Prepare the remaining intake tracks without implying that a participant is selected:
 
 - Own-business: use a genuine Keryx operational or product research decision with
   an owner-accepted deliverable. Report it as own-business activity.
