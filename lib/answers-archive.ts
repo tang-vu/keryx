@@ -22,6 +22,8 @@ export interface ArchiveEntry {
   createdAt: string;
   /** The agent's own trust level for this answer, when it recorded one. */
   confidence: Confidence | null;
+  /** Original rail for a retained historical record; never current payout authority. */
+  archivedNetwork?: "eip155:5042002";
 }
 
 const SNIPPET_LEN = 220;

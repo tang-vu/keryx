@@ -1,6 +1,7 @@
 /** GET /api/metrics → dashboard aggregate metrics + creator leaderboard + most-cited topics. */
 
 import { getDb } from "@/lib/db";
+import { getTestnetArchive } from "@/lib/history/testnet-archive";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +46,13 @@ export async function GET() {
   ]);
   const tagsById = new Map(sources.map((s) => [s.id, (s.tags ?? []).slice(0, 3)]));
   const topics = topicBreakdown(payments, tagsById);
+  let historicalArchive;
+  try {
+    const archive = await getTestnetArchive();
+    historicalArchive = archive ? { status: "available", info: archive.info, summary: await archive.summary() } : { status: "not-configured" };
+  } catch { historicalArchive = { status: "unavailable" }; }
   return Response.json({
+    historicalArchive,
     metrics: {
       ...metrics,
       satisfactionRate: feedback?.rate,

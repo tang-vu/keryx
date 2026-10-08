@@ -26,6 +26,11 @@ describe("xmlEscape", () => {
 });
 
 describe("buildAnswersFeedXml", () => {
+  it("labels historical testnet amounts without attributing them to mainnet", () => {
+    const xml = buildAnswersFeedXml([entry({ archivedNetwork: "eip155:5042002" })], BASE);
+    expect(xml).toContain("0.0053 test USDC in recorded creator rewards (Arc testnet history)");
+    expect(xml).not.toContain("$0.0053");
+  });
   it("renders a valid Atom skeleton with self + alternate links", () => {
     const xml = buildAnswersFeedXml([entry({})], BASE);
     expect(xml).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');

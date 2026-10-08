@@ -53,16 +53,31 @@ function timeAgo(iso: string): string {
 }
 
 export function MyAsksView() {
+  const [historical, setHistorical] = useState(false);
+  return <div>
+    <nav className="mb-6 flex flex-wrap gap-3" aria-label="Dispatch history network">
+      <button type="button" aria-pressed={!historical} onClick={() => setHistorical(false)} className="min-h-11 border border-line px-4 text-sm">Current network</button>
+      <button type="button" aria-pressed={historical} onClick={() => setHistorical(true)} className="min-h-11 border border-line px-4 text-sm">Arc testnet history</button>
+    </nav>
+    {historical && <p className="mb-5 text-sm leading-relaxed text-ink-2">Original testnet dispatches attributed to this wallet. These test USDC amounts are separate from current mainnet spend; archived source names do not grant current payout rights.</p>}
+    <MyAsksLedger key={historical ? "testnet" : "current"} historical={historical} />
+  </div>;
+}
+
+function MyAsksLedger({ historical }: { historical: boolean }) {
   const [loading, setLoading] = useState(true);
   const [signedOut, setSignedOut] = useState(false);
   const [asks, setAsks] = useState<AskRow[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [truncated, setTruncated] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
+    const controller = new AbortController();
     void (async () => {
       try {
-        const res = await fetch("/api/me/asks", { cache: "no-store" });
+        const res = await fetch(historical ? "/api/me/asks?network=arcTestnet&limit=200" : "/api/me/asks", { cache: "no-store", signal: controller.signal });
         if (res.status === 401) {
           setSignedOut(true);
           return;
@@ -77,14 +92,16 @@ export function MyAsksView() {
         setTotals(d.totals);
         setTruncated(d.truncated);
       } catch {
-        toast.error("Couldn't load your dispatches — try again.");
+        if (!controller.signal.aborted) { setFailed(true); toast.error("Couldn't load your dispatches — try again."); }
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+    return () => controller.abort();
+  }, [historical, revision]);
 
   if (loading) return <p className="font-mono text-xs text-ink-3">Loading your dispatches…</p>;
+  if (failed) return <p role="status" className="text-sm">Your dispatch history is unavailable. <button type="button" onClick={() => { setLoading(true); setFailed(false); setRevision(value => value + 1); }} className="min-h-11 px-2 text-seal underline">Retry</button></p>;
 
   if (signedOut)
     return (
@@ -102,7 +119,7 @@ export function MyAsksView() {
     return (
       <div className="rounded border border-dashed border-line p-8 text-center">
         <p className="mb-2 font-serif text-sm text-ink-2">
-          No dispatches from this wallet yet. Dispatches you ran signed out aren&apos;t attributed
+          {historical ? "No testnet dispatches attributed to this wallet. " : "No dispatches from this wallet yet. "}Dispatches you ran signed out aren&apos;t attributed
           to anyone — sign in first and the next one lands here.
         </p>
         <Link href="/" className="font-mono text-xs text-seal underline underline-offset-2">
@@ -117,7 +134,7 @@ export function MyAsksView() {
       {totals && (
         <section className="border border-line bg-paper p-5">
           <h2 className="mb-4 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-            <Receipt className="h-3.5 w-3.5 text-seal" /> Your tolls
+            <Receipt className="h-3.5 w-3.5 text-seal" /> {historical ? "Your recorded testnet tolls" : "Your tolls"}
           </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
@@ -187,7 +204,9 @@ export function MyAsksView() {
             </div>
             {a.creators.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-                {a.creators.map((c) => (
+                {a.creators.map((c) => historical ? (
+                  <span key={c.sourceId} className="border border-line px-2 py-0.5 font-mono text-[10px] text-ink-2">{c.name} · {fmtUsdc(c.rewardUsdc)} test USDC recorded</span>
+                ) : (
                   <Link
                     key={c.sourceId}
                     href={`/creator/${c.sourceId}`}

@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
-import { getDb } from "@/lib/db";
+import { config } from "@/lib/config";
+import { resolveDispatch } from "@/lib/history/read-dispatch";
 
-export const alt = "Keryx dispatch — citations settled on Arc";
+export const alt = "Keryx dispatch — question and original payment evidence";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -19,11 +20,15 @@ export default async function DispatchOgImage({
   let spent = 0;
   let toCreators = 0;
   let dateLabel = "";
+  let networkLabel = config.profile.testnet ? "Arc testnet" : "Arc mainnet";
+  let historical = false;
 
   try {
-    const db = await getDb();
-    const run = await db.getQueryRun(id);
-    if (run) {
+    const dispatch = await resolveDispatch(id);
+    if (dispatch) {
+      const { run, archive } = dispatch;
+      historical = Boolean(archive);
+      if (archive) networkLabel = "Arc testnet archive";
       question = run.question;
       cited = run.citations.length;
       spent = run.totalSpent;
@@ -67,7 +72,7 @@ export default async function DispatchOgImage({
             textTransform: "uppercase",
           }}
         >
-          <span>Keryx Dispatch · settled on Arc</span>
+          <span>Keryx · {networkLabel}</span>
           <span>Series 2026 — No. {serialLabel}</span>
         </div>
 
@@ -90,10 +95,10 @@ export default async function DispatchOgImage({
 
         <div style={{ display: "flex", gap: 56 }}>
           <Denomination value={String(cited)} label="sources cited" />
-          <Denomination value={`$${spent.toFixed(4)}`} label="USDC spent" />
+          <Denomination value={`$${spent.toFixed(4)}`} label={historical ? "testnet USDC recorded" : "USDC recorded"} />
           <Denomination
             value={`$${toCreators.toFixed(4)}`}
-            label="to creators"
+            label="creator rewards recorded"
             accent
           />
         </div>

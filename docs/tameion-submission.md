@@ -46,8 +46,10 @@ Limits of this record:
   comes from the owner's public account of the session and the recording.
 - The payment was sponsored, so it shows real use by an outside person, not an
   outside wallet paying.
-- The three run pages were served from testnet storage and are not available on the
-  mainnet deployment. The Circle and chain records above remain checkable.
+- The three original run URLs are restored through a read-only, explicitly labeled
+  [testnet archive](https://keryx.cc/history/testnet). Their recorded payment states
+  remain frozen at capture time; the later Circle and chain checks above are separate
+  evidence. See [history restoration and limits](historical-testnet-archive.md).
 - No repeat use by Hoàng after October 2 is recorded here.
 
 ### Other outside users
