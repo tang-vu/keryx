@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Product Hunt launch and dormant model support (2026-10-08, v0.27.43 candidate)
+### Original metadata, Product Hunt launch and paid delivery integrity (2026-10-09, v0.27.43 candidate)
 
 - Add the owner's official Product Hunt launch badge to the homepage immediately
   below Ask. Preserve the compact mobile introduction and primary action.
@@ -27,6 +27,13 @@
 - Prepare one verified empty SQLite schema for isolated signer fixtures, then run
   actual initialization on each separate copy. This removes repeated cold DDL from
   signing deadlines while preserving WAL/FULL and all original security assertions.
+- Check paid article text against the explicit plaintext hash and UTF-8 byte count
+  selected before payment. Reject empty or substituted bodies while retaining the
+  original pending/settled payment and keeping failed content out of evidence,
+  cache and creator rewards. Legacy rows without commitments retain that limit.
+- Publish [eight source/payment attack classes](engineering/source-money-adversarial-2026-10-09.md)
+  with deterministic regression checks and explicit semantic, legacy and live
+  testnet proof gates. Offline fixtures do not establish real settlement.
 
 ### Restore original testnet dispatches (2026-10-08, v0.27.42)
 

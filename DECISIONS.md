@@ -6314,3 +6314,28 @@ roles remain unchanged. This source and synthetic non-production candidate suppl
 no production admission, installation or schedule. Final ingress/build/role binding,
 native CI, app/client notice and coordinated hosted acceptance remain explicit gates
 in [the issue281 runbook](docs/engineering/planned-maintenance-2026-10-08.md).
+
+## Bind paid text to the selected plaintext commitment — 2026-10-09
+
+Matching an echoed article ID and price does not bind its returned body. The
+source/payment adversarial suite reproduced empty and substituted text passing
+buyer admission. Capture explicit article and manifest plaintext hash/byte
+commitments before I/O; reject malformed or conflicting contracts before signing,
+and check the exact delivered UTF-8 bytes in both server and browser co-sign
+gateways. The response cannot choose replacement commitments. Empty/non-text
+delivery remains unusable even when a legacy row has no body commitment.
+
+An integrity failure after submission retains the same payment authorization,
+amount, payee and pending/settled state. Record its refusal rule and use existing
+source-level failure handling; no refund, reservation release, retry, cache entry,
+evidence or creator reward follows from failed delivery. Shared gateways apply
+this rule to their web/API, CLI and MCP consumers without changing signing or
+receipt schemas. Protected originals and private Operator authority stay bound
+to their existing contracts.
+
+Do not mistake a receipt byte count inferred from legacy ciphertext or a summary
+for an explicit plaintext commitment. Those legacy rows retain identity/pricing
+checks without gaining body integrity. Hash consistency does not independently
+authenticate a publisher or establish general prompt-injection/semantic farming
+resistance. The public [adversarial catalog](docs/engineering/source-money-adversarial-2026-10-09.md)
+records checked boundaries and the still-open live testnet refusal gate.
