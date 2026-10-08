@@ -15,11 +15,13 @@ import {
 } from "../payments/browser-query-policy";
 import { createSyntheticOriginalObservationServer } from "../payments/browser-original-observation-server";
 import { verifyBrowserSigningHeader } from "../payments/browser-signing-original";
+import { createSignerFixtureSchemaSeed, type SignerFixtureSchemaSeed } from "./fixtures/separate-origin-original-signer-schema";
 
 let browser: Browser;
 let workerJs: string;
 let pageJs: string;
-type Stage = "init" | "context" | "parent-listen" | "signer-listen" | "navigation" | "worker-ready" | "grant" | "query" | "original" | "configure" | "send" | "terminal" | "status-wait" | "snapshot" | "cleanup";
+let schemaSeed: SignerFixtureSchemaSeed;
+type Stage = "seed-init" | "init" | "context" | "parent-listen" | "signer-listen" | "navigation" | "worker-ready" | "grant" | "query" | "original" | "configure" | "send" | "terminal" | "status-wait" | "snapshot" | "cleanup";
 async function stage<T>(name: Stage, operation: () => T | Promise<T>, watchdog?: number): Promise<T> {
   const started=performance.now();
   const emit=(phase:"start"|"end"|"failed")=>fs.writeSync(1,`[separate-origin-fixture] stage=${name} phase=${phase} elapsedMs=${Math.min(600000,Math.max(0,Math.round(performance.now()-started)))}\n`);
@@ -62,9 +64,13 @@ beforeAll(async () => {
   );
   browser = await chromium.launch({ headless: true });
 });
+beforeAll(async () => {
+  // Only cold, empty schema preparation gets a separate setup budget. Security deadlines below stay unchanged.
+  schemaSeed = await stage("seed-init", () => createSignerFixtureSchemaSeed());
+}, 120000);
 afterAll(async () => {
   const version = browser?.version();
-  await browser?.close();
+  try { await browser?.close(); } finally { schemaSeed?.close(); }
   expect(browser?.isConnected()).toBe(false);
   console.info("Synthetic Chromium fixture cleanup", {
     version,
@@ -107,7 +113,13 @@ async function fixture(mode: Mode = "exposed", failAfterInit?: (db: SqliteAdapte
     path.join(os.tmpdir(), "keryx-isolated-signer-")
   );
   const file = path.join(folder, "journal.sqlite");
-  const db = new SqliteAdapter(file);
+  let db: SqliteAdapter;
+  try { db = schemaSeed.clone(file); } catch (error) {
+    if (fs.lstatSync(folder).isSymbolicLink() || fs.realpathSync(path.dirname(folder)) !== fs.realpathSync(os.tmpdir()) ||
+      !path.basename(folder).startsWith("keryx-isolated-signer-")) throw new Error("Fixture cleanup target refused");
+    fs.rmSync(folder, { recursive: true, force: true });
+    throw error;
+  }
   let cleanupImpl=async()=>{try{db.close();}finally{fs.rmSync(folder,{recursive:true,force:true});}};
   let closed=false;
   const cleanup=async()=>{

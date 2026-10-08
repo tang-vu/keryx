@@ -29,6 +29,7 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   addItems: "write",
   getItems: "read",
   getItem: "read",
+  getSourceItemByLink: "read",
   getArticleOffer: "read",
   listArticleOffers: "read",
   setArticleOffer: "write",

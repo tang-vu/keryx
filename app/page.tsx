@@ -31,5 +31,5 @@ export default function AskPage() {
     }
   }, []);
 
-  return <div className="min-h-screen bg-paper-2"><SiteHeader /><main><ResearchChat /><div className="mx-auto max-w-[960px] px-4 sm:px-[30px]"><ActivityTicker /></div><HowItWorks /><ForCreators /></main><SiteFooter /></div>;
+  return <div className="min-h-screen bg-paper-2"><SiteHeader /><main><ResearchChat showLaunchBadge /><div className="mx-auto max-w-[960px] px-4 sm:px-[30px]"><ActivityTicker /></div><HowItWorks /><ForCreators /></main><SiteFooter /></div>;
 }

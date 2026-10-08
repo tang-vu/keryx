@@ -237,6 +237,8 @@ export interface KeryxDB {
   getItems(sourceId: string): Promise<SourceItem[]>;
   /** Resolve one article only within its owning registry source. */
   getItem(sourceId: string, itemId: string): Promise<SourceItem | null>;
+  /** Exact catalog membership only. Duplicate source/link rows refuse selection. */
+  getSourceItemByLink(sourceId: string, exactItemUrl: string): Promise<SourceItem | null>;
   /** Current immutable offer revision for one article, if the creator has published one. */
   getArticleOffer(sourceId: string, itemId: string): Promise<ArticleOffer | null>;
   /** Current offer revisions. Passing no source id returns the public marketplace book. */

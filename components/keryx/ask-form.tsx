@@ -12,8 +12,10 @@ import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { useResearchAvailability } from "@/lib/hooks/use-research-availability";
 import { RESEARCH_AVAILABILITY_UNKNOWN, RESEARCH_PAUSED_MESSAGE } from "@/lib/research/availability-contract";
 import { paperLibraryHref } from "@/lib/papers/handoff";
+import { ProductHuntBadge } from "./product-hunt-badge";
 
 interface AskFormProps {
+  showLaunchBadge?: boolean;
   disabled?: boolean;
   questionCapUsdc?: number;
   parentId?: string | null;
@@ -85,7 +87,7 @@ const SUGGESTIONS = [
   },
 ];
 
-export function AskForm({ disabled, onAsk, payer = "treasury", parentId, conversation = false, clearOnSubmit = false, questionCapUsdc, restoreQuestion }: AskFormProps) {
+export function AskForm({ disabled, onAsk, payer = "treasury", parentId, conversation = false, clearOnSubmit = false, questionCapUsdc, restoreQuestion, showLaunchBadge = false }: AskFormProps) {
   const [question, setQuestion] = useState("");
   const { availability, checking, refresh } = useResearchAvailability();
   const [dismissedRejection, setDismissedRejection] = useState<number | null>(null);
@@ -237,6 +239,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
               className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
               {disabled ? "Researching..." : researchPaused ? "Research paused" : "Ask Keryx"}
             </button>
+            {showLaunchBadge && <div className="mt-3 flex justify-center sm:justify-start"><ProductHuntBadge /></div>}
             <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
               {payer === "session"
                 ? `Your research budget pays on ${currentArcLabel}. This question can use up to ${effectiveBudget.toFixed(6)} USDC; your remaining total also applies.`

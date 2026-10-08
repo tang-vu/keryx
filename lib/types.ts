@@ -477,6 +477,12 @@ export interface OperatingFeeSnapshot {
 }
 
 export interface QueryRun {
+  /** Reviewed, hypothetical teaching suggestions; never factual/payment authority. */
+  teachingProposals?: import("./research/teaching-proposals").TeachingProposalDelivery;
+  /** Public exact-original bibliography, separate from scientific evidence/rewards. */
+  bibliography?: import("./research/bibliographic-task").BibliographicTaskResult;
+  /** Recorded native-feed ordering only, separate from body evidence/payment authority. */
+  sourceRecency?: import("./sources/source-recency-result").SourceRecencyResult;
   /** Sponsored service allocation; canonical payment rows alone establish settlement. */
   operatingFee?: OperatingFeeSnapshot;
   /** Private same-original recovery provenance; public response builders omit this packet. */

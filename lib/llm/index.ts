@@ -23,7 +23,7 @@ import {
   type ModelChoice,
 } from "./model-catalog";
 import { createModelEngine } from "./model-engine";
-import { endpointFor } from "./provider-endpoints";
+import { endpointFor, endpointForModel } from "./provider-endpoints";
 import type { ReasoningEngine } from "./reasoning-engine";
 import { BoundedProductionEngine, configuredProductionModelAllowance, ProductionModelAllowance } from "./bounded-production-engine";
 import { BusinessCanaryEngine } from "../business-operator/canary-suppliers";
@@ -34,7 +34,7 @@ export function availableModels(): ModelChoice[] {
   if (configuredBusinessCanary() || configuredProductionModelAllowance()) {
     return process.env.DEEPSEEK_API_KEY?.trim() ? MODEL_CATALOG.filter(model => model.id === DEFAULT_MODEL_ID) : [];
   }
-  return MODEL_CATALOG.filter((model) => endpointFor(model.provider) !== null);
+  return MODEL_CATALOG.filter((model) => endpointForModel(model) !== null);
 }
 
 /**
@@ -44,7 +44,7 @@ export function availableModels(): ModelChoice[] {
 export function resolveModelChoice(id?: string | null): ModelChoice | null {
   const model = findModelChoice(id);
   if (!model) return null;
-  return endpointFor(model.provider) ? model : null;
+  return endpointForModel(model) ? model : null;
 }
 
 function defaultRealEngines(exclude = new Set<string>()): ReasoningEngine[] {

@@ -6,6 +6,7 @@ import { CreatorsPaidPanel } from "@/components/keryx/creators-paid-panel";
 import { AnswerCard } from "@/components/keryx/answer-card";
 import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
+import { projectBibliographicTask } from "@/lib/research/bibliographic-task-result";
 
 export function DispatchView({
   run,
@@ -18,7 +19,8 @@ export function DispatchView({
   historical?: boolean;
   historicalNetwork?: string;
 }) {
-  const confidence = deriveConfidence(run);
+  const bibliography = projectBibliographicTask(run.bibliography);
+  const confidence = bibliography ? null : deriveConfidence(run);
   const mode = run.paymentMode ?? null;
   const recordedNetwork = historical ? historicalNetwork ?? "unknown" : undefined;
 
@@ -32,16 +34,16 @@ export function DispatchView({
           {run.question}
         </p>
         <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
-          {confidence ? <ConfidenceBadge confidence={confidence} showReason /> : null}
+          {bibliography ? <span className="text-xs text-ink-3">Original bibliographic metadata</span> : confidence ? <ConfidenceBadge confidence={confidence} showReason /> : null}
           <p className="font-mono text-[10px] text-ink-3">
             {new Date(run.createdAt).toLocaleString()} · {run.engine}
           </p>
         </div>
       </div>
 
-      <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,330px)]">
+      <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,330px)]">
         <AnswerCard run={run} meta={null} payments={payments} showFeedback={!historical} historicalNetwork={recordedNetwork} />
-        <aside className="lg:sticky lg:top-6" aria-label="Payment evidence">
+        <aside className="min-w-0 lg:sticky lg:top-6" aria-label="Payment evidence">
           <CreatorsPaidPanel payments={payments} mode={mode} streaming={false} historicalNetwork={recordedNetwork} />
         </aside>
       </div>

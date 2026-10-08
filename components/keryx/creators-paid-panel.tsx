@@ -60,7 +60,7 @@ export function CreatorsPaidPanel({
         : 0;
 
   return (
-    <div className="relative flex h-full flex-col">
+    <div className="relative flex h-full min-w-0 flex-col">
       <SectionHeading numeral="III" label="The settlement" right={historicalNetwork ? `${recordedArcLabel(historicalNetwork)} · recorded USDC` : "weighted · USDC on Arc"} />
       {operatingPayments.length > 0 && <aside aria-label="Keryx operating fees" className="mb-3 border border-line bg-paper-2 px-4 py-3">
         <p className="font-mono text-xs text-ink">Keryx operating fees</p>
@@ -111,7 +111,7 @@ export function CreatorsPaidPanel({
                 {i + 1}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-serif text-[15px] text-ink">
+                <p className="break-all font-serif text-[15px] text-ink sm:truncate sm:break-normal" title={p.sourceName} data-payment-identity>
                   {p.sourceName}
                 </p>
                 <p className="font-mono text-[11px] text-ink-3">

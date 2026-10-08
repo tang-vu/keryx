@@ -3,8 +3,8 @@ import { config } from "../config";
 import { MODEL_CATALOG } from "./model-catalog";
 import { createModelEngine } from "./model-engine";
 
-const mutableConfig = config as { deepseekKey: string; mimoKey: string; cloudflareEnabled: boolean; cloudflareAccountId: string; cloudflareKey: string };
-const originalKeys = { deepseekKey: config.deepseekKey, mimoKey: config.mimoKey, cloudflareEnabled: config.cloudflareEnabled, cloudflareAccountId: config.cloudflareAccountId, cloudflareKey: config.cloudflareKey };
+const mutableConfig = config as { deepseekKey: string; mimoKey: string; cloudflareEnabled: boolean; cloudflareGptOssEnabled: boolean; cloudflareAccountId: string; cloudflareKey: string };
+const originalKeys = { deepseekKey: config.deepseekKey, mimoKey: config.mimoKey, cloudflareEnabled: config.cloudflareEnabled, cloudflareGptOssEnabled: config.cloudflareGptOssEnabled, cloudflareAccountId: config.cloudflareAccountId, cloudflareKey: config.cloudflareKey };
 afterEach(() => { Object.assign(mutableConfig, originalKeys); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("shared runtime and watchdog model construction", () => {
@@ -12,6 +12,7 @@ describe("shared runtime and watchdog model construction", () => {
     mutableConfig.deepseekKey = "synthetic-only";
     mutableConfig.mimoKey = "synthetic-only";
     mutableConfig.cloudflareEnabled = true;
+    mutableConfig.cloudflareGptOssEnabled = true;
     mutableConfig.cloudflareAccountId = "a".repeat(32);
     mutableConfig.cloudflareKey = "synthetic-only";
     const request = vi.fn(async () => Response.json({ choices: [{ message: { content: '{"claims":["How does settlement work?"]}' }, finish_reason: "stop" }] }));
@@ -25,6 +26,7 @@ describe("shared runtime and watchdog model construction", () => {
     expect(body.model).toBe(choice.model);
     expect(body.max_tokens).toBe(2048);
     expect(body.thinking).toEqual(choice.provider === "deepseek" ? { type: "disabled" } : undefined);
+    expect(body.reasoning_effort).toBe(choice.id === "cloudflare-gpt-oss-120b" ? "low" : undefined);
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 

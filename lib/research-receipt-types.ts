@@ -143,6 +143,12 @@ export interface ReceiptSettlement {
 }
 
 export interface ResearchReceiptPayload {
+  /** Optional publication-order snapshot; this does not attest body content or settlement. */
+  sourceRecency?: QueryRun["sourceRecency"];
+  /** Hypothetical proposals retain a separate role under the receipt hash. */
+  teachingProposals?: QueryRun["teachingProposals"];
+  /** Optional metadata role; absent historical receipt bytes remain unchanged. */
+  bibliography?: QueryRun["bibliography"];
   funding?: { type: "research-monthly-prepaid"; monthlyId: string; allocationUsdc: number; newInboundPayment: false };
   schema: typeof RESEARCH_RECEIPT_SCHEMA;
   dispatch: {

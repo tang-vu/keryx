@@ -194,6 +194,9 @@ export interface SynthInput {
   generationFormat?: "evidence-only";
   /** Ordinary run only; omitted by protected original-fulfillment continuations. */
   answerPresentation?: import("../research/answer-presentation").AnswerPresentation;
+  /** Trusted original caller opt-in, ordinary evidence-only synthesis only.
+   * Never infer this request from model/source output or retained originals. */
+  teachingRequest?: import("../research/teaching-proposals-request").TeachingProposalRequest;
 }
 
 /** A factual disagreement the agent found between sources while writing the answer,
@@ -242,6 +245,12 @@ export interface SynthResult {
   synthesisOutputLimit?: SynthesisOutputLimit;
   /** Server-local reviewed rows/context; never serialize this packet in public receipts. */
   decisionBrief?: import("./decision-brief").ReviewedDecisionBrief;
+  /** Runtime-bound proposal review only. Final ledger/independently admitted
+   * statements still gate delivery; this bundle creates no factual/reward authority. */
+  teachingProposals?: {
+    reviewed?: import("../research/teaching-proposals").ReviewedTeachingProposals;
+    preparationGaps: import("../research/teaching-proposals").TeachingProposalGap[];
+  };
 }
 
 export interface AttributeInput {

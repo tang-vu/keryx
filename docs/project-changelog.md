@@ -1,5 +1,40 @@
 # Keryx Project Changelog
 
+### Original metadata, Product Hunt launch and paid delivery integrity (2026-10-09, v0.27.43 candidate)
+
+- Add the owner's official Product Hunt launch badge to the homepage immediately
+  below Ask. Preserve the compact mobile introduction and primary action.
+- Integrate the separately reviewed Cloudflare GPT-OSS support with its flag
+  still false. Direct vendor usefulness and multilingual quote review remain
+  activation gates; no model, payment or schedule allowance is added.
+- Retain the full app0.27.41 research/client stack and its issue-specific gates.
+  Shared hosted surfaces inherit its changes. Remote MCP0.3.7 and stdio0.4.11
+  preserve separate metadata result roles; desktop0.4.10 keeps its private Operator
+  role. Actual delivery requires release and published artifact readbacks.
+- Read exact bibliographic originals without model calls or creator payments,
+  with French/English/Vietnamese field labels and separate BibTeX/RIS exports.
+  Original page/version status stays separate from scientific evidence.
+- Observe one complete native feed snapshot before selecting its unique newest
+  publication. Missing exact catalog entries remain explicit; metadata probes use
+  existing attention slots and cannot confer price, body or reward authority.
+- Integrate proposed lesson activities with independent review and final factual
+  dependencies. The teaching flag stays disabled pending actual bounded lesson
+  acceptance. Proposals do not enter attribution, coverage or reward allocation.
+- Keep payment reports within narrow screen grids even for long source identifiers.
+- Wrap plain long original URLs within answer prose without changing their bytes.
+  Built saved-page checks pass at 320, 390 and 1366 pixels, including the original
+  French metadata exports and an explicitly simulated long-identity payment row.
+- Prepare one verified empty SQLite schema for isolated signer fixtures, then run
+  actual initialization on each separate copy. This removes repeated cold DDL from
+  signing deadlines while preserving WAL/FULL and all original security assertions.
+- Check paid article text against the explicit plaintext hash and UTF-8 byte count
+  selected before payment. Reject empty or substituted bodies while retaining the
+  original pending/settled payment and keeping failed content out of evidence,
+  cache and creator rewards. Legacy rows without commitments retain that limit.
+- Publish [eight source/payment attack classes](engineering/source-money-adversarial-2026-10-09.md)
+  with deterministic regression checks and explicit semantic, legacy and live
+  testnet proof gates. Offline fixtures do not establish real settlement.
+
 ### Restore original testnet dispatches (2026-10-08, v0.27.42)
 
 - Keep old dispatch URLs, public question history, cited archive and portable
@@ -69,6 +104,17 @@ results keep their recorded content, evidence and payment status unchanged.
 The research introduction uses less mobile space so the question, free-paper
 handoff, source cap and full Ask action fit a 320x640 first viewport.
 See [browser acceptance and surface roles](engineering/evidence-readability-2026-10-08.md).
+
+### Optional Cloudflare GPT-OSS reasoning choice (2026-10-08, v0.27.40 candidate)
+
+- Add a separately enabled, manually selected GPT-OSS 120B experiment across the
+  shared hosted model picker/APIs and local research CLI.
+- Preserve DeepSeek as default, the existing automatic fallback chain, retired
+  model IDs, private buyer policy and finite Operator original authority.
+- Apply per-model context bounds and low reasoning effort, retain failed-call
+  usage, and capture the published gross tariff without claiming billed cost.
+- Rename the default display to DeepSeek Flash to avoid a stale version promise.
+- [Direct acceptance and release gates](cloudflare-workers-ai.md).
 
 ### Review each retained Operator premise against its exact evidence (2026-10-08, v0.27.38 candidate)
 

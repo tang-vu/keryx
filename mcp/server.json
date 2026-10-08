@@ -8,7 +8,7 @@
     "subfolder": "mcp"
   },
   "websiteUrl": "https://keryx.cc",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "remotes": [
     {
       "type": "streamable-http",
@@ -20,7 +20,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "keryx-mcp",
-      "version": "0.4.10",
+      "version": "0.4.11",
       "transport": {
         "type": "stdio"
       }

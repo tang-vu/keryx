@@ -542,6 +542,7 @@ and [maintenance and surface boundaries](docs/arc-primitives-maintenance.md).
 - [`docs/openai-compatible-api.md`](./docs/openai-compatible-api.md) — drop-in recipes for OpenAI SDK, LangChain, LlamaIndex, Open WebUI, LibreChat, Continue
 - [`docs/system-architecture.md`](./docs/system-architecture.md) — data/money flow + on-chain components
 - [`docs/security-threat-model.md`](./docs/security-threat-model.md) — threat matrix, audits, residuals
+- [`docs/engineering/source-money-adversarial-2026-10-09.md`](./docs/engineering/source-money-adversarial-2026-10-09.md) — eight malicious-source classes, paid delivery checks and remaining live proof gates
 - [`docs/codebase-summary.md`](./docs/codebase-summary.md) — module map
 - [`docs/mainnet-delivery-plan.md`](./docs/mainnet-delivery-plan.md) — current product and release gates
 - [`docs/project-roadmap.md`](./docs/project-roadmap.md) — near-term priorities

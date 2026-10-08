@@ -87,7 +87,7 @@ export function createRemoteMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: "keryx",
-    version: "0.3.6",
+    version: "0.3.7",
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
@@ -102,7 +102,7 @@ export function createRemoteMcpServer(
       description:
         "Research a question under a USDC creator-payment budget. Keryx selects sources, pays " +
         "access tolls and weighted citation rewards on the configured Arc network, then returns qualified source excerpts and a receipt. Complete synthesis and per-assertion entailment remain unverified. This remote surface uses Keryx's treasury; anonymous research is sponsored, not caller-funded usage. Public research may send your question to our search provider. The source USDC budget is separate from model and search operating costs. " +
-        "For title, ordered authors, year, journal, DOI or exact arXiv version without reading paper findings, use free paper_lookup with an exact identifier instead.",
+        "For retained or repository bibliography use free paper_lookup with an exact identifier. An ordinary explicit exact-original bibliography request can also return a separate metadata-only record and references without a model call or creator payment; page status and full-paper evidence remain separate.",
       inputSchema: {
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
         budget: z

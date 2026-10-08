@@ -10,7 +10,7 @@ import { ResearchTurn, type ResearchTurnData } from "./research-turn";
 import { GlobeWatermark } from "./globe-watermark";
 import { SponsoredTrialNotice } from "./sponsored-trial-notice";
 
-export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHref?: string }) {
+export function ResearchChat({ paidHref = "/research#paid-research", showLaunchBadge = false }: { paidHref?: string; showLaunchBadge?: boolean }) {
   const [grantBinding, setGrantBinding] = useState<SessionGrantBinding>({ sessionId: null, getSessionWalletClient: () => null });
   const [sourceIndex, setSourceIndex] = useState<SourceIndex>(new Map());
   const [history, setHistory] = useState<ResearchTurnData[]>([]);
@@ -58,8 +58,8 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
     reset();
   };
   const hasTurns = history.length > 0 || request !== null;
-  return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-3 sm:px-[30px] sm:pt-6" data-tour="hero" aria-label="Research conversation">
-    <header className="relative mb-3 min-h-[122px] sm:mb-4 sm:min-h-[140px]">
+  return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-tour="hero" aria-label="Research conversation">
+    <header className="relative mb-2 min-h-[122px] sm:mb-4 sm:min-h-[140px]">
       <div aria-hidden="true" data-testid="chat-globe" className="pointer-events-none absolute right-0 top-[52px] h-[70px] w-[70px] opacity-60 sm:top-0 sm:h-[140px] sm:w-[140px]">
         <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-50 sm:scale-100" />
       </div>
@@ -67,8 +67,8 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
         <p data-testid="hero-kicker" className="font-mono text-[11px] uppercase tracking-wide text-seal">Research with Keryx</p>
         <div data-testid="hero-guide" className="sm:mr-[156px]"><OnboardingTour /></div>
       </div>
-      <h1 className="mt-1 font-display text-[clamp(32px,5vw,46px)] leading-tight sm:mt-2">Ask Keryx</h1>
-      <p className="mt-1 max-w-[calc(100%_-_84px)] font-serif text-base text-ink-2 sm:mt-2 sm:max-w-[64ch]">Get a cited answer. Inspect source decisions.</p>
+      <h1 className="mt-1 font-display text-[clamp(32px,5vw,46px)] leading-none sm:mt-2 sm:leading-tight">Ask Keryx</h1>
+      <p className="mt-1 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:mt-2 sm:max-w-[64ch] sm:text-base sm:leading-normal">Get a cited answer. Inspect source decisions.</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label="Conversation turns">
       {history.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
@@ -81,6 +81,7 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
         {streaming && <button type="button" onClick={stop} className="min-h-11 border border-seal px-3 py-2 font-mono text-xs text-seal">Stop research</button>}
       </div>}
       <AskForm disabled={streaming} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit
+        showLaunchBadge={showLaunchBadge && !hasTurns}
         restoreQuestion={request && (state.errorKind === "research-paused" || state.errorKind === "rate-limit")
           ? { ...request, researchPaused: state.errorKind === "research-paused" } : undefined} />
       {payer === "treasury" && !hasTurns && <div className="mt-3"><SponsoredTrialNotice /></div>}

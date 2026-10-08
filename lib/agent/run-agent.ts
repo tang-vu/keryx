@@ -68,6 +68,11 @@ import type {
 import { effectiveEngineName, reasoningAttempts, reasoningUsage, reasoningCalls } from "../llm/resilient-engine";
 import type { AgentDeps } from "./deps";
 import { resolveResearchEffects } from "./research-effects";
+import { recognizeBibliographicTask } from "../research/bibliographic-task-request";
+import { runBibliographicAgent } from "./run-bibliographic-agent";
+import { parseTeachingProposalRequest } from "../research/teaching-proposals-request";
+import { deliverTeachingProposals, type TeachingProposalDelivery } from "../research/teaching-proposals";
+import { teachingProposalAnswer } from "../research/teaching-proposals-presentation";
 import { allocateSplit } from "../payments/split-allocation";
 import {
   PaymentPendingError,
@@ -94,7 +99,9 @@ import { sourceClaimForUrl } from "../sources/public-source-claim-service";
 import { prepareOperatingFee, retainExactItemClaimUrls } from "./operating-fee";
 import { resolveFreeSourceItemContent } from "../sources/resolve-source-item-content";
 import { contentBodyHash } from "../sources/content-receipt";
-import { recognizeSourceRecency, sourceRecencyGap, sourceRecencyReport, sourceRecencyRequestGaps } from "../sources/source-recency";
+import { recognizeSourceRecency, sourceRecencyReport, sourceRecencyRequestGaps, sourceRecencyObservationReport } from "../sources/source-recency";
+import { createSourceRecencyResolver } from "./source-recency-observations";
+import { projectSourceRecencyResult } from "../sources/source-recency-result";
 import type { SourceClaimReceipt } from "../types";
 import { resolveValidArticleOffer } from "../offers/resolve-article-offer";
 import {
@@ -187,6 +194,13 @@ export async function* runAgent(
 ): AsyncGenerator<TraceStep, QueryRun, void> {
   const queryId = input.queryId ?? crypto.randomUUID();
   const effects = resolveResearchEffects(deps.db, deps.effects, deps.discoverExternal, queryId);
+  // The original caller alone can select this free, exact metadata task. Private
+  // originals, package execution, wanted assets and paid-paper flows keep their
+  // existing research/payment contracts. Source text and prior context cannot opt in.
+  const bibliography = effects.scope.kind === "public" && !input.answerFormat && !input.executionLimits &&
+    !input.targetAsset && !input.paidScholarly && ((input.origin ?? "engine") !== "engine" || input.allowExternalWeb === true)
+    ? recognizeBibliographicTask(input.originalQuestion ?? input.question) : null;
+  if (bibliography) return yield* runBibliographicAgent({ ...input, queryId }, deps, bibliography);
   const canary = admitBusinessCanaryRun({ question: input.question, queryId, origin: input.origin,
     researchMode: input.researchMode, budget: input.budget, fundingOwner: input.fundingOwner,
     privateScope: effects.scope.kind !== "public", paidScholarly: input.paidScholarly });
@@ -226,6 +240,7 @@ async function* runAdmittedAgent(
   const fundingNotice = "Funding readiness is unknown. Paid source access and creator rewards are withheld for this run; any wallet funding activity remains unverified. Inspect the original funding records before another paid attempt.";
   let finalDecisions: Decision[] = [];
   let citations: Citation[] = [];
+  let teachingProposals: TeachingProposalDelivery | undefined;
   let operatingFee: QueryRun["operatingFee"];
   let evidence: EvidenceRecord[] = [];
   let claimCoverage: ClaimCoverageRecord[] = [];
@@ -291,12 +306,18 @@ async function* runAdmittedAgent(
   if (!input.executionLimits && researchMode === "deep") {
     attentionLimit = Math.min(32, Math.max(attentionLimit, subClaims.length));
   }
+  const recencyEnabled = effects.scope.kind === "public" && !input.answerFormat && !input.executionLimits && !input.targetAsset &&
+    !input.paidScholarly && (origin !== "engine" || input.allowExternalWeb === true);
+  const recencyResolver = createSourceRecencyResolver(recencyRequirement, {
+    enabled: recencyEnabled,
+    maxReads: Math.min(4, Math.max(0, attentionLimit - 1)), signal: input.signal,
+  });
   yield emit("decompose", `Identified ${subClaims.length} research target(s) to investigate; these are not established facts`, subClaims);
   yield emit(
     "decompose",
     researchMode === "quick"
-      ? `Quick mode: at most ${attentionLimit} paid/cached/public reads, with no marketplace probe or gap-expansion round.`
-      : `Deep mode: up to ${attentionLimit} paid/cached/public reads plus one bounded gap-expansion pass when needed.`,
+      ? `Quick mode: at most ${attentionLimit} paid/cached/public${recencyEnabled && recencyRequirement ? " or native-feed" : ""} reads, with no marketplace probe or gap-expansion round.`
+      : `Deep mode: up to ${attentionLimit} paid/cached/public${recencyEnabled && recencyRequirement ? " or native-feed" : ""} reads plus one bounded gap-expansion pass when needed.`,
     { researchMode, attentionLimit, reevaluateRounds },
   );
 
@@ -321,7 +342,7 @@ async function* runAdmittedAgent(
   // the first purchase of a source would be the last toll it ever earned, and every later answer
   // would be built from text the source has moved on from. See ./cache-freshness.ts.
   const freshCache = new Set<string>();
-  const { publicReads, publicCandidates, recencyGaps, itemClaimUrls } = await discoverPublicReferences(db, input.question, subClaims, recencyRequirement);
+  const { publicReads, publicCandidates, recencyGaps, recencyObservations, itemClaimUrls } = await discoverPublicReferences(db, input.question, subClaims, recencyRequirement, recencyResolver);
   for (const gap of recencyGaps) yield emit("discover",
     `WITHHELD ${gap.sourceName}: retained feed metadata does not establish the requested newest entry; no older cached article substituted.`, gap);
   recencyGaps.push(...requestRecencyGaps);
@@ -331,6 +352,9 @@ async function* runAdmittedAgent(
   const requestedByUrl = new Map([...requested.candidates.values()].map(candidate => [candidate.item!.itemUrl, candidate]));
   const externalDocumentsWithheld = effects.scope.kind === "job" || origin === "engine" && input.allowExternalWeb !== true;
   function admitWeb(candidate: SourceCandidate) {
+    // A requested native feed belongs to the bounded metadata observation. An
+    // article reader or model must not re-read it as an alternate newest proof.
+    if (recencyRequirement?.feedUrls.includes(candidate.item?.itemUrl ?? "")) return;
     const supplied = requestedByUrl.get(canonicalUrl(candidate.item?.itemUrl ?? "") ?? "");
     const requirement = supplied?.item?.requestedSource;
     const previous = webCandidates.get(supplied?.id ?? candidate.id);
@@ -487,12 +511,13 @@ async function* runAdmittedAgent(
   }
   let signedOfferCount = 0;
   for (const s of sources) {
-    const recencyGap = sourceRecencyGap(recencyRequirement, s);
-    if (recencyGap) {
-      recencyGaps.push(recencyGap);
-      yield emit("discover", `WITHHELD ${s.name}: newest-entry criterion, source scope or observation is unqualified. No BUY/CACHE or legacy source-level article is admitted.`, recencyGap);
+    const recencyResolution = await recencyResolver.resolve(s, (sourceId, url) => db.getSourceItemByLink(sourceId, url));
+    if (recencyResolution.status === "withheld") {
+      recencyGaps.push(recencyResolution.gap);
+      yield emit("discover", `WITHHELD ${s.name}: current-feed selection is ${recencyResolution.gap.reason}. No BUY/CACHE or older catalog article is admitted.`, recencyResolution.gap);
       continue;
     }
+    if (recencyResolution.status === "eligible") recencyObservations.push(recencyResolution.observation);
     if (await paperDuplicatesPublicBody(db, s, [...publicReads.values()].map(read => read.text))) {
       yield emit("discover", `SKIP paid manuscript ${s.name}: identical exact-version body is already available as a free public reference.`);
       continue;
@@ -515,7 +540,7 @@ async function* runAdmittedAgent(
       yield emit("discover", `SKIP creator listing ${s.name}: earning has not been enabled for its current registry price.`);
       continue;
     }
-    const catalogItems = (await db.getItems(s.id)).map(item => hasKnownSeedFingerprint(item.title, item.link, item.bodyHash)
+    const catalogItems = (recencyResolution.status === "eligible" ? [recencyResolution.selected] : await db.getItems(s.id)).map(item => hasKnownSeedFingerprint(item.title, item.link, item.bodyHash)
       ? { ...item, evidenceProvenance: "synthetic-demo" as const } : item);
     for (const knownItem of catalogItems) retainExactItemClaimUrls(itemClaimUrls, knownItem.link,
       [s.url, ...(s.rssUrl ? [s.rssUrl] : [])]);
@@ -628,6 +653,18 @@ async function* runAdmittedAgent(
     if (!admitted || admitted.source.id !== input.targetAsset.sourceId) {
       throw new Error("wanted response source is not active, verified, or payable");
     }
+  }
+  // Metadata probes consume the original attention grant even when the feed or
+  // exact catalog lookup failed. Preserve at least one possible article slot.
+  if (recencyResolver.readsUsed) {
+    attentionLimit -= recencyResolver.readsUsed;
+    yield emit("discover", `Native feed observation used ${recencyResolver.readsUsed} existing attention slot(s); ${attentionLimit} article read slot(s) remain. Publication metadata does not authorize evidence or payments.`,
+      { metadataReads: recencyResolver.readsUsed, remainingAttention: attentionLimit, observations: recencyObservations });
+  }
+  const qualifiedFeeds = new Set([...recencyObservations.map(item => item.feedUrl), ...recencyGaps.flatMap(gap => gap.observation ? [gap.observation.feedUrl] : [])]);
+  for (let index = recencyGaps.length - 1; index >= 0; index--) {
+    const gap = recencyGaps[index];
+    if (gap.scope === "request" && gap.reason === "newest-feed-observation-unqualified" && gap.feedUrl && qualifiedFeeds.has(gap.feedUrl)) recencyGaps.splice(index, 1);
   }
   if (input.targetAsset) {
     yield emit(
@@ -771,6 +808,7 @@ async function* runAdmittedAgent(
   // A model can omit an input candidate. Preserve every explicit original as an inspectable
   // refusal instead of silently substituting whatever search happened to return.
   if (!externalDocumentsWithheld) for (const [id, candidate] of requested.candidates) {
+    if (recencyRequirement?.feedUrls.includes(candidate.item?.itemUrl ?? "")) continue;
     if (proposedAssetIds.has(id)) continue;
     internalProposed.push({ sourceId: id, assetId: id, sourceName: candidate.name, ...candidate.item,
       action: "SKIP", expectedValue: 0, price: 0, confidence: 0, targets: [],
@@ -1517,8 +1555,16 @@ async function* runAdmittedAgent(
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
   let synthesized: SynthResult;
   const presentation = answerPresentation(input.originalQuestion ?? input.question);
+  // First-turn ordinary caller only. Augmented follow-ups, retained/private
+  // originals and bounded packages keep their existing synthesis contract.
+  const teachingRequest = process.env.KERYX_TEACHING_PROPOSALS === "1" && effects.scope.kind === "public" &&
+    (origin !== "engine" || input.allowExternalWeb === true) && !input.executionLimits &&
+    !input.targetAsset && !input.paidScholarly && !input.answerFormat && process.env.KERYX_DECISION_BRIEF !== "1" &&
+    (input.originalQuestion === undefined || input.originalQuestion === input.question)
+    ? parseTeachingProposalRequest(input.originalQuestion ?? input.question) : undefined;
   try { synthesized = await engine.synthesize({ question: input.question, subClaims, gathered, generationFormat: "evidence-only",
     answerPresentation: presentation,
+    ...(teachingRequest ? { teachingRequest } : {}),
     ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
       ? { answerFormat: "decision-brief" as const } : {}) }); }
   catch (error) {
@@ -1581,6 +1627,10 @@ async function* runAdmittedAgent(
   evidenceMeasured = true;
   // Sentences are admitted against the final ledger, after every source, quote and review gate.
   const citedStatements = brief ? [] : selectCitedStatements(synthesized.evidence ?? [], ledger);
+  if (teachingRequest && !brief) {
+    teachingProposals = deliverTeachingProposals(teachingRequest,
+      synthesized.teachingProposals?.reviewed, ledger, citedStatements, synthesized.teachingProposals?.preparationGaps);
+  }
   answer = brief?.answer ?? finalizeGroundedAnswer({ question: input.question, answer, ledger, statements: citedStatements,
     presentation,
     synthesisUnavailable: Boolean(synthesisFailure) });
@@ -1924,6 +1974,9 @@ async function* runAdmittedAgent(
     paymentReviewRequired: fundingUnavailable || pendingPayments > 0 || fetchFailures > 0,
     synthesisFailure: synthesized.synthesisFailure });
   if (followUp) answer += `\n\n${followUp}`;
+  // Append proposals after contribution allocation and settlement. Their text,
+  // labels and gaps cannot enter factual coverage or model attribution input.
+  if (teachingProposals) answer += `\n\n${teachingProposalAnswer(teachingProposals)}`;
   return finish(answer);
 
   // ── helpers ──
@@ -1970,6 +2023,8 @@ async function* runAdmittedAgent(
     if (originals) answer += `\n\n${originals}`;
     const recency = sourceRecencyReport(recencyGaps, researchResponseLanguage(input.question) === "vi");
     if (recency) answer = gathered.length === 0 ? `${recency}\n\n${answer}` : `${answer}\n\n${recency}`;
+    const observedRecency = sourceRecencyObservationReport(recencyObservations, researchResponseLanguage(input.question) === "vi");
+    if (observedRecency) answer += `\n\n${observedRecency}`;
     if (fundingUnavailable) answer = `> ${fundingNotice}\n\n${answer}`;
     const totalSpent = round(
       payments
@@ -1998,6 +2053,9 @@ async function* runAdmittedAgent(
       decisions: finalDecisions,
       citations,
       ...(evidenceMeasured ? { evidence, claimCoverage } : {}),
+      ...(teachingProposals ? { teachingProposals } : {}),
+      ...(recencyEnabled && recencyRequirement ? { sourceRecency: projectSourceRecencyResult({ version: 1, scope: "current-feed",
+        metadataReads: recencyResolver.readsUsed, observations: recencyObservations, gaps: recencyGaps }) } : {}),
       answer,
       totalSpent,
       totalToCreators: round(payments.filter(payment => payment.kind !== "operating-fee" && paymentCountsAsSpent(payment))

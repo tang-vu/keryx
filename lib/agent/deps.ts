@@ -11,6 +11,8 @@ import type { SourceCandidate } from "../llm";
 import type { ResearchEffects } from "./research-effects";
 
 export interface AgentDeps {
+  /** Exact raw metadata reader. Separate from ordinary article/body evidence. */
+  readBibliographicOriginal?: import("../research/bibliographic-original").BibliographicOriginalReader;
   discoverScholarly?: import("../scholarly/discovery").ScholarlyDiscover;
   webSearch?: import("../web-research/search-provider").SearchProvider;
   readWebArticle?: import("../web-research/article-reader").ArticleReader;

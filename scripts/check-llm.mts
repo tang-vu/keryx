@@ -61,7 +61,7 @@ async function main(): Promise<void> {
           },
         ]
       : []),
-    ...availableModels(),
+    ...availableModels().filter(model => !model.manualOnly || process.argv.includes("--include-experimental")),
   ];
 
   if (llmProvider() === "heuristic" && models.length === 0) {

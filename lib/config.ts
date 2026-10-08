@@ -184,6 +184,7 @@ export const config = {
   // Cloudflare is an explicitly enabled experimental third provider; credentials alone do not
   // authorize sending public research to another processor. Private reasoning has its own policy.
   cloudflareEnabled: process.env.KERYX_CLOUDFLARE_ENABLED === "true",
+  cloudflareGptOssEnabled: process.env.KERYX_CLOUDFLARE_GPT_OSS_ENABLED === "true",
   cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? "",
   cloudflareKey: process.env.CLOUDFLARE_API_TOKEN ?? "",
   // Transport timeouts abort the provider request. Circuit state is stored in the shared DB so

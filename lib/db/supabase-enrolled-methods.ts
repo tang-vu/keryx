@@ -27,6 +27,7 @@ export const SUPABASE_ENROLLED_METHODS = Object.freeze({
   addItems: "write",
   getItems: "read",
   getItem: "read",
+  getSourceItemByLink: "unsupported",
   getArticleOffer: "read",
   listArticleOffers: "read",
   setArticleOffer: "write",

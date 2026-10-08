@@ -1,5 +1,14 @@
 # Keryx — Decision Log
 
+**Preserve source history and gate model activation separately — 2026-10-08.**
+After the completed Operator original positively closed its source window, merge
+the reviewed research aggregate with history. Integrate the manual Cloudflare
+GPT-OSS adapter as dormant support, preserving its false default and requiring
+direct multilingual supplier/quote acceptance before activation. Add the owner's
+official Product Hunt badge after homepage research controls so the mobile action
+remains visible. Source inclusion and a launch link do not establish useful live
+research, independent adoption or real payment traction.
+
 **Retain ordinary presentation without weakening grounded delivery — 2026-10-08.**
 Derive supported language and compact layout from the trusted original caller,
 before sentence review. Group source-bound sentence/excerpt pairs by their shared
@@ -16,6 +25,19 @@ The bounded MDN model trial recovered all four facts but failed the requested
 three-item format. Preserve that failure and its consumed three-call grant.
 Replay of those unchanged reviewed pairs validates the deterministic layout repair;
 it does not establish a fresh deployed end-to-end result or general brevity.
+
+**Add an explicitly selected Cloudflare GPT-OSS model — 2026-10-08.**
+The owner approved one experimental GPT-OSS 120B choice while retaining DeepSeek
+as default. Give it the new `cloudflare-gpt-oss-120b` public ID; preserve withdrawn
+Ollama IDs and private/bounded original model authority. Its separate exact opt-in
+controls catalog/runtime availability, while the automatic Cloudflare tier remains
+Llama. Exclude the manual experiment from ordinary scheduled supplier probes.
+Use per-model conservative prompt/output bounds, low GPT-OSS reasoning effort,
+the existing JSON validator/usage ledger and a fresh immutable gross price capture.
+Catalog/schema documentation is insufficient vendor acceptance: direct finite
+English/Vietnamese JSON and evidence checks precede runtime activation. Keep
+existing billing, source/payment limits and the active Operator source window.
+See [configuration, supported surfaces and gates](docs/cloudflare-workers-ai.md).
 
 **Reject incomplete prepared originals without discarding their history — 2026-10-08.**
 The retained original produced an exactly grounded answer that omitted documented
@@ -6247,6 +6269,38 @@ downloads need accompanying provenance; historical prepaid funding and private j
 recovery are not reconstructed from current authority. See
 [the restoration contract](docs/historical-testnet-archive.md).
 
+## Keep original metadata and proposed teaching roles separate — 2026-10-08
+
+Exact bibliography requests need displayed original fields rather than a paid
+scientific research plan. The public ordinary agent now reads the exact versioned
+arXiv/Crossref original once with pinned transport and no model or creator payment.
+Records, localized field gaps and reusable references have a distinct optional
+role in saved results and receipt hashes. Page/version observations do not imply
+full-paper reading, peer review, scientific coverage or settlement. Protected
+private originals, paid packages and wanted-asset execution retain their contracts.
+
+Current-feed newest selection requires complete native membership and explicit
+publication dates, followed by a unique exact catalog join. Feed title/date/hash
+cannot confer body, price, payee or creator reward authority. Native probes consume
+existing attention slots before selection, including failures; an unindexed winner
+is exposed as a gap rather than replaced by an older topical match. Only explicit
+single-feed current-publication requests are supported in this stage.
+
+Hypothetical lesson activities and examples use the existing generation/review
+calls and final factual dependency gate. Keep their exact admitted factual basis
+inside their optional delivery bundle for portable coverage, identity, request and
+word-count checks. Append proposals after attribution/settlement. Their labels and
+text never create facts, citation coverage or reward allocation. The teaching and
+Cloudflare experiments remain disabled until their direct usefulness gates pass.
+Portable JSON and a receipt digest record data; they do not restore runtime-issued
+review/observation capabilities or independently attest provider/network truth.
+
+The owner confirmed a live Product Hunt launch and supplied the official badge.
+Place it below the homepage Ask action with fixed250x54 sizing, accessible focus,
+separate-tab navigation and no referrer. Keep the question and full primary action
+within the compact mobile first viewport. Record surfaced and distributed roles
+with the coordinated app0.27.43 release; publication and deploy are separate gates.
+
 ## Prepare independent planned-maintenance admission without changing deployed authority - 2026-10-08
 
 A maintenance route in the application cannot explain a planned outage while that
@@ -6260,3 +6314,28 @@ roles remain unchanged. This source and synthetic non-production candidate suppl
 no production admission, installation or schedule. Final ingress/build/role binding,
 native CI, app/client notice and coordinated hosted acceptance remain explicit gates
 in [the issue281 runbook](docs/engineering/planned-maintenance-2026-10-08.md).
+
+## Bind paid text to the selected plaintext commitment — 2026-10-09
+
+Matching an echoed article ID and price does not bind its returned body. The
+source/payment adversarial suite reproduced empty and substituted text passing
+buyer admission. Capture explicit article and manifest plaintext hash/byte
+commitments before I/O; reject malformed or conflicting contracts before signing,
+and check the exact delivered UTF-8 bytes in both server and browser co-sign
+gateways. The response cannot choose replacement commitments. Empty/non-text
+delivery remains unusable even when a legacy row has no body commitment.
+
+An integrity failure after submission retains the same payment authorization,
+amount, payee and pending/settled state. Record its refusal rule and use existing
+source-level failure handling; no refund, reservation release, retry, cache entry,
+evidence or creator reward follows from failed delivery. Shared gateways apply
+this rule to their web/API, CLI and MCP consumers without changing signing or
+receipt schemas. Protected originals and private Operator authority stay bound
+to their existing contracts.
+
+Do not mistake a receipt byte count inferred from legacy ciphertext or a summary
+for an explicit plaintext commitment. Those legacy rows retain identity/pricing
+checks without gaining body integrity. Hash consistency does not independently
+authenticate a publisher or establish general prompt-injection/semantic farming
+resistance. The public [adversarial catalog](docs/engineering/source-money-adversarial-2026-10-09.md)
+records checked boundaries and the still-open live testnet refusal gate.

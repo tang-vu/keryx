@@ -115,7 +115,7 @@ export function AnswerMarkdown({
     3,
   );
   return (
-    <div className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink", className)}>
+    <div className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink [overflow-wrap:anywhere]", className)}>
       {blocks.map(({ trimmed, heading, list }, bi) => {
         if (list) return (
           <ul key={`b${bi}`} className="list-disc space-y-3 pl-6">
