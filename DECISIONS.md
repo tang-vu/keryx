@@ -6100,3 +6100,12 @@ the fresh default build and existing responsive/wrapped-cap acceptance. Keep the
 original failing screenshots and logs; earlier quote-view or unit acceptance does
 not qualify this changed geometry. See
 [the mobile regression](docs/engineering/evidence-readability-2026-10-08.md#mobile-composer).
+
+## Distinguish trace diagnostics from source decisions - 2026-10-08
+
+A decide phase can carry a bounded selection diagnostic as well as a source
+Decision. Validate the display shape in the hook and renderer, preserve refused
+and partial explanations/counts, and keep diagnostics out of streamed and final
+decision arrays. Preserve existing validator SKIP and empty-rationale records.
+This classification provides no payment authority and leaves SSE signing/abort
+paths unchanged. See [acceptance](docs/engineering/selection-diagnostic-trace.md).

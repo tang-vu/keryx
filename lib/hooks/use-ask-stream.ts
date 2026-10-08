@@ -34,6 +34,7 @@ import { readSession } from "@/lib/session/session-storage";
 import { BrowserSignBudget } from "./browser-sign-budget";
 import { browserPaymentProfile } from "../browser-payment-profile";
 import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/selection-diagnostic";
+import { isDecisionRecord } from "../research/decision-record";
 
 export type StreamMode = "real" | "offline";
 
@@ -169,8 +170,8 @@ export function useAskStream(opts?: AskStreamOpts) {
       const step = data as TraceStep;
       setState((s) => {
         const next: AskStreamState = { ...s, steps: [...s.steps, step] };
-        if (step.phase === "decide" && step.detail) {
-          next.decisions = [...s.decisions, step.detail as Decision];
+        if (step.phase === "decide" && isDecisionRecord(step.detail)) {
+          next.decisions = [...s.decisions, step.detail];
         }
         if (step.phase === "attribute" && step.detail) {
           next.citations = [...s.citations, step.detail as Citation];
@@ -333,8 +334,8 @@ export function useAskStream(opts?: AskStreamOpts) {
         ...s,
         status: "done",
         run,
-        // Trust the final run for canonical citations/decisions.
-        decisions: run.decisions?.length ? run.decisions : s.decisions,
+        // Canonical decisions still require the display shape used for streamed rows.
+        decisions: Array.isArray(run.decisions) && run.decisions.length ? run.decisions.filter(isDecisionRecord) : s.decisions,
         citations: run.citations?.length ? run.citations : s.citations,
       }));
       return;

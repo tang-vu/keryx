@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Explain refused source choices in the decision log (2026-10-08, v0.27.37 candidate)
+
+Source-selection diagnostics retain their explanation and inspectable counts.
+They no longer appear as unnamed SKIP choices with NaN expected value. Streamed
+and final decision lists accept valid source decisions; the failure download and
+existing read/payment safeguards remain. See
+[scope and acceptance](engineering/selection-diagnostic-trace.md).
+
 ### Coordinate the research reading release (2026-10-08, v0.27.36 candidate)
 
 Release pending reading/client improvements together with current main, preserving
