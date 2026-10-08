@@ -111,7 +111,7 @@ test("both browser-dependency workflows exercise the helper before the unchanged
     assert.match(yaml, /- name: Install (?:Chromium for unit and browser checks|actual Chromium)\s+timeout-minutes: 5\s+run: npx playwright install --with-deps chromium/);
     assert(!yaml.includes("ubuntu-latest") || name === "ci.yml"); // release-only job may retain its image
     if (name === "ci.yml") {
-      const boundaries = [...yaml.matchAll(/^  ([a-z][a-z0-9-]*):\n/gm)];
+      const boundaries = [...yaml.matchAll(/^  ([A-Za-z_][A-Za-z0-9_-]*):\n/gm)];
       const browserJobs = boundaries.map((match, index) => ({
         name: match[1],
         body: yaml.slice(match.index, boundaries[index + 1]?.index ?? yaml.length),
