@@ -437,6 +437,12 @@ export class SqliteAdapter implements KeryxDB {
     return row ? rowToSourceItem(row) : null;
   }
 
+  async getSourceItemByLink(sourceId: string, exactItemUrl: string): Promise<SourceItem | null> {
+    const rows = this.db.prepare(`SELECT * FROM source_items WHERE source_id=? AND link=? LIMIT 2`).all(sourceId, exactItemUrl);
+    if (rows.length > 1) throw new Error("Ambiguous exact source article membership");
+    return rows.length ? rowToSourceItem(rows[0]) : null;
+  }
+
   async getArticleOffer(sourceId: string, itemId: string): Promise<ArticleOffer | null> {
     const row = this.db
       .prepare(`SELECT * FROM article_offers WHERE source_id=? AND item_id=? LIMIT 1`)

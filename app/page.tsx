@@ -6,7 +6,6 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { ResearchChat } from "@/components/keryx/research-chat";
 import { ActivityTicker } from "@/components/keryx/activity-ticker";
 import { HowItWorks, ForCreators } from "@/components/keryx/landing-sections";
-import { ProductHuntBadge } from "@/components/keryx/product-hunt-badge";
 
 export default function AskPage() {
   // One coarse landing event per tab/day. No stable id is created and credentials are omitted, so
@@ -32,5 +31,5 @@ export default function AskPage() {
     }
   }, []);
 
-  return <div className="min-h-screen bg-paper-2"><SiteHeader /><main><ResearchChat /><div className="mx-auto max-w-[960px] px-4 sm:px-[30px]"><ActivityTicker /><div className="mt-6 flex justify-center sm:justify-start"><ProductHuntBadge /></div></div><HowItWorks /><ForCreators /></main><SiteFooter /></div>;
+  return <div className="min-h-screen bg-paper-2"><SiteHeader /><main><ResearchChat showLaunchBadge /><div className="mx-auto max-w-[960px] px-4 sm:px-[30px]"><ActivityTicker /></div><HowItWorks /><ForCreators /></main><SiteFooter /></div>;
 }

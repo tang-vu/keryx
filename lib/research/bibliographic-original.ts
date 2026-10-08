@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { bibliographicOriginalUrl } from "./bibliographic-original-url";
+export { bibliographicOriginalUrl } from "./bibliographic-original-url";
 import { completeMetadataText } from "../scholarly/provider";
 import { crossrefContributor, crossrefPublishedDate } from "../scholarly/crossref";
 import { normalizeDoi } from "../scholarly/doi";
@@ -23,10 +25,6 @@ const completePlainText = (value: string, limit: number) => {
 };
 const provenance = (unit: ArxivBibliographicUnit): BibliographicFieldProvenance => ({ path: unit.path, start: unit.start, end: unit.end,
   ...(unit.rawExcerpt !== undefined ? { rawExcerpt: unit.rawExcerpt } : {}) });
-
-export function bibliographicOriginalUrl(request: BibliographicOriginalRequest) {
-  return request.target.kind === "arxiv" ? `https://arxiv.org/abs/${request.target.id}` : `https://api.crossref.org/works/${encodeURIComponent(request.target.doi)}`;
-}
 
 function emptyRecord(request: BibliographicOriginalRequest): BibliographicOriginalRecord {
   return { scope: "metadata-only", requested: request, fields: { title: missingBibliographicField(), firstAuthor: missingBibliographicField(),
@@ -103,7 +101,7 @@ async function arxivOriginal(request: BibliographicOriginalRequest & { target: {
   });
   record.fields.journal = htmlField(page.metadata.citation_journal_title ?? [], 300);
   record.fields.doi = htmlField(page.metadata.citation_doi ?? [], 300, normalizeDoi);
-  // Only a dedicated explicit status field or withdrawal notice. Abstract,
+  // Only a dedicated status, literal dateline or withdrawal notice. Abstract,
   // comments, repository type and journal metadata never establish peer review.
   record.fields.status = htmlField([...(page.metadata.citation_publication_status ?? []), ...page.statuses], 1200);
   attachExport(record, { repository: "arxiv", url: read.finalUrl, publicationKind: "unknown" });

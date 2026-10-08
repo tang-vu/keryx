@@ -1,5 +1,21 @@
 # Ordinary original bibliography tasks — October 8, 2026
 
+## Integrated ordinary candidate
+
+App0.27.42 recognizes the trusted original caller before ordinary model admission
+only on public ordinary surfaces. One pinned raw original read produces localized
+requested fields, explicit gaps, and separate BibTeX/RIS. Saved runs, public API,
+remote MCP, manual CLI, report and receipt preserve this role. Paid A2A/stdio
+packages and private Operator originals keep their original payment/execution
+obligations; free `paper_lookup` remains its separate catalog/provider role.
+The browser projector recomputes exports from bounded validated original records
+without restoring any live reading or payment capability. Metadata cards and
+permalink descriptions use a neutral metadata label rather than scientific
+confidence. Actual public reads confirmed the versioned arXiv v4 native breadcrumb,
+literal page status and exact Crossref DOI with reference exports; an initial
+arXiv refusal is retained as a failed observation. Built/deployed readbacks remain
+separate release evidence. No model, search, creator toll or reward was used.
+
 Source candidate for issue218. The existing free `paper_lookup` role remains
 separate. These helpers supply an ordinary exact-original metadata task to the
 shared agent; root owns its result, receipt, renderer and caller integration.

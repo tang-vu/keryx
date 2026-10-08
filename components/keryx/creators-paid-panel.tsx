@@ -56,7 +56,7 @@ export function CreatorsPaidPanel({
         : 0;
 
   return (
-    <div className="relative flex h-full flex-col">
+    <div className="relative flex h-full min-w-0 flex-col">
       <SectionHeading numeral="III" label="The settlement" right="weighted · USDC on Arc" />
       {operatingPayments.length > 0 && <aside aria-label="Keryx operating fees" className="mb-3 border border-line bg-paper-2 px-4 py-3">
         <p className="font-mono text-xs text-ink">Keryx operating fees</p>

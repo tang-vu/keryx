@@ -1,5 +1,18 @@
 # Reviewed teaching proposal core - October 8, 2026
 
+## Integrated ordinary candidate
+
+App0.27.42 threads the trusted original caller through the existing generation
+and independent review calls, then gates proposals on final cited statements,
+coverage and unique physical evidence identity. The optional delivery bundle
+retains its exact admitted statements for portable dependency/word-count checks;
+its receipt hash records data and cannot restore the private review capability.
+Proposal text is appended after attribution and settlement, and never adds factual
+coverage, citations or payment authority. Private originals, paid packages, wanted
+assets, decision briefs, augmented follow-ups and unattended engine runs retain
+their existing contracts. The production flag remains disabled; a fresh authorized
+bounded lesson trial and inspected useful delivery remain activation/closure gates.
+
 This server-side slice implements the dependency/review contracts and opt-in LLM
 packet integration for issue [211](https://github.com/tang-vu/keryx/issues/211).
 It does not add a provider call or activate an ordinary teaching workflow by

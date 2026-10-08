@@ -8,8 +8,19 @@
   still false. Direct vendor usefulness and multilingual quote review remain
   activation gates; no model, payment or schedule allowance is added.
 - Retain the full app0.27.41 research/client stack and its issue-specific gates.
-  Shared hosted surfaces inherit its changes; stdio0.4.10 and desktop0.4.10 keep
-  their coordinated distribution roles. Actual delivery requires release readbacks.
+  Shared hosted surfaces inherit its changes. Remote MCP0.3.7 and stdio0.4.11
+  preserve separate metadata result roles; desktop0.4.10 keeps its private Operator
+  role. Actual delivery requires release and published artifact readbacks.
+- Read exact bibliographic originals without model calls or creator payments,
+  with French/English/Vietnamese field labels and separate BibTeX/RIS exports.
+  Original page/version status stays separate from scientific evidence.
+- Observe one complete native feed snapshot before selecting its unique newest
+  publication. Missing exact catalog entries remain explicit; metadata probes use
+  existing attention slots and cannot confer price, body or reward authority.
+- Integrate proposed lesson activities with independent review and final factual
+  dependencies. The teaching flag stays disabled pending actual bounded lesson
+  acceptance. Proposals do not enter attribution, coverage or reward allocation.
+- Keep payment reports within narrow screen grids even for long source identifiers.
 
 ### Repair document selection and bounded research output (2026-10-08, v0.27.41 candidate)
 

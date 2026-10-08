@@ -18,7 +18,7 @@ export const readBibliographicOriginalBody: BibliographicOriginalReader = async 
     mediaType = arxiv ? "text/html" : "application/json";
   } catch { throw new BibliographicOriginalError("invalid-metadata-read"); }
   const fetched = await fetchPublicBytes(url, { maxBytes: 250000, timeoutMs: 8000, maxHops: 0, signal,
-    httpsOnly: true, allowedContentTypes: [mediaType] });
+    httpsOnly: true, allowedContentTypes: [mediaType], requireFullResponse: true });
   if (fetched.finalUrl !== url) throw new BibliographicOriginalError("document-identity-changed");
   if (fetched.contentType !== mediaType || fetched.bytes.length > 250000) throw new BibliographicOriginalError("invalid-metadata-read");
   const body = new TextDecoder("utf-8", { fatal: true }).decode(fetched.bytes);

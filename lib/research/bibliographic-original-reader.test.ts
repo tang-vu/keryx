@@ -16,7 +16,7 @@ describe("bounded raw original metadata reader", () => {
     expect(read).toMatchObject({ requestedUrl: url, finalUrl: url, mediaType, body, truncated: false });
     expect(new Date(read.observedAt).toISOString()).toBe(read.observedAt);
     expect(fetched).toHaveBeenCalledExactlyOnceWith(url, { maxBytes: 250000, timeoutMs: 8000, maxHops: 0, signal,
-      httpsOnly: true, allowedContentTypes: [mediaType] });
+      httpsOnly: true, allowedContentTypes: [mediaType], requireFullResponse: true });
   });
 
   it.each(["https://example.com/abs/2005.11401v4", "https://arxiv.org/pdf/2005.11401v4", "https://arxiv.org/abs/2005.11401", arxiv + "?x=1", arxiv + "#title", "http://arxiv.org/abs/2005.11401v4", "https://api.crossref.org/works/10.1038/s41586-021-03819-2", "https://user@arxiv.org/abs/2005.11401v4"])("refuses unsupported URL before transport: %s", async url => {

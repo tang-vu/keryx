@@ -89,6 +89,17 @@ be serialized as a free observation or exported receipt.
 
 ## Integration and remaining gates
 
+The app0.27.42 candidate shares one original-bound resolver across public and
+creator discovery. The native probe uses an existing attention slot before
+portfolio selection, including failed reads. An exact catalog lookup rejects
+duplicates and preserves the actual source-owned article ID/body version for
+CACHE/BUY and reevaluation. Native observation hashes identify metadata only.
+The optional strict portable result and bounded report cannot reissue the
+process-local observer or authorize body reads, prices or creator rewards.
+Protected private/package/wanted/brief/paid-paper/unattended-engine runs keep
+historical holds without a new result key or native read. General stable,
+prerelease, cutoff and retained-set requests are still withheld.
+
 Root owns shared-agent admission, existing read/attention cap accounting,
 reusing the same eligible result across portfolio/reevaluation/cache/legacy
 fallback, UI/report/receipt metadata and all supported caller surfaces. Ordinary

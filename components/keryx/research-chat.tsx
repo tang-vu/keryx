@@ -9,8 +9,9 @@ import { SessionGrantPanel, type SessionGrantBinding } from "./session-grant-pan
 import { ResearchTurn, type ResearchTurnData } from "./research-turn";
 import { GlobeWatermark } from "./globe-watermark";
 import { SponsoredTrialNotice } from "./sponsored-trial-notice";
+import { ProductHuntBadge } from "./product-hunt-badge";
 
-export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHref?: string }) {
+export function ResearchChat({ paidHref = "/research#paid-research", showLaunchBadge = false }: { paidHref?: string; showLaunchBadge?: boolean }) {
   const [grantBinding, setGrantBinding] = useState<SessionGrantBinding>({ sessionId: null, getSessionWalletClient: () => null });
   const [sourceIndex, setSourceIndex] = useState<SourceIndex>(new Map());
   const [history, setHistory] = useState<ResearchTurnData[]>([]);
@@ -83,6 +84,7 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
       <AskForm disabled={streaming} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit
         restoreQuestion={request && (state.errorKind === "research-paused" || state.errorKind === "rate-limit")
           ? { ...request, researchPaused: state.errorKind === "research-paused" } : undefined} />
+      {showLaunchBadge && !hasTurns && <div className="mt-3 flex justify-center sm:justify-start"><ProductHuntBadge /></div>}
       {payer === "treasury" && !hasTurns && <div className="mt-3"><SponsoredTrialNotice /></div>}
       <div className="mt-3"><SessionGrantPanel onBindingChange={handleBindingChange} /></div>
       <p className="mt-3 text-xs text-ink-3">Conversation stays in this tab while the page is open. Completed reports have a saved link; signed-in reports appear in My saved reports. Download a report to keep a local copy.</p>

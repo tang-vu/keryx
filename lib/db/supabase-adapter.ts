@@ -513,6 +513,17 @@ export class SupabaseAdapter implements KeryxDB {
     return data ? rowToSourceItem(data) : null;
   }
 
+  async getSourceItemByLink(sourceId: string, exactItemUrl: string): Promise<SourceItem | null> {
+    // No enrolled SQL operation/schema exists for this new catalog read. Keep
+    // sealed authority closed rather than use legacy REST through that lane.
+    if (this.#enrolled) { this.assertEntry(); refuseStorage("invalid_operation"); }
+    const { data, error } = await this.#sb.from("source_items").select("*")
+      .eq("source_id", sourceId).eq("link", exactItemUrl).limit(2);
+    if (error) throw error;
+    if ((data?.length ?? 0) > 1) throw new Error("Ambiguous exact source article membership");
+    return data?.length ? rowToSourceItem(data[0]) : null;
+  }
+
   async getArticleOffer(sourceId: string, itemId: string): Promise<ArticleOffer | null> {
     const { data } = await this.domainCall("get_article_offer", { p_source_id: sourceId, p_item_id: itemId }, (_args) => this.#sb
       .from("article_offers")

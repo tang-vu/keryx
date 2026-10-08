@@ -1,5 +1,40 @@
 # Open issue resolution and acceptance - October 8, 2026
 
+## Current integrated candidate — app0.27.42
+
+The Operator original has completed. PR244 and all ten ancestor PRs are merged
+with provenance into main `ee01cbf9`; that exact main passed all twelve applicable
+CI/publication workflows and release v0.27.41 exists. Production was still
+app0.27.38 at the latest retained baseline; Git and publication are not a deploy.
+PR242's dormant model support is included in the current candidate and stays
+disabled. These current facts supersede earlier active-window holds below.
+
+Issue218 now has ordinary exact-original metadata integration across saved runs,
+receipts, web, public API, remote MCP and manual CLI. Actual free original reads
+confirmed arXiv2005.11401v4 and DOI10.1038/s41586-021-03819-2 with reusable
+references. An initially failed arXiv identity read is retained separately;
+the native breadcrumb/status fix passed a new original read. Built web/SSE,
+export and deployed readbacks remain release gates. No full-paper/peer-review
+claim or paid service authority follows from these observations.
+
+Issue217 now has a bounded native current-feed resolver shared by public and
+creator discovery. It admits only a complete unfiltered RSS/Atom document and
+explicit publication date, uses existing attention, and joins its unique winner
+to one exact catalog row. CACHE/BUY and reevaluation retain that article version;
+an unindexed newest entry is reported without choosing an older article.
+Stable/prerelease, cutoff, comparison and retained-set forms remain unsupported;
+useful original-task and deployed acceptance are still open.
+
+Issue211 has engine review and final dependency-gated proposal delivery; proposals
+are appended after attribution/settlement and remain a separate optional receipt
+role. `KERYX_TEACHING_PROPOSALS` stays disabled until a fresh bounded actual lesson
+passes usefulness acceptance. Fixture review does not establish NASA correctness.
+
+Issues202/236 still need built ordinary-hold/diagnostic rendering and deployed
+readbacks. The remaining model-dependent issues need a new finite enforceable
+allowance: the earlier MDN3-call grant and Operator continuation are consumed.
+No issue is closed solely from source inclusion, test count or health.
+
 The owner requested handling all open issues. The inventory contains 17 issues,
 with nine existing PRs already included in PR239's source ancestry. The later
 research presentation PR241 is also retained; the concurrent Operator PR240

@@ -228,5 +228,13 @@ retain metadata provenance and the exact DOI/arXiv version, and remain separate 
 research citations and research evidence exports. The public HTTP JSON remains v1.
 See [issue #218 scope and remaining gates](../docs/issue-218-metadata.md).
 
+The app0.27.42 coordinated candidate also supports exact original bibliography
+requests on ordinary hosted research and manual CLI surfaces, with separate
+`bibliography`/`bibliographyExports` roles. This is distinct from this stdio
+client's prepaid `ask_keryx` package and its free `paper_lookup` tool. Stdio0.4.11
+retains optional recorded metadata/proposal/feed roles in structured responses;
+they never authorize a purchase or establish scientific evidence or settlement.
+Published package/Registry and hosted versions require release readbacks.
+
 Candidate0.4.8 adds this tool; publication and hosted availability require separate
 verification. Existing paid tools keep their own custody and recovery requirements.

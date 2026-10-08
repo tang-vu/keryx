@@ -6248,3 +6248,35 @@ retain coordinated surface acceptance, reviewed deployment, health/provenance
 readback and authorized product publication. Actual runner acceptance and measured
 critical-path timing remain the evidence for improvement. See
 [the development workflow](docs/development-workflow.md).
+
+## Keep original metadata and proposed teaching roles separate — 2026-10-08
+
+Exact bibliography requests need displayed original fields rather than a paid
+scientific research plan. The public ordinary agent now reads the exact versioned
+arXiv/Crossref original once with pinned transport and no model or creator payment.
+Records, localized field gaps and reusable references have a distinct optional
+role in saved results and receipt hashes. Page/version observations do not imply
+full-paper reading, peer review, scientific coverage or settlement. Protected
+private originals, paid packages and wanted-asset execution retain their contracts.
+
+Current-feed newest selection requires complete native membership and explicit
+publication dates, followed by a unique exact catalog join. Feed title/date/hash
+cannot confer body, price, payee or creator reward authority. Native probes consume
+existing attention slots before selection, including failures; an unindexed winner
+is exposed as a gap rather than replaced by an older topical match. Only explicit
+single-feed current-publication requests are supported in this stage.
+
+Hypothetical lesson activities and examples use the existing generation/review
+calls and final factual dependency gate. Keep their exact admitted factual basis
+inside their optional delivery bundle for portable coverage, identity, request and
+word-count checks. Append proposals after attribution/settlement. Their labels and
+text never create facts, citation coverage or reward allocation. The teaching and
+Cloudflare experiments remain disabled until their direct usefulness gates pass.
+Portable JSON and a receipt digest record data; they do not restore runtime-issued
+review/observation capabilities or independently attest provider/network truth.
+
+The owner confirmed a live Product Hunt launch and supplied the official badge.
+Place it below the homepage Ask action with fixed250x54 sizing, accessible focus,
+separate-tab navigation and no referrer. Keep the question and full primary action
+within the compact mobile first viewport. Record surfaced and distributed roles
+with the coordinated app0.27.42 release; publication and deploy are separate gates.

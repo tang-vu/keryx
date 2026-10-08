@@ -20,6 +20,29 @@ vi.mock("@supabase/supabase-js", async (importOriginal) => ({
 
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.clearAllMocks(); vi.restoreAllMocks(); });
 
+describe("ordinary Supabase exact source article membership", () => {
+  it("bounds membership to source and exact link, refuses duplicates and propagates failed reads", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "synthetic-key-no-authority");
+    const row = { id: "newest", source_id: "one", title: "Synthetic", content: "Catalog body", summary: "Preview", link: "https://one.example/newest" };
+    const limit = vi.fn().mockResolvedValue({ data: [row], error: null });
+    const eq = vi.fn().mockReturnThis(), select = vi.fn().mockReturnThis();
+    const query = { select, eq, limit };
+    const from = vi.fn().mockReturnValue(query);
+    vi.mocked(createClient).mockReturnValue({ from } as unknown as ReturnType<typeof createClient>);
+    const db = new SupabaseAdapter();
+    expect(await db.getSourceItemByLink("one", row.link)).toMatchObject({ id: "newest", sourceId: "one", link: row.link });
+    expect(from).toHaveBeenCalledExactlyOnceWith("source_items");
+    expect(eq.mock.calls).toEqual([["source_id", "one"], ["link", row.link]]); expect(limit).toHaveBeenCalledWith(2);
+    limit.mockResolvedValueOnce({ data: [row, { ...row, id: "duplicate" }], error: null });
+    await expect(db.getSourceItemByLink("one", row.link)).rejects.toThrow("Ambiguous");
+    limit.mockResolvedValueOnce({ data: [], error: null });
+    expect(await db.getSourceItemByLink("one", row.link)).toBeNull();
+    const failure = new Error("Synthetic read failed"); limit.mockResolvedValueOnce({ data: null, error: failure });
+    await expect(db.getSourceItemByLink("one", row.link)).rejects.toBe(failure);
+  });
+});
+
 describe("ordinary Supabase exact original RPC", () => {
   function ordinary(data: unknown, error: unknown = null) {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-db.example");

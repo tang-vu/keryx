@@ -1,7 +1,35 @@
 import { requestedSourceUrls } from "../research/source-requirements";
+import type { CurrentFeedCatalogSelection } from "./retained-recency-adapter";
+import type { SourceRecencyFeedRead } from "./source-recency-feed";
+import { projectSourceRecencyResult } from "./source-recency-result";
 
 type RecencyGapReason = "newest-feed-observation-unqualified" | "unsupported-temporal-form" |
   "ambiguous-feed-urls" | "source-binding-unresolved" | "question-scan-limit";
+type ObservedRecencyGapReason = Extract<CurrentFeedCatalogSelection, { status: "withheld" }>["reason"] |
+  Extract<SourceRecencyFeedRead, { status: "withheld" }>["reason"] | "observation-disabled";
+
+/** Portable selection metadata only; it cannot authorize a body read, price or creator reward. */
+export interface SourceRecencyFeedMetadata {
+  readonly scope: "current-feed";
+  readonly criterion: "explicit-publication-date";
+  readonly sourceId: string;
+  readonly feedUrl: string;
+  readonly capturedAt: string;
+  readonly observationDigest: string;
+  readonly rawBodySha256: string;
+  readonly membership: "complete-document";
+  readonly membershipCount: number;
+  readonly filteredCount: 0;
+  readonly truncated: false;
+  readonly nativeFeedId?: string;
+  readonly newestEntry: Readonly<{
+    nativeId?: Readonly<{ field: "atom:id" | "rss:guid"; rawValue: string }>;
+    title: string;
+    itemUrl: string;
+    publication: Readonly<{ field: "atom:published" | "rss:pubDate"; rawValue: string; publishedAt: string }>;
+    entryMetadataVersion: string;
+  }>;
+}
 
 /** A narrow safety constraint from the caller's original text, never model targets or tags. */
 export interface SourceRecencyRequirement {
@@ -18,7 +46,8 @@ export interface SourceRecencyGap {
   readonly sourceId?: string;
   readonly sourceName?: string;
   readonly feedUrl?: string;
-  readonly reason: RecencyGapReason;
+  readonly reason: RecencyGapReason | ObservedRecencyGapReason;
+  readonly observation?: Readonly<SourceRecencyFeedMetadata>;
 }
 
 /** URL identity only. This performs no DNS, fetching, refresh or authority check. */
@@ -84,6 +113,23 @@ export function sourceRecencyGap(
 /** Safe portable diagnostic; it does not claim zero service/model costs or refund prior tolls. */
 export function sourceRecencyReport(gaps: readonly SourceRecencyGap[], vi: boolean): string {
   if (!gaps.length) return "";
+  const observed = gaps.filter(hasUnindexedObservedWinner);
+  if (observed.length) {
+    const feeds = new Set(observed.map(gap => gap.feedUrl));
+    const remaining = gaps.filter(gap => !hasUnindexedObservedWinner(gap) &&
+      !(gap.reason === "newest-feed-observation-unqualified" && feeds.has(gap.feedUrl)));
+    const records = observed.slice(0, 8).map(gap => {
+      const metadata = gap.observation!, entry = metadata.newestEntry;
+      const nativeId = entry.nativeId ? `; ${entry.nativeId.field}: ${diagnosticText(entry.nativeId.rawValue)}` : "";
+      return vi
+        ? `- Feed ${diagnosticText(metadata.feedUrl)}, quan sát lúc ${metadata.capturedAt} (${metadata.membershipCount} mục trong tài liệu): ${diagnosticText(entry.title)} — ${diagnosticText(entry.itemUrl)}. Ngày xuất bản ${entry.publication.field}: ${diagnosticText(entry.publication.rawValue)} (${entry.publication.publishedAt})${nativeId}.`
+        : `- Feed ${diagnosticText(metadata.feedUrl)}, observed at ${metadata.capturedAt} (${metadata.membershipCount} document entries): ${diagnosticText(entry.title)} — ${diagnosticText(entry.itemUrl)}. Publication ${entry.publication.field}: ${diagnosticText(entry.publication.rawValue)} (${entry.publication.publishedAt})${nativeId}.`;
+    }).join("\n");
+    const report = vi
+      ? `### Giới hạn bản phát hành mới nhất\n\nMục có ngày xuất bản mới nhất trong tài liệu feed đã quan sát chưa có bản khớp chính xác trong catalog. Không thay bằng bài cũ trước BUY/CACHE. Đây là siêu dữ liệu về thứ tự xuất bản; nội dung thay đổi, khả năng tương thích và trạng thái stable/prerelease chưa được xác minh.\n\n${records}\n\nChi phí dịch vụ/model và các khoản đã trả trước đây là những trạng thái riêng.`
+      : `### Newest-release limitation\n\nThe newest publication observed in the feed document has no exact catalog item. No older article was substituted before BUY/CACHE. This establishes publication ordering in that snapshot; release changes, compatibility and stable/prerelease status remain unverified.\n\n${records}\n\nService/model costs and earlier payments are separate states.`;
+    return remaining.length ? `${report}\n\n${sourceRecencyReport(remaining, vi)}` : report;
+  }
   const feeds = [...new Set(gaps.flatMap(gap => gap.feedUrl ? [gap.feedUrl] : []))].slice(0, 8).map(url => `\`${url}\``).join(", ");
   const target = feeds || (vi ? "phạm vi nguồn chưa được xác định" : "the unresolved source scope");
   const held = gaps.some(gap => gap.scope === "catalog");
@@ -93,4 +139,32 @@ export function sourceRecencyReport(gaps: readonly SourceRecencyGap[], vi: boole
   return vi
     ? `### Giới hạn bản phát hành mới nhất\n\nChưa thể xác nhận mục mới nhất cho ${target}: tiêu chí, phạm vi hoặc quan sát feed chưa được xác minh phù hợp. ${admission} Yêu cầu xác định mục mới nhất trong phạm vi của người hỏi vẫn chưa được xác minh. Chi phí dịch vụ/model và các khoản đã trả trước đây là những trạng thái riêng.`
     : `### Newest-release limitation\n\nNewest-entry selection for ${target} is unavailable: the criterion, scope or feed observation has not been qualified. ${admission} The caller's newest-entry criterion and scope remain unverified. Service/model costs and earlier payments are separate states.`;
+}
+
+/** Validate historical data shape, never restore a live observer/selection capability. */
+function hasUnindexedObservedWinner(gap: SourceRecencyGap): boolean {
+  return gap.reason === "newest-entry-not-indexed" && !!gap.observation &&
+    !!projectSourceRecencyResult({ version: 1, scope: "current-feed", metadataReads: 1, observations: [], gaps: [gap] });
+}
+
+function diagnosticText(value: string): string {
+  const flat = value.replace(/\s+/gu, " ").trim();
+  const points = Array.from(flat), bounded = points.length > 300 ? `${points.slice(0, 300).join("")}…` : flat;
+  return bounded.replace(/[\\`*_{}\[\]()<>!#|]/gu, "\\$&");
+}
+
+/** Informational post-delivery record; no body/evidence/creator payment eligibility is restored. */
+export function sourceRecencyObservationReport(observations: readonly SourceRecencyFeedMetadata[], vi: boolean): string {
+  if (!observations.length) return "";
+  const recorded = projectSourceRecencyResult({ version: 1, scope: "current-feed", metadataReads: observations.length, observations, gaps: [] });
+  if (!recorded) return "";
+  const rows = recorded.observations.map(metadata => {
+    const entry = metadata.newestEntry;
+    return vi
+      ? `- ${diagnosticText(metadata.feedUrl)} — quan sát lúc ${metadata.capturedAt}, ${metadata.membershipCount} mục trong tài liệu. Mục có ngày xuất bản mới nhất: ${diagnosticText(entry.title)}, ${diagnosticText(entry.itemUrl)}; ${entry.publication.field}: ${diagnosticText(entry.publication.rawValue)} (${entry.publication.publishedAt}).`
+      : `- ${diagnosticText(metadata.feedUrl)} — observed at ${metadata.capturedAt}, ${metadata.membershipCount} document entries. Newest by native publication date: ${diagnosticText(entry.title)}, ${diagnosticText(entry.itemUrl)}; ${entry.publication.field}: ${diagnosticText(entry.publication.rawValue)} (${entry.publication.publishedAt}).`;
+  }).join("\n");
+  return vi
+    ? `### Quan sát feed hiện tại\n\n${rows}\n\nĐây là siêu dữ liệu về thứ tự ngày xuất bản trong tài liệu feed đã đọc. Nội dung thay đổi, khả năng tương thích và trạng thái stable/prerelease chưa được xác minh bằng quan sát này.`
+    : `### Current feed snapshot\n\n${rows}\n\nThis records native publication ordering in the retrieved feed document. Release changes, compatibility and stable/prerelease status remain unverified by this observation.`;
 }

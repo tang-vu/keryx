@@ -11,8 +11,8 @@ import { loadFreshness } from "@/lib/answers-freshness";
 import { compareAnswerReceipts } from "@/lib/answers-delta";
 import { AnswerDeltaPanel } from "@/components/keryx/answer-delta";
 import { PortableReceiptPanel } from "@/components/keryx/portable-receipt-panel";
-import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
+import { projectBibliographicTask } from "@/lib/research/bibliographic-task-result";
 import { breadcrumbJsonLd, crumbLabel } from "@/lib/seo-structured-data";
 import { safeInlineJson } from "@/lib/safe-json";
 import { DispatchView } from "./dispatch-view";
@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const snippet = run.answer.slice(0, 160).replace(/\n/g, " ");
     const cited = run.citations.length;
     const conf = deriveConfidence(run);
-    const confTag = conf ? `${conf.level} confidence · ` : "";
+    const confTag = projectBibliographicTask(run.bibliography) ? "Original bibliographic metadata · " : conf ? `${conf.level} confidence · ` : "";
     return {
       title: `${run.question} — Keryx Dispatch`,
       description: `${confTag}${cited} source${cited !== 1 ? "s" : ""} cited · $${run.totalSpent.toFixed(4)} spent · ${snippet}…`,

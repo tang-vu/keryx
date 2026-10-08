@@ -1,4 +1,7 @@
 import { demoteSyntheticEvidence } from "./research/evidence-provenance";
+import { projectBibliographicTask } from "./research/bibliographic-task-result";
+import { projectTeachingProposalDelivery } from "./research/teaching-proposals-surface";
+import { projectSourceRecencyResult } from "./sources/source-recency-result";
 /**
  * Portable, integrity-checkable projection of one completed Keryx dispatch.
  *
@@ -130,8 +133,14 @@ function projectClaims(run: QueryRun): ReceiptClaim[] {
 export function buildResearchReceipt(run: QueryRun, payments: PaymentRecord[], funding?: ResearchReceiptPayload["funding"]): ResearchReceipt {
   run = demoteSyntheticEvidence(run);
   const confidence = deriveConfidence(run);
+  const bibliography = projectBibliographicTask(run.bibliography);
+  const teachingProposals = projectTeachingProposalDelivery(run.teachingProposals, run);
+  const sourceRecency = projectSourceRecencyResult(run.sourceRecency);
   const payload: ResearchReceiptPayload = {
     schema: RESEARCH_RECEIPT_SCHEMA,
+    ...(bibliography ? { bibliography } : {}),
+    ...(teachingProposals ? { teachingProposals } : {}),
+    ...(sourceRecency ? { sourceRecency } : {}),
     ...(funding ? { funding } : {}),
     dispatch: {
       id: run.id,

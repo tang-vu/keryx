@@ -26,9 +26,12 @@ import { ResearchCitationExport } from "./research-citation-export";
 import { EvidenceMatrixExport } from "./evidence-matrix-export";
 import { SourceEvidenceLens } from "./source-evidence-lens";
 import { reasoningOutputLimitText } from "@/lib/llm/reasoning-telemetry";
+import { projectBibliographicTask } from "@/lib/research/bibliographic-task-result";
+import { BibliographyExports } from "./bibliography-exports";
 
 export function AnswerCard({ run, meta, permalink, payments = [] }: { run: QueryRun; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[] }) {
   run = demoteSyntheticEvidence(run);
+  const bibliography = projectBibliographicTask(run.bibliography);
   const [highlight, setHighlight] = useState<string | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const openCitation = useCallback((marker: string, trigger: HTMLElement) => {
@@ -48,8 +51,8 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500">
-      <SectionHeading numeral="II" label="The reading" right={`${run.citations.length} cited`} />
-      {confidence ? (
+      <SectionHeading numeral="II" label="The reading" right={bibliography ? "Metadata only" : `${run.citations.length} cited`} />
+      {bibliography ? <p className="mb-4 text-sm text-ink-3">Original bibliographic metadata · no scientific claim assessment</p> : confidence ? (
         <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <ConfidenceBadge confidence={confidence} showReason sourceGrounding={run.citations.some(citation => Boolean(citation.webProvenance))} />
           <span className="border border-line bg-paper-2 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
@@ -92,8 +95,10 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
 
           <SourceEvidenceLens key={run.id} run={run} />
 
-          <EvidenceMatrixExport run={run} />
-          <ResearchCitationExport citations={run.citations} />
+          {bibliography ? <BibliographyExports result={bibliography} /> : <>
+            <EvidenceMatrixExport run={run} />
+            <ResearchCitationExport citations={run.citations} />
+          </>}
 
           {run.citations.length > 0 && (
             <div className="mt-7 border-t border-ink pt-5">

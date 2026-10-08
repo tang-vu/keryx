@@ -13,12 +13,12 @@ const plain = (limit: number, minimum = 1) => z.string().trim().min(minimum).max
 const premiseIds = z.array(z.string().regex(/^e(?:[1-9]|[12]\d|3[0-2])$/)).min(1).max(4)
   .refine(ids => new Set(ids).size === ids.length);
 const common = { id: z.string().regex(/^t[1-6]$/), text: plain(600), premiseIds, conditions: z.array(plain(180)).max(2) };
-const proposalSchema = z.discriminatedUnion("kind", [
+export const proposalSchema = z.discriminatedUnion("kind", [
   z.object({ ...common, kind: z.literal("activity"), durationMinutes: z.number().int().min(1).max(30) }).strict(),
   z.object({ ...common, text: plain(240), kind: z.literal("classification-example"), answer: plain(240) }).strict(),
   z.object({ ...common, text: plain(240), kind: z.literal("exit-question"), answer: plain(240) }).strict(),
 ]);
-const premiseSchema = z.object({
+export const premiseSchema = z.object({
   id: z.string().regex(/^e(?:[1-9]|[12]\d|3[0-2])$/),
   statement: z.object({ claimIndex: z.number().int().min(0).max(7), marker: z.string().regex(/^S\d+$/),
     quote: z.string().min(8).max(240).refine(isWellFormedUtf16), text: plain(321, 12) }).strict(),
@@ -132,6 +132,8 @@ export interface DeliveredTeachingProposal extends TeachingProposalBase {
 interface TeachingProposalBase { label: string; authority: "proposed-teaching-only" }
 export interface TeachingProposalDelivery {
   version: 1; request: TeachingProposalRequest; proposals: DeliveredTeachingProposal[];
+  /** Exact final selected factual statements, retained separately from invented proposals. */
+  admittedStatements: CitedStatement[];
   gaps: TeachingProposalGap[]; explanationWords: number; complete: boolean;
 }
 export const TEACHING_PROPOSAL_LABELS = {
@@ -174,7 +176,8 @@ export function deliverTeachingProposals(request: TeachingProposalRequest, revie
   }
   const explanationWords = teachingExplanationWordCount(admittedStatements);
   if (explanationWords > request.explanationMaximumWords) gaps.push({ reason: "explanation-word-limit" });
-  return { version: 1, request: structuredClone(request), proposals, gaps, explanationWords, complete: gaps.length === 0 };
+  return { version: 1, request: structuredClone(request), proposals, admittedStatements: admittedStatements.map(row => ({ ...row })),
+    gaps, explanationWords, complete: gaps.length === 0 };
 }
 
 function finalPremise(statement: CitedStatement, ledger: EvidenceLedger, admitted: readonly CitedStatement[]) {
