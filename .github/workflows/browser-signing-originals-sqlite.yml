@@ -38,6 +38,12 @@ on:
       - "scripts/ci-browser-apt*"
       - ".github/workflows/browser-signing-originals-sqlite.yml"
   workflow_dispatch:
+
+# Superseded PR checks are cancelled; push/manual/release runs stay independent.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   browser-signing-originals-sqlite:
     strategy:

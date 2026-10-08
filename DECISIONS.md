@@ -5977,3 +5977,26 @@ refuse. Old writers must actually close before deployment and activation; newer
 anchor handling cannot make an old binary safe by assertion. No new buyer charge,
 creator payment, custody, public activation or scheduler authority is introduced.
 Actual same-original delivery and buyer recovery remain separate release gates.
+
+## Proportionate CI and coherent release batches - 2026-10-08
+
+The owner requested reducing long PR/CI/merge waits. Keep one focused PR for a
+coherent outcome and its review corrections, with risk-proportionate local checks
+and reuse of unchanged valid evidence. Preserve required acceptance and standing
+routine merge authorization. Split main CI into isolated parallel lanes, shard
+the complete Vitest suite three ways, and retain every prior assertion. An
+always-running stable aggregate refuses failed, cancelled, missing or unintended
+skipped lanes. Informational lint remains visible outside merge acceptance.
+
+Only regular prose-only document PR changes use the lighter lane, with scope/gate
+regressions and feed integrity; unknown/mixed/runtime changes retain full coverage.
+Do not infer UI or shared-library isolation from broad path filters. Cancel only
+superseded same-PR workflow validation, preserving main, scheduled/manual runs
+and exact-source publication/provenance. Every main push retains full runtime
+acceptance so the existing package publishers cannot use a light PR pass as
+publication authority. CI/docs-only maintenance does not change
+runtime/distribution identity or require production deployment. Runtime releases
+retain coordinated surface acceptance, reviewed deployment, health/provenance
+readback and authorized product publication. Actual runner acceptance and measured
+critical-path timing remain the evidence for improvement. See
+[the development workflow](docs/development-workflow.md).
