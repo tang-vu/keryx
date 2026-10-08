@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
+import { config } from "@/lib/config";
+import { loadDispatchThread, resolveDispatch } from "@/lib/history/read-dispatch";
+import { HistoricalDispatchNote } from "@/components/keryx/historical-dispatch-note";
 import { cleanText, relatedAnswers } from "@/lib/answers-archive";
 import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { RelatedDispatches } from "@/components/keryx/related-dispatches";
@@ -11,7 +14,6 @@ import { loadFreshness } from "@/lib/answers-freshness";
 import { compareAnswerReceipts } from "@/lib/answers-delta";
 import { AnswerDeltaPanel } from "@/components/keryx/answer-delta";
 import { PortableReceiptPanel } from "@/components/keryx/portable-receipt-panel";
-import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { breadcrumbJsonLd, crumbLabel } from "@/lib/seo-structured-data";
 import { safeInlineJson } from "@/lib/safe-json";
@@ -19,6 +21,7 @@ import { DispatchView } from "./dispatch-view";
 import { publicQueryRun } from "@/lib/research/public-query-run";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
+const CURRENT_NETWORK_LABEL = config.profile.testnet ? "Arc testnet" : "Arc mainnet";
 
 // A settled dispatch is a finished record — its answer, citations and payouts never change. Only
 // the things layered on top (follow-ups, related answers) move, and hourly is soon enough for
@@ -45,20 +48,21 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   try {
-    const db = await getDb();
-    const run = await db.getQueryRun(id);
-    if (!run) return { title: "Dispatch not found — Keryx" };
+    const dispatch = await resolveDispatch(id);
+    if (!dispatch) return { title: "Dispatch not found — Keryx" };
+    const { run, archive } = dispatch;
     const snippet = run.answer.slice(0, 160).replace(/\n/g, " ");
     const cited = run.citations.length;
     const conf = deriveConfidence(run);
     const confTag = conf ? `${conf.level} confidence · ` : "";
+    const networkTag = archive ? "Arc testnet historical · " : "";
     return {
       title: `${run.question} — Keryx Dispatch`,
-      description: `${confTag}${cited} source${cited !== 1 ? "s" : ""} cited · $${run.totalSpent.toFixed(4)} spent · ${snippet}…`,
+      description: `${networkTag}${confTag}${cited} source${cited !== 1 ? "s" : ""} cited · $${run.totalSpent.toFixed(4)} spent · ${snippet}…`,
       alternates: { canonical: `/dispatch/${id}` },
       openGraph: {
         title: `${run.question} — Keryx Dispatch`,
-        description: `${confTag}${cited} cited · $${run.totalSpent.toFixed(4)} spent · $${run.totalToCreators.toFixed(4)} to creators`,
+        description: `${networkTag}${confTag}${cited} cited · $${run.totalSpent.toFixed(4)} spent · $${run.totalToCreators.toFixed(4)} to creators`,
       },
     };
   } catch {
@@ -69,25 +73,34 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function DispatchPage({ params }: PageProps) {
   const { id } = await params;
   const db = await getDb();
-  const run = await db.getQueryRun(id);
-  if (!run) notFound();
+  const dispatch = await resolveDispatch(id, db);
+  if (!dispatch) notFound();
+  const { run, reader, archive } = dispatch;
   // Original outbound rows include creator payments and separate operating fees.
   // Their ledger states, rather than allocations, establish settlement truth.
-  const payments = await db.listCreatorPaymentAttemptsByQuery(id);
+  const payments = await reader.listCreatorPaymentAttemptsByQuery(id);
 
   // The thread this dispatch sits in: what it followed from, and what followed from it — plus
   // whether the sources it cited have published since it settled (see lib/answers-freshness).
   // Freshness is only as current as this page's revalidate window, which is the right granularity:
   // an hour-old count of new posts still tells a reader the same thing.
-  const [parent, parentPayments, followUps, freshness] = await Promise.all([
-    run.parentId ? db.getQueryRun(run.parentId) : Promise.resolve(null),
-    run.parentId ? db.listCreatorPaymentAttemptsByQuery(run.parentId) : Promise.resolve([]),
-    db.listFollowUps(id),
-    loadFreshness(db, run),
+  const [thread, freshness] = await Promise.all([
+    loadDispatchThread(dispatch, db),
+    archive ? Promise.resolve(null) : loadFreshness(db, run),
   ]);
-  const delta = parent
-    ? compareAnswerReceipts(parent, run, { previous: parentPayments, current: payments })
-    : null;
+  const { parent: parentDispatch, followUps } = thread;
+  const parent = parentDispatch?.run ?? null;
+  const sameNetwork = parentDispatch !== null &&
+    (parentDispatch.archive?.network ?? config.networkId) === (archive?.network ?? config.networkId);
+  const comparison = await (async () => {
+    if (!parentDispatch || !parent || !sameNetwork) return { delta: null, unavailable: false };
+    try {
+      const parentPayments = await parentDispatch.reader.listCreatorPaymentAttemptsByQuery(parentDispatch.run.id);
+      return { delta: compareAnswerReceipts(parent, run, { previous: parentPayments, current: payments }), unavailable: false };
+    } catch {
+      return { delta: null, unavailable: true };
+    }
+  })();
 
   // Internal link mesh: point this permalink at its archive neighbours.
   const related = relatedAnswers(
@@ -169,13 +182,15 @@ export default async function DispatchPage({ params }: PageProps) {
       </header>
 
       <main className="mx-auto max-w-[1180px] px-4 pb-20 pt-10 sm:px-[30px]">
+        {archive ? <HistoricalDispatchNote archive={archive} /> : null}
+        {thread.parentUnavailable ? <p role="status" className="mb-6 max-w-[860px] font-serif text-sm text-ink-3">The earlier dispatch could not be loaded. This answer and its payment evidence remain available.</p> : null}
         {parent ? (
           <Link
             href={`/dispatch/${parent.id}`}
             className="mb-6 flex max-w-[860px] items-baseline gap-2.5 border-l-2 border-line pl-4 transition-colors hover:border-ink"
           >
             <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
-              Follows up on
+              Follows up on{parentDispatch?.archive ? " · Arc testnet" : ""}
             </span>
             <span className="font-serif text-[15px] leading-[1.5] text-ink-2">
               {parent.question}
@@ -183,13 +198,14 @@ export default async function DispatchPage({ params }: PageProps) {
           </Link>
         ) : null}
 
-        <DispatchView run={publicQueryRun(run)} payments={payments} />
+        <DispatchView run={publicQueryRun(run)} payments={payments} historical={Boolean(archive)} historicalNetwork={archive?.network} />
 
         <PortableReceiptPanel dispatchId={id} />
 
-        {delta ? <AnswerDeltaPanel delta={delta} /> : null}
+        {comparison.delta ? <AnswerDeltaPanel delta={comparison.delta} /> : null}
+        {comparison.unavailable ? <p role="status" className="mt-6 max-w-[860px] font-serif text-sm text-ink-3">The earlier payment comparison could not be loaded. This answer and its own payment evidence remain available.</p> : null}
 
-        <FreshnessNote freshness={freshness} dispatchId={id} question={run.question} />
+        {freshness ? <FreshnessNote freshness={freshness} dispatchId={id} question={run.question} /> : null}
 
         {followUps.length ? (
           <section className="mt-8 max-w-[860px]">
@@ -198,19 +214,22 @@ export default async function DispatchPage({ params }: PageProps) {
             </h2>
             <ul className="space-y-2.5">
               {followUps.map((f) => (
-                <li key={f.id}>
+                <li key={f.run.id}>
                   <Link
-                    href={`/dispatch/${f.id}`}
+                    href={`/dispatch/${f.run.id}`}
                     className="font-serif text-[15px] leading-[1.5] text-ink-2 underline decoration-line underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
                   >
-                    {f.question}
+                    {f.run.question}
                   </Link>
+                  {archive ? <span className="ml-2 font-mono text-[10px] text-ink-3">{f.archive ? "Arc testnet · historical" : CURRENT_NETWORK_LABEL}</span> : null}
                 </li>
               ))}
             </ul>
           </section>
         ) : null}
+        {thread.followUpsUnavailable ? <p role="status" className="mt-6 max-w-[860px] font-serif text-sm text-ink-3">Some follow-up links could not be loaded. This answer and its payment evidence remain available.</p> : null}
 
+        {archive ? <p className="mt-8 font-serif text-sm text-ink-2">A new follow-up runs on {CURRENT_NETWORK_LABEL} with today’s sources and budget. Only the historical question supplies context.</p> : null}
         <FollowUpForm parentId={id} />
         <RelatedDispatches entries={related} />
       </main>

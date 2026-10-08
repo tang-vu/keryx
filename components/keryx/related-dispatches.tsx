@@ -36,6 +36,7 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
             <div className="flex items-baseline justify-between gap-3">
               <span className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-seal">
                 Dispatch
+                {e.archivedNetwork && " · Arc testnet history"}
               </span>
               <time className="font-mono text-[9.5px] text-ink-3" dateTime={e.createdAt}>
                 {fmtDate(e.createdAt)}
@@ -48,7 +49,7 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
               <span>
                 {e.citationCount} source{e.citationCount !== 1 ? "s" : ""} cited
               </span>
-              <span className="text-paid">${e.toCreators.toFixed(4)} to creators</span>
+              <span className="text-paid">{e.archivedNetwork ? `${e.toCreators.toFixed(4)} test USDC` : `$${e.toCreators.toFixed(4)}`} recorded creator rewards</span>
             </div>
           </Link>
         ))}

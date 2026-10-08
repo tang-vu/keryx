@@ -20,13 +20,11 @@ export function ArchiveIndexView({
   slice,
   topics,
   totalEntries,
-  totalToCreators,
 }: {
   slice: ArchivePage;
   topics: ArchiveTopic[];
   /** Size of the whole archive, not this page — the headline counts the corpus. */
   totalEntries: number;
-  totalToCreators: number;
 }) {
   return (
     <main className="mx-auto max-w-[860px] px-4 pb-20 pt-12 sm:px-[30px]">
@@ -49,13 +47,13 @@ export function ArchiveIndexView({
         {totalEntries > 0 ? (
           <>
             {totalEntries} cited answer{totalEntries !== 1 ? "s" : ""} from Keryx research history.{" "}
-            <span className="text-paid">${totalToCreators.toFixed(4)}</span> in creator rewards recorded
-            on these runs. Individual dispatches show whether payments settled, remain pending, or were simulated.
+            Historical testnet entries retain their original network. Individual dispatches show whether payments settled, remain pending, or were simulated.
           </>
         ) : (
           <>No cited answers are available in the archive yet.</>
         )}
       </p>
+      <Link href="/history/testnet" className="mt-3 inline-block text-sm text-seal underline underline-offset-4">Browse all testnet questions, including uncited answers →</Link>
 
       {slice.items.length > 0 && (
         <ArchiveSearch

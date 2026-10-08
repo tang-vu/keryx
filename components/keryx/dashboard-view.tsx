@@ -67,7 +67,7 @@ function ResourceNotice({ resource, label }: { resource: LedgerResource<unknown>
   </div>;
 }
 
-export function DashboardView({ sourcePreview }: { sourcePreview: ReactNode }) {
+export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview: ReactNode; historyPreview?: ReactNode }) {
   const metricsResource = useLedgerResource("/api/metrics", metricBody);
   const paymentsResource = useLedgerResource("/api/payments?limit=200", paymentBody);
   const withdrawalsResource = useLedgerResource("/api/withdrawals?limit=25", withdrawalBody);
@@ -129,6 +129,7 @@ export function DashboardView({ sourcePreview }: { sourcePreview: ReactNode }) {
         </aside>
       </div>
 
+      {historyPreview}
       {sourcePreview}
 
       <section aria-label="Payment records" className="mt-8">

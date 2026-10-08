@@ -17,6 +17,7 @@
 
 import { getDb } from "@/lib/db";
 import { buildArchiveStream, type ArchiveEntry } from "@/lib/answers-archive";
+import { getTestnetArchive } from "./history/testnet-archive";
 
 /** How many raw runs the archive is built from. See the note above before changing. */
 export const ARCHIVE_WINDOW_RUNS = 2500;
@@ -30,8 +31,18 @@ let building: Promise<ArchiveEntry[]> | null = null;
 async function rebuild(): Promise<ArchiveEntry[]> {
   const db = await getDb();
   const entries = await buildArchiveStream(db.iterateRecentQueries(ARCHIVE_WINDOW_RUNS));
-  cached = { at: Date.now(), entries };
-  return entries;
+  let historical: ArchiveEntry[] = [];
+  let historicalUnavailable = false;
+  try {
+    const archive = await getTestnetArchive();
+    if (archive) historical = (await buildArchiveStream(archive.iterateRecentQueries(ARCHIVE_WINDOW_RUNS)))
+      .map(entry => ({ ...entry, archivedNetwork: archive.info.network }));
+  } catch { historicalUnavailable = true; /* Current answers stay available; retry the archive soon. */ }
+  const merged = new Map<string, ArchiveEntry>(historical.map(entry => [entry.id, entry]));
+  for (const entry of entries) merged.set(entry.id, entry);
+  const combined = [...merged.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+  cached = { at: historicalUnavailable ? Date.now() - TTL_MS + 15_000 : Date.now(), entries: combined };
+  return combined;
 }
 
 /**

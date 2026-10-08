@@ -33,7 +33,8 @@ function entryXml(e: ArchiveEntry, base: string): string {
     e.sourceNames.length > 0 ? ` Sources: ${e.sourceNames.slice(0, 6).join(", ")}.` : "";
   const summary =
     `${e.answerSnippet} — ${e.citationCount} source${e.citationCount !== 1 ? "s" : ""} cited, ` +
-    `$${e.toCreators.toFixed(4)} in recorded creator rewards; inspect dispatch for settlement state.${sources}`;
+    (e.archivedNetwork ? `${e.toCreators.toFixed(4)} test USDC in recorded creator rewards (Arc testnet history)` : `$${e.toCreators.toFixed(4)} in recorded creator rewards`) +
+    `; inspect dispatch for settlement state.${sources}`;
   return [
     "  <entry>",
     `    <title>${xmlEscape(e.question)}</title>`,
