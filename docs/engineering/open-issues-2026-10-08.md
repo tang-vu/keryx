@@ -24,7 +24,7 @@ against that window. A future admitted boundary must be positively confirmed.
 | [231](https://github.com/tang-vu/keryx/issues/231) | Inherited PR235 observes HTML headings and retains bounded following context across languages, including duplicate TOC labels. | Deployed frozen NASA task delivering the three useful cited Spanish sentences. |
 | [230](https://github.com/tang-vu/keryx/issues/230) | Inherited PR235 retains observed preformatted rule continuations and exact quote/review spans. | Deployed frozen RFC note with all three requested answers; preserve conditions and standards status. |
 | [218](https://github.com/tang-vu/keryx/issues/218) | Inherited free lookup is expanded into a metadata-only bibliographic handoff with explicit field provenance, ordered authors and reusable references. | Metadata-only research routing, page-specific status and actual French client acceptance remain distinct; lookup must not claim full-paper reading. |
-| [217](https://github.com/tang-vu/keryx/issues/217) | Inherited PR226 safely withholds unqualified newest-feed candidates before purchase. | Implement and qualify retained-set lookup, coherent current-feed observation and useful newest-entry delivery; Stage1 refusal alone is insufficient. |
+| [217](https://github.com/tang-vu/keryx/issues/217) | Inherited PR226 safely withholds unqualified newest-feed candidates; a staged explicit retained-set selector chooses a unique newest qualified native date independently of topical score. | Trusted complete adapters, retained native date provenance, coherent current-feed observation and useful newest-entry delivery remain required; the inactive primitive and Stage1 refusal alone are insufficient. |
 | [212](https://github.com/tang-vu/keryx/issues/212) | New ordinary evidence-only generation removes a discarded duplicate prose draft at the unchanged ceiling; inherited PR220 exposes proved output stops. | Actual bounded SQLite comparison/checklist and restoration qualifications. Fixture bytes are not a provider token or usefulness measurement. |
 | [211](https://github.com/tang-vu/keryx/issues/211) | Planner distinguishes requested prospective activities/format from historical NASA assertions; inherited HTML retrieval repairs remain. | Reviewed proposed activity/example/exit-question delivery and a complete useful lesson; ordinary sentence summaries do not yet supply that contract. |
 | [210](https://github.com/tang-vu/keryx/issues/210) | Historical finite client batches are fully consumed and retained; later count-limited authorization was exercised. | A fresh enforceable general model/search envelope and applicable authorization before another ordinary-client trial. Missing invoices and expired allowances cannot be reset or relabeled. |
@@ -46,6 +46,10 @@ whole short-item quote alternatives, neutral grouping and semantic list renderer
 App0.27.38 on PR240 is separately reserved for the active Operator continuation;
 this aggregate does not include, deploy or activate it. Earlier candidate version
 records remain historical.
+The newest-retained primitive is deliberately inactive: legacy catalog arrays and
+updated/creation timestamps are not promoted into complete native-publication
+observations. Its scoped adapter/current-feed gates remain in
+[the recency record](../issue-217-retained-selection.md).
 Use a merge commit when operationally admitted, preserving all feature tips;
 do not independently squash or downgrade the inherited client stack.
 
