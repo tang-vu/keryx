@@ -1,5 +1,14 @@
 # Supported-surface release parity
 
+## Deliverable quality successor — October 8, 2026
+
+App0.27.39 retains the reviewed reading aggregate and selection diagnostics while
+adding ordinary evidence/presentation improvements. Its
+[surface and acceptance record](engineering/research-deliverable-quality-2026-10-08.md)
+supersedes the active app36/37 release target. Existing package/installer gates and
+private operational source windows remain separate; no synchronized delivery is
+claimed from this source candidate.
+
 ## Coordinated reading release candidate — October 8, 2026
 
 App0.27.36 integrates the reading/client stack with current main. Hosted MCP0.3.5,

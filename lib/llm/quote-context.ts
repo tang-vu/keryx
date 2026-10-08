@@ -5,6 +5,7 @@ import { completeEvidenceSpans } from "./evidence-span";
 import { sourceSentenceSegments, type SourceExtraction } from "./source-sentences";
 import { sourceHtmlLayout, sourceTextBlocks } from "./source-text-blocks";
 import type { HtmlTextLayout } from "../web-research/html-text-layout";
+import { visibleEnumerationKind } from "./enumerated-context";
 
 export interface ContextualQuoteOption {
   quoteId: string;
@@ -103,6 +104,32 @@ function contextSpan(text: string, start: number, end: number, boundaries: Retur
   return [contextStart, contextEnd];
 }
 
+/** A visible enumerated item may hold multiple complete sentences. Offer its
+ * whole exact block only when its outer boundaries already satisfy the existing
+ * strict span policy. This adds a menu choice, never a new eligibility rule.
+ */
+function completeShortItems(original: GatheredContent, scanned: string, selected: ReturnType<typeof evidenceContext>[number]["passages"],
+  completeSpans: ReturnType<typeof completeEvidenceSpans>, layout: HtmlTextLayout | undefined) {
+  if (original.webProvenance?.extraction === "pdf" || original.webProvenance?.truncated || scanned.length !== original.text.length) return [];
+  const items: { start: number; end: number; text: string }[] = [];
+  let spanIndex = 0;
+  let preIndex = 0;
+  for (const block of sourceTextBlocks(scanned, original.webProvenance?.extraction, layout)) {
+    const [start, end] = trimSpan(scanned, block.start, block.end);
+    if (end - start > MAX_QUOTE_CHARACTERS || !visibleEnumerationKind(scanned.slice(start, end)) ||
+        !selected.some(passage => passage.start <= start && passage.end >= end)) continue;
+    while (layout?.preformatted[preIndex] && layout.preformatted[preIndex]!.end <= start) preIndex++;
+    if (layout?.preformatted[preIndex] && layout.preformatted[preIndex]!.start < end) continue;
+    while (completeSpans[spanIndex] && completeSpans[spanIndex]!.start < start) spanIndex++;
+    let last = spanIndex;
+    while (completeSpans[last] && completeSpans[last]!.end <= end) last++;
+    if (last - spanIndex < 2 || completeSpans[spanIndex]!.start !== start || completeSpans[last - 1]!.end !== end) continue;
+    items.push({ start, end, text: scanned.slice(start, end) });
+    if (items.length === MAX_QUOTES) break;
+  }
+  return items;
+}
+
 /**
  * Literal options from actual evidenceContext passages, bound to their gathered
  * source by unique marker, sourceId and exact offsets. Invalid bindings throw;
@@ -112,7 +139,7 @@ function contextSpan(text: string, start: number, end: number, boundaries: Retur
  * unread document truncation and delivery-kind provenance remain separate.
  */
 export function buildContextualQuoteOptions(sources: ReturnType<typeof evidenceContext>, gathered: GatheredContent[],
-  policy: { completeSentencesOnly?: boolean } = {}): ContextualQuoteOption[] {
+  policy: { completeSentencesOnly?: boolean; includeShortBlocks?: boolean } = {}): ContextualQuoteOption[] {
   const byMarker = new Map<string, GatheredContent>();
   for (const source of gathered) {
     if (!source.marker?.trim() || byMarker.has(source.marker)) invalid("ambiguous gathered marker");
@@ -139,13 +166,20 @@ export function buildContextualQuoteOptions(sources: ReturnType<typeof evidenceC
   });
   return bindings.flatMap(({ source, original, scanned }, sourceIndex) => {
     if (!source.passages.length || !scanned.length) return [];
-    const boundaries = contextBoundaries(scanned, original.webProvenance?.extraction, sourceHtmlLayout(original));
+    const layout = sourceHtmlLayout(original);
+    const boundaries = contextBoundaries(scanned, original.webProvenance?.extraction, layout);
     const options: ContextualQuoteOption[] = [];
     const offeredSpans = new Set<string>();
-    const passages = policy.completeSentencesOnly
-      ? completeEvidenceSpans(original).filter(span => source.passages.some(passage => passage.start <= span.start && passage.end >= span.end))
+    const completeSpans = policy.completeSentencesOnly ? completeEvidenceSpans(original) : [];
+    let passages = policy.completeSentencesOnly
+      ? completeSpans.filter(span => source.passages.some(passage => passage.start <= span.start && passage.end >= span.end))
         .map(span => ({ ...span, text: original.text.slice(span.start, span.end) }))
       : source.passages;
+    if (policy.completeSentencesOnly && policy.includeShortBlocks === true) {
+      // Existing sentence choices and their IDs retain first claim on the menu.
+      // Alternatives use spare capacity; compactness cannot evict a late fact.
+      passages = [...passages, ...completeShortItems(original, scanned, source.passages, completeSpans, layout)];
+    }
     passages: for (const passage of passages) {
       // Strict spans already have shared source boundaries. Resegmenting original
       // PDF line wraps here would turn a complete span back into a sentence tail.

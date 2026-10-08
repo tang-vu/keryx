@@ -25,6 +25,31 @@ function bounded(original: GatheredContent, selected: ReturnType<typeof evidence
 }
 
 describe("observed HTML text layout", () => {
+  it("retains visible labelled list siblings without changing complete quote eligibility", async () => {
+    const initial = "alpha: The initial choice applies when the setting is absent or empty.";
+    const second = "beta: The alternative choice restores the original settings.";
+    const third = "gamma: The remaining choice has no automatic operation.";
+    const original = await source(`<main><p>${padding}</p><p>Available choices:</p><ul>${[initial, second, third].map(rule => `<li>${rule}</li>`).join("")}</ul><p>${padding}</p></main>`);
+    const selected = evidenceContext("Explain beta and gamma choices.", ["beta choice", "gamma choice"], [original]);
+    bounded(original, selected[0]);
+    expect(selected[0].passages.some(passage => passage.text.includes([initial, second, third].join("\n")))).toBe(true);
+    const options = buildQuoteOptions(selected, [original]);
+    const initialQuote = options.find(option => option.text.includes("when the setting is absent"))!;
+    expect(initialQuote).toBeDefined();
+    expect(isCompleteEvidenceSpan(original, initialQuote.text, initialQuote)).toBe(true);
+    expect(original.text.slice(initialQuote.start, initialQuote.end)).toBe(initialQuote.text);
+    const suffixOffset = initialQuote.text.indexOf("when the setting");
+    const suffix = initialQuote.text.slice(suffixOffset);
+    expect(isCompleteEvidenceSpan(original, suffix, { start: initialQuote.start + suffixOffset, end: initialQuote.end })).toBe(false);
+    const ledger = buildEvidenceLedger({ subClaims: ["What happens when the setting is absent?"], gathered: [original],
+      answer: "The initial choice applies [S1].", declaredMarkers: ["S1"],
+      proposedEvidence: [{ claimIndex: 0, marker: "S1", quote: suffix,
+        quoteSpan: { start: initialQuote.start + suffixOffset, end: initialQuote.end }, support: 1 }],
+      finalAssessment: [{ claim: "What happens when the setting is absent?", coverage: 1, coveredBy: ["S1"] }] });
+    expect(ledger.acceptedMarkers.size).toBe(0);
+    expect(ledger.droppedEvidence).toBe(1);
+  });
+
   it("records exact visible pre and h1–h6 roles without promoting a TOC, class or hidden title", async () => {
     const original = await source(`<main>\n<a>Orbit and Rotation</a><span class="h2">Styled label</span><h3 hidden>Hidden heading</h3><h3>Orbit <em>and</em> Rotation</h3><p>${padding}</p><pre>  ${escape(rule6)}\n</pre></main>`);
     const layout = sourceHtmlLayout(original)!;

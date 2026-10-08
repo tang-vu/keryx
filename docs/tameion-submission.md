@@ -1,5 +1,30 @@
 # Tameion submission pack — working evidence
 
+## October 8 current evidence and deliverable gate
+
+At `2026-10-08T09:02:01.625Z`, [public health](https://keryx.cc/api/health)
+reported operational/db ok, Arc real settlement at `ab2195d6`/app0.27.35.
+At `2026-10-08T09:09:06.126Z`, [public metrics](https://keryx.cc/api/metrics)
+projected47 queries, six settled payment records totaling0.07USDC, creator
+payouts0.04USDC, two earning creators, zero settled operating fees and12 recorded
+accounts. These are database projections, not independent-customer counts or a
+new settlement performed by this review. Two feedback records cannot establish
+general satisfaction; aggregate factual grounding remains unavailable.
+
+The [four owner-operated real-client tasks](https://github.com/tang-vu/keryx/issues/128#issuecomment-6053576966)
+reported two partial results and two no-answer results, with no complete accepted
+deliverable. They are QA, not four external customers or a population failure rate.
+The [app0.27.39 deliverable candidate](engineering/research-deliverable-quality-2026-10-08.md)
+repairs the retained MDN evidence omission and stages bounded ordinary presentation.
+It does not establish live usefulness, original Operator fulfillment or deployment.
+PR240 retains its separate owner, financial continuation and admitted source window.
+
+Before recording the competitive demo, require useful original-task delivery,
+inspectable BUY/SKIP/CACHE reasoning, exact settlement receipts and honest event
+delta. Then collect accepted real use and repeat use from a narrow relevant user
+group. Do not turn simulations, own-business QA or historical feature counts into
+independent traction. Historical checkpoints below remain unchanged.
+
 ## October 7 read-only evidence checkpoint
 
 At `2026-10-07T02:04:31.538Z`, [public health](https://keryx.cc/api/health)

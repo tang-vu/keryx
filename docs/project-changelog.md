@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Retain short enumerated evidence and requested presentation (2026-10-08, v0.27.39 candidate)
+
+Preserve short visible list siblings in bounded evidence selection, including the
+retained MDN submit/default rule. Ordinary reviewed answers can retain supported
+requested language and short bullet layout while preserving every target,
+excerpt and cited contribution. Missing review or count mismatch keeps gaps and
+an unmet-format notice. Private original fulfillment and payment authority remain
+unchanged. Source tests do not establish live usefulness or deployment.
+See [scope and release gates](engineering/research-deliverable-quality-2026-10-08.md).
+
 ### Explain refused source choices in the decision log (2026-10-08, v0.27.37 candidate)
 
 Source-selection diagnostics retain their explanation and inspectable counts.

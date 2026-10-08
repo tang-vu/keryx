@@ -1,5 +1,10 @@
 # Coordinated research reading release — October 8, 2026
 
+The successor [app0.27.39 deliverable candidate](research-deliverable-quality-2026-10-08.md)
+retains this reviewed aggregate and app37 diagnostics. It supersedes the active
+version/PR release target below; operational, distribution and usefulness gates
+remain required. The app36 identities are retained source checkpoints.
+
 App **0.27.36** is a source candidate for one coordinated release through PR237.
 It includes the reviewed reading/client stack and merged main app0.27.35. Earlier
 app0.27.28–34 numbers identify source checkpoints, not separate deployments.

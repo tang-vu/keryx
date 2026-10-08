@@ -13,6 +13,7 @@ import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence, type QuoteOption } from "./quote-options";
 import { STATEMENT_GENERATION_GUIDANCE } from "./cited-statement";
+import { presentationStatementGuidance } from "../research/answer-presentation";
 import { buildContextualQuoteOptions } from "./quote-context";
 import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE, BRIEF_COMPACT_REVIEW_SCHEMA } from "./decision-brief";
 import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
@@ -326,7 +327,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
 
   /** Private completion may replace generation guidance without changing the
    * sufficiency prompt or ordinary research's existing contract. */
-  protected synthesisGenerationGuidance(_input: SynthInput): string {
+  protected synthesisGenerationGuidance(input: SynthInput): string {
     return "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
         "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
         "For every supported research question, select a quoteId from quoteOptions in an evidence item with " +
@@ -334,6 +335,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "Reuse that same claimIndex for multiple quotes answering one target; do not number answer sentences or evidence items. " +
         "Do not output raw quote text or invent IDs. " +
         STATEMENT_GENERATION_GUIDANCE +
+        (input.answerPresentation ? presentationStatementGuidance(input.answerPresentation) : "") +
         "Each option is already a bounded verbatim excerpt; choose only options that directly answer that question. " +
         "A related warning or shared topic is not evidence for an unmentioned procedure. " +
         "Select the smallest sufficient set, at most two options per research question; emit separate evidence items when needed. " +
@@ -348,7 +350,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   protected synthesisQuoteOptions(input: SynthInput, sources: ReturnType<typeof evidenceContext>): QuoteOption[] {
-    return buildQuoteOptions(sources, input.gathered);
+    return buildQuoteOptions(sources, input.gathered, { includeShortBlocks: Boolean(input.answerPresentation?.requestedBulletCount) });
   }
   /** Specialized completion may carry server-owned required target bindings in
    * its compact menu. Ordinary research's generation payload stays identical. */

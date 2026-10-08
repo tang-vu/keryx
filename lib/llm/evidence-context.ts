@@ -4,6 +4,7 @@ import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { sourceSentenceSegments, type SourceExtraction } from "./source-sentences";
 import { sourceHtmlLayout, sourceTextBlocks } from "./source-text-blocks";
 import { observedHtmlTextLayout, type HtmlTextLayout } from "../web-research/html-text-layout";
+import { enumeratedContext } from "./enumerated-context";
 
 const MAX_SOURCE_CHARACTERS = 200_000;
 const PASSAGE_CHARACTERS = 600;
@@ -128,6 +129,7 @@ export function selectEvidencePassages(text: string, question: string, subClaims
   // contiguous bounded sentence windows without altering the original document.
   const physicalLines = Array.from(scanned.matchAll(/[^\n]+(?:\n|$)/g), match => ({ start: match.index, end: match.index + match[0].length }));
   const blocks = sourceTextBlocks(scanned, extraction, layout);
+  const siblingContexts = pdf ? undefined : enumeratedContext(scanned, blocks, PASSAGE_CHARACTERS, layout?.preformatted);
   const blockAt = (offset: number) => {
     let low = 0;
     let high = blocks.length;
@@ -178,6 +180,11 @@ export function selectEvidencePassages(text: string, question: string, subClaims
   };
   const nominate = (offset: number, compact: boolean) => {
     const block = blockAt(offset);
+    const siblings = siblingContexts?.get(block.start);
+    if (siblings) {
+      addWindow(siblings.start, siblings.end);
+      return;
+    }
     // A short newline-delimited block is indivisible. Ranking isolated sentences
     // can otherwise keep a rule and discard its immediately following exception.
     // This is structural context preservation, not detection of semantic caveats.

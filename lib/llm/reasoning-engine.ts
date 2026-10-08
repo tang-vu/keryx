@@ -189,6 +189,8 @@ export interface SynthInput {
   gathered: GatheredContent[];
   /** Internal staged delivery contract; source/payment authority is unchanged. */
   answerFormat?: "decision-brief";
+  /** Ordinary run only; omitted by protected original-fulfillment continuations. */
+  answerPresentation?: import("../research/answer-presentation").AnswerPresentation;
 }
 
 /** A factual disagreement the agent found between sources while writing the answer,
