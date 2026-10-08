@@ -378,6 +378,6 @@ describe("fixed remaining-five successor profile", () => {
     await expect(activateEpochAnchor(f.home, { ...f.binding3, expiresAt: "2026-10-08T15:20:44.001Z" }, f.io, f.activation3)).rejects.toThrow();
     await expect(activateEpochAnchor(f.home, { ...f.binding3, parentAnchorFrontierSha256: h("f") } as ContinuationEpochBinding, f.io, f.activation3)).rejects.toThrow("uncertain");
     expect(f.io.exists(f.paths3.intentFile)).toBe(false);
-    expect(() => fixedPaths(f.home, 5 as 2)).toThrow("uncertain");
+    expect(() => fixedPaths(f.home, 6 as 2)).toThrow("uncertain");
   });
 });

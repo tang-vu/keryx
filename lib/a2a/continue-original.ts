@@ -4,10 +4,11 @@ import { OpenAICompatibleEngine } from "../llm/openai-compatible-engine";
 import { JsonChatEngine, type ChatJsonOptions } from "../llm/json-chat-engine";
 import { ReasoningInputLimitError, ReasoningOutputValidationError, type ReasoningEngine, type SufficiencyInput, type SynthInput } from "../llm/reasoning-engine";
 import { originalFulfillmentContext } from "./original-fulfillment-context";
-import { buildQuoteOptions, resolveQuoteEvidence } from "../llm/quote-options";
+import { buildQuoteOptions, resolveQuoteEvidence, type QuoteOption } from "../llm/quote-options";
 import { buildEvidenceReviewInput } from "../llm/evidence-review-input";
 import { MAX_REVIEWED_EVIDENCE } from "../llm/evidence-review";
 import { ORIGINAL_FULFILLMENT_GENERATION_GUIDANCE } from "../llm/original-fulfillment-quality";
+import { assertOriginalFulfillmentRequiredGeneration, originalFulfillmentRequiredQuotes } from "../llm/original-fulfillment-required-quotes";
 import { buildOriginalFulfillmentQualityReviewInput } from "../llm/original-fulfillment-review-input";
 import { ORIGINAL_FULFILLMENT_LIMITS as LIMITS } from "./failed-original-fulfillment-protocol";
 import type { FulfillmentEvidenceGap } from "./original-fulfillment-answer";
@@ -57,8 +58,13 @@ class OriginalContinuationEngine extends OpenAICompatibleEngine {
   }
   protected evidenceSources(input: SufficiencyInput) { return originalFulfillmentContext(input); }
   protected synthesisQuoteOptions(input: SufficiencyInput, sources: ReturnType<typeof originalFulfillmentContext>) {
-    return this.supplementalQuotes ? [...buildQuoteOptions(sources.filter(source => !source.sourceId.startsWith("public:fulfillment:supplement:")), input.gathered),
+    const options = this.supplementalQuotes ? [...buildQuoteOptions(sources.filter(source => !source.sourceId.startsWith("public:fulfillment:supplement:")), input.gathered),
       ...this.supplementalQuotes.options] : super.synthesisQuoteOptions(input, sources);
+    return this.qualityEvidence ? originalFulfillmentRequiredQuotes(options) : options;
+  }
+  protected synthesisGenerationQuoteOptions(input: SynthInput, options: QuoteOption[]) {
+    return this.qualityEvidence ? originalFulfillmentRequiredQuotes(options).map(({ quoteId, marker, text, claimIndex }) =>
+      ({ quoteId, marker, text, claimIndex })) : super.synthesisGenerationQuoteOptions(input, options);
   }
   protected synthesisEvidenceReviewInput(input: Parameters<typeof buildEvidenceReviewInput>[0]) {
     const bound = { ...input, supplementalCapability: this.supplementalQuotes?.capability };
@@ -82,6 +88,11 @@ class OriginalContinuationEngine extends OpenAICompatibleEngine {
       failed("synthesize", "output-validation");
     const options = this.synthesisQuoteOptions(this.input, this.evidenceSources(this.input));
     const proposals = resolveQuoteEvidence(result.evidence, options);
+    if (this.qualityEvidence) {
+      try { assertOriginalFulfillmentRequiredGeneration({ question: this.input.question, targets: this.input.subClaims,
+        options, evidence: result.evidence, proposals }); }
+      catch { failed("synthesize", "quality"); }
+    }
     const review = this.synthesisEvidenceReviewInput({ proposals, options, gathered: this.input.gathered, subClaims: this.input.subClaims });
     // Never checkpoint an invalid/partial review packet as successful generation.
     // The same exact raw proposal set must survive server binding and review bounds.
@@ -152,8 +163,13 @@ class ContinuationPromptPreflight extends JsonChatEngine {
   }
   protected evidenceSources(input: SufficiencyInput) { return originalFulfillmentContext(input); }
   protected synthesisQuoteOptions(input: SufficiencyInput, sources: ReturnType<typeof originalFulfillmentContext>) {
-    return this.supplementalQuotes ? [...buildQuoteOptions(sources.filter(source => !source.sourceId.startsWith("public:fulfillment:supplement:")), input.gathered),
+    const options = this.supplementalQuotes ? [...buildQuoteOptions(sources.filter(source => !source.sourceId.startsWith("public:fulfillment:supplement:")), input.gathered),
       ...this.supplementalQuotes.options] : super.synthesisQuoteOptions(input, sources);
+    return this.qualityEvidence ? originalFulfillmentRequiredQuotes(options) : options;
+  }
+  protected synthesisGenerationQuoteOptions(input: SynthInput, options: QuoteOption[]) {
+    return this.qualityEvidence ? originalFulfillmentRequiredQuotes(options).map(({ quoteId, marker, text, claimIndex }) =>
+      ({ quoteId, marker, text, claimIndex })) : super.synthesisGenerationQuoteOptions(input, options);
   }
   protected synthesisGenerationTokens(): number { return LIMITS.maximumOutputTokens; }
   protected synthesisGenerationGuidance(input: SynthInput): string {
