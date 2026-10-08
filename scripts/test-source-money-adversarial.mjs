@@ -27,9 +27,11 @@ try {
     const raw = JSON.parse(fs.readFileSync(rawReport, "utf8"));
     const assertions = raw.testResults.flatMap(test => test.assertionResults);
     const cases = ["prefer-cite", "payee-substitution", "reward-price-repeat", "forged-approval", "citation-farming", "bad-delivery", "exfiltration", "hidden-encoded"];
+    const gitHead = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, env, encoding: "utf8", windowsHide: true });
+    const gitStatus = spawnSync("git", ["status", "--porcelain"], { cwd: root, env, encoding: "utf8", windowsHide: true });
     const report = { protocol: "keryx-source-money-adversarial-v1", observedAt: new Date().toISOString(),
-      sourceCommit: spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8", windowsHide: true }).stdout?.trim() || null,
-      workingTree: spawnSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8", windowsHide: true }).stdout?.trim() ? "modified" : "clean",
+      sourceCommit: gitHead.status === 0 ? gitHead.stdout?.trim() || null : null,
+      workingTree: gitStatus.status === 0 ? (gitStatus.stdout?.trim() ? "modified" : "clean") : "unavailable",
       authority: "Offline deterministic fixtures and injected transport only; no live settlement or provider evidence",
       liveTestnetRefusal: null, success: raw.success, tests: { total: raw.numTotalTests, passed: raw.numPassedTests, failed: raw.numFailedTests },
       cases: cases.map(id => ({ id, status: assertions.find(test => test.title.startsWith(`${id}:`))?.status ?? "missing" })) };
