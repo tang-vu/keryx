@@ -59,4 +59,17 @@ describe("contiguous enumerated context ranges", () => {
     const blocks = sourceTextBlocks(text);
     for (const index of [0, 1, 2]) expect(enumeratedContextRange(text, blocks, index, 600)).toBeUndefined();
   });
+
+  it("uses the ordinary interval between multiple observed pre barriers without crossing either edge", () => {
+    const text = Array.from({ length: 20 }, (_, index) => `k${index}: Value.\n`).join("");
+    const blocks = sourceTextBlocks(text);
+    const preformatted = [[2, 4], [9, 11], [16, 18]].map(([first, last]) =>
+      ({ start: blocks[first]!.start, end: blocks[last]!.end }));
+    expect(enumeratedContextRange(text, blocks, 7, 600, preformatted))
+      .toEqual({ start: blocks[5]!.start, end: blocks[8]!.end });
+    expect(enumeratedContextRange(text, blocks, 0, 600, preformatted))
+      .toEqual({ start: blocks[0]!.start, end: blocks[1]!.end });
+    expect(enumeratedContextRange(text, blocks, 10, 600, preformatted)).toBeUndefined();
+    expect(enumeratedContextRange(text, blocks, 19, 600, preformatted)).toBeUndefined();
+  });
 });

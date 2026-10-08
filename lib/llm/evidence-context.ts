@@ -185,11 +185,8 @@ export function selectEvidencePassages(text: string, question: string, subClaims
     // can otherwise keep a rule and discard its immediately following exception.
     // This is structural context preservation, not detection of semantic caveats.
     if (block.end - block.start <= PASSAGE_CHARACTERS) {
-      // Keep short adjacent labeled/bullet/numbered siblings together so ranking
-      // one item cannot unnecessarily discard its nearby default or alternatives.
-      const enumeration = enumeratedContextRange(scanned, blocks, blockIndex, PASSAGE_CHARACTERS);
-      let start = enumeration?.start ?? block.start, end = enumeration?.end ?? block.end;
-      const pre = layout?.preformatted.find(region => region.start <= start && region.end >= end);
+      let start = block.start, end = block.end;
+      const pre = layout?.preformatted.find(region => region.start <= block.start && region.end >= block.end);
       if (pre) {
         // Preformatted rules often put their example or the next qualification
         // after a blank line. Retain contiguous neighboring groups when they fit;
@@ -197,6 +194,12 @@ export function selectEvidencePassages(text: string, question: string, subClaims
         const previous = blocks[blockIndex - 1], next = blocks[blockIndex + 1];
         if (previous && previous.start < start && previous.start >= pre.start && end - previous.start <= PASSAGE_CHARACTERS) start = previous.start;
         if (next && next.end > end && next.end <= pre.end && next.end - start <= PASSAGE_CHARACTERS) end = next.end;
+      } else {
+        // Ordinary enumeration cannot cross an observed pre boundary in either
+        // direction or displace the pre group's existing neighboring context.
+        const enumeration = enumeratedContextRange(scanned, blocks, blockIndex, PASSAGE_CHARACTERS, layout?.preformatted);
+        start = enumeration?.start ?? start;
+        end = enumeration?.end ?? end;
       }
       addWindow(start, end);
       return;
