@@ -39,6 +39,13 @@ the `/mcp` route and registry `remotes` entry; existing `mcp` rows remain readab
 
 ## Tools
 
+- `paper_lookup(query, searchRepositories?)` — returns free bibliography with
+  recorded title, contributors, DOI when present, exact version, metadata source
+  and observation time. Default is retained catalog metadata. External arXiv/
+  Crossref metadata lookup requires `searchRepositories: true`; no paper-body
+  reading, model, research dispatch or payment is performed. Unknown status and
+  provider failures remain visible. See [lookup boundaries](engineering/free-paper-lookup.md).
+
 - `research(question, budget?, model?, mode?, scholarly?)` — runs budgeted creator-paid research and returns both text
   and structured answer/citation/settlement metadata.
 - `keryx_status()` — reports the active caller tier and budget cap without starting a dispatch.

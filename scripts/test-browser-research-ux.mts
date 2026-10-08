@@ -52,6 +52,7 @@ try {
   await run("scripts/test-research-evidence-browser.mts");
   await run("scripts/test-browser-research-layout.mts");
   await run("scripts/test-browser-research-chat.mts");
+  await run("scripts/test-browser-source-recency.mts");
   await run("scripts/test-reading-ux-browser.mts");
 } finally {
   if (server) { server.kill(); await exited; }

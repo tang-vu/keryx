@@ -29,10 +29,12 @@ import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { runAgent, type RunInput } from "./run-agent";
 import { collectRun } from "./index";
+import { buildFollowUpQuestion } from "./follow-up-question";
 import type { ResearchEffects } from "./research-effects";
 import { config } from "../config";
 import { HeuristicEngine } from "../llm/heuristic-engine";
 import { JsonChatEngine } from "../llm/json-chat-engine";
+import { ReasoningOutputLimitError } from "../llm/reasoning-engine";
 import { evidenceContext } from "../llm/evidence-context";
 import { buildContextualQuoteOptions } from "../llm/quote-context";
 import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence } from "../llm/decision-brief";
@@ -2379,6 +2381,116 @@ describe("claim-managed free creator reading", () => {
   });
 });
 
+describe("original newest-feed requirement before article purchase", () => {
+  const feed = "https://creator.example/releases.atom";
+  const question = `Name the newest release in ${feed}, state one change and one compatibility fact not established by that entry.`;
+
+  it("withholds a stronger older match and its fresh cache even when model targets omit newest", async () => {
+    const source = makeSource({ id: "creator", rssUrl: feed, tags: ["old API compatibility"] });
+    const older: SourceItem = { id: "v10", sourceId: source.id, title: "Release change compatibility API", summary: "Newest release changes compatibility deployment fact", content: "Old release retained content.", link: "https://creator.example/v10", publishedAt: "2026-07-01T00:00:00.000Z" };
+    const newer: SourceItem = { ...older, id: "v18", title: "v18", summary: "New entry", link: "https://creator.example/v18", publishedAt: "2026-07-02T00:00:00.000Z" };
+    const engine = fakeEngine();
+    engine.decompose = async () => ["old API compatibility changes"];
+    const gateway = fakeGateway();
+    const d = deps([source], engine, gateway, { items: { [source.id]: [newer, older] }, cachedByKey: { [sourceItemCacheKey(source.id, older)]: new Date().toISOString() } });
+    const catalog = vi.spyOn(d.db, "getItems"), cache = vi.spyOn(d.db, "getCached"), funding = vi.spyOn(gateway, "ensureFunded");
+    const { run, steps } = await drive({ question, budget: 0.05 }, d);
+    expect(engine.decideInput?.candidates ?? []).toEqual([]);
+    expect(catalog).not.toHaveBeenCalled(); expect(cache).not.toHaveBeenCalled(); expect(funding).not.toHaveBeenCalled();
+    expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+    expect(run.answer).toContain("Newest-release limitation");
+    expect(run.answer).toContain("criterion and scope remain unverified");
+    expect(steps).toEqual(expect.arrayContaining([expect.objectContaining({ phase: "discover", detail: expect.objectContaining({ feedUrl: feed, reason: "newest-feed-observation-unqualified" }) })]));
+  });
+
+  it("blocks the historical source-level path with no item rows", async () => {
+    const gateway = fakeGateway();
+    const d = deps([makeSource({ id: "legacy", rssUrl: feed })], fakeEngine(), gateway);
+    const { run } = await drive({ question, budget: 0.05 }, d);
+    expect(gateway.fetchCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+    expect(run.answer).toContain("before BUY/CACHE selection");
+  });
+
+  it.each([
+    `Name the newest stable release in ${feed}.`,
+    `Name the newest release before 2026-10-01 in ${feed}.`,
+    `Compare the newest release in ${feed} with the older API.`,
+    `Name the newest release in ${feed} and name the newest release in https://second.example/feed.atom`,
+    `Name the newest release in ${feed} ` + "x".repeat(30000),
+  ])("does not turn a known unsupported temporal form into ordinary paid selection", async temporal => {
+    const gateway = fakeGateway();
+    const d = deps([makeSource({ id: "creator", rssUrl: feed }), makeSource({ id: "second", rssUrl: "https://second.example/feed.atom" })], fakeEngine(), gateway);
+    const { run } = await drive({ question: temporal, budget: 0.05 }, d);
+    expect(gateway.fetchCalls).not.toContain("creator");
+    if (temporal.includes("and name") || temporal.length > 30000) expect(gateway.fetchCalls).not.toContain("second");
+    expect(run.answer).toContain("Newest-release limitation");
+  });
+
+  it("retains a request-level gap when no source/reference matches the caller feed", async () => {
+    const gateway = fakeGateway(), d = deps([], fakeEngine(), gateway);
+    const { run, steps } = await drive({ question, budget: 0.05 }, d);
+    expect(run.answer).toContain(feed);
+    expect(run.answer).toContain("Newest-release limitation");
+    expect(steps).toEqual(expect.arrayContaining([expect.objectContaining({ phase: "decompose", detail: expect.objectContaining({ scope: "request", feedUrl: feed }) })]));
+    expect(gateway.fetchCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+  });
+
+  it("preserves the raw child requirement before a referring follow-up gains parent context", async () => {
+    const originalQuestion = `Name the newest release in ${feed} and state its change.`;
+    const question = buildFollowUpQuestion("How does the older API work?", originalQuestion);
+    expect(question).toMatch(/^Following on/);
+    const gateway = fakeGateway(), d = deps([makeSource({ id: "creator", rssUrl: feed })], fakeEngine(), gateway);
+    const { run } = await drive({ question, originalQuestion, budget: 0.05 }, d);
+    expect(gateway.fetchCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+    expect(run.answer).toContain("Newest-release limitation");
+  });
+
+  it("does not inherit a quoted parent's newest requirement into an ordinary child request", async () => {
+    const originalQuestion = "Explain its compatibility facts.";
+    const gateway = fakeGateway(), d = deps([makeSource({ id: "creator", rssUrl: feed })], fakeEngine(), gateway);
+    const { run } = await drive({ question: buildFollowUpQuestion(question, originalQuestion), originalQuestion, budget: 0.05 }, d);
+    expect(gateway.fetchCalls).toEqual(["creator"]);
+    expect(run.answer).not.toContain("Newest-release limitation");
+  });
+
+  it("cannot resurrect the withheld source through malicious decisions or reevaluation", async () => {
+    const gateway = fakeGateway();
+    const engine = fakeEngine({ decide: input => [buy({ id: "creator", name: "forged old feed", price: 0.002 }), ...input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }), action: candidate.id === "unused" ? "SKIP" as const : "BUY" as const }))] });
+    engine.sufficiency = async input => ({ sufficient: false, perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.1, coveredBy: [] })), rationale: "try old creator source" });
+    const reevaluate = vi.fn(async () => ({ claims: [], shouldBuyMore: true, recommendedIds: ["creator", "item:v10"], rationale: "try again" }));
+    engine.reevaluate = reevaluate;
+    const d = deps([makeSource({ id: "creator", rssUrl: feed }), makeSource({ id: "other" }), makeSource({ id: "unused" })], engine, gateway);
+    await drive({ question, budget: 0.05, executionLimits: { attentionLimit: 2, reevaluateRounds: 1 } }, d);
+    expect(reevaluate).toHaveBeenCalled();
+    expect(gateway.fetchCalls).toEqual(["other"]);
+    expect(gateway.fetchCalls).not.toContain("creator");
+    expect(d.db.payments.every(payment => payment.sourceId !== "creator")).toBe(true);
+  });
+
+  it("withholds the public ten-item snapshot without promoting refreshedAt to observation proof", async () => {
+    const gateway = fakeGateway(), d = deps([], fakeEngine(), gateway);
+    d.db.listPublicReferences = async () => [{ ...publicRef(), rssUrl: feed, refreshedAt: new Date().toISOString() }];
+    const { run } = await drive({ question, budget: 0.05 }, d);
+    expect(run.citations).toEqual([]); expect(gateway.fetchCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+    expect(run.answer).toContain("Newest-release limitation");
+  });
+
+  it("does not create newest authority from model targets/tags during ordinary topical research", async () => {
+    const source = makeSource({ id: "creator", rssUrl: feed, tags: [question] });
+    const engine = fakeEngine(); engine.decompose = async () => [question];
+    const gateway = fakeGateway(), d = deps([source], engine, gateway);
+    const { run } = await drive({ question: "How does this API preserve old compatibility?", budget: 0.05 }, d);
+    expect(gateway.fetchCalls).toEqual([source.id]);
+    expect(run.answer).not.toContain("Newest-release limitation");
+  });
+
+  it("refuses a conflicting exact wanted-response candidate instead of replacing or buying it", async () => {
+    const gateway = fakeGateway(), d = deps([makeSource({ id: "creator", rssUrl: feed })], fakeEngine(), gateway);
+    await expect(drive({ question, targetAsset: { sourceId: "creator", itemId: "v10", contentVersion: "sha256:old" } }, d)).rejects.toThrow("wanted response source is not active, verified, or payable");
+    expect(gateway.fetchCalls).toEqual([]); expect(d.db.payments).toEqual([]);
+  });
+});
+
 describe("sponsored operating fees", () => {
   let previousOrigin: string;
   beforeEach(() => { previousOrigin = config.baseUrl; Object.assign(config, { baseUrl: "https://keryx.cc" }); });
@@ -2398,6 +2510,15 @@ describe("sponsored operating fees", () => {
     d.db.getSourceClaim = async () => null;
     return { d, gateway, settle };
   }
+  it("does not turn withheld newest-feed evidence into a sponsored operating fee", async () => {
+    const f = fixture(), funding = vi.spyOn(f.gateway, "ensureFunded");
+    const { run } = await drive({ question: "Name the newest release in https://public.test/feed and explain its compatibility.",
+      budget: 0.03, fundingOwner: "treasury" }, f.d);
+    expect(run.answer).toContain("Newest-release limitation");
+    expect(run.citations).toEqual([]); expect(run.operatingFee).toBeUndefined();
+    expect(f.settle).not.toHaveBeenCalled(); expect(funding).not.toHaveBeenCalled();
+    expect(f.d.db.payments).toEqual([]); expect(run.totalSpent).toBe(0);
+  });
   it("settles only the public share and preserves free citation identity and separate creator totals", async () => {
     const f = fixture();
     const { run } = await drive({ question: "What evidence do agents need?", budget: 0.03, fundingOwner: "treasury" }, f.d);
@@ -2514,6 +2635,166 @@ describe("sponsored operating fees", () => {
     expect(run.answer).toContain("Public agents require honest evidence");
     expect(run.operatingFee?.status).toBe("pending"); expect(run.totalSpent).toBe(0);
     expect(run.pendingSpendUsdc).toBe(0.015); expect(run.pendingPayments).toBe(1);
+  });
+});
+
+describe("ordinary registered RSS document aliases", () => {
+  const articleUrl = "https://github.com/tang-vu/keryx/blob/main/docs/engineering/2026-09-08-buyer-recovery.md";
+  const articleText = "Resume reads the retained original journal and receipt. Resume does not sign or replay a new purchase. Deleting the journal and buying again can risk a second debit.";
+
+  function fixture(over: EngineOverrides = {}) {
+    const source = makeSource({ id: "registered-rss", name: "Registered Engineering", verified: true,
+      url: "https://engineering.test/", rssUrl: "https://engineering.test/feed", fetchPrice: 0.002 });
+    const item: SourceItem = { id: "recovery-article", sourceId: source.id, title: "Recovering a paid research job",
+      summary: "Resume retains the original receipt and does not purchase again", content: articleText,
+      link: articleUrl, deliveryKind: "full_text", storageMode: "db_plaintext" };
+    const engine = fakeEngine(over), gateway = fakeGateway();
+    const d = deps([source], engine, gateway, { items: { [source.id]: [item] } });
+    d.effects = isolatedTestEffects();
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async current => ({
+      payTo: current.walletAddress, creator: current.walletAddress, listPriceUsdc: current.fetchPrice,
+      active: true, authority: "onchain", stale: false,
+    }));
+    return { source, item, engine, gateway, d, terms };
+  }
+
+  it.each(["public-web", "public-rss"] as const)("deliberately uses the %s alias once with zero redundant access/citation payments", async route => {
+    const f = fixture(), fund = vi.spyOn(f.gateway, "ensureFunded"), boundary = vi.fn();
+    if (route === "public-web") {
+      f.d.webSearch = { search: async () => [] };
+      f.d.readWebArticle = vi.fn(async () => ({ text: articleText, title: f.item.title,
+        finalUrl: articleUrl, kind: "html" as const, truncated: false }));
+    } else {
+      const reference = publicRef();
+      reference.items[0] = { ...reference.items[0], link: articleUrl, title: f.item.title, content: articleText,
+        deliveryKind: "full_text" };
+      f.d.db.listPublicReferences = async () => [reference];
+    }
+    try {
+      const { run } = await drive({ question: route === "public-web" ? `Read the registered recovery article at ${articleUrl}.` : "Explain recovery from the registered article.",
+        origin: route === "public-web" ? "web" : "engine", budget: 0.05, researchMode: "quick", onCreatorPaymentBoundary: boundary }, f.d);
+      expect(f.engine.decideInput?.candidates).toHaveLength(2);
+      expect(run.evidencePortfolio?.selectedAssetIds).toHaveLength(1);
+      expect(run.evidencePortfolio?.claims[0].predictedCoverage).toBe(0.8);
+      expect(run.evidencePortfolio?.outcome?.readAssetIds).toHaveLength(1);
+      expect(run.evidencePortfolio?.selectedBuyUsdc).toBe(0);
+      expect(run.decisions.find(row => row.sourceId === f.source.id)).toMatchObject({ action: "SKIP",
+        rationale: expect.stringContaining("0 access USDC and no creator citation reward") });
+      expect(run.citations).toHaveLength(1);
+      expect(run.citations[0]).toMatchObject({ sourceKind: "public-reference", itemUrl: articleUrl, reward: 0 });
+      expect(run.evidence?.every(row => !row.qualifiesForReward)).toBe(true);
+      expect(run.answer).toContain("Resume");
+      expect(f.gateway.fetchCalls).toEqual([]); expect(f.gateway.citationCalls).toEqual([]);
+      expect(fund).not.toHaveBeenCalled(); expect(boundary).not.toHaveBeenCalled();
+      expect(run.paymentAttempts).toBe(0); expect(run.totalSpent).toBe(0);
+      expect(vi.mocked(f.d.effects!.recordPayment)).not.toHaveBeenCalled();
+    } finally { f.terms.mockRestore(); }
+  });
+
+  it.each(["SKIP", "below-attention"] as const)("keeps the registered evidence/payment identity when the public proposal is %s", async reason => {
+    const f = fixture({ decide: input => input.candidates.map(candidate => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }, candidate.sourceKind ? 0.01 : 0.9),
+      action: candidate.sourceKind && reason === "SKIP" ? "SKIP" : "BUY",
+    })) });
+    const reference = publicRef(); reference.items[0] = { ...reference.items[0], link: articleUrl, content: articleText };
+    f.d.db.listPublicReferences = async () => [reference];
+    try {
+      const { run } = await drive({ question: "Explain recovery from the registered article.", budget: 0.05, researchMode: "quick" }, f.d);
+      expect(run.evidencePortfolio?.selectedAssetIds).toEqual(["item:recovery-article"]);
+      expect(f.gateway.fetchCalls).toEqual([f.source.id]); expect(f.gateway.fetchItems).toEqual([f.item.id]);
+      expect(f.gateway.fetchPrices).toEqual([0.002]);
+      expect(run.citations[0]).toMatchObject({ sourceId: f.source.id, itemId: f.item.id, itemUrl: articleUrl,
+        contentVersion: sourceItemContentVersion(f.item), reward: expect.any(Number) });
+      expect(run.citations[0].reward).toBeGreaterThan(0);
+      expect(f.gateway.citationCalls).toEqual([{ sourceId: f.source.id, payee: f.source.walletAddress, amount: run.citations[0].reward }]);
+      const payments = vi.mocked(f.d.effects!.recordPayment).mock.calls.map(([payment]) => payment);
+      expect(payments.map(payment => payment.kind)).toEqual(["fetch", "citation"]);
+      expect(payments[0].amountUsdc).toBe(0.002); expect(payments[1].amountUsdc).toBe(run.citations[0].reward);
+      expect(run.totalSpent).toBeLessThanOrEqual(run.budget);
+    } finally { f.terms.mockRestore(); }
+  });
+
+  it("withholds a selected paid alias when the earlier public read redirects to its document", async () => {
+    const f = fixture(), original = "https://engineering.test/recovery-original";
+    f.d.webSearch = { search: async () => [] };
+    f.d.readWebArticle = vi.fn(async () => ({ text: articleText, title: f.item.title,
+      finalUrl: articleUrl, kind: "html" as const, truncated: false }));
+    try {
+      const { run } = await drive({ question: `Read the original at ${original}.`, origin: "web",
+        budget: 0.05, researchMode: "quick" }, f.d);
+      expect(run.evidencePortfolio?.selectedAssetIds).toHaveLength(2);
+      expect(run.decisions.find(row => row.sourceId === f.source.id)).toMatchObject({ action: "SKIP",
+        rationale: expect.stringContaining("canonical document was already read") });
+      expect(f.gateway.fetchCalls).toEqual([]); expect(f.gateway.citationCalls).toEqual([]);
+      expect(run.totalSpent).toBe(0); expect(run.citations).toHaveLength(1);
+      expect(run.citations[0]).toMatchObject({ sourceKind: "public-reference", itemUrl: articleUrl, reward: 0 });
+      expect(run.evidencePortfolio?.outcome?.unreadSelected).toBe(1);
+    } finally { f.terms.mockRestore(); }
+  });
+
+  it("does not count a public redirect back to a paid document as independent new evidence", async () => {
+    const f = fixture({ decide: input => input.candidates.map(candidate => buy({
+      id: candidate.id, name: candidate.name, price: candidate.fetchPrice,
+    }, candidate.sourceKind ? 0.6 : 0.9)), sufficiency: () => ({ sufficient: false, rationale: "Retain the other lead" }) });
+    const original = "https://engineering.test/recovery-original";
+    f.d.webSearch = { search: async () => [] };
+    f.d.readWebArticle = vi.fn(async () => ({ text: articleText + " An observed public edit.", title: f.item.title,
+      finalUrl: articleUrl, kind: "html" as const, truncated: false }));
+    try {
+      const { run } = await drive({ question: `Read the original at ${original}.`, origin: "web",
+        budget: 0.05, researchMode: "quick" }, f.d);
+      expect(f.gateway.fetchCalls).toEqual([f.source.id]);
+      expect(f.d.readWebArticle).toHaveBeenCalledOnce();
+      expect(run.citations).toHaveLength(1); expect(run.citations[0].sourceId).toBe(f.source.id);
+      expect(run.evidencePortfolio?.outcome?.readAssetIds).toEqual(["item:recovery-article"]);
+      expect(run.trace.some(step => step.message.includes("document-alias-already-read"))).toBe(true);
+    } finally { f.terms.mockRestore(); }
+  });
+
+  it("withholds an over-budget registered alias without promoting a public SKIP", async () => {
+    const f = fixture({ decide: input => input.candidates.map(candidate => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+      action: candidate.sourceKind ? "SKIP" : "BUY",
+    })) });
+    const reference = publicRef(); reference.items[0].link = articleUrl;
+    f.d.db.listPublicReferences = async () => [reference];
+    try {
+      const { run } = await drive({ question: "Explain recovery.", budget: 0.001, researchMode: "quick" }, f.d);
+      expect(run.evidencePortfolio?.selectedAssetIds).toEqual([]);
+      expect(run.citations).toEqual([]); expect(run.totalSpent).toBe(0);
+      expect(f.gateway.fetchCalls).toEqual([]); expect(f.gateway.citationCalls).toEqual([]);
+    } finally { f.terms.mockRestore(); }
+  });
+
+  it("keeps paid access distinct from a withheld unqualified citation reward", async () => {
+    const f = fixture({ decide: input => input.candidates.map(candidate => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+      action: candidate.sourceKind ? "SKIP" : "BUY",
+    })), synthesize: () => ({ answer: "Unsupported conclusion [S1]", citedMarkers: ["S1"], evidence: [] }) });
+    try {
+      const { run } = await drive({ question: "Explain recovery.", budget: 0.05, researchMode: "quick" }, f.d);
+      expect(f.gateway.fetchCalls).toEqual([f.source.id]); expect(f.gateway.citationCalls).toEqual([]);
+      expect(run.totalSpent).toBe(0.002); expect(run.citations).toEqual([]);
+      expect(vi.mocked(f.d.effects!.recordPayment).mock.calls.map(([payment]) => payment.kind)).toEqual(["fetch"]);
+    } finally { f.terms.mockRestore(); }
+  });
+
+  it("cannot restore a paid RSS alias through deep gap expansion after public evidence was read", async () => {
+    const f = fixture({ sufficiency: () => ({ sufficient: false, rationale: "A second target is unknown" }),
+      decide: input => input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+        action: candidate.sourceId === "independent" ? "SKIP" : "BUY" })),
+      reevaluate: () => ({ shouldBuyMore: true, recommendedIds: ["item:recovery-article"], rationale: "Recommend the other delivery channel" }) });
+    const independent = makeSource({ id: "independent" });
+    f.d.db.listSources = async () => [f.source, independent];
+    const reference = publicRef(); reference.items[0] = { ...reference.items[0], link: articleUrl, content: articleText };
+    f.d.db.listPublicReferences = async () => [reference];
+    try {
+      const { run } = await drive({ question: "Explain recovery and the unsupported second target.", budget: 0.05,
+        researchMode: "deep", executionLimits: { attentionLimit: 2, reevaluateRounds: 1 } }, f.d);
+      expect(f.gateway.fetchCalls).toEqual([]); expect(f.gateway.citationCalls).toEqual([]);
+      expect(run.citations).toHaveLength(1); expect(run.citations[0].sourceKind).toBe("public-reference");
+      expect(run.trace.some(step => step.phase === "reevaluate" && step.message.includes("canonical document was already read"))).toBe(true);
+    } finally { f.terms.mockRestore(); }
   });
 });
 
@@ -2972,6 +3253,42 @@ describe("omitted-assertion completion boundary", () => {
     expect(verifyResearchReceipt(receipt).valid).toBe(true);
     expect(receipt.payload.dispatch.answer).toBe(run.answer);
   });
+
+  it("delivers ordinary Portuguese bullets consistently through report, API, MCP and A2A results", async () => {
+    const quote = "The protocol binds approval to canonical action identity.";
+    const statement = "A aprovação está vinculada à identidade canônica da ação.";
+    const item: SourceItem = { id: "presentation-item", sourceId: "presentation-source", title: "Synthetic article",
+      link: "https://owned.example/presentation", summary: "Approval protocol", content: quote };
+    const source = makeSource({ id: item.sourceId, fetchPrice: 0.004 });
+    const engine = fakeEngine({ synthesize: input => {
+      expect(input.answerPresentation).toEqual({ language: "pt", requestedLanguage: "pt", requestedBulletCount: 1 });
+      return { answer: "Unsupported raw draft [S1]", citedMarkers: ["S1"],
+        evidence: [{ claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport: 0.9 }] };
+    } });
+    engine.decompose = async () => ["Approval identity"];
+    const gateway = fakeGateway(), effects = isolatedTestEffects();
+    const run = await collectRun({ question: "Earlier context: Answer in English in four short bullets about approval identity.",
+      originalQuestion: "Answer in Portuguese in one short bullet about approval identity.", budget: 0.03,
+      executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } },
+      { deps: { ...deps([source], engine, gateway, { items: { [source.id]: [item] } }), effects } });
+    expect(run.answer).toContain(`- ${statement} [S1] Texto da fonte: “${quote}”`);
+    expect(run.answer).not.toContain("Unsupported raw draft");
+    expect(gateway.citationCalls).toHaveLength(1);
+    expect(run.evidence).toHaveLength(1);
+    const payments = vi.mocked(effects.recordPayment).mock.calls.map(([payment]) => payment);
+    const receipt = buildResearchReceipt(run, payments);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.dispatch.answer).toBe(run.answer);
+    expect(researchReportMarkdown(run, null, payments)).toContain(run.answer);
+    expect(buildAnswerContent(run)).toContain(run.answer);
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run),
+      a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick"))]) {
+      expect(JSON.stringify(result)).not.toContain("Unsupported raw draft");
+      expect(result.evidence.map(item => item.quote)).toEqual([quote]);
+      expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
+    }
+    expect(remoteResearchResult(run).answer).toBe(run.answer);
+  });
 });
 
 /** Same frozen question, representative eight targets and synthetic provider/page responses. */
@@ -3050,6 +3367,24 @@ it("retains the classified SQLite failure and billed response counters without r
 });
 
 describe("completed reads survive bounded model exhaustion", () => {
+  it.each(["direct-error", "inner-review"] as const)("persists a %s output diagnostic with retained reads and no fabricated attempt or reward", async mode => {
+    const engine = fakeEngine({ synthesize: () => {
+      if (mode === "direct-error") throw new ReasoningOutputLimitError(2560);
+      return { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable",
+        synthesisFailure: "review", synthesisOutputLimit: { stage: "review", outputTokenLimit: 2560 } };
+    } });
+    const gateway = fakeGateway(), d = deps([makeSource({ id: "alpha" })], engine, gateway);
+    const { run, steps } = await drive({ question: "Inspect the original evidence", budget: 0.04 }, d);
+    expect(gateway.fetchCalls).toEqual(["alpha"]); expect(gateway.citationCalls).toEqual([]);
+    expect(run.reasoningAttempts ?? []).toEqual([]);
+    const diagnostic = { stage: mode === "direct-error" ? "synthesis" : "review", outputTokenLimit: 2560 };
+    expect(steps.some(step => step.phase === "synthesize" && JSON.stringify(step.detail) === JSON.stringify({ reasoningOutputLimit: diagnostic }))).toBe(true);
+    expect(run.trace.some(step => JSON.stringify(step.detail) === JSON.stringify({ reasoningOutputLimit: diagnostic }))).toBe(true);
+    const result = remoteResearchResult(run);
+    expect(result.outputLimits).toEqual([{ step: "synthesize", ...diagnostic }]);
+    expect(result.reasoning.telemetry).toBe("unavailable");
+    expect(verifyResearchReceipt(buildResearchReceipt(run, d.db.payments)).valid).toBe(true);
+  });
   it.each(["sufficiency", "reevaluate", "synthesize", "attribute"] as const)("retains the final dispatch and receipts after %s fails", async stage => {
     const sources = [makeSource({ id: "alpha" }), makeSource({ id: "beta" })];
     const engine = fakeEngine();

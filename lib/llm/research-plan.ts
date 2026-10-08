@@ -1,6 +1,6 @@
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { researchAdmissionError } from "../research/availability-contract";
-import { ReasoningOutputValidationError } from "./reasoning-engine";
+import { ReasoningOutputValidationError, outputTokenLimitFromValidatedError } from "./reasoning-engine";
 import { ResearchSelectionError } from "./research-selection";
 
 export type PlanningRefusalReason = "expanded_output" | "invalid_output" | "needs_refinement";
@@ -28,7 +28,7 @@ export class ResearchPlanningError extends ReasoningOutputValidationError {
   get scopeChoices(): readonly string[] { return this.#scopeChoices; }
   readonly language: "vi" | "en";
 
-  constructor(question: string, readonly reason: PlanningRefusalReason) {
+  constructor(question: string, readonly reason: PlanningRefusalReason, outputTokenLimit?: number) {
     const vi = /[ăâđêôơưĂÂĐÊÔƠƯ\u1ea0-\u1ef9]/u.test(question);
     const message = reason === "expanded_output"
       ? vi
@@ -40,7 +40,7 @@ export class ResearchPlanningError extends ReasoningOutputValidationError {
     // Keep private question excerpts out of Error.message, telemetry and server error logs.
     super(message + (vi
       ? " Hãy chọn một đối tượng hoặc một khía cạnh so sánh cho mỗi câu hỏi, giữ các URL/phiên bản và điều kiện nguồn của yêu cầu gốc."
-      : " Choose one comparison subject or dimension per question, keeping the original source URLs/versions and qualifications."));
+      : " Choose one comparison subject or dimension per question, keeping the original source URLs/versions and qualifications."), outputTokenLimit);
     this.language = vi ? "vi" : "en";
     this.#scopeChoices = Object.freeze(refinementChoices(question));
   }
@@ -69,9 +69,16 @@ export async function boundedResearchPlan(question: string, call: () => Promise<
     return parseResearchPlan(question, await call());
   } catch (error) {
     if (error instanceof ResearchPlanningError) throw error;
-    if (error instanceof ReasoningOutputValidationError) throw new ResearchPlanningError(question, "invalid_output");
+    if (error instanceof ReasoningOutputValidationError) throw new ResearchPlanningError(question, "invalid_output", outputTokenLimitFromValidatedError(error));
     throw error;
   }
+}
+
+function failureOutputLimitMessage(error: ReasoningOutputValidationError, language: "en" | "vi" = "en"): string {
+  const ceiling = outputTokenLimitFromValidatedError(error);
+  return ceiling === undefined ? "" : language === "vi"
+    ? `Phản hồi model đã chạm giới hạn ${ceiling.toLocaleString("en-US")} tokens. `
+    : `The model response reached its ${ceiling.toLocaleString("en-US")}-token output limit. `;
 }
 
 /** Render only for the original caller; suggestions are not copied into accounting or logs. */
@@ -79,13 +86,15 @@ export function researchFailureMessage(error: unknown): string {
   const held = researchAdmissionError(error);
   if (held) return held.message;
   if (error instanceof ResearchSelectionError) {
+    const limit = failureOutputLimitMessage(error);
     const diagnostic = error.diagnostic;
     const reasons = [...new Set(diagnostic.reasons.map(item => item.code))].join(", ");
-    return `${error.message}\nDiagnostic: ${diagnostic.id}${reasons ? ` (${reasons})` : ""}`;
+    return `${limit}${error.message}\nDiagnostic: ${diagnostic.id}${reasons ? ` (${reasons})` : ""}`;
   }
   if (!(error instanceof ResearchPlanningError)) return error instanceof Error ? error.message : String(error);
-  if (!error.scopeChoices.length) return error.message;
-  return error.message + "\n\n" + error.scopeChoices.map((choice, index) => `${index + 1}. ${choice}`).join("\n") +
+  const limit = failureOutputLimitMessage(error, error.language);
+  if (!error.scopeChoices.length) return limit + error.message;
+  return limit + error.message + "\n\n" + error.scopeChoices.map((choice, index) => `${index + 1}. ${choice}`).join("\n") +
     (error.language === "vi"
       ? "\n(Các đoạn từ yêu cầu gốc để chọn trọng tâm hẹp hơn; không phải câu hỏi mới hay lần thử tự động.)"
       : "\n(Excerpts from your original request for choosing a narrower focus; not a new question or an automatic retry.)");

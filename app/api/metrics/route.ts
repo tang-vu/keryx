@@ -39,7 +39,8 @@ export async function GET() {
     db.listPayments(1000),
     db.listSources(),
     db.dailySettled(14),
-    db.getFeedbackStats(),
+    // Feedback is optional engagement metadata, independent of settled metrics.
+    db.getFeedbackStats().catch(() => undefined),
     db.activationFunnel(30).catch(() => undefined),
   ]);
   const tagsById = new Map(sources.map((s) => [s.id, (s.tags ?? []).slice(0, 3)]));
@@ -47,8 +48,8 @@ export async function GET() {
   return Response.json({
     metrics: {
       ...metrics,
-      satisfactionRate: feedback.rate,
-      feedbackTotal: feedback.total,
+      satisfactionRate: feedback?.rate,
+      feedbackTotal: feedback?.total,
       activationFunnel,
     },
     leaderboard,

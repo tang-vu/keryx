@@ -65,7 +65,7 @@ function findExportModuleIds(registrations, exportName) {
 
 let runAgent;
 const forbidden = () => { throw new Error('No payment, synthesis or external effect is permitted'); };
-async function check(withCandidates) {
+async function check(withCandidates, originalQuestion) {
   let readAttempts = 0;
   const engine = {
     name: 'heuristic', decompose: async () => ['approval binding'],
@@ -77,26 +77,42 @@ async function check(withCandidates) {
     setCached: forbidden, recordPayment: forbidden, saveQueryRun: forbidden, discoverExternal: forbidden,
     decisionContext: async () => ({ memory: '', reputation: '' }), saveMemory: forbidden,
     notifyCitation: forbidden, alert: forbidden, activation: forbidden };
-  const deps = { engine, effects, db: { listSources: async () => [], listPublicReferences: async () => [] },
+  const feed = 'https://creator.example/releases.atom';
+  const deps = { engine, effects, db: { listSources: async () => originalQuestion ? [{
+    id: 'recency-fixture', name: 'Synthetic retained creator feed', url: 'https://creator.example',
+    rssUrl: feed, verified: true, fetchPrice: 0.005, tags: ['release'], authors: [],
+    walletAddress: '0x0000000000000000000000000000000000000001', createdAt: '2026-10-01T00:00:00Z',
+  }] : [], listPublicReferences: async () => [], getItems: forbidden },
     gateway: { mode: 'offline', ensureFunded: forbidden, payFetch: forbidden, payCitation: forbidden },
     webSearch: { search: async () => withCandidates ? [{ title: 'Original approval research',
       url: 'https://publisher.example/approval', snippet: 'Preview only, never evidence' }] : [] },
     readWebArticle: async () => { readAttempts++; throw new Error('Unavailable fixture page'); } };
-  const generator = runAgent({ question: 'Research approval binding', budget: 0.05,
-    researchMode: 'quick', origin: 'web' }, deps);
+  // The augmented question deliberately hides the start-anchored instruction. Only the
+  // trusted raw child may preserve it; retained item/cache and every payment effect forbid.
+  const generator = runAgent({ question: originalQuestion ? `Following on earlier context:\n${originalQuestion}` : 'Research approval binding',
+    ...(originalQuestion ? { originalQuestion } : {}), budget: 0.05,
+    researchMode: 'quick', origin: originalQuestion ? 'engine' : 'web' }, deps);
   const steps = [];
   let next = await generator.next();
   while (!next.done) { steps.push(next.value); next = await generator.next(); }
   const result = next.value;
   assert.equal(readAttempts, withCandidates ? 1 : 0);
   assert.equal(result.confidence.level, 'Low');
-  assert.match(result.answer, /^No supported answer:/);
+  assert.match(result.answer, originalQuestion ? /(?:No supported answer:|Chưa có câu trả lời được bằng chứng hỗ trợ:)/u : /^No supported answer:/u);
   assert.deepEqual(result.citations, []);
   assert.deepEqual(result.evidence, []);
   assert(result.claimCoverage.every(claim => claim.coverage === 0));
   assert.equal(result.totalSpent, 0);
   assert.equal(result.paymentAttempts, 0);
   assert.equal(result.trace.at(-1).phase, 'done');
+  if (originalQuestion) {
+    assert.match(result.answer, /^### (?:Newest-release limitation|Giới hạn bản phát hành mới nhất)\n/u);
+    assert(result.trace.some(step => step.detail?.sourceId === 'recency-fixture' && step.detail?.reason === 'newest-feed-observation-unqualified'));
+    assert.match(result.answer, /newest-entry criterion|mục mới nhất/iu);
+    assert(result.answer.includes(feed));
+    assert.deepEqual(result.decisions, []);
+  }
+  return result;
 }
 async function main() {
   const build = path.resolve(process.env.NEXT_DIST_DIR || '.next');
@@ -112,7 +128,13 @@ async function main() {
   ({ runAgent } = await runtime.m([...agentIds][0]).exports);
   assert.equal(typeof runAgent, 'function');
   await check(false); await check(true);
-  console.log('PASS: minified production run completes both no-source and failed-public-read branches with zero evidence/spend.');
+  const recency = [];
+  for (const question of ['Name the newest release in https://creator.example/releases.atom and state one change.',
+    'Hãy nêu bản phát hành mới nhất trong https://creator.example/releases.atom và nêu một thay đổi.']) {
+    recency.push(await check(false, question));
+  }
+  if (process.env.KERYX_RECENCY_RUN_FILE) fs.writeFileSync(process.env.KERYX_RECENCY_RUN_FILE, JSON.stringify(recency, null, 2) + '\n');
+  console.log('PASS: minified production no-source, failed-public-read and bilingual raw-follow-up recency branches retain gaps with zero evidence/spend.');
 }
 
 module.exports = { findExportModuleIds };

@@ -65,6 +65,11 @@ rail underneath it. Give it a question and a budget:
    to eligible accepted sources. Creator payouts are settled only when recorded
    payment evidence confirms settlement; multi-author rewards follow their payout split.
 
+Ordinary short-bullet requests can retain their requested count and supported
+output language when every target, reviewed sentence and qualifying excerpt fits
+the same grounded layout. Otherwise the answer keeps inspectable target sections
+and explains the unmet format. See [candidate scope and acceptance](docs/engineering/research-deliverable-quality-2026-10-08.md).
+
 The result is a working micro-economy: readers that pay by default, and writers that earn by
 being *useful* — not by being clicked.
 

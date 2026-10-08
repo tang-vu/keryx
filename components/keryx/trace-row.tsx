@@ -8,6 +8,8 @@
 
 import { Globe } from "lucide-react";
 import type { Decision, TraceStep } from "@/lib/types";
+import { isDecisionRecord } from "@/lib/research/decision-record";
+import { parseSelectionDiagnostic, type SelectionDiagnostic } from "@/lib/research/selection-diagnostic";
 import { ACTION_STYLES, PHASE_STYLES, fmtUsdc } from "./phase-style";
 import { cn } from "@/lib/utils";
 
@@ -15,9 +17,10 @@ export function TraceRow({ step }: { step: TraceStep }) {
   const ps = PHASE_STYLES[step.phase] ?? PHASE_STYLES.done;
   const Icon = ps.icon;
   const decision =
-    step.phase === "decide" && step.detail
-      ? (step.detail as Decision)
+    step.phase === "decide" && isDecisionRecord(step.detail)
+      ? step.detail
       : null;
+  const diagnostic = step.phase === "decide" ? parseSelectionDiagnostic(step.detail) : undefined;
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex gap-3 py-2.5">
@@ -48,12 +51,27 @@ export function TraceRow({ step }: { step: TraceStep }) {
 
         {decision ? (
           <DecisionBody decision={decision} />
+        ) : diagnostic ? (
+          <SelectionDiagnosticBody message={step.message} diagnostic={diagnostic} />
         ) : (
           <p className="mt-1 text-sm leading-snug text-ink-2">{step.message}</p>
         )}
       </div>
     </div>
   );
+}
+
+function SelectionDiagnosticBody({ message, diagnostic }: { message: string; diagnostic: SelectionDiagnostic }) {
+  const counts = diagnostic.counts;
+  return <div className="mt-1 space-y-2 text-sm leading-snug text-ink-2" data-testid="selection-diagnostic-row">
+    <p className="font-semibold">{diagnostic.outcome === "refused" ? "Source selection refused" : "Source selection partially withheld"}</p>
+    <p>{message}</p>
+    <p className="break-words font-mono text-[11px]">
+      {counts.candidateCount} candidates · {counts.targetCount} targets · {counts.decisionCount} proposal rows<br />
+      {counts.matchedCandidateCount} matched · {counts.validActionableCount} actionable · {counts.withheldCandidateCount} withheld · {counts.invalidRowCount} invalid rows
+    </p>
+    <p className="break-words text-xs">Reasons: {Array.from(new Set(diagnostic.reasons.map(reason => reason.code))).join(", ")}{diagnostic.truncated ? " (additional reasons omitted)" : ""}</p>
+  </div>;
 }
 
 function DecisionBadge({ decision }: { decision: Decision }) {

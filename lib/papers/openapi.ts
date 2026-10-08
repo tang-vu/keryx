@@ -11,7 +11,7 @@ export const paperOpenApiSchemas = {
       publishedYear: { type: "integer", minimum: 1000, maximum: 2999 }, venue: { ...text, maxLength: 300 }, doi: text,
       arxivId: { ...text, description: "Exact observed version, never a latest-version substitution." },
       repository: { ...text, enum: ["arxiv", "openreview", "pmlr", "acl-anthology", "crossref"] },
-      url: uri, metadataUrl: uri, metadataObservedAt: { ...text, format: "date-time" },
+      url: uri, metadataUrl: { ...uri, description: "Official repository provenance. Crossref works links bind the same exact DOI; arXiv abstract/API links bind the same exact version." }, metadataObservedAt: { ...text, format: "date-time" },
       publicationKind: { ...text, enum: ["preprint", "conference-paper", "journal-article", "unknown"] }, peerReview: { ...text, const: "unknown" },
       links: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["label", "url"], properties: { label: { ...text, enum: ["PDF", "Repository", "Reviews"] }, url: uri } } },
     },
@@ -35,7 +35,7 @@ export const paperOpenApiPaths = {
     operationId: "browseResearchPapers", summary: "Browse or explicitly search paper bibliography", security: [],
     description: "Default: checked-in metadata only, no database, model, original read, citation or payment. search=1 sends an explicit query/DOI to fixed arXiv/Crossref endpoints: at most two requests, six records per response. Unknown peer review; linked PDFs remain unread. Author/year/DOI filter the sample. No pagination or retries. Cache-Control: no-store.",
     parameters: [
-      { in: "query", name: "q", schema: { ...text, maxLength: 120 }, description: "Literal starter metadata or explicit live title/topic/identifier query." },
+      { in: "query", name: "q", schema: { ...text, maxLength: 120 }, description: "Literal starter metadata or explicit live title/topic/identifier query. Standalone versioned arXiv ID, arXiv prefix and official abs/PDF/HTML URL normalize to the exact ID for catalog lookup." },
       { in: "query", name: "author", schema: { ...text, maxLength: 120 }, description: "All literal terms must match one observed contributor name." },
       { in: "query", name: "year", schema: { ...text, pattern: "^[12][0-9]{3}$" } },
       { in: "query", name: "doi", schema: { ...text, maxLength: 200 }, description: "Exact DOI or canonical doi.org URL. With search=1, takes lookup precedence over q." },

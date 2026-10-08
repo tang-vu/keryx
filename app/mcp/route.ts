@@ -17,7 +17,7 @@ import { createRemoteMcpServer, type RemoteMcpAccess } from "@/lib/mcp/remote-se
 import { clientIp } from "@/lib/rate-limit";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { readMcpBody } from "@/lib/mcp/request-body";
-import { isAllowedMcpOrigin, normalizeMcpClient, researchCallCount } from "@/lib/mcp/route-helpers";
+import { isAllowedMcpOrigin, isPaperLookupCall, normalizeMcpClient, researchCallCount } from "@/lib/mcp/route-helpers";
 import { readResearchAvailability } from "@/lib/research/availability";
 
 export const runtime = "nodejs";
@@ -52,7 +52,13 @@ function jsonRpcHttpError(req: NextRequest, status: number, code: number, messag
 async function resolveAccess(
   req: NextRequest,
   researchCall: boolean,
+  paperLookupOnly: boolean,
 ): Promise<RemoteMcpAccess | Response> {
+  if (paperLookupOnly) return {
+    budgetCap: config.anonMaxBudget,
+    clientChannel: normalizeMcpClient(req.nextUrl.searchParams.get("client")),
+    paperCaller: clientIp(req), signal: req.signal,
+  };
   const heldResponse = () => {
     const availability = readResearchAvailability();
     return availability.state === "paused" ? jsonRpcHttpError(req, 503, -32000, availability.message,
@@ -78,6 +84,7 @@ async function resolveAccess(
       budgetCap: config.a2aMaxBudget,
       actor: key.walletAddress.toLowerCase(),
       clientChannel: normalizeMcpClient(req.nextUrl.searchParams.get("client")),
+      paperCaller: clientIp(req), signal: req.signal,
     };
   }
 
@@ -89,6 +96,7 @@ async function resolveAccess(
   return {
     budgetCap: config.anonMaxBudget,
     clientChannel: normalizeMcpClient(req.nextUrl.searchParams.get("client")),
+    paperCaller: clientIp(req), signal: req.signal,
   };
 }
 
@@ -111,7 +119,7 @@ async function handle(req: NextRequest): Promise<Response> {
       "A request may contain at most one treasury-funded research call.",
     );
   }
-  const access = await resolveAccess(req, researchCalls === 1);
+  const access = await resolveAccess(req, researchCalls === 1, isPaperLookupCall(parsedBody));
   if (access instanceof Response) {
     const headers = new Headers(access.headers);
     corsHeaders(req).forEach((value, key) => headers.set(key, value));

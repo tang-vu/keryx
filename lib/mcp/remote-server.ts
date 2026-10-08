@@ -16,6 +16,8 @@ import { readOperatorStatus } from "../business-operator/status";
 import { getDb } from "../db";
 import { assertOrdinaryResearchAvailable, readResearchAvailability } from "../research/availability";
 import { researchAdmissionError } from "../research/availability-contract";
+import { createPaperLookupHandler, paperLookupToolOptions } from "../papers/lookup";
+import { readHostedPaperLookup } from "../papers/hosted-lookup";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
@@ -23,6 +25,9 @@ export interface RemoteMcpAccess {
   actor?: string;
   /** Self-declared setup URL channel. Telemetry only; never identity or payment authority. */
   clientChannel: McpClientChannel;
+  /** Request-bound metadata admission identity and cancellation; never payment authority. */
+  paperCaller?: string;
+  signal?: AbortSignal;
 }
 
 type ResearchRunner = typeof collectRun;
@@ -82,10 +87,13 @@ export function createRemoteMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: "keryx",
-    version: "0.3.3",
+    version: "0.3.6",
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
+
+  server.registerTool("paper_lookup", paperLookupToolOptions,
+    createPaperLookupHandler(input => readHostedPaperLookup(input, access.paperCaller ?? "unknown", access.signal)));
 
   server.registerTool(
     "research",
@@ -93,7 +101,8 @@ export function createRemoteMcpServer(
       title: "Research with Keryx",
       description:
         "Research a question under a USDC creator-payment budget. Keryx selects sources, pays " +
-        "access tolls and weighted citation rewards on the configured Arc network, then returns qualified source excerpts and a receipt. Complete synthesis and per-assertion entailment remain unverified. This remote surface uses Keryx's treasury; anonymous research is sponsored, not caller-funded usage. Public research may send your question to our search provider. The source USDC budget is separate from model and search operating costs.",
+        "access tolls and weighted citation rewards on the configured Arc network, then returns qualified source excerpts and a receipt. Complete synthesis and per-assertion entailment remain unverified. This remote surface uses Keryx's treasury; anonymous research is sponsored, not caller-funded usage. Public research may send your question to our search provider. The source USDC budget is separate from model and search operating costs. " +
+        "For title, ordered authors, year, journal, DOI or exact arXiv version without reading paper findings, use free paper_lookup with an exact identifier instead.",
       inputSchema: {
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
         budget: z

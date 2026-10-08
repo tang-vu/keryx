@@ -6,7 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { APIConnectionError, APIConnectionTimeoutError } from "@anthropic-ai/sdk/error";
 import { config } from "../config";
 import { extractJson, JsonChatEngine } from "./json-chat-engine";
-import { ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
+import { ReasoningOutputLimitError, ReasoningTransportError } from "./reasoning-engine";
 import { assertOrdinaryCanarySupplierAdmission } from "../business-operator/canary-policy";
 
 export class AnthropicEngine extends JsonChatEngine {
@@ -48,11 +48,7 @@ export class AnthropicEngine extends JsonChatEngine {
     // Same rule as the OpenAI-compatible transport: a reply stopped by the token ceiling is
     // truncated JSON, and half an object must fail rather than read as an answer.
     if (msg.stop_reason === "max_tokens") {
-      const err = new ReasoningOutputValidationError(
-        `LLM reply hit the ${maxTokens}-token ceiling before closing its JSON`,
-      ) as Error & { status?: number };
-      err.status = 503;
-      throw err;
+      throw new ReasoningOutputLimitError(maxTokens);
     }
     const text = msg.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")

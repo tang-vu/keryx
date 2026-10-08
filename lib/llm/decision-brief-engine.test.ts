@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { JsonChatEngine } from "./json-chat-engine";
+import { ReasoningOutputLimitError } from "./reasoning-engine";
 
 class Engine extends JsonChatEngine {
   readonly name = "fixture";
@@ -25,6 +26,21 @@ const input = { question: "How should retries work?", subClaims: ["Are duplicate
   gathered: [{ sourceId: "q", sourceName: "Queue", marker: "S1", text: "The queue permits duplicates. Handlers must tolerate duplicates." }] };
 
 describe("two-pass bounded decision-brief engine", () => {
+  it.each(["generation", "review"] as const)("retains an explicit %s output stop without exposing a brief or retrying", async stage => {
+    class LimitEngine extends Engine {
+      callsMade = 0;
+      protected async chatJson(model: string, system: string, user: string) {
+        if (++this.callsMade === (stage === "generation" ? 1 : 2)) throw new ReasoningOutputLimitError(4096);
+        return super.chatJson(model, system, user);
+      }
+    }
+    const engine = new LimitEngine(), result = await engine.synthesize(input);
+    expect(engine.callsMade).toBe(stage === "generation" ? 1 : 2);
+    expect(result.synthesisOutputLimit).toEqual({ stage, outputTokenLimit: 4096 });
+    expect(result.synthesisFailure).toBe(stage);
+    expect(result.answer).toBe(""); expect(result.evidence).toEqual([]);
+    expect(result.decisionBrief).toBeUndefined();
+  });
   it("reviews the complete immutable packet and exposes only a marker envelope before delivery", async () => {
     const engine = new Engine(); const result = await engine.synthesize(input);
     expect(engine.requests).toHaveLength(2); expect(result.evidenceReview).toBe("completed");

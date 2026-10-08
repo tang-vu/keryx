@@ -72,8 +72,9 @@ The October 8 [source-recency proposal](engineering/source-recency-2026-10-08.md
 adds the observed newest-release failure in issue #217 to B06/B07. It stages
 source-scoped eligibility before an article toll, explicitly retained-set ordering,
 and a qualifying current-feed observation. Sorting publication dates alone cannot
-establish current newest. The proposal changes no runtime or spending authority;
-implementation, caller parity and useful-answer acceptance remain open.
+establish current newest. The narrow Stage1 safety candidate withholds affected
+retained articles and reports unresolved original scope before article selection;
+qualified observation, useful delivery and actual release acceptance remain open.
 
 October 4 follow-up: [B06/B07 candidate and measured limits](engineering/research-quality-2026-10-04.md)
 records 22/22 public URL captures and 18/18 offline pipeline completions, targeted

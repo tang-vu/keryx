@@ -39,7 +39,7 @@ export function ResearchPrivateResult({ job }: { job: PrivateWorkspaceResult }) 
       </li>)}</ul></div>}
       {!!job.result.claimCoverage?.length && <div><h4 className="font-display text-2xl">Claim evidence</h4><ol className="mt-3 space-y-3">{job.result.claimCoverage.map((claim, i) => <li key={i} className="border border-line p-4">
         <p className="font-serif">{claim.claim}</p><p className="mt-2 text-xs">{(claim.coverage * 100).toFixed(1)}% evidence coverage</p>
-        {job.result!.evidence?.filter(item => item.claimIndex === claim.claimIndex).map((item, j) => <blockquote key={j} className="mt-3 border-l border-line pl-3 font-serif text-sm"><p className="whitespace-pre-wrap break-words">“{item.quote}”</p><cite>{item.sourceName}</cite></blockquote>)}
+        {job.result!.evidence?.filter(item => item.claimIndex === claim.claimIndex).map((item, j) => <blockquote key={j} className="mt-3 border-l border-line pl-3 font-serif text-sm"><p className="whitespace-pre-wrap [overflow-wrap:anywhere]">“{item.quote}”</p><cite>{item.sourceName}</cite></blockquote>)}
       </li>)}</ol></div>}
       <p className="text-xs text-ink-3">Server-reported research and payment evidence. This view is not a portable verified receipt. Evidence coverage does not certify factual correctness.</p>
     </>}

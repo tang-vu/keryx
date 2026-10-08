@@ -17,8 +17,13 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { askKeryx, getStatus, meta, recoverKeryx } from "./keryx-buyer.mts";
 import { reasoningServingText } from "../lib/llm/reasoning-telemetry.ts";
+import { createPaperLookupHandler, paperLookupToolOptions } from "../lib/papers/lookup.ts";
+import { fetchPaperLookup } from "../lib/papers/client.ts";
+import { MAX_ASK_QUESTION_CHARS } from "../lib/ask-input.ts";
 
 const server = new McpServer({ name: "keryx", version: packageInfo.version });
+server.registerTool("paper_lookup", paperLookupToolOptions,
+  createPaperLookupHandler(input => fetchPaperLookup(meta.baseUrl, input)));
 import { registerMonthlyDiscovery } from "../lib/monthly/mcp-discovery.ts";
 import { fetchMonthlyQuote } from "../lib/monthly/client.ts";
 import { registerOperatorDiscovery } from "../lib/business-operator/mcp.ts";
@@ -36,9 +41,11 @@ server.registerTool(
       `${meta.feeUsdc} USDC service fee + ${meta.defaultBudgetUsdc} USDC creator budget; the POST body sets the exact price. ` +
       `Paid from your own funded ${meta.networkLabel} wallet (${meta.network}; run keryx_wallet_status first). ` +
       `Public research may send your question to Keryx's search provider. The source USDC budget is separate from model and search operating costs. ` +
-      `Use when you want a grounded, source-cited answer AND the creators paid for their work.`,
+      `Use when you want a grounded, source-cited answer AND the creators paid for their work. ` +
+      `For title, ordered authors, year, journal, DOI or exact arXiv version without reading paper findings, use free paper_lookup with an exact identifier instead.`,
     inputSchema: {
-      question: z.string().min(3).describe("The research question to ask Keryx."),
+      question: z.string().max(8192).trim().min(3).max(MAX_ASK_QUESTION_CHARS)
+        .describe(`The research question to ask Keryx (3–${MAX_ASK_QUESTION_CHARS} characters after trimming).`),
       budget: z
         .number()
         .positive()

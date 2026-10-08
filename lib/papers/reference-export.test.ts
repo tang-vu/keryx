@@ -1,14 +1,34 @@
 import { describe, expect, it } from "vitest";
 import { PAPER_CATALOG } from "./catalog";
-import { paperReferencesRis } from "./reference-export";
+import { paperReferencesBibtex, paperReferencesRis } from "./reference-export";
 import type { PaperRecord } from "./types";
 
 const paper = PAPER_CATALOG[0];
 
 describe("saved bibliography RIS", () => {
+  it("exports literal BibTeX names, provenance and exact identifiers without inferred surname or read authority", () => {
+    const record = { ...paper, authors: ["A Research and Methods Group", "Named {Author}"], authorCount: 2, authorsTruncated: false };
+    const { content, count } = paperReferencesBibtex([record, record]);
+    expect(count).toBe(1);
+    expect(content).toContain("author = {{A Research and Methods Group} and {Named \\{Author\\}}}");
+    expect(content).toContain(`eprint = {${paper.arxivId}}`); expect(content).toContain("archivePrefix = {arXiv}");
+    expect(content).toContain("no Keryx read, citation or settlement evidence");
+    expect(content).toContain("Peer review unknown"); expect(content).toContain("Withdrawal/replacement status unknown");
+    expect(content).not.toContain("Cited by Keryx"); expect(paperReferencesBibtex([])).toEqual({ count: 0, content: "" });
+  });
+
+  it("escapes BibTeX control characters and record delimiters while keeping missing fields absent", () => {
+    const { publishedYear: _year, venue: _venue, doi: _doi, ...minimal } = paper;
+    const title = "A {Title}, % \\ end\n@article{injected,";
+    const content = paperReferencesBibtex([{ ...minimal, title, authors: [], authorCount: 0, authorsTruncated: false }]).content;
+    expect(content.match(/^@/gm)).toHaveLength(1);
+    expect(content).toContain("\\{Title\\}"); expect(content).toContain("\\%"); expect(content).toContain("\\textbackslash{}");
+    for (const name of ["author", "year", "doi", "journal", "booktitle"]) expect(content).not.toContain(`  ${name} = `);
+    expect(() => paperReferencesBibtex([{ ...paper, metadataUrl: "https://export.arxiv.org/api/query?id_list=2005.11401v9" }])).toThrow("same exact version");
+  });
   it("preserves exact versions, first snapshots and author/provenance limits without inventing read evidence", () => {
     const arxivId = paper.arxivId!.replace(/v\d+$/, "v99");
-    const version = { ...paper, arxivId, url: `https://arxiv.org/abs/${arxivId}` };
+    const version = { ...paper, arxivId, url: `https://arxiv.org/abs/${arxivId}`, metadataUrl: `https://export.arxiv.org/api/query?id_list=${arxivId}` };
     const incomplete = { ...paper, authors: ["A. Person"], authorCount: 4, authorsTruncated: true };
     const result = paperReferencesRis([incomplete, { ...incomplete, title: "Later snapshot" }, version]);
     expect(result.count).toBe(2);

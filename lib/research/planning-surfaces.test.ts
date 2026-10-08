@@ -28,7 +28,7 @@ import { POST as completion } from "@/app/api/v1/chat/completions/route";
 import { createRemoteMcpServer } from "../mcp/remote-server";
 import { boundedResearchPlan } from "../llm/research-plan";
 import { MAX_RESEARCH_TARGETS } from "../llm/research-target-limits";
-import { ReasoningOutputValidationError } from "../llm/reasoning-engine";
+import { ReasoningOutputValidationError, ReasoningOutputLimitError } from "../llm/reasoning-engine";
 
 const RAW_PROVIDER_OUTPUT = "RAW_PROVIDER_PLAN_NOT_CALLER_TEXT";
 const step: TraceStep = { phase: "decompose", message: "Preparing a bounded research plan", ts: 1 };
@@ -91,7 +91,10 @@ async function refusal(surface: Surface, question: string): Promise<{ message: s
   expect(chunks).toHaveLength(3);
   expect(chunks[0].choices[0].delta).toEqual({ role: "assistant" });
   expect(chunks[1].choices[0].delta.reasoning_content).toContain("Preparing a bounded research plan");
-  for (const chunk of chunks) { expect(chunk.choices[0].finish_reason).toBeNull(); expect(chunk.keryx).toBeUndefined(); }
+  for (const chunk of chunks) {
+    expect(chunk.choices[0].finish_reason).toBeNull(); expect(chunk.keryx).toBeUndefined();
+    expect(chunk).not.toHaveProperty("error");
+  }
   const message = chunks[2].choices[0].delta.content!;
   expect(message).toMatch(/^\n\n\[keryx error\] /);
   return { message, wire };
@@ -133,6 +136,24 @@ afterEach(() => {
 });
 
 describe("terminal planning refusals reach the original caller", () => {
+  it.each(surfaces)("%s retains an observed planning ceiling without retries, receipts or private output", async surface => {
+    mocks.provider.mockRejectedValue(new ReasoningOutputLimitError(2048));
+    // A transport ID may contain status-like digits; it cannot turn this typed refusal
+    // into an upstream HTTP failure. Replay the actual CI counterexample deterministically.
+    const id = "b2bb9432-db5b-4c87-a891-f6752f85038c";
+    const idSpy = surface === "openai-stream" ? vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(id) : undefined;
+    try {
+      const { message, wire } = await refusal(surface, englishQuestion);
+      singleDispatch(surface, englishQuestion);
+      expect(message).toContain("2,048-token output limit");
+      expect(message).not.toContain("saved evidence");
+      expect(message).not.toContain("503");
+      expect(wire).not.toContain(RAW_PROVIDER_OUTPUT);
+      if (surface === "openai-stream") {
+        expect(packets(wire).map(event => event.data.id)).toEqual(Array(3).fill(`chatcmpl-${id}`));
+      }
+    } finally { idSpy?.mockRestore(); }
+  });
   it.each(surfaces)("%s preserves qualified caller excerpts without a completed report or retry", async surface => {
     const { message, wire } = await refusal(surface, englishQuestion);
     singleDispatch(surface, englishQuestion);

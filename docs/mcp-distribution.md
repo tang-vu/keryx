@@ -1,5 +1,38 @@
 # MCP package distribution
 
+## Coordinated reading release candidate — October 8, 2026
+
+App0.27.36 combines the pending reading/client stack with current main. Hosted
+MCP0.3.5, stdio0.4.9 and desktop0.4.10 are source candidates; earlier checkpoints
+and dated records below do not establish present delivery. Follow the
+[aggregate release and surface gates](engineering/research-reading-release-2026-10-08.md).
+Final-source packed consumers, npm integrity/provenance, Registry and installer/
+hosted readbacks remain required. No caller custody or policy activation follows.
+
+## Paid-question preflight candidate - October 8, 2026
+
+App 0.27.32/stdio MCP 0.4.9 align new paid questions with the API's shared 2000-character
+canonical bound before custody/funding. The package, lockfile and repository-owned
+Registry descriptor select 0.4.9 together. The existing operational TypeScript
+check now includes the stdio entry point, buyer and buyer regressions, so ordinary
+CI checks their imported graph. Hosted MCP 0.3.5 and desktop 0.4.10 retain the parent
+candidate's roles. This does not establish package, registry or installer publication;
+packed acceptance, coordinated release and exact-source public readback remain
+gates. See [scope and acceptance](engineering/mcp-question-preflight.md).
+
+## Free bibliography candidate - October 8, 2026
+
+Candidate app0.27.25/hosted MCP0.3.5 and stdio0.4.8 add shared paper_lookup with
+a retained-catalog default, explicit provider search and keyless GET transport.
+Desktop0.4.10 retains its reduced private Operator role. Public bibliography v1,
+human CLI and existing research/payment adapters retain their documented roles.
+Packed consumer and CI acceptance precede publication; registry/npm bytes, hosted
+health and installer readback remain separate gates. See
+[scope and release boundaries](engineering/free-paper-lookup.md). Earlier dated
+observations below remain historical.
+
+## Earlier dated observations
+
 The **0.26.20 source-selection candidate** adds hosted request-local diagnostic
 text on terminal `isError` results; remote protocol stays **0.3.1**. Its actual
 stdio runtime graph retains all 31 canonical Git input blobs from 0.26.18, so

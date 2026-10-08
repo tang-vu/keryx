@@ -4,6 +4,7 @@ import { privateReasoningEngine } from "./private-engine";
 import { capturePricePolicy, usageCostBounds } from "../economics/provider-cost-policy";
 import { MemoryReasoningCircuitStore } from "./reasoning-circuit-store";
 import { ResilientEngine } from "./resilient-engine";
+import { ReasoningOutputLimitError } from "./reasoning-engine";
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.resetModules(); });
 const model = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
@@ -114,8 +115,12 @@ it("surfaces truncated JSON and quota exhaustion rather than fabricated valid de
   vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ choices: [{ message: { content: '{', }, finish_reason: "length" }], usage: { prompt_tokens: 1, completion_tokens: 1024 } })))
     .mockResolvedValueOnce(new Response("quota exhausted", { status: 429 })));
   const transport = engine();
-  await expect(transport.request()).rejects.toMatchObject({ status: 503 });
+  const failure = await transport.request().catch(error => error);
+  expect(failure).toBeInstanceOf(ReasoningOutputLimitError);
+  expect(failure.outputTokenLimit).toBe(1024);
+  expect(failure).not.toHaveProperty("status");
   expect(transport.usage).toHaveLength(1);
+  expect(transport.usage[0]).toMatchObject({ inputTokens: 1, outputTokens: 1024 });
   await expect(transport.request()).rejects.toMatchObject({ status: 429 });
 });
 

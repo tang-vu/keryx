@@ -1,5 +1,5 @@
 import type { ScholarlyMetadata } from "../types";
-import { cleanText, fetchMetadata, type MetadataFetch } from "./provider";
+import { completeMetadataText as cleanText, fetchMetadata, type MetadataFetch } from "./provider";
 import { normalizeDoi } from "./doi";
 
 function object(value: unknown): Record<string, unknown> {
@@ -7,10 +7,16 @@ function object(value: unknown): Record<string, unknown> {
 }
 function first(value: unknown) { return Array.isArray(value) ? value[0] : undefined; }
 
-export function crossrefRecord(value: unknown, retrievedAt: string): ScholarlyMetadata | undefined {
-  const work = object(value), doi = normalizeDoi(typeof work.DOI === "string" ? work.DOI : ""), title = cleanText(first(work.title));
-  if (!doi || !title) return;
-  const parts = first(object(work.published)["date-parts"]);
+/** Preserve only complete provider name parts; no guessed surname or shifted position. */
+export function crossrefContributor(value: unknown): NonNullable<ScholarlyMetadata["authorNames"]>[number] | undefined {
+  const person = object(value), literal = cleanText(person.name), given = cleanText(person.given), family = cleanText(person.family);
+  if (typeof person.name === "string" && person.name.trim()) return literal ? { literal } : undefined;
+  const full = cleanText([person.given, person.family].filter(part => typeof part === "string").join(" "));
+  return full && (given || family) ? { given, family } : undefined;
+}
+
+export function crossrefPublishedDate(value: unknown): string | undefined {
+  const parts = first(object(value)["date-parts"]);
   let publishedDate: string | undefined;
   if (Array.isArray(parts) && parts.length >= 1 && parts.length <= 3 && parts.every(Number.isInteger)) {
     const [year, month, day] = parts as number[];
@@ -20,10 +26,16 @@ export function crossrefRecord(value: unknown, retrievedAt: string): ScholarlyMe
       if (day === undefined || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) === date) publishedDate = date;
     }
   }
+  return publishedDate;
+}
+
+export function crossrefRecord(value: unknown, retrievedAt: string): ScholarlyMetadata | undefined {
+  const work = object(value), doi = normalizeDoi(typeof work.DOI === "string" ? work.DOI : ""), title = cleanText(first(work.title), 1000);
+  if (!doi || !title) return;
+  const publishedDate = crossrefPublishedDate(work.published);
   const contributors = Array.isArray(work.author) ? work.author : [];
   const authorNames = contributors.slice(0, 50).flatMap<NonNullable<ScholarlyMetadata["authorNames"]>[number]>(author => {
-    const person = object(author), literal = cleanText(person.name), given = cleanText(person.given), family = cleanText(person.family);
-    return literal ? [{ literal }] : given || family ? [{ given, family }] : [];
+    const name = crossrefContributor(author); return name ? [name] : [];
   });
   const authors = authorNames.map(name => name.literal ?? [name.given, name.family].filter(Boolean).join(" "));
   return { provider: "crossref", recordUrl: `https://api.crossref.org/works/${encodeURIComponent(doi)}`,

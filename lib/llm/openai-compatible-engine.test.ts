@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { OpenAICompatibleEngine, type OpenAICompatibleOpts } from "./openai-compatible-engine";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+import { ReasoningOutputLimitError } from "./reasoning-engine";
 
 class TransportEngine extends OpenAICompatibleEngine {
   request(model = "deepseek-v4-flash") { return this.chatJson(model, "Return JSON", "test", 2048); }
@@ -67,7 +68,20 @@ describe("bounded provider JSON requests", () => {
       usage: { prompt_tokens: 20, completion_tokens: 2048 },
     })));
     const engine = new TransportEngine({ provider: "deepseek", model: "deepseek-v4-flash", name: "test", baseUrl: "https://provider.test", apiKey: "test-only" });
-    await expect(engine.request()).rejects.toMatchObject({ status: 503 });
+    const failure = await engine.request().catch(error => error);
+    expect(failure).toBeInstanceOf(ReasoningOutputLimitError);
+    expect(failure.outputTokenLimit).toBe(2048);
+    expect(failure).not.toHaveProperty("status");
+    expect(engine.usage[0].outputTokens).toBe(2048);
+  });
+
+  it("does not infer an output-limit stop from counters equal to the ceiling", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      choices: [{ message: { content: '{"ok":true}' }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 20, completion_tokens: 2048 },
+    })));
+    const engine = new TransportEngine({ name: "test", baseUrl: "https://provider.test", apiKey: "test-only" });
+    expect(await engine.request()).toEqual({ ok: true });
     expect(engine.usage[0].outputTokens).toBe(2048);
   });
 });

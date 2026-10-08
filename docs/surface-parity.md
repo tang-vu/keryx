@@ -1,5 +1,38 @@
 # Supported-surface release parity
 
+## Issue-resolution source candidate - October 8, 2026
+
+[App0.27.41](engineering/open-issues-2026-10-08.md) retains the reading stack
+and adds enumerated context, one canonical document channel, evidence-only
+ordinary generation and explicit metadata cards/exports. Hosted MCP0.3.6 and
+stdio0.4.10 are source candidates; desktop0.4.10 retains its existing reduced
+role. It inherits current main38/3b839ccd after the separate Operator owner's merge;
+this session preserves that owner's admitted window and does not deploy or activate it.
+Final source/release/distribution and useful live acceptance remain
+separate gates; no publication or synchronized installed-client claim is made.
+The aggregate also retains PR241's requested presentation, quote menu and semantic
+list renderer changes and its post-trial deterministic repair. PR240's separately
+active Operator source window remains under its owner's control.
+
+## Deliverable quality successor — October 8, 2026
+
+App0.27.39 retains the reviewed reading aggregate and selection diagnostics while
+adding ordinary evidence/presentation improvements. Its
+[surface and acceptance record](engineering/research-deliverable-quality-2026-10-08.md)
+supersedes the active app36/37 release target. Existing package/installer gates and
+private operational source windows remain separate; no synchronized delivery is
+claimed from this source candidate.
+
+## Coordinated reading release candidate — October 8, 2026
+
+App0.27.36 integrates the reading/client stack with current main. Hosted MCP0.3.5,
+stdio0.4.9 and desktop0.4.10 remain source candidates. The
+[aggregate release record](engineering/research-reading-release-2026-10-08.md)
+maps all applicable surfaces, exact feature-tip inclusion and independent
+operational/distribution/usefulness gates. Earlier versions and dated observations
+below remain historical; final source, deployed and published identities require
+current readback. Existing custody and payer roles remain unchanged.
+
 ## Literature workspace candidate, October 7, 2026
 
 Web gains a local paper shortlist, review focus, personal screening/notes,
@@ -474,3 +507,16 @@ old-writer refusal. Desktop/MCP 0.4.3 are refreshed source candidates; extension
 0.1.1 remains a thin chat adapter and remote MCP keeps protocol identity 0.2.0.
 Actual production commit, accepted installer/tarball manifests, npm publication and
 CI must be recorded separately before synchronized delivery is claimed.
+
+## Free bibliography candidate - October 8, 2026
+
+App0.27.25 adds an Ask link to free exact-identifier metadata and shared remote/
+stdio paper_lookup. Public API and human papers CLI retain bibliography v1;
+standalone versioned arXiv prefixes/official URLs now normalize for local lookup.
+Hosted MCP0.3.5 and stdio0.4.8 are candidate versions. Desktop0.4.10 retains the
+private Operator role; A2A/OpenAI/buyer research remain research surfaces and can
+use /api/papers first. Extensions and bots retain thin hosted handoffs. No new
+metadata body, citation, signer or scheduler reaches reduced native/Rust roles.
+Current production health, npm/Registry/installer publication and installed-client
+source require separate readback; candidate source and synthetic tests do not
+claim synchronized delivery. See [release boundaries](engineering/free-paper-lookup.md).

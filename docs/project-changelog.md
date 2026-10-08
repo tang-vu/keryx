@@ -1,5 +1,64 @@
 # Keryx Project Changelog
 
+### Repair document selection and bounded research output (2026-10-08, v0.27.41 candidate)
+
+- Retain nearby short enumerated rules and defaults at exact source offsets.
+- Choose one useful public or registered channel per canonical document, with
+  separate authoritative access and evidence-qualified creator reward identities.
+- Generate quote-bound evidence without duplicating a discarded ordinary prose
+  draft, using the existing output ceiling and independent review.
+- Keep proposed classroom activities/format distinct from historical NASA claims.
+- Retain supported requested language and short bullet layout while preserving
+  every target, excerpt and cited contribution, including the PR241 presentation changes.
+- Supply explicit bibliographic field provenance, ordered authors and reusable
+  references in the free metadata lookup, with optional English/French/Vietnamese labels.
+
+The complete preceding reading/client stack and current main38 remain included.
+This session does not advance main or deploy over the active Operator window.
+Useful live answers, original
+admission, CI/review, package/installer delivery and deployment are pending.
+See [all 17 issue dispositions and release gates](engineering/open-issues-2026-10-08.md).
+
+### Retain short enumerated evidence and requested presentation (2026-10-08, v0.27.39 candidate)
+
+Preserve short visible list siblings in bounded evidence selection, including the
+retained MDN submit/default rule. Ordinary reviewed answers can retain supported
+requested language and short bullet layout while preserving every target,
+excerpt and cited contribution. Missing review or count mismatch keeps gaps and
+an unmet-format notice. Private original fulfillment and payment authority remain
+unchanged. A bounded retained-body model trial recovered all four MDN facts but
+failed the requested format. A deterministic repair groups its five unchanged
+sentence/excerpt pairs into three items. The failed original stays retained;
+local replay does not establish a fresh production deliverable or deployment.
+See [scope and release gates](engineering/research-deliverable-quality-2026-10-08.md).
+
+### Explain refused source choices in the decision log (2026-10-08, v0.27.37 candidate)
+
+Source-selection diagnostics retain their explanation and inspectable counts.
+They no longer appear as unnamed SKIP choices with NaN expected value. Streamed
+and final decision lists accept valid source decisions; the failure download and
+existing read/payment safeguards remain. See
+[scope and acceptance](engineering/selection-diagnostic-trace.md).
+
+### Coordinate the research reading release (2026-10-08, v0.27.36 candidate)
+
+Release pending reading/client improvements together with current main, preserving
+their feature history and one increasing app version. This includes recency
+withholding, output-limit notices, free paper lookup, headings, MCP preflight,
+confirmed feedback, HTML context and readable excerpts. Earlier versions below
+are source checkpoints. Deployment, package/installer delivery and independent
+usefulness remain open; no policy is activated.
+See [release provenance and gates](engineering/research-reading-release-2026-10-08.md).
+
+### Read stored excerpts on small screens (2026-10-08, v0.27.36 candidate)
+
+Quote views retain stored line breaks and wrap long unbroken text. Citation Evidence
+actions have larger touch targets and contextual accessible names. Public/private
+results keep their recorded content, evidence and payment status unchanged.
+The research introduction uses less mobile space so the question, free-paper
+handoff, source cap and full Ask action fit a 320x640 first viewport.
+See [browser acceptance and surface roles](engineering/evidence-readability-2026-10-08.md).
+
 ### Review each retained Operator premise against its exact evidence (2026-10-08, v0.27.38 candidate)
 
 The private original-answer review now receives a fixed factual question for each
@@ -26,6 +85,88 @@ See [the private recovery contract](engineering/operator-original-continuation.m
   metrics, creator exports and shared API/MCP/CLI/answer renderers. Existing browser
   grants and fixed-price A2A/private jobs receive no additional service charge.
 - [Policy, supported surfaces and remaining release gates](sponsored-research-trial.md).
+
+### Preserve HTML evidence context (2026-10-08, v0.27.34 candidate)
+
+Observed preformatted regions now retain wrapped conditions and examples in
+selection, quotations and review context. Explicitly quoted short heading names
+can retrieve actual HTML headings and following prose across languages, while
+keeping room for lexical targets. TOC labels and CSS classes do not become
+heading roles. Exact text-bound metadata is internal; historical sources retain
+their prior behavior. Context and worker bounds remain, with optional role
+sampling labeled when limited. Useful live answers and deployment remain gates.
+See [scope and acceptance](engineering/html-evidence-context-2026-10-08.md).
+
+### Confirm report feedback honestly (2026-10-08, v0.27.33 candidate)
+
+Helpful controls now retain observed counts while sending and select a rating only
+after the server confirms it. Failed responses show that the vote may have been
+recorded and prevent another append-only attempt in the mounted report. Report
+changes isolate late responses. A 15-second observation deadline ends stalled
+requests without implying a write was undone. Legacy Supabase feedback insert/read
+errors propagate to the API instead of falsely confirming or publishing zero votes.
+The metrics endpoint omits unavailable optional feedback fields while preserving
+successfully read core metrics.
+Named keyboard controls, status announcements and
+44px touch targets reach the shared report surface. Anonymous totals still do not
+identify unique readers or prove traction. See [scope and acceptance](engineering/report-feedback-confirmation.md).
+
+### Validate a paid MCP question before funding (2026-10-08, v0.27.32 candidate)
+
+The caller-funded MCP buyer now checks the paid API's shared 2000-character limit
+before custody or funding. Its tool schema exposes the same upper limit, and
+accepted text is trimmed before submission. Within the buyer handler, original
+payment journals, pending funding journals and crash locks retain priority; recovery observes their
+original query or transaction without new-question validation or replacement payment.
+Stdio MCP 0.4.9 and app 0.27.32 are candidates, with publication and deployment still
+gated. See [scope and acceptance](engineering/mcp-question-preflight.md).
+
+### Navigate report sections with assistive technology (2026-10-08, v0.27.31 candidate)
+
+Answer sections now expose native headings, starting at level two and retaining
+their relative depth. This reaches chat, saved dispatches, desktop-hosted reports
+and the compact embed through the shared renderer. Typography and citation controls
+keep their existing behavior. CLI, API, MCP and exported Markdown retain their
+existing text contracts. See [scope and release gates](research-reading-ux.md#answer-heading-navigation--october-8-2026).
+
+### Free bibliography before research (2026-10-08, v0.27.30 candidate)
+
+Ask now links to free paper metadata with a single exact identifier. Remote and
+stdio MCP add `paper_lookup`: retained catalog metadata by default, explicitly
+requested repository lookup, exact version and recorded contributors, and visible
+unknown DOI/status and provider failures. This path does not run research or pay
+creators. Existing bibliography v1 and saved-workspace data remain compatible.
+The free handoff keeps its 44px touch target without pushing Ask off a small phone's
+first viewport when the source-cap disclosure wraps.
+See [scope, surface roles and release gates](engineering/free-paper-lookup.md).
+
+App0.27.30, hosted MCP0.3.5, stdio MCP0.4.8 and desktop0.4.10 identify candidates;
+production, published packages and installed clients require separate verification.
+
+### Explain a model output limit (2026-10-08, v0.27.29 candidate)
+
+Reports distinguish an explicitly stopped model response from a provider outage,
+retain its billable token usage, and explain when to inspect saved evidence and
+narrow a new request. Inner evidence-review and direct bounded-engine failures
+keep the same safe diagnostic through saved trace. CLI, APIs and MCP use the shared
+contract; output caps and payment authority are unchanged. Historical 503s are not
+reinterpreted. See [scope and remaining acceptance](engineering/model-output-limits.md).
+
+App 0.27.29, MCP 0.4.7, desktop 0.4.9 and hosted MCP 0.3.4 identify this candidate;
+published packages, installed clients and production must be verified separately.
+
+### Hold unqualified newest-feed article selection (2026-10-08, v0.27.28 candidate)
+
+Recognized English/Vietnamese newest-release instructions now retain their original
+feed constraint before model decomposition. Affected retained paid/free/cache and
+legacy candidates are held before article selection, and the answer explains the
+unresolved scope even when no catalog feed matches. Web follow-up preserves the
+validated child question; model proposals cannot restore withheld articles.
+An empty-read report leads with the feed gap, and long URLs wrap on mobile.
+Ordinary topical research keeps existing ranking. This is a narrow safety repair;
+current-feed observation, supported newest-release delivery and service pre-charge
+qualification remain open. Existing payments and incoming service/model costs are
+separate. See [coverage and release gates](engineering/source-recency-2026-10-08.md).
 
 ### Require complete evidence before original-answer review (2026-10-08, v0.27.28)
 

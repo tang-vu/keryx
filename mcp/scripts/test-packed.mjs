@@ -44,10 +44,11 @@ try {
   const mock = join(workspace, "synthetic-network.cjs");
   await writeFile(mock, `
 const fs=require('node:fs'), crypto=require('node:crypto'), viem=require('viem');
-const counts={paid:0,rpc:0,recovery:0};
+const counts={paid:0,rpc:0,recovery:0,bibliography:0,bibliographyQueries:[]};
 const reasoning={engine:'llm:deepseek:deepseek-v4-flash',
  reasoningAttempts:[{step:'decompose',engine:'llm:deepseek:deepseek-v4-flash',tier:0,attempt:1,startedAt:1,durationMs:0,outcome:'served'},
- {step:'decide',engine:'heuristic',tier:3,attempt:1,startedAt:2,durationMs:0,outcome:'served'}],
+ {step:'decide',engine:'heuristic',tier:3,attempt:1,startedAt:2,durationMs:0,outcome:'served'},
+ {step:'synthesize',engine:'llm:deepseek:deepseek-v4-flash',tier:0,attempt:1,startedAt:3,durationMs:0,outcome:'failed',error:'output_validation',outputTokenLimit:2560}],
  reasoning:{telemetry:'recorded',attemptsOmitted:0,
  steps:[{step:'decompose',state:'model',servingEngines:['llm:deepseek:deepseek-v4-flash'],fallbackUsed:false},
  {step:'decide',state:'heuristic',servingEngines:['heuristic'],fallbackUsed:true}],
@@ -59,6 +60,16 @@ for(const name of ['node:http','node:https']){const m=require(name);m.request=de
 const net=require('node:net');net.connect=deny;net.createConnection=deny;net.Socket.prototype.connect=deny;
 globalThis.fetch=async(input,init)=>{
  const url=String(input),body=init?.body?JSON.parse(init.body):null;
+ if(url.startsWith('https://synthetic.example/api/papers?')){
+  if(init.method!=='GET'||init.body||init.headers)throw new Error('Bibliography must be a keyless GET');
+  const query=new URL(url).searchParams;if(query.get('q')!=='2005.11401v4')throw new Error('Wrong bibliography identity');
+  counts.bibliography++;counts.bibliographyQueries.push(query.get('search')||'0');save();
+  const record={title:'Synthetic exact-version bibliography',authors:['First Author','Second Author'],authorCount:2,authorsTruncated:false,
+   arxivId:'2005.11401v4',repository:'arxiv',url:'https://arxiv.org/abs/2005.11401v4',metadataUrl:'https://export.arxiv.org/api/query?id_list=2005.11401v4',
+   metadataObservedAt:'2026-10-06T00:00:00.000Z',publicationKind:'preprint',peerReview:'unknown'};
+  return Response.json({version:1,scope:'bibliography-only',groups:[{id:'paper:'+crypto.createHash('sha256').update('2005.11401').digest('hex'),record,records:[record]}],totalWorks:1,catalogRecords:1,
+   providers:query.get('search')==='1'?[{name:'arxiv',status:'unavailable',records:0}]:[]});
+ }
  if(process.env.TEST_MODE==='keyless')throw new Error('No network allowed for missing custody');
  if(body?.jsonrpc==='2.0'){
   counts.rpc++;save();let result;
@@ -129,24 +140,49 @@ globalThis.fetch=async(input,init)=>{
     assert.equal(initialized.serverInfo.version, expectedPackage.version);
     child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
     const listed = await request("tools/list", {});
-    for (const name of ["ask_keryx", "keryx_wallet_status", "keryx_recover", "keryx_operator_status"]) assert(listed.tools.some(tool => tool.name === name));
+    for (const name of ["paper_lookup", "ask_keryx", "keryx_wallet_status", "keryx_recover", "keryx_operator_status"]) assert(listed.tools.some(tool => tool.name === name));
+    assert.equal(listed.tools.find(tool => tool.name === "paper_lookup").annotations.readOnlyHint, true);
+    assert.deepEqual(listed.tools.find(tool => tool.name === "paper_lookup").inputSchema.properties.language.enum, ["en", "fr", "vi"]);
+    assert.equal(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.question.maxLength, 2000);
     return { call: (name, args = {}) => request("tools/call", { name, arguments: args }), counts,
       stop: async () => { await stopChild(child); children.delete(child); lines.close(); } };
   }
   for (selectedNetwork of ["arcTestnet", "arc"]) {
   const keyless = await session("keyless", join(workspace, `${selectedNetwork}-missing-payment.json`), false);
   const missing = await keyless.call("keryx_wallet_status"); assert.match(missing.content[0].text, /unconfigured/); assert.match(missing.content[0].text, /No wallet is created/);
+  const invalidQuestion = await keyless.call("ask_keryx", { question: "x".repeat(2001) });
+  assert(invalidQuestion.isError); assert.match(invalidQuestion.content[0].text, /2000/);
+  const metadata = await keyless.call("paper_lookup", { query: "https://arxiv.org/pdf/2005.11401v4.pdf" });
+  assert(!metadata.isError); assert.equal(metadata.structuredContent.scope, "bibliography-only");
+  assert.equal(metadata.structuredContent.groups[0].record.arxivId, "2005.11401v4");
+  assert.match(metadata.content[0].text, /First listed author in the recorded complete list: First Author/);
+  assert.match(metadata.content[0].text, /withdrawal\/replacement status: unknown/);
+  assert.match(metadata.content[0].text, /eprint = \{2005\.11401v4\}/);
+  assert.match(metadata.content[0].text, /AN  - arXiv:2005\.11401v4/);
+  const frenchMetadata = await keyless.call("paper_lookup", { query: "2005.11401v4", language: "fr" });
+  assert(!frenchMetadata.isError);
+  assert.match(frenchMetadata.content[0].text, /Premier auteur dans la liste complète enregistrée: First Author/);
+  assert.match(frenchMetadata.content[0].text, /Référence bibliographique courte/);
+  assert.match(frenchMetadata.content[0].text, /Provenance des champs/);
+  const unavailable = await keyless.call("paper_lookup", { query: "2005.11401v4", searchRepositories: true });
+  assert(!unavailable.isError); assert.equal(unavailable.structuredContent.providers[0].status, "unavailable");
+  assert.match(unavailable.content[0].text, /unavailable; no empty result inferred/);
   await keyless.stop();
+  const metadataCounts = JSON.parse(await readFile(keyless.counts, "utf8"));
+  assert.equal(metadataCounts.paid, 0); assert.equal(metadataCounts.rpc, 0);
+  assert.equal(metadataCounts.bibliography, 3); assert.deepEqual(metadataCounts.bibliographyQueries, ["0", "0", "1"]);
   assert(!(await readdir(workspace)).some(name => /forbidden|missing-payment/.test(name)), "Missing custody created private state");
   const happy = await session("happy", join(workspace, `${selectedNetwork}-happy-payment.json`));
   const status = await happy.call("keryx_wallet_status"); assert.match(status.content[0].text, /ready:    yes/);
-  const answer = await happy.call("ask_keryx", { question: "Synthetic package research" }); assert(!answer.isError); assert.match(answer.content[0].text, /Synthetic cited answer/);
+  const answer = await happy.call("ask_keryx", { question: "Synthetic package research".padEnd(2000, "x") }); assert(!answer.isError); assert.match(answer.content[0].text, /Synthetic cited answer/);
   assert.match(answer.content[0].text, /decide: heuristic \(heuristic; fallback served\)/);
   assert.equal(answer.structuredContent.reasoning.telemetry, "recorded");
   assert.deepEqual(answer.structuredContent.reasoning.sourceSelection,
     { step: "decide", state: "heuristic", servingEngines: ["heuristic"], fallbackUsed: true });
   assert(!('reasoningTelemetry' in answer.structuredContent)); assert(!('reasoningServing' in answer.structuredContent));
   assert.equal(answer.structuredContent.reasoningAttempts.find(attempt => attempt.step === "decide").engine, "heuristic");
+  assert.equal(answer.structuredContent.reasoningAttempts.find(attempt => attempt.step === "synthesize").outputTokenLimit, 2560);
+  assert.match(answer.content[0].text, /Model output limit reached: answer preparation \(2,560 tokens\)/);
   await happy.stop(); const happyCounts = JSON.parse(await readFile(happy.counts, "utf8")); assert.equal(happyCounts.paid, 1);
   const journal = join(workspace, `${selectedNetwork}-unknown-payment.json`), unknown = await session("unknown", journal);
   assert((await unknown.call("ask_keryx", { question: "Synthetic response-loss research" })).isError);
@@ -159,7 +195,7 @@ globalThis.fetch=async(input,init)=>{
   await recovery.stop(); const recoveryCounts = JSON.parse(await readFile(recovery.counts, "utf8")); assert.equal(recoveryCounts.paid, 0); assert.equal(recoveryCounts.recovery, 1);
   }
   console.log(JSON.stringify({ networks: ["arcTestnet", "arc"], package: installedPackage.name, version: installedPackage.version, node: process.version,
-    dependencies, cases: ["keyless initialize/tools/status without wallet creation", "funded caller status", "actual SDK signed purchase", "recorded per-step heuristic tier", "original response-loss barrier and no second debit", "new-process keyless GET-only recovery"], liveNetwork: false }));
+    dependencies, cases: ["keyless initialize/tools/status without wallet creation", "free exact-version bibliography GET and explicit provider failure with retained snapshot", "funded caller status", "actual SDK signed purchase", "recorded per-step heuristic tier", "original response-loss barrier and no second debit", "new-process keyless GET-only recovery"], liveNetwork: false }));
 } finally {
   const stopped = await Promise.allSettled([...children].map(stopChild));
   // Only the mkdtemp-created acceptance workspace is removed.

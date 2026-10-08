@@ -21,14 +21,16 @@ describe("bibliography-only paper library", () => {
   });
   it("groups DOI and arXiv aliases transitively without discarding exact observed versions", () => {
     const first = { ...record, doi: "10.1234/work" };
-    const second = { ...record, arxivId: "2601.12345v2", url: "https://arxiv.org/abs/2601.12345v2", publishedYear: 2025 };
+    const second = { ...record, arxivId: "2601.12345v2", url: "https://arxiv.org/abs/2601.12345v2",
+      metadataUrl: "https://export.arxiv.org/api/query?id_list=2601.12345v2", publishedYear: 2025 };
     const third: PaperRecord = { ...record, repository: "crossref", arxivId: undefined, doi: first.doi,
       url: "https://doi.org/10.1234/work", metadataUrl: "https://api.crossref.org/works/10.1234%2Fwork" };
     const originals = [first, second, third];
     const groups = groupPaperWorks(originals);
     expect(groups).toHaveLength(1); expect(groups[0].records).toEqual(originals);
     expect(groups[0].records[1].arxivId).toBe("2601.12345v2");
-    expect(groupPaperWorks([record, { ...record, url: "https://arxiv.org/abs/2601.99999v1", arxivId: "2601.99999v1" }])).toHaveLength(2);
+    expect(groupPaperWorks([record, { ...record, url: "https://arxiv.org/abs/2601.99999v1", arxivId: "2601.99999v1",
+      metadataUrl: "https://export.arxiv.org/api/query?id_list=2601.99999v1" }])).toHaveLength(2);
     expect(groupPaperWorks([record, { ...record }])[0].records).toHaveLength(1);
   });
   it("matches literal metadata and one contributor name, preserving exact year/DOI semantics", () => {

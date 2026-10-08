@@ -75,7 +75,11 @@ describe("finite business canary supplier transport", () => {
     const engine = new DirectEngine("synthetic-key");
     await expect(engine.request()).rejects.toMatchObject({ category: "timeout", message: "Business canary provider request failed (timeout); reservation retained" });
     await expect(engine.request()).rejects.toBeInstanceOf(ReasoningTransportError);
-    await expect(engine.request()).rejects.toBeInstanceOf(ReasoningOutputValidationError);
+    const outputError = await engine.request().catch(error => error);
+    expect(outputError).toBeInstanceOf(ReasoningOutputValidationError);
+    expect(outputError.outputTokenLimit).toBe(2048);
+    expect(outputError.status).toBeUndefined();
+    expect(outputError.message).not.toMatch(/PRIVATE_|cut/);
     expect([guards.held, request.mock.calls.length]).toEqual([3, 3]);
   });
 

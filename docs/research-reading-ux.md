@@ -1,5 +1,51 @@
 # Research reading UX
 
+## Feedback confirmation — October 8, 2026
+
+The shared report's Helpful controls keep counts authoritative, distinguish sending,
+recorded and unconfirmed feedback, and isolate response state to its report.
+A failed response may follow a saved vote, so the client prevents another attempt
+in that mounted report and does not promise safe retry. Headers and body observation
+have a 15-second deadline; late results cannot erase uncertainty. Legacy Supabase
+feedback errors propagate instead of false confirmation or zero counts. Controls have spoken names,
+status announcements and 44px targets. This app0.27.33 candidate changes shared
+chat/dispatch/desktop-hosted reports; compact embeds and text/native adapters keep
+their existing roles. Browser/CI, coordinated release, physical-device use and
+independent usefulness remain separate gates. See
+[behavior, limits and acceptance](engineering/report-feedback-confirmation.md).
+
+## Answer heading navigation — October 8, 2026
+
+The answer renderer previously styled its recognized Markdown headings as
+paragraphs. Native headings now expose those sections to browser accessibility
+navigation. The shallowest recognized heading starts at h2; deeper headings retain
+their relative depth, up to h4. This avoids a separate h1 for every report in a
+conversation. The existing one-to-three-hash block grammar, typography, React text
+escaping and keyboard citation controls remain unchanged.
+
+The shared renderer covers public chat, saved reports, dispatches and reports opened
+from desktop handoffs; the compact iframe embed also uses it. Native desktop-local
+results, CLI, remote and stdio MCP, HTTP APIs, extensions and bots continue to
+receive the existing text contract. Markdown export preserves the original heading
+markers. No new payment, evidence or research authority follows from these semantics.
+
+App0.27.31 is a candidate layered after the free bibliography candidate. TypeScript,
+focused lint, the production build and built-CSS browser checks for heading levels,
+inline formatting, safe text, keyboard citation activation/focus restoration and
+small-screen layout are required before release. Physical screen-reader use,
+the complete host-page heading hierarchy and real-reader usability remain separate
+acceptance work. CI, coordinated merge, deployment and `/api/health` verification
+are still release gates; this source change is not a deployed accessibility claim.
+
+Local verification passed both TypeScript graphs, focused lint, the isolated
+Next16.3.8 production build and the existing reading-evidence browser suite. A
+disposable Chromium check exercised five heading/text cases with both full-report
+and compact-renderer styles at320/390/768/1440px. It confirmed native heading
+levels/names, inline formatting, escaped HTML, heading-citation keyboard activation
+and restored focus, with no horizontal overflow. Both320px screenshots were read.
+These checks used synthetic records and intercepted feedback GETs; they did not
+exercise a physical screen reader or the complete iframe/research host flow.
+
 ## Chat-first research — October 1, 2026
 
 The owner approved replacing the main reading flow with a question-led conversation

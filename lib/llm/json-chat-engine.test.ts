@@ -10,7 +10,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { JsonChatEngine, extractJson } from "./json-chat-engine";
-import type { DecideInput } from "./reasoning-engine";
+import type { DecideInput, SynthInput } from "./reasoning-engine";
+import { ReasoningOutputLimitError } from "./reasoning-engine";
 import { ResilientEngine, reasoningAttempts } from "./resilient-engine";
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { ResearchSelectionError } from "./research-selection";
@@ -39,12 +40,47 @@ class StubEngine extends JsonChatEngine {
   ceilingFor(items: number): number {
     return this.budgetFor(items);
   }
+  guidanceFor(input: SynthInput): string { return this.synthesisGenerationGuidance(input); }
 }
+
+it("uses ordinary requested-language guidance only with explicit server opt-in", () => {
+  const engine = new StubEngine({});
+  const input = { question: "Explain in Portuguese", subClaims: ["Behavior"], gathered: [] };
+  const historical = engine.guidanceFor(input);
+  expect(historical).toContain("in the language of the question");
+  expect(historical).not.toContain("For this ordinary research answer");
+  expect(engine.guidanceFor({ ...input, answerPresentation: { language: "pt", requestedLanguage: "pt" } }))
+    .toBe(historical.replace("Each option is already", "For this ordinary research answer, write each statement in Brazilian Portuguese. The original caller's explicit output language takes precedence over the question's language. Each option is already"));
+  expect(engine.guidanceFor({ ...input, answerPresentation: { language: "en" } })).toBe(historical);
+});
 
 it("preserves valid JSON containing embedded fenced examples", () => {
   const value = { answer: "Example: ```sql CREATE INDEX i ON t(c); ```", facts: [{ text: "A literal ``` delimiter" }] };
   expect(extractJson(JSON.stringify(value))).toEqual(value);
   expect(extractJson("```json\n" + JSON.stringify(value) + "\n```")).toEqual(value);
+});
+
+it("retains an inner review output stop without relabeling successful generation or admitting unreviewed support", async () => {
+  class ReviewLimitEngine extends JsonChatEngine {
+    readonly name = "llm:synthetic-review";
+    requests = 0;
+    protected async chatJson(_model: string, _system: string, user: string) {
+      if (++this.requests === 2) throw new ReasoningOutputLimitError(1280);
+      const packet = JSON.parse(user);
+      expect(packet.quoteOptions.length).toBeGreaterThan(0);
+      return { answer: "The synthetic policy permits duplicate records [S1].", citedMarkers: ["S1"], conflicts: [],
+        evidence: [{ claimIndex: 0, marker: "S1", quoteId: packet.quoteOptions[0].quoteId, support: 0.9 }] };
+    }
+  }
+  const primary = new ReviewLimitEngine(), engine = new ResilientEngine(primary, undefined, 0, new MemoryReasoningCircuitStore());
+  const result = await engine.synthesize({ question: "Does the synthetic policy permit duplicates?", subClaims: ["Are duplicates permitted?"],
+    gathered: [{ sourceId: "one", sourceName: "Synthetic policy", marker: "S1", text: "The synthetic policy permits duplicate records. Handlers must tolerate duplicate records." }] });
+  expect(primary.requests).toBe(2);
+  expect(result.evidenceReview).toBe("unavailable");
+  expect(result.synthesisOutputLimit).toEqual({ stage: "review", outputTokenLimit: 1280 });
+  expect(result.evidence.every(item => item.support === 0)).toBe(true);
+  expect(reasoningAttempts(engine)).toMatchObject([{ step: "synthesize", outcome: "served" }]);
+  expect(reasoningAttempts(engine)[0].error).toBeUndefined();
 });
 
 describe("bounded independent research targets", () => {

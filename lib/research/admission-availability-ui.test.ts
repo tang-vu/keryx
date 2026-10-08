@@ -88,7 +88,10 @@ it("keeps MCP protocol connectivity successful while clearly showing research pa
   try {
     await page.getByText("MCP endpoint connected", { exact: true }).waitFor();
     await page.getByRole("status").filter({ hasText: "temporarily paused" }).waitFor();
-    expect(await page.locator("body").textContent()).toContain("four tools");
+    expect(await page.locator("body").textContent()).toContain("paper_lookup");
+    expect(await page.locator("body").textContent()).toContain("repository search requires");
+    expect(await page.getByRole("link", { name: "Browse free paper metadata", exact: true }).getAttribute("href"))
+      .toBe("/sources?kind=paper#research-papers");
     expect(await page.locator("body").textContent()).not.toContain("Keryx is ready");
     expect(await asks(page)).toEqual([]);
   } finally { await context.close(); }

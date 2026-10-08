@@ -117,6 +117,14 @@ it("refuses excessive raw bytes, normalized bytes, elements and depth, then rele
   expect((await extractHtml(html, "https://example.com")).text).toContain(passage.trim());
 }, 12000);
 
+it("bounds optional observed text regions while preserving a readable document", async () => {
+  const limited = await extractHtml(`<main>${"<h2>Repeated heading</h2>".repeat(513)}</main>`, "https://example.com/regions");
+  expect(limited.htmlTextLayout?.headings).toHaveLength(512);
+  expect(limited.htmlTextLayout?.limited).toBe(true);
+  expect(limited.text.match(/Repeated heading/g)).toHaveLength(513);
+  expect((await extractHtml(html, "https://example.com/recovered")).text).toContain(passage.trim());
+});
+
 it("falls back to Mozilla Readability when no unique main/article exists", async () => {
   const result = await extractHtml(`<html><head><title>Fallback original</title><meta charset="utf-8"></head><body><div><h1>Fallback original</h1><p>${passage.repeat(15)}</p><p>Café &amp; tea: its limitations were not measured.<br>Neither was external accuracy.</p><pre>if x &lt; 3:\n  print("not guaranteed")\n\n  return</pre></div></body></html>`, "https://example.com/fallback");
   expect(result.title).toBe("Fallback original");

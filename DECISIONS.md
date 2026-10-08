@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**Retain ordinary presentation without weakening grounded delivery — 2026-10-08.**
+Derive supported language and compact layout from the trusted original caller,
+before sentence review. Group source-bound sentence/excerpt pairs by their shared
+target or literal nested quote, retaining each original pair without connecting
+prose. Ambiguous identity, oversized components, count mismatch or evidence gaps
+preserve target layout. Offer bounded whole visible enumeration items only
+through an ordinary opt-in. Private continuation defaults and rendered originals
+remain unchanged. These presentation gates do not certify usefulness or complete
+synthesis; real task acceptance remains required. Prioritize useful delivered work
+and independent repeat use for competition quality without promising a rank.
+See [acceptance and coordinated release](docs/engineering/research-deliverable-quality-2026-10-08.md).
+
+The bounded MDN model trial recovered all four facts but failed the requested
+three-item format. Preserve that failure and its consumed three-call grant.
+Replay of those unchanged reviewed pairs validates the deterministic layout repair;
+it does not establish a fresh deployed end-to-end result or general brevity.
+
 **Reject incomplete prepared originals without discarding their history — 2026-10-08.**
 The retained original produced an exactly grounded answer that omitted documented
 payment and validation steps. Per-target coverage and statement support scores
@@ -5883,11 +5900,47 @@ deployment and offhost drills remain gates. See [backup limits](docs/encrypted-b
 The retained one-shot execution lost its exception and has no prepared result. Do not reinterpret its reservations as successful requests or change the old claim/window. A new explicit owner instruction permits repair and same-original completion under a distinct finite source/host/old-evidence-bound supplier grant. Preserve every expired hold and the permanent native claim; reserve each new dispatch before transport, checkpoint only complete validated normalized JSON, and serialize attempts with durable uncertainty retained on crash/fsync failure. Exact successful stages may be reused only under identical grant/source/packet/prompt bounds. Generation uses the already-authorized8192 output ceiling while ordinary research remains unchanged. Complete the same claim through exact prepared-result metadata only after all five targets have reviewed support and gaps remain explicit. New payments, searches, creator rewards, funding and general schedules are outside this lane. The separate ledger catalogue detects deletion or replacement instead of silently resetting consumed allowance. See docs/engineering/operator-original-continuation.md.
 
 A Windows redeploy previously lost reviewed environment controls entering WSL and selected the legacy path. The Node launcher now forwards and verifies all nonsecret reviewed-role and optional economic-migration controls before mutation, preserving explicit native paths. This is transport validation, not authority to drain, migrate, deploy unreviewed code or call suppliers.
+
 ## Complete source context and additive supplier episodes — 2026-10-08
 
 Observed new continuation attempts reused an acknowledged assessment with mandatory target coverage0.1, while final evidence coverage is capped by that assessment. Later generation/review could never pass the existing0.4 threshold. The ordinary context sampler also omitted relevant lines from the already selected frozen documents. Give this private original-completion engine both complete selected bodies consistently through sufficiency, quote options, generation and review; refuse oversized full prompts before dispatch. Retain an actual negative mandatory assessment and stop before generation/review, then block unchanged-context retries. Preserve ordinary research context selection and all evidence/support thresholds.
 
 The owner explicitly requested repair to same-original completion without routine confirmation. Stage any additional supplier episode under a fresh reviewed source and immutable parent-ledger binding rather than extending, deleting or reusing the exhausted grant. The next fixed episode has six fresh holds,243260 microUSD history and400000 microUSD aggregate ceiling (367220 at full use); those conservative staged numbers are agent-chosen within that repair instruction, not an owner quotation or supplier invoice. External activation intent precedes the new journal, and a separately retained latest-head frontier prevents restoring an old journal snapshot from resetting its allowance. Uncertain publication blocks both new dispatch and parent fallback. Native same-claim completion remains exact-digest metadata after private reviewed answer acceptance, with no new payment, funding, search or schedule. Applicable web/API/MCP/client adapters continue to use the existing shared closure and original buyer GET contract; no new client package or native schema is introduced.
+
+## Explicit output stops without invented provider outages - 2026-10-08
+
+A completed length/max_tokens response can be billable and still fail the output
+contract. Preserve usage and the observed requested ceiling, but stop assigning
+synthetic provider503 status. Equal counters or historical status cannot prove the
+stop reason. Ordinary caps, fallback/circuit and financial authority remain intact.
+
+An inner evidence-review failure must not relabel successful generation or invent
+a serving attempt. Retain only a closed stage and positive integer ceiling in the
+existing persisted synthesis trace; use it for direct bounded engines too. The
+shared public projection validates, bounds and deduplicates those diagnostics;
+early terminal callers receive a safe ceiling sentence through their current
+error adapters. Private/native reduced projections retain their existing roles.
+See [scope and acceptance gates](docs/engineering/model-output-limits.md).
+
+## Free bibliography before research - 2026-10-08
+
+A bibliographic question should have a direct metadata path that requires no model,
+original read, buyer custody or creator payment. Reuse the bounded paper library
+rather than send a metadata-only request through paid research. Ask carries one
+explicit DOI/versioned arXiv identity to a local library link; it never copies the
+whole question or auto-submits. Remote and stdio MCP share paper_lookup with a
+catalog-only default and explicit repository-search opt-in. Hosted MCP and HTTP
+share the same RAM admission and normalized caller identity; a single public
+metadata call does not verify research credentials or open the database.
+
+Preserve the closed bibliography v1 and saved-workspace contracts. The new tool
+validates exact selected identity, version despite a matching DOI, retained snapshot
+membership, observed-alias grouping, total snapshot bounds and exact provenance
+links. It keeps legitimate alternate versions and their observation times.
+Incomplete names cannot establish first-slot authorship; missing DOI and page
+status remain unknown. Metadata grants no evidence, payout or reward authority.
+Reduced private/native and thin integration roles remain explicit. See
+[scope and release gates](docs/engineering/free-paper-lookup.md).
 
 ## Supplemental primary evidence for the same retained Operator original — 2026-10-08
 
@@ -5931,6 +5984,81 @@ the successful same-head rerun is separate evidence, not proof of the original
 network cause. This CI-only change has no production/runtime/distribution version
 change. See [runner setup and boundaries](docs/deployment-guide.md#browser-dependencies-on-github-hosted-runners).
 
+## Withhold unqualified newest-feed articles before ranking - 2026-10-08
+
+Stage1 freezes a narrow positive original-text requirement before model targets
+exist. Known unsupported temporal/multiple-feed forms remain explicit gaps;
+unresolved bounded binding refuses retained catalog candidates conservatively.
+Exact RSS/registered resource identity scopes refusal without granting feed or
+payment authority. Hold paid/free/cache/legacy candidates before item ranking and
+omit them from every purchase/reevaluation asset map. Preserve the validated raw
+web follow-up child separately from parent context; public overrides cannot set
+this trusted copy. An unmatched request still receives a visible gap.
+
+This staged repair favors an honest unresolved task over buying an older topical
+article for the recognized newest-feed request. It neither orders a retained set
+nor proves a coherent current-feed observation, and it preserves unrelated targets,
+exact wanted-response binding, incoming service charges and all existing payment
+limits/history. Shared TypeScript callers inherit the diagnostic; unchanged thin
+client contracts and reduced Operator/Rust roles do not establish pre-admission
+qualification. Build/CI/deployment and useful delivery remain separate gates. See
+[coverage and acceptance](docs/engineering/source-recency-2026-10-08.md#stage1-safety-candidate).
+
+## Native section headings in shared report rendering — 2026-10-08
+
+Styled paragraphs concealed the answer's section structure from assistive heading
+navigation. Render recognized headings as native h2–h4 elements, normalizing the
+shallowest depth to h2 and retaining relative depth. A conversation can contain
+several reports, so report text does not acquire a new page-level h1. Keep the
+small renderer's existing block grammar, styling, safe text and citation callbacks;
+do not rewrite saved answers or exported Markdown. This shared visual change has
+no protocol or native-local rendering migration. Exact browser and release gates
+remain explicit in [reading UX](docs/research-reading-ux.md#answer-heading-navigation--october-8-2026).
+
+## Share paid-question validation before stdio funding — 2026-10-08
+
+The stdio buyer's 8192-character allowance exceeded the paid API's 2000-character
+canonical limit. A configured synthetic caller reached the funding boundary with
+a server-invalid question. Reuse the server parser before loading custody or
+funding and publish the maximum in the tool schema. Keep the earlier journal/lock
+recovery barriers, existing client minimum/raw transport bound and exact original
+recovery. Hosted direct research keeps its separate existing limit. No merchant,
+funding, settlement, quote or saved-request authority changes. See
+[scope and acceptance](docs/engineering/mcp-question-preflight.md).
+
+## Confirm anonymous report feedback — 2026-10-08
+
+The old client left a locally increased vote count after failed POST responses.
+Use only validated observed totals and select a rating after confirmation. The
+append-only API can persist before aggregate readback fails, so an error is an
+unknown outcome: retain its uncertainty and prevent another mounted-report
+attempt. Do not present a response failure as an unsaved vote or safe retry.
+Scope state to the report, cancel obsolete GET observation, and keep submitted
+POSTs independent of unmounting. Bound headers and body observation to 15 seconds;
+ending local waiting cannot undo persistence, so retain the one-attempt guard.
+Explicitly check resolved Supabase feedback errors before confirmation or aggregate
+publication; preserve the append-only protocol and existing enrolled authority.
+In the metrics response, omit unavailable optional feedback fields while retaining
+successful core metric reads; neither substitute zero nor discard the whole response.
+This improves the shared reading UI without inventing identity,
+server-side deduplication or independent-user traction. See
+[scope and acceptance](docs/engineering/report-feedback-confirmation.md).
+
+## Observe HTML structure for bounded evidence retrieval — 2026-10-08
+
+The saved RFC and NASA reproductions expose two structural losses: physical pre
+wraps discard conditions, while duplicate TOC/heading labels omit substantive
+following text. Record actual pre and h1–h6 ranges during inert extraction, bound
+them to the exact returned body and enroll frozen metadata only at the validated
+worker boundary. Use shared logical groups for selection, strict quote spans and
+review context. Keep historical JSON/layoutless behavior and PDF policy unchanged.
+Named quoted headings are retrieval cues; preserve both bytes and a slot for lexical
+targets, sample duplicate matches and label optional role limits without discarding
+a readable source. Preserve the 2,000-character context and all support/payment
+authority. Source replay proves retrieval behavior only; useful live answers and
+coordinated production delivery remain gates. See
+[scope and acceptance](docs/engineering/html-evidence-context-2026-10-08.md).
+
 ## Required evidence selection and finite failed-quality recovery - 2026-10-08
 
 The retained original's generation omitted documented requirements despite an
@@ -5957,6 +6085,98 @@ separately required. Source release, deployment and successful transport remain
 separate from actual reviewed native delivery and original buyer receipt recovery.
 See [the private recovery contract](docs/engineering/operator-original-continuation.md).
 
+## Preserve stored excerpt layout during inspection - 2026-10-08
+
+Actual components with built CSS exposed collapsed line breaks, unbroken-string
+horizontal overflow and a 16-pixel Evidence target. Preserve recorded whitespace
+and wrap long strings across all six web excerpt views; use a contextual 44-pixel
+citation inspection action. Keep original quote bytes, eligibility and payment
+status unchanged. Browser geometry and text fidelity are acceptance evidence,
+not factual or independent-usefulness validation. See
+[scope and surface roles](docs/engineering/evidence-readability-2026-10-08.md).
+
+## Preserve feature ancestry in the coordinated reading release - 2026-10-08
+
+Main advanced to app0.27.35 while eight reviewed reading/client candidates retained
+older checkpoints. Integrate their complete source with current main and release
+one app0.27.36 through a merge commit, preserving every feature tip and avoiding
+version downgrade. This supersedes active parent-first sequencing, with explicit
+per-PR inclusion/closure records and final-head CI/review for the complete source.
+Historical candidate and failure evidence remains unchanged. Operational admission,
+public recovery, package/installer delivery, original financial delivery and fee
+activation retain their distinct authority and acceptance gates. See
+[the coordinated release](docs/engineering/research-reading-release-2026-10-08.md).
+
+## Keep the mobile research action reachable - 2026-10-08
+
+The built 320x640 composer failed the existing first-viewport gate on CI and
+locally. Compact the introductory copy and mobile spacing, with enough header
+height to contain its decorative globe. Preserve the question field, 44px targets,
+free metadata handoff, source cap, payer disclosures and desktop spacing. Require
+the fresh default build and existing responsive/wrapped-cap acceptance. Keep the
+original failing screenshots and logs; earlier quote-view or unit acceptance does
+not qualify this changed geometry. See
+[the mobile regression](docs/engineering/evidence-readability-2026-10-08.md#mobile-composer).
+
+## Distinguish trace diagnostics from source decisions - 2026-10-08
+
+A decide phase can carry a bounded selection diagnostic as well as a source
+Decision. Validate the display shape in the hook and renderer, preserve refused
+and partial explanations/counts, and keep diagnostics out of streamed and final
+decision arrays. Preserve existing validator SKIP and empty-rationale records.
+This classification provides no payment authority and leaves SSE signing/abort
+paths unchanged. See [acceptance](docs/engineering/selection-diagnostic-trace.md).
+
+## Generate ordinary checked evidence without a redundant draft - 2026-10-08
+
+The two-read Quick path requests a draft answer plus the same quote-bound sentences,
+although ordinary delivery discards that draft. Explicitly select an internal
+evidence-only generation packet in ordinary orchestration, retain the same output
+ceiling and review calls, and form only a server marker envelope after exact quote
+resolution and review. Existing ledger, requested-source, statement and reward
+gates remain authoritative. A compact fixture does not prove a provider will finish
+or that a live run produces a complete useful answer.
+
+Direct inputs for retained private originals keep their legacy schema/guidance;
+decision briefs keep their distinct disabled acceptance boundary. Prospective
+teaching proposals are planning constraints, while claims that NASA actually
+tested an activity remain factual targets. This adds no reviewed proposal delivery
+or experimental claim. See [behavior and residual gates](docs/engineering/evidence-only-synthesis-2026-10-08.md).
+
+## Group document channels without merging payment authority - 2026-10-08
+
+The registered/public alias reproduction consumed both Quick attention slots and
+paid a second channel that supplied no final evidence. Treat conservative canonical
+locations as alternatives for attention and predicted coverage, retaining each
+channel's targets, expected value, item/version, price and source identity. Prefer
+public delivery only on an equivalent useful route; do not transfer registered
+relevance or reward rights to a URL. Refuse already gathered locations in initial,
+redirect and Deep reads. The grouping cannot prove identical bytes, revisions,
+ownership or independent corroboration. See [scope and gates](docs/issue-232-document-aliases.md).
+
+## Preserve the active original while preparing issue repairs - 2026-10-08
+
+The owner confirmed the separate Operator session still runs and explicitly asked
+to preserve production. The initial admitted source was ab2195d6; the separate
+Operator owner subsequently merged PR240/main3b839ccd. This issue session does
+not advance main or deploy over that owner's source window. Prepare source,
+synthetic verification and PR/CI independently;
+defer main advance, deployment, supplier work and financial rebinding until a
+positively closed or parked admitted boundary. The new aggregate preserves the
+entire pending reading stack and records every issue's actual remaining gate in
+[the resolution inventory](docs/engineering/open-issues-2026-10-08.md).
+
+## Deliver bibliography through metadata roles with explicit field limits - 2026-10-08
+
+Exact DOI/arXiv metadata tasks currently fail when ordinary research requires a
+publisher-body excerpt. Improve the existing free lookup into a field-scoped
+card with exact provider identity, recorded observation, known field paths,
+complete-list author-order claims and escaped reusable references. Withhold
+truncated values, absent publication dates and unknown page-specific status.
+Optional language labels are local formatting; they grant no provider, research,
+payment or custody authority. Preserve HTTP JSON v1 and the separate ordinary
+evidence boundary. Actual metadata research routing and live usefulness remain
+open in [the metadata handoff record](docs/issue-218-metadata.md).
 ## Direct premise review and unused-reservation source repair - 2026-10-08
 
 The acknowledged original-answer pair selected all required quotes but added a

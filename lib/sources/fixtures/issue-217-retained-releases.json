@@ -1,0 +1,18 @@
+{
+  "sourceId": "synthetic-creator",
+  "feedUrl": "https://creator.example/releases.atom",
+  "capturedAt": "2026-10-08T00:00:00.000Z",
+  "membership": "complete-retained-set",
+  "items": [
+    { "itemId": "v18", "itemTitle": "v0.27.18", "itemUrl": "https://creator.example/v18", "contentVersion": "sha256:synthetic-v18", "itemPublishedAt": "2026-10-07T15:55:05.000Z", "publication": { "field": "atom:published", "rawValue": "2026-10-07T15:55:05Z" } },
+    { "itemId": "v17", "itemTitle": "v0.27.17", "itemUrl": "https://creator.example/v17", "contentVersion": "sha256:synthetic-v17", "itemPublishedAt": "2026-10-07T12:00:00.000Z", "publication": { "field": "atom:published", "rawValue": "2026-10-07T12:00:00Z" } },
+    { "itemId": "v16", "itemTitle": "v0.27.16", "itemUrl": "https://creator.example/v16", "contentVersion": "sha256:synthetic-v16", "itemPublishedAt": "2026-10-07T09:00:00.000Z", "publication": { "field": "atom:published", "rawValue": "2026-10-07T09:00:00Z" } },
+    { "itemId": "v15", "itemTitle": "v0.27.15", "itemUrl": "https://creator.example/v15", "contentVersion": "sha256:synthetic-v15", "itemPublishedAt": "2026-10-07T06:00:00.000Z", "publication": { "field": "atom:published", "rawValue": "2026-10-07T06:00:00Z" } },
+    { "itemId": "v14", "itemTitle": "v0.27.14", "itemUrl": "https://creator.example/v14", "contentVersion": "sha256:synthetic-v14", "itemPublishedAt": "2026-10-07T03:00:00.000Z", "publication": { "field": "atom:published", "rawValue": "2026-10-07T03:00:00Z" } },
+    { "itemId": "v13", "itemTitle": "v0.27.13", "itemUrl": "https://creator.example/v13", "contentVersion": "sha256:synthetic-v13", "itemPublishedAt": "2026-10-07T00:00:00.000Z", "publication": { "field": "atom:published", "rawValue": "2026-10-07T00:00:00Z" } },
+    { "itemId": "v12", "itemTitle": "v0.27.12", "itemUrl": "https://creator.example/v12", "contentVersion": "sha256:synthetic-v12", "itemPublishedAt": "2026-10-06T23:00:00.000Z", "publication": { "field": "atom:published", "rawValue": "2026-10-06T23:00:00Z" } },
+    { "itemId": "v11", "itemTitle": "v0.27.11", "itemUrl": "https://creator.example/v11", "contentVersion": "sha256:synthetic-v11", "itemPublishedAt": "2026-10-06T21:00:00.000Z", "publication": { "field": "atom:published", "rawValue": "2026-10-06T21:00:00Z" } },
+    { "itemId": "v10", "itemTitle": "v0.27.10 release change compatibility deployment API", "itemUrl": "https://creator.example/v10", "contentVersion": "sha256:synthetic-v10", "itemPublishedAt": "2026-10-06T18:11:41.000Z", "publication": { "field": "atom:published", "rawValue": "2026-10-06T18:11:41Z" } },
+    { "itemId": "v09", "itemTitle": "v0.27.09", "itemUrl": "https://creator.example/v09", "contentVersion": "sha256:synthetic-v09", "itemPublishedAt": "2026-10-06T12:00:00.000Z", "publication": { "field": "atom:published", "rawValue": "2026-10-06T12:00:00Z" } }
+  ]
+}

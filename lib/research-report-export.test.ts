@@ -11,6 +11,14 @@ const run = {
 const payment = (settled: boolean, settlementStatus?: PaymentRecord["settlementStatus"]) => ({ sourceName: "Writer", amountUsdc: 0.001, kind: "citation", settled, settlementStatus } as PaymentRecord);
 
 describe("research report export", () => {
+  it("exports a safe observed review ceiling without exposing private trace detail or changing the answer", () => {
+    const snapshot = { ...run, trace: [{ phase: "synthesize", ts: 1, message: "PRIVATE TRACE MESSAGE",
+      detail: { reasoningOutputLimit: { stage: "review", outputTokenLimit: 4096, body: "PRIVATE BODY" } } }] } as QueryRun;
+    const text = researchReportMarkdown(snapshot, null, []);
+    expect(text).toContain("4,096 tokens, evidence review");
+    expect(text).toContain(run.answer); expect(text).not.toContain("PRIVATE");
+    expect(researchReportMarkdown(run, null, [])).not.toContain("Model output limit reached");
+  });
   it("exports an operating fee with its original evidence and sponsored operator label", () => {
     const text = researchReportMarkdown(run, null, [{ ...payment(true, "settled"),
       kind: "operating-fee", sourceName: "Keryx operating fee", txHash: "circle-original" }]);

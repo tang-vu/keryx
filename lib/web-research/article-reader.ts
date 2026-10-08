@@ -3,8 +3,9 @@ import { extractPdfText } from "./pdf-reader";
 import { extractHtml } from "./html-reader";
 import { bodyIdentity, canonicalUrl, digest, publisherGroup } from "./url-identity";
 import type { GatheredContent } from "../llm";
+import { observedHtmlTextLayout, type HtmlTextLayout } from "./html-text-layout";
 
-export interface ArticleRead { text: string; title: string; finalUrl: string; kind: "html" | "text" | "pdf"; truncated: boolean }
+export interface ArticleRead { text: string; title: string; finalUrl: string; kind: "html" | "text" | "pdf"; truncated: boolean; htmlTextLayout?: HtmlTextLayout }
 export type ArticleFailureCode = "invalid-url" | "document-identity-changed" | "publisher-verification-required" | "transport-unavailable" | "article-byte-limit" | "html-extraction-unavailable" | "pdf-extraction-unavailable" | "cancelled";
 export class ArticleReadError extends Error {
   constructor(readonly code: ArticleFailureCode) { super(code); this.name = "ArticleReadError"; }
@@ -45,9 +46,11 @@ export const readArticle: ArticleReader = async (url, signal) => {
 export function gatheredArticle(id: string, article: ArticleRead): GatheredContent {
   const finalUrl = canonicalUrl(article.finalUrl);
   if (!finalUrl) throw new Error("Invalid article provenance");
+  const layout = article.kind === "html" ? observedHtmlTextLayout(article.text, article.htmlTextLayout) : undefined;
   return { assetId: id, sourceId: id, sourceName: publisherGroup(finalUrl), sourceKind: "public-reference",
     publicDeliveryKind: "excerpt", itemId: digest(finalUrl), itemTitle: article.title, itemUrl: finalUrl,
     contentVersion: digest(article.text), marker: "", text: article.text,
+    ...(layout ? { htmlTextLayout: layout } : {}),
     webProvenance: { retrievedAt: new Date().toISOString(), publisherGroup: publisherGroup(article.finalUrl),
       normalizedBodyHash: bodyIdentity(article.text), extraction: article.kind, truncated: article.truncated } };
 }

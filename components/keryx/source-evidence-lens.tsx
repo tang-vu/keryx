@@ -56,7 +56,7 @@ export function SourceEvidenceLensView({ model, selectId, selectRef, onOmit }: {
         {row.remaining.length > 0 && <details className="mt-1">
           <summary className="min-h-11 cursor-pointer py-2 text-sm text-ink-3">Inspect remaining excerpts</summary>
           {row.remaining.map((item, index) => <blockquote key={index} className="mt-2 border-l border-line pl-3 font-serif text-sm">
-            <p className="whitespace-pre-wrap break-words text-ink">“{item.quote}”</p>
+            <p className="whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">“{item.quote}”</p>
             <p className="mt-1 break-words text-ink-3">{item.marker} · {item.sourceName}{item.itemTitle ? ` · ${item.itemTitle}` : ""}{item.contentVersion ? ` · version ${item.contentVersion}` : ""}</p>
           </blockquote>)}
         </details>}

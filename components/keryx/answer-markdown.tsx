@@ -2,7 +2,7 @@
 
 /**
  * Minimal, dependency-free markdown renderer scoped to what the agent emits:
- * paragraphs, **bold**, *italic*, `code`, and inline [S#] citation markers
+ * paragraphs, headings, simple bullet lists, **bold**, *italic*, `code`, and inline [S#] citation markers
  * which become superscript chips that scroll to / highlight the matching
  * source. Intentionally small — not a general markdown engine.
  */
@@ -43,7 +43,7 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
       return (
         <code
           key={key}
-          className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[0.82em] text-ink"
+          className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[0.82em] text-ink [overflow-wrap:anywhere]"
         >
           {part.slice(1, -1)}
         </code>
@@ -100,14 +100,33 @@ export function AnswerMarkdown({
   className,
   onCitationClick,
 }: AnswerMarkdownProps) {
-  const blocks = text.split(/\n{2,}/).filter((b) => b.trim().length > 0);
+  const blocks: { trimmed: string; heading: RegExpExecArray | null; list?: string[] }[] = [];
+  for (const trimmed of text.split(/\n{2,}/).map(block => block.trim()).filter(Boolean)) {
+    const lines = trimmed.split("\n");
+    const list = lines.every(line => /^- \S/u.test(line)) ? lines.map(line => line.slice(2)) : undefined;
+    const previous = blocks.at(-1);
+    if (list && previous?.list) previous.list.push(...list);
+    else blocks.push({ trimmed, heading: /^(#{1,3})\s+(.*)$/.exec(trimmed), list });
+  }
+  // Each answer is a section within its host. Normalize the shallowest emitted
+  // heading to h2 while preserving the report's relative heading depths.
+  const shallowestHeading = blocks.reduce(
+    (depth, { heading }) => heading ? Math.min(depth, heading[1].length) : depth,
+    3,
+  );
   return (
     <div className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink", className)}>
-      {blocks.map((block, bi) => {
-        const trimmed = block.trim();
-        const heading = /^(#{1,3})\s+(.*)$/.exec(trimmed);
+      {blocks.map(({ trimmed, heading, list }, bi) => {
+        if (list) return (
+          <ul key={`b${bi}`} className="list-disc space-y-3 pl-6">
+            {list.map((item, index) => <li key={`b${bi}-l${index}`}>
+              {renderWithCitations(item, citations, `b${bi}-l${index}`, onCitationClick)}
+            </li>)}
+          </ul>
+        );
         if (heading) {
           const level = heading[1].length;
+          const Heading = `h${2 + level - shallowestHeading}` as "h2" | "h3" | "h4";
           const content = renderWithCitations(
             heading[2],
             citations,
@@ -121,9 +140,9 @@ export function AnswerMarkdown({
                 ? "font-serif text-lg tracking-tight text-ink"
                 : "font-mono text-xs font-semibold uppercase tracking-[0.12em] text-ink-3";
           return (
-            <p key={`b${bi}`} className={cls}>
+            <Heading key={`b${bi}`} className={cls}>
               {content}
-            </p>
+            </Heading>
           );
         }
         return (

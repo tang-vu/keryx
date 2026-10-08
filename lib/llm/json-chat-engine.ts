@@ -13,6 +13,7 @@ import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence, type QuoteOption } from "./quote-options";
 import { STATEMENT_GENERATION_GUIDANCE } from "./cited-statement";
+import { presentationStatementGuidance } from "../research/answer-presentation";
 import { buildContextualQuoteOptions } from "./quote-context";
 import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE, BRIEF_COMPACT_REVIEW_SCHEMA } from "./decision-brief";
 import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
@@ -21,7 +22,9 @@ import { buildEvidenceReviewInput } from "./evidence-review-input";
 import { MAX_SELECTION_DIAGNOSTIC_HISTORY, ResearchSelectionError, invalidResearchSelectionOutput, parseResearchSelection } from "./research-selection";
 import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/selection-diagnostic";
 import type { Decision } from "../types";
-import { ReasoningOutputValidationError } from "./reasoning-engine";
+import { ReasoningOutputValidationError, outputTokenLimitFromValidatedError } from "./reasoning-engine";
+import { synthesisOutputLimitFromError } from "./output-limit-diagnostic";
+import { EVIDENCE_ONLY_SCHEMA, evidenceOnlyEnvelope, evidenceOnlyGuidance } from "./evidence-only-synthesis";
 import type {
   AttributeInput,
   DecideInput,
@@ -33,6 +36,7 @@ import type {
   SynthInput,
   SynthResult,
   SynthesisFailureStage,
+  SynthesisOutputLimit,
   Conflict,
   LlmUsageRecord,
 } from "./reasoning-engine";
@@ -131,6 +135,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         `Break the user's question into 1-${MAX_RESEARCH_TARGETS} concise questions to investigate, NOT proposed answers or assertions of fact. ` +
         "Preserve the user's terminology and scope. Explicit user context takes precedence over Keryx's product context; questions can concern any subject. " +
         "Separate information needs from instructions about sources, citations, format, or style. Carry relevant source/scope constraints into the substantive questions; do not turn those instructions into extra research targets. " +
+        "A request to propose an activity, illustrative example, exercise, or exit question is a prospective delivery constraint, not a historical fact that the source performed or tested it. Preserve the requested proposal and its labeling in constraints; investigate the factual definitions, distinctions and limitations needed to ground it. " +
+        "For example, a teacher requesting weather/climate definitions, two invented classification examples and a ten-minute activity needs factual definition/distinction/limitation targets, not targets asking whether NASA ran those invented activities. If the user instead asks which activities NASA actually tested, preserve that as a factual target. " +
         "Each target must ask for a distinct requested fact or explanation. Do not add an umbrella question that repeats the other targets, or split one fact into paraphrases to fill the range. " +
         "Distinguish comparison SUBJECTS from evidence REFERENCES: complementary documentation URLs about a subject are source constraints, not extra comparison subjects. Do not multiply every dimension by every reference URL. " +
         "When the user compares specific papers or independent sources themselves, preserve every requested dimension for each specific source as a separately inspectable target. " +
@@ -161,12 +167,12 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   private selectionFailure(error: unknown, batchIndex: number, input?: DecideInput): unknown {
     try {
       if (error instanceof ResearchSelectionError) {
-        const refusal = new ResearchSelectionError(error.diagnostic);
+        const refusal = new ResearchSelectionError(error.diagnostic, outputTokenLimitFromValidatedError(error));
         this.recordSelectionDiagnostic(refusal.diagnostic);
         return refusal;
       }
       if (input && error instanceof ReasoningOutputValidationError) {
-        const refusal = invalidResearchSelectionOutput(input);
+        const refusal = invalidResearchSelectionOutput(input, outputTokenLimitFromValidatedError(error));
         this.recordSelectionDiagnostic(refusal.diagnostic);
         return refusal;
       }
@@ -283,17 +289,18 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         researchTargets: input.subClaims.map((question, claimIndex) => ({ claimIndex, question })),
         sources,
         quoteOptions: this.synthesisGenerationQuoteOptions(input, quoteOptions),
-        schema:
+        schema: input.generationFormat === "evidence-only" ? EVIDENCE_ONLY_SCHEMA :
           '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
           '"evidence":[{"claimIndex":number,"marker":string,"quoteId":string,"support":number(0..1),"statement":string}],' +
           '"conflicts":[{"point":string,"positions":[{"marker":string,"stance":string}],"trusted":string,"reason":string}]}',
       }),
-      // The answer itself is prose, so this floor carries the write-up on top of the per-source parts.
+      // Retain the admitted ceiling even when the ordinary packet omits a redundant prose draft.
       this.synthesisGenerationTokens(input),
     );
     const proposals = resolveQuoteEvidence(out.evidence, quoteOptions);
     let review: unknown;
     let reviewedIndexes: ReadonlySet<number> = new Set();
+    let synthesisOutputLimit: SynthesisOutputLimit | undefined;
     if (proposals.length) {
       try {
         const reviewInput = this.synthesisEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims });
@@ -304,24 +311,30 @@ export abstract class JsonChatEngine implements ReasoningEngine {
           reviewInput.json,
           this.budgetFor(Math.min(proposals.length, MAX_REVIEWED_EVIDENCE)),
         );
-      } catch {
+      } catch (error) {
         // Keep the written answer after a review outage; unreviewed evidence cannot earn rewards.
         review = undefined;
+        synthesisOutputLimit = synthesisOutputLimitFromError(error, "review");
       }
     }
+    const evidence = applyEvidenceReview(proposals, review, reviewedIndexes);
+    const envelope = input.generationFormat === "evidence-only" ? evidenceOnlyEnvelope(input, evidence) : undefined;
     return {
-      answer: (out.answer as string) ?? "",
-      citedMarkers: Array.isArray(out.citedMarkers) ? (out.citedMarkers as string[]) : [],
-      evidence: applyEvidenceReview(proposals, review, reviewedIndexes),
+      answer: envelope?.answer ?? (out.answer as string) ?? "",
+      citedMarkers: envelope?.citedMarkers ?? (Array.isArray(out.citedMarkers) ? (out.citedMarkers as string[]) : []),
+      evidence,
       ...(proposals.length ? { evidenceReview: review && typeof review === "object" && Array.isArray((review as { reviews?: unknown }).reviews)
         ? "completed" as const : "unavailable" as const } : {}),
       conflicts: parseConflicts(out.conflicts),
+      ...(synthesisOutputLimit ? { synthesisOutputLimit } : {}),
     };
   }
 
   /** Private completion may replace generation guidance without changing the
    * sufficiency prompt or ordinary research's existing contract. */
-  protected synthesisGenerationGuidance(_input: SynthInput): string {
+  protected synthesisGenerationGuidance(input: SynthInput): string {
+    if (input.generationFormat === "evidence-only") return evidenceOnlyGuidance +
+      (input.answerPresentation ? presentationStatementGuidance(input.answerPresentation) : "");
     return "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
         "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
         "For every supported research question, select a quoteId from quoteOptions in an evidence item with " +
@@ -329,6 +342,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "Reuse that same claimIndex for multiple quotes answering one target; do not number answer sentences or evidence items. " +
         "Do not output raw quote text or invent IDs. " +
         STATEMENT_GENERATION_GUIDANCE +
+        (input.answerPresentation ? presentationStatementGuidance(input.answerPresentation) : "") +
         "Each option is already a bounded verbatim excerpt; choose only options that directly answer that question. " +
         "A related warning or shared topic is not evidence for an unmentioned procedure. " +
         "Select the smallest sufficient set, at most two options per research question; emit separate evidence items when needed. " +
@@ -343,7 +357,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   protected synthesisQuoteOptions(input: SynthInput, sources: ReturnType<typeof evidenceContext>): QuoteOption[] {
-    return buildQuoteOptions(sources, input.gathered);
+    return buildQuoteOptions(sources, input.gathered, { includeShortBlocks: Boolean(input.answerPresentation?.requestedBulletCount) });
   }
   /** Specialized completion may carry server-owned required target bindings in
    * its compact menu. Ordinary research's generation payload stays identical. */
@@ -358,7 +372,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   private async synthesizeDecisionBrief(input: SynthInput): Promise<SynthResult> {
     const fallback: SynthResult = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable" };
     let failureStage: SynthesisFailureStage = "input";
-    const unavailable = (): SynthResult => ({ ...fallback, synthesisFailure: failureStage });
+    let synthesisOutputLimit: SynthesisOutputLimit | undefined;
+    const unavailable = (): SynthResult => ({ ...fallback, synthesisFailure: failureStage,
+      ...(synthesisOutputLimit ? { synthesisOutputLimit } : {}) });
     try {
       const selectedSources = this.evidenceSources(input);
       const options = buildContextualQuoteOptions(selectedSources, input.gathered);
@@ -393,9 +409,10 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       // rendered later from surviving reviewed rows after all existing gates.
       return { answer: citedMarkers.map(marker => `[${marker}]`).join(" "), citedMarkers, evidence,
         conflicts: [], evidenceReview: "completed", decisionBrief };
-    } catch {
+    } catch (error) {
       // A malformed generation/review, transport outage or input cap must not
       // discard completed paid reads or route an unreviewed narrative to the UI.
+      synthesisOutputLimit = synthesisOutputLimitFromError(error, failureStage === "review" ? "review" : "generation");
       return unavailable();
     }
   }

@@ -1,8 +1,11 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
+import { answerPresentation } from "../research/answer-presentation";
 import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../research/source-requirements";
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
+import { documentAlreadyRead, documentSelectionKey } from "./document-selection";
 import { synthesisFailureDetail } from "./synthesis-failure";
+import { parseSynthesisOutputLimit, synthesisOutputLimitFromError } from "../llm/output-limit-diagnostic";
 import { finalizeGroundedAnswer } from "./answer-grounding";
 import { selectCitedStatements } from "./cited-statements";
 import { deliverDecisionBrief } from "./decision-brief";
@@ -91,6 +94,7 @@ import { sourceClaimForUrl } from "../sources/public-source-claim-service";
 import { prepareOperatingFee, retainExactItemClaimUrls } from "./operating-fee";
 import { resolveFreeSourceItemContent } from "../sources/resolve-source-item-content";
 import { contentBodyHash } from "../sources/content-receipt";
+import { recognizeSourceRecency, sourceRecencyGap, sourceRecencyReport, sourceRecencyRequestGaps } from "../sources/source-recency";
 import type { SourceClaimReceipt } from "../types";
 import { resolveValidArticleOffer } from "../offers/resolve-article-offer";
 import {
@@ -118,6 +122,9 @@ export interface RunInput {
   /** Trusted manual CLI opt-in only; never populate from public request JSON. */
   allowExternalWeb?: boolean;
   question: string;
+  /** Trusted adapter copy of validated caller text before follow-up/context augmentation.
+   * Never populate this from a public originalQuestion field or model-created prompt. */
+  originalQuestion?: string;
   budget?: number;
   /** Quick bounds attention/expansion for latency; Deep preserves the full research pass. */
   researchMode?: ResearchMode;
@@ -273,7 +280,11 @@ async function* runAdmittedAgent(
   }
 
   // 1) DECOMPOSE
+  // Freeze this original-text constraint before the engine creates or omits research targets.
+  const recencyRequirement = recognizeSourceRecency(input.originalQuestion ?? input.question);
+  const requestRecencyGaps = sourceRecencyRequestGaps(recencyRequirement);
   yield emit("decompose", `Breaking down: "${input.question}"`);
+  for (const gap of requestRecencyGaps) yield emit("decompose", "Newest-feed requirement retained from the caller; selection is unqualified and affected catalog articles will be withheld before BUY/CACHE.", gap);
   const subClaims = await engine.decompose(input.question);
   // A comparison names one target per candidate. Unless the caller pinned its limits, Deep research
   // may read one source per target, so the last candidates are not left without any evidence.
@@ -310,7 +321,10 @@ async function* runAdmittedAgent(
   // the first purchase of a source would be the last toll it ever earned, and every later answer
   // would be built from text the source has moved on from. See ./cache-freshness.ts.
   const freshCache = new Set<string>();
-  const { publicReads, publicCandidates, itemClaimUrls } = await discoverPublicReferences(db, input.question, subClaims);
+  const { publicReads, publicCandidates, recencyGaps, itemClaimUrls } = await discoverPublicReferences(db, input.question, subClaims, recencyRequirement);
+  for (const gap of recencyGaps) yield emit("discover",
+    `WITHHELD ${gap.sourceName}: retained feed metadata does not establish the requested newest entry; no older cached article substituted.`, gap);
+  recencyGaps.push(...requestRecencyGaps);
   const webCandidates = new Map<string, SourceCandidate>();
   const gathered: GatheredContent[] = [];
   const requested = requestedSources(input.question);
@@ -439,6 +453,11 @@ async function* runAdmittedAgent(
         if (article.finalUrl !== expected || (!abstractFallback && article.kind !== (htmlFallback ? "html" : "pdf"))) throw new ArticleReadError("document-identity-changed");
       }
       const identity = bodyIdentity(article.text);
+      if (documentAlreadyRead({ sourceId: id, itemUrl: article.finalUrl }, gathered)) {
+        lastWebFailure = "document-alias-already-read";
+        publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure, assetId: id });
+        return null;
+      }
       lastWebFailure = "empty-or-duplicate-body";
       if (!article.text.trim() || seenWebBodies.has(identity) || seenWebUrls.has(article.finalUrl) ||
           gathered.some(read => bodyIdentity(read.text) === identity && read.itemUrl === article.finalUrl) ||
@@ -468,6 +487,12 @@ async function* runAdmittedAgent(
   }
   let signedOfferCount = 0;
   for (const s of sources) {
+    const recencyGap = sourceRecencyGap(recencyRequirement, s);
+    if (recencyGap) {
+      recencyGaps.push(recencyGap);
+      yield emit("discover", `WITHHELD ${s.name}: newest-entry criterion, source scope or observation is unqualified. No BUY/CACHE or legacy source-level article is admitted.`, recencyGap);
+      continue;
+    }
     if (await paperDuplicatesPublicBody(db, s, [...publicReads.values()].map(read => read.text))) {
       yield emit("discover", `SKIP paid manuscript ${s.name}: identical exact-version body is already available as a free public reference.`);
       continue;
@@ -837,11 +862,18 @@ async function* runAdmittedAgent(
     const assetId = decision.assetId ?? decision.sourceId;
     if (selectedAssets.has(assetId)) continue;
     if (decision.action === "BUY" || decision.action === "CACHE") {
+      const selectedAlias = evidencePortfolio.selectedAssetIds.map(id => preparedByAsset.get(id))
+        .find(selected => selected && documentSelectionKey(selected) === documentSelectionKey(decision));
       finalDecisions.push({
         ...decision,
         action: "SKIP",
         rationale:
-          `${decision.rationale} — the claim-aware portfolio chose a stronger, less redundant ` +
+          selectedAlias
+            ? `${decision.rationale} — selected ${selectedAlias.sourceName} as the single delivery channel for this canonical document; this alias adds no independent corroboration or second attention slot. ` +
+              (selectedAlias.sourceKind === "public-reference"
+                ? "The public route has 0 access USDC and no creator citation reward; no redundant creator toll is authorized."
+                : "Its own source identity and registry terms remain authoritative; a creator citation reward still requires qualifying evidence.")
+            : `${decision.rationale} — the claim-aware portfolio chose a stronger, less redundant ` +
           `set inside the ${attentionLimit}-source attention and $${fetchBudget.toFixed(6)} fetch-budget caps, so this proposal stays unspent.`,
       });
     } else {
@@ -922,6 +954,12 @@ async function* runAdmittedAgent(
   let interimAssessment: { result: SufficiencyResult; reads: number } | undefined;
 
   for (const d of buys) {
+    if (documentAlreadyRead(d, gathered)) {
+      const was = markUnread(d, "this canonical document was already read through another delivery channel; no second attention slot, access toll or independent contribution.");
+      if (was === "BUY" && assetById.has(d.assetId ?? d.sourceId)) spentTolls = Math.max(0, round(spentTolls - d.price));
+      yield emit("fetch", `SKIP ${d.sourceName}: this canonical document already contributes once; no redundant read or toll.`);
+      continue;
+    }
     if (webCandidates.has(d.assetId ?? d.sourceId)) {
       yield emit("fetch", `READ ${d.sourceName} - selected original public page, 0 USDC; not a cache hit.`);
       const read = await fetchWeb(d.assetId ?? d.sourceId);
@@ -1163,6 +1201,7 @@ async function* runAdmittedAgent(
             !discussionBlockedIds.has(d.assetId ?? d.sourceId) &&
             !isExternal(d.sourceId) &&
             !gatheredIds.has(d.assetId ?? d.sourceId) &&
+            !documentAlreadyRead(d, gathered) &&
             (!fundingUnavailable || publicReads.has(d.assetId ?? d.sourceId) || webCandidates.has(d.assetId ?? d.sourceId)),
         )
         .map((d) => {
@@ -1218,6 +1257,10 @@ async function* runAdmittedAgent(
       for (const recId of reeval.recommendedIds) {
         if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
         const recommended = webCandidates.get(recId) ?? publicCandidates.get(recId) ?? assetById.get(recId)?.candidate;
+        if (recommended && documentAlreadyRead({ ...recommended.item, assetId: recommended.id, sourceId: recommended.sourceId ?? recommended.id }, gathered)) {
+          yield emit("reevaluate", `SKIP ${recommended.name}: this canonical document was already read through another delivery channel; no redundant access toll or independent corroboration.`);
+          continue;
+        }
         if (discussionBlockedIds.has(recId) || discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl) ||
             subClaims.length > 0 && subClaims.every(claim => discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl, claim))) {
           yield emit("reevaluate", "Discussion-page recommendation withheld: the request requires official documentation.");
@@ -1473,13 +1516,21 @@ async function* runAdmittedAgent(
   // 5) SYNTHESIZE
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
   let synthesized: SynthResult;
-  try { synthesized = await engine.synthesize({ question: input.question, subClaims, gathered,
+  const presentation = answerPresentation(input.originalQuestion ?? input.question);
+  try { synthesized = await engine.synthesize({ question: input.question, subClaims, gathered, generationFormat: "evidence-only",
+    answerPresentation: presentation,
     ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
       ? { answerFormat: "decision-brief" as const } : {}) }); }
-  catch {
+  catch (error) {
     synthesized = { answer: "", citedMarkers: [], evidence: [], conflicts: [], evidenceReview: "unavailable", synthesisFailure: "synthesis" };
+    const limit = synthesisOutputLimitFromError(error, "synthesis");
+    if (limit) synthesized.synthesisOutputLimit = limit;
     yield emit("synthesize", "Synthesis unavailable; completed reads and payment receipts are retained, with unsupported conclusions withheld.");
   }
+  const outputLimit = parseSynthesisOutputLimit(synthesized.synthesisOutputLimit);
+  if (outputLimit) yield emit("synthesize",
+    `Model response reached its configured ${outputLimit.outputTokenLimit}-token output limit during ${outputLimit.stage}; completed reads are retained.`,
+    { reasoningOutputLimit: outputLimit });
   const synthesisFailure = synthesisFailureDetail(synthesized.synthesisFailure, gathered.length,
     researchResponseLanguage(input.question) === "vi");
   if (synthesisFailure) yield emit("synthesize", synthesisFailure,
@@ -1531,6 +1582,7 @@ async function* runAdmittedAgent(
   // Sentences are admitted against the final ledger, after every source, quote and review gate.
   const citedStatements = brief ? [] : selectCitedStatements(synthesized.evidence ?? [], ledger);
   answer = brief?.answer ?? finalizeGroundedAnswer({ question: input.question, answer, ledger, statements: citedStatements,
+    presentation,
     synthesisUnavailable: Boolean(synthesisFailure) });
   const vi = researchResponseLanguage(input.question) === "vi";
   const citedSummary = citedStatements.length > 0;
@@ -1916,6 +1968,8 @@ async function* runAdmittedAgent(
       decisions: finalDecisions, gathered, evidence, outcomes: publicReadOutcomes,
       vi: researchResponseLanguage(input.question) === "vi", withheld: externalDocumentsWithheld });
     if (originals) answer += `\n\n${originals}`;
+    const recency = sourceRecencyReport(recencyGaps, researchResponseLanguage(input.question) === "vi");
+    if (recency) answer = gathered.length === 0 ? `${recency}\n\n${answer}` : `${answer}\n\n${recency}`;
     if (fundingUnavailable) answer = `> ${fundingNotice}\n\n${answer}`;
     const totalSpent = round(
       payments

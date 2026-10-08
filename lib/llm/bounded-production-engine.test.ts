@@ -104,7 +104,7 @@ describe("production model allowance", () => {
     // locally instead of reporting an unreachable provider.
     const truncated = await failure();
     expect(truncated).toBeInstanceOf(ResearchPlanningError);
-    expect(truncated).toMatchObject({ reason: "invalid_output", status: 422 });
+    expect(truncated).toMatchObject({ reason: "invalid_output", status: 422, outputTokenLimit: 2048 });
     expect([attempted, slots(policy.journalDirectory).length]).toEqual([4, 4]);
   });
 

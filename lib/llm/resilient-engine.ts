@@ -14,7 +14,7 @@ import { ResearchPlanningError } from "./research-plan";
 import { ResearchAdmissionHeldError } from "../research/availability-contract";
 import { MAX_SELECTION_DIAGNOSTIC_HISTORY, ResearchSelectionError, readSelectionDiagnostics } from "./research-selection";
 import { ResearchSelectionInputLimitError, ResearchSelectionPartialBatchError } from "./selection-input";
-import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
+import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError, outputTokenLimitFromValidatedError } from "./reasoning-engine";
 import type {
   AttributeInput,
   DecideInput,
@@ -54,14 +54,17 @@ function isTimeout(err: unknown): boolean {
 }
 
 /** Persist only a bounded category/status, never a provider body that may echo request context. */
-function errorTelemetry(err: unknown): Pick<ReasoningAttempt, "status" | "error" | "inputBounds"> {
+function errorTelemetry(err: unknown): Pick<ReasoningAttempt, "status" | "error" | "inputBounds" | "outputTokenLimit"> {
   if (err instanceof ResearchSelectionPartialBatchError) return {
     ...(err.status === undefined ? {} : { status: err.status }), error: err.category === "unknown" ? "internal" : err.category,
   };
   const candidate = (err as { status?: unknown })?.status;
   const status = typeof candidate === "number" && Number.isInteger(candidate) && candidate >= 100 && candidate <= 599 ? candidate : undefined;
   if (err instanceof ReasoningInputLimitError) return { status: 413, error: "input_limit", ...(err.bounds ? { inputBounds: err.bounds } : {}) };
-  if (err instanceof ReasoningOutputValidationError) return { ...(status ? { status } : {}), error: "output_validation" };
+  if (err instanceof ReasoningOutputValidationError) {
+    const outputTokenLimit = outputTokenLimitFromValidatedError(err);
+    return { ...(status ? { status } : {}), error: "output_validation", ...(outputTokenLimit === undefined ? {} : { outputTokenLimit }) };
+  }
   if (err instanceof ReasoningTransportError) return { error: err.category };
   const name = (err as { name?: string })?.name;
   if (status === 408 || name === "TimeoutError" || name === "AbortError") {

@@ -11,8 +11,9 @@ export interface QuoteOption extends ContextualQuoteOption {
 }
 
 /** Whole, bounded sentences from exact already-unlocked source spans. */
-export function buildQuoteOptions(sources: ReturnType<typeof evidenceContext>, gathered: GatheredContent[]): QuoteOption[] {
-  const options = buildContextualQuoteOptions(sources, gathered, { completeSentencesOnly: true });
+export function buildQuoteOptions(sources: ReturnType<typeof evidenceContext>, gathered: GatheredContent[],
+  policy: { includeShortBlocks?: boolean } = {}): QuoteOption[] {
+  const options = buildContextualQuoteOptions(sources, gathered, { completeSentencesOnly: true, includeShortBlocks: policy.includeShortBlocks });
   return options.map(option => {
     const original = gathered.find(source => source.marker === option.marker)!;
     return { ...option, sourceId: original.sourceId, itemUrl: original.itemUrl, contentVersion: original.contentVersion };

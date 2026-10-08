@@ -217,11 +217,19 @@ jobs:
       - name: Withdrawal backup and recovered copy (Linux CLI, synthetic data)
         run: node --import tsx --no-warnings scripts/test-withdrawal-backup-restore.mts
 
-      - name: Built stdio Monthly discovery (hermetic, no settlement)
+      - name: Built stdio Monthly and bibliography discovery (hermetic, no settlement)
         run: |
           node --test scripts/mcp-registry-release.test.mjs
           npm --prefix mcp run build
           node --import tsx scripts/test-monthly-mcp-package.mts
+          node --import tsx scripts/test-paper-lookup-mcp-package.mts
+
+      - name: Packed stdio research diagnostics, signing and recovery (synthetic)
+        working-directory: mcp
+        run: |
+          mkdir -p "$RUNNER_TEMP/keryx-mcp-acceptance"
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/keryx-mcp-acceptance"
+          node scripts/test-packed.mjs "$(find "$RUNNER_TEMP/keryx-mcp-acceptance" -name '*.tgz' -type f)" "$(npm root -g)/npm/bin/npm-cli.js"
 
       - name: Agent quality regression (hermetic, no settlement)
         run: |
@@ -392,6 +400,20 @@ jobs:
       - name: Bounded document readers (assembled production trace, no network)
         run: node scripts/test-web-readers-traced.mjs
 
+      - name: HTML evidence structure (actual minified reader and quote boundaries, no network)
+        run: node scripts/test-built-html-evidence.cjs
+
+      - name: Ordinary answer presentation (production CSS, synthetic and retained replay, no spending)
+        run: npm run test:answer-presentation
+
+      - name: Ordinary answer presentation screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: answer-presentation-screenshots
+          path: .artifacts/answer-presentation-*.png
+          if-no-files-found: ignore
+
       - name: Research reading UX (offline Chromium and responsive layout)
         env:
           KERYX_FORCE_OFFLINE: "1"
@@ -401,10 +423,49 @@ jobs:
       - name: Business Operator production page (offline Chromium, synthetic status)
         run: node --import tsx scripts/test-browser-operator-business.mts
 
+      - name: Report feedback confirmation and response races (built CSS, hermetic Chromium)
+        env:
+          KERYX_FEEDBACK_SCREENSHOT_DIR: ${{ runner.temp }}/feedback-ux-screenshots
+        run: npm run test:browser-answer-feedback
+
+      - name: Report feedback screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feedback-ux-screenshots
+          path: ${{ runner.temp }}/feedback-ux-screenshots
+          if-no-files-found: ignore
+
       - name: Literature workspace built navigation and responsive UI (offline, no research)
         env:
           KERYX_LITERATURE_SCREENSHOT_DIR: ${{ runner.temp }}/literature-ux-screenshots
         run: npm run test:browser-literature-built
+
+      - name: Stored excerpt readability (built CSS, hermetic Chromium)
+        env:
+          KERYX_EVIDENCE_SCREENSHOT_DIR: ${{ runner.temp }}/evidence-readability
+        run: node --import tsx scripts/test-browser-evidence-readability.mts
+
+      - name: Stored excerpt readability screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-readability-screenshots
+          path: ${{ runner.temp }}/evidence-readability
+          if-no-files-found: ignore
+
+      - name: Model output-limit notice (built CSS, hermetic Chromium)
+        env:
+          KERYX_OUTPUT_LIMIT_SCREENSHOT_DIR: ${{ runner.temp }}/output-limit-ux-screenshots
+        run: npm run test:browser-output-limit
+
+      - name: Model output-limit screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: output-limit-ux-screenshots
+          path: ${{ runner.temp }}/output-limit-ux-screenshots
+          if-no-files-found: ignore
 
       - name: Literature workspace screenshots
         if: always()

@@ -2143,13 +2143,14 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async recordFeedback(queryId: string, rating: "up" | "down", comment?: string): Promise<void> {
-    await this.domainCall("record_feedback", { p_row: {
+    const { error } = await this.domainCall("record_feedback", { p_row: {
       id: crypto.randomUUID(),
       query_id: queryId,
       rating,
       comment: comment ?? null,
       created_at: new Date().toISOString(),
     } }, (_args) => this.#sb.from("answer_feedback").insert(_args.p_row));
+    if (error) throw new Error("Feedback write unavailable");
   }
 
   async getFeedbackStats(queryId?: string): Promise<FeedbackStats> {
@@ -2161,8 +2162,9 @@ export class SupabaseAdapter implements KeryxDB {
     }
     let query = this.#sb.from("answer_feedback").select("rating");
     if (queryId) query = query.eq("query_id", queryId);
-    const { data } = await query;
-    const rows = data ?? [];
+    const { data, error } = await query;
+    if (error || !Array.isArray(data)) throw new Error("Feedback counts unavailable");
+    const rows = data;
     const up = rows.filter((r) => r.rating === "up").length;
     const down = rows.filter((r) => r.rating === "down").length;
     const total = rows.length;

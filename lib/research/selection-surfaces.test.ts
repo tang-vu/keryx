@@ -44,7 +44,7 @@ function completionRequest(stream: boolean) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
-  const error = new ResearchSelectionError(diagnostic);
+  const error = new ResearchSelectionError(diagnostic, 2048);
   mocks.getAgentDeps.mockResolvedValue({ db: { saveQueryRun: mocks.saveQueryRun, recordActivationEvent: mocks.recordActivationEvent },
     engine: { name: "synthetic-selection" }, gateway: { mode: "offline", pay: mocks.pay, payCitation: mocks.payCitation } });
   mocks.recordActivationEvent.mockResolvedValue(undefined);
@@ -64,6 +64,8 @@ describe("terminal source-selection failure on hosted callers", () => {
       data: JSON.parse(/^data: (.+)$/m.exec(packet)![1]) }));
     expect(packets.map(packet => packet.event)).toEqual(["meta", "step", "error"]);
     expect(packets[2].data).toEqual({ message: expect.any(String), code: "research_source_selection_invalid", selectionDiagnostic: diagnostic });
+    expect(packets[2].data.message).toContain("2,048-token output limit");
+    expect(wire).not.toMatch(/503|saved evidence/);
     expect(mocks.runAgent).toHaveBeenCalledOnce();
     expect(mocks.runAgent.mock.calls[0][0].question).toBe(SQLITE_SELECTION_QUESTION);
     expect(mocks.saveQueryRun).not.toHaveBeenCalled();
@@ -74,7 +76,7 @@ describe("terminal source-selection failure on hosted callers", () => {
   it("OpenAI JSON returns 422 and a machine-readable diagnostic while preserving the original request", async () => {
     const response = await completion(completionRequest(false));
     expect(response.status).toBe(422);
-    expect(await response.json()).toEqual({ error: { message: expect.any(String), type: "invalid_request_error",
+    expect(await response.json()).toEqual({ error: { message: expect.stringContaining("2,048-token output limit"), type: "invalid_request_error",
       code: "research_source_selection_invalid", selectionDiagnostic: diagnostic } });
     expect(mocks.collectRun).toHaveBeenCalledOnce();
     expect(mocks.collectRun.mock.calls[0][0].question).toBe(SQLITE_SELECTION_QUESTION);
@@ -89,6 +91,8 @@ describe("terminal source-selection failure on hosted callers", () => {
     expect(packets.at(-1).keryx_error).toEqual({ code: "research_source_selection_invalid", selectionDiagnostic: diagnostic });
     expect(packets.every(packet => packet.choices[0].finish_reason === null && packet.keryx === undefined)).toBe(true);
     expect(wire).not.toContain("data: [DONE]");
+    expect(wire).toContain("2,048-token output limit");
+    expect(wire).not.toMatch(/503|saved evidence/);
     expect(mocks.collectRun).toHaveBeenCalledOnce();
   });
 
@@ -103,6 +107,8 @@ describe("terminal source-selection failure on hosted callers", () => {
       const content = result.content as { type: string; text: string }[];
       expect(content).toHaveLength(2);
       expect(content[0].text).toContain("Keryx research failed:");
+      expect(content[0].text).toContain("2,048-token output limit");
+      expect(content[0].text).not.toMatch(/503|saved evidence/);
       expect(JSON.parse(content[1].text.split("\n")[1])).toEqual(diagnostic);
       expect(mocks.collectRun).toHaveBeenCalledOnce();
       expect(mocks.collectRun.mock.calls[0][0].question).toBe(SQLITE_SELECTION_QUESTION);

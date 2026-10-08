@@ -9,10 +9,11 @@ import { demoteSyntheticEvidence } from "@/lib/research/evidence-provenance";
  * When a permalink URL is available, a Share button copies it to the clipboard.
  */
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { QueryRun, PaymentRecord } from "@/lib/types";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import { AnswerMarkdown } from "./answer-markdown";
+import { AnswerFeedback } from "./answer-feedback";
 import { ScholarlyMetadataDetails } from "./scholarly-metadata";
 import { ModeBadge } from "./mode-badge";
 import { SectionHeading } from "./banknote";
@@ -24,6 +25,7 @@ import { CitationEvidencePanel } from "./citation-evidence-panel";
 import { ResearchCitationExport } from "./research-citation-export";
 import { EvidenceMatrixExport } from "./evidence-matrix-export";
 import { SourceEvidenceLens } from "./source-evidence-lens";
+import { reasoningOutputLimitText } from "@/lib/llm/reasoning-telemetry";
 
 export function AnswerCard({ run, meta, permalink, payments = [] }: { run: QueryRun; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[] }) {
   run = demoteSyntheticEvidence(run);
@@ -42,6 +44,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
   const skipped = run.decisions.filter((d) => d.action === "SKIP").length;
   const cached = run.decisions.filter((d) => d.action === "CACHE").length;
   const confidence = deriveConfidence(run);
+  const outputLimit = reasoningOutputLimitText(run.reasoningAttempts, /[ăâđêôơưĂÂĐÊÔƠƯ\u1ea0-\u1ef9]/u.test(run.question) ? "vi" : "en", run.trace);
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500">
@@ -72,6 +75,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
           ) : null}
         </div>
       ) : null}
+      {outputLimit && <p className="mb-4 border border-line bg-paper-2 px-4 py-3 text-sm leading-relaxed text-ink" role="status" data-testid="model-output-limit">{outputLimit}</p>}
       <div className="border border-ink bg-paper">
         <div className="px-6 py-6 sm:px-9">
           <div className="max-w-[64ch]">
@@ -141,7 +145,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
                         )}
                         {c.scholarly && <ScholarlyMetadataDetails metadata={c.scholarly} />}
                       </span>
-                      <button type="button" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="font-mono text-xs text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">Evidence</button>
+                      <button type="button" aria-label={`Inspect evidence for citation ${c.marker}`} aria-haspopup="dialog" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center px-2 font-mono text-xs text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">Evidence</button>
                       <span className="shrink-0 font-mono text-[11px] text-ink-3">
                         {Math.round(c.weight * 100)}%
                       </span>
@@ -156,7 +160,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
           )}
         </div>
 
-        <FeedbackBar queryId={run.id} />
+        <AnswerFeedback queryId={run.id} />
         <SummaryStrip
           spent={run.totalSpent}
           toCreators={run.totalToCreators}
@@ -224,7 +228,7 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
                   {spans.map((item, index) => (
                     <blockquote
                       key={`${item.marker}-${index}`}
-                      className="font-serif text-[13px] italic leading-snug text-ink-2"
+                      className="whitespace-pre-wrap font-serif text-[13px] italic leading-snug text-ink-2 [overflow-wrap:anywhere]"
                     >
                       “{item.quote}”{" "}
                       <span className="not-italic text-paid">
@@ -242,92 +246,6 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
           );
         })}
       </ol>
-    </div>
-  );
-}
-
-/** Thumbs up/down bar between footnotes and summary strip.
- *  Fetches existing stats on mount, POSTs on click, updates optimistically. */
-function FeedbackBar({ queryId }: { queryId: string }) {
-  const [up, setUp] = useState(0);
-  const [down, setDown] = useState(0);
-  const [voted, setVoted] = useState<"up" | "down" | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    fetch(`/api/feedback?queryId=${queryId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((s) => {
-        if (s) { setUp(s.up ?? 0); setDown(s.down ?? 0); }
-      })
-      .catch(() => {});
-  }, [queryId]);
-
-  const vote = useCallback(
-    async (rating: "up" | "down") => {
-      if (busy || voted === rating) return;
-      setBusy(true);
-      // Optimistic update
-      if (rating === "up") setUp((n) => n + 1);
-      else setDown((n) => n + 1);
-      setVoted(rating);
-      try {
-        const res = await fetch("/api/feedback", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ queryId, rating }),
-        });
-        if (res.ok) {
-          const s = await res.json();
-          setUp(s.up ?? 0);
-          setDown(s.down ?? 0);
-        }
-      } catch {
-        /* revert on error — counts stay optimistic */
-      } finally {
-        setBusy(false);
-      }
-    },
-    [queryId, busy, voted],
-  );
-
-  const total = up + down;
-  return (
-    <div className="flex items-center gap-3 border-t border-line px-6 py-2.5 sm:px-9">
-      <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-        Helpful?
-      </span>
-      <button
-        type="button"
-        onClick={() => vote("up")}
-        disabled={busy}
-        className={cn(
-          "flex items-center gap-1 border px-2 py-0.5 font-mono text-[12px] transition-colors",
-          voted === "up"
-            ? "border-paid bg-paid/10 text-paid"
-            : "border-line text-ink-3 hover:border-ink hover:text-ink",
-        )}
-      >
-        👍 {up}
-      </button>
-      <button
-        type="button"
-        onClick={() => vote("down")}
-        disabled={busy}
-        className={cn(
-          "flex items-center gap-1 border px-2 py-0.5 font-mono text-[12px] transition-colors",
-          voted === "down"
-            ? "border-destructive bg-destructive/10 text-destructive"
-            : "border-line text-ink-3 hover:border-ink hover:text-ink",
-        )}
-      >
-        👎 {down}
-      </button>
-      {total > 0 && (
-        <span className="font-mono text-[10px] text-ink-3">
-          {total} vote{total !== 1 ? "s" : ""} · {Math.round((up / total) * 100)}% positive
-        </span>
-      )}
     </div>
   );
 }

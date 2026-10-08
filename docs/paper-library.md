@@ -68,6 +68,11 @@ aggregator metadata as publisher records.
 
 ## API and human CLI
 
+Ask provides a direct **Look up free paper metadata** link. A single explicit identifier
+prefills the local library and editable repository search; it never carries the
+whole question or submits a search. Remote and stdio MCP provide the same free
+`paper_lookup` capability. See [metadata lookup and release scope](engineering/free-paper-lookup.md).
+
 `GET /api/papers` is public, bibliography-only, version 1. Default is catalog-only;
 `?q=retrieval&search=1` explicitly enables external requests. Optional `author`,
 `year`, `doi` apply to results. Query/author are capped at 120 characters, DOI at

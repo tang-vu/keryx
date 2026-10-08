@@ -1,13 +1,13 @@
 import type { PaperFilters } from "./types";
 import { normalizeDoi } from "../scholarly/doi";
-import { paperLookupIntent } from "./intent";
+import { normalizePaperQuery, paperLookupIntent } from "./intent";
 
 export function parsePaperRequest(params: URLSearchParams): { filters: PaperFilters; live: boolean } {
   const bounds = { q: 120, author: 120, year: 4, doi: 200, search: 1 } as const;
   for (const [name, max] of Object.entries(bounds)) {
     if (params.getAll(name).length > 1 || (params.get(name)?.length ?? 0) > max) throw new Error("Invalid paper filters");
   }
-  const q = params.get("q")?.trim() ?? "", author = params.get("author")?.trim();
+  const q = normalizePaperQuery(params.get("q")?.trim() ?? ""), author = params.get("author")?.trim();
   const year = params.get("year")?.trim(), doiInput = params.get("doi")?.trim();
   const doi = doiInput ? normalizeDoi(doiInput) : undefined, search = params.get("search");
   if (year && (!/^\d{4}$/.test(year) || Number(year) < 1000 || Number(year) > 2999)
@@ -32,3 +32,6 @@ export function createPaperSearchLimiter(now = Date.now) {
     return 0;
   };
 }
+
+/** Both HTTP bibliography and hosted MCP share this process-local live allowance. */
+export const admitPaperSearch = createPaperSearchLimiter();

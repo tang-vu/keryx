@@ -3,6 +3,7 @@ import path from "node:path";
 import type { ArticleRead } from "./article-reader";
 import { acquireParserSlot } from "./parser-slots";
 import { parse } from "parse5";
+import { observeHtmlTextLayout } from "./html-text-layout";
 
 export async function extractHtml(text: string, finalUrl: string, signal?: AbortSignal): Promise<ArticleRead> {
   // Keep this external package visible to Next's dependency tracer; DOM construction and
@@ -29,7 +30,7 @@ export async function extractHtml(text: string, finalUrl: string, signal?: Abort
         const result = JSON.parse(output) as ArticleRead;
         if (typeof result.text !== "string" || result.text.length > 60000 || !result.text.trim() ||
           typeof result.title !== "string" || result.title.length > 200 || result.finalUrl !== finalUrl || result.kind !== "html" || typeof result.truncated !== "boolean") throw new Error();
-        resolve(result);
+        resolve({ ...result, htmlTextLayout: observeHtmlTextLayout(result.text, result.htmlTextLayout) });
       } catch { reject(new Error("HTML extraction unavailable")); }
     });
     child.stdin.end(JSON.stringify({ text, finalUrl }));

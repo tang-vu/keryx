@@ -37,6 +37,13 @@ export function researchCallCount(body: unknown): number {
   return count;
 }
 
+/** Only a single public metadata call bypasses research credentials. Mixed batches retain auth. */
+export function isPaperLookupCall(body: unknown): boolean {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return false;
+  const message = body as { jsonrpc?: unknown; method?: unknown; params?: { name?: unknown } };
+  return message.jsonrpc === "2.0" && message.method === "tools/call" && message.params?.name === "paper_lookup";
+}
+
 export function normalizeMcpClient(value: string | null): McpClientChannel {
   if (!value) return "direct";
   const normalized = value.trim().toLowerCase();

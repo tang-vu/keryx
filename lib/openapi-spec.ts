@@ -16,6 +16,19 @@ import {
   supportedA2aPackageVersions,
 } from "./a2a/research-package";
 
+const outputLimitMetadataProperties = {
+  outputLimits: {
+    type: "array", maxItems: 2304,
+    description: "Optional explicit model response stops from validated attempt/synthesis trace metadata; absence is unknown. Diagnostic kinds are not a supplier-call count. No retry or payment authority.",
+    items: { type: "object", additionalProperties: false, required: ["step", "outputTokenLimit"], properties: {
+      step: { type: "string", enum: ["decompose", "decide", "sufficiency", "reevaluate", "synthesize", "attribute"] },
+      stage: { type: "string", enum: ["generation", "review", "synthesis"], description: "Present only for synthesis subcall diagnostics." },
+      outputTokenLimit: { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER },
+    } },
+  },
+  outputLimitTraceStepsOmitted: { type: "integer", minimum: 1, description: "Earlier trace steps outside the bounded diagnostic scan; not a count of output-limit events." },
+};
+
 export const openapiSpec = {
   openapi: "3.1.0",
   info: {
@@ -269,6 +282,7 @@ export const openapiSpec = {
       AskResponse: {
         type: "object",
         properties: {
+          ...outputLimitMetadataProperties,
           queryId: { type: "string" },
           status: { type: "string", enum: ["completed"] },
           researchPackage: { $ref: "#/components/schemas/A2aResearchPackage" },
@@ -402,6 +416,7 @@ export const openapiSpec = {
               totalToCreators: { type: "number" },
               dispatchUrl: { type: "string" },
               evidence: { type: "array", items: { type: "object" } },
+              ...outputLimitMetadataProperties,
               claimCoverage: {
                 type: "array",
                 items: { type: "object" },

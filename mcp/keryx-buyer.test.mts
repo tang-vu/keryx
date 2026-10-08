@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 const dirs: string[] = [];
-afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.resetModules(); for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true }); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.resetModules(); for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true }); });
 async function buyer(content?: string) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-mcp-custody-")); dirs.push(dir);
   const wallet = path.join(dir, "wallet.json");
@@ -53,5 +53,55 @@ it.each(["payment.json.lock", "payment.json.funding.json.lock"])("retains %s aft
   const api = await import("./keryx-buyer.mts");
   expect(await api.getStatus()).toMatchObject({ ready: false, gatewayAvailable: "unknown", instructions: expect.stringContaining("admission is held") });
   await expect(api.askKeryx("Synthetic research")).rejects.toThrow(/before any new funding/);
+  await expect(api.askKeryx("x".repeat(2001))).rejects.toThrow(/before any new funding/);
   expect(fs.readdirSync(f.dir)).toEqual([lock]); expect(f.fetcher).not.toHaveBeenCalled();
+});
+
+it.each([["ASCII", "x".repeat(2001)], ["UTF-16", "🧪".repeat(1001)]])("rejects a server-invalid %s question before custody, funding or network", async (_kind, question) => {
+  const f = await buyer("{retained unreadable custody}");
+  await expect(f.api.askKeryx(question)).rejects.toThrow(/2000 characters or fewer/);
+  expect(fs.readFileSync(f.wallet, "utf8")).toBe("{retained unreadable custody}");
+  expect(fs.readdirSync(f.dir)).toEqual(["wallet.json"]);
+  expect(f.fetcher).not.toHaveBeenCalled();
+});
+
+it("prioritizes an original pending funding journal without a crash lock over a new oversized question", async () => {
+  const f = await buyer();
+  const file = path.join(f.dir, "payment.json.funding.json");
+  const original = JSON.stringify({ schema: "keryx-mcp-funding-v2", network: f.api.meta.network,
+    id: "11111111-1111-4111-8111-111111111111", payer: `0x${"11".repeat(20)}`,
+    amountMicros: "500000", requiredMicros: "100000", phase: "credit", status: "pending",
+    transactionHash: `0x${"ab".repeat(32)}` });
+  fs.writeFileSync(file, original);
+  await expect(f.api.askKeryx("x".repeat(2001))).rejects.toThrow(/Original funding requires recovery/);
+  expect(fs.readFileSync(file, "utf8")).toBe(original);
+  expect(fs.readdirSync(f.dir)).toEqual(["payment.json.funding.json"]);
+  expect(f.fetcher).not.toHaveBeenCalled();
+});
+
+it("refuses a 2001-character question with configured custody and merchant before entering funding", async () => {
+  const f = await buyer();
+  vi.stubEnv("KERYX_BUYER_PRIVATE_KEY", `0x${"11".repeat(32)}`);
+  vi.stubEnv("KERYX_BUYER_PAYEE", `0x${"22".repeat(20)}`); vi.resetModules();
+  const funding = await import("./local-funding.mts");
+  const fund = vi.spyOn(funding, "ensureLocalFunding").mockImplementation(async () => { throw new Error("Unexpected funding entry"); });
+  const api = await import("./keryx-buyer.mts");
+  await expect(api.askKeryx("x".repeat(2001))).rejects.toThrow(/2000 characters or fewer/);
+  expect(fund).not.toHaveBeenCalled(); expect(f.fetcher).not.toHaveBeenCalled();
+  expect(fs.readdirSync(f.dir)).toEqual([]);
+});
+
+it("preserves a valid 2000-character question and submits the server's trimmed canonical text", async () => {
+  const f = await buyer();
+  vi.stubEnv("KERYX_BUYER_PRIVATE_KEY", `0x${"11".repeat(32)}`);
+  vi.stubEnv("KERYX_BUYER_PAYEE", `0x${"22".repeat(20)}`); vi.resetModules();
+  const funding = await import("./local-funding.mts"), payment = await import("./local-payment.mts");
+  const fund = vi.spyOn(funding, "ensureLocalFunding").mockResolvedValue(undefined);
+  const pay = vi.spyOn(payment, "payForResearch").mockResolvedValue({ data: { answer: "Synthetic report", citations: [], creatorsPaid: null, totalToCreators: 0, feePaid: 0.05 }, settlementId: "synthetic", amountPaid: "0.1" });
+  const api = await import("./keryx-buyer.mts");
+  const question = "x".repeat(2000);
+  expect(await api.askKeryx(`  ${question}  `)).toMatchObject({ answer: "Synthetic report" });
+  expect(fund).toHaveBeenCalledTimes(1);
+  expect(pay).toHaveBeenCalledWith(expect.objectContaining({ body: expect.objectContaining({ question }) }));
+  expect(f.fetcher).not.toHaveBeenCalled(); expect(fs.readdirSync(f.dir)).toEqual([]);
 });

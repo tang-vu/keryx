@@ -292,6 +292,7 @@ export async function POST(req: NextRequest) {
         const gen = runAgent(
           {
             question: askQuestion,
+            originalQuestion: question,
             signal: agentAbort.signal,
             budget: askBudget,
             // Verified SIWE wallet only. Keeps a treasury-funded run from buying or rewarding the

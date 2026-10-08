@@ -12,6 +12,7 @@ import { GuardedArcSubmissionUnknownError } from "../lib/payments/guarded-arc-tr
 import { payForResearch, readPending, recoverResearch } from "./local-payment.mts";
 import { ensureLocalFunding, readFunding, recoverFunding } from "./local-funding.mts";
 import type { ReasoningSurface } from "../lib/llm/reasoning-telemetry.ts";
+import { parseAskQuestion } from "../lib/ask-input.ts";
 
 const RPC = callerConfig.rpcUrl;
 const BASE_URL = (process.env.KERYX_BASE_URL ?? "https://keryx.cc").replace(/\/$/, "");
@@ -108,13 +109,19 @@ export async function askKeryx(question: string, budget?: number): Promise<Keryx
   if (fs.existsSync(`${JOURNAL_FILE}.lock`) || fs.existsSync(`${FUNDING_FILE}.lock`))
     throw new Error("Original payment or funding admission is held; recover and inspect the existing lock before any new funding");
   if (readPending(JOURNAL_FILE)) throw new Error("Previous payment requires recovery. Use keryx_recover before another paid call");
+  if (readFunding(FUNDING_FILE)?.status === "pending")
+    throw new Error("Original funding requires recovery; use keryx_recover before another deposit");
   if (question.trim().length < 3 || question.length > 8192) throw new Error("Research question is invalid");
+  // The paid API validates this same canonical text. Refuse before loading custody
+  // or entering funding; original payment/lock recovery above remains first.
+  const parsedQuestion = parseAskQuestion(question);
+  if (!parsedQuestion.success) throw new Error(parsedQuestion.error);
   const account = configuredAccount(), payee = merchant(), { required, deposit } = limits(budget);
   try {
     await ensureLocalFunding({ account, rpcUrl: RPC, file: FUNDING_FILE, required, deposit });
     const r = await payForResearch<KeryxAnswer>({ url: `${BASE_URL}/api/agent/ask`, account, journalFile: JOURNAL_FILE,
       rpcUrl: RPC, maxAmountUsdc: MAX_TOTAL_USDC, expectedPayee: payee, expectedAmountMicros: required.toString(), waitForCompletionMs: 90000,
-      body: { question, budget: budget ?? DEFAULT_BUDGET_USDC, researchMode: "deep", responseMode: "async" } });
+      body: { question: parsedQuestion.question, budget: budget ?? DEFAULT_BUDGET_USDC, researchMode: "deep", responseMode: "async" } });
     return { ...r.data, settlementId: r.settlementId, amountPaid: r.amountPaid };
   } catch (error) {
     if (error instanceof GuardedArcSubmissionUnknownError) throw new Error(`Funding outcome unknown for original transaction ${error.transactionHash}. Use keryx_recover; do not deposit again`);
