@@ -3,11 +3,17 @@
 import fs from "node:fs";
 import { OpenAICompatibleEngine } from "../lib/llm/openai-compatible-engine.ts";
 import { usageCostBounds } from "../lib/economics/provider-cost-policy.ts";
+import { findModelChoice } from "../lib/llm/model-catalog.ts";
 
+const args = process.argv.slice(2);
+if (args.length !== 0 && (args.length !== 2 || args[0] !== "--model" || !["cloudflare-llama-3.3", "cloudflare-gpt-oss-120b"].includes(args[1]))) {
+  throw new Error("Usage: eval-cloudflare.mts [--model cloudflare-llama-3.3|cloudflare-gpt-oss-120b]");
+}
 const account = process.env.CLOUDFLARE_ACCOUNT_ID ?? "";
 const key = process.env.CLOUDFLARE_API_TOKEN ?? "";
 if (!/^[a-f0-9]{32}$/.test(account) || !key) throw new Error("Configure CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in a private environment file");
-const model = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+const choice = findModelChoice(args[1] ?? "cloudflare-llama-3.3")!;
+const model = choice.model;
 class EvaluationEngine extends OpenAICompatibleEngine {
   requests = 0;
   protected override chatJson(model: string, system: string, user: string, maxTokens = 512) {
@@ -70,7 +76,8 @@ try {
       ? costs.reduce((sum, value) => sum + value!.upper, 0) : null,
     billedUsd: null, remainingFreeNeurons: null, scope: "synthetic smoke; no payments or broad quality parity" };
   fs.mkdirSync(".artifacts", { recursive: true });
-  fs.writeFileSync(".artifacts/cloudflare-smoke.json", JSON.stringify(report, null, 2) + "\n");
+  const artifactPath = model === "@cf/openai/gpt-oss-120b" ? ".artifacts/cloudflare-gpt-oss-smoke.json" : ".artifacts/cloudflare-smoke.json";
+  fs.writeFileSync(artifactPath, JSON.stringify(report, null, 2) + "\n");
   console.log(JSON.stringify({ passed: report.passed, checks, requests: report.requests, durationMs: report.durationMs,
     grossTariffEstimateUsd: report.grossTariffEstimateUsd, billedUsd: null, remainingFreeNeurons: null }));
   if (!report.passed) process.exitCode = 1;

@@ -13,7 +13,7 @@
  */
 
 import { config } from "../config";
-import type { ModelProvider } from "./model-catalog";
+import type { ModelChoice, ModelProvider } from "./model-catalog";
 
 export interface ProviderEndpoint {
   baseUrl: string;
@@ -32,4 +32,10 @@ export function endpointFor(provider: ModelProvider): ProviderEndpoint | null {
   };
   const endpoint = endpoints[provider];
   return endpoint?.apiKey ? endpoint : null;
+}
+
+/** Experimental model consent is separate from enabling the existing Cloudflare tier. */
+export function endpointForModel(model: ModelChoice): ProviderEndpoint | null {
+  if (model.id === "cloudflare-gpt-oss-120b" && !config.cloudflareGptOssEnabled) return null;
+  return endpointFor(model.provider);
 }

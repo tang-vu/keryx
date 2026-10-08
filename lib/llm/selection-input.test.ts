@@ -121,7 +121,7 @@ describe("bounded source selection batches", () => {
     });
     vi.stubGlobal("fetch", fetch);
     const engine = new OpenAICompatibleEngine({ provider: "cloudflare", name: "synthetic-cloudflare",
-      baseUrl: "https://synthetic.invalid", model: "synthetic-model", apiKey: "synthetic" });
+      baseUrl: "https://synthetic.invalid", model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast", apiKey: "synthetic" });
     expect(await engine.decide(input(20))).toHaveLength(20);
     expect(bodies.length).toBeGreaterThan(1);
     for (const body of bodies) {
@@ -133,7 +133,7 @@ describe("bounded source selection batches", () => {
     const request = input(1); request.candidates[0].description = "d".repeat(18000);
     const fetch = vi.fn(() => { throw Error("No supplier may dispatch"); }); vi.stubGlobal("fetch", fetch);
     const primary = new OpenAICompatibleEngine({ provider: "cloudflare", name: "synthetic-cloudflare-indivisible",
-      baseUrl: "https://synthetic.invalid", model: "synthetic-model", apiKey: "synthetic" });
+      baseUrl: "https://synthetic.invalid", model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast", apiKey: "synthetic" });
     const alternate = new CaptureEngine(), engine = new ResilientEngine(primary, alternate, 0, new MemoryReasoningCircuitStore());
     const error = await engine.decide(request).catch(value => value);
     expect(error).toBeInstanceOf(ResearchSelectionInputLimitError);

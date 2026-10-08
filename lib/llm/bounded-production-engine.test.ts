@@ -195,7 +195,7 @@ describe("production model allowance", () => {
     fixture(1); vi.stubEnv("DEEPSEEK_API_KEY", "synthetic-test-key");
     const { availableModels, getReasoningEngine } = await import("./index");
     expect(availableModels().map(model => model.id)).toEqual(["deepseek-flash"]);
-    for (const id of ["deepseek-v4-pro", "mimo-v2.5", "cloudflare-llama-3.3", "invalid"])
+    for (const id of ["deepseek-v4-pro", "mimo-v2.5", "cloudflare-llama-3.3", "cloudflare-gpt-oss-120b", "keryx:cloudflare-gpt-oss-120b", "invalid"])
       expect(() => getReasoningEngine(id)).toThrow("only DeepSeek Flash");
     // On Windows the factory deliberately refuses unsupported directory fsync, before HTTP.
     if (process.platform === "win32") expect(() => getReasoningEngine("deepseek-flash")).toThrow();

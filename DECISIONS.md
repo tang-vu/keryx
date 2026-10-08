@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**Add an explicitly selected Cloudflare GPT-OSS model — 2026-10-08.**
+The owner approved one experimental GPT-OSS 120B choice while retaining DeepSeek
+as default. Give it the new `cloudflare-gpt-oss-120b` public ID; preserve withdrawn
+Ollama IDs and private/bounded original model authority. Its separate exact opt-in
+controls catalog/runtime availability, while the automatic Cloudflare tier remains
+Llama. Exclude the manual experiment from ordinary scheduled supplier probes.
+Use per-model conservative prompt/output bounds, low GPT-OSS reasoning effort,
+the existing JSON validator/usage ledger and a fresh immutable gross price capture.
+Catalog/schema documentation is insufficient vendor acceptance: direct finite
+English/Vietnamese JSON and evidence checks precede runtime activation. Keep
+existing billing, source/payment limits and the active Operator source window.
+See [configuration, supported surfaces and gates](docs/cloudflare-workers-ai.md).
+
 **Reject incomplete prepared originals without discarding their history — 2026-10-08.**
 The retained original produced an exactly grounded answer that omitted documented
 payment and validation steps. Per-target coverage and statement support scores

@@ -1,10 +1,10 @@
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
-import { endpointFor } from "./provider-endpoints";
+import { endpointForModel } from "./provider-endpoints";
 import type { ModelChoice } from "./model-catalog";
 
 /** Runtime picks and direct watchdog probes must send the same vendor transport policy. */
 export function createModelEngine(choice: ModelChoice): OpenAICompatibleEngine | null {
-  const endpoint = endpointFor(choice.provider);
+  const endpoint = endpointForModel(choice);
   if (!endpoint) return null;
   return new OpenAICompatibleEngine({
     provider: choice.provider,

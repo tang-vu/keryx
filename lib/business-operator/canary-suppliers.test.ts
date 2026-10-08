@@ -123,7 +123,7 @@ describe("finite canary engine selection", () => {
   it("fails closed for partial configuration, missing credentials and foreign model choices", () => {
     guards.configured.mockImplementationOnce(() => { throw new Error("Business canary selector configuration refused"); });
     expect(() => getReasoningEngine()).toThrow("configuration refused");
-    for (const model of ["deepseek-v4-pro", "mimo-v2.5", "cloudflare-llama-3.3", "unknown"])
+    for (const model of ["deepseek-v4-pro", "mimo-v2.5", "cloudflare-llama-3.3", "cloudflare-gpt-oss-120b", "keryx:cloudflare-gpt-oss-120b", "unknown"])
       expect(() => getReasoningEngine(model)).toThrow("no provider fallback");
     vi.stubEnv("DEEPSEEK_API_KEY", "");
     expect(() => getReasoningEngine()).toThrow("requires its DeepSeek credential");

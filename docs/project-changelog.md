@@ -1,5 +1,6 @@
 # Keryx Project Changelog
 
+<<<<<<< HEAD
 ### Review each retained Operator premise against its exact evidence (2026-10-08, v0.27.38 candidate)
 
 The private original-answer review now receives a fixed factual question for each
@@ -13,6 +14,18 @@ existing six-call episode. Historical reservations, the aggregate ceiling, origi
 owner receipt and expiry remain intact. Actual reviewed delivery, buyer receipt
 verification and restored public service remain separate acceptance gates.
 See [the private recovery contract](engineering/operator-original-continuation.md).
+=======
+### Optional Cloudflare GPT-OSS reasoning choice (2026-10-08, v0.27.40 candidate)
+
+- Add a separately enabled, manually selected GPT-OSS 120B experiment across the
+  shared hosted model picker/APIs and local research CLI.
+- Preserve DeepSeek as default, the existing automatic fallback chain, retired
+  model IDs, private buyer policy and finite Operator original authority.
+- Apply per-model context bounds and low reasoning effort, retain failed-call
+  usage, and capture the published gross tariff without claiming billed cost.
+- Rename the default display to DeepSeek Flash to avoid a stale version promise.
+- [Direct acceptance and release gates](cloudflare-workers-ai.md).
+>>>>>>> 01449244 (feat(llm): add manual Cloudflare GPT-OSS experiment)
 
 ### Sponsored research and distinct operating settlements (2026-10-08, v0.27.35 candidate)
 

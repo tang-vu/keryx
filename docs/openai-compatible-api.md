@@ -11,8 +11,13 @@ and the settlement state of each run remain separate from network selection.
 - **Model:** `keryx` (default), or pick a reasoning model chat-app style with
   `keryx:<id>` — currently `keryx:deepseek-flash` (workhorse), `keryx:deepseek-v4-pro`,
   `keryx:mimo-v2.5` and `keryx:mimo-v2.5-pro` (Xiaomi MiMo, added 2026-07-26).
+  Enabled Cloudflare installations also offer `keryx:cloudflare-llama-3.3` and,
+  after a separate opt-in, the manually selected experimental
+  `keryx:cloudflare-gpt-oss-120b`. See [Cloudflare configuration and gates](cloudflare-workers-ai.md).
   `GET /api/v1/models` lists what's live. Unknown ids run the default, and any pick that
-  errors mid-run falls back to Flash (then the offline heuristic) — an ask always answers.
+  encounters a supplier failure crosses the other configured provider defaults,
+  then the offline heuristic. Planning/selection contract refusals can still stop
+  a request; model availability does not guarantee a completed useful answer.
   The open-weight options served through Ollama Cloud (`glm-5.2`, `qwen3.5-397b`, `gemma4`,
   `kimi-k2.7-code`, `minimax-m3`, `gpt-oss-120b`) were withdrawn on 2026-07-26; those ids still
   resolve — to the workhorse — so existing callers and saved embeds keep working.

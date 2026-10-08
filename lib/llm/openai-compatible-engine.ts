@@ -7,6 +7,7 @@
  */
 
 import { config } from "../config";
+import { cloudflareModelPolicy } from "./cloudflare-model-policy";
 import { extractJson, JsonChatEngine, type ChatJsonOptions } from "./json-chat-engine";
 import { capturePricePolicy } from "../economics/provider-cost-policy";
 import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError } from "./reasoning-engine";
@@ -60,13 +61,14 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     this.name = this.opts.name;
   }
 
-  protected validateChatJsonInput(_model: string, system: string, user: string, maxTokens = 2048): void {
+  protected validateChatJsonInput(model: string, system: string, user: string, maxTokens = 2048): void {
     if (this.opts.provider !== "cloudflare") return;
+    const policy = cloudflareModelPolicy(this.opts.model ?? model);
     const promptUtf8Bytes = new TextEncoder().encode(system + " Respond with a single JSON object." + user).length;
-    if (maxTokens > 8192 || promptUtf8Bytes + maxTokens > 23000) {
+    if (maxTokens > policy.maximumOutputTokens || promptUtf8Bytes + maxTokens > policy.maximumCombinedUnits) {
       // Keep every target and candidate; an ineligible tier cannot acquire source/payment authority.
       throw new ReasoningInputLimitError("Cloudflare research exceeds the bounded context", {
-        promptUtf8Bytes, requestedOutputTokens: maxTokens, maximumCombinedUnits: 23000,
+        promptUtf8Bytes, requestedOutputTokens: maxTokens, maximumCombinedUnits: policy.maximumCombinedUnits,
       });
     }
   }
@@ -84,6 +86,7 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
     this.assertSupplierAdmission();
     const requestStartedAt = new Date().toISOString();
     const pricing = capturePricePolicy(this.opts.provider, wireModel);
+    const cloudflarePolicy = this.opts.provider === "cloudflare" ? cloudflareModelPolicy(wireModel) : null;
     const res = await fetch(`${this.opts.baseUrl}/chat/completions`, {
       method: "POST",
       ...(this.opts.redirect || this.opts.provider === "cloudflare" ? { redirect: this.opts.redirect ?? "error" } : {}),
@@ -94,6 +97,8 @@ export class OpenAICompatibleEngine extends JsonChatEngine {
       },
       body: JSON.stringify({
         model: wireModel,
+        ...(cloudflarePolicy && "reasoningEffort" in cloudflarePolicy
+          ? { reasoning_effort: cloudflarePolicy.reasoningEffort } : {}),
         // V4 defaults to thinking, which can consume a bounded JSON step's entire output
         // allowance before producing content. Keep the existing token cap and failover.
         ...(this.opts.provider === "deepseek" && /^(deepseek-v4-(flash|pro)|deepseek-flash)$/.test(wireModel)
