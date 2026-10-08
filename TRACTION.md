@@ -2,8 +2,10 @@
 
 Current figures are on the [Ledger](https://keryx.cc/dashboard). The
 [Proof page](https://keryx.cc/proof) shows their evidence sources and limits.
-Both pages show combined Arc testnet totals; Proof links the supporting
-settlement and on-chain evidence.
+They show the current mainnet ledger separately from the retained
+[Arc testnet history](https://keryx.cc/history/testnet). Original dispatch URLs and
+historical question records remain available with their original network and dates.
+See [archive evidence and limits](docs/historical-testnet-archive.md).
 
 Only confirmed Circle Gateway payments enter settled totals. Individual
 Gateway references are batched; creator cash-outs link to their Arc transactions.

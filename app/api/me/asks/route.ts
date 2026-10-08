@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { citedSourceIds, hasNewMaterial } from "@/lib/answers-freshness";
+import { getTestnetArchive } from "@/lib/history/testnet-archive";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,24 +27,34 @@ const MAX_LIMIT = 200;
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  const requestedNetwork = req.nextUrl.searchParams.get("network");
+  if (requestedNetwork && requestedNetwork !== "arcTestnet" && requestedNetwork !== "current")
+    return NextResponse.json({ error: "Invalid history network" }, { status: 400 });
+  const historical = requestedNetwork === "arcTestnet";
+  let archive;
+  if (historical) {
+    try { archive = await getTestnetArchive(); }
+    catch { return NextResponse.json({ error: "Testnet history unavailable" }, { status: 503 }); }
+    if (!archive) return NextResponse.json({ error: "Testnet history unavailable" }, { status: 503 });
+  }
 
   const raw = Number(req.nextUrl.searchParams.get("limit"));
   const limit = Number.isFinite(raw) && raw > 0 ? Math.min(Math.floor(raw), MAX_LIMIT) : DEFAULT_LIMIT;
 
   const db = await getDb();
-  const runs = await db.listQueryRunsByAsker(session.address, limit);
+  const runs = await (archive ?? db).listQueryRunsByAsker(session.address, limit);
 
   // "Has anything been published since I asked this?" for the whole ledger in one query: the newest
   // post per cited source, compared per row. Restricted to sources still on sale — a re-ask can't
   // buy from a source the creator has delisted, so flagging it would send the user nowhere.
   // listSources() already drops deactivated rows; unverified ones the agent won't read either.
   const onSale = new Set(
-    (await db.listSources()).filter((s) => s.verified !== false).map((s) => s.id),
+    (historical ? [] : await db.listSources()).filter((s) => s.verified !== false).map((s) => s.id),
   );
   const citedIds = [
     ...new Set(runs.flatMap((r) => citedSourceIds(r.citations ?? [])).filter((id) => onSale.has(id))),
   ];
-  const newestBySource = await db.newestItemDates(citedIds);
+  const newestBySource = historical ? {} : await db.newestItemDates(citedIds);
 
   const asks = runs.map((r) => ({
     id: r.id,
@@ -73,6 +84,8 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     wallet: session.address,
+    ...(archive ? { archive: archive.info } : {}),
+    historicalArchiveAvailable: Boolean(process.env.KERYX_TESTNET_ARCHIVE_MANIFEST),
     totals: {
       dispatches: asks.length,
       // Own spend: only dispatches this wallet's session key actually paid for.
@@ -85,5 +98,5 @@ export async function GET(req: NextRequest) {
     // True when the page is looking at a capped window rather than the wallet's whole history.
     truncated: asks.length === limit,
     asks,
-  });
+  }, { headers: { "Cache-Control": "no-store" } });
 }

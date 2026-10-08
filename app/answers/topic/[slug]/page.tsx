@@ -31,7 +31,6 @@ interface TopicData {
   topic: ArchiveTopic | null;
   entries: ArchiveEntry[];
   topics: ArchiveTopic[];
-  toCreators: number;
 }
 
 async function loadTopic(slug: string): Promise<TopicData> {
@@ -44,9 +43,9 @@ async function loadTopic(slug: string): Promise<TopicData> {
     const topic =
       topics.find((t) => t.slug === slug) ??
       (entries.length > 0 ? { slug, label: slug, count: entries.length } : null);
-    return { topic, entries, topics, toCreators: entries.reduce((s, e) => s + e.toCreators, 0) };
+    return { topic, entries, topics };
   } catch {
-    return { topic: null, entries: [], topics: [], toCreators: 0 };
+    return { topic: null, entries: [], topics: [] };
   }
 }
 
@@ -95,7 +94,7 @@ export async function generateMetadata({
 
 export default async function TopicPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { topic, entries, topics, toCreators } = await loadTopic(slug);
+  const { topic, entries, topics } = await loadTopic(slug);
   if (!topic || entries.length === 0) notFound();
 
   // A hub is an entry point to a beat, not a second copy of the archive: the biggest topic can
@@ -151,8 +150,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
         </h1>
         <p className="mt-4 max-w-[62ch] font-serif text-[17px] leading-[1.55] text-ink-2">
           {entries.length} cited answer{entries.length !== 1 ? "s" : ""} on this topic.{" "}
-          <span className="text-paid">${toCreators.toFixed(4)}</span> in creator rewards recorded
-          on these runs. Open a dispatch for its settlement state.
+          Each dispatch retains its network and recorded creator rewards. Testnet amounts remain separate from the current ledger; open individual receipts for settlement states.
         </p>
 
         <ArchiveSearch

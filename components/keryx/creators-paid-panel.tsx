@@ -20,17 +20,20 @@ import { fmtUsdc, shortAddr } from "./phase-style";
 import { SectionHeading } from "./banknote";
 import { PaidStamp } from "./paid-stamp";
 import { GatewayContractReferences } from "./gateway-contract-references";
+import { recordedArcLabel } from "@/lib/arc-network-display";
 
 interface CreatorsPaidPanelProps {
   payments: PaymentRecord[];
   mode: StreamMode | null;
   streaming: boolean;
+  historicalNetwork?: string;
 }
 
 export function CreatorsPaidPanel({
   payments,
   mode,
   streaming,
+  historicalNetwork,
 }: CreatorsPaidPanelProps) {
   const operatingPayments = payments.filter(payment => payment.kind === "operating-fee");
   payments = payments.filter(isCreatorPayment);
@@ -44,6 +47,7 @@ export function CreatorsPaidPanel({
   const failedCount = payments.filter(
     (payment) => paymentSettlementStatus(payment) === "failed",
   ).length;
+  const settledPayments = payments.filter(payment => paymentSettlementStatus(payment) === "settled");
   const paidInFull =
     hasPayments &&
     !streaming &&
@@ -57,7 +61,7 @@ export function CreatorsPaidPanel({
 
   return (
     <div className="relative flex h-full flex-col">
-      <SectionHeading numeral="III" label="The settlement" right="weighted · USDC on Arc" />
+      <SectionHeading numeral="III" label="The settlement" right={historicalNetwork ? `${recordedArcLabel(historicalNetwork)} · recorded USDC` : "weighted · USDC on Arc"} />
       {operatingPayments.length > 0 && <aside aria-label="Keryx operating fees" className="mb-3 border border-line bg-paper-2 px-4 py-3">
         <p className="font-mono text-xs text-ink">Keryx operating fees</p>
         <p className="mt-1 text-xs leading-relaxed text-ink-2">Research operating fees are recorded separately from creator rewards.</p>
@@ -119,6 +123,8 @@ export function CreatorsPaidPanel({
                       <Check className="h-2.5 w-2.5" />
                       batched
                     </span>
+                  ) : paymentSettlementStatus(p) === "settled" ? (
+                    <span>{shortAddr(p.payee)} · recorded settled · transfer ID unavailable</span>
                   ) : paymentSettlementStatus(p) === "failed" ? (
                     <span className="inline-flex items-center gap-1 text-red-700">
                       <CircleX className="h-2.5 w-2.5" />
@@ -156,10 +162,12 @@ export function CreatorsPaidPanel({
                 `${pendingCount} pending · confirmed total`
               ) : failedCount > 0 ? (
                 `${failedCount} failed · not charged`
-              ) : mode === "real" ? (
-                <GatewayContractReferences records={payments.filter(p=>paymentSettlementStatus(p)==="settled")} className="mr-3 hover:text-paid hover:underline"/>
-              ) : (
+              ) : settledPayments.length > 0 ? (
+                <GatewayContractReferences records={settledPayments} className="mr-3 hover:text-paid hover:underline"/>
+              ) : mode === "offline" ? (
                 "Offline — simulated"
+              ) : (
+                "Recorded payment states"
               )}
             </span>
             <span className="letterpress font-display text-[30px] font-bold leading-none tracking-tight tabular-nums text-paid">

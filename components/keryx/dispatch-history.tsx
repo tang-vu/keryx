@@ -18,6 +18,7 @@ export interface RunSummary {
   totalSpent: number;
   totalToCreators: number;
   citationCount: number;
+  archive?: { network: string; capturedAt: string };
 }
 
 function timeAgo(iso: string): string {
@@ -58,6 +59,7 @@ export function DispatchHistory({ runs, title = "Recent dispatches", showFinanci
               </p>
               <p className="font-mono text-[10px] text-ink-3">
                 {timeAgo(r.createdAt)} · {r.citationCount} citation{r.citationCount === 1 ? "" : "s"}
+                {r.archive && " · Arc testnet history"}
                 {showFinancials && <> · ${fmtUsdc(r.totalToCreators)} to creators</>}
               </p>
             </div>

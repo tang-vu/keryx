@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { historicalDispatchHeaders, resolveDispatch } from "@/lib/history/read-dispatch";
 import { publicQueryRun } from "@/lib/research/public-query-run";
 
 export async function GET(
@@ -19,12 +19,14 @@ export async function GET(
     return NextResponse.json({ error: "missing id" }, { status: 400 });
   }
   try {
-    const db = await getDb();
-    const run = await db.getQueryRun(id);
-    if (!run) {
+    const dispatch = await resolveDispatch(id);
+    if (!dispatch) {
       return NextResponse.json({ error: "not found" }, { status: 404 });
     }
-    return NextResponse.json(publicQueryRun(run));
+    return NextResponse.json({
+      ...publicQueryRun(dispatch.run),
+      ...(dispatch.archive ? { archive: dispatch.archive } : {}),
+    }, { headers: historicalDispatchHeaders(dispatch.archive) });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });

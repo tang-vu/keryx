@@ -8,6 +8,7 @@
 import { getDb } from "@/lib/db";
 import { buildResearchReceipt } from "@/lib/research-receipt";
 import { quoteFromA2aOrder } from "@/lib/a2a/result";
+import { historicalDispatchHeaders, resolveDispatch } from "@/lib/history/read-dispatch";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,15 +22,18 @@ export async function GET(
 
   try {
     const db = await getDb();
-    const run = await db.getQueryRun(id);
-    if (!run) return Response.json({ error: "not found" }, { status: 404 });
+    const dispatch = await resolveDispatch(id, db);
+    if (!dispatch) return Response.json({ error: "not found" }, { status: 404 });
+    const { run, reader, archive } = dispatch;
 
-    const payments = await db.listCreatorPaymentAttemptsByQuery(id);
-    const order = id.startsWith("a2a_") ? await db.getA2aOrder(id) : null;
+    const payments = await reader.listCreatorPaymentAttemptsByQuery(id);
+    // The archive restores public dispatch evidence, not live order/funding authority.
+    const order = !archive && id.startsWith("a2a_") ? await db.getA2aOrder(id) : null;
     const receipt = buildResearchReceipt(run, payments, order ? quoteFromA2aOrder(order).funding : undefined);
     const headers = new Headers({
       "Cache-Control": "no-store",
       "X-Keryx-Receipt-Digest": receipt.integrity.digest,
+      ...historicalDispatchHeaders(archive),
     });
     if (new URL(request.url).searchParams.get("download") === "1") {
       const safeId = id.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 80) || "dispatch";

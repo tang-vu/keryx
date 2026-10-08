@@ -43,7 +43,6 @@ export const metadata: Metadata = {
 
 export default async function AnswersPage() {
   const entries = await getArchiveCached();
-  const totalToCreators = entries.reduce((s, e) => s + e.toCreators, 0);
   const topics = buildTopics(entries);
   const slice = paginateArchive(entries, 1);
 
@@ -70,7 +69,6 @@ export default async function AnswersPage() {
         slice={slice}
         topics={topics}
         totalEntries={entries.length}
-        totalToCreators={totalToCreators}
       />
       <SiteFooter />
     </div>
