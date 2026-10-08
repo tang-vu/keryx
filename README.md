@@ -383,6 +383,10 @@ labeled `SIMULATED`.
 
 ## Architecture
 
+The [Circle and Arc integration ledger](docs/engineering/circle-arc-integration-ledger.md)
+maps each integration to code, network, status and public proof. It also records the
+gasless user-action evaluation and the sponsored testnet proof still required by #304.
+
 Production uses **Arc mainnet (`eip155:5042`)**, observed October 4, 2026 through
 [/api/health](https://keryx.cc/api/health). Full constants, release identities and
 the separation from historical testnet evidence are in [mainnet status](docs/mainnet-status.md).

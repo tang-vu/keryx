@@ -60,6 +60,11 @@ jobs:
       - name: CI scope and merge gate regression checks
         run: node --test scripts/ci-scope.test.mjs
 
+      - name: Circle/Arc integration ledger (offline paths and proof links)
+        run: |
+          node --test scripts/circle-arc-integration-ledger.test.mjs
+          node scripts/circle-arc-integration-ledger.mjs
+
       - name: Typecheck (tsc)
         if: needs.scope.outputs.scope == 'full'
         run: npm run typecheck
