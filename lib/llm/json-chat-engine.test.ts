@@ -10,7 +10,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { JsonChatEngine, extractJson } from "./json-chat-engine";
-import type { DecideInput } from "./reasoning-engine";
+import type { DecideInput, SynthInput } from "./reasoning-engine";
 import { ReasoningOutputLimitError } from "./reasoning-engine";
 import { ResilientEngine, reasoningAttempts } from "./resilient-engine";
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
@@ -40,7 +40,19 @@ class StubEngine extends JsonChatEngine {
   ceilingFor(items: number): number {
     return this.budgetFor(items);
   }
+  guidanceFor(input: SynthInput): string { return this.synthesisGenerationGuidance(input); }
 }
+
+it("uses ordinary requested-language guidance only with explicit server opt-in", () => {
+  const engine = new StubEngine({});
+  const input = { question: "Explain in Portuguese", subClaims: ["Behavior"], gathered: [] };
+  const historical = engine.guidanceFor(input);
+  expect(historical).toContain("in the language of the question");
+  expect(historical).not.toContain("For this ordinary research answer");
+  expect(engine.guidanceFor({ ...input, answerPresentation: { language: "pt", requestedLanguage: "pt" } }))
+    .toBe(historical.replace("Each option is already", "For this ordinary research answer, write each statement in Brazilian Portuguese. The original caller's explicit output language takes precedence over the question's language. Each option is already"));
+  expect(engine.guidanceFor({ ...input, answerPresentation: { language: "en" } })).toBe(historical);
+});
 
 it("preserves valid JSON containing embedded fenced examples", () => {
   const value = { answer: "Example: ```sql CREATE INDEX i ON t(c); ```", facts: [{ text: "A literal ``` delimiter" }] };

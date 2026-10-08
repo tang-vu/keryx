@@ -2,15 +2,23 @@ import type { TextRegion } from "../web-research/html-text-layout";
 
 const MAX_SIBLINGS = 8;
 
-function itemKey(text: string, block: TextRegion): string | undefined {
-  const body = text.slice(block.start, block.end).replace(/(?:\r\n|\r|\n)$/u, "").replace(/[ \t]+$/u, "");
+function singleLineBody(text: string): string | undefined {
+  const body = text.replace(/(?:\r\n|\r|\n)$/u, "").replace(/[ \t]+$/u, "");
   // Ordinary physical lines only. Observed preformatted paragraphs and PDF
   // continuation groups keep their existing source-aware boundary policy.
   if (/[\r\n]/u.test(body)) return;
-  const item = body.match(/^([ \t]*)(?:([-*•])[ \t]+|(?:\d{1,4}[.)])[ \t]+|(?:[\p{L}\p{N}_][\p{L}\p{N}_./+()-]{0,63})[ \t]*:[ \t]+)\S/u);
-  if (!item) return;
-  const kind = item[2] ? `bullet:${item[2]}` : /^[ \t]*\d{1,4}[.)][ \t]+/u.test(body) ? "numbered" : "label";
-  return `${item[1]}:${kind}`;
+  return body;
+}
+
+export function visibleEnumerationKind(text: string): string | undefined {
+  // Visible syntax is a retrieval cue, not restored DOM identity or meaning.
+  const body = singleLineBody(text);
+  const item = body?.match(/^([ \t]*)(?:(\d+[.)])[ \t]+|([-*•])[ \t]+|([\p{L}\p{N}_][\p{L}\p{N}_./+()-]{0,79})[ \t]*:[ \t]+)\S/u);
+  return item ? `${item[1]}:${item[2] ? "number" : item[3] ? item[3] : "label"}` : undefined;
+}
+
+function itemKey(text: string, block: TextRegion): string | undefined {
+  return visibleEnumerationKind(text.slice(block.start, block.end));
 }
 
 /** Bounded structural retrieval cue, never proof of a list's meaning or completeness.
@@ -58,4 +66,45 @@ export function enumeratedContextRange(text: string, blocks: readonly TextRegion
     } else nextOpen = false;
   }
   return siblings ? { start, end } : undefined;
+}
+
+/** Complete short visible runs, optionally with one short single-line colon intro.
+ * The linear pass rejects every prefix/suffix of an oversized ordinary run.
+ * Larger runs still use bounded sibling fallback; neither path proves coverage.
+ */
+export function enumeratedContext(text: string, blocks: readonly TextRegion[], maximum: number,
+  preformatted: readonly TextRegion[] = []): Map<number, TextRegion> {
+  const contexts = new Map<number, TextRegion>();
+  let preIndex = 0;
+  for (let first = 0; first < blocks.length;) {
+    const block = blocks[first]!;
+    while (preformatted[preIndex] && preformatted[preIndex]!.end <= block.start) preIndex++;
+    const pre = preformatted[preIndex];
+    const kind = pre && pre.start < block.end ? undefined : itemKey(text, block);
+    if (!kind) { first++; continue; }
+    const lower = preformatted[preIndex - 1]?.end ?? 0;
+    const upper = pre?.start ?? text.length;
+    let last = first;
+    // Scan the whole ordinary run once before labeling any window a full run.
+    // Observed pre regions delimit ordinary runs and cannot supply their intro.
+    while (last + 1 < blocks.length) {
+      const previous = blocks[last]!, next = blocks[last + 1]!;
+      if (next.start !== previous.end || next.end > upper || itemKey(text, next) !== kind) break;
+      last++;
+    }
+    const end = blocks[last]!.end;
+    if (last > first && end - block.start <= maximum) {
+      let start = block.start;
+      const introduction = blocks[first - 1];
+      if (introduction && introduction.start >= lower && introduction.end === start &&
+          introduction.end - introduction.start <= 120 && end - introduction.start <= maximum) {
+        const body = singleLineBody(text.slice(introduction.start, introduction.end));
+        if (body && /:[ \t]*$/u.test(body)) start = introduction.start;
+      }
+      const region = { start, end };
+      for (let index = first; index <= last; index++) contexts.set(blocks[index]!.start, region);
+    }
+    first = last + 1;
+  }
+  return contexts;
 }

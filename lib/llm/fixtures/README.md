@@ -11,6 +11,8 @@ These MDN-derived fields are distributed under that license; they are not
 relicensed under the repository's code license. Source identity, observation and
 exact-byte hashes are recorded in the fixture and
 [the regression record](../../../docs/issue-238-evidence.md).
+The selection, enumeration and evidence-only presentation regressions import
+this single frozen body; no independent copy or current compatibility claim is made.
 
 MDN's [attribution and copyright guidance](https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Attrib_copyright_license)
 was checked on October 8, 2026. This fixture is source-retrieval test data,

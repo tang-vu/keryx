@@ -1,7 +1,9 @@
 # Open issue resolution and acceptance - October 8, 2026
 
 The owner requested handling all open issues. The inventory contains 17 issues,
-with nine existing PRs already included in PR239's source ancestry. This record
+with nine existing PRs already included in PR239's source ancestry. The later
+research presentation PR241 is also retained; the concurrent Operator PR240
+belongs to a separate active source window. This record
 separates a source repair from its remaining acceptance; it does not close an
 issue merely because code, health or CI succeeds.
 
@@ -16,7 +18,7 @@ against that window. A future admitted boundary must be positively confirmed.
 
 | Issue | Source status | Remaining acceptance or work |
 | --- | --- | --- |
-| [238](https://github.com/tang-vu/keryx/issues/238) | New bounded sibling selection retains the exact MDN submit/default/reset/button group and strict quote options. | Coordinated release; actual three Portuguese bullets containing all four sourced facts. |
+| [238](https://github.com/tang-vu/keryx/issues/238) | New bounded sibling selection retains the exact MDN submit/default/reset/button group and strict quote options; PR241 preserves requested language and neutral short-bullet grouping. | Coordinated release; actual three Portuguese bullets containing all four sourced facts. |
 | [236](https://github.com/tang-vu/keryx/issues/236) | PR239 distinguishes validated source decisions from diagnostic trace records; exact-head hosted CI passed. | Admission and release of that source; preserve the separate strict-selection failure gate. |
 | [232](https://github.com/tang-vu/keryx/issues/232) | New canonical-location grouping selects one useful delivery channel without merging payment identities or transferring relevance. | Coordinated release; actual useful chosen channel with access/reward outcome and independent settlement evidence where applicable. |
 | [231](https://github.com/tang-vu/keryx/issues/231) | Inherited PR235 observes HTML headings and retains bounded following context across languages, including duplicate TOC labels. | Deployed frozen NASA task delivering the three useful cited Spanish sentences. |
@@ -36,10 +38,14 @@ against that window. A future admitted boundary must be positively confirmed.
 
 ## Coordinated source and release
 
-The new aggregate is app **0.27.38** on `fix/open-issue-resolution`. It preserves
+The new aggregate is app **0.27.40** on `fix/open-issue-resolution`. It preserves
 PR239/app0.27.37 and the complete preceding reading/client aggregate, then adds
 the enumerated context, canonical document, bounded generation/planning and
-metadata handoff changes. Earlier candidate version records remain historical.
+metadata handoff changes. It retains PR241/app0.27.39's requested language,
+whole short-item quote alternatives, neutral grouping and semantic list renderer.
+App0.27.38 on PR240 is separately reserved for the active Operator continuation;
+this aggregate does not include, deploy or activate it. Earlier candidate version
+records remain historical.
 Use a merge commit when operationally admitted, preserving all feature tips;
 do not independently squash or downgrade the inherited client stack.
 
@@ -69,5 +75,6 @@ full provenance and delivery permit local cleanup.
 
 See [the inherited release record](research-reading-release-2026-10-08.md),
 [generation boundaries](evidence-only-synthesis-2026-10-08.md),
+[requested presentation](research-deliverable-quality-2026-10-08.md),
 [enumerated evidence](../issue-238-evidence.md) and
 [document channels](../issue-232-document-aliases.md).

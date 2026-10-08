@@ -5,6 +5,9 @@ import { evidenceOnlyEnvelope } from "./evidence-only-synthesis";
 import { buildEvidenceLedger } from "../agent/evidence-ledger";
 import { selectCitedStatements } from "../agent/cited-statements";
 import { finalizeGroundedAnswer } from "../agent/answer-grounding";
+import frozenMdn from "./fixtures/issue-238-mdn-button.json";
+import { gatheredArticle } from "../web-research/article-reader";
+import { answerPresentation } from "../research/answer-presentation";
 
 // Synthetic two-read/eight-target shape. These sentences test the packet, not
 // SQLite documentation correctness or a live useful backup/restore run.
@@ -48,6 +51,58 @@ class PacketEngine extends JsonChatEngine {
 }
 
 describe("ordinary evidence-only synthesis", () => {
+  it("combines the compact packet and requested Portuguese presentation without bypassing separate review", async () => {
+    const statements = [
+      "O botão submit envia os dados do formulário ao servidor.",
+      "O botão reset restaura os controles para seus valores iniciais.",
+      "O botão button não possui comportamento padrão.",
+      "Submit é o padrão quando type está ausente, vazio ou inválido.",
+    ];
+    class CompactPortuguese extends JsonChatEngine {
+      readonly name = "synthetic-compact-portuguese";
+      packets: Array<Record<string, unknown>> = [];
+      protected async chatJson(_model: string, system: string, user: string) {
+        const packet = JSON.parse(user);
+        this.packets.push(packet);
+        if (this.packets.length === 2) {
+          expect(packet.evidence).toHaveLength(4);
+          return { reviews: statements.map((_, index) => ({ index, support: 0.9, statementSupport: 0.9 })) };
+        }
+        expect(system).toContain("write each statement in Brazilian Portuguese");
+        expect(packet.schema).not.toContain('"answer"');
+        const options = packet.quoteOptions as Array<{ quoteId: string; marker: string; text: string }>;
+        const submit = frozenMdn.text.slice(5280, 5466);
+        const quotes = [submit, "reset:", "button:", submit];
+        const evidence = quotes.map((prefix, claimIndex) => {
+          const option = options.find(option => claimIndex === 0 || claimIndex === 3
+            ? option.text === prefix : option.text.startsWith(prefix));
+          expect(option).toBeDefined();
+          return { claimIndex, marker: option!.marker, quoteId: option!.quoteId,
+            support: 0.9, statement: statements[claimIndex] };
+        });
+        return { evidence, conflicts: [], answer: "Injected draft [S99]", citedMarkers: ["S99"] };
+      }
+    }
+    const presentation = answerPresentation(frozenMdn.question);
+    const gathered = [{ ...gatheredArticle("public:web:frozen-mdn", { text: frozenMdn.text,
+      title: "Frozen MDN button", finalUrl: "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+      kind: "html", truncated: false }), marker: "S1" }];
+    const engine = new CompactPortuguese();
+    const result = await engine.synthesize({ question: frozenMdn.question, subClaims: frozenMdn.subClaims,
+      gathered, generationFormat: "evidence-only", answerPresentation: presentation });
+    expect(engine.packets).toHaveLength(2);
+    const ledger = buildEvidenceLedger({ question: frozenMdn.question, subClaims: frozenMdn.subClaims, gathered,
+      answer: result.answer, declaredMarkers: result.citedMarkers, proposedEvidence: result.evidence,
+      finalAssessment: frozenMdn.subClaims.map(claim => ({ claim, coverage: 0.9, coveredBy: ["S1"] })) });
+    const delivered = finalizeGroundedAnswer({ question: frozenMdn.question, answer: result.answer, ledger,
+      statements: selectCitedStatements(result.evidence, ledger), presentation });
+    expect(delivered.match(/^- /gm)).toHaveLength(3);
+    for (const statement of statements) expect(delivered).toContain(statement);
+    expect(delivered).toContain("Texto da fonte");
+    expect(delivered).not.toContain("Injected");
+    expect(ledger.evidence.every(row => row.qualifiesForAnswer && !row.qualifiesForReward)).toBe(true);
+  });
+
   it("delivers eight supported targets through the unchanged two calls and 2560 generation ceiling", async () => {
     const engine = new PacketEngine();
     const result = await engine.synthesize(input);

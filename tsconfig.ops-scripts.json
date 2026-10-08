@@ -13,6 +13,7 @@
     "mcp/keryx-buyer.test.mts",
     "scripts/test-paper-ris-import.mts",
     "scripts/test-paper-lookup-mcp-package.mts",
+    "scripts/test-answer-presentation.mts",
     "scripts/test-zotero-ris.mts",
     "scripts/test-browser-paper-library.mts",
     "scripts/operator-business.mts",

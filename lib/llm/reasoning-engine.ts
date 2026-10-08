@@ -192,6 +192,8 @@ export interface SynthInput {
   /** Ordinary delivery constructs prose from reviewed evidence, so generation need not
    * repeat it in a discarded draft. Retained private originals keep their legacy input. */
   generationFormat?: "evidence-only";
+  /** Ordinary run only; omitted by protected original-fulfillment continuations. */
+  answerPresentation?: import("../research/answer-presentation").AnswerPresentation;
 }
 
 /** A factual disagreement the agent found between sources while writing the answer,

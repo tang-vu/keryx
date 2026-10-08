@@ -4,7 +4,7 @@ import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { sourceSentenceSegments, type SourceExtraction } from "./source-sentences";
 import { sourceHtmlLayout, sourceTextBlocks } from "./source-text-blocks";
 import { observedHtmlTextLayout, type HtmlTextLayout } from "../web-research/html-text-layout";
-import { enumeratedContextRange } from "./enumerated-context";
+import { enumeratedContext, enumeratedContextRange } from "./enumerated-context";
 
 const MAX_SOURCE_CHARACTERS = 200_000;
 const PASSAGE_CHARACTERS = 600;
@@ -129,6 +129,7 @@ export function selectEvidencePassages(text: string, question: string, subClaims
   // contiguous bounded sentence windows without altering the original document.
   const physicalLines = Array.from(scanned.matchAll(/[^\n]+(?:\n|$)/g), match => ({ start: match.index, end: match.index + match[0].length }));
   const blocks = sourceTextBlocks(scanned, extraction, layout);
+  const siblingContexts = pdf ? undefined : enumeratedContext(scanned, blocks, PASSAGE_CHARACTERS, layout?.preformatted);
   const blockIndexAt = (offset: number) => {
     let low = 0;
     let high = blocks.length;
@@ -197,7 +198,8 @@ export function selectEvidencePassages(text: string, question: string, subClaims
       } else {
         // Ordinary enumeration cannot cross an observed pre boundary in either
         // direction or displace the pre group's existing neighboring context.
-        const enumeration = enumeratedContextRange(scanned, blocks, blockIndex, PASSAGE_CHARACTERS, layout?.preformatted);
+        const enumeration = pdf ? undefined : siblingContexts?.get(block.start) ??
+          enumeratedContextRange(scanned, blocks, blockIndex, PASSAGE_CHARACTERS, layout?.preformatted);
         start = enumeration?.start ?? start;
         end = enumeration?.end ?? end;
       }

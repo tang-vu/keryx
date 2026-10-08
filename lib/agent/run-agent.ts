@@ -1,4 +1,5 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
+import { answerPresentation } from "../research/answer-presentation";
 import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../research/source-requirements";
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
@@ -1515,7 +1516,9 @@ async function* runAdmittedAgent(
   // 5) SYNTHESIZE
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
   let synthesized: SynthResult;
+  const presentation = answerPresentation(input.originalQuestion ?? input.question);
   try { synthesized = await engine.synthesize({ question: input.question, subClaims, gathered, generationFormat: "evidence-only",
+    answerPresentation: presentation,
     ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
       ? { answerFormat: "decision-brief" as const } : {}) }); }
   catch (error) {
@@ -1579,6 +1582,7 @@ async function* runAdmittedAgent(
   // Sentences are admitted against the final ledger, after every source, quote and review gate.
   const citedStatements = brief ? [] : selectCitedStatements(synthesized.evidence ?? [], ledger);
   answer = brief?.answer ?? finalizeGroundedAnswer({ question: input.question, answer, ledger, statements: citedStatements,
+    presentation,
     synthesisUnavailable: Boolean(synthesisFailure) });
   const vi = researchResponseLanguage(input.question) === "vi";
   const citedSummary = citedStatements.length > 0;

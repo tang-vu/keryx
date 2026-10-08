@@ -249,6 +249,17 @@ jobs:
       - name: HTML evidence structure (actual minified reader and quote boundaries, no network)
         run: node scripts/test-built-html-evidence.cjs
 
+      - name: Ordinary answer presentation (production CSS, synthetic evidence, no spending)
+        run: npm run test:answer-presentation
+
+      - name: Ordinary answer presentation screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: answer-presentation-screenshots
+          path: .artifacts/answer-presentation-*.png
+          if-no-files-found: ignore
+
       - name: Research reading UX (offline Chromium and responsive layout)
         env:
           KERYX_FORCE_OFFLINE: "1"

@@ -2,13 +2,24 @@
 
 ## Issue-resolution source candidate - October 8, 2026
 
-[App0.27.38](engineering/open-issues-2026-10-08.md) retains the reading stack
+[App0.27.40](engineering/open-issues-2026-10-08.md) retains the reading stack
 and adds enumerated context, one canonical document channel, evidence-only
 ordinary generation and explicit metadata cards/exports. Hosted MCP0.3.6 and
 stdio0.4.10 are source candidates; desktop0.4.10 retains its existing reduced
 role. Current main/production remain ab2195d6 by the owner's active-Operator
 instruction. Final source/release/distribution and useful live acceptance remain
 separate gates; no publication or synchronized installed-client claim is made.
+The aggregate also retains PR241's requested presentation, quote menu and semantic
+list renderer changes. PR240's separately active Operator source window is excluded.
+
+## Deliverable quality successor — October 8, 2026
+
+App0.27.39 retains the reviewed reading aggregate and selection diagnostics while
+adding ordinary evidence/presentation improvements. Its
+[surface and acceptance record](engineering/research-deliverable-quality-2026-10-08.md)
+supersedes the active app36/37 release target. Existing package/installer gates and
+private operational source windows remain separate; no synchronized delivery is
+claimed from this source candidate.
 
 ## Coordinated reading release candidate — October 8, 2026
 

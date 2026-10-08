@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Repair document selection and bounded research output (2026-10-08, v0.27.38 candidate)
+### Repair document selection and bounded research output (2026-10-08, v0.27.40 candidate)
 
 - Retain nearby short enumerated rules and defaults at exact source offsets.
 - Choose one useful public or registered channel per canonical document, with
@@ -8,6 +8,8 @@
 - Generate quote-bound evidence without duplicating a discarded ordinary prose
   draft, using the existing output ceiling and independent review.
 - Keep proposed classroom activities/format distinct from historical NASA claims.
+- Retain supported requested language and short bullet layout while preserving
+  every target, excerpt and cited contribution, including the PR241 presentation changes.
 - Supply explicit bibliographic field provenance, ordered authors and reusable
   references in the free metadata lookup, with optional English/French/Vietnamese labels.
 
@@ -15,6 +17,16 @@ The complete preceding reading/client stack remains included. Production and mai
 stay pinned while the other Operator session runs. Useful live answers, original
 admission, CI/review, package/installer delivery and deployment are pending.
 See [all 17 issue dispositions and release gates](engineering/open-issues-2026-10-08.md).
+
+### Retain short enumerated evidence and requested presentation (2026-10-08, v0.27.39 candidate)
+
+Preserve short visible list siblings in bounded evidence selection, including the
+retained MDN submit/default rule. Ordinary reviewed answers can retain supported
+requested language and short bullet layout while preserving every target,
+excerpt and cited contribution. Missing review or count mismatch keeps gaps and
+an unmet-format notice. Private original fulfillment and payment authority remain
+unchanged. Source tests do not establish live usefulness or deployment.
+See [scope and release gates](engineering/research-deliverable-quality-2026-10-08.md).
 
 ### Explain refused source choices in the decision log (2026-10-08, v0.27.37 candidate)
 
