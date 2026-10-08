@@ -94,7 +94,9 @@ HTML units have checked exact raw offsets and, within the excerpt bound, an exac
 HTML excerpt; these are metadata provenance, not ordinary evidence quotes. Crossref
 fields retain original JSON paths. A missing author slot does not shift later names:
 each retained name has its original 1-based position, so a known slot 1 can be reported
-even if a later slot is missing. Conventional BibTeX/RIS use only the intact author
+even if a later slot is missing. Explicitly hidden head contributor slots, including
+hidden ancestors, stay as unavailable positions with a precise not-visible gap; later
+names never inherit those positions. Conventional BibTeX/RIS use only the intact author
 prefix and disclose incomplete provider names. Missing/conflicting title withholds the
 export while preserving other individually observed fields. Both formats retain only
 verified DOI/version identities. Their existing v1 notes do not encode page-specific
@@ -152,7 +154,7 @@ metadata GET, explicit French card, exact version, provenance and both export fo
 This uses the installed dependency closure and is not a clean-install/package-publication
 claim. Final-version packed-consumer checks remain in the root release workflow.
 
-The staged primitive passed 20 tests across its three test files, including actual
+The staged primitive passed 26 tests across its three test files, including actual
 child-process parsing and controlled containment/provenance failures. Another 35
 existing bibliography/Crossref discovery regression checks passed alongside the new
 primitive. Application and operational TypeScript checks and changed-file ESLint

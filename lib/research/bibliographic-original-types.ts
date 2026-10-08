@@ -30,7 +30,7 @@ export interface BibliographicFieldProvenance {
   end?: number;
 }
 export type BibliographicField = { state: "observed"; value: string; provenance: BibliographicFieldProvenance[] }
-  | { state: "missing" | "conflict"; reason: "not-explicit" | "over-bound" | "inconsistent" | "read-unavailable"; provenance?: BibliographicFieldProvenance[] };
+  | { state: "missing" | "conflict"; reason: "not-explicit" | "not-visible" | "over-bound" | "inconsistent" | "read-unavailable"; provenance?: BibliographicFieldProvenance[] };
 export interface BibliographicAuthor {
   /** Original 1-based provider slot; missing names never shift later contributors. */
   position: number;
