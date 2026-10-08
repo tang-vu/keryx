@@ -1,0 +1,11 @@
+# Proposed topology only. Never apply this file to the current tunnel or stock38 controls.
+# Preserve the current public hostname, origin request metadata and credential configuration.
+# This fragment has no tunnel identity, credential path or provisioning action.
+ingress:
+  - hostname: keryx.cc
+    service: http://127.0.0.1:3938
+    originRequest:
+      httpHostHeader: keryx.cc
+  - service: http_status:404
+# Candidate front door 3938 -> unchanged application listener 3939.
+# Validate X-Forwarded-Proto=https and any forwarded-host/port against current reviewed ingress.

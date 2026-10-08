@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "allowImportingTsExtensions": true, "incremental": false },
+  "include": ["lib/maintenance/**/*.ts", "scripts/maintenance-front-door.mts"]
+}
