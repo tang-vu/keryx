@@ -31,8 +31,10 @@ are appended after attribution/settlement and remain a separate optional receipt
 role. `KERYX_TEACHING_PROPOSALS` stays disabled until a fresh bounded actual lesson
 passes usefulness acceptance. Fixture review does not establish NASA correctness.
 
-Issues202/236 still need built ordinary-hold/diagnostic rendering and deployed
-readbacks. The remaining model-dependent issues need a new finite enforceable
+Issues202/236 passed isolated built ordinary-hold/diagnostic rendering: structured
+503s on all ordinary API modes, retained questions, read-only availability checks,
+separate diagnostic/source rows and exact failure-download bytes. Deployed
+readbacks remain required. The remaining model-dependent issues need a new finite enforceable
 allowance: the earlier MDN3-call grant and Operator continuation are consumed.
 No issue is closed solely from source inclusion, test count or health.
 
@@ -83,8 +85,9 @@ below retain their individual acceptance gates.
 
 | Issue | Source status | Remaining acceptance or work |
 | --- | --- | --- |
+| [245](https://github.com/tang-vu/keryx/issues/245) | Scoped payment-identity and prose wrapping passed nine built saved-page checks at 320/390/1366 pixels, preserving amount, percentage and receipt controls. | Read-only deployed check of the existing actually settled report; no new payment is needed. |
 | [238](https://github.com/tang-vu/keryx/issues/238) | New bounded sibling selection retains the exact MDN submit/default/reset/button group and strict quote options; PR241 preserves requested language and neutral short-bullet grouping. | Coordinated release; actual three Portuguese bullets containing all four sourced facts. |
-| [236](https://github.com/tang-vu/keryx/issues/236) | PR239 distinguishes validated source decisions from diagnostic trace records; exact-head hosted CI passed. | Admission and release of that source; preserve the separate strict-selection failure gate. |
+| [236](https://github.com/tang-vu/keryx/issues/236) | PR239 distinguishes validated source decisions from diagnostics; built explicit SSE fixtures verified named CACHE, diagnostic rows, footer counts and exact failure download without a completed report. | Deployed readback; preserve the separate strict-selection failure and live usefulness gates. |
 | [232](https://github.com/tang-vu/keryx/issues/232) | New canonical-location grouping selects one useful delivery channel without merging payment identities or transferring relevance. | Coordinated release; actual useful chosen channel with access/reward outcome and independent settlement evidence where applicable. |
 | [231](https://github.com/tang-vu/keryx/issues/231) | Inherited PR235 observes HTML headings and retains bounded following context across languages, including duplicate TOC labels. | Deployed frozen NASA task delivering the three useful cited Spanish sentences. |
 | [230](https://github.com/tang-vu/keryx/issues/230) | Inherited PR235 retains observed preformatted rule continuations and exact quote/review spans. | Deployed frozen RFC note with all three requested answers; preserve conditions and standards status. |
@@ -93,7 +96,7 @@ below retain their individual acceptance gates.
 | [212](https://github.com/tang-vu/keryx/issues/212) | New ordinary evidence-only generation removes a discarded duplicate prose draft at the unchanged ceiling; inherited PR220 exposes proved output stops. | Actual bounded SQLite comparison/checklist and restoration qualifications. Fixture bytes are not a provider token or usefulness measurement. |
 | [211](https://github.com/tang-vu/keryx/issues/211) | Separate reviewed proposals and final retained factual-dependency gates are integrated; the feature flag remains false. | Fresh bounded useful original lesson and QA-only opt-in; production activation requires accepted evidence. |
 | [210](https://github.com/tang-vu/keryx/issues/210) | Historical finite client batches are fully consumed and retained; later count-limited authorization was exercised. | A fresh enforceable general model/search envelope and applicable authorization before another ordinary-client trial. Missing invoices and expired allowances cannot be reset or relabeled. |
-| [202](https://github.com/tang-vu/keryx/issues/202) | Merged PR203/207 distinguish endpoint connectivity, ordinary admission and isolated Operator holds; observed live not-paused status exists. | Remaining held-mode ordinary UI/structured-error acceptance and retained-question checks in an admitted operational boundary. Useful answer quality is separate. |
+| [202](https://github.com/tang-vu/keryx/issues/202) | Merged PR203/207 distinguish ordinary admission and Operator holds; isolated built Ask, OpenAI stream/nonstream and MCP returned structured 503s, while the UI retained the original question through refusal/recheck without retry. | Deployed normal-mode readback in the admitted release boundary. Useful answer quality is separate. |
 | [181](https://github.com/tang-vu/keryx/issues/181) | Merged PR185 preserves base passages and expands only chosen quote neighborhoods; compact review stays within its original cap. | Decision brief remains disabled; real review/JSON behavior and its independently graded usefulness gate remain unverified. |
 | [172](https://github.com/tang-vu/keryx/issues/172) | Merged PR174/182 provide strict request-local selection diagnostics and retained usage; PR239 repairs presentation. | Ordinary feasible selections and useful frozen SQLite/German ETag deliverables; do not fabricate links or retry invalid selection through another paid tier. |
 | [169](https://github.com/tang-vu/keryx/issues/169) | Merged PR182 preserves comparison dimensions within eight targets and returns actionable refinement for true excess scope. | Useful ordinary systemd/SQLite acceptance; historical raw planning outputs remain unavailable. |

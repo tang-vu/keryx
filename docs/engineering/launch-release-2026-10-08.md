@@ -31,6 +31,20 @@ downloads verified. The third report is an explicitly offline simulated payment
 fixture, not a real settlement acceptance. The official launch badge also passed
 dimensions, keyboard focus, link policy and mobile/desktop layout checks.
 
+Built held-admission QA verified structured `research_paused` responses from Ask,
+both OpenAI stream modes and remote MCP. The composer retained the original typed
+question through a raced refusal and a read-only availability recheck. Explicit
+SSE fixtures kept selection diagnostics separate from named CACHE choices; failure
+downloads matched the diagnostic bytes and created no completed report. This
+acceptance made no provider, metadata or payment calls; production readback remains
+required for issues 202 and 236.
+
+Hosted CI caught an imported Next image runtime in standalone AskForm browser
+fixtures. The official SVG now uses its supplied fixed-size HTML image, preserving
+link policy, focus and layout without importing the image optimizer into those
+adapters. All nine focused admission/budget UI cases passed after the correction;
+the exact final head still requires the complete hosted CI gate.
+
 One Windows signer fixture hit a 67.107-second cold database initialization before
 any signing step. A test-only verified empty-schema seed now gives each fixture an
 exclusive independent copy followed by actual adapter initialization. Empty-table
