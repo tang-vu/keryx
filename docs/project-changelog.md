@@ -1,5 +1,26 @@
 # Keryx Project Changelog
 
+### Report layout and research command boundaries (2026-10-09, v0.27.44 candidate)
+
+- Keep complete related-report questions inside the mobile layout, including long
+  original URLs. The evidence matrix keeps its own horizontal scrolling. Isolated
+  built QA passes at 320, 390 and 1366 px with the original receipt unchanged;
+  deployed browser acceptance remains required.
+- Recognize the archived later-sentence newest-release instruction before buying
+  an irrelevant older source. Wrapped negative instructions and example clauses
+  remain excluded. Broader conversational temporal reasoning and live answer
+  usefulness still require separate acceptance.
+- Add the Circle/Arc integration ledger with exact evidence limits, an inactive
+  gasless evaluation and conservative treasury-float/obligation analysis. Neither
+  evaluation activates sponsorship, investments, funding or a schedule.
+- Hosted shared research surfaces inherit the command boundary. Caller-funded
+  stdio MCP 0.4.11, remote protocol 0.3.7, desktop 0.4.10, extension and bot roles
+  retain their documented contracts. Exact release/deployment provenance and
+  installed-client versions remain separate checks.
+- Release 43 is deployed at `6e591603`; public npm and the official MCP Registry
+  verify 0.4.11. Its actual 320 px report acceptance found the RelatedDispatches
+  overflow addressed by this candidate. No new financial trial was performed.
+
 ### Original metadata, Product Hunt launch and paid delivery integrity (2026-10-09, v0.27.43 candidate)
 
 - Add the owner's official Product Hunt launch badge to the homepage immediately
