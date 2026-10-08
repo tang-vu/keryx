@@ -53,11 +53,12 @@ Limits of this record:
 ### Other outside users
 
 These people are outside the Keryx team and used Keryx for their own work. The owner
-supplied their identities and use cases on October 8.
+supplied their identities and use cases on October 8 and confirmed that all three
+agreed to be named.
 
 | Person | Who they are | What they used Keryx for | Surface |
 | --- | --- | --- | --- |
-| [@JamWaveX](https://t.me/JamWaveX) (Telegram) | Overseas student preparing for a master's programme | Scientific research for the master's application | Not recorded |
+| [@JamWaveX](https://t.me/JamWaveX) (Telegram) | International student in China preparing for a master's programme | Scientific research for the master's application | Not recorded |
 | [Trần Minh Hiếu](https://www.linkedin.com/in/tr%E1%BA%A7n-minh-hi%E1%BA%BFu-667915335/) | Fourth-year university student | Undergraduate research for a study-abroad scholarship application | Not recorded |
 | [0xacee](https://github.com/0xacee) | Builder working on a SaaS product | Finding a product niche | Keryx API |
 
