@@ -20,12 +20,13 @@ app, ENV file, database, credentials, payment gateway or background worker.
 only `window.json` in an **existing** canonical Linux private directory, owned by
 its process UID with mode0700. The single-link file must have mode0600, be at most
 4096 bytes and match its path/descriptor identity before and after reading.
-Symlinks, replacement races, partial JSON, unsupported OS profiles and unprotected
+Symlinks, replacement races, malformed UTF-8, partial JSON, unsupported OS profiles and unprotected
 controls fail closed. The module neither creates nor edits controls.
 
 The exact schema contains format, ID, announcement/start/end timestamps, phase
 and a short plain message. All times are canonical UTC ISO strings. A window is
-at most30 minutes; announcement precedes the start. The states are:
+at most30 minutes; announcement strictly precedes the start. An immediate
+emergency window is outside this planned-maintenance contract. The states are:
 
 | State | Admission | Meaning |
 | --- | --- | --- |
@@ -127,13 +128,19 @@ refuse with zero journal acknowledgement/grant lookup/delivery. Existing real
 cryptographic verifier tests check nonce, signer, chain, tuple and expiry.
 These are synthetic non-production checks, not live payment or recovery evidence.
 
-Local Node24.21.0 checks use the immutable dependency junction with Vitest cache
-disabled. Five focused files include the candidate routing/control/recovery tests
-and the two unchanged cryptographic/sign-route suites. Targeted TypeScript and
-six-file lint passed:20 tests across5 files, zero skipped/failed; TypeScript exit0,
-lint exit0 and diff whitespace check exit0. The stopped-app loopback exercise and
-ambiguous upstream-response-loss case ran without production, provider, database
-or transaction calls. Native Linux file checks remain a separate gate.
+Local Node 24.21.0 checks use the immutable dependency junction with Vitest cache
+disabled. The initial candidate `9ddc858a` passed 20 tests across 5 files, including
+the two unchanged cryptographic/sign-route suites. After review corrections,
+the three maintenance suites passed 11 tests with one explicit Linux-only skip on
+Windows. Both the maintenance and central ops-script TypeScript graphs passed,
+as did six-file lint and the diff whitespace check. The malformed UTF-8 native
+regression rejects structurally valid JSON whose message bytes would otherwise
+be silently replaced; equal announcement/start timestamps are also refused.
+The Linux protected-file suite is included by `vitest.config.mts` and the full
+Ubuntu 24.04 unit-test lane in `.github/workflows/ci.yml`; it must actually pass
+there before native file acceptance is claimed. The stopped-app loopback exercise
+and ambiguous upstream-response-loss case used no production, provider, database
+or transaction calls.
 
 Exact-source independent review/CI, native protected-file acceptance, final
 root/peer ingress and recovery binding, advance in-app banner, supported client

@@ -41,7 +41,7 @@ export function parsePlannedWindow(value: unknown): PlannedWindow {
       !["draining", "active"].includes(String(row.phase)) || typeof row.message !== "string" ||
       !row.message.trim() || row.message.length > 300 || /[\u0000-\u001f\u007f]/.test(row.message)) throw Error("Invalid maintenance window");
   const announced = time(row.announcedAt), starts = time(row.startsAt), ends = time(row.endsAt);
-  if (announced > starts || starts >= ends || ends - starts > MAX_WINDOW_MS) throw Error("Invalid maintenance window");
+  if (announced >= starts || starts >= ends || ends - starts > MAX_WINDOW_MS) throw Error("Invalid maintenance window");
   return structuredClone(row) as unknown as PlannedWindow;
 }
 
@@ -93,7 +93,7 @@ export function readWindowControl(directory: string): WindowControl {
     const raw = readFileSync(fd);
     if (raw.length !== Number(before.size) || !sameFile(before, fstatSync(fd, { bigint: true })) ||
         !sameFile(before, protectedIdentity(file, false)) || !sameFile(dir, protectedIdentity(directory, true))) throw Error("Maintenance control unavailable");
-    return { kind: "valid", window: parsePlannedWindow(JSON.parse(raw.toString("utf8"))) };
+    return { kind: "valid", window: parsePlannedWindow(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(raw))) };
   } catch { return { kind: "unavailable" }; }
   finally { if (fd !== undefined) closeSync(fd); }
 }
