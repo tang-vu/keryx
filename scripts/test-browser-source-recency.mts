@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
 import type { QueryRun } from "../lib/types";
+import { parseResearchAvailability } from "../lib/research/availability-contract";
 
 const require = createRequire(import.meta.url);
 const target = new URL(process.env.KERYX_UX_BASE_URL ?? "http://127.0.0.1:3964");
@@ -27,6 +28,8 @@ const fixture = spawn(process.execPath, ["scripts/test-built-empty-evidence.cjs"
 assert.equal(await new Promise((resolve, reject) => { fixture.once("exit", resolve); fixture.once("error", reject); }), 0);
 const runs = JSON.parse(await readFile(runFile, "utf8")) as QueryRun[];
 assert.equal(runs.length, 2);
+const available = parseResearchAvailability({ state: "not-paused" });
+assert(available);
 const server = process.env.KERYX_UX_BASE_URL ? null : spawn(process.execPath,
   [require.resolve("next/dist/bin/next"), "start", "-H", "127.0.0.1", "-p", "3964"],
   { cwd: process.cwd(), env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
@@ -72,8 +75,17 @@ try {
     });
     const page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
     await page.goto(base, { waitUntil: "domcontentloaded" });
-    await page.getByLabel("What do you want to know?").fill(run.question);
-    await page.locator('[data-tour="dispatch-btn"]').click();
+    // This effect-driven copy proves React consumed availability. Filling the SSR
+    // textarea before hydration can lose the draft while leaving dispatch disabled.
+    await page.getByText(available.message, { exact: true }).waitFor();
+    const question = page.getByLabel("What do you want to know?");
+    const dispatch = page.locator('[data-tour="dispatch-btn"]');
+    await question.fill(run.question);
+    assert.equal(await question.inputValue(), run.question);
+    await page.locator('[data-tour="dispatch-btn"]:enabled').waitFor();
+    assert.equal(await dispatch.isEnabled(), true);
+    assert.equal(asks, 0, "Readiness and entering a draft must not submit research");
+    await dispatch.click();
     await page.getByText(index ? "Giới hạn bản phát hành mới nhất" : "Newest-release limitation", { exact: true }).waitFor();
     await page.screenshot({ path: join(artifacts, `${index ? "vi" : "en"}-${width}.png`), fullPage: true });
     await page.screenshot({ path: join(artifacts, `${index ? "vi" : "en"}-${width}-viewport.png`) });

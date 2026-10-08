@@ -100,6 +100,15 @@ physical isolated QA export; do not weaken compiler/lint rules or fill D with
 another dependency closure. A source export is a disposable validation artifact,
 not a relocated checkout or production deployment.
 
+The first exact-head CI reached the older source-recency browser fixture and
+failed at a disabled dispatch button. Holding actual built hydration bundles
+reproduced a DOMContentLoaded fill being erased when React mounted. The fixture
+now waits for rendered availability, then requires the exact draft, enabled
+dispatch and zero submissions before its ordinary click. The retained production
+build passes all eight bilingual/responsive cases with exports and existing
+one-request/no-payment checks; the original CI failure remains retained. The
+corrected head still requires the complete CI run.
+
 Parent-first current-main reconciliation and the separate Operator owner's active
 original/source lifetime must close before merge/deployment. Verify production
 health and actual source/version identities before a delivered-product claim.
