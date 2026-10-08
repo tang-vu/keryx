@@ -52,6 +52,17 @@ export default function ProofPage() {
           Verify the deployed code, source authority, settled payments, and creator cash-outs
           through the records behind each claim.
         </p>
+        <p className="mt-3 max-w-[68ch] font-serif text-[15px] leading-relaxed text-ink-2">
+          The{" "}
+          <a
+            href="https://github.com/tang-vu/keryx/blob/main/docs/engineering/circle-arc-integration-ledger.md"
+            className="text-paid underline underline-offset-4"
+          >
+            Circle and Arc integration ledger
+          </a>{" "}
+          links each tool to its code and evidence, including the remaining sponsored
+          testnet proof for gasless user actions.
+        </p>
 
         <section className="mt-9 grid gap-3 sm:grid-cols-3">
           {LAYERS.map((layer, index) => (
