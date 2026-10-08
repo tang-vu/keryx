@@ -1,5 +1,19 @@
 # Keryx Project Changelog
 
+### Confirm report feedback honestly (2026-10-08, v0.27.33 candidate)
+
+Helpful controls now retain observed counts while sending and select a rating only
+after the server confirms it. Failed responses show that the vote may have been
+recorded and prevent another append-only attempt in the mounted report. Report
+changes isolate late responses. A 15-second observation deadline ends stalled
+requests without implying a write was undone. Legacy Supabase feedback insert/read
+errors propagate to the API instead of falsely confirming or publishing zero votes.
+The metrics endpoint omits unavailable optional feedback fields while preserving
+successfully read core metrics.
+Named keyboard controls, status announcements and
+44px touch targets reach the shared report surface. Anonymous totals still do not
+identify unique readers or prove traction. See [scope and acceptance](engineering/report-feedback-confirmation.md).
+
 ### Validate a paid MCP question before funding (2026-10-08, v0.27.32 candidate)
 
 The caller-funded MCP buyer now checks the paid API's shared 2000-character limit

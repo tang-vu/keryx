@@ -5995,3 +5995,21 @@ recovery barriers, existing client minimum/raw transport bound and exact origina
 recovery. Hosted direct research keeps its separate existing limit. No merchant,
 funding, settlement, quote or saved-request authority changes. See
 [scope and acceptance](docs/engineering/mcp-question-preflight.md).
+
+## Confirm anonymous report feedback — 2026-10-08
+
+The old client left a locally increased vote count after failed POST responses.
+Use only validated observed totals and select a rating after confirmation. The
+append-only API can persist before aggregate readback fails, so an error is an
+unknown outcome: retain its uncertainty and prevent another mounted-report
+attempt. Do not present a response failure as an unsaved vote or safe retry.
+Scope state to the report, cancel obsolete GET observation, and keep submitted
+POSTs independent of unmounting. Bound headers and body observation to 15 seconds;
+ending local waiting cannot undo persistence, so retain the one-attempt guard.
+Explicitly check resolved Supabase feedback errors before confirmation or aggregate
+publication; preserve the append-only protocol and existing enrolled authority.
+In the metrics response, omit unavailable optional feedback fields while retaining
+successful core metric reads; neither substitute zero nor discard the whole response.
+This improves the shared reading UI without inventing identity,
+server-side deduplication or independent-user traction. See
+[scope and acceptance](docs/engineering/report-feedback-confirmation.md).

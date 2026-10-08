@@ -254,6 +254,19 @@ jobs:
       - name: Business Operator production page (offline Chromium, synthetic status)
         run: node --import tsx scripts/test-browser-operator-business.mts
 
+      - name: Report feedback confirmation and response races (built CSS, hermetic Chromium)
+        env:
+          KERYX_FEEDBACK_SCREENSHOT_DIR: ${{ runner.temp }}/feedback-ux-screenshots
+        run: npm run test:browser-answer-feedback
+
+      - name: Report feedback screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feedback-ux-screenshots
+          path: ${{ runner.temp }}/feedback-ux-screenshots
+          if-no-files-found: ignore
+
       - name: Literature workspace built navigation and responsive UI (offline, no research)
         env:
           KERYX_LITERATURE_SCREENSHOT_DIR: ${{ runner.temp }}/literature-ux-screenshots

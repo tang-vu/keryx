@@ -5,6 +5,7 @@
     "incremental": false
   },
   "include": [
+    "scripts/test-browser-answer-feedback.mts",
     "mcp/keryx-buyer.mts",
     "mcp/keryx-mcp-server.mts",
     "mcp/keryx-buyer.test.mts",

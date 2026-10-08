@@ -1,5 +1,19 @@
 # Research reading UX
 
+## Feedback confirmation — October 8, 2026
+
+The shared report's Helpful controls keep counts authoritative, distinguish sending,
+recorded and unconfirmed feedback, and isolate response state to its report.
+A failed response may follow a saved vote, so the client prevents another attempt
+in that mounted report and does not promise safe retry. Headers and body observation
+have a 15-second deadline; late results cannot erase uncertainty. Legacy Supabase
+feedback errors propagate instead of false confirmation or zero counts. Controls have spoken names,
+status announcements and 44px targets. This app0.27.33 candidate changes shared
+chat/dispatch/desktop-hosted reports; compact embeds and text/native adapters keep
+their existing roles. Browser/CI, coordinated release, physical-device use and
+independent usefulness remain separate gates. See
+[behavior, limits and acceptance](engineering/report-feedback-confirmation.md).
+
 ## Answer heading navigation — October 8, 2026
 
 The answer renderer previously styled its recognized Markdown headings as
