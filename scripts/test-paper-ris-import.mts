@@ -46,6 +46,7 @@ const base = PAPER_CATALOG[0];
 const { doi: _doi, ...withoutDoi } = base;
 const records: PaperRecord[] = Array.from({ length: 4 }, (_, index) => ({ ...withoutDoi,
   arxivId: `2601.00001v${index + 1}`, url: `https://arxiv.org/abs/2601.00001v${index + 1}`,
+  metadataUrl: `https://export.arxiv.org/api/query?id_list=2601.00001v${index + 1}`,
   title: "Synthetic saved bibliography", authors: ["Example, Ada"], authorCount: 2, authorsTruncated: true,
   publishedYear: 2026, venue: 'Recorded venue <img src="https://tracker.invalid/pixel"> & metadata',
   publicationKind: (["preprint", "conference-paper", "journal-article", "unknown"] as const)[index] }));

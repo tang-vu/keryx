@@ -14,7 +14,7 @@ describe("personal literature workspace", () => {
     const refreshed = { ...first, title: "Refreshed title", metadataObservedAt: "2026-10-08T00:00:00.000Z" };
     expect(saveLiteraturePaper(workspace, refreshed, time)).toBe(workspace);
     const arxivId = first.arxivId!.replace(/v\d+$/, "v99");
-    const version = { ...first, arxivId, url: `https://arxiv.org/abs/${arxivId}` };
+    const version = { ...first, arxivId, url: `https://arxiv.org/abs/${arxivId}`, metadataUrl: `https://export.arxiv.org/api/query?id_list=${arxivId}` };
     const result = saveLiteraturePaper(workspace, version, time);
     expect(result.entries).toHaveLength(2);
     expect(result.entries[0]).toMatchObject({ notes: "Keep this screening work", paper: first });
@@ -38,7 +38,7 @@ describe("personal literature workspace", () => {
     let workspace = emptyLiteratureWorkspace();
     for (let index = 1; index <= 50; index++) {
       const arxivId = `2601.${String(index).padStart(5, "0")}v1`;
-      workspace = saveLiteraturePaper(workspace, { ...first, arxivId, url: `https://arxiv.org/abs/${arxivId}` }, time);
+      workspace = saveLiteraturePaper(workspace, { ...first, arxivId, url: `https://arxiv.org/abs/${arxivId}`, metadataUrl: `https://export.arxiv.org/api/query?id_list=${arxivId}` }, time);
     }
     expect(() => saveLiteraturePaper(workspace, second, time)).toThrow("50 papers");
     expect(workspace.entries).toHaveLength(50);

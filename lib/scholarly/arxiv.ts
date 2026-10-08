@@ -1,12 +1,12 @@
 import Parser from "rss-parser";
 import type { ScholarlyMetadata } from "../types";
-import { cleanText, fetchMetadata, type MetadataFetch } from "./provider";
+import { completeMetadataText as cleanText, fetchMetadata, type MetadataFetch } from "./provider";
 import { normalizeDoi } from "./doi";
 import { normalizeVersionedArxivId, questionArxivIds } from "./arxiv-identity";
 export { questionArxivIds } from "./arxiv-identity";
 
-const parser = new Parser<Record<string, never>, { id?: string; paperAuthors?: Array<{ name?: string[] }>; paperDoi?: string }>({
-  customFields: { item: [["author", "paperAuthors", { keepArray: true }], ["arxiv:doi", "paperDoi"]] },
+const parser = new Parser<Record<string, never>, { id?: string; paperAuthors?: Array<{ name?: string[] }>; paperDoi?: string; paperPublished?: string }>({
+  customFields: { item: [["author", "paperAuthors", { keepArray: true }], ["arxiv:doi", "paperDoi"], ["published", "paperPublished"]] },
 });
 export async function parseArxiv(xml: string, retrievedAt: string): Promise<ScholarlyMetadata[]> {
   if (Buffer.byteLength(xml) > 250000 || /<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error("Invalid arXiv XML");
@@ -17,14 +17,19 @@ export async function parseArxiv(xml: string, retrievedAt: string): Promise<Scho
   const feed = await parser.parseString(xml);
   return feed.items.slice(0, 6).flatMap(item => {
     const match = typeof item.id === "string" ? item.id.match(/^https?:\/\/arxiv\.org\/abs\/((?:\d{4}\.\d{4,5}|[a-z-]+(?:\.[A-Z]{2})?\/\d{7})v\d+)$/) : null;
-    const title = cleanText(item.title);
+    const title = cleanText(item.title, 1000);
     if (!match || !title) return [];
     const arxivId = match[1], url = new URL("https://export.arxiv.org/api/query"); url.searchParams.set("id_list", arxivId);
     const contributors = Array.isArray(item.paperAuthors) ? item.paperAuthors : [];
     const authors = contributors.slice(0, 50).flatMap(author => {
       const name = cleanText(author && typeof author === "object" && Array.isArray(author.name) ? author.name[0] : undefined); return name ? [name] : [];
     });
-    const date = item.isoDate && /^\d{4}-\d{2}-\d{2}T/.test(item.isoDate) && Number.isFinite(Date.parse(item.isoDate)) ? item.isoDate.slice(0, 10) : undefined;
+    // rss-parser falls back to updated when published is absent. That update
+    // timestamp cannot establish a publication year in the bibliography.
+    const published = item.paperPublished;
+    const date = published && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(published)
+      && Number.isFinite(Date.parse(published)) && new Date(published).toISOString().slice(0, 10) === published.slice(0, 10)
+      ? published.slice(0, 10) : undefined;
     return [{ provider: "arxiv" as const, recordUrl: url.href, retrievedAt, title, authors, authorCount: contributors.length,
       authorsTruncated: contributors.length > 50, arxivId,
       doi: normalizeDoi(item.paperDoi ?? ""), workType: "preprint" as const, publishedDate: date, peerReview: "unknown" as const }];

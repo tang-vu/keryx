@@ -11,7 +11,7 @@ export const paperOpenApiSchemas = {
       publishedYear: { type: "integer", minimum: 1000, maximum: 2999 }, venue: { ...text, maxLength: 300 }, doi: text,
       arxivId: { ...text, description: "Exact observed version, never a latest-version substitution." },
       repository: { ...text, enum: ["arxiv", "openreview", "pmlr", "acl-anthology", "crossref"] },
-      url: uri, metadataUrl: uri, metadataObservedAt: { ...text, format: "date-time" },
+      url: uri, metadataUrl: { ...uri, description: "Official repository provenance. Crossref works links bind the same exact DOI; arXiv abstract/API links bind the same exact version." }, metadataObservedAt: { ...text, format: "date-time" },
       publicationKind: { ...text, enum: ["preprint", "conference-paper", "journal-article", "unknown"] }, peerReview: { ...text, const: "unknown" },
       links: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["label", "url"], properties: { label: { ...text, enum: ["PDF", "Repository", "Reviews"] }, url: uri } } },
     },

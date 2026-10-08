@@ -5,6 +5,9 @@ import { paperMatches } from "./filters";
 import { parsePaperRequest } from "./request";
 import { paperSearchResultSchema, type PaperRecord, type PaperSearchResult } from "./types";
 import { groupPaperWorks } from "./work-groups";
+import { bibliographyCardText, type BibliographyLanguage } from "./bibliography-card";
+
+const languageSchema = z.enum(["en", "fr", "vi"]);
 
 function assertExactLinks(record: PaperRecord) {
   if ([record.url, record.metadataUrl, ...(record.links ?? []).map(link => link.url)]
@@ -16,18 +19,21 @@ export const paperLookupToolOptions = {
   description: "Find paper titles, recorded contributors, DOI and exact repository versions without research or payment. " +
     "Default: retained catalog metadata with observation times. Set searchRepositories=true only to explicitly send the query to arXiv/Crossref " +
     "(at most two requests, no paper-body reading). Missing DOI, peer review and withdrawal/replacement status remain unknown. " +
-    "Use this for bibliographic questions before requesting paid research.",
+    "Returns a field-scoped bibliography card with provenance, a short reference and reusable BibTeX/RIS text. " +
+    "Use this for exact title/ordered author/year/journal/DOI/version questions before requesting paid research; original paper text is not required for recorded metadata.",
   inputSchema: {
     query: z.string().trim().min(1).max(200).describe("Title/topic (up to 120 characters), exact DOI (up to 200), or versioned arXiv ID/official URL."),
     searchRepositories: z.boolean().optional().describe("Explicit external metadata lookup; false by default. Sends the query to official scholarly providers."),
+    language: languageSchema.optional().describe("Language for bibliography labels: en (default), fr or vi. Original titles, author names and venue names are preserved."),
   },
   annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
 };
-export interface PaperLookupInput { query: string; searchRepositories?: boolean }
+export interface PaperLookupInput { query: string; searchRepositories?: boolean; language?: BibliographyLanguage }
 
 /** Normalizes only an entire supported identity; arbitrary URLs remain literal query text. */
 export function paperLookupParameters(input: PaperLookupInput) {
   const query = z.string().trim().min(1).max(200).parse(input.query);
+  languageSchema.optional().parse(input.language);
   const doi = normalizeDoi(query);
   const q = normalizePaperQuery(query);
   const params = new URLSearchParams(doi ? { doi } : { q });
@@ -66,28 +72,10 @@ export function validatePaperLookupResult(input: PaperLookupInput, value: unknow
 }
 
 /** Text-only clients get a bounded summary; structured data keeps the existing v1 contract. */
-export function paperLookupText(result: PaperSearchResult): string {
-  const field = (value: string) => value.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, " ").replace(/\s+/gu, " ").trim();
-  const lines = ["Paper bibliography only; no paper read, model call, citation or creator payment.",
-    `${result.totalWorks} matching works. Records retain their individual observation times; provider availability does not refresh catalog snapshots.`];
-  for (const provider of result.providers) lines.push(`${provider.name}: ${provider.status === "unavailable"
-    ? "unavailable; no empty result inferred" : provider.status === "empty" ? "no matching records accepted" : `${provider.records} metadata records returned`}.`);
-  for (const { record } of result.groups.slice(0, 8)) {
-    assertExactLinks(record);
-    const complete = record.authors.length > 0 && !record.authorsTruncated && record.authorCount === record.authors.length;
-    lines.push("", field(record.title),
-      complete ? `First listed author in the recorded complete list: ${field(record.authors[0])}.`
-        : "First listed author: not established from the incomplete or absent recorded names.",
-      `Recorded contributors (${record.authors.length}/${record.authorCount} names retained): ${record.authors.slice(0, 12).map(field).join("; ") || "unavailable"}.` +
-        (record.authors.length > 12 ? " Text shows the first 12 names; the structured record retains the remaining names." : ""),
-      `DOI: ${record.doi ?? "not recorded; existence not established"}.`,
-      `Version: ${record.arxivId ?? "no repository version recorded"}. Year: ${record.publishedYear ?? "not recorded"}. Venue: ${record.venue ? field(record.venue) : "not recorded"}.`,
-      "Peer review and withdrawal/replacement status: unknown in this metadata.",
-      `Landing page: ${record.url}`,
-      `Metadata: ${record.metadataUrl} (observed ${record.metadataObservedAt}).`);
-  }
-  if (result.totalWorks > 8) lines.push(`Text shows 8/${result.totalWorks} works; the bounded structured result contains the remaining records.`);
-  return lines.join("\n");
+export function paperLookupText(result: PaperSearchResult, language: BibliographyLanguage = "en"): string {
+  languageSchema.parse(language);
+  result.groups.slice(0, 8).forEach(({ record }) => assertExactLinks(record));
+  return bibliographyCardText(result, language);
 }
 
 export function createPaperLookupHandler(read: (input: PaperLookupInput) => Promise<PaperSearchResult>) {
@@ -100,7 +88,7 @@ export function createPaperLookupHandler(read: (input: PaperLookupInput) => Prom
     }
     try {
       const result = validatePaperLookupResult(input, await read(input));
-      return { structuredContent: result, content: [{ type: "text" as const, text: paperLookupText(result) }] };
+      return { structuredContent: result, content: [{ type: "text" as const, text: paperLookupText(result, input.language) }] };
     } catch {
       return { isError: true, content: [{ type: "text" as const, text:
         "Bibliography temporarily unavailable or unsupported. No empty result, paper read or payment is inferred. Try later or browse /sources?kind=paper." }] };

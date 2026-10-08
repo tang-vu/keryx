@@ -142,6 +142,7 @@ globalThis.fetch=async(input,init)=>{
     const listed = await request("tools/list", {});
     for (const name of ["paper_lookup", "ask_keryx", "keryx_wallet_status", "keryx_recover", "keryx_operator_status"]) assert(listed.tools.some(tool => tool.name === name));
     assert.equal(listed.tools.find(tool => tool.name === "paper_lookup").annotations.readOnlyHint, true);
+    assert.deepEqual(listed.tools.find(tool => tool.name === "paper_lookup").inputSchema.properties.language.enum, ["en", "fr", "vi"]);
     assert.equal(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.question.maxLength, 2000);
     return { call: (name, args = {}) => request("tools/call", { name, arguments: args }), counts,
       stop: async () => { await stopChild(child); children.delete(child); lines.close(); } };
@@ -156,13 +157,20 @@ globalThis.fetch=async(input,init)=>{
   assert.equal(metadata.structuredContent.groups[0].record.arxivId, "2005.11401v4");
   assert.match(metadata.content[0].text, /First listed author in the recorded complete list: First Author/);
   assert.match(metadata.content[0].text, /withdrawal\/replacement status: unknown/);
+  assert.match(metadata.content[0].text, /eprint = \{2005\.11401v4\}/);
+  assert.match(metadata.content[0].text, /AN  - arXiv:2005\.11401v4/);
+  const frenchMetadata = await keyless.call("paper_lookup", { query: "2005.11401v4", language: "fr" });
+  assert(!frenchMetadata.isError);
+  assert.match(frenchMetadata.content[0].text, /Premier auteur dans la liste complète enregistrée: First Author/);
+  assert.match(frenchMetadata.content[0].text, /Référence bibliographique courte/);
+  assert.match(frenchMetadata.content[0].text, /Provenance des champs/);
   const unavailable = await keyless.call("paper_lookup", { query: "2005.11401v4", searchRepositories: true });
   assert(!unavailable.isError); assert.equal(unavailable.structuredContent.providers[0].status, "unavailable");
   assert.match(unavailable.content[0].text, /unavailable; no empty result inferred/);
   await keyless.stop();
   const metadataCounts = JSON.parse(await readFile(keyless.counts, "utf8"));
   assert.equal(metadataCounts.paid, 0); assert.equal(metadataCounts.rpc, 0);
-  assert.equal(metadataCounts.bibliography, 2); assert.deepEqual(metadataCounts.bibliographyQueries, ["0", "1"]);
+  assert.equal(metadataCounts.bibliography, 3); assert.deepEqual(metadataCounts.bibliographyQueries, ["0", "0", "1"]);
   assert(!(await readdir(workspace)).some(name => /forbidden|missing-payment/.test(name)), "Missing custody created private state");
   const happy = await session("happy", join(workspace, `${selectedNetwork}-happy-payment.json`));
   const status = await happy.call("keryx_wallet_status"); assert.match(status.content[0].text, /ready:    yes/);

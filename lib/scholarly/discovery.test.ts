@@ -42,6 +42,11 @@ describe("scholarly discovery boundaries", () => {
     expect(result.candidates.size).toBe(2);
     for (const candidate of result.candidates.values()) expect(candidate).toMatchObject({ sourceKind: "public-reference", fetchPrice: 0, cached: false, item: { contentVersion: "unread" } });
   });
+  it("does not turn an arXiv update timestamp into an unrecorded publication year", async () => {
+    const updatedOnly = atom.replace("<published>2017-06-12T17:57:34Z</published>", "<updated>2026-10-08T00:00:00Z</updated>");
+    expect((await parseArxiv(updatedOnly, time))[0].publishedDate).toBeUndefined();
+    expect((await parseArxiv(atom.replace("2017-06-12T17:57:34Z", "2017-02-31T17:57:34Z"), time))[0].publishedDate).toBeUndefined();
+  });
   it("refuses entity declarations, excessive bytes, malformed XML and unversioned repository identities", async () => {
     for (const xml of [atom.replace("<feed", '<!DOCTYPE feed [<!ENTITY x SYSTEM "file:///secret">]><feed'), "x".repeat(250001), "<feed><entry>"])
       await expect(parseArxiv(xml, time)).rejects.toThrow();

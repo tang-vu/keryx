@@ -216,5 +216,17 @@ DOI, peer review and withdrawal/replacement status stay unknown. Incomplete
 contributor names do not establish the first author. These metadata records grant
 no read, citation, payout or reward authority.
 
+The text response includes a bibliography card, field provenance, a short reference,
+and reusable BibTeX/RIS. Set `language: "fr"` or `language: "vi"` for those labels;
+original titles, contributor names, identifiers and venue names keep their recorded
+form. For example, `paper_lookup({query: "10.1038/s41586-021-03819-2",
+searchRepositories: true, language: "fr"})` requests the exact Crossref record.
+It does not fetch Nature's article or require full text to return recorded metadata.
+First-author and first-three claims require a complete recorded contributor list;
+missing positions, year, venue, DOI and page status remain explicit gaps. Both exports
+retain metadata provenance and the exact DOI/arXiv version, and remain separate from
+research citations and research evidence exports. The public HTTP JSON remains v1.
+See [issue #218 scope and remaining gates](../docs/issue-218-metadata.md).
+
 Candidate0.4.8 adds this tool; publication and hosted availability require separate
 verification. Existing paid tools keep their own custody and recovery requirements.

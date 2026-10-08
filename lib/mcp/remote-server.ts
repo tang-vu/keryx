@@ -101,7 +101,8 @@ export function createRemoteMcpServer(
       title: "Research with Keryx",
       description:
         "Research a question under a USDC creator-payment budget. Keryx selects sources, pays " +
-        "access tolls and weighted citation rewards on the configured Arc network, then returns qualified source excerpts and a receipt. Complete synthesis and per-assertion entailment remain unverified. This remote surface uses Keryx's treasury; anonymous research is sponsored, not caller-funded usage. Public research may send your question to our search provider. The source USDC budget is separate from model and search operating costs.",
+        "access tolls and weighted citation rewards on the configured Arc network, then returns qualified source excerpts and a receipt. Complete synthesis and per-assertion entailment remain unverified. This remote surface uses Keryx's treasury; anonymous research is sponsored, not caller-funded usage. Public research may send your question to our search provider. The source USDC budget is separate from model and search operating costs. " +
+        "For title, ordered authors, year, journal, DOI or exact arXiv version without reading paper findings, use free paper_lookup with an exact identifier instead.",
       inputSchema: {
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
         budget: z

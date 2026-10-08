@@ -52,11 +52,15 @@ describe("remote MCP server", () => {
       await server.connect(serverTransport); await client.connect(clientTransport);
       const tools = await client.listTools(); const tool = tools.tools.find(item => item.name === "paper_lookup");
       expect(tool?.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
-      const response = await client.callTool({ name: "paper_lookup", arguments: { query: "2005.11401v4" } });
+      expect(tool?.inputSchema.properties?.language).toMatchObject({ enum: ["en", "fr", "vi"] });
+      const response = await client.callTool({ name: "paper_lookup", arguments: { query: "2005.11401v4", language: "fr" } });
       expect(response.isError).not.toBe(true);
       expect(response.structuredContent).toMatchObject({ scope: "bibliography-only", totalWorks: 1, providers: [],
         groups: [{ record: { arxivId: "2005.11401v4", authors: ["Patrick Lewis", "Ethan Perez", "Aleksandra Piktus", "Fabio Petroni", "Vladimir Karpukhin", "Naman Goyal", "Heinrich Küttler", "Mike Lewis", "Wen-tau Yih", "Tim Rocktäschel", "Sebastian Riedel", "Douwe Kiela"] } }] });
-      expect(response).toMatchObject({ content: [{ type: "text", text: expect.stringContaining("First listed author in the recorded complete list: Patrick Lewis") }] });
+      expect(response).toMatchObject({ content: [{ type: "text", text: expect.stringContaining("Premier auteur dans la liste complète enregistrée: Patrick Lewis") }] });
+      const bibliography = (response.content as Array<{ text: string }>)[0].text;
+      for (const value of ["1. Patrick Lewis; 2. Ethan Perez; 3. Aleksandra Piktus", "eprint = {2005.11401v4}", "AN  - arXiv:2005.11401v4", "Référence bibliographique courte", "Provenance des champs"])
+        expect(bibliography).toContain(value);
       expect(research).not.toHaveBeenCalled(); expect(http).not.toHaveBeenCalled();
     } finally { await client.close(); await server.close(); http.mockRestore(); }
   });

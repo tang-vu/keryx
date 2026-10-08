@@ -43,6 +43,23 @@ export const paperRecordSchema = z.object({
     ctx.addIssue({ code: "custom", message: "arXiv landing page must retain its exact observed version" });
   if (record.repository === "crossref" && (!record.doi || normalizeDoi(record.url) !== record.doi))
     ctx.addIssue({ code: "custom", message: "DOI landing page must match the observed DOI" });
+  const metadata = new URL(record.metadataUrl);
+  if (record.repository === "crossref") {
+    let observedDoi: string | undefined;
+    try { observedDoi = normalizeDoi(decodeURIComponent(metadata.pathname.replace(/^\/works\//, ""))); } catch { /* invalid encoded path */ }
+    if (!metadata.pathname.startsWith("/works/") || observedDoi !== record.doi || metadata.search || metadata.hash)
+      ctx.addIssue({ code: "custom", message: "Crossref metadata must identify the same exact DOI record" });
+  }
+  if (record.repository === "arxiv") {
+    const exactPage = metadata.hostname === "arxiv.org" && metadata.pathname === `/abs/${record.arxivId}` && !metadata.search;
+    const exactApi = metadata.hostname === "export.arxiv.org" && metadata.pathname === "/api/query"
+      && metadata.searchParams.getAll("id_list").length === 1 && metadata.searchParams.get("id_list") === record.arxivId
+      && metadata.searchParams.getAll("max_results").length <= 1
+      && (!metadata.searchParams.has("max_results") || /^[1-6]$/.test(metadata.searchParams.get("max_results")!))
+      && [...metadata.searchParams.keys()].every(key => key === "id_list" || key === "max_results");
+    if ((!exactPage && !exactApi) || metadata.hash)
+      ctx.addIssue({ code: "custom", message: "arXiv metadata must identify the same exact version" });
+  }
   if (record.repository === "openreview" && (landing.pathname !== "/forum" || !/^[a-zA-Z0-9_-]{1,120}$/.test(landing.searchParams.get("id") ?? "")
     || [...landing.searchParams.keys()].some(key => key !== "id") || landing.searchParams.getAll("id").length !== 1 || landing.hash))
     ctx.addIssue({ code: "custom", message: "OpenReview landing page must identify one original forum" });
