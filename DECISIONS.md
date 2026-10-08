@@ -6109,3 +6109,19 @@ and partial explanations/counts, and keep diagnostics out of streamed and final
 decision arrays. Preserve existing validator SKIP and empty-rationale records.
 This classification provides no payment authority and leaves SSE signing/abort
 paths unchanged. See [acceptance](docs/engineering/selection-diagnostic-trace.md).
+
+## Generate ordinary checked evidence without a redundant draft - 2026-10-08
+
+The two-read Quick path requests a draft answer plus the same quote-bound sentences,
+although ordinary delivery discards that draft. Explicitly select an internal
+evidence-only generation packet in ordinary orchestration, retain the same output
+ceiling and review calls, and form only a server marker envelope after exact quote
+resolution and review. Existing ledger, requested-source, statement and reward
+gates remain authoritative. A compact fixture does not prove a provider will finish
+or that a live run produces a complete useful answer.
+
+Direct inputs for retained private originals keep their legacy schema/guidance;
+decision briefs keep their distinct disabled acceptance boundary. Prospective
+teaching proposals are planning constraints, while claims that NASA actually
+tested an activity remain factual targets. This adds no reviewed proposal delivery
+or experimental claim. See [behavior and residual gates](docs/engineering/evidence-only-synthesis-2026-10-08.md).

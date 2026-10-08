@@ -1491,7 +1491,7 @@ async function* runAdmittedAgent(
   // 5) SYNTHESIZE
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
   let synthesized: SynthResult;
-  try { synthesized = await engine.synthesize({ question: input.question, subClaims, gathered,
+  try { synthesized = await engine.synthesize({ question: input.question, subClaims, gathered, generationFormat: "evidence-only",
     ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
       ? { answerFormat: "decision-brief" as const } : {}) }); }
   catch (error) {

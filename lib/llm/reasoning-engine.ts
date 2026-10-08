@@ -189,6 +189,9 @@ export interface SynthInput {
   gathered: GatheredContent[];
   /** Internal staged delivery contract; source/payment authority is unchanged. */
   answerFormat?: "decision-brief";
+  /** Ordinary delivery constructs prose from reviewed evidence, so generation need not
+   * repeat it in a discarded draft. Retained private originals keep their legacy input. */
+  generationFormat?: "evidence-only";
 }
 
 /** A factual disagreement the agent found between sources while writing the answer,

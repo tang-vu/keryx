@@ -23,6 +23,7 @@ import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/
 import type { Decision } from "../types";
 import { ReasoningOutputValidationError, outputTokenLimitFromValidatedError } from "./reasoning-engine";
 import { synthesisOutputLimitFromError } from "./output-limit-diagnostic";
+import { EVIDENCE_ONLY_SCHEMA, evidenceOnlyEnvelope, evidenceOnlyGuidance } from "./evidence-only-synthesis";
 import type {
   AttributeInput,
   DecideInput,
@@ -133,6 +134,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         `Break the user's question into 1-${MAX_RESEARCH_TARGETS} concise questions to investigate, NOT proposed answers or assertions of fact. ` +
         "Preserve the user's terminology and scope. Explicit user context takes precedence over Keryx's product context; questions can concern any subject. " +
         "Separate information needs from instructions about sources, citations, format, or style. Carry relevant source/scope constraints into the substantive questions; do not turn those instructions into extra research targets. " +
+        "A request to propose an activity, illustrative example, exercise, or exit question is a prospective delivery constraint, not a historical fact that the source performed or tested it. Preserve the requested proposal and its labeling in constraints; investigate the factual definitions, distinctions and limitations needed to ground it. " +
+        "For example, a teacher requesting weather/climate definitions, two invented classification examples and a ten-minute activity needs factual definition/distinction/limitation targets, not targets asking whether NASA ran those invented activities. If the user instead asks which activities NASA actually tested, preserve that as a factual target. " +
         "Each target must ask for a distinct requested fact or explanation. Do not add an umbrella question that repeats the other targets, or split one fact into paraphrases to fill the range. " +
         "Distinguish comparison SUBJECTS from evidence REFERENCES: complementary documentation URLs about a subject are source constraints, not extra comparison subjects. Do not multiply every dimension by every reference URL. " +
         "When the user compares specific papers or independent sources themselves, preserve every requested dimension for each specific source as a separately inspectable target. " +
@@ -285,12 +288,12 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         researchTargets: input.subClaims.map((question, claimIndex) => ({ claimIndex, question })),
         sources,
         quoteOptions: this.synthesisGenerationQuoteOptions(input, quoteOptions),
-        schema:
+        schema: input.generationFormat === "evidence-only" ? EVIDENCE_ONLY_SCHEMA :
           '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
           '"evidence":[{"claimIndex":number,"marker":string,"quoteId":string,"support":number(0..1),"statement":string}],' +
           '"conflicts":[{"point":string,"positions":[{"marker":string,"stance":string}],"trusted":string,"reason":string}]}',
       }),
-      // The answer itself is prose, so this floor carries the write-up on top of the per-source parts.
+      // Retain the admitted ceiling even when the ordinary packet omits a redundant prose draft.
       this.synthesisGenerationTokens(input),
     );
     const proposals = resolveQuoteEvidence(out.evidence, quoteOptions);
@@ -313,10 +316,12 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         synthesisOutputLimit = synthesisOutputLimitFromError(error, "review");
       }
     }
+    const evidence = applyEvidenceReview(proposals, review, reviewedIndexes);
+    const envelope = input.generationFormat === "evidence-only" ? evidenceOnlyEnvelope(input, evidence) : undefined;
     return {
-      answer: (out.answer as string) ?? "",
-      citedMarkers: Array.isArray(out.citedMarkers) ? (out.citedMarkers as string[]) : [],
-      evidence: applyEvidenceReview(proposals, review, reviewedIndexes),
+      answer: envelope?.answer ?? (out.answer as string) ?? "",
+      citedMarkers: envelope?.citedMarkers ?? (Array.isArray(out.citedMarkers) ? (out.citedMarkers as string[]) : []),
+      evidence,
       ...(proposals.length ? { evidenceReview: review && typeof review === "object" && Array.isArray((review as { reviews?: unknown }).reviews)
         ? "completed" as const : "unavailable" as const } : {}),
       conflicts: parseConflicts(out.conflicts),
@@ -326,7 +331,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
 
   /** Private completion may replace generation guidance without changing the
    * sufficiency prompt or ordinary research's existing contract. */
-  protected synthesisGenerationGuidance(_input: SynthInput): string {
+  protected synthesisGenerationGuidance(input: SynthInput): string {
+    if (input.generationFormat === "evidence-only") return evidenceOnlyGuidance;
     return "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
         "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
         "For every supported research question, select a quoteId from quoteOptions in an evidence item with " +
