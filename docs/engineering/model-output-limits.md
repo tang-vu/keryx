@@ -59,9 +59,9 @@ malformed/historical metadata; retained receipts; packed MCP and responsive actu
 components. A separately authorized live task and independent useful deliverable
 remain open, along with the original deployment/maintenance gates.
 
-Release ordering: this combined-source candidate includes PR226's app0.27.28
-recency guard and reviewed Operator/security source from merged PR227/main28b071d6
-(app0.27.27). Merge PR226 first, then reconcile this source against fresh main before
-publishing app0.27.29. Client package versions remain the output-limit candidate
-values above. Existing source-bound original/operational lifetime and deployed/
+The earlier app0.27.29 checkpoint includes PR226's recency guard and reviewed
+Operator/security source. Its active release sequence is now the
+[coordinated app0.27.36 aggregate](research-reading-release-2026-10-08.md), which
+preserves each feature tip and current main. The candidate versions above remain
+historical checkpoints. Existing source-bound operational admission and deployed/
 distribution readbacks remain gates; this integration rebinds no executor/grant.

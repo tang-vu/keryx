@@ -5,8 +5,9 @@ authorized usefulness trial remain release gates. The earlier owner-operated
 mainnet QA batch is closed; these changes grant no further spending or model calls.
 
 The full CI workflow runs on PRs targeting main. Keep the candidate main-based
-while preserving its parent-first merge dependencies; a feature-branch comparison
-does not supply that required CI gate.
+and preserve its feature tips through the
+[coordinated app0.27.36 release](research-reading-release-2026-10-08.md); a
+feature-branch comparison does not supply that required CI gate.
 
 An unmergeable PR also cannot supply the main CI gate. The candidate includes the
 merged required-evidence Operator source; its compact-menu hook and ordinary HTML

@@ -1,10 +1,22 @@
 # Keryx Project Changelog
 
+### Coordinate the research reading release (2026-10-08, v0.27.36 candidate)
+
+Release pending reading/client improvements together with current main, preserving
+their feature history and one increasing app version. This includes recency
+withholding, output-limit notices, free paper lookup, headings, MCP preflight,
+confirmed feedback, HTML context and readable excerpts. Earlier versions below
+are source checkpoints. Deployment, package/installer delivery and independent
+usefulness remain open; no policy is activated.
+See [release provenance and gates](engineering/research-reading-release-2026-10-08.md).
+
 ### Read stored excerpts on small screens (2026-10-08, v0.27.36 candidate)
 
 Quote views retain stored line breaks and wrap long unbroken text. Citation Evidence
 actions have larger touch targets and contextual accessible names. Public/private
 results keep their recorded content, evidence and payment status unchanged.
+The research introduction uses less mobile space so the question, free-paper
+handoff, source cap and full Ask action fit a 320x640 first viewport.
 See [browser acceptance and surface roles](engineering/evidence-readability-2026-10-08.md).
 
 ### Sponsored research and distinct operating settlements (2026-10-08, v0.27.35 candidate)

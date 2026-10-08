@@ -6077,3 +6077,26 @@ citation inspection action. Keep original quote bytes, eligibility and payment
 status unchanged. Browser geometry and text fidelity are acceptance evidence,
 not factual or independent-usefulness validation. See
 [scope and surface roles](docs/engineering/evidence-readability-2026-10-08.md).
+
+## Preserve feature ancestry in the coordinated reading release - 2026-10-08
+
+Main advanced to app0.27.35 while eight reviewed reading/client candidates retained
+older checkpoints. Integrate their complete source with current main and release
+one app0.27.36 through a merge commit, preserving every feature tip and avoiding
+version downgrade. This supersedes active parent-first sequencing, with explicit
+per-PR inclusion/closure records and final-head CI/review for the complete source.
+Historical candidate and failure evidence remains unchanged. Operational admission,
+public recovery, package/installer delivery, original financial delivery and fee
+activation retain their distinct authority and acceptance gates. See
+[the coordinated release](docs/engineering/research-reading-release-2026-10-08.md).
+
+## Keep the mobile research action reachable - 2026-10-08
+
+The built 320x640 composer failed the existing first-viewport gate on CI and
+locally. Compact the introductory copy and mobile spacing, with enough header
+height to contain its decorative globe. Preserve the question field, 44px targets,
+free metadata handoff, source cap, payer disclosures and desktop spacing. Require
+the fresh default build and existing responsive/wrapped-cap acceptance. Keep the
+original failing screenshots and logs; earlier quote-view or unit acceptance does
+not qualify this changed geometry. See
+[the mobile regression](docs/engineering/evidence-readability-2026-10-08.md#mobile-composer).

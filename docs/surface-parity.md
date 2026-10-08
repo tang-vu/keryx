@@ -1,5 +1,15 @@
 # Supported-surface release parity
 
+## Coordinated reading release candidate — October 8, 2026
+
+App0.27.36 integrates the reading/client stack with current main. Hosted MCP0.3.5,
+stdio0.4.9 and desktop0.4.10 remain source candidates. The
+[aggregate release record](engineering/research-reading-release-2026-10-08.md)
+maps all applicable surfaces, exact feature-tip inclusion and independent
+operational/distribution/usefulness gates. Earlier versions and dated observations
+below remain historical; final source, deployed and published identities require
+current readback. Existing custody and payer roles remain unchanged.
+
 ## Literature workspace candidate, October 7, 2026
 
 Web gains a local paper shortlist, review focus, personal screening/notes,

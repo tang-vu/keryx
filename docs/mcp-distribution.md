@@ -1,5 +1,14 @@
 # MCP package distribution
 
+## Coordinated reading release candidate — October 8, 2026
+
+App0.27.36 combines the pending reading/client stack with current main. Hosted
+MCP0.3.5, stdio0.4.9 and desktop0.4.10 are source candidates; earlier checkpoints
+and dated records below do not establish present delivery. Follow the
+[aggregate release and surface gates](engineering/research-reading-release-2026-10-08.md).
+Final-source packed consumers, npm integrity/provenance, Registry and installer/
+hosted readbacks remain required. No caller custody or policy activation follows.
+
 ## Paid-question preflight candidate - October 8, 2026
 
 App 0.27.32/stdio MCP 0.4.9 align new paid questions with the API's shared 2000-character

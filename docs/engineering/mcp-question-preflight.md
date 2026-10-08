@@ -72,8 +72,8 @@ valid boundary research and original response-loss/no-second-debit/keyless recov
 on both supported profiles. Keep existing test deadlines and financial assertions.
 
 Both TypeScript graphs, focused lint, package build/pack, unchanged production HIGH
-audit, exact-head CI and independent payment review remain gates. Parent-first
-current-main reconciliation and the active Operator source/original lifetime must
-close before merge/deployment. Verify production health, package publication,
+audit, exact-head CI and independent payment review remain gates. Follow the
+[coordinated app0.27.36 release](research-reading-release-2026-10-08.md), preserving
+parent-tip inclusion and current-main operational admission. Verify production health, package publication,
 distribution source metadata and applicable installer identities before claiming
 coordinated delivery. Internal fixtures do not establish customer traction.

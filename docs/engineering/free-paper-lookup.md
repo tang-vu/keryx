@@ -92,10 +92,10 @@ publication must pass before release claims. This is a focused response to
 page-specific status extraction, complete synthesis, independent usefulness and
 participant/return/demand evidence remain open.
 
-Release ordering: this candidate integrates PR220's app0.27.29 source, including
-PR226's app0.27.28 guard and the reviewed Operator/security source from merged
-PR227/main28b071d6 (app0.27.27). Merge PR226, then PR220, and reconcile this branch
-against fresh main/version ordering before publishing app0.27.30. The source-bound
-original/operational lifetime and exact-head CI remain release gates. Hosted/stdio/desktop
-candidate versions above are unchanged; source integration does not establish
+The earlier app0.27.30 checkpoint includes PR220, PR226 and reviewed
+Operator/security source. Its active release sequence is now the
+[coordinated app0.27.36 aggregate](research-reading-release-2026-10-08.md), which
+preserves feature tips and current main without a version downgrade. Source-bound
+operational admission and exact-head CI remain gates. The candidate versions
+above are historical checkpoints; source integration does not establish
 publication or installed/deployed synchronization.

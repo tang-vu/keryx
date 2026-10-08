@@ -109,7 +109,7 @@ build passes all eight bilingual/responsive cases with exports and existing
 one-request/no-payment checks; the original CI failure remains retained. The
 corrected head still requires the complete CI run.
 
-Parent-first current-main reconciliation and the separate Operator owner's active
-original/source lifetime must close before merge/deployment. Verify production
+Follow the [coordinated app0.27.36 release](research-reading-release-2026-10-08.md)
+for parent-tip inclusion and current-main operational admission. Verify production
 health and actual source/version identities before a delivered-product claim.
 Physical screen-reader/device use and independent reader usefulness remain open.

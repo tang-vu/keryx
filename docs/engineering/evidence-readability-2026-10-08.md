@@ -4,6 +4,10 @@ App 0.27.36 is a source candidate, building on the HTML evidence-context candida
 Production delivery requires current-main reconciliation, required CI and
 deployed-commit readback.
 
+This candidate is part of the [coordinated app0.27.36 release](research-reading-release-2026-10-08.md),
+which preserves all feature tips and current main. Release, distribution and
+operational gates remain separate from browser readability acceptance.
+
 ## Observed problem and behavior
 
 Actual AnswerCard and citation-panel components with production CSS reproduced a
@@ -17,6 +21,28 @@ source-omission inspector, public job detail and private result views. CSV examp
 and other multiline text remain readable without changing stored quote bytes.
 The citation's Evidence action has a 44-pixel minimum target, a contextual accessible
 name and a dialog hint. Existing focus restoration and Escape behavior remain.
+
+## Mobile composer
+
+Required CI at `87d7d336` exposed a separate 320x640 composer regression: the
+action ended at 659.125px. The retained local production build reproduced a
+644px bottom. The introductory text occupied three lines beside the globe;
+the sponsored notice appears below the form and did not cause this offset.
+
+The introduction now reads "Get a cited answer. Inspect source decisions." and
+uses smaller mobile gaps. Desktop spacing remains. A 122px header minimum
+contains the decorative globe's 52px offset and 70px height. The question field,
+44px controls, free-paper handoff and source-cap disclosure retain their sizes
+and order. The responsive fixture keeps its first-viewport assertion, all nine
+viewport cases, wrapped-cap case, tour and source-navigation checks. This runtime
+adjustment requires a fresh default build and responsive acceptance; the earlier
+509-test source acceptance does not establish its geometry.
+
+The fresh pinned-Node24.21 default build and unchanged nine-case responsive
+fixture passed, including the forced wrapped-cap case, shared research page,
+tour and real Next source-filter navigation. Related form, request isolation,
+expired/paused payer, quote-view and compiled-reader checks also passed. The
+original failure logs/screenshots remain retained. Final-head CI remains required.
 
 ## Acceptance and supported surfaces
 
