@@ -1,0 +1,9 @@
+{
+  "format": "keryx-planned-maintenance-v1",
+  "id": "example-only-281",
+  "announcedAt": "2026-10-08T10:00:00.000Z",
+  "startsAt": "2026-10-08T10:05:00.000Z",
+  "endsAt": "2026-10-08T10:15:00.000Z",
+  "phase": "draining",
+  "message": "Planned application update. Retain earlier request and payment records; check status before retrying."
+}

@@ -6300,3 +6300,17 @@ Place it below the homepage Ask action with fixed250x54 sizing, accessible focus
 separate-tab navigation and no referrer. Keep the question and full primary action
 within the compact mobile first viewport. Record surfaced and distributed roles
 with the coordinated app0.27.43 release; publication and deploy are separate gates.
+
+## Prepare independent planned-maintenance admission without changing deployed authority - 2026-10-08
+
+A maintenance route in the application cannot explain a planned outage while that
+process is stopped. Prepare an independent loopback front door with a bounded,
+advance-announced protected marker, static browser notice and API/MCP 503 status.
+Malformed or expired controls keep new admission closed; unknown upstream outcomes
+retain their original payment recovery and never trigger a retry. Accepted streams
+drain unchanged. A narrowly source-pinned retained signature callback is optional
+and disabled in the manual launcher. Existing stock/guardian, custody and release
+roles remain unchanged. This source and synthetic non-production candidate supplies
+no production admission, installation or schedule. Final ingress/build/role binding,
+native CI, app/client notice and coordinated hosted acceptance remain explicit gates
+in [the issue281 runbook](docs/engineering/planned-maintenance-2026-10-08.md).
