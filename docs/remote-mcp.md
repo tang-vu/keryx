@@ -1,5 +1,11 @@
 # Remote MCP
 
+The [CSL-JSON export source candidate](engineering/csl-json-reference-export-2026-10-09.md)
+adds derived `researchExports.cslJson` (`content`, `count`, `omitted`) and separate
+metadata-only `bibliographyExports.cslJson` (`content`, `count`). Existing paid
+response snapshots remain unchanged. Source readiness and deployed acceptance
+are separate; the protocol identity and authentication contract remain unchanged.
+
 Keryx exposes a stateless MCP Streamable HTTP endpoint at `https://keryx.cc/mcp`. It complements
 the published `keryx-mcp` stdio package: remote clients need no local process, while the stdio
 package remains the caller-funded x402 option.

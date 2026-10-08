@@ -289,7 +289,7 @@ try {
     try { await window.keryxDesktop.exportTask(handle); return false; } catch { return true; }
   }, created.handle);
   if (!overwriteRejected) throw Error("Status export overwrote an existing destination");
-  for (const [format, expected] of [["bibtex", "@misc"], ["ris", "TY  - WEB"], ["evidence-csv", "Synthetic bounded evidence"]]) {
+  for (const [format, expected] of [["bibtex", "@misc"], ["ris", "TY  - WEB"], ["csl-json", '"type": "webpage"'], ["evidence-csv", "Synthetic bounded evidence"]]) {
     await unlink(briefPath);
     if (!await page.evaluate(({ handle, format }) => window.keryxDesktop.exportBrief(handle, format), { handle: created.handle, format })) throw Error(`${format} export canceled`);
     if (!(await readFile(briefPath, "utf8")).includes(expected)) throw Error(`${format} lost checked receipt content`);
@@ -314,7 +314,7 @@ try {
   active = await launch({ openWorkspace: view.path });
   const restored = await active.page.evaluate(() => window.keryxDesktop.refresh());
   if (restored.tasks.length !== 1 || restored.tasks[0].question !== created.question) throw Error("Workspace did not reopen after app restart");
-  for (const format of ["brief", "bibtex", "ris", "evidence-csv"]) {
+  for (const format of ["brief", "bibtex", "ris", "csl-json", "evidence-csv"]) {
     if (await active.page.evaluate(({ handle, format }) => window.keryxDesktop.exportBrief(handle, format), { handle: created.handle, format })) throw Error(`${format} cancellation wrote an export`);
   }
   await active.page.screenshot({ path: screenshotPath });

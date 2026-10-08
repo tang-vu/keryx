@@ -1,5 +1,17 @@
 # Supported-surface release parity
 
+## CSL-JSON export source candidate — October 9, 2026
+
+Recorded references gain shared CSL-JSON exports on web and hosted API/A2A/OpenAI/
+remote MCP, metadata-only bibliography and filtered local literature downloads.
+Repository Operator CLI and desktop0.4.11 candidate derive private JSON files
+from an integrity-checked original-task-bound receipt. Caller-funded stdio types
+forward optional server fields; its formatter-free bundle and published0.4.11
+identity remain unchanged. Extension and bots retain their hosted/page/answer
+roles. No provider/payment, account sync or schedule is added. See the
+[surface and acceptance record](engineering/csl-json-reference-export-2026-10-09.md);
+publication, production and installed-client evidence remain release gates.
+
 ## Coordinated issue batch, October 9, 2026
 
 Application **0.27.44 candidate** combines the contextual temporal-command boundary,

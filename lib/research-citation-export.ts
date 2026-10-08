@@ -1,6 +1,7 @@
 import type { Citation, ScholarlyMetadata } from "./types";
+import { cslIssued, cslJsonContent, referenceKey, type CslReference } from "./research/reference-export-core";
 
-export type CitationExportFormat = "bibtex" | "ris";
+export type CitationExportFormat = "bibtex" | "ris" | "csl-json";
 
 interface Reference {
   key: string;
@@ -10,6 +11,7 @@ interface Reference {
   date?: string;
   note: string;
   scholarly?: ScholarlyMetadata;
+  version?: string;
 }
 
 // Keep every value on one line: RIS interprets new lines as new fields/records.
@@ -38,10 +40,7 @@ function publicationDate(value?: string): string | undefined {
 
 // A stable, nonsecurity identifier; resolve the unlikely digest collision per file below.
 function citationKey(identity: string): string {
-  let hash = BigInt("0xcbf29ce484222325");
-  const prime = BigInt("0x100000001b3");
-  for (const byte of new TextEncoder().encode(identity)) hash = BigInt.asUintN(64, (hash ^ BigInt(byte)) * prime);
-  return `keryx${hash.toString(16)}`;
+  return referenceKey(identity);
 }
 
 function references(citations: readonly Citation[]) {
@@ -64,7 +63,7 @@ function references(citations: readonly Citation[]) {
     const keyCount = (keys.get(baseKey) ?? 0) + 1;
     keys.set(baseKey, keyCount);
     const scholarly = citation.scholarly?.evidenceScope ? citation.scholarly : undefined;
-    entries.push({ key: keyCount === 1 ? baseKey : `${baseKey}_${keyCount}`, title, url, source, date: publicationDate(citation.itemPublishedAt), scholarly,
+    entries.push({ key: keyCount === 1 ? baseKey : `${baseKey}_${keyCount}`, title, url, source, date: publicationDate(citation.itemPublishedAt), scholarly, ...(version ? { version } : {}),
       note: text(`${citation.evidenceProvenance === "synthetic-demo" ? "ILLUSTRATIVE SYNTHETIC DEMO; not factual evidence. " : ""}Cited by Keryx [${text(citation.marker)}]. Source: ${source}.${itemId ? ` Item: ${itemId}.` : ""}${version ? ` Content version: ${version}.` : ""} ${scholarly ? `Bibliographic metadata from ${scholarly.provider}, observed ${text(scholarly.retrievedAt)} (${text(scholarly.recordUrl)}). Read scope: ${scholarly.evidenceScope}. ${scholarly.workType === "preprint" ? "Preprint. " : ""}Peer review unknown; metadata does not verify author rights.${scholarly.authorCount !== undefined && scholarly.authors.length < scholarly.authorCount ? ` Incomplete contributor list: ${scholarly.authors.length}/${scholarly.authorCount} provider entries recorded${scholarly.authorsTruncated ? "; capped at 50" : ""}.` : ""}` : "Bibliographic metadata is limited to the recorded article identity."}`) });
   }
   return { entries, omitted };
@@ -86,6 +85,31 @@ function risNote(value: string): string {
 
 export function buildCitationExport(citations: readonly Citation[], format: CitationExportFormat) {
   const { entries, omitted } = references(citations);
+  if (format === "csl-json") {
+    const records: CslReference[] = entries.map(entry => {
+      const metadata = entry.scholarly;
+      const issued = cslIssued(metadata?.publishedDate) ?? cslIssued(entry.date);
+      return {
+        id: entry.key, "citation-key": entry.key,
+        type: metadata?.workType === "journal-article" ? "article-journal" : metadata?.workType === "preprint" ? "manuscript" : "webpage",
+        title: entry.title, URL: entry.url,
+        ...(metadata?.authors.length ? { author: metadata.authors.map((author, index) => {
+          const name = metadata.authorNames?.[index], family = name?.family && text(name.family), given = name?.given && text(name.given);
+          return family ? { family, ...(given ? { given } : {}) } : { literal: text(author) };
+        }) } : {}),
+        ...(metadata?.doi ? { DOI: text(metadata.doi) } : {}),
+        ...(metadata?.journal ? { "container-title": text(metadata.journal) } : {}),
+        ...(metadata?.volume ? { volume: text(metadata.volume) } : {}),
+        ...(metadata?.issue ? { issue: text(metadata.issue) } : {}),
+        ...(metadata?.pages ? { page: text(metadata.pages) } : {}),
+        ...(metadata?.arxivId ? { archive: "arXiv", archive_location: text(metadata.arxivId) } : {}),
+        ...(entry.version ? { version: entry.version } : {}),
+        ...(issued ? { issued } : {}),
+        note: entry.note,
+      };
+    });
+    return { content: cslJsonContent(records), count: records.length, omitted };
+  }
   const content = entries.map((entry) => {
     const metadata = entry.scholarly;
     const year = metadata?.publishedDate?.match(/^\d{4}(?:-\d{2})?(?:-\d{2})?$/)?.[0].slice(0, 4) ?? entry.date?.slice(0, 4);

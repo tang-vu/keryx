@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { LiteratureComparisonPreview } from "./literature-comparison-preview";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { PAPER_REPOSITORIES } from "@/lib/papers/types";
-import { paperReferencesRis } from "@/lib/papers/reference-export";
+import { paperReferencesCslJson, paperReferencesRis } from "@/lib/papers/reference-export";
 import { changeLiteratureWorkspace, clearLiteratureWorkspace, replaceLiteratureWorkspace, useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES, parseLiteratureWorkspace,
   SCREENING_STATES, serializeLiteratureWorkspace, type LiteratureEntry, type LiteratureWorkspace as Workspace } from "@/lib/papers/literature-workspace";
@@ -145,9 +145,13 @@ export function LiteratureWorkspace() {
               const exported = paperReferencesRis(visible.map(entry => entry.paper));
               downloadBrowserText(exported.content, "keryx-literature-references.ris", "application/x-research-info-systems;charset=utf-8");
             }, `RIS download prepared for ${visible.length} shown papers.`)}>Download shown references (RIS)</button>
+            <button type="button" disabled={visible.length === 0} className={button} onClick={() => act(() => {
+              const exported = paperReferencesCslJson(visible.map(entry => entry.paper));
+              downloadBrowserText(exported.content, "keryx-literature-references.json", "application/json;charset=utf-8");
+            }, `CSL-JSON download prepared for ${visible.length} shown papers.`)}>Download shown references (CSL-JSON)</button>
           </div>
         </div>
-        <p className="mt-2 font-serif text-xs text-ink-3">RIS exports only the papers shown by this filter, for a reference manager such as Zotero. It keeps saved metadata and exact versions; your review question, screening decisions and personal notes stay out of this file.</p>
+        <p className="mt-2 font-serif text-xs text-ink-3">Reference exports contain only the papers shown by this filter, for a reference manager such as Zotero. They keep saved metadata and exact versions; your review question, screening decisions and personal notes stay out of these files. CSL-JSON reference keys stay the same when you reorder or filter saved papers.</p>
         <div className="mt-4 border border-line bg-panel p-4">
           <p className="font-serif text-sm text-ink-2">Select two saved papers to prepare an editable comparison using your saved review question. Deep research can inspect more targets; its existing reading, evidence, availability and budget limits still apply.</p>
           <LiteratureComparisonPreview entries={active.flatMap(url => workspace.entries.filter(entry => entry.paper.url === url)

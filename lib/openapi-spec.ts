@@ -74,6 +74,15 @@ export const openapiSpec = {
     schemas: {
       ...paperOpenApiSchemas,
       ...sourceClaimOpenApiSchemas,
+      ReferenceExport: {
+        type: "object", required: ["content", "count", "omitted"],
+        properties: { content: { type: "string" }, count: { type: "integer", minimum: 0 }, omitted: { type: "integer", minimum: 0 } },
+      },
+      ResearchExports: {
+        type: "object", description: "Derived recorded citation exports. No enrichment, payment authority or replacement of saved receipt bytes. CSL-JSON content is a JSON array with stable exact article/version keys.",
+        properties: { bibtex: { $ref: "#/components/schemas/ReferenceExport" }, ris: { $ref: "#/components/schemas/ReferenceExport" },
+          cslJson: { $ref: "#/components/schemas/ReferenceExport" }, evidenceCsv: { type: "string" } },
+      },
       DashboardGroundingStatus: {
         type: "object",
         required: ["groundedClaimRate", "evidenceQuality"],
@@ -337,6 +346,7 @@ export const openapiSpec = {
           totalToCreators: { type: "number" },
           feePaid: { type: "number" },
           totalPricePaid: { type: "number" },
+          researchExports: { $ref: "#/components/schemas/ResearchExports" },
           pricing: {
             type: "object",
             properties: {
@@ -415,6 +425,7 @@ export const openapiSpec = {
               creatorsPaid: { type: ["integer", "null"], description: "Distinct settled creators; null when unavailable. Citation allocations are not settlement evidence." },
               totalToCreators: { type: "number" },
               dispatchUrl: { type: "string" },
+              researchExports: { $ref: "#/components/schemas/ResearchExports" },
               evidence: { type: "array", items: { type: "object" } },
               ...outputLimitMetadataProperties,
               claimCoverage: {

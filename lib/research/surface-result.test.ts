@@ -10,6 +10,9 @@ import { remoteResearchResult } from "../mcp/remote-server";
 import type { QueryRun } from "../types";
 import { surfaceResearch } from "./surface-result";
 import type { ReasoningAttempt } from "../llm/reasoning-engine";
+import { readBibliographicTask } from "./bibliographic-task";
+import { recognizeBibliographicTask } from "./bibliographic-task-request";
+import { frenchArxivTask } from "./fixtures/bibliographic-task-questions";
 
 function attempt(overrides: Partial<ReasoningAttempt> = {}): ReasoningAttempt {
   return { step: "decide", engine: "llm:deepseek:recorded-model", tier: 0, attempt: 1,
@@ -28,6 +31,21 @@ export function fixture(): QueryRun {
 }
 
 describe("research surface parity", () => {
+  it("derives separate metadata CSL downloads without extending stored bibliography or changing original receipt bytes", async () => {
+    const run = fixture();
+    const body = fs.readFileSync(new URL("./fixtures/arxiv-2005.11401v4-bibliography.html", import.meta.url), "utf8");
+    run.bibliography = await readBibliographicTask(recognizeBibliographicTask(frenchArxivTask)!, { reader: async url => ({
+      requestedUrl: url, finalUrl: url, observedAt: run.createdAt, mediaType: "text/html", body, truncated: false,
+    }) });
+    const beforeRun = JSON.stringify(run), beforeReceipt = JSON.stringify(buildResearchReceipt(run, []));
+    const result = surfaceResearch(run);
+    expect(result.bibliography).toEqual(run.bibliography);
+    expect(result.bibliography!.bibliographyExports).not.toHaveProperty("cslJson");
+    expect(JSON.parse(result.bibliographyExports!.cslJson.content)[0]).toMatchObject({ archive_location: "2005.11401v4" });
+    expect(result.bibliographyExports!.cslJson.content).toContain("no Keryx read, citation or settlement evidence");
+    expect(JSON.stringify(run)).toBe(beforeRun);
+    expect(JSON.stringify(buildResearchReceipt(run, []))).toBe(beforeReceipt);
+  });
   it("retains trace-only inner review ceilings across hosted transports without inventing attempts or exporting private detail", () => {
     const run = fixture();
     run.trace = [{ phase: "synthesize", ts: 1, message: "Fixed diagnostic",
@@ -189,6 +207,7 @@ describe("research surface parity", () => {
       expect(result.evidence[0]).toMatchObject({ qualifiesForAnswer: true, qualifiesForReward: false, itemId: "article-1" });
       expect(result.researchExports.bibtex.count).toBe(1);
       expect(result.researchExports.ris.content).toContain("TI  - Observed paper");
+      expect(JSON.parse(result.researchExports.cslJson.content)[0]).toMatchObject({ type: "webpage", title: "Observed paper", URL: "https://example.org/paper" });
       expect(result.researchExports.evidenceCsv).toContain("Exact original quote");
       expect(result.creatorsPaid).toBeNull();
       expect(result.creatorRewardAllocations).toBe(0);
