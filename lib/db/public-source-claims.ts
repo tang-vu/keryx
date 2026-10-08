@@ -9,6 +9,9 @@ import { canonicalSourceUrl, sourceClaimSchema, sourceClaimChallengeSchema,
 import { claimControlIsFresh, sourceClaimReceiptSchema } from "../sources/public-source-claim";
 import type { SourceClaimReceipt } from "../types";
 import { config } from "../config";
+import { operatingFeeContextSchema, operatingFeeMaxMicroUsdc, operatingFeePolicySchema, operatingFeePolicyDigest, operatingFeeRequestHash,
+  OPERATING_FEE_SOURCE_ID, OPERATING_FEE_POLICY_KEY_PREFIX } from "../payments/operating-fee-policy";
+import { hostedTreasuryPolicySchema } from "../payments/hosted-treasury-policy";
 
 const PREFIX = "keryx:source-claims:v1:";
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -250,7 +253,7 @@ export function assertSqliteSourceClaimPaymentPolicy(db: DatabaseSync, input: {
 /** No DDL: retain seller original-policy evidence beside immutable economic authorization rows. */
 export function admitSqliteSourceClaimPurchasePolicy(db: DatabaseSync, input: {
   identity: { network: string; payer: string; authorizationId: string }; existing: boolean;
-  sourceId?: string; receipt?: SourceClaimReceipt; kind?: "fetch" | "citation"; payee: string; amountMicros: number;
+  sourceId?: string; receipt?: SourceClaimReceipt; kind?: "fetch" | "citation" | "operating-fee"; payee: string; amountMicros: number; requestHash?: string;
 }): void {
   if (!db.isTransaction) throw new Error("Atomic source claim purchase transaction required");
   assertSqliteSourceClaimSigningOriginal(db, input);
@@ -260,18 +263,19 @@ export function admitSqliteSourceClaimPurchasePolicy(db: DatabaseSync, input: {
   if (input.existing) {
     if (original && canonicalJson(original) !== canonicalJson(snapshot) || !original && input.receipt)
       throw new Error("Original research source claim policy conflict");
+    if(input.kind === "operating-fee" && !original) throw new Error("Original operating fee purchase policy is unavailable");
     return;
   }
   if (original) throw new Error("Orphaned original research source claim policy");
   if (snapshot) {
-    assertSqliteSourceClaimPaymentPolicy(db, { sourceId: snapshot.sourceId, expected: snapshot.receipt, kind: snapshot.kind, network: input.identity.network });
+    if(snapshot.kind !== "operating-fee") assertSqliteSourceClaimPaymentPolicy(db, { sourceId: snapshot.sourceId, expected: snapshot.receipt, kind: snapshot.kind, network: input.identity.network });
     put(db, key, snapshot, Date.now());
   }
 }
 /** x402's signed economic tuple does not sign URL query policy: bind it to any retained original. */
 function assertSqliteSourceClaimSigningOriginal(db: DatabaseSync, input: {
   identity: { network: string; payer: string; authorizationId: string };
-  sourceId?: string; receipt?: SourceClaimReceipt; kind?: "fetch" | "citation"; payee: string; amountMicros: number;
+  sourceId?: string; receipt?: SourceClaimReceipt; kind?: "fetch" | "citation" | "operating-fee"; payee: string; amountMicros: number; requestHash?: string;
 }): void {
   const exists = (name: string) => Boolean(db.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name=?").get(name));
   const policy = input.receipt ? sourceClaimReceiptSchema.parse(input.receipt) : null;
@@ -279,6 +283,7 @@ function assertSqliteSourceClaimSigningOriginal(db: DatabaseSync, input: {
     const row = db.prepare("SELECT i.*,b.* FROM browser_authorization_intents i LEFT JOIN browser_journal_bindings b USING(nonce) WHERE i.nonce=?")
       .get(input.identity.authorizationId);
     if (row) {
+      if(input.kind === "operating-fee") throw new Error("Operating fee requires its original public hosted authorization");
       if (!row.payment_metadata) throw new Error("Original browser payment binding is unavailable");
       const metadata = JSON.parse(String(row.payment_metadata)), context = row.payment_context ? JSON.parse(String(row.payment_context)) : null;
       const originalPolicy = metadata.sourceClaim ?? null, contextPolicy = context?.sourceClaim ?? context?.item?.sourceClaim ?? null;
@@ -290,13 +295,31 @@ function assertSqliteSourceClaimSigningOriginal(db: DatabaseSync, input: {
     }
   }
   if (exists("hosted_treasury_authorizations")) {
-    const row = db.prepare("SELECT signer,original FROM hosted_treasury_authorizations WHERE nonce=?").get(input.identity.authorizationId);
+    const row = db.prepare("SELECT signer,original,policy_digest,submitted,header_hash FROM hosted_treasury_authorizations WHERE nonce=?").get(input.identity.authorizationId);
     if (row) {
       const original = JSON.parse(String(row.original)), context = original.context, message = original.payload?.message;
       if (!context || !message || input.identity.network !== "eip155:5042" || row.signer !== input.identity.payer ||
         context.sourceId !== input.sourceId || context.kind !== input.kind || String(message.to).toLowerCase() !== input.payee ||
         String(message.value) !== String(input.amountMicros) || canonicalJson(context.sourceClaim ?? null) !== canonicalJson(policy))
         throw new Error("Seller source policy or economic tuple differs from the original hosted authorization");
+      if(input.kind === "operating-fee") {
+        const fee = operatingFeeContextSchema.parse(context.operatingFee), admitted = db.prepare("SELECT data,role FROM hosted_treasury_policies WHERE digest=?").get(row.policy_digest);
+        const treasury = hostedTreasuryPolicySchema.parse(admitted?.data ? JSON.parse(String(admitted.data)) : null);
+        const retainedPolicy = db.prepare("SELECT value FROM sync_state WHERE key=?").get(OPERATING_FEE_POLICY_KEY_PREFIX + fee.policyDigest);
+        const feePolicy = operatingFeePolicySchema.parse(retainedPolicy?.value ? JSON.parse(String(retainedPolicy.value)) : null);
+        if(admitted?.role !== "public" || treasury.signer !== row.signer || treasury.origin !== new URL(config.baseUrl).origin ||
+           operatingFeePolicyDigest(feePolicy) !== fee.policyDigest || canonicalJson(feePolicy) !== retainedPolicy?.value ||
+           feePolicy.beneficiary !== input.payee || feePolicy.origin !== treasury.origin || feePolicy.network !== treasury.network ||
+           feePolicy.storageIdentityDigest !== treasury.storageIdentityDigest ||
+           input.sourceId !== OPERATING_FEE_SOURCE_ID || context.itemId !== null || context.privateJob !== null || policy !== null ||
+           row.submitted !== 1 || typeof row.header_hash !== "string" || !/^0x[0-9a-f]{64}$/.test(row.header_hash) ||
+           input.payee === row.signer || !Number.isSafeInteger(input.amountMicros) || input.amountMicros <= 0 ||
+           input.requestHash !== operatingFeeRequestHash(context.queryId, fee) ||
+           fee.amountMicroUsdc !== String(input.amountMicros) || BigInt(input.amountMicros) > BigInt(operatingFeeMaxMicroUsdc(context.queryBudgetMicroUsdc)))
+          throw new Error("Operating fee seller terms differ from its original public hosted authorization");
+      }
+      return;
     }
   }
+  if(input.kind === "operating-fee") throw new Error("Operating fee requires its original public hosted authorization");
 }

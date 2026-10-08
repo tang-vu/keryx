@@ -31,6 +31,19 @@ exclude them. One payout wallet serves every owner-operated source so the public
 creator count cannot exceed one for the owner. Not decided: whether the public
 "Creators earning" and "Creator payouts" totals should exclude owner-operated sources.
 
+**Sponsored research and separately settled operating fees — 2026-10-07.**
+Keep public no-wallet trial access bounded by the existing shared quota and sealed
+prefunded treasury caps. The owner authorized real operating transfers for the
+original citation-pool share of eligible unclaimed public references, including
+sponsored questions. Keep creator payees/claims independent and retain historical
+originals; the fee does not claim publisher ownership. Use a distinct payment kind
+and protected identity/origin/expiry-bound recipient policy, with atomic ownership
+checks and one original per query. Pending/failed originals cannot be replaced.
+Display neutral research settlements, Keryx operating fees and creator rewards,
+while retaining exact payer/payee and funding provenance. Existing browser grants
+and fixed-price A2A/private packages admit no extra service debit in this release.
+See [scope, recovery and pilot gates](docs/sponsored-research-trial.md).
+
 **Keep PDF physical wraps out of evidence sentence boundaries — 2026-10-07.**
 An offline reproduction showed a newline-separated sentence tail passing the
 complete-span gate and strict quote menu. For observed PDF extractions, compute

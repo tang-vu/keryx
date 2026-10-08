@@ -14,6 +14,7 @@
 
 import type { PaymentRecord } from "../types";
 import { paymentSettlementStatus } from "../payments/payment-state";
+import { isCreatorPayment } from "../payments/payment-kind";
 
 export interface EarningsExportRow {
   date: string;
@@ -57,7 +58,7 @@ export function buildEarningsRows(
   baseUrl: string,
 ): EarningsExportRow[] {
   const origin = baseUrl.replace(/\/+$/, "");
-  return payments.map((p) => ({
+  return payments.filter(isCreatorPayment).map((p) => ({
     date: p.createdAt,
     kind: p.kind,
     question: questionById.get(p.queryId) ?? "",
@@ -90,6 +91,7 @@ export interface EarningsSummary {
 /** Header figures for the JSON envelope, computed over exactly the exported rows so the
  *  file is self-consistent even when a `limit` truncated the history. */
 export function summariseEarnings(payments: PaymentRecord[]): EarningsSummary {
+  payments = payments.filter(isCreatorPayment);
   const dates = payments.map((p) => p.createdAt).sort();
   return {
     paymentCount: payments.length,

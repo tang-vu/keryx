@@ -36,6 +36,17 @@ function run(
 }
 
 describe("testnet economics", () => {
+  it("separates sponsored founder transfers from external revenue, creator subsidies and unused A2A reserve", () => {
+    const snapshot = calculateTestnetEconomics([run("treasury", "treasury")], [
+      { queryId: "treasury", kind: "operating-fee", amountUsdc: 0.004, settled: true, settlementStatus: "settled" },
+      { queryId: "treasury", kind: "operating-fee", amountUsdc: 0.003, settled: false, settlementStatus: "pending" },
+      { queryId: "treasury", kind: "operating-fee", amountUsdc: 8, settled: false, settlementStatus: "failed" },
+      { queryId: "treasury", kind: "operating-fee", amountUsdc: 9, settled: false, settlementStatus: "simulated" },
+    ]);
+    expect(snapshot).toMatchObject({ settledOperatingFeeUsdc: 0.004, pendingOperatingFeeUsdc: 0.003,
+      settledInboundRevenueUsdc: 0, treasuryCreatorSubsidyUsdc: 0, pendingCreatorSpendUsdc: 0,
+      unknownFundingCreatorSpendUsdc: 0, prepaidA2aCreatorSpendUsdc: 0 });
+  });
   it("does not call same-original recovery costs complete when the original provider bill remains unknown", () => {
     const fixture = syntheticFailedOriginal(), completion = syntheticFulfilledRun({ ...fixture.input, failedOrder: fixture.order });
     const measured = run("measured", "treasury");

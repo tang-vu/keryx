@@ -32,6 +32,9 @@ export interface FetchResult {
 }
 
 export interface PaymentGateway {
+  /** Only a reviewed public hosted signer supports sponsored Keryx operating fees. */
+  operatingFeePolicy?(): import("./operating-fee-policy").OperatingFeePolicy;
+  payOperatingFee?(args: { queryId: string; operatingFee: import("./operating-fee-policy").OperatingFeeContext }): Promise<PaymentRecord>;
   readonly mode: "real" | "offline";
   /** Ensure the agent's spend wallet is funded for this run. Returns the agent address. */
   ensureFunded(budget: number): Promise<{ address: string; depositTx?: string }>;

@@ -3,7 +3,9 @@ import { exportsFromCheckedReceipt } from "./receipt-exports";
 import { describe, expect, it } from "vitest";
 import { a2aResponseFromRun } from "../a2a/result";
 import { quoteA2aResearch } from "../a2a/pricing";
-import { keryxMeta } from "../openai-compat";
+import { buildAnswerContent, keryxMeta } from "../openai-compat";
+import { JSDOM } from "jsdom";
+import fs from "node:fs";
 import { remoteResearchResult } from "../mcp/remote-server";
 import type { QueryRun } from "../types";
 import { surfaceResearch } from "./surface-result";
@@ -43,6 +45,34 @@ describe("research surface parity", () => {
     expect(JSON.stringify(receipt)).not.toMatch(/outputTokenLimit|PRIVATE_REVIEW_BODY/);
   });
 
+  it("keeps operating fee allocations separate from creator totals and points to per-payment authority", () => {
+    const run = fixture();
+    run.operatingFee = { policy: "public-citation-operating-fee-v1", beneficiary: "0xfounder",
+      amountUsdc: 0.004, status: "pending", paymentId: "original-fee", allocations: [
+        { marker: "P1", sourceId: "public:paper", itemUrl: "https://example.org/paper", amountUsdc: 0.004 },
+      ] };
+    for (const output of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run)]) {
+      expect(output.operatingFee).toMatchObject({ amountUsdc: 0.004, status: "pending",
+        funding: "keryx-sponsored", settlementAuthority: "per-payment-ledger" });
+      expect(output.creatorRewardAllocations).toBe(0);
+    }
+    expect(keryxMeta(run).totalToCreators).toBe(0);
+    expect(remoteResearchResult(run).totalToCreatorsUsdc).toBe(0);
+    expect(surfaceResearch(fixture()).operatingFee).toBeUndefined();
+    expect(buildAnswerContent(run)).toContain("Keryx operating fee allocation: $0.004000 USDC (pending)");
+    const dom = new JSDOM(fs.readFileSync("extension/popup.html", "utf8"),
+      { url: "https://extension.example/popup", runScripts: "outside-only" });
+    try {
+      Object.assign(dom.window, { chrome: { tabs: { query: async () => [] } },
+        fetch: () => { throw new Error("Rendering cannot submit research"); } });
+      dom.window.eval(fs.readFileSync("extension/popup.js", "utf8"));
+      dom.window.eval(`applyChunk(${JSON.stringify({ choices: [{ delta: { content: buildAnswerContent(run) } }] })})`);
+      dom.window.eval(`applyChunk(${JSON.stringify({ keryx: keryxMeta(run) })})`);
+      expect(dom.window.document.getElementById("paid-total-usd")!.textContent).toBe("$0.0000");
+      expect(dom.window.document.getElementById("answer")!.textContent)
+        .toContain("Keryx operating fee allocation: $0.004000 USDC (pending)");
+    } finally { dom.window.close(); }
+  });
   it("retains typed request-local refusal metadata on the one shared bounded reasoning contract", () => {
     const run = fixture(); run.engine = "llm:deepseek:recorded-model";
     run.reasoningAttempts = [attempt({ outcome: "failed", error: "output_validation", outputTokenLimit: 2560 }),

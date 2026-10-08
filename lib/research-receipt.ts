@@ -168,7 +168,7 @@ export function buildResearchReceipt(run: QueryRun, payments: PaymentRecord[], f
     })),
     limits: [
       "The SHA-256 detects payload changes when its original digest is retained separately; the self-check alone is not a Keryx or creator signature.",
-      "Only creator payment rows carrying Circle settlement evidence appear in settled totals.",
+      "Only payment rows carrying Circle settlement evidence appear in settled totals; creator rewards and Keryx operating fees are recorded separately.",
       "Circle Gateway transfer ids are settlement references, not per-payment Arc transaction hashes.",
       "The settlement snapshot may change if exact Circle reconciliation resolves a pending authorization.",
       "The receipt contains public evidence excerpts and metadata, never paid plaintext or signing authority.",

@@ -90,6 +90,12 @@ export interface ReceiptCreatorPayment extends ReceiptAsset {
   createdAt: string;
 }
 
+/** Owner-funded Keryx service charge; never a creator earning or external sale. */
+export interface ReceiptOperatingPayment extends Omit<ReceiptCreatorPayment, "kind"> {
+  kind: "operating-fee";
+  funding: "keryx-sponsored";
+}
+
 export type ReceiptLedgerCompleteness =
   | "complete"
   | "incomplete"
@@ -123,6 +129,17 @@ export interface ReceiptSettlement {
   failedCreatorUsdc: number;
   simulatedCreatorUsdc: number;
   creatorPayments: ReceiptCreatorPayment[];
+  /** Absent in historical receipts; their original payload and digest remain valid. */
+  operatingPayments?: ReceiptOperatingPayment[];
+  recordedOperatingPayments?: number;
+  settledOperatingPayments?: number;
+  pendingOperatingPayments?: number;
+  failedOperatingPayments?: number;
+  simulatedOperatingPayments?: number;
+  settledOperatingFeeUsdc?: number;
+  pendingOperatingFeeUsdc?: number;
+  failedOperatingFeeUsdc?: number;
+  simulatedOperatingFeeUsdc?: number;
 }
 
 export interface ResearchReceiptPayload {

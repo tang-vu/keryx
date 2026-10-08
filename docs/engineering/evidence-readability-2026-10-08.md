@@ -1,7 +1,8 @@
 # Stored excerpt readability — October 8, 2026
 
 App 0.27.36 is a source candidate, building on the HTML evidence-context candidate.
-Production delivery remains subject to the current-main and Operator release gates.
+Production delivery requires current-main reconciliation, required CI and
+deployed-commit readback.
 
 ## Observed problem and behavior
 
@@ -25,6 +26,10 @@ whitespace fidelity, quote/dialog geometry, the target size and keyboard focus
 return. Synthetic transport permits only read observations; no research or payment
 mutation is submitted. TypeScript, scoped lint, the default production build,
 required exact-head CI and source review remain separate checks.
+
+Integration retains main's sponsored operating settlement implementation and its
+inactive policy boundary. The combined agent regression verifies that a withheld
+newest-feed reference produces no citation, funding request or operating fee.
 
 These are web presentation changes, including shared public/private result views.
 Desktop clients opening those web pages receive the same presentation; their

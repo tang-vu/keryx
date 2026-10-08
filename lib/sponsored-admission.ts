@@ -72,7 +72,7 @@ async function admit(buckets: Bucket[]): Promise<Response | null> {
         const retryAfter = Math.max(1, Math.ceil(decision.msBeforeNext / 1000));
         return Response.json({
           error: "sponsored_rate_limit",
-          message: "Sponsored dispatch capacity is temporarily full. Try again shortly or use caller-funded research.",
+          message: "Sponsored research capacity is temporarily full. Try again shortly.",
           retryAfter,
         }, { status: 429, headers: { "Retry-After": String(retryAfter) } });
       }

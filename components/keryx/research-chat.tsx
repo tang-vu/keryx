@@ -8,6 +8,7 @@ import { OnboardingTour } from "./onboarding-tour";
 import { SessionGrantPanel, type SessionGrantBinding } from "./session-grant-panel";
 import { ResearchTurn, type ResearchTurnData } from "./research-turn";
 import { GlobeWatermark } from "./globe-watermark";
+import { SponsoredTrialNotice } from "./sponsored-trial-notice";
 
 export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHref?: string }) {
   const [grantBinding, setGrantBinding] = useState<SessionGrantBinding>({ sessionId: null, getSessionWalletClient: () => null });
@@ -67,7 +68,7 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
         <div data-testid="hero-guide" className="sm:mr-[156px]"><OnboardingTour /></div>
       </div>
       <h1 className="mt-2 font-display text-[clamp(32px,5vw,46px)] leading-tight">Ask Keryx</h1>
-      <p className="mt-2 max-w-[calc(100%_-_84px)] font-serif text-base text-ink-2 sm:max-w-[64ch]">Research with citations and visible spending.</p>
+      <p className="mt-2 max-w-[calc(100%_-_84px)] font-serif text-base text-ink-2 sm:max-w-[64ch]">Ask a question. Get a cited answer and inspect source decisions.</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label="Conversation turns">
       {history.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
@@ -80,7 +81,9 @@ export function ResearchChat({ paidHref = "/research#paid-research" }: { paidHre
         {streaming && <button type="button" onClick={stop} className="min-h-11 border border-seal px-3 py-2 font-mono text-xs text-seal">Stop research</button>}
       </div>}
       <AskForm disabled={streaming} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit
-        restoreQuestion={state.errorKind === "research-paused" && request ? request : undefined} />
+        restoreQuestion={request && (state.errorKind === "research-paused" || state.errorKind === "rate-limit")
+          ? { ...request, researchPaused: state.errorKind === "research-paused" } : undefined} />
+      {payer === "treasury" && !hasTurns && <div className="mt-3"><SponsoredTrialNotice /></div>}
       <div className="mt-3"><SessionGrantPanel onBindingChange={handleBindingChange} /></div>
       <p className="mt-3 text-xs text-ink-3">Conversation stays in this tab while the page is open. Completed reports have a saved link; signed-in reports appear in My saved reports. Download a report to keep a local copy.</p>
       <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs text-ink-2" aria-label="Research tools">

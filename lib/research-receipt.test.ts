@@ -151,6 +151,38 @@ function payment(
 }
 
 describe("portable research receipt", () => {
+  it("separates operating fee rows while including both outbound kinds in ledger completeness", () => {
+    const fee = payment("citation", 0.004, "settled", { kind: "operating-fee", sourceId: "keryx:operating-fee",
+      sourceName: "Keryx operating fee", payee: "0xfounder", txHash: "circle-operating" });
+    const rows = [payment("citation", 0.002, "settled"), fee];
+    const receipt = buildResearchReceipt(run({ settledPayments: 2 }), rows);
+    expect(receipt.payload.settlement).toMatchObject({ status: "settled", ledgerCompleteness: "complete",
+      expectedRecordedPaymentsAtFinish: 2, settledCreatorPayments: 1, settledCreators: 1,
+      settledCreatorUsdc: 0.002, settledOperatingPayments: 1, settledOperatingFeeUsdc: 0.004,
+      operatingPayments: [{ kind: "operating-fee", funding: "keryx-sponsored", payee: "0xfounder", circleTransferId: "circle-operating" }] });
+    expect(receipt.payload.settlement.creatorPayments).toHaveLength(1);
+    expect(buildResearchReceipt(run({ settledPayments: 2 }), rows.slice(0, 1)).payload.settlement.status).toBe("incomplete");
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    const tampered = structuredClone(receipt);
+    tampered.payload.settlement.operatingPayments![0].amountUsdc = 0.01;
+    expect(verifyResearchReceipt(tampered).valid).toBe(false);
+    expect(() => buildResearchReceipt(run({ settledPayments: 2 }), [rows[0], { ...fee, txHash: null }]))
+      .toThrow("operating fee settlement evidence is missing");
+  });
+
+  it("keeps pending, failed and simulated operating amounts out of settled creator and fee totals", () => {
+    for (const status of ["pending", "failed", "simulated"] as const) {
+      const receipt = buildResearchReceipt(run({ paymentMode: status === "simulated" ? "offline" : "real",
+        settledPayments: 0, pendingPayments: status === "simulated" ? 0 : 1 }),
+      [payment("citation", 0.004, status, { kind: "operating-fee", sourceId: "keryx:operating-fee" })]);
+      expect(receipt.payload.settlement.settledCreatorUsdc).toBe(0);
+      expect(receipt.payload.settlement.settledOperatingFeeUsdc).toBe(0);
+      expect(receipt.payload.settlement.creatorPayments).toHaveLength(0);
+      expect(receipt.payload.settlement.operatingPayments![0].status).toBe(status);
+    }
+    expect(buildResearchReceipt(run({ paymentMode: undefined, settledPayments: undefined }), [])
+      .payload.settlement.operatingPayments).toBeUndefined();
+  });
   it("binds agency, claims, exact assets and settled creator rows in a deterministic digest", () => {
     const rows = [payment("citation", 0.005, "settled"), payment("fetch", 0.01, "settled")];
     const receipt = buildResearchReceipt(run(), rows);

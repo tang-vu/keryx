@@ -16,6 +16,25 @@ const citation = (overrides: Partial<Citation> = {}): Citation => ({
 });
 
 describe("calculateDashboardMetrics", () => {
+  it("counts sponsored operating settlements once in gross volume but never as creator earnings or customer conversion", () => {
+    const fee = { kind: "operating-fee" as const, sourceId: "keryx:operating-fee", queryId: "sponsored",
+      amountUsdc: 0.005, settled: true, settlementStatus: "settled" as const, txHash: "circle-original" };
+    const metrics = calculateDashboardMetrics([
+      fee,
+      { ...fee, queryId: "pending", settled: false, settlementStatus: "pending" },
+      { ...fee, queryId: "failed", settled: false, settlementStatus: "failed" },
+      { ...fee, queryId: "offline", settled: false, settlementStatus: "simulated" },
+      { ...fee, queryId: "contradiction", settlementStatus: "simulated" },
+      { ...fee, queryId: "missing-evidence", txHash: null },
+      { kind: "citation", sourceId: "creator", queryId: "creator-query", amountUsdc: 0.002, settled: true },
+      { kind: "inbound", sourceId: "keryx", queryId: "customer", amountUsdc: 0.03, settled: true },
+    ], [{ id: "sponsored", origin: "mcp", mcpClient: "codex" }, { id: "creator-query", origin: "web" }]);
+    expect(metrics).toMatchObject({ totalPayments: 3, totalVolumeUsdc: 0.037,
+      totalCreatorPayoutsUsdc: 0.002, creatorsEarning: 1, payingQueries: 1,
+      settledOperatingFeeUsdc: 0.005, settledOperatingFeePayments: 1,
+      pendingPaymentConfirmations: 1, failedPaymentAttempts: 1,
+      mcpClientQueries: [{ client: "codex", queries: 1, payingQueries: 0 }] });
+  });
   it("counts only completed web questions without a recorded wallet as guest questions", () => {
     const metrics = calculateDashboardMetrics([], [
       { id: "guest-1", origin: "web", asker: null },

@@ -52,7 +52,7 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
       Object.values(counts).every(count => count === 0)) {
     return <section className="mt-8 border-t border-line pt-5">
       <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">Settlement — empty ledger</h2>
-      <p className="mt-3 text-sm text-ink-3">No settled creator payouts were recorded at this check. Circle balances were not queried; this does not prove payment readiness or settlement.</p>
+      <p className="mt-3 text-sm text-ink-3">No settled outbound payments were recorded at this check. Circle balances were not queried; this does not prove payment readiness or settlement.</p>
       <p className="mt-2 font-mono text-[10px] text-faint">Checked {ago(settlement.checkedAt)}</p>
     </section>;
   }
@@ -140,8 +140,8 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
       <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">
         Gateway settlement leaves no per-payment explorer hash. Keryx compares the payout ledger
         with observed Circle balances for each payee and publishes both numbers. A wallet holding <em>more</em> than
-        Keryx accounts for is the creator&rsquo;s own money and never flags; one holding less is
-        read against its on-chain balance first, because a creator may cash out by any route they
+        Keryx accounts for belongs to that payee and never flags; one holding less is
+        read against its on-chain balance first, because a payee may cash out by any route they
         like.
       </p>
       {recordedProfile ? <>

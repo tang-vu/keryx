@@ -25,7 +25,7 @@ import { contentBodyHash } from "../sources/content-receipt";
  * deterministic control flow only — no LLM, no network, no chain.
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { runAgent, type RunInput } from "./run-agent";
 import { collectRun } from "./index";
@@ -70,6 +70,7 @@ import { surfaceResearch } from "../research/surface-result";
 import { ArticleReadError } from "../web-research/article-reader";
 import * as fetchAuthority from "../registry/source-fetch-payto";
 import type { SourceClaim } from "../sources/public-source-claim";
+import { publicSourceClaimId } from "../db/public-source-claims";
 import { sourceClaimReceipt } from "../sources/source-claim-access";
 import { fixtureEvidenceSpans } from "../../test-support/evidence-fixtures";
 import { completeEvidenceSpans } from "../llm/evidence-span";
@@ -2490,7 +2491,154 @@ describe("original newest-feed requirement before article purchase", () => {
   });
 });
 
-describe("public feed references remain off the payment rail", () => {
+describe("sponsored operating fees", () => {
+  let previousOrigin: string;
+  beforeEach(() => { previousOrigin = config.baseUrl; Object.assign(config, { baseUrl: "https://keryx.cc" }); });
+  afterEach(() => { Object.assign(config, { baseUrl: previousOrigin }); });
+  function fixture() {
+    const gateway = fakeGateway();
+    const policy = { format: "keryx-operating-fee-policy-v1" as const, network: "eip155:5042" as const,
+      origin: "https://keryx.cc", storageIdentityDigest: "a".repeat(64), beneficiary: `0x${"22".repeat(20)}`, expiresAtSeconds: 2_000_000_000 };
+    gateway.operatingFeePolicy = () => policy;
+    const settle = vi.fn(async ({ queryId, operatingFee }: Parameters<NonNullable<PaymentGateway["payOperatingFee"]>>[0]) => makePayment({
+      kind: "operating-fee", id: "synthetic-fee", queryId, sourceId: "keryx:operating-fee", sourceName: "Keryx operating fee",
+      payer: "synthetic-treasury", payee: policy.beneficiary, amountUsdc: Number(operatingFee.amountMicroUsdc) / 1e6,
+      settled: true, settlementStatus: "settled", txHash: "synthetic-circle-reference" }));
+    gateway.payOperatingFee = settle;
+    const d = deps([], fakeEngine(), gateway);
+    d.db.listPublicReferences = async () => [publicRef()];
+    d.db.getSourceClaim = async () => null;
+    return { d, gateway, settle };
+  }
+  it("does not turn withheld newest-feed evidence into a sponsored operating fee", async () => {
+    const f = fixture(), funding = vi.spyOn(f.gateway, "ensureFunded");
+    const { run } = await drive({ question: "Name the newest release in https://public.test/feed and explain its compatibility.",
+      budget: 0.03, fundingOwner: "treasury" }, f.d);
+    expect(run.answer).toContain("Newest-release limitation");
+    expect(run.citations).toEqual([]); expect(run.operatingFee).toBeUndefined();
+    expect(f.settle).not.toHaveBeenCalled(); expect(funding).not.toHaveBeenCalled();
+    expect(f.d.db.payments).toEqual([]); expect(run.totalSpent).toBe(0);
+  });
+  it("settles only the public share and preserves free citation identity and separate creator totals", async () => {
+    const f = fixture();
+    const { run } = await drive({ question: "What evidence do agents need?", budget: 0.03, fundingOwner: "treasury" }, f.d);
+    expect(f.settle).toHaveBeenCalledOnce();
+    expect(f.settle.mock.lastCall?.[0].operatingFee).toMatchObject({ amountMicroUsdc: "15000",
+      sourceUrls: ["https://public.test/public-free", "https://public.test/", "https://public.test/feed"] });
+    expect(run.citations[0]).toMatchObject({ sourceKind: "public-reference", reward: 0 });
+    expect(run.trace.filter(step => step.phase === "attribute" && step.detail)
+      .map(step => (step.detail as { sourceId: string }).sourceId)).toEqual(run.citations.map(citation => citation.sourceId));
+    expect(run.operatingFee).toMatchObject({ status: "settled", amountUsdc: 0.015, paymentId: "synthetic-fee" });
+    expect(run.totalSpent).toBe(0.015); expect(run.totalToCreators).toBe(0);
+    expect(f.gateway.citationCalls).toEqual([]);
+  });
+  it.each(["browser", "a2a", "claimed"])("adds no second charge for %s", async boundary => {
+    const f = fixture();
+    if (boundary === "claimed") f.d.db.getSourceClaim = async () => ({ mode: "free" }) as never;
+    await drive({ question: "What evidence do agents need?", budget: 0.03,
+      ...(boundary === "browser" ? { fundingOwner: "browser" as const } : {}), ...(boundary === "a2a" ? { origin: "a2a" as const } : {}) }, f.d);
+    expect(f.settle).not.toHaveBeenCalled();
+  });
+  it.each(["https://public.test/", "https://public.test/feed"])(
+    "withholds a requested full web article's fee when its exact retained feed association has a claim at %s",
+    async claimUrl => {
+      const f = fixture(), articleUrl = "https://public.test/public-free";
+      f.d.engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: 0 }), action: candidate.item?.requestedSource ? "BUY" : "SKIP",
+      })) });
+      f.d.webSearch = { search: async () => [] };
+      f.d.readWebArticle = vi.fn(async url => ({ text: "Public agents require honest evidence and source attribution. The full original also explains durable payment recovery.",
+        title: "Full original", finalUrl: url, kind: "html" as const, truncated: false }));
+      const claimId = publicSourceClaimId(claimUrl, config.baseUrl, config.networkId);
+      const readClaim = vi.fn(async (id: string) => id === claimId ? ({ mode: "free" } as never) : null);
+      f.d.db.getSourceClaim = readClaim;
+
+      const { run } = await drive({ question: `Read ${articleUrl} and explain agent evidence.`, origin: "web", budget: 0.03 }, f.d);
+
+      expect(f.d.readWebArticle).toHaveBeenCalledOnce();
+      expect(run.decisions.find(decision => decision.sourceId === "public:free")?.action).toBe("SKIP");
+      expect(run.citations).toHaveLength(1);
+      expect(run.citations[0]).toMatchObject({ sourceId: expect.stringMatching(/^public:web:/), sourceKind: "public-reference", itemUrl: articleUrl, reward: 0 });
+      expect(readClaim).toHaveBeenCalledWith(claimId);
+      expect(f.settle).not.toHaveBeenCalled();
+      expect(run.totalSpent).toBe(0);
+      expect(f.gateway.citationCalls).toEqual([]);
+    },
+  );
+  it("does not infer an unrelated same-domain article's claim association", async () => {
+    const f = fixture(), articleUrl = "https://public.test/unrelated-article";
+    f.d.engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: 0 }), action: candidate.item?.requestedSource ? "BUY" : "SKIP",
+    })) });
+    f.d.webSearch = { search: async () => [] };
+    f.d.readWebArticle = vi.fn(async url => ({ text: "Unrelated public research requires verifiable evidence and careful source attribution.",
+      title: "Unrelated original", finalUrl: url, kind: "html" as const, truncated: false }));
+    const claimedFeedIds = new Set(["https://public.test/", "https://public.test/feed"]
+      .map(url => publicSourceClaimId(url, config.baseUrl, config.networkId)));
+    const readClaim = vi.fn(async (id: string) => claimedFeedIds.has(id) ? ({ mode: "free" } as never) : null);
+    f.d.db.getSourceClaim = readClaim;
+
+    const { run } = await drive({ question: `Read ${articleUrl} and explain research evidence.`, origin: "web", budget: 0.03 }, f.d);
+
+    expect(run.citations).toHaveLength(1);
+    expect(run.citations[0]).toMatchObject({ sourceId: expect.stringMatching(/^public:web:/), itemUrl: articleUrl });
+    expect(f.settle).toHaveBeenCalledOnce();
+    expect(f.settle.mock.lastCall?.[0].operatingFee.sourceUrls).toEqual([articleUrl]);
+    expect(readClaim.mock.calls.some(([id]) => claimedFeedIds.has(id))).toBe(false);
+    expect(run.totalSpent).toBe(0.015);
+    expect(run.totalToCreators).toBe(0);
+  });
+  it("withholds a web article's fee using an exact registered item already loaded for discovery", async () => {
+    const f = fixture(), articleUrl = "https://registered.test/article", wallet = `0x${"11".repeat(20)}`;
+    const source = makeSource({ id: "registered-free", url: "https://registered.test/", rssUrl: "https://registered.test/feed",
+      fetchPrice: 0, walletAddress: wallet, verified: true, onchainId: `0x${"22".repeat(32)}`, sourceClaimId: "a".repeat(64) });
+    const proofTime = new Date(Date.now() - 1000).toISOString();
+    const claim: SourceClaim = { id: source.sourceClaimId!, canonicalUrl: source.url, ownerWallet: wallet,
+      deploymentOrigin: config.baseUrl, network: config.networkId, linkedSourceId: source.id, onchainId: source.onchainId,
+      mode: "free", distributionPermission: false, revision: 1, effectiveAt: proofTime, verifiedAt: proofTime };
+    f.d.db.listSources = async () => [source];
+    f.d.db.listPublicReferences = async () => [];
+    const getItems = vi.fn(async () => [{ id: "registered-article", sourceId: source.id, title: "Agent research",
+      summary: "Public research evidence", content: "Short registered feed excerpt.", link: articleUrl }]);
+    f.d.db.getItems = getItems;
+    f.d.db.getSourceClaimForSource = async id => id === source.id ? claim : null;
+    const claimId = publicSourceClaimId(source.url, config.baseUrl, config.networkId);
+    const readClaim = vi.fn(async (id: string) => id === claimId ? claim : null);
+    f.d.db.getSourceClaim = readClaim;
+    f.d.engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: 0 }), action: candidate.item?.requestedSource ? "BUY" : "SKIP",
+    })) });
+    f.d.webSearch = { search: async () => [] };
+    f.d.readWebArticle = async url => ({ text: "Public agents require honest evidence and source attribution. Full original research explains recoverable payments.",
+      title: "Full original", finalUrl: url, kind: "html", truncated: false });
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockResolvedValue({ payTo: wallet, creator: wallet,
+      listPriceUsdc: 0, active: true, authority: "onchain", stale: false });
+    try {
+      const { run } = await drive({ question: `Read ${articleUrl} and explain agent evidence.`, origin: "web", budget: 0.03 }, f.d);
+      expect(getItems).toHaveBeenCalledOnce();
+      expect(run.decisions.find(decision => decision.sourceId === source.id)?.action).toBe("SKIP");
+      expect(run.citations).toHaveLength(1);
+      expect(run.citations[0]).toMatchObject({ sourceId: expect.stringMatching(/^public:web:/), sourceKind: "public-reference", itemUrl: articleUrl });
+      expect(readClaim).toHaveBeenCalledWith(claimId);
+      expect(f.settle).not.toHaveBeenCalled();
+      expect(f.gateway.citationCalls).toEqual([]);
+      expect(run.totalSpent).toBe(0);
+    } finally { terms.mockRestore(); }
+  });
+  it("preserves the completed answer and unresolved fee original after a lost acknowledgement", async () => {
+    const f = fixture();
+    f.settle.mockImplementationOnce(async ({ queryId }) => { throw new PaymentPendingError("Synthetic lost response", makePayment({
+      id: "synthetic-pending-fee", kind: "operating-fee", queryId, sourceId: "keryx:operating-fee", sourceName: "Keryx operating fee",
+      payer: "synthetic-treasury", payee: `0x${"22".repeat(20)}`, amountUsdc: 0.015, settled: false, settlementStatus: "pending" })); });
+    const { run } = await drive({ question: "What evidence do agents need?", budget: 0.03 }, f.d);
+    expect(f.settle).toHaveBeenCalledOnce();
+    expect(run.answer).toContain("Public agents require honest evidence");
+    expect(run.operatingFee?.status).toBe("pending"); expect(run.totalSpent).toBe(0);
+    expect(run.pendingSpendUsdc).toBe(0.015); expect(run.pendingPayments).toBe(1);
+  });
+});
+
+describe("public feed references remain off the creator payment rail", () => {
   it("grounds public citations after a malicious BUY without gateway, cache or settlement rows", async () => {
     const gateway = fakeGateway();
     gateway.ensureFunded = async () => { throw new Error("Free-only research must never fund/deposit"); };

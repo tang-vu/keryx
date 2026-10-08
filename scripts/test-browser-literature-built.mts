@@ -47,6 +47,13 @@ try {
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     await page.screenshot({ path: join(screenshots, `empty-${width}.png`), fullPage: true });
     await page.screenshot({ path: join(screenshots, `empty-viewport-${width}.png`) });
+    const trial = page.getByRole("complementary", { name: "Sponsored research trial" });
+    await trial.getByText("Trial reports have public links.", { exact: false }).waitFor();
+    await trial.getByRole("link", { name: "Prepare a research question" }).click();
+    await page.getByRole("textbox", { name: "What do you want to know?" }).waitFor();
+    assert.equal(researchRequests.length, 0, "The sponsored trial link prepares the composer without research or payment");
+    await page.goto(`${base}/literature`);
+    await page.getByRole("heading", { name: "Start with your review question" }).waitFor();
     await page.getByRole("link", { name: "Browse research papers" }).click();
     const cards = page.locator("#research-papers article"); await cards.first().getByRole("button", { name: "Save to literature workspace" }).waitFor();
     const savedTitles = [await cards.first().locator("h3").innerText(), await cards.nth(1).locator("h3").innerText()];

@@ -1,4 +1,4 @@
-import type { PaymentSettlementStatus, QueryRun, ResearchMode } from "../types";
+import type { PaymentRecord, PaymentSettlementStatus, QueryRun, ResearchMode } from "../types";
 import { config } from "../config";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { cloneUsage, usageCostBounds, type CostBounds } from "./provider-cost-policy";
@@ -42,7 +42,7 @@ export interface EconomicsPaymentRow {
   network?: string;
   txHash?: string | null;
   queryId: string;
-  kind: "fetch" | "citation" | "inbound";
+  kind: PaymentRecord["kind"];
   amountUsdc: number;
   settled: boolean;
   settlementStatus?: PaymentSettlementStatus | null;
@@ -127,6 +127,9 @@ export interface EconomicsSnapshot {
   /** The store projection omits unsampled history and is not complete billing accounting. */
   totalLlmCostUpperBoundUsd: null;
   settledInboundRevenueUsdc: number;
+  /** Keryx-sponsored owner transfer, separate from external revenue and creator spend. */
+  settledOperatingFeeUsdc: number;
+  pendingOperatingFeeUsdc: number;
   settledA2aV2ServiceFeesUsdc: number;
   prepaidA2aCreatorCapsUsdc: number;
   prepaidA2aCreatorSpendUsdc: number;
@@ -237,6 +240,8 @@ export function calculateEconomics(
   }
 
   let settledInboundRevenueUsdc = 0;
+  let settledOperatingFeeUsdc = 0;
+  let pendingOperatingFeeUsdc = 0;
   let settledA2aV2ServiceFeesUsdc = 0;
   let prepaidA2aCreatorCapsUsdc = 0;
   let prepaidA2aCreatorSpendUsdc = 0;
@@ -249,6 +254,11 @@ export function calculateEconomics(
   const a2aOrderByQuery = new Map(a2aOrders.map((order) => [order.queryId, order]));
   const committedA2aCreatorSpendByQuery = new Map<string, number>();
   for (const payment of payments) {
+    if (payment.kind === "operating-fee") {
+      if (payment.settled && payment.settlementStatus === "settled") settledOperatingFeeUsdc += payment.amountUsdc;
+      else if (!payment.settled && payment.settlementStatus === "pending") pendingOperatingFeeUsdc += payment.amountUsdc;
+      continue;
+    }
     if (payment.kind === "inbound") {
       if (payment.settled && payment.settlementStatus === "settled") {
         settledInboundRevenueUsdc += payment.amountUsdc;
@@ -312,6 +322,8 @@ export function calculateEconomics(
     costAndMarginScope: "priced-runs-only",
     totalLlmCostUpperBoundUsd: null,
     settledInboundRevenueUsdc: round(settledInboundRevenueUsdc),
+    settledOperatingFeeUsdc: round(settledOperatingFeeUsdc),
+    pendingOperatingFeeUsdc: round(pendingOperatingFeeUsdc),
     settledA2aV2ServiceFeesUsdc: round(settledA2aV2ServiceFeesUsdc),
     prepaidA2aCreatorCapsUsdc: round(prepaidA2aCreatorCapsUsdc),
     prepaidA2aCreatorSpendUsdc: round(prepaidA2aCreatorSpendUsdc),

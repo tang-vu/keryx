@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { LiteratureWorkspace } from "@/components/keryx/literature-workspace";
+import { SponsoredTrialNotice } from "@/components/keryx/sponsored-trial-notice";
 
 export const metadata: Metadata = {
   title: "Literature workspace — save, screen and compare research papers",
@@ -21,6 +22,7 @@ export default function LiteraturePage() {
         <Link prefetch={false} href="/sources?kind=paper#research-papers" className="inline-flex min-h-11 items-center border border-ink bg-seal px-4 py-2 font-mono text-xs text-paper">Find papers to save →</Link>
         <a href="#literature-project" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">Set your review focus</a>
       </nav>
+      <div className="mt-6"><SponsoredTrialNotice prepareQuestion /></div>
       <LiteratureWorkspace />
       <noscript><p className="mt-5 font-serif text-sm text-ink-2">Enable JavaScript to access papers saved in this browser. The public paper library remains available through Sources.</p></noscript>
     </main>

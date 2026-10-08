@@ -101,6 +101,7 @@ function citationsFooter(run: QueryRun): string {
     `\n\n---\n**Citations and planned creator rewards** — weighted USDC allocations:\n` +
     lines.join("\n") +
     `\n\nRecorded to creators: $${run.totalToCreators.toFixed(4)} · payment mode: ${run.paymentMode ?? "legacy"}. ` +
+    (run.operatingFee ? `Keryx operating fee allocation: $${run.operatingFee.amountUsdc.toFixed(6)} USDC (${run.operatingFee.status}), recorded separately from creator rewards. ` : "") +
     `Planned rewards and recorded totals do not establish settlement; inspect the original payment receipts. ` +
     `dispatch: ${config.baseUrl}/dispatch/${run.id}`
   );

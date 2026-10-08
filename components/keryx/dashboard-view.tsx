@@ -28,6 +28,8 @@ function metricBody(body: unknown): MetricsResponse {
   if (!Array.isArray(value.leaderboard)) throw new Error("Invalid leaderboard");
   const recordedAccounts = metrics.recordedAccounts;
   const guestQuestions = metrics.guestQuestions;
+  const operatingFeeUsdc = metrics.settledOperatingFeeUsdc;
+  const operatingFeePayments = metrics.settledOperatingFeePayments;
   return {
     ...value,
     metrics: {
@@ -35,6 +37,8 @@ function metricBody(body: unknown): MetricsResponse {
       recordedAccounts: typeof recordedAccounts === "number" && Number.isSafeInteger(recordedAccounts) && recordedAccounts >= 0 ? recordedAccounts : null,
       guestQuestions: typeof guestQuestions === "number" && Number.isSafeInteger(guestQuestions)
         && guestQuestions >= 0 && guestQuestions <= (metrics.totalQueries as number) ? guestQuestions : null,
+      settledOperatingFeeUsdc: typeof operatingFeeUsdc === "number" && Number.isFinite(operatingFeeUsdc) && operatingFeeUsdc >= 0 ? operatingFeeUsdc : null,
+      settledOperatingFeePayments: typeof operatingFeePayments === "number" && Number.isSafeInteger(operatingFeePayments) && operatingFeePayments >= 0 ? operatingFeePayments : null,
     },
   } as unknown as MetricsResponse;
 }
@@ -101,8 +105,8 @@ export function DashboardView({ sourcePreview }: { sourcePreview: ReactNode }) {
         </section>
         <aside aria-labelledby="payment-proof-title" className="border-t-2 border-seal bg-paper-2 p-5">
           <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-seal">Payment proof</div>
-          <h2 id="payment-proof-title" className="mt-3 font-display text-2xl text-ink">{metricsResource.status !== "ready" ? "Settlement records" : metrics?.totalPayments ? "Recorded settlements" : metrics?.pendingPaymentConfirmations ? "Awaiting settlement proof" : "No settled payments yet"}</h2>
-          <p className="mt-3 text-sm leading-relaxed text-ink-2">Public-source research and citations are recorded separately from payments. Creator rewards require eligible sources, an authorized budget, and settlement evidence.</p>
+          <h2 id="payment-proof-title" className="mt-3 font-display text-2xl text-ink">{metricsResource.status !== "ready" ? "Settlement records" : metrics?.totalPayments ? "Research settlements" : metrics?.pendingPaymentConfirmations ? "Awaiting settlement proof" : "No settled payments yet"}</h2>
+          <p className="mt-3 text-sm leading-relaxed text-ink-2">Research settlements include creator rewards and Keryx operating fees, shown separately. Public citations and planned allocations require payment settlement evidence before they count in these totals.</p>
           <ResourceNotice resource={metricsResource} label="Settlement totals" />
           {metrics && <>
             {metrics.pendingPaymentConfirmations > 0 && <p className="mt-3 text-sm text-amber-800">{metrics.pendingPaymentConfirmations} signed authorization(s), ${fmtUsdc(metrics.pendingPaymentVolumeUsdc)} USDC, await settlement proof and are excluded from settled totals.</p>}
@@ -112,10 +116,12 @@ export function DashboardView({ sourcePreview }: { sourcePreview: ReactNode }) {
               <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-3 text-sm text-ink-2">
                 <dt>Settled payments</dt><dd className="font-mono text-ink">{metrics.totalPayments}</dd>
                 <dt>Settled volume</dt><dd className="font-mono text-ink">${fmtUsdc(metrics.totalVolumeUsdc)}</dd>
-                <dt>Creator payouts</dt><dd className="font-mono text-ink">${fmtUsdc(metrics.totalCreatorPayoutsUsdc)}</dd>
+                <dt>Creator rewards</dt><dd className="font-mono text-ink">${fmtUsdc(metrics.totalCreatorPayoutsUsdc)}</dd>
                 <dt>Creators earning</dt><dd className="font-mono text-ink">{metrics.creatorsEarning}</dd>
+                <dt>Keryx operating fees</dt><dd className="font-mono text-ink">{metrics.settledOperatingFeeUsdc != null ? `$${fmtUsdc(metrics.settledOperatingFeeUsdc)}` : "Unavailable"}</dd>
+                <dt>Operating fee transfers</dt><dd className="font-mono text-ink">{metrics.settledOperatingFeePayments ?? "Unavailable"}</dd>
               </dl>
-              <p className="mt-3 font-mono text-[11px] text-ink-3">Amounts in USDC. Only settled records count.</p>
+              <p className="mt-3 font-mono text-[11px] text-ink-3">Amounts in USDC. Settled volume includes the separately listed operating fees. Only settled records count.</p>
             </details>
           </>}
           <Link href="/proof" className="mt-3 inline-block min-h-11 py-2 font-mono text-xs text-seal underline">How these records are verified →</Link>

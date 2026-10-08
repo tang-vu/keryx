@@ -19,6 +19,12 @@ describe("research report export", () => {
     expect(text).toContain(run.answer); expect(text).not.toContain("PRIVATE");
     expect(researchReportMarkdown(run, null, [])).not.toContain("Model output limit reached");
   });
+  it("exports an operating fee with its original evidence and sponsored operator label", () => {
+    const text = researchReportMarkdown(run, null, [{ ...payment(true, "settled"),
+      kind: "operating-fee", sourceName: "Keryx operating fee", txHash: "circle-original" }]);
+    expect(text).toContain("operating-fee · settled · reference circle-original");
+    expect(text).toContain("Keryx operating fees and creator rewards are recorded separately");
+  });
   it("shows captured free access and policy without treating them as settlement or leaking internal fields", () => {
     const snapshot = structuredClone(run);
     Object.assign(snapshot.citations[0], { accessKind: "creator-free", sourceClaim: { id: "a".repeat(64), revision: 3,

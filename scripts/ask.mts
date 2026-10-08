@@ -72,5 +72,6 @@ console.log(
 );
 console.log(c.dim(`Payment mode: ${run.paymentMode === "offline" ? "offline simulation" : run.paymentMode ?? "unknown"}. Allocations and recorded totals do not prove settlement; inspect the original per-payment receipts.`));
 console.log(c.dim("Model and search operating costs are separate from the source cap and recorded source total."));
+if (run.operatingFee) console.log(`Keryx operating fee allocation: ${run.operatingFee.amountUsdc} USDC · ${run.operatingFee.status}. Separate from creator rewards; inspect the original payment ledger for settlement evidence.`);
 console.log(c.dim(`\nrun id: ${run.id}\n`));
 process.exit(0);

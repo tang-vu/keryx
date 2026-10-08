@@ -3,6 +3,7 @@ import type {
   DashboardMetrics,
   McpClientChannel,
   PaymentOrigin,
+  PaymentRecord,
   QueryRun,
 } from "../types";
 
@@ -10,11 +11,12 @@ export interface MetricPaymentRow {
   amountUsdc: number;
   sourceId: string;
   queryId: string;
-  kind: "fetch" | "citation" | "inbound";
+  kind: PaymentRecord["kind"];
   origin?: PaymentOrigin | null;
   settled: boolean;
   settlementStatus?: import("../types").PaymentSettlementStatus | null;
   payer?: string | null;
+  txHash?: string | null;
 }
 
 export interface MetricRunRow {
@@ -109,8 +111,12 @@ export function calculateDashboardMetrics(
   const failed = paymentRows.filter(
     (payment) => !payment.settled && payment.settlementStatus === "failed",
   );
-  const payments = paymentRows.filter((p) => p.settled);
-  const creatorPayments = payments.filter((p) => p.kind !== "inbound");
+  const payments = paymentRows.filter((p) => p.settled &&
+    (p.kind === "operating-fee"
+      ? p.settlementStatus === "settled" && typeof p.txHash === "string" && p.txHash.trim().length > 0
+      : p.settlementStatus == null || p.settlementStatus === "settled"));
+  const creatorPayments = payments.filter((p) => p.kind === "fetch" || p.kind === "citation");
+  const operatingPayments = payments.filter((p) => p.kind === "operating-fee" && p.settlementStatus === "settled");
   const volume = payments.reduce((sum, p) => sum + p.amountUsdc, 0);
   const creatorVolume = creatorPayments.reduce((sum, p) => sum + p.amountUsdc, 0);
   const payingQueryIds = new Set(creatorPayments.map((p) => p.queryId));
@@ -139,6 +145,8 @@ export function calculateDashboardMetrics(
     totalPayments: payments.length,
     totalVolumeUsdc: round(volume),
     totalCreatorPayoutsUsdc: round(creatorVolume),
+    settledOperatingFeeUsdc: round(operatingPayments.reduce((sum, p) => sum + p.amountUsdc, 0)),
+    settledOperatingFeePayments: operatingPayments.length,
     creatorsEarning: new Set(creatorPayments.map((p) => p.sourceId)).size,
     avgPaymentUsdc: payments.length ? round(volume / payments.length) : 0,
     totalQueries: runRows.length,
