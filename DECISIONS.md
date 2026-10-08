@@ -5917,3 +5917,29 @@ coverage remains. Local adverse tests and actual full runner CI are required;
 the successful same-head rerun is separate evidence, not proof of the original
 network cause. This CI-only change has no production/runtime/distribution version
 change. See [runner setup and boundaries](docs/deployment-guide.md#browser-dependencies-on-github-hosted-runners).
+
+## Required evidence selection and finite failed-quality recovery - 2026-10-08
+
+The retained original's generation omitted documented requirements despite an
+explicit row-count instruction; the paid review could only score the rows it
+received. Select an exact admitted quote for each required meaning before
+generation and reject missing, duplicated, changed or semantically incomplete
+rows before spending on direct review. Preserve independent review, exact source
+provenance and final completeness gates. A related statement cannot substitute for
+an omitted required fact. Ordinary research keeps its existing behavior.
+
+The existing owner instruction explicitly authorizes repair to completion without
+routine reconfirmation. Stage further supplier work through a distinct V5 grant
+and private receipt, never by resetting the exhausted V4 journal. The receipt's
+timestamp is its genuine recording time, not an inferred chat time. Agent-chosen
+limits are six new holds at 20660 micro-USD each, 367220 historical reservations,
+491180 aggregate and at most 24 hours. Preserve every prior receipt/window and
+the same paid claim. This changes neither custody nor buyer/source payments.
+
+Bind the complete failed parent ledger/frontier, two acknowledged checkpoints and
+outcomes, closed attempt, quality diagnostic and exact positive carried assessment.
+Unknown locks, partial publication, rollback or a changed source/context refuse
+new work and prior fallback. Operational executor/guardian lifetime closure is
+separately required. Source release, deployment and successful transport remain
+separate from actual reviewed native delivery and original buyer receipt recovery.
+See [the private recovery contract](docs/engineering/operator-original-continuation.md).

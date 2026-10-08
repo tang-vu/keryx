@@ -7,16 +7,19 @@ import { ORIGINAL_FULFILLMENT_LIMITS } from "./failed-original-fulfillment-proto
 import { cleanFulfillmentFixtures, fixtureCommit, fixtureNow, fulfillmentFixture } from "../business-operator/fulfillment-test-fixture";
 import { fulfillmentObjectSha256, validateFulfilledQueryRun, type A2aFulfillmentClaim } from "./failed-original-fulfillment-protocol";
 import type { QueryRun } from "../types";
+import * as supplementary from "./fulfillment-supplement-evidence";
+import { qualityQuestion, qualityStatements, qualityTargets } from "../llm/original-fulfillment-quality-fixture";
 
 const policy = vi.hoisted(() => ({ begin: vi.fn(), model: vi.fn(), admission: vi.fn(), signal: vi.fn(), close: vi.fn(),
-  ledger: vi.fn(), prepare: vi.fn(), diagnostic: vi.fn(), qualityEvidence: vi.fn() }));
+  ledger: vi.fn(), prepare: vi.fn(), diagnostic: vi.fn(), qualityEvidence: vi.fn(), qualityProtocol: vi.fn() }));
 const git = vi.hoisted(() => vi.fn());
 vi.mock("node:child_process", async importOriginal => ({ ...await importOriginal<typeof import("node:child_process")>(), execFileSync: git }));
 vi.mock("../business-operator/fulfillment-continuation-policy", () => ({ beginOriginalContinuation: policy.begin,
   continuationModel: policy.model, assertContinuationSupplierAdmission: policy.admission,
   continuationSupplierSignal: policy.signal, closeContinuationCapability: policy.close,
   continuationProviderLedger: policy.ledger, prepareContinuationResult: policy.prepare,
-  recordContinuationDiagnostic: policy.diagnostic, continuationQualityEvidenceCapability: policy.qualityEvidence }));
+  recordContinuationDiagnostic: policy.diagnostic, continuationQualityEvidenceCapability: policy.qualityEvidence,
+  continuationQualityEvidenceProtocol: policy.qualityProtocol }));
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(fixtureNow); vi.resetAllMocks();
   git.mockImplementation((_command, args) => args?.[0] === "status" ? "" : `${fixtureCommit}\n`);
@@ -92,6 +95,51 @@ function provider(mode: "success" | "failure2" | "truncated2" | "malformed2" | "
 }
 
 describe("explicit same-original continuation engine", () => {
+  it.each(["missing", "wrong-target", "missing-meaning"] as const)
+    ("rejects synthetic required-plan %s generation before checkpoint/review and closes the attempt", async mode => {
+      const value = await admittedFixture(true), premises = qualityStatements();
+      value.binding.authority.question = qualityQuestion;
+      value.binding.packet.input.targets = [...qualityTargets]; value.binding.authority.input.targets = [...qualityTargets];
+      const gathered = ["S1", "S2", "S3", "S4"].map(marker => ({ ...value.binding.packet.gathered[0], marker,
+        sourceId: `public:fulfillment:supplement:synthetic:${marker}`,
+        text: premises.filter(row => row.marker === marker).map(row => row.quote).join("\n") }));
+      const quotes = premises.map((row, index) => {
+        const source = gathered.find(item => item.marker === row.marker)!, start = source.text.indexOf(row.quote), end = start + row.quote.length;
+        return { quoteId: `synthetic-required-${index}`, marker: row.marker, text: row.quote, sourceId: source.sourceId,
+          start, end, contextStart: start, contextEnd: end, context: row.quote, prefixOmitted: false, suffixOmitted: false };
+      });
+      // Test only the engine's generation/checkpoint/review ordering. Native source
+      // enrollment is deliberately replaced; no prepared/native result is accepted.
+      vi.spyOn(supplementary, "supplementaryQuoteOptions").mockReturnValue({ options: quotes, capability: {} as never });
+      policy.qualityEvidence.mockReturnValue(Object.freeze({}));
+      policy.qualityProtocol.mockReturnValue("same-evidence-prepared-quality-v1");
+      policy.begin.mockResolvedValue({ capability: value.capability, claim: value.claim,
+        binding: { original: value.binding, qualityProtocol: "same-evidence-prepared-quality-v1",
+          supplement: { gathered, contextSha256: "f".repeat(64) } } });
+      const fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
+        const wire = JSON.parse(String(init?.body)), user = JSON.parse(wire.messages[1].content);
+        if (fetch.mock.calls.length === 1) return Response.json({ choices: [{ message: { content: JSON.stringify(replies(user, 1)) }, finish_reason: "stop" }] });
+        expect(user.quoteOptions).toHaveLength(29);
+        expect(user.quoteOptions.every((row: { claimIndex: number }) => Number.isInteger(row.claimIndex))).toBe(true);
+        const evidence = (user.quoteOptions as Array<{ quoteId: string; marker: string; text: string; claimIndex: number }>).map(row => ({
+          claimIndex: row.claimIndex, marker: row.marker, quoteId: row.quoteId, support: 0.9,
+          statement: premises.find(premise => premise.quote === row.text)!.text }));
+        if (mode === "missing") evidence.splice(14, 1);
+        else if (mode === "wrong-target") evidence[14].claimIndex = 3;
+        else evidence[22].statement = "The signing key is protected.";
+        return Response.json({ choices: [{ message: { content: JSON.stringify({ answer: "Synthetic draft [S1] [S2] [S3] [S4].",
+          citedMarkers: ["S1", "S2", "S3", "S4"], evidence, conflicts: [] }) }, finish_reason: "stop" }] });
+      });
+      vi.stubGlobal("fetch", fetch);
+      await expect(completeOriginalContinuation(value.db, "synthetic-authorization", "a".repeat(64), "synthetic-key"))
+        .rejects.toThrow("synthesize quality");
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(policy.model.mock.calls.map(call => call[1])).toEqual(["sufficiency", "synthesize"]);
+      expect(policy.diagnostic).toHaveBeenCalledWith(value.capability, { phase: "synthesize", category: "quality" });
+      expect(policy.prepare).not.toHaveBeenCalled();
+      expect(policy.close).toHaveBeenCalledWith(value.capability);
+      expect(value.db.completeA2aFailedOriginalFulfillment).not.toHaveBeenCalled();
+    });
   it("refuses a quality admission without its protected evidence token before any supplier call", async () => {
     const value = await admittedFixture(true);
     policy.begin.mockResolvedValue({ capability: value.capability,
