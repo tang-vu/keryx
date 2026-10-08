@@ -4,6 +4,7 @@ import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { sourceSentenceSegments, type SourceExtraction } from "./source-sentences";
 import { sourceHtmlLayout, sourceTextBlocks } from "./source-text-blocks";
 import { observedHtmlTextLayout, type HtmlTextLayout } from "../web-research/html-text-layout";
+import { enumeratedContextRange } from "./enumerated-context";
 
 const MAX_SOURCE_CHARACTERS = 200_000;
 const PASSAGE_CHARACTERS = 600;
@@ -128,7 +129,7 @@ export function selectEvidencePassages(text: string, question: string, subClaims
   // contiguous bounded sentence windows without altering the original document.
   const physicalLines = Array.from(scanned.matchAll(/[^\n]+(?:\n|$)/g), match => ({ start: match.index, end: match.index + match[0].length }));
   const blocks = sourceTextBlocks(scanned, extraction, layout);
-  const blockAt = (offset: number) => {
+  const blockIndexAt = (offset: number) => {
     let low = 0;
     let high = blocks.length;
     while (low < high) {
@@ -136,8 +137,9 @@ export function selectEvidencePassages(text: string, question: string, subClaims
       if (blocks[middle]!.end <= offset) low = middle + 1;
       else high = middle;
     }
-    return blocks[low] ?? { start: offset, end: scanned.length };
+    return low;
   };
+  const blockAt = (offset: number) => blocks[blockIndexAt(offset)] ?? { start: offset, end: scanned.length };
   type Window = { start: number; end: number; text: string; words: Set<string>; questionScore: number };
   const retrievalTargets = [...targets, questionTerms];
   const pools: { window: Window; score: number }[][] = retrievalTargets.map(() => []);
@@ -177,21 +179,24 @@ export function selectEvidencePassages(text: string, question: string, subClaims
     return window;
   };
   const nominate = (offset: number, compact: boolean) => {
-    const block = blockAt(offset);
+    const blockIndex = blockIndexAt(offset);
+    const block = blocks[blockIndex] ?? { start: offset, end: scanned.length };
     // A short newline-delimited block is indivisible. Ranking isolated sentences
     // can otherwise keep a rule and discard its immediately following exception.
     // This is structural context preservation, not detection of semantic caveats.
     if (block.end - block.start <= PASSAGE_CHARACTERS) {
-      let start = block.start, end = block.end;
+      // Keep short adjacent labeled/bullet/numbered siblings together so ranking
+      // one item cannot unnecessarily discard its nearby default or alternatives.
+      const enumeration = enumeratedContextRange(scanned, blocks, blockIndex, PASSAGE_CHARACTERS);
+      let start = enumeration?.start ?? block.start, end = enumeration?.end ?? block.end;
       const pre = layout?.preformatted.find(region => region.start <= start && region.end >= end);
       if (pre) {
-        const index = blocks.indexOf(block);
         // Preformatted rules often put their example or the next qualification
         // after a blank line. Retain contiguous neighboring groups when they fit;
         // never concatenate selected blocks across an omitted gap.
-        const previous = blocks[index - 1], next = blocks[index + 1];
-        if (previous && previous.start >= pre.start && end - previous.start <= PASSAGE_CHARACTERS) start = previous.start;
-        if (next && next.end <= pre.end && next.end - start <= PASSAGE_CHARACTERS) end = next.end;
+        const previous = blocks[blockIndex - 1], next = blocks[blockIndex + 1];
+        if (previous && previous.start < start && previous.start >= pre.start && end - previous.start <= PASSAGE_CHARACTERS) start = previous.start;
+        if (next && next.end > end && next.end <= pre.end && next.end - start <= PASSAGE_CHARACTERS) end = next.end;
       }
       addWindow(start, end);
       return;
@@ -373,6 +378,7 @@ export const EVIDENCE_CONTEXT_GUIDANCE =
   "Each passage is separate; never join text across gaps to make a quote. " +
   "An excerpted or abstract source may omit needed details: assess only the supplied passages and state remaining gaps. " +
   "contextOmissions identifies omitted text within a selected source block; ordinary blocks use lines, observed HTML preformatted wraps use blank-line-delimited groups, and physical PDF wraps use contiguous document windows. Complete blocks can still depend on unselected surrounding blocks. No context selection certifies that every qualification is present. " +
+  "Short adjacent same-format enumeration items can share bounded contiguous context; this is structural retrieval, not proof of their meaning or complete list coverage. " +
   "candidateSelection reports bounded retrieval sampling; retained candidates and lexical matches do not certify coverage of every research target. " +
   "Caller URL fragments can prioritize uniquely matching short extracted lines and following contiguous text; this is a heading hint, not a verified HTML anchor or complete section read. " +
   "Quoted short heading names can prioritize observed HTML h1–h6 and bounded following text; repeated headings remain ambiguous, and this does not prove complete section coverage or factual support. " +
