@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+**Project obligations before investing Operator float — 2026-10-09.**
+Stage a read-only ownership-scoped projection using the existing complete prepaid
+inventory and original payment, withdrawal, funding and supplier journals. Keep
+uncertain exposure, failed paid-delivery remedies and valid refunds protected;
+authorization capacity and inbound receipts are not spendable balances. Preserve
+the liquid owner reserve independently of vault value, keep burned-but-unminted
+funds in transit, and count Arc native/ERC-20 USDC once. Unified Balance is a
+Gateway inventory input, not all treasury property or payout authority. Defer
+Earn/USYC deposits, CCTP sweeps and new schedules: vendor previews do not guarantee
+future redemption, USYC has eligibility/allowlist gates even on Arc Testnet, and
+whole-route fees, journal cutover and finite owner funding authority remain open.
+No treasury adapter or executor is enabled by this evaluation. A later funded
+testnet deposit/redemption/refusal drill must prove obligations and the reserve
+stay covered before mainnet consideration. See the
+[evaluation and buildable gates](docs/operator-treasury-float-evaluation.md).
+
 **Preserve source history and gate model activation separately — 2026-10-08.**
 After the completed Operator original positively closed its source window, merge
 the reviewed research aggregate with history. Integrate the manual Cloudflare
