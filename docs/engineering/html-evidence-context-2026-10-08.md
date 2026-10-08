@@ -4,6 +4,10 @@ App 0.27.34 is a source candidate. Production deployment and a separately
 authorized usefulness trial remain release gates. The earlier owner-operated
 mainnet QA batch is closed; these changes grant no further spending or model calls.
 
+The full CI workflow runs on PRs targeting main. Keep the candidate main-based
+while preserving its parent-first merge dependencies; a feature-branch comparison
+does not supply that required CI gate.
+
 ## Problem and behavior
 
 The saved RFC4180 HTML reproduction selected physical lines, losing a quoted-field
