@@ -32,7 +32,9 @@ export type RetainedSourceSetInput = z.input<typeof snapshotSchema>;
 type RetainedItem = Readonly<Omit<z.infer<typeof itemSchema>, "publication"> & {
   publication?: Readonly<NonNullable<z.infer<typeof itemSchema>["publication"]>>;
 }>;
+declare const retainedSetBrand: unique symbol;
 export interface RetainedSourceSet {
+  readonly [retainedSetBrand]: true;
   readonly sourceId: string;
   readonly feedUrl: string;
   readonly capturedAt: string;
@@ -40,6 +42,7 @@ export interface RetainedSourceSet {
   readonly items: readonly RetainedItem[];
   readonly digest: string;
 }
+const mintedSnapshots = new WeakSet<RetainedSourceSet>();
 export interface RetainedSourceRecencyRequirement {
   readonly kind: "newest-retained-feed-entry";
   readonly scope: "frozen-retained-set";
@@ -55,6 +58,7 @@ const requirementSchema = z.object({
  * Freeze one coherent metadata cohort. The trusted adapter must supply actual membership
  * completeness and native date fields; an array/refreshedAt/legacy publishedAt cannot infer them.
  * No full text, wallet, price, offer or payment fields are accepted or copied.
+ * Minting establishes in-process validation/immutability, not origin or completeness proof.
  */
 export function freezeRetainedSourceSet(input: RetainedSourceSetInput): RetainedSourceSet {
   const parsed = snapshotSchema.parse(input);
@@ -65,7 +69,9 @@ export function freezeRetainedSourceSet(input: RetainedSourceSetInput): Retained
   const body = { sourceId: parsed.sourceId, feedUrl: new URL(parsed.feedUrl).href,
     capturedAt: parsed.capturedAt, membership: parsed.membership, items };
   const digest = `sha256:${createHash("sha256").update(JSON.stringify(body)).digest("hex")}`;
-  return Object.freeze({ ...body, digest });
+  const snapshot = Object.freeze({ ...body, digest }) as RetainedSourceSet;
+  mintedSnapshots.add(snapshot);
+  return snapshot;
 }
 
 type WithheldReason = "requirement-unqualified" | "source-mismatch" | "membership-unqualified" | "empty-retained-set" |
@@ -79,7 +85,7 @@ interface SelectionMetadata {
   readonly snapshotDigest: string;
   readonly membershipCount: number;
 }
-export type RetainedSourceRecencySelection = Readonly<SelectionMetadata & (
+export type RetainedSourceRecencySelection = Readonly<{ status: "withheld"; reason: "snapshot-unqualified" }> | Readonly<SelectionMetadata & (
   { status: "eligible"; selected: RetainedItem } | { status: "withheld"; reason: WithheldReason }
 )>;
 
@@ -97,9 +103,15 @@ function publicationTime(item: RetainedItem): number | null {
     parts = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/u);
     if (!parts || !calendarDate(Number(parts[1]), Number(parts[2]), Number(parts[3]))) return null;
   } else {
-    parts = raw.match(/^(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), )?(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4}) (?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)? (?:GMT|UTC|[+-](?:[01]\d|2[0-3])[0-5]\d)$/u);
+    parts = raw.match(/^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun), )?(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4}) (?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)? (?:GMT|UTC|[+-](?:[01]\d|2[0-3])[0-5]\d)$/u);
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    if (!parts || !calendarDate(Number(parts[3]), months.indexOf(parts[2]) + 1, Number(parts[1]))) return null;
+    if (!parts) return null;
+    const year = Number(parts[4]), month = months.indexOf(parts[3]) + 1, day = Number(parts[2]);
+    if (!calendarDate(year, month, day)) return null;
+    // Compare the weekday with the raw local calendar date, before its timezone
+    // conversion can cross midnight. Date.parse silently ignores contradictory weekdays.
+    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    if (parts[1] && parts[1] !== weekdays[new Date(Date.UTC(year, month - 1, day)).getUTCDay()]) return null;
   }
   const time = new Date(raw);
   return Number.isFinite(time.getTime()) && time.toISOString() === item.itemPublishedAt ? time.getTime() : null;
@@ -110,6 +122,9 @@ export function selectNewestRetainedSourceItem(requirement: RetainedSourceRecenc
   snapshot: RetainedSourceSet, now: number,
   wanted?: Readonly<{ sourceId: string; itemId: string; contentVersion: string }>,
 ): RetainedSourceRecencySelection {
+  // Object identity is the capability. Copies, serialized values, structural casts
+  // and proxies cannot introduce an unchecked cohort or echo an arbitrary digest.
+  if (!mintedSnapshots.has(snapshot)) return Object.freeze({ status: "withheld", reason: "snapshot-unqualified" });
   const metadata: SelectionMetadata = { scope: "frozen-retained-set", criterion: "explicit-publication-date",
     sourceId: snapshot.sourceId, feedUrl: snapshot.feedUrl, capturedAt: snapshot.capturedAt,
     snapshotDigest: snapshot.digest, membershipCount: snapshot.items.length };

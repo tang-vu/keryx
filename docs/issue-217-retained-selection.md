@@ -23,6 +23,14 @@ validates at most 1000 metadata items, rejects duplicate IDs, copies and freezes
 the set and each native date record, and hashes the complete cohort. It accepts
 no paid body, wallet, price, offer or payment fields. Source ID is supplied by the
 existing source record; feed equality is a selection binding, never ownership.
+The snapshot is opaque and registered by object identity in a private `WeakSet`.
+Selection rejects unminted objects, shallow/deep/serialized copies and proxies
+before reading their fields; the rejection includes no claimed cohort metadata
+or digest. All minted metadata stays frozen. Rehydration requires the trusted
+adapter to validate and mint a new snapshot; a copied digest cannot confer that
+capability. Minting and hashing establish local validation and immutability only.
+Completeness and native field-origin claims still require actual trusted-adapter
+evidence; the hash is not proof of publisher origin or live feed completeness.
 
 The selector chooses a unique maximum publication time before any topical
 ranking. Every member must carry a normalized timestamp agreeing with its
@@ -32,10 +40,13 @@ dates, edited-only Atom dates, future publication times relative to capture,
 missing dates, partial/unknown sets and tied newest candidates. It does not drop
 uncertain members and call the remaining subset newest. An invalid/future capture
 clock and any exact wanted-source/item/version conflict also withhold selection.
+An optional RSS weekday must agree with its raw local calendar date, including
+when conversion to UTC crosses midnight; contradictory dates are not normalized
+into apparently qualified metadata.
 
-The result carries scope, criterion, source/feed, capture time, membership count,
-cohort digest and either the exact eligible item/version or a specific refusal
-reason. It commands no BUY/CACHE, supplies no content evidence and authorizes no
+For a minted snapshot, the result carries scope, criterion, source/feed, capture
+time, membership count, cohort digest and either the exact eligible item/version
+or a specific refusal reason. It commands no BUY/CACHE, supplies no content evidence and authorizes no
 reward. It makes no assertion about what is currently newest in the live feed.
 
 ## Frozen fixture and checks
@@ -58,6 +69,11 @@ application/operational TypeScript graphs passed. The first application check
 found an intentional invalid-fixture cast missing its `unknown` step; that test
 cast was corrected before the passing checks. No dependency install or package
 bytes changed, and mutable shared tool caches are excluded from dependency provenance.
+Independent review then identified that a structural snapshot could bypass the
+constructor and supply a fabricated digest. The opaque mint check closes that
+path. The impacted recency suite passed 31 tests, including five new spoof/copy/
+mutation and weekday cases; application TypeScript, scoped lint and diff checks
+passed. The unrelated operational graph and prior corpus were not repeated.
 
 ## Integration contract and unavailable evidence
 
