@@ -1120,11 +1120,13 @@ export class SupabaseAdapter implements KeryxDB {
   async getA2aFailedOriginalFulfillment(originalId: string): Promise<import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentRecord | null> {
     void originalId; throw new Error("PostgreSQL failed original fulfillment is not admitted");
   }
-  async completeA2aFailedOriginalFulfillment(input: import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentCompletion): Promise<boolean> {
-    void input; throw new Error("PostgreSQL failed original fulfillment is not admitted");
+  async completeA2aFailedOriginalFulfillment(input: import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentCompletion,
+    evidenceCapability?: import("../a2a/fulfillment-supplement-evidence").FulfillmentEvidenceCapability): Promise<boolean> {
+    void input; void evidenceCapability; throw new Error("PostgreSQL failed original fulfillment is not admitted");
   }
-  async hasA2aFailedOriginalFulfillment(authority: import("../a2a/failed-original-fulfillment-protocol").FulfillmentAuthority): Promise<boolean> {
-    void authority; throw new Error("PostgreSQL failed original fulfillment is not admitted");
+  async hasA2aFailedOriginalFulfillment(authority: import("../a2a/failed-original-fulfillment-protocol").FulfillmentAuthority,
+    evidenceCapability?: import("../a2a/fulfillment-supplement-evidence").FulfillmentEvidenceCapability): Promise<boolean> {
+    void authority; void evidenceCapability; throw new Error("PostgreSQL failed original fulfillment is not admitted");
   }
 
   async markA2aOrderPaymentStarted(id: string, startedAt: string): Promise<boolean> {

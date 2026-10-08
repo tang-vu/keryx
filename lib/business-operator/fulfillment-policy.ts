@@ -8,7 +8,9 @@ import { z } from "zod";
 import { canonicalJson } from "../canonical-json";
 import { businessCanaryHostIdentity, retainedFailedBusinessCanaryAuthority, verifyFailedBusinessCanary,
   type RetainedFailedCanaryAuthority, type FailedBusinessCanaryProofDb } from "./canary-policy";
-import { ORIGINAL_FULFILLMENT_LIMITS as LIMITS, fulfillmentInputSchema, fulfillmentAuthoritySchema,
+import { ORIGINAL_FULFILLMENT_LIMITS as LIMITS } from "../a2a/fulfillment-limits";
+import { fulfillmentInputSchema, fulfillmentAuthoritySchema } from "../a2a/fulfillment-authority";
+import {
   fulfillmentObjectSha256 as hashObject, fulfillmentSha256 as hash, validateFulfilledQueryRun,
   type FulfillmentAuthority, type A2aFulfillmentClaim, type A2aFulfillmentCompletion } from "../a2a/failed-original-fulfillment-protocol";
 import type { KeryxDB } from "../db/keryx-db";

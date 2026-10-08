@@ -620,9 +620,13 @@ export interface KeryxDB {
   /** Private finite recovery, never a requeue. Optional lanes explicitly refuse unsupported backends. */
   claimA2aFailedOriginalFulfillment?(input: import("../a2a/failed-original-fulfillment-protocol").FulfillmentClaimInput): Promise<import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentClaim | null>;
   getA2aFailedOriginalFulfillment?(originalId: string): Promise<import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentRecord | null>;
-  /** Atomic insert-only QueryRun + exact failed-original completion; no financial write. */
-  completeA2aFailedOriginalFulfillment?(input: import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentCompletion): Promise<boolean>;
-  hasA2aFailedOriginalFulfillment?(authority: import("../a2a/failed-original-fulfillment-protocol").FulfillmentAuthority): Promise<boolean>;
+  /** Atomic insert-only QueryRun + exact failed-original completion; no financial write.
+   * Supplemental results require an opaque, independently verified evidence capability. */
+  completeA2aFailedOriginalFulfillment?(input: import("../a2a/failed-original-fulfillment-protocol").A2aFulfillmentCompletion,
+    evidenceCapability?: import("../a2a/fulfillment-supplement-evidence").FulfillmentEvidenceCapability): Promise<boolean>;
+  /** Readonly exact delivery proof; supplemental evidence capability grants no supplier admission. */
+  hasA2aFailedOriginalFulfillment?(authority: import("../a2a/failed-original-fulfillment-protocol").FulfillmentAuthority,
+    evidenceCapability?: import("../a2a/fulfillment-supplement-evidence").FulfillmentEvidenceCapability): Promise<boolean>;
   /** Durably crosses the creator-payment boundary before any gateway authorization can begin. */
   markA2aOrderPaymentStarted(id: string, startedAt: string): Promise<boolean>;
   /** Durably crosses the QueryRun-save boundary before a no-payment result can appear. */

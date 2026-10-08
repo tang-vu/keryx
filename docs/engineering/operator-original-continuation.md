@@ -117,3 +117,133 @@ commit at public health, serialize maintenance with positive writer drain and
 preserve every old journal/custody/build backup. Only actual same-original native
 completion and verified original buyer recovery prove delivered acceptance; source
 publication or successful model transport alone does not.
+
+## Free supplemental evidence and the unused remainder
+
+An acknowledged negative full-source assessment is terminal for its exact context.
+A third source-bound episode may use at most five unused repair calls, with263920
+microUSD history and367220 fully reserved, preserving the same owner expiry and
+400000 outer ceiling. Its separately anchored journal binds every epoch2 authority,
+frontier, hold, acknowledged negative result, diagnostic and closed attempt. Missing,
+partial or rolled-back state blocks parent fallback. Activation still requires actual
+CLI0/full captures before suppliers; this is not a fresh six-call allowance.
+
+The protected supplementary manifest adds at most four official Arc/Circle references,
+with at most4800 UTF-8 bytes of verbatim sections in total. Retain complete raw inputs
+(up to200000bytes each), exact ordered offsets, both URLs and retrieval time; section
+bodies must reproduce those offsets exactly. The original two bodies stay unchanged.
+Each selected section is a distinct S3+ public-reference with bounded provenance,
+zero payment and reward authority. The complete union goes through fresh sufficiency,
+generation, exact quote binding, independent review and final assembly; every full
+wire prompt stays below32000bytes and generation below8192tokens. Documentation
+supports proposed acceptance checks, never an assertion that Keryx executed them.
+
+Official configuration tables also need usable evidence options. The protected reader
+enrolls exact contiguous table prefixes retaining their headers, code URL lines and
+completed short paragraphs within a single recorded verbatim section. The opaque
+span capability survives generation, separate review and ledger validation; unknown
+objects, changed spans/bodies and detached values refuse. Quotes remain at most240
+characters, with bounded adjacent review context. Raw vendor text is never rewritten
+or joined across sections to create a quote. Ordinary sentence-only gates stay intact.
+
+Result-v2 retains the original native authority/input hashes and completion tuple.
+An opaque runtime capability from protected provenance binds the exact claim and run.
+Native complete, transaction readback, idempotent recovery and readonly has all
+revalidate it; a forged/copied object or changed/missing body refuses. Historical
+readback can revalidate after supplier expiry without granting model access. All five
+targets require>=0.4 coverage, statements require independent review>=0.7 and the
+canonical answer preserves explicit gaps. Legacy result-v1 remains unchanged.
+
+The application version advances for coordinated web/API/Operator/CLI deployment.
+Hosted/stdio MCP, desktop, extensions and bots use their existing status and original
+buyer GET/receipt adapters; no new public activation, signing field, package or installer
+is introduced. SQLite/enrolled adapters forward the opaque object internally; Supabase
+continues to refuse this private domain. No database migration or ordinary research
+budget change is introduced. Source/CI/review/deployment and actual reviewed original
+recovery remain separate gates.
+
+## An immutable rejected prepared result
+
+A prepared answer can pass exact-quote and numerical support checks while omitting
+requested facts that the frozen documents supply. Such omissions are quality failures,
+not evidence gaps. Root and independent reviewers must reject that exact prepared/run
+tuple rather than deliver it or rewrite its retained bytes.
+
+V4 is a separately source-bound, externally anchored quality episode. It preserves
+the complete epoch3 grant, journal, three acknowledged model holds, prepared result
+and original native claim. Two distinct protected rejection records bind the same
+parent prepared result, run, ledger, source context and original input. History is
+325900 micro-USD; exactly two fresh calls can reserve at most 367220 in aggregate,
+within the existing 400000 owner ceiling and unchanged expiry. No parent generation
+or review can be reused, including after a subsequent failure.
+
+Only a genuine all-five positive sufficiency checkpoint can carry into the new journal.
+The authority binds its raw hold/checkpoint/result and exact wire prompt, complete
+four-source bodies, original question/targets and supplementary context. A different
+prompt, evidence set, partial publication or uncertain parent outcome refuses. A
+carried sufficiency observation performs no supplier action and consumes no new hold;
+fresh generation and independent review consume the two remaining reservations.
+
+Protected original guidance replaces the ordinary two-option limit for this quality
+episode. Statement selection can retain documented multi-step detail within the existing
+32-evidence bound; ordinary research retains its limits. Complete factual premises
+and direct independent statement review remain required. Canonical proposed acceptance
+checks are explicitly labeled inferences from those premises and are not executions,
+settlement evidence or documented vendor checklists. Missing Arc deployment addresses
+and executable parameter values remain gaps. Old result rendering and historical
+readback remain stable when the quality protocol is absent.
+
+This is private CLI/policy recovery; hosted web/API, desktop, MCP, extensions and bots
+continue to recover the original through their existing query-ID-bound GET and receipt
+adapters. No new public activation, schema, custody, inbound signing or schedule is
+introduced. Release requires adversarial policy and semantic completeness tests, both
+TypeScript graphs, lint, build, independent review and CI. A deployment alone does not
+prove the original delivered; review the actual new answer, complete its exact native
+metadata, restore public roles, and verify the original buyer job and receipt.
+
+## Complete required selection before spending on review
+
+Generation instructions alone did not prevent a returned answer from omitting
+documented facts or substituting related statements. For this private quality
+protocol, construct an exact 29-option plan from the already admitted quote menu,
+one option per required meaning. The model must retain each exact quote identifier,
+marker and target slot once. Validate this structure and the existing semantic
+requirements before dispatching direct statement review. A failed generation still
+consumes its reservation; it cannot acquire a successful reusable checkpoint or
+silently fall back to a prior incomplete pair. Complete source provenance and the
+independent review threshold remain separate gates. Ordinary research keeps its
+existing selection and transport behavior; the full input/output bounds stay intact.
+
+V5 is an additive recovery episode after an acknowledged V4 quality failure. Its
+separate private owner receipt retains the existing explicit instruction to repair
+the same original to completion. The receipt records its actual creation time and
+states that the instruction's chat timestamp was not recorded. The grant's
+`ownerAuthorizationReceivedAt` equals that receipt recording time. These finite
+numbers are chosen by the agent within that instruction: 367220 micro-USD of
+unchanged historical reservations, at most six new 20660 micro-USD holds, and
+491180 micro-USD in aggregate. Reservations are conservative bounds, not invoices
+or evidence of settled supplier charges. The new window is at most 24 hours;
+earlier owner records, windows and grant limits remain unchanged.
+
+Activation binds the full failed V4 ledger and external frontier, both acknowledged
+generation/review checkpoints and outcomes, its closed attempt and quality
+diagnostic, and the carried positive sufficiency record. No parent prepared result
+is manufactured. Missing or uncertain state, execution locks, changed evidence,
+rollback or an unknown frontier refuse activation and earlier fallback. Only the
+exact same-context positive sufficiency result can carry; failed generation and
+review outputs never carry into a fresh attempt. Genuine executor/guardian lifetime
+closure remains an operational prerequisite, separately from journal closure.
+
+This is private source/host-bound CLI recovery with no searches, new buyer payment,
+creator reward, funding, custody or scheduler authority. The native original claim
+and existing SQLite completion contract stay intact; Supabase remains unsupported.
+Web/API, hosted and stdio MCP, desktop, extensions and bots continue to observe
+existing availability and query-ID-bound buyer recovery adapters. Their wire
+contracts and client versions do not change in this server release. Existing
+package and installer publication identities retain their own verified release
+records; server deployment alone is not evidence that clients were republished.
+
+Source tests, both TypeScript graphs, lint, production build, independent review and
+required CI gate release. Deployment and model acknowledgements do not prove
+delivery: review the actual answer, complete the same claim, restore ordinary
+public service and verify the original buyer's GET response and signed receipt.

@@ -11,7 +11,7 @@ import { boundedResearchPlan } from "./research-plan";
 import { cloneUsage } from "../economics/provider-cost-policy";
 import { LlmCallLedger } from "./call-ledger";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
-import { buildQuoteOptions, resolveQuoteEvidence } from "./quote-options";
+import { buildQuoteOptions, resolveQuoteEvidence, type QuoteOption } from "./quote-options";
 import { STATEMENT_GENERATION_GUIDANCE } from "./cited-statement";
 import { buildContextualQuoteOptions } from "./quote-context";
 import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE, BRIEF_COMPACT_REVIEW_SCHEMA } from "./decision-brief";
@@ -274,32 +274,15 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   async synthesize(input: SynthInput): Promise<SynthResult> {
     if (input.answerFormat === "decision-brief" && this.supportsDecisionBrief()) return this.synthesizeDecisionBrief(input);
     const sources = this.evidenceSources(input);
-    const quoteOptions = buildQuoteOptions(sources, input.gathered);
+    const quoteOptions = this.synthesisQuoteOptions(input, sources);
     const out = await this.measuredChatJson(
       config.synthesisModel,
-      "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
-        "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
-        "For every supported research question, select a quoteId from quoteOptions in an evidence item with " +
-        "the claimIndex explicitly supplied in researchTargets and the option's exact marker. " +
-        "Reuse that same claimIndex for multiple quotes answering one target; do not number answer sentences or evidence items. " +
-        "Do not output raw quote text or invent IDs. " +
-        STATEMENT_GENERATION_GUIDANCE +
-        "Each option is already a bounded verbatim excerpt; choose only options that directly answer that question. " +
-        "A related warning or shared topic is not evidence for an unmentioned procedure. " +
-        "Select the smallest sufficient set, at most two options per research question; emit separate evidence items when needed. " +
-        "If no option supports an answer, state the gap and omit its evidence; never assume every option deserves a citation. " +
-        "Address every research question in the answer, explicitly naming any unanswered part. " +
-        "A source belongs in `citedMarkers` only when it appears inline and has an evidence item. " +
-        "If the sources do not support a claim, say so and emit no citation/evidence for it. " +
-        "When two or more sources disagree on a factual point, do NOT average or blur them: decide " +
-        "which to trust based on specificity, internal consistency, and recency; write the answer " +
-        "reflecting the trusted source; and record each disagreement in `conflicts` (use an empty " +
-        "array when the sources are consistent). Output strict JSON.",
+      this.synthesisGenerationGuidance(input),
       JSON.stringify({
         question: input.question,
         researchTargets: input.subClaims.map((question, claimIndex) => ({ claimIndex, question })),
         sources,
-        quoteOptions: quoteOptions.map(({ quoteId, marker, text }) => ({ quoteId, marker, text })),
+        quoteOptions: this.synthesisGenerationQuoteOptions(input, quoteOptions),
         schema:
           '{"answer":string (markdown with [S#] citations),"citedMarkers":string[],' +
           '"evidence":[{"claimIndex":number,"marker":string,"quoteId":string,"support":number(0..1),"statement":string}],' +
@@ -313,7 +296,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     let reviewedIndexes: ReadonlySet<number> = new Set();
     if (proposals.length) {
       try {
-        const reviewInput = buildEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims });
+        const reviewInput = this.synthesisEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims });
         reviewedIndexes = reviewInput.reviewedIndexes;
         if (reviewedIndexes.size) review = await this.measuredChatJson(
           config.llmModel,
@@ -334,6 +317,42 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         ? "completed" as const : "unavailable" as const } : {}),
       conflicts: parseConflicts(out.conflicts),
     };
+  }
+
+  /** Private completion may replace generation guidance without changing the
+   * sufficiency prompt or ordinary research's existing contract. */
+  protected synthesisGenerationGuidance(_input: SynthInput): string {
+    return "You write a grounded, accurate answer using ONLY the provided sources. " + EVIDENCE_CONTEXT_GUIDANCE +
+        "Cite inline with the source markers like [S1]. Cite every claim. Do not invent facts. " +
+        "For every supported research question, select a quoteId from quoteOptions in an evidence item with " +
+        "the claimIndex explicitly supplied in researchTargets and the option's exact marker. " +
+        "Reuse that same claimIndex for multiple quotes answering one target; do not number answer sentences or evidence items. " +
+        "Do not output raw quote text or invent IDs. " +
+        STATEMENT_GENERATION_GUIDANCE +
+        "Each option is already a bounded verbatim excerpt; choose only options that directly answer that question. " +
+        "A related warning or shared topic is not evidence for an unmentioned procedure. " +
+        "Select the smallest sufficient set, at most two options per research question; emit separate evidence items when needed. " +
+        "If no option supports an answer, state the gap and omit its evidence; never assume every option deserves a citation. " +
+        "Address every research question in the answer, explicitly naming any unanswered part. " +
+        "A source belongs in `citedMarkers` only when it appears inline and has an evidence item. " +
+        "If the sources do not support a claim, say so and emit no citation/evidence for it. " +
+        "When two or more sources disagree on a factual point, do NOT average or blur them: decide " +
+        "which to trust based on specificity, internal consistency, and recency; write the answer " +
+        "reflecting the trusted source; and record each disagreement in `conflicts` (use an empty " +
+        "array when the sources are consistent). Output strict JSON.";
+  }
+
+  protected synthesisQuoteOptions(input: SynthInput, sources: ReturnType<typeof evidenceContext>): QuoteOption[] {
+    return buildQuoteOptions(sources, input.gathered);
+  }
+  /** Specialized completion may carry server-owned required target bindings in
+   * its compact menu. Ordinary research's generation payload stays identical. */
+  protected synthesisGenerationQuoteOptions(_input: SynthInput, options: QuoteOption[]):
+    Array<Pick<QuoteOption, "quoteId" | "marker" | "text"> & { claimIndex?: number }> {
+    return options.map(({ quoteId, marker, text }) => ({ quoteId, marker, text }));
+  }
+  protected synthesisEvidenceReviewInput(input: Parameters<typeof buildEvidenceReviewInput>[0]) {
+    return buildEvidenceReviewInput(input);
   }
 
   private async synthesizeDecisionBrief(input: SynthInput): Promise<SynthResult> {

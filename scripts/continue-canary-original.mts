@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { readContinuationAuthorization, inspectOriginalContinuation, verifyPreparedContinuation,
-  completePreparedContinuation, activateOriginalContinuationEpoch } from "../lib/business-operator/fulfillment-continuation-policy.ts";
+  completePreparedContinuation, activateOriginalContinuationEpoch, continuationReadOnlyQualityEvidenceCapability } from "../lib/business-operator/fulfillment-continuation-policy.ts";
 import { completeOriginalContinuation, preflightOriginalContinuation } from "../lib/a2a/continue-original.ts";
 import { ORIGINAL_FULFILLMENT_LIMITS } from "../lib/a2a/failed-original-fulfillment-protocol.ts";
 import type { KeryxDB } from "../lib/db/keryx-db.ts";
@@ -10,7 +10,7 @@ import type { KeryxDB } from "../lib/db/keryx-db.ts";
 const usage = `Private additive continuation of the same already-paid retained original
   preflight --authorization <protected-file> --sha256 <reviewed-digest>
   execute --authorization <protected-file> --sha256 <reviewed-digest>
-  activate-epoch --authorization <separate-v2-file> --sha256 <reviewed-digest>
+  activate-epoch --authorization <separate-v2-v3-v4-or-v5-file> --sha256 <reviewed-digest>
   verify-prepared
   complete-prepared --prepared-sha256 <exact-reviewed-result-digest>
 
@@ -20,10 +20,18 @@ its irreversible external anchor initializes a fresh additive journal, retaining
 Preserve the expired original authorization, permanent native claim and all old holds.
 Execute uses only frozen evidence, checkpointed sufficiency/generation/separate review.
 Every new request is durably reserved within one aggregate finite allowance. A known
-failed attempt can resume matching normalized checkpoints; uncertain locks stay held.
+failed attempt keeps all holds consumed; checkpoint reuse is episode-specific and
+quality episodes always use fresh generation and review. Uncertain locks stay held.
 Generation uses the existing authorized 8192-token ceiling. No order/payment/search,
 creator reward, general admission, scheduler or automatic claim replay is authorized.
-Review the prepared answer privately before exact-digest metadata completion.`;
+Review the prepared answer privately before exact-digest metadata completion.
+An independently rejected prepared answer remains immutable. A separately bound V4
+quality episode may carry only the same-evidence positive sufficiency and spend its
+two remaining calls on fresh generation and review, preserving the original deadline.
+A failed V4 pair needs a distinct V5 owner receipt and externally anchored grant,
+retaining every old limit, window and outcome. Its agent-chosen six-call allowance
+is finite; receipt recording time is not a claimed chat timestamp. Required quote
+selection and completeness checks precede any paid direct statement review.`;
 export function continuationCliFailure(error: unknown) {
   const message = error instanceof Error ? error.message : "";
   const match = /^Original continuation (sufficiency|synthesize|review|assemble) (input-limit|output-validation|transport|incomplete-review|quality|unknown);/.exec(message);
@@ -54,8 +62,9 @@ export async function runContinueCanaryOriginal(argv: string[]) {
   try {
     applicationSqliteIdentity(db, writing ? "write" : "read");
     if (command === "preflight") {
-      const prompt = await preflightOriginalContinuation(binding!.original);
       const proof = await inspectOriginalContinuation(db, authorizationFile!, authorizationSha256!);
+      const qualityEvidence = binding!.qualityProtocol ? continuationReadOnlyQualityEvidenceCapability(binding!, proof.claim) : undefined;
+      const prompt = await preflightOriginalContinuation(binding!.original, binding!.supplement, qualityEvidence);
       console.log(JSON.stringify({ command, readOnly: true, newModelCalls: proof.newModelCalls,
         combinedReservedMicroUsd: proof.combinedReservedMicroUsd, supplierWindowLive: proof.supplierWindowLive,
         executionIntentRetained: proof.executionIntentRetained, prepared: proof.prepared,

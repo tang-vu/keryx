@@ -1,6 +1,7 @@
 import type { GatheredContent } from "./reasoning-engine";
 import { isWellFormedUtf16 } from "./well-formed-utf16";
 import { sourceSentenceSegments } from "./source-sentences";
+import { isSupplementaryStructuredSpan, type SupplementalSpanCapability } from "./supplemental-span-capability";
 
 export interface EvidenceSpan { start: number; end: number }
 const MAX_SOURCE_CHARACTERS = 200_000;
@@ -33,10 +34,12 @@ export function completeEvidenceSpans(source: GatheredContent): EvidenceSpan[] {
 }
 
 /** Exact source binding; missing metadata must not be repaired by text lookup. */
-export function isCompleteEvidenceSpan(source: GatheredContent, quote: string, span: EvidenceSpan | undefined): boolean {
+export function isCompleteEvidenceSpan(source: GatheredContent, quote: string, span: EvidenceSpan | undefined,
+  supplementalCapability?: SupplementalSpanCapability): boolean {
   if (!span || !Number.isSafeInteger(span.start) || !Number.isSafeInteger(span.end) ||
       span.start < 0 || span.end <= span.start || span.end > Math.min(source.text.length, MAX_SOURCE_CHARACTERS) ||
       quote.length < 8 || quote.length > 240 || source.text.slice(span.start, span.end) !== quote) return false;
+  if (isSupplementaryStructuredSpan(supplementalCapability, source, quote, span)) return true;
   const boundaries = completeEvidenceSpans(source);
   return boundaries.some(candidate => candidate.start === span.start) && boundaries.some(candidate => candidate.end === span.end);
 }

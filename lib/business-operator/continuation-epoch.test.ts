@@ -2,7 +2,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { canonicalJson } from "../canonical-json";
 import { fulfillmentSha256 as hash } from "../a2a/failed-original-fulfillment-protocol";
-import { activateEpochAnchor, beginEpochLedgerUpdate, completeEpochLedgerUpdate, CONTINUATION_EPOCH2_LIMITS, fixedPaths, readActiveEpochAnchor,
+import { activateEpochAnchor, beginEpochLedgerUpdate, completeEpochLedgerUpdate, CONTINUATION_EPOCH2_LIMITS, fixedPaths, readActiveEpochAnchor, readLatestEpochAnchor,
   type ContinuationEpochBinding, type ContinuationEpochIO } from "./continuation-epoch";
 
 const at = "2026-10-07T17:00:00.000Z", h = (digit: string) => digit.repeat(64);
@@ -62,6 +62,73 @@ function fixture() {
   const validateAuthority = vi.fn(async () => {});
   return { home, paths, files, directories, events, io, binding, initializeJournal, validateAuthority,
     activation: { initializeJournal, validateAuthority } };
+}
+
+async function supplementFixture() {
+  const f = fixture(); await activateEpochAnchor(f.home, f.binding, f.io, f.activation);
+  const token = beginEpochLedgerUpdate(f.home, f.io), parentHeadFile = path.join(f.paths.epochDirectory, "ledger-head.json");
+  const head = bytes({ synthetic: "one-acknowledged-negative-assessment" }); f.files.set(parentHeadFile, head);
+  const parent = completeEpochLedgerUpdate(token, hash(head), f.io), paths = fixedPaths(f.home, 3);
+  const supplementaryInputFile = path.join(f.home, "synthetic-free-supplement.json");
+  f.files.set(supplementaryInputFile, bytes({ synthetic: "separately-bound-free-primary-evidence" }));
+  const fields = { ...f.binding, format: "keryx-original-continuation-authorization-v3" as const,
+    historicalReservedMicroUsd: 263920 as const, maximumNewModelCalls: 5 as const, maximumCombinedMicroUsd: 367220 as const,
+    ownerMaximumCombinedMicroUsd: 400000 as const,
+    parentAuthorizationFile: f.binding.authorizationFile, parentAuthorizationSha256: f.binding.authorizationSha256,
+    parentProviderLedgerSha256: h("8"), parentLedgerHeadSha256: parent.ledgerHeadSha256,
+    parentAnchorIntentSha256: parent.intentSha256, parentAnchorActiveSha256: parent.activeSha256, parentAnchorFrontierSha256: parent.frontierSha256,
+    parentSufficiencyHoldSha256: h("9"), parentSufficiencyCheckpointSha256: h("a"), parentSufficiencyResultSha256: h("b"),
+    parentSufficiencyDiagnosticSha256: h("c"), parentAttemptOutcomeSha256: h("d"),
+    supplementaryInputFile, supplementaryInputSha256: hash(f.files.get(supplementaryInputFile)!), contextSha256: h("e"),
+    contextProtocol: "full-selected-bodies-required-sufficiency-with-free-primary-supplement-v1" as const,
+    authorizationFile: path.join(f.home, "fresh-epoch-3-grant.json") };
+  const { authorizationFile, authorizationSha256: _oldSha, ...grant } = fields;
+  f.files.set(authorizationFile, bytes(grant));
+  const binding: ContinuationEpochBinding = { ...fields, authorizationSha256: hash(f.files.get(authorizationFile)!) };
+  const initializeJournal = vi.fn(() => {
+    expect(f.io.exists(paths.intentFile)).toBe(true);
+    f.io.ensureDirectory(paths.epochDirectory);
+    f.io.retainRecord(path.join(paths.epochDirectory, "authorization.json"), {
+      format: "keryx-original-continuation-retained-authorization-v1", authorizationFile, authorizationSha256: binding.authorizationSha256 });
+    f.io.retainRecord(path.join(paths.epochDirectory, "ledger-head.json"), { synthetic: "remaining-five-unused" });
+  });
+  return { ...f, parent, paths3: paths, binding3: binding, activation3: { initializeJournal, validateAuthority: vi.fn(async () => {}) } };
+}
+async function preparedFixture() {
+  const f = await supplementFixture(); await activateEpochAnchor(f.home, f.binding3, f.io, f.activation3);
+  const token = beginEpochLedgerUpdate(f.home, f.io), parentHeadFile = path.join(f.paths3.epochDirectory, "ledger-head.json");
+  const head = bytes({ synthetic: "three-returned-stages-positive-prepared" }); f.files.set(parentHeadFile, head);
+  const parent = completeEpochLedgerUpdate(token, hash(head), f.io), paths = fixedPaths(f.home, 4);
+  const preparedFile = path.join(f.paths3.epochDirectory, "prepared-result.json");
+  f.files.set(preparedFile, bytes({ synthetic: "immutable-quality-rejected-prepared" }));
+  const rootQualityRejectionFile = path.join(f.home, "synthetic-root-quality-rejection.json"),
+    independentQualityRejectionFile = path.join(f.home, "synthetic-independent-quality-rejection.json");
+  f.files.set(rootQualityRejectionFile, bytes({ synthetic: "root-rejection" }));
+  f.files.set(independentQualityRejectionFile, bytes({ synthetic: "independent-rejection" }));
+  const authorizationFile = path.join(f.home, "fresh-epoch-4-grant.json"), fields = { ...f.binding,
+    format: "keryx-original-continuation-authorization-v4" as const, historicalReservedMicroUsd: 325900 as const,
+    maximumNewModelCalls: 2 as const, maximumCombinedMicroUsd: 367220 as const, ownerMaximumCombinedMicroUsd: 400000 as const,
+    parentAuthorizationFile: f.binding3.authorizationFile, parentAuthorizationSha256: f.binding3.authorizationSha256,
+    parentProviderLedgerSha256: h("8"), parentLedgerHeadSha256: parent.ledgerHeadSha256,
+    parentAnchorIntentSha256: parent.intentSha256, parentAnchorActiveSha256: parent.activeSha256, parentAnchorFrontierSha256: parent.frontierSha256,
+    parentPreparedResultSha256: hash(f.files.get(preparedFile)!), parentRunSha256: h("9"),
+    parentSufficiencyHoldSha256: h("a"), parentSufficiencyCheckpointSha256: h("b"), parentSufficiencyResultSha256: h("c"),
+    parentSufficiencyPromptSha256: h("d"), supplementaryInputFile: f.binding3.format === "keryx-original-continuation-authorization-v3" ? f.binding3.supplementaryInputFile : "",
+    supplementaryInputSha256: f.binding3.format === "keryx-original-continuation-authorization-v3" ? f.binding3.supplementaryInputSha256 : "",
+    contextSha256: h("e"), rootQualityRejectionFile, rootQualityRejectionSha256: hash(f.files.get(rootQualityRejectionFile)!),
+    independentQualityRejectionFile, independentQualityRejectionSha256: hash(f.files.get(independentQualityRejectionFile)!),
+    contextProtocol: "full-same-evidence-required-quality-refresh-v1" as const };
+  const { authorizationFile: _priorFile, authorizationSha256: _priorSha, ...grant } = fields;
+  f.files.set(authorizationFile, bytes(grant));
+  const binding: ContinuationEpochBinding = { ...grant, authorizationFile, authorizationSha256: hash(f.files.get(authorizationFile)!) };
+  const initializeJournal = vi.fn(() => {
+    expect(f.io.exists(paths.intentFile)).toBe(true); f.io.ensureDirectory(paths.epochDirectory);
+    f.io.retainRecord(path.join(paths.epochDirectory, "authorization.json"), {
+      format: "keryx-original-continuation-retained-authorization-v1", authorizationFile, authorizationSha256: binding.authorizationSha256 });
+    f.io.retainRecord(path.join(paths.epochDirectory, "ledger-head.json"), { synthetic: "two-new-quality-holds-unused" });
+  });
+  return { ...f, parent3: parent, paths4: paths, binding4: binding,
+    activation4: { initializeJournal, validateAuthority: vi.fn(async () => {}) } };
 }
 
 describe("irreversible separate continuation epoch authority", () => {
@@ -240,5 +307,77 @@ describe("irreversible separate continuation epoch authority", () => {
     expect(f.io.exists(f.paths.ledgerUpdateUncertainFile)).toBe(true);
     expect(() => readActiveEpochAnchor(f.home, f.io)).toThrow("uncertain");
     expect(() => completeEpochLedgerUpdate(token, hash(nextHead), f.io)).toThrow("uncertain");
+  });
+});
+
+describe("immutable prepared-quality successor frontier", () => {
+  it("activates the exact two-slot successor without altering any prior journal, prepared result or rejection proof", async () => {
+    const f = await preparedFixture(), previous = new Map([...f.files].map(([file, raw]) => [file, Buffer.from(raw)]));
+    const active = await activateEpochAnchor(f.home, f.binding4, f.io, f.activation4);
+    expect(active.paths.epoch).toBe(4); expect(readLatestEpochAnchor(f.home, f.io)).toEqual(active);
+    expect(active.binding.historicalReservedMicroUsd + active.binding.maximumNewModelCalls * 20660).toBe(367220);
+    expect(readActiveEpochAnchor(f.home, f.io, 3)).toEqual(f.parent3);
+    for (const [file, raw] of previous) expect(f.files.get(file)).toEqual(raw);
+    expect(f.activation4.validateAuthority).toHaveBeenCalledTimes(2);
+  });
+  it("blocks all fallback on uncertain successor publication and refuses a new full-journal rollback", async () => {
+    const f = await preparedFixture(), retain = f.io.retainRecord;
+    f.io.retainRecord = (file, value) => { retain(file, value); if (file === f.paths4.activeFile) throw Error("Synthetic fourth activation acknowledgement lost"); };
+    await expect(activateEpochAnchor(f.home, f.binding4, f.io, f.activation4)).rejects.toThrow("acknowledgement lost");
+    expect(readActiveEpochAnchor(f.home, f.io, 3)).toEqual(f.parent3);
+    expect(() => readLatestEpochAnchor(f.home, f.io)).toThrow();
+    expect(() => beginEpochLedgerUpdate(f.home, f.io)).toThrow();
+    const other = await preparedFixture(); await activateEpochAnchor(other.home, other.binding4, other.io, other.activation4);
+    const headFile = path.join(other.paths4.epochDirectory, "ledger-head.json"), initial = Buffer.from(other.files.get(headFile)!);
+    const token = beginEpochLedgerUpdate(other.home, other.io), next = bytes({ synthetic: "fresh-generation-hold" });
+    other.files.set(headFile, next); expect(completeEpochLedgerUpdate(token, hash(next), other.io).paths.epoch).toBe(4);
+    other.files.set(headFile, initial); expect(() => readLatestEpochAnchor(other.home, other.io)).toThrow();
+  });
+});
+
+describe("fixed remaining-five successor profile", () => {
+  it("chains separate immutable parent anchors and transfers only the remaining five holds", async () => {
+    const f = await supplementFixture(), previous = new Map([...f.files].map(([file, raw]) => [file, Buffer.from(raw)]));
+    const activated = await activateEpochAnchor(f.home, f.binding3, f.io, f.activation3);
+    expect(activated.paths.epoch).toBe(3);
+    expect(activated.binding.maximumNewModelCalls).toBe(5);
+    expect(activated.binding.historicalReservedMicroUsd + 5 * 20660).toBe(367220);
+    expect(readLatestEpochAnchor(f.home, f.io)?.binding).toEqual(f.binding3);
+    expect(readActiveEpochAnchor(f.home, f.io, 2)).toEqual(f.parent);
+    for (const [file, raw] of previous) expect(f.files.get(file)).toEqual(raw);
+    expect([...f.io.list(f.paths.anchorDirectory)].sort()).toEqual(["epoch-2-active.json", "epoch-2-intent.json", "frontier.json"]);
+  });
+
+  it("blocks all fallback on a partial successor even while the parent remains valid metadata", async () => {
+    const f = await supplementFixture(), retain = f.io.retainRecord;
+    f.io.retainRecord = (file, value) => { retain(file, value); if (file === f.paths3.activeFile) throw Error("Synthetic successor acknowledgement lost"); };
+    await expect(activateEpochAnchor(f.home, f.binding3, f.io, f.activation3)).rejects.toThrow("acknowledgement lost");
+    expect(readActiveEpochAnchor(f.home, f.io, 2)).toEqual(f.parent);
+    expect(() => readLatestEpochAnchor(f.home, f.io)).toThrow("uncertain");
+    expect(() => beginEpochLedgerUpdate(f.home, f.io)).toThrow("uncertain");
+  });
+
+  it("anchors successor updates separately and rejects rollback of either epoch", async () => {
+    const f = await supplementFixture(); await activateEpochAnchor(f.home, f.binding3, f.io, f.activation3);
+    const initial = Buffer.from(f.files.get(path.join(f.paths3.epochDirectory, "ledger-head.json"))!);
+    const token = beginEpochLedgerUpdate(f.home, f.io);
+    expect(f.io.exists(f.paths3.ledgerUpdateLockFile)).toBe(true);
+    expect(f.io.exists(f.paths.ledgerUpdateLockFile)).toBe(false);
+    const next = bytes({ synthetic: "successor-first-hold" }); f.files.set(path.join(f.paths3.epochDirectory, "ledger-head.json"), next);
+    expect(completeEpochLedgerUpdate(token, hash(next), f.io).paths.epoch).toBe(3);
+    f.files.set(path.join(f.paths3.epochDirectory, "ledger-head.json"), initial);
+    expect(() => readLatestEpochAnchor(f.home, f.io)).toThrow("uncertain");
+    f.files.set(path.join(f.paths3.epochDirectory, "ledger-head.json"), next);
+    f.files.set(path.join(f.paths.epochDirectory, "ledger-head.json"), bytes({ synthetic: "rolled-back-parent" }));
+    expect(() => readLatestEpochAnchor(f.home, f.io)).toThrow("uncertain");
+  });
+
+  it("does not accept a renewed deadline, new six-call allowance or changed parent frontier", async () => {
+    const f = await supplementFixture();
+    await expect(activateEpochAnchor(f.home, { ...f.binding3, maximumNewModelCalls: 6 } as unknown as ContinuationEpochBinding, f.io, f.activation3)).rejects.toThrow();
+    await expect(activateEpochAnchor(f.home, { ...f.binding3, expiresAt: "2026-10-08T15:20:44.001Z" }, f.io, f.activation3)).rejects.toThrow();
+    await expect(activateEpochAnchor(f.home, { ...f.binding3, parentAnchorFrontierSha256: h("f") } as ContinuationEpochBinding, f.io, f.activation3)).rejects.toThrow("uncertain");
+    expect(f.io.exists(f.paths3.intentFile)).toBe(false);
+    expect(() => fixedPaths(f.home, 6 as 2)).toThrow("uncertain");
   });
 });

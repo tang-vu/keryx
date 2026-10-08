@@ -68,6 +68,13 @@ B03/B06/B07 directly support the already-open issue #128 rather than replacing i
 live usefulness and export gates. Repeated independent demand remains an external
 validation task even if all 24 internal scenarios pass.
 
+The October 8 [source-recency proposal](engineering/source-recency-2026-10-08.md)
+adds the observed newest-release failure in issue #217 to B06/B07. It stages
+source-scoped eligibility before an article toll, explicitly retained-set ordering,
+and a qualifying current-feed observation. Sorting publication dates alone cannot
+establish current newest. The proposal changes no runtime or spending authority;
+implementation, caller parity and useful-answer acceptance remain open.
+
 October 4 follow-up: [B06/B07 candidate and measured limits](engineering/research-quality-2026-10-04.md)
 records 22/22 public URL captures and 18/18 offline pipeline completions, targeted
 read-recovery guidance, independent reader review and remaining release gates.

@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**Reject incomplete prepared originals without discarding their history — 2026-10-08.**
+The retained original produced an exactly grounded answer that omitted documented
+payment and validation steps. Per-target coverage and statement support scores
+cannot establish completion of the requested task. Keep the rejected prepared
+result and every parent reservation immutable, bind separate root and independent
+quality rejections, and activate a separate finite quality episode only after its
+previous command tree is positively closed. Carry a genuine positive sufficiency
+checkpoint only when the complete question, targets, four source bodies and exact
+sufficiency prompt remain unchanged. Never carry the rejected generation or review.
+Charge the two unused calls to fresh generation and independent review, retaining
+325900 micro-USD history, the 367220 full-use ceiling and original owner expiry.
+Protected original guidance and statement selection must cover available requested
+parts. Canonical proposed acceptance checks are explicitly labeled inferences from
+admitted factual premises, never assertions that those checks were executed.
+Ordinary research, native claims, inbound payments and schedules keep their authority.
+See [the recovery contract](docs/engineering/operator-original-continuation.md).
+
 **List the first-party engineering feed on mainnet as an owner-operated source — 2026-10-07.**
 Production mainnet had no registered source or offer, so every question read only free
 public references and no access toll or citation reward could occur. The owner asked
@@ -5871,3 +5888,71 @@ A Windows redeploy previously lost reviewed environment controls entering WSL an
 Observed new continuation attempts reused an acknowledged assessment with mandatory target coverage0.1, while final evidence coverage is capped by that assessment. Later generation/review could never pass the existing0.4 threshold. The ordinary context sampler also omitted relevant lines from the already selected frozen documents. Give this private original-completion engine both complete selected bodies consistently through sufficiency, quote options, generation and review; refuse oversized full prompts before dispatch. Retain an actual negative mandatory assessment and stop before generation/review, then block unchanged-context retries. Preserve ordinary research context selection and all evidence/support thresholds.
 
 The owner explicitly requested repair to same-original completion without routine confirmation. Stage any additional supplier episode under a fresh reviewed source and immutable parent-ledger binding rather than extending, deleting or reusing the exhausted grant. The next fixed episode has six fresh holds,243260 microUSD history and400000 microUSD aggregate ceiling (367220 at full use); those conservative staged numbers are agent-chosen within that repair instruction, not an owner quotation or supplier invoice. External activation intent precedes the new journal, and a separately retained latest-head frontier prevents restoring an old journal snapshot from resetting its allowance. Uncertain publication blocks both new dispatch and parent fallback. Native same-claim completion remains exact-digest metadata after private reviewed answer acceptance, with no new payment, funding, search or schedule. Applicable web/API/MCP/client adapters continue to use the existing shared closure and original buyer GET contract; no new client package or native schema is introduced.
+
+## Supplemental primary evidence for the same retained Operator original — 2026-10-08
+
+The full original source bodies still produced an acknowledged negative assessment for Arc-profile and acceptance checks. Retrying unchanged context cannot repair a documented evidence gap. Add a separately protected manifest of bounded free official verbatim sections, retaining raw body hashes, exact offsets, retrieval times and requested/final URLs. Keep original S1/S2, question, targets, payer, native claim and settled inbound untouched. Distinct S3+ public references have zero spending and reward authority; selected sections remain visibly bounded, and no official documentation proves that a live acceptance check has run.
+
+Epoch3 transfers only the five unused holds from the six-call repair scope:263920microUSD historical reservation, maximum5 additional calls and367220 at full use within the existing400000 outer ceiling. Keep the same received owner instruction and expiry; bind epoch2 authorization, external active/frontier, full journal and acknowledged negative checkpoint/diagnostic/closed attempt. A missing, pending or rolled-back third epoch refuses earlier fallback. New context gets a fresh sufficiency assessment with the same complete source union throughout generation, quote binding and independent review; prior checkpoints are not reused across contexts.
+
+Native result-v2 keeps the original authority/input hashes and existing completion CAS. A protected reader mints an opaque runtime evidence capability bound to that exact claim, run and supplemental context. SQLite completion, transactional readback, idempotency and historical readonly proof all revalidate the full source identities, verbatim quotes and provenance. No JSON/user API can grant this capability. Historical evidence validation survives supplier expiry but grants no dispatch permission. Legacy result-v1 remains bounded to the original sources; Supabase remains unsupported. All five original targets still require coverage>=0.4, every delivered statement independent review>=0.7, canonical rendering and explicit gaps. No new migration, client package, funding, purchase, creator payment or scheduler follows. Actual reviewed same-original delivery and buyer GET/receipt verification remain release gates.
+
+Protected supplemental tables require exact header-bearing contiguous quotes, not rewritten vendor prose. A separate opaque span capability enrolls only verbatim units inside one recorded raw section. Generation, independent review and the evidence ledger share that runtime authority; ordinary sentence-only checks have no new JSON override. Adjacent context may expose limitations but never substitutes for a quoted fact. Shared span helpers remain filesystem-free. Constructor or predispatch evidence failures close the known attempt before any model reservation.
+
+## Source-scoped recency eligibility - proposed, 2026-10-08
+
+Issue #217 and a frozen synthetic counterexample show that one-article topical
+ranking can buy an older release despite an explicit newest-entry request. Apply
+immutable original source/version/temporal eligibility before ranking, with a
+validated structured per-call contract preferred over a general latest regex or
+model-generated targets. Stage a visible refusal of unresolved current-newest
+paid selection before adding explicit retained-set ordering and coherent bounded
+feed observations. Paid catalog accumulation has no collection cohort; publication
+dates and public-reference refreshedAt alone cannot prove current newest. Preserve
+wanted-response item/version/offer binding, registry payout authority, every
+execution/payment bound and original recovery. Independent architecture review
+supports this direction; runtime, intent recognition, freshness/completeness,
+storage/adapters and useful-answer gates remain open. See
+[the staged proposal](docs/engineering/source-recency-2026-10-08.md).
+
+## Explicit Ubuntu browser CI dependency bootstrap - 2026-10-08
+
+A required Ubuntu browser job exceeded its existing 15-minute limit while APT
+repeatedly ignored the first Azure HTTP mirror; no test assertions had run.
+Keep browser checks and deadlines intact. Pin both affected Linux jobs to Ubuntu
+24.04 and prepare their existing official HTTPS archive/security mirrors with
+bounded APT transport timeouts/retries and a stricter five-minute install-step
+limit; per-acquisition timeouts alone do not bound the whole installation.
+A shared Node builtin helper guards the
+GitHub-hosted runner, OS and expected configuration before any privileged write.
+It preserves source/keyring/TLS trust and reads back the two fixed files. Windows
+coverage remains. Local adverse tests and actual full runner CI are required;
+the successful same-head rerun is separate evidence, not proof of the original
+network cause. This CI-only change has no production/runtime/distribution version
+change. See [runner setup and boundaries](docs/deployment-guide.md#browser-dependencies-on-github-hosted-runners).
+
+## Required evidence selection and finite failed-quality recovery - 2026-10-08
+
+The retained original's generation omitted documented requirements despite an
+explicit row-count instruction; the paid review could only score the rows it
+received. Select an exact admitted quote for each required meaning before
+generation and reject missing, duplicated, changed or semantically incomplete
+rows before spending on direct review. Preserve independent review, exact source
+provenance and final completeness gates. A related statement cannot substitute for
+an omitted required fact. Ordinary research keeps its existing behavior.
+
+The existing owner instruction explicitly authorizes repair to completion without
+routine reconfirmation. Stage further supplier work through a distinct V5 grant
+and private receipt, never by resetting the exhausted V4 journal. The receipt's
+timestamp is its genuine recording time, not an inferred chat time. Agent-chosen
+limits are six new holds at 20660 micro-USD each, 367220 historical reservations,
+491180 aggregate and at most 24 hours. Preserve every prior receipt/window and
+the same paid claim. This changes neither custody nor buyer/source payments.
+
+Bind the complete failed parent ledger/frontier, two acknowledged checkpoints and
+outcomes, closed attempt, quality diagnostic and exact positive carried assessment.
+Unknown locks, partial publication, rollback or a changed source/context refuse
+new work and prior fallback. Operational executor/guardian lifetime closure is
+separately required. Source release, deployment and successful transport remain
+separate from actual reviewed native delivery and original buyer receipt recovery.
+See [the private recovery contract](docs/engineering/operator-original-continuation.md).

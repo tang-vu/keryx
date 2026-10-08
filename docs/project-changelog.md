@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Sponsored research and distinct operating settlements (2026-10-08, v0.27.25 candidate)
+### Sponsored research and distinct operating settlements (2026-10-08, v0.27.35 candidate)
 
 - Explain the bounded no-wallet trial in research and literature workflows, with
   public-report visibility, manual preparation and wait guidance after throttling.
@@ -12,6 +12,41 @@
   metrics, creator exports and shared API/MCP/CLI/answer renderers. Existing browser
   grants and fixed-price A2A/private jobs receive no additional service charge.
 - [Policy, supported surfaces and remaining release gates](sponsored-research-trial.md).
+
+### Require complete evidence before original-answer review (2026-10-08, v0.27.28)
+
+The retained original's generation selects one admitted quote for each required
+documented fact. Missing, duplicated or changed selections and omitted meanings
+stop before another independent-review request. Existing quote provenance, review
+thresholds and explicit acceptance-check labels remain required.
+
+A separate finite recovery episode preserves the exhausted predecessor, every
+reservation and the original payment. Its private owner receipt records when the
+existing repair instruction was retained; it does not invent a chat timestamp or
+replenish an earlier grant. Actual reviewed delivery, original buyer receipt
+verification and public service restoration remain release acceptance gates.
+
+### Complete documented detail after a rejected prepared original (2026-10-08, v0.27.27)
+
+A separate quality episode preserves an incomplete prepared answer and its entire
+history. It carries only an exactly bound positive same-evidence assessment, then
+uses the two remaining calls for fresh synthesis and review. Original-only guidance
+and statement selection cover documented multi-step flows and limitations. Proposed
+acceptance checks are labeled inferences from reviewed source premises; missing
+deployment values remain explicit. Actual reviewed delivery and buyer recovery are
+still release acceptance gates.
+
+Next.js and its ESLint configuration are pinned to 16.3.8, the [September security release](https://nextjs.org/blog/september-2026-security-release), to address the image optimization SSRF and cache disclosure advisories.
+
+### Free primary evidence for retained Operator completion (2026-10-08, v0.27.26)
+
+A private continuation can supplement an acknowledged evidence gap with protected,
+verbatim official sections. Original sources, payment, question and native claim stay
+intact. Complete source provenance and independent statement review gate native
+completion and historical readback. Only the five unused repair calls transfer to
+the new journal; earlier reservations and the original deadline remain unchanged.
+Ordinary research and existing public buyer contracts retain their roles.
+See [authority and acceptance](engineering/operator-original-continuation.md).
 
 ### Full-source checks for retained Operator completion (2026-10-08, v0.27.23 candidate)
 

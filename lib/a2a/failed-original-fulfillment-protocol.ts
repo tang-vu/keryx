@@ -1,34 +1,17 @@
-import { createHash } from "node:crypto";
+import { fulfillmentObjectSha256, type A2aFulfillmentClaim, type FulfillmentCompletionInput } from "./fulfillment-authority";
+export { fulfillmentInputSchema, fulfillmentAuthoritySchema, fulfillmentClaimInputSchema, fulfillmentCompletionInputSchema, fulfillmentSha256, fulfillmentObjectSha256, failedOriginalEvidenceSha256, matchesFailedFulfillmentOriginal } from "./fulfillment-authority";
+export type { FulfillmentInput, FulfillmentAuthority, FulfillmentClaimInput, A2aFulfillmentClaim, FulfillmentCompletionInput, A2aFulfillmentCompletion, A2aFulfillmentRecord } from "./fulfillment-authority";
 import { z } from "zod";
 import { canonicalJson } from "../canonical-json";
 import { MAX_RESEARCH_TARGETS } from "../llm/research-target-limits";
-import { matchesA2aOriginalBinding, a2aOriginalClaimSchema } from "./original-claim";
-import type { A2aOrder } from "./order";
 import type { QueryRun } from "../types";
 import { renderFulfilledOriginalAnswer, type FulfillmentEvidenceGap } from "./original-fulfillment-answer";
-import { fulfillmentSupplierWindowSchema, fulfillmentTimestampSchema, matchesFulfillmentSupplierWindow } from "./fulfillment-window";
+import { supplementalRunSources, supplementalRunQuoteOptions, type FulfillmentEvidenceCapability } from "./fulfillment-supplement-evidence";
+import type { GatheredContent } from "../llm/reasoning-engine";
+import { ORIGINAL_FULFILLMENT_QUALITY_PROTOCOL, type OriginalFulfillmentQualityProtocol } from "../llm/original-fulfillment-quality";
+export { ORIGINAL_FULFILLMENT_LIMITS } from "./fulfillment-limits";
 
-const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const timestamp = z.string().datetime().refine(value => Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value);
-export const ORIGINAL_FULFILLMENT_LIMITS = Object.freeze({
-  expiresAt: "2026-10-07T00:00:00.000Z", maximumNewModelCalls: 10,
-  modelReserveMicroUsd: 20660, originalReservedMicroUsd: 36660,
-  maximumCombinedMicroUsd: 243260, maximumInputBytes: 32000, maximumOutputTokens: 8192,
-  attentionLimit: 2,
-} as const);
-
-/** Frozen reconstructed scope. It is not a recovered decomposition or a new order. */
-export const fulfillmentInputSchema = z.object({
-  format: z.literal("keryx-canary-original-fulfillment-input-v1"),
-  questionSha256: digest,
-  scopeBasis: z.literal("reviewed-original-question-reconstruction"),
-  targets: z.array(z.string().trim().min(1).max(2000)).min(1).max(MAX_RESEARCH_TARGETS),
-  constraints: z.array(z.string().trim().min(1).max(2000)).max(16),
-  sourceManifestSha256: digest,
-  selectedDocumentIds: z.array(z.string().regex(/^[a-z0-9-]{1,80}$/)).min(1).max(ORIGINAL_FULFILLMENT_LIMITS.attentionLimit),
-}).strict().refine(value => new Set(value.targets).size === value.targets.length &&
-  new Set(value.selectedDocumentIds).size === value.selectedDocumentIds.length, "Duplicate fulfillment scope");
-export type FulfillmentInput = z.infer<typeof fulfillmentInputSchema>;
 
 export const fulfillmentEvidenceGapsSchema = z.array(z.object({
   claimIndex: z.number().int().min(0).max(MAX_RESEARCH_TARGETS - 1),
@@ -39,72 +22,31 @@ export const fulfillmentEvidenceGapsSchema = z.array(z.object({
   (index === 0 || value[index - 1].claimIndex < item.claimIndex) &&
   new Set(item.missingRequestedParts).size === item.missingRequestedParts.length), "Duplicate or unordered evidence gaps");
 
-/** This native tuple grants no supplier authority by itself. The private controller must
- * also prove its protected source-bound authorization and opaque execution capability. */
-const fulfillmentAuthorityV1Schema = z.object({
-  format: z.literal("keryx-a2a-failed-original-fulfillment-authority-v1"),
-  original: a2aOriginalClaimSchema,
-  question: z.string().min(1).max(10000),
-  input: fulfillmentInputSchema,
-  authorizationSha256: digest, policySha256: digest, failedClosureSha256: digest,
-  originalEvidenceSha256: digest, originalProviderLedgerSha256: digest,
-  executorCommit: z.string().regex(/^[a-f0-9]{40}$/),
-  expiresAt: z.literal(ORIGINAL_FULFILLMENT_LIMITS.expiresAt),
-}).strict();
-const fulfillmentAuthorityV2Schema = fulfillmentAuthorityV1Schema.extend({
-  format: z.literal("keryx-a2a-failed-original-fulfillment-authority-v2"),
-  expiresAt: fulfillmentTimestampSchema,
-  supplierWindow: fulfillmentSupplierWindowSchema,
-});
-export const fulfillmentAuthoritySchema = z.discriminatedUnion("format", [fulfillmentAuthorityV1Schema, fulfillmentAuthorityV2Schema])
-  .refine(value => fulfillmentSha256(value.question) === value.input.questionSha256, "Original question changed")
-  .refine(value => value.format === "keryx-a2a-failed-original-fulfillment-authority-v1" ||
-    matchesFulfillmentSupplierWindow(value), "Supplier window expiry changed");
-export type FulfillmentAuthority = z.infer<typeof fulfillmentAuthoritySchema>;
-export const fulfillmentClaimInputSchema = z.object({
-  authority: fulfillmentAuthoritySchema, claimId: digest, claimedAt: timestamp,
-}).strict().refine(value => value.authority.format === "keryx-a2a-failed-original-fulfillment-authority-v1" ||
-  Date.parse(value.claimedAt) >= Date.parse(value.authority.supplierWindow.approvalReceivedAt) &&
-  Date.parse(value.claimedAt) < Date.parse(value.authority.expiresAt), "Claim outside explicit supplier window");
-export type FulfillmentClaimInput = z.infer<typeof fulfillmentClaimInputSchema>;
-export interface A2aFulfillmentClaim extends FulfillmentClaimInput { failedOrder: A2aOrder }
-export const fulfillmentCompletionInputSchema = z.object({
-  claimId: digest, originalId: z.string().regex(/^a2a_[a-f0-9]{64}$/),
-  runSha256: digest, providerLedgerSha256: digest, completedAt: timestamp,
-}).strict();
-export type FulfillmentCompletionInput = z.infer<typeof fulfillmentCompletionInputSchema>;
-export interface A2aFulfillmentCompletion extends FulfillmentCompletionInput { run: QueryRun }
-export interface A2aFulfillmentRecord { claim: A2aFulfillmentClaim; completion: FulfillmentCompletionInput | null }
-
-export function fulfillmentSha256(value: string | Buffer): string { return createHash("sha256").update(value).digest("hex"); }
-export function fulfillmentObjectSha256(value: unknown): string { return fulfillmentSha256(canonicalJson(value)); }
-/** Same digest committed by the metadata-only failed closure. */
-export function failedOriginalEvidenceSha256(order: A2aOrder): string {
-  return fulfillmentObjectSha256({ order, nativeExactOriginalSettled: true, queryRunFound: false, creatorAttempts: 0 });
-}
-export function matchesFailedFulfillmentOriginal(order: A2aOrder, authority: FulfillmentAuthority): boolean {
-  return matchesA2aOriginalBinding(order, authority.original) && order.request?.origin === "a2a" &&
-    order.request.question === authority.question && order.status === "failed" && order.errorCode === "research_failed" &&
-    order.executionJournalVersion === 1 && typeof order.startedAt === "string" && timestamp.safeParse(order.startedAt).success &&
-    timestamp.safeParse(order.createdAt).success && timestamp.safeParse(order.updatedAt).success &&
-    Date.parse(order.createdAt) <= Date.parse(order.startedAt) && Date.parse(order.startedAt) <= Date.parse(order.updatedAt) &&
-    typeof order.workerId === "string" && !!order.workerId.trim() && order.workerId.length <= 200 &&
-    order.paymentStartedAt === null && order.resultSavingAt === null && order.response === null && order.resolution === null &&
-    failedOriginalEvidenceSha256(order) === authority.originalEvidenceSha256;
-}
-
 /** Private provenance stored with the new result. Historical failed execution/cost stays explicit. */
-export interface FulfilledOriginalRunMetadata {
-  format: "keryx-a2a-original-fulfillment-result-v1";
+interface FulfilledOriginalRunMetadataBase {
   claimId: string; authoritySha256: string; inputSha256: string;
   originalFailureSha256: string; providerLedgerSha256: string;
   originalProviderBilling: "unknown"; noNewInboundPayment: true;
   statements: import("../agent/cited-statements").CitedStatement[];
   evidenceGaps: FulfillmentEvidenceGap[];
 }
+export type FulfilledOriginalRunMetadata = FulfilledOriginalRunMetadataBase & ({
+  format: "keryx-a2a-original-fulfillment-result-v1";
+} | {
+  format: "keryx-a2a-original-fulfillment-result-v2";
+  supplementaryInputSha256: string; contextSha256: string;
+  qualityProtocol?: OriginalFulfillmentQualityProtocol;
+  statementReviews: Array<import("../agent/cited-statements").CitedStatement & { support: number }>;
+});
 export function validateFulfilledQueryRun(run: QueryRun, claim: A2aFulfillmentClaim,
-  completion: FulfillmentCompletionInput): void {
+  completion: FulfillmentCompletionInput, evidenceCapability?: FulfillmentEvidenceCapability): void {
   const metadata = run.originalFulfillment;
+  if (metadata && "qualityProtocol" in metadata && metadata.qualityProtocol !== undefined &&
+      (metadata.format !== "keryx-a2a-original-fulfillment-result-v2" ||
+        metadata.qualityProtocol !== ORIGINAL_FULFILLMENT_QUALITY_PROTOCOL))
+    throw new Error("Failed original fulfillment quality protocol refused");
+  const supplementalSources = metadata?.format === "keryx-a2a-original-fulfillment-result-v2"
+    ? supplementalRunSources(run, claim, evidenceCapability) : undefined;
   if (completion.originalId !== claim.authority.original.id || completion.claimId !== claim.claimId ||
     run.id !== claim.authority.original.queryId || run.question !== claim.authority.question ||
     run.budget !== 0.01 || run.engine !== "llm:deepseek:deepseek-v4-flash" ||
@@ -113,7 +55,7 @@ export function validateFulfilledQueryRun(run: QueryRun, claim: A2aFulfillmentCl
     run.paymentAttempts !== 0 || run.settledPayments !== 0 || run.pendingPayments !== 0 ||
     run.parentId !== undefined || run.retryOf !== undefined || !run.answer?.trim() ||
     !Array.isArray(run.subClaims) || canonicalJson(run.subClaims) !== canonicalJson(claim.authority.input.targets) ||
-    !metadata || metadata.format !== "keryx-a2a-original-fulfillment-result-v1" || metadata.claimId !== claim.claimId ||
+    !metadata || !["keryx-a2a-original-fulfillment-result-v1", "keryx-a2a-original-fulfillment-result-v2"].includes(metadata.format) || metadata.claimId !== claim.claimId ||
     metadata.authoritySha256 !== fulfillmentObjectSha256(claim.authority) ||
     metadata.inputSha256 !== fulfillmentObjectSha256(claim.authority.input) ||
     metadata.originalFailureSha256 !== claim.authority.originalEvidenceSha256 ||
@@ -127,18 +69,19 @@ export function validateFulfilledQueryRun(run: QueryRun, claim: A2aFulfillmentCl
   const gaps = fulfillmentEvidenceGapsSchema.safeParse(metadata.evidenceGaps);
   if (!gaps.success || canonicalJson(gaps.data) !== canonicalJson(metadata.evidenceGaps) ||
     gaps.data.some(gap => gap.claimIndex >= run.subClaims.length)) throw new Error("Failed original fulfillment gaps refused");
-  const selected = new Set(claim.authority.input.selectedDocumentIds.map(id => `public:fulfillment:${id}`));
-  if (!Array.isArray(citations) || citations.length < 1 || citations.length > ORIGINAL_FULFILLMENT_LIMITS.attentionLimit ||
+  const selectedIds = supplementalSources?.map(source => source.sourceId) ?? claim.authority.input.selectedDocumentIds.map(id => `public:fulfillment:${id}`);
+  const selected = new Set(selectedIds);
+  if (!Array.isArray(citations) || citations.length < 1 || citations.length > selectedIds.length ||
     new Set(citations.map(item => item.marker)).size !== citations.length ||
     new Set(citations.map(item => item.sourceId)).size !== citations.length ||
     citations.some(item => item.sourceKind !== "public-reference" || item.reward !== 0 || !selected.has(item.sourceId) ||
-      !/^S[1-2]$/.test(item.marker) || !Number.isFinite(item.weight) || item.weight < 0 || item.weight > 1) ||
+      item.marker !== `S${selectedIds.indexOf(item.sourceId) + 1}` || !Number.isFinite(item.weight) || item.weight < 0 || item.weight > 1) ||
     !Array.isArray(evidence) || !evidence.some(item => item.qualifiesForAnswer === true) ||
     evidence.some(item => item.sourceKind !== "public-reference" || item.qualifiesForReward !== false ||
       !Number.isInteger(item.claimIndex) || item.claimIndex < 0 || item.claimIndex >= run.subClaims.length ||
       item.claim !== run.subClaims[item.claimIndex] || typeof item.quote !== "string" || !item.quote.trim() ||
       !Number.isFinite(item.support) || item.support < 0 || item.support > 1 ||
-      !selected.has(item.sourceId) || item.marker !== `S${claim.authority.input.selectedDocumentIds.indexOf(item.sourceId.slice("public:fulfillment:".length)) + 1}` ||
+      !selected.has(item.sourceId) || item.marker !== `S${selectedIds.indexOf(item.sourceId) + 1}` ||
       item.qualifiesForAnswer === true && !citations.some(citation => citation.marker === item.marker && citation.sourceId === item.sourceId && citation.sourceName === item.sourceName)) ||
     citations.some(citation => !evidence.some(item => item.qualifiesForAnswer === true && item.marker === citation.marker)) ||
     !Array.isArray(coverage) || coverage.length !== run.subClaims.length || coverage.some((item, index) =>
@@ -148,6 +91,27 @@ export function validateFulfilledQueryRun(run: QueryRun, claim: A2aFulfillmentCl
         !evidence.some(e => e.claimIndex === index && e.marker === marker && e.qualifiesForAnswer === true)) ||
       item.coverage > Math.max(0, ...evidence.filter(e => e.claimIndex === index && e.qualifiesForAnswer === true).map(e => e.support))))
     throw new Error("Failed original fulfillment evidence refused");
+  if (supplementalSources && metadata.format === "keryx-a2a-original-fulfillment-result-v2") {
+    // A serialized quality flag grants no evidence authority. Reconstruct its
+    // exact original-source spans through the protected run/claim capability.
+    if (metadata.qualityProtocol) supplementalRunQuoteOptions(run, claim, evidenceCapability);
+    const matchesSource = (item: typeof citations[number] | typeof evidence[number], source: GatheredContent) =>
+      item.marker === source.marker && item.sourceId === source.sourceId && item.sourceName === source.sourceName &&
+      item.itemId === source.itemId && item.itemTitle === source.itemTitle && item.itemUrl === source.itemUrl &&
+      item.contentVersion === source.contentVersion && canonicalJson(item.webProvenance) === canonicalJson(source.webProvenance) &&
+      canonicalJson(item.requestedSource) === canonicalJson(source.requestedSource);
+    if (citations.some(item => item.weight !== 0 || !supplementalSources.some(source => matchesSource(item, source))) ||
+      evidence.some(item => !supplementalSources.some(source => matchesSource(item, source) &&
+        item.quote.length >= 8 && item.quote.length <= 240 && source.text.includes(item.quote))) ||
+      !Array.isArray(metadata.statementReviews) || metadata.statementReviews.length !== metadata.statements.length ||
+      metadata.statements.some((statement, index) => {
+        const review = metadata.statementReviews[index];
+        return !review || !Number.isFinite(review.support) || review.support < 0.7 || review.support > 1 ||
+          canonicalJson({ claimIndex: review.claimIndex, marker: review.marker, quote: review.quote, text: review.text }) !== canonicalJson(statement);
+      }) || claim.authority.input.targets.some((_, index) => (coverage[index]?.coverage ?? 0) < 0.4 ||
+        !metadata.statements.some(statement => statement.claimIndex === index)))
+      throw new Error("Failed original supplemental provenance or review refused");
+  }
   for (const statement of metadata.statements) {
     if (!Number.isInteger(statement.claimIndex) || statement.claimIndex < 0 || statement.claimIndex >= run.subClaims.length ||
       typeof statement.text !== "string" || !statement.text.trim() ||
@@ -159,6 +123,7 @@ export function validateFulfilledQueryRun(run: QueryRun, claim: A2aFulfillmentCl
   // be escaped, and every unsupported frozen target must remain a visible gap.
   if (run.answer !== renderFulfilledOriginalAnswer({ question: run.question, answer: "", statements: metadata.statements,
     evidenceGaps: metadata.evidenceGaps,
+    qualityProtocol: metadata.format === "keryx-a2a-original-fulfillment-result-v2" ? metadata.qualityProtocol : undefined,
     ledger: { evidence, claimCoverage: coverage, acceptedMarkers: new Set(citations.map(item => item.marker)),
       droppedEvidence: 0, droppedCitations: [] } })) throw new Error("Failed original fulfillment delivery refused");
 }
