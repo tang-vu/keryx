@@ -59,3 +59,16 @@ commit and applicable published distributions before synchronized delivery is
 claimed. A separately authorized live acceptance remains necessary to demonstrate
 all four requested facts in three short Portuguese bullets. This change grants
 no model, search, source-payment, funding, custody or scheduling authority.
+
+Independent review found that grouping a last single-line pre item with ordinary
+prose after `</pre>` could hide its pre role and discard the preceding prerequisite.
+The correction classifies the original containing block before enumeration and
+retains the inherited pre-neighbor policy. Ordinary enumeration uses a binary
+lookup of its interval between observed pre regions, with barriers on both sides.
+Three isolated-worker mixed-role regressions failed before the correction and now
+retain the complete pre prerequisite at offsets 2420–2722 or keep ordinary windows
+outside the neighboring pre region, as applicable. A separate multiple-barrier
+check retains bounded lookup and the eight-sibling scan limit. These role barriers
+do not change the source body, quote offsets or source/payment authority.
+The corrected source passed 174 focused tests in 13 files, changed-file ESLint
+and `git diff --check`; final combined release checks remain required.
