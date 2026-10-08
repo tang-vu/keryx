@@ -2,6 +2,7 @@ import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../research/source-requirements";
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
+import { documentAlreadyRead, documentSelectionKey } from "./document-selection";
 import { synthesisFailureDetail } from "./synthesis-failure";
 import { parseSynthesisOutputLimit, synthesisOutputLimitFromError } from "../llm/output-limit-diagnostic";
 import { finalizeGroundedAnswer } from "./answer-grounding";
@@ -451,6 +452,11 @@ async function* runAdmittedAgent(
         if (article.finalUrl !== expected || (!abstractFallback && article.kind !== (htmlFallback ? "html" : "pdf"))) throw new ArticleReadError("document-identity-changed");
       }
       const identity = bodyIdentity(article.text);
+      if (documentAlreadyRead({ sourceId: id, itemUrl: article.finalUrl }, gathered)) {
+        lastWebFailure = "document-alias-already-read";
+        publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure, assetId: id });
+        return null;
+      }
       lastWebFailure = "empty-or-duplicate-body";
       if (!article.text.trim() || seenWebBodies.has(identity) || seenWebUrls.has(article.finalUrl) ||
           gathered.some(read => bodyIdentity(read.text) === identity && read.itemUrl === article.finalUrl) ||
@@ -855,11 +861,18 @@ async function* runAdmittedAgent(
     const assetId = decision.assetId ?? decision.sourceId;
     if (selectedAssets.has(assetId)) continue;
     if (decision.action === "BUY" || decision.action === "CACHE") {
+      const selectedAlias = evidencePortfolio.selectedAssetIds.map(id => preparedByAsset.get(id))
+        .find(selected => selected && documentSelectionKey(selected) === documentSelectionKey(decision));
       finalDecisions.push({
         ...decision,
         action: "SKIP",
         rationale:
-          `${decision.rationale} — the claim-aware portfolio chose a stronger, less redundant ` +
+          selectedAlias
+            ? `${decision.rationale} — selected ${selectedAlias.sourceName} as the single delivery channel for this canonical document; this alias adds no independent corroboration or second attention slot. ` +
+              (selectedAlias.sourceKind === "public-reference"
+                ? "The public route has 0 access USDC and no creator citation reward; no redundant creator toll is authorized."
+                : "Its own source identity and registry terms remain authoritative; a creator citation reward still requires qualifying evidence.")
+            : `${decision.rationale} — the claim-aware portfolio chose a stronger, less redundant ` +
           `set inside the ${attentionLimit}-source attention and $${fetchBudget.toFixed(6)} fetch-budget caps, so this proposal stays unspent.`,
       });
     } else {
@@ -940,6 +953,12 @@ async function* runAdmittedAgent(
   let interimAssessment: { result: SufficiencyResult; reads: number } | undefined;
 
   for (const d of buys) {
+    if (documentAlreadyRead(d, gathered)) {
+      const was = markUnread(d, "this canonical document was already read through another delivery channel; no second attention slot, access toll or independent contribution.");
+      if (was === "BUY" && assetById.has(d.assetId ?? d.sourceId)) spentTolls = Math.max(0, round(spentTolls - d.price));
+      yield emit("fetch", `SKIP ${d.sourceName}: this canonical document already contributes once; no redundant read or toll.`);
+      continue;
+    }
     if (webCandidates.has(d.assetId ?? d.sourceId)) {
       yield emit("fetch", `READ ${d.sourceName} - selected original public page, 0 USDC; not a cache hit.`);
       const read = await fetchWeb(d.assetId ?? d.sourceId);
@@ -1181,6 +1200,7 @@ async function* runAdmittedAgent(
             !discussionBlockedIds.has(d.assetId ?? d.sourceId) &&
             !isExternal(d.sourceId) &&
             !gatheredIds.has(d.assetId ?? d.sourceId) &&
+            !documentAlreadyRead(d, gathered) &&
             (!fundingUnavailable || publicReads.has(d.assetId ?? d.sourceId) || webCandidates.has(d.assetId ?? d.sourceId)),
         )
         .map((d) => {
@@ -1236,6 +1256,10 @@ async function* runAdmittedAgent(
       for (const recId of reeval.recommendedIds) {
         if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
         const recommended = webCandidates.get(recId) ?? publicCandidates.get(recId) ?? assetById.get(recId)?.candidate;
+        if (recommended && documentAlreadyRead({ ...recommended.item, assetId: recommended.id, sourceId: recommended.sourceId ?? recommended.id }, gathered)) {
+          yield emit("reevaluate", `SKIP ${recommended.name}: this canonical document was already read through another delivery channel; no redundant access toll or independent corroboration.`);
+          continue;
+        }
         if (discussionBlockedIds.has(recId) || discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl) ||
             subClaims.length > 0 && subClaims.every(claim => discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl, claim))) {
           yield emit("reevaluate", "Discussion-page recommendation withheld: the request requires official documentation.");
