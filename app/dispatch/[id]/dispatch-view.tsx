@@ -11,13 +11,18 @@ import { projectBibliographicTask } from "@/lib/research/bibliographic-task-resu
 export function DispatchView({
   run,
   payments,
+  historical = false,
+  historicalNetwork,
 }: {
   run: QueryRun;
   payments: PaymentRecord[];
+  historical?: boolean;
+  historicalNetwork?: string;
 }) {
   const bibliography = projectBibliographicTask(run.bibliography);
   const confidence = bibliography ? null : deriveConfidence(run);
   const mode = run.paymentMode ?? null;
+  const recordedNetwork = historical ? historicalNetwork ?? "unknown" : undefined;
 
   return (
     <>
@@ -37,9 +42,9 @@ export function DispatchView({
       </div>
 
       <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,330px)]">
-        <AnswerCard run={run} meta={null} payments={payments} />
+        <AnswerCard run={run} meta={null} payments={payments} showFeedback={!historical} historicalNetwork={recordedNetwork} />
         <aside className="min-w-0 lg:sticky lg:top-6" aria-label="Payment evidence">
-          <CreatorsPaidPanel payments={payments} mode={mode} streaming={false} />
+          <CreatorsPaidPanel payments={payments} mode={mode} streaming={false} historicalNetwork={recordedNetwork} />
         </aside>
       </div>
 

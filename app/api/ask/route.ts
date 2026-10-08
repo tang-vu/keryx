@@ -28,6 +28,7 @@ import { config } from "@/lib/config";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { getDb } from "@/lib/db";
+import { resolveDispatch } from "@/lib/history/read-dispatch";
 import { buildFollowUpQuestion } from "@/lib/agent/follow-up-question";
 import { getGrant } from "@/lib/payments/session-grants";
 import { isPaymentRecord } from "@/lib/payments/payment-state";
@@ -100,9 +101,9 @@ export async function POST(req: NextRequest) {
   let parentId: string | undefined;
   let askQuestion = question;
   const requestedParentId =
-    typeof body.parentId === "string" && body.parentId.trim() ? body.parentId.trim() : undefined;
+    typeof body.parentId === "string" && body.parentId.trim() && body.parentId.trim().length <= 256 ? body.parentId.trim() : undefined;
   if (requestedParentId) {
-    const parent = await (await getDb()).getQueryRun(requestedParentId);
+    const parent = (await resolveDispatch(requestedParentId))?.run;
     if (parent) {
       parentId = parent.id;
       // Historical rows predate the input bound. Keep one old dispatch from expanding a new model

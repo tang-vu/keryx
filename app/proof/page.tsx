@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { ProofDashboard } from "@/components/keryx/proof-dashboard";
+import { HistoricalHistorySection } from "@/components/keryx/testnet-history-summary";
+
+export const dynamic = "force-dynamic";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 const TITLE = "Public proof — Keryx";
@@ -65,6 +68,7 @@ export default function ProofPage() {
         </section>
 
         <ProofDashboard />
+        <HistoricalHistorySection />
       </main>
       <SiteFooter />
     </div>

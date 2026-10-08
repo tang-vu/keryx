@@ -103,7 +103,6 @@ export default async function AnswersPageN({ params }: { params: Promise<{ n: st
         slice={slice}
         topics={buildTopics(entries)}
         totalEntries={entries.length}
-        totalToCreators={entries.reduce((s, e) => s + e.toCreators, 0)}
       />
       <SiteFooter />
     </div>

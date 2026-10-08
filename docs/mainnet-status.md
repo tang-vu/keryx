@@ -103,6 +103,14 @@ does not prove a particular payment, delivery or withdrawal.
 
 ## Configuration and retained history
 
+The 0.27.42 restoration candidate retains original public testnet records at their
+existing `/dispatch/{id}` URLs and adds `/history/testnet` for all recorded questions.
+Ledger, Proof and authenticated account history label this separate Arc testnet
+snapshot; its frozen payment states and test USDC never enter mainnet totals.
+The protected read-only reader, snapshot cutoff, receipt compatibility and release
+acceptance are described in [historical testnet archive](historical-testnet-archive.md).
+Exact-source CI and deployed URL/hash checks remain release gates for this candidate.
+
 Mainnet builds, servers and standalone payment callers use matched `KERYX_NETWORK=arc`
 and `NEXT_PUBLIC_KERYX_NETWORK=arc`. Application servers/browser builds additionally
 require matching nonzero registry address twins and fresh sealed mainnet storage;

@@ -16,6 +16,7 @@ import { AnswerMarkdown } from "./answer-markdown";
 import { AnswerFeedback } from "./answer-feedback";
 import { ScholarlyMetadataDetails } from "./scholarly-metadata";
 import { ModeBadge } from "./mode-badge";
+import { recordedArcLabel } from "@/lib/arc-network-display";
 import { SectionHeading } from "./banknote";
 import { ConfidenceBadge } from "./confidence-badge";
 import { fmtUsdc } from "./phase-style";
@@ -29,7 +30,7 @@ import { reasoningOutputLimitText } from "@/lib/llm/reasoning-telemetry";
 import { projectBibliographicTask } from "@/lib/research/bibliographic-task-result";
 import { BibliographyExports } from "./bibliography-exports";
 
-export function AnswerCard({ run, meta, permalink, payments = [] }: { run: QueryRun; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[] }) {
+export function AnswerCard({ run, meta, permalink, payments = [], showFeedback = true, historicalNetwork }: { run: QueryRun; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[]; showFeedback?: boolean; historicalNetwork?: string }) {
   run = demoteSyntheticEvidence(run);
   const bibliography = projectBibliographicTask(run.bibliography);
   const [highlight, setHighlight] = useState<string | null>(null);
@@ -165,7 +166,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
           )}
         </div>
 
-        <AnswerFeedback queryId={run.id} />
+        {showFeedback ? <AnswerFeedback queryId={run.id} /> : null}
         <SummaryStrip
           spent={run.totalSpent}
           toCreators={run.totalToCreators}
@@ -175,6 +176,7 @@ export function AnswerCard({ run, meta, permalink, payments = [] }: { run: Query
           engine={run.engine}
           pending={run.pendingPayments ?? 0}
           mode={run.paymentMode ?? meta?.mode ?? null}
+          historicalNetwork={historicalNetwork}
           permalink={permalink}
         />
       </div>
@@ -264,6 +266,7 @@ interface SummaryStripProps {
   engine: string;
   pending: number;
   mode: "real" | "offline" | null;
+  historicalNetwork?: string;
   permalink?: string;
 }
 
@@ -276,6 +279,7 @@ function SummaryStrip({
   engine,
   pending,
   mode,
+  historicalNetwork,
   permalink,
 }: SummaryStripProps) {
   const [copied, setCopied] = useState(false);
@@ -311,7 +315,11 @@ function SummaryStrip({
         <span className="border border-line bg-card px-2 py-0.5 font-mono text-[11px] text-ink-3">
           {engine}
         </span>
-        <ModeBadge mode={mode} />
+        {historicalNetwork ? (
+          <span className="border border-line bg-card px-2 py-0.5 font-mono text-[11px] text-ink-3">
+            {recordedArcLabel(historicalNetwork)} · historical
+          </span>
+        ) : <ModeBadge mode={mode} />}
       </div>
     </div>
   );

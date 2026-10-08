@@ -28,6 +28,17 @@
   actual initialization on each separate copy. This removes repeated cold DDL from
   signing deadlines while preserving WAL/FULL and all original security assertions.
 
+### Restore original testnet dispatches (2026-10-08, v0.27.42)
+
+- Keep old dispatch URLs, public question history, cited archive and portable
+  receipts reachable after mainnet migration through a separately pinned read-only
+  testnet snapshot. Historical pages and amounts retain their original network.
+- Add full paginated testnet history, separate evidence panels on Ledger/Proof,
+  and an authenticated historical wallet tab without combining mainnet spend.
+- Preserve frozen payment states, synthetic-source disclosures, current authority
+  and receipt v1 compatibility. No signing service, funding or schedule changes.
+- [Evidence, limits and supported surfaces](historical-testnet-archive.md).
+
 ### Repair document selection and bounded research output (2026-10-08, v0.27.41 candidate)
 
 - Retain nearby short enumerated rules and defaults at exact source offsets.

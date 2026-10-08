@@ -45,22 +45,35 @@ keeps it off.
 
 ## Limits set by Circle
 
-- Debit card, Apple Pay and Google Pay only. Credit cards are not supported.
-- Offered to eligible buyers in the US, UK, selected EU countries and other
-  selected regions. The exact country list is in Circle's Onramp Provider Schedule.
+- Payment methods, per the [Onramp documentation](https://docs.arc.io/app-kit/onramp),
+  rechecked October 8:
+
+  | Method | Business verification (KYB) | Offered |
+  | --- | --- | --- |
+  | Bank transfer | Not required | USDC on Arc, in select US states and select EU countries |
+  | Debit card, Apple Pay, Google Pay | Required; the server must also pass `referrerDomain` when creating the session | US, UK, select EU countries and other countries |
+  | Credit card | Not supported | — |
+
+- The exact country list is in Circle's Onramp Provider Schedule.
+- A sandbox environment exists, with its own API key.
 - Circle charges no fee for the onramp itself; providers, banks and card issuers
   may charge their own.
-- Circle states that business verification (KYB) in the
-  [Circle Console](https://console.circle.com/app-kits/) is required to enable
-  certain payment methods.
+- Business verification is completed in the
+  [Circle Console](https://console.circle.com/app-kits/). It applies to the card and
+  wallet-pay methods only, not to bank transfer.
 
 ## Remaining gates
 
 - One production session was minted with the owner's key on 2026-10-06. No
   purchase, identity check or USDC delivery has been observed.
-- Whether an individual developer can complete Circle's business verification, and
-  which payment methods work before it, is unverified.
-- Availability for buyers in Vietnam is unverified.
+- Bank transfer needs no business verification and is the method to enable first.
+  This page and the integration still describe card funding only; widening both is
+  tracked in [issue 256](https://github.com/tang-vu/keryx/issues/256).
+- Card, Apple Pay and Google Pay are blocked until Keryx has a registered legal
+  entity to complete business verification. That is not expected before the event
+  deadline.
+- Bank transfer is not listed for the regions where current mainnet users are. Users in regions without a supported
+  method need sponsored credit or a cross-chain USDC deposit instead.
 - Sandbox operation is not wired; its endpoints and test-network delivery were not
   verified.
 - A real owner purchase on `keryx.cc`, including popup behaviour on mobile

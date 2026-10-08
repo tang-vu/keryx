@@ -6249,6 +6249,26 @@ readback and authorized product publication. Actual runner acceptance and measur
 critical-path timing remain the evidence for improvement. See
 [the development workflow](docs/development-workflow.md).
 
+## Preserve original permalinks through a separate historical reader — 2026-10-08
+
+The owner requires old testnet dispatch URLs and question history to remain usable
+after mainnet migration. Mainnet's fresh sealed storage stays authoritative for
+current execution, payments, sessions, registries and recovery. Do not import old
+financial rows or decorate the global database selector. Resolve current public
+records first, then an explicitly pinned native read-only original-testnet snapshot.
+Keep receipts with their matching original payment rows, original settlement states
+and frozen source provenance; label the historical network on every display surface.
+
+Provide complete paginated historical questions, separately labeled cited archives
+and separate authenticated wallet history/totals. Preserve current answers when an
+optional historical index/thread lookup is unavailable. New follow-ups can use only
+the bounded old parent question, under current admission and funding; no cross-network
+monetary delta or historical feedback write follows. Receipt v1 remains byte-compatible:
+archive provenance is in headers/page/API, not extra digest-envelope fields. Zero-payment
+downloads need accompanying provenance; historical prepaid funding and private job
+recovery are not reconstructed from current authority. See
+[the restoration contract](docs/historical-testnet-archive.md).
+
 ## Keep original metadata and proposed teaching roles separate — 2026-10-08
 
 Exact bibliography requests need displayed original fields rather than a paid

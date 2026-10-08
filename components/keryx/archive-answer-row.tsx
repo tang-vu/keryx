@@ -27,6 +27,7 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
           <span className="flex items-baseline gap-2.5">
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-seal">
               Dispatch
+              {entry.archivedNetwork && " · Arc testnet history"}
             </span>
             {entry.confidence ? <ConfidenceBadge confidence={entry.confidence} /> : null}
           </span>
@@ -46,7 +47,7 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
           <span>
             {entry.citationCount} source{entry.citationCount !== 1 ? "s" : ""} cited
           </span>
-          <span className="text-paid">${entry.toCreators.toFixed(4)} recorded creator rewards</span>
+          <span className="text-paid">{entry.archivedNetwork ? `${entry.toCreators.toFixed(4)} test USDC` : `$${entry.toCreators.toFixed(4)}`} recorded creator rewards</span>
           {entry.sourceNames.length > 0 && (
             <span className="normal-case tracking-normal text-ink-3">
               {entry.sourceNames.slice(0, 4).join(" · ")}
