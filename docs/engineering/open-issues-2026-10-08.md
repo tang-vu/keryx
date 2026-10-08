@@ -1,6 +1,6 @@
 # Open issue resolution and acceptance - October 8, 2026
 
-## Current integrated candidate — app0.27.42
+## Current integrated candidate — app0.27.43
 
 The Operator original has completed. PR244 and all ten ancestor PRs are merged
 with provenance into main `ee01cbf9`; that exact main passed all twelve applicable
@@ -38,7 +38,8 @@ readbacks remain required. The remaining model-dependent issues need a new finit
 allowance: the earlier MDN3-call grant and Operator continuation are consumed.
 No issue is closed solely from source inclusion, test count or health.
 
-The current inventory also includes issue245 (18 open issues total). Its 66-character
+This release tracks the original 18 defect issues, including issue245; later roadmap
+issues have their own scope and acceptance gates. Its 66-character
 payment identity, percentage, amount, explicit simulation status and receipt controls
 pass built saved-page checks at 320/390/1366 pixels. The existing actually settled
 production report still needs a read-only check after deployment; no new payment

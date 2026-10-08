@@ -1,11 +1,16 @@
 # Coordinated launch candidate — October 8, 2026
 
-App0.27.42 retains main41 and the dormant PR242 history, adds the owner's official
+App0.27.43 retains main41 and the dormant PR242 history, adds the owner's official
 Product Hunt badge below Ask, and integrates exact original bibliography, native
 current-feed selection and a disabled reviewed teaching workflow. Long payment
 identifiers now remain within a single-column mobile report grid. PR246's complete
 history is retained; its broad mono-font CSS was replaced with wrapping on the
 actual payment identity and plain answer prose.
+
+App0.27.42 is reserved for the independently managed historical-testnet/on-ramp
+release. This candidate must inherit its actual merged main source and verify the
+resulting production boundary before a later deployment; neither an open PR nor
+its candidate version establishes that boundary.
 
 | Surface | Candidate role and acceptance |
 | --- | --- |

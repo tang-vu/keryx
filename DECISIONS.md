@@ -6279,4 +6279,4 @@ The owner confirmed a live Product Hunt launch and supplied the official badge.
 Place it below the homepage Ask action with fixed250x54 sizing, accessible focus,
 separate-tab navigation and no referrer. Keep the question and full primary action
 within the compact mobile first viewport. Record surfaced and distributed roles
-with the coordinated app0.27.42 release; publication and deploy are separate gates.
+with the coordinated app0.27.43 release; publication and deploy are separate gates.

@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Product Hunt launch and dormant model support (2026-10-08, v0.27.42 candidate)
+### Product Hunt launch and dormant model support (2026-10-08, v0.27.43 candidate)
 
 - Add the owner's official Product Hunt launch badge to the homepage immediately
   below Ask. Preserve the compact mobile introduction and primary action.
