@@ -287,6 +287,49 @@ async function failedQualityEpochFixture() {
   return { ...value, repairFile: file, repairSha256: hash(fs.readFileSync(file)), repairAuthorization: authorization,
     ownerAuthorizationFile, ownerReceipt, parent4: parent, retainedBooks };
 }
+async function premiseScopeEpochFixture() {
+  const value = await failedQualityEpochFixture(), parentPaths = fixedPaths(value.root, 5);
+  await activateOriginalContinuationEpoch(value.db, value.repairFile, value.repairSha256, fixtureFlush);
+  const admitted = await beginOriginalContinuation(value.db, value.repairFile, value.repairSha256, fixtureFlush);
+  await stages(admitted.capability); recordContinuationDiagnostic(admitted.capability, { phase: "assemble", category: "quality" });
+  closeContinuationCapability(admitted.capability);
+  const parent = continuationProviderLedger(), rawHash = (name: string) => hash(fs.readFileSync(path.join(parentPaths.epochDirectory, name))),
+    approvedAt = "2026-10-08T14:00:00.000Z";
+  vi.setSystemTime(approvedAt);
+  const directory = path.join(value.root, ".local", "share", "keryx-canary-transitions", "synthetic-premise-source-repair");
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const closure = syntheticQualityFailureClosure(value.root, { failureEpoch: 5, executorCommit: value.repairAuthorization.executorCommit,
+    parentAuthorizationSha256: value.repairSha256, nativeClaimSha256: value.repairAuthorization.nativeClaimSha256,
+    packetSha256: value.packet.packetSha256, inputSemanticSha256: value.packet.inputSemanticSha256, contextSha256: value.context.contextSha256,
+    parentProviderLedgerSha256: parent.sha256, parentLedgerHeadSha256: rawHash("ledger-head.json"),
+    parentAnchorFrontierSha256: hash(fs.readFileSync(parentPaths.frontierFile)), parentPreparedAuthorizationSha256: value.qualitySha256, approvedAt });
+  for (const [file, raw] of closure.files) {
+    fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 }); fs.writeFileSync(file, raw, { mode: 0o600 });
+  }
+  const parentFailureClosureFile = path.join(directory, "failure-closure.json");
+  fs.writeFileSync(parentFailureClosureFile, JSON.stringify(closure.proof), { mode: 0o600 });
+  const tariffFile = path.join(directory, "current-tariff.txt"); fs.writeFileSync(tariffFile, "Synthetic unchanged-price fresh source-repair tariff", { mode: 0o600 });
+  const nextCommit = "1".repeat(40); git.mockImplementation((_command, args) => args?.[0] === "status" ? "" : `${nextCommit}\n`);
+  const authorization: ContinuationAuthorization = { ...value.repairAuthorization,
+    format: "keryx-original-continuation-authorization-v6", executorCommit: nextCommit, approvedAt,
+    historicalReservedMicroUsd: 408_540, maximumNewModelCalls: 4,
+    parentAuthorizationFile: value.repairFile, parentAuthorizationSha256: value.repairSha256,
+    parentProviderLedgerSha256: parent.sha256, parentLedgerHeadSha256: rawHash("ledger-head.json"),
+    parentAnchorIntentSha256: hash(fs.readFileSync(parentPaths.intentFile)), parentAnchorActiveSha256: hash(fs.readFileSync(parentPaths.activeFile)),
+    parentAnchorFrontierSha256: hash(fs.readFileSync(parentPaths.frontierFile)), parentCarriedSufficiencySha256: rawHash("carried-sufficiency.json"),
+    parentGenerationHoldSha256: rawHash("call-01.json"), parentGenerationCheckpointSha256: rawHash("call-01-checkpoint.json"),
+    parentGenerationOutcomeSha256: rawHash("call-01-outcome.json"), parentReviewHoldSha256: rawHash("call-02.json"),
+    parentReviewCheckpointSha256: rawHash("call-02-checkpoint.json"), parentReviewOutcomeSha256: rawHash("call-02-outcome.json"),
+    parentAttemptOutcomeSha256: rawHash("attempt-01-outcome.json"), parentQualityDiagnosticSha256: rawHash("diagnostic-01.json"),
+    parentFailureClosureFile, parentFailureClosureSha256: hash(fs.readFileSync(parentFailureClosureFile)),
+    tariffFile, tariffBodySha256: hash(fs.readFileSync(tariffFile)), tariffRetrievedAt: approvedAt,
+    contextProtocol: "full-same-evidence-premise-scope-repair-v1" };
+  const sourceRepairFile = path.join(directory, "authorization.json"); fs.writeFileSync(sourceRepairFile, JSON.stringify(authorization), { mode: 0o600 });
+  const retainedBooks = new Map([...value.retainedBooks, ...[parentPaths.epochDirectory, parentPaths.anchorDirectory]
+    .map(directory => [directory, bytes(directory)] as const)]);
+  return { ...value, sourceRepairFile, sourceRepairSha256: hash(fs.readFileSync(sourceRepairFile)), sourceRepairAuthorization: authorization,
+    parent5: parent, retainedBooks, closure };
+}
 describe("additive same-original supplier continuation", () => {
   it("observes fresh native authority and window without creating an execution intent", async () => {
     const value = await fixture(), before = bytes(value.oldDirectory), retained = bytes(fulfillmentDirectory());
@@ -905,4 +948,85 @@ describe("separately recorded finite repair after exhausted quality pair", () =>
     for (const [directory, before] of value.retainedBooks) expect(bytes(directory)).toEqual(before);
     expect(fetch).not.toHaveBeenCalled();
   }, 300_000);
+});
+
+describe("premise-scope source repair within the same finite owner receipt", () => {
+  it("binds the acknowledged failed pair and original clock, then charges only four fresh requests and blocks superseded dispatch", async () => {
+    const value = await premiseScopeEpochFixture(), paths = fixedPaths(value.root, 6), ownerBefore = fs.readFileSync(value.ownerAuthorizationFile);
+    const a = value.sourceRepairAuthorization;
+    for (const patch of [{ maximumNewModelCalls: 5 }, { historicalReservedMicroUsd: 367_220 }, { maximumCombinedMicroUsd: 512_000 },
+      { ownerAuthorizationSha256: "a".repeat(64) }, { ownerAuthorizationReceivedAt: a.approvedAt },
+      { expiresAt: "2026-10-09T13:00:00.001Z" }, { executorCommit: value.repairAuthorization.executorCommit },
+      { parentProviderLedgerSha256: "a".repeat(64) }, { parentAnchorFrontierSha256: "a".repeat(64) },
+      { parentReviewCheckpointSha256: "a".repeat(64) }, { parentQualityDiagnosticSha256: "a".repeat(64) },
+      { supplementaryInputSha256: "a".repeat(64) }, { packetSha256: "a".repeat(64) }]) {
+      fs.writeFileSync(value.sourceRepairFile, JSON.stringify({ ...a, ...patch }));
+      await expect(activateOriginalContinuationEpoch(value.db, value.sourceRepairFile, hash(fs.readFileSync(value.sourceRepairFile)), fixtureFlush)).rejects.toThrow();
+      expect(fs.existsSync(paths.anchorDirectory)).toBe(false);
+    }
+    fs.writeFileSync(value.sourceRepairFile, JSON.stringify(a));
+    const parentPaths = fixedPaths(value.root, 5), executionLock = path.join(parentPaths.epochDirectory, "execution-lock.json");
+    fs.writeFileSync(executionLock, "Synthetic unknown execution", { mode: 0o600 });
+    await expect(activateOriginalContinuationEpoch(value.db, value.sourceRepairFile, value.sourceRepairSha256, fixtureFlush)).rejects.toThrow();
+    fs.unlinkSync(executionLock);
+    const alias = path.join(path.dirname(value.sourceRepairFile), "owner-alias.json"); fs.writeFileSync(alias, ownerBefore, { mode: 0o600 });
+    fs.writeFileSync(value.sourceRepairFile, JSON.stringify({ ...a, ownerAuthorizationFile: alias }));
+    await expect(activateOriginalContinuationEpoch(value.db, value.sourceRepairFile, hash(fs.readFileSync(value.sourceRepairFile)), fixtureFlush)).rejects.toThrow();
+    fs.writeFileSync(value.sourceRepairFile, JSON.stringify(a));
+    expect(await inspectOriginalContinuation(value.db, value.sourceRepairFile, value.sourceRepairSha256)).toMatchObject({ newModelCalls: 0,
+      combinedReservedMicroUsd: 408_540, nativeCompleted: false, prepared: false });
+    await activateOriginalContinuationEpoch(value.db, value.sourceRepairFile, value.sourceRepairSha256, fixtureFlush);
+    git.mockImplementation((_command, args) => args?.[0] === "status" ? "" : `${value.repairAuthorization.executorCommit}\n`);
+    await expect(beginOriginalContinuation(value.db, value.repairFile, value.repairSha256, fixtureFlush)).rejects.toThrow("superseded");
+    git.mockImplementation((_command, args) => args?.[0] === "status" ? "" : `${a.executorCommit}\n`);
+    const action = vi.fn(async () => ({ synthetic: "fresh source-repaired request" }));
+    for (let index = 0; index < 2; index++) {
+      const admitted = await beginOriginalContinuation(value.db, value.sourceRepairFile, value.sourceRepairSha256, fixtureFlush);
+      expect(await continuationModel(admitted.capability, "sufficiency", "Fixture system", "sufficiency fixture", 1, action)).toEqual(value.assessment);
+      for (const stage of ["synthesize", "review"] as const)
+        await continuationModel(admitted.capability, stage, "Fixture system", `${stage} fixture`, 1, action);
+      recordContinuationDiagnostic(admitted.capability, { phase: "assemble", category: "quality" }); closeContinuationCapability(admitted.capability);
+    }
+    expect(action).toHaveBeenCalledTimes(4); // Neither parent's failed generation/review nor this epoch's rejected pair can replay.
+    expect(continuationProviderLedger()).toMatchObject({ newModelCalls: 4, oldAdditiveModelCalls: 18, combinedReservedMicroUsd: 491_180 });
+    await expect(beginOriginalContinuation(value.db, value.sourceRepairFile, value.sourceRepairSha256, fixtureFlush)).rejects.toThrow("exhausted");
+    expect(fs.readFileSync(value.ownerAuthorizationFile)).toEqual(ownerBefore);
+    for (const [directory, before] of value.retainedBooks) expect(bytes(directory)).toEqual(before);
+    const unknown = path.join(value.root, ".local", "share", "keryx-business-canary-continuation-epoch-7-authority");
+    fs.mkdirSync(unknown, { mode: 0o700 }); expect(() => continuationDirectory()).toThrow("uncertain");
+    await expect(inspectOriginalContinuation(value.db, value.sourceRepairFile, value.sourceRepairSha256)).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled(); expect(value.db.claimA2aFailedOriginalFulfillment).toHaveBeenCalledOnce();
+  }, 600_000);
+
+  it("retains a fresh generation fault without a checkpoint, refuses insufficient pair allowance and detects rolled-back V6 journals", async () => {
+    const value = await premiseScopeEpochFixture(), paths = fixedPaths(value.root, 6);
+    await activateOriginalContinuationEpoch(value.db, value.sourceRepairFile, value.sourceRepairSha256, fixtureFlush);
+    const initial = bytes(paths.epochDirectory), frontier = fs.readFileSync(paths.frontierFile);
+    const first = await beginOriginalContinuation(value.db, value.sourceRepairFile, value.sourceRepairSha256, fixtureFlush);
+    await continuationModel(first.capability, "sufficiency", "Fixture system", "sufficiency fixture", 1, async () => { throw Error("No new sufficiency"); });
+    await expect(continuationModel(first.capability, "synthesize", "Fixture system", "synthesize fixture", 1, async () => {
+      throw Error("Synthetic new generation failed its required slot gate");
+    })).rejects.toThrow("slot gate");
+    recordContinuationDiagnostic(first.capability, { phase: "synthesize", category: "quality" }); closeContinuationCapability(first.capability);
+    const action = vi.fn(async () => ({ synthetic: "new pair after acknowledged generation fault" }));
+    const second = await beginOriginalContinuation(value.db, value.sourceRepairFile, value.sourceRepairSha256, fixtureFlush);
+    await continuationModel(second.capability, "sufficiency", "Fixture system", "sufficiency fixture", 1, action);
+    for (const stage of ["synthesize", "review"] as const)
+      await continuationModel(second.capability, stage, "Fixture system", `${stage} fixture`, 1, action);
+    recordContinuationDiagnostic(second.capability, { phase: "assemble", category: "quality" }); closeContinuationCapability(second.capability);
+    expect(action).toHaveBeenCalledTimes(2);
+    const ledger = continuationProviderLedger(); expect(ledger).toMatchObject({ newModelCalls: 3, combinedReservedMicroUsd: 470_520 });
+    expect(ledger.holds[0].checkpoint).toBeUndefined(); expect(ledger.holds.map(row => row.hold.stage)).toEqual(["synthesize", "synthesize", "review"]);
+    await expect(beginOriginalContinuation(value.db, value.sourceRepairFile, value.sourceRepairSha256, fixtureFlush)).rejects.toThrow("two remaining holds");
+    const currentFrontier = fs.readFileSync(paths.frontierFile);
+    expect(currentFrontier.equals(frontier)).toBe(false);
+    fs.unlinkSync(paths.frontierFile); await expect(inspectOriginalContinuation(value.db, value.sourceRepairFile, value.sourceRepairSha256)).rejects.toThrow();
+    fs.writeFileSync(paths.frontierFile, currentFrontier, { mode: 0o600 });
+    for (const name of fs.readdirSync(paths.epochDirectory)) fs.unlinkSync(path.join(paths.epochDirectory, name));
+    for (const [name, raw] of initial) fs.writeFileSync(path.join(paths.epochDirectory, name), Buffer.from(raw, "hex"), { mode: 0o600 });
+    expect(() => continuationDirectory()).toThrow("uncertain");
+    await expect(beginOriginalContinuation(value.db, value.repairFile, value.repairSha256, fixtureFlush)).rejects.toThrow();
+    for (const [directory, before] of value.retainedBooks) expect(bytes(directory)).toEqual(before);
+    expect(fetch).not.toHaveBeenCalled();
+  }, 600_000);
 });

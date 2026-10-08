@@ -13,6 +13,9 @@ exact-byte hashes are recorded in the fixture and
 [the regression record](../../../docs/issue-238-evidence.md).
 The selection, enumeration and evidence-only presentation regressions import
 this single frozen body; no independent copy or current compatibility claim is made.
+Verbatim MDN excerpts in `mdn-grounded-model-20261008.json` also retain this
+attribution and license. Its curated model statements, scores and provenance
+are retained replay data, not a new source read or a guarantee of source truth.
 
 MDN's [attribution and copyright guidance](https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Attrib_copyright_license)
 was checked on October 8, 2026. This fixture is source-retrieval test data,

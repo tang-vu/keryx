@@ -2,14 +2,20 @@
 
 **Retain ordinary presentation without weakening grounded delivery — 2026-10-08.**
 Derive supported language and compact layout from the trusted original caller,
-before sentence review. Group only identical qualified excerpts, retaining all
-reviewed sentences, targets and cited contributions; count mismatch or evidence
-gaps preserve target layout. Offer bounded whole visible enumeration items only
+before sentence review. Group source-bound sentence/excerpt pairs by their shared
+target or literal nested quote, retaining each original pair without connecting
+prose. Ambiguous identity, oversized components, count mismatch or evidence gaps
+preserve target layout. Offer bounded whole visible enumeration items only
 through an ordinary opt-in. Private continuation defaults and rendered originals
 remain unchanged. These presentation gates do not certify usefulness or complete
 synthesis; real task acceptance remains required. Prioritize useful delivered work
 and independent repeat use for competition quality without promising a rank.
 See [acceptance and coordinated release](docs/engineering/research-deliverable-quality-2026-10-08.md).
+
+The bounded MDN model trial recovered all four facts but failed the requested
+three-item format. Preserve that failure and its consumed three-call grant.
+Replay of those unchanged reviewed pairs validates the deterministic layout repair;
+it does not establish a fresh deployed end-to-end result or general brevity.
 
 **Reject incomplete prepared originals without discarding their history — 2026-10-08.**
 The retained original produced an exactly grounded answer that omitted documented
@@ -6151,8 +6157,10 @@ ownership or independent corroboration. See [scope and gates](docs/issue-232-doc
 ## Preserve the active original while preparing issue repairs - 2026-10-08
 
 The owner confirmed the separate Operator session still runs and explicitly asked
-to preserve production. Keep production and main pinned to its admitted ab2195d6
-source window. Prepare source, synthetic verification and PR/CI independently;
+to preserve production. The initial admitted source was ab2195d6; the separate
+Operator owner subsequently merged PR240/main3b839ccd. This issue session does
+not advance main or deploy over that owner's source window. Prepare source,
+synthetic verification and PR/CI independently;
 defer main advance, deployment, supplier work and financial rebinding until a
 positively closed or parked admitted boundary. The new aggregate preserves the
 entire pending reading stack and records every issue's actual remaining gate in
@@ -6169,3 +6177,23 @@ Optional language labels are local formatting; they grant no provider, research,
 payment or custody authority. Preserve HTTP JSON v1 and the separate ordinary
 evidence boundary. Actual metadata research routing and live usefulness remain
 open in [the metadata handoff record](docs/issue-218-metadata.md).
+## Direct premise review and unused-reservation source repair - 2026-10-08
+
+The acknowledged original-answer pair selected all required quotes but added a
+mainnet qualification to a network table that did not contain it. Another correct
+documented example received partial evidence support against the broader target.
+Give each fixed required quote a server-owned factual question while retaining
+the original target assignment. Independent statement review must still reject
+any unsupported assertion; all numerical thresholds and final completeness/manual
+review gates remain intact. Canonical acceptance checks remain labeled unexecuted
+inferences, and missing deployment values remain gaps. Preserve actual failed
+model outputs and scores rather than rewriting or carrying them.
+
+Transfer the four unused holds to a source-bound V6 episode, preserving 408540
+micro-USD history, the original 491180 ceiling and exact owner receipt/expiry.
+Bind the complete acknowledged failed V5 ledger/frontier and genuine operational
+closure. Unknown/pending epochs, changed context, rollback and superseded suppliers
+refuse. Old writers must actually close before deployment and activation; newer
+anchor handling cannot make an old binary safe by assertion. No new buyer charge,
+creator payment, custody, public activation or scheduler authority is introduced.
+Actual same-original delivery and buyer recovery remain separate release gates.

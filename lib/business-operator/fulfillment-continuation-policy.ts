@@ -11,6 +11,7 @@ import { continuationEpochAuthorizationFields, fixedPaths, readActiveEpochAnchor
 import { continuationSupplementEpochAuthorizationFields } from "./continuation-supplement-epoch";
 import { continuationPreparedEpochAuthorizationFields, continuationPreparedRejectionSchema } from "./continuation-prepared-epoch";
 import { continuationFailedQualityEpochAuthorizationFields, continuationOwnerRepairReceiptSchema } from "./continuation-failed-quality-epoch";
+import { continuationPremiseScopeEpochAuthorizationFields } from "./continuation-premise-scope-epoch";
 import { continuationQualityFailureContext, validateContinuationQualityFailureClosure } from "./continuation-failed-quality-closure";
 import { readBoundSupplementaryContext, assertSupplementaryRunBinding, fulfillmentEvidenceCapability,
   type FulfillmentSupplementContext } from "../a2a/fulfillment-supplement-evidence";
@@ -60,15 +61,17 @@ export const continuationAuthorizationSchema = z.union([continuationAuthorizatio
   continuationAuthorizationObject.extend(continuationEpochAuthorizationFields),
   continuationAuthorizationObject.extend(continuationSupplementEpochAuthorizationFields),
   continuationAuthorizationObject.extend(continuationPreparedEpochAuthorizationFields),
-  continuationAuthorizationObject.extend(continuationFailedQualityEpochAuthorizationFields)]).refine(value =>
+  continuationAuthorizationObject.extend(continuationFailedQualityEpochAuthorizationFields),
+  continuationAuthorizationObject.extend(continuationPremiseScopeEpochAuthorizationFields)]).refine(value =>
   Date.parse(value.ownerAuthorizationReceivedAt) <= Date.parse(value.approvedAt) &&
   Date.parse(value.approvedAt) < Date.parse(value.expiresAt) &&
   Date.parse(value.expiresAt) - Date.parse(value.ownerAuthorizationReceivedAt) <= value.maximumDurationMs,
 "Continuation outside explicit owner window");
 export type ContinuationAuthorization = z.infer<typeof continuationAuthorizationSchema>;
 function isCarriedQualityAuthorization(authorization: ContinuationAuthorization): authorization is Extract<ContinuationAuthorization,
-  { format: "keryx-original-continuation-authorization-v4" | "keryx-original-continuation-authorization-v5" }> {
-  return authorization.format === "keryx-original-continuation-authorization-v4" || authorization.format === "keryx-original-continuation-authorization-v5";
+  { format: "keryx-original-continuation-authorization-v4" | "keryx-original-continuation-authorization-v5" | "keryx-original-continuation-authorization-v6" }> {
+  return authorization.format === "keryx-original-continuation-authorization-v4" || authorization.format === "keryx-original-continuation-authorization-v5" ||
+    authorization.format === "keryx-original-continuation-authorization-v6";
 }
 export function continuationDirectory() {
   return readLatestEpochAnchor(os.homedir(), epochIo())?.paths.epochDirectory ?? fixedPaths(os.homedir()).parentDirectory;
@@ -100,7 +103,8 @@ function read(file: string, maximumBytes = 1_000_000, minimumBytes: 0 | 1 = 1) {
     stat.ctimeNs, stat.uid, stat.gid, stat.mode, stat.nlink].join(":");
   if (minimumBytes === 0 && (path.basename(file) !== "lease-driver-process-001.stdout" && path.basename(file) !== "lease-driver-process-001.stderr" ||
     !/^(?:g01|d0[1-8])$/.test(path.basename(path.dirname(file))) ||
-    path.dirname(path.dirname(file)) !== continuationQualityFailureContext(os.homedir()))) refuse("empty stream path refused");
+    !([4, 5] as const).some(epoch => path.dirname(path.dirname(file)) === continuationQualityFailureContext(os.homedir(), epoch))))
+    refuse("empty stream path refused");
   if (before.size < BigInt(minimumBytes) || before.size > BigInt(maximumBytes)) refuse("protected file byte limit refused");
   const fd = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
   try {
@@ -174,7 +178,8 @@ function publishLedgerHead(previous: string | null, flush: (directory: string) =
 function retain(name: string, value: unknown, flush = syncDirectory, directory = continuationDirectory()) {
   protectedPath(directory, true);
   const previousHead = assertLedgerHead(directory);
-  const epochPaths = fixedPaths(os.homedir(), directory === fixedPaths(os.homedir(), 5).epochDirectory ? 5 :
+  const epochPaths = fixedPaths(os.homedir(), directory === fixedPaths(os.homedir(), 6).epochDirectory ? 6 :
+    directory === fixedPaths(os.homedir(), 5).epochDirectory ? 5 :
     directory === fixedPaths(os.homedir(), 4).epochDirectory ? 4 :
     directory === fixedPaths(os.homedir(), 3).epochDirectory ? 3 : 2), io = epochIo(flush);
   const epochUpdate = !nonLedgerNames.has(name) && directory === epochPaths.epochDirectory && exists(epochPaths.frontierFile)
@@ -386,24 +391,32 @@ export function readContinuationAuthorization(file: string, expectedSha256: stri
       promptSha256: held.hold.promptSha256, contextSha256: authorization.contextSha256,
       inputBytes: held.hold.inputBytes, maximumOutputTokens: held.hold.maximumOutputTokens, result: checkpoint.result });
   }
-  if (authorization.format === "keryx-original-continuation-authorization-v5") {
+  if (authorization.format === "keryx-original-continuation-authorization-v5" || authorization.format === "keryx-original-continuation-authorization-v6") {
+    const sourceRepair = authorization.format === "keryx-original-continuation-authorization-v6";
     const parent = readContinuationAuthorization(authorization.parentAuthorizationFile, authorization.parentAuthorizationSha256);
-    if (parent.authorization.format !== "keryx-original-continuation-authorization-v4" || !parent.supplement || !parent.carriedSufficiency ||
-      parent.directory !== fixedPaths(os.homedir(), 4).epochDirectory || !same(parent.original, original) || !same(parent.local, local) ||
+    if (parent.authorization.format !== (sourceRepair ? "keryx-original-continuation-authorization-v5" : "keryx-original-continuation-authorization-v4") ||
+      !isCarriedQualityAuthorization(parent.authorization) || !parent.supplement || !parent.carriedSufficiency ||
+      parent.directory !== fixedPaths(os.homedir(), sourceRepair ? 5 : 4).epochDirectory || !same(parent.original, original) || !same(parent.local, local) ||
       authorization.supplementaryInputFile !== parent.authorization.supplementaryInputFile ||
       authorization.supplementaryInputSha256 !== parent.authorization.supplementaryInputSha256 || authorization.contextSha256 !== parent.authorization.contextSha256 ||
-      authorization.ownerAuthorizationSha256 === parent.authorization.ownerAuthorizationSha256)
+      (sourceRepair ? parent.authorization.format !== "keryx-original-continuation-authorization-v5" ||
+        authorization.ownerAuthorizationFile !== parent.authorization.ownerAuthorizationFile ||
+        authorization.ownerAuthorizationSha256 !== parent.authorization.ownerAuthorizationSha256 ||
+        authorization.ownerAuthorizationReceivedAt !== parent.authorization.ownerAuthorizationReceivedAt ||
+        authorization.expiresAt !== parent.authorization.expiresAt || authorization.executorCommit === parent.authorization.executorCommit :
+        authorization.ownerAuthorizationSha256 === parent.authorization.ownerAuthorizationSha256))
       refuse("failed quality recovery authority changed");
     const transitions = path.join(os.homedir(), ".local", "share", "keryx-canary-transitions"),
       relative = path.relative(transitions, authorization.ownerAuthorizationFile);
     if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) refuse("repair receipt must remain protected and private");
     const receiptRaw = read(authorization.ownerAuthorizationFile, 65_536), receipt = continuationOwnerRepairReceiptSchema.parse(JSON.parse(receiptRaw.toString("utf8")));
     if (hash(receiptRaw) !== authorization.ownerAuthorizationSha256 || receipt.recordedAt !== authorization.ownerAuthorizationReceivedAt ||
-      receipt.expiresAt !== authorization.expiresAt || receipt.parentAuthorizationSha256 !== authorization.parentAuthorizationSha256 ||
+      receipt.expiresAt !== authorization.expiresAt || receipt.parentAuthorizationSha256 !==
+        (sourceRepair ? parent.authorization.parentAuthorizationSha256 : authorization.parentAuthorizationSha256) ||
       receipt.originalAuthorizationSha256 !== authorization.originalAuthorizationSha256 || receipt.nativeClaimSha256 !== authorization.nativeClaimSha256 ||
       receipt.packetSha256 !== authorization.packetSha256 || receipt.inputSemanticSha256 !== authorization.inputSemanticSha256 ||
       receipt.contextSha256 !== authorization.contextSha256) refuse("new finite owner repair receipt changed");
-    const anchor = readActiveEpochAnchor(os.homedir(), epochIo(), 4), parentLedger = continuationProviderLedger(parent);
+    const anchor = readActiveEpochAnchor(os.homedir(), epochIo(), sourceRepair ? 5 : 4), parentLedger = continuationProviderLedger(parent);
     if (!anchor || anchor.binding.authorizationFile !== parent.authorizationFile || anchor.binding.authorizationSha256 !== parent.authorizationSha256 ||
       anchor.intentSha256 !== authorization.parentAnchorIntentSha256 || anchor.activeSha256 !== authorization.parentAnchorActiveSha256 ||
       anchor.frontierSha256 !== authorization.parentAnchorFrontierSha256 || anchor.ledgerHeadSha256 !== authorization.parentLedgerHeadSha256 ||
@@ -443,12 +456,14 @@ export function readContinuationAuthorization(file: string, expectedSha256: stri
       parentProviderLedgerSha256: authorization.parentProviderLedgerSha256, parentLedgerHeadSha256: authorization.parentLedgerHeadSha256,
       parentAnchorFrontierSha256: authorization.parentAnchorFrontierSha256,
       parentPreparedAuthorizationSha256: parent.authorization.parentAuthorizationSha256, approvedAt: authorization.approvedAt,
+      ...(sourceRepair ? { failureEpoch: 5 as const } : {}),
     }, { read, readStream: (file, maximumBytes) => read(file, maximumBytes, 0) });
   }
   if (supplier && (Date.now() >= Date.parse(authorization.expiresAt) ||
     fulfillmentExecutorCommit() !== authorization.executorCommit)) refuse("supplier authority expired or source changed");
   const directory = authorization.format === "keryx-original-continuation-authorization-v1" ? paths.parentDirectory :
-    fixedPaths(os.homedir(), authorization.format === "keryx-original-continuation-authorization-v5" ? 5 :
+    fixedPaths(os.homedir(), authorization.format === "keryx-original-continuation-authorization-v6" ? 6 :
+      authorization.format === "keryx-original-continuation-authorization-v5" ? 5 :
       authorization.format === "keryx-original-continuation-authorization-v4" ? 4 :
       authorization.format === "keryx-original-continuation-authorization-v3" ? 3 : 2).epochDirectory;
   if (supplier && authorization.format === "keryx-original-continuation-authorization-v1" &&
@@ -459,6 +474,8 @@ export function readContinuationAuthorization(file: string, expectedSha256: stri
     readActiveEpochAnchor(os.homedir(), epochIo(), 4)) refuse("parent supplier epoch superseded");
   if (supplier && authorization.format === "keryx-original-continuation-authorization-v4" &&
     readActiveEpochAnchor(os.homedir(), epochIo(), 5)) refuse("parent supplier epoch superseded");
+  if (supplier && authorization.format === "keryx-original-continuation-authorization-v5" &&
+    readActiveEpochAnchor(os.homedir(), epochIo(), 6)) refuse("parent supplier epoch superseded");
   return { authorization, authorizationFile: file, authorizationSha256: expectedSha256, directory, original, local,
     ...(supplement ? { supplement } : {}), ...(carriedSufficiency ? { carriedSufficiency,
       qualityProtocol: "same-evidence-prepared-quality-v1" as const } : {}) };
@@ -571,7 +588,8 @@ export function continuationProviderLedger(binding = retainedBinding()) {
     binding.authorization.historicalReservedMicroUsd + holds.length * LIMITS.modelReserveMicroUsd > binding.authorization.maximumCombinedMicroUsd ||
     !same(names, fs.readdirSync(directory).sort())) refuse("ledger changed or exceeded bounds");
   return { sha256: hashObject(entries), newModelCalls: holds.length,
-    oldAdditiveModelCalls: binding.authorization.format === "keryx-original-continuation-authorization-v5" ? 16 :
+    oldAdditiveModelCalls: binding.authorization.format === "keryx-original-continuation-authorization-v6" ? 18 :
+      binding.authorization.format === "keryx-original-continuation-authorization-v5" ? 16 :
       binding.authorization.format === "keryx-original-continuation-authorization-v4" ? 14 :
       binding.authorization.format === "keryx-original-continuation-authorization-v3" ? 11 :
       binding.authorization.format === "keryx-original-continuation-authorization-v2" ? 10 : 2,
@@ -595,7 +613,8 @@ function nativeClaimMatches(binding: ContinuationBinding, claim: A2aFulfillmentC
     same(claim.authority, binding.original.authority) && claim.claimedAt === binding.local.claimedAt;
 }
 function validateRejectedParentPrepared(binding: ContinuationBinding, claim: A2aFulfillmentClaim) {
-  if (binding.authorization.format === "keryx-original-continuation-authorization-v5") {
+  if (binding.authorization.format === "keryx-original-continuation-authorization-v5" ||
+    binding.authorization.format === "keryx-original-continuation-authorization-v6") {
     const parent = readContinuationAuthorization(binding.authorization.parentAuthorizationFile, binding.authorization.parentAuthorizationSha256);
     validateRejectedParentPrepared(parent, claim);
     return;
@@ -663,7 +682,8 @@ export async function inspectOriginalContinuation(db: NativeDb, file: string, ex
 export async function activateOriginalContinuationEpoch(db: NativeDb, file: string, expectedSha256: string, flush = syncDirectory) {
   const binding = readContinuationAuthorization(file, expectedSha256, true), authorization = binding.authorization;
   if (authorization.format === "keryx-original-continuation-authorization-v1") refuse("epoch activation requires separate authority");
-  const fields = authorization.format === "keryx-original-continuation-authorization-v5"
+  const fields = authorization.format === "keryx-original-continuation-authorization-v6"
+    ? z.object(continuationPremiseScopeEpochAuthorizationFields).parse(authorization) : authorization.format === "keryx-original-continuation-authorization-v5"
     ? z.object(continuationFailedQualityEpochAuthorizationFields).parse(authorization) : authorization.format === "keryx-original-continuation-authorization-v4"
     ? z.object(continuationPreparedEpochAuthorizationFields).parse(authorization) : authorization.format === "keryx-original-continuation-authorization-v3"
     ? z.object(continuationSupplementEpochAuthorizationFields).parse(authorization)

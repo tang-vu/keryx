@@ -10,7 +10,7 @@ const labels = ["fresh-parent-native-preflight", "fresh-continuation-native-pref
 const lifetimePins = { intentSha256: digest, specSha256: digest, lifetimeReceiptSha256: digest,
   keeperExitSha256: digest, processIntentSha256: digest, processReceiptSha256: digest };
 const lifetimePinsSchema = z.object(lifetimePins).strict();
-export const continuationQualityFailureClosureSchema = z.object({
+const closureObject = z.object({
   format: z.literal("keryx-original-continuation-quality-failure-closure-v1"), readOnly: z.literal(true), recordedAt: timestamp,
   context: z.string().min(1), executorCommit: z.string().regex(/^[a-f0-9]{40}$/),
   parentAuthorizationSha256: digest, nativeClaimSha256: digest, packetSha256: digest, inputSemanticSha256: digest, contextSha256: digest,
@@ -20,14 +20,18 @@ export const continuationQualityFailureClosureSchema = z.object({
   inner: z.array(z.object({ label: z.enum(labels), mode: z.enum(["preflight", "activate-epoch", "execute"]),
     authorizationSha256: digest, ...lifetimePins }).strict()).length(8),
 }).strict();
+export const continuationQualityFailureClosureSchema = z.union([closureObject,
+  closureObject.extend({ format: z.literal("keryx-original-continuation-quality-failure-closure-v2") })]);
 export type ContinuationQualityFailureClosure = z.infer<typeof continuationQualityFailureClosureSchema>;
-export function continuationQualityFailureContext(home: string) {
+export function continuationQualityFailureContext(home: string, failureEpoch: 4 | 5 = 4) {
   if (!path.isAbsolute(home) || path.resolve(home) !== home) throw Error("Quality failure closure home refused");
-  return path.join(home, ".local", "share", "keryx-canary-transitions", "operator-completion-epoch-4-20261008-01");
+  if (failureEpoch !== 4 && failureEpoch !== 5) throw Error("Quality failure closure epoch refused");
+  return path.join(home, ".local", "share", "keryx-canary-transitions", failureEpoch === 5
+    ? "operator-completion-epoch-5-20261008-03" : "operator-completion-epoch-4-20261008-01");
 }
 export type ContinuationQualityFailureClosureBinding = Pick<ContinuationQualityFailureClosure, "executorCommit" | "parentAuthorizationSha256" |
   "nativeClaimSha256" | "packetSha256" | "inputSemanticSha256" | "contextSha256" | "parentProviderLedgerSha256" |
-  "parentLedgerHeadSha256" | "parentAnchorFrontierSha256"> & { parentPreparedAuthorizationSha256: string; approvedAt: string };
+  "parentLedgerHeadSha256" | "parentAnchorFrontierSha256"> & { parentPreparedAuthorizationSha256: string; approvedAt: string; failureEpoch?: 4 | 5 };
 export interface ContinuationQualityFailureClosureIO {
   /** Same protected stable read used for authority/journals; nonempty, <=1MiB. */
   read(file: string, maximumBytes: number): Buffer;
@@ -58,8 +62,10 @@ const record = (value: unknown): Record<string, unknown> => {
  * all nine closed lifetimes; a boolean assertion is never a process closure. */
 export function validateContinuationQualityFailureClosure(value: unknown, home: string, binding: ContinuationQualityFailureClosureBinding,
   io: ContinuationQualityFailureClosureIO): ContinuationQualityFailureClosure {
-  const proof = continuationQualityFailureClosureSchema.parse(value), context = continuationQualityFailureContext(home);
-  if (proof.context !== context || Date.parse(proof.recordedAt) > Date.parse(binding.approvedAt) || Date.parse(proof.recordedAt) > Date.now()) refuse();
+  const proof = continuationQualityFailureClosureSchema.parse(value), failureEpoch = binding.failureEpoch ?? 4,
+    context = continuationQualityFailureContext(home, failureEpoch);
+  if (proof.format !== `keryx-original-continuation-quality-failure-closure-v${failureEpoch === 5 ? 2 : 1}` ||
+    proof.context !== context || Date.parse(proof.recordedAt) > Date.parse(binding.approvedAt) || Date.parse(proof.recordedAt) > Date.now()) refuse();
   for (const key of ["executorCommit", "parentAuthorizationSha256", "nativeClaimSha256", "packetSha256", "inputSemanticSha256",
     "contextSha256", "parentProviderLedgerSha256", "parentLedgerHeadSha256", "parentAnchorFrontierSha256"] as const)
     if (proof[key] !== binding[key]) refuse();

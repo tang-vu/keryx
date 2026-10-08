@@ -3,6 +3,7 @@ import { MIN_REWARD_SUPPORT } from "./evidence-ledger";
 import { researchResponseLanguage } from "./empty-public-evidence";
 import type { CitedStatement } from "./cited-statements";
 import type { AnswerPresentation } from "../research/answer-presentation";
+import { compactStatementGroups } from "./compact-statement-groups";
 
 function literal(value: string): string {
   // The reading UI's small renderer does not decode Markdown escapes/entities. Invisible
@@ -82,7 +83,7 @@ export function finalizeGroundedAnswer(input: {
   return withNotice([intro, ...sections, limitations].join("\n\n"));
 }
 
-/** Group only identical excerpts, retaining every statement, target and cited contribution. */
+/** Preserve each statement/excerpt binding; grouping never adds synthesized prose. */
 function compactSummary(presentation: AnswerPresentation, ledger: EvidenceLedger,
   qualifying: EvidenceLedger["evidence"], summary: CitedStatement[]): string | undefined {
   const count = presentation.requestedBulletCount;
@@ -92,21 +93,24 @@ function compactSummary(presentation: AnswerPresentation, ledger: EvidenceLedger
       qualifying.some(item => !summary.some(statement => statement.claimIndex === item.claimIndex &&
         statement.marker === item.marker && statement.quote === item.quote)) ||
       [...ledger.acceptedMarkers].some(marker => !summary.some(statement => statement.marker === marker))) return undefined;
-  const groups = new Map<string, CitedStatement[]>();
-  for (const statement of summary) {
-    const key = JSON.stringify([statement.marker, statement.quote]);
-    const group = groups.get(key) ?? [];
-    group.push(statement);
-    groups.set(key, group);
-  }
-  if (groups.size !== count) return undefined;
+  const groups = compactStatementGroups(summary, qualifying);
+  if (!groups || groups.length !== count || groups.some(group => group.length > 4)) return undefined;
   const copy = {
     en: { source: "Source text", note: "Model-written and model-checked summaries; inspect the paired source excerpts. Full synthesis and source correctness remain unverified. Payment states are recorded separately." },
     vi: { source: "Nguyên văn nguồn", note: "Tóm tắt do mô hình viết và kiểm tra; hãy đối chiếu trích đoạn đi kèm. Chưa xác minh tính đầy đủ của tổng hợp và tính đúng đắn của nguồn. Thanh toán được ghi riêng." },
     pt: { source: "Texto da fonte", note: "Resumos escritos e verificados por modelos; confira os trechos citados. A síntese completa e a exatidão das fontes permanecem não verificadas. Os pagamentos são registrados separadamente." },
   }[presentation.language];
-  return [...groups.values()].map(group => `- ${group.map(statement => literal(statement.text)).join(" ")} [${group[0].marker}] ${copy.source}: “${literal(group[0].quote)}”`)
-    .concat(copy.note).join("\n\n");
+  const rows = groups.map(group => {
+    const excerpts = new Map<string, CitedStatement[]>();
+    for (const statement of group) {
+      const sentences = excerpts.get(statement.quote) ?? [];
+      sentences.push(statement);
+      excerpts.set(statement.quote, sentences);
+    }
+    return `- ${[...excerpts.values()].map(sentences => `${sentences.map(statement => literal(statement.text)).join(" ")} [${sentences[0].marker}] ${copy.source}: “${literal(sentences[0].quote)}”`).join(" ")}`;
+  });
+  if (rows.some(row => row.length > 1200)) return undefined;
+  return rows.concat(copy.note).join("\n\n");
 }
 
 /** Portuguese ordinary delivery keeps the same excerpt/statement and gap boundaries. */

@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Repair document selection and bounded research output (2026-10-08, v0.27.40 candidate)
+### Repair document selection and bounded research output (2026-10-08, v0.27.41 candidate)
 
 - Retain nearby short enumerated rules and defaults at exact source offsets.
 - Choose one useful public or registered channel per canonical document, with
@@ -13,8 +13,9 @@
 - Supply explicit bibliographic field provenance, ordered authors and reusable
   references in the free metadata lookup, with optional English/French/Vietnamese labels.
 
-The complete preceding reading/client stack remains included. Production and main
-stay pinned while the other Operator session runs. Useful live answers, original
+The complete preceding reading/client stack and current main38 remain included.
+This session does not advance main or deploy over the active Operator window.
+Useful live answers, original
 admission, CI/review, package/installer delivery and deployment are pending.
 See [all 17 issue dispositions and release gates](engineering/open-issues-2026-10-08.md).
 
@@ -25,7 +26,10 @@ retained MDN submit/default rule. Ordinary reviewed answers can retain supported
 requested language and short bullet layout while preserving every target,
 excerpt and cited contribution. Missing review or count mismatch keeps gaps and
 an unmet-format notice. Private original fulfillment and payment authority remain
-unchanged. Source tests do not establish live usefulness or deployment.
+unchanged. A bounded retained-body model trial recovered all four MDN facts but
+failed the requested format. A deterministic repair groups its five unchanged
+sentence/excerpt pairs into three items. The failed original stays retained;
+local replay does not establish a fresh production deliverable or deployment.
 See [scope and release gates](engineering/research-deliverable-quality-2026-10-08.md).
 
 ### Explain refused source choices in the decision log (2026-10-08, v0.27.37 candidate)
@@ -54,6 +58,20 @@ results keep their recorded content, evidence and payment status unchanged.
 The research introduction uses less mobile space so the question, free-paper
 handoff, source cap and full Ask action fit a 320x640 first viewport.
 See [browser acceptance and surface roles](engineering/evidence-readability-2026-10-08.md).
+
+### Review each retained Operator premise against its exact evidence (2026-10-08, v0.27.38 candidate)
+
+The private original-answer review now receives a fixed factual question for each
+required quote, while preserving the five original research targets. Independent
+review still checks every assertion in the generated statement against its exact
+quote. Generation rejects added deployment/mainnet claims in the network-details
+row and preserves the example qualification on contract spending policies.
+
+A source-bound repair transfers only the four unused model reservations from the
+existing six-call episode. Historical reservations, the aggregate ceiling, original
+owner receipt and expiry remain intact. Actual reviewed delivery, buyer receipt
+verification and restored public service remain separate acceptance gates.
+See [the private recovery contract](engineering/operator-original-continuation.md).
 
 ### Sponsored research and distinct operating settlements (2026-10-08, v0.27.35 candidate)
 

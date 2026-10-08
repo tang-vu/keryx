@@ -2,15 +2,17 @@
 
 ## Issue-resolution source candidate - October 8, 2026
 
-[App0.27.40](engineering/open-issues-2026-10-08.md) retains the reading stack
+[App0.27.41](engineering/open-issues-2026-10-08.md) retains the reading stack
 and adds enumerated context, one canonical document channel, evidence-only
 ordinary generation and explicit metadata cards/exports. Hosted MCP0.3.6 and
 stdio0.4.10 are source candidates; desktop0.4.10 retains its existing reduced
-role. Current main/production remain ab2195d6 by the owner's active-Operator
-instruction. Final source/release/distribution and useful live acceptance remain
+role. It inherits current main38/3b839ccd after the separate Operator owner's merge;
+this session preserves that owner's admitted window and does not deploy or activate it.
+Final source/release/distribution and useful live acceptance remain
 separate gates; no publication or synchronized installed-client claim is made.
 The aggregate also retains PR241's requested presentation, quote menu and semantic
-list renderer changes. PR240's separately active Operator source window is excluded.
+list renderer changes and its post-trial deterministic repair. PR240's separately
+active Operator source window remains under its owner's control.
 
 ## Deliverable quality successor — October 8, 2026
 

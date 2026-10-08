@@ -1,10 +1,10 @@
 # Coordinated research reading release — October 8, 2026
 
-The active successor is the [app0.27.40 issue-resolution aggregate](open-issues-2026-10-08.md).
+The active successor is the [app0.27.41 issue-resolution aggregate](open-issues-2026-10-08.md).
 It retains this complete source, PR239 and the [PR241 presentation candidate](research-deliverable-quality-2026-10-08.md).
 Earlier candidate evidence and failures remain historical; the successor requires
-its own exact-head acceptance. The separately active Operator PR240 stays outside
-this aggregate and must be coordinated at an admitted operational boundary.
+its own exact-head acceptance. PR240 is now inherited through current main38;
+the independently active Operator release/continuation must still be preserved.
 
 App **0.27.36** is a source candidate for one coordinated release through PR237.
 It includes the reviewed reading/client stack and merged main app0.27.35. Earlier

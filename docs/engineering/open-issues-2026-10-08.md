@@ -8,9 +8,13 @@ separates a source repair from its remaining acceptance; it does not close an
 issue merely because code, health or CI succeeds.
 
 The owner explicitly confirmed that the separately active Operator original still
-runs and requested preserving production. Keep `origin/main` and production at
-`ab2195d654b068f8213121b3abbfc281ec307350` while that admitted source window
-remains active. Develop, review and run synthetic checks in isolated worktrees.
+runs and requested preserving production. This session initially observed main
+at `ab2195d654b068f8213121b3abbfc281ec307350`; the separate Operator owner later
+merged PR240 to `3b839ccd75900eff3edc51913d30b924a9440db0`. This session inherits
+that current main source without advancing main or deploying it. Preserve the
+Operator owner's current admitted release/continuation window; a main commit is
+not proof of production deployment or native closure. Develop, review and run
+synthetic checks in isolated worktrees.
 Do not merge, deploy, alter roles/ENV/custody, rebind grants or run paid acceptance
 against that window. A future admitted boundary must be positively confirmed.
 
@@ -38,14 +42,17 @@ against that window. A future admitted boundary must be positively confirmed.
 
 ## Coordinated source and release
 
-The new aggregate is app **0.27.40** on `fix/open-issue-resolution`. It preserves
+The new aggregate is app **0.27.41** on `fix/open-issue-resolution`. It preserves
 PR239/app0.27.37 and the complete preceding reading/client aggregate, then adds
 the enumerated context, canonical document, bounded generation/planning and
 metadata handoff changes. It retains PR241/app0.27.39's requested language,
 whole short-item quote alternatives, neutral grouping and semantic list renderer.
-App0.27.38 on PR240 is separately reserved for the active Operator continuation;
-this aggregate does not include, deploy or activate it. Earlier candidate version
-records remain historical.
+App0.27.38 on PR240 is inherited through current main; its independently managed
+Operator release/continuation is not activated here. App0.27.40 is reserved by the
+separate Cloudflare manual-model candidate and is not included. The aggregate
+retains PR241's post-trial deterministic presentation repair and unchanged reviewed
+MDN pairs; its separate three-call authorization is consumed and is not borrowed
+or repeated here. Earlier candidate version records remain historical.
 The newest-retained primitive is deliberately inactive: legacy catalog arrays and
 updated/creation timestamps are not promoted into complete native-publication
 observations. Its scoped adapter/current-feed gates remain in
