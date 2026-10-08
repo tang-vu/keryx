@@ -7,33 +7,106 @@
 [![payments: Circle x402](https://img.shields.io/badge/payments-Circle_x402-2775CA)](https://github.com/circlefin/arc-nanopayments)
 [![CI](https://github.com/tang-vu/keryx/actions/workflows/ci.yml/badge.svg)](https://github.com/tang-vu/keryx/actions/workflows/ci.yml)
 
-**Every time an AI uses a creator's work as a source, the creator gets paid — instantly.**
+Keryx is a citation-toll reading agent for researchers and builders: a question and
+budget lead to a cited report, visible BUY/SKIP/CACHE decisions, and payment receipts
+for eligible creator rewards.
 
-🔗 Live: **[keryx.cc](https://keryx.cc)** — free to try, no wallet, no sign-up
-&nbsp;·&nbsp; 🔎 **[public proof](https://keryx.cc/proof)** — code, adoption, RPC, settlement, cash-outs
-&nbsp;·&nbsp; ▶️ `npm run demo` — the whole loop, real settlement, ~90s
-&nbsp;·&nbsp; 🤖 [Remote MCP setup](https://keryx.cc/integrations/mcp) — connect your research agent
-&nbsp;·&nbsp; 🧩 [Fork the Arc primitives](https://github.com/tang-vu/keryx-arc-primitives)
+**[Live app](https://keryx.cc)** · **[Public proof](https://keryx.cc/proof)** ·
+**Demo recording: pending** — [recording plan and release gates](docs/reviewer-start.md#recording-gate).
+There is no current Tameion video linked yet; the CLI demo below is a runnable script.
+
+## Try it in two minutes — no wallet
+
+1. Open this [existing English cited report](https://keryx.cc/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913)
+   about how source-access tolls differ from citation rewards. Read the summary
+   and its `[S1]` source excerpts, including the Low confidence boundary.
+2. Expand **Decision log** below the answer. Inspect why Keryx reused the cached
+   first-party article and skipped unrelated candidates. This run has CACHE/SKIP
+   decisions; it did not pay a new access toll.
+3. Open **View JSON** in **Portable research receipt**, or use the
+   [direct receipt](https://keryx.cc/api/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913/receipt).
+   Under `payload.settlement`, check `mode: real`, `ledgerCompleteness: complete`,
+   **0 USDC access / 0.025 USDC citation**, and the mainnet Circle reference.
+   [Receipt verification and the retained digest](docs/reviewer-start.md#verify-the-example)
+   explain what these records prove.
+
+This is an archived owner-operated QA result using **Keryx Engineering (first-party)**,
+not a fresh answer or an outside customer's task. The location/job in its prompt is
+a test persona. It supports the three core payment facts but omits the requested
+document revision, so the original deliverable remains partial. Opening the report
+or receipt makes no research or payment request.
+
+**Next, ask your own question:** open [keryx.cc](https://keryx.cc), choose Quick,
+and submit a shareable question. The public sponsored trial needs no wallet or
+sign-up; the composer shows the payer and budget. Admission depends on current
+quota, available capacity and spend caps, so a new answer within two minutes is
+not guaranteed. Submitted questions become public reports. See
+[sponsored trial limits](docs/sponsored-research-trial.md).
+
+## Usage so far
+
+Read-only snapshot of [public metrics](https://keryx.cc/api/metrics),
+**October 8, 2026, 16:24 UTC**, with [public health](https://keryx.cc/api/health)
+reporting Arc mainnet / real settlement at `3b839ccd`.
+
+| Measure | Observed value | Counting boundary |
+| --- | --- | --- |
+| Recorded research runs | 50 | All caller origins, including team and QA; not accepted deliverables |
+| Settled payment records | 7 | All payment kinds; pending, failed and simulated excluded |
+| Settled volume | 0.095 USDC | Gross payment volume, not net revenue |
+| Creator access + citation payouts | 0.065 USDC to 2 earning creators | Includes first-party recipients; not independent creator adoption |
+| Settled operating fees | 0 USDC | Reported separately from creator rewards |
+| Outside users / team / QA | Separate counts unavailable | The endpoint does not partition these groups; guest questions are not unique outside users |
+| Historical Arc testnet | Separate evidence only | Not included in these mainnet totals; see the [event-period record](docs/tameion-submission.md#event-period-usage-testnet-week-then-mainnet) |
+
+These are dated database projections. [Live Ledger](https://keryx.cc/dashboard)
+and [Public Proof](https://keryx.cc/proof) expose the current records and their limits.
+The [submission pack](docs/tameion-submission.md#named-external-user-hoàng-freelance-developer)
+separately documents sponsored outside use on testnet and unmatched participant
+stories; none is inferred from these aggregate counts. [Snapshot hashes](docs/reviewer-start.md#public-checkpoint)
+retain the exact observation.
+
+## What is real and what is scripted
+
+- **The two-minute path reopens a stored run.** Its model-written answer, decision
+  trace and receipt are recorded artifacts. It is a curated QA example, not a live
+  rerun or evidence of customer acceptance.
+- **The example's payment is recorded as real Arc mainnet settlement:** one
+  0.025 USDC citation reward to the first-party Engineering source. Its cached read
+  cost zero. The Circle transfer reference is not a per-citation Arc transaction hash.
+- **First-party and public sources are distinct.** Keryx Engineering and Keryx owner
+  release notes are first-party validation sources. Public web/paper references
+  alone grant no creator payout rights. Historical seeded sample sources have
+  Keryx-controlled authority; they do not establish independent seller adoption.
+- **CLI demo, seed and benchmark commands are scripts.** Offline development uses
+  labelled simulated payments. Invoking a real-mode script can make actual paid
+  requests; it is not required for the wallet-free review path.
+- **Production research is caller-driven.** The local desktop alpha is not an
+  autonomous scheduler. Monitoring/reconciliation jobs are operational checks,
+  not independent users or fresh research. This public checkpoint does not verify
+  the host's current schedule inventory.
+- **Settlement is checked per receipt.** Pending, failed, simulated and planned
+  amounts are separate from settled value. A cited answer, healthy API or script
+  completion alone does not prove a payment settled.
+
+## What happened during Tameion
+
+The pre-event main baseline is
+[`2291753` (September 25)](https://github.com/tang-vu/keryx/tree/2291753cc4fff2135d546227d5aafda287cbed7d).
+During the event Keryx added original-document and scholarly discovery, portable
+cited-report exports, a local CLI/Windows task workspace, bounded manual Research
+Monthly, and prepaid Operator recovery/observation. Production moved from Arc
+testnet to mainnet on October 4. The
+[event-period product delta](docs/tameion-submission.md#event-period-product-delta)
+links source evidence and the limits of each change.
+
+The usage record separates the event's testnet phase from mainnet; the mainnet
+snapshot above includes internal activity. Sponsored outside use is documented,
+but independent paid demand, repeat use and general deliverable usefulness remain
+separate evidence gates. Source candidates beyond the observed deployment are
+not claimed live. The short current-release recording remains pending.
 
 ---
-
-Windows local Operator alpha: `npm run desktop:install` then `npm run desktop:start`.
-See the [desktop guide](docs/desktop-alpha.md) for the unpacked app build, offline
-saved results, private Markdown briefs, and limits.
-
-[Research-paper library](docs/paper-library.md): browse 40 observed paper records
-from arXiv, OpenReview, PMLR and ACL Anthology, filter by author/year/DOI, or explicitly
-search live arXiv/Crossref metadata. `/api/papers` and `npm run papers` share the
-bibliography-only contract. Links remain unread until a separate research run.
-
-[Literature workspace](docs/literature-workspace.md): save exact paper records on
-this browser, screen against a review question, keep personal notes, export CSV/JSON/RIS
-and prepare an editable two-paper comparison. No account, cloud sync or automatic ask.
-
-[Research Monthly](docs/research-monthly.md): a bounded plan for four Deep
-requests over 30 days, 10% below four separate packages with unchanged creator
-caps. Manual renewal; no scheduling or unlimited use. Failed/pending jobs use a
-slot. Web/API own the entitlement; Monthly CLI and MCP handoffs share that contract.
 
 ## The problem
 
@@ -138,6 +211,26 @@ Historical testnet trace (recorded output; not current mainnet traction):
 [settle]  Settled $0.015 → Mara Okoye · $0.010 → Devin Park   (60/40 author split)
 📊 $0.032 spent → 100% to creators · 3 bought / 3 skipped
 ```
+
+## Research tools and desktop
+
+Windows local Operator alpha: `npm run desktop:install` then `npm run desktop:start`.
+See the [desktop guide](docs/desktop-alpha.md) for the unpacked app build, offline
+saved results, private Markdown briefs, and limits.
+
+[Research-paper library](docs/paper-library.md): browse 40 observed paper records
+from arXiv, OpenReview, PMLR and ACL Anthology, filter by author/year/DOI, or explicitly
+search live arXiv/Crossref metadata. `/api/papers` and `npm run papers` share the
+bibliography-only contract. Links remain unread until a separate research run.
+
+[Literature workspace](docs/literature-workspace.md): save exact paper records on
+this browser, screen against a review question, keep personal notes, export CSV/JSON/RIS
+and prepare an editable two-paper comparison. No account, cloud sync or automatic ask.
+
+[Research Monthly](docs/research-monthly.md): a bounded plan for four Deep
+requests over 30 days, 10% below four separate packages with unchanged creator
+caps. Manual renewal; no scheduling or unlimited use. Failed/pending jobs use a
+slot. Web/API own the entitlement; Monthly CLI and MCP handoffs share that contract.
 
 ## For creators
 
@@ -287,12 +380,6 @@ labeled `SIMULATED`.
   only after x402 settlement verifies. Free previews stay plaintext.
 - **USDC-native chain** — Arc settles in <500ms with USDC as gas, which is what makes per-citation
   economics physically possible.
-
-## Live numbers
-
-The [live Ledger](https://keryx.cc/dashboard) shows recorded settled Arc mainnet USDC,
-creator payouts, and recent payments. [Public Proof](https://keryx.cc/proof)
-links the supporting registry, Gateway, and cash-out evidence.
 
 ## Architecture
 
