@@ -6126,3 +6126,24 @@ and partial explanations/counts, and keep diagnostics out of streamed and final
 decision arrays. Preserve existing validator SKIP and empty-rationale records.
 This classification provides no payment authority and leaves SSE signing/abort
 paths unchanged. See [acceptance](docs/engineering/selection-diagnostic-trace.md).
+
+## Direct premise review and unused-reservation source repair - 2026-10-08
+
+The acknowledged original-answer pair selected all required quotes but added a
+mainnet qualification to a network table that did not contain it. Another correct
+documented example received partial evidence support against the broader target.
+Give each fixed required quote a server-owned factual question while retaining
+the original target assignment. Independent statement review must still reject
+any unsupported assertion; all numerical thresholds and final completeness/manual
+review gates remain intact. Canonical acceptance checks remain labeled unexecuted
+inferences, and missing deployment values remain gaps. Preserve actual failed
+model outputs and scores rather than rewriting or carrying them.
+
+Transfer the four unused holds to a source-bound V6 episode, preserving 408540
+micro-USD history, the original 491180 ceiling and exact owner receipt/expiry.
+Bind the complete acknowledged failed V5 ledger/frontier and genuine operational
+closure. Unknown/pending epochs, changed context, rollback and superseded suppliers
+refuse. Old writers must actually close before deployment and activation; newer
+anchor handling cannot make an old binary safe by assertion. No new buyer charge,
+creator payment, custody, public activation or scheduler authority is introduced.
+Actual same-original delivery and buyer recovery remain separate release gates.

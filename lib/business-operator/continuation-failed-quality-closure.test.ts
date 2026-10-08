@@ -8,11 +8,11 @@ import { continuationOwnerRepairReceiptSchema } from "./continuation-failed-qual
 const at = "2026-10-08T04:00:00.000Z", h = "a".repeat(64);
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(at); });
 afterEach(() => { vi.useRealTimers(); });
-function fixture() {
+function fixture(failureEpoch: 4 | 5 = 4) {
   const home = path.resolve("synthetic-closed-repair-home"), binding: ContinuationQualityFailureClosureBinding = {
     executorCommit: "b".repeat(40), parentAuthorizationSha256: h, nativeClaimSha256: h, packetSha256: h, inputSemanticSha256: h,
     contextSha256: h, parentProviderLedgerSha256: h, parentLedgerHeadSha256: h, parentAnchorFrontierSha256: h,
-    parentPreparedAuthorizationSha256: "c".repeat(64), approvedAt: at };
+    parentPreparedAuthorizationSha256: "c".repeat(64), approvedAt: at, ...(failureEpoch === 5 ? { failureEpoch } : {}) };
   const value = syntheticQualityFailureClosure(home, binding), read = (file: string, max: number) => {
     const raw = value.files.get(file); if (!raw || raw.length > max) throw Error("Synthetic protected byte read refused"); return Buffer.from(raw);
   };
@@ -26,6 +26,17 @@ function fixture() {
   return { ...value, home, binding, validate, amend };
 }
 describe("exact original failed quality lifetime projection", () => {
+  it("keeps V5's genuine failed pair in a distinct context-bound closure without accepting a relabeled predecessor", () => {
+    const f = fixture(5); expect(f.validate()).toEqual(f.proof);
+    expect(f.proof.format).toBe("keryx-original-continuation-quality-failure-closure-v2");
+    expect(f.proof.context).toContain("operator-completion-epoch-5-20261008-03");
+    expect(() => validateContinuationQualityFailureClosure(f.proof, f.home, { ...f.binding, failureEpoch: 4 }, {
+      read: file => f.files.get(file)!, readStream: file => f.files.get(file)! })).toThrow();
+    const format = f.proof.format; f.proof.format = "keryx-original-continuation-quality-failure-closure-v1";
+    expect(f.validate).toThrow(); f.proof.format = format;
+    f.amend(path.join(f.proof.context, "g01"), "lease-driver-receipt.json", "lifetimeReceiptSha256", v => { v.accepted = false; });
+    expect(f.validate).toThrow();
+  });
   it("checks all nine raw lifetimes and full streams while preserving genuine root and execute failure", () => {
     const f = fixture(); expect(f.validate()).toEqual(f.proof);
     expect(f.proof.inner).toHaveLength(8);

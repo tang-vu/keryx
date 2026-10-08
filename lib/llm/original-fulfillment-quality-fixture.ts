@@ -42,7 +42,8 @@ const rows: Array<[number, string, string]> = [
 ];
 export function qualityStatements(): CitedStatement[] {
   return rows.map(([claimIndex, marker, quote]) => ({ claimIndex, marker, quote,
-    text: claimIndex === 4 && marker === "S3" ? "Arc mainnet uses chain 5042, currency USDC and explorer.arc.io." :
+    text: claimIndex === 4 && marker === "S3" ? "The Arc network-details table lists chain 5042, currency USDC and explorer.arc.io." :
       claimIndex === 4 && marker === "S4" ? "Arc's Gateway domain is 26 with mainnet arc and testnet arcTestnet." :
+        claimIndex === 4 && marker === "S1" ? "Common ERC-1271 examples include contracts enforcing allowlists and spending limits before approving an action." :
         quote.endsWith(".") ? quote : `${quote}.` }));
 }

@@ -40,6 +40,20 @@ The research introduction uses less mobile space so the question, free-paper
 handoff, source cap and full Ask action fit a 320x640 first viewport.
 See [browser acceptance and surface roles](engineering/evidence-readability-2026-10-08.md).
 
+### Review each retained Operator premise against its exact evidence (2026-10-08, v0.27.38 candidate)
+
+The private original-answer review now receives a fixed factual question for each
+required quote, while preserving the five original research targets. Independent
+review still checks every assertion in the generated statement against its exact
+quote. Generation rejects added deployment/mainnet claims in the network-details
+row and preserves the example qualification on contract spending policies.
+
+A source-bound repair transfers only the four unused model reservations from the
+existing six-call episode. Historical reservations, the aggregate ceiling, original
+owner receipt and expiry remain intact. Actual reviewed delivery, buyer receipt
+verification and restored public service remain separate acceptance gates.
+See [the private recovery contract](engineering/operator-original-continuation.md).
+
 ### Sponsored research and distinct operating settlements (2026-10-08, v0.27.35 candidate)
 
 - Explain the bounded no-wallet trial in research and literature workflows, with

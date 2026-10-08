@@ -247,3 +247,41 @@ Source tests, both TypeScript graphs, lint, production build, independent review
 required CI gate release. Deployment and model acknowledgements do not prove
 delivery: review the actual answer, complete the same claim, restore ordinary
 public service and verify the original buyer's GET response and signed receipt.
+
+## Scope direct review to the factual premise
+
+The acknowledged V5 pair retained all 29 quotes but failed direct review: its
+network-details statement added a mainnet qualification absent from that exact
+table quote, and a documented example of contract spending policies was scored
+against the broader request for concrete acceptance checks. Preserve those actual
+checkpoints and failed scores. Generation now rejects unsupported deployment or
+mainnet qualifications on that table row and requires the policy's example scope.
+
+Each required slot also has a server-owned factual `premiseQuestion` and
+`requiredPremiseId`. The private review packet binds them to the exact admitted
+quote ID, marker and original target slot; missing, repeated or reassigned slots
+refuse review. The original five questions and target assignments stay intact.
+Evidence support evaluates that factual contribution; statement support separately
+evaluates every assertion in the generated statement against the exact quote.
+Both scores still require 0.7. A strong factual contribution does not establish
+full target completion, deployment readiness or executed acceptance checks. All
+29 meanings, target coverage, canonical proposed checks, explicit gaps and manual
+root/independent review remain required. Ordinary research packets are unchanged.
+
+V6 binds the acknowledged failed V5 pair, immutable ledger and external frontier,
+closed attempt/quality diagnostic, and genuine nine-lifetime closure. It transfers
+only four unused 20660 micro-USD holds: history is 408540 and the same aggregate
+ceiling is 491180. It retains the exact original owner receipt, recording time and
+expiry; it neither renews the window nor reuses a failed generation or review.
+Only the bound positive same-evidence sufficiency result carries. The source must
+differ from the failed V5 source. Old writers must genuinely end before source
+cutover and activation; the new binary refuses superseded V5 suppliers, uncertain
+anchors and unknown future epoch namespaces. An old binary's ignorance of V6 is
+not a substitute for that operational exclusion.
+
+This remains private CLI/Operator server recovery. Web/API, hosted and stdio MCP,
+desktop, extensions and bots retain their existing availability, query-ID-bound
+GET and signed-receipt contracts. No client package/installer version, schema,
+database migration, payment, custody or schedule is added. Server source release
+does not claim client redistribution or original delivery; verify each applicable
+published identity and actual recovery independently.

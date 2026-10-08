@@ -6,7 +6,7 @@ import { continuationQualityFailureClosureSchema, continuationQualityFailureCont
   type ContinuationQualityFailureClosureBinding } from "./continuation-failed-quality-closure";
 
 export function syntheticQualityFailureClosure(home: string, binding: ContinuationQualityFailureClosureBinding) {
-  const files = new Map<string, Buffer>(), context = continuationQualityFailureContext(home),
+  const files = new Map<string, Buffer>(), context = continuationQualityFailureContext(home, binding.failureEpoch),
     retain = (file: string, value: unknown) => {
       const raw = typeof value === "string" ? Buffer.from(value) : Buffer.from(`${canonicalJson(value)}\n`);
       files.set(file, raw); return hash(raw);
@@ -44,8 +44,8 @@ export function syntheticQualityFailureClosure(home: string, binding: Continuati
     return { label, mode, authorizationSha256, ...lifetime(path.join(context, `d${String(index + 1).padStart(2, "0")}`), index === 5 ? 1 : 0,
       `original-cli-${mode}`, mode, authorizationSha256) };
   });
-  const { parentPreparedAuthorizationSha256: _parent3, approvedAt, ...tuple } = binding;
-  const proof = continuationQualityFailureClosureSchema.parse({ format: "keryx-original-continuation-quality-failure-closure-v1", readOnly: true,
+  const { parentPreparedAuthorizationSha256: _parent3, approvedAt, failureEpoch, ...tuple } = binding;
+  const proof = continuationQualityFailureClosureSchema.parse({ format: `keryx-original-continuation-quality-failure-closure-v${failureEpoch === 5 ? 2 : 1}`, readOnly: true,
     recordedAt: approvedAt, context, ...tuple, exportSha256: hash("Synthetic fully reviewed raw export"),
     exportReceiptSha256: hash("Synthetic export capture receipt"),
     guardian: lifetime(path.join(context, "g01"), 1, "same-original-completion-controller"), inner });
