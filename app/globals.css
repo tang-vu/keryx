@@ -255,11 +255,3 @@ input[type="range"]:focus-visible {
   }
 }
 
-/* Keep unbroken source IDs from widening payment rows on narrow screens. */
-@media (max-width: 40rem) {
-  main .font-mono {
-    min-width: 0;
-    max-width: 100%;
-    overflow-wrap: anywhere;
-  }
-}

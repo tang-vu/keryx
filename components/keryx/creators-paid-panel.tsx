@@ -107,7 +107,7 @@ export function CreatorsPaidPanel({
                 {i + 1}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-serif text-[15px] text-ink">
+                <p className="break-all font-serif text-[15px] text-ink sm:truncate sm:break-normal" title={p.sourceName} data-payment-identity>
                   {p.sourceName}
                 </p>
                 <p className="font-mono text-[11px] text-ink-3">

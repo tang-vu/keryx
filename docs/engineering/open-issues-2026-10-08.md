@@ -13,8 +13,9 @@ Issue218 now has ordinary exact-original metadata integration across saved runs,
 receipts, web, public API, remote MCP and manual CLI. Actual free original reads
 confirmed arXiv2005.11401v4 and DOI10.1038/s41586-021-03819-2 with reusable
 references. An initially failed arXiv identity read is retained separately;
-the native breadcrumb/status fix passed a new original read. Built web/SSE,
-export and deployed readbacks remain release gates. No full-paper/peer-review
+the native breadcrumb/status fix passed a new original read. Built ordinary SSE,
+saved reports and exact BibTeX/RIS and receipt downloads passed in isolated QA;
+the deployed readback remains a release gate. No full-paper/peer-review
 claim or paid service authority follows from these observations.
 
 Issue217 now has a bounded native current-feed resolver shared by public and
@@ -35,7 +36,13 @@ readbacks. The remaining model-dependent issues need a new finite enforceable
 allowance: the earlier MDN3-call grant and Operator continuation are consumed.
 No issue is closed solely from source inclusion, test count or health.
 
-The owner requested handling all open issues. The inventory contains 17 issues,
+The current inventory also includes issue245 (18 open issues total). Its 66-character
+payment identity, percentage, amount, explicit simulation status and receipt controls
+pass built saved-page checks at 320/390/1366 pixels. The existing actually settled
+production report still needs a read-only check after deployment; no new payment
+is needed for that acceptance. PR246's ancestry is retained with a scoped correction.
+
+The owner requested handling all open issues. The initial inventory contained 17 issues,
 with nine existing PRs already included in PR239's source ancestry. The later
 research presentation PR241 is also retained; the concurrent Operator PR240
 belongs to a separate active source window. This record
@@ -81,10 +88,10 @@ below retain their individual acceptance gates.
 | [232](https://github.com/tang-vu/keryx/issues/232) | New canonical-location grouping selects one useful delivery channel without merging payment identities or transferring relevance. | Coordinated release; actual useful chosen channel with access/reward outcome and independent settlement evidence where applicable. |
 | [231](https://github.com/tang-vu/keryx/issues/231) | Inherited PR235 observes HTML headings and retains bounded following context across languages, including duplicate TOC labels. | Deployed frozen NASA task delivering the three useful cited Spanish sentences. |
 | [230](https://github.com/tang-vu/keryx/issues/230) | Inherited PR235 retains observed preformatted rule continuations and exact quote/review spans. | Deployed frozen RFC note with all three requested answers; preserve conditions and standards status. |
-| [218](https://github.com/tang-vu/keryx/issues/218) | Inherited free lookup supplies explicit field provenance, ordered authors and reusable references; a staged exact-original parser validates metadata-only scope, page/version and bounded field observations. | Typed ordinary planning/original-body adapters and result/receipt routing remain absent. Captured/live actual French client acceptance is separate; neither lookup nor the inactive parser claims full-paper reading. |
-| [217](https://github.com/tang-vu/keryx/issues/217) | Inherited PR226 safely withholds unqualified newest-feed candidates; a staged explicit retained-set selector chooses a unique newest qualified native date independently of topical score. | Trusted complete adapters, retained native date provenance, coherent current-feed observation and useful newest-entry delivery remain required; the inactive primitive and Stage1 refusal alone are insufficient. |
+| [218](https://github.com/tang-vu/keryx/issues/218) | Exact-original ordinary metadata adapter and typed result/receipt routing are integrated; both frozen French tasks passed original GET/SSE/saved-report/export checks in isolated QA. | Coordinated release and deployed readback; metadata does not claim full-paper reading or peer review. |
+| [217](https://github.com/tang-vu/keryx/issues/217) | Complete native RSS/Atom snapshot, unique publication-date winner, exact catalog lookup and retained result diagnostics are integrated. | Useful original newest-entry delivery and deployed acceptance; broader temporal forms remain unsupported. |
 | [212](https://github.com/tang-vu/keryx/issues/212) | New ordinary evidence-only generation removes a discarded duplicate prose draft at the unchanged ceiling; inherited PR220 exposes proved output stops. | Actual bounded SQLite comparison/checklist and restoration qualifications. Fixture bytes are not a provider token or usefulness measurement. |
-| [211](https://github.com/tang-vu/keryx/issues/211) | Planner distinguishes requested prospective activities/format from historical NASA assertions; inherited HTML retrieval repairs remain. | Reviewed proposed activity/example/exit-question delivery and a complete useful lesson; ordinary sentence summaries do not yet supply that contract. |
+| [211](https://github.com/tang-vu/keryx/issues/211) | Separate reviewed proposals and final retained factual-dependency gates are integrated; the feature flag remains false. | Fresh bounded useful original lesson and QA-only opt-in; production activation requires accepted evidence. |
 | [210](https://github.com/tang-vu/keryx/issues/210) | Historical finite client batches are fully consumed and retained; later count-limited authorization was exercised. | A fresh enforceable general model/search envelope and applicable authorization before another ordinary-client trial. Missing invoices and expired allowances cannot be reset or relabeled. |
 | [202](https://github.com/tang-vu/keryx/issues/202) | Merged PR203/207 distinguish endpoint connectivity, ordinary admission and isolated Operator holds; observed live not-paused status exists. | Remaining held-mode ordinary UI/structured-error acceptance and retained-question checks in an admitted operational boundary. Useful answer quality is separate. |
 | [181](https://github.com/tang-vu/keryx/issues/181) | Merged PR185 preserves base passages and expands only chosen quote neighborhoods; compact review stays within its original cap. | Decision brief remains disabled; real review/JSON behavior and its independently graded usefulness gate remain unverified. |

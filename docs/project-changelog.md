@@ -2,8 +2,8 @@
 
 ### Product Hunt launch and dormant model support (2026-10-08, v0.27.42 candidate)
 
-- Add the owner's official Product Hunt launch badge to the homepage, after the
-  research controls. Preserve the compact mobile introduction and primary action.
+- Add the owner's official Product Hunt launch badge to the homepage immediately
+  below Ask. Preserve the compact mobile introduction and primary action.
 - Integrate the separately reviewed Cloudflare GPT-OSS support with its flag
   still false. Direct vendor usefulness and multilingual quote review remain
   activation gates; no model, payment or schedule allowance is added.
@@ -21,6 +21,12 @@
   dependencies. The teaching flag stays disabled pending actual bounded lesson
   acceptance. Proposals do not enter attribution, coverage or reward allocation.
 - Keep payment reports within narrow screen grids even for long source identifiers.
+- Wrap plain long original URLs within answer prose without changing their bytes.
+  Built saved-page checks pass at 320, 390 and 1366 pixels, including the original
+  French metadata exports and an explicitly simulated long-identity payment row.
+- Prepare one verified empty SQLite schema for isolated signer fixtures, then run
+  actual initialization on each separate copy. This removes repeated cold DDL from
+  signing deadlines while preserving WAL/FULL and all original security assertions.
 
 ### Repair document selection and bounded research output (2026-10-08, v0.27.41 candidate)
 
