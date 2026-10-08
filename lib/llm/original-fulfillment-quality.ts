@@ -16,18 +16,19 @@ export const ORIGINAL_FULFILLMENT_GENERATION_GUIDANCE =
   "target 1 every stage: deposit, paid request, 402 details, EIP-3009 signature, signed retry, verification/delivery, batch settlement/credit; " +
   "target 2 contractSigner/sourceSigner, EOA fallback, request-time Nitro validation, recent-block isValidSignature, 2-of-3 RPC quorum, attestation and Wallet burn, different ERC-3009 rail; " +
   "target 3 EVM-only/read-only, five-minute block/revocation timing, RPC trust limits, audited enclave/key protection, independently verifiable attestations and signing security; " +
-  "target 4 Arc mainnet chain/currency/explorer, Gateway domain/mainnet-versus-testnet labels and documented allowlists/spending limits. " +
+  "target 4 the Arc network table's chain/currency/explorer, Gateway domain/mainnet-versus-testnet labels and documented policy examples. " +
   "Use 29 complementary rows, counts by target [1,7,9,9,3]; keep each statement <=240 characters and the draft answer <=200 words. " +
-  "For the contract-policy example, say the documentation lists contracts enforcing allowlists and spending limits before approval; do not assert a deployed policy or configured values. " +
+  "For the Arc network-table row, say what that table lists; do not add mainnet, deployment readiness or verified status that its quote does not state. The separate Gateway row carries the mainnet/testnet labels. " +
+  "For the contract-policy example, explicitly say common ERC-1271 examples include contracts enforcing allowlists and spending limits before approval; do not assert a deployed policy or configured values. " +
   "Do not substitute a related sentence for an omitted step or qualification. Keep undocumented Arc addresses, deployment status and authorization values as explicit gaps. " +
   "The application derives clearly labeled proposed acceptance checks from admitted factual premises; do not claim tests were executed. " +
   "Use citedMarkers only for inline markers with evidence. Record genuine source disagreements in conflicts, otherwise [].";
 
 const originalQuestion = "Can a citation-toll research business use Circle Gateway Nanopayments with ERC-1271 contract wallets on Arc mainnet? Explain the supported payment flow, current limitations, and concrete acceptance checks using primary documentation.";
 
-type Requirement = { id: string; target: number; marker: string; quote: RegExp[]; statement: RegExp[] };
-const r = (id: string, target: number, marker: string, quote: RegExp[], statement = quote): Requirement =>
-  ({ id, target, marker, quote, statement });
+type Requirement = { id: string; target: number; marker: string; quote: RegExp[]; statement: RegExp[]; reject: RegExp[] };
+const r = (id: string, target: number, marker: string, quote: RegExp[], statement = quote, reject: RegExp[] = []): Requirement =>
+  ({ id, target, marker, quote, statement, reject });
 
 /** Predicates name the requested meanings, not a minimum count. A row must carry
  * both an admitted quote establishing the meaning and a reviewed sentence that
@@ -59,15 +60,50 @@ const requirements: Requirement[] = [
   r("audited-image", 3, "S1", [/Only the audited enclave image can access the key/i], [/only/i, /audited/i, /enclave image/i, /key/i]),
   r("independent-attestation", 3, "S1", [/attestations can be independently verified/i], [/attestation/i, /independent/i, /verif/i]),
   r("signing-security", 3, "S1", [/insecure ERC-1271 implementations/i, /balances drained/i], [/insecure/i, /ERC-1271/i, /balance/i, /drain/i]),
-  r("arc-profile", 4, "S3", [/Chain ID.*5042/, /Currency.*USDC/, /Explorer.*explorer\.arc\.io/], [/5042/, /USDC/, /explorer\.arc\.io/]),
+  r("arc-profile", 4, "S3", [/Chain ID.*5042/, /Currency.*USDC/, /Explorer.*explorer\.arc\.io/], [/5042/, /USDC/, /explorer\.arc\.io/], [/\b(?:mainnet|deployed|deployment|ready|readiness|verified)\b/i]),
   r("gateway-mainnet-profile", 4, "S4", [/Arc.*26.*`arc`.*`arcTestnet`/], [/Arc/i, /26/, /\barc\b/, /arcTestnet/, /testnet/i]),
-  r("bounded-contract-policy", 4, "S1", [/Contracts that enforce allowlists, spending limits/i, /before approving an action/i], [/contract/i, /allowlist/i, /spend(?:ing)? limit/i, /before|prior/i, /approv|authoriz/i]),
+  r("bounded-contract-policy", 4, "S1", [/Contracts that enforce allowlists, spending limits/i, /before approving an action/i], [/example/i, /contract/i, /allowlist/i, /spend(?:ing)? limit/i, /before|prior/i, /approv|authoriz/i], [/\b(?:deployed|configured)\b/i]),
 ];
+
+/** Fixed factual contributions of the existing slots, never model-authored scope.
+ * These questions do not certify full target coverage or executed acceptance. */
+const premiseQuestions: Record<string, string> = {
+  "nanopayments-eoa-only": "Which signer type do Nanopayments and x402 batch settlement require, and do they support ERC-1271?",
+  deposit: "How does the buyer deposit USDC into Gateway before Nanopayments?",
+  "paid-request": "What paid resource request does the buyer send?",
+  "payment-required": "What status and payment information does the seller return?",
+  "buyer-signature": "What payment authorization does the buyer sign, and where and at what gas cost?",
+  "signed-retry": "How does the buyer retry with the signed authorization?",
+  "immediate-delivery": "What does the seller verify and when does it serve the resource?",
+  "batch-settlement": "How does Gateway batch authorizations and credit the seller?",
+  "contract-request": "Which endpoint, flag and signature submit a contract-wallet burn intent?",
+  "contract-source-signer": "Who is sourceSigner and which logic produces the contract signature?",
+  "eoa-fallback": "How is a signature validated when contractSigner is omitted or false?",
+  "request-time-enclave": "Which service validates the signature and when?",
+  "contract-simulation": "What do independent RPCs and isValidSignature simulation validate, against which block?",
+  "quorum-attestation": "Which RPC quorum validates the signature and what attestation follows?",
+  "attestation-burn": "When an attestation is used, whose signature performs the Gateway burn?",
+  "wallet-burn": "Which signature does the Gateway Wallet recognize to complete the burn?",
+  "different-nanopayment-rail": "Which different validation path batches Nanopayment burn intents?",
+  "evm-only": "Which blockchains support ERC-1271 validation?",
+  "read-only": "Does offchain isValidSignature validation support authorization that changes onchain state?",
+  "block-age": "How old can blocks used to validate signatures be?",
+  "revocation-delay": "How long can key rotation or revocation take to apply?",
+  "rpc-trust": "What does RPC quorum mitigate and which correctness or security guarantees remain absent?",
+  "enclave-key": "How does AWS KMS protect the enclave signing key?",
+  "audited-image": "Which enclave image can access the key?",
+  "independent-attestation": "Can enclave attestations be independently verified?",
+  "signing-security": "What balance risk remains with insecure ERC-1271 implementations?",
+  "arc-profile": "What chain ID, currency and explorer does the Arc network-details table list?",
+  "gateway-mainnet-profile": "What domain and mainnet/testnet API names does Gateway list for Arc?",
+  "bounded-contract-policy": "Which authorization-policy contracts are listed as common ERC-1271 examples before approving an action?",
+};
 
 /** Selection reuses the exact same quote predicates as final semantic acceptance.
  * This supplies no source authority; callers must pass already admitted options. */
 export function originalFulfillmentQuoteRequirements() {
   return requirements.map(requirement => ({ id: requirement.id, claimIndex: requirement.target, marker: requirement.marker,
+    premiseQuestion: premiseQuestions[requirement.id],
     matchesQuote: (quote: string) => requirement.quote.every(pattern => pattern.test(quote)) }));
 }
 
@@ -80,7 +116,8 @@ export function assertOriginalFulfillmentQuality(input: { question: string; targ
   const missing = requirements.filter(requirement => !input.statements.some(statement =>
     statement.claimIndex === requirement.target && statement.marker === requirement.marker &&
     requirement.quote.every(pattern => pattern.test(statement.quote)) &&
-    requirement.statement.every(pattern => pattern.test(statement.text))));
+    requirement.statement.every(pattern => pattern.test(statement.text)) &&
+    !requirement.reject.some(pattern => pattern.test(statement.text))));
   if (missing.length) throw new Error(`Original fulfillment quality missing required parts: ${missing.map(item => item.id).join(", ")}`);
 }
 

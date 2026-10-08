@@ -10,7 +10,7 @@ import type { KeryxDB } from "../lib/db/keryx-db.ts";
 const usage = `Private additive continuation of the same already-paid retained original
   preflight --authorization <protected-file> --sha256 <reviewed-digest>
   execute --authorization <protected-file> --sha256 <reviewed-digest>
-  activate-epoch --authorization <separate-v2-v3-v4-or-v5-file> --sha256 <reviewed-digest>
+  activate-epoch --authorization <separate-v2-v3-v4-v5-or-v6-file> --sha256 <reviewed-digest>
   verify-prepared
   complete-prepared --prepared-sha256 <exact-reviewed-result-digest>
 

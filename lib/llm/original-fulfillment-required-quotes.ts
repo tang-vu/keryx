@@ -4,6 +4,7 @@ import { assertOriginalFulfillmentQuality, originalFulfillmentQuoteRequirements 
 
 export interface OriginalRequiredQuote extends QuoteOption {
   readonly requirementId: string;
+  readonly premiseQuestion: string;
   readonly claimIndex: number;
 }
 
@@ -21,7 +22,8 @@ export function originalFulfillmentRequiredQuotes(options: readonly QuoteOption[
     if (candidates.length !== 1 || selected.has(candidates[0].quoteId))
       throw new Error(`Original fulfillment required quote unavailable or ambiguous: ${requirement.id}`);
     const option = candidates[0]; selected.add(option.quoteId);
-    return { ...option, claimIndex: requirement.claimIndex, requirementId: requirement.id };
+    if (!requirement.premiseQuestion?.trim()) throw new Error("Original fulfillment missing premise question");
+    return { ...option, claimIndex: requirement.claimIndex, requirementId: requirement.id, premiseQuestion: requirement.premiseQuestion };
   });
 }
 

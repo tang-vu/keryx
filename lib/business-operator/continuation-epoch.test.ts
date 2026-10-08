@@ -132,6 +132,13 @@ async function preparedFixture() {
 }
 
 describe("irreversible separate continuation epoch authority", () => {
+  it("refuses unsupported future namespaces before publishing any activation intent", async () => {
+    const f = fixture(), base = path.dirname(f.paths.epochDirectory);
+    f.directories.add(base); f.directories.add(path.join(base, "keryx-business-canary-continuation-epoch-7-authority"));
+    expect(() => readLatestEpochAnchor(f.home, f.io)).toThrow("uncertain");
+    await expect(activateEpochAnchor(f.home, f.binding, f.io, f.activation)).rejects.toThrow("uncertain");
+    expect(f.io.exists(f.paths.intentFile)).toBe(false); expect(f.events).toEqual([]);
+  });
   it("activates only after fresh proof and external intent, preserving every parent byte", async () => {
     const f = fixture(), original = new Map([...f.files].map(([file, raw]) => [file, Buffer.from(raw)]));
     expect(readActiveEpochAnchor(f.home, f.io)).toBeNull();
@@ -378,6 +385,6 @@ describe("fixed remaining-five successor profile", () => {
     await expect(activateEpochAnchor(f.home, { ...f.binding3, expiresAt: "2026-10-08T15:20:44.001Z" }, f.io, f.activation3)).rejects.toThrow();
     await expect(activateEpochAnchor(f.home, { ...f.binding3, parentAnchorFrontierSha256: h("f") } as ContinuationEpochBinding, f.io, f.activation3)).rejects.toThrow("uncertain");
     expect(f.io.exists(f.paths3.intentFile)).toBe(false);
-    expect(() => fixedPaths(f.home, 6 as 2)).toThrow("uncertain");
+    expect(() => fixedPaths(f.home, 7 as 2)).toThrow("uncertain");
   });
 });

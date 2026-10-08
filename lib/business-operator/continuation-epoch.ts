@@ -6,6 +6,7 @@ import { fulfillmentSha256 as hash } from "../a2a/fulfillment-authority";
 import { continuationSupplementEpochAuthorizationFields } from "./continuation-supplement-epoch";
 import { continuationPreparedEpochAuthorizationFields } from "./continuation-prepared-epoch";
 import { continuationFailedQualityEpochAuthorizationFields, continuationOwnerRepairReceiptSchema } from "./continuation-failed-quality-epoch";
+import { continuationPremiseScopeEpochAuthorizationFields } from "./continuation-premise-scope-epoch";
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const timestamp = z.string().datetime().refine(value => Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value);
@@ -35,16 +36,17 @@ const bindingCommonFields = {
 const bindingSchema = z.union([z.object({ ...continuationEpochAuthorizationFields, ...bindingCommonFields }).strict(),
   z.object({ ...continuationSupplementEpochAuthorizationFields, ...bindingCommonFields }).strict(),
   z.object({ ...continuationPreparedEpochAuthorizationFields, ...bindingCommonFields }).strict(),
-  z.object({ ...continuationFailedQualityEpochAuthorizationFields, ...bindingCommonFields }).strict()]).refine(value =>
+  z.object({ ...continuationFailedQualityEpochAuthorizationFields, ...bindingCommonFields }).strict(),
+  z.object({ ...continuationPremiseScopeEpochAuthorizationFields, ...bindingCommonFields }).strict()]).refine(value =>
   Date.parse(value.ownerAuthorizationReceivedAt) <= Date.parse(value.approvedAt) &&
   Date.parse(value.approvedAt) < Date.parse(value.expiresAt) &&
   Date.parse(value.expiresAt) - Date.parse(value.ownerAuthorizationReceivedAt) <= value.maximumDurationMs);
 export type ContinuationEpochBinding = z.infer<typeof bindingSchema>;
 
-export function fixedPaths(home: string, epoch: 2 | 3 | 4 | 5 = 2) {
+export function fixedPaths(home: string, epoch: 2 | 3 | 4 | 5 | 6 = 2) {
   if (!path.isAbsolute(home) || path.resolve(home) !== home) refuse();
   const base = path.join(home, ".local", "share");
-  if (epoch !== 2 && epoch !== 3 && epoch !== 4 && epoch !== 5) refuse();
+  if (epoch !== 2 && epoch !== 3 && epoch !== 4 && epoch !== 5 && epoch !== 6) refuse();
   const anchorDirectory = path.join(base, epoch === 2 ? "keryx-business-canary-continuation-epoch-authority" : `keryx-business-canary-continuation-epoch-${epoch}-authority`);
   return { home, epoch, parentDirectory: path.join(base, epoch === 2 ? "keryx-business-canary-continuation" : `keryx-business-canary-continuation-epoch-${epoch - 1}`),
     epochDirectory: path.join(base, `keryx-business-canary-continuation-epoch-${epoch}`), anchorDirectory,
@@ -74,14 +76,14 @@ export interface ContinuationEpochIO {
   releaseRecordExact(file: string, sha256: string): void;
 }
 const intentSchema = z.object({ format: z.literal("keryx-original-continuation-epoch-intent-v1"),
-  epoch: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]), binding: bindingSchema, activationId: digest, requestedAt: timestamp }).strict();
+  epoch: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]), binding: bindingSchema, activationId: digest, requestedAt: timestamp }).strict();
 const activeSchema = z.object({ format: z.literal("keryx-original-continuation-epoch-active-v1"),
-  epoch: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]), intentSha256: digest, authorizationFile: nonempty, authorizationSha256: digest,
+  epoch: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]), intentSha256: digest, authorizationFile: nonempty, authorizationSha256: digest,
   directory: nonempty, activatedAt: timestamp }).strict();
 const retainedGrantSchema = z.object({ format: z.literal("keryx-original-continuation-retained-authorization-v1"),
   authorizationFile: nonempty, authorizationSha256: digest }).strict();
 const frontierSchema = z.object({ format: z.literal("keryx-original-continuation-epoch-frontier-v1"),
-  epoch: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]), intentSha256: digest, authorizationSha256: digest, directory: nonempty,
+  epoch: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]), intentSha256: digest, authorizationSha256: digest, directory: nonempty,
   ledgerHeadSha256: digest, updatedAt: timestamp }).strict();
 const recordBytes = (value: unknown) => Buffer.from(`${canonicalJson(value)}\n`);
 const object = (bytes: Buffer): Record<string, unknown> => {
@@ -111,8 +113,9 @@ function assertSources(paths: ContinuationEpochPaths, binding: ContinuationEpoch
   const expectedFormat = `keryx-original-continuation-authorization-v${paths.epoch}`;
   if (binding.format !== expectedFormat) refuse();
   if (binding.format === "keryx-original-continuation-authorization-v3" || binding.format === "keryx-original-continuation-authorization-v4" ||
-    binding.format === "keryx-original-continuation-authorization-v5") {
-    const previousEpoch = binding.format === "keryx-original-continuation-authorization-v5" ? 4 :
+    binding.format === "keryx-original-continuation-authorization-v5" || binding.format === "keryx-original-continuation-authorization-v6") {
+    const previousEpoch = binding.format === "keryx-original-continuation-authorization-v6" ? 5 :
+      binding.format === "keryx-original-continuation-authorization-v5" ? 4 :
       binding.format === "keryx-original-continuation-authorization-v4" ? 3 : 2;
     const previousPaths = fixedPaths(paths.home, previousEpoch);
     outside(binding.authorizationFile, [previousPaths.parentDirectory, previousPaths.anchorDirectory]);
@@ -145,20 +148,25 @@ function assertSources(paths: ContinuationEpochPaths, binding: ContinuationEpoch
         hash(io.read(binding.rootQualityRejectionFile, 65_536)) !== binding.rootQualityRejectionSha256 ||
         hash(io.read(binding.independentQualityRejectionFile, 65_536)) !== binding.independentQualityRejectionSha256) refuse();
     }
-    if (binding.format === "keryx-original-continuation-authorization-v5") {
-      const allDirectories = [2, 3, 4, 5].flatMap(epoch => {
-        const value = fixedPaths(paths.home, epoch as 2 | 3 | 4 | 5);
+    if (binding.format === "keryx-original-continuation-authorization-v5" || binding.format === "keryx-original-continuation-authorization-v6") {
+      const sourceRepair = binding.format === "keryx-original-continuation-authorization-v6";
+      const allDirectories = (sourceRepair ? [2, 3, 4, 5, 6] as const : [2, 3, 4, 5] as const).flatMap(epoch => {
+        const value = fixedPaths(paths.home, epoch);
         return [value.parentDirectory, value.epochDirectory, value.anchorDirectory];
       });
       for (const file of [binding.authorizationFile, binding.parentAuthorizationFile, binding.supplementaryInputFile,
         binding.ownerAuthorizationFile, binding.parentFailureClosureFile]) outside(file, allDirectories);
       const receiptRaw = io.read(binding.ownerAuthorizationFile, 65_536), receipt = continuationOwnerRepairReceiptSchema.parse(object(receiptRaw));
-      if (parent.binding.format !== "keryx-original-continuation-authorization-v4" ||
+      if (parent.binding.format !== (sourceRepair ? "keryx-original-continuation-authorization-v5" : "keryx-original-continuation-authorization-v4") ||
+        (parent.binding.format !== "keryx-original-continuation-authorization-v4" && parent.binding.format !== "keryx-original-continuation-authorization-v5") ||
         parent.binding.supplementaryInputFile !== binding.supplementaryInputFile ||
         parent.binding.supplementaryInputSha256 !== binding.supplementaryInputSha256 || parent.binding.contextSha256 !== binding.contextSha256 ||
-        binding.ownerAuthorizationSha256 === parent.binding.ownerAuthorizationSha256 ||
+        (sourceRepair ? parent.binding.format !== "keryx-original-continuation-authorization-v5" ||
+          binding.ownerAuthorizationFile !== parent.binding.ownerAuthorizationFile ||
+          binding.executorCommit === parent.binding.executorCommit : binding.ownerAuthorizationSha256 === parent.binding.ownerAuthorizationSha256) ||
         hash(receiptRaw) !== binding.ownerAuthorizationSha256 || receipt.recordedAt !== binding.ownerAuthorizationReceivedAt ||
-        receipt.expiresAt !== binding.expiresAt || receipt.parentAuthorizationSha256 !== binding.parentAuthorizationSha256 ||
+        receipt.expiresAt !== binding.expiresAt || receipt.parentAuthorizationSha256 !==
+          (sourceRepair ? parent.binding.parentAuthorizationSha256 : binding.parentAuthorizationSha256) ||
         receipt.originalAuthorizationSha256 !== binding.originalAuthorizationSha256 || receipt.nativeClaimSha256 !== binding.nativeClaimSha256 ||
         receipt.packetSha256 !== binding.packetSha256 || receipt.inputSemanticSha256 !== binding.inputSemanticSha256 ||
         receipt.contextSha256 !== binding.contextSha256) refuse();
@@ -202,7 +210,7 @@ function readFrontier(paths: ContinuationEpochPaths, io: ContinuationEpochIO) {
 
 /** Null means no epoch was ever activated or left uncertain. A partial/missing
  * new journal after any anchor, or an activation lock, always refuses fallback. */
-export function readActiveEpochAnchor(home: string, io: ContinuationEpochIO, epoch: 2 | 3 | 4 | 5 = 2) {
+export function readActiveEpochAnchor(home: string, io: ContinuationEpochIO, epoch: 2 | 3 | 4 | 5 | 6 = 2) {
   const paths = fixedPaths(home, epoch);
   if (pending(paths, io)) refuse();
   const intentExists = io.exists(paths.intentFile), activeExists = io.exists(paths.activeFile);
@@ -230,10 +238,19 @@ export function readActiveEpochAnchor(home: string, io: ContinuationEpochIO, epo
     frontierSha256: current.sha256, ledgerHeadSha256: current.frontier.ledgerHeadSha256 };
 }
 
-/** Probe the only supported successor first. Any pending or orphan successor
+/** Future or malformed namespaces are uncertainty, never permission to fall back. */
+function assertSupportedEpochNamespaces(home: string, io: ContinuationEpochIO) {
+  const base = path.dirname(fixedPaths(home).epochDirectory);
+  if (io.exists(base) && io.list(base).some(name => name.startsWith("keryx-business-canary-continuation-epoch-") &&
+    name !== "keryx-business-canary-continuation-epoch-authority" &&
+    !/^keryx-business-canary-continuation-epoch-[2-6](?:-authority)?$/.test(name))) refuse();
+}
+/** Probe the latest supported successor first. Any pending or orphan successor
  * refuses globally; a validated predecessor is never used as supplier fallback. */
 export function readLatestEpochAnchor(home: string, io: ContinuationEpochIO) {
-  return readActiveEpochAnchor(home, io, 5) ?? readActiveEpochAnchor(home, io, 4) ?? readActiveEpochAnchor(home, io, 3) ?? readActiveEpochAnchor(home, io, 2);
+  assertSupportedEpochNamespaces(home, io);
+  return readActiveEpochAnchor(home, io, 6) ?? readActiveEpochAnchor(home, io, 5) ?? readActiveEpochAnchor(home, io, 4) ??
+    readActiveEpochAnchor(home, io, 3) ?? readActiveEpochAnchor(home, io, 2);
 }
 
 export interface ContinuationEpochActivation {
@@ -249,10 +266,12 @@ export interface ContinuationEpochActivation {
  * its external lock/intent; there is no recovery by age, PID or reusing a grant. */
 export async function activateEpochAnchor(home: string, value: ContinuationEpochBinding, io: ContinuationEpochIO,
   activation: ContinuationEpochActivation) {
-  const binding = bindingSchema.parse(value), epoch = binding.format === "keryx-original-continuation-authorization-v5" ? 5 :
+  const binding = bindingSchema.parse(value), epoch = binding.format === "keryx-original-continuation-authorization-v6" ? 6 :
+    binding.format === "keryx-original-continuation-authorization-v5" ? 5 :
     binding.format === "keryx-original-continuation-authorization-v4" ? 4 :
     binding.format === "keryx-original-continuation-authorization-v3" ? 3 : 2;
   const paths = fixedPaths(home, epoch);
+  assertSupportedEpochNamespaces(home, io);
   assertEmpty(paths, io);
   assertFreshWindow(binding);
   assertSources(paths, binding, io);

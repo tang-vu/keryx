@@ -38,6 +38,20 @@ describe("private complete original answer contract", () => {
     expect(() => assertOriginalFulfillmentQuality({ ...complete(), question: "Explain another payment rail." })).toThrow(/scope mismatch/);
     expect(() => assertOriginalFulfillmentQuality({ ...complete(), targets: qualityTargets.slice(0, 4) })).toThrow(/scope mismatch/);
   });
+  it("refuses mainnet or readiness assertions added to the network table", () => {
+    for (const text of ["Arc mainnet uses chain 5042, USDC and explorer.arc.io.",
+      "The deployed Arc network uses chain 5042, USDC and explorer.arc.io."]) {
+      const input = complete(); input.statements.find(row => row.marker === "S3")!.text = text;
+      expect(() => assertOriginalFulfillmentQuality(input)).toThrow(/arc-profile/);
+    }
+  });
+  it("retains policy examples without certifying an actual configured policy", () => {
+    const input = complete(), row = input.statements.find(row => row.claimIndex === 4 && row.marker === "S1")!;
+    row.text = "The configured contract enforces allowlists and spending limits before approving an action.";
+    expect(() => assertOriginalFulfillmentQuality(input)).toThrow(/bounded-contract-policy/);
+    row.text = "Examples prove the deployed contract enforces allowlists and spending limits before approving an action.";
+    expect(() => assertOriginalFulfillmentQuality(input)).toThrow(/bounded-contract-policy/);
+  });
   it("replaces the two-option shortcut with a bounded full-detail contract", () => {
     expect(ORIGINAL_FULFILLMENT_GENERATION_GUIDANCE).toContain("every stage");
     expect(ORIGINAL_FULFILLMENT_GENERATION_GUIDANCE).toContain("29 complementary rows");
