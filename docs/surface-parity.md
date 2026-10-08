@@ -1,5 +1,15 @@
 # Supported-surface release parity
 
+## Issue-resolution source candidate - October 8, 2026
+
+[App0.27.38](engineering/open-issues-2026-10-08.md) retains the reading stack
+and adds enumerated context, one canonical document channel, evidence-only
+ordinary generation and explicit metadata cards/exports. Hosted MCP0.3.6 and
+stdio0.4.10 are source candidates; desktop0.4.10 retains its existing reduced
+role. Current main/production remain ab2195d6 by the owner's active-Operator
+instruction. Final source/release/distribution and useful live acceptance remain
+separate gates; no publication or synchronized installed-client claim is made.
+
 ## Coordinated reading release candidate — October 8, 2026
 
 App0.27.36 integrates the reading/client stack with current main. Hosted MCP0.3.5,

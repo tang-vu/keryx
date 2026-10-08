@@ -1,5 +1,21 @@
 # Keryx Project Changelog
 
+### Repair document selection and bounded research output (2026-10-08, v0.27.38 candidate)
+
+- Retain nearby short enumerated rules and defaults at exact source offsets.
+- Choose one useful public or registered channel per canonical document, with
+  separate authoritative access and evidence-qualified creator reward identities.
+- Generate quote-bound evidence without duplicating a discarded ordinary prose
+  draft, using the existing output ceiling and independent review.
+- Keep proposed classroom activities/format distinct from historical NASA claims.
+- Supply explicit bibliographic field provenance, ordered authors and reusable
+  references in the free metadata lookup, with optional English/French/Vietnamese labels.
+
+The complete preceding reading/client stack remains included. Production and main
+stay pinned while the other Operator session runs. Useful live answers, original
+admission, CI/review, package/installer delivery and deployment are pending.
+See [all 17 issue dispositions and release gates](engineering/open-issues-2026-10-08.md).
+
 ### Explain refused source choices in the decision log (2026-10-08, v0.27.37 candidate)
 
 Source-selection diagnostics retain their explanation and inspectable counts.

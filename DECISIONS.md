@@ -6125,3 +6125,36 @@ decision briefs keep their distinct disabled acceptance boundary. Prospective
 teaching proposals are planning constraints, while claims that NASA actually
 tested an activity remain factual targets. This adds no reviewed proposal delivery
 or experimental claim. See [behavior and residual gates](docs/engineering/evidence-only-synthesis-2026-10-08.md).
+
+## Group document channels without merging payment authority - 2026-10-08
+
+The registered/public alias reproduction consumed both Quick attention slots and
+paid a second channel that supplied no final evidence. Treat conservative canonical
+locations as alternatives for attention and predicted coverage, retaining each
+channel's targets, expected value, item/version, price and source identity. Prefer
+public delivery only on an equivalent useful route; do not transfer registered
+relevance or reward rights to a URL. Refuse already gathered locations in initial,
+redirect and Deep reads. The grouping cannot prove identical bytes, revisions,
+ownership or independent corroboration. See [scope and gates](docs/issue-232-document-aliases.md).
+
+## Preserve the active original while preparing issue repairs - 2026-10-08
+
+The owner confirmed the separate Operator session still runs and explicitly asked
+to preserve production. Keep production and main pinned to its admitted ab2195d6
+source window. Prepare source, synthetic verification and PR/CI independently;
+defer main advance, deployment, supplier work and financial rebinding until a
+positively closed or parked admitted boundary. The new aggregate preserves the
+entire pending reading stack and records every issue's actual remaining gate in
+[the resolution inventory](docs/engineering/open-issues-2026-10-08.md).
+
+## Deliver bibliography through metadata roles with explicit field limits - 2026-10-08
+
+Exact DOI/arXiv metadata tasks currently fail when ordinary research requires a
+publisher-body excerpt. Improve the existing free lookup into a field-scoped
+card with exact provider identity, recorded observation, known field paths,
+complete-list author-order claims and escaped reusable references. Withhold
+truncated values, absent publication dates and unknown page-specific status.
+Optional language labels are local formatting; they grant no provider, research,
+payment or custody authority. Preserve HTTP JSON v1 and the separate ordinary
+evidence boundary. Actual metadata research routing and live usefulness remain
+open in [the metadata handoff record](docs/issue-218-metadata.md).

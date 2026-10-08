@@ -28,6 +28,8 @@ does not permit a quote assembled across an omitted source block.
 
 The regression fixture contains the full 8,026-character frozen extracted body,
 the actual question and all four actual targets from the owner-operated MCP run.
+Its MDN-derived text retains Mozilla Contributors attribution and CC BY-SA 2.5
+in [the fixture notice](../lib/llm/fixtures/README.md).
 Its raw SHA256/content version is
 `ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e`;
 its NFKC/whitespace-normalized body hash is
