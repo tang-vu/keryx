@@ -109,10 +109,14 @@ the owner's former co-authors and labmates through one-to-one asks, then univers
 research groups in Vietnam; public graduate-research forums are the wider circle.
 Each session runs the participant's own question live, leaves them the report and
 BibTeX, and asks three things: whether the evidence helped, what was missing, and
-what they still had to check by hand. This remains a hypothesis with no recorded
-independent user. The owner reported that first-time wallet funding is the main
-obstacle and that the [Arc card on-ramp](./arc-card-onramp.md) is hindered by Circle's
-business-verification requirement; neither is resolved.
+what they still had to check by hand. Four outside users are recorded in the
+[submission pack](./tameion-submission.md); repeat demand in this segment is still
+unproven. The owner reported that first-time wallet funding is the main obstacle.
+On October 8 event staff clarified that the [Arc on-ramp](./arc-card-onramp.md)
+needs business verification only for card and wallet-pay methods: bank transfer
+works without it, in select US states and EU countries. Current mainnet users are
+outside those regions, so sponsored credit and cross-chain deposit remain their
+path; see [issue 256](https://github.com/tang-vu/keryx/issues/256).
 
 Event mentor guidance on October 7: use by a real participant on testnet counts as
 traction and mainnet counts more; sponsored credits that keep the wallet out of the
