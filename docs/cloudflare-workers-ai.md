@@ -1,5 +1,58 @@
 # Experimental Cloudflare Workers AI provider
 
+## GPT-OSS 120B dormant support (October 8, 2026, v0.27.42 candidate)
+
+The owner requested one additional experimental model, `@cf/openai/gpt-oss-120b`.
+Its new public ID is `cloudflare-gpt-oss-120b` (OpenAI surface:
+`keryx:cloudflare-gpt-oss-120b`). The retired bare `gpt-oss-120b` ID retains its
+existing DeepSeek mapping, so saved clients do not silently change processors.
+Enable the existing Cloudflare provider and separately set
+`KERYX_CLOUDFLARE_GPT_OSS_ENABLED=true` after direct vendor acceptance. Missing or
+nonliteral flags and credentials keep the new choice out of both model APIs and
+runtime selection. DeepSeek remains the default, MiMo its existing alternate,
+and Llama the automatic Cloudflare tier. GPT-OSS requires an explicit choice.
+
+The [official model page](https://developers.cloudflare.com/workers-ai/models/gpt-oss-120b/)
+documents 128,000 tokens and a gross tariff of $0.35/M input and $0.75/M output.
+Keryx conservatively bounds actual UTF-8 prompt bytes plus requested output at
+120,000, with the existing 8,192-token output ceiling, and requests low reasoning
+effort. Llama retains its 23,000-unit ceiling. Neither model truncates evidence
+to fit. The new immutable price capture is dated October 8; historical Llama and
+DeepSeek captures remain unchanged. Free quota, cached billing and invoices are
+not measured by a capture; this is a gross estimate, not billed cost.
+
+The shared [JSON Mode page](https://developers.cloudflare.com/workers-ai/features/json-mode/)
+does not explicitly list GPT-OSS despite `response_format` on its model schema.
+Direct English/Vietnamese JSON, decision, quote-review and usage acceptance is
+therefore an activation gate, not inferred from catalog support. This release
+integrates dormant support with the flag still false; it does not qualify or
+enable a live GPT-OSS service. The existing harness's Vietnamese section checks
+planning/selection/sufficiency, while synthesis and quote review are English.
+A successful run alone cannot establish Vietnamese final delivery or the new
+ordinary evidence-only presentation path. The synthetic harness
+accepts `npm run eval:cloudflare -- --model cloudflare-gpt-oss-120b`, uses no source
+payments or database writes, makes at most six direct calls without fallback, and
+saves separate ignored GPT-OSS evidence. Invocation requires a current finite
+supplier allowance; old closed smoke/trial authority cannot be reused.
+
+The ordinary scheduled `check-llm` excludes this manual experimental choice.
+An explicitly invoked `npm run check-llm -- --include-experimental` may include
+it under its own applicable allowance. No new schedule or automatic retry is added.
+Buyer-approved private jobs and finite Operator canaries retain their pinned
+providers/models and do not admit this choice. Rich decision briefs are not
+enabled for GPT-OSS. The existing picker now says **DeepSeek Flash**, because
+the accepted `deepseek-v4-flash` wire alias currently serves V4.1 Flash according
+to [DeepSeek](https://api-docs.deepseek.com/en/). Wire names and active local/hosted
+environment files remain preserved during the original Operator source window.
+
+Shared web, embed, public API/OpenAI, remote MCP, A2A and bots inherit the hosted
+catalog/engine. The local ask CLI supports the new explicit ID when configured.
+Stdio/buyer MCP, buyer CLI, desktop/Operator and extensions retain their existing
+hosted-client/task/payment roles; their package bytes and contracts are unchanged.
+No client installer/package publication is required for identical artifacts.
+Final CI/review, direct acceptance, coordinated original-safe merge/deploy,
+environment enablement and `/api/models` plus `/api/health` readbacks remain gates.
+
 Keryx can use Cloudflare-hosted Llama 3.3 70B FP8 fast as an optional third public reasoning
 provider. DeepSeek remains the default. A healthy DeepSeek response does not send a request
 to Cloudflare. The shared model picker also offers `cloudflare-llama-3.3` when enabled and

@@ -24,6 +24,21 @@ against that window. A future admitted boundary must be positively confirmed.
 
 ## Issue-by-issue disposition
 
+### Release boundary update — October 8, 2026
+
+The owner subsequently confirmed that the Operator original is completed and
+requested handling all PRs and issues. Its retained completion record positively
+verifies native closure, normal public restoration, original buyer readback and
+the Canteen acknowledgement. This supersedes the earlier active-window hold
+above; it creates no new supplier, payment, custody or scheduler allowance.
+
+PR244 merged with history into `ee01cbf9d3b6c09391613ef589045202733aca96`,
+whose tree equals reviewed head `e9077764`. GitHub also marked all ten retained
+parent PRs (220, 222, 226, 228, 229, 233, 235, 237, 239, 241) merged; their tips
+are actual ancestors of that main commit. Main-push acceptance, distribution
+and deployed readbacks remain separate from this source inclusion. The issues
+below retain their individual acceptance gates.
+
 | Issue | Source status | Remaining acceptance or work |
 | --- | --- | --- |
 | [238](https://github.com/tang-vu/keryx/issues/238) | New bounded sibling selection retains the exact MDN submit/default/reset/button group and strict quote options; PR241 preserves requested language and neutral short-bullet grouping. | Coordinated release; actual three Portuguese bullets containing all four sourced facts. |

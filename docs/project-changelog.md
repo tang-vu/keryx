@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Product Hunt launch and dormant model support (2026-10-08, v0.27.42 candidate)
+
+- Add the owner's official Product Hunt launch badge to the homepage, after the
+  research controls. Preserve the compact mobile introduction and primary action.
+- Integrate the separately reviewed Cloudflare GPT-OSS support with its flag
+  still false. Direct vendor usefulness and multilingual quote review remain
+  activation gates; no model, payment or schedule allowance is added.
+- Retain the full app0.27.41 research/client stack and its issue-specific gates.
+  Shared hosted surfaces inherit its changes; stdio0.4.10 and desktop0.4.10 keep
+  their coordinated distribution roles. Actual delivery requires release readbacks.
+
 ### Repair document selection and bounded research output (2026-10-08, v0.27.41 candidate)
 
 - Retain nearby short enumerated rules and defaults at exact source offsets.
@@ -58,6 +69,17 @@ results keep their recorded content, evidence and payment status unchanged.
 The research introduction uses less mobile space so the question, free-paper
 handoff, source cap and full Ask action fit a 320x640 first viewport.
 See [browser acceptance and surface roles](engineering/evidence-readability-2026-10-08.md).
+
+### Optional Cloudflare GPT-OSS reasoning choice (2026-10-08, v0.27.40 candidate)
+
+- Add a separately enabled, manually selected GPT-OSS 120B experiment across the
+  shared hosted model picker/APIs and local research CLI.
+- Preserve DeepSeek as default, the existing automatic fallback chain, retired
+  model IDs, private buyer policy and finite Operator original authority.
+- Apply per-model context bounds and low reasoning effort, retain failed-call
+  usage, and capture the published gross tariff without claiming billed cost.
+- Rename the default display to DeepSeek Flash to avoid a stale version promise.
+- [Direct acceptance and release gates](cloudflare-workers-ai.md).
 
 ### Review each retained Operator premise against its exact evidence (2026-10-08, v0.27.38 candidate)
 

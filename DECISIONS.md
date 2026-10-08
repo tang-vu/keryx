@@ -1,5 +1,14 @@
 # Keryx — Decision Log
 
+**Preserve source history and gate model activation separately — 2026-10-08.**
+After the completed Operator original positively closed its source window, merge
+the reviewed research aggregate with history. Integrate the manual Cloudflare
+GPT-OSS adapter as dormant support, preserving its false default and requiring
+direct multilingual supplier/quote acceptance before activation. Add the owner's
+official Product Hunt badge after homepage research controls so the mobile action
+remains visible. Source inclusion and a launch link do not establish useful live
+research, independent adoption or real payment traction.
+
 **Retain ordinary presentation without weakening grounded delivery — 2026-10-08.**
 Derive supported language and compact layout from the trusted original caller,
 before sentence review. Group source-bound sentence/excerpt pairs by their shared
@@ -16,6 +25,19 @@ The bounded MDN model trial recovered all four facts but failed the requested
 three-item format. Preserve that failure and its consumed three-call grant.
 Replay of those unchanged reviewed pairs validates the deterministic layout repair;
 it does not establish a fresh deployed end-to-end result or general brevity.
+
+**Add an explicitly selected Cloudflare GPT-OSS model — 2026-10-08.**
+The owner approved one experimental GPT-OSS 120B choice while retaining DeepSeek
+as default. Give it the new `cloudflare-gpt-oss-120b` public ID; preserve withdrawn
+Ollama IDs and private/bounded original model authority. Its separate exact opt-in
+controls catalog/runtime availability, while the automatic Cloudflare tier remains
+Llama. Exclude the manual experiment from ordinary scheduled supplier probes.
+Use per-model conservative prompt/output bounds, low GPT-OSS reasoning effort,
+the existing JSON validator/usage ledger and a fresh immutable gross price capture.
+Catalog/schema documentation is insufficient vendor acceptance: direct finite
+English/Vietnamese JSON and evidence checks precede runtime activation. Keep
+existing billing, source/payment limits and the active Operator source window.
+See [configuration, supported surfaces and gates](docs/cloudflare-workers-ai.md).
 
 **Reject incomplete prepared originals without discarding their history — 2026-10-08.**
 The retained original produced an exactly grounded answer that omitted documented

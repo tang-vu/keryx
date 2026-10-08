@@ -27,6 +27,8 @@ export interface ModelChoice {
   model: string;
   /** One-line description for pickers. */
   note: string;
+  /** Offered only for explicit selection; excluded from automatic supplier probes. */
+  manualOnly?: boolean;
 }
 
 export const DEFAULT_MODEL_ID = "deepseek-flash";
@@ -53,7 +55,7 @@ const RETIRED_IDS: Record<string, string> = {
 export const MODEL_CATALOG: ModelChoice[] = [
   {
     id: "deepseek-flash",
-    label: "DeepSeek V4 Flash",
+    label: "DeepSeek Flash",
     provider: "deepseek",
     model: "deepseek-v4-flash",
     note: "The workhorse — fast, dependable, and the fallback for every other pick.",
@@ -85,6 +87,14 @@ export const MODEL_CATALOG: ModelChoice[] = [
     provider: "cloudflare",
     model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     note: "Optional bounded third provider; smaller research contexts only.",
+  },
+  {
+    id: "cloudflare-gpt-oss-120b",
+    label: "GPT-OSS 120B · Cloudflare (experimental)",
+    provider: "cloudflare",
+    model: "@cf/openai/gpt-oss-120b",
+    note: "Optional reasoning model; select explicitly to compare grounded research.",
+    manualOnly: true,
   },
 ];
 
