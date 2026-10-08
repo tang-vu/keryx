@@ -50,8 +50,27 @@ Limits of this record:
   mainnet deployment. The Circle and chain records above remain checkable.
 - No repeat use by Hoàng after October 2 is recorded here.
 
-Other people have contacted the owner through X, LinkedIn and Product Hunt. Each is
-added here only once there is a named person, their own task and a matching run.
+### Other outside users
+
+These people are outside the Keryx team and used Keryx for their own work. The owner
+supplied their identities and use cases on October 8.
+
+| Person | Who they are | What they used Keryx for | Surface |
+| --- | --- | --- | --- |
+| [@JamWaveX](https://t.me/JamWaveX) (Telegram) | Overseas student preparing for a master's programme | Scientific research for the master's application | Not recorded |
+| [Trần Minh Hiếu](https://www.linkedin.com/in/tr%E1%BA%A7n-minh-hi%E1%BA%BFu-667915335/) | Fourth-year university student | Undergraduate research for a study-abroad scholarship application | Not recorded |
+| [0xacee](https://github.com/0xacee) | Builder working on a SaaS product | Finding a product niche | Keryx API |
+
+Limits of these records:
+
+- Run IDs, dates, network and payment legs for these three users are not matched in
+  this pack yet. Stored runs do not carry a name, so matching needs each person's
+  session time or wallet.
+- Until a run is matched, these rows show who used Keryx and why, not settled
+  payments by an outside wallet.
+
+Other people have contacted the owner through X, LinkedIn and Product Hunt and are
+added here as their use is recorded.
 
 ## October 8 current evidence and deliverable gate
 
@@ -226,7 +245,7 @@ first run needs longer, record the genuine steps and disclose elapsed time/cuts.
 
 ## Pilot intake and evidence record
 
-The freelancer track has one recorded participant: Hoàng, in
+Four outside users are recorded, one with matched runs and payment (Hoàng), in
 [Event-period usage](#event-period-usage-testnet-week-then-mainnet) above. The
 own-business and small-team tracks, and the blank record below for the next
 participant, remain open.
