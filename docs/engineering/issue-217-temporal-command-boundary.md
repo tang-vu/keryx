@@ -40,6 +40,7 @@ establish the release's change, compatibility, body integrity or payment authori
 | Analyst context followed by `In English, name the newest release tag actually present in the feed` | Original source binding retained; unsupported wording held before the affected article read |
 | Context followed by a direct `Name` / `Identify` / `Find` / `Compare` newest/latest command | Conservative unsupported hold; no new native scope inferred |
 | A quoted example or `Do not name the newest release` | Does not manufacture a positive temporal requirement |
+| A line wrap after `Do not` / `Don't` / `Đừng` / `Không`, or an explicit `Example:` / `Ví dụ:` label | Remains a negation or example; optional language/please modifiers across lines do not create a positive command |
 | Multiple original feed URLs or unresolved binding | Existing ambiguous/unresolved refusal; no guessed feed membership |
 
 This remains a narrow grammar. Inline clauses without a recognized sentence/line
@@ -76,6 +77,9 @@ payment record, citation reward or native read, and returns the explicit gap.
 Focused tests retain the existing qualified native winner and membership/date
 failure coverage while adding contextual commands, sentence/line boundaries,
 quotes/code examples, negation and ambiguous binding. All fixtures remain inert.
+Wrapped negation/example regressions cover English and Vietnamese while preserving
+direct commands after a newline, blank line or completed example. These specific
+continuation prefixes do not establish general prose or negation understanding.
 
 Required CI, independent root review and deployment of the final accepted source
 remain release gates. No version, production setting, funding, custody or source

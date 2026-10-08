@@ -60,6 +60,16 @@ function feedIdentity(value: string | undefined): string | null {
   } catch { return null; }
 }
 
+/** A line wrap cannot turn a negated command or explicit example into an instruction. */
+function continuesNonCommandPrefix(question: string, start: number): boolean {
+  const before = question.slice(0, start);
+  // Preserve the optional command modifiers across wrapped lines, too. These are narrow
+  // continuation prefixes, not a general negation or quotation classifier.
+  const negative = /(?:^|[^\p{L}\p{N}])(?:do\s+not|don['\u2019]t|must\s+not|should\s+not|never|not\s+to|đừng|không(?:\s+(?:được|nên|cần(?:\s+phải)?))?)\s*[:：]?(?:\s+(?:please|hãy)|\s+in\s+(?:English|Vietnamese),){0,2}\s*$/iu;
+  const example = /(?:^|[^\p{L}\p{N}])(?:example|for\s+example|e\.g\.|ví\s+dụ)\s*[:：]?(?:\s+(?:please|hãy)|\s+in\s+(?:English|Vietnamese),){0,2}\s*$/iu;
+  return negative.test(before) || example.test(before);
+}
+
 /** Later sentence commands are refusal scope only, never a new native-feed capability. */
 function contextualRecencyStart(question: string, families: readonly RegExp[]): number | null {
   let scanned = 0, quote: string | null = null;
@@ -79,7 +89,7 @@ function contextualRecencyStart(question: string, families: readonly RegExp[]): 
     }
     if (quote) continue;
     const command = question.slice(start).replace(/^in\s+(?:English|Vietnamese),\s*/iu, "");
-    if (families.some(family => family.test(command))) return start;
+    if (families.some(family => family.test(command)) && !continuesNonCommandPrefix(question, start)) return start;
   }
   return null;
 }

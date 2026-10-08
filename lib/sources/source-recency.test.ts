@@ -56,6 +56,33 @@ describe("original caller newest-feed safety constraint", () => {
     expect(sourceRecencyGap(requirement, { ...source, rssUrl: "https://unrelated.example/feed" })).toBeNull();
   });
 
+  it.each([
+    `Read ${feed}. Do not\nname the newest release in the feed. Explain compatibility.`,
+    `Read ${feed}. Do\nnot\nname the newest release in the feed.`,
+    `Read ${feed}. Don't\nname the newest release in the feed.`,
+    `Read ${feed}. In English, do not\nname the newest release in the feed.`,
+    `Read ${feed}. Do not\nIn English,\nplease\nname the newest release in the feed.`,
+    `Read ${feed}. Đừng\nnêu bản phát hành mới nhất trong feed.`,
+    `Read ${feed}. Không\nnêu bản phát hành mới nhất trong feed.`,
+    `Read ${feed}. Không cần phải\nhãy\nnêu bản phát hành mới nhất trong feed.`,
+    `Read ${feed}. Example:\nName the newest release in the feed. Explain this example.`,
+    `Read ${feed}. For example:\nIn English,\nplease\nname the newest release in the feed.`,
+    `Read ${feed}. Ví dụ:\nNêu bản phát hành mới nhất trong feed. Giải thích ví dụ này.`,
+    `Read ${feed}. Ví dụ:\nhãy\nnêu bản phát hành mới nhất trong feed.`,
+  ])("does not promote a wrapped negation or explicit example to a command: %s", question => {
+    expect(recognizeSourceRecency(question)).toBeNull();
+  });
+
+  it.each([
+    `Read ${feed}.\n\nName the newest release in the feed.`,
+    `I am evaluating release notes\nName the newest release in ${feed}.`,
+    `Read ${feed}.\n\nHãy nêu bản phát hành mới nhất trong feed.`,
+    `Read ${feed}. Example:\nName the newest release. Explain the example.\nName the newest release in the feed.`,
+  ])("retains a genuine later command after line breaks or a completed example: %s", question => {
+    expect(recognizeSourceRecency(question)).toMatchObject({ status: "unsupported", reason: "unsupported-temporal-form",
+      binding: "exact-feeds", feedUrls: [feed] });
+  });
+
   it("withholds unresolved later-command source bindings rather than reverting to topical BUY", () => {
     const requirement = recognizeSourceRecency("I am evaluating releases. Name the newest release tag actually present in the feed.")!;
     expect(requirement).toMatchObject({ status: "unsupported", reason: "source-binding-unresolved", binding: "unresolved", feedUrls: [] });
