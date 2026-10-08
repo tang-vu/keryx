@@ -26,12 +26,12 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
       <h2 className="font-display text-[22px] font-medium tracking-tight text-ink">
         Related dispatches
       </h2>
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {entries.map((e) => (
           <Link
             key={e.id}
             href={`/dispatch/${e.id}`}
-            className="group block border border-ink bg-paper p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
+            className="group block min-w-0 border border-ink bg-paper p-4 [overflow-wrap:anywhere] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
           >
             <div className="flex items-baseline justify-between gap-3">
               <span className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-seal">
