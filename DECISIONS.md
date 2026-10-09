@@ -17,6 +17,21 @@ public-readback gates, including installer version from its filename. Complete
 the agreed source batch and deploy it once; older candidates remain historical.
 See [surface parity](docs/surface-parity.md).
 
+**Public job books project observed transfers with explicit funding roles — 2026-10-09.**
+Issue 286 receives a bounded public web-dispatch settlement ledger and balanced export,
+separate from retained testnet activity and private operating economics. Only persisted
+web-public provenance in the existing public result domain qualifies; unknown/A2A/private
+publicness is excluded. Questions, customer identities, private reviews, invoices and
+supplier authority are omitted. Exact finally settled legs produce equal debit/credit
+transfer-control vouchers, with browser, treasury, unknown and offline funding separated.
+Browser-funded creator payments are never Operator expenses, and sponsored operating-fee
+transfers are never inferred outside-customer revenue. Missing full revenue/invoices,
+pending legs, duplicate conflicts and partial reads prevent net/profit or complete-books
+claims. Existing sealed read-only facades grant observation only; no finance, private
+journal, storage writer or payout authority is added. Architecture and source/release gates:
+[`operator-job-ledger-286.md`](docs/engineering/operator-job-ledger-286.md).
+
+
 **Lead the ledger with the retained track record and recover creator rankings — 2026-10-09.**
 The owner requested a more effective Activity & proof presentation and the missing
 testnet creator leaderboard. Show the retained testnet summary and original creator

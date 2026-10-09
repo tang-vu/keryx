@@ -14,6 +14,8 @@ import { researchFailureMessage } from "../llm/research-plan";
 import { ResearchSelectionError } from "../llm/research-selection";
 import { registerOperatorDiscovery } from "../business-operator/mcp";
 import { readOperatorStatus } from "../business-operator/status";
+import { registerPublicJobLedger } from "../operator-ledger/mcp";
+import { readSelectedOperatorLedger } from "../operator-ledger/server";
 import { getDb } from "../db";
 import { assertOrdinaryResearchAvailable, readResearchAvailability } from "../research/availability";
 import { researchAdmissionError } from "../research/availability-contract";
@@ -214,6 +216,7 @@ export function createRemoteMcpServer(
 
   registerMonthlyDiscovery(server, async () => process.env.KERYX_MONTHLY_ENABLED === "1" ? quoteResearchMonthly() : null);
   registerOperatorDiscovery(server, async () => readOperatorStatus(await getDb(), config.networkId));
+  registerPublicJobLedger(server, readSelectedOperatorLedger);
   registerProfileTools(server, {
     read: async () => (await profileStore("profile:read")).get(access.actor!, config.networkId),
     update: async input => ({ profile: await (await profileStore("profile:write")).update(access.actor!, input) }),

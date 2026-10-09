@@ -109,6 +109,7 @@
     "mainnet:unsigned-setup": "node --import tsx --no-warnings scripts/mainnet-unsigned-setup.mts",
     "test:built-research-allowance": "node scripts/test-built-research-allowance.cjs",
     "operator:business": "node --import tsx --no-warnings scripts/operator-business.mts",
+    "operator:ledger": "node --import tsx --no-warnings scripts/operator-ledger.mts",
     "operator:canary": "node --import tsx --no-warnings scripts/operator-canary.mts",
     "papers": "node --import tsx scripts/papers.mts",
     "papers:collect": "node --import tsx scripts/collect-paper-catalog.mts",

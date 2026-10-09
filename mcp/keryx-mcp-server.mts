@@ -43,8 +43,11 @@ import { registerMonthlyDiscovery } from "../lib/monthly/mcp-discovery.ts";
 import { fetchMonthlyQuote } from "../lib/monthly/client.ts";
 import { registerOperatorDiscovery } from "../lib/business-operator/mcp.ts";
 import { fetchOperatorStatus } from "../lib/business-operator/client.ts";
+import { registerPublicJobLedger } from "../lib/operator-ledger/mcp.ts";
+import { fetchOperatorLedger } from "../lib/operator-ledger/client.ts";
 registerMonthlyDiscovery(server, fetchMonthlyQuote);
 registerOperatorDiscovery(server, () => fetchOperatorStatus(meta.baseUrl));
+registerPublicJobLedger(server, days => fetchOperatorLedger(meta.baseUrl, days));
 
 server.registerTool(
   "ask_keryx",

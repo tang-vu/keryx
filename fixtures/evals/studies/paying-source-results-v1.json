@@ -103,7 +103,7 @@
     "lib/db/a2a-failed-original-fulfillment.ts": "929342468dc3c1966e347d242332fcb0136f92027af5f31cd918bcc992b57b31",
     "lib/db/a2a-fulfillment-schema.ts": "06649d4e9841cfdd29a64eed2559e1e3d680100264c7fc7fadaa75263724f0fd",
     "lib/db/a2a-original-claim.ts": "fe7f28247de3976b5feb41a83b9dde6b25a67f4c33252e9c89d8adbd5125607b",
-    "lib/db/application-storage.ts": "06ece78845a1b9beae25c6dfbdd9b8b05c39e1634291f0903f94d634c3f4d3b3",
+    "lib/db/application-storage.ts": "06f55557633467ce38c075a1a9d2496e18dc1c013404739e4b6e24e23ec6a359",
     "lib/db/browser-authorization-admission.ts": "c24d170b36aee5c53184d6d7b011bbe865f9846813bb9cf05101eab6cfac8e25",
     "lib/db/browser-authorization-journal.ts": "cb44bc46b512936bbd43725da2e2b36bd747a1062514a6c4c8ab5babbb55f5c9",
     "lib/db/browser-signing-originals.ts": "b31cbda17ba9bb2a6d294c194c5854fff4b04334bdc5e3b08a786631c69125a8",

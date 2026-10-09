@@ -175,7 +175,7 @@ describe("remote MCP server", () => {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const tools = await client.listTools();
-    expect(tools.tools.map((tool) => tool.name)).toEqual(["evidence_draft", "operator_obligations_read", "paper_lookup", "research", "keryx_status", "research_monthly", "keryx_operator_status", "profile_read", "profile_update", "history_read", "profile_identities_read"]);
+    expect(tools.tools.map((tool) => tool.name)).toEqual(["evidence_draft", "operator_obligations_read", "paper_lookup", "research", "keryx_status", "research_monthly", "keryx_operator_status", "keryx_public_job_ledger", "profile_read", "profile_update", "history_read", "profile_identities_read"]);
 
     const result = await client.callTool({
       name: "research",

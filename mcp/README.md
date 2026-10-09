@@ -10,6 +10,14 @@ Existing buyer, original recovery and account-tool gates remain unchanged.
 Publication, installed-client acceptance and hosted availability are separate;
 see the [distribution record](https://github.com/tang-vu/keryx/blob/main/docs/mcp-distribution.md).
 
+The issue 286 source candidate adds keyless `keryx_public_job_ledger` (`days: 1..31`, default
+7). It reads a bounded public web-dispatch transfer ledger with separate browser/treasury/
+unknown/offline funding and balanced exact integer vouchers. It omits questions, customers,
+private invoices and original authority. It cannot inspect private obligations, spend,
+refund or calculate full profit. Shared settlement batch references remain unattributed
+unless original per-leg evidence exists. Hosted availability, versioned package publication
+and installation are separate release gates; this note does not claim installed delivery.
+
 ## Prior release46 distribution candidate
 
 Release46 source candidate selects package **0.4.13** with the official Registry

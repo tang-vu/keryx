@@ -256,6 +256,7 @@ jobs:
           node --import tsx scripts/test-evidence-drafts-mcp-package.mts
           node --import tsx scripts/test-personal-history-mcp-package.mts
           node --import tsx scripts/test-operator-obligations-transports.mts
+          node --import tsx scripts/test-public-job-ledger-mcp-package.mts
 
       - name: Packed stdio research diagnostics, signing and recovery (synthetic)
         working-directory: mcp
@@ -391,6 +392,9 @@ jobs:
       - name: Business calculator UI (local arithmetic, no settlement)
         run: npm run test:business-calculator
 
+      - name: Public transfer ledger WebCrypto and exports (hermetic, no storage or settlement)
+        run: node --import tsx scripts/test-browser-public-job-ledger.mts
+
   production:
     needs: scope
     if: needs.scope.outputs.scope == 'full'
@@ -428,6 +432,9 @@ jobs:
 
       - name: Build (Next.js)
         run: npm run build
+
+      - name: Public transfer ledger (built API, sealed offline SQLite and production CSS)
+        run: node --import tsx scripts/test-public-job-ledger-built.mts
 
       - name: Private bibliography snapshots (built routes, isolated SQLite and synthetic sessions)
         run: node --import tsx scripts/test-private-bibliography-built.mts
