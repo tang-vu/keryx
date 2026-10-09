@@ -1,0 +1,68 @@
+{
+  "page": {
+    "metadataTitle": "Private retained-evidence drafts — Keryx",
+    "metadataDescription": "Assemble exact retained excerpts into private claim assessments and related-work evidence themes. Imported report origin and semantic support remain unverified.",
+    "back": "Back to your saved review",
+    "heading": "Build a draft from retained excerpts.",
+    "introduction": "Select exact claim spans, record your own assessments, and organise read excerpts into related-work themes.",
+    "noScript": "Enable JavaScript for this local editor. No passage or report is uploaded automatically.",
+    "navigation": "Build a retained-evidence draft"
+  },
+  "workspace": {
+    "label": "Private evidence draft",
+    "privacy": "This editor uses papers marked Include in your saved review. Passage, imported reports and theme edits stay in this tab’s memory. Reloading or leaving loses them; export first. Nothing is uploaded or saved to public history. Your browser and same-origin scripts can access this page.",
+    "loading": "Loading saved review…",
+    "includeFirst": "Mark papers Include in the literature workspace before assembling this draft.",
+    "changed": "A selected excerpt or saved paper changed, or this draft exceeds its limit. Remove that selection or clear the draft; your edits remain below.",
+    "clear": "Clear this tab’s draft",
+    "cleared": "Draft cleared from this tab. Your saved paper list remains."
+  },
+  "import": {
+    "label": "Retained Keryx report JSON",
+    "guidance": "Use a report returned by the API/MCP with its retained citation and excerpt ledger. Bibliography alone cannot describe a paper. Imported bytes are your responsibility; this editor does not authenticate their origin.",
+    "button": "Import report in this tab",
+    "summary": "Reports: {reports} · matching retained excerpts: {excerpts}",
+    "success": "Report imported locally. Matching excerpts are available for selection; the report origin and semantic support remain unverified.",
+    "refused": "Report not imported. Use a unique retained report with id/queryId, subClaims, citations and evidence; check the 64 KiB draft limit. Your existing draft remains."
+  },
+  "claim": {
+    "label": "Claim assessment",
+    "passage": "Your original passage",
+    "guidance": "Select a claim in the passage, then add it below. Changing the passage clears its old claim spans and assessments. Text is never rewritten to fit an excerpt.",
+    "add": "Add selected claim",
+    "selectFirst": "Select the exact claim text in your passage first.",
+    "reviewer": "Your name for an optional assessment",
+    "paper": "Exact cited paper",
+    "unavailable": "Retained source evidence unavailable",
+    "pending": "Assessment pending",
+    "assessed": "Your assessment: {assessment}",
+    "recordAssessment": "Record my {assessment} assessment",
+    "unavailableGuidance": "An unavailable source is never reported as unsupported.",
+    "excerptVersion": "{version} · report {report}",
+    "verdicts": { "supported": "supported", "partly-supported": "partly supported", "not-found": "not found" }
+  },
+  "theme": {
+    "label": "Related-work themes",
+    "heading": "Related-work evidence themes",
+    "guidance": "Group exact excerpts before writing. Exported paper accounts are quotations; your own synthesis, agreements and gaps stay marked as unverified author notes.",
+    "title": "Theme title",
+    "notes": "Your synthesis notes (unverified)",
+    "clearExcerpts": "Clear this theme’s excerpt selections",
+    "add": "Add theme",
+    "initialTitle": "Evidence to organise",
+    "newTitle": "New theme",
+    "unreadHeading": "Included papers without usable retained excerpts",
+    "unreadPaper": "{title} — retained excerpt unavailable; not described."
+  },
+  "download": {
+    "markdown": "Download Markdown",
+    "latex": "Download LaTeX",
+    "bibtex": "Download BibTeX",
+    "ris": "Download RIS",
+    "backup": "Download private draft JSON",
+    "success": "Downloaded your current private draft. Keep the Markdown/LaTeX and reference files together.",
+    "refused": "Export refused: an exact record or selected excerpt is unavailable or changed.",
+    "backupSuccess": "Downloaded private draft inputs and your assessments. Keep this file private.",
+    "backupRefused": "Backup refused: check the current exact record and excerpt selections."
+  }
+}

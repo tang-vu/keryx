@@ -1,5 +1,13 @@
 # Remote MCP
 
+The [private evidence-draft source candidate](evidence-drafts.md) adds stateless
+`evidence_draft(draft)`, sharing the browser/API version-1 contract. It processes
+caller-supplied retained report rows and Include records without retrieving private
+history or calling research, payments, providers or storage. Imported origin remains
+unverified and support assessments remain explicitly user supplied. Your MCP client
+may retain private tool messages. Existing MCP transport/key/Origin policy still
+applies; source registration is not deployed acceptance or package publication.
+
 The [CSL-JSON export source candidate](engineering/csl-json-reference-export-2026-10-09.md)
 adds derived `researchExports.cslJson` (`content`, `count`, `omitted`) and separate
 metadata-only `bibliographyExports.cslJson` (`content`, `count`). Existing paid

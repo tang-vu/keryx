@@ -22,6 +22,7 @@ import { readHostedPaperLookup } from "../papers/hosted-lookup";
 import { registerProfileTools } from "../profiles/profile-mcp";
 import { requirePrivateProfiles } from "../profiles/private-profile";
 import type { ApiKeyScope } from "../api-key-scopes";
+import { registerEvidenceDraftTool } from "../research/evidence-draft-tool";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
@@ -97,6 +98,7 @@ export function createRemoteMcpServer(
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
+  registerEvidenceDraftTool(server);
   const profileStore = async (scope: "profile:read" | "profile:write") => {
     if (!access.actor || !access.profileScopes?.includes(scope)) throw new Error("Explicit profile scope required");
     return requirePrivateProfiles(await getDb());

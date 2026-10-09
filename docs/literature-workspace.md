@@ -1,5 +1,12 @@
 # Literature workspace
 
+The [retained-evidence draft source candidate](evidence-drafts.md) adds a manual
+tab-memory workflow at `/literature/drafts`: Include records plus explicitly imported
+Keryx excerpt ledgers, exact claim spans, named user assessments and quote-based
+related-work themes with matching references. Imported origin, semantic support
+and model-written synthesis remain unverified; full issues 282/283 acceptance and
+deployment are separate gates. No automatic paper read, upload or payment occurs.
+
 `/literature` adds a personal shortlist to the research-paper library. Use it to
 screen papers against a review question, keep your reasons and prepare a comparison.
 The candidate is not production delivery or evidence of independent demand.
