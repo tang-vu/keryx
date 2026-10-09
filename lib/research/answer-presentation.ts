@@ -52,7 +52,8 @@ export function answerPresentation(question: string, scope: "ordinary" | "retain
     const name = request.slice(1).find(value => value !== undefined)!;
     // Budget eligibility observes the existing finite directive grammar, without
     // changing statement-language selection or treating a neutral fallback as English.
-    if (!quotedRanges.some(range => request.index! >= range.start && request.index! < range.end))
+    const numericWordLimit = /^(?:answer|respond)\s+in\s+(?:at most|no more than)\s+[1-9]\d{0,3}\s+words\b/u.test(text.slice(request.index!));
+    if (!numericWordLimit && !quotedRanges.some(range => request.index! >= range.start && request.index! < range.end))
       budgetLanguageDirective = { index: request.index!, english: /^(?:english|anh|inglês)$/u.test(name) };
     requestedLanguage = /^(?:vietnamese|việt|vietnamita)$/u.test(name) ? "vi"
       : /^(?:(?:brazilian )?portuguese|português(?: brasileiro| do brasil)?|bồ đào nha)$/u.test(name) ? "pt"

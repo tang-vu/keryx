@@ -7,6 +7,18 @@ describe("finite ordinary English complete-answer limits", () => {
   it.each(["Keep the note within 180 words.", "Please keep answer at most 180 words.",
     "Answer in no more than 180 words.", "Respond in at most 180 words."])("recognizes %s", question => {
     expect(answerWordBudget(question)).toBe(180);
+    expect(answerPresentation(question).requestedMaximumWords).toBe(180);
+  });
+  it("keeps numeric-limit words separate from positive output-language directives", () => {
+    for (const limit of ["Answer in no more than 180 words.", "Respond in at most 180 words."]) {
+      expect(answerPresentation(`Answer in English. ${limit}`).requestedMaximumWords).toBe(180);
+      expect(answerPresentation(`Answer in French. ${limit}`).requestedMaximumWords).toBeUndefined();
+      expect(answerPresentation(`${limit} Answer in French.`).requestedMaximumWords).toBeUndefined();
+      expect(answerPresentation(`Responda em francês. ${limit}`).requestedMaximumWords).toBeUndefined();
+      expect(answerPresentation(`${limit} Answer in English.`).requestedMaximumWords).toBe(180);
+    }
+    for (const directive of ["Answer in no.", "Respond in at."])
+      expect(answerPresentation(`${directive} Keep the note within 180 words.`).requestedMaximumWords).toBeUndefined();
   });
   it("reproduces the retained full RFC answer's excess without changing the snapshot", () => {
     expect(answerPresentation(rfc.question).requestedMaximumWords).toBe(180);
