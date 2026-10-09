@@ -2,14 +2,15 @@
 import assert from "node:assert/strict";
 import { build } from "esbuild";
 import { chromium } from "playwright";
+import { assertResearchBrowserFixtureGraph, signedOutResearchAuthFixture } from "../test-support/research-browser-auth-fixture";
 
 const session = "0x1111111111111111111111111111111111111111";
 const bundle = await build({
   stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import{ResearchChat}from'./components/keryx/research-chat';createRoot(document.getElementById('root')).render(<ResearchChat/>);`, loader: "tsx", resolveDir: process.cwd() },
-  bundle: true, write: false, platform: "browser", format: "iife",
+  bundle: true, write: false, platform: "browser", format: "iife", metafile: true,
   external: ["@/lib/x402-client-sign", "@/lib/payments/browser-fetch-price-policy"],
   define: { "process.env.NODE_ENV": '"production"', "process.env": "{}" },
-  plugins: [{ name: "synthetic-grant", setup(api) {
+  plugins: [signedOutResearchAuthFixture(), { name: "synthetic-grant", setup(api) {
     api.onResolve({ filter: /session-grant-panel$/ }, () => ({ path: "grant", namespace: "fixture" }));
     api.onResolve({ filter: /client-payto-allowlist$/ }, () => ({ path: "authority", namespace: "fixture" }));
     api.onLoad({ filter: /.*/, namespace: "fixture" }, args => ({ loader: "js", resolveDir: process.cwd(), contents: args.path === "authority"
@@ -17,6 +18,7 @@ const bundle = await build({
       : `import{useEffect}from'react';export function SessionGrantPanel({onBindingChange}){useEffect(()=>{const bind=paused=>onBindingChange({sessionId:'${session}',getSessionWalletClient:()=>null,expired:!paused,paused});bind(false);const listener=()=>bind(true);window.addEventListener('fixture:paused',listener);return()=>window.removeEventListener('fixture:paused',listener)},[onBindingChange]);return null}` }));
   } }],
 });
+assertResearchBrowserFixtureGraph(bundle.metafile);
 const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 740 } });

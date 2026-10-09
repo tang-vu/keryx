@@ -7,8 +7,9 @@ import type { TestnetArchiveInfo } from "./testnet-archive";
 import type { DispatchReader } from "./read-dispatch";
 import { verifyResearchReceipt } from "../research-receipt";
 import { syntheticFailedOriginal, syntheticFulfilledRun } from "../db/a2a-fulfillment-fixture";
+import { decisionReviewCopy } from "../research/decision-review-copy";
 
-const mocks = vi.hoisted(() => ({ current: vi.fn(), archive: vi.fn() }));
+const mocks = vi.hoisted(() => ({ current: vi.fn(), archive: vi.fn(), auth: vi.fn(() => ({ session: null })) }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.current }));
 vi.mock("./testnet-archive", () => ({ getTestnetArchive: mocks.archive }));
 vi.mock("@/lib/arc-network-display", async importOriginal => ({
@@ -16,6 +17,8 @@ vi.mock("@/lib/arc-network-display", async importOriginal => ({
 }));
 vi.mock("@/lib/answers-archive-cache", () => ({ getArchiveCached: async () => [] }));
 vi.mock("@/components/keryx/follow-up-form", () => ({ FollowUpForm: () => null }));
+// These server-render/archive tests do not perform wallet authentication. Keep DecisionReviews real.
+vi.mock("@/lib/hooks/use-siwe-auth", () => ({ useSiweAuth: mocks.auth }));
 
 import { loadDispatchThread, resolveDispatch } from "./read-dispatch";
 import { GET as readPublicDispatch } from "@/app/api/dispatch/[id]/route";
@@ -52,7 +55,7 @@ function installArchive(runs = [run()], payments: PaymentRecord[] = []) {
 }
 
 beforeEach(() => {
-  mocks.current.mockReset(); mocks.archive.mockReset();
+  mocks.current.mockReset(); mocks.archive.mockReset(); mocks.auth.mockClear();
   mocks.current.mockResolvedValue(reader()); mocks.archive.mockResolvedValue(null);
 });
 
@@ -165,9 +168,14 @@ describe("historical public read contracts", () => {
     expect(historical).not.toContain('aria-label="Report feedback"');
     expect(historical).toContain("Arc Testnet · historical");
     expect(historical).not.toContain("live on Arc mainnet");
+    expect(mocks.auth).not.toHaveBeenCalled();
     const current = renderToStaticMarkup(createElement(DispatchView, { run: run(), payments: [] }));
+    expect(historical).not.toContain(decisionReviewCopy.signedOut);
+    expect(historical).not.toContain(decisionReviewCopy.load);
     expect(current).toContain('aria-label="Report feedback"');
     expect(current).toContain("live on Arc mainnet");
+    expect(current).toContain(decisionReviewCopy.signedOut);
+    expect(mocks.auth).toHaveBeenCalled();
   });
 
   it("shows original settled testnet evidence with a neutral legacy-mode badge instead of calling it simulated", () => {
