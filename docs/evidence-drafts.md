@@ -40,7 +40,11 @@ access editor contents; no protection against a compromised origin is claimed.
 
 `lib/research/evidence-draft.ts` validates a version-1 `private-evidence-draft`
 packet: a saved literature workspace, projected retained reports, original passage,
-manual claim spans and themes. Each selected excerpt requires an Include record,
+manual claim spans and themes. Claim offsets count UTF-16 code units in the unchanged
+passage. Both the whole passage and each selected claim must be well-formed UTF-16:
+either boundary splitting a surrogate pair is rejected rather than repaired.
+Complete Unicode scalars remain unchanged; grapheme-cluster boundaries are not
+required. Each selected excerpt requires an Include record,
 an exact item URL/source/item/content-version/marker match to one retained citation,
 the original research claim/index and a qualified bounded quote. Missing version,
 unqualified records, ambiguous duplicate markers, synthetic markers and known seed

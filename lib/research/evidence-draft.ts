@@ -62,7 +62,8 @@ export function parseEvidenceDraftRequest(value: unknown): EvidenceDraftRequest 
   if (!unique(input.reports.map(row => row.id)) || !unique(input.claims.map(row => row.id)) || !unique(input.themes.map(row => row.id)))
     throw new Error("Duplicate draft identifiers");
   for (const claim of input.claims) {
-    if (claim.end > input.passage.length || claim.start >= claim.end || !input.passage.slice(claim.start, claim.end).trim()
+    const claimText = input.passage.slice(claim.start, claim.end);
+    if (claim.end > input.passage.length || claim.start >= claim.end || !claimText.trim() || !isWellFormedUtf16(claimText)
       || !unique(claim.paperUrls) || !unique(claim.excerptIds)) throw new Error("Invalid exact claim span");
   }
   for (const theme of input.themes) if (!unique(theme.excerptIds)) throw new Error("Duplicate theme excerpts");

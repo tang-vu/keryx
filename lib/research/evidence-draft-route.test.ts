@@ -15,6 +15,17 @@ it("returns a stateless shared draft contract with private no-store headers", as
   expect(result.draft.scope).toBe("private-evidence-draft"); expect(result.draft.claims[0].status).toBe("assessment-pending");
   expect(response.headers.get("vary")).toBe("Authorization, Cookie"); expect(response.headers.get("cache-control")).toContain("no-store");
 });
+it.each([{ start: 0, end: 1 }, { start: 1, end: 2 }])("API refuses a split UTF-16 claim at $start..$end without echoing draft text", async span => {
+  const input = evidenceDraftFixture(); input.passage = "\u{1F600}x"; Object.assign(input.claims[0], span);
+  const response = await createEvidenceDraftRoute(async () => null)(request(input));
+  expect(response.status).toBe(400); expect(await response.json()).toEqual({ error: "invalid_or_changed_draft" });
+  expect(response.headers.get("cache-control")).toBe("private, no-store");
+});
+it("API returns a complete UTF-16 scalar unchanged", async () => {
+  const input = evidenceDraftFixture(); input.passage = "\u{1F600}x"; input.claims[0].end = 2;
+  const response = await createEvidenceDraftRoute(async () => null)(request(input));
+  expect(response.status).toBe(200); expect((await response.json()).draft.claims[0].text).toBe("\u{1F600}");
+});
 it("bounds actual streamed bytes and refuses non-JSON, invalid data and URL selectors without echo", async () => {
   const handler = createEvidenceDraftRoute(async () => null);
   for (const input of [request({ passage: "SECRET_DRAFT" }), request(evidenceDraftFixture(), { "Content-Type": "text/plain" }), request({ passage: "x".repeat(65537) })]) {

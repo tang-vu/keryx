@@ -115,6 +115,35 @@ describe("private retained-evidence drafts", () => {
     expect(() => parseEvidenceDraftRequest(accessor)).toThrow(); expect(evaluated).toBe(false);
     expect(() => parseEvidenceDraftRequest({ ...input, passage: "x".repeat(MAX_EVIDENCE_DRAFT_BYTES) })).toThrow();
   });
+  it.each([{ start: 0, end: 1 }, { start: 1, end: 2 }])("rejects a claim splitting a UTF-16 scalar at $start..$end", span => {
+    const input = evidenceDraftFixture(); input.passage = "\u{1F600}x";
+    Object.assign(input.claims[0], span);
+    expect(() => parseEvidenceDraftRequest(input)).toThrow("Invalid exact claim span");
+    expect(() => buildEvidenceDraft(input)).toThrow("Invalid exact claim span");
+    expect(() => exportEvidenceDraft(input)).toThrow("Invalid exact claim span");
+  });
+  it("preserves UTF-16 claim offsets for complete scalars without imposing grapheme boundaries", () => {
+    const input = evidenceDraftFixture(); input.passage = "\u{1F600}xe\u0301";
+    input.claims = [
+      { ...input.claims[0], id: "scalar", start: 0, end: 2 },
+      { ...input.claims[0], id: "afterScalar", start: 2, end: 3 },
+      { ...input.claims[0], id: "combiningMark", start: 4, end: 5 },
+    ];
+    expect(parseEvidenceDraftRequest(input).claims.map(({ start, end }) => ({ start, end })))
+      .toEqual([{ start: 0, end: 2 }, { start: 2, end: 3 }, { start: 4, end: 5 }]);
+    expect(buildEvidenceDraft(input).claims.map(claim => claim.text)).toEqual(["\u{1F600}", "x", "\u0301"]);
+  });
+  it.each([{ start: 0, end: 1 }, { start: 1, end: 2 }])("MCP refuses a split UTF-16 claim at $start..$end with a fixed private error", span => {
+    const input = evidenceDraftFixture(); input.passage = "\u{1F600}x";
+    Object.assign(input.claims[0], span);
+    const refused = evidenceDraftTool({ draft: input });
+    expect(refused).toEqual({ isError: true, content: [{ type: "text", text: "Invalid or changed private evidence draft. Use the version-1 bounded contract; no research or payment started." }] });
+  });
+  it("MCP returns a complete UTF-16 scalar unchanged", () => {
+    const input = evidenceDraftFixture(); input.passage = "\u{1F600}x"; input.claims[0].end = 2;
+    const result = evidenceDraftTool({ draft: input });
+    expect("structuredContent" in result && result.structuredContent?.draft.claims[0].text).toBe("\u{1F600}");
+  });
   it("shares the pure MCP result and emits fixed errors without leaking private input", () => {
     const input = evidenceDraftFixture(); const result = evidenceDraftTool({ draft: input });
     expect("structuredContent" in result && result.structuredContent?.draft).toEqual(buildEvidenceDraft(input));
