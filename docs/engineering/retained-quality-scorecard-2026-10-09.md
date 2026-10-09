@@ -36,6 +36,12 @@ from this release. A new inspector regrading identical archived captures is not
 a release trend. The checked-in frozen composition records its actual inspector
 checkpoint; later documentation/data commits do not relabel that execution.
 
+The [frozen composition](../../fixtures/evals/quality/scorecard-20261009.json)
+was inspected at `2026-10-09T12:33:38.255Z` on source checkpoint
+`21a328484236198740e76ee7e8c07c9f551254a9` using Node `v24.21.0`.
+Its complete-file SHA256 is
+`5407e206154c5a9679345512e096a99ae2e73057e6c9e63dd60077eef12a87e0`.
+
 ## Current evidence and denominators
 
 These remain the owner-operated app0.27.44 snapshots at
@@ -111,7 +117,7 @@ contract, package/installer version, deployment or product announcement.
 Focused new tests cover denominator preservation, exact language groups, private
 and malformed inputs, registry/case/hash identity, honest removal history and
 diagnostic comparability/thresholds. App and ops TypeScript graphs and scoped lint
-cover the new helper/runner; the runner has an explicit ops include. Existing27
+cover the new helper/runner; the runner has an explicit ops include. Existing 27
 grader tests are reusable only while their source and retained fixtures are
 unchanged. The frozen composition is an actual offline run, not a synthetic new
 release answer; synthetic comparison cases exist only in unit tests.
