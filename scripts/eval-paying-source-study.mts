@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { artifact, renderStudy, type StudyArtifact } from "../lib/evals/paying-source-study/report";
-import { canonical, parseCorpus, sha256 } from "../lib/evals/paying-source-study/contract";
+import { artifactTextEqual, canonical, parseCorpus, sha256 } from "../lib/evals/paying-source-study/contract";
 import { denyOutbound, studyEnvironment } from "../lib/evals/paying-source-study/offline-boundary";
 import { sourceInputs } from "../lib/evals/paying-source-study/source-inputs";
 
@@ -50,7 +50,7 @@ if (args[0] === "--internal-worker") {
     fs.writeFileSync(resultsPath, bytesOut); fs.writeFileSync(reportPath, report);
     console.log("Wrote 48 actual offline trials and generated study; no settled payments or outbound calls.");
   } else {
-    if (fs.readFileSync(resultsPath, "utf8") !== bytesOut || fs.readFileSync(reportPath, "utf8") !== report)
+    if (!artifactTextEqual(fs.readFileSync(resultsPath, "utf8"), bytesOut) || !artifactTextEqual(fs.readFileSync(reportPath, "utf8"), report))
       throw new Error("Study inputs/output/write-up drifted; inspect and reproduce with --write");
     console.log("Checked 48 actual offline trials: canonical outputs and write-up match exactly; outbound attempts 0.");
   }

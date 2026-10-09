@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { GatheredContent } from "../../llm/reasoning-engine";
 import type { PaymentRecord, QueryRun } from "../../types";
 import { sourceItemContentVersion } from "../../sources/source-item-asset";
-import { BUDGETS, PRICES, canonical, microFromUsdc, parseCorpus, retainedItem, retainedVersion, sha256, usdcFromMicro } from "./contract";
+import { BUDGETS, PRICES, artifactTextEqual, canonical, microFromUsdc, parseCorpus, retainedItem, retainedVersion, sha256, usdcFromMicro } from "./contract";
 import { gradeTrial } from "./rubric";
 import { assertSimulated } from "./runner";
 import { studyEnvironment } from "./offline-boundary";
@@ -66,6 +66,12 @@ describe("controlled study retained inputs and exact accounting", () => {
   });
   it("canonicalizes object order and retains null observations", () => {
     expect(canonical({ z: null, a: { b: 1 } })).toBe(canonical({ a: { b: 1 }, z: null }));
+  });
+  it("accepts Git line endings but retains escaped source bytes and amount differences", () => {
+    const output = canonical({ body: "first\r\nsecond", amountMicro: "1000" });
+    expect(artifactTextEqual(output.replaceAll("\n", "\r\n"), output)).toBe(true);
+    expect(artifactTextEqual(output.replace("1000", "1001"), output)).toBe(false);
+    expect(artifactTextEqual(output.replace("\\r\\n", "\\n"), output)).toBe(false);
   });
 });
 describe("literal/read rubric refuses unbound support", () => {

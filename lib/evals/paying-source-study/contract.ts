@@ -32,6 +32,9 @@ export function canonical(value: unknown): string {
   }
   return JSON.stringify(sort(value), null, 2) + "\n";
 }
+export function artifactTextEqual(retained: string, actual: string): boolean {
+  return retained.replaceAll("\r\n", "\n") === actual.replaceAll("\r\n", "\n");
+}
 /** Reject unsafe legacy numbers rather than round them into apparently exact accounting. */
 export function microFromUsdc(value: number): bigint {
   if (!Number.isFinite(value) || value < 0) throw new Error("Invalid USDC amount");

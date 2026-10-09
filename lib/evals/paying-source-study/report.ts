@@ -87,7 +87,7 @@ npm run eval:paying-source-study -- --check
 npm run eval:paying-source-study -- --write
 \`\`\`
 
-The bounded CLI runs all 48 actual trials in a fresh process (128 KiB corpus ceiling, 120-second deadline, 4 MiB output ceiling). \`--check\` compares canonical output **and this generated write-up** byte-for-byte. \`--write\` replaces only these two public study artifacts after all checks pass. It accepts no model, provider, corpus, wallet, private-input or arbitrary-output option. Both commands deny outbound study I/O; neither spends funds or touches a shared database.
+The bounded CLI runs all 48 actual trials in a fresh process (128 KiB corpus ceiling, 120-second deadline, 4 MiB output ceiling). \`--check\` compares canonical output **and this generated write-up** exactly after Git CRLF-to-LF text normalization; it does not ignore other byte/value differences. \`--write\` replaces only these two public study artifacts after all checks pass. It accepts no model, provider, corpus, wallet, private-input or arbitrary-output option. Both commands deny outbound study I/O; neither spends funds or touches a shared database.
 
 - [Retained corpus and authored facts](../../fixtures/evals/studies/paying-source-corpus-v1.json)
 - [Actual canonical synthetic outputs, proposals, reads, simulated ledger and metrics](../../fixtures/evals/studies/paying-source-results-v1.json)
