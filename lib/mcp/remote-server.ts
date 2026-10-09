@@ -23,7 +23,9 @@ import { registerProfileTools } from "../profiles/profile-mcp";
 import { registerHistoryTool } from "../history/personal-history-mcp";
 import { requirePersonalHistory } from "../history/personal-history";
 import { readPersonalHistory } from "../history/personal-history-reader";
-import { requirePrivateProfiles } from "../profiles/private-profile";
+import { registerIdentityReadTool } from "../profiles/identity-mcp";
+import { identitySnapshotSchema, requireProfileIdentities } from "../profiles/verified-identities";
+import { profileWallet, requirePrivateProfiles } from "../profiles/private-profile";
 import type { ApiKeyScope } from "../api-key-scopes";
 import { registerEvidenceDraftTool } from "../research/evidence-draft-tool";
 
@@ -214,6 +216,13 @@ export function createRemoteMcpServer(
   registerHistoryTool(server, async input => {
     if (!access.actor || !access.historyScopes?.includes("history:read")) throw new Error("Explicit history scope required");
     return readPersonalHistory(requirePersonalHistory(await getDb()), access.actor, config.networkId, input);
+  });
+  registerIdentityReadTool(server, async () => {
+    if (!access.actor || !access.profileScopes?.includes("profile:read")) throw new Error("Explicit profile scope required");
+    const owner = profileWallet(access.actor);
+    const body = identitySnapshotSchema.parse(await requireProfileIdentities(await getDb()).list(owner));
+    if (body.wallet !== owner) throw new Error("Invalid verified identity owner");
+    return body;
   });
   return server;
 }

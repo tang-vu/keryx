@@ -89,6 +89,9 @@ jobs:
       - name: Personal history PostgreSQL ownership, filters, keyset and refusal
         if: needs.scope.outputs.scope == 'full'
         run: node --import tsx scripts/test-personal-history-postgres.mts
+      - name: Private verified identities PostgreSQL lineage, ownership and ACL acceptance
+        if: needs.scope.outputs.scope == 'full'
+        run: node --import tsx scripts/test-profile-identities-postgres.mts
 
       - name: Engineering feed integrity (no settlement)
         run: node --import tsx scripts/build-engineering-feed.mts --check
@@ -426,6 +429,8 @@ jobs:
 
       - name: Private bibliography snapshots (built routes, isolated SQLite and synthetic sessions)
         run: node --import tsx scripts/test-private-bibliography-built.mts
+      - name: Private identity configured Origin behind Next proxy (built, synthetic pre-auth)
+        run: node --import tsx scripts/test-server-profile-identities-origin.mts
 
       - name: Empty evidence (actual minified production orchestrator, no network)
         run: npm run test:built-empty-evidence
@@ -461,6 +466,9 @@ jobs:
 
       - name: Private profile UI (production CSS, synthetic owner sessions, no outbound requests)
         run: node --import tsx scripts/test-browser-private-profiles.mts
+
+      - name: Private verified identity UI (production CSS, synthetic consent and owner isolation)
+        run: node --import tsx scripts/test-browser-profile-identities.mts
 
       - name: Report feedback confirmation and response races (built CSS, hermetic Chromium)
         env:

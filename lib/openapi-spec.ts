@@ -16,6 +16,7 @@ import { privateProfileOpenApiPaths } from "./profiles/openapi";
 import { evidenceDraftOpenApiPath } from "./research/evidence-draft-openapi";
 import { personalHistoryOpenApiPaths } from "./history/openapi";
 import { API_KEY_SCOPES } from "./api-key-scopes";
+import { profileIdentityOpenApiPaths } from "./profiles/identity-openapi";
 import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
@@ -614,6 +615,7 @@ export const openapiSpec = {
     ...evidenceDraftOpenApiPath,
     ...privateProfileOpenApiPaths,
     ...personalHistoryOpenApiPaths,
+    ...profileIdentityOpenApiPaths,
     ...paperOpenApiPaths,
     ...sourceClaimOpenApiPaths,
     "/api/source/{id}": {
