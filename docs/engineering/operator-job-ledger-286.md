@@ -13,6 +13,10 @@ store, custody account or network. Use only the existing read-only application f
 its already-reviewed public query/payment reads; no ordinary adapter initialization,
 schema migration, provider request, wallet construction or signing occurs. Unsupported
 storage is unavailable rather than an ordinary/private fallback.
+Terminal disposal stays inside `lib/db/application-storage.ts`: its private registry
+admits only readers returned by its no-argument read-only factory, pins the actual SQLite
+handle or existing Supabase terminal closer, and permits disposal after configuration
+revocation without probing undeclared facade properties or gaining fresh authority.
 
 The eligible cohort requires persisted, validated `RunProvenance` from the web ingress,
 `origin: web`, and the existing public `query_runs` domain. The actual web ingress stamps

@@ -35,15 +35,19 @@ it("reads the actual sealed native facade without migration/writes or private jo
   vi.stubEnv("KERYX_NETWORK", "arcTestnet"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arcTestnet"); vi.stubEnv("KERYX_FORCE_OFFLINE", "1");
   vi.stubEnv("SUPABASE_URL", ""); vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", ""); vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
   const { createReadonlyEnrolledSqliteAdapter, assertEnrolledSqliteAdapter } = await import("../db/enrolled-sqlite-adapter");
+  const { createReadonlyApplicationStorage, closeReadonlyApplicationStorage } = await import("../db/application-storage");
   let reader: Awaited<ReturnType<typeof createReadonlyEnrolledSqliteAdapter>> | undefined;
   try {
     const before = readFileSync(path);
-    reader = await createReadonlyEnrolledSqliteAdapter(); expect(assertEnrolledSqliteAdapter(reader, "read")).toEqual(identity);
+    reader = await createReadonlyApplicationStorage() as Awaited<ReturnType<typeof createReadonlyEnrolledSqliteAdapter>>;
+    expect(reader).toBeDefined(); expect(assertEnrolledSqliteAdapter(reader, "read")).toEqual(identity);
     const ledger = await readOperatorLedger(reader, identity.network, 7, () => LEDGER_FIXTURE_TIME);
     expect(ledger.payload.jobs[0].funding).toBe("offline"); expect(ledger.payload.jobs[0].legs[0].state).toBe("simulated");
     expect(ledger.payload.trialBalance.debitMicroUsdc).toBe("0"); expect(ledger.payload.entries).toEqual([]);
     expect(readFileSync(path)).toEqual(before); expect(() => reader!.saveQueryRun(ledgerRun())).toThrow("mutation refused");
     writeFileSync(manifest, "{}");
     await expect(readOperatorLedger(reader, identity.network, 7, () => LEDGER_FIXTURE_TIME)).rejects.toThrow();
+    closeReadonlyApplicationStorage(reader);
+    expect(() => closeReadonlyApplicationStorage(reader!)).toThrow();
   } finally { reader?.close(); rmSync(folder, { recursive: true, force: true }); }
 }, 30_000);

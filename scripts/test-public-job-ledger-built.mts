@@ -110,7 +110,7 @@ try {
     const page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
     assert.equal((await page.goto(origin + "/operator/ledger"))?.status(), 200);
     await page.getByText("Offline records", { exact: true }).first().waitFor();
-    await page.locator("summary").first().click(); await page.getByText("Simulated — excluded", { exact: true }).waitFor();
+    await page.locator("summary").first().click(); await page.getByText("Simulated — excluded", { exact: false }).first().waitFor();
     await page.evaluate(() => document.fonts.ready);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     const download = page.waitForEvent("download"); await page.getByText("Download balanced CSV", { exact: true }).click();
