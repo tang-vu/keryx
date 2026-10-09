@@ -46,6 +46,12 @@ it("reads real SQLite markers without exposing private orders or changing their 
     expect(corrupted.completionLatencyCohorts?.ordinary.completed).toBe(1);
     expect(corrupted.completionLatencyCohorts?.unknown.completed).toBe(3);
     expect(JSON.stringify(corrupted)).not.toContain("PRIVATE_SCALAR");
+    const malformedRecovery = { ...(rows[2].resolution as object), actor: ["operator-cli"] };
+    raw.prepare("UPDATE a2a_orders SET resolution_data=? WHERE id='synthetic_cohort_2'")
+      .run(JSON.stringify(malformedRecovery));
+    const arrayActor = await db.a2aOperationsSnapshot(COMPLETION_FIXTURE_NOW);
+    expect(arrayActor.completionLatencyCohorts?.recovered.completed).toBe(1);
+    expect(arrayActor.completionLatencyCohorts?.unknown.completed).toBe(4);
   } finally { raw.close(); db.close(); rmSync(root, { recursive: true, force: true }); }
 });
 

@@ -104,6 +104,7 @@ describe("recorded completion latency cohorts", () => {
   it.each([
     { resolution: {} }, { resolution: { action: "repair_completed", reason: "saved_real_query_run", resolvedAt: new Date(COMPLETION_FIXTURE_NOW).toISOString(), evidence: { queryRunFound: true } } },
     { resolution: { ...(recoveredCompletion(1000).resolution as object), resolvedAt: "2026-10-08T23:59:59.000Z" } },
+    { resolution: { ...(recoveredCompletion(1000).resolution as object), actor: ["operator-cli"] } },
     { executionJournalVersion: null }, { serviceReceipt: "untrusted text" },
     { serviceReceipt: { ...(ordinaryCompletion(1000).serviceReceipt as object), finishedAt: "2026-02-30T00:00:00.000Z" } },
     { serviceReceipt: { ...(ordinaryCompletion(1000).serviceReceipt as object), packageVersion: "unknown" } },
@@ -114,6 +115,14 @@ describe("recorded completion latency cohorts", () => {
     expect(snapshot.completionLatencyCohorts?.ordinary.completed).toBe(0);
     expect(snapshot.completionLatencyCohorts?.recovered.completed).toBe(0);
     expect(snapshot.completionLatencyCohorts?.unknown.completed).toBe(1);
+  });
+
+  it("does not coerce matching malformed package identifiers into supported versions", () => {
+    const row = ordinaryCompletion(1000), id = ["keryx-quick"];
+    row.researchPackage = { ...(row.researchPackage as object), id };
+    row.serviceReceipt = { ...(row.serviceReceipt as object), packageId: id };
+    expect(summarizeA2aOperations([row], COMPLETION_FIXTURE_NOW, true)
+      .completionLatencyCohorts?.unknown.completed).toBe(1);
   });
 
   it("keeps older/future completions and running originals out of every completion cohort", () => {

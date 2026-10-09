@@ -86,6 +86,10 @@ Release requires exact-head aggregate and applicable storage/Operator CI,
 TypeScript, independent review and the root-coordinated runtime release. Supabase
 production migration/enrollment and actual deployed browser/API/MCP readback
 remain separate gates. No runtime version or deployment is changed here.
+Packaged stdio MCP embeds the strict shared status schema. Its compatible
+package must be released with this server field; an older strict client may
+report observation unavailable. This candidate does not claim synchronized
+published packages or installers.
 
 Issue #257 remains open. Existing Quick/Deep package targets are provisional
 180/300-second SLOs with `remedy:none`; this report does not promote them to an

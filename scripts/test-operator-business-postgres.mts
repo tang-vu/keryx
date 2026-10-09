@@ -74,6 +74,7 @@ try {
     {completed:2,timedSamples:2,p50Ms:3000,p95Ms:31_000});
   for(const mutation of [
     {...ordinaryCompletion(1000),resolution:{...(recoveredCompletion(1000).resolution as object),actor:null}},
+    {...ordinaryCompletion(1000),resolution:{...(recoveredCompletion(1000).resolution as object),actor:["operator-cli"]}},
     {...ordinaryCompletion(1000),serviceReceipt:{...(ordinaryCompletion(1000).serviceReceipt as object),finishedAt:"2026-02-30T00:00:00.000Z"}},
     {...ordinaryCompletion(1000),resolution:{...(recoveredCompletion(1000,true).resolution as object),fulfillment:{claimId:123}}},
   ])assert.equal(sql(`set role service_role;select operator_recorded_completion_cohort_v1(${quoted(mutation.resolution)},

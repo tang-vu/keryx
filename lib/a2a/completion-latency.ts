@@ -35,7 +35,7 @@ export function recordedCompletionCohort(row: CompletionMarkers): CompletionLate
   if (!Number.isFinite(updatedMs)) return "unknown";
   if (row.resolution !== null) {
     const resolution = object(row.resolution), evidence = object(resolution?.evidence);
-    if (!resolution || !evidence || !["automatic-poll", "operator-cli"].includes(String(resolution.actor)) ||
+    if (!resolution || !evidence || (resolution.actor !== "automatic-poll" && resolution.actor !== "operator-cli") ||
       canonicalTimestamp(resolution.resolvedAt) !== updatedMs || evidence.queryRunFound !== true) return "unknown";
     if (resolution.action === "repair_completed" && resolution.reason === "saved_real_query_run") return "recovered";
     const fulfillment = object(resolution.fulfillment);
@@ -49,7 +49,7 @@ export function recordedCompletionCohort(row: CompletionMarkers): CompletionLate
   const createdMs = Date.parse(row.createdAt), startedMs = row.startedAt === null ? NaN : Date.parse(row.startedAt);
   const finishedMs = canonicalTimestamp(receipt?.finishedAt);
   if (row.executionJournalVersion !== 1 || !receipt || !pkg || pkg.schema !== "urn:keryx:a2a-research-package:1" ||
-    pkg.version !== "1.0.0" || !["keryx-quick", "keryx-deep"].includes(String(pkg.id)) ||
+    pkg.version !== "1.0.0" || (pkg.id !== "keryx-quick" && pkg.id !== "keryx-deep") ||
     receipt.packageId !== pkg.id || receipt.packageVersion !== pkg.version || receipt.outcome !== "completed" ||
     receipt.objectiveKind !== "provisional_slo" || receipt.remedy !== "none" ||
     !Number.isFinite(createdMs) || !Number.isFinite(startedMs) || startedMs < createdMs ||
