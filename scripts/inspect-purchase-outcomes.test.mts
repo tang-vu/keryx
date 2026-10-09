@@ -31,4 +31,11 @@ describe("offline public-snapshot CLI", () => {
         stdout: "", stderr: "Purchase outcomes refused. Supply a bounded public dispatch JSON file and --network eip155:5042 or eip155:5042002.\n" });
     }
   });
+  it.skipIf(process.platform === "win32")("refuses a POSIX FIFO before waiting for a writer (Windows unsupported)", async () => {
+    const folder = await mkdtemp(join(tmpdir(), "purchase-outcome-fifo-")), fifo = join(folder, "unopened-pipe");
+    await run("mkfifo", [fifo], { timeout: 5000 });
+    await expect(run(process.execPath, ["--import", loader, script, fifo, "--network", "eip155:5042"],
+      { cwd: folder, env: { PATH: process.env.PATH, TEMP: folder, TMP: folder, TSX_DISABLE_CACHE: "1" }, timeout: 5000 }))
+      .rejects.toMatchObject({ code: 1, stdout: "", stderr: "Purchase outcomes refused. Supply a bounded public dispatch JSON file and --network eip155:5042 or eip155:5042002.\n" });
+  });
 });

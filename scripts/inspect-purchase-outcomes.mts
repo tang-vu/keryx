@@ -8,7 +8,9 @@ try {
   const [file, selector, network, ...extra] = process.argv.slice(2);
   if (!file || selector !== "--network" || !purchaseOutcomeNetwork.safeParse(network).success || extra.length
     || /^https?:/i.test(file)) throw new Error();
-  const handle = await open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  // Nonblocking open reaches fstat for a POSIX FIFO instead of waiting for a
+  // writer before the regular-file refusal. No pipe/device content is consumed.
+  const handle = await open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
   let snapshot: unknown;
   try {
     const info = await handle.stat();
