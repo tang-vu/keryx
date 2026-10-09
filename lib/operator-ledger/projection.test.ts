@@ -161,4 +161,12 @@ describe("public observed transfer books", () => {
     expect(() => projectOperatorLedger({ ...base, days: 32 })).toThrow();
     expect(ledgerFixture([ledgerRun({ settledPayments: undefined })]).payload.jobs[0].legCoverage).toBe("unknown");
   });
+
+  it("serializes spreadsheet-formula-like public IDs as literal CSV text without changing JSON or micro amounts", () => {
+    const id = "-1-1", result = ledgerFixture([ledgerRun({ id })], [ledgerPayment({ queryId: id })]);
+    const rows = operatorLedgerCsv(result).trim().split("\r\n").map(row => row.split(",").map(cell => cell.slice(1, -1)));
+    expect(rows[1][6]).toBe("'-1-1"); expect(rows[2][6]).toBe("'-1-1");
+    expect(rows[1][9]).toBe("15700"); expect(rows[2][10]).toBe("15700");
+    expect(verifyOperatorLedger(JSON.parse(operatorLedgerJson(result)), result.integrity.digest).payload.jobs[0].id).toBe(id);
+  });
 });

@@ -19,6 +19,10 @@ export function operatorLedgerCsv(value: unknown): string {
   const rows = payload.entries.map(entry => [payload.schema, payload.network, payload.window.readStartedAt, payload.window.readCompletedAt,
     integrity.digest, entry.voucherId, entry.jobId, entry.funding, entry.account, entry.debitMicroUsdc, entry.creditMicroUsdc,
     entry.settlementReference, entry.evidencePath]);
-  return [columns, ...rows].map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\r\n") + "\r\n";
+  // Quoting alone does not stop spreadsheet formulas. Preserve JSON identities,
+  // but explicitly serialize risky CSV text as literal text. Integer amounts
+  // are canonical nonnegative strings and remain unchanged.
+  const quote = (cell: string) => `"${(/^[=+\-@\t\r]/.test(cell) ? "'" + cell : cell).replace(/"/g, '""')}"`;
+  return [columns, ...rows].map(row => row.map(quote).join(",")).join("\r\n") + "\r\n";
 }
 export function operatorLedgerJson(value: unknown): string { return canonicalJson(verifyOperatorLedger(value)) + "\n"; }

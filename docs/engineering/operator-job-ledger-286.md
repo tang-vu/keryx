@@ -82,6 +82,8 @@ Open `/operator/ledger` for the selected network. The API is `GET /api/operator/
 posted-transfer voucher projection, not a separate invoice or profit report. Unknown,
 duplicate or custody/network selectors are rejected before the store is read. A sealed
 store refusal returns a uniform 503; no private or ordinary database fallback is attempted.
+CSV text cells with a leading spreadsheet formula character receive a literal-text
+apostrophe; JSON original identities and integer amount columns remain exact.
 
 `npm run operator:ledger -- --days 7` uses public HTTPS at `https://keryx.cc` by default.
 `KERYX_OPERATOR_URL` may select another HTTPS origin or a loopback HTTP fixture. Add `--csv`
