@@ -11,6 +11,7 @@ import { gradeTrial } from "./rubric";
 import { assertSimulated } from "./runner";
 import { studyEnvironment } from "./offline-boundary";
 import { sourceInputs } from "./source-inputs";
+import type { StudyArtifact } from "./report";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const raw = JSON.parse(fs.readFileSync(path.join(root, "fixtures/evals/studies/paying-source-corpus-v1.json"), "utf8"));
@@ -126,5 +127,28 @@ describe("fresh-process outbound boundary and input scope", () => {
     expect(scope.files["lib/llm/heuristic-engine.ts"]).toHaveLength(64);
     expect(scope.files["app/proof/page.tsx"]).toBeUndefined();
     expect(scope.files["lib/evals/paying-source-study/study.test.ts"]).toBeUndefined();
+  });
+});
+describe("retained actual matrix invariants and declared sensitivity", () => {
+  it("keeps all48 cells, a fresh empty cache, zero live calls and integer budget caps", () => {
+    const result = JSON.parse(fs.readFileSync(path.join(root, "fixtures/evals/studies/paying-source-results-v1.json"), "utf8")) as StudyArtifact;
+    expect(result.trials).toHaveLength(48); expect(new Set(result.trials.map(t => t.id)).size).toBe(48);
+    expect(result.outboundAttempts).toBe(0);
+    for (const trial of result.trials) {
+      expect(trial.proposals.flat().some(proposal => proposal.action === "CACHE")).toBe(false);
+      expect(trial.output.paymentMode).toBe("offline"); expect(trial.output.settledPayments).toBe(0);
+      expect(trial.metrics.semanticCorrectness).toBeNull(); expect(trial.metrics.explorationEffect).toBeNull();
+      expect(BigInt(trial.metrics.fetchMicro) + BigInt(trial.metrics.citationMicro) <= BigInt(trial.budgetMicro)).toBe(true);
+      if (trial.budgetMicro === "0") expect(trial.metrics.paidReads).toBe(0);
+      for (const payment of trial.payments) assertSimulated(payment as PaymentRecord, trial.id);
+    }
+  });
+  it("retains measured price/budget contrasts without promoting quotation to factual completeness", () => {
+    const result = JSON.parse(fs.readFileSync(path.join(root, "fixtures/evals/studies/paying-source-results-v1.json"), "utf8")) as StudyArtifact;
+    const paid = (predicate: (t: StudyArtifact["trials"][number]) => boolean) => result.trials.filter(predicate).reduce((sum, t) => sum + t.metrics.paidReads, 0);
+    // These are observed prespecified fixture contrasts, not a monotonicity guarantee for arbitrary questions.
+    expect(paid(t => t.paidPriceMicro === PRICES[0])).toBeGreaterThan(paid(t => t.paidPriceMicro === PRICES[2]));
+    expect(paid(t => t.budgetMicro === BUDGETS[3])).toBeGreaterThan(paid(t => t.budgetMicro === BUDGETS[0]));
+    expect(result.trials.some(t => t.metrics.literalReadBoundClaimRate.value === 1 && t.metrics.requiredFactCompleteness.value === 0)).toBe(true);
   });
 });

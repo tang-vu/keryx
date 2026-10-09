@@ -50,15 +50,15 @@ Across 48 trials, ${overall.paid} paid fixture reads cost ${overall.toll} simula
 
 Each budget row contains the same four questions at all three prices (12 trials). Each price row contains the same four questions at all four budgets (16 trials). Read counts include free reads; paid reads count actual simulated fetch payments, rather than BUY proposals.
 
-| Budget (micro-USDC) | Trials | Reads / paid reads | Literal read-bound claims | Required facts | Literal read-bound citations | Toll / citation micro-USDC | Proposal/final action changes |
+| Budget (micro-USDC) | Trials | Reads / paid reads | Literal read-bound claims | Required facts | Literal read-bound citations | Toll / citation micro-USDC | Initial proposal/final action changes |
 | --- | ---: | ---: | --- | --- | --- | ---: | ---: |
 ${BUDGETS.map(budget => row(budget, result.trials.filter(trial => trial.budgetMicro === budget))).join("\n")}
 
-| Paid catalogue price (micro-USDC) | Trials | Reads / paid reads | Literal read-bound claims | Required facts | Literal read-bound citations | Toll / citation micro-USDC | Proposal/final action changes |
+| Paid catalogue price (micro-USDC) | Trials | Reads / paid reads | Literal read-bound claims | Required facts | Literal read-bound citations | Toll / citation micro-USDC | Initial proposal/final action changes |
 | --- | ---: | ---: | --- | --- | --- | ---: | ---: |
 ${PRICES.map(price => row(price, result.trials.filter(trial => trial.paidPriceMicro === price))).join("\n")}
 
-Price response in this matrix is the observed number of paid reads under the existing hard budget, attention, portfolio and sufficiency policies. It is not general willingness to pay, nor an estimated demand curve. The heuristic's lexical value proposal and the written policy are both retained. Action changes include free-source BUY-to-CACHE normalization; CACHE on a free source does not imply a pre-existing cache hit. A final BUY can remain unread after an early stop. No alternate-policy counterfactual was run, so which policy gives the better semantic answer is **not measured**. The hard budget constraint was checked using integer micro-USDC in all 48 trials.
+Price response in this matrix is the observed number of paid reads under the existing hard budget, attention, portfolio and sufficiency policies. It is not general willingness to pay, nor an estimated demand curve. The heuristic's initial lexical value proposals, actual reevaluation inputs/outputs and the written policy are retained separately. The action-change column counts initial decide proposals whose final action differs, not reevaluation recommendations. Changes include free-source BUY-to-CACHE normalization; CACHE on a free source does not imply a pre-existing cache hit. A final BUY can remain unread after an early stop. No alternate-policy counterfactual was run, so which policy gives the better semantic answer is **not measured**. The hard budget constraint was checked using integer micro-USDC in all 48 trials.
 
 Citation reward concentration uses **citation legs only**, grouped by creator source; tolls are excluded. ${concentration.length}/48 trials had nonzero citation rewards. Mean per-trial top-source share was ${mean("topRewardShare")}; mean per-trial HHI was ${mean("rewardHhi")}. Every exact numerator/denominator and per-source amount is retained in the JSON; zero-reward trials have null concentration. This fixed extractive engine and tiny corpus can favor redundant or stale records. The Lumen fixture deliberately contains a conflicting free threshold. Literal quotation can pass while the required fact is absent; a quotation is not entailment or truth.
 
