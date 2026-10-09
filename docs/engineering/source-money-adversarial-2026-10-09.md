@@ -18,13 +18,41 @@ project's installed dependencies:
 node scripts/test-source-money-adversarial.mjs --report output/source-money-adversarial-report.json
 ```
 
-The optional JSON report records the checked-out commit, whether tracked or
-untracked changes remain, test counts and each attack's result. It labels its
-authority as offline and leaves `liveTestnetRefusal` null. Generated reports are
-local artifacts, not committed financial evidence. The runner does not load an
-environment file and admits only ordinary OS paths/locales plus its explicit
-offline/testnet flags; provider, funding, database and Node preload authority are
-not inherited by Vitest.
+The runner now retains an exclusive temporary capture directory even on failure.
+It records actual argv, wall-clock times, exit code/signal, process errors and the
+observed stdout/stderr `end`, child `exit` and child `close` events. Raw bytes and
+their hashes accompany the JSON report; a leader exit alone does not establish
+EOF while a descendant holds a pipe. Capture is limited to 120 seconds and 4 MiB
+combined stdout/stderr; refused capture cleanup has a bounded five-second grace
+(plus at most one second for Windows tree termination). No retry runs.
+
+Successful reporting requires a zero exit with complete capture, a valid bounded
+Vitest JSON report with consistent counts and passing assertions, and exactly one
+passing result for each of the eight attack IDs. Nonzero exit, signal, timeout,
+overflow, capture errors, missing/duplicate cases or malformed JSON refuse success
+even if the JSON claims `success: true`. The output file is exclusive: an existing
+report is never overwritten. The CI checks job runs the report predicate and
+actual local child-process lifecycle regressions without providers or settlement.
+The descendant-held-pipe fixture runs on Linux CI; Windows does not inherit this
+fixture's pipe beyond the leader lifetime. Windows retains the other actual
+child lifecycle checks and the strict EOF refusal predicates.
+
+Before and after testing, the runner captures Git HEAD, tree, tracked/untracked
+status and an input manifest. The manifest hashes all tracked `lib/` and
+`test-support/` files plus the runner/helper/tests, CI workflow, package/lock,
+Vitest config and TypeScript config (at most 10,000 files / 64 MiB). A dirty tree,
+failed Git capture or changed source/runtime input refuses success and leaves
+`sourceCommit` null. Commit the candidate before recording a successful report.
+This is a before/after observation, not an atomic filesystem or hostile-host seal.
+Installed Vitest package metadata and the Node version/path are recorded; the
+lockfile is bound, but the installed dependency closure is **not** attested.
+
+The report labels its authority as offline and leaves `liveTestnetRefusal` null.
+Generated reports are local artifacts, not committed financial evidence. The
+runner does not load an environment file and admits only ordinary OS paths/locales
+plus explicit offline/testnet, disabled external-discovery and blank Supabase
+flags; provider, funding, database and Node preload authority are not inherited
+by Vitest.
 The catalog fixtures also refuse unexpected global `fetch`; HTML parsing is inert
 in the existing bounded child. No original page, search provider, LLM supplier,
 Circle endpoint, RPC, shared database or real wallet is contacted.
@@ -121,3 +149,12 @@ delivery is claimed by this candidate catalog. No runtime version bump or separa
 deployment is needed for the test/catalog entry; the gateway correction belongs
 to the coordinated reviewed runtime release. Issue #311 may close after that
 verified correction; issue #300 retains its live proof gate.
+
+This report-integrity maintenance changes only the focused local/CI runner,
+its lifecycle regressions and this catalog. The 54 financial/content tests and
+runtime, public receipts, payment APIs, web/SSE, CLI research, MCP, extensions,
+bots, desktop and installer contracts are unchanged. Its merge gates are the
+focused offline runner, helper regressions, applicable CI aggregate and
+independent source review; it needs no runtime version bump, publication,
+production deployment or product announcement. The historical results above
+remain historical until a new source-bound result is separately recorded.
