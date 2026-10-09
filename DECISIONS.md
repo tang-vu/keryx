@@ -6491,3 +6491,26 @@ exact-unit and recovery constraints, all supported surface roles and release gat
 Participant currency demand, rate-provider/fee policies, tiny-amount feasibility,
 browser-compatible custody and bounded testnet proof remain unaccepted. This records
 the evaluation boundary, not an accepted economic policy or enabled EURC product.
+
+## Prepare offline research decision audits before changing live authority — 2026-10-09
+
+Keep prospective cohort accounting, exact-version purchase scoring, bounded source
+learning and canonical read-admission replay in pure modules and one bounded local
+CLI. Closed policy records exclude question/body/rationale text. Exact micro-USDC
+arithmetic and separately retained digests support integrity checks, not independent
+settlement or actor attestation. Supplied funding/ownership/settlement facts require
+trusted adapters. Conflicting duplicate identities refuse; malformed JSON cannot
+coerce IDs, booleans or weights into measured results.
+
+Historical unknowns stay unknown. Citation occurrence/weight are recorded outcomes,
+not causal regret or fresh factual assessment. Source learning excludes unknown,
+self-owned, team/scripted/sponsored history and counts at most one reviewed source/
+topic/run observation; conflicting copies refuse before eligibility filtering.
+Exploration has an explicitly supplied exact partition, no default finance authority
+or automatic purchase. Keep live policy, payee, grant caps, receipts, native/sealed
+storage and distributions unchanged until their integration gates pass.
+
+The [audit contracts and acceptance map](docs/engineering/research-decision-audit-2026-10-09.md)
+record the offline source boundaries and remaining write-time adapters, public
+surface, live learning, full decision-graph replay and independent evaluation gates.
+Source tests and draft PRs do not close issues249/298/299/301 or authorize deployment.
