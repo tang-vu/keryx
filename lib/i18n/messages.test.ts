@@ -34,4 +34,14 @@ describe("typed English catalogue and selected translations", () => {
     expect(createMessages("vi", inherited)("navigation.home")).toBe("Home");
     expect(validateMessageCatalogue(inherited).missing).toContain("navigation.home");
   });
+
+  it("keeps the validated selected catalogue independent of caller mutation", () => {
+    const catalogue = { "navigation.home": "Trang chủ" };
+    const messages = createMessages("vi", catalogue);
+    catalogue["navigation.home"] = "Changed after validation";
+    expect(messages("navigation.home")).toBe("Trang chủ");
+    expect(Object.isFrozen(englishMessages)).toBe(true);
+    const accessor = Object.defineProperty({}, "navigation.home", { get() { throw new Error("unexpected getter"); }, enumerable: true });
+    expect(() => createMessages("vi", accessor)).toThrow("Invalid message catalogue properties");
+  });
 });

@@ -1,7 +1,7 @@
 import type { UiLocale } from "./locales";
 
 /** English source keys. Payment/legal prose remains in its separate review gate. */
-export const englishMessages = {
+export const englishMessages = Object.freeze({
   "navigation.home": "Home",
   "navigation.archive": "The archive",
   "navigation.newDispatch": "New dispatch",
@@ -10,7 +10,7 @@ export const englishMessages = {
   "report.citedSources.one": "{count} source cited",
   "report.citedSources.other": "{count} sources cited",
   "format.unavailable": "Unavailable",
-} as const;
+} as const);
 export type MessageKey = keyof typeof englishMessages;
 type Placeholders<T extends string> = T extends `${string}{${infer Name}}${infer Tail}` ? Name | Placeholders<Tail> : never;
 type Parameters<K extends MessageKey> = Record<Placeholders<typeof englishMessages[K]>, string | number>;
@@ -38,11 +38,15 @@ export function validateMessageCatalogue(catalogue: MessageCatalogue): { missing
 
 /** Pass only the selected catalogue to a client. Missing translations render English. */
 export function createMessages(locale: UiLocale, catalogue: MessageCatalogue = {}, reportMissing?: MissingMessageReporter) {
-  const checked = validateMessageCatalogue(catalogue);
+  const descriptors = Object.getOwnPropertyDescriptors(catalogue);
+  if (Reflect.ownKeys(catalogue).some(key => typeof key !== "string") ||
+    Object.values(descriptors).some(descriptor => !("value" in descriptor))) throw new Error("Invalid message catalogue properties");
+  const selected = Object.freeze(Object.fromEntries(Object.entries(descriptors).map(([key, descriptor]) => [key, descriptor.value]))) as MessageCatalogue;
+  const checked = validateMessageCatalogue(selected);
   if (checked.invalid.length) throw new Error(`Invalid message catalogue: ${checked.invalid.join(", ")}`);
   return function message<K extends MessageKey>(key: K, ...args: MessageArguments<K>): string {
     if (!Object.hasOwn(englishMessages, key)) throw new Error("Unknown English source message");
-    const translated = Object.hasOwn(catalogue, key) ? catalogue[key] : undefined;
+    const translated = Object.hasOwn(selected, key) ? selected[key] : undefined;
     if (translated === undefined && locale !== "en") reportMissing?.(locale, key);
     const text = translated ?? englishMessages[key];
     const parameters = args[0] as Record<string, string | number> | undefined;

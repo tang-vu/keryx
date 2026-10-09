@@ -29,6 +29,8 @@ are not included. Unknown English keys refuse rather than rendering a raw key.
 The catalogue validator reports missing and invalid entries for CI/review.
 Target placeholders must match the source. This is plain text, not HTML; callers
 must render it as text rather than through an HTML injection API.
+The message function retains an immutable validated snapshot of own data
+properties, refusing accessors; later caller mutation cannot change its strings.
 
 Pass only the selected catalogue through a server/client boundary; the helper
 does not import every target dictionary. The source has no runtime loader or
