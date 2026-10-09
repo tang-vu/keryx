@@ -20,6 +20,8 @@ import { isRequestObject } from "@/lib/request-object";
 import { NextRequest } from "next/server";
 import { BROWSER_AUTHORIZATION_PROTOCOL } from "@/lib/payments/browser-authorization-protocol";
 import { getSession } from "@/lib/auth";
+import { accountSessionContext } from "@/lib/account-sessions";
+import { assertDecisionReviewAuthority } from "@/lib/research/decision-review-authority";
 import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
 import { researchFailureMessage } from "@/lib/llm/research-plan";
@@ -44,6 +46,9 @@ import { isAddress } from "viem";
 import { readRetainedMainnetSessionAuthority } from "@/lib/payments/retained-session-authority";
 import { readResearchAvailability } from "@/lib/research/availability";
 import { researchAdmissionError } from "@/lib/research/availability-contract";
+import { isConfiguredSameOrigin } from "@/lib/auth-origin";
+import { createLiveDecisionReviews } from "@/lib/research/decision-review-live";
+import { unsupportedDecisionReviewIntent } from "@/lib/research/decision-review-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,6 +59,10 @@ export async function POST(req: NextRequest) {
   if (!isRequestObject(body)) {
     return Response.json({ error: "request body must be a JSON object" }, { status: 400 });
   }
+  if (body.reviewFirst !== undefined && typeof body.reviewFirst !== "boolean") return Response.json({ error: "reviewFirst must be a boolean" }, { status: 400 });
+  if (unsupportedDecisionReviewIntent({ ...body, reviewFirst: false })) return Response.json({ error: "review_unsupported" }, { status: 400 });
+  if (body.reviewFirst === true && (!body.sessionId || req.nextUrl.searchParams.has("bot") || !isConfiguredSameOrigin(req, config.baseUrl)))
+    return Response.json({ error: "review_unsupported", message: "Review-first requires an authenticated browser session on this origin." }, { status: 409 });
   // Model pick from the UI's picker. Validated inside getAgentDeps → resolveModelChoice:
   // unknown/unconfigured ids silently run the default engine, and every pick has a
   // Configured-provider → heuristic fallback chain, so a crafted value can never fail an ask.
@@ -161,6 +170,15 @@ export async function POST(req: NextRequest) {
     );
   }
   const useBrowserCoSign = Boolean(sessionId);
+  let reviewStore = asker ? (await getDb()).decisionReviews : undefined;
+  if (body.reviewFirst === true && !reviewStore) return Response.json({ error: "review_unavailable" }, { status: 503 });
+  if (reviewStore) {
+    try { await reviewStore.ready(); }
+    catch { if (body.reviewFirst === true) return Response.json({ error: "review_unavailable" }, { status: 503, headers: { "Cache-Control": "private, no-store", "Vary": "Cookie" } }); reviewStore = undefined; }
+  }
+  const reviewSession = body.reviewFirst === true ? await accountSessionContext() : undefined;
+  if (reviewSession instanceof Response) return reviewSession;
+  if (reviewSession && reviewSession.wallet !== asker) return Response.json({ error: "review_owner_changed" }, { status: 409 });
   let questionCapUsdc = config.sessionAskMaxBudget;
   if (useBrowserCoSign && grant && config.profile.name === "arc") {
     try {
@@ -215,6 +233,7 @@ export async function POST(req: NextRequest) {
   }
 
   const encoder = new TextEncoder();
+  const queryId = crypto.randomUUID();
 
   // AbortController tied to the client connection so sign-request promises are
   // cancelled when the browser disconnects mid-run.
@@ -242,6 +261,16 @@ export async function POST(req: NextRequest) {
           // Controller already closed (client disconnected) — ignore.
         }
       };
+      const reviewAdapter = asker && reviewStore ? createLiveDecisionReviews({
+        owner: asker, store: reviewStore, reviewFirst: body.reviewFirst === true, signal: abort.signal, send, sessionHash: reviewSession?.currentId ?? null,
+        cohort: isBot ? "scripted" : config.devWallets.includes(asker) ? "team" : "unknown",
+        cohortEvidence: isBot ? "authenticated-bot-route" : config.devWallets.includes(asker) ? "configured-dev-wallet" : null,
+        verifyOwnerAndGrant: async () => {
+          const current = sessionId ? await getGrant(sessionId) : undefined;
+          const session = reviewSession ? await reviewSession.db.getWebSession(reviewSession.currentId) : null;
+          assertDecisionReviewAuthority(asker, reviewSession?.currentId ?? "", session, grant, current);
+        },
+      }) : undefined;
 
       try {
         let deps;
@@ -287,11 +316,14 @@ export async function POST(req: NextRequest) {
         }
 
         if (agentAbort.signal.aborted) throw new DOMException("Research cancelled", "AbortError");
-        send("meta", { engine: deps.engine.name, mode: deps.gateway.mode, researchMode });
+        send("meta", { engine: deps.engine.name, mode: deps.gateway.mode, researchMode, ...(reviewAdapter ? { reviewOwner: asker } : {}) });
         // Preserve the execution origin for audit. A manual internal client with the bot key
         // can be tagged `engine`; ordinary requests through this route are tagged `web`.
         const gen = runAgent(
           {
+            queryId,
+            reviewFirst: body.reviewFirst === true,
+            decisionReviews: reviewAdapter?.reviews,
             question: askQuestion,
             originalQuestion: question,
             signal: agentAbort.signal,
@@ -353,6 +385,7 @@ export async function POST(req: NextRequest) {
           ...(researchAdmissionError(err) ? { code: "research_paused" } : {}),
           ...(err instanceof ResearchSelectionError ? { code: err.code, selectionDiagnostic: err.diagnostic } : {}) });
       } finally {
+        await reviewAdapter?.close(queryId).catch(() => undefined);
         req.signal.removeEventListener("abort", disconnect);
         try { controller.close(); } catch { /* The disconnected reader may have cancelled it. */ }
       }
@@ -362,7 +395,8 @@ export async function POST(req: NextRequest) {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
+      "Cache-Control": reviewStore ? "private, no-store, no-transform" : "no-cache, no-transform",
+      ...(reviewStore ? { "Vary": "Cookie", "Referrer-Policy": "no-referrer" } : {}),
       Connection: "keep-alive",
       // Disable proxy response buffering so the live reasoning trace streams token-by-token
       // instead of arriving in one batch at the end. Honored by nginx and by the Cloudflare

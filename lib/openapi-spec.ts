@@ -20,6 +20,7 @@ import { evidenceDraftOpenApiPath } from "./research/evidence-draft-openapi";
 import { personalHistoryOpenApiPaths } from "./history/openapi";
 import { API_KEY_SCOPES } from "./api-key-scopes";
 import { profileIdentityOpenApiPaths } from "./profiles/identity-openapi";
+import { decisionReviewOpenApiPaths } from "./research/decision-review-openapi";
 import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
@@ -618,6 +619,7 @@ export const openapiSpec = {
     },
   },
   paths: {
+    ...decisionReviewOpenApiPaths,
     ...evidenceDraftOpenApiPath,
     ...privateProfileOpenApiPaths,
     ...personalHistoryOpenApiPaths,

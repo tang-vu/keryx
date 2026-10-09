@@ -17,6 +17,10 @@ const client = new Client({ name: "monthly-distribution-test", version: "1.0.0" 
 try {
   await client.connect(transport);
   const tools = await client.listTools();
+  for (const input of [{ question: "Synthetic review request", reviewFirst: true }, { question: "Synthetic review request", mode: "review-first" }, { question: "Synthetic review request", researchMode: "review-first" }]) {
+    const refused = await client.callTool({ name: "ask_keryx", arguments: input });
+    assert.equal(refused.isError, true); // Input validation before buyer signing/payment/provider.
+  }
   assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["evidence_draft", "operator_obligations_read", "paper_lookup", "ask_keryx", "keryx_wallet_status", "keryx_recover", "research_monthly", "keryx_operator_status", "keryx_public_job_ledger", "profile_read", "profile_update", "history_read", "profile_identities_read"].sort());
   const bibliography = tools.tools.find(tool => tool.name === "paper_lookup")!;
   assert.equal(bibliography.annotations?.readOnlyHint, true);

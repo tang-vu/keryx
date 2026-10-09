@@ -74,9 +74,82 @@ import { publicSourceClaimId } from "../db/public-source-claims";
 import { sourceClaimReceipt } from "../sources/source-claim-access";
 import { fixtureEvidenceSpans } from "../../test-support/evidence-fixtures";
 import { completeEvidenceSpans } from "../llm/evidence-span";
+import { DatabaseSync } from "node:sqlite";
+import { createSqliteDecisionReviews } from "../db/decision-reviews-sqlite";
+import { createLiveDecisionReviews, recordLiveReviewVerdict } from "../research/decision-review-live";
+import type { DecisionReview } from "../research/decision-review-types";
 
 const AGENT = "0xAGENT";
 const EPS = 1e-6;
+
+describe("identity-bound review-first pipeline", () => {
+  const owner = `0x${"ab".repeat(20)}`, payee = `0x${"12".repeat(20)}`, sessionHash = "a".repeat(64);
+  async function reviewedCase({ cached = false, free = false, reeval = false, decline = false, changed = false, fundingFails = false } = {}) {
+    const previousOrigin = config.baseUrl; Object.assign(config, { baseUrl: "https://keryx.cc" });
+    const connection = new DatabaseSync(":memory:"), store = createSqliteDecisionReviews(connection), signal = new AbortController();
+    const source = makeSource({ id: "reviewed-source", url: "https://reviewed-source.example/", walletAddress: payee, fetchPrice: free ? 0 : 0.002,
+      authors: [{ name: "Synthetic author", walletAddress: payee, splitWeight: 1 }] });
+    const bootstrap = makeSource({ id: "bootstrap", walletAddress: payee });
+    const continuing = makeSource({ id: "continuing-source", walletAddress: payee });
+    const gateway = fakeGateway(), funding = vi.spyOn(gateway, "ensureFunded"); if (fundingFails) funding.mockRejectedValue(new Error("Synthetic unknown funding"));
+    const engine = fakeEngine({ decide: input => input.candidates.map(c => ({ ...buy({ id: c.id, name: c.name, price: c.fetchPrice }, changed && c.sourceId === source.id ? 0.95 : 0.8), action: reeval && c.sourceId === source.id ? "SKIP" : cached && c.sourceId === source.id ? "CACHE" : "BUY" })),
+      sufficiency: input => ({ sufficient: !reeval || input.gathered.length >= 2, rationale: "Synthetic coverage",
+        perClaim: [{ claim: "the sub-claim", coverage: reeval && input.gathered.length < 2 ? 0 : 0.9, coveredBy: input.gathered.map(row => row.marker) }] }),
+      reevaluate: () => ({ shouldBuyMore: true, recommendedIds: [source.id], rationale: "Synthetic second-pass proposal" }) });
+    const proofTime = new Date().toISOString(), items: SourceItem[] = free ? [{ id: "free-item", sourceId: source.id, title: "Synthetic measurement", summary: "Preview", content: "Synthetic measured evidence supports the research question.", link: `${source.url}/article`, publishedAt: proofTime }] : [];
+    if (free) Object.assign(source, { sourceClaimId: "a".repeat(64), onchainId: `0x${"22".repeat(32)}`, verified: true });
+    const d = deps(reeval ? [bootstrap, source] : changed ? [source, continuing] : [source], engine, gateway, { ...(cached ? { cachedAt: { [source.id]: proofTime } } : {}), ...(free ? { items: { [source.id]: items } } : {}) });
+    if (free) d.db.getSourceClaimForSource = async id => id === source.id ? { id: source.sourceClaimId!, canonicalUrl: source.url, ownerWallet: payee,
+      deploymentOrigin: new URL(config.baseUrl).origin, network: config.networkId, linkedSourceId: source.id, onchainId: source.onchainId!, mode: "citation-only", distributionPermission: true, revision: 1, effectiveAt: proofTime, verifiedAt: proofTime } : null;
+    const events: DecisionReview[] = [], verdicts: Promise<unknown>[] = [], queryId = crypto.randomUUID(); let recipientChanged = false;
+    const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async s => ({ payTo: recipientChanged && s.id === source.id ? `0x${"34".repeat(20)}` : payee, creator: payee,
+      listPriceUsdc: s.fetchPrice, active: true, authority: "onchain", stale: false, citationWallets: new Set([payee]) }));
+    const live = createLiveDecisionReviews({ owner, store, signal: signal.signal, reviewFirst: true, sessionHash, cohort: "unknown", cohortEvidence: null,
+      verifyOwnerAndGrant: async () => {}, send(event, record) {
+        events.push(record);
+        if (event === "decision-review-request") {
+          const target = record.terms.sourceId === source.id;
+          expect(funding.mock.calls.length).toBe(reeval && target ? 1 : 0); expect(gateway.fetchCalls).toEqual(reeval && target ? [bootstrap.id] : []); expect(gateway.citationCalls).toEqual([]);
+          if (target) { expect(record.terms).toMatchObject({ priceMicroUsdc: cached || free ? "0" : "2000", listPriceMicroUsdc: free ? "0" : "2000" });
+            expect(record.initialCodeAction).toBe(cached ? "CACHE" : "BUY"); if (free) expect(record.terms.claimDigest).toMatch(/^[a-f0-9]{64}$/); if (changed) recipientChanged = true; }
+          verdicts.push(recordLiveReviewVerdict(store, owner, { id: record.id, key: crypto.randomUUID(), context: "gate", value: target && decline ? "disagree" : "agree" }, sessionHash));
+        }
+      } });
+    try {
+      const result = drive({ question: "Compare synthetic evidence", queryId, budget: 0.05, reviewFirst: true, decisionReviews: live.reviews,
+        origin: "web", fundingOwner: "browser", asker: owner, signal: signal.signal, researchMode: "deep", executionLimits: { attentionLimit: 2, reevaluateRounds: reeval ? 1 : 0 } }, d);
+      {
+        const { run } = await result;
+        if (changed) { expect(gateway.fetchCalls).toEqual(reeval ? [bootstrap.id] : [continuing.id]);
+          expect(run.citations.some(row => row.sourceId === source.id)).toBe(false); expect(gateway.citationCalls.some(row => row.sourceId === source.id)).toBe(false);
+          expect(run.citations.some(row => row.sourceId === (reeval ? bootstrap.id : continuing.id))).toBe(true); }
+        else if (decline || fundingFails) { expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]); }
+        else if (cached || free) expect(gateway.fetchCalls).toEqual(reeval ? [bootstrap.id] : []);
+        else expect(gateway.fetchCalls).toEqual(reeval ? [bootstrap.id, source.id] : [source.id]);
+        if ((free || cached) && !decline && !fundingFails) { expect(gateway.citationCalls.some(call => call.sourceId === source.id && call.amount > 0)).toBe(true);
+          expect(run.evidence?.some(row => row.sourceId === source.id && row.qualifiesForReward)).toBe(true); }
+        expect(events.some(record => record.terms.sourceId === source.id && record.state === (changed ? "cancelled" : decline ? "declined" : "consumed"))).toBe(true);
+        expect(run).not.toHaveProperty("decisionReviews"); expect(run.decisions.every(row => !Object.hasOwn(row, "reviewId"))).toBe(true);
+        const records = await store.list(owner, queryId);
+        if (fundingFails) expect(records.at(-1)).toMatchObject({ initialCodeAction: "BUY", codeAction: "SKIP", codeRule: "funding-unavailable" });
+        if (decline) expect(records.at(-1)).toMatchObject({ codeAction: cached ? "CACHE" : "BUY", codeRule: cached ? "cache-selected" : "selected" });
+        if (changed) expect(records.find(row => row.terms.sourceId === source.id && row.round === (reeval ? 1 : 0))).toMatchObject({ initialCodeAction: "BUY", codeAction: "SKIP", codeRule: "terms-changed", state: "cancelled", verdict: { value: "agree", context: "gate" } });
+      }
+      await Promise.all(verdicts);
+    } finally { await live.close(queryId); terms.mockRestore(); funding.mockRestore(); connection.close(); Object.assign(config, { baseUrl: previousOrigin }); }
+  }
+  it.each([false, true])("gates initial and reevaluation BUY before funding, second-pass=%s", reeval => reviewedCase({ reeval }));
+  it.each([false, true])("gates cached reward exposure at zero access price, second-pass=%s", reeval => reviewedCase({ cached: true, reeval }));
+  it("gates an owned creator-free read before reward exposure", () => reviewedCase({ free: true }));
+  it.each([false, true])("decline leaves purchase/rewards effect-free, cached=%s", cached => reviewedCase({ cached, decline: true }));
+  it.each([false, true])("changed authoritative terms refuse before effects, second-pass=%s", reeval => reviewedCase({ reeval, changed: true }));
+  it("funding failure after approved admission preserves unknown-readiness degradation", () => reviewedCase({ fundingFails: true }));
+  it.each(["engine", "a2a", "mcp"] as const)("unsupported %s refuses before providers or funding", async origin => {
+    const engine = fakeEngine(), gateway = fakeGateway(), provider = vi.spyOn(engine, "decompose"), fund = vi.spyOn(gateway, "ensureFunded");
+    await expect(drive({ question: "Synthetic question", origin, reviewFirst: true, asker: owner, fundingOwner: "treasury" }, deps([], engine, gateway))).rejects.toThrow("review_unsupported");
+    expect(provider).not.toHaveBeenCalled(); expect(fund).not.toHaveBeenCalled();
+  });
+});
 
 // ── fixtures ──────────────────────────────────────────────────────────────
 

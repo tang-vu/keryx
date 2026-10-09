@@ -96,6 +96,10 @@ import {
   sourceItemIdentity,
 } from "../sources/source-item-asset";
 import { sourceFetchTerms } from "../registry/source-fetch-payto";
+import type { SourceFetchTerms } from "../registry/source-fetch-payto";
+import { createHash } from "node:crypto";
+import { canonicalJson } from "../canonical-json";
+import { DecisionReviewError, DecisionReviewSourceChanged, REVIEW_POLICY_VERSION, reviewMicros, type AgentDecisionReviews, type DecisionReview, type DecisionTerms, type CaptureDecision } from "../research/decision-review-types";
 import { assertRecipientAllowed, sourceRecipientIsExcluded } from "../payments/recipient-exclusion";
 import { sourceClaimAccess, publicDuplicateOfOwnedItem } from "../sources/source-claim-access";
 import { sourceClaimForUrl } from "../sources/public-source-claim-service";
@@ -122,6 +126,10 @@ import {
 } from "./evidence-portfolio";
 
 export interface RunInput {
+  /** Interactive same-owner browser admission only; other adapters fail before effects. */
+  reviewFirst?: boolean;
+  /** Trusted ordinary sidecar adapter. Never accept this object from request JSON. */
+  decisionReviews?: AgentDecisionReviews;
   /** Trusted hosted-worker format selection; public request JSON cannot set it. */
   answerFormat?: "decision-brief";
   /** Opt in to scholarly metadata search; this never authorizes payment. */
@@ -181,6 +189,7 @@ export interface RunInput {
 }
 
 interface InternalAsset {
+  terms: SourceFetchTerms;
   candidate: SourceCandidate;
   source: Source;
   item?: SourceItem;
@@ -197,8 +206,11 @@ export async function* runAgent(
   input: RunInput,
   deps: AgentDeps,
 ): AsyncGenerator<TraceStep, QueryRun, void> {
+  if (input.reviewFirst && (!input.decisionReviews || input.origin !== "web" || input.fundingOwner !== "browser" || !input.asker))
+    throw new DecisionReviewError("review_unsupported");
   const queryId = input.queryId ?? crypto.randomUUID();
   const effects = resolveResearchEffects(deps.db, deps.effects, deps.discoverExternal, queryId);
+  if (input.reviewFirst && effects.scope.kind !== "public") throw new DecisionReviewError("review_unsupported");
   // The original caller alone can select this free, exact metadata task. Private
   // originals, package execution, wanted assets and paid-paper flows keep their
   // existing research/payment contracts. Source text and prior context cannot opt in.
@@ -244,6 +256,9 @@ async function* runAdmittedAgent(
   let fundingUnavailable = false;
   const fundingNotice = "Funding readiness is unknown. Paid source access and creator rewards are withheld for this run; any wallet funding activity remains unverified. Inspect the original funding records before another paid attempt.";
   let finalDecisions: Decision[] = [];
+  const reviewRecords = new Map<string, DecisionReview>();
+  const reviewedAssets = new Set<string>();
+  const codeRules = new Map<string, CaptureDecision["codeRule"]>();
   let citations: Citation[] = [];
   let teachingProposals: TeachingProposalDelivery | undefined;
   let operatingFee: QueryRun["operatingFee"];
@@ -616,6 +631,7 @@ async function* runAdmittedAgent(
       if (target) candidates.unshift(candidate);
       else candidates.push(candidate);
       assetById.set(id, {
+        terms,
         candidate,
         source: s,
         item,
@@ -650,6 +666,7 @@ async function* runAdmittedAgent(
     };
     candidates.push(candidate);
     assetById.set(s.id, {
+      terms,
       candidate,
       source: s,
       cacheKey: s.id,
@@ -781,6 +798,7 @@ async function* runAdmittedAgent(
   // orchestrator never purchases them, regardless of advertised rail — enforced here like the
   // budget cap, so a model BUY can never leak into an external purchase.
   const proposedAssetIds = new Set<string>();
+  const modelActions = new Map<string, Decision["action"]>();
   const internalProposed = proposed
     .filter((d) => !isExternal(d.sourceId))
     .flatMap<Decision>((d) => {
@@ -790,6 +808,7 @@ async function* runAdmittedAgent(
       if (publicCandidate) {
         if (proposedAssetIds.has(publicCandidate.id)) return [];
         proposedAssetIds.add(publicCandidate.id);
+        modelActions.set(publicCandidate.id, d.action);
         return [{ ...d, assetId: publicCandidate.id, sourceId: publicCandidate.id,
           sourceName: publicCandidate.name, price: 0, offerId: undefined, listPrice: undefined,
           external: false, ...publicCandidate.item,
@@ -801,6 +820,7 @@ async function* runAdmittedAgent(
       if (!asset) return [];
       if (proposedAssetIds.has(asset.candidate.id)) return [];
       proposedAssetIds.add(asset.candidate.id);
+      modelActions.set(asset.candidate.id, d.action);
       return [{
         ...d,
         assetId: asset.candidate.id,
@@ -825,6 +845,7 @@ async function* runAdmittedAgent(
     internalProposed.push({ sourceId: id, assetId: id, sourceName: candidate.name, ...candidate.item,
       action: "SKIP", expectedValue: 0, price: 0, confidence: 0, targets: [],
       rationale: "No valid decision was returned for this supplied original. The reasoning engine omitted this supplied original from its proposals; no read was authorized. Narrow the task to this URL and inspect the original rather than silently substituting a secondary source." });
+    codeRules.set(id, "missing-proposal");
   }
 
   // Normalize model proposals and apply the downward-only preview gates before portfolio
@@ -839,6 +860,7 @@ async function* runAdmittedAgent(
     if (discussionDoesNotMeetDocumentRequest(input.question, r.itemUrl) ||
         proposedDecision.targets.length > 0 && targets.length === 0) {
       discussionBlockedIds.add(r.assetId ?? r.sourceId);
+      codeRules.set(r.assetId ?? r.sourceId, "discussion");
       preparedDecisions.push({ ...r, action: "SKIP",
         rationale: "The request asks for official documentation; this URL identifies a discussion or issue page, so no read slot or source payment is authorized." });
       continue;
@@ -856,7 +878,9 @@ async function* runAdmittedAgent(
           }
         : r;
     const coverageBlock = previewCoverageBlockReason(d, subClaims.length);
+    if (d.action === "BUY" && r.action === "CACHE") codeRules.set(d.assetId ?? d.sourceId, "cache-expired");
     if (coverageBlock) {
+      codeRules.set(d.assetId ?? d.sourceId, "preview");
       preparedDecisions.push({
         ...d,
         action: "SKIP",
@@ -870,6 +894,7 @@ async function* runAdmittedAgent(
       d.action === "CACHE" &&
       ((d.targets?.length ?? 0) === 0 || d.expectedValue < attentionFloor)
     ) {
+      codeRules.set(d.assetId ?? d.sourceId, "attention");
       preparedDecisions.push({
         ...d,
         action: "SKIP",
@@ -912,6 +937,7 @@ async function* runAdmittedAgent(
     const assetId = decision.assetId ?? decision.sourceId;
     if (selectedAssets.has(assetId)) continue;
     if (decision.action === "BUY" || decision.action === "CACHE") {
+      codeRules.set(assetId, "portfolio");
       const selectedAlias = evidencePortfolio.selectedAssetIds.map(id => preparedByAsset.get(id))
         .find(selected => selected && documentSelectionKey(selected) === documentSelectionKey(decision));
       finalDecisions.push({
@@ -970,6 +996,13 @@ async function* runAdmittedAgent(
   for (const d of finalDecisions) {
     yield emit("decide", `${d.action} ${d.sourceName} — ${d.rationale}`, d);
   }
+  for (const [ordinal, decision] of finalDecisions.entries()) {
+    const assetId = decision.assetId ?? decision.sourceId;
+    const externalMatches = decision.external ? proposed.filter(item => item.sourceId === decision.sourceId) : [];
+    const record = await captureReview(decision, decision.external ? externalMatches.length === 1 ? externalMatches[0].action : null : modelActions.get(assetId) ?? null,
+      decision.external ? "external-only" : codeRules.get(assetId) ?? (decision.action === "SKIP" ? "model-skip" : publicCandidates.has(assetId) ? "public-read" : decision.action === "CACHE" ? "cache-selected" : "selected"), 0, ordinal);
+    if (record) reviewRecords.set(assetId, record);
+  }
 
   // 4) FETCH (+ stop-early sufficiency)
   let markerN = 0;
@@ -982,7 +1015,7 @@ async function* runAdmittedAgent(
   // (real mode tops up from the funder once; offline is a no-op). Cached sources still earn
   // citation rewards, so fund only when an owned payable source will be used.
   let spendWalletReady = false;
-  if (budget > 0 && buys.some((decision) =>
+  if (!input.reviewFirst && budget > 0 && buys.some((decision) =>
       (assetById.get(decision.assetId ?? decision.sourceId)?.priceUsdc ?? 0) > 0)) {
     try {
       const funded = await gateway.ensureFunded(budget);
@@ -992,7 +1025,7 @@ async function* runAdmittedAgent(
       }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") throw error;
-      yield* withholdOwnedReads("fetch");
+      yield* await withholdOwnedReads("fetch");
     }
   }
 
@@ -1005,6 +1038,7 @@ async function* runAdmittedAgent(
 
   for (const d of buys) {
     if (documentAlreadyRead(d, gathered)) {
+      await observeReview(d.assetId ?? d.sourceId, "duplicate");
       const was = markUnread(d, "this canonical document was already read through another delivery channel; no second attention slot, access toll or independent contribution.");
       if (was === "BUY" && assetById.has(d.assetId ?? d.sourceId)) spentTolls = Math.max(0, round(spentTolls - d.price));
       yield emit("fetch", `SKIP ${d.sourceName}: this canonical document already contributes once; no redundant read or toll.`);
@@ -1033,7 +1067,7 @@ async function* runAdmittedAgent(
     }
     const asset = assetById.get(d.assetId ?? d.sourceId);
     if (!asset) continue;
-    if (fundingUnavailable && asset.priceUsdc > 0) continue;
+    if (fundingUnavailable && asset.priceUsdc > 0) { await observeReview(d.assetId ?? d.sourceId, "funding-unavailable"); continue; }
     const { source, item, cacheKey } = asset;
     try {
       const currentTerms = await sourceFetchTerms(source, { refresh: true });
@@ -1041,19 +1075,32 @@ async function* runAdmittedAgent(
       const currentAccess = await sourceClaimAccess(db, source, currentTerms, { expected: asset.claimPolicy ?? null });
       if (!currentAccess.readAllowed || currentTerms.listPriceUsdc !== asset.listPriceUsdc) throw new Error("Source terms changed");
     } catch {
+      await observeReview(d.assetId ?? d.sourceId, "terms-changed");
       yield emit("fetch", `SKIP ${source.name}: source claim or registry terms changed after discovery; no new payment.`);
       continue;
     }
     if (item && asset.claimPolicy && gathered.some(read => publicDuplicateOfOwnedItem(item, read, contentBodyHash))) {
+      await observeReview(d.assetId ?? d.sourceId, "duplicate");
       yield emit("fetch", `SKIP ${source.name}: this exact article was already read; no duplicate contribution or reward.`);
       continue;
     }
     if (await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text))) {
+      await observeReview(d.assetId ?? d.sourceId, "duplicate");
       yield emit("fetch", `SKIP paid manuscript ${source.name}: identical body was already read publicly, no duplicate access or reward.`);
       continue;
     }
     if (!await paperCanResearch(db, source, input.paidScholarly === true && origin === "web")) {
+      await observeReview(d.assetId ?? d.sourceId, "rights");
       yield emit("fetch", `SKIP ${source.name}: manuscript rights or registry terms changed before this read.`);
+      continue;
+    }
+    const admission = await admitReview(asset, reviewRecords.get(d.assetId ?? d.sourceId));
+    if (admission !== "admitted") {
+      const reason = admission === "source-changed" ? "source terms changed during review; no read or payment was admitted"
+        : "human review did not admit this read; waiting, decline and expiry are not code refusals";
+      yield emit("fetch", `SKIP ${source.name}: ${reason}.`);
+      const unread = markUnread(d, reason);
+      if (unread === "BUY") spentTolls = Math.max(0, round(spentTolls - asset.priceUsdc));
       continue;
     }
     const itemIdentity = { ...asset.candidate.item, evidenceProvenance: asset.candidate.item?.evidenceProvenance ?? source.evidenceProvenance };
@@ -1085,8 +1132,13 @@ async function* runAdmittedAgent(
       yield emit("fetch", `Reused cached ${assetLabel} (free) — ${marker}`);
     } else {
       if (budget === 0) {
+        await observeReview(d.assetId ?? d.sourceId, "zero-budget");
         yield emit("fetch", `SKIP ${assetLabel}: this delivery requires the payment gateway; the question authorizes 0 USDC and no payment attempt.`);
         continue;
+      }
+      if (input.reviewFirst && !spendWalletReady) {
+        try { await input.onCreatorPaymentBoundary?.(); await gateway.ensureFunded(budget); spendWalletReady = true; }
+        catch (error) { if (error instanceof Error && error.name === "AbortError") throw error; yield* await withholdOwnedReads("fetch"); continue; }
       }
       yield emit(
         "fetch",
@@ -1183,6 +1235,7 @@ async function* runAdmittedAgent(
       try { suf = await engine.sufficiency({ question: input.question, subClaims, gathered }); }
       catch {
         readingAssessmentUnavailable = true;
+        for (const unread of buys.slice(buys.indexOf(d) + 1)) await observeReview(unread.assetId ?? unread.sourceId, "assessment-unavailable");
         yield emit("sufficiency", "Reading assessment unavailable; stopping further purchases and retaining completed reads and receipts.");
         break;
       }
@@ -1204,6 +1257,7 @@ async function* runAdmittedAgent(
         let unreadBuys = 0;
         let released = 0;
         for (const x of buys.slice(buys.indexOf(d) + 1)) {
+          await observeReview(x.assetId ?? x.sourceId, "sufficient");
           const was = markUnread(x, "not read: the sources already read covered every research target, so the agent stopped early.");
           if (was === "BUY" && assetById.has(x.assetId ?? x.sourceId)) { unreadBuys++; released += x.price; }
         }
@@ -1308,15 +1362,18 @@ async function* runAdmittedAgent(
         if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
         const recommended = webCandidates.get(recId) ?? publicCandidates.get(recId) ?? assetById.get(recId)?.candidate;
         if (recommended && documentAlreadyRead({ ...recommended.item, assetId: recommended.id, sourceId: recommended.sourceId ?? recommended.id }, gathered)) {
+          await captureRecommendation(recId, "SKIP", "duplicate", round + 1, reeval.recommendedIds.indexOf(recId));
           yield emit("reevaluate", `SKIP ${recommended.name}: this canonical document was already read through another delivery channel; no redundant access toll or independent corroboration.`);
           continue;
         }
         if (discussionBlockedIds.has(recId) || discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl) ||
             subClaims.length > 0 && subClaims.every(claim => discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl, claim))) {
+          await captureRecommendation(recId, "SKIP", "discussion", round + 1, reeval.recommendedIds.indexOf(recId));
           yield emit("reevaluate", "Discussion-page recommendation withheld: the request requires official documentation.");
           continue;
         }
         if (attentionUsed >= attentionLimit) {
+          for (const unread of reeval.recommendedIds.slice(reeval.recommendedIds.indexOf(recId))) await captureRecommendation(unread, "SKIP", "attention", round + 1, reeval.recommendedIds.indexOf(unread));
           yield emit(
             "reevaluate",
             `Attention budget reached ${attentionLimit} source(s); stopping gap expansion.`,
@@ -1324,6 +1381,7 @@ async function* runAdmittedAgent(
           break;
         }
         if (webCandidates.has(recId) && !gatheredIds.has(recId)) {
+          await captureRecommendation(recId, "CACHE", "public-read", round + 1, reeval.recommendedIds.indexOf(recId));
           const read = await fetchWeb(recId);
           for (const message of scholarlyReadFailures.splice(0)) yield emit("reevaluate", message);
           if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
@@ -1334,6 +1392,7 @@ async function* runAdmittedAgent(
         }
         const publicRead = publicReads.get(recId);
         if (publicRead && !gatheredIds.has(recId)) {
+          await captureRecommendation(recId, "CACHE", "public-read", round + 1, reeval.recommendedIds.indexOf(recId));
           if (gathered.some(read => read.itemUrl === publicRead.itemUrl && contentBodyHash(read.text) === contentBodyHash(publicRead.text))) continue;
           const marker = `S${++markerN}`;
           gathered.push({ ...publicRead, marker });
@@ -1346,9 +1405,12 @@ async function* runAdmittedAgent(
         const source = asset?.source;
         // Guard against an engine recommending a source we already read (duplicate marker +
         // double payment) or that no longer fits the remaining budget.
-        if (!asset || !source || gatheredIds.has(recId) || (remainingBudget <= 0 && asset.priceUsdc > 0) || asset.priceUsdc > remainingBudget + 1e-9) continue;
+        if (!asset || !source || gatheredIds.has(recId) || (remainingBudget <= 0 && asset.priceUsdc > 0) || asset.priceUsdc > remainingBudget + 1e-9) {
+          await captureRecommendation(recId, "SKIP", !asset || !source ? "not-admitted" : gatheredIds.has(recId) ? "duplicate" : "budget", round + 1, reeval.recommendedIds.indexOf(recId)); continue;
+        }
         if (fundingUnavailable && asset.priceUsdc > 0) {
-          yield* withholdOwnedReads("reevaluate", recId);
+          await captureRecommendation(recId, "SKIP", "funding-unavailable", round + 1, reeval.recommendedIds.indexOf(recId));
+          yield* await withholdOwnedReads("reevaluate", recId);
           continue;
         }
         try {
@@ -1356,14 +1418,24 @@ async function* runAdmittedAgent(
           if (sourceRecipientIsExcluded(source, currentTerms, outsideFundedAsker)) throw new Error("Source recipient is excluded");
           const access = await sourceClaimAccess(db, source, currentTerms, { expected: asset.claimPolicy ?? null });
           if (!access.readAllowed || currentTerms.listPriceUsdc !== asset.listPriceUsdc) throw new Error("Source terms changed");
-        } catch { yield emit("reevaluate", `SKIP ${source.name}: claim or registry terms changed; no new payment.`); continue; }
-        if (asset.item && asset.claimPolicy && gathered.some(read => publicDuplicateOfOwnedItem(asset.item!, read, contentBodyHash))) continue;
+        } catch { await captureRecommendation(recId, "SKIP", "terms-changed", round + 1, reeval.recommendedIds.indexOf(recId)); yield emit("reevaluate", `SKIP ${source.name}: claim or registry terms changed; no new payment.`); continue; }
+        if (asset.item && asset.claimPolicy && gathered.some(read => publicDuplicateOfOwnedItem(asset.item!, read, contentBodyHash))) { await captureRecommendation(recId, "SKIP", "duplicate", round + 1, reeval.recommendedIds.indexOf(recId)); continue; }
         if (await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text))) {
+          await captureRecommendation(recId, "SKIP", "duplicate", round + 1, reeval.recommendedIds.indexOf(recId));
           yield emit("reevaluate", `SKIP paid manuscript ${source.name}: identical public body is already evidence, no duplicate payment.`);
           continue;
         }
         if (!await paperCanResearch(db, source, input.paidScholarly === true && origin === "web")) {
+          await captureRecommendation(recId, "SKIP", "rights", round + 1, reeval.recommendedIds.indexOf(recId));
           yield emit("reevaluate", `SKIP ${source.name}: manuscript rights or registry terms changed before this read.`);
+          continue;
+        }
+        const retainedCache = asset.priceUsdc > 0 && freshCache.has(recId) ? await effects.getCached(asset.cacheKey).catch(() => null) : null;
+        const reviewRecord = await captureRecommendation(recId, retainedCache ? "CACHE" : "BUY", retainedCache ? "cache-selected" : "selected", round + 1, reeval.recommendedIds.indexOf(recId));
+        const admission = await admitReview(asset, reviewRecord);
+        if (admission !== "admitted") {
+          yield emit("reevaluate", admission === "source-changed" ? `SKIP ${source.name}: source terms changed during review; no new read or payment.`
+            : `Human review withheld ${source.name}; no new read or payment. This is not a code refusal.`);
           continue;
         }
 
@@ -1371,15 +1443,12 @@ async function* runAdmittedAgent(
         const assetLabel = asset.item ? `${source.name} — ${asset.item.title}` : source.name;
         const itemIdentity = { ...asset.candidate.item, evidenceProvenance: asset.candidate.item?.evidenceProvenance ?? source.evidenceProvenance };
         // A fresh cached copy is already paid for: read it instead of buying the same article again.
-        if (asset.priceUsdc > 0 && freshCache.has(recId)) {
-          const cachedText = await effects.getCached(asset.cacheKey).catch(() => null);
-          if (cachedText) {
+        if (retainedCache) {
             gathered.push({ assetId: asset.candidate.id, sourceId: source.id, sourceName: source.name,
-              ...itemIdentity, marker, text: cachedText, creatorRewardEligible: asset.rewardAllowed !== false });
+              ...itemIdentity, marker, text: retainedCache, creatorRewardEligible: asset.rewardAllowed !== false });
             attentionUsed++; gatheredIds.add(recId);
             yield emit("reevaluate", `Filling gap — reused cached ${assetLabel} (free) — ${marker}`);
             continue;
-          }
         }
         if (asset.priceUsdc === 0 && asset.item) {
           try {
@@ -1394,6 +1463,7 @@ async function* runAdmittedAgent(
         // Funding errors have their own uncertainty boundary. They are never
         // interpreted as a creator payment record or permission to retry funding.
         if (budget === 0) {
+          await observeReview(recId, "zero-budget");
           yield emit("reevaluate", `SKIP ${assetLabel}: no payment gateway delivery is authorized by a 0 USDC question.`);
           continue;
         }
@@ -1403,7 +1473,7 @@ async function* runAdmittedAgent(
             spendWalletReady = true;
           } catch (error) {
             if (error instanceof Error && error.name === "AbortError") throw error;
-            yield* withholdOwnedReads("reevaluate", recId);
+            yield* await withholdOwnedReads("reevaluate", recId);
             continue;
           }
         }
@@ -1825,6 +1895,11 @@ async function* runAdmittedAgent(
   }
   for (const c of citations) {
     if (publicReads.has(c.sourceId) || isPublicReferenceId(c.sourceId)) continue;
+    if (input.reviewFirst && !reviewedAssets.has(c.itemId ? sourceItemAssetId(c.itemId) : c.sourceId)) {
+      c.reward = 0;
+      yield emit("settle", `Creator reward withheld for ${c.sourceName}: no human-approved read admits this source.`);
+      continue;
+    }
     const source = sourceById.get(c.sourceId);
     if (!source || c.reward <= 0) continue;
     try {
@@ -1840,10 +1915,10 @@ async function* runAdmittedAgent(
     }
     if (fundingUnavailable) { c.reward = 0; continue; }
     if (!spendWalletReady) {
-      try { await gateway.ensureFunded(budget); spendWalletReady = true; }
+      try { if (input.reviewFirst) await input.onCreatorPaymentBoundary?.(); await gateway.ensureFunded(budget); spendWalletReady = true; }
       catch (error) {
         if (error instanceof Error && error.name === "AbortError") throw error;
-        yield* withholdOwnedReads("settle");
+        yield* await withholdOwnedReads("settle");
         c.reward = 0;
         continue;
       }
@@ -2005,6 +2080,59 @@ async function* runAdmittedAgent(
   return finish(answer);
 
   // ── helpers ──
+  function reviewTerms(asset?: InternalAsset, action: Decision["action"] = "BUY"): DecisionTerms {
+    return { assetId: asset?.candidate.id ?? "unowned", sourceId: asset?.source.id ?? "unowned", owned: Boolean(asset),
+      network: config.profile.networkId, ...(asset ? { payTo: asset.terms.payTo.toLowerCase() } : {}),
+      ...(asset?.item ? { itemId: asset.item.id, contentVersion: sourceItemContentVersion(asset.item) } : {}),
+      ...(asset?.offer ? { offerId: asset.offer.id } : {}),
+      ...(asset?.claimPolicy ? { claimDigest: createHash("sha256").update(canonicalJson(asset.claimPolicy)).digest("hex") } : {}),
+      priceMicroUsdc: reviewMicros(action === "CACHE" ? 0 : asset?.priceUsdc ?? 0), listPriceMicroUsdc: reviewMicros(asset?.listPriceUsdc ?? 0),
+      citationBudgetMicroUsdc: reviewMicros(round(citationPool)) };
+  }
+  async function captureReview(decision: Decision, modelAction: CaptureDecision["modelAction"], codeRule: CaptureDecision["codeRule"], round: number, ordinal: number) {
+    if (!input.decisionReviews) return undefined;
+    try {
+      const assetId = decision.assetId ?? decision.sourceId, asset = assetById.get(assetId), terms = reviewTerms(asset, decision.action);
+      return await input.decisionReviews.capture({ policyVersion: REVIEW_POLICY_VERSION, engine: effectiveEngineName(engine), requestedModel: input.model ?? null,
+        runId: queryId, round, ordinal, sourceName: decision.sourceName,
+        modelAction, codeAction: decision.action, codeRule, terms: { ...terms, assetId, sourceId: decision.sourceId } });
+    } catch (error) { if (input.reviewFirst) throw error; return undefined; }
+  }
+  async function captureRecommendation(assetId: string, action: Decision["action"], rule: CaptureDecision["codeRule"], round: number, ordinal: number) {
+    const candidate = assetById.get(assetId)?.candidate ?? publicCandidates.get(assetId) ?? webCandidates.get(assetId);
+    const record = await captureReview({ ...candidate?.item, assetId, sourceId: candidate?.sourceId ?? assetId,
+      sourceName: candidate?.name ?? assetId, action, price: candidate?.fetchPrice ?? 0, targets: [], expectedValue: 0, confidence: 0, rationale: "Recorded reevaluation recommendation." }, "BUY", rule, round, ordinal);
+    if (record) reviewRecords.set(assetId, record); return record;
+  }
+  async function observeReview(assetId: string, rule: CaptureDecision["codeRule"]) {
+    const record = reviewRecords.get(assetId); if (!record || !input.decisionReviews) return;
+    try { await input.decisionReviews.observe(record, "SKIP", rule); }
+    catch (error) { if (input.reviewFirst) throw error; }
+  }
+  async function admitReview(asset: InternalAsset, record?: DecisionReview): Promise<"admitted" | "human-withheld" | "source-changed"> {
+    if (!input.reviewFirst) return "admitted";
+    if (!record || !input.decisionReviews) throw new DecisionReviewError("review_unavailable");
+    let approved: boolean;
+    try { approved = await input.decisionReviews.admit(record, async () => {
+      if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
+      const terms = await sourceFetchTerms(asset.source, { refresh: true });
+      const access = await sourceClaimAccess(db, asset.source, terms, { expected: asset.claimPolicy ?? null });
+      if (!access.readAllowed || sourceRecipientIsExcluded(asset.source, terms, outsideFundedAsker) ||
+          terms.listPriceUsdc !== asset.listPriceUsdc || terms.payTo.toLowerCase() !== asset.terms.payTo.toLowerCase()) throw new DecisionReviewSourceChanged();
+      if (asset.item) {
+        const current = (await db.getItems(asset.source.id)).find(item => item.id === asset.item!.id);
+        if (!current || sourceItemContentVersion(current) !== sourceItemContentVersion(asset.item)) throw new DecisionReviewSourceChanged();
+      }
+      if (!await paperCanResearch(db, asset.source, input.paidScholarly === true && origin === "web")) throw new DecisionReviewSourceChanged();
+      if (asset.offer && asset.offer.expiresAt * 1000 <= Date.now()) throw new DecisionReviewSourceChanged();
+      return reviewTerms(asset, record.initialCodeAction);
+    }); } catch (error) {
+      if (!(error instanceof DecisionReviewSourceChanged)) throw error;
+      await input.decisionReviews.observe(record, "SKIP", "terms-changed"); return "source-changed";
+    }
+    if (approved) reviewedAssets.add(asset.candidate.id);
+    return approved ? "admitted" : "human-withheld";
+  }
   /**
    * Turn a selected-but-never-read decision into a SKIP so receipts and counts match reality.
    * Returns the action it replaced, or null when the decision was already a SKIP or is unknown.
@@ -2018,7 +2146,7 @@ async function* runAdmittedAgent(
     finalDecisions[index] = { ...current, action: "SKIP", rationale: `${current.rationale} — ${reason}` };
     return current.action;
   }
-  function withholdOwnedReads(phase: "fetch" | "reevaluate" | "settle", selectedAssetId?: string): TraceStep[] {
+  async function withholdOwnedReads(phase: "fetch" | "reevaluate" | "settle", selectedAssetId?: string): Promise<TraceStep[]> {
     const steps: TraceStep[] = [];
     if (!fundingUnavailable) {
       fundingUnavailable = true;
@@ -2035,6 +2163,7 @@ async function* runAdmittedAgent(
       const withheld: Decision = { ...decision, action: "SKIP",
         rationale: "Funding readiness is unknown; this owned source cannot be read or rewarded in this run." };
       finalDecisions[index] = withheld;
+      await observeReview(assetId, "funding-unavailable");
       steps.push(emit(phase, `SKIP ${withheld.sourceName}: ${withheld.rationale}`));
     }
     // Keep the query-local fetch reservation intact. A funding error cannot

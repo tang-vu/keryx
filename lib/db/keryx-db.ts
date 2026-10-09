@@ -212,6 +212,8 @@ export interface KeryxDB {
   readonly privateBibliographies?: PrivateBibliographiesStore;
   /** Bounded ordinary current-store attribution only; absent on sealed/native/archive readers. */
   readonly personalHistory?: import("../history/personal-history").PersonalHistoryStore;
+  /** Ordinary-only decision opinions/admission sidecars; never payment authority. */
+  readonly decisionReviews?: import("../research/decision-review-types").DecisionReviewsStore;
   /** Atomic creator gas originals; absent on storage without a reviewed sponsor journal. */
   admitRegistrationSponsor?(policy: import("../sources/registration-sponsor-protocol").RegistrationSponsorPolicy,
     row: import("../sources/registration-sponsor-protocol").SponsoredRegistration, now?: number): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;

@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { mkdtemp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -26,6 +26,10 @@ const writer: DesktopTaskWriter = {
     return { child, state: "windows_visible_entry_unproven" };
   },
 };
+it.each([{ reviewFirst: true }, { mode: "review-first" }])("refuses unsupported interactive review before the native task writer: %j", intent => {
+  const create = vi.fn(), store = new WorkspaceStore({ ...writer, create });
+  return expect(store.createTask({ ...input, ...intent })).rejects.toThrow().then(() => { expect(create).not.toHaveBeenCalled(); });
+});
 
 it("creates multiple tasks and lists a legacy v1 task after reopening", async () => {
   const workspace = await temp();

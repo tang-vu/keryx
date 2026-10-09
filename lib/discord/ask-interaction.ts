@@ -9,6 +9,7 @@
  */
 
 import { config } from "../config";
+import { unsupportedDecisionReviewFlag } from "../research/decision-review-types";
 import { formatRecordedUsdc } from "../display/recorded-usdc";
 import { researchAdmissionError } from "../research/availability-contract";
 import type { QueryRun } from "../types";
@@ -58,11 +59,12 @@ export function parseAskCommand(interaction: Interaction): AskCommand | null {
   if (!interaction.application_id || !interaction.token) return null;
 
   const options = interaction.data.options ?? [];
+  if (options.some(option => !["question", "budget"].includes(option.name ?? ""))) return null;
   const question =
     typeof optionValue(options, "question") === "string"
       ? (optionValue(options, "question") as string).trim()
       : "";
-  if (!question) return null;
+  if (!question || unsupportedDecisionReviewFlag(question)) return null;
 
   const rawBudget = optionValue(options, "budget");
   const budget =

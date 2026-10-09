@@ -43,13 +43,13 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
   const streaming = state.status === "streaming";
   const payer = grantBinding.paused ? "paused" : grantBinding.expired ? "expired" : grantBinding.sessionId ? "session" : "treasury";
   const parentId = rootRequest ? null : state.run?.id ?? anchor;
-  const submit: Parameters<typeof AskForm>[0]["onAsk"] = (question, budget, sharedParent, model, mode, scholarly, paidScholarly) => {
+  const submit: Parameters<typeof AskForm>[0]["onAsk"] = (question, budget, sharedParent, model, mode, scholarly, paidScholarly, reviewFirst) => {
     if (streaming) return;
     if (request) setHistory(previous => [...previous, { ...request, state }]);
     setAnchor(rootRequest ? undefined : parentId ?? undefined);
     setRequest({ id: ++sequence.current, question, payer: payer === "session" ? "your funded session" : payer === "expired" ? "your expired funded session (recovery required)" : "Keryx treasury" });
     setRootRequest(false);
-    void ask(question, budget, rootRequest ? undefined : parentId ?? sharedParent, model, mode, scholarly, paidScholarly);
+    void ask(question, budget, rootRequest ? undefined : parentId ?? sharedParent, model, mode, scholarly, paidScholarly, reviewFirst);
   };
   const stop = () => {
     if (!request || !streaming) return;

@@ -14,6 +14,7 @@ import { RESEARCH_AVAILABILITY_UNKNOWN, RESEARCH_PAUSED_MESSAGE } from "@/lib/re
 import { paperLibraryHref } from "@/lib/papers/handoff";
 import { createMessages } from "@/lib/i18n/messages";
 import { ProductHuntBadge } from "./product-hunt-badge";
+import { decisionReviewCopy as reviewCopy } from "@/lib/research/decision-review-copy";
 
 // Catalogue adoption only. Interface locale and request data remain unchanged.
 const message = createMessages("en");
@@ -35,6 +36,7 @@ interface AskFormProps {
     researchMode?: ResearchMode,
     scholarly?: boolean,
     paidScholarly?: boolean,
+    reviewFirst?: boolean,
   ) => void;
 }
 
@@ -118,6 +120,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
   const [researchMode, setResearchMode] = useState<ResearchMode>("quick");
   const [scholarly, setScholarly] = useState(false);
   const [paidScholarly, setPaidScholarly] = useState(false);
+  const [reviewFirst, setReviewFirst] = useState(false);
   const [models, setModels] = useState<PickerModel[]>([]);
   const advancedRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
@@ -173,7 +176,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
   const submit = () => {
     const q = question.trim();
     if (!q || disabled || payer === "paused" || checking || researchPaused) return;
-    onAsk(q, effectiveBudget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode, scholarly, paidScholarly && payer === "session");
+    onAsk(q, effectiveBudget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode, scholarly, paidScholarly && payer === "session", ...(reviewFirst ? [true] as const : []));
     if (clearOnSubmit) setQuestion("");
   };
 
@@ -263,6 +266,8 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
           <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={paidScholarly} disabled={disabled || payer !== "session" || !browserPaymentProfile().testnet} onChange={event => setPaidScholarly(event.target.checked)} /> {message("researchEntry.paidScholarly")}</label>
           {!browserPaymentProfile().testnet&&<p className="mt-1 text-xs text-ink-3">{message("researchEntry.paidScholarlyMainnetNotice")}</p>}
           <p className="text-xs text-ink-3">{message("researchEntry.paidScholarlyNotice")}</p>
+          <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={reviewFirst} disabled={disabled || payer !== "session" && !reviewFirst} onChange={event => setReviewFirst(event.target.checked)} />{reviewCopy.mode}</label>
+          <p className="mt-1 text-xs text-ink-3">{reviewCopy.modeNotice}</p>
           <details ref={advancedRef} className="mt-3 border-t border-line pt-2">
             <summary className="flex min-h-11 cursor-pointer items-center font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2 marker:text-seal hover:text-ink">
               {message("researchEntry.budgetAndModel", { amount: effectiveBudget.toFixed(6) })}

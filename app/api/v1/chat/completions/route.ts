@@ -17,6 +17,7 @@
  */
 
 import { isRequestObject } from "@/lib/request-object";
+import { unsupportedDecisionReviewIntent } from "@/lib/research/decision-review-types";
 import { NextRequest } from "next/server";
 import { collectRun } from "@/lib/agent";
 import { resolveModelChoice } from "@/lib/llm";
@@ -71,6 +72,7 @@ export function OPTIONS() {
 export async function POST(req: NextRequest) {
   const parsedBody: unknown = await req.json().catch(() => null);
   if (!isRequestObject(parsedBody)) return openaiError("request body must be a JSON object", 400, "invalid_request");
+  if (unsupportedDecisionReviewIntent(parsedBody)) return openaiError("Review-first requires the authenticated live browser.", 400, "review_unsupported");
   if (!validChatMessages(parsedBody.messages)) return openaiError("messages must be a non-empty array of message objects with valid content", 400, "invalid_request");
   const body = parsedBody as unknown as ChatCompletionRequest;
   const authHeader = req.headers.get("authorization");

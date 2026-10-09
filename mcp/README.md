@@ -1,5 +1,13 @@
 # Keryx MCP
 
+Interactive review-first research is available only in the authenticated live web
+browser. `ask_keryx` refuses `reviewFirst: true` and review-mode aliases before the
+buyer path; an MCP verdict cannot sign, resume, refund or spend. Private decision
+reasons use the original owner's cookie-only web API, never default API-key rights.
+Public aggregate counts are documented at `/api/decision-reviews/metrics` and
+`/decision-reviews`; unclassified activity stays unknown and missing history is not
+reconstructed. Existing paid-job/receipt recovery remains unchanged.
+
 The coordinated app0.27.47 candidate selects package **0.4.14** and the same
 official Registry descriptor, alongside hosted MCP **0.3.10** after final tool
 integration. `operator_obligations_read` uses a bounded HTTPS read with explicit

@@ -10,6 +10,7 @@
  */
 
 import { config } from "../config";
+import { unsupportedDecisionReviewFlag, unsupportedDecisionReviewIntent } from "../research/decision-review-types";
 import { formatRecordedUsdc } from "../display/recorded-usdc";
 import { researchAdmissionError } from "../research/availability-contract";
 import type { QueryRun } from "../types";
@@ -35,7 +36,7 @@ export interface SlashCommand {
  */
 export function parseSlashCommand(params: URLSearchParams): SlashCommand | null {
   const question = (params.get("text") ?? "").trim();
-  if (!question) return null;
+  if (!question || unsupportedDecisionReviewFlag(question) || unsupportedDecisionReviewIntent(Object.fromEntries(params))) return null;
   return {
     question,
     userId: (params.get("user_id") ?? "").trim() || "unknown",
@@ -53,6 +54,7 @@ export function helpText(): string {
       "attempts weighted USDC rewards for eligible cited creators. The dispatch trace shows payment outcomes.",
     "",
     "Usage: `/keryx what is x402?`",
+    "Review-first is available only in the authenticated live browser; review mode flags are refused here.",
     "",
     `Creator payments and service charges are recorded separately. Live status: ${config.baseUrl}/status`,
   ].join("\n");

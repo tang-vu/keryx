@@ -43,6 +43,14 @@ function completedRun(): QueryRun {
 }
 
 describe("remote MCP server", () => {
+  it.each([{ reviewFirst: true }, { mode: "review-first" }, { researchMode: "review-first" }, { responseMode: "reviewFirst" }])("refuses unsupported review intent before research: %j", async intent => {
+    const runner = vi.fn(async () => completedRun()), server = createRemoteMcpServer({ budgetCap: 0.03, clientChannel: "other" }, runner);
+    const client = new Client({ name: "review-refusal-fixture", version: "1" }), [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try { await server.connect(serverTransport); await client.connect(clientTransport);
+      const result = await client.callTool({ name: "research", arguments: { question: "Synthetic question", ...intent } });
+      expect(result.isError).toBe(true); expect(runner).not.toHaveBeenCalled();
+    } finally { await client.close(); await server.close(); }
+  });
   it("keeps a micro-USDC reward visible in text without changing structured amounts or answer", async () => {
     const run = completedRun();
     run.citations[0].reward = 0.000001;

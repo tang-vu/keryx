@@ -28,6 +28,8 @@ for (let i = 0; i < argv.length; i++) {
     model = argv[++i];
   } else if (argv[i] === "--web") {
     allowExternalWeb = true;
+  } else if (argv[i].startsWith("--")) {
+    throw new Error("Unsupported option. Review-first requires the authenticated live browser.");
   } else {
     qParts.push(argv[i]);
   }

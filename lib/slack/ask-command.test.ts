@@ -62,6 +62,13 @@ function params(overrides: Record<string, string> = {}): URLSearchParams {
 }
 
 describe("parseSlashCommand", () => {
+  it.each(["--review-first", "--reviewFirst=true", "--mode review-first"])("refuses unsupported review intent %s before research admission", flag => {
+    expect(parseSlashCommand(params({ text: `Synthetic question ${flag}` }))).toBeNull();
+    expect(helpText()).toContain("Review-first");
+  });
+  it("refuses an unsupported review-first form field rather than stripping it", () => {
+    expect(parseSlashCommand(params({ reviewFirst: "true" }))).toBeNull();
+  });
   it("extracts question, user, channel, response url, and command", () => {
     expect(parseSlashCommand(params())).toEqual<SlashCommand>({
       question: "What is x402?",

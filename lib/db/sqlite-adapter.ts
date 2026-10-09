@@ -1,6 +1,8 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
 import { createSqlitePrivateBibliographies } from "./private-bibliographies-sqlite";
+import { createSqliteDecisionReviews } from "./decision-reviews-sqlite";
+import { DecisionReviewError, type DecisionReviewsStore } from "../research/decision-review-types";
 import { PrivateBibliographyError, type PrivateBibliographiesStore } from "../bibliographies/private-bibliography";
 import { createSqlitePersonalHistory } from "./personal-history-sqlite";
 import type { PersonalHistoryStore } from "../history/personal-history";
@@ -140,6 +142,7 @@ export class SqliteAdapter implements KeryxDB {
   declare readonly privateProfiles?: PrivateProfilesStore;
   declare readonly privateBibliographies?: PrivateBibliographiesStore;
   declare readonly personalHistory?: PersonalHistoryStore;
+  declare readonly decisionReviews?: DecisionReviewsStore;
   declare readonly profileIdentities?: ProfileIdentitiesStore;
   private db: DatabaseSync;
   private enrolledMode?: StorageIdentity["authorityMode"];
@@ -202,6 +205,10 @@ export class SqliteAdapter implements KeryxDB {
     assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installOrdinarySqliteApplicationSchema(this.db);
+    if (!this.decisionReviews) {
+      try { Object.defineProperty(this, "decisionReviews", { value: createSqliteDecisionReviews(this.db) }); }
+      catch (error) { if (!(error instanceof DecisionReviewError && error.code === "review_unavailable")) throw error; }
+    }
     if (!this.privateBibliographies) {
       try { Object.defineProperty(this, "privateBibliographies", { value: createSqlitePrivateBibliographies(this.db) }); }
       catch (error) { if (!(error instanceof PrivateBibliographyError && error.code === "bibliography_unavailable")) throw error; }
