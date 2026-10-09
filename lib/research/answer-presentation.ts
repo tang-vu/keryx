@@ -17,8 +17,12 @@ function negated(text: string, index: number): boolean {
   const prefix = text.slice(Math.max(0, index - 45), index);
   const line = prefix.split(/[\r\n\u2028\u2029]/u).at(-1)!;
   if (/(?<![\p{L}\p{N}_])(?:do not|don't|not|não|nao|không|no|nunca|sin|pas|sans|nicht)\s+(?:[^\s.,;:!?]+\s+){0,2}$/u.test(line)) return true;
-  // Preserve explicit wrapped commands, not discourse such as "No thanks\n".
-  return /(?<![\p{L}\p{N}_])(?:do not|don't)\s+(?:[^\s.,;:!?]+\s+){0,2}$/u.test(prefix);
+  // Preserve finite explicit command wrappers across lines. Discourse such as
+  // "No thanks\n", "Não obrigado\n" or "Không cảm ơn\n" starts a new clause.
+  return /(?<![\p{L}\p{N}_])(?:do not|don't)\s+(?:[^\s.,;:!?]+\s+){0,2}$/u.test(prefix)
+    || /(?<![\p{L}\p{N}_])(?:não|nao)\s+(?:(?:apenas|só|somente|exatamente|explicitamente)\s+){0,2}(?:(?:responda|responde|escreva|escreve)\s+(?:(?:apenas|só|somente|exatamente|explicitamente)\s+){0,2})?$/u.test(prefix)
+    || /(?<![\p{L}\p{N}_])không\s+(?:(?:chỉ|đúng|chính xác)\s+){0,2}(?:(?:viết|trả lời|đáp)\s+(?:(?:chỉ|đúng|chính xác)\s+){0,2})?$/u.test(prefix)
+    || /(?<![\p{L}\p{N}_])(?:no|nunca|sin|pas|sans|nicht)\s+(?:(?:solo|solamente|únicamente|seulement|uniquement|nur|bitte)\s+){0,2}$/u.test(prefix);
 }
 
 /** Finite positive language/count instructions; ambiguous counts retain target layout. */

@@ -73,6 +73,25 @@ describe("ordinary scaffold language fallback", () => {
     expect(answerPresentation(`Do not write${separator}exactly one short bullet.`)).toEqual({language: "en"});
   });
 
+  it.each(["\n", "\r\n", "\u2028", "\u2029"])("preserves explicit wrapped Portuguese/Vietnamese negation without crossing discourse (%j)", separator => {
+    for (const negator of ["Não", "Nao"]) {
+      expect(answerPresentation(`Write in Portuguese. ${negator}${separator}responda em inglês.`)).toEqual({language: "pt", requestedLanguage: "pt"});
+      expect(answerPresentation(`${negator} escreva${separator}um tópico curto.`).requestedBulletCount).toBeUndefined();
+      expect(answerPresentation(`${negator} escreva${separator}exatamente um tópico curto.`).requestedBulletCount).toBeUndefined();
+      expect(answerPresentation(`${negator} obrigado${separator}Answer in Portuguese.`)).toEqual({language: "pt", requestedLanguage: "pt"});
+      expect(answerPresentation(`${negator} obrigado${separator}Write one short bullet.`).requestedBulletCount).toBe(1);
+    }
+    expect(answerPresentation(`Viết bằng tiếng Việt. Không${separator}trả lời bằng tiếng Anh.`)).toEqual({language: "vi", requestedLanguage: "vi"});
+    expect(answerPresentation(`Viết bằng tiếng Việt. Không chỉ${separator}trả lời bằng tiếng Anh.`)).toEqual({language: "vi", requestedLanguage: "vi"});
+    expect(answerPresentation(`Không viết${separator}một gạch đầu dòng ngắn.`).requestedBulletCount).toBeUndefined();
+    expect(answerPresentation(`Không cảm ơn${separator}Answer in Portuguese.`)).toEqual({language: "pt", requestedLanguage: "pt"});
+    expect(answerPresentation(`Không cảm ơn${separator}Write one short bullet.`).requestedBulletCount).toBe(1);
+    for (const directive of [`No${separator}responda en español.`, `Pas${separator}en français, expliquez.`, `Nicht${separator}auf Deutsch.`])
+      expect(answerPresentation(`Write in Portuguese. ${directive}`)).toEqual({language: "pt", requestedLanguage: "pt"});
+    expect(answerPresentation(`No gracias${separator}Answer in Portuguese.`)).toEqual({language: "pt", requestedLanguage: "pt"});
+    expect(answerPresentation(`Pas de problème${separator}Answer in Portuguese.`)).toEqual({language: "pt", requestedLanguage: "pt"});
+  });
+
   it("keeps the exact admitted quote, statement, markers and ledger while selecting the English scaffold fallback", () => {
     const quote = "Synthetic source text: the same side faces Earth.";
     const statement = "La misma cara mira hacia la Tierra.";
