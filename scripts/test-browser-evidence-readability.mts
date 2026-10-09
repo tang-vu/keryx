@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { privateWorkspaceResultSchema } from "../lib/a2a/private-workspace";
+import { assertSignedOutBrowserFixtureGraph, signedOutResearchAuthFixture } from "../test-support/research-browser-auth-fixture";
 
 const directory = join(resolve(process.env.NEXT_DIST_DIR ?? ".next"), "static", "chunks");
 const cssFiles = (await readdir(directory)).filter(file => file.endsWith(".css"));
@@ -40,8 +41,9 @@ createRoot(document.getElementById('root')).render(<>
 <section data-view="answer"><AnswerCard run={${JSON.stringify(run)}} meta={null}/></section>
 <section data-view="public-job"><ResearchJobDetails job={${JSON.stringify(publicJob)}}/></section>
 <section data-view="private-job"><ResearchPrivateResult job={${JSON.stringify(privateJob)}}/></section>
-</>);`, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
-  define: { "process.env": JSON.stringify({ NODE_ENV: "production", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet" }) } });
+</>);`, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, metafile: true, platform: "browser", format: "iife", jsx: "automatic",
+  define: { "process.env": JSON.stringify({ NODE_ENV: "production", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet" }) }, plugins: [signedOutResearchAuthFixture()] });
+assertSignedOutBrowserFixtureGraph(bundle.metafile, ["components/keryx/answer-card.tsx", "components/keryx/research-job-details.tsx", "components/keryx/research-private-result.tsx", "components/keryx/deliverable-acceptance.tsx"]);
 const browser = await chromium.launch({ headless: true });
 const results = [];
 try {

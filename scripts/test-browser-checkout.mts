@@ -11,6 +11,7 @@ import { a2aResearchPackageForVersion } from "../lib/a2a/research-package-defini
 import { researchReceiptDigest, sha256 } from "../lib/research-receipt-integrity";
 import { decodeFunctionData, erc20Abi } from "viem";
 import { GATEWAY_DEPOSIT_ABI } from "../lib/buyer/funding-policy";
+import { assertSignedOutBrowserFixtureGraph, signedOutResearchAuthFixture } from "../test-support/research-browser-auth-fixture";
 
 const account = privateKeyToAccount(`0x${"1".repeat(64)}`);
 const payee = `0x${"b".repeat(40)}`;
@@ -34,7 +35,7 @@ const bundle = await build({ stdin: { contents: `
   createRoot(document.getElementById('root')).render(React.createElement(ResearchWorkspace,null,
     React.createElement(ResearchRequest,{mode:'quick',budget:0.03,version:'1.0.0',total:0.05,payee:'${payee}'}),React.createElement(ResearchSavedJobs)));
   `, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false, metafile: true,
-  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' }, plugins: [circleSdkBrowserPlugin(), { name: "synthetic-wagmi", setup(b) {
+  define: { "process.env": "{}", "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' }, plugins: [signedOutResearchAuthFixture(), circleSdkBrowserPlugin(), { name: "synthetic-wagmi", setup(b) {
     b.onResolve({ filter: /^(wagmi|next\/image)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onLoad({ filter: /.*/, namespace: "synthetic" }, args => ({ contents: args.path === "next/image" ? "export default function Image(){return null;}" : `
       import {useSyncExternalStore} from 'react';
@@ -46,6 +47,7 @@ const bundle = await build({ stdin: { contents: `
       export const useConnect=()=>({connect:()=>{},connectors:[],isPending:false});
     `, loader: "js", resolveDir: process.cwd() }));
   } }] });
+assertSignedOutBrowserFixtureGraph(bundle.metafile, ["components/keryx/research-checkout.tsx", "components/keryx/research-saved-jobs.tsx", "components/keryx/research-job-details.tsx", "components/keryx/deliverable-acceptance.tsx"]);
 assert(!Object.keys(bundle.metafile.inputs).some(path => /^lib\/(config|db\/)/.test(path)), "Server dependency in browser UI bundle");
 const browser = await chromium.launch({ headless: true });
 try {

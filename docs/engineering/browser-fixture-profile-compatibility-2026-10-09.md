@@ -36,3 +36,20 @@ boundary for current composition, and prove frozen archives neither call that
 hook nor expose review/feedback controls. This is fixture maintenance: no product
 version, deployment, payment, wallet, database rollout or wider issue completion
 is claimed. Exact candidate CI/platform acceptance remains required.
+
+The subsequent hosted run found the same composed-auth boundary in the checkout,
+stored-evidence reading and excerpt-readability fixtures. They now reuse only the
+signed-out hook boundary and explicitly retain their real checkout, DispatchView,
+DecisionReviews, answer and job components. Synthetic checkout still exercises
+IndexedDB, signing, funding response loss, GET-only recovery and receipt tamper
+refusal. This does not replace the actual authentication or customer-choice gates.
+The standalone ResearchTurn/ResearchChat fixtures already declare that boundary;
+the built research-chat and owner/auth fixtures retain their separate real scope.
+
+Actual ordinary SQLite initialization also adds one immutable installation UUID
+in `deliverable_acceptance_store`. The empty signer seed census recognizes only
+one exact `{singleton: 1, id: UUID-v4}` row with no extra columns. Acceptance
+journal entries, unknown populated tables and activated browser controls still
+refuse. Missing, malformed, duplicate or widened identity rows refuse as well.
+No runtime schema, journal, auth or payment authority changes are made by this
+fixture compatibility correction.
