@@ -8,6 +8,7 @@ import { documentAlreadyRead, documentSelectionKey } from "./document-selection"
 import { synthesisFailureDetail } from "./synthesis-failure";
 import { parseSynthesisOutputLimit, synthesisOutputLimitFromError } from "../llm/output-limit-diagnostic";
 import { finalizeGroundedAnswer } from "./answer-grounding";
+import { compactWordBudgetAnswer, finishWordBudgetAnswer } from "./word-budget-answer";
 import { selectCitedStatements } from "./cited-statements";
 import { deliverDecisionBrief } from "./decision-brief";
 import { discoverPublicReferences } from "./public-reference-evidence";
@@ -254,6 +255,13 @@ async function* runAdmittedAgent(
   // Initialize before any early return. The production optimizer can otherwise merge an
   // uninitialized binding with the later verdict declaration, stranding finish() in its TDZ.
   let runConfidence: Confidence = { level: "Low", reason: "no source was read for this question" };
+  // finish() also handles early returns; never read synthesis-phase lexical bindings there.
+  const initialWordBudget = effects.scope.kind === "public" && !input.targetAsset && !input.paidScholarly &&
+    !input.answerFormat && !input.executionLimits && process.env.KERYX_DECISION_BRIEF !== "1" &&
+    process.env.KERYX_TEACHING_PROPOSALS !== "1"
+    ? answerPresentation(input.originalQuestion ?? input.question).requestedMaximumWords : undefined;
+  let finalWordBudget: { maximumWords: number; compactAnswer?: string } | undefined = initialWordBudget
+    ? { maximumWords: initialWordBudget } : undefined;
 
   const fetchBudget = budget * (1 - config.citationPoolRatio);
   const citationPool = budget * config.citationPoolRatio;
@@ -1706,6 +1714,10 @@ async function* runAdmittedAgent(
     ? `Chỉ cung cấp trích đoạn nguồn; chưa xác minh được tổng hợp đầy đủ và hỗ trợ cho từng nhận định. Có ${claimCoverage.filter(claim => !(claim.coverage >= MIN_REWARD_SUPPORT)).length} yêu cầu dưới ngưỡng hỗ trợ theo đánh giá ghi nhận; độ bao phủ không chứng minh tính đúng đắn hoặc giải quyết mâu thuẫn nguồn.`
     : `Only source excerpts are delivered; complete synthesis and per-assertion support remain unverified. Evidence assessment: ${evidenceVerdict.reason}` };
   runConfidence = verdict;
+  if (finalWordBudget && ordinaryPresentation && !brief && !teachingRequest && presentation.requestedMaximumWords) {
+    finalWordBudget = { maximumWords: presentation.requestedMaximumWords,
+      compactAnswer: compactWordBudgetAnswer(ledger, citedStatements, verdict) };
+  } else finalWordBudget = undefined;
 
   if (verdict.level === "Low" && used.length > 0) {
     answer = ordinaryPresentation && !brief ? confidenceBanner(answer, verdict, presentation.language)
@@ -2030,12 +2042,24 @@ async function* runAdmittedAgent(
     const originals = requestedSourceReport({ candidates: requested.candidates, notices: requested.notices,
       decisions: finalDecisions, gathered, evidence, outcomes: publicReadOutcomes,
       vi: researchResponseLanguage(input.question) === "vi", withheld: externalDocumentsWithheld });
-    if (originals) answer += `\n\n${originals}`;
     const recency = sourceRecencyReport(recencyGaps, researchResponseLanguage(input.question) === "vi");
-    if (recency) answer = gathered.length === 0 ? `${recency}\n\n${answer}` : `${answer}\n\n${recency}`;
     const observedRecency = sourceRecencyObservationReport(recencyObservations, researchResponseLanguage(input.question) === "vi");
-    if (observedRecency) answer += `\n\n${observedRecency}`;
-    if (fundingUnavailable) answer = `> ${fundingNotice}\n\n${answer}`;
+    const withOperationalNotices = (body: string): string => {
+      if (originals) body += `\n\n${originals}`;
+      if (recency) body = gathered.length === 0 ? `${recency}\n\n${body}` : `${body}\n\n${recency}`;
+      if (observedRecency) body += `\n\n${observedRecency}`;
+      if (fundingUnavailable) body = `> ${fundingNotice}\n\n${body}`;
+      return body;
+    };
+    answer = withOperationalNotices(answer);
+    if (finalWordBudget) {
+      const delivered = finishWordBudgetAnswer(answer,
+        finalWordBudget.compactAnswer === undefined ? undefined : withOperationalNotices(finalWordBudget.compactAnswer),
+        finalWordBudget.maximumWords);
+      answer = delivered.answer;
+      emit("synthesize", "Final complete-answer word-budget projection; evidence and payment decisions are unchanged.",
+        { answer, maximumWords: finalWordBudget.maximumWords, words: delivered.words, outcome: delivered.outcome });
+    }
     const totalSpent = round(
       payments
         .filter(paymentCountsAsSpent)

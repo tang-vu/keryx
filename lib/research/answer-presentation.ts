@@ -1,10 +1,12 @@
 import { researchResponseLanguage } from "../agent/empty-public-evidence";
+import { answerWordBudget } from "./answer-word-budget";
 
 /** Ordinary research presentation, derived only from the original caller request. */
 export interface AnswerPresentation {
   language: "en" | "vi" | "pt" | "es";
   requestedLanguage?: "en" | "vi" | "pt" | "es";
   requestedBulletCount?: number;
+  requestedMaximumWords?: number;
 }
 
 const counts: Record<string, number> = {
@@ -64,8 +66,11 @@ export function answerPresentation(question: string, scope: "ordinary" | "retain
     if (!/\b(?:short|brief|concise|curtos?|breves?)\b|ngắn/u.test(vicinity)) continue;
     requested.add(counts[match[1]] ?? Number(match[1]));
   }
+  const maximumWords = scope === "ordinary" && language === "en" && !requested.size
+    ? answerWordBudget(question) : undefined;
   return { language, ...(requestedLanguage ? { requestedLanguage } : {}),
-    ...(requested.size === 1 ? { requestedBulletCount: [...requested][0] } : {}) };
+    ...(requested.size === 1 ? { requestedBulletCount: [...requested][0] } : {}),
+    ...(maximumWords ? { requestedMaximumWords: maximumWords } : {}) };
 }
 
 /** Translate at generation time, before separate statement review; never after it. */

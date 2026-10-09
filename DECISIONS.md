@@ -6764,3 +6764,15 @@ profile snapshot contracts stay unchanged. Public-profile integration, reviewed
 sealed activation and live provider acceptance remain open, with current main
 freeze and combined exact-source release/distribution gates authoritative. See
 [the implementation contract](docs/engineering/private-verified-identities-2026-10-09.md).
+# 2026-10-09 — Count ordinary English word limits after complete delivery
+
+An ordinary RFC answer retained its three facts but exceeded the requested 180 words
+with 296 tokens of repeated scaffolding. Apply a finite explicit caller word budget
+only to final ordinary English delivery, after unchanged attribution/settlement.
+Keep every checked sentence/excerpt/marker, evidence gap, full confidence reason,
+source status, operational notice and receipt/payment limitation. Select a compact
+scaffolding projection only when the entire answer fits; otherwise retain full
+content with an explicit unmet-limit notice. Private/retained, bounded packages,
+decision briefs and teaching policies stay unchanged. Historical failures and
+semantic/live acceptance remain open. See
+[scope and gates](docs/engineering/ordinary-word-budget-2026-10-09.md).
