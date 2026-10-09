@@ -171,7 +171,7 @@
     "lib/economics/provider-cost-policy.ts": "d4877d7ffb813de3176c6e8928ec66f021effd1f781173178d7904cc73688690",
     "lib/economics/testnet-economics.ts": "9aada204fc87e42794cbaab75042c565617e8b64f0376ce4bb5bc67304790a8f",
     "lib/evals/paying-source-study/contract.ts": "2e3ce15e0bcf73b63d3ab17d5bc55814041845f4a0fc6e934d311b905ec40489",
-    "lib/evals/paying-source-study/offline-boundary.ts": "e711aed46539e1e25fed0dd29e358e96104dfd736a826c5d3d223ab41646b668",
+    "lib/evals/paying-source-study/offline-boundary.ts": "adde4ac70ef0d86ac145ee56d2dc76153c16d7c826ed801b4a3dd1386d11a235",
     "lib/evals/paying-source-study/report.ts": "f3437f7878a0eee9c6c17e78ed1e5c8e3c9c43e9137303c867e1532b8739048e",
     "lib/evals/paying-source-study/rubric.ts": "ddf40881f36b00837670b6f212727170a8bd1eb6b392a6e4c20c87ef76b52dd2",
     "lib/evals/paying-source-study/runner.ts": "60d3bb5c54be3ec0059d5c22b36d5fd38d66c15ea021d28bedb31f41eb170ed4",
@@ -48228,8 +48228,6 @@
       ]
     }
   ],
-  "unresolvedSourceInputs": [
-    "lib/evals/paying-source-study/offline-boundary.ts:37: nonliteral import/require"
-  ],
+  "unresolvedSourceInputs": [],
   "version": 1
 }
