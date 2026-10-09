@@ -140,7 +140,14 @@ export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
       <h2 className="font-display text-xl">{indexed ? "Registration confirmed and indexed" : labels[row.state]}</h2>
       <p className="break-all text-sm">Source: {row.canonicalUrl}</p>
       <p className="break-all text-sm">Creator and payout wallet: {row.creator}</p>
+      <div className="space-y-1 text-sm"><p>Author rewards:</p>{row.params.authors.map((author, index) =>
+        <p className="break-all" key={`${author.wallet}:${index}`}>{author.wallet}: {(author.basisPoints / 100).toFixed(2)}%</p>)}</div>
       <p className="text-sm">Price per read: {formatUnits(BigInt(row.params.fetchPriceUsdc6), 6)} USDC</p>
+      <p className="break-all text-sm">Content identifier: {row.params.contentCid || "Feed content retained by Keryx"}</p>
+      <p className="break-all text-sm">Tags: {row.params.tags || "None"}</p>
+      <p className="break-all text-sm">Network and registry: {profile.label}, {row.registryAddress}</p>
+      <p className="break-all text-sm">Gas sponsor: {row.relayer}</p>
+      <p className="text-sm">Authorization expires: {new Date(row.deadline * 1000).toISOString()}</p>
       <p className="text-sm">Keryx gas reservation: up to {formatUnits(BigInt(row.reservedWei), 18)} USDC. This is separate from creator earnings.</p>
       <label className="block text-xs">Original request<input className="mt-1 w-full border border-line bg-paper p-2 font-mono text-xs" readOnly value={row.id} /></label>
       {row.transactionHash && <a className="block break-all text-xs underline" href={`${profile.explorerUrl}/tx/${row.transactionHash}`} target="_blank" rel="noreferrer">Original registration transaction: {row.transactionHash}</a>}
