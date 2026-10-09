@@ -34,12 +34,16 @@ export function projectOperatorObligations(raw: unknown, nowMs: number) {
 
   let liquid = ZERO, excluded = ZERO, liquidKnown = true;
   const balances = new Map<string, typeof s.cash>();
-  const cashIds = new Set<string>(), cashOriginals = new Set<string>();
+  const cashIds = new Set<string>(), cashOriginals = new Set<string>(), originalBalances = new Map<string, string>();
   for (const c of s.cash) {
     bound(c);
     if (!c.verifiedOriginal) { reasons.add("unverified-original"); liquidKnown = false; }
     if (cashIds.has(c.id)) { reasons.add("conflicting-original"); liquidKnown = false; }
     cashIds.add(c.id);
+    if (originalBalances.has(c.originalId) && originalBalances.get(c.originalId) !== c.balanceId) {
+      reasons.add("conflicting-original"); liquidKnown = false;
+    }
+    originalBalances.set(c.originalId, c.balanceId);
     cashOriginals.add(c.originalId);
     const micros = c.units === "native-18" ? BigInt(c.amount) / SCALE : BigInt(c.amount);
     if (["incoming-pending", "bridge-in-transit", "vault-quote", "disputed"].includes(c.kind)) { excluded += micros; continue; }
@@ -67,18 +71,20 @@ export function projectOperatorObligations(raw: unknown, nowMs: number) {
   }
 
   const liabilities = new Map<string, (typeof s.liabilities)[number]>(), originals = new Map<string, string>();
+  const conflictingRows: typeof s.liabilities = [], canonicalRows = new Set<string>();
   for (const row of s.liabilities) {
     bound(row);
     if (!row.verifiedOriginal) reasons.add("unverified-original");
     if (row.outcome === "confirmed-debit" && (!row.verifiedOriginal || !row.confirmationId ||
       !["payment-exposure", "creator-debt", "refund-withdrawal", "gas-fee"].includes(row.category))) reasons.add("unverified-outcome");
     if (cashIds.has(row.id) || cashOriginals.has(row.originalId)) reasons.add("conflicting-original");
+    const canonical = canonicalJson(row);
+    if (canonicalRows.has(canonical)) continue;
+    canonicalRows.add(canonical);
     const prior = liabilities.get(row.id);
     if (prior) {
-      if (canonicalJson(prior) !== canonicalJson(row)) {
-        reasons.add("conflicting-original");
-        liabilities.set(`${row.id}:conflict:${liabilities.size}`, row); // Retain both possible amounts; never select the smaller by input order.
-      }
+      reasons.add("conflicting-original");
+      conflictingRows.push(row); // Separate collection; caller IDs cannot collide with an invented map key.
       continue;
     }
     if (originals.has(row.originalId)) reasons.add("conflicting-original");
@@ -114,7 +120,7 @@ export function projectOperatorObligations(raw: unknown, nowMs: number) {
     if (Date.parse(p.expiresAt) <= nowMs) reasons.add("policy-expired");
     if (p.horizonAt === null || Date.parse(p.horizonAt) < nowMs || Date.parse(p.horizonAt) - nowMs > 90 * 24 * 60 * 60_000) reasons.add("invalid-horizon");
   }
-  for (const row of liabilities.values()) {
+  for (const row of [...liabilities.values(), ...conflictingRows]) {
     const confirmed = !reasons.has("conflicting-original") && !reasons.has("foreign-binding") && !reasons.has("stale-observation") && !reasons.has("wrong-units") && row.outcome === "confirmed-debit" && row.verifiedOriginal && row.confirmationId &&
       ["payment-exposure", "creator-debt", "refund-withdrawal", "gas-fee"].includes(row.category);
     if (confirmed || included.has(row.id)) continue;

@@ -105,6 +105,16 @@ describe("exact nonauthorizing obligation projection", () => {
     expect(refused(s, "cash-alias-mismatch").liquidMicroUsdc).toBeNull(); s.cash.pop(); s.cash[0].finalized = false;
     expect(refused(s, "cash-unverified").liquidMicroUsdc).toBeNull();
   });
+  it("never overwrites real IDs with synthetic conflict keys and deduplicates repeated conflicting records", () => {
+    const s = obligationFixture(), conflict = structuredClone(s.liabilities[0]); conflict.amount = "600000";
+    s.liabilities.push(fixtureLiability("job:original:conflict:2", "700000"), conflict, structuredClone(conflict));
+    const a = refused(s, "conflicting-original"); s.liabilities.reverse(); const b = refused(s, "conflicting-original");
+    expect(a.protectedMicroUsdc).toBe("1800000"); expect(b.protectedMicroUsdc).toBe(a.protectedMicroUsdc);
+  });
+  it("keeps a repeated cash original across different balances ambiguous", () => {
+    const s = obligationFixture(); s.cash.push({ ...structuredClone(s.cash[0]), id: "cash:pending", balanceId: "bridge:balance", kind: "bridge-in-transit" });
+    expect(refused(s, "conflicting-original").liquidMicroUsdc).toBeNull();
+  });
   it("does not pool Gateway cash into wallet liquidity or unsupported FX", () => {
     const s = obligationFixture(); s.cash[0].kind = "gateway-available"; refused(s, "wrong-units");
     s.cash[0].scope.asset = "0xother" as ObligationSnapshot["scope"]["asset"]; expect(() => run(s)).toThrow();
