@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**Decline standalone SSE on stateless remote MCP — 2026-10-09.**
+JSON response mode in SDK1.31.0 governs POST, but its GET path can create an
+indefinite notification stream even without session management. Keryx's remote
+endpoint has no durable notification session, so answer GET with protocol-compatible
+405 before key verification, database access or transport construction. Preserve
+Origin403 and advertise only POST, DELETE and OPTIONS. Keep existing in-flight
+POST, paid-history retention, authorization and recovery behavior unchanged.
+Local SDK/HTTP acceptance is distinct from production drain proof; an observed
+socket without a request path cannot be attributed to MCP. Coordinate remote
+identity0.3.8 with the next application release. The wider issue281 maintenance
+front door and hosted/client acceptance remain open. See
+[scope and evidence](docs/engineering/mcp-standalone-stream-lifetime.md).
+
 **Project obligations before investing Operator float — 2026-10-09.**
 Stage a read-only ownership-scoped projection using the existing complete prepaid
 inventory and original payment, withdrawal, funding and supplier journals. Keep

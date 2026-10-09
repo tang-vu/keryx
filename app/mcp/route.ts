@@ -24,7 +24,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-const METHODS = "GET, POST, DELETE, OPTIONS";
+const METHODS = "POST, DELETE, OPTIONS";
 const REQUEST_HEADERS =
   "Authorization, Content-Type, Accept, MCP-Protocol-Version, MCP-Session-Id, Last-Event-ID";
 
@@ -145,6 +145,18 @@ export function OPTIONS(req: NextRequest) {
   return new Response(null, { status: 204, headers: corsHeaders(req) });
 }
 
-export const GET = handle;
+export function GET(req: NextRequest) {
+  if (!isAllowedMcpOrigin(req)) {
+    return jsonRpcHttpError(req, 403, -32003, "Forbidden Origin header.");
+  }
+  // This stateless JSON endpoint has no server-initiated notification stream.
+  // Refuse before resolving credentials or constructing the SDK's unbounded GET SSE stream.
+  const response = jsonRpcHttpError(req, 405, -32000,
+    "Standalone SSE is not supported. Send MCP messages with POST.");
+  response.headers.set("Allow", METHODS);
+  response.headers.set("Cache-Control", "no-store");
+  return response;
+}
+
 export const POST = handle;
 export const DELETE = handle;
