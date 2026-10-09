@@ -34,3 +34,26 @@ it("requires separate nonduplicate publisher groups for every claim before High"
   expect(researchVerdict({ ...base, conflicts: [], sources: base.sources.map(source => ({ ...source, text: "same  body" })) }).level).toBe("Moderate");
   expect(researchVerdict({ ...base, conflicts: [], sources: undefined }).level).toBe("Moderate");
 });
+
+it("localizes reasons while preserving every confidence classification and input", () => {
+  const cases = [
+    { ...base, conflicts: [], citedMarkers: [] },
+    { ...base, conflicts: [conflict] },
+    { ...base, conflicts: [], coverage: [] },
+    { ...base, conflicts: [], coverage: [{ ...base.coverage[0], coverage: 0.1 }] },
+    { ...base, conflicts: [], finalAssessmentSufficient: false },
+    { ...base, conflicts: [{ ...conflict, trusted: "S1" }] },
+    { ...base, conflicts: [] },
+    { ...base, conflicts: [], citedMarkers: ["S1"] },
+  ];
+  for (const input of cases) {
+    const before = JSON.stringify(input), english = researchVerdict(input);
+    for (const language of ["vi", "pt", "es"] as const) {
+      const localized = researchVerdict(input, language);
+      expect(localized.level).toBe(english.level);
+      expect(localized.reason).not.toBe(english.reason);
+    }
+    expect(researchVerdict(input, "en")).toEqual(english);
+    expect(JSON.stringify(input)).toBe(before);
+  }
+});

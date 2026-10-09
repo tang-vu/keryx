@@ -8,9 +8,10 @@ request could retain Portuguese inferred from other text.
 
 This repair narrows automatic Portuguese inference to distinctive cues and gives
 positive output directives precedence over inferred language. Existing explicit
-English, Vietnamese and Portuguese selection remains supported. Bounded Spanish,
-French and German directive forms identify unsupported requests; they select the
-English scaffold fallback without forcing English statement generation. The last
+English, Vietnamese and Portuguese selection remains supported. The later
+[ordinary Spanish and confidence repair](ordinary-confidence-language-2026-10-09.md)
+adds Spanish ordinary-answer scaffolding. French and German directive forms still
+select the English scaffold fallback without forcing English statement generation. The last
 positive directive wins; a negated directive does not replace it. This finite
 parser does not establish general language detection or instruction understanding.
 Discourse on a previous line cannot negate a new language/count instruction;
@@ -36,7 +37,8 @@ and retained finalization without ordinary presentation retains its existing pat
 | Desktop, Operator and private research | Existing role boundaries and private-original presentation remain in place; no system-locale override is added. |
 | Citation emails and notifications | This selector is not used. Recipient preferences and localized email catalogs remain open work. |
 
-Issue276 remains open. This fixes wrong Portuguese inference, not Spanish/French/
+Issue276 remains open. This fixes wrong Portuguese inference; the later repair
+adds ordinary Spanish scaffolding and matching confidence notices, but not French/
 German localization or agreement between every answer and every surrounding
 notice. New catalogs, human translation review, bot and recipient preferences,
 early failure notices and all-surface evaluation remain acceptance gates. The
