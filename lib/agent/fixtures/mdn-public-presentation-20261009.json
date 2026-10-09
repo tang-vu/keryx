@@ -1,0 +1,53 @@
+{
+  "projection": "Displayed public statement/excerpt pairs only. No captured model review scores or runtime layout capability.",
+  "captureSha256": "69d8f81b43fca4262a07a36c52fbfdfb2168027291bd19e63bd659c88728d8a5",
+  "capturedAt": "2026-10-09T02:23:08.694Z",
+  "reportUrl": "https://keryx.cc/dispatch/6c41b95d-7877-4403-8b52-988d924f132d",
+  "reportedAppCommit": "380647b10a924e231ebe98123028877d8c5ee187",
+  "sourceCommitProvenance": "Issue 238 owner retest report; this public dispatch capture does not independently bind deployment health.",
+  "question": "Sou professora no Brasil e preparo uma oficina introdutória de HTML. Leia https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button . Em português brasileiro, escreva três tópicos curtos explicando as diferenças entre type=\"submit\", type=\"reset\" e type=\"button\", incluindo o comportamento padrão quando type não é informado. Cite trechos verificáveis da página. Não diga que você executou os exemplos em um navegador e não compre fontes pagas.",
+  "sourceIdentity": {
+    "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+    "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+    "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+    "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e"
+  },
+  "targets": [
+    "Qual é a diferença de comportamento do type=\"submit\" em um elemento <button>, conforme a página de referência da MDN?",
+    "Qual é a diferença de comportamento do type=\"reset\" em um elemento <button>, conforme a página de referência da MDN?",
+    "Qual é a diferença de comportamento do type=\"button\" em um elemento <button>, conforme a página de referência da MDN?",
+    "Qual é o comportamento padrão de um elemento <button> quando o atributo type não é informado, conforme a página de referência da MDN?"
+  ],
+  "pairs": [
+    {
+      "claimIndex": 0,
+      "marker": "S1",
+      "quote": "submit: O botão envia os dados do formulário para o servidor.",
+      "text": "O type=\"submit\" faz o botão enviar os dados do formulário para o servidor."
+    },
+    {
+      "claimIndex": 1,
+      "marker": "S1",
+      "quote": "reset: O botão restaura todos os controles para seus valores iniciais.",
+      "text": "O type=\"reset\" faz o botão restaurar todos os controles para seus valores iniciais."
+    },
+    {
+      "claimIndex": 2,
+      "marker": "S1",
+      "quote": "button: O botão não possui comportamento padrão.",
+      "text": "O type=\"button\" não possui comportamento padrão."
+    },
+    {
+      "claimIndex": 2,
+      "marker": "S1",
+      "quote": "Ele pode ter scripts do lado do cliente associado com os eventos do elemento, no qual são acionados quando o evento ocorrer.",
+      "text": "O type=\"button\" pode ter scripts do lado do cliente associados aos eventos do elemento, acionados quando o evento ocorrer."
+    },
+    {
+      "claimIndex": 3,
+      "marker": "S1",
+      "quote": "Esse é o padrão se o atributo não for especifidado, ou se o atributo é dinamicamente mudado para um valor vazio ou inválido.",
+      "text": "Quando o atributo type não é especificado, ou é mudado dinamicamente para um valor vazio ou inválido, o padrão é submit."
+    }
+  ]
+}

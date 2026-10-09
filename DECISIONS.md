@@ -6540,3 +6540,21 @@ catalogue migration, visual parity or human translation review. Area migrations
 must retire old allowances and demonstrate unchanged rendered English. Keep
 arbitrary data flow and non-JSX surfaces as explicit follow-up boundaries rather
 than claiming universal extraction. See [authoring rules](docs/ui-copy-authoring.md).
+
+## Preserve exact short-item identity for ordinary presentation — 2026-10-09
+
+Separate reviewed sentences from one complete visible enumerated item can satisfy
+different research targets without requiring a new semantic relationship. Retain
+that structural identity as process-local metadata from the already offered whole
+item quote option, through its exact resolved span and existing statement admission.
+Do not serialize or restore it from receipts, raise support, widen retrieval or
+change payment authority. Require observed complete public HTML, exact source and
+item binding, and unchanged qualifying ledger identities at consumption.
+
+Preserve existing presentation groups first. A new item edge joins only groups
+whose every sentence belongs to that item; target transitivity cannot pull another
+block into the new edge. Retain every exact sentence/excerpt pair and all final
+coverage, count and row limits. Defaults and private originals remain unchanged.
+The [candidate and retained-fixture record](docs/engineering/short-item-presentation-2026-10-09.md)
+distinguishes synthetic layout/review inputs from public displayed pairs and keeps
+issue238's live usefulness, localization and coordinated-delivery gates open.

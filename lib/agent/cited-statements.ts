@@ -1,6 +1,7 @@
 import type { ProposedEvidence } from "../llm/reasoning-engine";
 import { MIN_STATEMENT_SUPPORT, normalizeStatement } from "../llm/cited-statement";
 import type { EvidenceLedger } from "./evidence-ledger";
+import { retainStatementPresentationItem } from "../llm/quote-presentation-item";
 
 /** A summary sentence and the one ledger excerpt it may be shown beside. */
 export interface CitedStatement {
@@ -38,7 +39,9 @@ export function selectCitedStatements(proposals: ProposedEvidence[], ledger: Evi
     if (count >= maximumPerTarget) continue;
     seen.add(id).add(text.toLocaleLowerCase("en-US"));
     perTarget.set(proposal.claimIndex, count + 1);
-    statements.push({ claimIndex: proposal.claimIndex, marker: proposal.marker, quote, text });
+    const statement = { claimIndex: proposal.claimIndex, marker: proposal.marker, quote, text };
+    retainStatementPresentationItem(proposal, statement, ledger.evidence);
+    statements.push(statement);
   }
   return statements;
 }
