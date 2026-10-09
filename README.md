@@ -12,8 +12,9 @@ budget lead to a cited report, visible BUY/SKIP/CACHE decisions, and payment rec
 for eligible creator rewards.
 
 **[Live app](https://keryx.cc)** · **[Public proof](https://keryx.cc/proof)** ·
-**Demo recording: pending** — [recording plan and release gates](docs/reviewer-start.md#recording-gate).
-There is no current Tameion video linked yet; the CLI demo below is a runnable script.
+**[Archived QA walkthrough (2m40s, app 0.27.43, recorded Oct 8)](https://github.com/tang-vu/keryx/releases/download/v0.27.43/keryx-current-release-6e591603-archived-qa-05.mp4)**.
+Reopens an archived first-party report and receipt; no new research was submitted.
+See the [recording scope and public checks](docs/reviewer-start.md#recording-gate).
 
 ## Try it in two minutes — no wallet
 
@@ -104,7 +105,8 @@ The usage record separates the event's testnet phase from mainnet; the mainnet
 snapshot above includes internal activity. Sponsored outside use is documented,
 but independent paid demand, repeat use and general deliverable usefulness remain
 separate evidence gates. Source candidates beyond the observed deployment are
-not claimed live. The short current-release recording remains pending.
+not claimed live. The dated archived-QA walkthrough above reopens existing artifacts; it is not a
+live-Ask or complete current-feature demonstration.
 
 ---
 
