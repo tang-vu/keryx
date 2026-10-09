@@ -25,9 +25,9 @@ export function answerPresentation(question: string): AnswerPresentation {
   // Cue detection must not treat a negated language directive as a positive request.
   const cues = text.replace(explicit, " ");
   let language: AnswerPresentation["language"] = researchResponseLanguage(cues);
-  // "explique", "responda", "sobre" and "para" are also Spanish cues.
-  if (/\b(?:sou|preciso|escreva)\b/u.test(cues) &&
-      /\b(?:uma|para|sobre|entre)\b/u.test(cues)) language = "pt";
+  // Shared Spanish verbs need the distinctive Portuguese "uma" cue.
+  if ((/\b(?:sou|escreva)\b/u.test(cues) && /\b(?:uma|para|sobre|entre)\b/u.test(cues)) ||
+      (/\b(?:preciso|explique|responda)\b/u.test(cues) && /\buma\b/u.test(cues))) language = "pt";
   let requestedLanguage: AnswerPresentation["requestedLanguage"];
   for (const request of requests) {
     if (negated(text, request.index!)) continue;

@@ -11,6 +11,7 @@ describe("ordinary scaffold language fallback", () => {
   it.each([
     spanishQuestion,
     "Explique si la Luna gira sobre su eje y para qué sirve esa explicación.",
+    "Preciso información sobre la Luna para esta investigación.",
     "Sou professora e preciso de uma explicação. Reply in Spanish.",
     "Sou professora e preciso de uma explicação. En español, responde brevemente.",
     "Sou professora e preciso de uma explicação. Responda en español.",
@@ -26,6 +27,8 @@ describe("ordinary scaffold language fallback", () => {
 
   it.each([
     ["Sou professora e preciso de uma explicação.", "pt"],
+    ["Preciso de uma explicação sobre a Lua.", "pt"],
+    ["Explique uma questão sobre a Lua.", "pt"],
     ["Write in Portuguese. Do not reply in Spanish.", "pt"],
     ["Write in Portuguese. No responda en español.", "pt"],
     ["Write in Portuguese. Pas en français, s'il vous plaît.", "pt"],
