@@ -113,18 +113,35 @@ function leg(
   };
   return { queryNamespace: namespace, queryId, journal };
 }
-async function setup(v2 = true) {
+function diagnosticStage(stage: string, phase: "start" | "end", started: number) {
+  console.info(`Browser originals fixture stage=${stage} phase=${phase} elapsedMs=${Math.round(performance.now() - started)}`);
+}
+async function setup(v2 = true, diagnostics = false) {
+  const started = performance.now();
+  const mark = (stage: string, phase: "start" | "end") => {
+    if (diagnostics) diagnosticStage(stage, phase, started);
+  };
+  mark("constructor", "start");
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-signing-v2-")),
     file = path.join(folder, "fixture.sqlite");
   const db = new SqliteAdapter(file);
+  mark("constructor", "end");
+  mark("init", "start");
   await db.init();
+  mark("init", "end");
+  mark("grant", "start");
   await db.upsertSessionGrant(grant());
+  mark("grant", "end");
+  mark("journal-activation", "start");
   await db.activateBrowserJournal();
+  mark("journal-activation", "end");
+  mark("native-open", "start");
   const native = new DatabaseSync(file);
   native.exec("PRAGMA busy_timeout=5000");
   if (v2)
     native.exec("UPDATE browser_signing_v2_control SET active=1 WHERE id=1");
   fixtures.push({ db, native, folder });
+  mark("native-open", "end");
   return { db, native, file };
 }
 async function query(db: SqliteAdapter, p = body(), sessionId = ownerId) {
@@ -141,15 +158,22 @@ afterEach(() => {
   }
 });
 it("installs inactive without changing v1 fresh behavior", async () => {
-  const { db } = await setup(false),
-    p = await proof();
+  const started = performance.now();
+  const { db } = await setup(false, true);
+  diagnosticStage("proof", "start", started);
+  const p = await proof();
+  diagnosticStage("proof", "end", started);
+  diagnosticStage("inactive-policy", "start", started);
   expect((await db.admitBrowserQueryPolicy(p, ownerId)).status).toBe(
     "inactive"
   );
+  diagnosticStage("inactive-policy", "end", started);
+  diagnosticStage("v1-journal-admission", "start", started);
   expect(
     (await db.admitBrowserJournal(leg("unused", p.policy.queryId).journal))
       .status
   ).toBe("admitted");
+  diagnosticStage("v1-journal-admission", "end", started);
 });
 it("admits owner proof and complete original atomically with one payment debit", async () => {
   const { db, native } = await setup(),
