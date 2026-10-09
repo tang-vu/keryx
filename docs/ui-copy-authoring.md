@@ -26,7 +26,8 @@ committed before a local scan; CI always sees the committed source inventory.
   and sentence templates with embedded literal branches.
 - Accessibility, title, alt, placeholder and other listed presentation attributes.
 - Toast titles/descriptions, confirmations, alerts and named UI error/status setters.
-- Presentation descriptor labels and direct metadata titles/descriptions/alt text.
+- Presentation descriptor labels and direct metadata titles/descriptions/alt text,
+  including static Next title objects' `default`, `template` and `absolute` leaves.
 - Local constant aliases and object label lookups used by those contexts, with
   simple lexical shadowing and cycle protection.
 
@@ -42,6 +43,16 @@ occurrence count. Moving lines or deleting copy is allowed. New/changed copy,
 copy in a new file/context, or an extra duplicate occurrence fails. Hashes keep
 the baseline free of a second full copy of legacy strings. A hash is an allowance
 identity, not a human translation approval or security signature.
+
+A reused local declaration is counted once per syntax context. Rendering the same
+constant in another context (for example, adding a title attribute to an existing
+child expression) requires a separate allowance. Static metadata title objects
+are followed through local constant aliases; unrelated data objects with
+`default`, `template` or `absolute` fields remain excluded.
+
+The reviewed guard correction adds only the existing `app/layout.tsx` title
+template (`%s · Keryx`) to the legacy inventory. Guarded UI source still matches
+the baseline's named commit; its other allowances and provenance are retained.
 
 ## Adding or migrating copy
 

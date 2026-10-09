@@ -65,6 +65,41 @@ test("metadata titles, descriptions, alt text and static title aliases are inclu
   assert.deepEqual(texts('export function generateMetadata() { return { title: "Profile", description: "Public researcher" }; }'), ["Profile", "Public researcher"]);
 });
 
+test("static Next metadata title objects include default, template and absolute copy", () => {
+  assert.deepEqual(texts('export const metadata = { title: { default: "New title", template: "%s | New brand" } };'),
+    ["New title", "%s | New brand"]);
+  assert.deepEqual(texts('export function generateMetadata() { return { title: { absolute: "Standalone title" } }; }'),
+    ["Standalone title"]);
+  const original = 'export const metadata = { title: { default: "Existing" } };';
+  assert.equal(compareBaseline(scan(original.replace("Existing", "Changed")), baseline(original)).length, 1);
+  assert.equal(compareBaseline(scan(original.replace('"Existing"', '"Existing", template: "%s | New brand"')), baseline(original)).length, 1);
+});
+
+test("metadata title aliases are static while unrelated default/template data is excluded", () => {
+  assert.deepEqual(texts('const defaultTitle = "Fallback"; const template = "%s | Brand"; const titles = ({ default: defaultTitle, template } as const); const alias = titles; export const metadata = { title: alias };'),
+    ["Fallback", "%s | Brand"]);
+  assert.deepEqual(texts('const data = { title: { default: "Data title", template: "Data template", absolute: "Data absolute" } }; const C = () => <>{data.title}</>;'), []);
+  assert.deepEqual(texts('const titles = { default: "Outer title" }; function generateMetadata(titles) { return { title: titles }; }'), []);
+});
+
+test("reusing a constant in a new rendered syntax context requires its own allowance", () => {
+  const declaration = 'const LABEL = "Existing"; ';
+  for (const [original, changed, kinds] of [
+    ['const C = () => <>{LABEL}</>;', 'const C = () => <>{LABEL}<input title={LABEL}/></>;', ["jsx-expression", "attribute"]],
+    ['const C = () => <input title={LABEL}/>;', 'const C = () => <input title={LABEL}/>; alert(LABEL);', ["attribute", "ui-call"]],
+    ['const options = [{ label: LABEL }];', 'const options = [{ label: LABEL }]; const C = () => <>{LABEL}</>;', ["descriptor", "jsx-expression"]],
+  ]) {
+    const before = declaration + original, after = declaration + changed;
+    assert.deepEqual(scan(after).map(finding => finding.kind), kinds);
+    const added = compareBaseline(scan(after), baseline(before));
+    assert.equal(added.length, 1);
+    assert.equal(added[0].kind, kinds[1]);
+    assert.equal(added[0].text, "Existing");
+  }
+  assert.deepEqual(compareBaseline(scan(declaration + 'const C = () => <>{LABEL}{LABEL}</>;'),
+    baseline(declaration + 'const C = () => <>{LABEL}</>;')), []);
+});
+
 test("existing occurrences are allowed; new, changed and duplicated text fails", () => {
   const original = '<><p>Existing</p><p>Existing</p></>';
   const allowed = baseline(original);

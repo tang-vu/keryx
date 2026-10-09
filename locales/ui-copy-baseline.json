@@ -455,6 +455,7 @@
     {"file":"app/integrations/mcp/mcp-integration-client.tsx","kind":"jsx-text","sha256":"fb719a4dadaf7c979b11553764ad54054e3a68e3c894abd8fa13309d48d5f9ac","count":1},
     {"file":"app/integrations/mcp/page.tsx","kind":"descriptor","sha256":"9de0e20c4b2e9eb86dc460625e9f54d5aa38fbfdcc36df6b7c243fb8a6efc85c","count":1},
     {"file":"app/integrations/mcp/page.tsx","kind":"descriptor","sha256":"9fbbafa43b04e6afb1935861ca5a0f79df6f96e93d817a803074d7d96a94d418","count":1},
+    {"file":"app/layout.tsx","kind":"descriptor","sha256":"26475b73431b8169476bd21e57880c7d78b320b3027329b0fc683c14d93e331b","count":1},
     {"file":"app/layout.tsx","kind":"descriptor","sha256":"30174fc8bb9ca3a6174e4064f19c90a58324e8cddea2b83cb3d4b70ab98e47eb","count":1},
     {"file":"app/layout.tsx","kind":"descriptor","sha256":"8b4ed1b22174e0d786de959de62cfeea90a078230c19f93122011e5079b64c4f","count":1},
     {"file":"app/layout.tsx","kind":"descriptor","sha256":"a66ac9de033015dfbfb08dd4bbfbe1bf4e30c98f9ac607d02c81e307d8a36dcb","count":1},

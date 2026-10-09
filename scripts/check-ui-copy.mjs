@@ -14,6 +14,7 @@ const textAttributes = new Set(["alt", "title", "placeholder", "aria-label", "ar
   "emptyText", "loadingText", "errorText", "successText"]);
 const descriptorProperties = new Set(["label", "placeholder", "emptyText", "tooltip", "successMessage", "errorMessage", "ariaLabel"]);
 const metadataProperties = new Set(["title", "description", "alt"]);
+const metadataTitleProperties = new Set(["default", "template", "absolute"]);
 const scopes = ["app", "components", "desktop/src"];
 
 function requireCondition(condition, message) {
@@ -76,8 +77,9 @@ export function extractUiCopy(filename, source) {
 
   function add(node, kind, text) {
     // Whitespace and decorative punctuation alone do not need language catalogues.
-    if (!/[\p{L}\p{N}]/u.test(text) || recorded.has(node.pos)) return;
-    recorded.add(node.pos);
+    const context = `${node.pos}:${kind}`;
+    if (!/[\p{L}\p{N}]/u.test(text) || recorded.has(context)) return;
+    recorded.add(context);
     const position = ast.getLineAndCharacterOfPosition(node.getStart(ast));
     findings.push({ file: filename, kind, text, line: position.line + 1 });
   }
@@ -126,8 +128,19 @@ export function extractUiCopy(filename, source) {
       rendered(ts.isJsxExpression(node.initializer) ? node.initializer.expression : node.initializer, "attribute");
     }
     if (ts.isJsxExpression(node) && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))) rendered(node.expression, "jsx-expression");
-    if (ts.isPropertyAssignment(node) && (descriptorProperties.has(propertyName(node.name)) ||
-      (insideMetadata(node) && metadataProperties.has(propertyName(node.name))))) rendered(node.initializer, "descriptor");
+    if (ts.isPropertyAssignment(node)) {
+      const name = propertyName(node.name);
+      const metadata = insideMetadata(node);
+      const title = metadata && name === "title" ? constantExpression(node.initializer) : undefined;
+      if (title && ts.isObjectLiteralExpression(title)) {
+        // Next title objects expose only these presentation leaves. Do not turn
+        // arbitrary default/template data objects into visible-copy candidates.
+        title.properties.forEach(property => {
+          if (ts.isPropertyAssignment(property) && metadataTitleProperties.has(propertyName(property.name))) rendered(property.initializer, "descriptor");
+          if (ts.isShorthandPropertyAssignment(property) && metadataTitleProperties.has(property.name.text)) rendered(property.name, "descriptor");
+        });
+      } else if (descriptorProperties.has(name) || (metadata && metadataProperties.has(name))) rendered(node.initializer, "descriptor");
+    }
     if (ts.isCallExpression(node)) {
       const callee = node.expression;
       const name = ts.isIdentifier(callee) ? callee.text : undefined;
