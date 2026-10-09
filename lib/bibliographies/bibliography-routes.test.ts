@@ -16,7 +16,7 @@ function fixture() {
   const sqlite = new DatabaseSync(":memory:"); connections.push(sqlite); installSqliteApplicationSchema(sqlite);
   const store = createSqlitePrivateBibliographies(sqlite), db = { privateBibliographies: store } as KeryxDB;
   const session = vi.fn(async (): Promise<{ db: KeryxDB; wallet: string } | Response> => ({ db, wallet: alice }));
-  return { sqlite, store, db, session, routes: createBibliographyManagement(session), download: createBibliographyDownload(async () => db) };
+  return { sqlite, store, db, session, routes: createBibliographyManagement(session, "https://keryx.cc"), download: createBibliographyDownload(async () => db) };
 }
 describe("explicit private bibliography API", () => {
   it("anonymous, bearer, cross-origin and missing/stale owner requests never create a snapshot", async () => {
@@ -46,6 +46,21 @@ describe("explicit private bibliography API", () => {
     expect((await f.routes.revoke(request("DELETE", undefined, { ...ownerHeaders, "If-Match": '"2"' }), created.bibliography.id)).status).toBe(200);
     const revoked = await get(); expect(revoked.status).toBe(404); expect(await revoked.json()).toEqual({ error: "bibliography_not_found" });
   });
+  it("configured public Origin accepts canonical Next URLs while spoofed Host/forwarded headers never choose authority", async () => {
+    const f = fixture();
+    const internal = (origin: string, headers: Record<string, string> = {}) => new Request("http://localhost:3939/api/me/bibliographies", {
+      method: "POST", headers: { ...ownerHeaders, Origin: origin, "Content-Type": "application/json", ...headers }, body: JSON.stringify(input),
+    });
+    expect((await f.routes.create(internal("https://keryx.cc", { Host: "keryx.cc", "X-Forwarded-Proto": "https" }))).status).toBe(201);
+    f.session.mockClear();
+    for (const headers of [{ Host: "evil.example", "X-Forwarded-Host": "evil.example", "X-Forwarded-Proto": "https" }, { "Sec-Fetch-Site": "cross-site" }]) {
+      expect((await f.routes.create(internal("https://evil.example", headers))).status).toBe(403);
+    }
+    expect((await f.routes.create(internal("https://keryx.cc", { "Sec-Fetch-Site": "same-site" }))).status).toBe(403);
+    expect(f.session).not.toHaveBeenCalled(); expect(await f.store.list(alice)).toHaveLength(1);
+    const unavailable = createBibliographyManagement(f.session, undefined);
+    expect((await unavailable.create(request("POST", input))).status).toBe(403); expect(f.session).not.toHaveBeenCalled();
+  });
   it("a bearer read has no owner selector or arbitrary stored report access; malformed/revoked keys match", async () => {
     const f = fixture(), bad = "0".repeat(64) + ".bib";
     for (const filename of [bad, "../../original.json", "arbitrary-report.bib"]) expect((await f.download(new Request("https://keryx.cc/api/bibliographies/" + bad), filename)).status).toBe(404);
@@ -53,7 +68,7 @@ describe("explicit private bibliography API", () => {
     expect((await f.routes.list(new Request("https://keryx.cc/api/me/bibliographies?wallet=" + alice, { headers: ownerHeaders }))).status).toBe(400);
   });
   it("unsupported and sealed stores refuse without any fallback", async () => {
-    const noStore = {} as KeryxDB, routes = createBibliographyManagement(async () => ({ db: noStore, wallet: alice }));
+    const noStore = {} as KeryxDB, routes = createBibliographyManagement(async () => ({ db: noStore, wallet: alice }), "https://keryx.cc");
     expect((await routes.create(request("POST", input))).status).toBe(503);
     const download = createBibliographyDownload(async () => noStore); expect((await download(new Request("https://keryx.cc/api/bibliographies/file"), "0".repeat(64) + ".bib")).status).toBe(503);
     Object.defineProperty(noStore, "privateBibliographies", { get() { throw new Error("sealed authority"); } });

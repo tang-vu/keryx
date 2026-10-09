@@ -4,6 +4,8 @@
 Advance issue285 with revocable bearer `.bib` URLs for saved-paper metadata,
 independently of account-provider authorization. Store only random-token hashes;
 owner-session writes need exact-origin, wallet and revision preconditions. Keep
+the cookie-write origin bound to server `BASE_URL` through a pure strict helper;
+Next's internal URL and request Host/forwarded headers select no authority. Keep
 notes/questions/screening, profiles, original receipts and payment history out of
 published snapshots. Ordinary SQLite alone exposes the additive private port;
 unsupported/enrolled/native stores refuse without widening authority or fallback.

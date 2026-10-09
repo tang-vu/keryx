@@ -1,4 +1,5 @@
 import type { KeryxDB } from "../db/keryx-db";
+import { isConfiguredSameOrigin } from "../auth-origin";
 import { bibliographyIdSchema, bibliographyInputSchema, bibliographyOwner, bibliographyRevisionSchema,
   MAX_BIBLIOGRAPHY_BODY_BYTES, PrivateBibliographyError, requirePrivateBibliographies } from "./private-bibliography";
 
@@ -29,7 +30,7 @@ function expectedRevision(req: Request) {
   return match ? bibliographyRevisionSchema.safeParse(Number(match[1])) : null;
 }
 /** Session-only explicit sharing: historical API keys gain no new private-write authority. */
-export function createBibliographyManagement(session: Session) {
+export function createBibliographyManagement(session: Session, configuredBaseUrl: unknown) {
   async function execute(req: Request, operation: "list" | "create" | "replace" | "revoke", id?: string) {
     try {
       if (new URL(req.url).search || id !== undefined && !bibliographyIdSchema.safeParse(id).success) return json({ error: "invalid_bibliography" }, 400);
@@ -37,7 +38,7 @@ export function createBibliographyManagement(session: Session) {
       const expected = req.headers.get("x-keryx-expected-wallet");
       if (expected === null) return json({ error: "owner_precondition_required" }, 428);
       if (!/^0x[0-9a-fA-F]{40}$/.test(expected)) return json({ error: "invalid_owner_precondition" }, 400);
-      if (operation !== "list" && req.headers.get("origin") !== new URL(req.url).origin) return json({ error: "same_origin_required" }, 403);
+      if (operation !== "list" && !isConfiguredSameOrigin(req, configuredBaseUrl)) return json({ error: "same_origin_required" }, 403);
       const context = await session();
       if (context instanceof Response) { const headers = new Headers(context.headers); for (const [key, value] of Object.entries(privateHeaders)) headers.set(key, value); return new Response(context.body, { status: context.status, headers }); }
       if (bibliographyOwner(context.wallet) !== expected.toLowerCase()) return json({ error: "bibliography_owner_changed" }, 409);

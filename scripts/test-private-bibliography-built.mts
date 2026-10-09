@@ -15,7 +15,8 @@ await readFile(join(dist, "BUILD_ID"), "utf8");
 const fixture = join(source, ".artifacts", `private-bib-built-${randomUUID()}`);
 await mkdir(join(fixture, "lib"), { recursive: true });
 await mkdir(join(fixture, "data"));
-for (const file of ["package.json", "next.config.ts", "lib/security-headers.ts"]) await writeFile(join(fixture, file), await readFile(join(source, file)));
+for (const file of ["package.json", "next.config.ts", "lib/security-headers.ts", "lib/arc-network-profile.ts", "lib/circle-wallet-config.ts"])
+  await writeFile(join(fixture, file), await readFile(join(source, file)));
 await symlink(join(source, "node_modules"), join(fixture, "node_modules"), process.platform === "win32" ? "junction" : "dir");
 await symlink(dist, join(fixture, ".next"), process.platform === "win32" ? "junction" : "dir");
 const sqlite = new SqliteAdapter(join(fixture, "data", "keryx.sqlite"));
@@ -27,6 +28,7 @@ await new Promise<void>(resolve => listener.listen(0, "127.0.0.1", resolve));
 const address = listener.address(); assert.ok(address && typeof address !== "string"); const port = address.port;
 await new Promise<void>((resolve, reject) => listener.close(error => error ? reject(error) : resolve()));
 const environment = { ...process.env, NODE_ENV: "production", JWT_SECRET: secret, KERYX_FORCE_OFFLINE: "1", KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet",
+  BASE_URL: `http://127.0.0.1:${port}`, KERYX_EXTERNAL_DISCOVERY: "0",
   SUPABASE_URL: "", NEXT_PUBLIC_SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", SUPABASE_ANON_KEY: "", NEXT_PUBLIC_SUPABASE_ANON_KEY: "" };
 for (const name of Object.keys(environment)) if (/^KERYX_(?:STORAGE|SQLITE|SUPABASE)/.test(name) || name === "NEXT_DIST_DIR") delete environment[name as keyof typeof environment];
 const child = spawn(process.execPath, [join(source, "node_modules", "next", "dist", "bin", "next"), "start", "-H", "127.0.0.1", "-p", String(port)],
@@ -53,6 +55,12 @@ try {
   }
   assert.ok(ready, "Isolated built server did not become ready");
   const input = { title: "PRIVATE BUILT REVIEW", papers: [PAPER_CATALOG[0]] };
+  const anonymous = { method: "POST", headers: { Origin: origin, "X-Keryx-Expected-Wallet": alice, "Content-Type": "application/json" }, body: "not-json" };
+  assert.equal((await fetchPrivate("/api/me/bibliographies", anonymous)).status, 401);
+  for (const headers of [{ Origin: "https://foreign.invalid", Host: "foreign.invalid", "X-Forwarded-Host": "foreign.invalid", "X-Forwarded-Proto": "https" }, { Origin: origin, "Sec-Fetch-Site": "cross-site" }]) {
+    const attempt = ownerRequest("POST", input);
+    assert.equal((await fetchPrivate("/api/me/bibliographies", { ...attempt, headers: { ...attempt.headers, ...headers } })).status, 403);
+  }
   const create = await fetchPrivate("/api/me/bibliographies", ownerRequest("POST", input)); assert.equal(create.status, 201);
   const saved = await create.json() as { bibliography: { id: string; revision: number }; urlPath: string };
   assert.match(saved.urlPath, /^\/api\/bibliographies\/[0-9a-f]{64}\.bib$/);

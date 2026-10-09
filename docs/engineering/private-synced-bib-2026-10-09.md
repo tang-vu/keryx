@@ -55,8 +55,13 @@ identity does not merge DOI aliases across providers.
 Management is session-only. Historical API keys gain no new sharing authority;
 any present Authorization header refuses rather than falling back to a cookie.
 Every management request compares `X-Keryx-Expected-Wallet` to the independently
-authenticated, revocable signed-session owner. Writes require the exact request
-origin. The UUID identifies a document, never an owner; another owner's mutations
+authenticated, revocable signed-session owner. Writes require the exact serialized
+Origin from server-controlled `BASE_URL` (an absolute HTTP(S) origin without
+credentials, path, query or fragment), and present `Sec-Fetch-Site` must be
+`same-origin`. Request Host/forwarded headers and Next's canonicalized internal
+URL grant no origin authority. A local server on another port must configure its
+own `BASE_URL`. Existing profile/session endpoints are not changed. The UUID
+identifies a document, never an owner; another owner's mutations
 receive a non-identifying 404. Atomic revision checks prevent stale replacements
 and revocations. The editor remounts on owner changes, cancels its requests and
 withholds stale responses; cancellation does not promise server-side rollback.
@@ -146,6 +151,7 @@ With the pinned dependencies and explicit offline/testnet settings:
 ```powershell
 node node_modules/vitest/vitest.mjs run lib/db/private-bibliographies-sqlite.test.ts lib/bibliographies/bibliography-routes.test.ts lib/bibliographies/bibliography-browser.test.ts lib/papers/reference-export.test.ts lib/db/private-profiles-sqlite.test.ts lib/db/enrolled-sqlite-adapter.test.ts
 node node_modules/vitest/vitest.mjs run lib/research/surface-result.test.ts lib/research/bibliographic-original.test.ts lib/research/bibliographic-task.test.ts lib/research/receipt-exports.test.ts
+node node_modules/vitest/vitest.mjs run lib/auth-origin.test.ts lib/bibliographies/bibliography-routes.test.ts
 node node_modules/typescript/bin/tsc --noEmit
 node node_modules/typescript/bin/tsc --noEmit --project tsconfig.ops-scripts.json
 node node_modules/next/dist/bin/next build
@@ -168,20 +174,20 @@ The first old-ordinal fixture failed because safe projection regenerated a stabl
 key. The explicit original-page legacy mode corrected that regression; all 54
 formatter/original-bibliography/surface/receipt tests passed on the correction.
 
-The local Windows worktree's dependency junction crosses Turbopack's filesystem
-root and refuses the default build before compilation. `next build --webpack`
-may be used here for actual built-route/privacy validation without changing
-project configuration; this is distinct from the required hosted default
-Turbopack build against a physical locked dependency installation. The local
-webpack attempt also stops on the reused local Wagmi/Base Account/Coinbase
-dependency tree's import of missing `@x402/svm/exact/client`, before this candidate's routes can be
-built. Neither local build nor the built fixture passed; hosted exact-source CI
-and the built fixture remain open. A webpack result does not satisfy the
-default-build release gate. This local failure does not establish a defect in a
-fresh, pinned physical dependency installation.
+The initial reused dependency junction failed the default Turbopack build before
+compilation and the webpack attempt failed on a missing transitive
+`@x402/svm/exact/client` import. Its generated route validator also reported
+TS2344 for unchanged `SourcesPage` props. Those local failures are retained as
+historical evidence; a separate exact-head worktree with a physical npm11.19.0
+`ci` installation passed the default Turbopack build and both full TypeScript
+graphs at `84c656b5`, with no lockfile change. The generated-route failure did not
+reproduce on fresh default type generation.
 
-The app TypeScript check passed before those build attempts generated route
-validators. The later full check reports baseline `SourcesPage`'s defaulted props
-as possibly undefined in `.next/types/app/sources/page.ts` (TS2344); the source is
-unchanged from `f5565998`. This remains a full generated-route gate, separate from
-ops and a source-only check excluding generated build directories.
+The first actual built fixture exposed a missing pure config dependency in its
+isolated server directory. After that correction, its 127.0.0.1 browser Origin
+was refused because Next canonicalized `request.url` to localhost. The corrected
+fixture copies the complete small config closure and explicitly sets synthetic
+`BASE_URL`; the shared pure origin check uses that server-controlled origin.
+All 46 focused origin/API tests passed, including a trailing-NUL configuration
+regression. Fresh default build/full TypeScript/built-fixture acceptance after
+this runtime correction and hosted exact-source aggregate remain open.
