@@ -1,5 +1,6 @@
 import { afterEach, expect, it, onTestFailed, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
+import { requirePrivateProfiles } from "../profiles/private-profile";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, renameSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -88,6 +89,18 @@ async function fixture(mode: "testnet-real" | "testnet-offline" = "testnet-real"
   phase("import:end");
   return { file, manifestPath, manifest, identity, adapters, api, phase };
 }
+
+it("private-profile capability is absent on the actual enrolled facade and refuses before native or manifest guard I/O", async () => {
+  const f = await fixture("testnet-offline");
+  const adapter = await f.api.createEnrolledSqliteAdapter(); f.adapters.push(adapter);
+  writeFileSync(f.manifestPath, "{}", "utf8");
+  const prepare = vi.spyOn(DatabaseSync.prototype, "prepare"), exec = vi.spyOn(DatabaseSync.prototype, "exec");
+  try {
+    expect(Object.hasOwn(adapter, "privateProfiles")).toBe(false);
+    expect(() => requirePrivateProfiles(adapter)).toThrow("profile_unavailable");
+    expect(prepare).not.toHaveBeenCalled(); expect(exec).not.toHaveBeenCalled();
+  } finally { prepare.mockRestore(); exec.mockRestore(); }
+});
 
 it("uses the exact installed application schema without startup migration and retains enrolled provenance", async () => {
   const f = await fixture("testnet-real", false, "exact-schema");

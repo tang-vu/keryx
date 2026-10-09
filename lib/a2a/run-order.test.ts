@@ -129,6 +129,8 @@ describe("durable A2A worker", () => {
     expect(collector).toHaveBeenCalledWith(
       expect.objectContaining({
         fundingOwner: "treasury",
+        asker: current.payer,
+        provenance: { version: 1, surface: "agent-to-agent", ownershipMethod: "verified-payer" },
         budget,
         question: "What changed?",
         executionLimits: { attentionLimit: 4, reevaluateRounds: 1 },
@@ -138,6 +140,16 @@ describe("durable A2A worker", () => {
     expect(db.completeA2aOrder).toHaveBeenCalledOnce();
     expect(db.markA2aOrderPaymentStarted).toHaveBeenCalledOnce();
     expect(db.markA2aOrderResultSaving).toHaveBeenCalledOnce();
+    expect(db.failA2aOrder).not.toHaveBeenCalled();
+  });
+
+  it("holds a changed retained payer before attribution or research", async () => {
+    const order = claimedOrder();
+    const db = { getA2aOrder: vi.fn().mockResolvedValue({ ...order, payer: `0x${"3".repeat(40)}` }),
+      getQueryRun: vi.fn(), failA2aOrder: vi.fn() };
+    const collector = vi.fn();
+    expect(await runClaimedA2aOrder(db as never, order, { collector })).toMatchObject({ status: "recovery_pending" });
+    expect(collector).not.toHaveBeenCalled(); expect(db.getQueryRun).not.toHaveBeenCalled();
     expect(db.failA2aOrder).not.toHaveBeenCalled();
   });
 

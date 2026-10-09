@@ -1,5 +1,11 @@
 # Remote MCP
 
+The [CSL-JSON export source candidate](engineering/csl-json-reference-export-2026-10-09.md)
+adds derived `researchExports.cslJson` (`content`, `count`, `omitted`) and separate
+metadata-only `bibliographyExports.cslJson` (`content`, `count`). Existing paid
+response snapshots remain unchanged. Source readiness and deployed acceptance
+are separate; the protocol identity and authentication contract remain unchanged.
+
 Keryx exposes a stateless MCP Streamable HTTP endpoint at `https://keryx.cc/mcp`. It complements
 the published `keryx-mcp` stdio package: remote clients need no local process, while the stdio
 package remains the caller-funded x402 option.
@@ -33,6 +39,12 @@ and a browser could attempt DNS-rebinding/cross-origin calls.
   `KERYX_MCP_ALLOWED_ORIGINS` entry. Invalid origins receive HTTP 403.
 - The endpoint is stateless and exposes no server-initiated notification stream or durable session.
 
+The staged [standalone-stream refusal](engineering/mcp-standalone-stream-lifetime.md)
+makes that boundary explicit: GET returns HTTP405 with `Allow: POST, DELETE, OPTIONS`;
+MCP messages continue through JSON POST. Remote protocol0.3.8 is required for its
+coordinated release. This source candidate does not establish hosted deployment
+or planned-maintenance acceptance.
+
 **Migration and rollback.** Supabase migration `0022_remote_mcp_origin.sql` expands the query-run
 origin constraint. SQLite stores origin as text and needs no schema rewrite. Rollback is to remove
 the `/mcp` route and registry `remotes` entry; existing `mcp` rows remain readable external history.
@@ -55,6 +67,17 @@ the `/mcp` route and registry `remotes` entry; existing `mcp` rows remain readab
   [runtime-copy follow-up](surface-parity.md#october-4-documentation-and-current-release-status).
 
 ## Client configuration
+
+### Private-profile source capability
+
+`profile_read()` requires an explicitly selected `profile:read` key;
+`profile_update(profile)` requires `profile:write`. Write does not imply read.
+Profile-only keys cannot run research, including mixed batches. Historical/default
+keys retain ask/export and gain no private-profile access. Tool arguments never
+select a wallet. This additive ordinary-storage capability remains unavailable on
+the current sealed/native production store until its own reviewed migration and
+deployed acceptance; no REST fallback or payment is performed. See
+[private-profile contracts and remaining gates](engineering/private-profiles-2026-10-09.md).
 
 Use `https://keryx.cc/mcp` as a Streamable HTTP server URL. For copy-ready setup and a live
 connection check, open [`https://keryx.cc/integrations/mcp`](https://keryx.cc/integrations/mcp).

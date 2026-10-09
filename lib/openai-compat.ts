@@ -1,6 +1,7 @@
 import { demoteSyntheticEvidence } from "./research/evidence-provenance";
 import { isRequestObject } from "./request-object";
 import { surfaceResearch } from "./research/surface-result";
+import { formatRecordedUsdc } from "./display/recorded-usdc";
 /**
  * OpenAI Chat Completions ↔ Keryx mappers (pure, side-effect free).
  *
@@ -95,13 +96,13 @@ export function keryxMeta(run: QueryRun) {
 function citationsFooter(run: QueryRun): string {
   if (run.citations.length === 0) return "";
   const lines = run.citations.map(
-    (c) => `- ${c.sourceName} — $${c.reward.toFixed(4)} (weight ${c.weight.toFixed(2)})`,
+    (c) => `- ${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (weight ${c.weight.toFixed(2)})`,
   );
   return (
     `\n\n---\n**Citations and planned creator rewards** — weighted USDC allocations:\n` +
     lines.join("\n") +
-    `\n\nRecorded to creators: $${run.totalToCreators.toFixed(4)} · payment mode: ${run.paymentMode ?? "legacy"}. ` +
-    (run.operatingFee ? `Keryx operating fee allocation: $${run.operatingFee.amountUsdc.toFixed(6)} USDC (${run.operatingFee.status}), recorded separately from creator rewards. ` : "") +
+    `\n\nRecorded to creators: ${formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 })} · payment mode: ${run.paymentMode ?? "legacy"}. ` +
+    (run.operatingFee ? `Keryx operating fee allocation: ${formatRecordedUsdc(run.operatingFee.amountUsdc, { minimumFractionDigits: 6 })} USDC (${run.operatingFee.status}), recorded separately from creator rewards. ` : "") +
     `Planned rewards and recorded totals do not establish settlement; inspect the original payment receipts. ` +
     `dispatch: ${config.baseUrl}/dispatch/${run.id}`
   );

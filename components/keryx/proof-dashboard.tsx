@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import type { WithdrawalRecord } from "@/lib/types";
 import { CreatorCashoutsPanel } from "./creator-cashouts-panel";
 import { RegistryStatusSection, type RegistryHealth } from "./registry-status-section";
@@ -28,7 +29,7 @@ interface ProofHealth {
 }
 
 function money(value: number): string {
-  return `$${value.toFixed(value >= 10 ? 2 : 4)}`;
+  return formatRecordedUsdc(value, { minimumFractionDigits: value >= 10 ? 2 : 4 });
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

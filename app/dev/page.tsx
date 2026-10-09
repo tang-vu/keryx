@@ -6,7 +6,7 @@
  * Lists the signed-in wallet's API keys, mints new ones (raw key shown once),
  * revokes existing ones, and shows a 30-day usage chart per key.
  *
- * Keys are identity + rate-limit only. x402 payment-signature is still
+ * Keys authorize their explicit scopes. x402 payment-signature is still
  * required on every /api/agent/ask call — keys do not grant free compute.
  */
 
@@ -15,10 +15,10 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { shortAddr } from "@/components/keryx/phase-style";
 import { Copy, Key, Plus, Trash2, X } from "lucide-react";
 import type { ApiKeyRow, ApiKeyUsage } from "@/lib/db/keryx-db";
-import { API_KEY_SCOPES, type ApiKeyScope } from "@/lib/api-key-scopes";
+import { API_KEY_SCOPES, LEGACY_API_KEY_SCOPES, type ApiKeyScope } from "@/lib/api-key-scopes";
 
 /** GET /api/keys parses the stored scope columns before returning them, so a pre-scopes key
- *  arrives as the full scope list rather than a null the UI would have to interpret. */
+ *  arrives with historical ask/export rights rather than private-profile permissions. */
 interface KeyWithUsage extends Omit<ApiKeyRow, "scopes" | "sourceIds"> {
   usage?: ApiKeyUsage[];
   scopes: ApiKeyScope[];
@@ -103,7 +103,7 @@ function RawKeyModal({ rawKey, onClose }: { rawKey: string; onClose: () => void 
 
         <p className="mt-3 font-mono text-[10px] text-ink-3 text-center">
           x402 payment-signature is still required on every /api/agent/ask call.
-          This key adds identity + rate-limit only.
+          Profile/account scopes do not grant payment or research authority.
         </p>
 
         <button
@@ -201,8 +201,8 @@ export default function DevPage() {
   const [error, setError] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
   const [newLabel, setNewLabel] = useState("");
-  // Default to full power so the common case is one click; narrowing is deliberate.
-  const [newScopes, setNewScopes] = useState<ApiKeyScope[]>([...API_KEY_SCOPES]);
+  // Historical defaults remain ask/export. Private profile permissions are never preselected.
+  const [newScopes, setNewScopes] = useState<ApiKeyScope[]>([...LEGACY_API_KEY_SCOPES]);
   const [showMintForm, setShowMintForm] = useState(false);
   const [rawKey, setRawKey] = useState<string | null>(null);
 
@@ -265,7 +265,7 @@ export default function DevPage() {
       const { rawKey: rk } = (await res.json()) as { rawKey: string; prefix: string; id: string };
       setRawKey(rk);
       setNewLabel("");
-      setNewScopes([...API_KEY_SCOPES]);
+      setNewScopes([...LEGACY_API_KEY_SCOPES]);
       setShowMintForm(false);
       void loadKeys();
     } catch (e) {
@@ -296,8 +296,8 @@ export default function DevPage() {
           <h1 className="font-serif text-2xl text-ink">Developer Portal</h1>
           <p className="mt-1 font-mono text-xs text-ink-3">
             Wallet-issued API keys for programmatic access to{" "}
-            <code className="text-seal">/api/agent/ask</code>. Keys add identity + rate-limit only
-            — x402 <code className="text-seal">payment-signature</code> is still required per call.
+            <code className="text-seal">/api/agent/ask</code> and explicitly scoped account operations.
+            Research still requires x402 <code className="text-seal">payment-signature</code> per call.
           </p>
           <div className="mt-3 flex gap-3">
             <a
@@ -420,7 +420,7 @@ export default function DevPage() {
 
               {/* Scope picker. A key handed to an accountant should read the ledger without
                   being able to spend; unticking everything would mint a useless key, so the
-                  server reads an empty selection as "all". */}
+                  empty selections retain ask/export defaults. Private-profile scopes are opt-in. */}
               <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-line pt-3">
                 <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
                   Scopes
@@ -444,11 +444,12 @@ export default function DevPage() {
                     />
                     {scope}
                     <span className="text-ink-3">
-                      {scope === "ask" ? "(run dispatches)" : "(read your earnings)"}
+                      {scope === "ask" ? "(run dispatches)" : scope === "export" ? "(read your earnings)" : scope === "profile:read" ? "(read private profile + activity)" : "(replace private profile fields)"}
                     </span>
                   </label>
                 ))}
               </div>
+              <p className="mt-2 font-mono text-[10px] text-ink-3">Empty selection uses ask + export defaults. Private profile permissions require explicit selection; write does not grant read.</p>
             </form>
           )}
         </div>

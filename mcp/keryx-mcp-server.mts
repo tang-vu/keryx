@@ -17,11 +17,16 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { askKeryx, getStatus, meta, recoverKeryx } from "./keryx-buyer.mts";
 import { reasoningServingText } from "../lib/llm/reasoning-telemetry.ts";
+import { formatRecordedUsdc } from "../lib/display/recorded-usdc.ts";
 import { createPaperLookupHandler, paperLookupToolOptions } from "../lib/papers/lookup.ts";
 import { fetchPaperLookup } from "../lib/papers/client.ts";
 import { MAX_ASK_QUESTION_CHARS } from "../lib/ask-input.ts";
+import { registerProfileTools } from "../lib/profiles/profile-mcp.ts";
+import { createProfileClient } from "../lib/profiles/profile-client.ts";
 
 const server = new McpServer({ name: "keryx", version: packageInfo.version });
+const profileClient = () => createProfileClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
+registerProfileTools(server, { read: () => profileClient().read(), update: input => profileClient().update(input) });
 server.registerTool("paper_lookup", paperLookupToolOptions,
   createPaperLookupHandler(input => fetchPaperLookup(meta.baseUrl, input)));
 import { registerMonthlyDiscovery } from "../lib/monthly/mcp-discovery.ts";
@@ -41,6 +46,7 @@ server.registerTool(
       `${meta.feeUsdc} USDC service fee + ${meta.defaultBudgetUsdc} USDC creator budget; the POST body sets the exact price. ` +
       `Paid from your own funded ${meta.networkLabel} wallet (${meta.network}; run keryx_wallet_status first). ` +
       `Public research may send your question to Keryx's search provider. The source USDC budget is separate from model and search operating costs. ` +
+      `New hosted runs are attributed to the verified paying wallet through agent-to-agent ingress; editable client metadata does not prove stdio identity or grant additional rights. ` +
       `Use when you want a grounded, source-cited answer AND the creators paid for their work. ` +
       `For title, ordered authors, year, journal, DOI or exact arXiv version without reading paper findings, use free paper_lookup with an exact identifier instead.`,
     inputSchema: {
@@ -57,7 +63,7 @@ server.registerTool(
     try {
       const r = await askKeryx(question, budget);
       const cites = r.citations?.length
-        ? r.citations.map((c) => `  • ${c.source} — $${c.reward}`).join("\n")
+        ? r.citations.map((c) => `  • ${c.source} — ${formatRecordedUsdc(c.reward)}`).join("\n")
         : "  (none)";
       // The settlement id is a batched Circle Gateway UUID, not an EVM hash — label it honestly and
       // point at the dashboard for the on-chain proof rather than a /tx/ link that won't resolve.
@@ -66,7 +72,7 @@ server.registerTool(
         `${r.answer}\n\n` +
         `${reasoningServingText(r)}\n\n` +
         `— Paid Keryx ${r.amountPaid} USDC${proof}\n` +
-        `Recorded creator total: $${r.totalToCreators}; citation allocations (not individual settlement proof):\n${cites}\n` +
+        `Recorded creator total: ${formatRecordedUsdc(r.totalToCreators)}; citation allocations (not individual settlement proof):\n${cites}\n` +
         `On-chain proof + live feed: ${meta.baseUrl}/dashboard`;
       return { content: [{ type: "text" as const, text }], structuredContent: { ...r } };
     } catch (e) {

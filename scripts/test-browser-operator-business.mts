@@ -66,7 +66,12 @@ try {
           decision: { action: "run-next", reason: "liquidity-covered", liquidity: "covered", observedAt: new Date().toISOString() } },
         jobs: { queued: 7, processing: 1, reviewRequired: 0, completedLast24h: 4, failedLast24h: 1,
           completionRateLast24h: 0.8, oldestQueuedAgeSeconds: 60, oldestProcessingAgeSeconds: 10,
-          completionLatencyP50Ms: 100, completionLatencyP95Ms: 200, degraded: false },
+          completionLatencyP50Ms: 100, completionLatencyP95Ms: 52 * 60 * 60_000, degraded: false,
+          completionLatencyCohorts: {
+            ordinary: { completed: 2, timedSamples: 2, p50Ms: 100, p95Ms: 200 },
+            recovered: { completed: 1, timedSamples: 1, p50Ms: 52 * 60 * 60_000, p95Ms: 52 * 60 * 60_000 },
+            unknown: { completed: 1, timedSamples: 0, p50Ms: null, p95Ms: null },
+          } },
         creatorCatalog: { registered: 3 },
       }) });
     });
@@ -77,12 +82,17 @@ try {
     assert.equal((await page.goto(`${base}/operator`))?.status(), 200);
     await page.getByText("Active · working", { exact: true }).waitFor();
     await page.getByRole("link", { name: "Request research", exact: true }).waitFor();
+    await page.getByRole("rowheader", { name: "Ordinary", exact: true }).waitFor();
+    assert((await page.getByRole("row", { name: /Recovered/ }).textContent())?.includes("2d 4h"));
+    assert((await page.getByRole("row", { name: /Unknown path/ }).textContent())?.includes("Unknown"));
     await page.evaluate(() => document.fonts.ready);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     await page.screenshot({ path: join(screenshots, `working-${width}.png`), fullPage: true });
     await page.clock.runFor(31_000);
     await page.getByText("Previous counts are hidden", { exact: false }).waitFor();
     await page.getByText("The queue is unknown.", { exact: false }).waitFor();
+    await page.getByText("Completion-path timing is unavailable", { exact: false }).waitFor();
+    assert.equal(await page.getByRole("table").count(), 0);
     assert.equal(calls, 2);
     assert.equal(writes, 0);
     assert.deepEqual(errors, []);

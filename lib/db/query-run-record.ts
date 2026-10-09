@@ -2,9 +2,11 @@ import type { DatabaseSync } from "node:sqlite";
 import type { QueryRun } from "../types";
 import { runEvidenceMetrics } from "./dashboard-metrics";
 import { economicsRunSample } from "../economics/testnet-economics";
+import { recordedRunProvenance } from "../research/run-provenance";
 
 /** One application record mapping. Recovery uses insert-only, never the ordinary overwrite path. */
 export function writeSqliteQueryRun(db: DatabaseSync, run: QueryRun, replace: boolean): void {
+  run = recordedRunProvenance(run);
   const evidence = runEvidenceMetrics(run), economics = economicsRunSample(run);
   db.prepare(`INSERT ${replace ? "OR REPLACE " : ""}INTO query_runs (
     id,created_at,question,budget,engine,total_spent,total_to_creators,answer,data,

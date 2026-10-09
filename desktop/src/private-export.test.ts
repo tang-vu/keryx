@@ -38,6 +38,7 @@ test.each([
   ["private-brief.md", "# Private research brief\n"],
   ["references.bib", "@misc{record}\n"],
   ["references.ris", "TY  - WEB\r\nER  - \r\n"],
+  ["references.json", '[{"id":"record","type":"webpage"}]\n'],
   ["evidence.csv", "\"claim_index\",\"claim\"\r\n"],
   ["operator-task-status.json", "{\"payment\":\"unknown\"}\n"],
 ])("%s succeeds only after complete bytes are published", async (name, text) => {

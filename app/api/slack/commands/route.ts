@@ -79,6 +79,7 @@ async function runAndReply(cmd: SlashCommand, budget: number) {
       budget,
       queryId: crypto.randomUUID(),
       origin: "web",
+      provenance: { version: 1, surface: "slack", ownershipMethod: "unknown" },
     });
     text = buildAnswerText(run);
   } catch (err) {

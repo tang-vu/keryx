@@ -9,6 +9,8 @@ import { canonicalJson } from "../canonical-json";
 import { refuseStorage, StorageIdentityRefused } from "./storage-identity";
 import { SUPABASE_RUNTIME_CONTRACT } from "./supabase-runtime-contract";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
+import { createSupabasePrivateProfiles } from "./private-profiles-supabase";
+import type { PrivateProfilesStore } from "../profiles/private-profile";
 import { admitSupabaseBrowserQueryPolicy,admitSupabaseBrowserSigningOriginal,admitSupabaseBrowserSourceSigningOriginal,readSupabaseBrowserSigningSnapshot,readExposedSupabaseBrowserSigningSnapshotForSigner,signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
 import { createBrowserOriginalSourceAuthority } from "../payments/browser-original-source-authority";
 import type { BrowserQueryPolicyProof } from "../payments/browser-query-policy";
@@ -73,6 +75,7 @@ import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
 import { claimSupabasePrivatePayment, getSupabasePrivatePayment, confirmSupabasePrivatePayment } from "./private-research-payments";
 import { getSupabasePrivateResearchIntent, reserveSupabasePrivateResearchIntent, listSupabasePrivateResearchHistory, type PrivateHistoryCursor } from "./private-research-intents";
+import { recordedRunProvenance } from "../research/run-provenance";
 import {
   summarizeA2aOperations,
   type A2aOperationsRow,
@@ -142,6 +145,7 @@ export function assembleAuthorityBoundSupabaseCore(
 }
 
 export class SupabaseAdapter implements KeryxDB {
+  declare readonly privateProfiles?: PrivateProfilesStore;
   #sb: SupabaseClient;
   #enrolled?: { deployment: Readonly<StorageDeploymentManifest>; authority: SupabaseAuthority;
     readDeployment: () => Readonly<StorageDeploymentManifest>; ready: boolean };
@@ -159,6 +163,7 @@ export class SupabaseAdapter implements KeryxDB {
         global: { fetch: throwingSupabaseFetch },
       },
     );
+    if (!deployment) Object.defineProperty(this, "privateProfiles", { value: createSupabasePrivateProfiles(this.#sb) });
     if (deployment) this.#enrolled = { deployment, ready: false, readDeployment: construction!.readDeployment,
       authority: new SupabaseAuthority(this.#sb, deployment.identity, () => { this.assertEntry(); return this.#enrolled?.ready === true; }) };
     if (deployment) enrolledEntryGuards.set(this, { verify: async () => {
@@ -892,6 +897,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async saveQueryRun(run: QueryRun): Promise<void> {
+    run = recordedRunProvenance(run);
     const evidenceTelemetry = runEvidenceMetrics(run);
     await this.domainCall("save_query_run", { p_row: {
       id: run.id,
@@ -1198,6 +1204,13 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async a2aOperationsSnapshot(nowMs: number): Promise<A2aOperationsSnapshot> {
+    if (!this.#enrolled) {
+      // Keep completion cohorts and existing counts in one whole-database read.
+      // Never enrich this aggregate with a capped REST slice of private orders.
+      const snapshot = await this.operatorPublicSnapshot(nowMs);
+      if (!snapshot.jobs) throw new Error("A2A operations observation unavailable");
+      return snapshot.jobs;
+    }
     const since = new Date(nowMs - 24 * 60 * 60_000).toISOString();
     const { data, error } = await this.domainCall("a2a_operations_snapshot", { p_since: since }, () => this.#sb
       .from("a2a_orders")
@@ -1210,6 +1223,8 @@ export class SupabaseAdapter implements KeryxDB {
       updatedAt: String(row.updated_at),
       startedAt: row.started_at == null ? null : String(row.started_at),
     })) satisfies A2aOperationsRow[];
+    // The enrolled read contract intentionally returns no completion-path markers.
+    // A future sealed contract migration/enrollment must supply that capability.
     return summarizeA2aOperations(rows, nowMs);
   }
 

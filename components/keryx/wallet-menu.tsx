@@ -153,6 +153,9 @@ export function WalletMenu() {
           </DropdownMenuItem>
           {/* The paying side of the same wallet: what it dispatched and what those tolls cost. */}
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
+            <Link href="/me/profile"><ShieldCheck className="h-3.5 w-3.5" /> Private profile</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/me/asks">
               <Receipt className="h-3.5 w-3.5" /> My dispatches
             </Link>

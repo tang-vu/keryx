@@ -1,5 +1,65 @@
 # Keryx — Decision Log
 
+**Record verified run ingress without inferring account ownership — 2026-10-09.**
+New shared research runs carry optional closed JSON provenance separately from
+payment origin and editable MCP client telemetry. Ownership continues to use the
+existing verified `asker`: session wallet, ask-scoped key wallet, or the original
+paid payer. Attribute synchronous and queued public A2A results to that payer;
+Monthly uses the same original-bound worker. Compare the retained claimed payer
+before execution. Ownership adds no budget, signer authority or downstream spend
+claim. Authenticated chat ingress does not establish a linked wallet account.
+
+Store the same metadata snapshot in existing SQLite/Supabase run JSON; no new
+columns, migration or backfill. Missing old fields remain absent/unknown, and
+old receipts/protected original projections retain their contracts. Record the
+verified hosted ingress for stdio/desktop/CLI/extension clients using a shared
+remote endpoint; a client name cannot prove the originating app. Defer account
+linking, later claims and admin reassignment. Scope and remaining acceptance are
+in [run ownership and ingress](docs/engineering/run-owner-provenance-261.md).
+
+**Keep recovered completion latency separate from ordinary delivery — 2026-10-09.**
+An original repaired after 52 hours must not define the reported speed of ordinary
+jobs. Preserve the legacy mixed percentiles and add identifier-free completion
+cohorts from recorded versioned service receipts and explicit repair/fulfillment
+resolutions. Missing or contradictory markers stay unknown; missing storage
+capability stays null. Measure stored order `createdAt` to `updatedAt` (acceptance
+to recorded completion/update), including queueing, recovery and later bookkeeping
+delay, without claiming first-answer or settlement timing.
+
+SQLite extracts existing metadata. Ordinary Supabase aggregates the whole set in
+its existing service-role public snapshot RPC; a capped REST page cannot augment
+that truth. Its source migration does not rewrite orders or grant new authority.
+Keep enrolled PostgreSQL's markerless contract and unsupported public snapshot
+unchanged until separate protected storage migration/enrollment proof. This is
+only the latency-reporting part of #257, with target-time alerts, customer remedies
+and first-user measurements still open. Original receipts, budgets, custody,
+settlement and recovery remain unchanged. See [rules and release gates](docs/engineering/completion-latency-cohorts-257.md).
+
+**Exact recorded-money presentation without rounding repair — 2026-10-09.**
+Public reward summaries previously rounded one micro-USDC to zero on several surfaces.
+Use one browser-safe integer formatter and a strict adapter for legacy recorded decimal
+numbers. Preserve existing decimal padding while retaining every known micro digit;
+missing or fractional-micro data displays an unavailable amount. Sum known payment legs
+as integers. Do not feed display strings into storage, receipts, signing or budget checks,
+and do not infer settlement from an amount. The extension ships an exact checked copy;
+human OpenAI/MCP footer text changes separately from unchanged machine-readable money.
+Desktop's helper also produces a buyer command and remains outside this display-only
+change. Locale/date/plural breadth and per-locale consent review remain open under #274.
+See [scope and acceptance](docs/engineering/recorded-usdc-display.md).
+
+**Decline standalone SSE on stateless remote MCP — 2026-10-09.**
+JSON response mode in SDK1.31.0 governs POST, but its GET path can create an
+indefinite notification stream even without session management. Keryx's remote
+endpoint has no durable notification session, so answer GET with protocol-compatible
+405 before key verification, database access or transport construction. Preserve
+Origin403 and advertise only POST, DELETE and OPTIONS. Keep existing in-flight
+POST, paid-history retention, authorization and recovery behavior unchanged.
+Local SDK/HTTP acceptance is distinct from production drain proof; an observed
+socket without a request path cannot be attributed to MCP. Coordinate remote
+identity0.3.8 with the next application release. The wider issue281 maintenance
+front door and hosted/client acceptance remain open. See
+[scope and evidence](docs/engineering/mcp-standalone-stream-lifetime.md).
+
 **Bind payment glossary review to exact content — 2026-10-09.**
 Prepare English, Vietnamese and Simplified Chinese payment/trust terminology as
 explicit agent-authored drafts, independently of locale routing and runtime
@@ -6366,6 +6426,54 @@ checks without gaining body integrity. Hash consistency does not independently
 authenticate a publisher or establish general prompt-injection/semantic farming
 resistance. The public [adversarial catalog](docs/engineering/source-money-adversarial-2026-10-09.md)
 records checked boundaries and the still-open live testnet refusal gate.
+
+## 2026-10-09 — CSL reference files derive from recorded metadata
+
+Issue285's file-export outcome uses a shared CSL-JSON formatter over exact recorded
+article/version identities and separately validated saved-paper records. Preserve
+observed calendar precision and supplied structured names; omit missing fields,
+retain literal names and provenance/read limits, and never infer peer review.
+Stable reference keys support reordered or filtered files without granting source,
+rights or payment authority. Saved-workspace questions, notes and screening
+decisions stay outside reference downloads.
+
+Keep new derived exports outside the original stored bibliography object and
+receipt projection. Legacy bibliography text and BibTeX/RIS snapshots, saved
+private receipt bytes and native inspection semantics remain unchanged. Hosted
+surfaces share the formatter; CLI and desktop exports require their existing
+integrity-checked original task binding and exclusive private file publication.
+The [surface and acceptance record](docs/engineering/csl-json-reference-export-2026-10-09.md)
+keeps account-linked Zotero synchronization and private revocable `.bib` URLs open.
+
+## Keep owner profiles private behind an additive ordinary-storage capability — 2026-10-09
+
+Issue260 adds owner-edited display fields without changing wallet authentication,
+source/creator ownership or payout authority. SIWE and explicit profile-scoped API
+keys select the owner; no body/URL wallet selector or public profile exists.
+Cookie writes additionally compare the editor's required expected-wallet header
+against independently authenticated SIWE authority before profile access; this
+precondition cannot select an owner. Changed owners refuse rather than applying
+a stale editor's fields to another wallet. The bound web editor also compares
+GET, withholding the new owner's activity even when that owner has no profile.
+Other GET clients may omit this comparison. Scoped key writes retain their verified
+actor and may use the same comparison without gaining rights.
+Historical/default API-key rights remain ask/export. Profile write does not imply
+read, and the developer portal never preselects new private permissions.
+
+The separate non-enumerable `privateProfiles` port is installed only on ordinary
+adapters. Its SQLite table and service-role-only Supabase RPC source migration do
+not change sealed schemas, exhaustive method inventories or provenance digests.
+Unsupported enrolled/native storage refuses before profile guard/DB/REST I/O,
+with no fallback. Production profile CRUD remains an explicit migration/enrollment
+and deployed-acceptance gate; source preparation does not close issue260.
+
+Case-folded handles use atomic uniqueness and reserved names. Text is bounded
+plain data; allowlisted HTTPS links are assertions, never verified identity or
+server-fetch authority. Deletion removes private fields only. Activity derives
+from the whole attributed current store; recorded creator payee counts do not
+establish that the profile owner funded those runs. Public receipts and immutable
+research/payment originals retain their existing contracts. See
+[implementation and acceptance boundaries](docs/engineering/private-profiles-2026-10-09.md).
 
 ## Evaluate local-currency estimates separately from EURC conversion — 2026-10-09
 

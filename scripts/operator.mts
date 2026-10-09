@@ -19,7 +19,7 @@ const usage = `Keryx Operator task alpha (trusted configured Arc network)
   npm run operator -- result --state operator-workspace/task-1
   npm run operator -- brief --state operator-workspace/task-1 --file private-brief.md
   npm run operator -- brief --state operator-workspace/task-1 --format bibtex --file private-references.bib
-  Formats: brief (default), bibtex, ris, evidence-csv
+  Formats: brief (default), bibtex, ris, csl-json, evidence-csv
 
 Build the trusted writer from a clean checkout with npm run native:build.
 Workspace creates a new private directory; create adds one immutable private task.

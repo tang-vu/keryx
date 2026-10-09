@@ -6,6 +6,7 @@
  */
 
 import Link from "next/link";
+import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import type { ArchiveEntry } from "@/lib/answers-archive";
 
 function fmtDate(iso: string): string {
@@ -49,7 +50,7 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
               <span>
                 {e.citationCount} source{e.citationCount !== 1 ? "s" : ""} cited
               </span>
-              <span className="text-paid">{e.archivedNetwork ? `${e.toCreators.toFixed(4)} test USDC` : `$${e.toCreators.toFixed(4)}`} recorded creator rewards</span>
+              <span className="text-paid">{formatRecordedUsdc(e.toCreators, { minimumFractionDigits: 4, denomination: e.archivedNetwork ? "test USDC" : "$" })} recorded creator rewards</span>
             </div>
           </Link>
         ))}

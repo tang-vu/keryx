@@ -43,6 +43,27 @@ function completedRun(): QueryRun {
 }
 
 describe("remote MCP server", () => {
+  it("keeps a micro-USDC reward visible in text without changing structured amounts or answer", async () => {
+    const run = completedRun();
+    run.citations[0].reward = 0.000001;
+    run.totalSpent = 0.000001; run.totalToCreators = 0.000001;
+    run.paymentMode = "offline"; run.settledPayments = 0;
+    const before = JSON.stringify(run);
+    const http = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("No network allowed"));
+    const server = createRemoteMcpServer({ budgetCap: 0.03, clientChannel: "other" }, async () => run);
+    const client = new Client({ name: "exact-money-fixture", version: "1" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await server.connect(serverTransport); await client.connect(clientTransport);
+      const result = await client.callTool({ name: "research", arguments: { question: run.question } });
+      const text = (result.content as { text?: string }[]).map(item => item.text ?? "").join("\n");
+      expect(text).toContain("$0.000001 USDC");
+      expect(text).toContain("offline payment simulation");
+      expect(result.structuredContent).toMatchObject({ answer: run.answer, totalToCreatorsUsdc: 0.000001,
+        citations: [{ rewardPlannedUsdc: 0.000001 }], settledPayments: 0 });
+      expect(JSON.stringify(run)).toBe(before); expect(http).not.toHaveBeenCalled();
+    } finally { await client.close(); await server.close(); http.mockRestore(); }
+  });
   it("preserves the retained MDN three-bullet answer and exact evidence through a hermetic SDK client", async () => {
     const replay = mdnModelReplay();
     const run: QueryRun = { ...completedRun(), id: "retained-mdn-local-replay", question: replay.question,
@@ -114,7 +135,7 @@ describe("remote MCP server", () => {
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     try {
       await server.connect(serverTransport); await client.connect(clientTransport);
-      expect(client.getServerVersion()?.version).toBe("0.3.7");
+      expect(client.getServerVersion()?.version).toBe("0.3.8");
       const result = await client.callTool({ name: "research", arguments: { question: "What changed?" } });
       expect(result.structuredContent).toMatchObject({ engine: run.engine, reasoningAttempts: run.reasoningAttempts,
         reasoning: { sourceSelection: { state: "heuristic", servingEngines: ["heuristic"], fallbackUsed: true } } });
@@ -154,7 +175,7 @@ describe("remote MCP server", () => {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const tools = await client.listTools();
-    expect(tools.tools.map((tool) => tool.name)).toEqual(["paper_lookup", "research", "keryx_status", "research_monthly", "keryx_operator_status"]);
+    expect(tools.tools.map((tool) => tool.name)).toEqual(["paper_lookup", "research", "keryx_status", "research_monthly", "keryx_operator_status", "profile_read", "profile_update"]);
 
     const result = await client.callTool({
       name: "research",
@@ -166,6 +187,7 @@ describe("remote MCP server", () => {
         budget: 0.03, scholarly: true, researchMode: "quick",
         origin: "mcp",
         asker: "0xAbC",
+        provenance: { version: 1, surface: "remote-mcp", ownershipMethod: "api-key" },
         mcpClient: "codex",
       }),
     );

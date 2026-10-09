@@ -1,5 +1,12 @@
 # Operator task alpha
 
+The [CSL-JSON export candidate](engineering/csl-json-reference-export-2026-10-09.md)
+adds `brief --format csl-json` for the original-task-bound, integrity-checked
+saved receipt. It uses the same exclusive private file publication path as
+BibTeX/RIS. Receipt bytes and payment authority remain unchanged. Desktop0.4.11
+adds the JSON save-dialog choice; installer publication and an installed-client
+upgrade require separate verification.
+
 The Operator alpha is a local research task handoff on the trusted configured Arc network. It persists
 one normalized request, a pinned seller payee, and a per-job total cap. It does not
 create a wallet, fund it, sign, submit a purchase, or start a background worker.

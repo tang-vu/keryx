@@ -1,5 +1,7 @@
 "use client";
 
+import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
+
 /**
  * /status section for what the agent has actually been doing lately: how many dispatches completed in
  * the last window, how many of them were genuinely model-reasoned, and how much reached creators.
@@ -61,7 +63,7 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
           v={d.runs === 0 ? "—" : `${d.paying}/${d.runs}`}
           alert={d.alarms.some(a => a.code === "nothing-bought" || a.code === "payment-unsettled")}
         />
-        <Row k="To creators" v={`$${d.creatorPayoutUsdc.toFixed(4)}`} />
+        <Row k="To creators" v={formatRecordedUsdc(d.creatorPayoutUsdc, { minimumFractionDigits: 4 })} />
         <Row
           k="Cross-provider saves"
           v={d.reasoningAttemptSamples ? String(d.providerFailoverSteps ?? 0) : "collecting"}

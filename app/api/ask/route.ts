@@ -299,6 +299,7 @@ export async function POST(req: NextRequest) {
             // Verified SIWE wallet only. Keeps a treasury-funded run from buying or rewarding the
             // asker's own sources.
             asker,
+            provenance: { version: 1, surface: "web", ownershipMethod: asker ? "session" : "unknown" },
             researchMode,
             scholarly: body.scholarly === true,
             paidScholarly: body.paidScholarly === true,

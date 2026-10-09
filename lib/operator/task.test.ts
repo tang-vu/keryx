@@ -239,7 +239,7 @@ it("CLI exports each requested format to --file and preserves overwrite refusal"
   expect(enriched!.receiptDigest).toBe(raw!.receiptDigest);
   const execute = promisify(execFile);
   const command = ["--import", "tsx", resolve("scripts/operator.mts"), "brief", "--state", task];
-  for (const [format, expected] of [["brief", "# Private research brief"], ["bibtex", "@misc"], ["ris", "TY  - WEB"], ["evidence-csv", "claim_index"]]) {
+  for (const [format, expected] of [["brief", "# Private research brief"], ["bibtex", "@misc"], ["ris", "TY  - WEB"], ["csl-json", '"type": "webpage"'], ["evidence-csv", "claim_index"]]) {
     const target = join(root, `requested-${format}.txt`);
     const args = [...command, "--file", target, ...(format === "brief" ? [] : ["--format", format])];
     await execute(process.execPath, args);

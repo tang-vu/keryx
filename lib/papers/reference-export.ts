@@ -1,4 +1,5 @@
 import { PAPER_REPOSITORIES, paperRecordSchema, type PaperRecord } from "./types";
+import { cslIssued, cslJsonContent, referenceKey, type CslReference } from "../research/reference-export-core";
 
 // A metadata field cannot introduce a second RIS tag or record.
 const field = (value: string) => value.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, " ").replace(/\s+/gu, " ").trim();
@@ -26,6 +27,26 @@ function provenanceNote(paper: PaperRecord) {
     (paper.venue ? ` Recorded venue: ${paper.venue}.` : "") +
     (paper.arxivId ? ` Exact arXiv version: ${paper.arxivId}.` : "") +
     (paper.authorsTruncated ? ` Incomplete contributor list: ${paper.authors.length}/${paper.authorCount} provider entries have names here; missing positions are not established.` : "");
+}
+
+/** Saved metadata only. Exact versions keep separate stable keys without claiming a read. */
+export function paperReferencesCslJson(records: readonly PaperRecord[]) {
+  const papers = referencePapers(records);
+  const entries: CslReference[] = papers.map(paper => {
+    const key = referenceKey(paper.url, "keryxPaper");
+    return {
+      id: key, "citation-key": key,
+      type: paper.publicationKind === "journal-article" ? "article-journal" : paper.publicationKind === "conference-paper" ? "paper-conference" : paper.publicationKind === "preprint" ? "manuscript" : "webpage",
+      title: field(paper.title), URL: paper.url,
+      ...(paper.authors.length ? { author: paper.authors.map(author => ({ literal: field(author) })) } : {}),
+      ...(paper.publishedYear ? { issued: cslIssued(String(paper.publishedYear)) } : {}),
+      ...(paper.doi ? { DOI: field(paper.doi) } : {}),
+      ...(paper.venue && ["journal-article", "conference-paper"].includes(paper.publicationKind) ? { "container-title": field(paper.venue) } : {}),
+      ...(paper.arxivId ? { archive: "arXiv", archive_location: paper.arxivId } : {}),
+      note: provenanceNote(paper),
+    };
+  });
+  return { count: entries.length, content: cslJsonContent(entries) };
 }
 
 export function paperReferencesRis(records: readonly PaperRecord[]) {

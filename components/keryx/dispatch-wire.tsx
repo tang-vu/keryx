@@ -1,5 +1,7 @@
 "use client";
 
+import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PaymentRecord } from "@/lib/types";
 import { paymentSettlementStatus } from "@/lib/payments/payment-state";
@@ -49,7 +51,7 @@ export function DispatchWire() {
         {state === "error" && "Payment feed unavailable."}
         {state === "ready" && (
           <div className="flex w-max gap-6 whitespace-nowrap">
-            {payments.map((p) => <span key={p.id ?? `${p.queryId}-${p.sourceId}-${p.createdAt}`} className="flex items-center gap-2"><span className="text-seal">PAID</span><span>{p.sourceName}</span><span className="text-paid">${p.amountUsdc.toFixed(6)} USDC</span><span>{recordedArcLabel(p.network)}</span></span>)}
+            {payments.map((p) => <span key={p.id ?? `${p.queryId}-${p.sourceId}-${p.createdAt}`} className="flex items-center gap-2"><span className="text-seal">PAID</span><span>{p.sourceName}</span><span className="text-paid">{formatRecordedUsdc(p.amountUsdc, { minimumFractionDigits: 6 })} USDC</span><span>{recordedArcLabel(p.network)}</span></span>)}
           </div>
         )}
       </div>

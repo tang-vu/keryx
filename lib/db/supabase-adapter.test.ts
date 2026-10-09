@@ -273,6 +273,15 @@ describe("closed enrolled Supabase construction", () => {
       return Object.assign(promise, { throwOnError: () => promise });
     });
     await adapter.init();
+    const provenance = { version: 1, surface: "api", ownershipMethod: "api-key" } as const;
+    await adapter.saveQueryRun({ id: "synthetic-owned-run", question: "Synthetic", budget: 0,
+      engine: "heuristic", subClaims: [], decisions: [], citations: [], answer: "Offline fixture", totalSpent: 0,
+      totalToCreators: 0, trace: [], createdAt: "2026-10-09T00:00:00.000Z",
+      asker: `0x${"A".repeat(40)}`, provenance, paymentMode: "offline" });
+    expect(rpc).toHaveBeenCalledWith("storage_save_query_run", expect.objectContaining({
+      p_row: expect.objectContaining({ asker: `0x${"a".repeat(40)}`, data: expect.objectContaining({ provenance }) }),
+      p_expected_identity: deployment.identity,
+    }));
     await expect(adapter.upsertUser("0x1111111111111111111111111111111111111111", "creator")).rejects.toBe(failure);
     expect(rpc.mock.calls.filter(([name]) => name === "storage_get_user")).toHaveLength(1);
   });
