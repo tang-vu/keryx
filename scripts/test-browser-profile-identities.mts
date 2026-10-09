@@ -42,6 +42,7 @@ try {
       await update(page, bob, true); await update(page, alice, true); await page.getByRole("link", { name: "github: alice" }).waitFor();
       const link = page.getByRole("link", { name: "github: alice" }); assert.equal(await link.getAttribute("href"), "https://github.com/alice");
       assert((await link.getAttribute("rel"))?.includes("noreferrer")); await page.getByText("Verified at 2026-10-09T00:00:00.000Z").waitFor();
+      await page.screenshot({ path: join(output, `identity-linked-${width}.png`), fullPage: true });
       await page.getByRole("button", { name: "Unlink", exact: true }).click(); await page.getByText("Identity link removed. Pending verification for this provider was cancelled.", { exact: true }).waitFor(); assert.equal(await link.count(), 0);
       await page.evaluate(() => { (window as unknown as { unsafe: boolean }).unsafe = true; });
       await page.getByRole("button", { name: "Verify GitHub" }).click(); await page.getByText("Identity verification could not be started.", { exact: true }).waitFor(); assert.equal(page.url(), "https://identities.test/");
@@ -55,12 +56,22 @@ try {
       await page.waitForFunction(() => (window as unknown as { heldMutation: unknown[] }).heldMutation.length === 1); await update(page, bob, true);
       await page.evaluate(() => { (window as unknown as { heldMutation: (() => void)[] }).heldMutation.splice(0).forEach(fn => fn()); });
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))); assert.equal(await page.getByRole("link").count(), 0); assert.equal(await page.getByText(/Identity link removed/).count(), 0);
-      await update(page, alice, true, bob); await page.getByText("Verified identity links are unavailable on this storage deployment.", { exact: true }).waitFor(); assert.equal(await page.getByRole("link").count(), 0);
+      // Same owner, different saved-profile lifecycle: abort an unlink, delete/recreate the profile, and retain usable controls.
+      await page.evaluate(input => { (window as unknown as { identities: Record<string, unknown[]> }).identities[input.wallet] = [input]; }, identity);
+      await update(page, alice, true); await page.getByRole("link", { name: "github: alice" }).waitFor();
+      await page.evaluate(() => { (window as unknown as { delayMutation: boolean }).delayMutation = true; }); await page.getByRole("button", { name: "Unlink", exact: true }).click();
+      await page.waitForFunction(() => (window as unknown as { heldMutation: unknown[] }).heldMutation.length === 1);
+      await update(page, alice, false); await page.evaluate(() => { (window as unknown as { heldMutation: (() => void)[] }).heldMutation.splice(0).forEach(fn => fn()); });
+      await update(page, alice, true); await page.waitForFunction(() => !Array.from(document.querySelectorAll('button')).some(button => button.disabled));
+      assert.equal(await page.getByText("Working…", { exact: true }).count(), 0); assert.equal(await page.getByText(/Identity link removed/).count(), 0);
+      await page.evaluate(input => { (window as unknown as { identities: Record<string, unknown[]> }).identities[input.wallet] = [{ provider: 'orcid', externalId: '0000-0002-1825-0097', label: '<img data-injection onerror=alert(1)>', wallet: input.wallet, verifiedAt: input.verifiedAt }]; }, identity);
+      await update(page, bob, true); await update(page, alice, true); await page.getByRole("link", { name: "orcid: <img data-injection onerror=alert(1)>" }).waitFor(); assert.equal(await page.locator('[data-injection]').count(), 0);
+      await update(page, bob, true); await update(page, alice, true, bob); await page.getByText("Verified identity links are unavailable on this storage deployment.", { exact: true }).waitFor(); assert.equal(await page.getByRole("link").count(), 0);
       const geometry = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth })); assert(geometry.document <= width, `Identity panel overflow at ${width}`);
       await page.screenshot({ path: join(output, `identity-${width}.png`), fullPage: true });
       await update(page, null, false); assert.equal(await page.getByRole("button").count(), 0);
       assert.deepEqual(external, []); assert.deepEqual(errors, []);
-      results.push({ width, geometry, synthetic: true, ownerIsolation: true, unlink: true, cancelledReadAndMutation: true, rejectedRedirect: true, external, errors });
+      results.push({ width, geometry, synthetic: true, ownerIsolation: true, unlink: true, cancelledReadAndMutation: true, sameOwnerProfileLifecycle: true, plainProviderName: true, rejectedRedirect: true, external, errors });
     } finally { await context.close(); }
   }
   // Actual explicit navigation is fenced into an inert synthetic provider response.

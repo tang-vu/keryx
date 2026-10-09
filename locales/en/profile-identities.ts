@@ -7,7 +7,7 @@ export const identityCopy = Object.freeze({
   failed: "Identity verification did not complete. Try again from this profile.", conflict: "That external account is already linked to another profile.",
   verified: "Verification returned. Your recorded verified links are shown below.", unlinked: "Identity link removed. Pending verification for this provider was cancelled.",
   ownership: "Verification confirms account control on the recorded date. It does not verify affiliation, research, payment eligibility or creator status.",
-  scope: "ORCID shares only your iD and name. GitHub shares only your public account ID and login. Provider tokens are not retained.",
+  scope: "Keryx records only your ORCID iD and name or GitHub public account ID and login. GitHub requests no extra scopes. ORCID authentication permits public record reads; Keryx does not read those records. Provider tokens are discarded.",
   changed: "Your signed-in wallet changed. Reload this profile.", invalid: "Identity verification could not be started.",
   date: (value: string) => `Verified at ${value}`,
 });

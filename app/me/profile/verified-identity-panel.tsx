@@ -3,7 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { identityCopy as copy } from "@/locales/en/profile-identities";
 import { IDENTITY_PROVIDERS, identitySnapshotSchema, identityUrl, type IdentityProvider, type IdentitySnapshot } from "@/lib/profiles/verified-identities";
 
-export function VerifiedIdentityPanel({ wallet, saved }: { wallet: string; saved: boolean }) {
+export function VerifiedIdentityPanel(props: { wallet: string; saved: boolean }) {
+  return <IdentityPanelSession key={`${props.wallet}:${props.saved ? "saved" : "unsaved"}`} {...props} />;
+}
+/** Saved-profile deletion/recreation is a new lifecycle even when the wallet stays the same. */
+function IdentityPanelSession({ wallet, saved }: { wallet: string; saved: boolean }) {
   const [snapshot, setSnapshot] = useState<IdentitySnapshot | null>(null), [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const owner = useRef<AbortController | null>(null);
@@ -61,10 +65,10 @@ export function VerifiedIdentityPanel({ wallet, saved }: { wallet: string; saved
     {saved && snapshot?.identities.map(identity => <div key={identity.provider} className="flex flex-wrap items-center gap-3 text-sm">
       <a className="break-all underline" href={identityUrl(identity)} target="_blank" rel="noopener noreferrer nofollow">{identity.provider}: {identity.label || identity.externalId}</a>
       <span className="text-xs text-ink-3">{copy.date(identity.verifiedAt)}</span>
-      <button type="button" disabled={busy || !saved} className="border border-line px-3 py-2" onClick={() => void act(identity.provider, true)}>{copy.unlink}</button>
+      <button type="button" disabled={busy || !saved} className="border border-line px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50" onClick={() => void act(identity.provider, true)}>{copy.unlink}</button>
     </div>)}
     <div className="flex flex-wrap gap-3">{IDENTITY_PROVIDERS.map(provider => <button key={provider} type="button" disabled={busy || !saved || !snapshot}
-      className="border border-line px-3 py-2 text-sm" onClick={() => void act(provider, false)}>
+      className="border border-line px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" onClick={() => void act(provider, false)}>
       {busy ? copy.busy : provider === "orcid" ? copy.verifyOrcid : copy.verifyGithub}
     </button>)}</div>
     <p className="text-xs text-ink-3">{copy.scope}</p><p className="text-xs text-ink-3">{copy.ownership}</p>
