@@ -24,9 +24,15 @@ describe("private read-only transport contract", () => {
   });
   it("rejects oversized response and positive native surplus claims", async () => {
     const key = () => `kx_live_${"a".repeat(96)}`;
-    await expect(createObligationClient("https://inspect.example", key, async () => new Response(" ".repeat(32769))).read()).rejects.toThrow("size limit");
+    await expect(createObligationClient("https://inspect.example", key, async () => new Response(" ".repeat(32769))).read()).rejects.toThrow("refused or unavailable");
     const value = nativeInspectionFixture(); value.projection.advisorySurplusMicroUsdc = "1";
     await expect(createObligationClient("https://inspect.example", key, async () => Response.json(value)).read()).rejects.toThrow("refused or unavailable");
+  });
+  it("does not expose transport or malformed backend values through CLI/client errors", async () => {
+    const key = () => `kx_live_${"a".repeat(96)}`;
+    await expect(createObligationClient("https://inspect.example", key, async () => { throw new Error("private transport detail"); }).read()).rejects.toThrow(/^Operator inspection refused or unavailable$/);
+    const value = nativeInspectionFixture(); Object.assign(value.projection, { status: "private backend detail" });
+    await expect(createObligationClient("https://inspect.example", key, async () => Response.json(value)).read()).rejects.toThrow(/^Operator inspection refused or unavailable$/);
   });
   it("actual MCP SDK discovers no books, returns the exact unknown contract and redacts errors", async () => {
     const server = new McpServer({ name: "obligation-fixture", version: "1" }); let fail = false;
