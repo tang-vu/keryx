@@ -31,6 +31,11 @@ product work. Internal evaluation is separate from independent customer demand.
    offline/testnet validation and bounded mainnet acceptance where authorized.
    Deployment does not close the remaining product/usefulness or financial gates.
 
+The [local-currency/EURC evaluation](currency-support-evaluation.md) stages optional
+display estimates before any owner-approved conversion. Current settlement and
+caps remain USDC-only; customer demand, executable costs and testnet conversion
+proof are open gates under [issue294](https://github.com/tang-vu/keryx/issues/294).
+
 The private [same-original fulfillment window](operator-original-fulfillment.md)
 keeps explicitly approved supplier time separate from deployment and historical
 metadata completion. The held paid original must pass native delivery and ordinary

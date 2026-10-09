@@ -60,6 +60,17 @@ identity0.3.8 with the next application release. The wider issue281 maintenance
 front door and hosted/client acceptance remain open. See
 [scope and evidence](docs/engineering/mcp-standalone-stream-lifetime.md).
 
+**Bind payment glossary review to exact content — 2026-10-09.**
+Prepare English, Vietnamese and Simplified Chinese payment/trust terminology as
+explicit agent-authored drafts, independently of locale routing and runtime
+catalogue migration. Critical labels reference canonical terms; protocol names
+and BUY/SKIP/CACHE remain unchanged. Human review covers the whole locale plus
+its English source, with content digests invalidating stale approvals. Offline
+CI validates structure and review bindings; actual human review, semantic
+accuracy and runtime integration remain separate gates. Existing interfaces
+are not retrospectively marked reviewed. No locale is activated by this
+development-only change. See [translation instructions](docs/translation-instructions.md).
+
 **Project obligations before investing Operator float — 2026-10-09.**
 Stage a read-only ownership-scoped projection using the existing complete prepaid
 inventory and original payment, withdrawal, funding and supplier journals. Keep
@@ -6463,3 +6474,20 @@ from the whole attributed current store; recorded creator payee counts do not
 establish that the profile owner funded those runs. Public receipts and immutable
 research/payment originals retain their existing contracts. See
 [implementation and acceptance boundaries](docs/engineering/private-profiles-2026-10-09.md).
+
+## Evaluate local-currency estimates separately from EURC conversion — 2026-10-09
+
+Issue294's written evaluation keeps the current USDC reward, source-owned payee,
+Gateway, consent, nonce and receipt authority intact. Documentary Arc Swap support
+for USDC/EURC does not make EURC a Gateway balance or authorize Keryx to convert a
+creator's funds. Stage optional labeled estimates first; a future creator conversion
+would follow receipt/withdrawal of their USDC reward, while buyer conversion precedes
+the existing USDC deposit and separately signed research budget. Neither expands
+an existing spending ceiling. Merchant conversion, pooled rewards and automatic FX
+remain deferred; no transaction writer or custody change is implemented.
+
+The [evaluation](docs/currency-support-evaluation.md) records current vendor sources,
+exact-unit and recovery constraints, all supported surface roles and release gates.
+Participant currency demand, rate-provider/fee policies, tiny-amount feasibility,
+browser-compatible custody and bounded testnet proof remain unaccepted. This records
+the evaluation boundary, not an accepted economic policy or enabled EURC product.

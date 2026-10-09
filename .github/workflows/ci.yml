@@ -60,6 +60,11 @@ jobs:
       - name: CI scope and merge gate regression checks
         run: node --test scripts/ci-scope.test.mjs
 
+      - name: Payment glossary consistency and review bindings (offline)
+        run: |
+          node --test scripts/check-payment-glossaries.test.mjs
+          node scripts/check-payment-glossaries.mjs
+
       - name: Adversarial report lifecycle and source binding (offline)
         run: node --test scripts/source-money-adversarial-report.test.mjs
 
