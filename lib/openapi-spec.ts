@@ -11,6 +11,7 @@ import { paperOpenApiPaths, paperOpenApiSchemas } from "./papers/openapi";
 import { operatorStatusOpenApiPath } from "./business-operator/openapi";
 import { operatorObligationOpenApiPath } from "./operator-obligations/openapi";
 import { publicJobLedgerOpenApiPath } from "./operator-ledger/openapi";
+import { purchaseOutcomesOpenApiPath } from "./research/purchase-outcomes-openapi";
 import { monthlyOpenApiPath } from "./monthly/openapi";
 import { paidJobEscalationOpenApiProperty, paidJobEscalationOpenApiSchemas } from "./a2a/overdue-openapi";
 import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
@@ -732,6 +733,7 @@ export const openapiSpec = {
       },
     },
     "/api/research/monthly": monthlyOpenApiPath,
+    "/api/dispatch/{id}/purchase-outcomes": purchaseOutcomesOpenApiPath,
     "/api/dispatch/{id}/receipt": {
       get: {
         operationId: "getDispatchResearchReceipt",

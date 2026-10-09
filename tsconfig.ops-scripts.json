@@ -5,6 +5,9 @@
     "incremental": false
   },
   "include": [
+    "scripts/inspect-purchase-outcomes.mts",
+    "scripts/test-purchase-outcomes-transports.mts",
+    "scripts/test-purchase-outcomes-built.mts",
     "scripts/eval-paying-source-study.mts",
     "scripts/operator-obligations.mts",
     "scripts/test-operator-obligations-transports.mts",

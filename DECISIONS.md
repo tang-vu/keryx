@@ -6938,3 +6938,19 @@ response window remain visible; revision/refund execution and prospective terms
 stay withheld. An absent native domain refuses rather than adopting an ordinary
 sidecar. This provides an honest customer request without manufacturing execution,
 funding, usefulness, outside-customer traction or full issue250 acceptance.
+## Expose bounded recorded purchase outcomes without new financial authority — 2026-10-09
+
+Issue298 receives a read-only projection of the already public retained dispatch
+snapshot. Exact item/version BUYs, citations and trace payment observations feed
+the existing pure audit scorer; no current source joins or private review sidecars
+backfill history. Original reports, receipts and payment records remain unchanged.
+Archive/network provenance stays explicit, recorded settlement is not a new chain
+verification, and unknown participant cohorts remain unknown. Excluded/unscored
+counts and calibration sample sizes accompany every score; uncited cost is not
+causal regret and supported-claim/missed-value measures remain unmeasured.
+
+Share the bounded contract across report UI, public API, offline-file CLI and
+hosted/stdio public-read MCP. Preserve issue250 acceptance controls and all role,
+release and storage boundaries. Full prospective capture, expert assessment,
+counterfactual/learning authority and coordinated release remain separate gates
+in [the source plan](docs/engineering/purchase-outcomes-298.md).

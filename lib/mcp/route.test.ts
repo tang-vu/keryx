@@ -114,7 +114,7 @@ describe("/mcp", () => {
       "keryx_status",
       "research_monthly",
       "keryx_operator_status",
-      "keryx_public_job_ledger",
+      "keryx_public_job_ledger", "keryx_purchase_outcomes",
       "profile_read",
       "profile_update",
       "history_read",
