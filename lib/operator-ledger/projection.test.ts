@@ -181,4 +181,15 @@ describe("public observed transfer books", () => {
     expect(rows[1][9]).toBe("15700"); expect(rows[2][10]).toBe("15700");
     expect(verifyOperatorLedger(JSON.parse(operatorLedgerJson(result)), result.integrity.digest).payload.jobs[0].id).toBe(id);
   });
+
+  it("rejects inconsistent finish coverage even with a recomputed checksum", () => {
+    for (const expectedRecordedLegs of [null, 2]) {
+      const changed = structuredClone(ledgerFixture()); changed.payload.jobs[0].expectedRecordedLegs = expectedRecordedLegs;
+      changed.integrity.digest = ledgerDigest(changed.payload);
+      expect(() => verifyOperatorLedger(changed)).toThrow("coverage binding");
+    }
+    const changed = structuredClone(ledgerFixture()); changed.payload.jobs[0].legCoverage = "unknown";
+    changed.integrity.digest = ledgerDigest(changed.payload);
+    expect(() => verifyOperatorLedger(changed)).toThrow("coverage binding");
+  });
 });

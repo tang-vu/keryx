@@ -38,8 +38,11 @@ export function validateLedgerBindings(value: unknown): OperatorLedger {
       sums[category] += BigInt(leg.amountMicroUsdc); totals[job.funding][category] += BigInt(leg.amountMicroUsdc);
     }
     for (const key of Object.keys(sums) as Array<keyof typeof sums>) if (sums[key].toString() !== job.settled[key]) throw new Error("Ledger job total mismatch");
-    if (job.uncertainLegs !== job.legs.filter(leg => leg.state === "uncertain").length || job.pendingLegs !== job.legs.filter(leg => leg.state === "pending").length ||
-      (job.uncertainLegs > 0 || job.pendingLegs > 0) && job.legCoverage !== "incomplete") throw new Error("Ledger uncertainty mismatch");
+    if (job.uncertainLegs !== job.legs.filter(leg => leg.state === "uncertain").length || job.pendingLegs !== job.legs.filter(leg => leg.state === "pending").length)
+      throw new Error("Ledger uncertainty mismatch");
+    const coverage = job.uncertainLegs > 0 || job.pendingLegs > 0 ? "incomplete" : job.expectedRecordedLegs === null ? "unknown" :
+      job.legs.filter(leg => leg.state !== "simulated" && leg.state !== "failed").length === job.expectedRecordedLegs ? "matched-finish-count" : "incomplete";
+    if (job.legCoverage !== coverage) throw new Error("Ledger coverage binding mismatch");
   }
   for (const funding of ["browser", "treasury", "unknown", "offline"] as const) {
     for (const key of Object.keys(totals[funding]) as Array<keyof ReturnType<typeof zero>>) {
