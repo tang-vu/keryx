@@ -158,7 +158,7 @@ export function OperatorBusinessSnapshot({ status, readState = "ready" }: {
           <p className="mt-3 font-serif text-sm leading-relaxed text-ink-3">{terminal === 0 ? "No terminal order outcomes are recorded in this window. That does not establish demand or a success rate." : "Order completion describes delivery state. It does not prove a useful answer, settled creator payments or independent customer demand."}</p>
           <div className="mt-6" aria-labelledby="completion-latency-heading">
             <h3 id="completion-latency-heading" className="font-mono text-[11px] uppercase tracking-wider text-ink-3">Completion timing by recorded path</h3>
-            <p className="mt-2 font-serif text-sm leading-relaxed text-ink-3">Acceptance to recorded completion/update, for completions in the last 24 hours. Later reconciliation can extend this time. Ordinary means a versioned service receipt with no recorded recovery. Recovered includes saved-result repair and original fulfillment; missing markers stay unknown.</p>
+            <p className="mt-2 font-serif text-sm leading-relaxed text-ink-3">Acceptance to recorded completion/update, for orders recorded as completed and updated in the last 24 hours. Later reconciliation can extend this time. Ordinary means a versioned service receipt with no recorded recovery. Recovered includes saved-result repair and original fulfillment; missing markers stay unknown.</p>
             {jobs?.completionLatencyCohorts ? <div className="mt-3 overflow-x-auto">
               <table className="w-full text-left font-mono text-[10px]">
                 <caption className="sr-only">Recorded completion latency cohorts, not first-answer or payment settlement times</caption>

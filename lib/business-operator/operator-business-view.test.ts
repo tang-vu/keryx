@@ -49,7 +49,7 @@ describe("public Operator view", () => {
   it("renders separate recorded timing paths and exposes neither private markers nor a settlement claim", () => {
     const value = status(); value.jobs = summarizeA2aOperations(completionFixtureRows(), COMPLETION_FIXTURE_NOW, true);
     const html = render(value);
-    for (const text of ["Completion timing by recorded path", "Ordinary", "Recovered", "Unknown path", "2d 4h", "Timed samples", "95th percentile", "first answer", "Acceptance to recorded completion/update", "Later reconciliation can extend this time"]) expect(html).toContain(text);
+    for (const text of ["Completion timing by recorded path", "Ordinary", "Recovered", "Unknown path", "2d 4h", "Timed samples", "95th percentile", "first answer", "Acceptance to recorded completion/update", "for orders recorded as completed and updated in the last 24 hours", "Later reconciliation can extend this time"]) expect(html).toContain(text);
     expect(html).toContain('scope="col"'); expect(html).toContain('scope="row"'); expect(html).toContain('overflow-x-auto');
     expect(html).not.toMatch(/claimId|authoritySha256|originalFailureSha256|Synthetic timing fixture/);
   });
