@@ -188,6 +188,16 @@ isolated server directory. After that correction, its 127.0.0.1 browser Origin
 was refused because Next canonicalized `request.url` to localhost. The corrected
 fixture copies the complete small config closure and explicitly sets synthetic
 `BASE_URL`; the shared pure origin check uses that server-controlled origin.
-All 50 focused origin/API tests passed, including trailing-NUL, empty query/
-fragment and normalized-path configuration regressions. Fresh default build/full TypeScript/built-fixture acceptance after
-this runtime correction and hosted exact-source aggregate remain open.
+All 50 focused origin/API tests passed on the physical install, including
+trailing-NUL, empty query/fragment and normalized-path configuration regressions.
+The final runtime source at `25cf7fc7` passed the default Turbopack build. After
+type-only annotations to test/harness header arrays at `1df4ca26`, both full
+TypeScript graphs and the actual built private-API fixture passed. The fixture
+verified configured-Origin 401 versus foreign/forwarded/site 403 refusal, exact
+snapshot bytes, owner/revision isolation, stable updates, revocation, framework
+privacy headers and observed child exit. Runtime build inputs did not change
+between those commits. Raw logs and isolated synthetic SQLite fixtures remain
+in the separate validation worktree's ignored `.artifacts` directory; prior
+failed logs remain retained. Hosted exact-source aggregate, final independent
+review, production storage/log redaction, live provider acceptance and coordinated
+release remain open.
