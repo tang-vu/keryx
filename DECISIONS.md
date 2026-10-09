@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+## Batch issue outcomes before one deployment — owner decision, 2026-10-09
+
+When one task spans several issues or PRs, finish the agreed implementation
+batch, review and merge its outcomes, then deploy the combined current main
+once. Include corrective work before that deployment instead of releasing each
+PR separately. Keep independently gated financial or scheduled capabilities
+disabled until their own authorization and acceptance are met.
+
+For 2026-10-09 only, the owner explicitly directs reviewed PRs to merge without
+waiting for hosted CI, with checks and fixes continuing on main afterward.
+This is a dated exception to pre-merge CI waiting, not a claim that pending or
+failed checks passed. Preserve source review, proportionate local validation,
+main validation runs and actual combined-source release/publication acceptance.
+The usual required pre-merge CI gates resume after this exception. The batch
+does not authorize funding, custody changes, schedules or production DDL, and
+partial implementations do not close broader acceptance issues.
+
 **Publish explicitly updated private metadata snapshots — 2026-10-09.**
 Advance issue285 with revocable bearer `.bib` URLs for saved-paper metadata,
 independently of account-provider authorization. Store only random-token hashes;
