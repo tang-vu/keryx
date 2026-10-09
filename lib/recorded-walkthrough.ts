@@ -13,8 +13,9 @@ export const recordedWalkthrough = Object.freeze({
   videoUrl: "https://github.com/tang-vu/keryx/releases/download/v0.27.43/keryx-current-release-6e591603-archived-qa-05.mp4",
 } as const);
 
-export async function checkRecordedReceipt(value: unknown): Promise<"matched" | "changed"> {
+export async function checkRecordedReceipt(value: unknown): Promise<"matched" | "changed" | "unavailable"> {
   const result = await verifyBrowserReceipt(value);
+  if (result.reason === "Browser SHA-256 verification is unavailable") return "unavailable";
   return result.valid && result.actualDigest === recordedWalkthrough.digest ? "matched" : "changed";
 }
 

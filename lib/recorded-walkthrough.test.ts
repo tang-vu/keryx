@@ -20,6 +20,12 @@ it("reads only the fixed public original with one credential-free bounded GET", 
   })]);
 });
 
+it("reports unavailable hashing separately from a changed receipt", async () => {
+  const denied = vi.spyOn(globalThis.crypto.subtle, "digest").mockRejectedValueOnce(new Error("Denied"));
+  try { expect(await checkRecordedReceipt(receipt)).toBe("unavailable"); }
+  finally { denied.mockRestore(); }
+});
+
 it("refuses failed or oversized responses without a retry or research fallback", async () => {
   const denied = vi.fn(async () => new Response("Unavailable", { status: 503 }));
   await expect(readRecordedReceipt(new AbortController().signal, denied)).rejects.toThrow("unavailable");
