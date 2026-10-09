@@ -9,7 +9,7 @@ type Rationale = { kind: "no-citation" | "no-coverage" | "incomplete" | "explain
 export function evidenceConfidenceReason(language: Language, rationale: Rationale): string {
   switch (rationale.kind) {
     case "no-citation": return {
-      en: "no citation passed the evidence gate", vi: "không có trích dẫn nào vượt qua ngưỡng bằng chứng",
+      en: "no citation passed the evidence gate", vi: "không có trích dẫn nào đáp ứng điều kiện bằng chứng",
       pt: "nenhuma citação passou pelo filtro de evidências", es: "ninguna cita superó el filtro de evidencias",
     }[language];
     case "unresolved-conflict": return {
