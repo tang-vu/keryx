@@ -28,5 +28,5 @@ it("uses the provenance-bound terminal closer without probing undeclared Supabas
   });
   mocks.create.mockResolvedValue(reader);
   const response = await GET(new Request("http://localhost/api/operator/ledger"));
-  expect(response.status).toBe(200); expect(mocks.close).toHaveBeenCalledWith(reader);
+  expect(response.status).toBe(200); expect(mocks.close.mock.calls.at(-1)?.[0] === reader).toBe(true);
 });

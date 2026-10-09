@@ -18,7 +18,7 @@ it("pins SQLite terminal disposal at construction and can close after configurat
   // The profile helper requires an exact network/id pair; use the existing synthetic identity shape.
   const { syntheticStorageIdentity } = await import("./storage-identity-fixture");
   mocks.deployment.mockReturnValue({ identity: syntheticStorageIdentity("testnet-offline"), backend: { kind: "sqlite" } });
-  const reader = await createReadonlyApplicationStorage(); expect(reader).toBe(native);
+  const reader = await createReadonlyApplicationStorage(); expect(reader === native).toBe(true);
   mocks.deployment.mockImplementation(() => { throw new Error("Revoked selected deployment"); });
   closeReadonlyApplicationStorage(reader!); expect(close).toHaveBeenCalledOnce();
   expect(() => closeReadonlyApplicationStorage(reader!)).toThrow();
@@ -29,8 +29,8 @@ it("closes the registered Supabase facade without touching an undeclared close p
   mocks.deployment.mockReturnValue({ identity: syntheticStorageIdentity("testnet-offline"), backend: { kind: "supabase" } });
   const native = new Proxy({}, { get(_target, property) { if (property === "then") return undefined; throw new Error("Undeclared native property"); } }) as KeryxDB;
   mocks.supabase.mockResolvedValue(native);
-  const reader = await createReadonlyApplicationStorage(); expect(reader).toBe(native);
-  closeReadonlyApplicationStorage(reader!); expect(mocks.terminal).toHaveBeenCalledWith(native);
+  const reader = await createReadonlyApplicationStorage(); expect(reader === native).toBe(true);
+  closeReadonlyApplicationStorage(reader!); expect(mocks.terminal.mock.calls.at(-1)?.[0] === native).toBe(true);
 });
 
 it("refuses unrelated/caller-selected/ordinary facades without invoking their close field", () => {
