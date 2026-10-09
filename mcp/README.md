@@ -1,5 +1,13 @@
 # Keryx MCP
 
+Source candidate: `history_read` reads bounded ordinary current-store summaries for
+the verified `KERYX_API_KEY` wallet with explicit `history:read`. It needs no payment
+signer and accepts no wallet or network selector. Search is literal and case sensitive;
+cursor/filter binding and recorded funding remain explicit. Sealed storage and
+unapplied RPC return unavailable. See the
+[scope and release gates](https://github.com/tang-vu/keryx/blob/main/docs/engineering/personal-history-read-2026-10-09.md).
+This note does not claim publication or deployed support.
+
 Candidate 0.4.9 validates paid questions against the shared API's 2000-character
 limit before loading custody or entering funding. `ask_keryx` advertises 3–2000
 characters after trimming, using the server's JavaScript string-length convention.

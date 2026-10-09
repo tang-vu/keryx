@@ -11,6 +11,8 @@ import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { fmtUsdc } from "@/components/keryx/phase-style";
+import { CurrentHistoryPane } from "./current-history-view";
+import { personalHistoryCopy as copy } from "@/locales/en/personal-history";
 
 interface AskCreator {
   sourceId: string;
@@ -56,13 +58,15 @@ function timeAgo(iso: string): string {
 
 export function MyAsksView() {
   const [historical, setHistorical] = useState(false);
+  const [browse, setBrowse] = useState(false);
   return <div>
     <nav className="mb-6 flex flex-wrap gap-3" aria-label="Dispatch history network">
       <button type="button" aria-pressed={!historical} onClick={() => setHistorical(false)} className="min-h-11 border border-line px-4 text-sm">Current network</button>
       <button type="button" aria-pressed={historical} onClick={() => setHistorical(true)} className="min-h-11 border border-line px-4 text-sm">Arc testnet history</button>
     </nav>
     {historical && <p className="mb-5 text-sm leading-relaxed text-ink-2">Original testnet dispatches attributed to this wallet. These test USDC amounts are separate from current mainnet spend; archived source names do not grant current payout rights.</p>}
-    <MyAsksLedger key={historical ? "testnet" : "current"} historical={historical} />
+    {!historical && <button type="button" className="mb-5 min-h-11 border border-line px-4 text-sm" onClick={() => setBrowse(value => !value)}>{browse ? copy.recent : copy.browse}</button>}
+    {!historical && browse ? <CurrentHistoryPane /> : <MyAsksLedger key={historical ? "testnet" : "current"} historical={historical} />}
   </div>;
 }
 

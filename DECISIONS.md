@@ -6491,3 +6491,17 @@ exact-unit and recovery constraints, all supported surface roles and release gat
 Participant currency demand, rate-provider/fee policies, tiny-amount feasibility,
 browser-compatible custody and bounded testnet proof remain unaccepted. This records
 the evaluation boundary, not an accepted economic policy or enabled EURC product.
+
+## 2026-10-09 — Explicit ordinary personal history read (#268 partial)
+
+Choose a separate optional current-store summary port and explicit `history:read`
+scope rather than widening legacy keys or joining private/enrolled/archive readers.
+API, web and both MCP transports share strict bounded filters and owner/network/filter
+bound keyset cursors. Store projection excludes answers, raw run JSON and private
+fulfillment. Recorded allocations/funding are not payer or settlement authority.
+Preserve the recent creator ledger, SIWE archive, receipt bytes and existing ownership
+attribution. Missing ports or ordinary RPC refuse without fallback. Linked wallets,
+claims, chat identities, visibility/deletion, whole-history exports and verified
+service-spend classification remain gates; issue #268 stays open. This source
+candidate has no production migration, enrollment, publication, merge or deployment
+admission; see [the surface audit](docs/engineering/personal-history-read-2026-10-09.md).

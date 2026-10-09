@@ -9,13 +9,13 @@
  *  - A key NEVER grants more than its wallet already has. Scopes narrow; they cannot widen.
  *    Source restriction is intersected with live ownership at read time, so a key pinned to a
  *    source the wallet later loses stops returning it.
- *  - NULL/default keys retain their historical ask/export rights. New private-profile rights
+ *  - NULL/default keys retain their historical ask/export rights. New profile/history rights
  *    require explicit scopes; old keys are neither downgraded nor widened.
  */
 
-/** Historical implicit rights stay fixed. Private-profile access is always an explicit opt-in. */
+/** Historical implicit rights stay fixed. Profile and history access require explicit opt-in. */
 export const LEGACY_API_KEY_SCOPES = ["ask", "export"] as const;
-export const API_KEY_SCOPES = [...LEGACY_API_KEY_SCOPES, "profile:read", "profile:write"] as const;
+export const API_KEY_SCOPES = [...LEGACY_API_KEY_SCOPES, "profile:read", "profile:write", "history:read"] as const;
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
 
 export function isApiKeyScope(value: unknown): value is ApiKeyScope {

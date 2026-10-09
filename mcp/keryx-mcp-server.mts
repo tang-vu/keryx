@@ -23,10 +23,13 @@ import { fetchPaperLookup } from "../lib/papers/client.ts";
 import { MAX_ASK_QUESTION_CHARS } from "../lib/ask-input.ts";
 import { registerProfileTools } from "../lib/profiles/profile-mcp.ts";
 import { createProfileClient } from "../lib/profiles/profile-client.ts";
+import { createHistoryClient } from "../lib/history/personal-history-client.ts";
+import { registerHistoryTool } from "../lib/history/personal-history-mcp.ts";
 
 const server = new McpServer({ name: "keryx", version: packageInfo.version });
 const profileClient = () => createProfileClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
 registerProfileTools(server, { read: () => profileClient().read(), update: input => profileClient().update(input) });
+registerHistoryTool(server, input => createHistoryClient(meta.baseUrl, () => process.env.KERYX_API_KEY).read(input));
 server.registerTool("paper_lookup", paperLookupToolOptions,
   createPaperLookupHandler(input => fetchPaperLookup(meta.baseUrl, input)));
 import { registerMonthlyDiscovery } from "../lib/monthly/mcp-discovery.ts";

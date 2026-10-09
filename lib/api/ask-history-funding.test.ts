@@ -64,6 +64,9 @@ it("keeps mixed wallet funding totals without inferring service price or a payer
     "import React from 'react';import{createRoot}from'react-dom/client';import{MyAsksView}from'./app/me/asks/my-asks-view';createRoot(document.getElementById('root')).render(<MyAsksView/>);" },
     bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' },
     plugins: [{ name: "isolated-next-link", setup(builder) {
+      // This ledger fixture does not enter the optional browse pane or connect a wallet.
+      builder.onResolve({ filter: /use-siwe-auth$/ }, () => ({ path: "auth", namespace: "history-auth-fixture" }));
+      builder.onLoad({ filter: /.*/, namespace: "history-auth-fixture" }, () => ({ loader: "js", contents: "export function useSiweAuth(){return {session:null}}" }));
       builder.onResolve({ filter: /^next\/link$/ }, () => ({ path: "link", namespace: "fixture" }));
       builder.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ resolveDir: process.cwd(), loader: "js",
         contents: "import React from 'react';export default function Link({children,...props}){return React.createElement('a',props,children)}" }));

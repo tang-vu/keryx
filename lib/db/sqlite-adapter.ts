@@ -1,5 +1,7 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
+import { createSqlitePersonalHistory } from "./personal-history-sqlite";
+import type { PersonalHistoryStore } from "../history/personal-history";
 import { PrivateProfileError, type PrivateProfilesStore } from "../profiles/private-profile";
 import { readSqliteOperatorInventory, type OperatorInventoryInput } from "../business-operator/inventory";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
@@ -130,6 +132,7 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 export class SqliteAdapter implements KeryxDB {
   declare readonly privateProfiles?: PrivateProfilesStore;
+  declare readonly personalHistory?: PersonalHistoryStore;
   private db: DatabaseSync;
   private enrolledMode?: StorageIdentity["authorityMode"];
   private enrolledIdentity?: Readonly<StorageIdentity>;
@@ -191,6 +194,7 @@ export class SqliteAdapter implements KeryxDB {
     assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installOrdinarySqliteApplicationSchema(this.db);
+    if (!this.personalHistory) Object.defineProperty(this, "personalHistory", { value: createSqlitePersonalHistory(this.db) });
     if (!this.privateProfiles) {
       try { Object.defineProperty(this, "privateProfiles", { value: createSqlitePrivateProfiles(this.db) }); }
       catch (error) {

@@ -206,6 +206,8 @@ export interface FeedbackStats {
 export interface KeryxDB {
   /** Additive ordinary-storage domain. Absent on sealed/native adapters; never restore by fallback. */
   readonly privateProfiles?: PrivateProfilesStore;
+  /** Bounded ordinary current-store attribution only; absent on sealed/native/archive readers. */
+  readonly personalHistory?: import("../history/personal-history").PersonalHistoryStore;
   /** Supervised SQLite scholarly pilot capability; absent on unsupported backends. */
   getPaperState?(sourceId: string): Promise<import("../scholarly/rights-protocol").PaperState | null>;
   beginPaperEnrollment?(sourceId: string, creator: string): Promise<void>;
