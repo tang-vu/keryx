@@ -188,6 +188,6 @@ isolated server directory. After that correction, its 127.0.0.1 browser Origin
 was refused because Next canonicalized `request.url` to localhost. The corrected
 fixture copies the complete small config closure and explicitly sets synthetic
 `BASE_URL`; the shared pure origin check uses that server-controlled origin.
-All 46 focused origin/API tests passed, including a trailing-NUL configuration
-regression. Fresh default build/full TypeScript/built-fixture acceptance after
+All 50 focused origin/API tests passed, including trailing-NUL, empty query/
+fragment and normalized-path configuration regressions. Fresh default build/full TypeScript/built-fixture acceptance after
 this runtime correction and hosted exact-source aggregate remain open.

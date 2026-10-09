@@ -16,7 +16,7 @@ describe("server-configured cookie mutation origin", () => {
   it.each([undefined, "null", "https://evil.example", "http://keryx.cc", "https://keryx.cc:444", "https://keryx.cc:443", "https://keryx.cc/", "https://keryx.cc/path", "https://keryx.cc?x=1", "https://keryx.cc#x", "https://keryx.cc@evil.example", "https://user@keryx.cc", "https://keryx.cc, https://evil.example", "https://KERYX.CC", "https:\\keryx.cc"])("refuses missing, malformed or nonexact Origin %s", origin => {
     expect(isConfiguredSameOrigin(request(origin, { Host: "keryx.cc", "X-Forwarded-Host": "keryx.cc", "X-Forwarded-Proto": "https" }), "https://keryx.cc")).toBe(false);
   });
-  it.each([undefined, null, 42, "", "keryx.cc", "https:keryx.cc", "ftp://keryx.cc", "file:///keryx.cc", "https://user@keryx.cc", "https://user:password@keryx.cc", "https://keryx.cc/path", "https://keryx.cc?x=1", "https://keryx.cc#x", " https://keryx.cc", "https://keryx.cc\n/", "https://keryx.cc\u0000", "https:\\keryx.cc"])("fails closed on invalid deployment configuration %s", base => {
+  it.each([undefined, null, 42, "", "keryx.cc", "https:keryx.cc", "ftp://keryx.cc", "file:///keryx.cc", "https://user@keryx.cc", "https://user:password@keryx.cc", "https://keryx.cc/path", "https://keryx.cc?x=1", "https://keryx.cc#x", "https://keryx.cc?", "https://keryx.cc#", "https://keryx.cc/.", "https://keryx.cc/%2e", " https://keryx.cc", "https://keryx.cc\n/", "https://keryx.cc\u0000", "https:\\keryx.cc"])("fails closed on invalid deployment configuration %s", base => {
     expect(isConfiguredSameOrigin(request("https://keryx.cc"), base)).toBe(false);
   });
   it.each(["cross-site", "same-site", "none", "same-origin, cross-site", ""])("refuses nonmatching fetch metadata %s", site => {

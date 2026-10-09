@@ -3,7 +3,7 @@
  * No environment, database or request body access belongs in this pure check. */
 export function isConfiguredSameOrigin(request: Request, configuredBaseUrl: unknown): boolean {
   try {
-    if (typeof configuredBaseUrl !== "string" || !/^https?:\/\//i.test(configuredBaseUrl) || /[\s\\\u0000-\u001f\u007f]/u.test(configuredBaseUrl)) return false;
+    if (typeof configuredBaseUrl !== "string" || !/^https?:\/\/[^/?#]+\/?$/i.test(configuredBaseUrl) || /[\s\\\u0000-\u001f\u007f]/u.test(configuredBaseUrl)) return false;
     const base = new URL(configuredBaseUrl);
     if (!["http:", "https:"].includes(base.protocol) || base.username || base.password || base.pathname !== "/" || base.search || base.hash) return false;
     const origin = request.headers.get("origin");
