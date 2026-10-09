@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { createMessages } from "@/lib/i18n/messages";
 import { SiteHeader } from "./site-header";
 import { SiteFooter } from "./site-footer";
 import { DispatchHistory, type RunSummary } from "./dispatch-history";
@@ -12,6 +13,8 @@ import { fmtUsdc } from "./phase-style";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { useLedgerResource, type LedgerResource } from "@/lib/hooks/use-ledger-resource";
 import type { DashboardMetrics, PaymentRecord, WithdrawalRecord } from "@/lib/types";
+
+const message = createMessages("en");
 
 interface MetricsResponse { metrics: DashboardMetrics; leaderboard: LeaderboardEntry[] }
 
@@ -87,20 +90,20 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-8">
       <header className="border-b-[1.5px] border-ink pb-6">
         <div className="font-mono text-xs uppercase tracking-[0.2em] text-seal">The ledger</div>
-        <h1 className="letterpress mt-3 font-display text-[clamp(28px,3.6vw,40px)] font-medium tracking-tight text-ink">Reading activity &amp; creator rewards</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-2">Follow the questions, explore the sources, and see what reached creator wallets. Browse the retained testnet track record and current mainnet activity, each with its original payment proof.</p>
-        <nav aria-label="Ledger sections" className="mt-4 flex flex-wrap gap-x-5 text-sm text-seal">
-          <Link href="/history/testnet" className="min-h-11 py-3 underline">Testnet track record</Link>
-          <a href="#current-activity" className="min-h-11 py-3 underline">{currentArcLabel} activity</a>
-          <a href="#current-creators" className="min-h-11 py-3 underline">Current creator rewards</a>
-          <a href="#payment-records" className="min-h-11 py-3 underline">Payment evidence</a>
+        <h1 className="letterpress mt-3 font-display text-[clamp(28px,3.6vw,40px)] font-medium tracking-tight text-ink">{message("ledger.title")}</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-2">{message("ledger.introduction")}</p>
+        <nav aria-label={message("ledger.sectionsLabel")} className="mt-4 flex flex-wrap gap-x-5 text-sm text-seal">
+          <Link href="/history/testnet" className="min-h-11 py-3 underline">{message("ledger.testnetTrackRecord")}</Link>
+          <a href="#current-activity" className="min-h-11 py-3 underline">{message("ledger.activity", { network: currentArcLabel })}</a>
+          <a href="#current-creators" className="min-h-11 py-3 underline">{message("ledger.currentCreators")}</a>
+          <a href="#payment-records" className="min-h-11 py-3 underline">{message("ledger.paymentEvidence")}</a>
         </nav>
       </header>
 
       {historyPreview}
 
-      <section id="current-activity" aria-label="Current network activity" className="mt-8 border-t border-line pt-6">
-        <h2 className="font-display text-2xl text-ink">{currentArcLabel} activity</h2>
+      <section id="current-activity" aria-label={message("ledger.currentActivityLabel")} className="mt-8 border-t border-line pt-6">
+        <h2 className="font-display text-2xl text-ink">{message("ledger.activity", { network: currentArcLabel })}</h2>
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
           <span className="font-mono text-sm text-ink">{metrics ? <><span className="font-display text-2xl">{metrics.totalQueries}</span> recorded questions{metricsResource.status === "error" && " · last successful read"}</> : metricsResource.status === "error" ? "Question total unavailable" : "Loading question total…"}</span>
           <span className="font-mono text-sm text-ink">{metrics?.recordedAccounts != null ? <><span className="font-display text-2xl">{metrics.recordedAccounts}</span> recorded accounts{metricsResource.status === "error" && " · last successful read"}</> : metrics || metricsResource.status === "error" ? "Account total unavailable" : "Loading account total…"}</span>
@@ -145,10 +148,10 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
         </aside>
       </div>
 
-      <section id="current-creators" aria-label="Current creator rewards" className="mt-8">
+      <section id="current-creators" aria-label={message("ledger.currentCreators")} className="mt-8">
         <ResourceNotice resource={withdrawalsResource} label="Cash-out records" />
         {(leaderboard.length > 0 || withdrawals.length > 0) && <div className="mt-5 grid gap-5 lg:grid-cols-2">
-          {leaderboard.length > 0 && <CreatorLeaderboard rows={leaderboard} title={`${currentArcLabel} creator leaderboard`} />}
+          {leaderboard.length > 0 && <CreatorLeaderboard rows={leaderboard} title={message("ledger.creatorLeaderboard", { network: currentArcLabel })} />}
           {withdrawals.length > 0 && <CreatorCashoutsPanel withdrawals={withdrawals} compact />}
         </div>}
       </section>
