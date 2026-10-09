@@ -11,7 +11,9 @@ declare global { interface Window {
   setListingReceipt: (value: { status: "success" | "reverted" }) => void;
   listingToasts: { kind: string; message: string }[];
 } }
-async function exercise(profile:ArcNetworkProfile){
+async function exercise(profile:ArcNetworkProfile,registryVersion:1|3){
+const originalRevision="9007199254740993";
+const onchainId=`0x${"1".repeat(64)}`;
 const bundle = await build({ stdin: { contents: `
 import React from 'react'; import {createRoot} from 'react-dom/client';
 import {ListingControlsPanel} from './app/creator/[id]/listing-controls-panel';
@@ -22,7 +24,7 @@ function Harness(){const [wallet,setWallet]=React.useState({address:'${creator}'
   return React.createElement(ListingControlsPanel,{creatorId:'synthetic'});}
 createRoot(document.getElementById('root')).render(React.createElement(Harness));
 `, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,
-  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-wallet", setup(b) {
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_VERSION": JSON.stringify(String(registryVersion)), "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-wallet", setup(b) {
     b.onResolve({ filter: /^wagmi$|^sonner$/ }, a => ({ path: a.path, namespace: "fixture" }));
     b.onLoad({ filter: /.*/, namespace: "fixture" }, a => ({ contents: a.path === "wagmi" ? `
 export const useAccount=()=>window.listingWallet;
@@ -36,6 +38,7 @@ const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   let currentPayout = payout, currentRegistry=registry, unavailable = false;
+  let currentVersion:number|undefined=registryVersion,currentRevision:string|undefined=originalRevision;
   const setWallet=(value:{address?:string;chainId?:number})=>page.evaluate(w=>window.setListingWallet(w),value);
   let hold: Promise<void> | undefined, observed: (() => void) | undefined;
   const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
@@ -47,7 +50,8 @@ try {
       if (unavailable) return route.fulfill({ status: 503, json: { error: "synthetic outage" } });
       return route.fulfill({ json: {
       mode: "onchain", fetchPrice: 0.002, active: true, creator, registryAddress: currentRegistry,
-      onchainId: `0x${"1".repeat(64)}`, current: { payoutWallet: currentPayout, authors: [{ wallet: payout, basisPoints: 10000 }], fetchPriceUsdc6: "2000", contentCid: "synthetic", tags: "research" },
+      registryVersion:currentVersion,revision:currentVersion===1?undefined:currentRevision,
+      onchainId, current: { payoutWallet: currentPayout, authors: [{ wallet: payout, basisPoints: 10000 }], fetchPriceUsdc6: "2000", contentCid: "synthetic", tags: "research" },
     } }); }
     return route.fulfill({ contentType: "text/html", body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>' });
   });
@@ -67,8 +71,14 @@ try {
   await delist.click(); await page.getByRole("button", { name: "Click again to confirm", exact: false }).click();
   await page.waitForFunction(() => window.listingWrites.length === 2);
   const writes = await page.evaluate(() => window.listingWrites);
-  assert.deepEqual(writes.map(x => [x.account, x.chainId, x.functionName]), [[creator, profile.chainId, "update"], [creator, profile.chainId, "deactivate"]]);
-  assert.equal(writes[0].args[1], payout); assert.equal(writes[0].args[3], "3000");
+  assert.deepEqual(writes.map(x => [x.account, x.chainId, x.functionName]), [[creator, profile.chainId, registryVersion===1?"update":"updatePrice"], [creator, profile.chainId, "deactivate"]]);
+  if(registryVersion===1){
+    assert.equal(writes[0].args[1], payout); assert.equal(writes[0].args[3], "3000");
+    assert.deepEqual(writes[1].args,[onchainId]);
+  }else{
+    assert.deepEqual(writes[0].args,[onchainId,originalRevision,"3000"]);
+    assert.deepEqual(writes[1].args,[onchainId,originalRevision]);
+  }
   assert.equal(await page.evaluate(() => window.listingReceiptChain), profile.chainId);
   await page.evaluate(() => window.setListingReceipt({ status: "reverted" }));
   await page.waitForFunction(() => window.listingToasts.some(x => x.kind === "error" && x.message.includes("Transaction reverted")));
@@ -94,13 +104,51 @@ try {
   assert.equal((await page.evaluate(() => window.listingWrites)).length, 0);
   await page.getByRole("slider").focus(); await page.keyboard.press("ArrowRight");
   await save.click(); await page.waitForFunction(() => window.listingWrites.length === 1);
-  assert.equal((await page.evaluate(() => window.listingWrites))[0].args[1], currentPayout);
+  const reviewedWrite=(await page.evaluate(() => window.listingWrites))[0];
+  if(registryVersion===1)assert.equal(reviewedWrite.args[1], currentPayout);
+  else assert.deepEqual(reviewedWrite.args,[onchainId,originalRevision,"3000"],"V3 price edits never resubmit payout or author terms");
 
   unavailable = true;
   await delist.click(); await page.getByRole("button", { name: "Click again to confirm", exact: false }).click();
   await page.waitForFunction(() => window.listingToasts.some(x => x.kind === "error" && x.message.includes("could not be refreshed")));
   assert.equal((await page.evaluate(() => window.listingWrites)).length, 1);
   unavailable = false;
+
+  // A deployment version change cannot switch the selector family of a bundled page.
+  await freshPage();currentVersion=registryVersion===1?3:1;
+  await save.click();await page.waitForFunction(()=>window.listingToasts.some(x=>x.kind==="error"&&x.message.includes("Wallet or source changed")));
+  assert.equal((await page.evaluate(()=>window.listingWrites)).length,0,"Foreign registry version must not reach the wallet");
+  currentVersion=registryVersion;
+
+  if(registryVersion===3){
+    // A revision change alone is signing state, including values beyond JS safe integers.
+    await freshPage();currentRevision="9007199254740994";
+    await save.click();await page.waitForFunction(()=>window.listingToasts.some(x=>x.kind==="error"&&x.message.includes("Listing changed")));
+    assert.equal((await page.evaluate(()=>window.listingWrites)).length,0,"Stale revision cannot open a wallet prompt");
+    await page.getByRole("slider").focus();await page.keyboard.press("ArrowRight");
+    await save.click();await page.waitForFunction(()=>window.listingWrites.length===1);
+    assert.deepEqual((await page.evaluate(()=>window.listingWrites))[0].args,[onchainId,currentRevision,"3000"],"Refreshed revision stays exact when signed");
+    currentRevision=originalRevision;
+
+    for(const invalidRevision of [undefined,"0","01","18446744073709551616"]){
+      await freshPage();currentRevision=invalidRevision;
+      await save.click();await page.waitForFunction(()=>window.listingToasts.some(x=>x.kind==="error"&&x.message.includes("Listing data is unavailable")));
+      assert.equal((await page.evaluate(()=>window.listingWrites)).length,0,"Missing or malformed V3 revision grants no signing authority");
+      currentRevision=originalRevision;
+    }
+
+    await freshPage();currentVersion=undefined;
+    await delist.click();await page.getByRole("button",{name:"Click again to confirm",exact:false}).click();
+    await page.waitForFunction(()=>window.listingToasts.some(x=>x.kind==="error"&&x.message.includes("Listing data is unavailable")));
+    assert.equal((await page.evaluate(()=>window.listingWrites)).length,0,"Omitted V3 version cannot downgrade to a legacy delist");
+    currentVersion=registryVersion;
+
+    await freshPage();currentRevision="9007199254740992";
+    await delist.click();await page.getByRole("button",{name:"Click again to confirm",exact:false}).click();
+    await page.waitForFunction(()=>window.listingToasts.some(x=>x.kind==="error"&&x.message.includes("Listing changed")));
+    assert.equal((await page.evaluate(()=>window.listingWrites)).length,0,"Delisting rejects an obsolete or mismatched revision");
+    currentRevision=originalRevision;
+  }
 
   await freshPage();
   let release!: () => void;
@@ -118,7 +166,7 @@ try {
     assert.equal((await page.evaluate(()=>window.listingWrites)).length,0,"Foreign server registry must never reach a mainnet wallet");
   }
   assert.deepEqual(errors, []);
-  console.log(`PASS ${profile.name}: creator listing pins wallet/network/registry, distinguishes revert, refuses stale payout and unavailable authority, and stops after wallet changes during refresh. Synthetic wallet; no signing or settlement.`);
+  console.log(`PASS ${profile.name} registry V${registryVersion}: creator listing pins wallet/network/registry/version, distinguishes revert, refuses stale payout and unavailable authority, and stops after wallet changes during refresh.${registryVersion===3?" Exact revision-bound price/delist calls reject stale, missing and malformed revisions or version downgrades.":" Legacy V1 update/delist selectors remain compatible."} Synthetic wallet; no signing or settlement.`);
 } finally { await browser.close(); }
 }
-for(const profile of [ARC_TESTNET_PROFILE,ARC_MAINNET_PROFILE])await exercise(profile);
+for(const profile of [ARC_TESTNET_PROFILE,ARC_MAINNET_PROFILE])for(const version of [1,3] as const)await exercise(profile,version);

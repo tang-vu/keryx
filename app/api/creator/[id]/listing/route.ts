@@ -20,6 +20,7 @@ import { getSession } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { ownsSource } from "@/lib/sources/source-ownership";
 import { getRegistrySource } from "@/lib/registry/registry-client";
+import { getServerRegistryVersion } from "@/lib/registry/registry-version";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,6 +57,13 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     });
   }
 
+  let registryVersion;
+  try {
+    registryVersion = getServerRegistryVersion();
+  } catch {
+    return NextResponse.json({ error: "Listing management requires matching supported registry versions." }, { status: 409 });
+  }
+
   if (!config.registryAddress || config.registryAddress.toLowerCase() !== config.registryReadAddress.toLowerCase()) {
     return NextResponse.json(
       { error: "Listing management requires matching registry read and write addresses." },
@@ -80,6 +88,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       { status: 409 },
     );
   }
+  if (registryVersion !== 1 && (record.registryVersion !== registryVersion || record.revision === undefined || record.revision < BigInt(1))) {
+    return NextResponse.json({ error: "An atomic registry revision is required before listing management." }, { status: 409 });
+  }
 
   // Registration authority is independent of payout/author wallets. Never let a
   // stale cache deny the actual creator or authorize a previous payout recipient.
@@ -95,6 +106,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     onchainId: source.onchainId,
     // Only this wallet's update()/deactivate() will pass the contract's onlyCreator check.
     creator: record.creator,
+    registryVersion,
+    ...(registryVersion === 1 ? {} : { revision: record.revision!.toString() }),
     current: {
       payoutWallet: record.payoutWallet,
       authors: record.authors.map((a) => ({ wallet: a.wallet, basisPoints: a.basisPoints })),

@@ -71,6 +71,27 @@ accuracy and runtime integration remain separate gates. Existing interfaces
 are not retrospectively marked reviewed. No locale is activated by this
 development-only change. See [translation instructions](docs/translation-instructions.md).
 
+**Sponsor creator registration through exact signed authority — 2026-10-09.**
+The owner requested gas sponsorship when creators add sources. V1/V2 registration
+derives ownership from `msg.sender`, so sending that call from a platform wallet
+would transfer source control to the relay. Use an independent V3 candidate with
+EIP-712 creator authorization bound to the exact registry, chain, named relayer,
+source terms, sequential nonce and deadline. Preserve creator ownership, payouts
+and revision-bound later edits through explicit matching V1/V2/V3 adapters.
+Do not delegate an existing wallet account or silently migrate registry authority.
+
+Keep the relay disabled until a finite expiring allowance, dedicated custody,
+funded testnet acceptance and registry cutover are separately authorized and
+accepted. Native SQLite admits the original and maximum gas hold atomically,
+checks the live publishing claim before signing, and serializes creator/sponsor
+nonces. Retain ambiguous signing and submission with their full liability. Only
+an explicitly renewed, conclusively expired unsigned original can create another
+attempt; it retains predecessor history and consumed counts. Browser recovery
+reads the owner's latest original even if a renewal response was lost. Gas costs
+remain separate from creator earnings and settled citation metrics. Supabase and
+non-browser publisher execution are outside this pilot. See the
+[implementation, surface boundaries and remaining gates](docs/creator-registration-sponsorship.md).
+
 **Project obligations before investing Operator float — 2026-10-09.**
 Stage a read-only ownership-scoped projection using the existing complete prepaid
 inventory and original payment, withdrawal, funding and supplier journals. Keep

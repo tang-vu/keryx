@@ -7,6 +7,9 @@ import type { StorageIdentity } from "./storage-identity";
 
 /** Explicit behavior inventory, including verifyApiKey's last-used write. New methods require review. */
 export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
+  admitRegistrationSponsor: "write",
+  getRegistrationSponsor: "read",
+  transitionRegistrationSponsor: "write",
   upsertSource: "write",
   verifySourceIfUnchanged: "write",
   setSourcePreviewDepth: "write",

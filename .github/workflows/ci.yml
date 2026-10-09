@@ -306,6 +306,7 @@ jobs:
           node --import tsx scripts/test-browser-creator-listing.mts
           node --import tsx scripts/test-browser-creator-registration.mts
           node --import tsx scripts/test-browser-creator-onboarding.mts
+          node --import tsx scripts/test-browser-registration-sponsor.mts
 
       - name: Scholarly creator rights (hermetic wallet and HTTP, no settlement)
         run: npm run test:browser-scholarly-rights

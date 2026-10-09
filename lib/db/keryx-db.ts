@@ -206,6 +206,11 @@ export interface FeedbackStats {
 export interface KeryxDB {
   /** Additive ordinary-storage domain. Absent on sealed/native adapters; never restore by fallback. */
   readonly privateProfiles?: PrivateProfilesStore;
+  /** Atomic creator gas originals; absent on storage without a reviewed sponsor journal. */
+  admitRegistrationSponsor?(policy: import("../sources/registration-sponsor-protocol").RegistrationSponsorPolicy,
+    row: import("../sources/registration-sponsor-protocol").SponsoredRegistration, now?: number): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
+  getRegistrationSponsor?(input: { wallet: string; id?: string; canonicalUrl?: string }): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration | null>;
+  transitionRegistrationSponsor?(input: import("./registration-sponsor").RegistrationSponsorTransition): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
   /** Supervised SQLite scholarly pilot capability; absent on unsupported backends. */
   getPaperState?(sourceId: string): Promise<import("../scholarly/rights-protocol").PaperState | null>;
   beginPaperEnrollment?(sourceId: string, creator: string): Promise<void>;

@@ -19,7 +19,9 @@ import { browserPaymentProfile,browserRegistryAddress } from "@/lib/browser-paym
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { parseUnits } from "viem";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
-import { REGISTRY_ABI } from "@/lib/registry/registry-abi";
+import { getBrowserRegistryVersion, type RegistryVersion } from "@/lib/registry/registry-version";
+import { listingPriceCall, listingDeactivateCall } from "@/lib/creator/listing-call";
+import { REGISTRY_ABI, REVISIONED_REGISTRY_ABI } from "@/lib/registry/registry-abi";
 import { parseListingSnapshot, sameListingSnapshot } from "@/lib/creator/listing-snapshot";
 
 interface ListingData {
@@ -29,6 +31,8 @@ interface ListingData {
   registryAddress?: `0x${string}`;
   onchainId?: `0x${string}`;
   creator?: `0x${string}`;
+  registryVersion?: RegistryVersion;
+  revision?: string;
   current?: {
     payoutWallet: `0x${string}`;
     authors: { wallet: `0x${string}`; basisPoints: number }[];
@@ -65,6 +69,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
       if (!res.ok) return; // 401/403/404 → not the owner, stay hidden
       const value = (await res.json()) as ListingData;
       const d = value.mode === "onchain" ? parseListingSnapshot(value) : value;
+      if (d.mode === "onchain" && d.registryVersion !== getBrowserRegistryVersion()) throw new Error("Configured listing registry version differs");
       if(!browserPaymentProfile().testnet&&(d.mode!=="onchain"||d.registryAddress?.toLowerCase()!==browserRegistryAddress().toLowerCase()))throw new Error("Configured listing registry differs");
       setData(d);
       setPrice(String(d.fetchPrice));
@@ -112,6 +117,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
     const fresh = parseListingSnapshot(await res.json());
     if (!owner.active || identity.current !== owner || owner.creatorId !== creatorId
       || owner.chainId !== arcChain.id || owner.connected?.toLowerCase() !== fresh.creator ||
+      fresh.registryVersion !== getBrowserRegistryVersion() ||
       !browserPaymentProfile().testnet&&fresh.registryAddress.toLowerCase()!==browserRegistryAddress().toLowerCase()) {
       throw new Error("Wallet or source changed. Refresh before signing.");
     }
@@ -132,21 +138,11 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
       if (data.mode === "onchain" && data.current && data.registryAddress && data.onchainId) {
         const fresh = await refreshBeforeSigning();
         toast.loading("Waiting for wallet signature…", { id: "listing-tx" });
-        const txHash = await writeContractAsync({
-          account: connected,
-          chainId: arcChain.id,
-          address: fresh.registryAddress,
-          abi: REGISTRY_ABI,
-          functionName: "update",
-          args: [
-            fresh.onchainId,
-            fresh.current.payoutWallet,
-            fresh.current.authors,
-            parsedPriceMicros!,
-            fresh.current.contentCid,
-            fresh.current.tags,
-          ],
-        });
+        const call = listingPriceCall(fresh, parsedPriceMicros!);
+        const wallet = { account: connected, chainId: arcChain.id, address: call.address };
+        const txHash = call.functionName === "updatePrice"
+          ? await writeContractAsync({ ...wallet, abi: call.abi, functionName: call.functionName, args: call.args })
+          : await writeContractAsync({ ...wallet, abi: call.abi, functionName: call.functionName, args: call.args });
         setPendingTx(txHash);
         toast.loading("Price update submitted — confirming…", { id: "listing-tx" });
       } else {
@@ -183,14 +179,11 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
       if (data.mode === "onchain" && data.registryAddress && data.onchainId) {
         const fresh = await refreshBeforeSigning();
         toast.loading("Waiting for wallet signature…", { id: "listing-tx" });
-        const txHash = await writeContractAsync({
-          account: connected,
-          chainId: arcChain.id,
-          address: fresh.registryAddress,
-          abi: REGISTRY_ABI,
-          functionName: "deactivate",
-          args: [fresh.onchainId],
-        });
+        const call = listingDeactivateCall(fresh);
+        const wallet = { account: connected, chainId: arcChain.id, address: call.address };
+        const txHash = call.args.length === 2
+          ? await writeContractAsync({ ...wallet, abi: REVISIONED_REGISTRY_ABI, functionName: "deactivate", args: call.args })
+          : await writeContractAsync({ ...wallet, abi: REGISTRY_ABI, functionName: "deactivate", args: call.args });
         setPendingTx(txHash);
         toast.loading("Delist submitted — confirming…", { id: "listing-tx" });
       } else {
@@ -286,7 +279,9 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
             <details className="mt-4 border-t border-line pt-3 text-ink-3" open={reviewRequired}>
               <summary className="cursor-pointer font-mono text-[11px]">Current registry details</summary>
               {reviewRequired && <p className="mt-2 text-sm text-amber-700">The listing changed. Review these details before choosing your change again.</p>}
-              <p className="mt-2 text-xs">Price updates also submit these fields. Avoid editing this source elsewhere while the wallet prompt is open.</p>
+              <p className="mt-2 text-xs">{data.registryVersion === 2 || data.registryVersion === 3
+                ? "Price updates change only the price. A concurrent edit requires a fresh review before signing."
+                : "Price updates also submit these fields. Avoid editing this source elsewhere while the wallet prompt is open."}</p>
               <dl className="mt-3 space-y-2 break-all font-mono text-[11px]">
                 <div><dt>Payout wallet</dt><dd>{data.current.payoutWallet}</dd></div>
                 <div><dt>Author splits</dt><dd>{data.current.authors.length ? data.current.authors.map((a, i) => (

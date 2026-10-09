@@ -28,6 +28,7 @@ import {
 import { BulkImportForm } from "@/components/keryx/bulk-import-form";
 import { ClaimOnchainPanel } from "@/components/keryx/claim-onchain-panel";
 import { FaucetPanel } from "@/components/keryx/faucet-panel";
+import { RegistrationSponsorLink } from "@/components/keryx/registration-sponsor-link";
 import { WithdrawEarningsPanel } from "@/components/keryx/withdraw-earnings-panel";
 import {
   SourcesList,
@@ -208,6 +209,7 @@ export default function RegisterPage() {
                 </div>
                 {/* Returning creators: pull accrued citation earnings on-chain (gasless). */}
                 {address && <WithdrawEarningsPanel address={address} />}
+                {address && <RegistrationSponsorLink wallet={address} claimId={prefill?.sourceClaimId} />}
                 {/* Sources this wallet listed before the registry existed — one click pre-fills
                     the form below with the source's own feed/URL and price to claim it on-chain. */}
                 {!prefill?.sourceClaimId && <ClaimOnchainPanel
