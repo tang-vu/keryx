@@ -173,11 +173,12 @@ root and refuses the default build before compilation. `next build --webpack`
 may be used here for actual built-route/privacy validation without changing
 project configuration; this is distinct from the required hosted default
 Turbopack build against a physical locked dependency installation. The local
-webpack attempt also stops on a baseline Wagmi/Base Account/Coinbase dependency
-import of missing `@x402/svm/exact/client`, before this candidate's routes can be
+webpack attempt also stops on the reused local Wagmi/Base Account/Coinbase
+dependency tree's import of missing `@x402/svm/exact/client`, before this candidate's routes can be
 built. Neither local build nor the built fixture passed; hosted exact-source CI
 and the built fixture remain open. A webpack result does not satisfy the
-default-build release gate.
+default-build release gate. This local failure does not establish a defect in a
+fresh, pinned physical dependency installation.
 
 The app TypeScript check passed before those build attempts generated route
 validators. The later full check reports baseline `SourcesPage`'s defaulted props
