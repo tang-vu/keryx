@@ -167,6 +167,11 @@ counts and authenticated explicit archived DOM at 320/390/768/1366 pixels. Clean
 requires observed child exit. It creates no grant/payment signature/provider call
 or settlement and cannot certify a funded production review.
 
+The CLI rejects unsupported review intent before importing the agent/provider
+graph. The isolated regression poisons those imports and retains the 10-second
+process limit. Private review responses also keep `no-referrer` at Next's
+configured-header layer, which otherwise overrides Route Handler headers.
+
 Final qualification still requires source-bound focused results, both TypeScript
 graphs, lint, literal-copy guard, actual 48-case study write/check at the changed
 reachable graph, default build, built fixture, independent exact-head review and
