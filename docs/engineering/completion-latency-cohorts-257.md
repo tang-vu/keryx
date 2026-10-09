@@ -98,8 +98,10 @@ adds request-time escalation-needed metadata and a visible customer alert,
 including when an original creator leg remains uncertain. Background delivery,
 staffed escalation, a guaranteed target-window observation, a first-user
 time-to-first-answer measure, and implementation of customer wait/partial/refund
-requests remain open. The confirmed policy refunds an undelivered service fee,
-retaining only pre-disclosed actually settled source costs; manual owner review
-precedes a separately verified refund mechanism. Observation never retries research,
+requests remain open. The [confirmed policy](../research-delivery-remedy-policy.md)
+refunds terminal undelivered prepaid charges less only pre-disclosed, finalized
+irreversible third-party source costs with exact receipts. Pending/unknown movements
+require reconciliation; manual owner review precedes a separately verified refund
+mechanism and prospective terms activation. Observation never retries research,
 signs, purchases, releases a hold, refunds, starts a scheduler or changes the
 original payment/recovery rules.

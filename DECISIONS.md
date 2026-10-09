@@ -6761,9 +6761,14 @@ Dynamic observations stay outside completed retained responses and portable
 receipts, preserving original/native comparison and export authority. There is no
 new timer, scheduler, outbound alert, retry, signature, purchase, hold release or
 refund. Staffed escalation and choice/refund execution remain separate gates.
-The owner-confirmed product direction permits wait, partial delivery or a refund
-request: refund the undelivered service fee and retain only pre-disclosed actually
-settled source costs. Initial manual owner review precedes a verified refund
-mechanism; this alert-only source implements neither requests nor refund authority.
+The owner delegated the remedy choice: permit wait, partial delivery or a refund
+request, and refund the undelivered prepaid charge less only pre-disclosed,
+finally settled irreversible source tolls. The service fee and unused reserves
+are refundable; earned settled creator rewards are not clawed back. Initial
+manual owner review precedes a verified refund mechanism. The prospective
+[delivery and acceptance policy](docs/research-delivery-remedy-policy.md) resolves
+the policy choice for issues250/257 without changing existing accepted packages
+or granting transfer authority. This alert-only source implements neither
+requests nor refunds.
 The [surface contract and remaining gates](docs/engineering/paid-job-overdue-escalation-257.md)
 record this source boundary; issue257 and deployment/distribution acceptance remain open.
