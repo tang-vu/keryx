@@ -32,7 +32,7 @@ export async function GET() {
   const db = await getDb();
   const keys = await db.listApiKeys(session.address);
   // Strip wallet from the returned list — caller knows their own address. Scopes are parsed
-  // rather than echoed raw so a pre-scopes key reads as what it actually is: full power.
+  // rather than echoed raw: pre-scopes keys retain ask/export and gain no private scopes.
   return Response.json(
     keys.map(({ wallet: _w, scopes, sourceIds, ...k }) => ({
       ...k,
@@ -55,8 +55,7 @@ export async function POST(req: NextRequest) {
   };
   const label = typeof body.label === "string" ? body.label.slice(0, 80) : undefined;
 
-  // Least privilege is opt-in: an unspecified request still mints a full-power key, because a
-  // key that can do nothing is a support ticket. The caller narrows deliberately.
+  // Unspecified requests retain historical ask/export. Private-profile scopes are explicit.
   const scopes = normalizeScopes(body.scopes);
   const sourceIds = normalizeSourceIds(body.sourceIds);
 

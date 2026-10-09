@@ -9,11 +9,13 @@
  *  - A key NEVER grants more than its wallet already has. Scopes narrow; they cannot widen.
  *    Source restriction is intersected with live ownership at read time, so a key pinned to a
  *    source the wallet later loses stops returning it.
- *  - Keys minted before scopes existed store NULL and mean "everything". Silently downgrading
- *    them would break integrations that are working today; the owner re-mints to narrow.
+ *  - NULL/default keys retain their historical ask/export rights. New private-profile rights
+ *    require explicit scopes; old keys are neither downgraded nor widened.
  */
 
-export const API_KEY_SCOPES = ["ask", "export"] as const;
+/** Historical implicit rights stay fixed. Private-profile access is always an explicit opt-in. */
+export const LEGACY_API_KEY_SCOPES = ["ask", "export"] as const;
+export const API_KEY_SCOPES = [...LEGACY_API_KEY_SCOPES, "profile:read", "profile:write"] as const;
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
 
 export function isApiKeyScope(value: unknown): value is ApiKeyScope {
@@ -22,20 +24,19 @@ export function isApiKeyScope(value: unknown): value is ApiKeyScope {
 
 /**
  * Scopes requested at mint time → the set to store.
- * Unknown entries are dropped. An empty or absent request means all scopes: a key that can do
- * nothing is a support ticket, not a security win.
+ * Unknown entries are dropped. Empty/absent requests retain historical ask/export defaults.
  */
 export function normalizeScopes(requested: unknown): ApiKeyScope[] {
-  if (!Array.isArray(requested)) return [...API_KEY_SCOPES];
+  if (!Array.isArray(requested)) return [...LEGACY_API_KEY_SCOPES];
   const kept = API_KEY_SCOPES.filter((s) => requested.includes(s));
-  return kept.length > 0 ? kept : [...API_KEY_SCOPES];
+  return kept.length > 0 ? kept : [...LEGACY_API_KEY_SCOPES];
 }
 
-/** Stored column → scopes. NULL/blank = a pre-scopes key = every scope. */
+/** NULL/blank/unknown-only legacy rows retain ask/export, never new private scopes. */
 export function parseScopes(stored: string | null | undefined): ApiKeyScope[] {
-  if (!stored) return [...API_KEY_SCOPES];
+  if (!stored) return [...LEGACY_API_KEY_SCOPES];
   const parts = stored.split(",").map((s) => s.trim()).filter(isApiKeyScope);
-  return parts.length > 0 ? parts : [...API_KEY_SCOPES];
+  return parts.length > 0 ? parts : [...LEGACY_API_KEY_SCOPES];
 }
 
 export function serializeScopes(scopes: ApiKeyScope[]): string {

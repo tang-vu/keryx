@@ -1,4 +1,6 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
+import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
+import { PrivateProfileError, type PrivateProfilesStore } from "../profiles/private-profile";
 import { readSqliteOperatorInventory, type OperatorInventoryInput } from "../business-operator/inventory";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
@@ -127,6 +129,7 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 
 export class SqliteAdapter implements KeryxDB {
+  declare readonly privateProfiles?: PrivateProfilesStore;
   private db: DatabaseSync;
   private enrolledMode?: StorageIdentity["authorityMode"];
   private enrolledIdentity?: Readonly<StorageIdentity>;
@@ -188,6 +191,14 @@ export class SqliteAdapter implements KeryxDB {
     assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installOrdinarySqliteApplicationSchema(this.db);
+    if (!this.privateProfiles) {
+      try { Object.defineProperty(this, "privateProfiles", { value: createSqlitePrivateProfiles(this.db) }); }
+      catch (error) {
+        // An unknown optional profile schema disables that domain without repairing it
+        // or taking existing ordinary research/account/payment reads offline.
+        if (!(error instanceof PrivateProfileError && error.code === "profile_unavailable")) throw error;
+      }
+    }
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
     // value before verification. Remove those legacy counters during every startup so the live DB
     // and every restored snapshot converge back to the documented hash-only secret invariant.

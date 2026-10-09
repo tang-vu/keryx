@@ -11,6 +11,7 @@ import { paperOpenApiPaths, paperOpenApiSchemas } from "./papers/openapi";
 import { operatorStatusOpenApiPath } from "./business-operator/openapi";
 import { monthlyOpenApiPath } from "./monthly/openapi";
 import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
+import { privateProfileOpenApiPaths } from "./profiles/openapi";
 import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
@@ -65,8 +66,8 @@ export const openapiSpec = {
         description:
           "Wallet-issued API key (`kx_live_…`). Mint at `/api/keys` after SIWE sign-in. " +
           "Still requires `payment-signature` — key is identity + rate-limit only. Keys carry " +
-          "scopes (`ask`, `export`); calling outside a key's scopes returns 403. Keys minted " +
-          "before scopes existed carry all of them.",
+          "scopes (`ask`, `export`, explicit `profile:read`/`profile:write`); calling outside a key's scopes returns 403. " +
+          "Historical/default keys retain ask/export and never gain private-profile rights. Profile operations require no payment signature.",
       },
       X402Payment: {
         type: "apiKey",
@@ -606,6 +607,7 @@ export const openapiSpec = {
     },
   },
   paths: {
+    ...privateProfileOpenApiPaths,
     ...paperOpenApiPaths,
     ...sourceClaimOpenApiPaths,
     "/api/source/{id}": {

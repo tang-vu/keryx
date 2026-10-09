@@ -19,11 +19,16 @@ import { assertOrdinaryResearchAvailable, readResearchAvailability } from "../re
 import { researchAdmissionError } from "../research/availability-contract";
 import { createPaperLookupHandler, paperLookupToolOptions } from "../papers/lookup";
 import { readHostedPaperLookup } from "../papers/hosted-lookup";
+import { registerProfileTools } from "../profiles/profile-mcp";
+import { requirePrivateProfiles } from "../profiles/private-profile";
+import type { ApiKeyScope } from "../api-key-scopes";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
   /** Wallet from a verified Keryx API key. Anonymous MCP clients leave this absent. */
   actor?: string;
+  /** Explicit verified-key scopes only; actor alone never authorizes profile access. */
+  profileScopes?: ApiKeyScope[];
   /** Self-declared setup URL channel. Telemetry only; never identity or payment authority. */
   clientChannel: McpClientChannel;
   /** Request-bound metadata admission identity and cancellation; never payment authority. */
@@ -92,6 +97,10 @@ export function createRemoteMcpServer(
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
+  const profileStore = async (scope: "profile:read" | "profile:write") => {
+    if (!access.actor || !access.profileScopes?.includes(scope)) throw new Error("Explicit profile scope required");
+    return requirePrivateProfiles(await getDb());
+  };
 
   server.registerTool("paper_lookup", paperLookupToolOptions,
     createPaperLookupHandler(input => readHostedPaperLookup(input, access.paperCaller ?? "unknown", access.signal)));
@@ -192,5 +201,9 @@ export function createRemoteMcpServer(
 
   registerMonthlyDiscovery(server, async () => process.env.KERYX_MONTHLY_ENABLED === "1" ? quoteResearchMonthly() : null);
   registerOperatorDiscovery(server, async () => readOperatorStatus(await getDb(), config.networkId));
+  registerProfileTools(server, {
+    read: async () => (await profileStore("profile:read")).get(access.actor!, config.networkId),
+    update: async input => ({ profile: await (await profileStore("profile:write")).update(access.actor!, input) }),
+  });
   return server;
 }

@@ -68,6 +68,17 @@ the `/mcp` route and registry `remotes` entry; existing `mcp` rows remain readab
 
 ## Client configuration
 
+### Private-profile source capability
+
+`profile_read()` requires an explicitly selected `profile:read` key;
+`profile_update(profile)` requires `profile:write`. Write does not imply read.
+Profile-only keys cannot run research, including mixed batches. Historical/default
+keys retain ask/export and gain no private-profile access. Tool arguments never
+select a wallet. This additive ordinary-storage capability remains unavailable on
+the current sealed/native production store until its own reviewed migration and
+deployed acceptance; no REST fallback or payment is performed. See
+[private-profile contracts and remaining gates](engineering/private-profiles-2026-10-09.md).
+
 Use `https://keryx.cc/mcp` as a Streamable HTTP server URL. For copy-ready setup and a live
 connection check, open [`https://keryx.cc/integrations/mcp`](https://keryx.cc/integrations/mcp).
 

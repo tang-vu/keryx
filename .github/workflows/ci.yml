@@ -72,6 +72,10 @@ jobs:
         if: needs.scope.outputs.scope == 'full'
         run: npm run typecheck
 
+      - name: Private profiles PostgreSQL ownership, collision and privacy acceptance
+        if: needs.scope.outputs.scope == 'full'
+        run: node --import tsx scripts/test-private-profiles-postgres.mts
+
       - name: Engineering feed integrity (no settlement)
         run: node --import tsx scripts/build-engineering-feed.mts --check
 
@@ -231,6 +235,7 @@ jobs:
           npm --prefix mcp run build
           node --import tsx scripts/test-monthly-mcp-package.mts
           node --import tsx scripts/test-paper-lookup-mcp-package.mts
+          node --import tsx scripts/test-private-profiles-mcp-package.mts
 
       - name: Packed stdio research diagnostics, signing and recovery (synthetic)
         working-directory: mcp
@@ -430,6 +435,9 @@ jobs:
 
       - name: Business Operator production page (offline Chromium, synthetic status)
         run: node --import tsx scripts/test-browser-operator-business.mts
+
+      - name: Private profile UI (production CSS, synthetic owner sessions, no outbound requests)
+        run: node --import tsx scripts/test-browser-private-profiles.mts
 
       - name: Report feedback confirmation and response races (built CSS, hermetic Chromium)
         env:
