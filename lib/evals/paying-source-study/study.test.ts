@@ -50,6 +50,12 @@ describe("controlled study retained inputs and exact accounting", () => {
     const wrong = structuredClone(raw); wrong.questions[0].facts[0].literal = "Unretained fact.";
     expect(() => parseCorpus(wrong)).toThrow("Required fact");
   });
+  it("refuses an undeclared free/paid split or duplicated fact rubric", () => {
+    const split = structuredClone(raw); split.questions[0].documents[1].free = true;
+    expect(() => parseCorpus(split)).toThrow("fixed study design");
+    const duplicate = structuredClone(raw); duplicate.questions[0].facts[1].literal = duplicate.questions[0].facts[0].literal;
+    expect(() => parseCorpus(duplicate)).toThrow("fixed study design");
+  });
   it("measures a genuine changed required fact only after rebinding retained bytes", () => {
     const changed = structuredClone(raw); const q = changed.questions[0];
     const doc = q.documents[0]; doc.body = doc.body.replace("42", "43");

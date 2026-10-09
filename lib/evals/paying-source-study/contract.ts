@@ -12,7 +12,7 @@ const documentSchema = z.object({ id, name: text, title: text, summary: text,
   body: text, free: z.boolean(), bodyHash: z.string().regex(/^0x[0-9a-f]{64}$/),
   contentVersion: z.string().regex(/^sha256:[0-9a-f]{64}$/) }).strict();
 const questionSchema = z.object({ id, question: text, description: text,
-  facts: z.array(z.object({ id, literal: text, documentIds: z.array(id).min(1).max(4) }).strict()).min(1).max(6),
+  facts: z.array(z.object({ id, literal: text, documentIds: z.array(id).min(1).max(4) }).strict()).length(2),
   documents: z.array(documentSchema).length(4) }).strict();
 const corpusSchema = z.object({ version: z.literal(1), provenance: z.literal("fictional-public-synthetic-fixture"),
   questions: z.array(questionSchema).length(4) }).strict();
@@ -65,6 +65,8 @@ export function parseCorpus(raw: unknown): StudyCorpus {
     const docs = new Map(question.documents.map(doc => [doc.id, doc]));
     if (docs.size !== question.documents.length || new Set(question.facts.map(f => f.id)).size !== question.facts.length)
       throw new Error("Duplicate fixture identity");
+    if (question.documents.filter(doc => doc.free).length !== 1 || new Set(question.facts.map(f => f.literal)).size !== 2
+      || question.facts.some(f => new Set(f.documentIds).size !== f.documentIds.length)) throw new Error("Fixture differs from fixed study design");
     for (const doc of question.documents) {
       if (doc.bodyHash !== `0x${sha256(doc.body)}` || doc.contentVersion !== retainedVersion(retainedItem(question.id, doc)))
         throw new Error("Retained source version mismatch");

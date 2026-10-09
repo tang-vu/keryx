@@ -15,7 +15,7 @@ const args = process.argv.slice(2);
 if (args.length !== 1 || !["--check", "--write", "--internal-worker"].includes(args[0]))
   throw new Error("Use --check or --write; no provider, private input or payment options are accepted");
 function readCorpus() {
-  if (fs.statSync(corpusPath).size > 128 * 1024) throw new Error("Controlled study corpus exceeds128KiB bound");
+  if (fs.statSync(corpusPath).size > 128 * 1024) throw new Error("Controlled study corpus exceeds 128 KiB bound");
   return parseCorpus(JSON.parse(fs.readFileSync(corpusPath, "utf8")));
 }
 
