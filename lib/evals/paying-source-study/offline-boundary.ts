@@ -31,10 +31,11 @@ export function denyOutbound(): { attempts(): number } {
   globalThis.fetch = async () => deny();
   globalThis.WebSocket = class { constructor() { deny(); } } as unknown as typeof WebSocket;
   const require = createRequire(import.meta.url);
-  for (const [module, methods] of [["node:http", ["request", "get"]], ["node:https", ["request", "get"]],
-    ["node:net", ["connect", "createConnection"]], ["node:tls", ["connect"]], ["node:dgram", ["createSocket"]],
-    ["node:child_process", ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"]]] as const) {
-    const api = require(module) as Record<string, unknown>;
+  // Keep each builtin edge literal so the authority scanner can inspect the
+  // whole library without relaxing its refusal of computed module loading.
+  for (const [api, methods] of [[require("node:http"), ["request", "get"]], [require("node:https"), ["request", "get"]],
+    [require("node:net"), ["connect", "createConnection"]], [require("node:tls"), ["connect"]], [require("node:dgram"), ["createSocket"]],
+    [require("node:child_process"), ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"]]] as const) {
     for (const method of methods) api[method] = deny;
   }
   const net = require("node:net") as typeof import("node:net");
