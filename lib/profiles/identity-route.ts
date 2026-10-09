@@ -12,6 +12,7 @@ interface Dependencies {
   key(raw: string): Promise<{ walletAddress: string; scopes: string | null; keyId: string } | null>;
   db(): Promise<KeryxDB>;
   provider(provider: IdentityProvider): ProviderConfiguration | null;
+  applicationOrigin: string | undefined;
   secret: string;
   now?: () => number;
   exchange?: (config: ProviderConfiguration, input: { code: string; codeVerifier?: string }) => Promise<ProviderIdentity>;
@@ -26,15 +27,25 @@ function safeResponse(response: Response): Response {
   response.headers.set("Referrer-Policy", "no-referrer");
   return response;
 }
+/** Server configuration only. Never infer browser authority from Next's internal URL or proxy headers. */
+function configuredApplicationOrigin(value: string | undefined): string | null {
+  try {
+    if (!value || value.length > 2048) return null;
+    const url = new URL(value);
+    return url.protocol === "https:" && url.origin === value ? value : null;
+  } catch { return null; }
+}
 /** OAuth grants identity only. Neither provider ID nor a typed link can create payment/login/creator authority. */
 export function createIdentityRoutes(deps: Dependencies) {
   const now = deps.now ?? Date.now;
+  const applicationOrigin = configuredApplicationOrigin(deps.applicationOrigin);
   const session = async (request: Request, write: boolean) => {
     if (request.headers.has("authorization")) return authJson({ error: "interactive_session_required" }, 403);
     const expected = request.headers.get("x-keryx-expected-wallet");
     if (expected !== null && !/^0x[0-9a-fA-F]{40}$/.test(expected)) return authJson({ error: "invalid_owner_precondition" }, 400);
     if (write) {
-      if (request.headers.get("origin") !== new URL(request.url).origin) return authJson({ error: "same_origin_required" }, 403);
+      if (!applicationOrigin) return authJson({ error: "identity_unavailable" }, 503);
+      if (request.headers.get("origin") !== applicationOrigin) return authJson({ error: "same_origin_required" }, 403);
       if (expected === null) return authJson({ error: "owner_precondition_required" }, 428);
     }
     const context = await deps.session();
@@ -76,7 +87,8 @@ export function createIdentityRoutes(deps: Dependencies) {
         if (context instanceof Response) return safeResponse(context);
         const store = requireProfileIdentities(context.db);
         const config = deps.provider(parsed.data);
-        if (!config || deps.secret.length < 32 || new URL(config.redirectUri).origin !== new URL(request.url).origin) throw new ProfileIdentityError("identity_unavailable");
+        if (!applicationOrigin || !config || deps.secret.length < 32 || config.provider !== parsed.data
+          || config.redirectUri !== `${applicationOrigin}/api/me/profile/identities/${parsed.data}/callback`) throw new ProfileIdentityError("identity_unavailable");
         const { state, flow, codeChallenge } = newIdentityFlow(context.wallet, context.currentId, parsed.data, now());
         const token = await sealIdentityFlow(flow, deps.secret, now());
         const url = authorizationUrl(config, state, codeChallenge);
@@ -104,9 +116,11 @@ export function createIdentityRoutes(deps: Dependencies) {
       let result: "verified" | "conflict" | "failed" = "failed";
       let returnOrigin: string | undefined;
       try {
+        if (!applicationOrigin) throw new ProfileIdentityError("identity_unavailable");
         const config = deps.provider(provider.data);
-        if (!config || new URL(request.url).origin !== new URL(config.redirectUri).origin) throw new ProfileIdentityError("identity_unavailable");
-        returnOrigin = new URL(config.redirectUri).origin;
+        if (!config || config.provider !== provider.data
+          || config.redirectUri !== `${applicationOrigin}/api/me/profile/identities/${provider.data}/callback`) throw new ProfileIdentityError("identity_unavailable");
+        returnOrigin = applicationOrigin;
         const url = new URL(request.url);
         if (url.search.length > 4096 || [...url.searchParams.keys()].some(key => !["code", "state", "error", "error_description", "error_uri"].includes(key))
           || [...new Set(url.searchParams.keys())].some(key => url.searchParams.getAll(key).length !== 1)) throw new ProfileIdentityError("identity_expired");

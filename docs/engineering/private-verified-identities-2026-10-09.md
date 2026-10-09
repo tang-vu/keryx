@@ -11,10 +11,15 @@ existing rate/allowance limits remain authoritative.
 
 Only interactive active SIWE can start OAuth or use the individual unlink endpoint, through body/query-free
 same-origin POST/DELETE with a comparison-only expected-wallet header. The saved
-profile must already exist. The fixed operator-configured HTTPS origin selects
-registered callbacks; request Host, profile links and supplied selectors do not.
-Configuration is disabled when credentials/origin or the required storage port is
-absent. Client secrets stay in environment only.
+profile must already exist. The exact HTTPS origin in server `BASE_URL` is the
+application authority for mutation Origin checks and the fixed callback return.
+Next may expose an internal HTTP request URL behind a proxy; that URL, request
+Host, forwarding headers, profile links and supplied selectors never select this
+authority. OAuth admission additionally requires `KERYX_IDENTITY_OAUTH_ORIGIN`
+to match `BASE_URL`, the exact provider callback path, credentials and the required
+storage port. Missing or malformed configuration fails closed. Removing provider
+credentials disables linking but leaves authenticated unlink available with the
+configured application origin. Client secrets stay in environment only.
 
 Each flow has a fresh 256-bit state and a five-minute encrypted purpose-specific
 HttpOnly Secure SameSite=Lax cookie. Ordinary storage holds only its hash, hashed
@@ -67,7 +72,13 @@ uses the existing wallet-keyed private profile.
 
 Focused route/state/provider tests cover minimal scopes, expiry/replay, owner/session
 switches, unlink races, provider failure/oversize/redirect refusal and no secret
-redirects. Temporary ordinary SQLite and isolated PostgreSQL acceptance cover
+redirects. Internal-URL/proxy-header route regressions cover public-origin admission
+and foreign-origin refusal before dependency access. The synthetic built-server
+fixture uses the candidate's default production output, no owner session/provider
+grant, and an owned temporary ordinary testnet SQLite database for Next's boot
+schema and empty-grant housekeeping. Identity/profile/session/challenge tables
+remain empty; it does not qualify live provider or production activation.
+Temporary ordinary SQLite and isolated PostgreSQL acceptance cover
 atomic uniqueness, lineage/session/privacy and migration ACLs. Hermetic actual
 components with built CSS and packed stdio client fixtures cover surface roles;
 synthetic identities never establish live provider/production acceptance.

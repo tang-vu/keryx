@@ -65,7 +65,7 @@ describe("terminal source-selection failure on hosted callers", () => {
     expect(packets.map(packet => packet.event)).toEqual(["meta", "step", "error"]);
     expect(packets[2].data).toEqual({ message: expect.any(String), code: "research_source_selection_invalid", selectionDiagnostic: diagnostic });
     expect(packets[2].data.message).toContain("2,048-token output limit");
-    expect(wire).not.toMatch(/503|saved evidence/);
+    expect(packets[2].data.message).not.toMatch(/503|saved evidence/);
     expect(mocks.runAgent).toHaveBeenCalledOnce();
     expect(mocks.runAgent.mock.calls[0][0].question).toBe(SQLITE_SELECTION_QUESTION);
     expect(mocks.saveQueryRun).not.toHaveBeenCalled();
@@ -84,16 +84,22 @@ describe("terminal source-selection failure on hosted callers", () => {
   });
 
   it("OpenAI started streams attach error diagnostics without completion metadata or DONE", async () => {
-    const response = await completion(completionRequest(true));
-    expect(response.status).toBe(200);
-    const wire = await response.text();
-    const packets = wire.trim().split("\n\n").map(packet => JSON.parse(/^data: (.+)$/m.exec(packet)![1]));
-    expect(packets.at(-1).keryx_error).toEqual({ code: "research_source_selection_invalid", selectionDiagnostic: diagnostic });
-    expect(packets.every(packet => packet.choices[0].finish_reason === null && packet.keryx === undefined)).toBe(true);
-    expect(wire).not.toContain("data: [DONE]");
-    expect(wire).toContain("2,048-token output limit");
-    expect(wire).not.toMatch(/503|saved evidence/);
-    expect(mocks.collectRun).toHaveBeenCalledOnce();
+    const completionId = "f6260338-7445-4d3e-ab3c-5030719b21e0";
+    const uuid = vi.spyOn(crypto, "randomUUID").mockReturnValue(completionId);
+    try {
+      const response = await completion(completionRequest(true));
+      expect(response.status).toBe(200);
+      const wire = await response.text();
+      const packets = wire.trim().split("\n\n").map(packet => JSON.parse(/^data: (.+)$/m.exec(packet)![1]));
+      expect(packets.every(packet => packet.id === `chatcmpl-${completionId}`)).toBe(true);
+      expect(packets.at(-1).keryx_error).toEqual({ code: "research_source_selection_invalid", selectionDiagnostic: diagnostic });
+      expect(packets.every(packet => packet.choices[0].finish_reason === null && packet.keryx === undefined)).toBe(true);
+      expect(wire).not.toContain("data: [DONE]");
+      const content = packets.map(packet => packet.choices[0].delta.content ?? "").join("");
+      expect(content).toContain("2,048-token output limit");
+      expect(content).not.toMatch(/503|saved evidence/);
+      expect(mocks.collectRun).toHaveBeenCalledOnce();
+    } finally { uuid.mockRestore(); }
   });
 
   it("remote MCP retains isError plus exportable diagnostic text without a completed result", async () => {

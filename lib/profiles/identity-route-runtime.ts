@@ -6,4 +6,4 @@ import { identityProviderConfiguration } from "./identity-flow";
 import { createIdentityRoutes } from "./identity-route";
 
 export const identityRoutes = createIdentityRoutes({ session: accountSessionContext, key: verifyApiKey, db: getDb,
-  provider: provider => identityProviderConfiguration(provider, process.env), secret: config.jwtSecret });
+  provider: provider => identityProviderConfiguration(provider, process.env), applicationOrigin: config.baseUrl, secret: config.jwtSecret });

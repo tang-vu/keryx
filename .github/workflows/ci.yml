@@ -413,6 +413,9 @@ jobs:
       - name: Build (Next.js)
         run: npm run build
 
+      - name: Private identity configured Origin behind Next proxy (built, synthetic pre-auth)
+        run: node --import tsx scripts/test-server-profile-identities-origin.mts
+
       - name: Empty evidence (actual minified production orchestrator, no network)
         run: npm run test:built-empty-evidence
 
