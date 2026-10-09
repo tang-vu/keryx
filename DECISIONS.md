@@ -43,6 +43,26 @@ and document its hosted-only role. Metadata alignment is not publication,
 installation, production storage activation or another application deployment.
 See [surface parity](docs/surface-parity.md).
 
+**Keep delegated obligation inspection separate from custody — 2026-10-09.**
+Stage exact bounded accounting under issue258 without a transaction adapter.
+Count one Arc wallet native/ERC20 balance, round gas up, keep full uncertain
+originals and require explicit compatible inclusion before removing duplicate
+holds. Missing/partial/stale/foreign history, absent policy or unresolved overlap
+refuses surplus. Complete offline fixture arithmetic is an estimate, not native
+cash or spending authority; no complete native port is introduced.
+
+Add disabled private API/CLI/remote/stdio inspection only for BOTH an explicitly
+operator:read-scoped bearer and exact protected server-delegated reader/role.
+Existing auth lookup/last-used precedes this decision; new inspection hydration
+uses only the selected read-only enrolled SQLite facade after authorization.
+The reader is separate from custody wallet/signing policy. Configuration changes
+are rechecked before delivery. Public status privacy and all financial authority
+remain unchanged. Current aggregate books are partial, so native results always
+stay unknown with zero safe/advisory surplus. No funding, Earn, CCTP, refund,
+release, scheduler or new authority enrollment. Supported roles, result bounds
+and remaining funded/release gates are in the
+[source contract](docs/engineering/operator-obligation-projection-258.md).
+
 ## Batch issue outcomes before one deployment — owner decision, 2026-10-09
 
 When one task spans several issues or PRs, finish the agreed implementation

@@ -15,6 +15,13 @@ owner's October9 merge-before-CI instruction leaves exact-main CI, packed-packag
 acceptance, npm/Registry integrity and hosted/deployed readback as release gates.
 The dated candidate and publication records below remain historical.
 
+The [Operator obligation source candidate](engineering/operator-obligation-projection-258.md)
+adds the same delegated read-only tool/client to hosted and built stdio. Source and
+hermetic transport evidence are distinct from deployed commit, npm publication and
+installed package versions. Its new `operator:read` scope requires exact protected
+server reader delegation; it grants no wallet/custody/execution role. Keep production
+and package release identities unclaimed until the coordinated release verifies them.
+
 The [personal history source candidate](engineering/personal-history-read-2026-10-09.md)
 adds key-only `history_read` to both transports. Built fixture acceptance does not
 establish npm publication or adoption of the ordinary SQL read port in production.

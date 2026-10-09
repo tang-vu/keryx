@@ -13,6 +13,10 @@ them. Stage deterministic accounting and refusal scenarios before introducing an
 transaction adapter. Defer Earn deposits, USYC subscriptions, CCTP sweeps and any
 new recurring executor until separate authorization and acceptance.
 
+The subsequent [read-only projection source candidate](engineering/operator-obligation-projection-258.md)
+implements bounded deterministic accounting and explicitly partial delegated native
+inspection. It does not change the dated evaluation or satisfy funded acceptance.
+
 No demonstrated surplus, net return, eligible treasury entity, selected vault
 liquidity or cross-chain revenue inventory has been established here. Useful paid
 research and recovery remain the product priority in the

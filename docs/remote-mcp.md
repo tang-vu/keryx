@@ -7,6 +7,14 @@ existing API paths, A2A package and original payment/receipt protocols retain th
 contracts. See [surface parity](surface-parity.md); source versions do not establish
 hosted deployment, npm publication or activation of unsupported storage ports.
 
+The [Operator obligation source candidate](engineering/operator-obligation-projection-258.md)
+adds `operator_obligations_read()` to remote/stdio transports. It requires both an
+explicit `operator:read` key and exact protected server reader/role delegation.
+No caller selects custody. Partial native books remain unknown with zero safe/advisory
+surplus; no payment, wallet, refund or scheduler authority. Disabled configuration
+stays closed. Publication, installed versions and complete native/funded acceptance
+remain separate gates.
+
 The [private evidence-draft source candidate](evidence-drafts.md) adds stateless
 `evidence_draft(draft)`, sharing the browser/API version-1 contract. It processes
 caller-supplied retained report rows and Include records without retrieving private

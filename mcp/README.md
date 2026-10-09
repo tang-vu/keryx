@@ -9,6 +9,14 @@ recovery contracts remain unchanged. Publication, installed-client acceptance an
 hosted activation are separate gates; see the
 [distribution record](https://github.com/tang-vu/keryx/blob/main/docs/mcp-distribution.md).
 
+Source candidate: `operator_obligations_read()` uses an explicit `operator:read`
+`KERYX_API_KEY` belonging to the exact server-delegated reader. Server configuration
+selects custody role; the caller cannot choose owner, signer or snapshot. It makes
+one HTTPS private inspection call without wallet initialization/research/payment.
+Native history remains partial/unknown with zero safe/advisory surplus. This does
+not establish installed/published delivery or permission to move funds. See the
+[contract and gates](../docs/engineering/operator-obligation-projection-258.md).
+
 Source candidate: `history_read` reads bounded ordinary current-store summaries for
 the verified `KERYX_API_KEY` wallet with explicit `history:read`. It needs no payment
 signer and accepts no wallet or network selector. Search is literal and case sensitive;
