@@ -6,6 +6,7 @@
   },
   "include": [
     "scripts/grade-retained-deliverables.mts",
+    "scripts/test-private-bibliography-built.mts",
     "scripts/test-private-profiles-postgres.mts",
     "scripts/test-browser-private-profiles.mts",
     "scripts/test-private-profiles-mcp-package.mts",

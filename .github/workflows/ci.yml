@@ -414,6 +414,9 @@ jobs:
       - name: Build (Next.js)
         run: npm run build
 
+      - name: Private bibliography snapshots (built routes, isolated SQLite and synthetic sessions)
+        run: node --import tsx scripts/test-private-bibliography-built.mts
+
       - name: Empty evidence (actual minified production orchestrator, no network)
         run: npm run test:built-empty-evidence
 

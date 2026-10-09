@@ -42,7 +42,7 @@ const names: BibliographicFieldName[] = ["title", "firstAuthor", "identifier", "
  * settlement, full-text assertion or scientific finding is generated. */
 export function bibliographicOriginalDeliverable(record: BibliographicOriginalRecord) {
   const l = labels[record.requested.language], papers = record.paper ? [record.paper] : [];
-  const bibtex = paperReferencesBibtex(papers), ris = paperReferencesRis(papers);
+  const bibtex = paperReferencesBibtex(papers, "legacy-ordinal"), ris = paperReferencesRis(papers);
   const value = (field: BibliographicField) => field.state === "observed" ? field.value : field.state === "conflict" ? l.conflict
     : field.reason === "over-bound" ? l.bound : field.reason === "read-unavailable" ? l.unavailable : field.reason === "not-visible" ? l.hidden : l.absent;
   const lines = [l.scope, ...names.map(name => `${l[name]}: ${value(record.fields[name])}.`), l.peer,

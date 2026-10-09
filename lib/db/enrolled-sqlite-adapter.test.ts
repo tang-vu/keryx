@@ -97,6 +97,7 @@ it("private-profile capability is absent on the actual enrolled facade and refus
   const prepare = vi.spyOn(DatabaseSync.prototype, "prepare"), exec = vi.spyOn(DatabaseSync.prototype, "exec");
   try {
     expect(Object.hasOwn(adapter, "privateProfiles")).toBe(false);
+    expect(Object.hasOwn(adapter, "privateBibliographies")).toBe(false);
     expect(() => requirePrivateProfiles(adapter)).toThrow("profile_unavailable");
     expect(prepare).not.toHaveBeenCalled(); expect(exec).not.toHaveBeenCalled();
   } finally { prepare.mockRestore(); exec.mockRestore(); }
