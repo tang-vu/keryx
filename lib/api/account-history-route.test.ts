@@ -7,6 +7,8 @@ import { SqliteAdapter } from "../db/sqlite-adapter";
 import { issueWebSession, parseWebSession, webSessionHash } from "../auth-session";
 import type { A2aOrder } from "../a2a/order";
 import { encodeHistoryCursor } from "../a2a/account-history";
+import { a2aResearchPackage } from "../a2a/research-package";
+import { accountHistorySchema } from "../a2a/account-history-types";
 
 const mocks = vi.hoisted(() => ({ cookies: vi.fn(), db: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
@@ -77,4 +79,27 @@ it("keeps failed, queued, processing and review-needed orders visible even witho
   const body = await (await read(token)).json();
   expect(body.jobs.map((row: { status: string }) => row.status).sort()).toEqual(["failed", "processing", "queued", "review_required"]);
   expect(body.jobs.find((row: { status: string }) => row.status === "failed").question).toBeNull();
+});
+
+it("shows original owner references and overdue uncertainty using read-only evidence, without clearing expired legs", async () => {
+  const owner = `0x${"d".repeat(40)}`, original = { ...order(257, owner), researchMode: "quick" as const,
+    researchPackage: a2aResearchPackage("quick"), request: { question: "Owner only", origin: "a2a" as const, network: "eip155:5042002" },
+    startedAt: "2026-09-09T00:00:01.000Z", paymentStartedAt: "2026-09-09T00:00:02.000Z", updatedAt: "2026-09-09T00:00:02.000Z" };
+  await db.createA2aOrder(original);
+  const leg = { id: "private-leg", kind: "fetch" as const, queryId: original.id, sourceId: "private-source", sourceName: "Private source",
+    payer: foreign, payee: wallet, amountUsdc: 0.000001, network: "eip155:5042002", settled: false, settlementStatus: "pending" as const,
+    authorizationId: "private-creator-nonce", authorizationExpiresAt: "2026-09-09T00:00:03.000Z", createdAt: original.paymentStartedAt };
+  const attempts = vi.spyOn(db, "listCreatorPaymentAttemptsByQuery").mockResolvedValue([leg]);
+  const write = vi.spyOn(db, "recordPayment"), complete = vi.spyOn(db, "completeA2aOrder");
+  const { token } = await issueWebSession(db, secret, owner, "asker");
+  const packet = accountHistorySchema.parse(await (await read(token)).json());
+  expect(packet.jobs[0]).toMatchObject({ id: original.id, escalation: { state: "overdue", escalationNeeded: true,
+    creatorPaymentState: "pending_recorded", lastRecordedStage: "creator_payment_boundary" },
+    originalPayment: { reference: "synthetic-transaction", network: "eip155:5042002", asset: "USDC", amountMicros: "50000" } });
+  expect(JSON.stringify(packet)).not.toMatch(/private-leg|private-source|private-creator-nonce|synthetic-private-worker|synthetic-authorization/);
+  expect(attempts).toHaveBeenCalledExactlyOnceWith(original.id);
+  expect(write).not.toHaveBeenCalled(); expect(complete).not.toHaveBeenCalled();
+  expect(await db.getA2aOrder(original.id)).toEqual(original);
+  attempts.mockRejectedValue(new Error("unsupported read"));
+  expect((await (await read(token)).json()).jobs[0].escalation).toMatchObject({ state: "overdue", creatorPaymentState: "payment_boundary_crossed" });
 });

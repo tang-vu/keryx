@@ -223,6 +223,19 @@ official Product Hunt badge after homepage research controls so the mobile actio
 remains visible. Source inclusion and a launch link do not establish useful live
 research, independent adoption or real payment traction.
 
+# 2026-10-09 — Count ordinary English word limits after complete delivery
+
+An ordinary RFC answer retained its three facts but exceeded the requested 180 words
+with 296 tokens of repeated scaffolding. Apply a finite explicit caller word budget
+only to final ordinary English delivery, after unchanged attribution/settlement.
+Keep every checked sentence/excerpt/marker, evidence gap, full confidence reason,
+source status, operational notice and receipt/payment limitation. Select a compact
+scaffolding projection only when the entire answer fits; otherwise retain full
+content with an explicit unmet-limit notice. Private/retained, bounded packages,
+decision briefs and teaching policies stay unchanged. Historical failures and
+semantic/live acceptance remain open. See
+[scope and gates](docs/engineering/ordinary-word-budget-2026-10-09.md).
+
 **Retain ordinary presentation without weakening grounded delivery — 2026-10-08.**
 Derive supported language and compact layout from the trusted original caller,
 before sentence review. Group source-bound sentence/excerpt pairs by their shared
@@ -6764,15 +6777,28 @@ profile snapshot contracts stay unchanged. Public-profile integration, reviewed
 sealed activation and live provider acceptance remain open, with current main
 freeze and combined exact-source release/distribution gates authoritative. See
 [the implementation contract](docs/engineering/private-verified-identities-2026-10-09.md).
-# 2026-10-09 — Count ordinary English word limits after complete delivery
+## Observe overdue originals without adding financial or notification authority — 2026-10-09
 
-An ordinary RFC answer retained its three facts but exceeded the requested 180 words
-with 296 tokens of repeated scaffolding. Apply a finite explicit caller word budget
-only to final ordinary English delivery, after unchanged attribution/settlement.
-Keep every checked sentence/excerpt/marker, evidence gap, full confidence reason,
-source status, operational notice and receipt/payment limitation. Select a compact
-scaffolding projection only when the entire answer fits; otherwise retain full
-content with an explicit unmet-limit notice. Private/retained, bounded packages,
-decision briefs and teaching policies stay unchanged. Historical failures and
-semantic/live acceptance remain open. See
-[scope and gates](docs/engineering/ordinary-word-budget-2026-10-09.md).
+Issue257 reuses the immutable Quick/Deep accepted 180/300-second provisional target
+and original acceptance clock. Request-time observation can mark an original
+overdue and needing human review even while a creator payment remains uncertain;
+expiry, missing rows and later recovery do not reset the clock or clear a crossed
+payment boundary. Unknown provenance remains explicit. Owner history alone gains
+allowlisted original payment references and exact micro-USDC amounts; public
+aggregates stay identifier-free, and bearer status gains no owner payment data.
+
+Dynamic observations stay outside completed retained responses and portable
+receipts, preserving original/native comparison and export authority. There is no
+new timer, scheduler, outbound alert, retry, signature, purchase, hold release or
+refund. Staffed escalation and choice/refund execution remain separate gates.
+The owner delegated the remedy choice: permit wait, partial delivery or a refund
+request, and refund the undelivered prepaid charge less only pre-disclosed,
+finally settled irreversible source tolls. The service fee and unused reserves
+are refundable; earned settled creator rewards are not clawed back. Initial
+manual owner review precedes a verified refund mechanism. The prospective
+[delivery and acceptance policy](docs/research-delivery-remedy-policy.md) resolves
+the policy choice for issues250/257 without changing existing accepted packages
+or granting transfer authority. This alert-only source implements neither
+requests nor refunds.
+The [surface contract and remaining gates](docs/engineering/paid-job-overdue-escalation-257.md)
+record this source boundary; issue257 and deployment/distribution acceptance remain open.

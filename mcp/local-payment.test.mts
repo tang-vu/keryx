@@ -102,6 +102,20 @@ it("retains admission for wrong completed query identity", async () => {
   expect(readPending(journalFile)).toEqual(original);
 });
 
+it("forwards observed overdue uncertainty while preserving the original journal through GET-only recovery", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-mcp-overdue-")); dirs.push(dir);
+  const journalFile = path.join(dir, "payment.json"), original = { queryId: `a2a_${"a".repeat(64)}`,
+    authorizationId: `0x${"a".repeat(64)}`, amountUsdc: "0.08", status: "unconfirmed" };
+  fs.writeFileSync(journalFile, JSON.stringify(original));
+  const data = { queryId: original.queryId, status: "processing", escalation: { state: "overdue", escalationNeeded: true,
+    creatorPaymentState: "payment_boundary_crossed", evaluation: "on_observation", remedy: "none" } };
+  const poll = vi.fn().mockResolvedValue(Response.json(data));
+  expect((await recoverResearch("https://example.test", journalFile, poll as typeof fetch)).data).toEqual(data);
+  expect(poll).toHaveBeenCalledOnce(); expect(poll.mock.calls[0][1]).not.toHaveProperty("method", "POST");
+  expect(poll.mock.calls[0][0]).toBe(`https://example.test/api/agent/ask?queryId=${original.queryId}`);
+  expect(readPending(journalFile)).toEqual(original);
+});
+
 it("delayed recovery cannot clear a replacement journal and held recovery never signs", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-mcp-test-")); dirs.push(dir);
   const journalFile = path.join(dir, "payment.json");
