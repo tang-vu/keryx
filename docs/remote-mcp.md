@@ -1,5 +1,12 @@
 # Remote MCP
 
+The app0.27.46 source candidate identifies this hosted tool set as protocol0.3.9.
+It includes `evidence_draft`, explicitly scoped `history_read` and
+`profile_identities_read`. The document-release label for OpenAPI is0.27.46;
+existing API paths, A2A package and original payment/receipt protocols retain their
+contracts. See [surface parity](surface-parity.md); source versions do not establish
+hosted deployment, npm publication or activation of unsupported storage ports.
+
 The [private evidence-draft source candidate](evidence-drafts.md) adds stateless
 `evidence_draft(draft)`, sharing the browser/API version-1 contract. It processes
 caller-supplied retained report rows and Include records without retrieving private

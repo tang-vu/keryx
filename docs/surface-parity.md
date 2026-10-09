@@ -1,5 +1,30 @@
 # Supported-surface release parity
 
+## Coordinated distributions46 — October 9, 2026 source candidate
+
+App **0.27.46** incorporates the twelve source-reviewed outcomes merged through
+PR342. Its distribution candidate selects stdio **0.4.13**, remote **0.3.9** and
+desktop **0.4.12**. OpenAPI's document-release label is **0.27.46**; the API paths,
+A2A execution package **1.0.0** and original receipt protocols keep their existing
+contracts. No intermediate application version or deployment is added.
+
+| Surface | Applicable change and boundary |
+| --- | --- |
+| Web / API / OpenAI / A2A | Shared ordinary answer and exact short-item presentation; additive evidence-draft, history, identity and bibliography routes retain their own auth/storage gates. Legacy native proof admits the exact pre-CSL presentation without rewriting saved responses. |
+| Remote MCP0.3.9 | Adds `evidence_draft`, `history_read` and `profile_identities_read`; each retains the pure transformation or explicit owner-key scope described in its contract. GET405 and research/funding policy remain unchanged. |
+| Stdio0.4.13 / official Registry | Includes those same new tools in a newly identified package. `evidence_draft` is local; account tools use bounded owner APIs. Buyer signing, original polling/recovery and key scope boundaries remain unchanged. |
+| Desktop0.4.12 | Repackages the changed shared original-proof graph; preserves the local Operator, private receipt and native export roles. No hosted profile editor, account linking or automatic scheduler is added. |
+| Repository CLI / bots | Shared research/receipt contracts retain their documented roles. No separate binary version, bot identity inference or autonomous OAuth flow is added. |
+| Extension0.1.2 | All shipped files and its canonical formatter are unchanged from the prior batch. Its thin OpenAI-compatible hosted/page role inherits server answer changes; it gains no new local tool or signer. |
+| Rust / native / enrolled stores | Existing protocol and cutover boundaries remain. New ordinary ports, sponsorship, catalogs and source migrations are not production activation. |
+
+October9's owner instruction permits merging the complete batch before hosted CI
+finishes, then checking/fixing main. This does not establish CI, publication or
+deployment acceptance. Exact-main platform/package checks, npm integrity and
+Registry readback, desktop installer/source manifest, hosted protocol and health
+readback remain required. Preserve prior failed captures and immutable original
+records; broader issue acceptance and private/profile/sponsor activation stay open.
+
 ## Coordinated research surfaces45 — October 9, 2026 candidate
 
 App0.27.45 coordinates reviewed PR318/319/321/322/323/324 in one genuine merge

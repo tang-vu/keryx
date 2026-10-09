@@ -1,5 +1,14 @@
 # Keryx MCP
 
+Release46 source candidate selects package **0.4.13** with the official Registry
+descriptor at the same version. It adds local `evidence_draft`, explicit
+`history:read` summaries and `profile:read` verified-identity snapshots. Account
+reads remain unavailable on unsupported or sealed hosted stores; verification is
+not login, payment or payout authority. Existing buyer, funding and original
+recovery contracts remain unchanged. Publication, installed-client acceptance and
+hosted activation are separate gates; see the
+[distribution record](https://github.com/tang-vu/keryx/blob/main/docs/mcp-distribution.md).
+
 Source candidate: `history_read` reads bounded ordinary current-store summaries for
 the verified `KERYX_API_KEY` wallet with explicit `history:read`. It needs no payment
 signer and accepts no wallet or network selector. Search is literal and case sensitive;
