@@ -6372,3 +6372,21 @@ checks without gaining body integrity. Hash consistency does not independently
 authenticate a publisher or establish general prompt-injection/semantic farming
 resistance. The public [adversarial catalog](docs/engineering/source-money-adversarial-2026-10-09.md)
 records checked boundaries and the still-open live testnet refusal gate.
+
+## 2026-10-09 — CSL reference files derive from recorded metadata
+
+Issue285's file-export outcome uses a shared CSL-JSON formatter over exact recorded
+article/version identities and separately validated saved-paper records. Preserve
+observed calendar precision and supplied structured names; omit missing fields,
+retain literal names and provenance/read limits, and never infer peer review.
+Stable reference keys support reordered or filtered files without granting source,
+rights or payment authority. Saved-workspace questions, notes and screening
+decisions stay outside reference downloads.
+
+Keep new derived exports outside the original stored bibliography object and
+receipt projection. Legacy bibliography text and BibTeX/RIS snapshots, saved
+private receipt bytes and native inspection semantics remain unchanged. Hosted
+surfaces share the formatter; CLI and desktop exports require their existing
+integrity-checked original task binding and exclusive private file publication.
+The [surface and acceptance record](docs/engineering/csl-json-reference-export-2026-10-09.md)
+keeps account-linked Zotero synchronization and private revocable `.bib` URLs open.

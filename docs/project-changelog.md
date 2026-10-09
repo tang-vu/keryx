@@ -1,5 +1,19 @@
 # Keryx Project Changelog
 
+### CSL-JSON reference exports (2026-10-09, source candidate)
+
+- Download recorded research references and separate metadata-only bibliographies
+  as CSL-JSON. The local literature workspace exports the current filtered papers
+  with stable exact-version keys and excludes personal notes and review questions.
+- Hosted API/A2A/OpenAI/remote MCP share derived export fields. Operator CLI adds
+  `brief --format csl-json`; desktop0.4.11 candidate adds the checked private JSON
+  export and native save-dialog choice. Original receipts and stored bibliography
+  text/BibTeX/RIS snapshots remain unchanged.
+- Focused format/transport/receipt/browser tests, app and desktop TypeScript and
+  upstream CSL schema checks passed locally. Full production build, packaged
+  desktop smoke, publication/deployment and installed-client gates remain open.
+  Zotero account sync and private revocable `.bib` URLs remain in issue285.
+
 ### Report layout and research command boundaries (2026-10-09, v0.27.44 candidate)
 
 - Keep complete related-report questions inside the mobile layout, including long

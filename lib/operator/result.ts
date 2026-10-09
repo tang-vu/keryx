@@ -177,7 +177,7 @@ export function privateOperatorBrief(result: NonNullable<Awaited<ReturnType<type
   return lines.join("\n");
 }
 
-export const operatorResearchExportFormat = z.enum(["brief", "bibtex", "ris", "evidence-csv"]);
+export const operatorResearchExportFormat = z.enum(["brief", "bibtex", "ris", "csl-json", "evidence-csv"]);
 export type OperatorResearchExportFormat = z.infer<typeof operatorResearchExportFormat>;
 
 export function formatOperatorResearchExport(result: NonNullable<Awaited<ReturnType<typeof readSavedOperatorResult>>> | NonNullable<Awaited<ReturnType<typeof readSavedOperatorResearchResult>>>, format: unknown = "brief") {
@@ -185,5 +185,6 @@ export function formatOperatorResearchExport(result: NonNullable<Awaited<ReturnT
   if (selected === "brief") return privateOperatorBrief(result);
   if (!("researchExports" in result)) throw new Error("Research export requires the checked application projection");
   if (selected === "evidence-csv") return result.researchExports.evidenceCsv;
+  if (selected === "csl-json") return result.researchExports.cslJson.content;
   return result.researchExports[selected].content;
 }

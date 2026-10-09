@@ -19,7 +19,7 @@ beforeAll(async () => {
 }, 30000);
 afterAll(async () => { await browser?.close(); });
 
-it.each([320, 1366])("downloads actual RIS and BibTeX files with retained preprint identity at %ipx", async width => {
+it.each([320, 1366])("downloads actual reference files with retained preprint identity at %ipx", async width => {
   const context = await browser.newContext({ viewport: { width, height: 768 }, acceptDownloads: true });
   try {
     const requests: string[] = [];
@@ -34,7 +34,7 @@ it.each([320, 1366])("downloads actual RIS and BibTeX files with retained prepri
     await page.getByText(/1 article references/).waitFor();
     expect(await page.locator("body").textContent()).toContain("1 citations omitted");
     for (const [button, filename] of [["Download RIS (Zotero)", "keryx-references.ris"],
-      ["Download BibTeX", "keryx-references.bib"]] as const) {
+      ["Download BibTeX", "keryx-references.bib"], ["Download CSL-JSON", "keryx-references.json"]] as const) {
       const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: button, exact: true }).click()]);
       expect(download.suggestedFilename()).toBe(filename);
       expect(await download.failure()).toBeNull();
@@ -46,6 +46,8 @@ it.each([320, 1366])("downloads actual RIS and BibTeX files with retained prepri
         expect(output).toContain("TY  - MANSCPT\r\n"); expect(output).not.toContain("TY  - JOUR");
         expect(output).toContain("AN  - arXiv:1706.03762v7");
         expect(output).toContain("Group &lt;img"); expect(output).not.toContain("<img");
+      } else if (filename.endsWith(".json")) {
+        expect(JSON.parse(output)).toMatchObject([{ type: "manuscript", URL: "https://arxiv.org/abs/1706.03762v7", archive_location: "1706.03762v7", version: "v7" }]);
       } else { expect(output).toContain("@misc{"); expect(output).toContain("archivePrefix = {arXiv}"); }
     }
     expect(requests).toEqual(["https://references.test/"]);

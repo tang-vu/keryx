@@ -20,6 +20,32 @@ it("exports only recorded scholarly metadata with structured Crossref author nam
   expect(ris).toContain("TY  - JOUR"); expect(ris).toContain("AU  - Lovelace, Ada\r\nAU  - Research Group"); expect(ris).toContain("PY  - 2026");
   expect(ris).toContain("Peer review unknown"); expect(ris).toContain("Read scope: publisher-page");
 });
+it("exports CSL-JSON with observed names, publication precision and the existing stable citation key", () => {
+  const row = citation({ scholarly });
+  const result = buildCitationExport([row], "csl-json");
+  const [entry] = JSON.parse(result.content);
+  expect(result).toMatchObject({ count: 1, omitted: 0 });
+  expect(entry).toMatchObject({ type: "article-journal", title: row.itemTitle, URL: row.itemUrl,
+    author: [{ family: "Lovelace", given: "Ada" }, { literal: "Research Group" }],
+    issued: { "date-parts": [[2026]] }, DOI: scholarly.doi, "container-title": scholarly.journal,
+    volume: "2", issue: "3", page: "1-5", version: row.contentVersion });
+  expect(entry["citation-key"]).toBe(entry.id);
+  expect(buildCitationExport([row], "bibtex").content).toContain(`@article{${entry.id},`);
+  expect(entry.note).toContain("Read scope: publisher-page");
+  expect(result.content).not.toMatch(/private allocation rationale|reward|payTo/);
+});
+it("keeps CSL references distinct across versions and stable across order, with no inferred names or read authority", () => {
+  const a = citation({ scholarly: { ...scholarly, evidenceScope: undefined }, itemTitle: 'Title " } ] 日本語' });
+  const b = citation({ contentVersion: "other-version" });
+  const first = JSON.parse(buildCitationExport([a, a, b], "csl-json").content);
+  const second = JSON.parse(buildCitationExport([b, a], "csl-json").content);
+  expect(first).toHaveLength(2);
+  expect(first[0]).toMatchObject({ type: "webpage", title: a.itemTitle, issued: { "date-parts": [[2026, 9, 28]] } });
+  expect(first[0]).not.toHaveProperty("author"); expect(first[0]).not.toHaveProperty("DOI");
+  expect(first.map((entry: { id: string }) => entry.id)).toEqual(second.map((entry: { id: string }) => entry.id).reverse());
+  expect(buildCitationExport([], "csl-json")).toEqual({ count: 0, omitted: 0, content: "[]\n" });
+  expect(buildCitationExport([citation({ itemUrl: "javascript:alert(1)" })], "csl-json")).toEqual({ count: 0, omitted: 1, content: "[]\n" });
+});
 it("exports preprints and abstract-only read limitations without claiming a reviewed or fully read paper", () => {
   const metadata: ScholarlyMetadata = { ...scholarly, provider: "arxiv", workType: "preprint", evidenceScope: "abstract-page", arxivId: "1706.03762v7", authorNames: undefined };
   expect(buildCitationExport([citation({ scholarly: metadata })], "ris").content).toContain("TY  - MANSCPT");
