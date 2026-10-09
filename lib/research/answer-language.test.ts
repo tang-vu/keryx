@@ -51,6 +51,28 @@ describe("ordinary scaffold language fallback", () => {
     expect(answerPresentation("No problem. Write one short bullet.")).toEqual({language: "en", requestedBulletCount: 1});
   });
 
+  it.each(["\n", "\r\n", "\u2028", "\u2029"])("keeps a new positive clause after a negative discourse line (%j)", separator => {
+    expect(answerPresentation(`No thanks${separator}Answer in Portuguese.`)).toEqual({language: "pt", requestedLanguage: "pt"});
+    expect(answerPresentation(`No thanks${separator}Write one short bullet.`)).toEqual({language: "en", requestedBulletCount: 1});
+    const fallback = answerPresentation(`Sou professora e preciso de uma explicação. No thanks${separator}En español, responde brevemente.`);
+    expect(fallback).toEqual({language: "en"});
+    expect(presentationStatementGuidance(fallback)).toBe("");
+  });
+
+  it.each([
+    "Do not\nanswer in Portuguese.",
+    "Don't\r\nreply in Vietnamese.",
+    "Do not write\none short bullet.",
+  ])("preserves explicit wrapped English negation: %s", question => {
+    expect(answerPresentation(question)).toEqual({language: "en"});
+  });
+
+  it.each(["\n", "\r\n", "\u2028", "\u2029"])("preserves bounded words in wrapped negative commands (%j)", separator => {
+    expect(answerPresentation(`Do not${separator}explicitly answer in Portuguese.`)).toEqual({language: "en"});
+    expect(answerPresentation(`Don't${separator}just reply in Vietnamese.`)).toEqual({language: "en"});
+    expect(answerPresentation(`Do not write${separator}exactly one short bullet.`)).toEqual({language: "en"});
+  });
+
   it("keeps the exact admitted quote, statement, markers and ledger while selecting the English scaffold fallback", () => {
     const quote = "Synthetic source text: the same side faces Earth.";
     const statement = "La misma cara mira hacia la Tierra.";

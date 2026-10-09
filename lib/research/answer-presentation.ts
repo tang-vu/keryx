@@ -14,7 +14,11 @@ const counts: Record<string, number> = {
 };
 
 function negated(text: string, index: number): boolean {
-  return /(?<![\p{L}\p{N}_])(?:do not|don't|not|não|nao|không|no|nunca|sin|pas|sans|nicht)\s+(?:[^\s.,;:!?]+\s+){0,2}$/u.test(text.slice(Math.max(0, index - 45), index));
+  const prefix = text.slice(Math.max(0, index - 45), index);
+  const line = prefix.split(/[\r\n\u2028\u2029]/u).at(-1)!;
+  if (/(?<![\p{L}\p{N}_])(?:do not|don't|not|não|nao|không|no|nunca|sin|pas|sans|nicht)\s+(?:[^\s.,;:!?]+\s+){0,2}$/u.test(line)) return true;
+  // Preserve explicit wrapped commands, not discourse such as "No thanks\n".
+  return /(?<![\p{L}\p{N}_])(?:do not|don't)\s+(?:[^\s.,;:!?]+\s+){0,2}$/u.test(prefix);
 }
 
 /** Finite positive language/count instructions; ambiguous counts retain target layout. */
@@ -36,7 +40,7 @@ export function answerPresentation(question: string): AnswerPresentation {
     // New native forms are directives only at a clause boundary, not page titles
     // or quoted language mentions inside the caller's substantive question.
     if (request.slice(5).some(value => value !== undefined) &&
-        (!/(?:^|[.!?;:\r\n])\s*$/u.test(text.slice(0, request.index!)) ||
+        (!/(?:^|[.!?;:\r\n\u2028\u2029])\s*$/u.test(text.slice(0, request.index!)) ||
          quotedRanges.some(range => request.index! >= range.start && request.index! < range.end))) continue;
     const name = request.slice(1).find(value => value !== undefined)!;
     requestedLanguage = /^(?:vietnamese|việt|vietnamita)$/u.test(name) ? "vi"

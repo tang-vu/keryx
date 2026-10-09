@@ -13,6 +13,8 @@ French and German directive forms identify unsupported requests; they select the
 English scaffold fallback without forcing English statement generation. The last
 positive directive wins; a negated directive does not replace it. This finite
 parser does not establish general language detection or instruction understanding.
+Discourse on a previous line cannot negate a new language/count instruction;
+explicit wrapped English `Do not`/`Don't` commands retain their negative meaning.
 
 Only the original caller question supplies ordinary answer presentation. A
 Portuguese instruction in accumulated context cannot override a Spanish original.
@@ -27,6 +29,7 @@ and retained finalization without ordinary presentation retains its existing pat
 | --- | --- |
 | Web, saved reports, research API | New ordinary answers use the shared selector; existing stored answers are not rewritten. Deployed exact-source acceptance remains required. |
 | Hosted/remote MCP, A2A, OpenAI adapter | Existing shared answer and export consumers inherit selection; field names, enum values and receipt structures stay unchanged. |
+| Local `npm run ask` CLI | `scripts/ask.mts` runs `collectRun` locally and inherits selection when its source is updated; CLI wrapper labels remain outside this repair. |
 | Buyer CLI, stdio MCP | Hosted answer consumers inherit the server result; no package contract change. Published versions and deployed source must be verified before claiming synchronized delivery. |
 | Telegram, Discord, Slack | Embedded ordinary answer inherits selection. Bot help, wrapper labels and language-preference commands remain separate open localization work. |
 | Browser extension | Existing research result consumer inherits server output; no new catalog or extension distribution change. |
