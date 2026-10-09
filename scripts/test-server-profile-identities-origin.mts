@@ -67,6 +67,9 @@ function call(path: string, method: string, headers: Record<string, string>) {
   });
 }
 
+let failed = false, primaryFailure: unknown;
+let exit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
+const cleanupFailures: unknown[] = [];
 try {
   for (let attempt = 0; attempt < 120 && !ready && !spawnError && child.exitCode === null && child.signalCode === null; attempt++) await delay(250);
   assert(ready && !spawnError && child.exitCode === null && child.signalCode === null, `Owned built server failed to become ready: ${output}`);
@@ -103,21 +106,40 @@ try {
     assert.equal(callback.headers["cache-control"], "no-store"); assert.equal(callback.headers["referrer-policy"], "no-referrer");
     assert(callback.headers["set-cookie"]?.every(value => value.includes("Max-Age=0"))); assert.equal(callback.body, "");
   }
-} finally {
-  if (child.exitCode === null && child.signalCode === null && !spawnError) child.kill("SIGTERM");
-  const exit = await Promise.race([closed, delay(15000, undefined, { ref: false }).then(() => { throw new Error("Owned built server failed to close; temporary evidence retained"); })]);
+} catch (error) { failed = true; primaryFailure = error; }
+finally {
+  try { if (child.exitCode === null && child.signalCode === null && !spawnError) child.kill("SIGTERM"); }
+  catch (error) { cleanupFailures.push(error); }
+  try { exit = await Promise.race([closed, delay(15000, undefined, { ref: false }).then(() => { throw new Error("Owned built server failed to close; temporary evidence retained"); })]); }
+  catch (error) { cleanupFailures.push(error); }
   // Next boot initializes its ordinary schema and prunes its empty grants. There
   // is no owner identity/session/flow action, and no shared/sealed datastore.
-  assert(existsSync(databasePath), "Boot database must be confined to the owned temporary cwd");
-  const database = new DatabaseSync(databasePath, { readOnly: true });
-  try {
-    for (const table of ["private_profiles", "profile_verified_identities", "profile_identity_challenges", "web_sessions"])
-      assert.equal(database.prepare(`SELECT count(*) AS count FROM ${table}`).get()?.count, 0, `${table} remains empty`);
-  } finally { database.close(); }
-  assert.equal(child.stdout.readableEnded, true); assert.equal(child.stderr.readableEnded, true);
-  await rm(temporary, { recursive: true, force: true });
-  console.log(JSON.stringify({ fixture: "built-profile-identities-configured-origin", applicationOrigin, physicalOrigin: `http://127.0.0.1:${port}`,
-    bootWrites: "owned temporary ordinary SQLite schema/empty grant housekeeping only", ownerProviderActions: false,
-    childClosedEof: true, exit, temporaryRemoved: true }));
+  // Inspection must wait for the owned child to close; failed confinement cannot
+  // replace an earlier startup/request failure or authorize another database.
+  if (exit) try {
+    assert(existsSync(databasePath), "Boot database must be confined to the owned temporary cwd");
+    const database = new DatabaseSync(databasePath, { readOnly: true });
+    try {
+      for (const table of ["private_profiles", "profile_verified_identities", "profile_identity_challenges", "web_sessions"]) {
+        try { assert.equal(database.prepare(`SELECT count(*) AS count FROM ${table}`).get()?.count, 0, `${table} remains empty`); }
+        catch (error) { cleanupFailures.push(error); }
+      }
+    } finally { database.close(); }
+  } catch (error) { cleanupFailures.push(error); }
+  for (const stream of [child.stdout, child.stderr]) {
+    try { assert.equal(stream.readableEnded, true); }
+    catch (error) { cleanupFailures.push(error); }
+  }
 }
+const receipt = { fixture: "built-profile-identities-configured-origin", applicationOrigin, appDirectory: root, temporaryDirectory: temporary,
+  databasePath, bootDatabaseExists: existsSync(databasePath), physicalOrigin: `http://127.0.0.1:${port}`, exit: exit ?? null,
+  childClosedEof: !!exit && child.stdout.readableEnded && child.stderr.readableEnded };
+if (failed || cleanupFailures.length) {
+  console.error(JSON.stringify({ ...receipt, temporaryRetained: true, childOutput: output }));
+  throw new AggregateError([...(failed ? [primaryFailure] : []), ...cleanupFailures], "Built identity Origin fixture failed; temporary evidence retained", { cause: primaryFailure });
+}
+// Remove only after every behavioral/boot/privacy/closed-EOF assertion passes.
+await rm(temporary, { recursive: true, force: true });
+console.log(JSON.stringify({ ...receipt, bootWrites: "owned temporary ordinary SQLite schema/empty grant housekeeping only",
+  ownerProviderActions: false, temporaryRemoved: true }));
 console.log("PASS: candidate default built Next admits configured HTTPS Origin to SIWE 401, refuses foreign Origin before authentication, and returns invalid callbacks only to configured origin.");
