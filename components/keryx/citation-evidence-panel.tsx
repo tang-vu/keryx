@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { Citation, EvidenceRecord, PaymentRecord } from "@/lib/types";
 import { paymentSettlementStatus } from "@/lib/payments/payment-state";
-import { fmtUsdc } from "./phase-style";
+import { formatRecordedUsdc, formatUsdcMicros, sumRecordedUsdc } from "@/lib/display/recorded-usdc";
 import { ScholarlyMetadataDetails } from "./scholarly-metadata";
 import { recordedArcLabel,recordedArcTransactionUrl } from "@/lib/arc-network-display";
 import { GatewayContractReferences } from "./gateway-contract-references";
@@ -48,7 +48,7 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
   const pending = consistent.filter((payment) => paymentSettlementStatus(payment) === "pending");
   const failed = consistent.filter((payment) => paymentSettlementStatus(payment) === "failed");
   const simulated = consistent.filter((payment) => paymentSettlementStatus(payment) === "simulated");
-  const settledAmount = settled.reduce((sum, payment) => sum + payment.amountUsdc, 0);
+  const settledAmount = sumRecordedUsdc(settled.map(payment => payment.amountUsdc));
 
   useEffect(() => {
     const dialog = panelRef.current;
@@ -135,7 +135,7 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
           <h3 className="font-mono text-xs uppercase tracking-widest text-ink-3">Creator reward</h3>
           <p className="mt-2 font-serif text-lg text-ink">{Math.round(citation.weight * 100)}% contribution weight</p>
           <p className="mt-2 text-sm text-ink-2">
-            {settled.length ? `$${fmtUsdc(settledAmount)} settled across ${settled.length} author ${settled.length === 1 ? "payment" : "payments"}.` : "No settled citation payment is recorded."}
+            {settled.length ? settledAmount === null ? `Settled amount unavailable across ${settled.length} author ${settled.length === 1 ? "payment" : "payments"}.` : `${formatUsdcMicros(settledAmount)} settled across ${settled.length} author ${settled.length === 1 ? "payment" : "payments"}.` : "No settled citation payment is recorded."}
           </p>
           {pending.length > 0 && <p className="mt-1 text-sm text-amber-700">{pending.length} payment {pending.length === 1 ? "is" : "are"} pending confirmation.</p>}
           {failed.length > 0 && <p className="mt-1 text-sm text-red-700">{failed.length} payment {failed.length === 1 ? "failed" : "legs failed"}.</p>}
@@ -146,7 +146,7 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
             <ul className="mt-3 space-y-1 font-mono text-xs text-ink-3">
               {legs.map((payment, index) => (
                 <li key={payment.id ?? `${payment.payee}-${index}`} className="break-all">
-                  {payment.settled !== (paymentSettlementStatus(payment) === "settled") ? "unverified" : paymentSettlementStatus(payment)} · ${fmtUsdc(payment.amountUsdc)} USDC on {recordedArcLabel(payment.network)} · recipient {payment.payee}
+                  {payment.settled !== (paymentSettlementStatus(payment) === "settled") ? "unverified" : paymentSettlementStatus(payment)} · {formatRecordedUsdc(payment.amountUsdc)} USDC on {recordedArcLabel(payment.network)} · recipient {payment.payee}
                   {payment.txHash && settled.includes(payment) && (
                     /^0x[0-9a-fA-F]{64}$/.test(payment.txHash) ? (
                       <a href={recordedArcTransactionUrl(payment.network,payment.txHash)} target="_blank" rel="noopener noreferrer" className="ml-1 underline">View transaction ↗</a>
@@ -156,7 +156,7 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
               ))}
             </ul>
           )}
-          <p className="mt-2 font-mono text-xs text-ink-3">Planned citation reward: ${fmtUsdc(citation.reward)}</p>
+          <p className="mt-2 font-mono text-xs text-ink-3">Planned citation reward: {formatRecordedUsdc(citation.reward)}</p>
           <GatewayContractReferences records={settled} className="mt-2 mr-3 inline-block text-xs text-paid underline"/>
         </div>}
         {articleUrl && (

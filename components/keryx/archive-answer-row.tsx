@@ -5,6 +5,7 @@
  */
 
 import Link from "next/link";
+import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import type { ArchiveEntry } from "@/lib/answers-archive";
 import { ConfidenceBadge } from "./confidence-badge";
 
@@ -47,7 +48,7 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
           <span>
             {entry.citationCount} source{entry.citationCount !== 1 ? "s" : ""} cited
           </span>
-          <span className="text-paid">{entry.archivedNetwork ? `${entry.toCreators.toFixed(4)} test USDC` : `$${entry.toCreators.toFixed(4)}`} recorded creator rewards</span>
+          <span className="text-paid">{formatRecordedUsdc(entry.toCreators, { minimumFractionDigits: 4, denomination: entry.archivedNetwork ? "test USDC" : "$" })} recorded creator rewards</span>
           {entry.sourceNames.length > 0 && (
             <span className="normal-case tracking-normal text-ink-3">
               {entry.sourceNames.slice(0, 4).join(" · ")}

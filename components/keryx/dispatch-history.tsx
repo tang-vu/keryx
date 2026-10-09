@@ -9,7 +9,7 @@
 import Link from "next/link";
 import { History } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fmtUsdc } from "./phase-style";
+import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 
 export interface RunSummary {
   id: string;
@@ -60,11 +60,11 @@ export function DispatchHistory({ runs, title = "Recent dispatches", showFinanci
               <p className="font-mono text-[10px] text-ink-3">
                 {timeAgo(r.createdAt)} · {r.citationCount} citation{r.citationCount === 1 ? "" : "s"}
                 {r.archive && " · Arc testnet history"}
-                {showFinancials && <> · ${fmtUsdc(r.totalToCreators)} to creators</>}
+                {showFinancials && <> · {formatRecordedUsdc(r.totalToCreators)} to creators</>}
               </p>
             </div>
             {showFinancials && <span className="shrink-0 font-mono text-[12px] tabular-nums text-paid">
-              ${fmtUsdc(r.totalSpent)}
+              {formatRecordedUsdc(r.totalSpent)}
             </span>}
           </Link>
         ))}

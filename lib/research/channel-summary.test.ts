@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
-import { runInNewContext } from "node:vm";
 import { expect, it } from "vitest";
+import { replayExtensionPopup } from "../display/extension-popup.test-fixture";
 import { buildAnswerText as slack } from "../slack/ask-command";
 import { buildAnswerText as telegram } from "../telegram/ask-message";
 import { buildAnswerMessage as discord } from "../discord/ask-interaction";
@@ -19,15 +19,12 @@ it.each(["real", "offline"] as const)("thin channel summaries separate public ci
   }
 });
 
-it("the actual extension stream renderer marks allocations and offline state without claiming settlement", () => {
-  const nodes = new Map<string, { textContent: string; hidden: boolean; children: unknown[]; append: (...values: unknown[]) => void; appendChild: (value: unknown) => void; addEventListener: () => void }>();
-  const element = () => ({ textContent: "", hidden: true, children: [] as unknown[], append(...values: unknown[]) { this.children.push(...values); }, appendChild(value: unknown) { this.children.push(value); }, addEventListener() {} });
-  const document = { getElementById(id: string) { const node = element(); nodes.set(id, node); return node; }, createElement: element };
-  const source = readFileSync("extension/popup.js", "utf8").replace(/\ninitContext\(\);\s*$/, "");
+it("the actual extension stream renderer marks allocations and offline state without claiming settlement", async () => {
   const chunk = { keryx: { citations: [{ source: "Public publisher", reward: 0 }], totalToCreators: 0, paymentMode: "offline" } };
-  runInNewContext(source + "\napplyChunk(chunk);", { document, chunk });
-  expect(nodes.get("paid-panel")?.hidden).toBe(false);
-  expect(nodes.get("status")?.textContent).toContain("offline");
-  expect(nodes.get("status")?.textContent).toContain("not settlement proof");
+  await replayExtensionPopup([chunk], document => {
+    expect(document.getElementById("paid-panel")!.hidden).toBe(false);
+    expect(document.getElementById("status")!.textContent).toContain("offline");
+    expect(document.getElementById("status")!.textContent).toContain("not settlement proof");
+  });
   expect(readFileSync("extension/popup.html", "utf8")).not.toMatch(/Creators paid|settled in USDC/);
 });

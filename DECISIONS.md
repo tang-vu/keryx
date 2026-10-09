@@ -35,6 +35,18 @@ only the latency-reporting part of #257, with target-time alerts, customer remed
 and first-user measurements still open. Original receipts, budgets, custody,
 settlement and recovery remain unchanged. See [rules and release gates](docs/engineering/completion-latency-cohorts-257.md).
 
+**Exact recorded-money presentation without rounding repair — 2026-10-09.**
+Public reward summaries previously rounded one micro-USDC to zero on several surfaces.
+Use one browser-safe integer formatter and a strict adapter for legacy recorded decimal
+numbers. Preserve existing decimal padding while retaining every known micro digit;
+missing or fractional-micro data displays an unavailable amount. Sum known payment legs
+as integers. Do not feed display strings into storage, receipts, signing or budget checks,
+and do not infer settlement from an amount. The extension ships an exact checked copy;
+human OpenAI/MCP footer text changes separately from unchanged machine-readable money.
+Desktop's helper also produces a buyer command and remains outside this display-only
+change. Locale/date/plural breadth and per-locale consent review remain open under #274.
+See [scope and acceptance](docs/engineering/recorded-usdc-display.md).
+
 **Project obligations before investing Operator float — 2026-10-09.**
 Stage a read-only ownership-scoped projection using the existing complete prepaid
 inventory and original payment, withdrawal, funding and supplier journals. Keep

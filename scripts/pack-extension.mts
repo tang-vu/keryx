@@ -19,6 +19,10 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const extDir = resolve(root, "extension");
 
+if (!readFileSync(resolve(root, "lib/display/recorded-usdc.mjs")).equals(readFileSync(resolve(extDir, "recorded-usdc.mjs")))) {
+  throw new Error("Extension formatter differs from its canonical source; run scripts/sync-extension-usdc.mts");
+}
+
 const manifest = JSON.parse(readFileSync(resolve(extDir, "manifest.json"), "utf8"));
 const version: string = manifest.version;
 
@@ -30,6 +34,7 @@ const FILES = [
   "popup.html",
   "popup.css",
   "popup.js",
+  "recorded-usdc.mjs",
   "icons/icon-16.png",
   "icons/icon-32.png",
   "icons/icon-48.png",

@@ -17,6 +17,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { askKeryx, getStatus, meta, recoverKeryx } from "./keryx-buyer.mts";
 import { reasoningServingText } from "../lib/llm/reasoning-telemetry.ts";
+import { formatRecordedUsdc } from "../lib/display/recorded-usdc.ts";
 import { createPaperLookupHandler, paperLookupToolOptions } from "../lib/papers/lookup.ts";
 import { fetchPaperLookup } from "../lib/papers/client.ts";
 import { MAX_ASK_QUESTION_CHARS } from "../lib/ask-input.ts";
@@ -58,7 +59,7 @@ server.registerTool(
     try {
       const r = await askKeryx(question, budget);
       const cites = r.citations?.length
-        ? r.citations.map((c) => `  • ${c.source} — $${c.reward}`).join("\n")
+        ? r.citations.map((c) => `  • ${c.source} — ${formatRecordedUsdc(c.reward)}`).join("\n")
         : "  (none)";
       // The settlement id is a batched Circle Gateway UUID, not an EVM hash — label it honestly and
       // point at the dashboard for the on-chain proof rather than a /tx/ link that won't resolve.
@@ -67,7 +68,7 @@ server.registerTool(
         `${r.answer}\n\n` +
         `${reasoningServingText(r)}\n\n` +
         `— Paid Keryx ${r.amountPaid} USDC${proof}\n` +
-        `Recorded creator total: $${r.totalToCreators}; citation allocations (not individual settlement proof):\n${cites}\n` +
+        `Recorded creator total: ${formatRecordedUsdc(r.totalToCreators)}; citation allocations (not individual settlement proof):\n${cites}\n` +
         `On-chain proof + live feed: ${meta.baseUrl}/dashboard`;
       return { content: [{ type: "text" as const, text }], structuredContent: { ...r } };
     } catch (e) {

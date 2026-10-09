@@ -2,6 +2,8 @@
 // stream the Keryx agent's reasoning + answer over the OpenAI-compatible endpoint, and show which
 // creators got paid. No wallet or key needed — the anonymous free tier is treasury-funded.
 
+import { formatRecordedUsdc } from "./recorded-usdc.mjs";
+
 const els = {
   question: document.getElementById("question"),
   budget: document.getElementById("budget"),
@@ -98,11 +100,11 @@ function renderPaid(meta) {
     src.textContent = c.source || "source";
     const amt = document.createElement("span");
     amt.className = "amt";
-    amt.textContent = `$${Number(c.reward || 0).toFixed(4)}`;
+    amt.textContent = formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 });
     li.append(src, amt);
     els.paidList.appendChild(li);
   }
-  els.paidTotalUsd.textContent = `$${Number(meta.totalToCreators || 0).toFixed(4)}`;
+  els.paidTotalUsd.textContent = formatRecordedUsdc(meta.totalToCreators, { minimumFractionDigits: 4 });
   if (meta.dispatchUrl) els.dispatchLink.href = meta.dispatchUrl;
   show(els.paidPanel);
   els.status.textContent = `done / ${meta.paymentMode || "legacy"} / planned rewards are not settlement proof`;
