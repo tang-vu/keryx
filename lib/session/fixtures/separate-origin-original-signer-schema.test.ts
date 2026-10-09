@@ -110,6 +110,12 @@ it("still refuses acceptance journal entries and unknown populated tables as bus
   expect(() => assertEmptySignerFixtureSchema(unknown.native)).toThrow("business rows");
 });
 
+it("refuses a complete-looking seed with the required installation identity table removed", async () => {
+  const { native } = await clone();
+  native.exec("DROP TABLE deliverable_acceptance_store");
+  expect(() => assertEmptySignerFixtureSchema(native)).toThrow("Incomplete signer fixture schema");
+});
+
 it("refuses a changed seed before creating a clone", () => {
   const destination = target();
   const original = fs.readFileSync(seed.file);

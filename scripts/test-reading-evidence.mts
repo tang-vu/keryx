@@ -226,14 +226,15 @@ try {
   }
 
   const log = page.getByLabel("Decision log").last();
-  await log.evaluate(element => { element.style.height = "120px"; element.style.maxHeight = "120px"; element.style.overflowY = "auto"; element.firstElementChild.style.minHeight = "1600px"; });
+  await log.evaluate(element => { element.style.height = "120px"; element.style.maxHeight = "120px"; element.style.overflowY = "auto";
+    const child = element.firstElementChild; if (!(child instanceof HTMLElement)) throw new Error("Decision log fixture child missing"); child.style.minHeight = "1600px"; });
   await log.evaluate(element => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
-  await page.evaluate(() => window.addStep());
+  await page.evaluate(() => (window as unknown as { addStep(): void }).addStep());
   await page.waitForTimeout(40);
   assert(await log.evaluate(element => element.scrollTop > 0));
   await log.evaluate(element => { element.scrollTop = 0; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
   await page.getByRole("button", { name: "Jump to latest" }).waitFor();
-  await page.evaluate(() => window.addStep());
+  await page.evaluate(() => (window as unknown as { addStep(): void }).addStep());
   assert.equal(await log.evaluate(element => element.scrollTop), 0);
   await page.getByRole("button", { name: "Jump to latest" }).click();
   assert(await log.evaluate(element => element.scrollTop > 0));

@@ -17,6 +17,7 @@ const requiredEmptyTables = [
   "sources", "source_items", "cache_items", "payment_events", "query_runs", "a2a_orders",
   "session_grants", "browser_retained_grants", "browser_authorization_intents",
   "browser_signing_namespaces", "browser_signing_queries", "browser_signing_originals",
+  "deliverable_acceptance_store",
 ];
 
 /** Test-only: dormant controls and the exact installation UUID are allowed, never business authority. */
