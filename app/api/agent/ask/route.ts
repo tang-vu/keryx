@@ -43,6 +43,7 @@ import {
 } from "@/lib/a2a/operator-resolution";
 import type { KeryxDB } from "@/lib/db/keryx-db";
 import { authorizationSchema, decodeHeader } from "@/lib/buyer/protocol";
+import { paidJobEscalation } from "@/lib/a2a/overdue-status";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
   acceptsA2aPackageVersion,
@@ -101,6 +102,7 @@ async function currentFailedResponse(db: KeryxDB, order: A2aOrder, replayed = fa
     status: "failed",
     queryId: order.queryId,
     error: order.errorCode ?? "research_failed",
+    escalation: paidJobEscalation(order, Date.now(), attempts),
     ...(economics.funding ? { funding: economics.funding } : {}),
     pricing: accountingComplete
       ? { ...economics.pricing, accountingComplete: true }
@@ -133,10 +135,11 @@ async function currentFailedResponse(db: KeryxDB, order: A2aOrder, replayed = fa
 }
 
 function pendingResponse(order: A2aOrder, replayed = false, message?: string) {
+  const observedAt = Date.now();
   const startedMs = order.startedAt ? Date.parse(order.startedAt) : Number.NaN;
   const needsReview =
     !!order.startedAt &&
-    (!Number.isFinite(startedMs) || Date.now() - startedMs >= A2A_REVIEW_AFTER_MS);
+    (!Number.isFinite(startedMs) || observedAt - startedMs >= A2A_REVIEW_AFTER_MS);
   const status = needsReview ? "review_required" : order.startedAt ? "processing" : "queued";
   const researchPackage = isSupportedA2aResearchPackage(
     order.researchPackage,
@@ -147,6 +150,7 @@ function pendingResponse(order: A2aOrder, replayed = false, message?: string) {
   return {
     status,
     queryId: order.queryId,
+    escalation: paidJobEscalation(order, observedAt),
     pollUrl: `/api/agent/ask?queryId=${encodeURIComponent(order.queryId)}`,
     ...(order.request?.monthlyId ? { funding: quoteFromA2aOrder(order).funding } : {}),
     ...(researchPackage
@@ -157,6 +161,7 @@ function pendingResponse(order: A2aOrder, replayed = false, message?: string) {
             state: status,
             acceptedAt: order.createdAt,
             startedAt: order.startedAt,
+            nowMs: observedAt,
           }),
         }
       : {}),

@@ -14,6 +14,13 @@ export async function GET(req: Request) {
     const rows = await context.db.listA2aOrdersByPayer(context.wallet, before);
     if (rows.some(row => row.payer.toLowerCase() !== context.wallet)) throw new Error("History owner mismatch");
     const page = rows.slice(0, 25);
-    return authJson({ wallet: context.wallet, jobs: page.map(order => accountHistoryItem(order, Date.now())), nextCursor: rows.length > 25 ? encodeHistoryCursor(page[24]) : null });
+    if (page.some(order => order.id !== order.queryId)) throw new Error("History original identity mismatch");
+    const observedAt = Date.now();
+    const jobs = await Promise.all(page.map(async order => {
+      // Unavailable/unsupported evidence stays unknown; no fallback reads or reconciliation.
+      const attempts = await context.db.listCreatorPaymentAttemptsByQuery(order.queryId).catch(() => null);
+      return accountHistoryItem(order, observedAt, attempts);
+    }));
+    return authJson({ wallet: context.wallet, jobs, nextCursor: rows.length > 25 ? encodeHistoryCursor(page[24]) : null });
   } catch { return authJson({ error: "Paid job history is unavailable. Please retry." }, 503); }
 }

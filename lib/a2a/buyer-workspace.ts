@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paidJobEscalationSchema } from "./overdue-types";
 
 export const a2aQueryIdSchema = z.string().regex(/^a2a_[a-f0-9]{64}$/);
 const amount = z.number().finite().nonnegative();
@@ -10,6 +11,7 @@ export const buyerJobSchema = z.object({
   answer: z.string().optional(),
   message: z.string().optional(),
   error: z.string().optional(),
+  escalation: paidJobEscalationSchema.optional(),
   funding: z.object({ type: z.literal("research-monthly-prepaid"), monthlyId: z.string(),
     allocationUsdc: amount, newInboundPayment: z.literal(false) }).optional(),
   pricing: z.object({

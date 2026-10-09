@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { accountHistorySchema, type AccountHistory } from "@/lib/a2a/account-history-types";
 import { ResearchJob } from "./research-job";
+import { ResearchJobEscalation } from "./research-job-escalation";
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 
@@ -64,6 +65,7 @@ function WalletHistory({ wallet }: { wallet: string }) {
         <p className="break-words font-serif text-ink">{row.question ?? "Question unavailable for this historical job"}</p>
         <p className="mt-1 text-sm text-ink-3">{row.mode} · {row.status.replaceAll("_", " ")} · {new Date(row.createdAt).toLocaleString("en-US")}</p>
         <p className="mt-1 text-sm text-ink-2">{row.funding ? "Prepaid Monthly allocation" : "Package price"}: {row.packagePriceUsdc === null ? "unknown" : `${row.packagePriceUsdc} USDC`} · retain the original payment network</p>
+        <ResearchJobEscalation escalation={row.escalation} original={row.originalPayment ? { orderId: row.id, payment: row.originalPayment } : undefined} />
         <button className={`${control} mt-2`} onClick={() => setSelected(row.id)}>Follow this job</button>
       </li>)}
     </ul>

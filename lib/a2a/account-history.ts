@@ -2,6 +2,8 @@ import { z } from "zod";
 import type { A2aOrder } from "./order";
 import { A2A_REVIEW_AFTER_MS } from "./order";
 import { a2aQueryIdSchema } from "./buyer-workspace";
+import { originalOrderPayment, paidJobEscalation } from "./overdue-status";
+import type { PaymentRecord } from "../types";
 
 const cursorSchema = z.object({ createdAt: z.string().datetime({ offset: true }), id: a2aQueryIdSchema }).strict();
 export type HistoryCursor = z.infer<typeof cursorSchema>;
@@ -15,7 +17,8 @@ export function encodeHistoryCursor(order: A2aOrder) {
 }
 
 /** Allowlisted owner projection. No worker input object, payment nonce or raw receipt. */
-export function accountHistoryItem(order: A2aOrder, now: number) {
+export function accountHistoryItem(order: A2aOrder, now: number, attempts: PaymentRecord[] | null = null) {
+  if (order.id !== order.queryId) throw new Error("History original identity mismatch");
   const started = order.startedAt ? Date.parse(order.startedAt) : NaN;
   const status = order.status !== "running" ? order.status : order.startedAt
     ? (!Number.isFinite(started) || now - started >= A2A_REVIEW_AFTER_MS ? "review_required" : "processing") : "queued";
@@ -25,6 +28,7 @@ export function accountHistoryItem(order: A2aOrder, now: number) {
     status, createdAt: order.createdAt, updatedAt: order.updatedAt,
     mode: order.researchMode,
     packagePriceUsdc: Number.isFinite(order.amountUsdc) && order.amountUsdc >= 0 ? order.amountUsdc : null,
+    escalation: paidJobEscalation(order, now, attempts), originalPayment: originalOrderPayment(order),
     ...(order.request?.monthlyId ? { funding: "research-monthly-prepaid" as const } : {}),
   };
 }
