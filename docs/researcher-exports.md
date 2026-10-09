@@ -11,7 +11,7 @@ on screen; they make no enrichment request or payment and do not upload to a ref
 
 ## References for papers and reference managers
 
-Under **Reference export**, download BibTeX (`.bib`) or RIS (`.ris`). Import either file
+Under **Reference export**, download BibTeX (`.bib`), RIS (`.ris`) or CSL-JSON (`.json`). Import a supported file
 into Zotero through **File → Import**. Ordinary web records use RIS `WEB` and BibTeX
 `@misc`. The files contain recorded article titles, links, available publication dates
 and a provenance note identifying the source and recorded content version.
@@ -74,9 +74,11 @@ decisions, evidence and classified creator payment states, retain the separate
 
 ## Other supported surfaces
 
-Remote MCP `research`, OpenAI responses in the `keryx` extension, and paid A2A results expose the same recorded `researchExports` (`bibtex`, `ris`, `evidenceCsv`) and article identity. The caller-funded stdio MCP returns the result as structured content as well as text. No export initiates another research request.
+Remote MCP `research`, OpenAI responses in the `keryx` extension, and paid A2A results expose the same recorded `researchExports` (`bibtex`, `ris`, `cslJson`, `evidenceCsv`) and article identity. Original-page metadata has its separate `bibliographyExports`; it is never promoted into cited evidence. The caller-funded stdio MCP returns the result as structured content as well as text. No export initiates another research request.
 
-The Operator CLI retains the stable raw inspection view with `result`, or publish a new private file with `brief --format bibtex|ris|evidence-csv --state <task> --file <destination>`; omit `--format` for a Markdown brief. The desktop offers BibTeX, RIS and evidence CSV through native save dialogs. Each rechecks receipt integrity and original task binding, keeps payment seller-reported, and refuses an existing destination. Older receipts can have no usable article identity or claim ledger. Exports never start discovery. Operator storage remains private locally, while its deliberate buyer purchase uses the public `/api/agent/ask` endpoint and its configured public web/exact-DOI discovery; this is distinct from the isolated private-research endpoint.
+The Operator CLI retains the stable raw inspection view with `result`, or publish a new private file with `brief --format bibtex|ris|csl-json|evidence-csv --state <task> --file <destination>`; omit `--format` for a Markdown brief. The desktop offers BibTeX, RIS, CSL-JSON and evidence CSV through native save dialogs. Each rechecks receipt integrity and original task binding, keeps payment seller-reported, and refuses an existing destination. Older receipts can have no usable article identity or claim ledger. Exports never start discovery. Operator storage remains private locally, while its deliberate buyer purchase uses the public `/api/agent/ask` endpoint and its configured public web/exact-DOI discovery; this is distinct from the isolated private-research endpoint.
+
+For a saved original-page bibliography task, use `brief --format bibliography-bibtex|bibliography-ris|bibliography-csl-json --state <task> --file <destination>`, or the desktop's **Export bibliography** choices. These explicit choices export only the separately validated metadata role from the same checked receipt. They refuse absent, invalid or unusable bibliography metadata before creating a file. Ordinary cited-reference formats remain cited-only, so they stay empty for a metadata-only task. Bibliography exports retain exact versions and metadata-only notes; they do not establish a read, citation or settlement. Existing stored BibTeX keys and receipt bytes stay unchanged. See the [scope and delivery gates](engineering/checked-bibliography-exports-2026-10-09.md).
 
 Transport correction: `creatorsPaid` is null when the response cannot prove a distinct settled creator count. `creatorRewardAllocations` counts non-public sources with positive planned citation rewards; `creatorsReferenced` counts distinct cited source identities. Neither count is settlement evidence. Clients must accept the nullable field.
 
