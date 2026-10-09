@@ -144,6 +144,9 @@ Ordinary short-bullet requests can retain their requested count and supported
 output language when every target, reviewed sentence and qualifying excerpt fits
 the same grounded layout. Otherwise the answer keeps inspectable target sections
 and explains the unmet format. See [candidate scope and acceptance](docs/engineering/research-deliverable-quality-2026-10-08.md).
+Unsupported output-language requests use English scaffold labels without forcing
+statement translation; [language-selection scope](docs/engineering/output-language-2026-10-09.md)
+records the finite parser and remaining localization gates.
 
 The result is a working micro-economy: readers that pay by default, and writers that earn by
 being *useful* — not by being clicked.
