@@ -10,6 +10,7 @@ import { config } from "./config";
 import { paperOpenApiPaths, paperOpenApiSchemas } from "./papers/openapi";
 import { operatorStatusOpenApiPath } from "./business-operator/openapi";
 import { monthlyOpenApiPath } from "./monthly/openapi";
+import { paidJobEscalationOpenApiProperty, paidJobEscalationOpenApiSchemas } from "./a2a/overdue-openapi";
 import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
 
 import { privateProfileOpenApiPaths } from "./profiles/openapi";
@@ -85,6 +86,7 @@ export const openapiSpec = {
       },
     },
     schemas: {
+      ...paidJobEscalationOpenApiSchemas,
       ...paperOpenApiSchemas,
       ...sourceClaimOpenApiSchemas,
       ReferenceExport: {
@@ -272,6 +274,7 @@ export const openapiSpec = {
           pollUrl: { type: "string" },
           researchPackage: { $ref: "#/components/schemas/A2aResearchPackage" },
           serviceStatus: { $ref: "#/components/schemas/A2aServiceStatus" },
+          escalation: paidJobEscalationOpenApiProperty,
           message: { type: "string" },
         },
       },
@@ -282,6 +285,7 @@ export const openapiSpec = {
           status: { type: "string", enum: ["failed"] },
           queryId: { type: "string", pattern: "^a2a_[a-f0-9]{64}$" },
           error: { type: "string" },
+          escalation: paidJobEscalationOpenApiProperty,
           researchPackage: { $ref: "#/components/schemas/A2aResearchPackage" },
           serviceReceipt: { $ref: "#/components/schemas/A2aServiceReceipt" },
           pricing: { type: "object" },

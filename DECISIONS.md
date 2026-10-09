@@ -6747,3 +6747,19 @@ profile snapshot contracts stay unchanged. Public-profile integration, reviewed
 sealed activation and live provider acceptance remain open, with current main
 freeze and combined exact-source release/distribution gates authoritative. See
 [the implementation contract](docs/engineering/private-verified-identities-2026-10-09.md).
+## Observe overdue originals without adding financial or notification authority — 2026-10-09
+
+Issue257 reuses the immutable Quick/Deep accepted 180/300-second provisional target
+and original acceptance clock. Request-time observation can mark an original
+overdue and needing human review even while a creator payment remains uncertain;
+expiry, missing rows and later recovery do not reset the clock or clear a crossed
+payment boundary. Unknown provenance remains explicit. Owner history alone gains
+allowlisted original payment references and exact micro-USDC amounts; public
+aggregates stay identifier-free, and bearer status gains no owner payment data.
+
+Dynamic observations stay outside completed retained responses and portable
+receipts, preserving original/native comparison and export authority. There is no
+new timer, scheduler, outbound alert, retry, signature, purchase, hold release or
+refund. Staffed escalation and wait/partial/refund policy remain separate decisions.
+The [surface contract and remaining gates](docs/engineering/paid-job-overdue-escalation-257.md)
+record this source boundary; issue257 and deployment/distribution acceptance remain open.

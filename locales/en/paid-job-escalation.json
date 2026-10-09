@@ -1,0 +1,30 @@
+{
+  "overdueTitle": "Completion target exceeded. Review the original job.",
+  "overdueBody": "The accepted provisional target has passed without delivery. Human review is needed; this alert does not mean that a person has been notified or that support is staffed.",
+  "unavailable": "Completion timing is unavailable for this recorded job. No target or refund promise is inferred.",
+  "paymentPending": "An original creator payment is still recorded as pending. Expiry or delay does not prove that it failed.",
+  "paymentBoundary": "The job crossed a creator-payment boundary. Missing or definitive recorded legs do not prove that every call is resolved.",
+  "paymentUnknown": "Original creator-payment evidence is unavailable or inconsistent.",
+  "originalOnly": "Keep the original job and payment reference. Do not pay again to recover this job. Wait, partial-delivery and refund choices require a separately confirmed policy.",
+  "observation": "This state was calculated when status was checked. There is no new background alert or notification service.",
+  "orderLabel": "Original order",
+  "referenceLabel": "Original payment reference",
+  "monthlyReferenceLabel": "Original plan payment reference (prepaid allocation)",
+  "networkLabel": "Recorded original network",
+  "amountLabel": "Original order amount (micro-USDC)",
+  "unknown": "Unavailable",
+  "stageLabel": "Last recorded stage",
+  "stage": {
+    "queued": "Waiting to start",
+    "research_started": "Research start recorded",
+    "creator_payment_boundary": "Creator payment boundary recorded",
+    "result_save_boundary": "Result save boundary recorded",
+    "unknown": "Stage unavailable"
+  },
+  "failure": {
+    "research_failed": "Research execution failure recorded",
+    "invalid_order_data": "Original job data failed validation",
+    "operator_reviewed_no_result": "Original job closed without a saved result",
+    "unknown": "Failure details unavailable"
+  }
+}

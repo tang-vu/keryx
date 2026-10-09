@@ -1,12 +1,14 @@
 "use client";
 
 import { ResearchDecisions } from "./research-decisions";
+import { ResearchJobEscalation } from "./research-job-escalation";
 import type { BuyerJob } from "@/lib/a2a/buyer-workspace";
 const usdc = (value: number | null | undefined) => value == null ? "Unknown" : `${value.toFixed(6)} USDC`;
 
 export function ResearchJobDetails({ job, onDownloadReceipt }: { job: BuyerJob; onDownloadReceipt?: () => void }) {
   return (
     <div className="mt-5 space-y-6">
+      <ResearchJobEscalation escalation={job.escalation} />
       {job.funding && <p className="font-serif text-sm">This job uses a {usdc(job.funding.allocationUsdc)} allocation from prepaid Research Monthly. It creates no new inbound payment. Failed or pending execution keeps its request slot.</p>}
       {(job.message || job.error) && <p className="border-l-2 border-seal pl-4 font-serif">{job.message ?? job.error}</p>}
       {job.status === "review_required" && <p className="font-serif">Operator review is required. Automatic polling has stopped. Refresh this job after review; do not submit a new payment to recover it.</p>}

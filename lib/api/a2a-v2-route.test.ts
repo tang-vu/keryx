@@ -39,6 +39,7 @@ vi.mock("@/lib/x402-server", () => ({
 import { GET, POST } from "@/app/api/agent/ask/route";
 import { config } from "@/lib/config";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
+import { a2aResearchPackage } from "../a2a/research-package";
 
 function request(body: unknown, signed = false) {
   return new NextRequest("http://localhost/api/agent/ask", {
@@ -358,7 +359,9 @@ describe("A2A v2 route", () => {
       { amountUsdc: 0.005, settled: false, settlementStatus: "pending" },
     ]);
     const response = await GET(new NextRequest(`http://localhost/api/agent/ask?queryId=${queryId}`));
-    expect(await response.json()).toMatchObject({
+    const completedPacket = await response.json();
+    expect(completedPacket).not.toHaveProperty("escalation");
+    expect(completedPacket).toMatchObject({
       status: "completed",
       answer: "saved",
       totalToCreators: 0.03,
@@ -415,6 +418,26 @@ describe("A2A v2 route", () => {
       new NextRequest(`http://localhost/api/agent/ask?queryId=${queryId}`),
     );
     expect(await processing.json()).toMatchObject({ status: "processing", queryId });
+  });
+
+  it("observes an overdue original without new settlement, research or private payment references", async () => {
+    const queryId = `a2a_${"d".repeat(64)}`, original = {
+      id: queryId, queryId, authorizationId: "PRIVATE_NONCE", requestHash: "PRIVATE_HASH",
+      payer: "0x1111111111111111111111111111111111111111", payee: "0x2222222222222222222222222222222222222222",
+      amountUsdc: 0.08, creatorBudgetUsdc: 0.06, serviceFeeUsdc: 0.02, researchMode: "quick", researchPackage: a2aResearchPackage("quick"),
+      status: "running", transaction: "PRIVATE_ORIGINAL_PAYMENT", request: { question: "PRIVATE_QUESTION", origin: "a2a", network: "eip155:5042002" },
+      startedAt: "2026-09-01T00:00:01.000Z", workerId: "PRIVATE_WORKER", executionJournalVersion: 1,
+      paymentStartedAt: "2026-09-01T00:00:02.000Z", resultSavingAt: null, response: null, errorCode: null, resolution: null,
+      createdAt: "2026-09-01T00:00:00.000Z", updatedAt: "2026-09-01T00:00:02.000Z",
+    };
+    db.getA2aOrder.mockResolvedValue(original);
+    const before = structuredClone(original);
+    const packet = await (await GET(new NextRequest(`http://localhost/api/agent/ask?queryId=${queryId}`))).json();
+    expect(packet.escalation).toMatchObject({ state: "overdue", escalationNeeded: true, lastRecordedStage: "creator_payment_boundary",
+      creatorPaymentState: "payment_boundary_crossed", acceptedAt: original.createdAt, targetCompletionAt: "2026-09-01T00:03:00.000Z" });
+    expect(JSON.stringify(packet)).not.toMatch(/PRIVATE_|originalPayment/);
+    expect(original).toEqual(before); expect(mocks.settleThenServe).not.toHaveBeenCalled(); expect(mocks.collectRun).not.toHaveBeenCalled();
+    for (const method of [db.recordPaymentOnce, db.completeA2aOrder, db.failA2aOrder, db.resolveA2aOrder, db.markA2aOrderPaymentStarted, db.markA2aOrderResultSaving]) expect(method).not.toHaveBeenCalled();
   });
 
   it("publishes audited failed economics without exposing private order data", async () => {

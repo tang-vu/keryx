@@ -93,9 +93,11 @@ published packages or installers.
 
 Issue #257 remains open. Existing Quick/Deep package targets are provisional
 180/300-second SLOs with `remedy:none`; this report does not promote them to an
-SLA. Alerts and a customer-visible escalation at each tier's target, a first-user
+SLA. [Observed customer overdue state](paid-job-overdue-escalation-257.md)
+adds request-time escalation-needed metadata and a visible customer alert,
+including when an original creator leg remains uncertain. Background delivery,
+staffed escalation, a guaranteed target-window observation, a first-user
 time-to-first-answer measure, and a wait/partial/refund choice with confirmed
-support/refund ownership are not implemented. In particular, this candidate
-does not claim acceptance for exceeding a target while a payment leg is
-uncertain. It never retries research, signs, purchases, releases a hold, refunds,
-starts a scheduler or changes the original payment/recovery rules.
+support/refund ownership remain open. Observation never retries research,
+signs, purchases, releases a hold, refunds, starts a scheduler or changes the
+original payment/recovery rules.
