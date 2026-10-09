@@ -6910,3 +6910,31 @@ outside/team/scripted/unknown partitions based on trusted recorded facts, with
 unknown historical identity left unknown. The [source plan and gates](docs/engineering/decision-review-253.md)
 separate buildable ordinary source from database enrollment, live funded authority,
 independent customer evidence and coordinated publication/deployment acceptance.
+
+### 2026-10-09 — Bind deliverable choices to the original customer and version
+
+The delegated remedy policy enables source work on issue250. Use a separate
+acceptance/request domain bound to trusted original store, network, customer and
+delivered digest, preserving original receipts and payment authority. A request
+is distinct from a completed revision or settled refund. Do not turn it into a
+follow-up purchase or replenish an original reservation. Historical remedy:none
+and missing response-window terms remain visible rather than being rewritten.
+Ordinary and enrolled native capabilities, private/monthly originals and every
+supported surface require explicit adapters and acceptance; unsupported domains
+refuse instead of falling back to an unbound journal. The implementation plan
+and remaining accounting, execution and release gates are recorded in
+[deliverable acceptance](docs/engineering/deliverable-acceptance-250.md).
+
+The first request outcome supports settled ordinary prepaid A2A originals through
+one optional SQLite/Supabase journal, scoped API/remote+stdio MCP/CLI and report UI.
+Bind the full retained original and exact stored delivery text to store, network
+and verified customer. Recheck active durable authority after lock acquisition;
+concurrent choices use revision CAS and exact-key replay. A later explicit choice
+supersedes current state without erasing history, including withdrawal of public
+consent. Reasons stay private; consented-current counts retain unknown customer
+classification and denominator/rate. Displayed-answer verification is bound to
+the current bytes even while a digest is pending. Historical remedy:none and no
+response window remain visible; revision/refund execution and prospective terms
+stay withheld. An absent native domain refuses rather than adopting an ordinary
+sidecar. This provides an honest customer request without manufacturing execution,
+funding, usefulness, outside-customer traction or full issue250 acceptance.

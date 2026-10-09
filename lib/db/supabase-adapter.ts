@@ -10,6 +10,8 @@ import { refuseStorage, StorageIdentityRefused } from "./storage-identity";
 import { SUPABASE_RUNTIME_CONTRACT } from "./supabase-runtime-contract";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { createSupabasePrivateProfiles } from "./private-profiles-supabase";
+import { createSupabaseDeliverableAcceptance } from "./deliverable-acceptance-supabase";
+import type { DeliverableAcceptanceStore } from "../deliverable-acceptance/contracts";
 import { createSupabasePersonalHistory } from "./personal-history-supabase";
 import { createSupabaseDecisionReviews } from "./decision-reviews-supabase";
 import type { DecisionReviewsStore } from "../research/decision-review-types";
@@ -151,6 +153,7 @@ export function assembleAuthorityBoundSupabaseCore(
 }
 
 export class SupabaseAdapter implements KeryxDB {
+  declare readonly deliverableAcceptance?: DeliverableAcceptanceStore;
   declare readonly privateProfiles?: PrivateProfilesStore;
   declare readonly personalHistory?: PersonalHistoryStore;
   declare readonly decisionReviews?: DecisionReviewsStore;
@@ -173,6 +176,7 @@ export class SupabaseAdapter implements KeryxDB {
       },
     );
     if (!deployment) Object.defineProperty(this, "privateProfiles", { value: createSupabasePrivateProfiles(this.#sb) });
+    if (!deployment) Object.defineProperty(this, "deliverableAcceptance", { value: createSupabaseDeliverableAcceptance(this.#sb) });
     if (!deployment) Object.defineProperty(this, "personalHistory", { value: createSupabasePersonalHistory(this.#sb) });
     if (!deployment) Object.defineProperty(this, "decisionReviews", { value: createSupabaseDecisionReviews(this.#sb) });
     if (!deployment && this.privateProfiles) Object.defineProperty(this, "profileIdentities", { value: createSupabaseProfileIdentities(this.#sb, this.privateProfiles) });

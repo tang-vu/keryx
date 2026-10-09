@@ -206,6 +206,8 @@ export interface FeedbackStats {
 }
 
 export interface KeryxDB {
+  /** Additive ordinary customer-request journal; no native/enrolled, execution or financial capability. */
+  readonly deliverableAcceptance?: import("../deliverable-acceptance/contracts").DeliverableAcceptanceStore;
   /** Additive ordinary-storage domain. Absent on sealed/native adapters; never restore by fallback. */
   readonly privateProfiles?: PrivateProfilesStore;
   /** Explicit owner-controlled metadata snapshots; absent on unsupported/enrolled adapters. */

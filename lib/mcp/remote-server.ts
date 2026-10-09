@@ -32,8 +32,13 @@ import { identitySnapshotSchema, requireProfileIdentities } from "../profiles/ve
 import { profileWallet, requirePrivateProfiles } from "../profiles/private-profile";
 import type { ApiKeyScope } from "../api-key-scopes";
 import { registerEvidenceDraftTool } from "../research/evidence-draft-tool";
+import { registerAcceptanceTools } from "../deliverable-acceptance/mcp";
+import { requireDeliverableAcceptance } from "../deliverable-acceptance/contracts";
 
 export interface RemoteMcpAccess {
+  /** Verified key row identifier and explicit deliverable rights; not model input. */
+  keyId?: string;
+  deliverableScopes?: ApiKeyScope[];
   budgetCap: number;
   /** Wallet from a verified Keryx API key. Anonymous MCP clients leave this absent. */
   actor?: string;
@@ -111,6 +116,14 @@ export function createRemoteMcpServer(
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
   registerEvidenceDraftTool(server);
+  const acceptanceStore = async (scope: "deliverable:read" | "deliverable:write") => {
+    if (!access.actor || !access.keyId || !access.deliverableScopes?.includes(scope)) throw new Error("Explicit deliverable scope required");
+    return requireDeliverableAcceptance(await getDb());
+  };
+  registerAcceptanceTools(server, {
+    read: async id => (await acceptanceStore("deliverable:read")).read(access.actor!, config.networkId, id),
+    submit: async (id, input) => (await acceptanceStore("deliverable:write")).submit(access.actor!, config.networkId, id, input, { kind: "api-key", id: access.keyId! }),
+  });
   const profileStore = async (scope: "profile:read" | "profile:write") => {
     if (!access.actor || !access.profileScopes?.includes(scope)) throw new Error("Explicit profile scope required");
     return requirePrivateProfiles(await getDb());

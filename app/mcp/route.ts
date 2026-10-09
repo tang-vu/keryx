@@ -71,7 +71,7 @@ async function resolveAccess(
     const key = await verifyApiKey(rawKey);
     if (!key) return jsonRpcHttpError(req, 401, -32001, "Invalid or revoked API key.");
     const scopes = parseScopes(key.scopes);
-    if (!hasScope(scopes, "ask") && (researchCall || !scopes.some(scope => scope === "profile:read" || scope === "profile:write" || scope === "history:read" || scope === "operator:read"))) {
+    if (!hasScope(scopes, "ask") && (researchCall || !scopes.some(scope => scope === "profile:read" || scope === "profile:write" || scope === "history:read" || scope === "operator:read" || scope === "deliverable:read" || scope === "deliverable:write"))) {
       return jsonRpcHttpError(req, 403, -32003, "API key is not scoped for research.");
     }
     if (researchCall) {
@@ -87,6 +87,8 @@ async function resolveAccess(
       profileScopes: scopes,
       historyScopes: scopes,
       operatorScopes: scopes,
+      keyId: key.keyId,
+      deliverableScopes: scopes,
       clientChannel: normalizeMcpClient(req.nextUrl.searchParams.get("client")),
       paperCaller: clientIp(req), signal: req.signal,
     };

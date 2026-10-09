@@ -16,6 +16,7 @@ import { paidJobEscalationOpenApiProperty, paidJobEscalationOpenApiSchemas } fro
 import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
 
 import { privateProfileOpenApiPaths } from "./profiles/openapi";
+import { deliverableAcceptanceOpenApiPaths } from "./deliverable-acceptance/openapi";
 import { evidenceDraftOpenApiPath } from "./research/evidence-draft-openapi";
 import { personalHistoryOpenApiPaths } from "./history/openapi";
 import { API_KEY_SCOPES } from "./api-key-scopes";
@@ -620,6 +621,7 @@ export const openapiSpec = {
   },
   paths: {
     ...decisionReviewOpenApiPaths,
+    ...deliverableAcceptanceOpenApiPaths,
     ...evidenceDraftOpenApiPath,
     ...privateProfileOpenApiPaths,
     ...personalHistoryOpenApiPaths,

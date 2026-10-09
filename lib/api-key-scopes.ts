@@ -15,7 +15,7 @@
 
 /** Historical implicit rights stay fixed. Private/delegated access requires explicit opt-in. */
 export const LEGACY_API_KEY_SCOPES = ["ask", "export"] as const;
-export const API_KEY_SCOPES = [...LEGACY_API_KEY_SCOPES, "profile:read", "profile:write", "history:read", "operator:read"] as const;
+export const API_KEY_SCOPES = [...LEGACY_API_KEY_SCOPES, "profile:read", "profile:write", "history:read", "operator:read", "deliverable:read", "deliverable:write"] as const;
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
 
 export function isApiKeyScope(value: unknown): value is ApiKeyScope {
