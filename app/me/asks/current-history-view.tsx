@@ -69,7 +69,7 @@ export function CurrentHistoryView({ owner }: { owner: string }) {
       <ul className="divide-y divide-line">{page.rows.map(row => <li key={row.id} className="space-y-2 py-4">
         <Link className="break-words text-ink underline" href={`/dispatch/${row.id}`}>{row.question}</Link>
         <p className="text-xs text-ink-3">{row.createdAt} · {row.provenance?.surface ?? copy.unknown} · {row.funding === "browser-recorded" ? copy.browser : copy.other}</p>
-        <p className="text-xs text-ink-2">{copy.recorded}: {row.recordedSpendUsdc} / {row.recordedCreatorAllocationUsdc} USDC · {row.paymentMode ?? copy.unknown}</p>
+        <p className="text-xs text-ink-2">{copy.recorded}: {row.recordedSpendUsdc} / {row.recordedCreatorAllocationUsdc} {copy.usdc} · {row.paymentMode ?? copy.unknown}</p>
         <div className="flex gap-4 text-sm"><Link href={`/dispatch/${row.id}`}>{copy.report}</Link><a href={`/api/dispatch/${row.id}/receipt`}>{copy.receipt}</a></div>
       </li>)}</ul>
       <div className="flex gap-3">

@@ -7,6 +7,6 @@ export const personalHistoryCopy = Object.freeze({
   apply: "Apply filters", loading: "Loading history…", checking: "Checking your sign-in…", empty: "No matching dispatches attributed to this wallet.",
   unavailable: "History is unavailable on this storage deployment. Use the recent creator ledger or try again later.",
   changed: "Your signed-in wallet changed. Reload history.", signedOut: "Sign in to browse your attributed history.",
-  retry: "Retry", newer: "Newer page", older: "Older page", report: "Report", receipt: "Receipt", recorded: "Recorded spend / creator allocation",
+  retry: "Retry", newer: "Newer page", older: "Older page", report: "Report", receipt: "Receipt", recorded: "Recorded spend / creator allocation", usdc: "USDC",
   scopeLabel: "(read attributed current-store history)", scopeDefaults: "Empty selection uses ask + export defaults. Profile and history permissions require explicit selection; write does not grant read.",
 });
