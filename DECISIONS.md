@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**Publish explicitly updated private metadata snapshots — 2026-10-09.**
+Advance issue285 with revocable bearer `.bib` URLs for saved-paper metadata,
+independently of account-provider authorization. Store only random-token hashes;
+owner-session writes need exact-origin, wallet and revision preconditions. Keep
+notes/questions/screening, profiles, original receipts and payment history out of
+published snapshots. Ordinary SQLite alone exposes the additive private port;
+unsupported/enrolled/native stores refuse without widening authority or fallback.
+Stable exact-URL paper keys align newly generated BibTeX with CSL-JSON while
+preserving already retained exports. Explicit replacement and external-tool refresh
+remain visible actions; no automatic publication or Zotero synchronization is
+inferred. Provider-token encryption, live import/refresh and deployment log
+redaction remain separate gates. See [scope and acceptance](docs/engineering/private-synced-bib-2026-10-09.md).
+
 **Record verified run ingress without inferring account ownership — 2026-10-09.**
 New shared research runs carry optional closed JSON provenance separately from
 payment origin and editable MCP client telemetry. Ownership continues to use the

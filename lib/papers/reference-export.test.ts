@@ -5,6 +5,15 @@ import type { PaperRecord } from "./types";
 
 const paper = PAPER_CATALOG[0];
 
+it("BibTeX uses the same stable exact-work keys as CSL across order, filters and sessions", () => {
+  const records = PAPER_CATALOG.slice(0, 3), keys = (value: string) => [...value.matchAll(/^@\w+\{([^,]+),/gm)].map(match => match[1]);
+  const exported = paperReferencesBibtex(records).content;
+  expect(keys(exported)).toEqual(JSON.parse(paperReferencesCslJson(records).content).map((entry: { id: string }) => entry.id));
+  expect(keys(paperReferencesBibtex([...records].reverse()).content)).toEqual(keys(exported).reverse());
+  expect(keys(paperReferencesBibtex([records[2]]).content)).toEqual([keys(exported)[2]]);
+  expect(paperReferencesBibtex(JSON.parse(JSON.stringify(records))).content).toBe(exported);
+});
+
 it("exports saved metadata as CSL-JSON with stable keys across filters, without personal or read data", () => {
   const arxivId = paper.arxivId!.replace(/v\d+$/, "v99");
   const version = { ...paper, arxivId, url: `https://arxiv.org/abs/${arxivId}`, metadataUrl: `https://export.arxiv.org/api/query?id_list=${arxivId}` };

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import bibliographyCopy from "@/locales/en/bibliographies.json";
 import { useRef, useState } from "react";
 import { LiteratureComparisonPreview } from "./literature-comparison-preview";
 import { downloadBrowserText } from "@/lib/browser-text-download";
@@ -179,6 +180,7 @@ export function LiteratureWorkspace() {
       <h2 id="literature-portability" className="font-display text-2xl text-ink">Keep your work portable</h2>
       <p className="mt-2 font-serif text-sm leading-relaxed text-ink-2">Screening CSV includes all saved papers, your notes and metadata provenance. JSON backup also restores your review focus and screening. These are personal bibliography records; they contain no paper text, generated answer or settlement receipt.</p>
       <div className="mt-4 flex flex-wrap gap-3">
+        <Link href="/me/bibliographies" prefetch={false} className={button}>{bibliographyCopy.manage}</Link>
         <button type="button" disabled={!!error || workspace.entries.length === 0} className={button} onClick={() => act(() => downloadBrowserText(literatureScreeningCsv(workspace), "keryx-literature-screening.csv", "text/csv;charset=utf-8"), "Screening CSV download prepared.")}>Download screening CSV</button>
         <button type="button" disabled={!!error} className={button} onClick={() => act(() => downloadBrowserText(serializeLiteratureWorkspace(workspace), "keryx-literature-backup.json", "application/json"), "Workspace backup download prepared.")}>Download JSON backup</button>
         {raw !== undefined && <button type="button" className={button} onClick={() => act(() => downloadBrowserText(raw, "keryx-literature-stored-data.json", "application/json"), "Original stored data download prepared.")}>Download stored data</button>}
