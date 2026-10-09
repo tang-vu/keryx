@@ -12,7 +12,11 @@ import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { useResearchAvailability } from "@/lib/hooks/use-research-availability";
 import { RESEARCH_AVAILABILITY_UNKNOWN, RESEARCH_PAUSED_MESSAGE } from "@/lib/research/availability-contract";
 import { paperLibraryHref } from "@/lib/papers/handoff";
+import { createMessages } from "@/lib/i18n/messages";
 import { ProductHuntBadge } from "./product-hunt-badge";
+
+// Catalogue adoption only. Interface locale and request data remain unchanged.
+const message = createMessages("en");
 
 interface AskFormProps {
   showLaunchBadge?: boolean;
@@ -78,11 +82,11 @@ function readSharedAsk(): {
 
 const SUGGESTIONS = [
   {
-    label: "Compare SQLite WAL and rollback journals",
+    label: message("researchEntry.sqliteExample"),
     q: "Compare SQLite WAL and rollback journals for a small web application. What are the concurrency and operational tradeoffs?",
   },
   {
-    label: "Research children's educational video ideas",
+    label: message("researchEntry.educationExample"),
     q: "Compare English-language educational YouTube topic ideas for children ages 6–9. Distinguish evidence from assumptions and explain the limits of claims about audience demand.",
   },
 ];
@@ -175,11 +179,11 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
 
   const availabilityPanel = (
     <div className="mt-3 border border-line bg-paper p-3 text-sm text-ink-2" role="status">
-      <p>{checking ? "Checking research availability…" : researchPaused ? RESEARCH_PAUSED_MESSAGE :
+      <p>{checking ? message("researchEntry.checking") : researchPaused ? RESEARCH_PAUSED_MESSAGE :
         availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}</p>
       <div className="flex flex-wrap gap-x-3">
-        <a href="/me/asks" className="inline-flex min-h-11 items-center py-3 underline">My saved reports</a>
-        <button type="button" onClick={() => void checkAvailability()} disabled={checking} className="min-h-11 py-3 underline">Check availability</button>
+        <a href="/me/asks" className="inline-flex min-h-11 items-center py-3 underline">{message("researchEntry.savedReports")}</a>
+        <button type="button" onClick={() => void checkAvailability()} disabled={checking} className="min-h-11 py-3 underline">{message("researchEntry.checkAvailability")}</button>
       </div>
     </div>
   );
@@ -188,12 +192,12 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
     <div data-tour="ask-form">
       <div className="border border-ink bg-paper-2">
         <div className="hidden flex-wrap items-center justify-between gap-2 border-b border-ink bg-ink px-4 py-2.5 text-cream sm:flex sm:px-5">
-          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em]">Ask Keryx</span>
-          <span className="font-mono text-[11px]">USDC on {currentArcLabel}</span>
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em]">{message("researchEntry.ask")}</span>
+          <span className="font-mono text-[11px]">{message("researchEntry.network", { network: currentArcLabel })}</span>
         </div>
         <div className="p-3.5 sm:p-5">
           <label htmlFor="ask-question" className="block font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">
-            What do you want to know?
+            {message("researchEntry.question")}
           </label>
           <textarea
             id="ask-question"
@@ -202,83 +206,83 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
             onKeyDown={(e) => {
               if (!e.nativeEvent.isComposing && (e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); submit(); }
             }}
-            placeholder="Ask a question worth reading for..."
+            placeholder={message("researchEntry.placeholder")}
             rows={2}
             maxLength={MAX_ASK_QUESTION_CHARS}
             disabled={disabled}
             className="mt-2 min-h-[76px] w-full resize-y border border-ink bg-paper px-3 py-2 font-serif text-[17px] leading-snug text-ink outline-none placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50"
           />
-          <p className="mt-1 text-xs text-ink-3">Enter for a new line · Ctrl/⌘ + Enter to ask</p>
-          <a href={paperLibraryHref(question)} aria-label="Look up free paper metadata: title, authors or DOI" className="inline-flex min-h-11 items-center font-serif text-sm text-seal underline" data-testid="paper-metadata-handoff">
-            Look up free paper metadata
+          <p className="mt-1 text-xs text-ink-3">{message("researchEntry.keyboardHint")}</p>
+          <a href={paperLibraryHref(question)} aria-label={message("researchEntry.metadataLookupLabel")} className="inline-flex min-h-11 items-center font-serif text-sm text-seal underline" data-testid="paper-metadata-handoff">
+            {message("researchEntry.metadataLookup")}
           </a>
           {researchPaused && availabilityPanel}
           <fieldset className="mt-1">
-            <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">Research depth</legend>
+            <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">{message("researchEntry.depth")}</legend>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
               {(["quick", "deep"] as const).map((mode) => (
                 <label key={mode} className={`flex min-h-11 cursor-pointer items-center gap-2 border px-3 py-2 font-mono text-[12px] font-semibold capitalize focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-seal ${researchMode === mode ? "border-ink bg-ink text-cream" : "border-line bg-paper text-ink"}`}>
                   <input type="radio" name="research-depth" value={mode} checked={researchMode === mode}
                     onChange={() => setResearchMode(mode)} disabled={disabled} className="accent-seal" />
-                  {mode}
+                  {message(mode === "quick" ? "researchEntry.quick" : "researchEntry.deep")}
                 </label>
               ))}
             </div>
             <p className="mt-1.5 font-serif text-[13px] leading-snug text-ink-2">
               {researchMode === "quick"
-                ? "Quick: up to 2 focused reads."
-                : "Deep: up to 4 reads, including marketplace discovery and a coverage check."}
+                ? message("researchEntry.quickHint")
+                : message("researchEntry.deepHint")}
             </p>
           </fieldset>
           <div className="mt-2 border-t border-line pt-3">
             <p className="mb-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-source-cap">
-              Source cap: {effectiveBudget.toFixed(6)} USDC · {payer === "treasury" ? "Keryx pays" : payer === "session" ? "Your research budget" : payer === "expired" ? "Budget expired" : "Budget paused"}
+              {message("researchEntry.sourceCap", { amount: effectiveBudget.toFixed(6), payer: message(payer === "treasury" ? "researchEntry.treasuryPayer" : payer === "session" ? "researchEntry.sessionPayer" : payer === "expired" ? "researchEntry.expiredPayer" : "researchEntry.pausedPayer") })}
             </p>
             <button type="button" onClick={submit} disabled={disabled || payer === "paused" || checking || researchPaused || question.trim().length === 0}
               data-tour="dispatch-btn"
               className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
-              {disabled ? "Researching..." : researchPaused ? "Research paused" : "Ask Keryx"}
+              {message(disabled ? "researchEntry.researching" : researchPaused ? "researchEntry.paused" : "researchEntry.ask")}
             </button>
             {showLaunchBadge && <div className="mt-3 flex justify-center sm:justify-start"><ProductHuntBadge /></div>}
             <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
               {payer === "session"
-                ? `Your research budget pays on ${currentArcLabel}. This question can use up to ${effectiveBudget.toFixed(6)} USDC; your remaining total also applies.`
+                ? message("researchEntry.sessionNotice", { network: currentArcLabel, amount: effectiveBudget.toFixed(6) })
                 : payer === "paused"
-                  ? "Session status unavailable. Recover your funded session below before another question."
+                  ? message("researchEntry.unavailableSessionNotice")
                 : payer === "expired"
-                  ? "Session expired. Recover it below before another wallet funded question."
-                  : `Sponsored trial on ${currentArcLabel}. No wallet or deposit required. Usage and spending limits apply.`}
+                  ? message("researchEntry.expiredSessionNotice")
+                  : message("researchEntry.sponsoredNotice", { network: currentArcLabel })}
             </p>
           </div>
           {!researchPaused && availabilityPanel}
           <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-2 font-mono text-xs text-ink">
             <input type="checkbox" checked={scholarly} disabled={disabled} onChange={event => setScholarly(event.target.checked)} />
-            Search scholarly papers (Crossref and arXiv)
+            {message("researchEntry.scholarly")}
           </label>
-          <p className="text-xs text-ink-3">Sends your question to scholarly repositories. DOI lookup works when a DOI is in the question. Public papers cost no source USDC; unavailable papers and abstract-only reads stay visible.</p>
-          <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={paidScholarly} disabled={disabled || payer !== "session" || !browserPaymentProfile().testnet} onChange={event => setPaidScholarly(event.target.checked)} /> Include reviewed paid manuscripts (experimental testnet rights protocol)</label>
-          {!browserPaymentProfile().testnet&&<p className="mt-1 text-xs text-ink-3">Paid manuscript rights are not yet available on mainnet. Ordinary registered articles remain available.</p>}
-          <p className="text-xs text-ink-3">Requires your funded browser session. Uses the question budget for access and supported citation rewards. Public scholarly references stay free; only approved exact versions can be paid.</p>
+          <p className="text-xs text-ink-3">{message("researchEntry.scholarlyNotice")}</p>
+          <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={paidScholarly} disabled={disabled || payer !== "session" || !browserPaymentProfile().testnet} onChange={event => setPaidScholarly(event.target.checked)} /> {message("researchEntry.paidScholarly")}</label>
+          {!browserPaymentProfile().testnet&&<p className="mt-1 text-xs text-ink-3">{message("researchEntry.paidScholarlyMainnetNotice")}</p>}
+          <p className="text-xs text-ink-3">{message("researchEntry.paidScholarlyNotice")}</p>
           <details ref={advancedRef} className="mt-3 border-t border-line pt-2">
             <summary className="flex min-h-11 cursor-pointer items-center font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2 marker:text-seal hover:text-ink">
-              Budget and model: ${effectiveBudget.toFixed(6)} USDC
+              {message("researchEntry.budgetAndModel", { amount: effectiveBudget.toFixed(6) })}
             </summary>
             <div className="pb-2 pt-1">
               <div className="flex flex-wrap items-center justify-between gap-2" data-tour="budget">
-                <label htmlFor="ask-budget" className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">Maximum budget</label>
+                <label htmlFor="ask-budget" className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">{message("researchEntry.maximumBudget")}</label>
                 <span className="font-display text-[25px] font-semibold tabular-nums text-seal">${effectiveBudget.toFixed(6)}</span>
               </div>
               <input id="ask-budget" type="range" min={0} max={maximumBudget} step={maximumBudget < 0.01 ? 0.000001 : 0.005} value={effectiveBudget}
                 disabled={disabled} onChange={(e) => setBudget(parseFloat(e.target.value))}
-                className="mt-2 w-full" aria-label="Maximum budget in USDC" />
-              <p className="mt-2 font-serif text-[13px] text-ink-2">The agent cannot spend more than this amount on one question. Choose 0 for free sources without source purchases or creator rewards. Model and search costs remain separate.</p>
+                className="mt-2 w-full" aria-label={message("researchEntry.maximumBudgetLabel")} />
+              <p className="mt-2 font-serif text-[13px] text-ink-2">{message("researchEntry.budgetNotice")}</p>
               {models.length > 1 && (
                 <label className="mt-3 flex flex-col gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">
-                  AI model
+                  {message("researchEntry.model")}
                   <select value={model} disabled={disabled} onChange={(e) => setModel(e.target.value)}
-                    title={models.find((m) => m.id === model)?.note ?? "Default reasoning model"}
+                    title={models.find((m) => m.id === model)?.note ?? message("researchEntry.defaultModelNote")}
                     className="min-h-11 w-full border border-ink bg-paper px-3 py-2 text-[12px] font-normal normal-case text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
-                    <option value="">Default: DeepSeek</option>
+                    <option value="">{message("researchEntry.defaultModel")}</option>
                     {models.filter((m) => m.id !== DEFAULT_MODEL_ID).map((m) => (
                       <option key={m.id} value={m.id} title={m.note}>{m.label}</option>
                     ))}
@@ -287,8 +291,8 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
               )}
             </div>
           </details>
-          <p className="mt-2 text-xs text-ink-3">Research may search the public web; your question is sent to our search provider. The USDC source budget is separate from model and search operating costs.</p>
-          {!conversation && <div className="mt-2 flex flex-wrap gap-2" aria-label="Example questions">
+          <p className="mt-2 text-xs text-ink-3">{message("researchEntry.searchNotice")}</p>
+          {!conversation && <div className="mt-2 flex flex-wrap gap-2" aria-label={message("researchEntry.examplesLabel")}>
             {SUGGESTIONS.map((s) => (
               <button key={s.label} type="button" disabled={disabled} onClick={() => setQuestion(s.q)}
                 className="min-h-11 max-w-full border border-line bg-paper px-3 py-2 text-left font-mono text-[11px] leading-snug text-ink-2 transition-colors hover:border-seal hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50">
