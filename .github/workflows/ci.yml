@@ -89,6 +89,9 @@ jobs:
       - name: Personal history PostgreSQL ownership, filters, keyset and refusal
         if: needs.scope.outputs.scope == 'full'
         run: node --import tsx scripts/test-personal-history-postgres.mts
+      - name: Prepaid A2A acceptance PostgreSQL atomic choices and active authority (synthetic)
+        if: needs.scope.outputs.scope == 'full'
+        run: node --import tsx scripts/test-deliverable-acceptance-postgres.mts
       - name: Private verified identities PostgreSQL lineage, ownership and ACL acceptance
         if: needs.scope.outputs.scope == 'full'
         run: node --import tsx scripts/test-profile-identities-postgres.mts
@@ -230,6 +233,8 @@ jobs:
 
       - name: Exact paid original claim (isolated PostgreSQL 17, no payments)
         run: node --import tsx scripts/test-a2a-original-claim-postgres.mts
+      - name: Prepaid A2A acceptance SQLite competing processes and session expiry (synthetic)
+        run: node --import tsx scripts/test-deliverable-acceptance-sqlite.mts
 
       - name: Stdio MCP original paid-job polling (hermetic, no settlement)
         run: npx vitest run --config mcp/vitest.config.mts
@@ -260,6 +265,7 @@ jobs:
           node --import tsx scripts/test-personal-history-mcp-package.mts
           node --import tsx scripts/test-operator-obligations-transports.mts
           node --import tsx scripts/test-public-job-ledger-mcp-package.mts
+          node --import tsx scripts/test-deliverable-acceptance-transports.mts
 
       - name: Packed stdio research diagnostics, signing and recovery (synthetic)
         working-directory: mcp
@@ -443,6 +449,9 @@ jobs:
         run: node --import tsx scripts/test-private-bibliography-built.mts
       - name: Decision reviews (built owner routes and DOM, isolated SQLite and synthetic sessions)
         run: KERYX_NETWORK=arcTestnet NEXT_PUBLIC_KERYX_NETWORK=arcTestnet KERYX_FORCE_OFFLINE=1 node --import tsx scripts/test-decision-reviews-built.mts
+
+      - name: Prepaid A2A acceptance built routes and owner UI (synthetic, no execution)
+        run: node --import tsx scripts/test-deliverable-acceptance-built.mts
       - name: Private identity configured Origin behind Next proxy (built, synthetic pre-auth)
         run: node --import tsx scripts/test-server-profile-identities-origin.mts
 

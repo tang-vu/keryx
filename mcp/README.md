@@ -53,6 +53,23 @@ unapplied RPC return unavailable. See the
 [scope and release gates](https://github.com/tang-vu/keryx/blob/main/docs/engineering/personal-history-read-2026-10-09.md).
 This note does not claim publication or deployed support.
 
+Source candidate adds `deliverable_acceptance_read({id})` and
+`deliverable_acceptance_submit({id,submission})` for completed ordinary prepaid
+A2A originals. Configure an explicit `deliverable:read` / `deliverable:write`
+`KERYX_API_KEY` for the original paying wallet and an HTTPS `KERYX_BASE_URL`.
+Read first; retain `originalFingerprint`, `deliveredDigest`, current revision and
+one `idempotencyKey` for the exact submission. `choice` is `accept`, `revise` or
+`reject`; `reason` is optional/private and `publishState` defaults false. One
+bounded bearer HTTP request records a choice or owner-review request, with no
+automatic retry, signer, second charge, revision or refund execution. Following a
+lost acknowledgement, read current state or replay the identical key/body. Later
+explicit choices supersede current state while history remains immutable; a new
+choice with `publishState:false` withdraws public consent. MCP clients may retain
+messages independently. Browser-only, Monthly/private-v2 and enrolled native
+originals remain unavailable. These tools grant no additional research quota,
+payment, recovery or custody authority; publication and hosted activation remain
+separate gates. See [the contract and limits](../docs/engineering/deliverable-acceptance-250.md).
+
 Candidate 0.4.9 validates paid questions against the shared API's 2000-character
 limit before loading custody or entering funding. `ask_keryx` advertises 3–2000
 characters after trimming, using the server's JavaScript string-length convention.

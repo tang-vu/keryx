@@ -20,6 +20,7 @@ import { breadcrumbJsonLd, crumbLabel } from "@/lib/seo-structured-data";
 import { safeInlineJson } from "@/lib/safe-json";
 import { DispatchView } from "./dispatch-view";
 import { publicQueryRun } from "@/lib/research/public-query-run";
+import { DeliverableAcceptance } from "@/components/keryx/deliverable-acceptance";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 const CURRENT_NETWORK_LABEL = config.profile.testnet ? "Arc testnet" : "Arc mainnet";
@@ -202,6 +203,7 @@ export default async function DispatchPage({ params }: PageProps) {
         <DispatchView run={publicQueryRun(run)} payments={payments} historical={Boolean(archive)} historicalNetwork={archive?.network} />
 
         <PortableReceiptPanel dispatchId={id} />
+        {!archive && <DeliverableAcceptance id={id} answer={run.answer} />}
 
         {comparison.delta ? <AnswerDeltaPanel delta={comparison.delta} /> : null}
         {comparison.unavailable ? <p role="status" className="mt-6 max-w-[860px] font-serif text-sm text-ink-3">The earlier payment comparison could not be loaded. This answer and its own payment evidence remain available.</p> : null}

@@ -246,6 +246,16 @@ requests over 30 days, 10% below four separate packages with unchanged creator
 caps. Manual renewal; no scheduling or unlimited use. Failed/pending jobs use a
 slot. Web/API own the entitlement; Monthly CLI and MCP handoffs share that contract.
 
+[Original-customer deliverable choices](docs/engineering/deliverable-acceptance-250.md)
+source candidate: an ordinary settled prepaid A2A customer can Accept, request a
+revision or Reject the exact retained delivery through its report, scoped API,
+MCP or `npm run deliverable:acceptance -- read <a2a_id>`. Submissions use the exact
+read-back fingerprint/digest/revision and a retained idempotency key. Reasons stay
+private; sharing current choice/timestamp is opt-in and withdrawable. Historical
+`remedy:none` and missing response-window terms remain visible. Revision/refund
+execution is withheld; Monthly/private/browser/native originals and synchronized
+deployment/distribution acceptance remain separate gates.
+
 ## For creators
 
 - **Claim proven demand** — [keryx.cc/wanted](https://keryx.cc/wanted) shows claims paid

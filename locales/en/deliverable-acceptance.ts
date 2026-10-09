@@ -1,0 +1,18 @@
+export const deliverableAcceptanceCopy = {
+  heading: "Your prepaid A2A deliverable choice", publicHeading: "Customer acceptance",
+  scope: "This journal supports settled ordinary prepaid A2A originals. It records your choice or request; revision and refund execution remain withheld.",
+  loading: "Loading acceptance…", unavailable: "Acceptance is unavailable for this original or storage deployment. Browser-only, Monthly, private v2 and enrolled native originals require their own accepted adapter.",
+  signIn: "Sign in with the wallet that ordered this job", noResponse: "No response recorded", notShared: "The customer has not shared an acceptance state.",
+  accepted: "Accepted", revised: "Revision requested — awaiting owner review", rejected: "Rejected — awaiting owner review",
+  terms: "Original terms: remedy:none. This historical job has no agreed response window. Silence stays no response. Recording a request does not execute a revision or refund, buy sources again, replenish a reservation or claw back creator rewards.",
+  reason: "Optional private reason", consent: "Share only my choice and its timestamp on the public report",
+  accept: "Accept", revise: "Request revision", reject: "Reject", refresh: "Read current state", retry: "Replay the same submission",
+  pending: "A creator payment leg remains pending or unknown. Recording your choice does not reconcile or refund it.",
+  busy: "Saving your choice…", failed: "The submission was refused or its acknowledgement was lost. Read current state, or replay the exact retained submission; no revision or refund was executed.",
+  conflict: "The version or current choice changed. Read current state before submitting a new choice.",
+  digest: "Exact retained delivery digest", privateNotice: "Your reason stays private to the service. MCP clients may retain messages independently.",
+  changedAnswer: "The displayed answer differs from the retained delivery. Reload the report before choosing.",
+  verifyingAnswer: "The current displayed answer must be verified before choosing.",
+  publicUnavailable: "Public acceptance state is currently unavailable.", discard: "Clear local retry data", discardNotice: "Clearing retry data does not erase a recorded choice or cancel a request.",
+  readScope: "(read your deliverable choices)", writeScope: "(record your deliverable choice or request)",
+} as const;

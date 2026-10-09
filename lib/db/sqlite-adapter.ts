@@ -1,5 +1,7 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
+import { createSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
+import { AcceptanceError, type DeliverableAcceptanceStore } from "../deliverable-acceptance/contracts";
 import { createSqlitePrivateBibliographies } from "./private-bibliographies-sqlite";
 import { createSqliteDecisionReviews } from "./decision-reviews-sqlite";
 import { DecisionReviewError, type DecisionReviewsStore } from "../research/decision-review-types";
@@ -139,6 +141,7 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 
 export class SqliteAdapter implements KeryxDB {
+  declare readonly deliverableAcceptance?: DeliverableAcceptanceStore;
   declare readonly privateProfiles?: PrivateProfilesStore;
   declare readonly privateBibliographies?: PrivateBibliographiesStore;
   declare readonly personalHistory?: PersonalHistoryStore;
@@ -208,6 +211,10 @@ export class SqliteAdapter implements KeryxDB {
     if (!this.decisionReviews) {
       try { Object.defineProperty(this, "decisionReviews", { value: createSqliteDecisionReviews(this.db) }); }
       catch (error) { if (!(error instanceof DecisionReviewError && error.code === "review_unavailable")) throw error; }
+    }
+    if (!this.deliverableAcceptance) {
+      try { Object.defineProperty(this, "deliverableAcceptance", { value: createSqliteDeliverableAcceptance(this.db) }); }
+      catch (error) { if (!(error instanceof AcceptanceError && error.code === "acceptance_unavailable")) throw error; }
     }
     if (!this.privateBibliographies) {
       try { Object.defineProperty(this, "privateBibliographies", { value: createSqlitePrivateBibliographies(this.db) }); }
