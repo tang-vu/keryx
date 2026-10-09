@@ -41,6 +41,7 @@ export function answerPresentation(question: string, scope: "ordinary" | "retain
   if ((/\b(?:sou|escreva)\b/u.test(cues) && /\b(?:uma|para|sobre|entre)\b/u.test(cues)) ||
       (/\b(?:preciso|explique|responda)\b/u.test(cues) && /\buma\b/u.test(cues))) language = "pt";
   let requestedLanguage: AnswerPresentation["requestedLanguage"];
+  let budgetLanguageDirective: { index: number; english: boolean } | undefined;
   for (const request of requests) {
     if (negated(text, request.index!)) continue;
     // New native forms are directives only at a clause boundary, not page titles
@@ -49,6 +50,10 @@ export function answerPresentation(question: string, scope: "ordinary" | "retain
         (!/(?:^|[.!?;:\r\n\u2028\u2029])\s*$/u.test(text.slice(0, request.index!)) ||
          quotedRanges.some(range => request.index! >= range.start && request.index! < range.end))) continue;
     const name = request.slice(1).find(value => value !== undefined)!;
+    // Budget eligibility observes the existing finite directive grammar, without
+    // changing statement-language selection or treating a neutral fallback as English.
+    if (!quotedRanges.some(range => request.index! >= range.start && request.index! < range.end))
+      budgetLanguageDirective = { index: request.index!, english: /^(?:english|anh|inglês)$/u.test(name) };
     requestedLanguage = /^(?:vietnamese|việt|vietnamita)$/u.test(name) ? "vi"
       : /^(?:(?:brazilian )?portuguese|português(?: brasileiro| do brasil)?|bồ đào nha)$/u.test(name) ? "pt"
       : scope === "ordinary" && /^(?:spanish|español|espanhol)$/u.test(name) ? "es"
@@ -67,7 +72,7 @@ export function answerPresentation(question: string, scope: "ordinary" | "retain
     requested.add(counts[match[1]] ?? Number(match[1]));
   }
   const maximumWords = scope === "ordinary" && language === "en" && !requested.size
-    ? answerWordBudget(question) : undefined;
+    ? answerWordBudget(question, budgetLanguageDirective) : undefined;
   return { language, ...(requestedLanguage ? { requestedLanguage } : {}),
     ...(requested.size === 1 ? { requestedBulletCount: [...requested][0] } : {}),
     ...(maximumWords ? { requestedMaximumWords: maximumWords } : {}) };

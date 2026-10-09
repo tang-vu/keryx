@@ -30,7 +30,7 @@ describe("complete-answer word-budget projection", () => {
     const delivered = finishWordBudgetAnswer(rfc.answer, compact, 180);
     expect(delivered.outcome).toBe("compact");
     expect(completeAnswerWords(delivered.answer)).toBeLessThanOrEqual(180);
-    expect(delivered.words).toBe(178);
+    expect(delivered.words).toBe(180);
     for (const statement of data.statements) {
       const paragraph = delivered.answer.split("\n\n").find(row => row.includes(statement.text));
       expect(paragraph).toContain(`[${statement.marker}] Source text: “${statement.quote.replace(/[\r\n]+/g, " ")}”`);
@@ -38,6 +38,7 @@ describe("complete-answer word-budget projection", () => {
     expect(delivered.answer).toContain(data.confidence.reason);
     expect(delivered.answer).toContain(data.suffix);
     expect(delivered.answer).toContain("Grounding proves neither truth nor entailment.");
+    expect(delivered.answer).toContain("Model-written summaries.");
     expect(delivered.answer).toContain("Sources may conflict; payment states remain in receipts.");
     expect(snapshot()).toBe(before);
     expect(data.ledger.evidence.every(item => item.qualifiesForAnswer && !item.qualifiesForReward)).toBe(true);

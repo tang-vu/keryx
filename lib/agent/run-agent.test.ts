@@ -357,7 +357,7 @@ const citationPool = (budget: number) => budget * config.citationPoolRatio;
 describe("ordinary complete-answer word budget", () => {
   const quote = "The protocol binds approval to canonical action identity.";
   const statement = "Approval binds to canonical action identity.";
-  async function wordBudgetRun(options: { limit?: number; private?: boolean; executionLimits?: boolean } = {}) {
+  async function wordBudgetRun(options: { limit?: number; private?: boolean; executionLimits?: boolean; pending?: boolean } = {}) {
     const question = `Explain approval identity. Keep the note within ${options.limit ?? 120} words.`;
     const item: SourceItem = { id: "word-budget-item", sourceId: "word-budget-source", title: "Article",
       link: "https://owned.example/word-budget", summary: "Approval protocol", content: quote };
@@ -367,6 +367,12 @@ describe("ordinary complete-answer word budget", () => {
     engine.decompose = async () => ["Approval identity"];
     const attribute = vi.spyOn(engine, "attribute");
     const gateway = fakeGateway(), queryId = options.private ? `prv_${"c".repeat(64)}` : undefined;
+    if (options.pending) gateway.payCitation = async ({ source, author, amount, weight, queryId, rationale }) => {
+      gateway.citationCalls.push({ sourceId: source.id, payee: author.walletAddress, amount });
+      throw new PaymentPendingError("Synthetic pending original", makePayment({ kind: "citation", queryId,
+        sourceId: source.id, sourceName: source.name, payer: AGENT, payee: author.walletAddress,
+        amountUsdc: amount, weight, rationale, settled: false, settlementStatus: "pending" }));
+    };
     const effects = isolatedTestEffects(queryId);
     const run = await collectRun({ question, budget: 0.03, ...(queryId ? { queryId } : {}),
       ...(options.executionLimits ? { executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } } : {}) },
@@ -424,6 +430,35 @@ describe("ordinary complete-answer word budget", () => {
     expect(run.answer).toContain("Could not meet the 1-word limit");
     expect(run.evidence).toEqual([]);
     expect(run.totalSpent).toBe(0);
+  });
+  it("keeps exact post-settlement pending-original guidance in the counted compact answer", async () => {
+    const data = await wordBudgetRun({ limit: 180, pending: true });
+    expect(data.run.answer).toContain("Before any new paid attempt, inspect this job's original payment receipts and records");
+    expect(data.run.answer).toContain("Read failures and follow-up steps do not erase recorded charges or reservations.");
+    expect(data.run.answer).toContain("These are suggested follow-up steps; this run has not performed them.");
+    expect(data.run.answer.match(/\S+/g)!.length).toBeLessThanOrEqual(180);
+    expect(data.run.trace.find(step => step.message.includes("word-budget projection"))?.detail).toMatchObject({ outcome: "compact" });
+    expect(data.run.pendingPayments).toBe(1);
+    expect(data.run.pendingSpendUsdc).toBeGreaterThan(0);
+    const canonical = data.attribute.mock.calls[0][0] as { answer: string };
+    expect(canonical.answer).not.toContain("Next steps to complete");
+  });
+  it("keeps truncated-original recovery and read-status notices in complete-answer counting", async () => {
+    const engine = fakeEngine({ synthesize: () => ({ answer: "Withheld draft [S1]", citedMarkers: ["S1"],
+      evidence: [{ claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport: 0.9 }] }) });
+    const gateway = fakeGateway(), d = deps([], engine, gateway);
+    d.readWebArticle = vi.fn(async url => ({ text: quote + "\nUnfinished extraction tail", title: "Original", finalUrl: url,
+      kind: "html" as const, truncated: true }));
+    const { run } = await drive({ question: "Read https://www.example.org/original. Keep the note within 180 words.",
+      origin: "web", budget: 0 }, d);
+    expect(run.answer).toContain("the extracted text was truncated. Read the missing section of the same version");
+    expect(run.answer).toContain("retain this snapshot for comparison.");
+    expect(run.answer).toContain("Supplied original source status");
+    expect(run.answer).toContain("Extraction was truncated.");
+    expect(run.answer.match(/\S+/g)!.length).toBeLessThanOrEqual(180);
+    expect(run.trace.find(step => step.message.includes("word-budget projection"))?.detail).toMatchObject({ outcome: "compact" });
+    expect(gateway.citationCalls).toEqual([]);
+    expect(run.evidence).toMatchObject([{ quote, qualifiesForAnswer: true, qualifiesForReward: false }]);
   });
 });
 

@@ -14,6 +14,7 @@ describe("finite ordinary English complete-answer limits", () => {
   });
   it.each(["RFC 180 contains 180 words.", "Do not keep the note within 180 words.",
     "Do not\nkeep the note within 180 words.", 'Read the title "Keep the note within 180 words."',
+    "Do not explicitly\nkeep the note within 180 words.", "Don't explicitly\nkeep the note within 180 words.",
     "Keep the note within 180 words, excluding warnings.", "Keep the note within 180.5 words.",
     "Keep the note within 0180 words.", "Keep the note within 0 words.", "Keep the note within 2001 words.",
     "Keep the note within 180 words. Keep the answer within 90 words."])("refuses unsupported/ambiguous %s", question => {
@@ -39,4 +40,17 @@ describe("finite ordinary English complete-answer limits", () => {
     expect(answerPresentation('In English, give a note. Read "Answer in French." Keep the note within 180 words.').requestedMaximumWords).toBe(180);
     expect(answerPresentation("In English, give a note. Do not\nanswer in French. Keep the note within 180 words.").requestedMaximumWords).toBe(180);
   });
+  it.each(["Responda em francês.", "Trả lời tiếng Pháp."])("refuses native unsupported positive directive %s without widening locale grammar", directive => {
+    expect(answerPresentation(`${directive} Keep the note within 180 words.`).requestedMaximumWords).toBeUndefined();
+    expect(answerPresentation(`${directive} In English, give a note. Keep the note within 180 words.`).requestedMaximumWords).toBe(180);
+    expect(answerPresentation(`In English, give a note. Read “${directive}” Keep the note within 180 words.`).requestedMaximumWords).toBe(180);
+  });
+  it("keeps negated native unsupported requests inert before bare English", () => {
+    for (const directive of ["Não responda em francês.", "Không trả lời tiếng Pháp."])
+      expect(answerPresentation(`Answer in English. ${directive} In English, give a note. Keep the note within 180 words.`).requestedMaximumWords).toBe(180);
+  });
+  it.each(["Not now\n", "Not now\r\n", "Not now\u2028", "Not now\u2029", "Not now.\n", "No thanks\n"])
+    ("preserves a new positive limit after discourse %j", prefix => {
+      expect(answerPresentation(`${prefix}Keep the note within 180 words.`).requestedMaximumWords).toBe(180);
+    });
 });

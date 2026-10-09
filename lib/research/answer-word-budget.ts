@@ -1,17 +1,26 @@
 /** A finite caller instruction, never a number inferred from a research target. */
-export function answerWordBudget(question: string): number | undefined {
+export function answerWordBudget(question: string, lastLanguageDirective?: { index: number; english: boolean }): number | undefined {
   const text = question.slice(0, 30_000).normalize("NFC").toLowerCase();
   const quoted = [...text.matchAll(/"[^"]*"|“[^”]*”|«[^»]*»|`[^`]*`|(?<![\p{L}\p{N}])'[^']*'(?![\p{L}\p{N}])/gu)]
     .map(match => [match.index!, match.index! + match[0].length]);
-  const inert = (index: number) => quoted.some(([left, right]) => index >= left && index < right) ||
-    /(?:do not|don't|not)\s*$/u.test(text.slice(Math.max(0, index - 45), index));
+  const inert = (index: number) => {
+    const prefix = text.slice(Math.max(0, index - 45), index);
+    const line = prefix.split(/[\r\n\u2028\u2029]/u).at(-1)!;
+    return quoted.some(([left, right]) => index >= left && index < right) ||
+      /(?<![\p{L}\p{N}_])(?:do not|don't|not)\s+(?:[^\s.,;:!?]+\s+){0,2}$/u.test(line) ||
+      /(?<![\p{L}\p{N}_])(?:do not|don't)\s+(?:[^\s.,;:!?]+\s+){0,2}$/u.test(prefix);
+  };
   // A neutral English scaffold fallback is not an English-language instruction.
   // Keep this eligibility check separate from statement translation/language selection.
-  let explicitLanguage: string | undefined;
+  let explicitLanguage = lastLanguageDirective ? lastLanguageDirective.english ? "english" : "unsupported" : undefined;
+  let languageIndex = lastLanguageDirective?.index ?? -1;
   const languages = /(?<![\p{L}\p{N}_])(?:answer|respond|reply|write)\s+(?:only\s+)?(?:in|using)\s+(?!(?:at|no)\b)([\p{L}-]+)|(?:^|[.!?;\r\n\u2028\u2029])\s*(?:in\s+([\p{L}-]+)\s*[,;:]|en\s+(français)\s*[,;:]|(?:antworte\s+(?:bitte\s+)?)?auf\s+(deutsch)\b)/gu;
   for (const match of text.matchAll(languages)) {
     const index = match.index! + match[0].search(/[\p{L}]/u);
-    if (!inert(index)) explicitLanguage = match.slice(1).find(value => value !== undefined);
+    if (index >= languageIndex && !inert(index)) {
+      explicitLanguage = match.slice(1).find(value => value !== undefined);
+      languageIndex = index;
+    }
   }
   if (explicitLanguage !== undefined && explicitLanguage !== "english") return undefined;
   const limits = new Set<number>();

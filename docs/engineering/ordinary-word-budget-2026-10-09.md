@@ -1,7 +1,7 @@
 # Ordinary English complete-answer word budgets
 
 The retained public RFC4180 question asks for a note within 180 words. Its captured
-app 0.27.44 answer has 296 whitespace-delimited tokens, despite retaining all three
+app 0.27.44 answer has 296 whitespace-delimited words, despite retaining all three
 requested facts. Preserve that historical failure and its source/version bindings.
 The new source candidate addresses renderer overhead, not extraction or model
 quality; it makes no new source, search, model, database or payment call.
@@ -32,7 +32,7 @@ same display escaping as historical grounded delivery; evidence/receipt quote
 bytes and flags are unchanged. Neither renderer creates evidence capabilities.
 
 Both original and compact bodies receive the identical supplied-original status,
-recency gaps/observations and funding notice. Count whitespace-delimited tokens in
+recency gaps/observations, funding notice and exact post-attribution follow-up guidance. Count whitespace-delimited words in
 the entire final answer. Prefer an already-fitting original; select the compact
 candidate only when it fits. Otherwise retain the full original plus an explicit
 unmet-limit notice. Never truncate reviewed text or drop targets to force a cap.
@@ -52,7 +52,7 @@ Stored historical reports are not rewritten. Coordinate any runtime release and
 verify deployed commit/package/installer inventory before synchronized delivery.
 
 Offline regressions replay only the public retained renderer projection, not source
-admission/model review. They reproduce 296 tokens and check all three exact pairs
+admission/model review. They reproduce 296 words and check all three exact pairs
 plus original status/confidence within 180; an injected hermetic pipeline checks
 attribution input, evidence, money calls and checked receipt/export equality.
 Insufficient budgets and operational suffixes retain full content. Require focused

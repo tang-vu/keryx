@@ -1995,7 +1995,10 @@ async function* runAdmittedAgent(
   const followUp = researchFollowUp({ vi, outcomes: publicReadOutcomes, gathered, conflicts: synthesized.conflicts ?? [],
     paymentReviewRequired: fundingUnavailable || pendingPayments > 0 || fetchFailures > 0,
     synthesisFailure: synthesized.synthesisFailure });
-  if (followUp) answer += `\n\n${followUp}`;
+  if (followUp) {
+    answer += `\n\n${followUp}`;
+    if (finalWordBudget?.compactAnswer !== undefined) finalWordBudget.compactAnswer += `\n\n${followUp}`;
+  }
   // Append proposals after contribution allocation and settlement. Their text,
   // labels and gaps cannot enter factual coverage or model attribution input.
   if (teachingProposals) answer += `\n\n${teachingProposalAnswer(teachingProposals)}`;

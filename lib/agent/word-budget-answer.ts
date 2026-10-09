@@ -29,7 +29,7 @@ export function compactWordBudgetAnswer(ledger: EvidenceLedger, statements: Cite
   });
   // Keep full confidence rationale once, instead of repeating its limitations in three places.
   return confidenceBanner([...sections,
-    "Grounding proves neither truth nor entailment. Sources may conflict; payment states remain in receipts.",
+    "Model-written summaries. Grounding proves neither truth nor entailment. Sources may conflict; payment states remain in receipts.",
   ].join("\n\n"), confidence, "en");
 }
 
