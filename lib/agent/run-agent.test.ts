@@ -354,6 +354,114 @@ async function drive(
 const fetchBudget = (budget: number) => budget * (1 - config.citationPoolRatio);
 const citationPool = (budget: number) => budget * config.citationPoolRatio;
 
+describe("ordinary complete-answer word budget", () => {
+  const quote = "The protocol binds approval to canonical action identity.";
+  const statement = "Approval binds to canonical action identity.";
+  async function wordBudgetRun(options: { limit?: number; private?: boolean; executionLimits?: boolean; pending?: boolean } = {}) {
+    const question = `Explain approval identity. Keep the note within ${options.limit ?? 120} words.`;
+    const item: SourceItem = { id: "word-budget-item", sourceId: "word-budget-source", title: "Article",
+      link: "https://owned.example/word-budget", summary: "Approval protocol", content: quote };
+    const source = makeSource({ id: item.sourceId, fetchPrice: 0.004 });
+    const engine = fakeEngine({ synthesize: () => ({ answer: "Unsupported raw draft [S1]", citedMarkers: ["S1"],
+      evidence: [{ claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport: 0.9 }] }) });
+    engine.decompose = async () => ["Approval identity"];
+    const attribute = vi.spyOn(engine, "attribute");
+    const gateway = fakeGateway(), queryId = options.private ? `prv_${"c".repeat(64)}` : undefined;
+    if (options.pending) gateway.payCitation = async ({ source, author, amount, weight, queryId, rationale }) => {
+      gateway.citationCalls.push({ sourceId: source.id, payee: author.walletAddress, amount });
+      throw new PaymentPendingError("Synthetic pending original", makePayment({ kind: "citation", queryId,
+        sourceId: source.id, sourceName: source.name, payer: AGENT, payee: author.walletAddress,
+        amountUsdc: amount, weight, rationale, settled: false, settlementStatus: "pending" }));
+    };
+    const effects = isolatedTestEffects(queryId);
+    const run = await collectRun({ question, budget: 0.03, ...(queryId ? { queryId } : {}),
+      ...(options.executionLimits ? { executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } } : {}) },
+      { deps: { ...deps([source], engine, gateway, { items: { [source.id]: [item] } }), effects } });
+    return { run, attribute, gateway, effects };
+  }
+  it("projects the saved/done answer after unchanged attribution and settles the same admitted contribution", async () => {
+    const data = await wordBudgetRun();
+    expect(data.run.answer.match(/\S+/g)!.length).toBeLessThanOrEqual(120);
+    expect(data.run.answer).toContain(`${statement} [S1] Source text: “${quote}”`);
+    expect(data.run.answer).not.toContain("Research target 1");
+    const input = data.attribute.mock.calls[0][0] as { answer: string };
+    expect(input.answer).toContain("Research target 1"); // canonical pre-projection attribution input
+    expect(input.answer).toContain("Summary sentences are model-written and model-checked");
+    expect(data.run.trace.find(step => step.message.includes("word-budget projection"))?.detail)
+      .toMatchObject({ answer: data.run.answer, maximumWords: 120, outcome: "compact" });
+    expect(data.effects.saveQueryRun).toHaveBeenCalledWith(data.run);
+    const payments = vi.mocked(data.effects.recordPayment).mock.calls.map(([payment]) => payment);
+    const receipt = buildResearchReceipt(data.run, payments);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.dispatch.answer).toBe(data.run.answer);
+    expect(researchReportMarkdown(data.run, null, payments)).toContain(data.run.answer);
+    expect(remoteResearchResult(data.run).answer).toBe(data.run.answer);
+    expect(data.gateway.citationCalls).toHaveLength(1);
+    expect(data.run.evidence).toMatchObject([{ quote, qualifiesForAnswer: true, qualifiesForReward: true }]);
+    const retained = await wordBudgetRun({ executionLimits: true });
+    expect(retained.attribute.mock.calls[0][0]).toEqual(data.attribute.mock.calls[0][0]);
+    expect(retained.run.evidence).toEqual(data.run.evidence);
+    expect(retained.run.claimCoverage).toEqual(data.run.claimCoverage);
+    expect(retained.run.citations).toEqual(data.run.citations);
+    expect(retained.gateway.citationCalls).toEqual(data.gateway.citationCalls);
+    expect(retained.run.totalSpent).toBe(data.run.totalSpent);
+    expect(retained.run.totalToCreators).toBe(data.run.totalToCreators);
+  });
+  it("keeps the full answer and explicit notice when too small, without changing money", async () => {
+    const data = await wordBudgetRun({ limit: 1 });
+    expect(data.run.answer).toContain("Could not meet the 1-word limit");
+    expect(data.run.answer).toContain("Research target 1");
+    expect(data.run.answer).toContain(`${statement} [S1] Source text: “${quote}”`);
+    expect(data.run.trace.find(step => step.message.includes("word-budget projection"))?.detail)
+      .toMatchObject({ outcome: "unmet", words: data.run.answer.match(/\S+/g)!.length });
+    expect(data.gateway.citationCalls).toHaveLength(1);
+  });
+  it("leaves private and execution-limited originals on their original answer policy", async () => {
+    for (const options of [{ private: true }, { executionLimits: true }]) {
+      const data = await wordBudgetRun(options);
+      expect(data.run.answer).toContain("Research target 1");
+      expect(data.run.answer).not.toContain("Could not meet");
+      expect(data.run.trace.some(step => step.message.includes("word-budget projection"))).toBe(false);
+    }
+  });
+  it("keeps early no-source content without reading late synthesis bindings", async () => {
+    const { run } = await drive({ question: "Explain approval identity. Keep the note within 1 words.", budget: 0 },
+      deps([], fakeEngine(), fakeGateway()));
+    expect(run.answer).toContain("Could not meet the 1-word limit");
+    expect(run.evidence).toEqual([]);
+    expect(run.totalSpent).toBe(0);
+  });
+  it("keeps exact post-settlement pending-original guidance in the counted compact answer", async () => {
+    const data = await wordBudgetRun({ limit: 180, pending: true });
+    expect(data.run.answer).toContain("Before any new paid attempt, inspect this job's original payment receipts and records");
+    expect(data.run.answer).toContain("Read failures and follow-up steps do not erase recorded charges or reservations.");
+    expect(data.run.answer).toContain("These are suggested follow-up steps; this run has not performed them.");
+    expect(data.run.answer.match(/\S+/g)!.length).toBeLessThanOrEqual(180);
+    expect(data.run.trace.find(step => step.message.includes("word-budget projection"))?.detail).toMatchObject({ outcome: "compact" });
+    expect(data.run.pendingPayments).toBe(1);
+    expect(data.run.pendingSpendUsdc).toBeGreaterThan(0);
+    const canonical = data.attribute.mock.calls[0][0] as { answer: string };
+    expect(canonical.answer).not.toContain("Next steps to complete");
+  });
+  it("keeps truncated-original recovery and read-status notices in complete-answer counting", async () => {
+    const engine = fakeEngine({ synthesize: () => ({ answer: "Withheld draft [S1]", citedMarkers: ["S1"],
+      evidence: [{ claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport: 0.9 }] }) });
+    const gateway = fakeGateway(), d = deps([], engine, gateway);
+    d.readWebArticle = vi.fn(async url => ({ text: quote + "\nUnfinished extraction tail", title: "Original", finalUrl: url,
+      kind: "html" as const, truncated: true }));
+    const { run } = await drive({ question: "Read https://www.example.org/original. Keep the note within 180 words.",
+      origin: "web", budget: 0 }, d);
+    expect(run.answer).toContain("the extracted text was truncated. Read the missing section of the same version");
+    expect(run.answer).toContain("retain this snapshot for comparison.");
+    expect(run.answer).toContain("Supplied original source status");
+    expect(run.answer).toContain("Extraction was truncated.");
+    expect(run.answer.match(/\S+/g)!.length).toBeLessThanOrEqual(180);
+    expect(run.trace.find(step => step.message.includes("word-budget projection"))?.detail).toMatchObject({ outcome: "compact" });
+    expect(gateway.citationCalls).toEqual([]);
+    expect(run.evidence).toMatchObject([{ quote, qualifiesForAnswer: true, qualifiesForReward: false }]);
+  });
+});
+
 it("records trusted ingress without deriving an owner or method from origin/client telemetry", async () => {
   const provenance = { version: 1, surface: "api", ownershipMethod: "api-key" } as const;
   const asker = `0x${"ab".repeat(20)}`;

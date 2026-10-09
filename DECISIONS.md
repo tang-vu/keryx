@@ -223,6 +223,19 @@ official Product Hunt badge after homepage research controls so the mobile actio
 remains visible. Source inclusion and a launch link do not establish useful live
 research, independent adoption or real payment traction.
 
+# 2026-10-09 — Count ordinary English word limits after complete delivery
+
+An ordinary RFC answer retained its three facts but exceeded the requested 180 words:
+the full answer had 296 whitespace-delimited words, including repeated scaffolding. Apply a finite explicit caller word budget
+only to final ordinary English delivery, after unchanged attribution/settlement.
+Keep every checked sentence/excerpt/marker, evidence gap, full confidence reason,
+source status, operational notice and receipt/payment limitation. Select a compact
+scaffolding projection only when the entire answer fits; otherwise retain full
+content with an explicit unmet-limit notice. Private/retained, bounded packages,
+decision briefs and teaching policies stay unchanged. Historical failures and
+semantic/live acceptance remain open. See
+[scope and gates](docs/engineering/ordinary-word-budget-2026-10-09.md).
+
 **Retain ordinary presentation without weakening grounded delivery — 2026-10-08.**
 Derive supported language and compact layout from the trusted original caller,
 before sentence review. Group source-bound sentence/excerpt pairs by their shared
