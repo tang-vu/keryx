@@ -48,7 +48,7 @@ import { readResearchAvailability } from "@/lib/research/availability";
 import { researchAdmissionError } from "@/lib/research/availability-contract";
 import { isConfiguredSameOrigin } from "@/lib/auth-origin";
 import { createLiveDecisionReviews } from "@/lib/research/decision-review-live";
-import { unsupportedDecisionReviewIntent } from "@/lib/research/decision-review-types";
+import { unsupportedDecisionReviewIntent, type DecisionReviewsStore } from "@/lib/research/decision-review-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -170,12 +170,16 @@ export async function POST(req: NextRequest) {
     );
   }
   const useBrowserCoSign = Boolean(sessionId);
-  let reviewStore = asker ? (await getDb()).decisionReviews : undefined;
-  if (body.reviewFirst === true && !reviewStore) return Response.json({ error: "review_unavailable" }, { status: 503 });
-  if (reviewStore) {
-    try { await reviewStore.ready(); }
-    catch { if (body.reviewFirst === true) return Response.json({ error: "review_unavailable" }, { status: 503, headers: { "Cache-Control": "private, no-store", "Vary": "Cookie" } }); reviewStore = undefined; }
+  const reviewDb = asker ? await getDb() : undefined;
+  let reviewStore: DecisionReviewsStore | undefined;
+  try {
+    reviewStore = reviewDb?.decisionReviews;
+    if (reviewStore) await reviewStore.ready();
+  } catch {
+    // Strict enrolled facades refuse undeclared capabilities; selection failures stay outside.
+    reviewStore = undefined;
   }
+  if (body.reviewFirst === true && !reviewStore) return Response.json({ error: "review_unavailable" }, { status: 503, headers: { "Cache-Control": "private, no-store", "Vary": "Cookie" } });
   const reviewSession = body.reviewFirst === true ? await accountSessionContext() : undefined;
   if (reviewSession instanceof Response) return reviewSession;
   if (reviewSession && reviewSession.wallet !== asker) return Response.json({ error: "review_owner_changed" }, { status: 409 });

@@ -17,10 +17,16 @@ let model: string | undefined;
 let allowExternalWeb = false;
 const qParts: string[] = [];
 for (let i = 0; i < argv.length; i++) {
-  if (argv[i] === "--budget" && argv[i + 1]) {
-    budget = parseFloat(argv[++i]);
-  } else if (argv[i] === "--model" && argv[i + 1]) {
-    model = argv[++i];
+  if (argv[i] === "--budget") {
+    const value = argv[++i];
+    if (!value || !/^(0|[1-9][0-9]*)(?:\.[0-9]{1,6})?$/.test(value) || !Number.isFinite(Number(value)))
+      throw new Error("--budget requires a finite nonnegative decimal USDC value with at most six decimal places.");
+    budget = Number(value);
+  } else if (argv[i] === "--model") {
+    const value = argv[++i];
+    if (!value?.trim() || value.startsWith("-") || /[\u0000-\u001f\u007f]/u.test(value))
+      throw new Error("--model requires a nonempty model id.");
+    model = value.trim();
   } else if (argv[i] === "--web") {
     allowExternalWeb = true;
   } else if (argv[i].startsWith("--")) {

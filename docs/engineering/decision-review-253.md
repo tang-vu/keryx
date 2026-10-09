@@ -166,11 +166,17 @@ sessions exercise actual owner/Origin/privacy/readback/closed-gate routes, publi
 counts and authenticated explicit archived DOM at 320/390/768/1366 pixels. Cleanup
 requires observed child exit. It creates no grant/payment signature/provider call
 or settlement and cannot certify a funded production review.
+The fresh fixture keeps the original browser journal inactive and proves exact
+cutover-pending refusal for ask admission, plus unauthenticated/foreign-Origin
+refusal on the private verdict API; it does not simulate payment readiness.
 
 The CLI rejects unsupported review intent before importing the agent/provider
 graph. The isolated regression poisons those imports and retains the 10-second
 process limit. Private review responses also keep `no-referrer` at Next's
-configured-header layer, which otherwise overrides Route Handler headers.
+configured-header layer for both owner verdicts and ask SSE, which otherwise
+overrides Route Handler headers. Selected storage failures remain terminal;
+strict native-facade optional property/readiness refusal only disables ordinary
+capture, with review-first unavailable and no ordinary-store fallback.
 
 Final qualification still requires source-bound focused results, both TypeScript
 graphs, lint, literal-copy guard, actual 48-case study write/check at the changed

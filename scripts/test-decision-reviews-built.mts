@@ -84,7 +84,9 @@ try {
   assert.equal(metrics.cohorts[3].decisions, 2); assert.equal(metrics.cohorts[3].disagrees, 1); assert.equal(metrics.cohorts[0].agreementRate, null);
   assert.doesNotMatch(JSON.stringify(metrics), /PRIVATE|private-fixture|wallet|runId|0xaaaa|reason"/);
   const ask = { question: "Synthetic question", sessionId: alice, reviewFirst: true, browserAuthorizationProtocol: "durable-v1" };
-  assert.equal((await request("/api/ask", { ...preAuth, body: JSON.stringify(ask) })).status, 401);
+  const closedAsk = await request("/api/ask", { ...preAuth, body: JSON.stringify(ask) });
+  assert.equal(closedAsk.status, 503); assert.deepEqual(await closedAsk.json(), { error: "browser_authorization_cutover_pending" });
+  assert.equal(closedAsk.headers.get("referrer-policy"), "no-referrer");
   assert.equal((await request("/api/ask", { ...preAuth, headers: { ...preAuth.headers, Origin: "https://foreign.example" }, body: JSON.stringify(ask) })).status, 409);
   browser = await chromium.launch({ headless: true });
   for (const width of [320, 390, 768, 1366]) {
