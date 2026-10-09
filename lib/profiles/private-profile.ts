@@ -1,12 +1,13 @@
 import { z } from "zod";
+import { isWellFormedUtf16 } from "../llm/well-formed-utf16";
 
 export const RESERVED_PROFILE_HANDLES = ["keryx", "admin", "administrator", "api", "auth", "circle", "arc", "creator", "creators", "developer", "dev", "dispatch", "gateway", "help", "integrations", "login", "mainnet", "me", "moderator", "official", "operator", "owner", "profile", "research", "root", "signup", "sources", "status", "support", "system", "testnet", "treasury", "wallet"] as const;
 export const PROFILE_LINK_KINDS = ["orcid", "github", "linkedin", "x", "website", "telegram"] as const;
-const singleLine = (max: number) => z.string().max(max).refine(value => value.isWellFormed() && !/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(value), "Use one line without control characters").transform(value => value.trim());
+const singleLine = (max: number) => z.string().max(max).refine(value => isWellFormedUtf16(value) && !/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(value), "Use one line without control characters").transform(value => value.trim());
 const hosts: Record<string, readonly string[]> = { orcid: ["orcid.org"], github: ["github.com"], linkedin: ["linkedin.com", "www.linkedin.com"], x: ["x.com", "twitter.com"], telegram: ["t.me"] };
 
 export function canonicalProfileLink(kind: string, value: string): string {
-  if (value.length > 512 || !value.isWellFormed() || /[\s\p{Cc}\p{Cf}]/u.test(value)) throw new Error("Invalid profile link");
+  if (value.length > 512 || !isWellFormedUtf16(value) || /[\s\p{Cc}\p{Cf}]/u.test(value)) throw new Error("Invalid profile link");
   const url = new URL(value);
   if (url.protocol !== "https:" || url.username || url.password || url.port || url.hash || url.search
     || !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}$/.test(url.hostname)
