@@ -1,0 +1,259 @@
+{
+  "version": 1,
+  "provenance": "fictional-public-synthetic-fixture",
+  "questions": [
+    {
+      "id": "meridian",
+      "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
+      "description": "A useful free fact and a complementary paid fact.",
+      "facts": [
+        {
+          "id": "capacity",
+          "literal": "Meridian reservoir capacity is 42 million liters.",
+          "documentIds": [
+            "overview",
+            "primary"
+          ]
+        },
+        {
+          "id": "opening",
+          "literal": "Meridian reservoir opened on 12 May 2024.",
+          "documentIds": [
+            "primary"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "overview",
+          "name": "Meridian reservoir capacity overview",
+          "title": "Meridian reservoir capacity overview",
+          "summary": "Meridian reservoir capacity introduction.",
+          "body": "Meridian reservoir capacity is 42 million liters.",
+          "free": true,
+          "bodyHash": "0x95339c2f7d00e4359f7d34fd86ec72969635c95556952a64322f2849e5d08bd8",
+          "contentVersion": "sha256:22fd5668a118940a8ff7a862f3599dc5363b43d0874d9841a49f4cbd5ce54662"
+        },
+        {
+          "id": "primary",
+          "name": "Meridian reservoir opening record",
+          "title": "Meridian reservoir opening record",
+          "summary": "Meridian reservoir capacity and opening date record.",
+          "body": "Meridian reservoir capacity is 42 million liters. Meridian reservoir opened on 12 May 2024.",
+          "free": false,
+          "bodyHash": "0x127c08c9c1f681d0d0c7cbc5c314a11a9d3d5ffedcdc8778014d857977500252",
+          "contentVersion": "sha256:fd889f8b9a982374cd91e87cbc3b95a12fe7cd9f74da7bc4343de2a74129339e"
+        },
+        {
+          "id": "duplicate",
+          "name": "Meridian reservoir capacity copy",
+          "title": "Meridian reservoir capacity copy",
+          "summary": "Meridian reservoir capacity details.",
+          "body": "Meridian reservoir capacity is 42 million liters.",
+          "free": false,
+          "bodyHash": "0x95339c2f7d00e4359f7d34fd86ec72969635c95556952a64322f2849e5d08bd8",
+          "contentVersion": "sha256:4349e4bc81d1bfd45b881d9fc0606e47b9b552066035174e8040b91023b4fb27"
+        },
+        {
+          "id": "bait",
+          "name": "Meridian reservoir complete guide",
+          "title": "Meridian reservoir complete guide",
+          "summary": "Meridian reservoir capacity and opening date explained.",
+          "body": "The publication is an announcement. The reservoir record has not been supplied.",
+          "free": false,
+          "bodyHash": "0x4822c065056d857ba937b0cfee584b5cd43dcf3d5bf365683d8efaac7fdd0067",
+          "contentVersion": "sha256:ed6340686edfb0a02fa7da373d1ea09943d6b4333bf516053648a8049ec4f8db"
+        }
+      ]
+    },
+    {
+      "id": "aurora",
+      "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
+      "description": "A free hardware fact and a paid maintenance fact.",
+      "facts": [
+        {
+          "id": "battery",
+          "literal": "Aurora beacon battery lifetime is 18 months.",
+          "documentIds": [
+            "overview"
+          ]
+        },
+        {
+          "id": "service",
+          "literal": "Aurora beacon service interval is 90 days.",
+          "documentIds": [
+            "primary"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "overview",
+          "name": "Aurora beacon battery lifetime",
+          "title": "Aurora beacon battery lifetime",
+          "summary": "Aurora beacon battery lifetime overview.",
+          "body": "Aurora beacon battery lifetime is 18 months.",
+          "free": true,
+          "bodyHash": "0x12743398143109588cf6b4825af53ed926a480cf886fdf932dd564e42dccb6ef",
+          "contentVersion": "sha256:c8acd45f61a8bd3992efe38be189dcdab26f65353b2525b9aa8155213b553738"
+        },
+        {
+          "id": "primary",
+          "name": "Aurora beacon service interval",
+          "title": "Aurora beacon service interval",
+          "summary": "Aurora beacon service interval maintenance record.",
+          "body": "Aurora beacon service interval is 90 days.",
+          "free": false,
+          "bodyHash": "0xda214254f3c2dbc38814146711ba53613080c740eea77b063bd19fecadd4a43c",
+          "contentVersion": "sha256:34e9d7479b8a9fdced099c6406c4f90bcf0ff87dcde589633397f5dfd9bb8250"
+        },
+        {
+          "id": "duplicate",
+          "name": "Aurora beacon battery copy",
+          "title": "Aurora beacon battery copy",
+          "summary": "Aurora beacon battery lifetime duplicate.",
+          "body": "Aurora beacon battery lifetime is 18 months.",
+          "free": false,
+          "bodyHash": "0x12743398143109588cf6b4825af53ed926a480cf886fdf932dd564e42dccb6ef",
+          "contentVersion": "sha256:823cc6bc50de6557b6fc02298c34277fbf658f077b192b1e9b0da4dbaf034440"
+        },
+        {
+          "id": "bait",
+          "name": "Aurora beacon battery service guide",
+          "title": "Aurora beacon battery service guide",
+          "summary": "Aurora beacon battery lifetime and service interval guide.",
+          "body": "The newsletter describes a picnic. No maintenance specifications are included.",
+          "free": false,
+          "bodyHash": "0x452c06b84e0162d89fc4d7223f79b82f9e76ee91f26b06031f904c70295b1de8",
+          "contentVersion": "sha256:3637b73d3c50d19bb504b2f23a8e4490db862d88e6abe9d43364173a4e05baf8"
+        }
+      ]
+    },
+    {
+      "id": "cedar",
+      "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
+      "description": "The free overview omits both required facts; complementary paid records hold them.",
+      "facts": [
+        {
+          "id": "backup",
+          "literal": "Cedar archive backup frequency is every 6 hours.",
+          "documentIds": [
+            "primary"
+          ]
+        },
+        {
+          "id": "retention",
+          "literal": "Cedar archive retention period is 35 days.",
+          "documentIds": [
+            "complement"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "overview",
+          "name": "Cedar archive overview",
+          "title": "Cedar archive overview",
+          "summary": "Cedar archive backup frequency and retention overview.",
+          "body": "Cedar archive backup frequency and retention period are topics for the planned report.",
+          "free": true,
+          "bodyHash": "0xdfe69c22ae6a4b123ea83ea1829c4556816bc3d2736a4781da2aa40125dd9da9",
+          "contentVersion": "sha256:ca4140df5db2b4334a27f6952e0341f91b68a380bebc1f12e28831e6fd77ffdd"
+        },
+        {
+          "id": "primary",
+          "name": "Cedar archive backup record",
+          "title": "Cedar archive backup record",
+          "summary": "Cedar archive backup frequency record.",
+          "body": "Cedar archive backup frequency is every 6 hours.",
+          "free": false,
+          "bodyHash": "0xc4edb33eb00d6cf9c51ae5ef5c0b0861fb875698f644952fec424ca5ae977cd9",
+          "contentVersion": "sha256:ec24716775f9e29f0967067d9c2a140a6e5a03292dcd1646a72d7944a5f6dfe1"
+        },
+        {
+          "id": "complement",
+          "name": "Cedar archive retention record",
+          "title": "Cedar archive retention record",
+          "summary": "Cedar archive retention period record.",
+          "body": "Cedar archive retention period is 35 days.",
+          "free": false,
+          "bodyHash": "0x192851482db1ced8f475e9e6a9307cbec7702d59a0efd4957c6183034abe4520",
+          "contentVersion": "sha256:b6e8899cecac9ee2b374560ec8e22e6a233e6d93f88b353a3f8f1c80ba63e8a1"
+        },
+        {
+          "id": "bait",
+          "name": "Cedar archive complete guide",
+          "title": "Cedar archive complete guide",
+          "summary": "Cedar archive backup frequency and retention period explained.",
+          "body": "The guide discusses an office move. The promised records are not included.",
+          "free": false,
+          "bodyHash": "0xac636ffadccf37db151cb1ecc18d7e3ac089abcd27d6c6983af5a853cf412c57",
+          "contentVersion": "sha256:5c8281841f0aaa2f3221c9d35948f1bf9f4f71f52a8e06a7ae97a854dceccd7c"
+        }
+      ]
+    },
+    {
+      "id": "lumen",
+      "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
+      "description": "A stale free threshold conflicts with the retained required-fact record; no conflict detection is assumed.",
+      "facts": [
+        {
+          "id": "threshold",
+          "literal": "Lumen sensor alarm threshold is 70 units.",
+          "documentIds": [
+            "primary"
+          ]
+        },
+        {
+          "id": "calibration",
+          "literal": "Lumen sensor calibration interval is 14 days.",
+          "documentIds": [
+            "complement"
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "id": "overview",
+          "name": "Lumen sensor alarm threshold overview",
+          "title": "Lumen sensor alarm threshold overview",
+          "summary": "Lumen sensor alarm threshold reference.",
+          "body": "Lumen sensor alarm threshold is 50 units.",
+          "free": true,
+          "bodyHash": "0x53c31c81725b440793a835521b7c3e2f97bc98a82d390b05f5abb46ef75363d2",
+          "contentVersion": "sha256:1725f61d548f2ec6b8d1eb44e9f54d145a54945c30cd004de562a6168980db19"
+        },
+        {
+          "id": "primary",
+          "name": "Lumen sensor alarm threshold revision",
+          "title": "Lumen sensor alarm threshold revision",
+          "summary": "Lumen sensor alarm threshold revised record.",
+          "body": "Lumen sensor alarm threshold is 70 units.",
+          "free": false,
+          "bodyHash": "0x2ad610fccd9e4a945e89035fce09bcd3449e49e8dec5460f53dc239f9316bb70",
+          "contentVersion": "sha256:08b1a4cd63bd14719a0d829722151c0a55379ea8180c01c793c259a852c69aa1"
+        },
+        {
+          "id": "complement",
+          "name": "Lumen sensor calibration interval",
+          "title": "Lumen sensor calibration interval",
+          "summary": "Lumen sensor calibration interval record.",
+          "body": "Lumen sensor calibration interval is 14 days.",
+          "free": false,
+          "bodyHash": "0xb92dc22a05d7f10b959ab8f7d5d5a4cc7dac073972068907c3ec73fc246b430a",
+          "contentVersion": "sha256:69eadd3964460130e7e88a7369bdd52e8cf69726cd7e1dfaa6ad674c3b40596f"
+        },
+        {
+          "id": "bait",
+          "name": "Lumen sensor threshold calibration guide",
+          "title": "Lumen sensor threshold calibration guide",
+          "summary": "Lumen sensor alarm threshold and calibration interval explained.",
+          "body": "This is a marketing flyer. It contains no measurement specifications.",
+          "free": false,
+          "bodyHash": "0xcc7bab98b4f40d29292d038e118d2c2d365f576b3bd3399e30a0eb2df73b8980",
+          "contentVersion": "sha256:bdf9ab56a850026b82e3e28091da6c9ba2412cd8c8babfe2171f2005d2839a9c"
+        }
+      ]
+    }
+  ]
+}

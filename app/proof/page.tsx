@@ -3,6 +3,7 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { ProofDashboard } from "@/components/keryx/proof-dashboard";
 import { HistoricalHistorySection } from "@/components/keryx/testnet-history-summary";
+import { proofMessages } from "@/locales/en/proof";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,22 @@ export default function ProofPage() {
               </p>
             </article>
           ))}
+        </section>
+
+        <section className="mt-9 border border-line bg-paper p-5">
+          <h2 className="font-display text-[24px] text-ink">{proofMessages.studyTitle}</h2>
+          <p className="mt-3 max-w-[74ch] font-serif text-[15px] leading-relaxed text-ink-2">
+            {proofMessages.studyDescription}
+          </p>
+          <p className="mt-3 max-w-[74ch] font-mono text-[11px] leading-relaxed text-faint">
+            {proofMessages.studyLimit}
+          </p>
+          <a
+            href="https://github.com/tang-vu/keryx/blob/main/docs/studies/paying-for-sources-2026-10-09.md"
+            className="mt-4 inline-block text-paid underline underline-offset-4"
+          >
+            {proofMessages.studyLink}
+          </a>
         </section>
 
         <ProofDashboard />

@@ -6732,6 +6732,27 @@ record the offline source boundaries and remaining write-time adapters, public
 surface, live learning, full decision-graph replay and independent evaluation gates.
 Source tests and draft PRs do not close issues249/298/299/301 or authorize deployment.
 
+## 2026-10-09 — Controlled paying-source fixture study (#302 candidate)
+
+Use the existing `runAgent`, `HeuristicEngine` and `OfflineGateway` without a
+replacement selection policy. Publish four fictional questions, retained exact
+source versions and authored required facts; compare four integer budgets and
+three prices with fresh memory stores/caches and complete isolated effects.
+Observe actual proposals, policy decisions, reads and simulated payment legs.
+Preserve within-trial cache timestamps; reject unsafe legacy numeric amounts and
+any pending/settled or real-transaction record before canonical projection.
+
+Fresh-process offline/testnet configuration and outbound/child-process denial
+precede runtime imports. Literal read-bound quotation/completeness and reward
+concentration are closed-fixture observations, never semantic correctness or
+real earnings. Keep null observations explicit. No model/search allowance,
+alternate-policy winner or exploration effect is invented. Reproduction binds
+the declared static potential source-input graph, corpus/rubric and dependency
+lock; relevant changes require a reviewed actual rerun. README/Proof expose the
+[generated study](docs/studies/paying-for-sources-2026-10-09.md), while research,
+payment authority and supported surface contracts remain unchanged. Source,
+CI/review, synchronized release and full issue gates remain separately open.
+
 ## 2026-10-09 — Explicit ordinary personal history read (#268 partial)
 
 Choose a separate optional current-store summary port and explicit `history:read`

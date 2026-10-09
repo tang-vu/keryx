@@ -266,6 +266,7 @@ jobs:
       - name: Agent quality regression (hermetic, no settlement)
         run: |
           npm run eval:agent:ci
+          npm run eval:paying-source-study -- --check
           node --import tsx scripts/eval-research-boundary-corpus.mts --check
           npm run eval:workload:research -- --capture --fixtures
           npm run eval:workload:research -- --replay --fixtures
