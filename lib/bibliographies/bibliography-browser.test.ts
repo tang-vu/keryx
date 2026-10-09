@@ -11,13 +11,13 @@ beforeAll(async () => {
   bundle = (await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
     import React from 'react';import{createRoot}from'react-dom/client';import{BibliographiesView}from'./app/me/bibliographies/bibliographies-view';
     localStorage.setItem('keryx-literature-workspace-v1',${JSON.stringify(JSON.stringify(fixture))});
-    window.auth=null;window.calls=[];window.stores={};window.delayCreate=false;window.held=[];
+    window.auth=null;window.calls=[];window.stores={};window.delayCreate=false;window.held=[];window.authListenerReady=false;window.committedOwner=null;window.responseOwners=[];
     window.fetch=async(url,init={})=>{const method=init.method||'GET',owner=init.headers['X-Keryx-Expected-Wallet'];
-      window.calls.push({url:String(url),method,body:init.body,headers:init.headers});if(!String(url).startsWith('/api/me/bibliographies'))throw Error('Unexpected request');
+      window.calls.push({url:String(url),method,body:init.body,headers:init.headers,signal:init.signal});if(!String(url).startsWith('/api/me/bibliographies'))throw Error('Unexpected request');
       if(!window.auth||owner!==window.auth.address)return Response.json({},{status:409});
       if(method==='GET')return Response.json({bibliographies:window.stores[owner]||[]});
       if(method==='POST'){const input=JSON.parse(init.body),saved={id:${JSON.stringify(id)},title:input.title,count:input.papers.length,revision:1,createdAt:'2026-10-09T00:00:00Z',updatedAt:'2026-10-09T00:00:00Z'};
-        const respond=()=>{window.stores[owner]=[saved];return Response.json({bibliography:saved,urlPath:'/api/bibliographies/${token}.bib'},{status:201});};
+        const respond=()=>{window.stores[owner]=[saved];const response=Response.json({bibliography:saved,urlPath:'/api/bibliographies/${token}.bib'},{status:201}),json=response.json.bind(response);response.json=async()=>{const value=await json();window.responseOwners.push(owner);return value};return response;};
         if(window.delayCreate)return new Promise(resolve=>window.held.push(()=>resolve(respond())));return respond();}
       if(method==='PUT'){const saved={...window.stores[owner][0],revision:2};window.stores[owner]=[saved];return Response.json({bibliography:saved});}
       if(method==='DELETE'){window.stores[owner]=[];return Response.json({revoked:true});}throw Error('Unexpected method');};
@@ -26,14 +26,20 @@ beforeAll(async () => {
     plugins: [{ name: "explicit-owner-fixture", setup(plugin) {
       plugin.onResolve({ filter: /^(next\/link|@\/lib\/hooks\/use-siwe-auth)$/ }, args => ({ path: args.path, namespace: "fixture" }));
       plugin.onLoad({ filter: /.*/, namespace: "fixture" }, args => ({ loader: "jsx", resolveDir: process.cwd(), contents: args.path === "next/link" ? "import React from 'react';export default function Link({prefetch,...props}){return <a {...props}/>}" :
-        "import{useEffect,useState}from'react';export function useSiweAuth(){const[session,set]=useState(window.auth);useEffect(()=>{const update=()=>set(window.auth);window.addEventListener('fixture-auth',update);return()=>window.removeEventListener('fixture-auth',update)},[]);return{session}}" }));
+        "import{useEffect,useState}from'react';export function useSiweAuth(){const[session,set]=useState(window.auth);useEffect(()=>{let active=true;const update=()=>set(window.auth),attach=()=>{if(active){window.addEventListener('fixture-auth',update);window.authListenerReady=true}};if(window.holdAuthListener)window.releaseAuthListener=attach;else attach();return()=>{active=false;window.authListenerReady=false;window.removeEventListener('fixture-auth',update)}},[]);useEffect(()=>{window.committedOwner=session?.address??null},[session]);return{session}}" }));
     } }] })).outputFiles[0].text;
   browser = await chromium.launch({ headless: true });
 }, 30000);
 afterAll(async () => { await browser?.close(); });
-const signIn = (page: Page, address: string | null) => page.evaluate(address => {
-  (window as unknown as { auth: unknown }).auth = address ? { address, role: "asker" } : null; window.dispatchEvent(new Event("fixture-auth"));
-}, address);
+const signIn = async (page: Page, address: string | null) => {
+  await page.waitForFunction(() => (window as unknown as { authListenerReady: boolean }).authListenerReady);
+  await page.evaluate(address => {
+    (window as unknown as { auth: unknown }).auth = address ? { address, role: "asker" } : null; window.dispatchEvent(new Event("fixture-auth"));
+  }, address);
+  await page.waitForFunction(address => (window as unknown as { committedOwner: string | null }).committedOwner === address, address);
+  if (address) await page.waitForFunction(address => (window as unknown as { calls: { method: string; headers: Record<string, string> }[] }).calls.some(call =>
+    call.method === "GET" && call.headers["X-Keryx-Expected-Wallet"] === address), address);
+};
 
 it.each([320, 1366])("requires explicit create/update/revoke and withholds private workspace prose at %ipx", async width => {
   const context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: "block" });
@@ -66,13 +72,24 @@ it("an old owner's delayed create response cannot reveal its one-time URL to a n
   const context = await browser.newContext();
   try {
     await context.route("**/*", route => route.request().url() === "https://bibliographies.test/" ? route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' }) : route.abort());
-    const page = await context.newPage(); await page.goto("https://bibliographies.test/"); await page.addScriptTag({ content: bundle });
-    await signIn(page, alice); await page.getByText(copy.empty, { exact: true }).waitFor();
+    const page = await context.newPage(); await page.goto("https://bibliographies.test/");
+    await page.evaluate(() => { (window as unknown as { holdAuthListener: boolean }).holdAuthListener = true; });
+    await page.addScriptTag({ content: bundle });
+    await page.waitForFunction(() => typeof (window as unknown as { releaseAuthListener?: unknown }).releaseAuthListener === "function");
+    // Make the missing-subscription ordering deterministic; dispatch must wait for the fixture effect.
+    const signingIn = signIn(page, alice);
+    expect(await page.evaluate(() => (window as unknown as { auth: unknown }).auth)).toBeNull();
+    await page.evaluate(() => (window as unknown as { releaseAuthListener: () => void }).releaseAuthListener());
+    await signingIn; await page.getByText(copy.empty, { exact: true }).waitFor();
     await page.evaluate(() => { (window as unknown as { delayCreate: boolean }).delayCreate = true; });
     await page.getByLabel(copy.titleLabel).fill("Alice private review"); await page.getByRole("button", { name: copy.create, exact: true }).click();
     await page.waitForFunction(() => (window as unknown as { held: unknown[] }).held.length === 1);
     await signIn(page, bob); await page.getByText(copy.empty, { exact: true }).waitFor();
+    expect(await page.evaluate(() => (window as unknown as { calls: { method: string; signal: AbortSignal }[] }).calls.find(call => call.method === "POST")!.signal.aborted)).toBe(true);
     await page.evaluate(() => (window as unknown as { held: (() => void)[] }).held.shift()!());
+    await page.waitForFunction(owner => (window as unknown as { responseOwners: string[] }).responseOwners.includes(owner), alice);
+    // Observe the delivered JSON and subsequent browser render frames, not just a queued response.
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     expect(await page.getByLabel(copy.secretLabel).count()).toBe(0); expect(await page.getByText("Alice private review").count()).toBe(0);
     expect(await page.evaluate(() => (window as unknown as { calls: { method: string }[] }).calls.filter(call => call.method === "POST").length)).toBe(1);
   } finally { await context.close(); }

@@ -201,3 +201,17 @@ in the separate validation worktree's ignored `.artifacts` directory; prior
 failed logs remain retained. Hosted exact-source aggregate, final independent
 review, production storage/log redaction, live provider acceptance and coordinated
 release remain open.
+
+Hosted unit shard1 at `ec824abf` timed out only in the delayed-owner browser
+fixture (run37888004348, job113683174978; 2009 other cases passed). A controlled
+late subscription reproduced a hang at Alice's first empty-state locator: the
+fixture sign-in event arrived before its effect listener. The fixture now waits
+for the listener, committed owner and that owner's GET; it observes Alice's
+abort before releasing the response, then consumed JSON and browser render
+frames before checking secrecy. All three browser cases passed at the unchanged
+10-second CI deadline, and full app TypeScript passed. A temporary unkeyed-editor
+mutation failed on the secret URL count (1 versus 0), proving the assertion
+detects a stale-owner leak; runtime source was restored and remains unchanged.
+The local Windows shard1 reproduction and replacement hosted CI remain pending.
+Failed CI, deterministic reproduction and mutation logs are retained separately
+from successful evidence in the ignored acceptance artifacts.
