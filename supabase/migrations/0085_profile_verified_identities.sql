@@ -94,7 +94,7 @@ end; $$;
 
 create function public.profile_identity_complete_v1(p_wallet text,p_provider text,p_state_hash text,p_session_hash text,p_expires_at timestamptz,p_identity jsonb) returns jsonb
 language plpgsql security invoker set search_path=pg_catalog,public as $$
-declare external_id text; label text; verified_at timestamptz; digits text; total integer:=0; checksum integer; i integer;
+declare v_external_id text; v_label text; v_verified_at timestamptz; digits text; total integer:=0; checksum integer; i integer;
 begin
   perform public.profile_identity_active_v1(p_wallet,p_provider,p_state_hash,p_session_hash,p_expires_at);
   perform 1 from public.profile_identity_challenges c join public.profile_verified_identities l
@@ -106,31 +106,31 @@ begin
     (select count(*) from jsonb_object_keys(p_identity))<>3 or p_identity->>'provider' is distinct from p_provider or
     jsonb_typeof(p_identity->'provider') is distinct from 'string' or jsonb_typeof(p_identity->'externalId') is distinct from 'string' or
     jsonb_typeof(p_identity->'label') is distinct from 'string' then raise exception 'identity_unavailable'; end if;
-  external_id:=p_identity->>'externalId'; label:=p_identity->>'label';
-  if char_length(label)+(select count(*) from regexp_matches(label,U&'[\+010000-\+10FFFF]','g'))>160 or
-    label ~ '[[:cntrl:]]' or label ~ U&'[\0080-\009F\00AD\0600-\0605\061C\06DD\070F\0890-\0891\08E2\180E\200B-\200F\2028-\202E\2060-\2064\2066-\206F\FEFF\FFF9-\FFFB\+0110BD\+0110CD\+013430-\+01343F\+01BCA0-\+01BCA3\+01D173-\+01D17A\+0E0001\+0E0020-\+0E007F]' then
+  v_external_id:=p_identity->>'externalId'; v_label:=p_identity->>'label';
+  if char_length(v_label)+(select count(*) from regexp_matches(v_label,U&'[\+010000-\+10FFFF]','g'))>160 or
+    v_label ~ '[[:cntrl:]]' or v_label ~ U&'[\0080-\009F\00AD\0600-\0605\061C\06DD\070F\0890-\0891\08E2\180E\200B-\200F\2028-\202E\2060-\2064\2066-\206F\FEFF\FFF9-\FFFB\+0110BD\+0110CD\+013430-\+01343F\+01BCA0-\+01BCA3\+01D173-\+01D17A\+0E0001\+0E0020-\+0E007F]' then
     raise exception 'identity_unavailable'; end if;
   if p_provider='github' then
-    if external_id !~ '^[1-9][0-9]{0,19}$' or label !~ '^[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$' then raise exception 'identity_unavailable'; end if;
+    if v_external_id !~ '^[1-9][0-9]{0,19}$' or v_label !~ '^[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$' then raise exception 'identity_unavailable'; end if;
   else
-    if external_id !~ '^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$' then raise exception 'identity_unavailable'; end if;
-    digits:=replace(external_id,'-','');
+    if v_external_id !~ '^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$' then raise exception 'identity_unavailable'; end if;
+    digits:=replace(v_external_id,'-','');
     for i in 1..15 loop total:=(total+substring(digits from i for 1)::integer)*2; end loop;
     checksum:=(12-total%11)%11;
     if substring(digits from 16 for 1)<>(case when checksum=10 then 'X' else checksum::text end) then raise exception 'identity_unavailable'; end if;
   end if;
-  verified_at:=date_trunc('milliseconds',clock_timestamp());
+  v_verified_at:=date_trunc('milliseconds',clock_timestamp());
   -- UPDATE only: an unlinked/deleted lineage must never be recreated by a callback.
-  update public.profile_verified_identities l set external_id=profile_identity_complete_v1.external_id,label=profile_identity_complete_v1.label,
-    verified_at=profile_identity_complete_v1.verified_at,current_state_hash=null
+  update public.profile_verified_identities l set external_id=v_external_id,label=v_label,
+    verified_at=v_verified_at,current_state_hash=null
     where wallet=p_wallet and provider=p_provider and current_state_hash=p_state_hash;
   if not found then raise exception 'identity_expired'; end if;
   -- A different wallet's UNIQUE-index transaction may have blocked the update.
   -- Recheck after that wait; failure rolls the provisional write and lineage clear back.
-  verified_at:=timestamptz 'epoch'+public.profile_identity_active_v1(p_wallet,p_provider,p_state_hash,p_session_hash,p_expires_at)*interval '1 millisecond';
-  update public.profile_verified_identities l set verified_at=profile_identity_complete_v1.verified_at where wallet=p_wallet and provider=p_provider;
-  return jsonb_build_object('wallet',p_wallet,'provider',p_provider,'externalId',external_id,'label',label,
-    'verifiedAt',to_char(verified_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'));
+  v_verified_at:=timestamptz 'epoch'+public.profile_identity_active_v1(p_wallet,p_provider,p_state_hash,p_session_hash,p_expires_at)*interval '1 millisecond';
+  update public.profile_verified_identities l set verified_at=v_verified_at where wallet=p_wallet and provider=p_provider;
+  return jsonb_build_object('wallet',p_wallet,'provider',p_provider,'externalId',v_external_id,'label',v_label,
+    'verifiedAt',to_char(v_verified_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'));
 end; $$;
 
 create function public.profile_identity_unlink_v1(p_wallet text,p_provider text) returns jsonb
