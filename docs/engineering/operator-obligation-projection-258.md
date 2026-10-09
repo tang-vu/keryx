@@ -103,8 +103,9 @@ the private contract. CLI uses HTTPS `KERYX_OPERATOR_URL` and existing process
 annotations and generic errors. Client sends one bounded deadline-limited HTTPS GET
 without redirects, retries or cookies.
 
-Web/desktop may call the scoped API but get no new UI or session role. Public
-Operator/treasury privacy remains unchanged. Extensions/bots retain hosted research
+Web/desktop may call the scoped API but get no new Operator UI or session role.
+API-key management names the new scope as delegated inspection, never profile write.
+Public Operator/treasury privacy remains unchanged. Extensions/bots retain hosted research
 roles. Native Rust status/result/brief contracts lack complete treasury observation
 and stay unchanged. No supported surface gains a signer or scheduler.
 

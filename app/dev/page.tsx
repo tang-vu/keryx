@@ -17,6 +17,7 @@ import { Copy, Key, Plus, Trash2, X } from "lucide-react";
 import type { ApiKeyRow, ApiKeyUsage } from "@/lib/db/keryx-db";
 import { API_KEY_SCOPES, LEGACY_API_KEY_SCOPES, type ApiKeyScope } from "@/lib/api-key-scopes";
 import { personalHistoryCopy } from "@/locales/en/personal-history";
+import { operatorObligationsCopy } from "@/locales/en/operator-obligations";
 
 /** GET /api/keys parses the stored scope columns before returning them, so a pre-scopes key
  *  arrives with historical ask/export rights rather than private-profile permissions. */
@@ -445,7 +446,7 @@ export default function DevPage() {
                     />
                     {scope}
                     <span className="text-ink-3">
-                      {scope === "ask" ? "(run dispatches)" : scope === "export" ? "(read your earnings)" : scope === "profile:read" ? "(read private profile + activity)" : scope === "history:read" ? personalHistoryCopy.scopeLabel : "(replace private profile fields)"}
+                      {scope === "ask" ? "(run dispatches)" : scope === "export" ? "(read your earnings)" : scope === "profile:read" ? "(read private profile + activity)" : scope === "history:read" ? personalHistoryCopy.scopeLabel : scope === "operator:read" ? operatorObligationsCopy.scopeLabel : "(replace private profile fields)"}
                     </span>
                   </label>
                 ))}
