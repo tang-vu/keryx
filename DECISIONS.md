@@ -14,6 +14,18 @@ This is an offline source candidate with coordinated delivery and live usefulnes
 gates, not a general language detector or broad interface localization. See
 [scope and acceptance](docs/engineering/ordinary-confidence-language-2026-10-09.md).
 
+## Identify changed distribution graphs once per coordinated batch — 2026-10-09
+
+App0.27.46 includes additional remote and stdio tools plus the shared retained
+native-proof compatibility path. Give the changed MCP package and desktop graph
+new distribution identities, align Registry/npm/Tauri/Cargo metadata, and label
+OpenAPI with the application document release. Keep financial execution and
+original receipt protocol versions unchanged. The extension's shipped graph and
+canonical formatter are byte-identical to the preceding batch, so preserve0.1.2
+and document its hosted-only role. Metadata alignment is not publication,
+installation, production storage activation or another application deployment.
+See [surface parity](docs/surface-parity.md).
+
 ## Batch issue outcomes before one deployment — owner decision, 2026-10-09
 
 When one task spans several issues or PRs, finish the agreed implementation

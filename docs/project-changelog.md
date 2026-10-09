@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Coordinated distribution metadata (2026-10-09, v0.27.46 candidate)
+
+- Identify the new remote/stdio MCP tool set with hosted0.3.9 and stdio0.4.13;
+  align npm lock metadata and official Registry descriptor without changing
+  dependency closures, scopes, signing or paid-original protocols.
+- Align desktop npm, Tauri and Cargo metadata at0.4.12 for the changed shared
+  original-proof graph. Preserve extension0.1.2 because all shipped inputs are
+  unchanged. OpenAPI's document-release label now matches app0.27.46.
+- This is source preparation for the owner's one final batch deployment. No
+  package/installer build, publication, production migration, activation or
+  deployment is claimed. [Surface parity](surface-parity.md) records the gates.
+
 ### Ordinary answer language selection (2026-10-09, v0.27.46 candidate)
 
 - Avoid choosing Portuguese from words shared with Spanish. Positive original
