@@ -1,5 +1,6 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { surfaceResearch } from "../research/surface-result";
+import { formatRecordedUsdc } from "../display/recorded-usdc";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { collectRun } from "../agent";
@@ -51,7 +52,7 @@ function researchText(result: ReturnType<typeof remoteResearchResult>): string {
   const rewards =
     result.citations.length > 0
       ? result.citations
-          .map((citation) => `- ${citation.source}: $${citation.rewardPlannedUsdc.toFixed(4)} USDC`)
+          .map((citation) => `- ${citation.source}: ${formatRecordedUsdc(citation.rewardPlannedUsdc, { minimumFractionDigits: 4 })} USDC`)
           .join("\n")
       : "- No source reward was allocated.";
   const settlement =
@@ -74,8 +75,8 @@ function researchText(result: ReturnType<typeof remoteResearchResult>): string {
     `Citations and planned creator rewards\n${rewards}\n\n` +
     `Evidence: ${groundedClaims}/${result.claimCoverage.length} research targets meet the recorded excerpt-support threshold; this does not verify entailment or complete synthesis\n` +
     `${selectionText}\n` +
-    `Total recorded to creators: $${result.totalToCreatorsUsdc.toFixed(4)} USDC · ${settlement}\n` +
-    (result.operatingFee ? `Keryx operating fee allocation: $${result.operatingFee.amountUsdc.toFixed(6)} USDC · ${result.operatingFee.status}. Separate from creator rewards; inspect the payment ledger for settlement evidence.\n` : "") +
+    `Total recorded to creators: ${formatRecordedUsdc(result.totalToCreatorsUsdc, { minimumFractionDigits: 4 })} USDC · ${settlement}\n` +
+    (result.operatingFee ? `Keryx operating fee allocation: ${formatRecordedUsdc(result.operatingFee.amountUsdc, { minimumFractionDigits: 6 })} USDC · ${result.operatingFee.status}. Separate from creator rewards; inspect the payment ledger for settlement evidence.\n` : "") +
     `Confidence: ${result.confidence?.level ?? "Low"} · ${result.dispatchUrl}`
   );
 }

@@ -9,6 +9,7 @@
  */
 
 import { config } from "../config";
+import { formatRecordedUsdc } from "../display/recorded-usdc";
 import { researchAdmissionError } from "../research/availability-contract";
 import type { QueryRun } from "../types";
 
@@ -114,7 +115,7 @@ export function buildAnswerMessage(run: QueryRun) {
   const fields = [];
   if (run.citations.length > 0) {
     const lines = run.citations.map(
-      (c) => `${c.sourceName} — $${c.reward.toFixed(4)} (weight ${c.weight.toFixed(2)})`,
+      (c) => `${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (weight ${c.weight.toFixed(2)})`,
     );
     fields.push({
       name: "Citations and planned rewards (USDC)",
@@ -132,7 +133,7 @@ export function buildAnswerMessage(run: QueryRun) {
         footer: {
           text:
             `Keryx · ${run.citations.length} source${run.citations.length === 1 ? "" : "s"} cited` +
-            ` · $${run.totalToCreators.toFixed(4)} recorded to creators (${run.paymentMode ?? "legacy"}) · Recorded amounts are not settlement proof; check full trace receipts at the title link`,
+            ` · ${formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 })} recorded to creators (${run.paymentMode ?? "legacy"}) · Recorded amounts are not settlement proof; check full trace receipts at the title link`,
         },
       },
     ],

@@ -43,6 +43,27 @@ function completedRun(): QueryRun {
 }
 
 describe("remote MCP server", () => {
+  it("keeps a micro-USDC reward visible in text without changing structured amounts or answer", async () => {
+    const run = completedRun();
+    run.citations[0].reward = 0.000001;
+    run.totalSpent = 0.000001; run.totalToCreators = 0.000001;
+    run.paymentMode = "offline"; run.settledPayments = 0;
+    const before = JSON.stringify(run);
+    const http = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("No network allowed"));
+    const server = createRemoteMcpServer({ budgetCap: 0.03, clientChannel: "other" }, async () => run);
+    const client = new Client({ name: "exact-money-fixture", version: "1" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await server.connect(serverTransport); await client.connect(clientTransport);
+      const result = await client.callTool({ name: "research", arguments: { question: run.question } });
+      const text = (result.content as { text?: string }[]).map(item => item.text ?? "").join("\n");
+      expect(text).toContain("$0.000001 USDC");
+      expect(text).toContain("offline payment simulation");
+      expect(result.structuredContent).toMatchObject({ answer: run.answer, totalToCreatorsUsdc: 0.000001,
+        citations: [{ rewardPlannedUsdc: 0.000001 }], settledPayments: 0 });
+      expect(JSON.stringify(run)).toBe(before); expect(http).not.toHaveBeenCalled();
+    } finally { await client.close(); await server.close(); http.mockRestore(); }
+  });
   it("preserves the retained MDN three-bullet answer and exact evidence through a hermetic SDK client", async () => {
     const replay = mdnModelReplay();
     const run: QueryRun = { ...completedRun(), id: "retained-mdn-local-replay", question: replay.question,

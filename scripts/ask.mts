@@ -13,6 +13,7 @@ import { c, printStep } from "./trace-console.mts";
 import { ResearchPlanningError, researchFailureMessage } from "../lib/llm/research-plan.ts";
 import { ResearchSelectionError } from "../lib/llm/research-selection.ts";
 import { reasoningOutputLimitText } from "../lib/llm/reasoning-telemetry.ts";
+import { formatRecordedUsdc } from "../lib/display/recorded-usdc.ts";
 
 // ── parse args ──
 const argv = process.argv.slice(2);
@@ -61,17 +62,17 @@ if (run.citations.length === 0) {
 } else {
   for (const cit of run.citations) {
     console.log(
-      `  • ${cit.sourceName}: ${c.green(cit.reward + " USDC")} ${c.dim(`(${(cit.weight * 100).toFixed(0)}% contribution)`)}`,
+      `  • ${cit.sourceName}: ${c.green(formatRecordedUsdc(cit.reward, { denomination: "USDC" }))} ${c.dim(`(${(cit.weight * 100).toFixed(0)}% contribution)`)}`,
     );
   }
 }
 
 console.log(
-  c.bold(`\n📊 Recorded source total: ${c.green(run.totalSpent + " USDC")}`) +
+  c.bold(`\n📊 Recorded source total: ${c.green(formatRecordedUsdc(run.totalSpent, { denomination: "USDC" }))}`) +
     c.dim(`  ·  ${run.decisions.filter((d) => d.action === "BUY").length} bought / ${run.decisions.filter((d) => d.action === "SKIP").length} skipped`),
 );
 console.log(c.dim(`Payment mode: ${run.paymentMode === "offline" ? "offline simulation" : run.paymentMode ?? "unknown"}. Allocations and recorded totals do not prove settlement; inspect the original per-payment receipts.`));
 console.log(c.dim("Model and search operating costs are separate from the source cap and recorded source total."));
-if (run.operatingFee) console.log(`Keryx operating fee allocation: ${run.operatingFee.amountUsdc} USDC · ${run.operatingFee.status}. Separate from creator rewards; inspect the original payment ledger for settlement evidence.`);
+if (run.operatingFee) console.log(`Keryx operating fee allocation: ${formatRecordedUsdc(run.operatingFee.amountUsdc, { denomination: "USDC" })} · ${run.operatingFee.status}. Separate from creator rewards; inspect the original payment ledger for settlement evidence.`);
 console.log(c.dim(`\nrun id: ${run.id}\n`));
 process.exit(0);

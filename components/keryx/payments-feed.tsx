@@ -19,7 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fmtUsdc, shortAddr } from "./phase-style";
+import { shortAddr } from "./phase-style";
+import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import { cn } from "@/lib/utils";
 import { GatewayContractReferences } from "./gateway-contract-references";
 import { recordedArcLabel } from "@/lib/arc-network-display";
@@ -98,7 +99,7 @@ export function PaymentsFeed({
                       : "text-paid"
                   )}
                 >
-                  ${fmtUsdc(p.amountUsdc)}
+                  {formatRecordedUsdc(p.amountUsdc)}
                 </span>
               </div>
             );
@@ -155,7 +156,7 @@ export function PaymentsFeed({
                           : "text-paid"
                       )}
                     >
-                      ${fmtUsdc(p.amountUsdc)}
+                      {formatRecordedUsdc(p.amountUsdc)}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
                       {shortAddr(p.payer)} → {shortAddr(p.payee)}

@@ -43,6 +43,7 @@ Works on any Chromium browser (Chrome, Edge, Brave, Arc). Manifest V3.
 | `background.js` | service worker — registers the two right-click menus, routes their clicks |
 | `popup.html` / `popup.css` / `popup.js` | the ask panel — resolves the question, streams the answer, shows creators paid |
 | `keryx-config.js` | shared origin + endpoint constants |
+| `recorded-usdc.mjs` | exact recorded-money display; byte-identical to `lib/display/recorded-usdc.mjs` and checked before packing |
 | `icons/` | herald-seal icons (generated from `app/icon.svg`) |
 
 ## Privacy

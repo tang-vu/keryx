@@ -19,7 +19,7 @@ import { ModeBadge } from "./mode-badge";
 import { recordedArcLabel } from "@/lib/arc-network-display";
 import { SectionHeading } from "./banknote";
 import { ConfidenceBadge } from "./confidence-badge";
-import { fmtUsdc } from "./phase-style";
+import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { cn } from "@/lib/utils";
 import { CitationEvidencePanel } from "./citation-evidence-panel";
@@ -156,7 +156,7 @@ export function AnswerCard({ run, meta, permalink, payments = [], showFeedback =
                         {Math.round(c.weight * 100)}%
                       </span>
                       {!isPublicReference && <span className="shrink-0 font-mono text-sm tabular-nums text-paid">
-                        ${fmtUsdc(c.reward)} planned
+                        {formatRecordedUsdc(c.reward)} planned
                       </span>}
                     </li>
                   );
@@ -295,7 +295,7 @@ function SummaryStrip({
 
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-ink bg-paper-2 px-6 py-3.5 text-sm sm:px-9">
-      <Stat label={mode === "offline" ? "Simulated spend" : mode === "real" ? "Spent" : "Recorded spend"} value={`$${fmtUsdc(spent)}`} mono />
+      <Stat label={mode === "offline" ? "Simulated spend" : mode === "real" ? "Spent" : "Recorded spend"} value={formatRecordedUsdc(spent)} mono />
       <Stat label={mode === "offline" ? "Simulated creator share" : mode === "real" ? "To creators" : "Recorded creator share"} value={creatorShare} accent={spent > 0 && mode === "real"} />
       {pending > 0 && <Stat label="Pending proof" value={`${pending}`} />}
       <Stat
