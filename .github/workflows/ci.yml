@@ -512,6 +512,9 @@ jobs:
           KERYX_FORCE_OFFLINE: "1"
         run: node --import tsx scripts/test-withdrawal-framework-headers.mts
 
+      - name: Registration sponsor framework boundary (synthetic reverse proxy, no signing)
+        run: node --import tsx scripts/test-registration-sponsor-framework.mts
+
   lint:
     name: Lint (informational, outside merge gate)
     continue-on-error: true

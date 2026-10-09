@@ -37,6 +37,8 @@ const nextConfig: NextConfig = {
       // Keep the private withdrawal boundary consistent at the framework layer.
       { source: "/api/me/withdrawals/:path*", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       { source: "/me/withdrawals", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      { source: "/api/sources/sponsor", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      { source: "/register/sponsored", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       // Matching rules are applied in order, so this CSP replaces the global CSP only for the
       // standalone Scalar document. Other pages still cannot execute scripts from jsDelivr.
       {

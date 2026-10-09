@@ -51,7 +51,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const origin = new URL(config.baseUrl).origin;
-    if (req.headers.get("origin") !== origin || new URL(req.url).origin !== origin)
+    // Next may expose its internal listener in req.url behind a reverse proxy.
+    // Browser Origin is pinned here; ingress Host/proxy validation belongs to the public wrapper.
+    if (req.headers.get("origin") !== origin)
       return response({ error: "Use this deployment's creator registration page", code: "origin_mismatch" }, 403);
     const session = await getSession();
     if (!session) return response({ error: "Sign in with the source owner wallet" }, 401);

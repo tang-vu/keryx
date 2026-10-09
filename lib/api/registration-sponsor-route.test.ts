@@ -22,9 +22,9 @@ it.each(["https://foreign.example", "null", ""])("refuses caller Origin %s befor
   expect((await POST(request({ operation: "submit", id, signature }, origin))).status).toBe(403);
   expect(mocks.submit).not.toHaveBeenCalled();
 });
-it("requires the request URL to match the configured origin too", async () => {
-  mocks.session = { address: wallet }; mocks.ctx = {};
-  expect((await POST(request({ operation: "submit", id, signature }, "https://keryx.example", "https://foreign.example/api/sources/sponsor"))).status).toBe(403);
+it("accepts the configured browser Origin through an internal Next listener but still requires SIWE", async () => {
+  mocks.ctx = {};
+  expect((await POST(request({ operation: "submit", id, signature }, "https://keryx.example", "http://127.0.0.1:3940/api/sources/sponsor"))).status).toBe(401);
   expect(mocks.submit).not.toHaveBeenCalled();
 });
 it("never grants registration ownership to an API key without SIWE", async () => {

@@ -28,8 +28,10 @@ its existing call shape. V3 signature recovery currently supports EOAs; it does
 not implement EIP-1271 contract-wallet signatures.
 
 The application requires a matching connected wallet and SIWE creator session.
-The POST endpoint derives the creator from that session and requires the request
-URL and `Origin` header to match the configured deployment origin. API keys do
+The POST endpoint derives the creator from that session and requires the browser
+`Origin` header to match the configured deployment origin. It does not derive
+authority from Next's internal listener URL or caller-supplied proxy headers;
+the reviewed public server wrapper separately validates ingress metadata. API keys do
 not acquire this publishing role. SIWE establishes wallet authentication; it does
 not replace the separate registration authorization. See the authoritative
 [SIWE specification](https://eips.ethereum.org/EIPS/eip-4361).
