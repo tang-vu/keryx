@@ -1,0 +1,347 @@
+{
+  "version": 1,
+  "capturedAt": "2026-10-09T12:27:34.006Z",
+  "source": "public-github-open-issue-list",
+  "issues": [
+    {
+      "number": 128,
+      "title": "Research user receives no supported answer despite relevant scholarly candidates; validate end-to-end research and Arc payment evidence",
+      "url": "https://github.com/tang-vu/keryx/issues/128"
+    },
+    {
+      "number": 158,
+      "title": "Research decide fallback is unusable after shared circuits open, while Remote MCP hides the heuristic serving tier",
+      "url": "https://github.com/tang-vu/keryx/issues/158"
+    },
+    {
+      "number": 164,
+      "title": "Stage immutable releases before draining production writers to shorten maintenance",
+      "url": "https://github.com/tang-vu/keryx/issues/164"
+    },
+    {
+      "number": 169,
+      "title": "Ordinary browser research aborts at planning for systemd and SQLite comparisons",
+      "url": "https://github.com/tang-vu/keryx/issues/169"
+    },
+    {
+      "number": 172,
+      "title": "Ordinary browser SQLite backup research aborts during decide with invalid target links",
+      "url": "https://github.com/tang-vu/keryx/issues/172"
+    },
+    {
+      "number": 181,
+      "title": "Decision brief ends with an empty answer on real multi-page reads (deepseek-v4-flash)",
+      "url": "https://github.com/tang-vu/keryx/issues/181"
+    },
+    {
+      "number": 210,
+      "title": "Live persona acceptance needs a fresh bounded model/search allowance",
+      "url": "https://github.com/tang-vu/keryx/issues/210"
+    },
+    {
+      "number": 211,
+      "title": "Quick teacher lesson returns missing-evidence placeholders for requested facts and proposed activities",
+      "url": "https://github.com/tang-vu/keryx/issues/211"
+    },
+    {
+      "number": 212,
+      "title": "Two-original Quick SQLite synthesis hits its 2560-token ceiling and drops to fallback",
+      "url": "https://github.com/tang-vu/keryx/issues/212"
+    },
+    {
+      "number": 217,
+      "title": "Paid newest-release research selects an older article and returns no supported answer",
+      "url": "https://github.com/tang-vu/keryx/issues/217"
+    },
+    {
+      "number": 230,
+      "title": "HTML preformatted RFC evidence loses wrapped rule continuations and omits CSV quoting answers",
+      "url": "https://github.com/tang-vu/keryx/issues/230"
+    },
+    {
+      "number": 231,
+      "title": "Spanish exact NASA query retains Orbit and Rotation headings but drops the substantive section",
+      "url": "https://github.com/tang-vu/keryx/issues/231"
+    },
+    {
+      "number": 238,
+      "title": "Portuguese MDN button research drops the intact submit/default rule while retaining obsolete browser examples",
+      "url": "https://github.com/tang-vu/keryx/issues/238"
+    },
+    {
+      "number": 249,
+      "title": "Public usage figures mix outside users, team activity and scripted tests",
+      "url": "https://github.com/tang-vu/keryx/issues/249"
+    },
+    {
+      "number": 250,
+      "title": "Paid deliverables have no accept, revise or reject step",
+      "url": "https://github.com/tang-vu/keryx/issues/250"
+    },
+    {
+      "number": 251,
+      "title": "First research job needs a wallet-free order flow and a page showing the money on that job",
+      "url": "https://github.com/tang-vu/keryx/issues/251"
+    },
+    {
+      "number": 252,
+      "title": "Spending limits are enforced only in application code, not on the payment path",
+      "url": "https://github.com/tang-vu/keryx/issues/252"
+    },
+    {
+      "number": 253,
+      "title": "No measure of whether people agree with BUY/SKIP decisions; add verdicts and a review-first mode",
+      "url": "https://github.com/tang-vu/keryx/issues/253"
+    },
+    {
+      "number": 256,
+      "title": "Users without an Arc wallet cannot fund a job: finish sponsored credit, cross-chain deposit and card on-ramp",
+      "url": "https://github.com/tang-vu/keryx/issues/256"
+    },
+    {
+      "number": 257,
+      "title": "Paid jobs have no completion target, public latency figure or stuck-job state",
+      "url": "https://github.com/tang-vu/keryx/issues/257"
+    },
+    {
+      "number": 258,
+      "title": "Operator does not manage its float: evaluate obligation forecast, reserve and cross-chain sweep",
+      "url": "https://github.com/tang-vu/keryx/issues/258"
+    },
+    {
+      "number": 260,
+      "title": "Users have no profile: add an owner-edited profile record on top of wallet identity",
+      "url": "https://github.com/tang-vu/keryx/issues/260"
+    },
+    {
+      "number": 261,
+      "title": "Runs are not attributed to their owner on the API, agent-to-agent and chat surfaces",
+      "url": "https://github.com/tang-vu/keryx/issues/261"
+    },
+    {
+      "number": 262,
+      "title": "Anonymous runs cannot be claimed: return a single-use claim link with every unowned run",
+      "url": "https://github.com/tang-vu/keryx/issues/262"
+    },
+    {
+      "number": 263,
+      "title": "Telegram, Discord and Slack users cannot link their chat account to a Keryx account",
+      "url": "https://github.com/tang-vu/keryx/issues/263"
+    },
+    {
+      "number": 264,
+      "title": "No public page for a person who asks: add an opt-in profile at /u/<handle>",
+      "url": "https://github.com/tang-vu/keryx/issues/264"
+    },
+    {
+      "number": 265,
+      "title": "Profile links are unverified: add ORCID and GitHub verification",
+      "url": "https://github.com/tang-vu/keryx/issues/265"
+    },
+    {
+      "number": 266,
+      "title": "Every question is public: add per-run visibility, export and deletion for the owner",
+      "url": "https://github.com/tang-vu/keryx/issues/266"
+    },
+    {
+      "number": 267,
+      "title": "An account is one wallet: allow one profile with several wallets and wallet-free sign-in",
+      "url": "https://github.com/tang-vu/keryx/issues/267"
+    },
+    {
+      "number": 268,
+      "title": "Personal history covers web sessions only: show a user every run they own across surfaces",
+      "url": "https://github.com/tang-vu/keryx/issues/268"
+    },
+    {
+      "number": 269,
+      "title": "No audited way to assign known past runs to a consenting user",
+      "url": "https://github.com/tang-vu/keryx/issues/269"
+    },
+    {
+      "number": 270,
+      "title": "Tracking: user profiles, run ownership and public researcher pages",
+      "url": "https://github.com/tang-vu/keryx/issues/270"
+    },
+    {
+      "number": 271,
+      "title": "Web app is English only: add locale negotiation, typed message catalogues and a language switcher",
+      "url": "https://github.com/tang-vu/keryx/issues/271"
+    },
+    {
+      "number": 272,
+      "title": "User-facing text is hard-coded in components: move it into the English catalogue by area",
+      "url": "https://github.com/tang-vu/keryx/issues/272"
+    },
+    {
+      "number": 273,
+      "title": "Payment and trust terms need a fixed glossary and human review in every language",
+      "url": "https://github.com/tang-vu/keryx/issues/273"
+    },
+    {
+      "number": 274,
+      "title": "Dates, numbers and USDC amounts are formatted for English only",
+      "url": "https://github.com/tang-vu/keryx/issues/274"
+    },
+    {
+      "number": 275,
+      "title": "Ship interface languages in waves: Vietnamese and Simplified Chinese first",
+      "url": "https://github.com/tang-vu/keryx/issues/275"
+    },
+    {
+      "number": 276,
+      "title": "Chat bots, emails and report scaffolding reply in English regardless of the question language",
+      "url": "https://github.com/tang-vu/keryx/issues/276"
+    },
+    {
+      "number": 277,
+      "title": "Public pages declare English metadata for every language: add language tags, alternates and localized previews",
+      "url": "https://github.com/tang-vu/keryx/issues/277"
+    },
+    {
+      "number": 278,
+      "title": "Tracking: multilingual interface and localized output on every surface",
+      "url": "https://github.com/tang-vu/keryx/issues/278"
+    },
+    {
+      "number": 279,
+      "title": "Research groups cannot share a budget: add a workspace with member limits and approvals",
+      "url": "https://github.com/tang-vu/keryx/issues/279"
+    },
+    {
+      "number": 280,
+      "title": "Researchers cannot claim their own papers and earn citation rewards",
+      "url": "https://github.com/tang-vu/keryx/issues/280"
+    },
+    {
+      "number": 281,
+      "title": "Planned maintenance returns a bare 502 on the site, health and API",
+      "url": "https://github.com/tang-vu/keryx/issues/281"
+    },
+    {
+      "number": 282,
+      "title": "No way to check an existing draft: verify each claim against the sources it cites",
+      "url": "https://github.com/tang-vu/keryx/issues/282"
+    },
+    {
+      "number": 283,
+      "title": "Literature workspace stops before the deliverable: build a related-work draft from a saved review",
+      "url": "https://github.com/tang-vu/keryx/issues/283"
+    },
+    {
+      "number": 284,
+      "title": "Users have no reason to return: add topic watches with a spending limit",
+      "url": "https://github.com/tang-vu/keryx/issues/284"
+    },
+    {
+      "number": 285,
+      "title": "References must be imported by hand: connect Zotero, a synced .bib and CSL-JSON",
+      "url": "https://github.com/tang-vu/keryx/issues/285"
+    },
+    {
+      "number": 286,
+      "title": "Operator finances are spread across pages: add one public ledger with per-job margin",
+      "url": "https://github.com/tang-vu/keryx/issues/286"
+    },
+    {
+      "number": 287,
+      "title": "Answer quality has no single measure: add a fixed evaluation set and a public scorecard",
+      "url": "https://github.com/tang-vu/keryx/issues/287"
+    },
+    {
+      "number": 288,
+      "title": "Run paid mainnet pilots with three research groups and record accepted results",
+      "url": "https://github.com/tang-vu/keryx/issues/288"
+    },
+    {
+      "number": 289,
+      "title": "Keryx has no on-chain agent identity or reputation: register under ERC-8004 on Arc",
+      "url": "https://github.com/tang-vu/keryx/issues/289"
+    },
+    {
+      "number": 290,
+      "title": "Paid research jobs are prepaid to Keryx: run them as ERC-8183 escrowed jobs with a deliverable hash",
+      "url": "https://github.com/tang-vu/keryx/issues/290"
+    },
+    {
+      "number": 291,
+      "title": "On-chain payments are not tied to their decisions: add Arc transaction memos and batched payouts",
+      "url": "https://github.com/tang-vu/keryx/issues/291"
+    },
+    {
+      "number": 292,
+      "title": "Keryx is absent from the Circle Agent Marketplace: list the research service and discover sellers through it",
+      "url": "https://github.com/tang-vu/keryx/issues/292"
+    },
+    {
+      "number": 293,
+      "title": "Settlement is learned by polling: use nanopayment settlement hooks, Gateway webhooks and reconciliation",
+      "url": "https://github.com/tang-vu/keryx/issues/293"
+    },
+    {
+      "number": 294,
+      "title": "Everything is priced and paid in USDC only: evaluate local-currency quotes and EURC rewards",
+      "url": "https://github.com/tang-vu/keryx/issues/294"
+    },
+    {
+      "number": 295,
+      "title": "Creators cannot turn rewards into bank money: evaluate a cash-out path in a sandbox",
+      "url": "https://github.com/tang-vu/keryx/issues/295"
+    },
+    {
+      "number": 298,
+      "title": "Purchase decisions are never scored against outcomes: add hit rate, regret and calibration",
+      "url": "https://github.com/tang-vu/keryx/issues/298"
+    },
+    {
+      "number": 299,
+      "title": "What the agent learns about sources is invisible: make outcome-based learning explicit and bounded",
+      "url": "https://github.com/tang-vu/keryx/issues/299"
+    },
+    {
+      "number": 301,
+      "title": "Decisions cannot be re-run by a reader: add canonical records and deterministic replay",
+      "url": "https://github.com/tang-vu/keryx/issues/301"
+    },
+    {
+      "number": 302,
+      "title": "The value of paying for sources is unmeasured: run and publish a controlled study",
+      "url": "https://github.com/tang-vu/keryx/issues/302"
+    },
+    {
+      "number": 303,
+      "title": "Unmet source needs go nowhere: let the agent post funded bounties for missing sources",
+      "url": "https://github.com/tang-vu/keryx/issues/303"
+    },
+    {
+      "number": 304,
+      "title": "No single record of Circle and Arc usage with proof: add an integration ledger and gasless user actions",
+      "url": "https://github.com/tang-vu/keryx/issues/304"
+    },
+    {
+      "number": 305,
+      "title": "No guided path that shows the whole loop working: add a self-running walkthrough with verification",
+      "url": "https://github.com/tang-vu/keryx/issues/305"
+    },
+    {
+      "number": 306,
+      "title": "Operator acts only when prompted: add a bounded unattended operating cycle",
+      "url": "https://github.com/tang-vu/keryx/issues/306"
+    },
+    {
+      "number": 307,
+      "title": "Tracking: agent quality, platform use and novelty for the event",
+      "url": "https://github.com/tang-vu/keryx/issues/307"
+    },
+    {
+      "number": 308,
+      "title": "Shared root causes behind the open answer-quality issues",
+      "url": "https://github.com/tang-vu/keryx/issues/308"
+    },
+    {
+      "number": 331,
+      "title": "Spanish question receives Portuguese section labels and an English confidence banner",
+      "url": "https://github.com/tang-vu/keryx/issues/331"
+    }
+  ]
+}

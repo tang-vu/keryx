@@ -6938,6 +6938,7 @@ response window remain visible; revision/refund execution and prospective terms
 stay withheld. An absent native domain refuses rather than adopting an ordinary
 sidecar. This provides an honest customer request without manufacturing execution,
 funding, usefulness, outside-customer traction or full issue250 acceptance.
+
 ## Expose bounded recorded purchase outcomes without new financial authority — 2026-10-09
 
 Issue298 receives a read-only projection of the already public retained dispatch
@@ -6954,3 +6955,18 @@ hosted/stdio public-read MCP. Preserve issue250 acceptance controls and all role
 release and storage boundaries. Full prospective capture, expert assessment,
 counterfactual/learning authority and coordinated release remain separate gates
 in [the source plan](docs/engineering/purchase-outcomes-298.md).
+
+## Compose retained quality diagnostics without inventing release acceptance — 2026-10-09
+
+Aggregate the existing hash-bound public deliverable corpus by declared kind and
+exact requested language, preserving every failed and unjudged case. A dated
+public issue inventory and explicit selected coverage registry expose missing
+cases and reasoned removals; labels alone never establish complete issue coverage.
+Recompute grades from the bounded inputs instead of accepting caller PASS fields.
+Keep useful-answer rates null, language/completeness UNJUDGED, and historical
+capture allowance unknown. Inspector source/date is separate from archived answer
+commit/date; a new inspector is not a new release cohort. An explicit deterministic
+diagnostic margin cannot authorize semantic acceptance or deployment. This is a
+maintainer-only offline tool; no application, payment, database, runtime version
+or package surface changes. Full issue287 corpus, consent, semantic/human review,
+agreed release margin and public/live acceptance remain open.
