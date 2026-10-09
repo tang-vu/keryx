@@ -1873,7 +1873,13 @@ export class SqliteAdapter implements KeryxDB {
     const since = new Date(nowMs - 24 * 60 * 60_000).toISOString();
     const rows = this.db
       .prepare(
-        `SELECT status,created_at,updated_at,started_at FROM a2a_orders
+        `SELECT status,created_at,updated_at,started_at,execution_journal_version,
+          CASE WHEN json_valid(package_data) THEN package_data END AS latency_package,
+          CASE WHEN json_valid(response_data) THEN CASE WHEN json_type(response_data,'$.serviceReceipt')='object'
+            THEN json_extract(response_data,'$.serviceReceipt') END END AS latency_receipt,
+          CASE WHEN resolution_data IS NULL THEN 'null'
+            WHEN json_valid(resolution_data) THEN resolution_data ELSE '{}' END AS latency_resolution
+          FROM a2a_orders
           WHERE status='running' OR updated_at>=?`,
       )
       .all(since)
@@ -1882,8 +1888,12 @@ export class SqliteAdapter implements KeryxDB {
         createdAt: String(row.created_at),
         updatedAt: String(row.updated_at),
         startedAt: row.started_at == null ? null : String(row.started_at),
+        executionJournalVersion: row.execution_journal_version,
+        researchPackage: row.latency_package == null ? undefined : JSON.parse(String(row.latency_package)),
+        serviceReceipt: row.latency_receipt == null ? undefined : JSON.parse(String(row.latency_receipt)),
+        resolution: JSON.parse(String(row.latency_resolution)),
       })) satisfies A2aOperationsRow[];
-    return summarizeA2aOperations(rows, nowMs);
+    return summarizeA2aOperations(rows, nowMs, true);
   }
 
   async operatorInventory(input: OperatorInventoryInput) {

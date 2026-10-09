@@ -173,7 +173,13 @@ definitive, financial truth changes through the existing reconciliation job, not
 
 After resolution, poll the public `queryId` and check `/api/health`. `a2aJobs` contains only aggregate
 counts, 24-hour completion/failure rates, oldest queue/processing ages, and p50/p95 completed-job
-latency. Health becomes `degraded` when any order needs review or the oldest queued order exceeds
+latency. The legacy completion p50/p95 includes every completed path. The additive
+`completionLatencyCohorts` separates recorded ordinary, repaired/fulfilled and unknown
+paths; unavailable marker capability stays `null`. Timing uses order `createdAt`
+to `updatedAt` (acceptance to recorded completion/update); later reconciliation
+can extend it. It is never first-answer time or proof of settled payment. See
+[cohort rules and storage gates](engineering/completion-latency-cohorts-257.md).
+Health becomes `degraded` when any order needs review or the oldest queued order exceeds
 two minutes; this is an operator signal, not a liveness failure.
 
 ## Release gate

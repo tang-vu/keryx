@@ -17,6 +17,24 @@ remote endpoint; a client name cannot prove the originating app. Defer account
 linking, later claims and admin reassignment. Scope and remaining acceptance are
 in [run ownership and ingress](docs/engineering/run-owner-provenance-261.md).
 
+**Keep recovered completion latency separate from ordinary delivery — 2026-10-09.**
+An original repaired after 52 hours must not define the reported speed of ordinary
+jobs. Preserve the legacy mixed percentiles and add identifier-free completion
+cohorts from recorded versioned service receipts and explicit repair/fulfillment
+resolutions. Missing or contradictory markers stay unknown; missing storage
+capability stays null. Measure stored order `createdAt` to `updatedAt` (acceptance
+to recorded completion/update), including queueing, recovery and later bookkeeping
+delay, without claiming first-answer or settlement timing.
+
+SQLite extracts existing metadata. Ordinary Supabase aggregates the whole set in
+its existing service-role public snapshot RPC; a capped REST page cannot augment
+that truth. Its source migration does not rewrite orders or grant new authority.
+Keep enrolled PostgreSQL's markerless contract and unsupported public snapshot
+unchanged until separate protected storage migration/enrollment proof. This is
+only the latency-reporting part of #257, with target-time alerts, customer remedies
+and first-user measurements still open. Original receipts, budgets, custody,
+settlement and recovery remain unchanged. See [rules and release gates](docs/engineering/completion-latency-cohorts-257.md).
+
 **Project obligations before investing Operator float — 2026-10-09.**
 Stage a read-only ownership-scoped projection using the existing complete prepaid
 inventory and original payment, withdrawal, funding and supplier journals. Keep

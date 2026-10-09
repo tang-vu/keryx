@@ -21,6 +21,8 @@ vi.mock("react", async importOriginal => ({
 }));
 import { OperatorBusinessSnapshot, OperatorBusinessView } from "../../components/keryx/operator-business-view";
 import { OPERATOR_REASON_TEXT } from "./contracts";
+import { summarizeA2aOperations } from "../a2a/operations";
+import { completionFixtureRows, COMPLETION_FIXTURE_NOW } from "../a2a/completion-latency.test-support";
 
 const status = (): OperatorBusinessStatus => ({
   version: 1,
@@ -34,6 +36,7 @@ const status = (): OperatorBusinessStatus => ({
     completedLast24h: 4, failedLast24h: 1, completionRateLast24h: 0.8,
     oldestQueuedAgeSeconds: 125, oldestProcessingAgeSeconds: 60,
     completionLatencyP50Ms: 4_000, completionLatencyP95Ms: 6_000, degraded: true,
+    completionLatencyCohorts: null,
   },
   creatorCatalog: { registered: 0 },
 });
@@ -43,6 +46,18 @@ beforeEach(() => { reader.index = 0; reader.status = null; reader.readState = "l
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("public Operator view", () => {
+  it("renders separate recorded timing paths and exposes neither private markers nor a settlement claim", () => {
+    const value = status(); value.jobs = summarizeA2aOperations(completionFixtureRows(), COMPLETION_FIXTURE_NOW, true);
+    const html = render(value);
+    for (const text of ["Completion timing by recorded path", "Ordinary", "Recovered", "Unknown path", "2d 4h", "Timed samples", "95th percentile", "first answer", "Acceptance to recorded completion/update", "for orders recorded as completed and updated in the last 24 hours", "Later reconciliation can extend this time"]) expect(html).toContain(text);
+    expect(html).toContain('scope="col"'); expect(html).toContain('scope="row"'); expect(html).toContain('overflow-x-auto');
+    expect(html).not.toMatch(/claimId|authoritySha256|originalFailureSha256|Synthetic timing fixture/);
+  });
+  it("keeps a legacy storage response's missing capability explicit instead of ordinary zero latency", () => {
+    const html = render(status());
+    expect(html).toContain("Completion-path timing is unavailable on this storage contract");
+    expect(html).toContain("Missing capability is not zero ordinary latency");
+  });
   it.each(["disabled", "idle", "working", "held", "review", "stale", "unavailable"] as const)("renders the observed %s state", state => {
     const value = status(); value.operator.state = state;
     const expected = {
