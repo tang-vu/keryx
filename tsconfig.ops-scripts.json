@@ -5,6 +5,7 @@
     "incremental": false
   },
   "include": [
+    "scripts/grade-retained-deliverables.mts",
     "scripts/maintenance-front-door.mts",
     "scripts/test-browser-source-recency.mts",
     "scripts/test-browser-answer-feedback.mts",
