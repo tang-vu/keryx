@@ -9,7 +9,8 @@
 import Link from "next/link";
 import { Crown, Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fmtUsdc, shortAddr } from "./phase-style";
+import { shortAddr } from "./phase-style";
+import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import { cn } from "@/lib/utils";
 
 export interface LeaderboardEntry {
@@ -21,13 +22,13 @@ export interface LeaderboardEntry {
   citationCount: number;
 }
 
-export function CreatorLeaderboard({ rows }: { rows: LeaderboardEntry[] }) {
+export function CreatorLeaderboard({ rows, title = "Creator leaderboard" }: { rows: LeaderboardEntry[]; title?: string }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center gap-2 space-y-0 pb-4">
         <Trophy className="h-4 w-4 text-seal" />
         <CardTitle className="font-serif text-lg font-normal">
-          Creator leaderboard
+          {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -65,7 +66,7 @@ export function CreatorLeaderboard({ rows }: { rows: LeaderboardEntry[] }) {
               </p>
             </div>
             <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-paid">
-              ${fmtUsdc(row.totalEarnedUsdc)}
+              {formatRecordedUsdc(row.totalEarnedUsdc)}
             </span>
           </Link>
         ))}

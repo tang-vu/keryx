@@ -114,6 +114,14 @@ async function open(): Promise<TestnetArchiveStore> {
   return store!;
 }
 
+function revise(f: ReturnType<typeof fixture>, change: (writer: DatabaseSync) => void): void {
+  const writer = new DatabaseSync(f.database);
+  writers.add(writer);
+  try { change(writer); }
+  finally { writer.close(); writers.delete(writer); }
+  f.writeManifest({ databaseSha256: hash(f.database) });
+}
+
 afterEach(() => {
   for (const archive of opened.splice(0)) archive.close();
   for (const writer of writers) writer.close();
@@ -210,6 +218,117 @@ describe("read-only historical testnet archive", () => {
     expect((await archive.listPaymentsByQuery(IDS[0])).find(payment => payment.id === "citation-settled")?.settlementStatus).toBe("settled");
     expect((await archive.listPaymentsByQuery(IDS[0])).find(payment => payment.id === "citation-pending")?.settlementStatus).toBe("simulated");
     expect(hash(f.database)).toBe(before);
+  });
+
+  it("reports only visible, evidence-backed creator payments without importing private data", async () => {
+    const f = fixture();
+    revise(f, writer => {
+      writer.exec(`UPDATE payment_events SET settled=1,settlement_status='settled',tx_hash='unexposed-settlement'
+        WHERE id IN ('prepared','cancelled');
+        UPDATE payment_events SET source_name='Unsettled name' WHERE settled=0;`);
+    });
+    const before = readFileSync(f.database);
+    const archive = await open();
+    const creators = await archive.creatorLeaderboard();
+    expect(creators).toEqual([{ sourceId: "source-a", sourceName: "Creator", walletAddress: BOB,
+      totalEarnedMicroUsdc: 100003, paymentCount: 2, citationCount: 1 }]);
+    const summary = await archive.summary();
+    expect(creators.reduce((sum, creator) => sum + creator.totalEarnedMicroUsdc, 0)).toBe(summary.settledCreatorMicroUsdc);
+    expect(creators.reduce((sum, creator) => sum + creator.paymentCount, 0)).toBe(summary.settledCreatorPaymentCount);
+    expect(JSON.stringify(creators)).not.toMatch(/private-|authorization|grant|payer|content|txHash|operating|inbound/);
+    expect(readFileSync(f.database)).toEqual(before);
+    expect(Object.keys(creators[0]).sort()).toEqual(["citationCount", "paymentCount", "sourceId", "sourceName", "totalEarnedMicroUsdc", "walletAddress"]);
+    for (const suffix of ["-wal", "-shm", "-journal"]) expect(existsSync(f.database + suffix)).toBe(false);
+  });
+
+  it("preserves split recipients, deduplicates wallet case and orders tied earnings deterministically", async () => {
+    const f = fixture();
+    revise(f, writer => {
+      writer.prepare("UPDATE payment_events SET payee=?,source_name='Latest recorded creator' WHERE id='fetch-settled'").run(BOB.toUpperCase());
+      const insert = writer.prepare(`INSERT INTO payment_events(id,created_at,kind,source_id,source_name,payee,amount_usdc,network,settled,settlement_status,tx_hash)
+        VALUES(?,?,'citation',?,?,?,?, 'eip155:5042002',1,'settled','original-evidence')`);
+      insert.run("different-recipient", "2026-09-01T12:02:00.000Z", "source-a", "Recipient's recorded name", ALICE, 0.100003);
+      insert.run("different-source", "2026-09-01T12:03:00.000Z", "source-b", "Another source", ALICE, 0.100003);
+    });
+    const archive = await open();
+    expect(await archive.creatorLeaderboard()).toEqual([
+      { sourceId: "source-a", sourceName: "Recipient's recorded name", walletAddress: ALICE, totalEarnedMicroUsdc: 100003, paymentCount: 1, citationCount: 1 },
+      { sourceId: "source-a", sourceName: "Latest recorded creator", walletAddress: BOB, totalEarnedMicroUsdc: 100003, paymentCount: 2, citationCount: 1 },
+      { sourceId: "source-b", sourceName: "Another source", walletAddress: ALICE, totalEarnedMicroUsdc: 100003, paymentCount: 1, citationCount: 1 },
+    ]);
+    expect((await archive.summary()).settledCreatorCount).toBe(2);
+  });
+
+  it("reads complete creator history beyond query paging limits and sums integer units exactly", async () => {
+    const f = fixture();
+    revise(f, writer => {
+      const insert = writer.prepare(`INSERT INTO payment_events(id,created_at,kind,source_id,source_name,payee,amount_usdc,network,settled,settlement_status,tx_hash)
+        VALUES(?,'2026-09-01T12:00:00.000Z','fetch',?,'Historical source',?,0.000001,'eip155:5042002',1,'settled','original-evidence')`);
+      for (let index = 0; index < 2601; index++) insert.run(`old-${index}`, `old-source-${index}`, BOB);
+    });
+    const archive = await open();
+    const creators = await archive.creatorLeaderboard();
+    expect(creators).toHaveLength(2602);
+    expect(creators[0].totalEarnedMicroUsdc).toBe(100003);
+    expect(creators.slice(1).every(creator => creator.totalEarnedMicroUsdc === 1 && creator.paymentCount === 1 && creator.citationCount === 0)).toBe(true);
+    expect(creators.reduce((sum, creator) => sum + creator.totalEarnedMicroUsdc, 0)).toBe(102604);
+    expect((await archive.summary()).settledCreatorMicroUsdc).toBe(102604);
+  });
+
+  it.each([undefined, "legacy"] as const)("keeps creator names usable with optional source schema %s", async metadata => {
+    const f = fixture({ metadata, legacyStatus: true });
+    revise(f, writer => writer.exec("UPDATE payment_events SET source_name=source_id WHERE id='fetch-settled'"));
+    const archive = await open();
+    expect(await archive.creatorLeaderboard()).toEqual([{ sourceId: "source-a", sourceName: "Creator", walletAddress: BOB,
+      totalEarnedMicroUsdc: 100003, paymentCount: 2, citationCount: 1 }]);
+  });
+
+  it("uses immutable source name metadata only for missing recorded names, without reading payout or content", async () => {
+    const f = fixture({ metadata: "legacy" });
+    revise(f, writer => {
+      writer.exec(`ALTER TABLE sources ADD COLUMN name TEXT;
+        INSERT INTO sources(id,name,content,pay_to) VALUES('source-a','Archived creator name','paid-private-source-body-fixture','private-payout-fixture');
+        UPDATE payment_events SET source_name=CASE WHEN id='fetch-settled' THEN '' ELSE source_id END;
+        INSERT INTO payment_events(id,created_at,kind,source_id,source_name,payee,amount_usdc,network,settled,settlement_status,tx_hash)
+          VALUES('named','2026-09-01T12:00:00.000Z','fetch','source-b','Recorded payment name','${ALICE}',0.000001,'eip155:5042002',1,'settled','original-evidence');
+        INSERT INTO sources(id,name,content,pay_to) VALUES('source-b','Other metadata name','private-body','private-payout');`);
+    });
+    const before = readFileSync(f.database);
+    const statements: string[] = [];
+    const nativePrepare = DatabaseSync.prototype.prepare;
+    vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function (this: DatabaseSync, sql: string) {
+      statements.push(sql);
+      return nativePrepare.call(this, sql);
+    });
+    const archive = await open();
+    const creators = await archive.creatorLeaderboard();
+    expect(creators.map(creator => creator.sourceName)).toEqual(["Archived creator name", "Recorded payment name"]);
+    const metadataReads = statements.filter(sql => /\bFROM\s+sources\b/i.test(sql));
+    expect(metadataReads).toHaveLength(1);
+    expect(metadataReads[0]).toMatch(/^SELECT id, name FROM sources WHERE id IN/);
+    expect(JSON.stringify(creators)).not.toMatch(/paid-private-|private-payout|private-body/);
+    expect(readFileSync(f.database)).toEqual(before);
+  });
+
+  it("falls back to the original source ID when no name is retained", async () => {
+    const f = fixture();
+    revise(f, writer => writer.exec("UPDATE payment_events SET source_name=NULL"));
+    expect((await (await open()).creatorLeaderboard())[0].sourceName).toBe("source-a");
+  });
+
+  it("refuses unsafe cumulative creator amounts with a sanitized error", async () => {
+    const f = fixture();
+    revise(f, writer => writer.exec("UPDATE payment_events SET amount_usdc=5000000000 WHERE id IN ('citation-settled','fetch-settled')"));
+    const archive = await open();
+    await expect(archive.creatorLeaderboard()).rejects.toThrow(/^Historical testnet archive unavailable$/);
+  });
+
+  it("rechecks archive integrity before exposing a creator leaderboard", async () => {
+    const f = fixture();
+    const archive = await open();
+    expect(await archive.creatorLeaderboard()).toHaveLength(1);
+    f.writeManifest({ capturedAt: "2026-10-03T00:00:01.000Z" });
+    await expect(archive.creatorLeaderboard()).rejects.toThrow(/^Historical testnet archive unavailable$/);
   });
 
   it("projects frozen source/item flags for legacy citations across every history read using metadata only", async () => {

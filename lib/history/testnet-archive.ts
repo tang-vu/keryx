@@ -31,6 +31,16 @@ export interface TestnetArchiveSummary {
   origins: Array<{ origin: string | null; count: number }>;
 }
 
+/** Recorded source/recipient pairs; not current publisher or payout authority. */
+export interface TestnetCreatorEntry {
+  sourceId: string;
+  sourceName: string;
+  walletAddress: string;
+  totalEarnedMicroUsdc: number;
+  paymentCount: number;
+  citationCount: number;
+}
+
 /** Public history only: no writer, authentication, session, nonce or custody methods. */
 export interface TestnetArchiveStore {
   readonly info: TestnetArchiveInfo;
@@ -43,6 +53,7 @@ export interface TestnetArchiveStore {
   listPaymentsByQuery(id: string): Promise<PaymentRecord[]>;
   listCreatorPaymentAttemptsByQuery(id: string): Promise<PaymentRecord[]>;
   summary(): Promise<TestnetArchiveSummary>;
+  creatorLeaderboard(): Promise<TestnetCreatorEntry[]>;
   close(): void;
 }
 
@@ -169,6 +180,7 @@ class ReadonlyTestnetArchive implements TestnetArchiveStore {
   readonly #settledEvidence: string;
   readonly #queryOrigin: string;
   readonly #sourceProvenance: boolean;
+  readonly #sourceNames: boolean;
   readonly #itemProvenance: boolean;
   #closed = false;
 
@@ -201,6 +213,7 @@ class ReadonlyTestnetArchive implements TestnetArchiveStore {
       const sourceColumns = this.optionalColumns("sources");
       const itemColumns = this.optionalColumns("source_items");
       this.#sourceProvenance = ["id", "evidence_provenance"].every(column => sourceColumns.has(column));
+      this.#sourceNames = ["id", "name"].every(column => sourceColumns.has(column));
       this.#itemProvenance = ["id", "source_id", "evidence_provenance"].every(column => itemColumns.has(column));
       // Network checking covers every row, including receipts excluded from the public projection.
       if (this.#db.prepare("SELECT 1 FROM payment_events WHERE network IS NULL OR network != ? LIMIT 1").get(NETWORK) ||
@@ -377,6 +390,61 @@ class ReadonlyTestnetArchive implements TestnetArchiveStore {
         origins: this.#db.prepare(`SELECT ${this.#queryOrigin} AS origin, COUNT(*) AS count FROM query_runs GROUP BY origin ORDER BY origin`).all()
           .map(row => ({ origin: (row.origin as string) ?? null, count: safeCount(row.count) })),
       };
+    });
+  }
+
+  async creatorLeaderboard(): Promise<TestnetCreatorEntry[]> {
+    return this.read(() => {
+      const sources = new Map<string, Map<string, TestnetCreatorEntry>>();
+      let totalMicroUsdc = 0;
+      // Convert each historical REAL amount to the archive's integer accounting
+      // unit before adding it. No current source joins or top-N limits apply.
+      const rows = this.#db.prepare(`SELECT source_id, source_name, LOWER(payee) AS wallet, kind,
+        CAST(ROUND(amount_usdc*1000000) AS INTEGER) AS micro FROM payment_events
+        WHERE ${this.#visiblePayment} AND kind IN ('fetch','citation') AND ${this.#settledEvidence}
+        ORDER BY source_id ASC, LOWER(payee) ASC, created_at DESC, id DESC`).iterate();
+      for (const row of rows) {
+        if (typeof row.source_id !== "string" || !row.source_id.length ||
+            typeof row.wallet !== "string" || !row.wallet.length) throw unavailable();
+        const micro = safeCount(row.micro);
+        totalMicroUsdc = safeCount(totalMicroUsdc + micro);
+        let recipients = sources.get(row.source_id);
+        if (!recipients) { recipients = new Map(); sources.set(row.source_id, recipients); }
+        let entry = recipients.get(row.wallet);
+        if (!entry) {
+          entry = { sourceId: row.source_id, sourceName: row.source_id, walletAddress: row.wallet,
+            totalEarnedMicroUsdc: 0, paymentCount: 0, citationCount: 0 };
+          recipients.set(row.wallet, entry);
+        }
+        // Prefer the latest useful name recorded on a settled payment. A raw ID
+        // or blank name must not hide an earlier recorded human-readable name.
+        if (entry.sourceName === entry.sourceId && typeof row.source_name === "string" &&
+            row.source_name.trim() && row.source_name.trim() !== entry.sourceId) {
+          entry.sourceName = row.source_name.trim();
+        }
+        entry.totalEarnedMicroUsdc = safeCount(entry.totalEarnedMicroUsdc + micro);
+        entry.paymentCount = safeCount(entry.paymentCount + 1);
+        entry.citationCount = safeCount(entry.citationCount + (row.kind === "citation" ? 1 : 0));
+      }
+      const entries = Array.from(sources.values()).flatMap(recipients => Array.from(recipients.values()));
+      if (this.#sourceNames) {
+        const missingNames = Array.from(new Set(entries.filter(entry => entry.sourceName === entry.sourceId).map(entry => entry.sourceId)));
+        for (let offset = 0; offset < missingNames.length; offset += 500) {
+          const batch = missingNames.slice(offset, offset + 500);
+          // Immutable display metadata only: never content, pay_to, keys or
+          // current registry/profile data. Older snapshots need no source table.
+          const names = this.#db.prepare(`SELECT id, name FROM sources WHERE id IN (${batch.map(() => "?").join(",")})`).all(...batch);
+          for (const row of names) {
+            if (typeof row.name !== "string" || !row.name.trim()) continue;
+            for (const entry of sources.get(String(row.id))?.values() ?? []) {
+              if (entry.sourceName === entry.sourceId) entry.sourceName = row.name.trim();
+            }
+          }
+        }
+      }
+      return entries.sort((a, b) => b.totalEarnedMicroUsdc - a.totalEarnedMicroUsdc ||
+        (a.sourceId < b.sourceId ? -1 : a.sourceId > b.sourceId ? 1 : 0) ||
+        (a.walletAddress < b.walletAddress ? -1 : a.walletAddress > b.walletAddress ? 1 : 0));
     });
   }
 

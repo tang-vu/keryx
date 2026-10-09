@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**Lead the ledger with the retained track record and recover creator rankings — 2026-10-09.**
+The owner requested a more effective Activity & proof presentation and the missing
+testnet creator leaderboard. Show the retained testnet summary and original creator
+rankings before long recent-question and payment lists. Keep current mainnet
+activity and creator rewards visibly separate, and retain exact settlement proof
+behind accessible details. Historical scale is not mainnet revenue, independent
+customers or current-event growth.
+
+Project every visible, evidenced, settled access/citation row in the immutable
+archive by original source and recipient, with exact integer micro-USDC and
+deterministic ranking. Show five entries initially and expose the complete ranking;
+the full history page and public creator-data endpoint retain every entry. Distinct
+paid wallets and source/wallet pairs are different counts. Original names and
+optional frozen display metadata grant no current publisher control or payment
+authority. A ranking outage preserves available summary/question history.
+See [release scope and acceptance](docs/engineering/ledger-testnet-creators-2026-10-09.md).
+
 **Use one ordinary answer language for labels and confidence — 2026-10-09.**
 Issue331's Spanish request was protected from false Portuguese inference by the
 earlier selector repair, but Spanish still had English scaffolding and ordinary

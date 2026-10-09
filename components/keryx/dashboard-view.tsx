@@ -74,17 +74,33 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
   const runsResource = useLedgerResource("/api/runs", runBody);
   const metrics = metricsResource.data?.metrics;
   const leaderboard = metricsResource.data?.leaderboard ?? [];
-  const payments = paymentsResource.data ?? [];
+  const creatorNames = new Map(leaderboard.map(row => [row.sourceId, row.sourceName]));
+  const payments = (paymentsResource.data ?? []).map(payment => ({
+    ...payment,
+    sourceName: payment.sourceName === payment.sourceId ? creatorNames.get(payment.sourceId) ?? payment.sourceName : payment.sourceName,
+  }));
   const withdrawals = withdrawalsResource.data ?? [];
-  const runs = runsResource.data ?? [];
+  const runs = (runsResource.data ?? []).filter(run => !run.archive);
 
   return <div className="min-h-screen bg-paper">
     <SiteHeader />
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-8">
       <header className="border-b-[1.5px] border-ink pb-6">
         <div className="font-mono text-xs uppercase tracking-[0.2em] text-seal">The ledger</div>
-        <h1 className="letterpress mt-3 font-display text-[clamp(28px,3.6vw,40px)] font-medium tracking-tight text-ink">Reading activity &amp; payment proof</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-2">Explore recorded questions, citations, and sources. Creator payments appear with their original settlement evidence and network.</p>
+        <h1 className="letterpress mt-3 font-display text-[clamp(28px,3.6vw,40px)] font-medium tracking-tight text-ink">Reading activity &amp; creator rewards</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-2">Follow the questions, explore the sources, and see what reached creator wallets. Browse the retained testnet track record and current mainnet activity, each with its original payment proof.</p>
+        <nav aria-label="Ledger sections" className="mt-4 flex flex-wrap gap-x-5 text-sm text-seal">
+          <Link href="/history/testnet" className="min-h-11 py-3 underline">Testnet track record</Link>
+          <a href="#current-activity" className="min-h-11 py-3 underline">{currentArcLabel} activity</a>
+          <a href="#current-creators" className="min-h-11 py-3 underline">Current creator rewards</a>
+          <a href="#payment-records" className="min-h-11 py-3 underline">Payment evidence</a>
+        </nav>
+      </header>
+
+      {historyPreview}
+
+      <section id="current-activity" aria-label="Current network activity" className="mt-8 border-t border-line pt-6">
+        <h2 className="font-display text-2xl text-ink">{currentArcLabel} activity</h2>
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
           <span className="font-mono text-sm text-ink">{metrics ? <><span className="font-display text-2xl">{metrics.totalQueries}</span> recorded questions{metricsResource.status === "error" && " · last successful read"}</> : metricsResource.status === "error" ? "Question total unavailable" : "Loading question total…"}</span>
           <span className="font-mono text-sm text-ink">{metrics?.recordedAccounts != null ? <><span className="font-display text-2xl">{metrics.recordedAccounts}</span> recorded accounts{metricsResource.status === "error" && " · last successful read"}</> : metrics || metricsResource.status === "error" ? "Account total unavailable" : "Loading account total…"}</span>
@@ -94,13 +110,13 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
         </div>
         <p className="mt-3 max-w-2xl text-xs leading-relaxed text-ink-3">Account totals include verified Google and wallet sign-ins. Each wallet is counted once; one person may use several wallets.</p>
         <p className="mt-2 max-w-2xl text-xs leading-relaxed text-ink-3">Guest questions are included in recorded questions: completed web questions with no signed-in wallet recorded. This counts questions, not visits or unique people.</p>
-      </header>
+      </section>
 
       <div className="mt-8 grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section aria-label="Recorded research activity" className="min-w-0">
           <ResourceNotice resource={runsResource} label="Question records" />
-          {runsResource.data !== null && <DispatchHistory runs={runs.slice(0, 8)} title="Recent questions" showFinancials={false} />}
-          {runs.length > 8 && <details className="mt-4 border border-line bg-paper-2/30"><summary className="cursor-pointer px-5 py-4 font-display text-lg text-ink">More questions</summary><div className="px-4 pb-4"><DispatchHistory runs={runs.slice(8, 25)} title="Earlier questions" showFinancials={false} /></div></details>}
+          {runsResource.data !== null && <DispatchHistory runs={runs.slice(0, 4)} title="Recent questions" showFinancials={false} />}
+          {runs.length > 4 && <details className="mt-4 border border-line bg-paper-2/30"><summary className="cursor-pointer px-5 py-4 font-display text-lg text-ink">More questions</summary><div className="px-4 pb-4"><DispatchHistory runs={runs.slice(4, 25)} title="Earlier questions" showFinancials={false} /></div></details>}
           <Link href="/answers" className="mt-3 inline-block min-h-11 py-2 font-mono text-xs text-seal underline">Browse past answers →</Link>
         </section>
         <aside aria-labelledby="payment-proof-title" className="border-t-2 border-seal bg-paper-2 p-5">
@@ -129,20 +145,19 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
         </aside>
       </div>
 
-      {historyPreview}
-      {sourcePreview}
-
-      <section aria-label="Payment records" className="mt-8">
-        <ResourceNotice resource={paymentsResource} label="Payment records" />
-        {payments.length > 0 && <>
-          <PaymentsFeed payments={payments.slice(0, 8)} compact />
-          <details className="mt-4 border border-line"><summary className="min-h-11 cursor-pointer px-5 py-3 font-display text-lg text-ink">Inspect payment evidence</summary><PaymentsFeed payments={payments} /></details>
-        </>}
+      <section id="current-creators" aria-label="Current creator rewards" className="mt-8">
         <ResourceNotice resource={withdrawalsResource} label="Cash-out records" />
         {(leaderboard.length > 0 || withdrawals.length > 0) && <div className="mt-5 grid gap-5 lg:grid-cols-2">
-          {leaderboard.length > 0 && <CreatorLeaderboard rows={leaderboard} />}
+          {leaderboard.length > 0 && <CreatorLeaderboard rows={leaderboard} title={`${currentArcLabel} creator leaderboard`} />}
           {withdrawals.length > 0 && <CreatorCashoutsPanel withdrawals={withdrawals} compact />}
         </div>}
+      </section>
+
+      {sourcePreview}
+
+      <section id="payment-records" aria-label="Payment records" className="mt-8">
+        <ResourceNotice resource={paymentsResource} label="Payment records" />
+        {payments.length > 0 && <details className="border border-line"><summary className="min-h-11 cursor-pointer px-5 py-3 font-display text-lg text-ink">Inspect payment evidence</summary><PaymentsFeed payments={payments} /></details>}
         {(payments.length > 0 || withdrawals.length > 0) && <p className="mt-4 text-sm leading-relaxed text-ink-2">Individual payment references identify Circle Gateway batch settlements. Creator cash-outs link to their own Arc transactions. Each record retains its original network.</p>}
       </section>
     </main>
