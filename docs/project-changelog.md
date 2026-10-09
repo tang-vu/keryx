@@ -1,5 +1,26 @@
 # Keryx Project Changelog
 
+### Coordinated research surfaces (2026-10-09, v0.27.45 candidate)
+
+- Attribute new API and paid A2A research to independently verified owners and
+  record closed ingress labels separately. Historical and unlinked chat ownership
+  remains unknown; this adds no payment rights or backfill.
+- Preserve exact micro-USDC in human summaries on web, hosted transports, CLI,
+  stdio and bots, with the same checked formatter in extension0.1.2. Invalid or
+  fractional-micro records remain unavailable; machine money and receipts stay
+  unchanged. CSL-JSON exports and desktop0.4.11 retain their scope below.
+- Separate ordinary, explicitly recovered and unknown recorded-completion cohorts.
+  These are acceptance-to-last-update timings, not first-answer or settlement SLOs.
+- Remote MCP0.3.8 declines standalone GET streams with405 before authentication or
+  storage; POST research and recovery remain intact. Stdio0.4.12 adds explicitly
+  scoped private-profile read/update tools. Private profile fields/API/editor are
+  staged for ordinary storage; production CRUD still requires its separate sealed
+  storage cutover and acceptance. No new migration is applied by this release.
+- This candidate preserves the reviewed feature heads in one real merge graph.
+  Final combined aggregate/domain/platform checks, exact-main package/installer
+  publication, production health and applicable readback remain release gates.
+  No fresh model call, payment, schedule, installed-client or adoption is claimed.
+
 ### CSL-JSON reference exports (2026-10-09, source candidate)
 
 - Download recorded research references and separate metadata-only bibliographies
