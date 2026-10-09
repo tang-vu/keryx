@@ -12,9 +12,14 @@ export function signedOutResearchAuthFixture(): Plugin {
 }
 
 export function assertResearchBrowserFixtureGraph(metafile: Metafile | undefined) {
+  assertSignedOutBrowserFixtureGraph(metafile, ["components/keryx/research-turn.tsx", "components/keryx/decision-reviews.tsx", "lib/hooks/use-ask-stream.ts"]);
+}
+
+/** Each fixture names the real composition it exercises; wallet authentication stays separate. */
+export function assertSignedOutBrowserFixtureGraph(metafile: Metafile | undefined, requiredModules: readonly string[]) {
   assert(metafile, "The actual browser fixture must retain its esbuild input graph");
   const paths = Object.keys(metafile.inputs).map(path => path.replaceAll("\\", "/"));
-  for (const suffix of ["components/keryx/research-turn.tsx", "components/keryx/decision-reviews.tsx", "lib/hooks/use-ask-stream.ts"])
+  for (const suffix of requiredModules)
     assert(paths.some(path => path.endsWith(suffix)), `Real research composition missing: ${suffix}`);
   assert(!paths.some(path => /(?:^|\/)node_modules\/(?:jsonwebtoken|jwa|jws)\//.test(path)), "Node JWT signing/verification must not enter the hermetic browser fixture");
   assert(paths.includes("research-auth-fixture:signed-out-auth"), "The synthetic signed-out wallet boundary must be explicit");

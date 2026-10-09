@@ -86,6 +86,30 @@ it("never overwrites an existing destination or copies beside a retained journal
   expect(fs.existsSync(journal)).toBe(false);
 });
 
+it("recognizes only the exact singleton installation UUID, refusing missing, malformed and widened rows", async () => {
+  const validId = "12345678-1234-4234-8234-123456789abc";
+  for (const rows of [[], [{ singleton: 1, id: "not-a-uuid" }], [{ singleton: 1, id: validId + "\n" }], [{ singleton: 2, id: validId }],
+    [{ singleton: 1, id: validId }, { singleton: 1, id: validId }]]) {
+    const { native } = await clone();
+    native.exec("DROP TABLE deliverable_acceptance_store; CREATE TABLE deliverable_acceptance_store(singleton INTEGER,id TEXT)");
+    for (const row of rows) native.prepare("INSERT INTO deliverable_acceptance_store VALUES(?,?)").run(row.singleton, row.id);
+    expect(() => assertEmptySignerFixtureSchema(native)).toThrow("invalid installation identity");
+  }
+  const { native } = await clone();
+  native.exec("ALTER TABLE deliverable_acceptance_store ADD COLUMN authority TEXT");
+  expect(() => assertEmptySignerFixtureSchema(native)).toThrow("invalid installation identity");
+});
+
+it("still refuses acceptance journal entries and unknown populated tables as business authority", async () => {
+  const accepted = await clone();
+  accepted.native.prepare("INSERT INTO deliverable_acceptance_entries(owner,network,original_id,revision,idempotency_key,original_fingerprint,delivered_digest,data) VALUES(?,?,?,?,?,?,?,?)")
+    .run("synthetic-owner", "eip155:5042002", "synthetic-original", 1, "synthetic-key", "synthetic-fingerprint", "synthetic-digest", "{}");
+  expect(() => assertEmptySignerFixtureSchema(accepted.native)).toThrow("business rows");
+  const unknown = await clone();
+  unknown.native.exec("CREATE TABLE unknown_authority(id INTEGER); INSERT INTO unknown_authority VALUES(1)");
+  expect(() => assertEmptySignerFixtureSchema(unknown.native)).toThrow("business rows");
+});
+
 it("refuses a changed seed before creating a clone", () => {
   const destination = target();
   const original = fs.readFileSync(seed.file);

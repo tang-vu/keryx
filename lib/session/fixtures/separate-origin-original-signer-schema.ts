@@ -7,6 +7,7 @@ import { SqliteAdapter } from "../../db/sqlite-adapter";
 
 const seedPrefix = "keryx-original-signer-schema-";
 const sidecars = ["-wal", "-shm", "-journal"];
+const installationUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const dormantControls: Record<string, Record<string, number>> = {
   browser_journal_control: { id: 1, active: 0 },
   browser_signing_v2_control: { id: 1, active: 0, min_original_version: 2 },
@@ -18,7 +19,7 @@ const requiredEmptyTables = [
   "browser_signing_namespaces", "browser_signing_queries", "browser_signing_originals",
 ];
 
-/** Test-only: a full schema may retain dormant installation controls, never business authority. */
+/** Test-only: dormant controls and the exact installation UUID are allowed, never business authority. */
 export function assertEmptySignerFixtureSchema(db: DatabaseSync): void {
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT GLOB 'sqlite_*'").all();
   const names = new Set(tables.map(row => String(row.name)));
@@ -26,6 +27,13 @@ export function assertEmptySignerFixtureSchema(db: DatabaseSync): void {
     throw new Error("Incomplete signer fixture schema");
   for (const name of names) {
     const quoted = '"' + name.replaceAll('"', '""') + '"';
+    if (name === "deliverable_acceptance_store") {
+      const rows = db.prepare(`SELECT * FROM ${quoted}`).all();
+      if (rows.length !== 1 || Object.keys(rows[0]).length !== 2 || rows[0].singleton !== 1 ||
+        typeof rows[0].id !== "string" || rows[0].id.length !== 36 || !installationUuid.test(rows[0].id))
+        throw new Error("Signer fixture schema contains invalid installation identity");
+      continue;
+    }
     const control = Object.hasOwn(dormantControls, name) ? dormantControls[name] : undefined;
     if (!control) {
       if (db.prepare(`SELECT count(*) AS count FROM ${quoted}`).get()?.count !== 0)

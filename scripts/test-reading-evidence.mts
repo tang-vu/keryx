@@ -4,6 +4,7 @@ import path from "node:path";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { chromium } from "playwright";
+import { assertSignedOutBrowserFixtureGraph, signedOutResearchAuthFixture } from "../test-support/research-browser-auth-fixture";
 
 const buildDir = path.resolve(process.cwd(), process.env.NEXT_DIST_DIR ?? ".next");
 const cssDir = [
@@ -67,16 +68,18 @@ createRoot(document.getElementById('root')).render(<App/>);
   format: "iife",
   jsx: "automatic",
   write: false,
-  define: { "process.env.NODE_ENV": '"development"', "process.env.NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET": '""',
+  metafile: true,
+  define: { "process.env": "{}", "process.env.NODE_ENV": '"development"', "process.env.NEXT_PUBLIC_KERYX_SETTLEMENT_WALLET": '""',
     "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined",
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
-  plugins: [{ name: "alias", setup(api) {
+  plugins: [signedOutResearchAuthFixture(), { name: "alias", setup(api) {
     api.onResolve({ filter: /^@\// }, ({ path: importPath }) => {
       const target = path.join(process.cwd(), importPath.slice(2));
       return { path: existsSync(`${target}.ts`) ? `${target}.ts` : `${target}.tsx` };
     });
   } }],
 });
+assertSignedOutBrowserFixtureGraph(bundle.metafile, ["app/dispatch/[id]/dispatch-view.tsx", "components/keryx/decision-reviews.tsx", "components/keryx/answer-card.tsx", "components/keryx/reasoning-console.tsx"]);
 
 const browser = await chromium.launch({ headless: true });
 try {
