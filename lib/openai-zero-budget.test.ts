@@ -23,3 +23,9 @@ it.each([0, undefined])("preserves explicit zero while clamping the default for 
   expect(response.status).toBe(200);
   expect(mocks.collectRun).toHaveBeenCalledWith(expect.objectContaining({ budget: budget === 0 ? 0 : 0.03 }));
 });
+it.each([{ reviewFirst: true }, { reviewFirst: "false" }, { mode: "review-first" }, { researchMode: "review-first" }])("refuses unsupported interactive review intent before the provider: %j", async intent => {
+  const response = await POST(new NextRequest("https://keryx.cc/api/v1/chat/completions", { method: "POST",
+    body: JSON.stringify({ messages: [{ role: "user", content: "Synthetic question" }], ...intent }) }));
+  expect(response.status).toBe(400); expect(await response.json()).toMatchObject({ error: { code: "review_unsupported" } });
+  expect(mocks.collectRun).not.toHaveBeenCalled();
+});

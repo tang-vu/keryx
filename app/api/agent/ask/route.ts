@@ -20,6 +20,7 @@ import { verifyApiKey } from "@/lib/api-keys";
 import { hasScope, parseScopes } from "@/lib/api-key-scopes";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { parseAskQuestion } from "@/lib/ask-input";
+import { unsupportedDecisionReviewIntent } from "@/lib/research/decision-review-types";
 import {
   parseResearchMode,
   quoteA2aResearch,
@@ -268,6 +269,7 @@ export async function POST(req: NextRequest) {
     packageVersion?: unknown;
     responseMode?: unknown;
   };
+  if (unsupportedDecisionReviewIntent(body)) return Response.json({ error: "review_unsupported" }, { status: 400, headers: { "Cache-Control": "no-store" } });
   const parsedQuestion = parseAskQuestion(body.question);
   if (!parsedQuestion.success) {
     return Response.json({ error: parsedQuestion.error }, { status: 400 });

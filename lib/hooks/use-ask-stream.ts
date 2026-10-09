@@ -35,10 +35,12 @@ import { BrowserSignBudget } from "./browser-sign-budget";
 import { browserPaymentProfile } from "../browser-payment-profile";
 import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/selection-diagnostic";
 import { isDecisionRecord } from "../research/decision-record";
+import { decisionReviewSchema, type DecisionReview } from "../research/decision-review-types";
 
 export type StreamMode = "real" | "offline";
 
 export interface AskMeta {
+  reviewOwner?: string | null;
   engine: string;
   mode: StreamMode;
   researchMode?: ResearchMode;
@@ -62,6 +64,7 @@ export interface AskStreamState {
   citations: Citation[];
   payments: PaymentRecord[];
   run: QueryRun | null;
+  decisionReviews?: DecisionReview[];
   error: string | null;
   /** Caller-local diagnostic; never a completed research or payment record. */
   selectionDiagnostic?: SelectionDiagnostic;
@@ -163,6 +166,11 @@ export function useAskStream(opts?: AskStreamOpts) {
 
     if (event === "meta") {
       setState((s) => ({ ...s, meta: data as AskMeta }));
+      return;
+    }
+    if (["decision-review", "decision-review-request", "decision-review-result"].includes(event)) {
+      const parsed = decisionReviewSchema.safeParse(data);
+      if (parsed.success) setState(s => ({ ...s, decisionReviews: [...(s.decisionReviews ?? []).filter(row => row.id !== parsed.data.id), parsed.data] }));
       return;
     }
 
@@ -362,6 +370,7 @@ export function useAskStream(opts?: AskStreamOpts) {
       researchMode: ResearchMode = "quick",
       scholarly = false,
       paidScholarly = false,
+      reviewFirst = false,
     ) => {
       reset();
       // Reset reservations for this ask before any SSE frame can arrive.
@@ -404,6 +413,7 @@ export function useAskStream(opts?: AskStreamOpts) {
             mode: researchMode,
             ...(scholarly ? { scholarly: true } : {}),
             ...(paidScholarly ? { paidScholarly: true } : {}),
+            ...(reviewFirst ? { reviewFirst: true } : {}),
           }),
           signal: controller.signal,
         });

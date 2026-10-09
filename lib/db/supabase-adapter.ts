@@ -11,6 +11,8 @@ import { SUPABASE_RUNTIME_CONTRACT } from "./supabase-runtime-contract";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { createSupabasePrivateProfiles } from "./private-profiles-supabase";
 import { createSupabasePersonalHistory } from "./personal-history-supabase";
+import { createSupabaseDecisionReviews } from "./decision-reviews-supabase";
+import type { DecisionReviewsStore } from "../research/decision-review-types";
 import type { PersonalHistoryStore } from "../history/personal-history";
 import { createSupabaseProfileIdentities } from "./profile-identities-supabase";
 import type { ProfileIdentitiesStore } from "../profiles/verified-identities";
@@ -151,6 +153,7 @@ export function assembleAuthorityBoundSupabaseCore(
 export class SupabaseAdapter implements KeryxDB {
   declare readonly privateProfiles?: PrivateProfilesStore;
   declare readonly personalHistory?: PersonalHistoryStore;
+  declare readonly decisionReviews?: DecisionReviewsStore;
   declare readonly profileIdentities?: ProfileIdentitiesStore;
   #sb: SupabaseClient;
   #enrolled?: { deployment: Readonly<StorageDeploymentManifest>; authority: SupabaseAuthority;
@@ -171,6 +174,7 @@ export class SupabaseAdapter implements KeryxDB {
     );
     if (!deployment) Object.defineProperty(this, "privateProfiles", { value: createSupabasePrivateProfiles(this.#sb) });
     if (!deployment) Object.defineProperty(this, "personalHistory", { value: createSupabasePersonalHistory(this.#sb) });
+    if (!deployment) Object.defineProperty(this, "decisionReviews", { value: createSupabaseDecisionReviews(this.#sb) });
     if (!deployment && this.privateProfiles) Object.defineProperty(this, "profileIdentities", { value: createSupabaseProfileIdentities(this.#sb, this.privateProfiles) });
     if (deployment) this.#enrolled = { deployment, ready: false, readDeployment: construction!.readDeployment,
       authority: new SupabaseAuthority(this.#sb, deployment.identity, () => { this.assertEntry(); return this.#enrolled?.ready === true; }) };

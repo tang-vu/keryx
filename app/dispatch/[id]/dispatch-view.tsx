@@ -7,6 +7,7 @@ import { AnswerCard } from "@/components/keryx/answer-card";
 import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { projectBibliographicTask } from "@/lib/research/bibliographic-task-result";
+import { DecisionReviews } from "@/components/keryx/decision-reviews";
 
 export function DispatchView({
   run,
@@ -56,6 +57,7 @@ export function DispatchView({
           <ReasoningConsole steps={run.trace} streaming={false} budget={run.budget} />
         </div>
       </details>
+      {!historical && <DecisionReviews runId={run.id} />}
     </>
   );
 }

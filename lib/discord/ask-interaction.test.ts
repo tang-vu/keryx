@@ -74,6 +74,12 @@ function askInteraction(overrides: Partial<Interaction> = {}): Interaction {
 }
 
 describe("parseAskCommand", () => {
+  it.each(["--review-first", "--reviewFirst=true", "--mode review-first"])("refuses unsupported review intent %s before research admission", flag => {
+    expect(parseAskCommand(askInteraction({ data: { name: "ask", options: [{ name: "question", value: `Synthetic question ${flag}` }] } }))).toBeNull();
+  });
+  it("refuses an unknown interactive review option rather than stripping it", () => {
+    expect(parseAskCommand(askInteraction({ data: { name: "ask", options: [{ name: "question", value: "Synthetic question" }, { name: "reviewFirst", value: true }] } }))).toBeNull();
+  });
   it("extracts question, user, and routing ids from a guild invocation", () => {
     const cmd = parseAskCommand(askInteraction());
     expect(cmd).toMatchObject({

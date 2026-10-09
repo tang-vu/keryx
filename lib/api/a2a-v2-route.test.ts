@@ -69,6 +69,11 @@ const run = {
 };
 
 describe("A2A v2 route", () => {
+  it.each([{ reviewFirst: true }, { mode: "review-first" }, { researchMode: "review-first" }, { responseMode: "reviewFirst" }])("refuses review intent before provider, payment or job admission: %j", async intent => {
+    const response = await POST(request({ question: "Synthetic question", budget: 0.05, ...intent }));
+    expect(response.status).toBe(400); expect(await response.json()).toEqual({ error: "review_unsupported" });
+    expect(mocks.collectRun).not.toHaveBeenCalled(); expect(mocks.getAgentDeps).not.toHaveBeenCalled(); expect(mocks.settleThenServe).not.toHaveBeenCalled();
+  });
   let db: {
     recordPaymentOnce: ReturnType<typeof vi.fn>;
     createA2aOrder: ReturnType<typeof vi.fn>;

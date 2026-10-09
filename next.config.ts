@@ -44,6 +44,8 @@ const nextConfig: NextConfig = {
       { source: "/register/sponsored", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       // OAuth callback queries must retain the private handler's referrer policy.
       { source: "/api/me/profile/identities/:path*", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      { source: "/api/me/decision-reviews", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      { source: "/api/ask", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       // Matching rules are applied in order, so this CSP replaces the global CSP only for the
       // standalone Scalar document. Other pages still cannot execute scripts from jsDelivr.
       {

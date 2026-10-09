@@ -8,6 +8,8 @@
     "scripts/eval-paying-source-study.mts",
     "scripts/operator-obligations.mts",
     "scripts/test-operator-obligations-transports.mts",
+    "scripts/test-decision-reviews-postgres.mts",
+    "scripts/test-decision-reviews-built.mts",
     "scripts/grade-retained-deliverables.mts",
     "scripts/test-private-bibliography-built.mts",
     "scripts/research-audit.mts",

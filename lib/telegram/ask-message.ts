@@ -9,6 +9,7 @@
  */
 
 import { config } from "../config";
+import { unsupportedDecisionReviewFlag } from "../research/decision-review-types";
 import { formatRecordedUsdc } from "../display/recorded-usdc";
 import { researchAdmissionError } from "../research/availability-contract";
 import type { QueryRun } from "../types";
@@ -55,7 +56,7 @@ export function parseAskMessage(update: TelegramUpdate): AskMessage | null {
   } else if (!text.startsWith("/") && msg?.chat?.type === "private") {
     question = text;
   }
-  if (!question) return null;
+  if (!question || unsupportedDecisionReviewFlag(question)) return null;
 
   return { question, chatId, userId, messageId: msg?.message_id };
 }
@@ -74,6 +75,7 @@ export function helpText(): string {
       "planned USDC creator rewards. Open the full trace to check payment mode and settlement receipts.",
     "",
     "Usage: <code>/ask what is x402?</code>",
+    "Review-first is available only in the authenticated live browser; review mode flags are refused here.",
     "In this private chat you can also just type the question.",
     "",
     `Creators keep 100%. Live traction: ${config.baseUrl}/status`,

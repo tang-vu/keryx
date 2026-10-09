@@ -222,6 +222,9 @@ jobs:
       - name: Synthetic research provenance (isolated PostgreSQL 17, synthetic data)
         run: node --import tsx scripts/test-synthetic-provenance-postgres.mts
 
+      - name: Decision review owner admission (isolated PostgreSQL17, no payments)
+        run: node --import tsx scripts/test-decision-reviews-postgres.mts
+
       - name: Business Operator whole inventory (isolated PostgreSQL 17, no payments)
         run: node --import tsx scripts/test-operator-business-postgres.mts
 
@@ -438,6 +441,8 @@ jobs:
 
       - name: Private bibliography snapshots (built routes, isolated SQLite and synthetic sessions)
         run: node --import tsx scripts/test-private-bibliography-built.mts
+      - name: Decision reviews (built owner routes and DOM, isolated SQLite and synthetic sessions)
+        run: KERYX_NETWORK=arcTestnet NEXT_PUBLIC_KERYX_NETWORK=arcTestnet KERYX_FORCE_OFFLINE=1 node --import tsx scripts/test-decision-reviews-built.mts
       - name: Private identity configured Origin behind Next proxy (built, synthetic pre-auth)
         run: node --import tsx scripts/test-server-profile-identities-origin.mts
 

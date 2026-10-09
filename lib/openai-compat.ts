@@ -30,6 +30,8 @@ export interface ChatMessage {
 /** Incoming OpenAI request body. `budget` is a Keryx extension (passed via extra_body); OpenAI
  *  clients that don't know it simply omit it and the route applies its per-path default + cap. */
 export interface ChatCompletionRequest {
+  /** This adapter has no live owner review broker; true is explicitly refused. */
+  reviewFirst?: false;
   model?: string;
   messages?: ChatMessage[];
   stream?: boolean;

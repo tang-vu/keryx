@@ -63,6 +63,9 @@ server.registerTool(
       `Use when you want a grounded, source-cited answer AND the creators paid for their work. ` +
       `For title, ordered authors, year, journal, DOI or exact arXiv version without reading paper findings, use free paper_lookup with an exact identifier instead.`,
     inputSchema: {
+      reviewFirst: z.literal(false).optional().describe("Review-first requires the authenticated live browser; this adapter refuses true."),
+      mode: z.never().optional().describe("Interactive review mode is unavailable on stdio."),
+      researchMode: z.never().optional(), responseMode: z.never().optional(),
       question: z.string().max(8192).trim().min(3).max(MAX_ASK_QUESTION_CHARS)
         .describe(`The research question to ask Keryx (3–${MAX_ASK_QUESTION_CHARS} characters after trimming).`),
       budget: z

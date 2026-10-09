@@ -30,6 +30,10 @@ function askUpdate(overrides: Partial<NonNullable<TelegramUpdate["message"]>> = 
 }
 
 describe("parseAskMessage", () => {
+  it.each(["--review-first", "--reviewFirst=true", "--mode review-first"])("refuses unsupported review intent %s before research admission", flag => {
+    expect(parseAskMessage(askUpdate({ text: `/ask Synthetic question ${flag}` }))).toBeNull();
+    expect(helpText()).toContain("Review-first");
+  });
   it("extracts question, chat, user, and message id from a group /ask", () => {
     expect(parseAskMessage(askUpdate())).toEqual({
       question: "What is x402?",

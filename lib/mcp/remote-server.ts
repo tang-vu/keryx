@@ -130,6 +130,8 @@ export function createRemoteMcpServer(
         "For retained or repository bibliography use free paper_lookup with an exact identifier. An ordinary explicit exact-original bibliography request can also return a separate metadata-only record and references without a model call or creator payment; page status and full-paper evidence remain separate. " +
         "New runs record remote MCP ingress. A verified ask-scoped API key attributes the run to its wallet; anonymous runs have no wallet owner. Editable client names establish no identity or spending authority.",
       inputSchema: {
+        reviewFirst: z.literal(false).optional().describe("Review-first requires the authenticated live browser; this adapter refuses true."),
+        researchMode: z.never().optional(), responseMode: z.never().optional(),
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
         budget: z
           .number()

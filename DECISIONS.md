@@ -6887,3 +6887,26 @@ settlement verification. Changed or unavailable records offer the retained copy.
 No research, payment, sponsor enrollment or allowance is added. Full live demo,
 budget/approval/replay and independent payment verification remain explicit
 [gates](docs/engineering/recorded-walkthrough-305.md).
+## Bind human decision reviews before exposing payment effects — 2026-10-09
+
+Issue253's source candidate uses private ordinary-store sidecars for captured model proposals,
+actual deterministic outcomes and identity-bound human verdicts. Do not reinterpret
+anonymous answer feedback or reconstruct missing historical model decisions.
+Human hold/decline/expiry is distinct from code refusal and settlement outcome.
+Gate verdicts concern the immutable initial offer; later opinions require an
+atomic expected displayed code snapshot and retain their actual voting basis.
+Stale individual source terms close only that unconsumed admission and degrade
+to code SKIP while global owner/grant failures remain terminal.
+
+Review-first pauses only an authenticated browser's same live run before funding,
+initial/re-evaluation purchases and owned cached/free reads that can earn rewards.
+Single-use expiring agreement admits the exact decision; it grants no signature,
+new cap or automatic resume. Normal current source, grant and budget checks remain
+authoritative. Unsupported execution adapters refuse before effects. A later
+Disagree about an already settled purchase is an opinion, never payment reversal.
+
+Public aggregates contain no reviewer wallets or private reasons and retain
+outside/team/scripted/unknown partitions based on trusted recorded facts, with
+unknown historical identity left unknown. The [source plan and gates](docs/engineering/decision-review-253.md)
+separate buildable ordinary source from database enrollment, live funded authority,
+independent customer evidence and coordinated publication/deployment acceptance.

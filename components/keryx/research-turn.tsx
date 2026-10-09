@@ -9,6 +9,7 @@ import { stepPaymentTotals } from "./budget-meter";
 import { fmtUsdc } from "./phase-style";
 import { ReportActions } from "./report-actions";
 import { SelectionFailureDownload } from "./selection-failure-download";
+import { DecisionReviews } from "./decision-reviews";
 
 export interface ResearchTurnData {
   id: number;
@@ -46,6 +47,7 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
         <SelectionFailureDownload diagnostic={state.selectionDiagnostic} />
         {state.errorKind === "rate-limit" && <p className="mt-2">Try again{state.retryAfter ? ` in ${state.retryAfter}s` : " shortly"}. Your saved reports remain available.</p>}
       </div>}
+      {state.decisionReviews?.length ? <DecisionReviews records={state.decisionReviews} capturedOwner={state.meta?.reviewOwner} live={streaming} /> : null}
       <details className="mt-3 border border-line bg-paper" onToggle={event => setEvidenceOpen(event.currentTarget.open)}>
         <summary className="min-h-11 cursor-pointer break-words px-4 py-3 font-mono text-xs text-ink-2">
           Decision log and payments · {state.steps.length} steps · {fmtUsdc(totals.settled)} USDC settled of {fmtUsdc(state.budget)} cap{unsettled && ` · ${unsettled}`}{state.meta?.mode === "offline" && " · offline simulation"}

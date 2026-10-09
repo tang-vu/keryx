@@ -7,12 +7,7 @@
  *        npm run ask -- "…" --web   (explicit external search provider disclosure)
  */
 
-import { collectRun } from "../lib/agent/index.ts";
-import { getReasoningEngine } from "../lib/llm/index.ts";
 import { c, printStep } from "./trace-console.mts";
-import { ResearchPlanningError, researchFailureMessage } from "../lib/llm/research-plan.ts";
-import { ResearchSelectionError } from "../lib/llm/research-selection.ts";
-import { reasoningOutputLimitText } from "../lib/llm/reasoning-telemetry.ts";
 import { formatRecordedUsdc } from "../lib/display/recorded-usdc.ts";
 
 // ── parse args ──
@@ -22,12 +17,20 @@ let model: string | undefined;
 let allowExternalWeb = false;
 const qParts: string[] = [];
 for (let i = 0; i < argv.length; i++) {
-  if (argv[i] === "--budget" && argv[i + 1]) {
-    budget = parseFloat(argv[++i]);
-  } else if (argv[i] === "--model" && argv[i + 1]) {
-    model = argv[++i];
+  if (argv[i] === "--budget") {
+    const value = argv[++i];
+    if (!value || !/^(0|[1-9][0-9]*)(?:\.[0-9]{1,6})?$/.test(value) || !Number.isFinite(Number(value)))
+      throw new Error("--budget requires a finite nonnegative decimal USDC value with at most six decimal places.");
+    budget = Number(value);
+  } else if (argv[i] === "--model") {
+    const value = argv[++i];
+    if (!value?.trim() || value.startsWith("-") || /[\u0000-\u001f\u007f]/u.test(value))
+      throw new Error("--model requires a nonempty model id.");
+    model = value.trim();
   } else if (argv[i] === "--web") {
     allowExternalWeb = true;
+  } else if (argv[i].startsWith("--")) {
+    throw new Error("Unsupported option. Review-first requires the authenticated live browser.");
   } else {
     qParts.push(argv[i]);
   }
@@ -35,6 +38,13 @@ for (let i = 0; i < argv.length; i++) {
 const question =
   qParts.join(" ").trim() ||
   "How do x402 and stablecoin micropayments enable autonomous AI agent commerce?";
+
+// Refuse unsupported execution intent before initializing the agent/provider graph.
+const [{ collectRun }, { getReasoningEngine }, { ResearchPlanningError, researchFailureMessage },
+  { ResearchSelectionError }, { reasoningOutputLimitText }] = await Promise.all([
+  import("../lib/agent/index.ts"), import("../lib/llm/index.ts"), import("../lib/llm/research-plan.ts"),
+  import("../lib/llm/research-selection.ts"), import("../lib/llm/reasoning-telemetry.ts"),
+]);
 
 console.log(c.bold(`\n🏛  Keryx — citation-toll reading agent`));
 console.log(`${c.dim("engine:")} ${getReasoningEngine(model).name}`);
