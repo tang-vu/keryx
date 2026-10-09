@@ -14,6 +14,8 @@ import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
 
 import { privateProfileOpenApiPaths } from "./profiles/openapi";
 import { evidenceDraftOpenApiPath } from "./research/evidence-draft-openapi";
+import { personalHistoryOpenApiPaths } from "./history/openapi";
+import { API_KEY_SCOPES } from "./api-key-scopes";
 import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
@@ -68,8 +70,8 @@ export const openapiSpec = {
         description:
           "Wallet-issued API key (`kx_live_…`). Mint at `/api/keys` after SIWE sign-in. " +
           "Still requires `payment-signature` — key is identity + rate-limit only. Keys carry " +
-          "scopes (`ask`, `export`, explicit `profile:read`/`profile:write`); calling outside a key's scopes returns 403. " +
-          "Historical/default keys retain ask/export and never gain private-profile rights. Profile operations require no payment signature.",
+          "scopes (`ask`, `export`, explicit `profile:read`/`profile:write`/`history:read`); calling outside a key's scopes returns 403. " +
+          "Historical/default keys retain ask/export and never gain private-profile or history rights. These scoped read/profile operations require no payment signature.",
       },
       X402Payment: {
         type: "apiKey",
@@ -459,8 +461,8 @@ export const openapiSpec = {
           revokedAt: { type: "string", format: "date-time", nullable: true },
           scopes: {
             type: "array",
-            items: { type: "string", enum: ["ask", "export"] },
-            description: "Resolved scopes — a pre-scopes key reads back as all of them.",
+            items: { type: "string", enum: API_KEY_SCOPES },
+            description: "Resolved scopes. Historical/default keys retain only ask/export; private profile and history rights require explicit selection.",
           },
           sourceIds: {
             type: "array",
@@ -611,6 +613,7 @@ export const openapiSpec = {
   paths: {
     ...evidenceDraftOpenApiPath,
     ...privateProfileOpenApiPaths,
+    ...personalHistoryOpenApiPaths,
     ...paperOpenApiPaths,
     ...sourceClaimOpenApiPaths,
     "/api/source/{id}": {
@@ -1021,10 +1024,10 @@ export const openapiSpec = {
                   label: { type: "string", description: "Optional nickname." },
                   scopes: {
                     type: "array",
-                    items: { type: "string", enum: ["ask", "export"] },
+                    items: { type: "string", enum: API_KEY_SCOPES },
                     description:
                       "Operations this key may perform. `ask` runs dispatches; `export` reads " +
-                      "the wallet's earnings ledger. Omitted or empty mints a full-power key.",
+                      "the wallet's earnings ledger. Omitted or empty retains ask/export. Profile and history rights require explicit selection.",
                   },
                   sourceIds: {
                     type: "array",

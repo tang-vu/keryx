@@ -86,6 +86,10 @@ jobs:
         if: needs.scope.outputs.scope == 'full'
         run: node --import tsx scripts/test-private-profiles-postgres.mts
 
+      - name: Personal history PostgreSQL ownership, filters, keyset and refusal
+        if: needs.scope.outputs.scope == 'full'
+        run: node --import tsx scripts/test-personal-history-postgres.mts
+
       - name: Engineering feed integrity (no settlement)
         run: node --import tsx scripts/build-engineering-feed.mts --check
 
@@ -247,6 +251,7 @@ jobs:
           node --import tsx scripts/test-paper-lookup-mcp-package.mts
           node --import tsx scripts/test-private-profiles-mcp-package.mts
           node --import tsx scripts/test-evidence-drafts-mcp-package.mts
+          node --import tsx scripts/test-personal-history-mcp-package.mts
 
       - name: Packed stdio research diagnostics, signing and recovery (synthetic)
         working-directory: mcp

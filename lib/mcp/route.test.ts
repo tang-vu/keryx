@@ -113,6 +113,7 @@ describe("/mcp", () => {
       "keryx_operator_status",
       "profile_read",
       "profile_update",
+      "history_read",
     ]);
     expect(body.result.tools.find((tool: { name: string }) => tool.name === "keryx_operator_status").annotations)
       .toEqual(expect.objectContaining({ readOnlyHint: true, destructiveHint: false }));

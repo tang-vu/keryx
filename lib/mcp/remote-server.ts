@@ -20,6 +20,9 @@ import { researchAdmissionError } from "../research/availability-contract";
 import { createPaperLookupHandler, paperLookupToolOptions } from "../papers/lookup";
 import { readHostedPaperLookup } from "../papers/hosted-lookup";
 import { registerProfileTools } from "../profiles/profile-mcp";
+import { registerHistoryTool } from "../history/personal-history-mcp";
+import { requirePersonalHistory } from "../history/personal-history";
+import { readPersonalHistory } from "../history/personal-history-reader";
 import { requirePrivateProfiles } from "../profiles/private-profile";
 import type { ApiKeyScope } from "../api-key-scopes";
 import { registerEvidenceDraftTool } from "../research/evidence-draft-tool";
@@ -30,6 +33,7 @@ export interface RemoteMcpAccess {
   actor?: string;
   /** Explicit verified-key scopes only; actor alone never authorizes profile access. */
   profileScopes?: ApiKeyScope[];
+  historyScopes?: ApiKeyScope[];
   /** Self-declared setup URL channel. Telemetry only; never identity or payment authority. */
   clientChannel: McpClientChannel;
   /** Request-bound metadata admission identity and cancellation; never payment authority. */
@@ -206,6 +210,10 @@ export function createRemoteMcpServer(
   registerProfileTools(server, {
     read: async () => (await profileStore("profile:read")).get(access.actor!, config.networkId),
     update: async input => ({ profile: await (await profileStore("profile:write")).update(access.actor!, input) }),
+  });
+  registerHistoryTool(server, async input => {
+    if (!access.actor || !access.historyScopes?.includes("history:read")) throw new Error("Explicit history scope required");
+    return readPersonalHistory(requirePersonalHistory(await getDb()), access.actor, config.networkId, input);
   });
   return server;
 }

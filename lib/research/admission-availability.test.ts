@@ -70,7 +70,7 @@ describe("public research availability", () => {
     const discovered = await mcp(request("/mcp", { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }));
     expect(discovered.status).toBe(200);
     expect((await discovered.json()).result.tools.map((tool: { name: string }) => tool.name)).toEqual([
-      "evidence_draft", "paper_lookup", "research", "keryx_status", "research_monthly", "keryx_operator_status", "profile_read", "profile_update",
+      "evidence_draft", "paper_lookup", "research", "keryx_status", "research_monthly", "keryx_operator_status", "profile_read", "profile_update", "history_read",
     ]);
     expect(mocks.run).not.toHaveBeenCalled(); expect(mocks.quota).not.toHaveBeenCalled(); expect(mocks.db).not.toHaveBeenCalled();
   });

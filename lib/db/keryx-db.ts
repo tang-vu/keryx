@@ -209,6 +209,8 @@ export interface KeryxDB {
   readonly privateProfiles?: PrivateProfilesStore;
   /** Explicit owner-controlled metadata snapshots; absent on unsupported/enrolled adapters. */
   readonly privateBibliographies?: PrivateBibliographiesStore;
+  /** Bounded ordinary current-store attribution only; absent on sealed/native/archive readers. */
+  readonly personalHistory?: import("../history/personal-history").PersonalHistoryStore;
   /** Supervised SQLite scholarly pilot capability; absent on unsupported backends. */
   getPaperState?(sourceId: string): Promise<import("../scholarly/rights-protocol").PaperState | null>;
   beginPaperEnrollment?(sourceId: string, creator: string): Promise<void>;
