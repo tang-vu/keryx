@@ -17,7 +17,7 @@ export function closedIdentity(value: unknown): value is string { return typeof 
 
 export interface LedgerRunSnapshot {
   id: string; createdAt: string; funding: LedgerFunding; offline: boolean; expected: number | null;
-  references: Array<{ sourceId: string; itemId: string | null; contentVersion: string | null; synthetic: boolean }>;
+  references: Array<{ kind: "fetch" | "citation"; sourceId: string; itemId: string | null; contentVersion: string | null; synthetic: boolean }>;
   fee: { beneficiary: string; amount: string; paymentId: string } | null;
 }
 
@@ -35,13 +35,14 @@ export function captureLedgerRun(value: unknown): LedgerRunSnapshot | null {
   if (!offline && value.fundingOwner === "browser" && value.askerFunded === true && provenance.ownershipMethod === "session") funding = "browser";
   if (!offline && value.fundingOwner === "treasury" && value.askerFunded !== true) funding = "treasury";
   const references: LedgerRunSnapshot["references"] = [];
-  for (const group of [value.decisions, value.citations]) {
+  for (const [kind, group] of [["fetch", value.decisions], ["citation", value.citations]] as const) {
     if (!Array.isArray(group) || group.length > LEDGER_PAYMENT_LIMIT) return null;
     for (const reference of group) {
       if (!plain(reference) || !closedIdentity(reference.sourceId) ||
         reference.itemId !== undefined && !closedIdentity(reference.itemId) ||
         reference.contentVersion !== undefined && (typeof reference.contentVersion !== "string" || reference.contentVersion.length > 256)) return null;
-      references.push({ sourceId: reference.sourceId, itemId: typeof reference.itemId === "string" ? reference.itemId : null,
+      if (kind === "fetch" && reference.action !== "BUY") continue;
+      references.push({ kind, sourceId: reference.sourceId, itemId: typeof reference.itemId === "string" ? reference.itemId : null,
         contentVersion: typeof reference.contentVersion === "string" ? reference.contentVersion : null,
         synthetic: reference.evidenceProvenance === "synthetic-demo" });
     }

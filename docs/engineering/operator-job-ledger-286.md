@@ -25,6 +25,9 @@ The presence of an `originalFulfillment` marker excludes the entire run even if 
 historical web provenance would otherwise qualify it. Sponsored fee legs additionally
 match the snapshot's exact `paymentId`, amount, beneficiary and policy; equal amount alone
 does not establish the original association.
+Access legs bind to an actual recorded BUY; reward legs bind to an actual citation with
+the same source/item/version. A discovery/SKIP/CACHE reference cannot stand in for either
+settlement association.
 
 `fundingOwner` is independent of customer ownership: browser-funded access/rewards are
 customer transfers, treasury-funded access/rewards are sponsored transfers, and missing or

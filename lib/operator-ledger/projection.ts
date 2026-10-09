@@ -20,7 +20,7 @@ function projectLeg(p: Record<string, unknown>, run: LedgerRunSnapshot, network:
   const original = closedIdentity(p.id) ? p.id : ledgerDigest(p);
   const amount = recordedUsdcMicros(p.amountUsdc);
   const kind = ["fetch", "citation", "operating-fee"].includes(String(p.kind)) ? p.kind as NonNullable<LedgerLeg["kind"]> : null;
-  const matches = run.references.filter(r => r.sourceId === p.sourceId && r.itemId === (p.itemId ?? null) && r.contentVersion === (p.contentVersion ?? null));
+  const matches = run.references.filter(r => r.kind === kind && r.sourceId === p.sourceId && r.itemId === (p.itemId ?? null) && r.contentVersion === (p.contentVersion ?? null));
   const feeMatch = kind === "operating-fee" && p.sourceId === "keryx:operating-fee" && run.funding === "treasury" &&
     run.fee && p.id === run.fee.paymentId && typeof p.payee === "string" && p.payee.toLowerCase() === run.fee.beneficiary && amount?.toString() === run.fee.amount;
   const leg: LedgerLeg = { id: ledgerDigest([network, p.network ?? null, original, run.id]), kind,

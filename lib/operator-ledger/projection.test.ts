@@ -100,6 +100,18 @@ describe("public observed transfer books", () => {
     expect(forward.payload.jobs[0].legs.find(leg => leg.reason === "foreign-network")?.amountMicroUsdc).toBeNull();
   });
 
+  it("binds access to recorded BUY and rewards to actual citations rather than interchangeable source references", () => {
+    const payment = ledgerPayment({ kind: "citation" });
+    expect(ledgerFixture(undefined, [payment]).payload.jobs[0].legs[0].reason).toBe("source-binding");
+    const citation = { sourceId: payment.sourceId, sourceName: "Not exported", marker: "S1", weight: 1, reward: payment.amountUsdc, rationale: "PRIVATE-RATIONALE" };
+    const run = ledgerRun({ citations: [citation] });
+    expect(ledgerFixture([run], [payment]).payload.settledByFunding.treasury.rewardMicroUsdc).toBe("15700");
+    for (const action of ["SKIP", "CACHE"] as const) {
+      const changed = ledgerRun(); changed.decisions[0].action = action;
+      expect(ledgerFixture([changed], [ledgerPayment()]).payload.jobs[0].legs[0].reason).toBe("source-binding");
+    }
+  });
+
   it("deduplicates identical originals and quarantines conflicting ID/authorization records in either order", () => {
     const p = ledgerPayment();
     expect(ledgerFixture(undefined, [p, { ...p }]).payload.trialBalance.debitMicroUsdc).toBe("15700");
