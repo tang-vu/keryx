@@ -5,7 +5,7 @@
   "paymentPending": "An original creator payment is still recorded as pending. Expiry or delay does not prove that it failed.",
   "paymentBoundary": "The job crossed a creator-payment boundary. Missing or definitive recorded legs do not prove that every call is resolved.",
   "paymentUnknown": "Original creator-payment evidence is unavailable or inconsistent.",
-  "originalOnly": "Keep the original job and payment reference. Do not pay again to recover this job. Wait, partial-delivery and refund choices require a separately confirmed policy.",
+  "originalOnly": "Keep the original job and payment reference. Do not pay again to recover this job. Waiting, partial delivery and refund requests require manual owner review. This alert does not submit a choice or refund request.",
   "observation": "This state was calculated when status was checked. There is no new background alert or notification service.",
   "orderLabel": "Original order",
   "referenceLabel": "Original payment reference",

@@ -6760,6 +6760,10 @@ aggregates stay identifier-free, and bearer status gains no owner payment data.
 Dynamic observations stay outside completed retained responses and portable
 receipts, preserving original/native comparison and export authority. There is no
 new timer, scheduler, outbound alert, retry, signature, purchase, hold release or
-refund. Staffed escalation and wait/partial/refund policy remain separate decisions.
+refund. Staffed escalation and choice/refund execution remain separate gates.
+The owner-confirmed product direction permits wait, partial delivery or a refund
+request: refund the undelivered service fee and retain only pre-disclosed actually
+settled source costs. Initial manual owner review precedes a verified refund
+mechanism; this alert-only source implements neither requests nor refund authority.
 The [surface contract and remaining gates](docs/engineering/paid-job-overdue-escalation-257.md)
 record this source boundary; issue257 and deployment/distribution acceptance remain open.

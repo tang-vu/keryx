@@ -97,7 +97,9 @@ SLA. [Observed customer overdue state](paid-job-overdue-escalation-257.md)
 adds request-time escalation-needed metadata and a visible customer alert,
 including when an original creator leg remains uncertain. Background delivery,
 staffed escalation, a guaranteed target-window observation, a first-user
-time-to-first-answer measure, and a wait/partial/refund choice with confirmed
-support/refund ownership remain open. Observation never retries research,
+time-to-first-answer measure, and implementation of customer wait/partial/refund
+requests remain open. The confirmed policy refunds an undelivered service fee,
+retaining only pre-disclosed actually settled source costs; manual owner review
+precedes a separately verified refund mechanism. Observation never retries research,
 signs, purchases, releases a hold, refunds, starts a scheduler or changes the
 original payment/recovery rules.
