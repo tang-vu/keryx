@@ -9,7 +9,7 @@ existing rate/allowance limits remain authoritative.
 
 ## Consent, minimal data and replay
 
-Only interactive active SIWE can start or unlink OAuth, through body/query-free
+Only interactive active SIWE can start OAuth or use the individual unlink endpoint, through body/query-free
 same-origin POST/DELETE with a comparison-only expected-wallet header. The saved
 profile must already exist. The fixed operator-configured HTTPS origin selects
 registered callbacks; request Host, profile links and supplied selectors do not.
@@ -32,7 +32,10 @@ session in the final write transaction. A new flow supersedes earlier pending
 work while preserving the prior verified link until success. Provider/ID uniqueness
 prevents simultaneous ownership by two wallet profiles. Atomic unlink and profile
 deletion invalidate pending and in-flight callbacks; completion cannot recreate a
-missing lineage. Revoked sessions and replays cannot complete. Conflict responses
+missing lineage. Existing authorized whole-profile deletion, including a
+`profile:write` API key, cascades private verified links and pending identity state;
+this does not grant that key OAuth consent or individual linking/unlinking calls.
+Revoked sessions and replays cannot complete. Conflict responses
 never identify another owner. Local unlink does not delete a provider account;
 provider access tokens are discarded rather than stored for later use or revocation.
 

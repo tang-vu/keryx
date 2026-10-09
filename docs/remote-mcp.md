@@ -72,6 +72,12 @@ the `/mcp` route and registry `remotes` entry; existing `mcp` rows remain readab
 
 `profile_read()` requires an explicitly selected `profile:read` key;
 `profile_update(profile)` requires `profile:write`. Write does not imply read.
+The issue265 source candidate adds `profile_identities_read()` with explicit
+`profile:read`, returning only the owner's dated private ORCID/GitHub identity
+links. Existing `profile_read` responses remain unchanged. Provider consent and
+individual unlink require the active browser SIWE session; whole-profile deletion
+also removes its private verified links. Sealed production activation and exact
+hosted/package delivery remain separate gates.
 Profile-only keys cannot run research, including mixed batches. Historical/default
 keys retain ask/export and gain no private-profile access. Tool arguments never
 select a wallet. This additive ordinary-storage capability remains unavailable on

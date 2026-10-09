@@ -84,6 +84,13 @@ See the repository's `docs/remote-mcp.md` for the remote trust model.
 
 ## Local stdio tools
 
+The issue265 source candidate adds `profile_identities_read()` for an explicit
+`profile:read` key. It reads private dated ORCID/GitHub account-control links only;
+it does not start OAuth, unlink an individual identity, research or pay. Complete
+provider consent/individual unlink in the signed-in hosted profile page. Current
+sealed production remains unavailable; combined package publication, hosted
+activation and installed-client acceptance are separate gates.
+
 Source capability: `profile_read()` and `profile_update(profile)` use an explicitly
 profile-scoped `KERYX_API_KEY` to the selected HTTPS deployment. Profile ownership
 comes from that key, independently of the buyer wallet; no wallet/signer is loaded
