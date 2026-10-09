@@ -10,6 +10,7 @@ import { chromium } from "playwright";
 import { operatorBusinessStatusSchema } from "../lib/business-operator/contracts";
 
 const require = createRequire(import.meta.url);
+const candidateVersion = (require("../package.json") as { version: string }).version;
 const base = "http://127.0.0.1:3961";
 const screenshots = await mkdtemp(join(tmpdir(), "keryx-operator-page-"));
 const server = spawn(process.execPath,
@@ -44,7 +45,7 @@ try {
   assert.equal(observation.network, "eip155:5042002");
   assert.equal(observation.operator.state, "unavailable"); // no synthetic worker heartbeat
   const openapi = await (await fetch(`${base}/api/openapi.json`)).json();
-  assert.equal(openapi.info.version, "0.27.0");
+  assert.equal(openapi.info.version, candidateVersion);
   assert.deepEqual(openapi.paths["/api/operator/status"].get.security, []);
 
   browser = await chromium.launch({ headless: true });
