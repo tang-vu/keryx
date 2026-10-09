@@ -206,6 +206,14 @@ Money safety is enforced in code, not by the model: the LLM proposes value; the 
 enforces the hard budget cap, so a hallucinated number can never overspend. An economic-invariant
 test suite (spend ≤ budget, payouts = weights, splits sum exactly) runs in CI on every push.
 
+The [controlled offline paying-source study](docs/studies/paying-for-sources-2026-10-09.md)
+runs the actual Keryx heuristic pipeline on four published fictional questions across
+four budgets and three catalogue prices. Retained bodies, actual synthetic outputs,
+literal/read-bound scoring and exact simulated ledger amounts are reproducible with
+`npm run eval:paying-source-study -- --check`. It measures this closed fixture only;
+live model behavior, semantic correctness, real spending and exploration's causal
+effect remain unmeasured.
+
 Historical testnet trace (recorded output; not current mainnet traction):
 
 ```
