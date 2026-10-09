@@ -46,7 +46,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.27.46",
+    version: "0.27.47",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -673,6 +673,18 @@ export const openapiSpec = {
           "409": { description: "Expected original policy differs; no automatic re-admission." },
           "410": { description: "Source inactive/unverified, free public identity or citation policy disabled." },
           "503": { description: "Current managed policy or mainnet registry authority unavailable." },
+        },
+      },
+    },
+    "/api/history/testnet/creators": {
+      get: {
+        operationId: "readTestnetCreatorLeaderboard",
+        tags: ["History"],
+        summary: "Complete creator leaderboard from the retained Arc testnet snapshot",
+        description: "Read-only original source/wallet pairs ranked by settled access and citation payments with recorded evidence. Exact integer micro-USDC; excludes service receipts, operating fees, pending, failed, simulated and unexposed authorizations. Snapshot info retains network, cutoff, source commit and database hash. Names are historical display metadata, never current publisher control or payout authority. No mainnet database, signer, session or custody access.",
+        responses: {
+          "200": { description: "archive provenance and complete creators array: sourceId, sourceName, walletAddress, totalEarnedMicroUsdc, paymentCount and citationCount. Cache-Control: no-store." },
+          "503": { description: "Historical archive missing or unavailable; no inferred empty or zero totals. Cache-Control: no-store." },
         },
       },
     },

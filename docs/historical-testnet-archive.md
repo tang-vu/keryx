@@ -13,6 +13,16 @@ index, topic pages, related links, Atom feed and sitemap also retain historical
 entries under their original URLs. Index selection remains bounded to the newest
 2,500 runs per corpus; the complete history has separate pagination.
 
+The ledger now leads with the retained testnet track record and creator leaderboard.
+Five ranked source/wallet entries appear immediately; expand to inspect all entries.
+The full history page shows the complete leaderboard. Download the original ranking
+at `/api/history/testnet/creators`: it returns archive provenance and every source,
+recorded display name, recipient wallet, exact integer micro-USDC, payment count
+and citation count. A source with multiple recipients has separate entries;
+source/wallet pairs are not the distinct paid-wallet count. Historical rows link
+only to their original testnet wallet explorer, never current creator profiles.
+Current mainnet creator rankings remain a separate section.
+
 `/me/asks` keeps current authenticated wallet history separate from the Arc testnet
 tab. `/api/me/asks?network=arcTestnet` accepts only the current verified session's
 wallet; it imports no historical session or login authority. The retained snapshot's

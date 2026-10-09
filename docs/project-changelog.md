@@ -1,5 +1,19 @@
 # Keryx Project Changelog
 
+### Activity and historical creator rewards (2026-10-09, v0.27.47 candidate)
+
+- Put the retained testnet track record and recovered creator leaderboard near the
+  top of Activity & proof. Show paid-wallet counts, five ranked entries, expansion
+  to the full ranking and complete rankings on the history page.
+- Keep current network activity and creator rewards separate. Shorten the initial
+  question list and move detailed payment evidence into one expandable table.
+  Resolve opaque current leaderboard labels from exact source display metadata.
+- Add read-only `/api/history/testnet/creators` with original snapshot provenance
+  and complete, evidenced, settled source/wallet totals in integer micro-USDC.
+  No payment authority, archived writes, migration, custody or schedule changes.
+- [Scope and validation](engineering/ledger-testnet-creators-2026-10-09.md) records
+  supported-surface boundaries. Source preparation is not a deployment claim.
+
 ### Coordinated distribution metadata (2026-10-09, v0.27.46 candidate)
 
 - Identify the new remote/stdio MCP tool set with hosted0.3.9 and stdio0.4.13;

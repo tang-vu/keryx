@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getTestnetArchive, type TestnetArchiveInfo, type TestnetArchiveSummary } from "@/lib/history/testnet-archive";
+import { getTestnetArchive, type TestnetArchiveInfo, type TestnetArchiveSummary, type TestnetCreatorEntry } from "@/lib/history/testnet-archive";
 import type { QueryRun } from "@/lib/types";
 import { historyBefore, historyNext } from "@/lib/history/public-history";
 import { SiteHeader } from "@/components/keryx/site-header";
@@ -13,16 +13,17 @@ export const metadata: Metadata = { title: "Arc testnet history — Keryx", desc
 export default async function TestnetHistoryPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(await searchParams)) if (typeof value === "string") params.set(key, value);
-  let data: { info: TestnetArchiveInfo; runs: QueryRun[]; summary: TestnetArchiveSummary } | null = null;
+  let data: { info: TestnetArchiveInfo; runs: QueryRun[]; summary: TestnetArchiveSummary; creators: TestnetCreatorEntry[] | null } | null = null;
   try {
     const archive = await getTestnetArchive();
     if (!archive) throw new Error("Archive unavailable");
     const runs = await archive.listRecentQueries(51, historyBefore(params));
     const summary = await archive.summary();
-    data = { info: archive.info, runs, summary };
+    const creators = await archive.creatorLeaderboard().catch(() => null);
+    data = { info: archive.info, runs, summary, creators };
   } catch { /* Render an explicit unavailable state without hiding it as empty history. */ }
   const content = data ? <>
-      <TestnetHistorySummary info={data.info} summary={data.summary} />
+      <TestnetHistorySummary info={data.info} summary={data.summary} creators={data.creators} expandedCreators />
       <p className="mt-6 text-sm text-ink-2">Every recorded public question is available here, including runs with no citations or no payment. Open its original dispatch link to read the answer and full trace.</p>
       <ol className="mt-5 divide-y divide-line border border-line bg-paper">
         {data.runs.slice(0, 50).map(run => <li key={run.id} className="p-5">

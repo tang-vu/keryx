@@ -20,6 +20,15 @@ const source = { id: "fixture-creator", name: "Unverified creator fixture", url:
 const citedEntry = { url: "https://docs.publisher.example/service", title: "A previously cited service manual", publisher: "docs.publisher.example", runId: "fixture-run", citedAt: "2026-10-05T00:00:00.000Z", deliveryKind: "excerpt", truncated: true, retrievedAt: "2026-10-04T23:00:00.000Z", extraction: "html" };
 const directory = { registry: { status: "ready", entries: [{ source, totalEarnedUsdc: 0, citationCount: 0, claim: null, claimPolicyUnavailable: false, controlFresh: false }] }, publicReferences: { status: "ready", entries: [reference] }, citedSources: { status: "ready", entries: [citedEntry], runCount: 28 }, earningsStatus: "ready" };
 const metrics = { totalQueries: 28, recordedAccounts: 7, guestQuestions: 12, totalPayments: 0, totalVolumeUsdc: 0, totalCreatorPayoutsUsdc: 0, creatorsEarning: 0, pendingPaymentConfirmations: 0, pendingPaymentVolumeUsdc: 0, failedPaymentAttempts: 0, failedPaymentVolumeUsdc: 0 };
+const archivedCreators = Array.from({ length: 7 }, (_, index) => ({
+  sourceId: `historical-source-${index}`, sourceName: `Original testnet publisher ${index}`,
+  walletAddress: `0x${String(index + 1).repeat(40)}`, totalEarnedMicroUsdc: (7 - index) * 100001,
+  paymentCount: 3 + index, citationCount: index + 1,
+}));
+const archiveInfo = { network: "eip155:5042002", label: "Arc testnet", capturedAt: "2026-10-03T00:26:18.665Z", sourceCommit: "a".repeat(40), databaseSha256: "b".repeat(64) };
+const archiveSummary = { totalQueryRuns: 100, earliestQueryAt: "2026-06-15T00:00:00.000Z", latestQueryAt: "2026-10-02T00:00:00.000Z", walletAttributedQueryRuns: 10, settledCreatorCount: 7, settledCreatorPaymentCount: 42, settledCreatorMicroUsdc: 2800028,
+  payments: { settled: { count: 45, amountMicroUsdc: 2900028 }, pending: { count: 1, amountMicroUsdc: 2000 }, failed: { count: 0, amountMicroUsdc: 0 }, simulated: { count: 0, amountMicroUsdc: 0 } },
+  paymentKinds: [{ kind: "inbound", count: 3, settledMicroUsdc: 100000 }], origins: [{ origin: "engine", count: 80 }, { origin: "web", count: 20 }] };
 const run = { id: "fixture-run", question: "How should a live SQLite database be backed up safely?", answer: "Fixture answer [S1]", createdAt: "2026-10-05T00:00:00.000Z", totalSpent: 0, totalToCreators: 0, citationCount: 2, citations: [{ marker: "S1", sourceId: "public:web:fixture", sourceName: citedEntry.publisher, sourceKind: "public-reference", itemTitle: citedEntry.title, itemUrl: citedEntry.url, publicDeliveryKind: "excerpt", webProvenance: { retrievedAt: citedEntry.retrievedAt, truncated: true, extraction: "html" } }] };
 const chrome: Plugin = {
   name: "isolated-ledger-chrome",
@@ -50,6 +59,7 @@ try {
       import React from 'react';import{createRoot}from'react-dom/client';
       import{DashboardView}from'./components/keryx/dashboard-view';
       import{SourceDirectoryPreview}from'./components/keryx/source-directory-preview';
+      import{TestnetHistorySummary}from'./components/keryx/testnet-history-view';
       import SourcesPage from './app/sources/page';
       const reference=${JSON.stringify(reference)}, source=${JSON.stringify(source)}, directory=${JSON.stringify(directory)}, run=${JSON.stringify(run)};
       const mode=new URL(location.href).searchParams.get('mode');
@@ -59,7 +69,7 @@ try {
         window.fixtureRenderSources=params=>SourcesPage({searchParams:Promise.resolve(params)}).then(page=>root.render(page));
         window.fixtureRenderSources(Object.fromEntries(new URL(location.href).searchParams));
       }
-      else root.render(<DashboardView sourcePreview={<SourceDirectoryPreview directory={directory}/>}/>);
+      else root.render(<DashboardView historyPreview={mode==='archive'?<TestnetHistorySummary info={${JSON.stringify(archiveInfo)}} summary={${JSON.stringify(archiveSummary)}} creators={${JSON.stringify(archivedCreators)}}/>:undefined} sourcePreview={<SourceDirectoryPreview directory={directory}/>}/>);
     `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife", plugins: [chrome], define: { "process.env": "{}", "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(network), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' } });
     for (const width of [320, 768, 1440]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 } });
@@ -81,7 +91,7 @@ try {
         if (pathname.startsWith("/api/")) {
           if (mode === "error" && pathname === "/api/metrics") return route.fulfill({ status: 503, json: { error: "unavailable" } });
           if (pathname === "/api/metrics") return route.fulfill({ json: mode === "malformed" ? { metrics: { totalQueries: 28 }, leaderboard: [] } : { metrics: { ...metrics, ...(mode === "account-unavailable" ? { recordedAccounts: null } : mode === "account-malformed" ? { recordedAccounts: 1.5 } : mode === "account-zero" ? { recordedAccounts: 0 } : mode === "account-legacy" ? { recordedAccounts: undefined } : {}), ...(Object.hasOwn(guestModes, mode) ? { guestQuestions: guestModes[mode] } : {}), ...(mode === "pending" ? { pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.02, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.01 } : {}) }, leaderboard: [] } });
-          if (pathname === "/api/runs") return route.fulfill({ json: [run] });
+          if (pathname === "/api/runs") return route.fulfill({ json: mode === "archive" ? [run, { ...run, id: "old-testnet-run", question: "Archived testnet question stays in history", archive: archiveInfo }] : [run] });
           if (pathname === "/api/payments") return route.fulfill({ json: { payments: mode === "pending" ? [{ id: "fixture-payment", sourceName: "Pending creator fixture", queryId: "fixture-run", sourceId: "fixture-creator", kind: "citation", payer: "buyer", payee: "creator", amountUsdc: 0.02, network: "eip155:5042002", authorizationId: "fixture-authorization", settled: false, settlementStatus: "pending", createdAt: "2026-10-05T00:00:00.000Z" }] : [] } });
           if (pathname === "/api/withdrawals") return route.fulfill({ json: { withdrawals: [] } });
           throw new Error(`Unexpected API ${pathname}`);
@@ -153,12 +163,31 @@ try {
       await open("/dashboard");
       await page.getByRole("heading", { name: "Awaiting settlement proof" }).waitFor();
       await page.getByText(/failed and were not charged/).waitFor();
-      await page.getByTitle("Pending creator fixture", { exact: true }).waitFor();
       await page.getByText("Inspect payment evidence", { exact: true }).click();
+      await page.getByRole("cell").filter({ hasText: "Pending creator fixture" }).waitFor();
       await page.getByRole("columnheader", { name: "Flow" }).waitFor();
       await page.getByText("Authorization: fixture-authorization", { exact: true }).waitFor();
       assert.equal(await page.locator("tbody").getByText("Arc Testnet", { exact: true }).count(), 1,
         "A retained testnet record must keep its own network in either build profile");
+
+      mode = "archive";
+      await open("/dashboard?mode=archive");
+      const history = page.locator("#testnet-history");
+      await history.getByRole("heading", { name: "Testnet creator leaderboard" }).waitFor();
+      await history.getByText("2.800028 test USDC", { exact: true }).waitFor();
+      await page.getByText("28 recorded questions", { exact: true }).waitFor();
+      assert.equal(await page.getByText("Archived testnet question stays in history", { exact: true }).count(), 0, "Current activity does not mix archived questions");
+      assert.equal(await page.evaluate(() => Boolean(document.querySelector("#testnet-history")!.compareDocumentPosition(document.querySelector("#current-activity")!) & Node.DOCUMENT_POSITION_FOLLOWING)), true, "Testnet track record precedes current activity");
+      assert.equal(await history.getByText("Original testnet publisher 6", { exact: true }).isVisible(), false);
+      await history.getByText("Show all 7 source / wallet entries", { exact: true }).click();
+      await history.getByText("Original testnet publisher 6", { exact: true }).waitFor();
+      assert.equal(await history.locator('a[href^="/creator/"]').count(), 0, "Historical identities must not open current creator authority");
+      assert.equal(await history.locator('a[href^="https://testnet.arcscan.app/address/"]').count(), 7);
+      await history.getByText("Inspect archived totals and channels", { exact: true }).click();
+      await history.getByText(/^pending payment records$/i).waitFor();
+      await history.getByText("engine questions", { exact: true }).waitFor();
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `Historical leaderboard overflow ${width}`);
+      await page.screenshot({ path: path.join(screenshots, `ledger-history-${network}-${width}.png`), fullPage: true });
 
       await open("/sources");
       await page.getByRole("heading", { name: "Sources to explore." }).waitFor();

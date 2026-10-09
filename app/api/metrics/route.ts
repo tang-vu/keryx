@@ -45,6 +45,13 @@ export async function GET() {
     db.activationFunnel(30).catch(() => undefined),
   ]);
   const tagsById = new Map(sources.map((s) => [s.id, (s.tags ?? []).slice(0, 3)]));
+  // Display identity only: retain every original payment/source/wallet and amount.
+  const namesById = new Map(sources.map(source => [source.id, source.name]));
+  const namedLeaderboard = leaderboard.map(row => ({
+    ...row,
+    sourceName: (!row.sourceName || row.sourceName === row.sourceId)
+      ? namesById.get(row.sourceId) || row.sourceName || row.sourceId : row.sourceName,
+  }));
   const topics = topicBreakdown(payments, tagsById);
   let historicalArchive;
   try {
@@ -59,7 +66,7 @@ export async function GET() {
       feedbackTotal: feedback?.total,
       activationFunnel,
     },
-    leaderboard,
+    leaderboard: namedLeaderboard,
     topics,
     dailySettled,
   });
