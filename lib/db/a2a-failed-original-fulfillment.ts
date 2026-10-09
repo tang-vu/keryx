@@ -79,6 +79,16 @@ function resolution(claim: A2aFulfillmentClaim, completion: FulfillmentCompletio
       authoritySha256: fulfillmentObjectSha256(claim.authority), providerLedgerSha256: completion.providerLedgerSha256,
       runSha256: completion.runSha256 } };
 }
+/** One complete historical presentation, only after native result validation. V1/V2
+ * committed the run, not a presentation stamp. Never remove fields from the stored
+ * response: all money, evidence, identity and unknown fields still compare exactly. */
+function preCslNativeResponse(run: QueryRun, response: ReturnType<typeof a2aResponseFromRun>) {
+  if (run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v1" &&
+      run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v2") return null;
+  const { bibtex, ris, evidenceCsv } = response.researchExports;
+  return { ...response, researchExports: { bibtex, ris, evidenceCsv },
+    ...(response.bibliography ? { bibliographyExports: response.bibliography.bibliographyExports } : {}) };
+}
 function hasCompletion(db: DatabaseSync, authority: FulfillmentAuthority,
   readOrder: (row: Record<string, unknown>) => A2aOrder, evidenceCapability?: FulfillmentEvidenceCapability): boolean {
   const record = readRecord(db, authority.original.id);
@@ -100,7 +110,9 @@ function hasCompletion(db: DatabaseSync, authority: FulfillmentAuthority,
     resolution: resolution(record.claim, record.completion),
     response: a2aResponseFromRun(run, quoteFromA2aOrder(record.claim.failedOrder),
       { acceptedAt: record.claim.failedOrder.createdAt, startedAt: record.claim.failedOrder.startedAt }) };
-  return same(order, expected);
+  if (same(order, expected)) return true;
+  const legacyResponse = preCslNativeResponse(run, expected.response);
+  return legacyResponse !== null && same(order, { ...expected, response: legacyResponse });
 }
 /** One native transaction inserts the actual run once and commits only the matching failed
  * original. A rollback cannot strand a saved run or erase the immutable failure snapshot. */
