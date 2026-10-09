@@ -294,6 +294,9 @@ jobs:
         timeout-minutes: 5
         run: npx playwright install --with-deps chromium
 
+      - name: Research decision replay browser WebCrypto parity (offline corpus)
+        run: node --import tsx scripts/test-research-audit-browser.mts
+
       - name: Zotero RIS parser compatibility (pinned source, synthetic metadata)
         run: |
           mkdir -p .artifacts/reference-export

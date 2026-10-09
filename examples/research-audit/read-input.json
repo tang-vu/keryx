@@ -1,0 +1,13 @@
+{
+  "candidateId": "item:fixture-one",
+  "proposal": "BUY",
+  "priceMicros": "11",
+  "budgetRemainingMicros": "100",
+  "priceCeilingMicros": "50",
+  "attentionRemaining": 2,
+  "eligible": true,
+  "external": false,
+  "cacheFresh": false,
+  "sufficient": false,
+  "requiresApproval": false
+}
