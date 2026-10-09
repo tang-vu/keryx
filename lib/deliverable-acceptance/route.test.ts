@@ -48,6 +48,19 @@ describe("owner-bound deliverable HTTP", () => {
     expect(response.status).toBe(503); expect(request.bodyUsed).toBe(false); expect(port.submit).not.toHaveBeenCalled();
     expect(await response.json()).toEqual({ error: "acceptance_unavailable" });
   });
+  it("treats a strict enrolled facade capability getter refusal as unavailable before body read", async () => {
+    const { write, deps, port } = setup();
+    const getter = vi.fn(() => { throw new Error("invalid_operation"); });
+    const facade = Object.defineProperty({}, "deliverableAcceptance", { get: getter }) as KeryxDB;
+    deps.db.mockResolvedValueOnce(facade);
+    const request = req({ Authorization: `Bearer ${key}` }, input);
+    const response = await write(request, context());
+    expect(response.status).toBe(503); expect(request.bodyUsed).toBe(false);
+    expect(getter).toHaveBeenCalledOnce(); expect(port.submit).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({ error: "acceptance_unavailable" });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("vary")).toBe("Authorization, Cookie");
+  });
   it.each([{ ...input, wallet: bob }, { ...input, network: "eip155:5042" }, { ...input, reason: "\ud800" }, { ...input, expectedRevision: -1 }])("rejects closed malformed submission before journal write", async body => {
     const { write, port } = setup(); expect((await write(req({ Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body), context())).status).toBe(400); expect(port.submit).not.toHaveBeenCalled();
   });
