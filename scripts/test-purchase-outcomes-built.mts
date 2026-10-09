@@ -89,7 +89,10 @@ try {
       await page.goto(`${origin}/dispatch/${run.id}`); const panel = page.getByRole("region", { name: copy.title, exact: true });
       await panel.getByRole("heading", { name: copy.title, exact: true }).waitFor();
       await panel.getByText(copy.partialTrace, { exact: true }).waitFor();
-      assert.equal(await panel.getByText("0.002 test USDC", { exact: true }).count(), 1);
+      // The access cost is also present in the initially closed observation
+      // details. Bind this assertion to its visible summary metric, not every
+      // duplicate text node including hidden details.
+      await panel.getByText(copy.uncitedCost, { exact: true }).locator("..").getByText("0.002 test USDC", { exact: true }).waitFor({ state: "visible" });
       await panel.getByText(copy.observations, { exact: true }).click();
       assert.equal(await panel.getByText(run.decisions.find(row => row.action === "BUY")!.contentVersion!, { exact: true }).count(), 1);
       assert.equal(await panel.getByText("PRIVATE SIDECAR SOURCE", { exact: true }).count(), 0);
