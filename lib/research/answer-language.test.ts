@@ -39,6 +39,9 @@ describe("ordinary scaffold language fallback", () => {
     ['Write in Portuguese. The source uses the phrase "en español," in its title.', "pt"],
     ['Write in Portuguese. Review the page titled "Auf Deutsch".', "pt"],
     ['Write in Portuguese. Review the phrase "Responda en español."', "pt"],
+    ['Write in Portuguese. Review the title "A note. En español,".', "pt"],
+    ['Write in Portuguese. Review the quoted text “A note:\nEn français, expliquez.”', "pt"],
+    ["Write in Portuguese. Review the title 'A note. Auf Deutsch'.", "pt"],
     ["Sou professora e preciso de uma explicação. Write in French. Reply in Vietnamese.", "vi"],
   ])("retains supported cues and positive-request precedence: %s", (question, language) => {
     expect(answerPresentation(question).language).toBe(language);

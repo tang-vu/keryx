@@ -22,6 +22,8 @@ export function answerPresentation(question: string): AnswerPresentation {
   const text = question.slice(0, 30_000).normalize("NFC").toLowerCase();
   const explicit = /(?<![\p{L}\p{N}_])(?:(?:answer|respond|reply|write)\s+(?:only\s+)?(?:in|using)\s+((?:brazilian\s+)?portuguese|[\p{L}-]+)|(?:trả lời|viết|đáp)\s+(?:bằng\s+)?tiếng\s+(bồ đào nha|[\p{L}-]+)|(?:responda em|escreva em)\s+(português(?:\s+(?:brasileiro|do brasil))?|[\p{L}-]+)|em\s+(português(?:\s+(?:brasileiro|do brasil))?|inglês|vietnamita|francês|espanhol|alemão|japonês|chinês)|(?:responda|responde|escriba|escribe)\s+(?:solo\s+)?en\s+(español)|en\s+(español|français)(?=\s*[,;:])|(?:antworte\s+(?:bitte\s+)?)?auf\s+(deutsch))(?![\p{L}\p{N}_])/gu;
   const requests = [...text.matchAll(explicit)];
+  const quotedRanges = [...text.matchAll(/"[^"]*"|“[^”]*”|«[^»]*»|`[^`]*`|(?<![\p{L}\p{N}])'[^']*'(?![\p{L}\p{N}])/gu)]
+    .map(match => ({ start: match.index!, end: match.index! + match[0].length }));
   // Cue detection must not treat a negated language directive as a positive request.
   const cues = text.replace(explicit, " ");
   let language: AnswerPresentation["language"] = researchResponseLanguage(cues);
@@ -34,7 +36,8 @@ export function answerPresentation(question: string): AnswerPresentation {
     // New native forms are directives only at a clause boundary, not page titles
     // or quoted language mentions inside the caller's substantive question.
     if (request.slice(5).some(value => value !== undefined) &&
-        !/(?:^|[.!?;:\r\n])\s*$/u.test(text.slice(0, request.index!))) continue;
+        (!/(?:^|[.!?;:\r\n])\s*$/u.test(text.slice(0, request.index!)) ||
+         quotedRanges.some(range => request.index! >= range.start && request.index! < range.end))) continue;
     const name = request.slice(1).find(value => value !== undefined)!;
     requestedLanguage = /^(?:vietnamese|việt|vietnamita)$/u.test(name) ? "vi"
       : /^(?:(?:brazilian )?portuguese|português(?: brasileiro| do brasil)?|bồ đào nha)$/u.test(name) ? "pt"
