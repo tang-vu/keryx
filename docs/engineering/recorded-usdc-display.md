@@ -45,7 +45,10 @@ fixtures. These are zero-provider fixtures, not new settlement or outside-user e
 The popup fixture records its test-only renderer export seam separately from the exact
 uninstrumented module import. A separate fresh local unpacked MV3 profile verifies the
 actual extension worker, Chrome APIs and uninstrumented popup/module import. No Ask
-button, provider request or payment is invoked. This does not establish store installation.
+button is clicked in the Chromium fixtures. The commerce replay imports the actual popup
+ES module into JSDOM and drives one synthetic DOM click against an injected in-memory SSE
+response; it creates no HTTP request, agent dispatch, provider call or payment.
+These checks do not establish store installation.
 
 Issue #274 remains open for locale preference integration, dates/time zones, plural rules,
 broader display migration and review of signing/confirmation wording for every shipped

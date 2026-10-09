@@ -6,7 +6,7 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { encodeFunctionResult } from "viem";
-import { JSDOM } from "jsdom";
+import { replayExtensionPopup } from "../display/extension-popup.test-fixture";
 import type { QueryRun, Source, SourceItem } from "../types";
 import type { BrowserSourceOriginalAdmission } from "../db/browser-signing-originals";
 import type { ReasoningEngine } from "../llm/reasoning-engine";
@@ -373,16 +373,13 @@ it("R24 retains identities/read limits through result, recovery and export adapt
   expect(await savePrivateExport(async () => ({ canceled: false, filePath: exportPath }), baseline.researchExports.evidenceCsv)).toBe(true);
   expect(fs.readFileSync(exportPath, "utf8")).toBe(baseline.researchExports.evidenceCsv);
 
-  const dom = new JSDOM(fs.readFileSync("extension/popup.html", "utf8"), { url: "https://extension.example/popup", runScripts: "outside-only" });
-  const window = dom.window;
-  Object.assign(window, { chrome: { tabs: { query: async () => [] } }, fetch: () => { throw new Error("Rendering cannot submit research"); } });
-  window.eval(fs.readFileSync("extension/popup.js", "utf8"));
-  window.eval(`renderPaid(${JSON.stringify(keryxMeta(run))})`);
-  const extension = { status: window.document.getElementById("status")!.textContent,
-    handoff: (window.document.getElementById("dispatch-link") as unknown as HTMLAnchorElement).href };
+  const extension = await replayExtensionPopup([{ keryx: keryxMeta(run) }], (document, requests) => ({
+    status: document.getElementById("status")!.textContent,
+    handoff: (document.getElementById("dispatch-link") as HTMLAnchorElement).href,
+    inMemorySseRequests: requests, actualHttpRequests: 0,
+  }));
   expect(extension.status).toContain("planned rewards are not settlement proof");
   expect(extension.handoff).toContain(`/dispatch/${id}`);
-  window.close();
   const telegram = buildAnswerText(run), discord = buildAnswerMessage(run);
   expect(telegram).toContain(`/dispatch/${id}`);
   expect(discord.embeds[0].url).toContain(`/dispatch/${id}`);
@@ -391,7 +388,7 @@ it("R24 retains identities/read limits through result, recovery and export adapt
   record("R24", criteria.get("R24")!, { sourceIdentity: asset, projected, apiReceipt, cli, stdio, readCalls, extension, telegram, discord,
     surfaceRoles: { web: "shared report/export read model", api: "actual receipt route with isolated retained run", remoteMcp: "result mapper",
       stdioMcp: "original journal GET recovery helper, package installation not launched", cli: "original journal GET recovery and archived receipt",
-      desktop: "shared export writer/native save adapter; shell not launched", extension: "actual popup renderer in DOM; dispatch handoff",
+      desktop: "shared export writer/native save adapter; shell not launched", extension: "actual popup ES module and formatter in DOM; in-memory SSE only; dispatch handoff",
       bots: "actual Telegram/Discord result formatters; dispatch handoff" } },
   ["Real browser and desktop shell", "installed MCP/extension package", "authenticated live recovery", "remote MCP HTTP transport", "actual bot message delivery"]);
 });
