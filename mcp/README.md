@@ -84,6 +84,15 @@ See the repository's `docs/remote-mcp.md` for the remote trust model.
 
 ## Local stdio tools
 
+Source candidate: `evidence_draft(draft)` assembles private manual claim assessments
+and related-work quotation themes from caller-retained report excerpts and saved
+Include paper records. This is a local transformation: no HTTP/model/wallet/DB call,
+research purchase or reward. Imported report origin and semantic support remain
+unverified; names/timestamps identify user assertions only. MCP clients may retain
+private tool messages. Use the [shared contract and boundaries](../docs/evidence-drafts.md).
+Coordinated source/version, packaging and publication gates remain open; this
+paragraph does not claim that installed clients already have the tool.
+
 Source capability: `profile_read()` and `profile_update(profile)` use an explicitly
 profile-scoped `KERYX_API_KEY` to the selected HTTPS deployment. Profile ownership
 comes from that key, independently of the buyer wallet; no wallet/signer is loaded

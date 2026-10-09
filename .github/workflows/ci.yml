@@ -241,6 +241,7 @@ jobs:
           node --import tsx scripts/test-monthly-mcp-package.mts
           node --import tsx scripts/test-paper-lookup-mcp-package.mts
           node --import tsx scripts/test-private-profiles-mcp-package.mts
+          node --import tsx scripts/test-evidence-drafts-mcp-package.mts
 
       - name: Packed stdio research diagnostics, signing and recovery (synthetic)
         working-directory: mcp
@@ -461,6 +462,9 @@ jobs:
         env:
           KERYX_LITERATURE_SCREENSHOT_DIR: ${{ runner.temp }}/literature-ux-screenshots
         run: npm run test:browser-literature-built
+
+      - name: Private evidence drafts built interactions (offline, no research)
+        run: node --import tsx scripts/test-browser-evidence-drafts.mts
 
       - name: Stored excerpt readability (built CSS, hermetic Chromium)
         env:

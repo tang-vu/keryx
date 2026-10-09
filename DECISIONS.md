@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+**Assemble private drafts from retained excerpts without inferring semantic support — 2026-10-09.**
+Stage issues 282/283 through one zero-I/O draft contract shared by the browser,
+authenticated API and remote/stdio MCP. Match Include records to retained report
+ledger rows by exact source/item/URL/version/marker and original claim; withhold
+synthetic, ambiguous and missing records. Imported report origin stays caller
+asserted. Claim spans preserve the passage and optional named user assessments
+bind literal excerpt rows; missing retained evidence cannot become unsupported.
+Related-work themes export quotations, separately marked author notes and one
+matching reference set. Browser drafts stay in memory unless explicitly downloaded.
+Automatic reading/semantic review, expert metrics and coordinated deployment remain
+gated; no receipt, payment, budget or custody authority changes. See
+[scope, surfaces and acceptance](docs/evidence-drafts.md).
+
 **Record verified run ingress without inferring account ownership — 2026-10-09.**
 New shared research runs carry optional closed JSON provenance separately from
 payment origin and editable MCP client telemetry. Ownership continues to use the

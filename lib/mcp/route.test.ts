@@ -105,6 +105,7 @@ describe("/mcp", () => {
 
     expect(response.status).toBe(200);
     expect(body.result.tools.map((tool: { name: string }) => tool.name)).toEqual([
+      "evidence_draft",
       "paper_lookup",
       "research",
       "keryx_status",
