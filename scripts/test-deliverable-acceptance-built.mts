@@ -36,11 +36,11 @@ const listener = createServer(); await new Promise<void>(resolveReady => listene
 const port = address.port; await new Promise<void>((resolveClose, reject) => listener.close(error => error ? reject(error) : resolveClose())); const origin = `http://127.0.0.1:${port}`;
 const networkGuard = join(fixture, "loopback.mjs");
 await writeFile(networkGuard, `import net from'node:net';import dns from'node:dns';import cp from'node:child_process';import{syncBuiltinESMExports}from'node:module';
-const deny=()=>{throw Error('Synthetic fixture denies outbound/subprocess capability');};const connect=net.Socket.prototype.connect;
+const deny=capability=>{const error=Error('Synthetic fixture denies '+capability);process.stderr.write(error.stack+'\\n');throw error;};const connect=net.Socket.prototype.connect;
 net.Socket.prototype.connect=function(...raw){const args=Array.isArray(raw[0])?raw[0]:raw;const first=args[0];const host=typeof first==='object'?first.host??'localhost':args[1]??'localhost';const port=typeof first==='object'?first.port:first;
-if(!['127.0.0.1','localhost','::1'].includes(host)||Number(port)!==${port})return deny();return connect.apply(this,raw);};
-for(const name of ['lookup','resolve','resolve4','resolve6','resolveAny','resolveCaa','resolveCname','resolveMx','resolveNaptr','resolveNs','resolvePtr','resolveSoa','resolveSrv','resolveTxt','reverse']){if(name in dns)dns[name]=deny;if(name in dns.promises)dns.promises[name]=deny;}
-for(const name of ['spawn','spawnSync','exec','execSync','execFile','execFileSync','fork'])cp[name]=deny;
+if(!['127.0.0.1','localhost','::1'].includes(host)||Number(port)!==${port})return deny('socket');return connect.apply(this,raw);};
+for(const name of ['lookup','resolve','resolve4','resolve6','resolveAny','resolveCaa','resolveCname','resolveMx','resolveNaptr','resolveNs','resolvePtr','resolveSoa','resolveSrv','resolveTxt','reverse']){if(name in dns)dns[name]=()=>deny('dns.'+name);if(name in dns.promises)dns.promises[name]=()=>deny('dns.promises.'+name);}
+for(const name of ['spawn','spawnSync','exec','execSync','execFile','execFileSync','fork'])cp[name]=()=>deny('child_process.'+name);
 const fetcher=globalThis.fetch;globalThis.fetch=(input,...args)=>{const url=new URL(typeof input==='string'?input:input.url??String(input));if(url.origin!==${JSON.stringify(origin)})return Promise.reject(Error('Synthetic fixture denies outbound fetch'));return fetcher(input,...args);};syncBuiltinESMExports();`);
 const env: NodeJS.ProcessEnv = {};
 for (const name of ["PATH", "Path", "SystemRoot", "WINDIR", "TEMP", "TMP", "ComSpec", "PATHEXT", "LOCALAPPDATA", "USERPROFILE"]) if (process.env[name]) env[name] = process.env[name];
