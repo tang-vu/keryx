@@ -53,6 +53,8 @@ regressions run alongside it.
 
 Require focused tests, both TypeScript graphs, scoped lint, actual aggregate and
 applicable platform CI, independent review and coordinated exact-main delivery.
+App0.27.46 is the source candidate; consumer package/installer code and contracts
+are unchanged. This version is not a deployed or published claim.
 The existing release45 owner retains its active source/native acceptance window;
 this independent repair must not advance main or deploy through that window
 without its closure or admission. Source checks do not prove deployed behavior,

@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Ordinary answer language selection (2026-10-09, source candidate)
+### Ordinary answer language selection (2026-10-09, v0.27.46 candidate)
 
 - Avoid choosing Portuguese from words shared with Spanish. Positive original
   output-language requests take precedence over inferred and accumulated-context
