@@ -5,6 +5,7 @@
     "incremental": false
   },
   "include": [
+    "scripts/eval-paying-source-study.mts",
     "scripts/grade-retained-deliverables.mts",
     "scripts/test-private-bibliography-built.mts",
     "scripts/research-audit.mts",
