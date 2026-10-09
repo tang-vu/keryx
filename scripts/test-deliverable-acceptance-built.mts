@@ -40,6 +40,11 @@ const deny=capability=>{const error=Error('Synthetic fixture denies '+capability
 net.Socket.prototype.connect=function(...raw){const args=Array.isArray(raw[0])?raw[0]:raw;const first=args[0];const host=typeof first==='object'?first.host??'localhost':args[1]??'localhost';const port=typeof first==='object'?first.port:first;
 if(!['127.0.0.1','localhost','::1'].includes(host)||Number(port)!==${port})return deny('socket');return connect.apply(this,raw);};
 for(const name of ['lookup','resolve','resolve4','resolve6','resolveAny','resolveCaa','resolveCname','resolveMx','resolveNaptr','resolveNs','resolvePtr','resolveSoa','resolveSrv','resolveTxt','reverse']){if(name in dns)dns[name]=()=>deny('dns.'+name);if(name in dns.promises)dns.promises[name]=()=>deny('dns.promises.'+name);}
+// Node Server.listen invokes lookup even for its literal127 address. Return that
+// fixed address without invoking an OS resolver; foreign names remain refused.
+dns.lookup=(host,options,callback)=>{if(host!=='127.0.0.1')return deny('dns.lookup');const cb=typeof options==='function'?options:callback;const all=typeof options==='object'&&options?.all;
+if(typeof cb!=='function')return deny('dns.lookup callback');queueMicrotask(()=>all?cb(null,[{address:'127.0.0.1',family:4}]):cb(null,'127.0.0.1',4));};
+for(const type of [dns.Resolver,dns.promises.Resolver])for(const name of ['resolve','resolve4','resolve6','resolveAny','resolveCaa','resolveCname','resolveMx','resolveNaptr','resolveNs','resolvePtr','resolveSoa','resolveSrv','resolveTxt','reverse'])if(name in type.prototype)type.prototype[name]=()=>deny('dns.Resolver.'+name);
 for(const name of ['spawn','spawnSync','exec','execSync','execFile','execFileSync','fork'])cp[name]=()=>deny('child_process.'+name);
 const fetcher=globalThis.fetch;globalThis.fetch=(input,...args)=>{const url=new URL(typeof input==='string'?input:input.url??String(input));if(url.origin!==${JSON.stringify(origin)})return Promise.reject(Error('Synthetic fixture denies outbound fetch'));return fetcher(input,...args);};syncBuiltinESMExports();`);
 const env: NodeJS.ProcessEnv = {};
