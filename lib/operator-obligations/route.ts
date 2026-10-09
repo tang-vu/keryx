@@ -1,4 +1,4 @@
-import { obligationProjectionSchema } from "./contracts";
+import { parseNativeObligationInspection } from "./contracts";
 import { configuredObligationReader, isObligationReader, type ObligationReader } from "./reader";
 
 export interface ObligationRouteDependencies {
@@ -22,13 +22,17 @@ export function createObligationRoute(deps: ObligationRouteDependencies) {
     let key;
     try { key = await deps.key(header.slice(7)); } catch { return denied(); }
     if (!key || !isObligationReader(reader, key.walletAddress.toLowerCase(), key.scopes?.split(",").map(s => s.trim()))) return denied();
-    const latest = deps.reader();
+    let latest;
+    try { latest = deps.reader(); } catch { return denied(); }
     if (!latest || latest.wallet !== reader.wallet || latest.role !== reader.role) return denied();
     if (new URL(request.url).search || request.body !== null) return json({ error: "invalid_inspection_request" }, 400);
     try {
-      const value = obligationProjectionSchema.parse(await deps.inspect(reader));
-      if (value.scope.ownerWallet !== reader.wallet || value.scope.custodyRole !== `${reader.role}-hosted` || value.source !== "native-journal" ||
-        value.status !== "unknown" || value.safeNewSpendMicroUsdc !== "0" || value.advisorySurplusMicroUsdc !== "0") throw new Error();
+      const value = parseNativeObligationInspection(await deps.inspect(reader));
+      let after;
+      try { after = deps.reader(); } catch { return denied(); }
+      if (!after || after.wallet !== reader.wallet || after.role !== reader.role) return denied();
+      const p = value.projection;
+      if (value.readerWallet !== reader.wallet || p.scope.custodyRole !== `${reader.role}-hosted`) throw new Error();
       return json(value);
     } catch { return json({ error: "inspection_unavailable" }, 503); }
   };

@@ -102,7 +102,8 @@ export function projectOperatorObligations(raw: unknown, nowMs: number) {
   }
   for (const [parent, total] of childTotals) if (total > amount(liabilities.get(parent)!)) reasons.add("ambiguous-inclusion");
   // Category constraints prevent nested/cyclic parents; unresolved relations retain every full amount.
-  if (reasons.has("ambiguous-inclusion") || reasons.has("foreign-binding") || reasons.has("conflicting-original")) included.clear();
+  if (["ambiguous-inclusion", "foreign-binding", "conflicting-original", "stale-observation", "unverified-original", "wrong-units"]
+    .some(reason => reasons.has(reason as ObligationReason))) included.clear();
   let protectedAmount = ZERO, dueNow = ZERO, dueHorizon = ZERO;
   const p = s.policy;
   if (!p) reasons.add("missing-policy");
@@ -114,7 +115,7 @@ export function projectOperatorObligations(raw: unknown, nowMs: number) {
     if (p.horizonAt === null || Date.parse(p.horizonAt) < nowMs || Date.parse(p.horizonAt) - nowMs > 90 * 24 * 60 * 60_000) reasons.add("invalid-horizon");
   }
   for (const row of liabilities.values()) {
-    const confirmed = !reasons.has("conflicting-original") && !reasons.has("foreign-binding") && row.outcome === "confirmed-debit" && row.verifiedOriginal && row.confirmationId &&
+    const confirmed = !reasons.has("conflicting-original") && !reasons.has("foreign-binding") && !reasons.has("stale-observation") && !reasons.has("wrong-units") && row.outcome === "confirmed-debit" && row.verifiedOriginal && row.confirmationId &&
       ["payment-exposure", "creator-debt", "refund-withdrawal", "gas-fee"].includes(row.category);
     if (confirmed || included.has(row.id)) continue;
     const n = amount(row); protectedAmount += n;

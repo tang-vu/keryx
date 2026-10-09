@@ -1,9 +1,10 @@
 import type { ObligationScope, ObligationSnapshot } from "../lib/operator-obligations/contracts";
+import { projectOperatorObligations } from "../lib/operator-obligations/projection";
 
 export const OBLIGATION_FIXTURE_TIME = Date.parse("2026-10-09T08:00:00.000Z");
 export const OBLIGATION_FIXTURE_OWNER = `0x${"1".repeat(40)}`;
 export const OBLIGATION_FIXTURE_SCOPE: ObligationScope = Object.freeze({
-  ownerWallet: OBLIGATION_FIXTURE_OWNER, signer: `0x${"2".repeat(40)}`,
+  custodyWallet: `0x${"2".repeat(40)}`, signer: `0x${"2".repeat(40)}`,
   custodyRole: "public-hosted", storageIdentityDigest: "a".repeat(64), network: "eip155:5042",
   asset: "0x3600000000000000000000000000000000000000", compartment: "wallet",
 });
@@ -24,4 +25,9 @@ export function obligationFixture(): ObligationSnapshot {
 export function fixtureLiability(id: string, amount: string, category: ObligationSnapshot["liabilities"][number]["category"] = "payment-exposure") {
   const row = obligationFixture().liabilities[0];
   return { ...row, id, originalId: id, evidenceId: `${id}:proof`, amount, category };
+}
+export function nativeInspectionFixture() {
+  const s = obligationFixture(); s.source = "native-journal"; s.consistency = "partial"; s.domains = []; s.cash = []; s.overlap = "unresolved"; s.policy = null;
+  s.scope.compartment = "gateway"; s.liabilities.forEach(r => { r.scope.compartment = "gateway"; });
+  return { version: 1 as const, readerWallet: OBLIGATION_FIXTURE_OWNER, projection: projectOperatorObligations(s, OBLIGATION_FIXTURE_TIME) };
 }

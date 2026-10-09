@@ -24,11 +24,14 @@ import { MAX_ASK_QUESTION_CHARS } from "../lib/ask-input.ts";
 import { registerProfileTools } from "../lib/profiles/profile-mcp.ts";
 import { registerIdentityReadTool } from "../lib/profiles/identity-mcp.ts";
 import { createProfileClient } from "../lib/profiles/profile-client.ts";
+import { registerObligationInspection } from "../lib/operator-obligations/mcp.ts";
+import { createObligationClient } from "../lib/operator-obligations/client.ts";
 import { registerEvidenceDraftTool } from "../lib/research/evidence-draft-tool.ts";
 import { createHistoryClient } from "../lib/history/personal-history-client.ts";
 import { registerHistoryTool } from "../lib/history/personal-history-mcp.ts";
 
 const server = new McpServer({ name: "keryx", version: packageInfo.version });
+registerObligationInspection(server, () => createObligationClient(meta.baseUrl, () => process.env.KERYX_API_KEY).read());
 registerEvidenceDraftTool(server);
 const profileClient = () => createProfileClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
 registerProfileTools(server, { read: () => profileClient().read(), update: input => profileClient().update(input) });

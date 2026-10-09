@@ -56,12 +56,20 @@ describe("exact nonauthorizing obligation projection", () => {
     s.liabilities[0].dueAt = "2026-10-20T08:00:00.000Z";
     expect(run(s).protectedMicroUsdc).toBe("550000"); expect(run(s).dueWithinHorizonMicroUsdc).toBe("50000");
   });
+  it("stale original evidence releases neither a historical debit hold nor included creator hold", () => {
+    const s = obligationFixture(), leg = fixtureLiability("leg:stale", "50000", "creator-debt");
+    leg.observedAt = "2026-10-09T07:59:29.000Z"; s.liabilities.push(leg);
+    s.inclusions.push({ childId: leg.id, parentId: s.liabilities[0].id, kind: "creator-leg-in-job-cap", evidenceId: "membership:stale", snapshotId: s.snapshotId });
+    expect(refused(s, "stale-observation").protectedMicroUsdc).toBe("550000");
+    s.inclusions = []; leg.outcome = "confirmed-debit"; leg.confirmationId = "confirmation:stale";
+    expect(refused(s, "stale-observation").protectedMicroUsdc).toBe("550000");
+  });
   it("bounds safe new work by original policy capacity, independently of cash", () => {
     const s = obligationFixture(); s.policy!.remainingOriginalCapacityMicroUsdc = "17";
     expect(run(s).safeNewSpendMicroUsdc).toBe("17"); expect(run(s).advisorySurplusMicroUsdc).toBe("200000");
   });
-  it.each(["ownerWallet", "signer", "custodyRole", "storageIdentityDigest", "network", "compartment"] as const)("refuses foreign %s", field => {
-    const s = obligationFixture(); const patch = { ownerWallet: `0x${"3".repeat(40)}`, signer: `0x${"4".repeat(40)}`, custodyRole: "private-hosted", storageIdentityDigest: "b".repeat(64), network: "eip155:5042002", compartment: "gateway" };
+  it.each(["custodyWallet", "signer", "custodyRole", "storageIdentityDigest", "network", "compartment"] as const)("refuses foreign %s", field => {
+    const s = obligationFixture(); const patch = { custodyWallet: `0x${"3".repeat(40)}`, signer: `0x${"4".repeat(40)}`, custodyRole: "private-hosted", storageIdentityDigest: "b".repeat(64), network: "eip155:5042002", compartment: "gateway" };
     Object.assign(s.liabilities[0].scope, { [field]: patch[field] }); refused(s, "foreign-binding");
   });
   it.each(["native-journal", "partial", "stale", "missing-domain", "partial-domain", "missing-policy", "unreviewed", "expired", "unknown-floor", "unknown-original"])("refuses %s rather than promising zero obligations", mode => {
@@ -105,6 +113,11 @@ describe("exact nonauthorizing obligation projection", () => {
     for (const amount of ["-1", "01", "0.1", "1e6", "9".repeat(31)]) { const s = obligationFixture(); s.cash[0].amount = amount; expect(() => run(s)).toThrow(); }
     const s = obligationFixture(); s.liabilities[0].originalId = "x".repeat(129); expect(() => run(s)).toThrow();
     s.liabilities = Array(1001).fill(null); expect(() => run(s)).toThrow();
+  });
+  it("explicitly refuses an aggregate beyond the supported 30-digit result bound without truncation", () => {
+    const s = obligationFixture(); s.liabilities[0].amount = "9".repeat(30);
+    s.liabilities.push(fixtureLiability("second:original", "9".repeat(30)));
+    expect(() => run(s)).toThrow();
   });
   it("rejects getters/cycles without invoking untrusted code, and never mutates an immutable fixture", () => {
     const s = obligationFixture(); Object.defineProperty(s, "observedAt", { get() { throw new Error("getter invoked"); }, enumerable: true });

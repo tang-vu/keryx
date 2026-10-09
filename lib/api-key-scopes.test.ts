@@ -60,6 +60,13 @@ describe("explicit private profile scopes", () => {
     expect(parseScopes(serializeScopes(["profile:write"]))).toEqual(["profile:write"]);
   });
 });
+describe("explicit delegated operator read scope", () => {
+  it("keeps historical/profile/history keys unprivileged and supports deliberate read-only selection", () => {
+    for (const stored of [null, "", "unknown", "ask,export", "profile:read,history:read"]) expect(hasScope(parseScopes(stored), "operator:read")).toBe(false);
+    expect(normalizeScopes(["operator:read"])).toEqual(["operator:read"]);
+    expect(parseScopes(serializeScopes(["operator:read"]))).toEqual(["operator:read"]);
+  });
+});
 
 describe("hasScope", () => {
   it("gates a narrowed key", () => {

@@ -5,12 +5,13 @@ import type { KeryxDB } from "../db/keryx-db";
 import { configuredHostedTreasuryPolicy } from "../payments/hosted-treasury-policy";
 import { operatorInventorySchema } from "../business-operator/contracts";
 import { config } from "../config";
-import { obligationAmount, type ObligationSnapshot, type ObligationScope } from "./contracts";
+import { obligationAmount, obligationInspectionSchema, type ObligationSnapshot, type ObligationScope } from "./contracts";
 import { projectOperatorObligations } from "./projection";
 import type { ObligationReader } from "./reader";
 
 /** The only runtime port. Selected sealed SQLite facade and reviewed public/private
- * role policy are rechecked. No keys, vendor balance reads, writer or alternate store.
+ * role policy are rechecked. No secret field use, wallet construction, signing,
+ * vendor balance reads, writer or alternate store. Central config reads environment.
  * Aggregate books cannot prove original inclusion, complete liabilities or atomic cash. */
 export async function inspectOperatorObligations(reader: ObligationReader) {
   let db: KeryxDB | undefined;
@@ -21,7 +22,7 @@ export async function inspectOperatorObligations(reader: ObligationReader) {
     const origin = new URL(config.baseUrl).origin;
     const policy = configuredHostedTreasuryPolicy(identity, origin, reader.role);
     const observedAt = new Date().toISOString(), nowMs = Date.parse(observedAt);
-    const scope: ObligationScope = { ownerWallet: reader.wallet, signer: policy.signer,
+    const scope: ObligationScope = { custodyWallet: policy.signer, signer: policy.signer,
       custodyRole: reader.role === "public" ? "public-hosted" : "private-hosted",
       storageIdentityDigest: storageIdentityDigest(identity), network: identity.network,
       asset: "0x3600000000000000000000000000000000000000", compartment: "gateway" };
@@ -53,7 +54,8 @@ export async function inspectOperatorObligations(reader: ObligationReader) {
         reserveFloorMicroUsdc: null, operatingBudgetMicroUsdc: null,
         remainingOriginalCapacityMicroUsdc: String(BigInt(policy.lifetimeCapMicroUsdc) - retained) } };
     // Own plain immutable value graph; no caller-supplied JSON is admitted as a native snapshot.
-    return projectOperatorObligations(JSON.parse(JSON.stringify(snapshot)), Date.now());
+    return obligationInspectionSchema.parse({ version: 1, readerWallet: reader.wallet,
+      projection: projectOperatorObligations(JSON.parse(JSON.stringify(snapshot)), Date.now()) });
   } catch { throw new Error("Operator obligation inspection unavailable"); }
   finally { if (db && "close" in db && typeof db.close === "function") db.close(); }
 }

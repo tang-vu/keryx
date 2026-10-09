@@ -9,6 +9,7 @@
 import { config } from "./config";
 import { paperOpenApiPaths, paperOpenApiSchemas } from "./papers/openapi";
 import { operatorStatusOpenApiPath } from "./business-operator/openapi";
+import { operatorObligationOpenApiPath } from "./operator-obligations/openapi";
 import { monthlyOpenApiPath } from "./monthly/openapi";
 import { paidJobEscalationOpenApiProperty, paidJobEscalationOpenApiSchemas } from "./a2a/overdue-openapi";
 import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
@@ -72,8 +73,8 @@ export const openapiSpec = {
         description:
           "Wallet-issued API key (`kx_live_…`). Mint at `/api/keys` after SIWE sign-in. " +
           "Still requires `payment-signature` — key is identity + rate-limit only. Keys carry " +
-          "scopes (`ask`, `export`, explicit `profile:read`/`profile:write`/`history:read`); calling outside a key's scopes returns 403. " +
-          "Historical/default keys retain ask/export and never gain private-profile or history rights. These scoped read/profile operations require no payment signature.",
+          "scopes (`ask`, `export`, explicit `profile:read`/`profile:write`/`history:read`/`operator:read`). Private Operator inspection also requires exact protected reader delegation and uniformly refuses unauthorized access. " +
+          "Historical/default keys retain ask/export and never gain private-profile, history or Operator inspection rights. These scoped read/profile operations require no payment signature.",
       },
       X402Payment: {
         type: "apiKey",
@@ -793,6 +794,7 @@ export const openapiSpec = {
       },
     },
     "/api/operator/status": operatorStatusOpenApiPath,
+    "/api/operator/obligations": operatorObligationOpenApiPath,
     "/api/agent/ask": {
       get: {
         operationId: "inspectOrPollAgentAsk",

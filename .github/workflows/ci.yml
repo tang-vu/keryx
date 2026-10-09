@@ -255,6 +255,7 @@ jobs:
           node --import tsx scripts/test-private-profiles-mcp-package.mts
           node --import tsx scripts/test-evidence-drafts-mcp-package.mts
           node --import tsx scripts/test-personal-history-mcp-package.mts
+          node --import tsx scripts/test-operator-obligations-transports.mts
 
       - name: Packed stdio research diagnostics, signing and recovery (synthetic)
         working-directory: mcp

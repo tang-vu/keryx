@@ -20,6 +20,8 @@ import { researchAdmissionError } from "../research/availability-contract";
 import { createPaperLookupHandler, paperLookupToolOptions } from "../papers/lookup";
 import { readHostedPaperLookup } from "../papers/hosted-lookup";
 import { registerProfileTools } from "../profiles/profile-mcp";
+import { registerObligationInspection } from "../operator-obligations/mcp";
+import { readDelegatedOperatorObligations } from "../operator-obligations/delegated";
 import { registerHistoryTool } from "../history/personal-history-mcp";
 import { requirePersonalHistory } from "../history/personal-history";
 import { readPersonalHistory } from "../history/personal-history-reader";
@@ -36,6 +38,8 @@ export interface RemoteMcpAccess {
   /** Explicit verified-key scopes only; actor alone never authorizes profile access. */
   profileScopes?: ApiKeyScope[];
   historyScopes?: ApiKeyScope[];
+  /** Explicit verified-key delegation scope, narrowed again by protected reader config. */
+  operatorScopes?: ApiKeyScope[];
   /** Self-declared setup URL channel. Telemetry only; never identity or payment authority. */
   clientChannel: McpClientChannel;
   /** Request-bound metadata admission identity and cancellation; never payment authority. */
@@ -109,6 +113,7 @@ export function createRemoteMcpServer(
     if (!access.actor || !access.profileScopes?.includes(scope)) throw new Error("Explicit profile scope required");
     return requirePrivateProfiles(await getDb());
   };
+  registerObligationInspection(server, () => readDelegatedOperatorObligations(access.actor, access.operatorScopes));
 
   server.registerTool("paper_lookup", paperLookupToolOptions,
     createPaperLookupHandler(input => readHostedPaperLookup(input, access.paperCaller ?? "unknown", access.signal)));
