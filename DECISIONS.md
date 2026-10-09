@@ -6910,3 +6910,17 @@ outside/team/scripted/unknown partitions based on trusted recorded facts, with
 unknown historical identity left unknown. The [source plan and gates](docs/engineering/decision-review-253.md)
 separate buildable ordinary source from database enrollment, live funded authority,
 independent customer evidence and coordinated publication/deployment acceptance.
+
+### 2026-10-09 — Bind deliverable choices to the original customer and version
+
+The delegated remedy policy enables source work on issue250. Use a separate
+acceptance/request domain bound to trusted original store, network, customer and
+delivered digest, preserving original receipts and payment authority. A request
+is distinct from a completed revision or settled refund. Do not turn it into a
+follow-up purchase or replenish an original reservation. Historical remedy:none
+and missing response-window terms remain visible rather than being rewritten.
+Ordinary and enrolled native capabilities, private/monthly originals and every
+supported surface require explicit adapters and acceptance; unsupported domains
+refuse instead of falling back to an unbound journal. The implementation plan
+and remaining accounting, execution and release gates are recorded in
+[deliverable acceptance](docs/engineering/deliverable-acceptance-250.md).
