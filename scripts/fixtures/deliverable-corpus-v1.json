@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "id": "public-retained-deliverables-v1",
+  "description": "Two public owner-operated app0.27.44 snapshots. Structure and recorded binding inspection only; semantic and language correctness remain unjudged. Not complete open-quality-issue coverage.",
+  "cases": [
+    {
+      "file": "deliverable-mdn-public-20261009.json",
+      "sha256": "351840af8f58f8c066d74c7f45d2bf5895fabe8a3ff4dd087183e92bdb9147d4",
+      "contract": {
+        "version": 1,
+        "id": "mdn-public-20261009",
+        "issues": [
+          238
+        ],
+        "kind": "single-page",
+        "requestedLanguage": "pt-BR",
+        "questionSha256": "866f2f1d4b0895f867546537429bb198e02140289156c699ce225ea5a5ab0fbc",
+        "targets": [
+          {
+            "claimIndex": 0,
+            "label": "Qual é a diferença de comportamento do type=\"submit\" em um elemento <button>, conforme a página de referência da MDN?"
+          },
+          {
+            "claimIndex": 1,
+            "label": "Qual é a diferença de comportamento do type=\"reset\" em um elemento <button>, conforme a página de referência da MDN?"
+          },
+          {
+            "claimIndex": 2,
+            "label": "Qual é a diferença de comportamento do type=\"button\" em um elemento <button>, conforme a página de referência da MDN?"
+          },
+          {
+            "claimIndex": 3,
+            "label": "Qual é o comportamento padrão de um elemento <button> quando o atributo type não é informado, conforme a página de referência da MDN?"
+          }
+        ],
+        "requiredBindings": [
+          {
+            "claimIndex": 0,
+            "marker": "S1",
+            "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+            "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+            "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+            "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e",
+            "quoteSha256": "233d67ebc5133db87a2c50d348a2e116be0b03bd8d873b67e93925f881628773"
+          },
+          {
+            "claimIndex": 1,
+            "marker": "S1",
+            "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+            "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+            "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+            "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e",
+            "quoteSha256": "882c696aad8c515868a3f516c780ef5e493084504af0bd08f6127d2d0b64e41d"
+          },
+          {
+            "claimIndex": 2,
+            "marker": "S1",
+            "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+            "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+            "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+            "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e",
+            "quoteSha256": "10824930dcb2623f3be41ce32996aa174a9fcc21f66fbad2d81464469700c4f9"
+          },
+          {
+            "claimIndex": 2,
+            "marker": "S1",
+            "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+            "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+            "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+            "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e",
+            "quoteSha256": "86cc11990769442dcfc7a407ab0db33cddfeda36b495803784d10cb86dbff2ea"
+          },
+          {
+            "claimIndex": 3,
+            "marker": "S1",
+            "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+            "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+            "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+            "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e",
+            "quoteSha256": "4a8cec5a90abc15a07122a012d32469915f66d5cc40166c41d55cbf59a1462e1"
+          }
+        ],
+        "format": {
+          "bulletCount": 3,
+          "excludedBulletSuffixSha256": "74fdd3736552883a2dfc1e1136a8a6906c4ffe5b4cb2458edcd7a9e742515c46"
+        }
+      }
+    },
+    {
+      "file": "deliverable-rfc-public-20261009.json",
+      "sha256": "a20b1697b9bb45febb799d393da262cc6ce36b17b921545f376635486b3e3257",
+      "contract": {
+        "version": 1,
+        "id": "rfc-public-20261009",
+        "issues": [
+          230
+        ],
+        "kind": "single-page",
+        "requestedLanguage": "en",
+        "questionSha256": "30caba8fe782737ca6b08c2770e1aa9af9a323a309425fa989104520762a0ba2",
+        "targets": [
+          {
+            "claimIndex": 0,
+            "label": "According to RFC 4180 section 2, which fields need to be enclosed in double quotes?"
+          },
+          {
+            "claimIndex": 1,
+            "label": "According to RFC 4180 section 2, how is a double quote inside a quoted field escaped?"
+          },
+          {
+            "claimIndex": 2,
+            "label": "Does RFC 4180 claim to be an Internet standard?"
+          }
+        ],
+        "requiredBindings": [
+          {
+            "claimIndex": 0,
+            "marker": "S1",
+            "sourceId": "public:web:6b919e172718f2a55dbc9aacb068e5cd14d524479832479a94499c0067e329d8",
+            "itemId": "6b919e172718f2a55dbc9aacb068e5cd14d524479832479a94499c0067e329d8",
+            "itemUrl": "https://www.rfc-editor.org/rfc/rfc4180.html",
+            "contentVersion": "43773c859fad70d5f8b44a556e8b11598c4de1dcbd503c6d2a7a191d3668246c",
+            "quoteSha256": "fd81795ad6add9894547f1edba65c5e0cdc601e8ec0433e285a8eb6f3a0f06e8"
+          },
+          {
+            "claimIndex": 1,
+            "marker": "S1",
+            "sourceId": "public:web:6b919e172718f2a55dbc9aacb068e5cd14d524479832479a94499c0067e329d8",
+            "itemId": "6b919e172718f2a55dbc9aacb068e5cd14d524479832479a94499c0067e329d8",
+            "itemUrl": "https://www.rfc-editor.org/rfc/rfc4180.html",
+            "contentVersion": "43773c859fad70d5f8b44a556e8b11598c4de1dcbd503c6d2a7a191d3668246c",
+            "quoteSha256": "3f212a662852d1f9411195dd0fb874ab86c4028f1128b9c6cdc86dc984ba0904"
+          },
+          {
+            "claimIndex": 2,
+            "marker": "S1",
+            "sourceId": "public:web:6b919e172718f2a55dbc9aacb068e5cd14d524479832479a94499c0067e329d8",
+            "itemId": "6b919e172718f2a55dbc9aacb068e5cd14d524479832479a94499c0067e329d8",
+            "itemUrl": "https://www.rfc-editor.org/rfc/rfc4180.html",
+            "contentVersion": "43773c859fad70d5f8b44a556e8b11598c4de1dcbd503c6d2a7a191d3668246c",
+            "quoteSha256": "ea912df53116d517e7b316d84361b3aaaaa85ddd0c177fe3fb1f42239c1f0b10"
+          }
+        ],
+        "format": {
+          "maxWhitespaceWords": 180,
+          "excludedBulletSuffixSha256": "a852f0a7bf565d7d166241956f82353ff9bd45ad4cbf6d346ecd44cbfc6cc0f7"
+        }
+      }
+    }
+  ]
+}

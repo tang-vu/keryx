@@ -6383,3 +6383,26 @@ exact-unit and recovery constraints, all supported surface roles and release gat
 Participant currency demand, rate-provider/fee policies, tiny-amount feasibility,
 browser-compatible custody and bounded testnet proof remain unaccepted. This records
 the evaluation boundary, not an accepted economic policy or enabled EURC product.
+
+## Grade retained deliverable structure separately from semantic acceptance — 2026-10-09
+
+Issue #287 needs one inspectable rubric rather than interpreting each successful
+request or coverage score as a useful answer. Start with a bounded local corpus
+projected from two already retained public MDN/RFC reports. Hash the original
+capture provenance, exact projection, reviewed contract and grader inputs. Count
+requested bullet structure and full-answer whitespace tokens deterministically;
+compare the recorded source/item/version/quote bindings without reissuing their
+runtime evidence or payment roles.
+
+Language, factual correctness and semantic completeness remain `UNJUDGED`.
+A structural pass cannot make `deliverableAccepted` true. Keep malformed, missing,
+duplicate or stale inputs closed, preserve the two observed failures, and label
+fixture validation exit 0 separately from contract acceptance. The CLI never calls
+the agent, providers, databases or payment machinery, and changes no saved answer,
+receipt or supported research surface. This evaluation maintenance outcome does
+not bump or deploy a runtime version.
+
+The [initial rubric and corpus](docs/engineering/retained-deliverable-contracts-2026-10-09.md)
+cover single-page structure only. Public scorecard, full failure-class coverage,
+consented private cases, reviewed semantic/language criteria, agreed regression
+margins and bounded exact-release live acceptance remain issue #287 gates.
