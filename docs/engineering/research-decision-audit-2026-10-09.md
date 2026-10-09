@@ -26,6 +26,8 @@ a JSON result. Errors omit private input and paths. Unix no-follow is used when
 available. Collections are limited to2000rows; identifiers to256characters;
 policy identifiers are tighter. Contract fields are checked at runtime without
 coercing object IDs, string booleans or fractional-micro amounts.
+Legacy Number amounts above safe integer micro precision and negative zero are
+refused; canonical authoritative integer strings retain their separate30digit bound.
 
 `record` emits a record/hash pair; save only its `record` member as the verification
 file and retain the hash separately. `verify` requires that hash and exits1 on

@@ -31,6 +31,10 @@ describe("exact audit amounts", () => {
     expect(decimalMicros(0.0000005)).toBeNull(); expect(decimalMicros(0.1 + 0.2)).toBeNull();
     expect(decimalMicros(NaN)).toBeNull(); expect(() => micros("01")).toThrow(); expect(() => micros("-1")).toThrow();
   });
+  it("refuses unsafe legacy numeric money while retaining authoritative huge integer strings", () => {
+    expect(decimalMicros(9007199254.740993)).toBeNull(); expect(decimalMicros(-0)).toBeNull();
+    expect(micros("9007199254740993").toString()).toBe("9007199254740993");
+  });
 });
 describe("cohort/funding boundaries (#249)", () => {
   it("keeps unknown history conservative regardless of execution channel", () => {

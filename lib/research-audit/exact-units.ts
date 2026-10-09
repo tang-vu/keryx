@@ -6,7 +6,7 @@ export function micros(value: string): bigint {
 
 /** Legacy decimal fields are admissible only when their printed value is exactly representable. */
 export function decimalMicros(value: number): string | null {
-  if (!Number.isFinite(value) || value < 0) return null;
+  if (!Number.isFinite(value) || value < 0 || Object.is(value, -0)) return null;
   const match = /^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/.exec(String(value));
   if (!match) return null;
   const digits = match[1] + (match[2] ?? "");
@@ -20,7 +20,7 @@ export function decimalMicros(value: number): string | null {
     result /= divisor;
   }
   const exact = result.toString();
-  return exact.length <= 30 ? exact : null;
+  return result <= BigInt(Number.MAX_SAFE_INTEGER) ? exact : null;
 }
 
 export function boundedRatio(numerator: number, denominator: number): number | null {
