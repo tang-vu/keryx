@@ -2,6 +2,8 @@ import { hasKnownSyntheticFingerprint } from "./evidence-provenance";
 import { z } from "zod";
 import { researchExports } from "./surface-result";
 import { sourceClaimReceiptSchema } from "../sources/public-source-claim";
+import { bibliographyFromCheckedReceipt } from "./bibliographic-task-result";
+import { paperReferencesCslJson } from "../papers/reference-export";
 
 const text = z.string().max(4096);
 const scholarly = z.object({
@@ -43,4 +45,13 @@ export function exportsFromCheckedReceipt(receipt: unknown) {
     claimIndex: row.claimIndex, claim: row.claim, coverage: 0, coveredBy: [] as string[] })),
     evidence: payload.claims === undefined ? undefined : records };
   return researchExports(input);
+}
+
+/** Separate unread metadata role; call only after the same receipt integrity and
+ * original task binding checks. Never inject bibliography papers into citations. */
+export function bibliographyExportsFromCheckedReceipt(receipt: unknown) {
+  const bibliography = bibliographyFromCheckedReceipt(receipt);
+  if (!bibliography) return;
+  return { ...bibliography.bibliographyExports,
+    cslJson: paperReferencesCslJson(bibliography.record.paper ? [bibliography.record.paper] : []) };
 }

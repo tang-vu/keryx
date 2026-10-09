@@ -14,6 +14,10 @@ import { authorizationWithNonce, BUYER_GATEWAY, BUYER_NETWORK, BUYER_USDC } from
 import { buyerJobId } from "../buyer/policy";
 import { createOperatorTask, formatOperatorBrief, operatorTaskStatus, readOperatorResult, readOperatorResearchResult, resumeOperatorTask } from "./task";
 import { createLegacyOperatorTask } from "../../test-support/legacy-operator-task";
+import { readBibliographicTask, type BibliographicTaskResult } from "../research/bibliographic-task";
+import { recognizeBibliographicTask } from "../research/bibliographic-task-request";
+import { frenchArxivTask } from "../research/fixtures/bibliographic-task-questions";
+import { formatOperatorResearchExport } from "./result";
 
 const roots: string[] = [];
 const payer = `0x${"1".repeat(40)}`;
@@ -127,15 +131,15 @@ it("retains an interrupted buyer directory as incomplete, without inferring fail
   await expect(resumeOperatorTask(task, vi.fn() as never)).rejects.toThrow("No complete buyer journal");
 });
 
-async function completedRecovery(task: string, answer: string, citations: unknown[] = []) {
+async function completedRecovery(task: string, answer: string, citations: unknown[] = [], bibliography?: BibliographicTaskResult) {
   const intent = await readBuyerJournal(join(task, "buyer"));
   const job = { queryId: intent.queryId, status: "completed", answer, researchPackage: a2aResearchPackage("quick"),
     pricing: { totalPriceUsdc: 0.05, serviceFeeUsdc: 0.02, creatorBudgetUsdc: 0.03,
       settledCreatorSpendUsdc: 0.01, pendingCreatorSpendUsdc: 0.005, unusedCreatorReserveUsdc: 0.015 } };
   const payload = { schema: RESEARCH_RECEIPT_SCHEMA,
-    dispatch: { id: intent.queryId, question: request.question, answer, answerSha256: sha256(answer),
-      budgetUsdc: request.budget, researchMode: "quick" },
-    citations, settlement: { mode: "real", ledgerCompleteness: "complete", settledCreatorUsdc: 0.01,
+    dispatch: { id: intent.queryId, question: intent.request.question, answer, answerSha256: sha256(answer),
+      budgetUsdc: intent.request.budget, researchMode: "quick" },
+    citations, ...(bibliography ? { bibliography } : {}), settlement: { mode: "real", ledgerCompleteness: "complete", settledCreatorUsdc: 0.01,
       pendingCreatorUsdc: 0.005, simulatedCreatorUsdc: 0 } };
   const digest = researchReceiptDigest(payload);
   const receipt = { payload, integrity: { algorithm: "sha256", canonicalization: RESEARCH_RECEIPT_CANONICALIZATION,
@@ -249,8 +253,45 @@ it("CLI exports each requested format to --file and preserves overwrite refusal"
   const invalid = join(root, "invalid.txt");
   await expect(execute(process.execPath, [...command, "--file", invalid, "--format", "invalid"])).rejects.toThrow();
   await expect(readFile(invalid)).rejects.toMatchObject({ code: "ENOENT" });
+  for (const format of ["bibliography-bibtex", "bibliography-ris", "bibliography-csl-json"] as const) {
+    expect(() => formatOperatorResearchExport(enriched!, format)).toThrow("No reusable bibliography metadata");
+    const target = join(root, `${format}.txt`);
+    await expect(execute(process.execPath, [...command, "--file", target, "--format", format])).rejects.toThrow();
+    await expect(readFile(target)).rejects.toMatchObject({ code: "ENOENT" });
+  }
   const snapshot = JSON.parse(await readFile(join(task, "result.json"), "utf8"));
   await writeFile(join(task, "buyer", snapshot.receiptFile), "{}");
   await expect(readOperatorResult(task)).rejects.toThrow();
+  await expect(readOperatorResearchResult(task)).rejects.toThrow();
+}, 30000);
+
+it("exports a saved bibliography-only task explicitly while preserving cited exports, receipt bytes and raw/native inspection", async () => {
+  const { task, root } = await fixture(), requested = { ...request, question: frenchArxivTask };
+  await createLegacyOperatorTask(task, { request: requested, payee, maxTotalMicros: "100000" });
+  await buyerJournal(task, { request: requested });
+  const body = await readFile(new URL("../research/fixtures/arxiv-2005.11401v4-bibliography.html", import.meta.url), "utf8");
+  const bibliography = await readBibliographicTask(recognizeBibliographicTask(frenchArxivTask)!, { reader: async url => ({
+    requestedUrl: url, finalUrl: url, observedAt: "2026-10-01T00:00:00Z", mediaType: "text/html", body, truncated: false,
+  }) });
+  await completedRecovery(task, bibliography.text, [], bibliography);
+  const snapshotBytes = await readFile(join(task, "result.json"), "utf8"), snapshot = JSON.parse(snapshotBytes);
+  const receiptPath = join(task, "buyer", snapshot.receiptFile), receiptBytes = await readFile(receiptPath, "utf8");
+  const raw = await readOperatorResult(task), checked = await readOperatorResearchResult(task);
+  expect(raw).not.toHaveProperty("bibliographyExports"); expect(raw).not.toHaveProperty("researchExports");
+  expect(checked!.receiptDigest).toBe(raw!.receiptDigest); expect(checked!.authority).toBe(raw!.authority);
+  expect(formatOperatorBrief(checked!)).toBe(formatOperatorBrief(raw!));
+  expect(formatOperatorResearchExport(checked!, "csl-json")).toBe("[]\n");
+  expect(formatOperatorResearchExport(checked!, "bibtex")).toBe(""); expect(formatOperatorResearchExport(checked!, "ris")).toBe("");
+  const execute = promisify(execFile), command = ["--import", "tsx", resolve("scripts/operator.mts"), "brief", "--state", task];
+  for (const [format, expected] of [["bibliography-bibtex", bibliography.bibliographyExports.bibtex.content],
+    ["bibliography-ris", bibliography.bibliographyExports.ris.content], ["bibliography-csl-json", checked!.bibliographyExports!.cslJson.content]] as const) {
+    const target = join(root, `${format}.txt`), args = [...command, "--file", target, "--format", format];
+    await execute(process.execPath, args); expect(await readFile(target, "utf8")).toBe(expected);
+    await expect(execute(process.execPath, args)).rejects.toThrow();
+  }
+  expect(JSON.parse(checked!.bibliographyExports!.cslJson.content)[0]).toMatchObject({ archive_location: "2005.11401v4" });
+  expect(checked!.bibliographyExports!.cslJson.content).toContain("no Keryx read, citation or settlement evidence");
+  expect(await readFile(join(task, "result.json"), "utf8")).toBe(snapshotBytes); expect(await readFile(receiptPath, "utf8")).toBe(receiptBytes);
+  await writeFile(receiptPath, receiptBytes.replace("2005.11401v4", "2005.11401v9"));
   await expect(readOperatorResearchResult(task)).rejects.toThrow();
 }, 30000);

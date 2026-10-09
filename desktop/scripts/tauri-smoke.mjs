@@ -13,6 +13,9 @@ import { a2aResearchPackage } from "../../lib/a2a/research-package-definition.ts
 import { RESEARCH_RECEIPT_CANONICALIZATION, RESEARCH_RECEIPT_SCHEMA } from "../../lib/research-receipt-types.ts";
 import { researchReceiptDigest, sha256 } from "../../lib/research-receipt-integrity.ts";
 import { resumeOperatorTask } from "../../lib/operator/task.ts";
+import { readBibliographicTask } from "../../lib/research/bibliographic-task.ts";
+import { recognizeBibliographicTask } from "../../lib/research/bibliographic-task-request.ts";
+import { frenchArxivTask } from "../../lib/research/fixtures/bibliographic-task-questions.ts";
 
 if (process.platform !== "win32" || !process.argv[2]) throw Error("Pass one packaged Windows Tauri executable");
 const exe = resolve(process.argv[2]);
@@ -28,7 +31,11 @@ const configPath = join(temporary, "smoke.json");
 await mkdir(parent);
 await writeFile(reference, "# Local acceptance reference\nNo upload or payment.\n");
 
-function fixture(answer, intent) {
+async function fixture(answer, intent) {
+  const body = await readFile(new URL("../../lib/research/fixtures/arxiv-2005.11401v4-bibliography.html", import.meta.url), "utf8");
+  const bibliography = await readBibliographicTask(recognizeBibliographicTask(intent.request.question), { reader: async url => ({
+    requestedUrl: url, finalUrl: url, observedAt: "2026-10-01T00:00:00Z", mediaType: "text/html", body, truncated: false,
+  }) });
   const job = { queryId: intent.queryId, status: "completed", answer,
     researchPackage: a2aResearchPackage(intent.request.researchMode),
     pricing: { totalPriceUsdc: 0.05, serviceFeeUsdc: 0.04, creatorBudgetUsdc: 0.01,
@@ -36,7 +43,7 @@ function fixture(answer, intent) {
   const payload = { schema: RESEARCH_RECEIPT_SCHEMA,
     dispatch: { id: intent.queryId, question: intent.request.question, answer,
       answerSha256: sha256(answer), budgetUsdc: intent.request.budget, researchMode: intent.request.researchMode },
-    citations: [{ marker: "[1]", sourceId: "synthetic", sourceName: "Synthetic acceptance source",
+    bibliography, citations: [{ marker: "[1]", sourceId: "synthetic", sourceName: "Synthetic acceptance source",
       itemId: "article", itemTitle: "Synthetic article", itemUrl: "https://example.org/article", contentVersion: "v1", weight: 1, rewardPlannedUsdc: 0.005, rationale: "read" }],
     claims: [{ claimIndex: 0, claim: "Synthetic claim", evidence: [{ marker: "[1]", sourceId: "synthetic", sourceName: "Synthetic acceptance source", itemId: "article", contentVersion: "v1", quote: "Synthetic bounded evidence", support: 0.8, qualifiesForAnswer: true, qualifiesForReward: true }] }],
     settlement: { mode: "real", ledgerCompleteness: "complete", settledCreatorUsdc: 0.005,
@@ -57,7 +64,7 @@ async function createSyntheticSavedResult(taskDirectory) {
   await createBuyerJournal(buyerDirectory, { schema: "keryx-buyer-intent-v1", request: task.request,
     requirement, authorization, queryId: buyerJobId(authorization) });
   const intent = await readBuyerJournal(buyerDirectory);
-  const completed = fixture("Synthetic acceptance answer [1]", intent);
+  const completed = await fixture("Synthetic acceptance answer [1]", intent);
   const recover = async (buyer) => resumeResearch(buyer, async (url, init) => {
     if (init?.method && init.method !== "GET") throw Error("Non-GET acceptance request");
     if (url === `https://keryx.cc/api/agent/ask?queryId=${intent.queryId}`) return Response.json(completed.job);
@@ -256,13 +263,13 @@ try {
   if (!canonicalWorkspace.startsWith(canonicalParent + sep)) {
     throw Error("Workspace was created outside synthetic parent");
   }
-  await page.getByRole("textbox", { name: "Research question" }).fill("Synthetic Tauri IPC question");
+  await page.getByRole("textbox", { name: "Research question" }).fill(frenchArxivTask);
   await page.getByPlaceholder("0x... independently verified").fill("0x1111111111111111111111111111111111111111");
   await page.getByRole("button", { name: /Save task/ }).click();
-  await page.getByText("Synthetic Tauri IPC question", { exact: true }).last().waitFor();
+  await page.getByText(frenchArxivTask, { exact: true }).last().waitFor();
   await page.locator(".activity").waitFor({ state: "hidden" });
   const created = (await page.evaluate(() => window.keryxDesktop.refresh())).tasks[0];
-  if (created.question !== "Synthetic Tauri IPC question") throw Error("Task create IPC returned wrong task");
+  if (created.question !== frenchArxivTask) throw Error("Task create IPC returned wrong task");
   const taskDirectory = join(view.path, created.directoryName);
   const persisted = JSON.parse(await readFile(join(taskDirectory, "task.json"), "utf8"));
   if (persisted.request.question !== created.question) throw Error("Native-created task bytes differ from UI");
@@ -289,7 +296,8 @@ try {
     try { await window.keryxDesktop.exportTask(handle); return false; } catch { return true; }
   }, created.handle);
   if (!overwriteRejected) throw Error("Status export overwrote an existing destination");
-  for (const [format, expected] of [["bibtex", "@misc"], ["ris", "TY  - WEB"], ["csl-json", '"type": "webpage"'], ["evidence-csv", "Synthetic bounded evidence"]]) {
+  for (const [format, expected] of [["bibtex", "@misc"], ["ris", "TY  - WEB"], ["csl-json", '"type": "webpage"'], ["evidence-csv", "Synthetic bounded evidence"],
+    ["bibliography-bibtex", "eprint = {2005.11401v4}"], ["bibliography-ris", "AN  - arXiv:2005.11401v4"], ["bibliography-csl-json", '"archive_location": "2005.11401v4"']]) {
     await unlink(briefPath);
     if (!await page.evaluate(({ handle, format }) => window.keryxDesktop.exportBrief(handle, format), { handle: created.handle, format })) throw Error(`${format} export canceled`);
     if (!(await readFile(briefPath, "utf8")).includes(expected)) throw Error(`${format} lost checked receipt content`);
@@ -314,7 +322,7 @@ try {
   active = await launch({ openWorkspace: view.path });
   const restored = await active.page.evaluate(() => window.keryxDesktop.refresh());
   if (restored.tasks.length !== 1 || restored.tasks[0].question !== created.question) throw Error("Workspace did not reopen after app restart");
-  for (const format of ["brief", "bibtex", "ris", "csl-json", "evidence-csv"]) {
+  for (const format of ["brief", "bibtex", "ris", "csl-json", "evidence-csv", "bibliography-bibtex", "bibliography-ris", "bibliography-csl-json"]) {
     if (await active.page.evaluate(({ handle, format }) => window.keryxDesktop.exportBrief(handle, format), { handle: created.handle, format })) throw Error(`${format} cancellation wrote an export`);
   }
   await active.page.screenshot({ path: screenshotPath });

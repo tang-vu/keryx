@@ -1,4 +1,4 @@
-import { exportsFromCheckedReceipt } from "../research/receipt-exports";
+import { bibliographyExportsFromCheckedReceipt, exportsFromCheckedReceipt } from "../research/receipt-exports";
 import { open, lstat, realpath, rename, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -10,6 +10,7 @@ import { verifyBuyerJob, verifyBuyerReceipt } from "../buyer/verify-result";
 import type { BuyerRequest } from "../buyer/protocol";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { sha256 } from "../research-receipt-integrity";
+import { checkedBibliographyExportErrors } from "../../locales/en/checked-bibliography-exports";
 
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
 const snapshotSchema = z.object({
@@ -117,7 +118,10 @@ export async function readSavedOperatorResult(directory: string, context: Contex
  * This TypeScript-owned presentation domain does not change native inspection authority. */
 export async function readSavedOperatorResearchResult(directory: string, context: Context) {
   const checked = await readCheckedSnapshot(directory, context);
-  return checked ? { ...checked.result, researchExports: exportsFromCheckedReceipt(checked.receipt) } : null;
+  if (!checked) return null;
+  const bibliographyExports = bibliographyExportsFromCheckedReceipt(checked.receipt);
+  return { ...checked.result, researchExports: exportsFromCheckedReceipt(checked.receipt),
+    ...(bibliographyExports ? { bibliographyExports } : {}) };
 }
 
 export async function inspectSavedOperatorResult(directory: string) {
@@ -177,12 +181,19 @@ export function privateOperatorBrief(result: NonNullable<Awaited<ReturnType<type
   return lines.join("\n");
 }
 
-export const operatorResearchExportFormat = z.enum(["brief", "bibtex", "ris", "csl-json", "evidence-csv"]);
+export const operatorResearchExportFormat = z.enum(["brief", "bibtex", "ris", "csl-json", "evidence-csv",
+  "bibliography-bibtex", "bibliography-ris", "bibliography-csl-json"]);
 export type OperatorResearchExportFormat = z.infer<typeof operatorResearchExportFormat>;
 
 export function formatOperatorResearchExport(result: NonNullable<Awaited<ReturnType<typeof readSavedOperatorResult>>> | NonNullable<Awaited<ReturnType<typeof readSavedOperatorResearchResult>>>, format: unknown = "brief") {
   const selected = operatorResearchExportFormat.parse(format);
   if (selected === "brief") return privateOperatorBrief(result);
+  if (selected === "bibliography-bibtex" || selected === "bibliography-ris" || selected === "bibliography-csl-json") {
+    if (!("bibliographyExports" in result) || !result.bibliographyExports?.bibtex.count)
+      throw new Error(checkedBibliographyExportErrors.unavailable);
+    if (selected === "bibliography-csl-json") return result.bibliographyExports.cslJson.content;
+    return result.bibliographyExports[selected === "bibliography-bibtex" ? "bibtex" : "ris"].content;
+  }
   if (!("researchExports" in result)) throw new Error("Research export requires the checked application projection");
   if (selected === "evidence-csv") return result.researchExports.evidenceCsv;
   if (selected === "csl-json") return result.researchExports.cslJson.content;

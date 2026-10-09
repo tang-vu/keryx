@@ -45,6 +45,7 @@ async function openPage(scenario, width, height) {
     let activeView = structuredClone(view);
     const initial = scenario === "empty" || scenario === "startup-error" ? null : view;
     window.createdInputs = [];
+    window.exportFormats = [];
     window.keryxDesktop = {
       refresh: async () => { if (scenario === "startup-error") throw Error("Local helper unavailable"); return initial ? activeView : null; },
       chooseWorkspace: async () => view, createWorkspace: async () => view,
@@ -57,7 +58,7 @@ async function openPage(scenario, width, height) {
       },
       resumeTask: () => scenario === "pending-resume" ? new Promise(() => {}) : Promise.reject(Error("Offline UI fixture")),
       readResult: () => scenario === "pending-result" ? new Promise(() => {}) : Promise.resolve(result),
-      exportBrief: async () => true, exportTask: async () => true,
+      exportBrief: async (_handle, format = "brief") => { window.exportFormats.push(format); return true; }, exportTask: async () => true,
       importReference: async () => view.references[0],
     };
   }, { scenario, view, result });
@@ -97,6 +98,11 @@ try {
     await page.screenshot({ path: screenshots.at(-1), fullPage: true });
     await page.getByRole("button", { name: /How does Arc settle/ }).click();
     await page.getByText("A cited result grounded in the saved receipt").waitFor();
+    for (const [label, format] of [["Export BibTeX", "bibtex"], ["Export RIS", "ris"], ["Export CSL-JSON", "csl-json"],
+      ["Export bibliography BibTeX", "bibliography-bibtex"], ["Export bibliography RIS", "bibliography-ris"], ["Export bibliography CSL-JSON", "bibliography-csl-json"]]) {
+      await page.getByRole("button", { name: label, exact: true }).click();
+      await page.waitForFunction(expected => window.exportFormats.at(-1) === expected, format);
+    }
     if (await page.getByText("PINNED SELLER PAYEE").count() < 1) throw Error("Payee not visible in task detail");
     await page.locator(".handoff summary").click();
     if (!(await page.locator(".handoff pre").textContent()).includes("$env:KERYX_NETWORK='arcTestnet'")) throw Error("Saved testnet handoff was changed to mainnet");
