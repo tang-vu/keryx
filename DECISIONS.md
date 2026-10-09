@@ -6491,3 +6491,18 @@ exact-unit and recovery constraints, all supported surface roles and release gat
 Participant currency demand, rate-provider/fee policies, tiny-amount feasibility,
 browser-compatible custody and bounded testnet proof remain unaccepted. This records
 the evaluation boundary, not an accepted economic policy or enabled EURC product.
+
+## Keep unsupported output requests above inferred scaffold language — 2026-10-09
+
+The Spanish NASA retest exposed shared Spanish/Portuguese vocabulary in ordinary
+presentation inference. Require distinctive Portuguese cues; a positive explicit
+output request supersedes inferred cues and accumulated context. Unsupported
+directives select the existing English labels while leaving statement-language
+guidance unset, rather than imposing a different generation language. Preserve
+last-positive precedence and negation, with a bounded parser rather than a general
+language detector. Reviewed statement and excerpt bytes are never translated by
+finalization, and private originals retain their existing presentation path.
+
+The [surface and release record](docs/engineering/output-language-2026-10-09.md)
+keeps broader issue276 catalogs, preferences and human-reviewed localization open.
+This repairs wrong Portuguese selection without claiming full Spanish delivery.

@@ -14,29 +14,33 @@ const counts: Record<string, number> = {
 };
 
 function negated(text: string, index: number): boolean {
-  return /(?:do not|don't|not|não|nao|không)\s+(?:\S+\s+){0,2}$/u.test(text.slice(Math.max(0, index - 45), index));
+  return /(?<![\p{L}\p{N}_])(?:do not|don't|not|não|nao|không|no|nunca|sin|pas|sans|nicht)\s+(?:[^\s.,;:!?]+\s+){0,2}$/u.test(text.slice(Math.max(0, index - 45), index));
 }
 
 /** Finite positive language/count instructions; ambiguous counts retain target layout. */
 export function answerPresentation(question: string): AnswerPresentation {
   const text = question.slice(0, 30_000).normalize("NFC").toLowerCase();
-  const explicit = /(?<![\p{L}\p{N}_])(?:(?:answer|respond|reply|write)\s+(?:only\s+)?(?:in|using)\s+((?:brazilian\s+)?portuguese|[\p{L}-]+)|(?:trả lời|viết|đáp)\s+(?:bằng\s+)?tiếng\s+(bồ đào nha|[\p{L}-]+)|(?:responda em|escreva em)\s+(português(?:\s+(?:brasileiro|do brasil))?|[\p{L}-]+)|em\s+(português(?:\s+(?:brasileiro|do brasil))?|inglês|vietnamita|francês|espanhol|alemão|japonês|chinês))(?![\p{L}\p{N}_])/gu;
+  const explicit = /(?<![\p{L}\p{N}_])(?:(?:answer|respond|reply|write)\s+(?:only\s+)?(?:in|using)\s+((?:brazilian\s+)?portuguese|[\p{L}-]+)|(?:trả lời|viết|đáp)\s+(?:bằng\s+)?tiếng\s+(bồ đào nha|[\p{L}-]+)|(?:responda em|escreva em)\s+(português(?:\s+(?:brasileiro|do brasil))?|[\p{L}-]+)|em\s+(português(?:\s+(?:brasileiro|do brasil))?|inglês|vietnamita|francês|espanhol|alemão|japonês|chinês)|(?:responda|responde|escriba|escribe)\s+(?:solo\s+)?en\s+(español)|en\s+(español|français)(?=\s*[,;:])|(?:antworte\s+(?:bitte\s+)?)?auf\s+(deutsch))(?![\p{L}\p{N}_])/gu;
   const requests = [...text.matchAll(explicit)];
   // Cue detection must not treat a negated language directive as a positive request.
   const cues = text.replace(explicit, " ");
   let language: AnswerPresentation["language"] = researchResponseLanguage(cues);
-  if (/\b(?:sou|preciso|escreva|explique|responda)\b/u.test(cues) &&
+  // "explique", "responda", "sobre" and "para" are also Spanish cues.
+  if (/\b(?:sou|preciso|escreva)\b/u.test(cues) &&
       /\b(?:uma|para|sobre|entre)\b/u.test(cues)) language = "pt";
-  const defaultLanguage = language;
   let requestedLanguage: AnswerPresentation["requestedLanguage"];
   for (const request of requests) {
     if (negated(text, request.index!)) continue;
-    const name = request[1] ?? request[2] ?? request[3] ?? request[4];
+    // New native forms are directives only at a clause boundary, not page titles
+    // or quoted language mentions inside the caller's substantive question.
+    if (request.slice(5).some(value => value !== undefined) &&
+        !/(?:^|[.!?;:\r\n])\s*$/u.test(text.slice(0, request.index!))) continue;
+    const name = request.slice(1).find(value => value !== undefined)!;
     requestedLanguage = /^(?:vietnamese|việt|vietnamita)$/u.test(name) ? "vi"
       : /^(?:(?:brazilian )?portuguese|português(?: brasileiro| do brasil)?|bồ đào nha)$/u.test(name) ? "pt"
       : /^(?:english|anh|inglês)$/u.test(name) ? "en" : undefined;
-    // A later unsupported language request must not retain an earlier forced language.
-    language = requestedLanguage ?? defaultLanguage;
+    // Unsupported requests use neutral labels without forcing statement translation.
+    language = requestedLanguage ?? "en";
   }
   const numbers = Object.keys(counts).join("|");
   const pattern = new RegExp(`\\b([1-8]|${numbers})\\s+(?:(?:short|brief|concise|curtos?|breves?|ngắn)\\s+)?(?:bullets?|bullet points?|tópicos?|pontos?|gạch đầu dòng)(?:\\s+(?:curtos?|breves?|ngắn))?(?=$|[\\s.,;:!?])`, "gu");

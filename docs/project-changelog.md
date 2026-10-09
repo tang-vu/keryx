@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Ordinary answer language selection (2026-10-09, source candidate)
+
+- Avoid choosing Portuguese from words shared with Spanish. Positive original
+  output-language requests take precedence over inferred and accumulated-context
+  cues; unsupported requests use English scaffold labels without forcing statement
+  translation. Negated directives preserve the preceding positive request.
+- Keep exact reviewed statements, source excerpts, receipts and private originals.
+  Shared answer consumers inherit the fix; bot wrappers, emails, preferences and
+  additional catalogs remain open in issue276. Coordinated CI/review, deployment
+  and exact-source acceptance are required before claiming delivery.
+
 ### Coordinated research surfaces (2026-10-09, v0.27.45 candidate)
 
 - Attribute new API and paid A2A research to independently verified owners and

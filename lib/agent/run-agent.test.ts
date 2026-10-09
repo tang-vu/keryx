@@ -3264,24 +3264,32 @@ describe("omitted-assertion completion boundary", () => {
     expect(receipt.payload.dispatch.answer).toBe(run.answer);
   });
 
-  it("delivers ordinary Portuguese bullets consistently through report, API, MCP and A2A results", async () => {
+  it.each([
+    { label: "Portuguese", question: "Earlier context: Answer in English in four short bullets about approval identity.",
+      originalQuestion: "Answer in Portuguese in one short bullet about approval identity.",
+      presentation: { language: "pt", requestedLanguage: "pt", requestedBulletCount: 1 },
+      statement: "A aprovação está vinculada à identidade canônica da ação.", quoteLabel: "Texto da fonte" },
+    { label: "unsupported Spanish with Portuguese context", question: "Sou professora e preciso de uma explicação. Write in Portuguese in four short bullets about approval identity.",
+      originalQuestion: "En español, explique sobre la identidad de aprobación. Write one short bullet.",
+      presentation: { language: "en", requestedBulletCount: 1 },
+      statement: "La aprobación está vinculada a la identidad canónica de la acción.", quoteLabel: "Source text" },
+  ])("delivers $label consistently through report, API, MCP and A2A results", async fixture => {
     const quote = "The protocol binds approval to canonical action identity.";
-    const statement = "A aprovação está vinculada à identidade canônica da ação.";
+    const statement = fixture.statement;
     const item: SourceItem = { id: "presentation-item", sourceId: "presentation-source", title: "Synthetic article",
       link: "https://owned.example/presentation", summary: "Approval protocol", content: quote };
     const source = makeSource({ id: item.sourceId, fetchPrice: 0.004 });
     const engine = fakeEngine({ synthesize: input => {
-      expect(input.answerPresentation).toEqual({ language: "pt", requestedLanguage: "pt", requestedBulletCount: 1 });
+      expect(input.answerPresentation).toEqual(fixture.presentation);
       return { answer: "Unsupported raw draft [S1]", citedMarkers: ["S1"],
         evidence: [{ claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport: 0.9 }] };
     } });
     engine.decompose = async () => ["Approval identity"];
     const gateway = fakeGateway(), effects = isolatedTestEffects();
-    const run = await collectRun({ question: "Earlier context: Answer in English in four short bullets about approval identity.",
-      originalQuestion: "Answer in Portuguese in one short bullet about approval identity.", budget: 0.03,
+    const run = await collectRun({ question: fixture.question, originalQuestion: fixture.originalQuestion, budget: 0.03,
       executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } },
       { deps: { ...deps([source], engine, gateway, { items: { [source.id]: [item] } }), effects } });
-    expect(run.answer).toContain(`- ${statement} [S1] Texto da fonte: “${quote}”`);
+    expect(run.answer).toContain(`- ${statement} [S1] ${fixture.quoteLabel}: “${quote}”`);
     expect(run.answer).not.toContain("Unsupported raw draft");
     expect(gateway.citationCalls).toHaveLength(1);
     expect(run.evidence).toHaveLength(1);
