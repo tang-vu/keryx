@@ -60,8 +60,8 @@ show their observed sample sizes; completion/duration/feedback are no substitute
 
 Money uses exact micro-USDC strings from deduplicated, identified real-settled
 rows with settlement references on the selected network. Pending/simulated/
-failed/unproved legacy/fractional-micro rows are excluded. Funding subdivisions
-Zero-value rows cannot establish a paying run or paid creator and are excluded.
+failed/unproved legacy/fractional-micro rows are excluded. Zero-value rows cannot
+establish a paying run or paid creator and are excluded. Funding subdivisions
 remain separate from user cohort. Creators are distinct fetch/citation payees,
 not source names or inbound recipients. Conflicting duplicate identities refuse.
 The history helper excludes scripted runs by default and supports outside-only;
