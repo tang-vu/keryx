@@ -5,6 +5,7 @@ import { profileWallet } from "./private-profile";
 import { authorizationUrl, exchangeIdentity, type ProviderConfiguration } from "./identity-provider";
 import { ProfileIdentityError, identityProviderSchema, identityRecordSchema, identitySnapshotSchema, requireProfileIdentities, type IdentityProvider, type ProviderIdentity } from "./verified-identities";
 import { flowChallenge, identityCookie, identityCookieValue, newIdentityFlow, readIdentityFlow, sealIdentityFlow, stateMatches } from "./identity-flow";
+import { emptyIdentityRequestBody } from "./identity-request-body";
 
 interface Context { db: KeryxDB; wallet: string; currentId: string }
 interface Dependencies {
@@ -82,7 +83,7 @@ export function createIdentityRoutes(deps: Dependencies) {
     async START(request: Request, providerValue: string): Promise<Response> {
       try {
         const parsed = identityProviderSchema.safeParse(providerValue);
-        if (!parsed.success || new URL(request.url).search || request.body) return safeResponse(authJson({ error: "invalid_identity_request" }, 400));
+        if (!parsed.success || new URL(request.url).search || !await emptyIdentityRequestBody(request)) return safeResponse(authJson({ error: "invalid_identity_request" }, 400));
         const context = await session(request, true);
         if (context instanceof Response) return safeResponse(context);
         const store = requireProfileIdentities(context.db);
@@ -101,7 +102,7 @@ export function createIdentityRoutes(deps: Dependencies) {
     async DELETE(request: Request, providerValue: string): Promise<Response> {
       try {
         const provider = identityProviderSchema.safeParse(providerValue);
-        if (!provider.success || new URL(request.url).search || request.body) return safeResponse(authJson({ error: "invalid_identity_request" }, 400));
+        if (!provider.success || new URL(request.url).search || !await emptyIdentityRequestBody(request)) return safeResponse(authJson({ error: "invalid_identity_request" }, 400));
         const context = await session(request, true);
         if (context instanceof Response) return safeResponse(context);
         await requireProfileIdentities(context.db).unlink(context.wallet, provider.data);
