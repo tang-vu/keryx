@@ -1,5 +1,13 @@
 # Keryx MCP
 
+Source candidate: `history_read` reads bounded ordinary current-store summaries for
+the verified `KERYX_API_KEY` wallet with explicit `history:read`. It needs no payment
+signer and accepts no wallet or network selector. Search is literal and case sensitive;
+cursor/filter binding and recorded funding remain explicit. Sealed storage and
+unapplied RPC return unavailable. See the
+[scope and release gates](https://github.com/tang-vu/keryx/blob/main/docs/engineering/personal-history-read-2026-10-09.md).
+This note does not claim publication or deployed support.
+
 Candidate 0.4.9 validates paid questions against the shared API's 2000-character
 limit before loading custody or entering funding. `ask_keryx` advertises 3–2000
 characters after trimming, using the server's JavaScript string-length convention.
@@ -83,6 +91,22 @@ codex mcp add keryx --url https://keryx.cc/mcp
 See the repository's `docs/remote-mcp.md` for the remote trust model.
 
 ## Local stdio tools
+
+Source candidate: `evidence_draft(draft)` assembles private manual claim assessments
+and related-work quotation themes from caller-retained report excerpts and saved
+Include paper records. This is a local transformation: no HTTP/model/wallet/DB call,
+research purchase or reward. Imported report origin and semantic support remain
+unverified; names/timestamps identify user assertions only. MCP clients may retain
+private tool messages. Use the [shared contract and boundaries](../docs/evidence-drafts.md).
+Coordinated source/version, packaging and publication gates remain open; this
+paragraph does not claim that installed clients already have the tool.
+
+The issue265 source candidate adds `profile_identities_read()` for an explicit
+`profile:read` key. It reads private dated ORCID/GitHub account-control links only;
+it does not start OAuth, unlink an individual identity, research or pay. Complete
+provider consent/individual unlink in the signed-in hosted profile page. Current
+sealed production remains unavailable; combined package publication, hosted
+activation and installed-client acceptance are separate gates.
 
 Source capability: `profile_read()` and `profile_update(profile)` use an explicitly
 profile-scoped `KERYX_API_KEY` to the selected HTTPS deployment. Profile ownership

@@ -52,10 +52,14 @@ describe("research surface parity", () => {
     run.bibliography = await readBibliographicTask(recognizeBibliographicTask(frenchArxivTask)!, { reader: async url => ({
       requestedUrl: url, finalUrl: url, observedAt: run.createdAt, mediaType: "text/html", body, truncated: false,
     }) });
+    // Historical archives retain their original ordinal BibTeX snapshot even after new exports adopt stable work keys.
+    const legacyBibtex = run.bibliography.bibliographyExports.bibtex.content.replace(/^(@\w+\{)[^,]+,/, "$1keryxPaper1,");
+    run.bibliography.bibliographyExports.bibtex.content = legacyBibtex;
     const beforeRun = JSON.stringify(run), beforeReceipt = JSON.stringify(buildResearchReceipt(run, []));
     const result = surfaceResearch(run);
     expect(result.provenance).toEqual(run.provenance);
     expect(result.bibliography).toEqual(run.bibliography);
+    expect(result.bibliographyExports!.bibtex.content).toBe(legacyBibtex);
     expect(result.bibliography!.bibliographyExports).not.toHaveProperty("cslJson");
     expect(JSON.parse(result.bibliographyExports!.cslJson.content)[0]).toMatchObject({ archive_location: "2005.11401v4" });
     expect(result.bibliographyExports!.cslJson.content).toContain("no Keryx read, citation or settlement evidence");

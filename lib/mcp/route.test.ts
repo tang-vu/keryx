@@ -105,6 +105,7 @@ describe("/mcp", () => {
 
     expect(response.status).toBe(200);
     expect(body.result.tools.map((tool: { name: string }) => tool.name)).toEqual([
+      "evidence_draft",
       "paper_lookup",
       "research",
       "keryx_status",
@@ -112,6 +113,8 @@ describe("/mcp", () => {
       "keryx_operator_status",
       "profile_read",
       "profile_update",
+      "history_read",
+      "profile_identities_read",
     ]);
     expect(body.result.tools.find((tool: { name: string }) => tool.name === "keryx_operator_status").annotations)
       .toEqual(expect.objectContaining({ readOnlyHint: true, destructiveHint: false }));

@@ -11,6 +11,11 @@ import { syntheticFailedOriginal, syntheticFulfilledRun } from "./a2a-fulfillmen
 import { fulfillmentObjectSha256, fulfillmentAuthoritySchema } from "../a2a/failed-original-fulfillment-protocol";
 import { finalizeGroundedAnswer } from "../agent/answer-grounding";
 import type { FulfillmentEvidenceCapability } from "../a2a/fulfillment-supplement-evidence";
+import { canonicalJson } from "../canonical-json";
+import { buildCitationExport } from "../research-citation-export";
+import { evidenceMatrixCsv } from "../research/evidence-matrix";
+import { bibliographicOriginalDeliverable } from "../research/bibliographic-original-text";
+import type { BibliographicOriginalRecord } from "../research/bibliographic-original-types";
 
 const cleanup: Array<() => void> = [];
 afterEach(() => { for (const close of cleanup.splice(0).reverse()) close(); vi.useRealTimers(); });
@@ -26,6 +31,40 @@ async function setup() {
 const getClaim = async (f: Awaited<ReturnType<typeof setup>>) => {
   const claim = await f.db.claimA2aFailedOriginalFulfillment(f.fixture.input); expect(claim).not.toBeNull(); return claim!;
 };
+
+// Historical presentation built from the unchanged pre-CSL export primitives,
+// not the compatibility helper or removal of fields from an actual response.
+async function completedPresentationFixture(withBibliography = false) {
+  const f = await setup(), claim = await getClaim(f), result = syntheticFulfilledRun(claim);
+  const identity = { itemId: "document-one", itemTitle: "Synthetic retained article",
+    itemUrl: "https://example.invalid/document-one", contentVersion: "v1" };
+  Object.assign(result.run.citations[0], identity); Object.assign(result.run.evidence![0], identity);
+  if (withBibliography) {
+    const missing = { state: "missing", reason: "read-unavailable" } as const;
+    const record: BibliographicOriginalRecord = { scope: "metadata-only",
+      requested: { scope: "metadata-only", language: "en", target: { kind: "arxiv", id: "2005.11401v4" } },
+      fields: { title: missing, firstAuthor: missing, identifier: missing, year: missing,
+        journal: missing, doi: missing, status: missing }, authors: [], authorCount: 0,
+      authorsIncomplete: true, peerReview: "unknown", failure: "read-unavailable" };
+    result.run.bibliography = { kind: "bibliography", ...bibliographicOriginalDeliverable(record), record,
+      originalQuestionSha256: "ba".repeat(32), requestedFields: ["title", "firstAuthor", "identifier"], requestedAuthorCount: 1 };
+  }
+  result.runSha256 = fulfillmentObjectSha256(result.run);
+  expect(await f.db.completeA2aFailedOriginalFulfillment(result)).toBe(true);
+  const modern = (await f.db.getA2aOrder(result.originalId))!.response!;
+  const legacy = { ...modern, researchExports: {
+    bibtex: buildCitationExport(result.run.citations, "bibtex"), ris: buildCitationExport(result.run.citations, "ris"),
+    evidenceCsv: evidenceMatrixCsv(result.run) },
+    ...(result.run.bibliography ? { bibliographyExports: result.run.bibliography.bibliographyExports } : {}) };
+  return { ...f, claim, result, modern, legacy };
+}
+function retainedRows(native: DatabaseSync) {
+  return canonicalJson(["a2a_orders", "query_runs", "a2a_failed_original_fulfillments",
+    "a2a_fulfillment_completions", "payment_events"].map(table => native.prepare(`SELECT * FROM ${table}`).all()));
+}
+function storeResponse(f: Awaited<ReturnType<typeof completedPresentationFixture>>, response: unknown) {
+  f.native.prepare("UPDATE a2a_orders SET response_data=? WHERE id=?").run(JSON.stringify(response), f.result.originalId);
+}
 
 describe("same failed original native fulfillment", () => {
   it("keeps a v1 native claim readable after its historical fixed expiry", async () => {
@@ -145,6 +184,83 @@ describe("same failed original native fulfillment", () => {
     expect(await f.db.completeA2aFailedOriginalFulfillment(result)).toBe(true);
     f.native.exec("UPDATE a2a_orders SET created_at='2026-10-06T03:23:03.000Z'");
     expect(await f.db.hasA2aFailedOriginalFulfillment(claim.authority)).toBe(false);
+  });
+
+  it.each([false, true])("reads exact modern and pre-CSL native responses without changing rows (bibliography=%s)", async bibliography => {
+    const f = await completedPresentationFixture(bibliography);
+    const exports = f.modern.researchExports as Record<string, unknown>;
+    expect(exports).toHaveProperty("cslJson");
+    expect(f.legacy.researchExports.bibtex.content).toContain("Synthetic retained article");
+    expect(f.legacy.researchExports.ris.content).toContain("Content version: v1");
+    expect(f.legacy.researchExports.evidenceCsv).toContain('"v1","Synthetic exact source quote."');
+    const readonly = new SqliteAdapter(f.file, { readOnly: true }); cleanup.push(() => readonly.close());
+    const modernRows = retainedRows(f.native);
+    expect(await readonly.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(true);
+    expect(retainedRows(f.native)).toBe(modernRows);
+    storeResponse(f, f.legacy); const legacyRows = retainedRows(f.native);
+    expect(await readonly.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(true);
+    expect(retainedRows(f.native)).toBe(legacyRows);
+    expect((await readonly.getA2aOrder(f.result.originalId))!.response).toEqual(f.legacy);
+    expect(await f.db.completeA2aFailedOriginalFulfillment(f.result)).toBe(true);
+    expect(retainedRows(f.native)).toBe(legacyRows); // idempotent completion does not upgrade a saved receipt
+  });
+
+  it.each(["money", "pricing", "answer", "evidence", "version", "unknown", "export-unknown", "bibtex", "ris", "csv", "missing-export"])(
+    "refuses corrupted %s in the complete pre-CSL response without changing native rows", async kind => {
+      const f = await completedPresentationFixture();
+      const response = JSON.parse(JSON.stringify(f.legacy));
+      if (kind === "money") response.totalPricePaid += 0.000001;
+      if (kind === "pricing") response.pricing.unknownAuthority = "forged";
+      if (kind === "answer") response.answer += " An unreviewed assertion.";
+      if (kind === "evidence") response.evidence[0].quote = "Altered quote";
+      if (kind === "version") response.citations[0].contentVersion = "v2";
+      if (kind === "unknown") response.futureReceiptField = "forged";
+      if (kind === "export-unknown") response.researchExports.futureFormat = "forged";
+      if (kind === "bibtex") response.researchExports.bibtex.content += "FORGED";
+      if (kind === "ris") response.researchExports.ris.count += 1;
+      if (kind === "csv") response.researchExports.evidenceCsv += "FORGED";
+      if (kind === "missing-export") delete response.researchExports.ris;
+      storeResponse(f, response); const before = retainedRows(f.native);
+      expect(await f.db.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(false);
+      expect(retainedRows(f.native)).toBe(before);
+    });
+
+  it.each(["null", "malformed", "content", "count", "extra"])("refuses %s present CSL instead of treating it as legacy", async kind => {
+    const f = await completedPresentationFixture(), response = JSON.parse(JSON.stringify(f.modern));
+    if (kind === "null") response.researchExports.cslJson = null;
+    if (kind === "malformed") response.researchExports.cslJson = {};
+    if (kind === "content") response.researchExports.cslJson.content = "[]";
+    if (kind === "count") response.researchExports.cslJson.count = 9;
+    if (kind === "extra") response.researchExports.cslJson.unknown = true;
+    storeResponse(f, response);
+    expect(await f.db.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(false);
+  });
+
+  it.each(["research-only", "bibliography-only", "bibliography-null", "bibliography-corrupt", "nested-bibliography"])(
+    "refuses partial or changed bibliography presentation: %s", async kind => {
+      const f = await completedPresentationFixture(true), response = JSON.parse(JSON.stringify(f.modern));
+      if (kind === "research-only") response.researchExports = f.legacy.researchExports;
+      if (kind === "bibliography-only") response.bibliographyExports = f.legacy.bibliographyExports;
+      if (kind === "bibliography-null") response.bibliographyExports.cslJson = null;
+      if (kind === "bibliography-corrupt") response.bibliographyExports.cslJson.count = 1;
+      if (kind === "nested-bibliography") response.bibliography.text += "FORGED";
+      storeResponse(f, response);
+      expect(await f.db.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(false);
+    });
+
+  it("keeps retained run hashes and original financial/claim evidence mandatory for legacy presentation", async () => {
+    const f = await completedPresentationFixture(); storeResponse(f, f.legacy);
+    const before = retainedRows(f.native);
+    const savedRun = String(f.native.prepare("SELECT data FROM query_runs WHERE id=?").get(f.result.run.id)!.data);
+    const run = JSON.parse(savedRun);
+    run.answer += "FORGED";
+    f.native.prepare("UPDATE query_runs SET data=? WHERE id=?").run(JSON.stringify(run), f.result.run.id);
+    expect(await f.db.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(false);
+    f.native.prepare("UPDATE query_runs SET data=? WHERE id=?").run(savedRun, f.result.run.id);
+    expect(retainedRows(f.native)).toBe(before);
+    expect(await f.db.hasA2aFailedOriginalFulfillment({ ...f.claim.authority, executorCommit: "b".repeat(40) })).toBe(false);
+    f.native.exec("UPDATE payment_events SET amount_usdc=0.031");
+    expect(await f.db.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(false);
   });
 
   it("accepts the real renderer's escaped technical literals while keeping a rejected second-source gap", async () => {

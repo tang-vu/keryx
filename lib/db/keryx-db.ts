@@ -1,5 +1,7 @@
 import type { PublicReference } from "../public-references/catalog";
 import type { PrivateProfilesStore } from "../profiles/private-profile";
+import type { PrivateBibliographiesStore } from "../bibliographies/private-bibliography";
+import type { ProfileIdentitiesStore } from "../profiles/verified-identities";
 import type { SourceClaim, SourceClaimChallenge, IssueSourceClaimChallenge, VerifySourceClaim, BindSourceClaim, UpdateSourceClaimPolicy } from "../sources/public-source-claim";
 /**
  * KeryxDB — persistence interface shared by the SQLite (dev) and Supabase (prod) adapters.
@@ -206,6 +208,17 @@ export interface FeedbackStats {
 export interface KeryxDB {
   /** Additive ordinary-storage domain. Absent on sealed/native adapters; never restore by fallback. */
   readonly privateProfiles?: PrivateProfilesStore;
+  /** Explicit owner-controlled metadata snapshots; absent on unsupported/enrolled adapters. */
+  readonly privateBibliographies?: PrivateBibliographiesStore;
+  /** Bounded ordinary current-store attribution only; absent on sealed/native/archive readers. */
+  readonly personalHistory?: import("../history/personal-history").PersonalHistoryStore;
+  /** Atomic creator gas originals; absent on storage without a reviewed sponsor journal. */
+  admitRegistrationSponsor?(policy: import("../sources/registration-sponsor-protocol").RegistrationSponsorPolicy,
+    row: import("../sources/registration-sponsor-protocol").SponsoredRegistration, now?: number): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
+  getRegistrationSponsor?(input: { wallet: string; id?: string; canonicalUrl?: string }): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration | null>;
+  transitionRegistrationSponsor?(input: import("./registration-sponsor").RegistrationSponsorTransition): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
+  /** Private verified-identity domain; ordinary admitted profiles only, absent on sealed/native storage. */
+  readonly profileIdentities?: ProfileIdentitiesStore;
   /** Supervised SQLite scholarly pilot capability; absent on unsupported backends. */
   getPaperState?(sourceId: string): Promise<import("../scholarly/rights-protocol").PaperState | null>;
   beginPaperEnrollment?(sourceId: string, creator: string): Promise<void>;

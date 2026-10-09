@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { PROFILE_LINK_KINDS, privateProfileInputSchema, privateProfileSnapshotSchema, privateProfileRecordSchema, type PrivateProfileInput, type PrivateProfileSnapshot } from "@/lib/profiles/private-profile";
+import { VerifiedIdentityPanel } from "./verified-identity-panel";
 
 const empty: PrivateProfileInput = { displayName: "", handle: "", bio: "", purpose: "", links: [] };
 export function PrivateProfileView() {
@@ -59,6 +60,7 @@ function ProfileEditor({ wallet }: { wallet: string }) {
           <button type="button" disabled={busy || !snapshot.profile} className="border border-line px-4 py-2 text-sm" onClick={() => { if (window.confirm("Delete your private profile fields and links? Research and payment history will remain.")) void save("DELETE"); }}>Delete profile fields</button></div>
       </form>
       {snapshot.profile?.links.length ? <ul className="space-y-2 text-sm">{snapshot.profile.links.map(link => <li key={link.kind}><a className="break-all underline" href={link.url} target="_blank" rel="noopener noreferrer nofollow">{link.kind}: {link.url}</a></li>)}</ul> : null}
+      <VerifiedIdentityPanel key={wallet} wallet={wallet} saved={!!snapshot.profile} />
       <section className="border-t border-line pt-5"><h2 className="font-serif text-lg">Recorded activity</h2>
         <p className="mt-2 text-sm">First seen: {snapshot.activity.firstSeenAt ?? "Unknown"} · Attributed dispatches: {snapshot.activity.questions}</p>
         <p className="text-sm">Surfaces recorded: {snapshot.activity.surfacesUsed.join(", ") || "None recorded"}</p>

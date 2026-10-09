@@ -20,8 +20,14 @@ import { researchAdmissionError } from "../research/availability-contract";
 import { createPaperLookupHandler, paperLookupToolOptions } from "../papers/lookup";
 import { readHostedPaperLookup } from "../papers/hosted-lookup";
 import { registerProfileTools } from "../profiles/profile-mcp";
-import { requirePrivateProfiles } from "../profiles/private-profile";
+import { registerHistoryTool } from "../history/personal-history-mcp";
+import { requirePersonalHistory } from "../history/personal-history";
+import { readPersonalHistory } from "../history/personal-history-reader";
+import { registerIdentityReadTool } from "../profiles/identity-mcp";
+import { identitySnapshotSchema, requireProfileIdentities } from "../profiles/verified-identities";
+import { profileWallet, requirePrivateProfiles } from "../profiles/private-profile";
 import type { ApiKeyScope } from "../api-key-scopes";
+import { registerEvidenceDraftTool } from "../research/evidence-draft-tool";
 
 export interface RemoteMcpAccess {
   budgetCap: number;
@@ -29,6 +35,7 @@ export interface RemoteMcpAccess {
   actor?: string;
   /** Explicit verified-key scopes only; actor alone never authorizes profile access. */
   profileScopes?: ApiKeyScope[];
+  historyScopes?: ApiKeyScope[];
   /** Self-declared setup URL channel. Telemetry only; never identity or payment authority. */
   clientChannel: McpClientChannel;
   /** Request-bound metadata admission identity and cancellation; never payment authority. */
@@ -97,6 +104,7 @@ export function createRemoteMcpServer(
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
+  registerEvidenceDraftTool(server);
   const profileStore = async (scope: "profile:read" | "profile:write") => {
     if (!access.actor || !access.profileScopes?.includes(scope)) throw new Error("Explicit profile scope required");
     return requirePrivateProfiles(await getDb());
@@ -204,6 +212,17 @@ export function createRemoteMcpServer(
   registerProfileTools(server, {
     read: async () => (await profileStore("profile:read")).get(access.actor!, config.networkId),
     update: async input => ({ profile: await (await profileStore("profile:write")).update(access.actor!, input) }),
+  });
+  registerHistoryTool(server, async input => {
+    if (!access.actor || !access.historyScopes?.includes("history:read")) throw new Error("Explicit history scope required");
+    return readPersonalHistory(requirePersonalHistory(await getDb()), access.actor, config.networkId, input);
+  });
+  registerIdentityReadTool(server, async () => {
+    if (!access.actor || !access.profileScopes?.includes("profile:read")) throw new Error("Explicit profile scope required");
+    const owner = profileWallet(access.actor);
+    const body = identitySnapshotSchema.parse(await requireProfileIdentities(await getDb()).list(owner));
+    if (body.wallet !== owner) throw new Error("Invalid verified identity owner");
+    return body;
   });
   return server;
 }

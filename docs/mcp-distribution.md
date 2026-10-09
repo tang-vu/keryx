@@ -1,5 +1,9 @@
 # MCP package distribution
 
+The [personal history source candidate](engineering/personal-history-read-2026-10-09.md)
+adds key-only `history_read` to both transports. Built fixture acceptance does not
+establish npm publication or adoption of the ordinary SQL read port in production.
+
 ## Coordinated reading release candidate — October 8, 2026
 
 App0.27.36 combines the pending reading/client stack with current main. Hosted

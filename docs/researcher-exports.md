@@ -1,5 +1,10 @@
 # Researcher exports
 
+The [private synced bibliography source candidate](engineering/private-synced-bib-2026-10-09.md)
+adds explicit saved-paper snapshot links on supported ordinary SQLite deployments.
+It is separate from the downloaded recorded-reading exports below; production
+enablement and external writing-tool acceptance remain open.
+
 Completed readings on the web, including archived dispatches, offer two complementary
 ways to reuse recorded research. These exports run in the browser from the reading already
 on screen; they make no enrichment request or payment and do not upload to a reference manager.

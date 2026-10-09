@@ -1,5 +1,26 @@
 # Keryx Project Changelog
 
+### Ordinary answer language selection (2026-10-09, v0.27.46 candidate)
+
+- Avoid choosing Portuguese from words shared with Spanish. Positive original
+  output-language requests take precedence over inferred and accumulated-context
+  cues; unsupported requests use English scaffold labels without forcing statement
+  translation. Negated directives preserve the preceding positive request.
+- Keep exact reviewed statements, source excerpts, receipts and private originals.
+  Shared answer consumers inherit the fix; bot wrappers, emails, preferences and
+  additional catalogs remain open in issue276. Coordinated CI/review, deployment
+  and exact-source acceptance are required before claiming delivery.
+
+### Private verified ORCID/GitHub links (2026-10-09, source candidate)
+
+- Ordinary private profiles gain dated account-control verification and immediate
+  unlink through an interactive session-bound, single-use OAuth flow. Typed links
+  stay unverified; only provider ID/name or login survives, and tokens are discarded.
+- API and remote/stdio MCP owner reads require explicit `profile:read`; existing
+  profile responses, SIWE and payment/creator authority remain unchanged. New
+  identity capability is absent on sealed/enrolled storage. Production activation,
+  public-profile integration and coordinated package/deploy acceptance remain open.
+
 ### Coordinated research surfaces (2026-10-09, v0.27.45 candidate)
 
 - Attribute new API and paid A2A research to independently verified owners and
@@ -34,6 +55,24 @@
   upstream CSL schema checks passed locally. Full production build, packaged
   desktop smoke, publication/deployment and installed-client gates remain open.
   Zotero account sync and private revocable `.bib` URLs remain in issue285.
+
+### Creator registration gas sponsorship candidate (2026-10-09)
+
+- Add a default-disabled pilot where a verified creator reviews and signs exact
+  registration terms and Keryx pays admitted gas. Source control and payouts stay
+  with the creator; gas remains separate from paid reads and citation rewards.
+- Add an independent V3 contract candidate and explicit V1/V2/V3 readers and
+  revision-aware listing edits. Current V1 registry authority is unchanged.
+- Retain original requests, atomic finite gas/attempt limits and live proof
+  admission. Wallet changes, lost responses and reloads do not authorize another
+  transaction. Expired unsigned renewal requires an explicit predecessor pointer.
+- Check both Arc profiles with hermetic browser fixtures and local contract,
+  authentication, storage and signature tests. No funded testnet/mainnet evidence,
+  production sponsorship, custody enrollment or registry migration is claimed.
+- Web and hosted API share the pilot; CLI, desktop, MCP, extension and bot roles
+  acquire no publisher signing custody. Supabase relay support, operational
+  uncertainty recovery and financial/cutover acceptance remain open. See
+  [the implementation and activation gates](creator-registration-sponsorship.md).
 
 ### Report layout and research command boundaries (2026-10-09, v0.27.44 candidate)
 

@@ -10,6 +10,10 @@ import { refuseStorage, StorageIdentityRefused } from "./storage-identity";
 import { SUPABASE_RUNTIME_CONTRACT } from "./supabase-runtime-contract";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
 import { createSupabasePrivateProfiles } from "./private-profiles-supabase";
+import { createSupabasePersonalHistory } from "./personal-history-supabase";
+import type { PersonalHistoryStore } from "../history/personal-history";
+import { createSupabaseProfileIdentities } from "./profile-identities-supabase";
+import type { ProfileIdentitiesStore } from "../profiles/verified-identities";
 import type { PrivateProfilesStore } from "../profiles/private-profile";
 import { admitSupabaseBrowserQueryPolicy,admitSupabaseBrowserSigningOriginal,admitSupabaseBrowserSourceSigningOriginal,readSupabaseBrowserSigningSnapshot,readExposedSupabaseBrowserSigningSnapshotForSigner,signSupabaseBrowserSigningOriginal } from "./supabase-browser-signing-originals";
 import { createBrowserOriginalSourceAuthority } from "../payments/browser-original-source-authority";
@@ -146,6 +150,8 @@ export function assembleAuthorityBoundSupabaseCore(
 
 export class SupabaseAdapter implements KeryxDB {
   declare readonly privateProfiles?: PrivateProfilesStore;
+  declare readonly personalHistory?: PersonalHistoryStore;
+  declare readonly profileIdentities?: ProfileIdentitiesStore;
   #sb: SupabaseClient;
   #enrolled?: { deployment: Readonly<StorageDeploymentManifest>; authority: SupabaseAuthority;
     readDeployment: () => Readonly<StorageDeploymentManifest>; ready: boolean };
@@ -164,6 +170,8 @@ export class SupabaseAdapter implements KeryxDB {
       },
     );
     if (!deployment) Object.defineProperty(this, "privateProfiles", { value: createSupabasePrivateProfiles(this.#sb) });
+    if (!deployment) Object.defineProperty(this, "personalHistory", { value: createSupabasePersonalHistory(this.#sb) });
+    if (!deployment && this.privateProfiles) Object.defineProperty(this, "profileIdentities", { value: createSupabaseProfileIdentities(this.#sb, this.privateProfiles) });
     if (deployment) this.#enrolled = { deployment, ready: false, readDeployment: construction!.readDeployment,
       authority: new SupabaseAuthority(this.#sb, deployment.identity, () => { this.assertEntry(); return this.#enrolled?.ready === true; }) };
     if (deployment) enrolledEntryGuards.set(this, { verify: async () => {

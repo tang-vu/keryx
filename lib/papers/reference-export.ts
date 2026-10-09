@@ -66,13 +66,16 @@ export function paperReferencesRis(records: readonly PaperRecord[]) {
   return { count: papers.length, content: content ? content + "\r\n" : "" };
 }
 
-/** Literal provider names, without guessed given/family splits or publication status. */
-export function paperReferencesBibtex(records: readonly PaperRecord[]) {
+/** Literal provider names, without guessed given/family splits or publication status.
+ * Original-page report projections retain their existing ordinal key contract. */
+export function paperReferencesBibtex(records: readonly PaperRecord[], keyMode: "stable" | "legacy-ordinal" = "stable") {
   const papers = referencePapers(records);
   const escape = (value: string) => field(value).replace(/[\\{}%&_#$^~]/g, char => ({
     "\\": "\\textbackslash{}", "{": "\\{", "}": "\\}", "%": "\\%", "&": "\\&", "_": "\\_",
     "#": "\\#", "$": "\\$", "^": "\\textasciicircum{}", "~": "\\textasciitilde{}",
   })[char]!);
+  const keys = papers.map((paper, index) => keyMode === "legacy-ordinal" ? `keryxPaper${index + 1}` : referenceKey(paper.url, "keryxPaper"));
+  if (new Set(keys).size !== keys.length) throw new Error("Reference identifier collision");
   const content = papers.map((paper, index) => {
     const fields: Array<[string, string]> = [["title", `{${escape(paper.title)}}`], ["url", escape(paper.url)]];
     if (paper.authors.length) fields.push(["author", paper.authors.map(author => `{${escape(author)}}`).join(" and ")]);
@@ -83,7 +86,7 @@ export function paperReferencesBibtex(records: readonly PaperRecord[]) {
     if (paper.venue && paper.publicationKind === "conference-paper") fields.push(["booktitle", escape(paper.venue)]);
     fields.push(["note", escape(provenanceNote(paper))]);
     const kind = paper.publicationKind === "journal-article" ? "article" : paper.publicationKind === "conference-paper" ? "inproceedings" : "misc";
-    return `@${kind}{keryxPaper${index + 1},\n${fields.map(([key, value]) => `  ${key} = {${value}}`).join(",\n")}\n}`;
+    return `@${kind}{${keys[index]},\n${fields.map(([key, value]) => `  ${key} = {${value}}`).join(",\n")}\n}`;
   }).join("\n\n");
   return { count: papers.length, content: content ? content + "\n" : "" };
 }

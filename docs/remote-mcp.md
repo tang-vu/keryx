@@ -1,5 +1,19 @@
 # Remote MCP
 
+The [private evidence-draft source candidate](evidence-drafts.md) adds stateless
+`evidence_draft(draft)`, sharing the browser/API version-1 contract. It processes
+caller-supplied retained report rows and Include records without retrieving private
+history or calling research, payments, providers or storage. Imported origin remains
+unverified and support assessments remain explicitly user supplied. Your MCP client
+may retain private tool messages. Existing MCP transport/key/Origin policy still
+applies; source registration is not deployed acceptance or package publication.
+
+The [personal history source candidate](engineering/personal-history-read-2026-10-09.md)
+adds `history_read` with explicit `history:read` and bounded current-store attribution.
+It performs no research/payment and grants legacy keys no new rights. Ordinary RPC
+adoption, hosted deployment and stdio publication remain separate; sealed production
+is unavailable for this new domain.
+
 The [CSL-JSON export source candidate](engineering/csl-json-reference-export-2026-10-09.md)
 adds derived `researchExports.cslJson` (`content`, `count`, `omitted`) and separate
 metadata-only `bibliographyExports.cslJson` (`content`, `count`). Existing paid
@@ -72,6 +86,12 @@ the `/mcp` route and registry `remotes` entry; existing `mcp` rows remain readab
 
 `profile_read()` requires an explicitly selected `profile:read` key;
 `profile_update(profile)` requires `profile:write`. Write does not imply read.
+The issue265 source candidate adds `profile_identities_read()` with explicit
+`profile:read`, returning only the owner's dated private ORCID/GitHub identity
+links. Existing `profile_read` responses remain unchanged. Provider consent and
+individual unlink require the active browser SIWE session; whole-profile deletion
+also removes its private verified links. Sealed production activation and exact
+hosted/package delivery remain separate gates.
 Profile-only keys cannot run research, including mixed batches. Historical/default
 keys retain ask/export and gain no private-profile access. Tool arguments never
 select a wallet. This additive ordinary-storage capability remains unavailable on

@@ -34,7 +34,8 @@ import { config } from "../config";
 
 // ── ABI (minimal — only what the indexer + client need) ──────────────────────
 
-import { REGISTRY_ABI } from "./registry-abi";
+import { REGISTRY_ABI, REVISIONED_REGISTRY_ABI } from "./registry-abi";
+import { getServerRegistryVersion, type RegistryVersion } from "./registry-version";
 export { REGISTRY_ABI } from "./registry-abi";
 
 // ── Source ID helpers ─────────────────────────────────────────────────────────
@@ -82,6 +83,8 @@ export type OnChainRecord = {
   contentCid: string;
   tags: string;
   active: boolean;
+  registryVersion?: RegistryVersion;
+  revision?: bigint;
 };
 
 /**
@@ -93,17 +96,29 @@ export async function getRegistrySource(
   id: Hex,
   options: { timeoutMs?: number } = {},
 ): Promise<OnChainRecord | null> {
+  const version = getServerRegistryVersion();
   if (!config.registryReadAddress) return null;
 
   const client = getPublicClient(options.timeoutMs);
   // Do NOT catch here — let RPC errors propagate so the indexer knows this chunk
   // failed and does not advance the checkpoint past unprocessed logs.
-  const record = await client.readContract({
-    address: config.registryReadAddress as Address,
-    abi: REGISTRY_ABI,
-    functionName: "get",
-    args: [id],
-  });
+  let record: OnChainRecord;
+  if (version === 1) {
+    record = await client.readContract({
+      address: config.registryReadAddress as Address,
+      abi: REGISTRY_ABI,
+      functionName: "get",
+      args: [id],
+    });
+  } else {
+    const [source, revision] = await client.readContract({
+      address: config.registryReadAddress as Address,
+      abi: REVISIONED_REGISTRY_ABI,
+      functionName: "getWithRevision",
+      args: [id],
+    });
+    record = { ...source, registryVersion: version, revision };
+  }
   // Zero address creator means the record doesn't exist.
   if (record.creator === "0x0000000000000000000000000000000000000000") return null;
   return record as OnChainRecord;
@@ -131,6 +146,7 @@ export interface RegistryCallParams {
  * The creator's connected wallet signs and submits this — gas paid by the creator.
  */
 export function buildRegisterArgs(p: RegistryCallParams) {
+  getServerRegistryVersion();
   return {
     address: config.registryAddress as Address,
     abi: REGISTRY_ABI,
@@ -157,9 +173,21 @@ export interface UpdateCallParams {
   fetchPriceUsdc6: bigint;
   contentCid: string;
   tags: string;
+  expectedRevision?: bigint;
 }
 
 export function buildUpdateArgs(p: UpdateCallParams) {
+  if (getServerRegistryVersion() !== 1) {
+    if (p.expectedRevision === undefined || p.expectedRevision < BigInt(1) || p.expectedRevision > BigInt("18446744073709551615")) {
+      throw new Error("Refresh the registry revision before building an update.");
+    }
+    return {
+      address: config.registryAddress as Address,
+      abi: REVISIONED_REGISTRY_ABI,
+      functionName: "update" as const,
+      args: [p.id, p.expectedRevision, p.payoutWallet, p.authors, p.fetchPriceUsdc6, p.contentCid, p.tags] as const,
+    };
+  }
   return {
     address: config.registryAddress as Address,
     abi: REGISTRY_ABI,
@@ -178,7 +206,18 @@ export function buildUpdateArgs(p: UpdateCallParams) {
 /**
  * Returns the args for wagmi's useWriteContract to call registry.deactivate().
  */
-export function buildDeactivateArgs(id: Hex) {
+export function buildDeactivateArgs(id: Hex, expectedRevision?: bigint) {
+  if (getServerRegistryVersion() !== 1) {
+    if (expectedRevision === undefined || expectedRevision < BigInt(1) || expectedRevision > BigInt("18446744073709551615")) {
+      throw new Error("Refresh the registry revision before building a delist.");
+    }
+    return {
+      address: config.registryAddress as Address,
+      abi: REVISIONED_REGISTRY_ABI,
+      functionName: "deactivate" as const,
+      args: [id, expectedRevision] as const,
+    };
+  }
   return {
     address: config.registryAddress as Address,
     abi: REGISTRY_ABI,

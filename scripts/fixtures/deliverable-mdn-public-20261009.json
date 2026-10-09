@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "id": "mdn-public-20261009",
+  "question": "Sou professora no Brasil e preparo uma oficina introdutória de HTML. Leia https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button . Em português brasileiro, escreva três tópicos curtos explicando as diferenças entre type=\"submit\", type=\"reset\" e type=\"button\", incluindo o comportamento padrão quando type não é informado. Cite trechos verificáveis da página. Não diga que você executou os exemplos em um navegador e não compre fontes pagas.",
+  "answer": "> ⚠ Low confidence — Each summary sentence is tied to a verbatim excerpt and model-checked; completeness and independent factual correctness remain unverified. Evidence assessment: 1 evidence-verified source cover every sub-claim, but corroboration or support strength is limited. Treat this as provisional.\n\nNão foi possível apresentar 3 tópicos curtos preservando todos os objetivos e trechos qualificados; os objetivos são apresentados abaixo.\n\nResumo escrito por modelo, com citações por frase. Cada frase aparece junto ao trecho original usado na sua verificação.\n\n### Objetivo de pesquisa 1\n\nTema solicitado (não verificado): “Qual é a diferença de comportamento do type=\"submit\" em um elemento <button>, conforme a página de referência da MDN?”\n\nO type=\"submit\" faz o botão enviar os dados do formulário para o servidor. [S1] Texto da fonte: “submit: O botão envia os dados do formulário para o servidor.”\n\n### Objetivo de pesquisa 2\n\nTema solicitado (não verificado): “Qual é a diferença de comportamento do type=\"reset\" em um elemento <button>, conforme a página de referência da MDN?”\n\nO type=\"reset\" faz o botão restaurar todos os controles para seus valores iniciais. [S1] Texto da fonte: “reset: O botão restaura todos os controles para seus valores iniciais.”\n\n### Objetivo de pesquisa 3\n\nTema solicitado (não verificado): “Qual é a diferença de comportamento do type=\"button\" em um elemento <button>, conforme a página de referência da MDN?”\n\nO type=\"button\" não possui comportamento padrão. [S1] Texto da fonte: “button: O botão não possui comportamento padrão.”\n\nO type=\"button\" pode ter scripts do lado do cliente associados aos eventos do elemento, acionados quando o evento ocorrer. [S1] Texto da fonte: “Ele pode ter scripts do lado do cliente associado com os eventos do elemento, no qual são acionados quando o evento ocorrer.”\n\n### Objetivo de pesquisa 4\n\nTema solicitado (não verificado): “Qual é o comportamento padrão de um elemento <button> quando o atributo type não é informado, conforme a página de referência da MDN?”\n\nQuando o atributo type não é especificado, ou é mudado dinamicamente para um valor vazio ou inválido, o padrão é submit. [S1] Texto da fonte: “Esse é o padrão se o atributo não for especifidado, ou se o atributo é dinamicamente mudado para um valor vazio ou inválido.”\n\nFrases escritas e verificadas por modelos, sem verificação independente. Os trechos estabelecem vínculo com a fonte, mas não comprovam sua exatidão nem uma síntese completa. As fontes podem estar erradas ou em conflito. Os pagamentos são registrados separadamente.\n\n### Supplied original source status\n\n- `https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button`: Bounded text extracted from `https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button`; qualifying excerpts retained.",
+  "answerSha256": "c7dd01f820adf7fcdcee98e86d97ec175f5772dc4d828180a958a945d3d2ff0d",
+  "bulletRegion": {
+    "start": 0,
+    "end": 2587,
+    "sha256": "cfe0fe6f6defb11814cc3dd3dd6ac4269307d49bd37ad7b624322485c12b661f"
+  },
+  "bindings": [
+    {
+      "claimIndex": 0,
+      "marker": "S1",
+      "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+      "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+      "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+      "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e",
+      "quote": "submit: O botão envia os dados do formulário para o servidor.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 1,
+      "marker": "S1",
+      "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+      "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+      "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+      "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e",
+      "quote": "reset: O botão restaura todos os controles para seus valores iniciais.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 2,
+      "marker": "S1",
+      "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+      "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+      "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+      "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e",
+      "quote": "button: O botão não possui comportamento padrão.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 2,
+      "marker": "S1",
+      "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+      "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+      "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+      "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e",
+      "quote": "Ele pode ter scripts do lado do cliente associado com os eventos do elemento, no qual são acionados quando o evento ocorrer.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 3,
+      "marker": "S1",
+      "sourceId": "public:web:e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+      "itemId": "e1fdca9bc2350a90893f4a3ab6b6b364577dbe4734e87880e0b9ed164a2bc38e",
+      "itemUrl": "https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button",
+      "contentVersion": "ad32a9abb71824e433fd4599c5f45d3f2a5c345c3ec9e107e8d8ffcbb98b4c8e",
+      "quote": "Esse é o padrão se o atributo não for especifidado, ou se o atributo é dinamicamente mudado para um valor vazio ou inválido.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    }
+  ],
+  "provenance": {
+    "kind": "retained-public-report",
+    "reportUrl": "https://keryx.cc/dispatch/6c41b95d-7877-4403-8b52-988d924f132d",
+    "capturedAt": "2026-10-09T02:23:08.694Z",
+    "deployedCommit": "380647b10a924e231ebe98123028877d8c5ee187",
+    "rawCaptureSha256": "69d8f81b43fca4262a07a36c52fbfdfb2168027291bd19e63bd659c88728d8a5",
+    "projection": "question-answer-qualified-public-bindings-only"
+  }
+}

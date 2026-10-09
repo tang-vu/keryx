@@ -1,5 +1,68 @@
 # Keryx — Decision Log
 
+## Batch issue outcomes before one deployment — owner decision, 2026-10-09
+
+When one task spans several issues or PRs, finish the agreed implementation
+batch, review and merge its outcomes, then deploy the combined current main
+once. Include corrective work before that deployment instead of releasing each
+PR separately. Keep independently gated financial or scheduled capabilities
+disabled until their own authorization and acceptance are met.
+
+For 2026-10-09 only, the owner explicitly directs reviewed PRs to merge without
+waiting for hosted CI, with checks and fixes continuing on main afterward.
+This is a dated exception to pre-merge CI waiting, not a claim that pending or
+failed checks passed. Preserve source review, proportionate local validation,
+main validation runs and actual combined-source release/publication acceptance.
+The usual required pre-merge CI gates resume after this exception. The batch
+does not authorize funding, custody changes, schedules or production DDL, and
+partial implementations do not close broader acceptance issues.
+
+**Publish explicitly updated private metadata snapshots — 2026-10-09.**
+Advance issue285 with revocable bearer `.bib` URLs for saved-paper metadata,
+independently of account-provider authorization. Store only random-token hashes;
+owner-session writes need exact-origin, wallet and revision preconditions. Bind
+the cookie-write origin to server `BASE_URL` through a pure strict helper;
+Next's internal URL and request Host/forwarded headers select no authority. Keep
+notes/questions/screening, profiles, original receipts and payment history out of
+published snapshots. Ordinary SQLite alone exposes the additive private port;
+unsupported/enrolled/native stores refuse without widening authority or fallback.
+Stable exact-URL paper keys align saved-paper BibTeX with CSL-JSON. Original-page
+bibliography generation and sanitized archive projections explicitly retain their
+ordinal-key contract, preserving already retained exports and receipt bytes.
+Explicit replacement and external-tool refresh remain visible actions; no
+automatic publication or Zotero synchronization is
+inferred. Provider-token encryption, live import/refresh and deployment log
+redaction remain separate gates. See [scope and acceptance](docs/engineering/private-synced-bib-2026-10-09.md).
+
+**Assemble private drafts from retained excerpts without inferring semantic support — 2026-10-09.**
+Stage issues 282/283 through one zero-I/O draft contract shared by the browser,
+authenticated API and remote/stdio MCP. Match Include records to retained report
+ledger rows by exact source/item/URL/version/marker and original claim; withhold
+synthetic, ambiguous and missing records. Imported report origin stays caller
+asserted. Claim spans preserve the passage and optional named user assessments
+bind literal excerpt rows; missing retained evidence cannot become unsupported.
+Related-work themes export quotations, separately marked author notes and one
+matching reference set. Browser drafts stay in memory unless explicitly downloaded.
+Bind cookie API requests to the configured public `BASE_URL` Origin because Next
+may canonicalize its internal request URL. Caller-controlled Host/forwarded headers
+grant no origin authority; malformed deployment origins fail closed.
+Automatic reading/semantic review, expert metrics and coordinated deployment remain
+gated; no receipt, payment, budget or custody authority changes. See
+[scope, surfaces and acceptance](docs/evidence-drafts.md).
+
+## 2026-10-09 — Keep exact native proof for one retained pre-CSL presentation
+
+Derived CSL exports changed the current A2A constructor without changing a
+retained native original's run or saved response. Keep modern full-order equality
+first, then admit one complete pre-CSL expected presentation only after the
+existing result-v1/v2 claim, run digest, evidence and settlement checks succeed.
+Never drop actual fields or rewrite old receipts. All money, identity, evidence,
+versions and unknown fields continue to compare exactly; new writes stay modern
+and PostgreSQL fulfillment stays unsupported. The old protocols did not bind a
+presentation stamp, so absence of the derived CSL companions cannot prove an old
+creation date. That narrow limitation is explicit rather than inferred authority.
+See [compatibility and acceptance gates](docs/engineering/native-original-response-compatibility.md).
+
 **Record verified run ingress without inferring account ownership — 2026-10-09.**
 New shared research runs carry optional closed JSON provenance separately from
 payment origin and editable MCP client telemetry. Ownership continues to use the
@@ -70,6 +133,27 @@ CI validates structure and review bindings; actual human review, semantic
 accuracy and runtime integration remain separate gates. Existing interfaces
 are not retrospectively marked reviewed. No locale is activated by this
 development-only change. See [translation instructions](docs/translation-instructions.md).
+
+**Sponsor creator registration through exact signed authority — 2026-10-09.**
+The owner requested gas sponsorship when creators add sources. V1/V2 registration
+derives ownership from `msg.sender`, so sending that call from a platform wallet
+would transfer source control to the relay. Use an independent V3 candidate with
+EIP-712 creator authorization bound to the exact registry, chain, named relayer,
+source terms, sequential nonce and deadline. Preserve creator ownership, payouts
+and revision-bound later edits through explicit matching V1/V2/V3 adapters.
+Do not delegate an existing wallet account or silently migrate registry authority.
+
+Keep the relay disabled until a finite expiring allowance, dedicated custody,
+funded testnet acceptance and registry cutover are separately authorized and
+accepted. Native SQLite admits the original and maximum gas hold atomically,
+checks the live publishing claim before signing, and serializes creator/sponsor
+nonces. Retain ambiguous signing and submission with their full liability. Only
+an explicitly renewed, conclusively expired unsigned original can create another
+attempt; it retains predecessor history and consumed counts. Browser recovery
+reads the owner's latest original even if a renewal response was lost. Gas costs
+remain separate from creator earnings and settled citation metrics. Supabase and
+non-browser publisher execution are outside this pilot. See the
+[implementation, surface boundaries and remaining gates](docs/creator-registration-sponsorship.md).
 
 **Project obligations before investing Operator float — 2026-10-09.**
 Stage a read-only ownership-scoped projection using the existing complete prepaid
@@ -6491,3 +6575,149 @@ exact-unit and recovery constraints, all supported surface roles and release gat
 Participant currency demand, rate-provider/fee policies, tiny-amount feasibility,
 browser-compatible custody and bounded testnet proof remain unaccepted. This records
 the evaluation boundary, not an accepted economic policy or enabled EURC product.
+
+## Grade retained deliverable structure separately from semantic acceptance — 2026-10-09
+
+Issue #287 needs one inspectable rubric rather than interpreting each successful
+request or coverage score as a useful answer. Start with a bounded local corpus
+projected from two already retained public MDN/RFC reports. Hash the original
+capture provenance, exact projection, reviewed contract and grader inputs. Count
+requested bullet structure and full-answer whitespace tokens deterministically;
+compare the recorded source/item/version/quote bindings without reissuing their
+runtime evidence or payment roles.
+
+Language, factual correctness and semantic completeness remain `UNJUDGED`.
+A structural pass cannot make `deliverableAccepted` true. Keep malformed, missing,
+duplicate or stale inputs closed, preserve the two observed failures, and label
+fixture validation exit 0 separately from contract acceptance. The CLI never calls
+the agent, providers, databases or payment machinery, and changes no saved answer,
+receipt or supported research surface. This evaluation maintenance outcome does
+not bump or deploy a runtime version.
+
+The [initial rubric and corpus](docs/engineering/retained-deliverable-contracts-2026-10-09.md)
+cover single-page structure only. Public scorecard, full failure-class coverage,
+consented private cases, reviewed semantic/language criteria, agreed regression
+margins and bounded exact-release live acceptance remain issue #287 gates.
+
+## Keep unsupported output requests above inferred scaffold language — 2026-10-09
+
+The Spanish NASA retest exposed shared Spanish/Portuguese vocabulary in ordinary
+presentation inference. Require distinctive Portuguese cues; a positive explicit
+output request supersedes inferred cues and accumulated context. Unsupported
+directives select the existing English labels while leaving statement-language
+guidance unset, rather than imposing a different generation language. Preserve
+last-positive precedence and negation, with a bounded parser rather than a general
+language detector. Reviewed statement and excerpt bytes are never translated by
+finalization, and private originals retain their existing presentation path.
+
+The [surface and release record](docs/engineering/output-language-2026-10-09.md)
+keeps broader issue276 catalogs, preferences and human-reviewed localization open.
+This repairs wrong Portuguese selection without claiming full Spanish delivery.
+
+## Prevent new literal UI copy while migrating catalogues — 2026-10-09
+
+Issue272's first independent increment adds a lockfile-pinned TypeScript AST
+guard for known presentation contexts in tracked web and desktop JSX. Explicit
+legacy allowances bind file, syntax context, text and count; new or changed copy
+fails main CI without loading the app or user data. A baseline is not proof of
+catalogue migration, visual parity or human translation review. Area migrations
+must retire old allowances and demonstrate unchanged rendered English. Keep
+arbitrary data flow and non-JSX surfaces as explicit follow-up boundaries rather
+than claiming universal extraction. See [authoring rules](docs/ui-copy-authoring.md).
+
+## Preserve exact short-item identity for ordinary presentation — 2026-10-09
+
+Separate reviewed sentences from one complete visible enumerated item can satisfy
+different research targets without requiring a new semantic relationship. Retain
+that structural identity as process-local metadata from the already offered whole
+item quote option, through its exact resolved span and existing statement admission.
+Do not serialize or restore it from receipts, raise support, widen retrieval or
+change payment authority. Require observed complete public HTML, exact source and
+item binding, and unchanged qualifying ledger identities at consumption.
+
+Preserve existing presentation groups first. A new item edge joins only groups
+whose every sentence belongs to that item; target transitivity cannot pull another
+block into the new edge. Retain every exact sentence/excerpt pair and all final
+coverage, count and row limits. Defaults and private originals remain unchanged.
+The [candidate and retained-fixture record](docs/engineering/short-item-presentation-2026-10-09.md)
+distinguishes synthetic layout/review inputs from public displayed pairs and keeps
+issue238's live usefulness, localization and coordinated-delivery gates open.
+
+## Prepare locale contracts without activating unreviewed language delivery — 2026-10-09
+
+Keep English as the sole shipped interface while preparing typed English keys,
+bounded explicit/stored/header preference admission, exact locale display and
+public language metadata contracts. Default allowlists refuse prepared Vietnamese
+and Simplified Chinese; glossary drafts are not translation release authority.
+Selected catalogue data may cross a server/client boundary without importing all
+locales. Runtime preference storage and a switcher remain separate integration gates.
+
+Preserve existing public report/profile paths without mandatory locale-prefix
+redirects. Advertise only actual published page variants, with an English
+`x-default` and a canonical among them. Reports need recorded output language and
+explicit public visibility; never infer either from a viewer or question. Current
+stored runs lack these fields, so metadata adapters remain unconnected. Unknown
+historical language is undetermined rather than retroactively labelled English.
+
+Locale USDC display adapts the existing exact bounded integer contract, keeps all
+micro digits and cannot influence signing/storage/comparison. Signing verification
+remains ungrouped invariant decimal text with an explicit currency. Dates require
+an explicit viewer zone and observed relative clock. The [source/gate record](docs/engineering/locale-foundation-2026-10-09.md)
+keeps full issue acceptance, privacy authority, human translation review and the
+operational main freeze open.
+
+## Prepare offline research decision audits before changing live authority — 2026-10-09
+
+Keep prospective cohort accounting, exact-version purchase scoring, bounded source
+learning and canonical read-admission replay in pure modules and one bounded local
+CLI. Closed policy records exclude question/body/rationale text. Exact micro-USDC
+arithmetic and separately retained digests support integrity checks, not independent
+settlement or actor attestation. Supplied funding/ownership/settlement facts require
+trusted adapters. Conflicting duplicate identities refuse; malformed JSON cannot
+coerce IDs, booleans or weights into measured results.
+
+Historical unknowns stay unknown. Citation occurrence/weight are recorded outcomes,
+not causal regret or fresh factual assessment. Source learning excludes unknown,
+self-owned, team/scripted/sponsored history and counts at most one reviewed source/
+topic/run observation; conflicting copies refuse before eligibility filtering.
+Exploration has an explicitly supplied exact partition, no default finance authority
+or automatic purchase. Keep live policy, payee, grant caps, receipts, native/sealed
+storage and distributions unchanged until their integration gates pass.
+
+The [audit contracts and acceptance map](docs/engineering/research-decision-audit-2026-10-09.md)
+record the offline source boundaries and remaining write-time adapters, public
+surface, live learning, full decision-graph replay and independent evaluation gates.
+Source tests and draft PRs do not close issues249/298/299/301 or authorize deployment.
+
+## 2026-10-09 — Explicit ordinary personal history read (#268 partial)
+
+Choose a separate optional current-store summary port and explicit `history:read`
+scope rather than widening legacy keys or joining private/enrolled/archive readers.
+API, web and both MCP transports share strict bounded filters and owner/network/filter
+bound keyset cursors. Store projection excludes answers, raw run JSON and private
+fulfillment. Recorded allocations/funding are not payer or settlement authority.
+Preserve the recent creator ledger, SIWE archive, receipt bytes and existing ownership
+attribution. Missing ports or ordinary RPC refuse without fallback. Linked wallets,
+claims, chat identities, visibility/deletion, whole-history exports and verified
+service-spend classification remain gates; issue #268 stays open. This source
+candidate has no production migration, enrollment, publication, merge or deployment
+admission; see [the surface audit](docs/engineering/personal-history-read-2026-10-09.md).
+
+### 2026-10-09 — Private verified identities remain separate from wallet authority
+
+Issue265's source increment verifies ORCID/GitHub account control on an existing
+ordinary private profile. Keep asserted URLs separate, dated provider ID/name or
+login minimal, tokens ephemeral, and ownership unique per provider ID. Bind the
+five-minute single-use OAuth lineage to an active durable SIWE session; atomically
+recheck session/expiry/current lineage at completion. Unlink/profile deletion
+invalidate in-flight callbacks. Verification grants no login, payout, creator,
+payment or allowance authority.
+
+An optional nonenumerable ordinary identity port and service-role-only source RPC
+migration preserve sealed/native inventories and exact receipt evidence. Missing
+or enrolled capability refuses without fallback. API/MCP reads require explicit
+profile:read; provider consent and mutations remain interactive SIWE. Existing
+profile snapshot contracts stay unchanged. Public-profile integration, reviewed
+sealed activation and live provider acceptance remain open, with current main
+freeze and combined exact-source release/distribution gates authoritative. See
+[the implementation contract](docs/engineering/private-verified-identities-2026-10-09.md).

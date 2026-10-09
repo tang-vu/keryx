@@ -65,6 +65,11 @@ jobs:
           node --test scripts/check-payment-glossaries.test.mjs
           node scripts/check-payment-glossaries.mjs
 
+      - name: UI copy regression guard (source parsing only)
+        run: |
+          node --test scripts/check-ui-copy.test.mjs
+          node scripts/check-ui-copy.mjs
+
       - name: Adversarial report lifecycle and source binding (offline)
         run: node --test scripts/source-money-adversarial-report.test.mjs
 
@@ -80,6 +85,13 @@ jobs:
       - name: Private profiles PostgreSQL ownership, collision and privacy acceptance
         if: needs.scope.outputs.scope == 'full'
         run: node --import tsx scripts/test-private-profiles-postgres.mts
+
+      - name: Personal history PostgreSQL ownership, filters, keyset and refusal
+        if: needs.scope.outputs.scope == 'full'
+        run: node --import tsx scripts/test-personal-history-postgres.mts
+      - name: Private verified identities PostgreSQL lineage, ownership and ACL acceptance
+        if: needs.scope.outputs.scope == 'full'
+        run: node --import tsx scripts/test-profile-identities-postgres.mts
 
       - name: Engineering feed integrity (no settlement)
         run: node --import tsx scripts/build-engineering-feed.mts --check
@@ -241,6 +253,8 @@ jobs:
           node --import tsx scripts/test-monthly-mcp-package.mts
           node --import tsx scripts/test-paper-lookup-mcp-package.mts
           node --import tsx scripts/test-private-profiles-mcp-package.mts
+          node --import tsx scripts/test-evidence-drafts-mcp-package.mts
+          node --import tsx scripts/test-personal-history-mcp-package.mts
 
       - name: Packed stdio research diagnostics, signing and recovery (synthetic)
         working-directory: mcp
@@ -289,6 +303,9 @@ jobs:
         timeout-minutes: 5
         run: npx playwright install --with-deps chromium
 
+      - name: Research decision replay browser WebCrypto parity (offline corpus)
+        run: node --import tsx scripts/test-research-audit-browser.mts
+
       - name: Zotero RIS parser compatibility (pinned source, synthetic metadata)
         run: |
           mkdir -p .artifacts/reference-export
@@ -306,6 +323,7 @@ jobs:
           node --import tsx scripts/test-browser-creator-listing.mts
           node --import tsx scripts/test-browser-creator-registration.mts
           node --import tsx scripts/test-browser-creator-onboarding.mts
+          node --import tsx scripts/test-browser-registration-sponsor.mts
 
       - name: Scholarly creator rights (hermetic wallet and HTTP, no settlement)
         run: npm run test:browser-scholarly-rights
@@ -409,6 +427,11 @@ jobs:
       - name: Build (Next.js)
         run: npm run build
 
+      - name: Private bibliography snapshots (built routes, isolated SQLite and synthetic sessions)
+        run: node --import tsx scripts/test-private-bibliography-built.mts
+      - name: Private identity configured Origin behind Next proxy (built, synthetic pre-auth)
+        run: node --import tsx scripts/test-server-profile-identities-origin.mts
+
       - name: Empty evidence (actual minified production orchestrator, no network)
         run: npm run test:built-empty-evidence
 
@@ -444,6 +467,9 @@ jobs:
       - name: Private profile UI (production CSS, synthetic owner sessions, no outbound requests)
         run: node --import tsx scripts/test-browser-private-profiles.mts
 
+      - name: Private verified identity UI (production CSS, synthetic consent and owner isolation)
+        run: node --import tsx scripts/test-browser-profile-identities.mts
+
       - name: Report feedback confirmation and response races (built CSS, hermetic Chromium)
         env:
           KERYX_FEEDBACK_SCREENSHOT_DIR: ${{ runner.temp }}/feedback-ux-screenshots
@@ -461,6 +487,9 @@ jobs:
         env:
           KERYX_LITERATURE_SCREENSHOT_DIR: ${{ runner.temp }}/literature-ux-screenshots
         run: npm run test:browser-literature-built
+
+      - name: Private evidence drafts built interactions (offline, no research)
+        run: node --import tsx scripts/test-browser-evidence-drafts.mts
 
       - name: Stored excerpt readability (built CSS, hermetic Chromium)
         env:
@@ -510,6 +539,9 @@ jobs:
           # Real production startup correctly requires CONTENT_MASTER_KEY.
           KERYX_FORCE_OFFLINE: "1"
         run: node --import tsx scripts/test-withdrawal-framework-headers.mts
+
+      - name: Registration sponsor framework boundary (synthetic reverse proxy, no signing)
+        run: node --import tsx scripts/test-registration-sponsor-framework.mts
 
   lint:
     name: Lint (informational, outside merge gate)

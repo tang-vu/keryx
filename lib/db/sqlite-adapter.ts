@@ -1,6 +1,14 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
+import { createSqlitePrivateBibliographies } from "./private-bibliographies-sqlite";
+import { PrivateBibliographyError, type PrivateBibliographiesStore } from "../bibliographies/private-bibliography";
+import { createSqlitePersonalHistory } from "./personal-history-sqlite";
+import type { PersonalHistoryStore } from "../history/personal-history";
+import { createSqliteProfileIdentities } from "./profile-identities-sqlite";
+import { ProfileIdentityError, type ProfileIdentitiesStore } from "../profiles/verified-identities";
 import { PrivateProfileError, type PrivateProfilesStore } from "../profiles/private-profile";
+import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, transitionSqliteRegistrationSponsor, type RegistrationSponsorTransition } from "./registration-sponsor";
+import type { RegistrationSponsorPolicy, SponsoredRegistration } from "../sources/registration-sponsor-protocol";
 import { readSqliteOperatorInventory, type OperatorInventoryInput } from "../business-operator/inventory";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
@@ -130,6 +138,9 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 export class SqliteAdapter implements KeryxDB {
   declare readonly privateProfiles?: PrivateProfilesStore;
+  declare readonly privateBibliographies?: PrivateBibliographiesStore;
+  declare readonly personalHistory?: PersonalHistoryStore;
+  declare readonly profileIdentities?: ProfileIdentitiesStore;
   private db: DatabaseSync;
   private enrolledMode?: StorageIdentity["authorityMode"];
   private enrolledIdentity?: Readonly<StorageIdentity>;
@@ -191,12 +202,24 @@ export class SqliteAdapter implements KeryxDB {
     assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installOrdinarySqliteApplicationSchema(this.db);
+    if (!this.privateBibliographies) {
+      try { Object.defineProperty(this, "privateBibliographies", { value: createSqlitePrivateBibliographies(this.db) }); }
+      catch (error) { if (!(error instanceof PrivateBibliographyError && error.code === "bibliography_unavailable")) throw error; }
+    }
+    if (!this.personalHistory) Object.defineProperty(this, "personalHistory", { value: createSqlitePersonalHistory(this.db) });
     if (!this.privateProfiles) {
       try { Object.defineProperty(this, "privateProfiles", { value: createSqlitePrivateProfiles(this.db) }); }
       catch (error) {
         // An unknown optional profile schema disables that domain without repairing it
         // or taking existing ordinary research/account/payment reads offline.
         if (!(error instanceof PrivateProfileError && error.code === "profile_unavailable")) throw error;
+      }
+    }
+    if (this.privateProfiles && !this.profileIdentities) {
+      try { Object.defineProperty(this, "profileIdentities", { value: createSqliteProfileIdentities(this.db) }); }
+      catch (error) {
+        // An unknown additive identity domain stays unavailable without repairing it.
+        if (!(error instanceof ProfileIdentityError && error.code === "identity_unavailable")) throw error;
       }
     }
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
@@ -661,6 +684,9 @@ export class SqliteAdapter implements KeryxDB {
     const row = this.db.prepare(`SELECT value FROM sync_state WHERE key=?`).get(key);
     return row ? (row.value as string) : null;
   }
+  async admitRegistrationSponsor(policy: RegistrationSponsorPolicy, row: SponsoredRegistration, now?: number) { return admitSqliteRegistrationSponsor(this.db, policy, row, now); }
+  async getRegistrationSponsor(input: { wallet: string; id?: string; canonicalUrl?: string }) { return getSqliteRegistrationSponsor(this.db, input); }
+  async transitionRegistrationSponsor(input: RegistrationSponsorTransition) { return transitionSqliteRegistrationSponsor(this.db, input); }
   async issueSourceClaimChallenge(input: IssueSourceClaimChallenge) { return issueSqliteSourceClaimChallenge(this.db, input); }
   async getSourceClaimChallenge(id: string) { return getSqliteSourceClaimChallenge(this.db, id); }
   async reserveSourceClaimVerification(challengeId: string, wallet: string, now?: number) { return reserveSqliteSourceClaimVerification(this.db, challengeId, wallet, now); }

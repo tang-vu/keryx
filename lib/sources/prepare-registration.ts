@@ -179,9 +179,9 @@ export async function prepareSourceRegistration(
     // is ready before the indexer processes the SourceRegistered event. Item ids are minted fresh
     // and source_items keys on the id alone, so a re-registration would shelve a second copy of
     // every post beside the first. Only posts this row has never seen are new.
-    const seen = claimed
-      ? new Set((await db.getItems(rowId)).map((i) => i.link).filter(Boolean))
-      : new Set<string>();
+    // Preparation can be renewed before any registry event has created the source
+    // row. Its retained items still belong to this rowId and must not be minted again.
+    const seen = new Set((await db.getItems(rowId)).map((i) => i.link).filter(Boolean));
     const unseen = feedItems.filter((it) => !it.link || !seen.has(it.link));
     if (unseen.length > 0) {
       const items: SourceItem[] = await storeSourceItems(
