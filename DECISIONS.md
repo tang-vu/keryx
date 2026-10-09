@@ -6529,3 +6529,14 @@ finalization, and private originals retain their existing presentation path.
 The [surface and release record](docs/engineering/output-language-2026-10-09.md)
 keeps broader issue276 catalogs, preferences and human-reviewed localization open.
 This repairs wrong Portuguese selection without claiming full Spanish delivery.
+
+## Prevent new literal UI copy while migrating catalogues — 2026-10-09
+
+Issue272's first independent increment adds a lockfile-pinned TypeScript AST
+guard for known presentation contexts in tracked web and desktop JSX. Explicit
+legacy allowances bind file, syntax context, text and count; new or changed copy
+fails main CI without loading the app or user data. A baseline is not proof of
+catalogue migration, visual parity or human translation review. Area migrations
+must retire old allowances and demonstrate unchanged rendered English. Keep
+arbitrary data flow and non-JSX surfaces as explicit follow-up boundaries rather
+than claiming universal extraction. See [authoring rules](docs/ui-copy-authoring.md).
