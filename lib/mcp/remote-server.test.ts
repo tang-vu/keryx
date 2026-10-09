@@ -166,6 +166,7 @@ describe("remote MCP server", () => {
         budget: 0.03, scholarly: true, researchMode: "quick",
         origin: "mcp",
         asker: "0xAbC",
+        provenance: { version: 1, surface: "remote-mcp", ownershipMethod: "api-key" },
         mcpClient: "codex",
       }),
     );

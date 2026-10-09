@@ -28,6 +28,20 @@ export function fixture(): QueryRun {
 }
 
 describe("research surface parity", () => {
+  it("exports only new closed ingress labels and leaves legacy projections and portable receipts unchanged", () => {
+    const legacy = fixture(), receipt = buildResearchReceipt(legacy, []);
+    expect(surfaceResearch(legacy)).not.toHaveProperty("provenance");
+    const provenance = { version: 1, surface: "api", ownershipMethod: "api-key" } as const;
+    const fresh = { ...legacy, provenance };
+    for (const result of [surfaceResearch(fresh), remoteResearchResult(fresh), keryxMeta(fresh),
+      a2aResponseFromRun(fresh, quoteA2aResearch(0.03, "deep"))]) {
+      expect(result.provenance).toEqual(provenance); expect(result.provenance).not.toBe(provenance);
+      expect(result).not.toHaveProperty("asker");
+    }
+    expect(buildResearchReceipt(fresh, [])).toEqual(receipt);
+    expect(surfaceResearch({ ...fresh, provenance: { ...provenance, wallet: "PRIVATE_WALLET" } as never })).not.toHaveProperty("provenance");
+  });
+
   it("retains trace-only inner review ceilings across hosted transports without inventing attempts or exporting private detail", () => {
     const run = fixture();
     run.trace = [{ phase: "synthesize", ts: 1, message: "Fixed diagnostic",

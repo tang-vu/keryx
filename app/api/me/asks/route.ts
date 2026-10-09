@@ -3,13 +3,12 @@
  *
  *   GET /api/me/asks?limit= → { wallet, totals, asks: [...] }
  *
- * Receipts, not history-for-everyone: a dispatch appears here only if it was run while this exact
- * wallet held a SIWE session (see app/api/ask). Totals keep the wallet's own spend apart from
- * free-trial dispatches, whose USDC came from the Keryx treasury — presenting the two as one
- * number would tell a user they spent money they never spent.
+ * A dispatch appears here only for its recorded verified wallet: session, API key or original
+ * payer. Totals include own creator spend only for browser session-funded runs; ownership alone
+ * does not prove that the wallet signed downstream creator payments or turn a prepaid fee into gas.
  *
  * SIWE session only. There is deliberately no API-key path: a key identifies a wallet for the
- * paid endpoints, and those runs are not attributed here.
+ * other endpoints, but does not grant access to this SIWE-authenticated history read.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -17,6 +16,7 @@ import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { citedSourceIds, hasNewMaterial } from "@/lib/answers-freshness";
 import { getTestnetArchive } from "@/lib/history/testnet-archive";
+import { parseRunProvenance } from "@/lib/research/run-provenance";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,31 +56,36 @@ export async function GET(req: NextRequest) {
   ];
   const newestBySource = historical ? {} : await db.newestItemDates(citedIds);
 
-  const asks = runs.map((r) => ({
-    id: r.id,
-    question: r.question,
-    createdAt: r.createdAt,
-    budget: r.budget,
-    spentUsdc: r.totalSpent,
-    toCreatorsUsdc: r.totalToCreators,
-    citationCount: r.citations?.length ?? 0,
-    // Which sources this wallet's money reached — the point of a citation toll, and the one
-    // thing a payer can't reconstruct from a bank-style amount alone.
-    creators: (r.citations ?? []).map((c) => ({
-      sourceId: c.sourceId,
-      name: c.sourceName,
-      rewardUsdc: c.reward,
-    })),
-    confidence: r.confidence?.level ?? null,
-    funded: r.askerFunded === true,
-    isFollowUp: Boolean(r.parentId),
-    // True when a source this dispatch cited has published since it settled. A hint that a re-ask
-    // would read something new — never a claim that the answer is now wrong.
-    hasNewMaterial: hasNewMaterial(r.citations ?? [], newestBySource, r.createdAt),
-  }));
+  const asks = runs.map((r) => {
+    const provenance = parseRunProvenance(r.provenance);
+    return {
+      id: r.id,
+      ...(provenance ? { provenance } : {}),
+      question: r.question,
+      createdAt: r.createdAt,
+      budget: r.budget,
+      spentUsdc: r.totalSpent,
+      toCreatorsUsdc: r.totalToCreators,
+      citationCount: r.citations?.length ?? 0,
+      // Which sources this wallet's money reached — the point of a citation toll, and the one
+      // thing a payer can't reconstruct from a bank-style amount alone.
+      creators: (r.citations ?? []).map((c) => ({
+        sourceId: c.sourceId,
+        name: c.sourceName,
+        rewardUsdc: c.reward,
+      })),
+      confidence: r.confidence?.level ?? null,
+      // Browser-wallet creator funding only; this says nothing about the service's original price.
+      funded: r.askerFunded === true,
+      isFollowUp: Boolean(r.parentId),
+      // True when a source this dispatch cited has published since it settled. A hint that a re-ask
+      // would read something new — never a claim that the answer is now wrong.
+      hasNewMaterial: hasNewMaterial(r.citations ?? [], newestBySource, r.createdAt),
+    };
+  });
 
   const funded = asks.filter((a) => a.funded);
-  const trial = asks.filter((a) => !a.funded);
+  const otherFunding = asks.filter((a) => !a.funded);
 
   return NextResponse.json({
     wallet: session.address,
@@ -92,8 +97,10 @@ export async function GET(req: NextRequest) {
       spentUsdc: funded.reduce((n, a) => n + a.spentUsdc, 0),
       toCreatorsUsdc: funded.reduce((n, a) => n + a.toCreatorsUsdc, 0),
       citations: asks.reduce((n, a) => n + a.citationCount, 0),
-      trialDispatches: trial.length,
-      trialToCreatorsUsdc: trial.reduce((n, a) => n + a.toCreatorsUsdc, 0),
+      // Keep legacy field names. False/missing browser funding includes keyed and prepaid A2A
+      // results; it never proves a free service, the inbound purchase price, gas or settlement.
+      trialDispatches: otherFunding.length,
+      trialToCreatorsUsdc: otherFunding.reduce((n, a) => n + a.toCreatorsUsdc, 0),
     },
     // True when the page is looking at a capped window rather than the wallet's whole history.
     truncated: asks.length === limit,

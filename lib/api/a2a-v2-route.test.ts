@@ -153,7 +153,8 @@ describe("A2A v2 route", () => {
     expect(response.status).toBe(200);
     expect(mocks.getAgentDeps).toHaveBeenCalledWith({ model: undefined });
     expect(mocks.collectRun).toHaveBeenCalledWith(
-      expect.objectContaining({ question: "q" }),
+      expect.objectContaining({ question: "q", asker: "0x1111111111111111111111111111111111111111",
+        provenance: { version: 1, surface: "agent-to-agent", ownershipMethod: "verified-payer" } }),
       { deps: await mocks.getAgentDeps.mock.results[0]!.value },
     );
   });

@@ -42,7 +42,8 @@ console.log(`${c.dim("question:")} ${question}\n`);
 if (allowExternalWeb) console.log("Public web search may send this question to the configured search provider. The source USDC budget is separate from model and search operating costs.");
 console.log(c.dim("─".repeat(72)));
 
-const run = await collectRun({ question, budget, model, origin: "engine", allowExternalWeb }, { onStep: printStep }).catch(error => {
+const run = await collectRun({ question, budget, model, origin: "engine", allowExternalWeb,
+  provenance: { version: 1, surface: "cli", ownershipMethod: "unknown" } }, { onStep: printStep }).catch(error => {
   if (!(error instanceof ResearchPlanningError) && !(error instanceof ResearchSelectionError)) throw error;
   console.error(researchFailureMessage(error));
   if (error instanceof ResearchSelectionError) console.error(JSON.stringify({ selectionDiagnostic: error.diagnostic }));
