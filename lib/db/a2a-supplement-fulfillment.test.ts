@@ -35,6 +35,12 @@ const protectedFolder = () => {
   const folder = mkdtempSync(join(process.platform === "win32" ? tmpdir() : homedir(), "keryx-supplement-db-"));
   cleanup.push(() => rmSync(folder, { recursive: true, force: true })); return folder;
 };
+function originalFixture(enrolled: boolean, index: number) {
+  const fixture = enrolled ? syntheticFailedOriginal(index, ARC_MAINNET_PROFILE) : syntheticFailedOriginal(index);
+  fixture.authority.input.selectedDocumentIds = ["document-one", "document-two"];
+  fixture.authority.input.targets = Array.from({ length: 5 }, (_, index) => `Synthetic required target ${index}.`);
+  return fixture;
+}
 async function setup(enrolled = false, index = 1) {
   vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime("2026-10-06T10:00:05.000Z");
   const folder = protectedFolder(), file = join(folder, "synthetic.sqlite");
@@ -55,9 +61,7 @@ async function setup(enrolled = false, index = 1) {
     writer = new SqliteAdapter(file); cleanup.push(() => writer.close()); await writer.init();
     reader = new SqliteAdapter(file, { readOnly: true }); cleanup.push(() => reader.close());
   }
-  const fixture = enrolled ? syntheticFailedOriginal(index, ARC_MAINNET_PROFILE) : syntheticFailedOriginal(index);
-  fixture.authority.input.selectedDocumentIds = ["document-one", "document-two"];
-  fixture.authority.input.targets = Array.from({ length: 5 }, (_, index) => `Synthetic required target ${index}.`);
+  const fixture = originalFixture(enrolled, index);
   await seedSyntheticA2aOriginal(writer, fixture);
   const claim = await writer.claimA2aFailedOriginalFulfillment(fixture.input); expect(claim).not.toBeNull();
   const native = new DatabaseSync(file); cleanup.push(() => native.close());
@@ -120,39 +124,45 @@ function supplementalResult(claim: A2aFulfillmentClaim) {
     capability: fulfillmentEvidenceCapability(context, claim, run) };
 }
 
-describe("supplemental same-original native completion", () => {
-  it("reads the unchanged pre-CSL v2 receipt through enrolled readonly storage only with genuine evidence capability", async () => {
-    const f = await setup(true), value = supplementalResult(f.claim), run = value.result.run;
-    const financialBefore = f.native.prepare("SELECT * FROM payment_events ORDER BY id").all();
-    const modern = a2aResult.a2aResponseFromRun(run, a2aResult.quoteFromA2aOrder(f.fixture.order),
-      { acceptedAt: f.fixture.order.createdAt, startedAt: f.fixture.order.startedAt });
-    expect(modern.researchExports).toHaveProperty("cslJson");
-    // Complete known historical presentation from unchanged export primitives.
-    const legacy = { ...modern, researchExports: { bibtex: buildCitationExport(run.citations, "bibtex"),
-      ris: buildCitationExport(run.citations, "ris"), evidenceCsv: evidenceMatrixCsv(run) } };
-    expect(legacy.researchExports.bibtex.count).toBe(3);
-    expect(legacy.researchExports.ris.content).toContain("Content version:");
-    // Emulate only the pre-CSL writer presentation through the real enrolled
-    // transaction, without bypassing its storage fence or any native validator.
-    // The historical shape intentionally predates today's inferred CSL type.
-    const presentation = vi.spyOn(a2aResult, "a2aResponseFromRun").mockReturnValueOnce(legacy as typeof modern);
-    try { expect(await f.writer.completeA2aFailedOriginalFulfillment(value.result, value.capability)).toBe(true); }
-    finally { presentation.mockRestore(); }
-    const rows = () => canonicalJson(["a2a_orders", "query_runs", "a2a_failed_original_fulfillments",
-      "a2a_fulfillment_completions", "payment_events"].map(table => f.native.prepare(`SELECT * FROM ${table}`).all()));
-    const before = rows();
-    vi.setSystemTime("2026-10-09T12:00:00.000Z");
-    expect(await f.reader.hasA2aFailedOriginalFulfillment(f.claim.authority, value.capability)).toBe(true);
-    expect(await f.reader.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(false);
-    expect(await f.reader.hasA2aFailedOriginalFulfillment(f.claim.authority, Object.freeze({}) as FulfillmentEvidenceCapability)).toBe(false);
-    expect(rows()).toBe(before);
-    expect((await f.reader.getA2aOrder(run.id))!.response).toEqual(legacy);
-    expect(await f.writer.completeA2aFailedOriginalFulfillment(value.result, value.capability)).toBe(true);
-    expect(rows()).toBe(before);
-    expect(f.native.prepare("SELECT * FROM payment_events ORDER BY id").all()).toEqual(financialBefore);
-    expect(await f.reader.getQueryRun(run.id)).toEqual(run);
-  }, 30000);
+async function assertLegacyEnrolledReadonly(storage: Awaited<ReturnType<typeof setup>>) {
+  // The real runtime pins one deployment for its module lifetime. Keep that
+  // identity and exercise a distinct historical original in the same store.
+  const fixture = originalFixture(true, 2);
+  await seedSyntheticA2aOriginal(storage.writer, fixture);
+  const claim = await storage.writer.claimA2aFailedOriginalFulfillment(fixture.input);
+  expect(claim).not.toBeNull();
+  const f = { ...storage, fixture, claim: claim! }, value = supplementalResult(f.claim), run = value.result.run;
+  const financialBefore = f.native.prepare("SELECT * FROM payment_events ORDER BY id").all();
+  const modern = a2aResult.a2aResponseFromRun(run, a2aResult.quoteFromA2aOrder(f.fixture.order),
+    { acceptedAt: f.fixture.order.createdAt, startedAt: f.fixture.order.startedAt });
+  expect(modern.researchExports).toHaveProperty("cslJson");
+  // Complete known historical presentation from unchanged export primitives.
+  const legacy = { ...modern, researchExports: { bibtex: buildCitationExport(run.citations, "bibtex"),
+    ris: buildCitationExport(run.citations, "ris"), evidenceCsv: evidenceMatrixCsv(run) } };
+  expect(legacy.researchExports.bibtex.count).toBe(3);
+  expect(legacy.researchExports.ris.content).toContain("Content version:");
+  // Emulate only the pre-CSL writer presentation through the real enrolled
+  // transaction, without bypassing its storage fence or any native validator.
+  // The historical shape intentionally predates today's inferred CSL type.
+  const presentation = vi.spyOn(a2aResult, "a2aResponseFromRun").mockReturnValueOnce(legacy as typeof modern);
+  try { expect(await f.writer.completeA2aFailedOriginalFulfillment(value.result, value.capability)).toBe(true); }
+  finally { presentation.mockRestore(); }
+  const rows = () => canonicalJson(["a2a_orders", "query_runs", "a2a_failed_original_fulfillments",
+    "a2a_fulfillment_completions", "payment_events"].map(table => f.native.prepare(`SELECT * FROM ${table}`).all()));
+  const before = rows();
+  vi.setSystemTime("2026-10-09T12:00:00.000Z");
+  expect(await f.reader.hasA2aFailedOriginalFulfillment(f.claim.authority, value.capability)).toBe(true);
+  expect(await f.reader.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(false);
+  expect(await f.reader.hasA2aFailedOriginalFulfillment(f.claim.authority, Object.freeze({}) as FulfillmentEvidenceCapability)).toBe(false);
+  expect(rows()).toBe(before);
+  expect((await f.reader.getA2aOrder(run.id))!.response).toEqual(legacy);
+  expect(await f.writer.completeA2aFailedOriginalFulfillment(value.result, value.capability)).toBe(true);
+  expect(rows()).toBe(before);
+  expect(f.native.prepare("SELECT * FROM payment_events ORDER BY id").all()).toEqual(financialBefore);
+  expect(await f.reader.getQueryRun(run.id)).toEqual(run);
+}
 
+describe("supplemental same-original native completion", () => {
   it.each([false, true])("commits once with enrolled=%s, retains financial history and proves delivery after expiry", async enrolled => {
     const f = await setup(enrolled), value = supplementalResult(f.claim);
     const financialBefore = f.native.prepare("SELECT * FROM payment_events ORDER BY id").all();
@@ -165,6 +175,7 @@ describe("supplemental same-original native completion", () => {
     expect((await f.reader.getA2aFailedOriginalFulfillment(f.claim.authority.original.id))?.claim).toEqual(f.claim);
     expect(f.native.prepare("SELECT count(*) AS n FROM a2a_fulfillment_completions").get()?.n).toBe(1);
     expect(f.native.prepare("SELECT * FROM payment_events ORDER BY id").all()).toEqual(financialBefore);
+    if (enrolled) await assertLegacyEnrolledReadonly(f);
     vi.setSystemTime("2026-10-09T12:00:00.000Z");
     const historicalCapability = fulfillmentEvidenceCapability(value.context, f.claim, value.result.run);
     expect(await f.reader.hasA2aFailedOriginalFulfillment(f.claim.authority, historicalCapability)).toBe(true);
