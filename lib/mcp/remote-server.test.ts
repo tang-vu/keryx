@@ -135,7 +135,7 @@ describe("remote MCP server", () => {
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     try {
       await server.connect(serverTransport); await client.connect(clientTransport);
-      expect(client.getServerVersion()?.version).toBe("0.3.8");
+      expect(client.getServerVersion()?.version).toBe("0.3.9");
       const result = await client.callTool({ name: "research", arguments: { question: "What changed?" } });
       expect(result.structuredContent).toMatchObject({ engine: run.engine, reasoningAttempts: run.reasoningAttempts,
         reasoning: { sourceSelection: { state: "heuristic", servingEngines: ["heuristic"], fallbackUsed: true } } });

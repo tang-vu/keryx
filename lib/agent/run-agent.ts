@@ -1,5 +1,6 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { answerPresentation } from "../research/answer-presentation";
+import { confidenceBanner, ordinaryConfidence } from "../research/confidence-copy";
 import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../research/source-requirements";
 import { emptyEvidenceAnswer, researchResponseLanguage } from "./empty-public-evidence";
 import { researchFollowUp } from "./research-follow-up";
@@ -1557,7 +1558,9 @@ async function* runAdmittedAgent(
   // 5) SYNTHESIZE
   yield emit("synthesize", `Synthesizing a grounded answer from ${gathered.length} source(s)…`);
   let synthesized: SynthResult;
-  const presentation = answerPresentation(input.originalQuestion ?? input.question);
+  const ordinaryPresentation = effects.scope.kind === "public" && !input.targetAsset && !input.paidScholarly &&
+    !input.answerFormat && process.env.KERYX_DECISION_BRIEF !== "1";
+  const presentation = answerPresentation(input.originalQuestion ?? input.question, ordinaryPresentation ? "ordinary" : "retained");
   // First-turn ordinary caller only. Augmented follow-ups, retained/private
   // originals and bounded packages keep their existing synthesis contract.
   const teachingRequest = process.env.KERYX_TEACHING_PROPOSALS === "1" && effects.scope.kind === "public" &&
@@ -1688,9 +1691,12 @@ async function* runAdmittedAgent(
   const evidenceVerdict = researchVerdict({ coverage: claimCoverage,
     sources: gathered,
     citedMarkers: [...ledger.acceptedMarkers], sourceMarkers: gathered.map(source => source.marker),
-    conflicts: synthesized.conflicts ?? [], finalAssessmentSufficient: finalSufficiency.sufficient });
+    conflicts: synthesized.conflicts ?? [], finalAssessmentSufficient: finalSufficiency.sufficient },
+    ordinaryPresentation ? presentation.language : "en");
   // Coverage estimates describe the excerpt ledger, never a verified complete synthesis.
-  const verdict: Confidence = { level: "Low", reason: unavailableAssessment ? (vi
+  const verdict: Confidence = ordinaryPresentation && !brief
+    ? ordinaryConfidence(presentation.language, unavailableAssessment ? "unavailable" : citedSummary ? "summary" : "excerpts", evidenceVerdict.reason)
+    : { level: "Low", reason: unavailableAssessment ? (vi
     ? "Bước tổng hợp hoặc kiểm tra bằng chứng chưa hoàn tất; chưa đánh giá được mức hỗ trợ của nguồn hay câu trả lời hữu ích."
     : "Synthesis or evidence review did not complete; source support and a useful answer remain unassessed.") : brief ? (vi
     ? "Bản phân tích đã qua kiểm tra bằng model trên trích đoạn có giới hạn; chưa xác minh tính đầy đủ hoặc tính đúng đắn độc lập."
@@ -1702,7 +1708,8 @@ async function* runAdmittedAgent(
   runConfidence = verdict;
 
   if (verdict.level === "Low" && used.length > 0) {
-    answer = vi ? `> ⚠ Độ tin cậy thấp — ${verdict.reason} Kết quả chưa hoàn chỉnh.\n\n${answer}`
+    answer = ordinaryPresentation && !brief ? confidenceBanner(answer, verdict, presentation.language)
+      : vi ? `> ⚠ Độ tin cậy thấp — ${verdict.reason} Kết quả chưa hoàn chỉnh.\n\n${answer}`
       : `> ⚠ Low confidence — ${verdict.reason.replace(/[.!?]$/, "")}. Treat this as provisional.\n\n${answer}`;
   }
 

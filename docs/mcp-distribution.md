@@ -1,5 +1,20 @@
 # MCP package distribution
 
+## Coordinated release46 — October 9, 2026 source candidate
+
+App0.27.46 selects stdio0.4.13 and official Registry descriptor0.4.13 with hosted
+protocol0.3.9. The new package includes local `evidence_draft`, key-scoped
+`history_read` and `profile_identities_read`; research, signing and original
+recovery retain their existing contracts. Ordinary history/profile capabilities
+remain unavailable on sealed production storage until separately admitted.
+
+Desktop0.4.12 packages the changed shared native-proof graph; extension0.1.2's
+shipped inputs are unchanged. See [surface parity](surface-parity.md). These are
+committed distribution candidates, not published or installed versions. The
+owner's October9 merge-before-CI instruction leaves exact-main CI, packed-package
+acceptance, npm/Registry integrity and hosted/deployed readback as release gates.
+The dated candidate and publication records below remain historical.
+
 The [personal history source candidate](engineering/personal-history-read-2026-10-09.md)
 adds key-only `history_read` to both transports. Built fixture acceptance does not
 establish npm publication or adoption of the ordinary SQL read port in production.

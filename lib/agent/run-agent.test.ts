@@ -3268,11 +3268,19 @@ describe("omitted-assertion completion boundary", () => {
     { label: "Portuguese", question: "Earlier context: Answer in English in four short bullets about approval identity.",
       originalQuestion: "Answer in Portuguese in one short bullet about approval identity.",
       presentation: { language: "pt", requestedLanguage: "pt", requestedBulletCount: 1 },
-      statement: "A aprovação está vinculada à identidade canônica da ação.", quoteLabel: "Texto da fonte" },
-    { label: "unsupported Spanish with Portuguese context", question: "Sou professora e preciso de uma explicação. Write in Portuguese in four short bullets about approval identity.",
+      statement: "A aprovação está vinculada à identidade canônica da ação.", quoteLabel: "Texto da fonte", banner: "Baixa confiança", reason: "Cada frase do resumo" },
+    { label: "Spanish with Portuguese context", question: "Sou professora e preciso de uma explicação. Write in Portuguese in four short bullets about approval identity.",
       originalQuestion: "En español, explique sobre la identidad de aprobación. Write one short bullet.",
+      presentation: { language: "es", requestedLanguage: "es", requestedBulletCount: 1 },
+      statement: "La aprobación está vinculada a la identidad canónica de la acción.", quoteLabel: "Texto de la fuente", banner: "Confianza baja", reason: "Cada frase del resumen" },
+    { label: "Vietnamese with Portuguese context", question: "Sou professora e preciso de uma explicação. Write in Portuguese.",
+      originalQuestion: "Answer in Vietnamese in one short bullet about approval identity.",
+      presentation: { language: "vi", requestedLanguage: "vi", requestedBulletCount: 1 },
+      statement: "Sự chấp thuận gắn với định danh chuẩn của hành động.", quoteLabel: "Nguyên văn nguồn", banner: "Độ tin cậy thấp", reason: "Mỗi câu tóm tắt" },
+    { label: "unsupported German with Portuguese context", question: "Sou professora e preciso de uma explicação. Write in Portuguese.",
+      originalQuestion: "Antworte auf Deutsch. Write one short bullet about approval identity.",
       presentation: { language: "en", requestedBulletCount: 1 },
-      statement: "La aprobación está vinculada a la identidad canónica de la acción.", quoteLabel: "Source text" },
+      statement: "Die Zustimmung ist an die kanonische Identität der Aktion gebunden.", quoteLabel: "Source text", banner: "Low confidence", reason: "Each summary sentence" },
   ])("delivers $label consistently through report, API, MCP and A2A results", async fixture => {
     const quote = "The protocol binds approval to canonical action identity.";
     const statement = fixture.statement;
@@ -3290,6 +3298,8 @@ describe("omitted-assertion completion boundary", () => {
       executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } },
       { deps: { ...deps([source], engine, gateway, { items: { [source.id]: [item] } }), effects } });
     expect(run.answer).toContain(`- ${statement} [S1] ${fixture.quoteLabel}: “${quote}”`);
+    expect(run.answer.startsWith(`> ⚠ ${fixture.banner} — `)).toBe(true);
+    expect(run.confidence).toMatchObject({ level: "Low", reason: expect.stringContaining(fixture.reason) });
     expect(run.answer).not.toContain("Unsupported raw draft");
     expect(gateway.citationCalls).toHaveLength(1);
     expect(run.evidence).toHaveLength(1);
@@ -3306,6 +3316,31 @@ describe("omitted-assertion completion boundary", () => {
       expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
     }
     expect(remoteResearchResult(run).answer).toBe(run.answer);
+  });
+
+  it("keeps the retained private Spanish run on its previous presentation and confidence bytes", async () => {
+    const quote = "The protocol binds approval to canonical action identity.";
+    const item: SourceItem = { id: "retained-language-item", sourceId: "retained-language-source", title: "Synthetic article",
+      link: "https://owned.example/retained-language", summary: "Approval protocol", content: quote };
+    const source = makeSource({ id: item.sourceId, fetchPrice: 0.004 });
+    const engine = fakeEngine({ synthesize: input => {
+      expect(input.answerPresentation).toEqual({language: "en"});
+      return { answer: "Unsupported raw draft [S1]", citedMarkers: ["S1"],
+        evidence: [{claimIndex: 0, marker: "S1", quote, support: 0.9,
+          statement: "La aprobación está vinculada a la identidad canónica de la acción.", statementSupport: 0.9}] };
+    } });
+    engine.decompose = async () => ["Approval identity"];
+    const queryId = `prv_${"f".repeat(64)}`, effects = isolatedTestEffects(queryId), gateway = fakeGateway();
+    const run = await collectRun({question: "En español, explique sobre la identidad de aprobación.", queryId, budget: 0.03,
+      executionLimits: {attentionLimit: 1, reevaluateRounds: 0}},
+    {deps: {...deps([source], engine, gateway, {items: {[source.id]: [item]}}), effects}});
+    expect(run.answer.startsWith("> ⚠ Low confidence — ")).toBe(true);
+    expect(run.answer).toContain("Model-written summary with sentence-level citations.");
+    expect(run.answer).not.toContain("Confianza baja");
+    expect(run.confidence).toEqual({level: "Low", reason: "Each summary sentence is tied to a verbatim excerpt and model-checked; completeness and independent factual correctness remain unverified. Evidence assessment: 1 evidence-verified source cover every sub-claim, but corroboration or support strength is limited"});
+    expect(run.evidence?.map(item => item.quote)).toEqual([quote]);
+    expect(effects.saveQueryRun).toHaveBeenCalledWith(run);
+    expect(gateway.citationCalls).toHaveLength(1);
   });
 });
 
