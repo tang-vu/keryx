@@ -42,6 +42,15 @@ was inspected at `2026-10-09T12:33:38.255Z` on source checkpoint
 Its complete-file SHA256 is
 `5407e206154c5a9679345512e096a99ae2e73057e6c9e63dd60077eef12a87e0`.
 
+After review corrected no-policy removal validation and the Node metadata floor,
+the [corrected-source composition](../../fixtures/evals/quality/scorecard-20261009-corrected.json)
+was inspected at `2026-10-09T12:46:12.796Z` on checkpoint
+`02fe224695ece6db92bcef6437365a1484ef5e39`, again using Node `v24.21.0`.
+Its complete-file SHA256 is
+`ac1650383b812baaf50b837221b039069da6cb53e88a4f2754608450a9f5110d`.
+Both inspect the same two archived captures; this is a source correction, not a
+new answer cohort or an improvement trend. The original run remains historical.
+
 ## Current evidence and denominators
 
 These remain the owner-operated app0.27.44 snapshots at
