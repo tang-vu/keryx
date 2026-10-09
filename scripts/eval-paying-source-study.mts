@@ -14,10 +14,14 @@ const reportPath = path.join(root, "docs/studies/paying-for-sources-2026-10-09.m
 const args = process.argv.slice(2);
 if (args.length !== 1 || !["--check", "--write", "--internal-worker"].includes(args[0]))
   throw new Error("Use --check or --write; no provider, private input or payment options are accepted");
+function readCorpus() {
+  if (fs.statSync(corpusPath).size > 128 * 1024) throw new Error("Controlled study corpus exceeds128KiB bound");
+  return parseCorpus(JSON.parse(fs.readFileSync(corpusPath, "utf8")));
+}
 
 if (args[0] === "--internal-worker") {
   const boundary = denyOutbound();
-  const corpus = parseCorpus(JSON.parse(fs.readFileSync(corpusPath, "utf8")));
+  const corpus = readCorpus();
   const { runStudy } = await import("../lib/evals/paying-source-study/runner");
   const trials = await runStudy(corpus);
   const inputs = sourceInputs(root, fileURLToPath(import.meta.url));
@@ -37,7 +41,7 @@ if (args[0] === "--internal-worker") {
   if (failure || code !== 0) throw failure ?? new Error(`Controlled study worker failed (${code}): ${stderr}`);
   const bytesOut = Buffer.concat(chunks).toString("utf8");
   const result = JSON.parse(bytesOut) as StudyArtifact;
-  const corpus = parseCorpus(JSON.parse(fs.readFileSync(corpusPath, "utf8")));
+  const corpus = readCorpus();
   if (result.trials.length !== 48 || result.outboundAttempts !== 0 || result.corpusSha256 !== sha256(canonical(corpus)))
     throw new Error("Controlled study artifact failed matrix boundary");
   const report = renderStudy(result, corpus);
