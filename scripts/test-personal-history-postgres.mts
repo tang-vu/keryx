@@ -6,7 +6,9 @@ import { resolve } from "node:path";
 import assert from "node:assert/strict";
 const name = `keryx-history-${randomUUID()}`, owner = `0x${"a".repeat(40)}`, other = `0x${"b".repeat(40)}`;
 const docker = (args: string[], input?: string) => execFileSync("docker", args, { input, encoding: "utf8", timeout: 30000, maxBuffer: 2 * 1024 * 1024, windowsHide: true });
-const sql = (input: string) => docker(["exec", "-i", name, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-At"], input).trim();
+// The image's temporary initialization server accepts Unix sockets before shutdown.
+// Internal TCP becomes available on the final server; never accept the bootstrap socket as ready.
+const sql = (input: string) => docker(["exec", "-i", name, "psql", "-h", "127.0.0.1", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-At"], input).trim();
 const call = (filters = "{}", take = 2, before = "null", upper = "null", role = "service_role") => sql(`set role ${role}; select public.personal_history_read_v1('${owner}','${filters}'::jsonb,${take},${upper}::jsonb,${before}::jsonb);`).split("\n").at(-1)!;
 let created = false;
 try {
