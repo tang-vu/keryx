@@ -1,18 +1,18 @@
 import assert from "node:assert/strict";
-import { execFile, execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { browserPostgresFixture } from "../test-support/browser-postgres-fixture";
+import { postgresBrowserMigrationProfiles } from "../test-support/postgres-browser-migration-profiles";
 
 // Disposable PostgreSQL only: no app environment, published ports, mounts or network.
-const name = `keryx-browser-admission-test-${Date.now()}`;
-const binary = process.platform === "win32" ? "wsl.exe" : "docker";
-const prefix = process.platform === "win32" ? ["-d", "Ubuntu", "--", "docker"] : [];
-const docker = (args: string[], input?: string) => execFileSync(binary, [...prefix, ...args],
-  { input, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
-const psql = ["exec", "-i", name, "psql", "-U", "postgres", "-v", "ON_ERROR_STOP=1", "-q", "-t", "-A"];
-const sql = (input: string) => docker(psql, input).trim();
+const postgres = browserPostgresFixture(process.argv.slice(2));
+const sql = postgres.sql;
 const concurrent = (input: string) => new Promise<string>((resolve, reject) => {
-  const child = execFile(binary, [...prefix, ...psql], { encoding: "utf8" },
-    (error, stdout) => error ? reject(error) : resolve(stdout.trim()));
+  const child = postgres.spawnClient(); let output = "", errors = "";
+  child.stdout.on("data", chunk => { output += String(chunk); });
+  child.stderr.on("data", chunk => { errors = (errors + String(chunk)).slice(-4096); });
+  child.once("error", reject);
+  child.once("close", code => code === 0 ? resolve(output.trim()) : reject(new Error(`Synthetic PostgreSQL client failed: ${errors}`)));
   child.stdin!.end(`set role service_role; begin; ${input}; select pg_sleep(0.1); commit;`);
 });
 const signer = `0x${"a".repeat(40)}`;
@@ -64,26 +64,12 @@ const journalState = () => sql(`select jsonb_build_object(
   'intents',(select jsonb_agg(to_jsonb(i) order by nonce) from public.browser_authorization_intents i),
   'bindings',(select jsonb_agg(to_jsonb(b) order by nonce) from public.browser_journal_bindings b),
   'payments',(select jsonb_agg(to_jsonb(p) order by id) from public.payment_events p))`);
-async function ready() {
-  for (let retry = 0; ; retry++) {
-    try { docker(["exec", name, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"]); return; }
-    catch {
-      if (retry === 60) throw new Error("PostgreSQL unavailable");
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-  }
-}
-let started = false;
 try {
   // Fail rather than skip when Docker is unavailable; CI is the runtime gate.
-  docker(["info", "--format", "{{.ServerVersion}}"]);
-  docker(["run", "-d", "--name", name, "--network", "none", "--memory", "256m", "--cpus", "1",
-    "-e", "POSTGRES_HOST_AUTH_METHOD=trust", "postgres:17"]);
-  started = true;
-  await ready();
+  await postgres.start();
   // Seed/test the previous writer before applying cutover. Both chains are actual migrations.
-  const migrations = readdirSync("supabase/migrations")
-    .filter(file => /^\d{4}.*\.sql$/.test(file)).sort();
+  const profiles = postgresBrowserMigrationProfiles(readdirSync("supabase/migrations"));
+  const migrations = profiles.native;
   assert(migrations.includes("0067_browser_authorization_admission.sql"));
   assert(migrations.includes("0068_browser_authorization_timestamp.sql"));
   assert(migrations.includes("0069_browser_authorization_journal.sql"));
@@ -186,6 +172,28 @@ try {
   sql("alter default privileges in schema public grant all on tables to service_role");
   sql(migrations.filter(file => Number(file.slice(0, 4)) >= 69)
     .map(file => readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n"));
+  // Actively prove ordinary extensions refuse the native marker rather than silently omit them.
+  const nativeSchema = () => sql("select coalesce(jsonb_agg(c.relname order by c.relname)::text,'[]') from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','keryx_storage');");
+  for (const extension of profiles.extensions) {
+    const before = nativeSchema();
+    assert.throws(() => sql(readFileSync(`supabase/migrations/${extension.file}`, "utf8")), new RegExp(extension.refusal));
+    assert.equal(nativeSchema(), before, "Native refusal must leave relations unchanged");
+  }
+  const ordinary = `browser_ordinary_${randomUUID().replaceAll("-", "")}`;
+  postgres.createDatabase(ordinary);
+  postgres.sql("create publication supabase_realtime;\n" + profiles.ordinary.concat(profiles.extensions.map(extension => extension.file))
+    .map(file => readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n"), ordinary);
+  assert.equal(postgres.sql("select to_regclass('keryx_storage.identity') is null;", ordinary), "t");
+  for (const extension of profiles.extensions) {
+    if (extension.file === "0086_decision_reviews.sql") {
+      assert.deepEqual(JSON.parse(postgres.sql("set role service_role;select public.decision_reviews_v1('ready',null,'{}'::jsonb);", ordinary)), { ready: true });
+      assert.throws(() => postgres.sql("set role anon;select public.decision_reviews_v1('ready',null,'{}'::jsonb);", ordinary), /permission denied/);
+    } else {
+      assert.equal(postgres.sql("select to_regclass('public.deliverable_acceptance_entries') is not null;", ordinary), "t");
+      assert.throws(() => postgres.sql("set role anon;select * from public.deliverable_acceptance_entries;", ordinary), /permission denied/);
+    }
+  }
+  console.log(`PASS actual migration profiles: ${migrations.length} accepted native inputs preserved; ${profiles.extensions.map(extension => extension.file).join(', ')} refuse native and install separately on fresh ordinary storage`);
   assert.equal(sql("select active from public.browser_journal_control"), "f", "schema must not activate signing");
   assert.equal(asService(journal(200)), "inactive");
   asService(`insert into public.session_grants(session_id,sess_addr,owner_addr,cap,spent,expiry,tx_hash,grant_epoch)
@@ -389,7 +397,7 @@ try {
     'capacity',(select spent_micro from public.browser_signer_capacity where signer='${signer}'),
     'retained',(select spent_micro from public.browser_retained_grants where grant_epoch='revoke-original'))`);
   const startTransaction = (application: string, statement: string, held = false) => {
-    const child = execFile(binary, [...prefix, ...psql], { encoding: "utf8", timeout: 20_000 });
+    const child = postgres.spawnClient();
     const completion = new Promise<{ ok: boolean; output: string }>(resolve => {
       let output = "";
       child.stdout?.on("data", value => { output += value; });
@@ -429,11 +437,10 @@ try {
   assert.equal(sql("select count(*) from public.browser_journal_writer"), "0");
   console.log("PASS: actual PG17 generation revoke contention, original exposed journal/cap retention and legacy CAS");
   const snapshot = journalState();
-  docker(["restart", name]);
-  await ready();
+  await postgres.restart();
   assert.equal(journalState(), snapshot, "committed authority + retained capacity must survive DB process restart");
   assert.equal(asService(sign(231)), "t", "identical signed callback remains idempotent after restart");
   assert.equal(JSON.parse(asService(terminal(231, "failed"))).resolved, false, "settled cannot release after restart");
   assert.equal(journalState(), snapshot);
-  console.log("PASS: PostgreSQL 17 ALL actual migrations; legacy exact conversion and retained orphan epochs; atomic intent/payment/cap bridge; real concurrent signer/alias caps; rollback and capability cleanup; service-only RPCs/RLS; NULL-resistant guards; old SQL/RPC fences; nonce collision defense; prepared-only cancellation; signing replay, terminal CAS/release and database-process restart persistence. Synthetic unfunded fixtures and terminal identifiers only, no real signatures/transfers. Restart does not prove power-loss durability.");
-} finally { if (started) docker(["rm", "-f", "-v", name]); }
+  console.log("PASS: PostgreSQL 17 complete accepted native migration profile; legacy exact conversion and retained orphan epochs; atomic intent/payment/cap bridge; real concurrent signer/alias caps; rollback and capability cleanup; service-only RPCs/RLS; NULL-resistant guards; old SQL/RPC fences; nonce collision defense; prepared-only cancellation; signing replay, terminal CAS/release and database-process restart persistence. Ordinary extensions install separately and refuse native. Synthetic unfunded fixtures and terminal identifiers only, no real signatures/transfers. Restart does not prove power-loss durability.");
+} finally { postgres.close(); }

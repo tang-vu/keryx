@@ -8,6 +8,7 @@ import { chromium } from "playwright";
 import { SQLITE_SELECTION_QUESTION } from "../test-support/sqlite-selection-fixture";
 import type { SelectionDiagnostic } from "../lib/research/selection-diagnostic";
 import type { Decision } from "../lib/types";
+import { assertResearchBrowserFixtureGraph, signedOutResearchAuthFixture } from "../test-support/research-browser-auth-fixture";
 
 const diagnostic: SelectionDiagnostic = {
   protocol: "keryx-source-selection-v1", id: "c12f7f67-2208-4f9d-ab28-f136ae55e61d",
@@ -38,10 +39,12 @@ const bundle = await build({
     }
     createRoot(document.getElementById('root')).render(<Probe/>);
   `, loader: "tsx", resolveDir: process.cwd() },
-  bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
-  define: { "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
+  bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", metafile: true,
+  plugins: [signedOutResearchAuthFixture()],
+  define: { "process.env": "{}", "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
 });
+assertResearchBrowserFixtureGraph(bundle.metafile);
 const screenshots = process.env.KERYX_UX_SCREENSHOT_DIR ?? join(tmpdir(), "keryx-selection-failure");
 await mkdir(screenshots, { recursive: true });
 const cssRoot = process.env.KERYX_TRACE_CSS_DIR ?? join(process.cwd(), ".next/static");
@@ -83,6 +86,9 @@ try {
     await page.goto("https://selection-failure.invalid/");
     await page.addStyleTag({ content: css });
     await page.addScriptTag({ content: bundle.outputFiles[0].text });
+    await page.getByRole("button", { name: "Submit synthetic question" }).waitFor({ timeout: 5000 }).catch(cause => {
+      throw new Error(`Real research fixture did not render. Browser errors: ${errors.join("; ")}`, { cause });
+    });
     await page.getByRole("button", { name: "Submit synthetic question" }).click();
     await page.getByRole("alert").waitFor();
     assert.equal(asks, 1);
