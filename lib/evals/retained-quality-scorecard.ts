@@ -26,8 +26,12 @@ export const qualityCoverageSchema = z.object({ version: z.literal(1), id,
   removals: z.array(z.object({ caseId: id, reason: z.string().trim().min(1).max(1024),
     recordedAt: z.string().datetime(), previousSuiteSha256: digest }).strict()).max(32),
 }).strict();
+const supportedRuntime = z.string().max(64).regex(/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/).refine(value => {
+  const [major, minor, patch] = value.slice(1).split(".").map(Number);
+  return [major, minor, patch].every(Number.isSafeInteger) && ((major === 22 && minor >= 19) || major >= 24);
+});
 const inspectionSchema = z.object({ inspectedAt: z.string().datetime(), inspectorCommit: z.string().regex(/^[a-f0-9]{40}$/),
-  inspectorSourceSha256: digest, runtime: z.string().regex(/^v(?:22|24|2[5-9]|[3-9]\d)\.\d+\.\d+$/) }).strict();
+  inspectorSourceSha256: digest, runtime: supportedRuntime }).strict();
 const policySchema = z.object({ version: z.literal(1), id,
   metric: z.literal("deterministic-contract-pass-rate"), allowedDropBasisPoints: z.number().int().min(0).max(10000),
   rationale: z.string().trim().min(1).max(1024), evidenceSha256: digest }).strict();
@@ -134,13 +138,14 @@ export function compareRetainedQualityScorecards(previous: RetainedQualityInputs
   const policy = policyInput === undefined ? null : parse(policySchema, policyInput);
   const common = { metric: "deterministic-contract-pass-rate", releaseQualityRegression: "NOT_COMPARABLE",
     operationalOrSemanticAcceptance: false, policyIsOwnerAgreementAttestation: false };
-  if (!policy) return { ...common, status: "NOT_COMPARABLE", reason: "NO_SUPPLIED_DIAGNOSTIC_POLICY" };
-  if (before.suiteDefinitionSha256 !== after.suiteDefinitionSha256) {
+  const changedSuite = before.suiteDefinitionSha256 !== after.suiteDefinitionSha256;
+  if (changedSuite) {
     const removed = before.cases.filter(c => !after.cases.some(a => a.id === c.id));
     if (removed.some(c => !after.removals.some(r => r.caseId === c.id && r.previousSuiteSha256 === before.suiteDefinitionSha256)))
       throw new DeliverableInputError("UNDOCUMENTED_CASE_REMOVAL");
-    return { ...common, status: "NOT_COMPARABLE", reason: "CHANGED_SUITE" };
   }
+  if (!policy) return { ...common, status: "NOT_COMPARABLE", reason: "NO_SUPPLIED_DIAGNOSTIC_POLICY" };
+  if (changedSuite) return { ...common, status: "NOT_COMPARABLE", reason: "CHANGED_SUITE" };
   if (before.captureFingerprintSha256 === after.captureFingerprintSha256)
     return { ...common, status: "NOT_COMPARABLE", reason: "SAME_RETAINED_CAPTURES" };
   const left = before.overall, right = after.overall;

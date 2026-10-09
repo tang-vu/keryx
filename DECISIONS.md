@@ -6963,6 +6963,7 @@ exact requested language, preserving every failed and unjudged case. A dated
 public issue inventory and explicit selected coverage registry expose missing
 cases and reasoned removals; labels alone never establish complete issue coverage.
 Recompute grades from the bounded inputs instead of accepting caller PASS fields.
+Require reasoned case-removal history even without a diagnostic comparison policy.
 Keep useful-answer rates null, language/completeness UNJUDGED, and historical
 capture allowance unknown. Inspector source/date is separate from archived answer
 commit/date; a new inspector is not a new release cohort. An explicit deterministic

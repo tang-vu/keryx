@@ -51,6 +51,16 @@ describe("retained scorecard composition", () => {
     const input = inputs(); input.corpus.cases[1].contract.requestedLanguage = "pt"; refresh(input);
     expect(buildRetainedQualityScorecard(input).byLanguage.map(r => r.language)).toEqual(["pt", "pt-BR"]);
   });
+  it("requires the supported Node metadata floor, including Node 22.19 rather than 22.0", () => {
+    for (const runtime of ["v22.0.0", "v22.18.9", "v20.19.0", "v23.9.0"]) {
+      const input = inputs(); input.inspection.runtime = runtime;
+      expect(() => buildRetainedQualityScorecard(input)).toThrow("INVALID_SCORECARD_INPUT");
+    }
+    for (const runtime of ["v22.19.0", "v22.22.0", "v24.0.0", "v24.21.0"]) {
+      const input = inputs(); input.inspection.runtime = runtime;
+      expect(buildRetainedQualityScorecard(input).inspection.runtime).toBe(runtime);
+    }
+  });
   it("refuses changed fixture/manifest bytes and missing cases instead of changing denominators", () => {
     const changed = inputs(); changed.corpus.cases[0].snapshot.answer += " tamper";
     expect(() => buildRetainedQualityScorecard(changed)).toThrow("SCORECARD_CASE_SET_MISMATCH");
@@ -111,6 +121,17 @@ describe("explicit deterministic diagnostic comparison", () => {
     second.coverage.removals.push({ caseId: "rfc-public-20261009", reason: "Synthetic case-removal test only.",
       recordedAt: second.inspection.inspectedAt, previousSuiteSha256: buildRetainedQualityScorecard(first).suiteDefinitionSha256 });
     expect(compareRetainedQualityScorecards(first, second, policy)).toMatchObject({ status: "NOT_COMPARABLE", reason: "CHANGED_SUITE" });
+  });
+  it("requires a failing-case removal ledger even when no diagnostic policy is supplied", () => {
+    const first = inputs(), second = inputs(); second.corpus.cases.pop(); second.corpus.manifest.cases.pop();
+    second.coverage.issues[0].caseIds = []; refresh(second);
+    expect(() => compareRetainedQualityScorecards(first, second)).toThrow("UNDOCUMENTED_CASE_REMOVAL");
+    second.coverage.removals.push({ caseId: "rfc-public-20261009", reason: "Synthetic no-policy removal regression only.",
+      recordedAt: second.inspection.inspectedAt, previousSuiteSha256: "d".repeat(64) });
+    expect(() => compareRetainedQualityScorecards(first, second)).toThrow("UNDOCUMENTED_CASE_REMOVAL");
+    second.coverage.removals[0].previousSuiteSha256 = buildRetainedQualityScorecard(first).suiteDefinitionSha256;
+    expect(compareRetainedQualityScorecards(first, second)).toMatchObject({ status: "NOT_COMPARABLE",
+      reason: "NO_SUPPLIED_DIAGNOSTIC_POLICY", releaseQualityRegression: "NOT_COMPARABLE", operationalOrSemanticAcceptance: false });
   });
   it("uses exact count arithmetic at the supplied threshold without semantic promotion", () => {
     const first = inputs(); first.corpus.cases[1].contract.format.maxWhitespaceWords = 300; refresh(first);

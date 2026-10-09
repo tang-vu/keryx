@@ -8,7 +8,7 @@ semantic acceptance, release readiness, creator rewards or customer approval.
 
 ## Reproduce the composition
 
-With the supported Node runtime and existing dependencies, without an environment file:
+With Node 22.19+ or 24+ and existing dependencies, without an environment file:
 
 ```sh
 node --import tsx scripts/compose-retained-quality-scorecard.mts
@@ -36,7 +36,7 @@ from this release. A new inspector regrading identical archived captures is not
 a release trend. The checked-in frozen composition records its actual inspector
 checkpoint; later documentation/data commits do not relabel that execution.
 
-The [frozen composition](../../fixtures/evals/quality/scorecard-20261009.json)
+The [original frozen composition](../../fixtures/evals/quality/scorecard-20261009.json)
 was inspected at `2026-10-09T12:33:38.255Z` on source checkpoint
 `21a328484236198740e76ee7e8c07c9f551254a9` using Node `v24.21.0`.
 Its complete-file SHA256 is
@@ -87,7 +87,8 @@ for every open failure class, not merely five labels in a registry.
 Case removals require an explicit reason, date and previous-suite digest and are
 printed in the scorecard. They do not silently improve a denominator or count as
 approval to remove a case. Comparing different suites is always NOT_COMPARABLE;
-an undocumented removed case refuses the comparison.
+an undocumented removed case refuses the comparison even when no diagnostic
+policy is supplied. Removal accountability precedes policy availability.
 
 ## Diagnostic comparisons and release gates
 
