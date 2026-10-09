@@ -6355,3 +6355,20 @@ checks without gaining body integrity. Hash consistency does not independently
 authenticate a publisher or establish general prompt-injection/semantic farming
 resistance. The public [adversarial catalog](docs/engineering/source-money-adversarial-2026-10-09.md)
 records checked boundaries and the still-open live testnet refusal gate.
+
+## Evaluate local-currency estimates separately from EURC conversion — 2026-10-09
+
+Issue294's written evaluation keeps the current USDC reward, source-owned payee,
+Gateway, consent, nonce and receipt authority intact. Documentary Arc Swap support
+for USDC/EURC does not make EURC a Gateway balance or authorize Keryx to convert a
+creator's funds. Stage optional labeled estimates first; a future creator conversion
+would follow receipt/withdrawal of their USDC reward, while buyer conversion precedes
+the existing USDC deposit and separately signed research budget. Neither expands
+an existing spending ceiling. Merchant conversion, pooled rewards and automatic FX
+remain deferred; no transaction writer or custody change is implemented.
+
+The [evaluation](docs/currency-support-evaluation.md) records current vendor sources,
+exact-unit and recovery constraints, all supported surface roles and release gates.
+Participant currency demand, rate-provider/fee policies, tiny-amount feasibility,
+browser-compatible custody and bounded testnet proof remain unaccepted. This records
+the evaluation boundary, not an accepted economic policy or enabled EURC product.
