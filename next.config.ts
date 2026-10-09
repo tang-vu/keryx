@@ -40,6 +40,9 @@ const nextConfig: NextConfig = {
       ...["/api/me/bibliographies/:path*", "/api/bibliographies/:path*", "/me/bibliographies"].map(source => ({
         source, headers: [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
       })),
+      ...["/api/me/deliverables/:id/acceptance", "/api/deliverables/:id/acceptance", "/api/deliverables/acceptance/metrics"].map(source => ({
+        source, headers: [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      })),
       { source: "/api/sources/sponsor", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       { source: "/register/sponsored", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       // OAuth callback queries must retain the private handler's referrer policy.
