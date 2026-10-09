@@ -17,6 +17,7 @@ const input = z.object({ id: purchaseOutcomeId, createdAt: z.string().datetime({
   answer: z.string().min(1).max(500_000).refine(value => !!value.trim()),
   decisions: z.array(decision).max(512), citations: z.array(citation).max(512),
   trace: z.array(z.object({ detail: z.unknown().optional() })).max(512), archive: purchaseArchive.nullable().optional() });
+export type PurchaseOutcomeSnapshot = z.infer<typeof input>;
 
 /** Public retained snapshot only: callers retain the existing dispatch visibility
  * authority. This function performs no database, source, provider or payment I/O. */
@@ -46,7 +47,7 @@ export function projectPurchaseOutcomes(value: unknown, selectedNetwork: string)
   });
   return validatePurchaseOutcomes({ schemaVersion: "keryx-purchase-outcomes-v1", dispatchId: snapshot.id,
     network, runCreatedAt: snapshot.createdAt, basis: "retained-dispatch-trace-exact-version",
-    settlementEvidence: "recorded-only-not-revalidated", cohort: "unknown", archive,
+    settlementEvidence: "recorded-only-not-revalidated", coverage: "partial-retained-trace", cohort: "unknown", archive,
     counts: { recordedBuyDecisions: snapshot.decisions.filter(row => row.action === "BUY").length,
       scoredPurchases: purchases.length, citedPurchases: purchases.filter(row => row.cited).length,
       unscoredBuyDecisions: score.unscoredDecisions, tracePaymentObservations: payments.length,

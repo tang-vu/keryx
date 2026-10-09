@@ -14,6 +14,8 @@ import { loadFreshness } from "@/lib/answers-freshness";
 import { compareAnswerReceipts } from "@/lib/answers-delta";
 import { AnswerDeltaPanel } from "@/components/keryx/answer-delta";
 import { PortableReceiptPanel } from "@/components/keryx/portable-receipt-panel";
+import { PurchaseOutcomesPanel } from "@/components/keryx/purchase-outcomes";
+import { projectPurchaseOutcomes } from "@/lib/research/purchase-outcomes-projector";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { projectBibliographicTask } from "@/lib/research/bibliographic-task-result";
 import { breadcrumbJsonLd, crumbLabel } from "@/lib/seo-structured-data";
@@ -91,6 +93,12 @@ export default async function DispatchPage({ params }: PageProps) {
     archive ? Promise.resolve(null) : loadFreshness(db, run),
   ]);
   const { parent: parentDispatch, followUps } = thread;
+  // Optional read-only enrichment from this exact retained public record. No
+  // additional ledger/source/private-sidecar lookup or immutable receipt change.
+  const purchaseOutcomes = (() => {
+    try { return projectPurchaseOutcomes({ ...publicQueryRun(run), ...(archive ? { archive } : {}) }, config.networkId); }
+    catch { return null; }
+  })();
   const parent = parentDispatch?.run ?? null;
   const sameNetwork = parentDispatch !== null &&
     (parentDispatch.archive?.network ?? config.networkId) === (archive?.network ?? config.networkId);
@@ -204,6 +212,7 @@ export default async function DispatchPage({ params }: PageProps) {
 
         <PortableReceiptPanel dispatchId={id} />
         {!archive && <DeliverableAcceptance id={id} answer={run.answer} />}
+        <PurchaseOutcomesPanel dispatchId={id} report={purchaseOutcomes} />
 
         {comparison.delta ? <AnswerDeltaPanel delta={comparison.delta} /> : null}
         {comparison.unavailable ? <p role="status" className="mt-6 max-w-[860px] font-serif text-sm text-ink-3">The earlier payment comparison could not be loaded. This answer and its own payment evidence remain available.</p> : null}

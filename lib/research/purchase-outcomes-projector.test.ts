@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import retained from "../../fixtures/purchase-outcomes/retained-testnet.json";
-import { projectPurchaseOutcomes } from "./purchase-outcomes-projector";
+import { projectPurchaseOutcomes, type PurchaseOutcomeSnapshot } from "./purchase-outcomes-projector";
 import { validatePurchaseOutcomes } from "./purchase-outcomes-contract";
 
-const snapshot = () => structuredClone(retained.snapshot);
+const snapshot = () => structuredClone(retained.snapshot) as PurchaseOutcomeSnapshot;
 function bought(value = snapshot()) { return value.decisions.find(row => row.action === "BUY")!; }
-function observed(value = snapshot()) { return value.trace[0].detail; }
+function observed(value = snapshot()) { return value.trace[0].detail as Record<string, unknown>; }
 const project = (value: unknown) => projectPurchaseOutcomes(value, "eip155:5042");
 
 describe("public retained purchase outcomes", () => {

@@ -266,6 +266,7 @@ jobs:
           node --import tsx scripts/test-operator-obligations-transports.mts
           node --import tsx scripts/test-public-job-ledger-mcp-package.mts
           node --import tsx scripts/test-deliverable-acceptance-transports.mts
+          node --import tsx scripts/test-purchase-outcomes-transports.mts
 
       - name: Packed stdio research diagnostics, signing and recovery (synthetic)
         working-directory: mcp
@@ -452,6 +453,8 @@ jobs:
 
       - name: Prepaid A2A acceptance built routes and owner UI (synthetic, no execution)
         run: node --import tsx scripts/test-deliverable-acceptance-built.mts
+      - name: Recorded purchase outcomes built public API and report (isolated replay, no spending)
+        run: KERYX_NETWORK=arcTestnet NEXT_PUBLIC_KERYX_NETWORK=arcTestnet KERYX_FORCE_OFFLINE=1 node --import tsx scripts/test-purchase-outcomes-built.mts
       - name: Private identity configured Origin behind Next proxy (built, synthetic pre-auth)
         run: node --import tsx scripts/test-server-profile-identities-origin.mts
 

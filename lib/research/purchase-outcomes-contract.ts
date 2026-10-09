@@ -25,6 +25,7 @@ export const purchaseOutcomesSchema = z.object({
   network: purchaseOutcomeNetwork, runCreatedAt: time,
   basis: z.literal("retained-dispatch-trace-exact-version"),
   settlementEvidence: z.literal("recorded-only-not-revalidated"),
+  coverage: z.literal("partial-retained-trace"),
   cohort: z.literal("unknown"), archive: purchaseArchive.nullable(),
   counts: z.object({ recordedBuyDecisions: count, scoredPurchases: count, citedPurchases: count,
     unscoredBuyDecisions: count, tracePaymentObservations: count, excludedPaymentObservations: count }).strict(),
