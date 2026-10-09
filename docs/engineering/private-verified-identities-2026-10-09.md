@@ -78,6 +78,12 @@ fixture uses the candidate's default production output, no owner session/provide
 grant, and an owned temporary ordinary testnet SQLite database for Next's boot
 schema and empty-grant housekeeping. Identity/profile/session/challenge tables
 remain empty; it does not qualify live provider or production activation.
+Pinned Next16.3.8 resolves relative imports in its generated configuration module
+from the process cwd. The fixture links only temporary `lib` to the candidate's
+unchanged code directory so those configuration imports resolve, while retaining
+the original absolute app directory, default build and temporary database cwd.
+It checks the link's real target, unlinks it before successful temporary cleanup,
+and retains failure evidence without copying source, dependencies or build output.
 Temporary ordinary SQLite and isolated PostgreSQL acceptance cover
 atomic uniqueness, lineage/session/privacy and migration ACLs. Hermetic actual
 components with built CSS and packed stdio client fixtures cover surface roles;

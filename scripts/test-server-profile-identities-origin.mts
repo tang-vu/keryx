@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { lstat, mkdtemp, readFile, realpath, rm, symlink, unlink } from "node:fs/promises";
 import { request } from "node:http";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
@@ -25,6 +25,14 @@ assert((await readFile(join(root, ".next", "BUILD_ID"), "utf8")).trim(), "A succ
 const temporaryRoot = resolve(tmpdir()), temporary = await mkdtemp(join(temporaryRoot, "keryx-identity-origin-"));
 assert.equal(dirname(resolve(temporary)), temporaryRoot); assert(basename(temporary).startsWith("keryx-identity-origin-"));
 const databasePath = join(temporary, "data", "keryx.sqlite");
+// Next 16.3.8's generated config module resolves relative imports from cwd.
+// Expose only the candidate's code directory for its unchanged security-header
+// config imports; app dir, default build, dependencies and DB cwd stay unchanged.
+const configSource = resolve(root, "lib"), configLink = resolve(temporary, "lib");
+assert.equal(dirname(configLink), resolve(temporary)); assert.equal(configSource, join(root, "lib"));
+assert(!existsSync(configLink));
+await symlink(configSource, configLink, process.platform === "win32" ? "junction" : "dir");
+assert((await lstat(configLink)).isSymbolicLink()); assert.equal(await realpath(configLink), await realpath(configSource));
 const environment: NodeJS.ProcessEnv = {};
 for (const key of ["SystemRoot", "WINDIR", "ComSpec", "PATH", "PATHEXT", "TEMP", "TMP", "USERPROFILE", "LOCALAPPDATA"])
   if (process.env[key]) environment[key] = process.env[key];
@@ -67,6 +75,9 @@ function call(path: string, method: string, headers: Record<string, string>) {
   });
 }
 
+let failed = false, primaryFailure: unknown;
+let exit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
+const cleanupFailures: unknown[] = [];
 try {
   for (let attempt = 0; attempt < 120 && !ready && !spawnError && child.exitCode === null && child.signalCode === null; attempt++) await delay(250);
   assert(ready && !spawnError && child.exitCode === null && child.signalCode === null, `Owned built server failed to become ready: ${output}`);
@@ -103,21 +114,47 @@ try {
     assert.equal(callback.headers["cache-control"], "no-store"); assert.equal(callback.headers["referrer-policy"], "no-referrer");
     assert(callback.headers["set-cookie"]?.every(value => value.includes("Max-Age=0"))); assert.equal(callback.body, "");
   }
-} finally {
-  if (child.exitCode === null && child.signalCode === null && !spawnError) child.kill("SIGTERM");
-  const exit = await Promise.race([closed, delay(15000, undefined, { ref: false }).then(() => { throw new Error("Owned built server failed to close; temporary evidence retained"); })]);
+} catch (error) { failed = true; primaryFailure = error; }
+finally {
+  try { if (child.exitCode === null && child.signalCode === null && !spawnError) child.kill("SIGTERM"); }
+  catch (error) { cleanupFailures.push(error); }
+  try { exit = await Promise.race([closed, delay(15000, undefined, { ref: false }).then(() => { throw new Error("Owned built server failed to close; temporary evidence retained"); })]); }
+  catch (error) { cleanupFailures.push(error); }
   // Next boot initializes its ordinary schema and prunes its empty grants. There
   // is no owner identity/session/flow action, and no shared/sealed datastore.
-  assert(existsSync(databasePath), "Boot database must be confined to the owned temporary cwd");
-  const database = new DatabaseSync(databasePath, { readOnly: true });
-  try {
-    for (const table of ["private_profiles", "profile_verified_identities", "profile_identity_challenges", "web_sessions"])
-      assert.equal(database.prepare(`SELECT count(*) AS count FROM ${table}`).get()?.count, 0, `${table} remains empty`);
-  } finally { database.close(); }
-  assert.equal(child.stdout.readableEnded, true); assert.equal(child.stderr.readableEnded, true);
-  await rm(temporary, { recursive: true, force: true });
-  console.log(JSON.stringify({ fixture: "built-profile-identities-configured-origin", applicationOrigin, physicalOrigin: `http://127.0.0.1:${port}`,
-    bootWrites: "owned temporary ordinary SQLite schema/empty grant housekeeping only", ownerProviderActions: false,
-    childClosedEof: true, exit, temporaryRemoved: true }));
+  // Inspection must wait for the owned child to close; failed confinement cannot
+  // replace an earlier startup/request failure or authorize another database.
+  if (exit) try {
+    assert(existsSync(databasePath), "Boot database must be confined to the owned temporary cwd");
+    const database = new DatabaseSync(databasePath, { readOnly: true });
+    try {
+      for (const table of ["private_profiles", "profile_verified_identities", "profile_identity_challenges", "web_sessions"]) {
+        try { assert.equal(database.prepare(`SELECT count(*) AS count FROM ${table}`).get()?.count, 0, `${table} remains empty`); }
+        catch (error) { cleanupFailures.push(error); }
+      }
+    } finally { database.close(); }
+  } catch (error) { cleanupFailures.push(error); }
+  for (const stream of [child.stdout, child.stderr]) {
+    try { assert.equal(stream.readableEnded, true); }
+    catch (error) { cleanupFailures.push(error); }
+  }
 }
+// Unlink the checked code-only shim before any recursive temporary cleanup;
+// retain the entire temporary directory if behavior or cleanup assertions fail.
+if (!failed && !cleanupFailures.length) try {
+  assert.equal(dirname(resolve(configLink)), resolve(temporary));
+  assert((await lstat(configLink)).isSymbolicLink()); assert.equal(await realpath(configLink), await realpath(configSource));
+  await unlink(configLink); assert(!existsSync(configLink)); assert(existsSync(configSource));
+} catch (error) { cleanupFailures.push(error); }
+const receipt = { fixture: "built-profile-identities-configured-origin", applicationOrigin, appDirectory: root, temporaryDirectory: temporary,
+  databasePath, bootDatabaseExists: existsSync(databasePath), configSource, configLink, configLinkRetained: existsSync(configLink), physicalOrigin: `http://127.0.0.1:${port}`, exit: exit ?? null,
+  childClosedEof: !!exit && child.stdout.readableEnded && child.stderr.readableEnded };
+if (failed || cleanupFailures.length) {
+  console.error(JSON.stringify({ ...receipt, temporaryRetained: true, childOutput: output }));
+  throw new AggregateError([...(failed ? [primaryFailure] : []), ...cleanupFailures], "Built identity Origin fixture failed; temporary evidence retained", { cause: primaryFailure });
+}
+// Remove only after every behavioral/boot/privacy/closed-EOF assertion passes.
+await rm(temporary, { recursive: true, force: true });
+console.log(JSON.stringify({ ...receipt, bootWrites: "owned temporary ordinary SQLite schema/empty grant housekeeping only",
+  ownerProviderActions: false, temporaryRemoved: true }));
 console.log("PASS: candidate default built Next admits configured HTTPS Origin to SIWE 401, refuses foreign Origin before authentication, and returns invalid callbacks only to configured origin.");
