@@ -59,7 +59,7 @@ describe("on-observation overdue escalation", () => {
     expect(paidJobEscalation(precise, start + 180_001)).toMatchObject({ state: "within_target", lastRecordedStage: "unknown" });
     expect(paidJobEscalation(precise, start + 180_002)).toMatchObject({ state: "overdue", targetCompletionAt: "2026-10-09T00:03:00.001Z" });
   });
-  it.each([NaN, Infinity, start - 1, start + 0.5])("does not infer a current observation from an invalid/backward clock", now => {
+  it.each([NaN, Infinity, start - 1, start + 0.5, 8_640_000_000_000_000])("does not infer a current observation from an invalid/backward/unsupported clock", now => {
     expect(paidJobEscalation(order(), now).state).toBe("unavailable");
   });
   it.each([{ updatedAt: "bad" }, { startedAt: "bad" }, { startedAt: "2026-10-09T00:20:00.000Z" }, { executionJournalVersion: null }, { paymentStartedAt: "bad" }])("still shows a known overdue acceptance clock while keeping uncertain execution markers unknown", patch => {
@@ -89,5 +89,10 @@ describe("on-observation overdue escalation", () => {
     expect(JSON.stringify(refs)).not.toContain("PRIVATE_");
     expect(originalOrderPayment(order({ request: null, transaction: "https://private.invalid/token", amountUsdc: 0.0000001 }))).toMatchObject({ network: null, reference: null, amountMicros: null });
     expect(originalOrderPayment(order({ request: { question: "private", origin: "a2a", monthlyId: "plan", network: "eip155:5042002" } }))).toMatchObject({ kind: "monthly_allocation", network: "eip155:5042002", amountMicros: "50001" });
+  });
+  it.each([1e-15, -1e-15, 0.050001000000001, NaN, Infinity, Number.MAX_SAFE_INTEGER, 9_007_199_254.740992])("never rounds malformed or unsafe original/creator amounts into exact micros: %s", amountUsdc => {
+    expect(originalOrderPayment(order({ amountUsdc })).amountMicros).toBeNull();
+    expect(paidJobEscalation(order(), start + 180_001, [pending({ amountUsdc })]).creatorPaymentState).toBe("unknown");
+    expect(paidJobEscalation(order({ creatorBudgetUsdc: amountUsdc }), start + 180_001, [pending()]).creatorPaymentState).toBe("unknown");
   });
 });

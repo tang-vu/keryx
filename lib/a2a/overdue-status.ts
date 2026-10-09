@@ -1,7 +1,6 @@
 import type { PaymentRecord } from "../types";
 import { assertPaymentSettlementState } from "../payments/payment-state";
 import type { A2aOrder } from "./order";
-import { a2aAmountMicros } from "./payment-evidence";
 import { isSupportedA2aResearchPackage } from "./research-package";
 import type { PaidJobEscalation } from "./overdue-types";
 
@@ -22,11 +21,15 @@ function subMillisecondTime(value: string | null): boolean {
   return typeof value === "string" && /\.\d{3}\d*[1-9]\d*(?:Z|[+-]\d{2}:\d{2})$/.test(value);
 }
 function observedTime(nowMs: number): number | null {
-  return Number.isSafeInteger(nowMs) && Number.isFinite(new Date(nowMs).getTime()) ? nowMs : null;
+  if (!Number.isSafeInteger(nowMs) || !Number.isFinite(new Date(nowMs).getTime())) return null;
+  return /^\d{4}-/.test(new Date(nowMs).toISOString()) ? nowMs : null;
 }
 function exactMicros(value: number): number | null {
-  try { const micros = a2aAmountMicros(value); return Number.isSafeInteger(micros) ? micros : null; }
-  catch { return null; }
+  if (!Number.isFinite(value) || value < 0) return null;
+  const parts = /^(0|[1-9]\d*)(?:\.(\d{1,6}))?$/.exec(String(value));
+  if (!parts) return null;
+  const micros = BigInt(parts[1]) * 1_000_000n + BigInt((parts[2] ?? "").padEnd(6, "0"));
+  return micros <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(micros) : null;
 }
 function recordedNetwork(order: A2aOrder) {
   const network = order.request?.network;
