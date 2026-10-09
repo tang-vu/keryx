@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The wallet's dispatch ledger: a summary strip (browser-wallet vs Keryx creator funding, kept apart on
+ * The wallet's dispatch ledger: a summary strip (recorded browser-wallet vs other creator funding, kept apart on
  * purpose) over a list of every attributed dispatch, each showing the creators its toll reached.
  * Read-only — the dispatch permalink stays the place to re-read an answer and its trace.
  */
@@ -166,7 +166,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
           </div>
           {totals.trialDispatches > 0 && (
             <p className="mt-4 border-t border-line pt-3 font-mono text-[10px] text-ink-3">
-              Creator payments for {totals.trialDispatches} of these used Keryx funding:
+              {totals.trialDispatches} of these have no recorded browser-wallet creator funding:
               {" "}${fmtUsdc(totals.trialToCreatorsUsdc)} recorded to creators.
               {" "}Original purchases, service fees and gas are separate.
             </p>
@@ -187,7 +187,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
               </Link>
               <span className="font-mono text-[11px] text-ink-2">
                 ${fmtUsdc(a.spentUsdc)}
-                {!a.funded && <span className="text-ink-3"> · creator payments funded by Keryx</span>}
+                {!a.funded && <span className="text-ink-3"> · creator funding not recorded from your browser wallet</span>}
               </span>
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] text-ink-3">

@@ -34,7 +34,7 @@ function run(id: string, totalSpent: number, totalToCreators: number, extra: Par
     totalSpent, totalToCreators, paymentMode: "offline", createdAt: "2026-10-09T00:00:00.000Z", asker: owner, ...extra };
 }
 
-it("keeps mixed wallet funding totals and renders keyed/prepaid/legacy history without a free-service claim", async () => {
+it("keeps mixed wallet funding totals without inferring service price or a payer for keyed/prepaid/legacy history", async () => {
   for (const value of [
     run("Browser-funded result", 0.04, 0.03, { askerFunded: true, fundingOwner: "browser",
       provenance: { version: 1, surface: "web", ownershipMethod: "session" } }),
@@ -42,7 +42,7 @@ it("keeps mixed wallet funding totals and renders keyed/prepaid/legacy history w
       provenance: { version: 1, surface: "api", ownershipMethod: "api-key" } }),
     run("Prepaid A2A result", 0.06, 0.05, { askerFunded: false, fundingOwner: "treasury",
       provenance: { version: 1, surface: "agent-to-agent", ownershipMethod: "verified-payer" } }),
-    run("Legacy result", 0.02, 0.01, { fundingOwner: "treasury" }),
+    run("Legacy result", 0.02, 0.01, {}),
     run("Foreign private question", 0.99, 0.98, { asker: foreign, askerFunded: true }),
     run("Ownerless question", 0.99, 0.98, { asker: undefined }),
   ]) await db.saveQueryRun(value);
@@ -83,11 +83,13 @@ it("keeps mixed wallet funding totals and renders keyed/prepaid/legacy history w
     await page.addScriptTag({ content: bundle });
     await page.getByRole("link", { name: "Prepaid A2A result", exact: true }).waitFor();
     const text = await page.locator("body").textContent();
-    expect(text).not.toMatch(/free trial|free service/i);
-    expect(text).toContain("Creator payments for 3 of these used Keryx funding");
+    expect(text).not.toMatch(/free trial|free service|Keryx funding|funded by Keryx/i);
+    expect(text).toContain("3 of these have no recorded browser-wallet creator funding");
+    expect(text).toContain("$0.08 recorded to creators");
     expect(text).toContain("Original purchases, service fees and gas are separate");
-    expect(await page.getByText("· creator payments funded by Keryx", { exact: true }).count()).toBe(3);
-    expect(await page.getByRole("link", { name: "Browser-funded result", exact: true }).locator("..").textContent()).not.toContain("funded by Keryx");
+    expect(await page.getByText("· creator funding not recorded from your browser wallet", { exact: true }).count()).toBe(3);
+    expect(await page.getByRole("link", { name: "Legacy result", exact: true }).locator("..").textContent()).toContain("creator funding not recorded from your browser wallet");
+    expect(await page.getByRole("link", { name: "Browser-funded result", exact: true }).locator("..").textContent()).not.toContain("creator funding not recorded");
     expect(requests).toEqual(["https://history.test/", "https://history.test/api/me/asks"]);
   } finally { await context.close(); }
 }, 30000);

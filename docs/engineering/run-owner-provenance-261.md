@@ -23,14 +23,15 @@ payments. A treasury-funded keyed request or prepaid A2A result cannot increase
 those browser-funded totals merely because it is in the wallet's history.
 Existing order history, caller limits and payer recovery remain separate.
 
-The history UI describes downstream creator funding rather than calling every
-non-browser-funded result a free trial. Original purchases, service fees and gas
-remain separate. The existing API names `trialDispatches` and
+The history UI describes whether browser-wallet creator funding was recorded;
+it does not identify Keryx or another payer from a false or missing flag.
+Original purchases, service fees and gas remain separate. The existing API names `trialDispatches` and
 `trialToCreatorsUsdc` are retained for compatibility: they count rows without
 recorded `askerFunded=true` and their recorded creator amounts, including keyed,
 prepaid A2A and older rows with a missing funding flag. Those names do not prove
-that the service was free or that each amount settled. Missing historical
-funding authority is not reconstructed from new ownership metadata.
+that the service was free, which payer funded creators, or that each amount
+settled. Missing historical funding authority is not reconstructed from new
+ownership metadata.
 
 Private execution still saves through job-scoped effects to owner-scoped private
 results, never to public `query_runs`, payment events or cache. Its existing
