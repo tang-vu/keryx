@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { lstat, mkdtemp, readFile, realpath, rm, symlink, unlink } from "node:fs/promises";
 import { request } from "node:http";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
@@ -25,6 +25,14 @@ assert((await readFile(join(root, ".next", "BUILD_ID"), "utf8")).trim(), "A succ
 const temporaryRoot = resolve(tmpdir()), temporary = await mkdtemp(join(temporaryRoot, "keryx-identity-origin-"));
 assert.equal(dirname(resolve(temporary)), temporaryRoot); assert(basename(temporary).startsWith("keryx-identity-origin-"));
 const databasePath = join(temporary, "data", "keryx.sqlite");
+// Next 16.3.8's generated config module resolves relative imports from cwd.
+// Expose only the candidate's code directory for its unchanged security-header
+// config imports; app dir, default build, dependencies and DB cwd stay unchanged.
+const configSource = resolve(root, "lib"), configLink = resolve(temporary, "lib");
+assert.equal(dirname(configLink), resolve(temporary)); assert.equal(configSource, join(root, "lib"));
+assert(!existsSync(configLink));
+await symlink(configSource, configLink, process.platform === "win32" ? "junction" : "dir");
+assert((await lstat(configLink)).isSymbolicLink()); assert.equal(await realpath(configLink), await realpath(configSource));
 const environment: NodeJS.ProcessEnv = {};
 for (const key of ["SystemRoot", "WINDIR", "ComSpec", "PATH", "PATHEXT", "TEMP", "TMP", "USERPROFILE", "LOCALAPPDATA"])
   if (process.env[key]) environment[key] = process.env[key];
@@ -131,8 +139,15 @@ finally {
     catch (error) { cleanupFailures.push(error); }
   }
 }
+// Unlink the checked code-only shim before any recursive temporary cleanup;
+// retain the entire temporary directory if behavior or cleanup assertions fail.
+if (!failed && !cleanupFailures.length) try {
+  assert.equal(dirname(resolve(configLink)), resolve(temporary));
+  assert((await lstat(configLink)).isSymbolicLink()); assert.equal(await realpath(configLink), await realpath(configSource));
+  await unlink(configLink); assert(!existsSync(configLink)); assert(existsSync(configSource));
+} catch (error) { cleanupFailures.push(error); }
 const receipt = { fixture: "built-profile-identities-configured-origin", applicationOrigin, appDirectory: root, temporaryDirectory: temporary,
-  databasePath, bootDatabaseExists: existsSync(databasePath), physicalOrigin: `http://127.0.0.1:${port}`, exit: exit ?? null,
+  databasePath, bootDatabaseExists: existsSync(databasePath), configSource, configLink, configLinkRetained: existsSync(configLink), physicalOrigin: `http://127.0.0.1:${port}`, exit: exit ?? null,
   childClosedEof: !!exit && child.stdout.readableEnded && child.stderr.readableEnded };
 if (failed || cleanupFailures.length) {
   console.error(JSON.stringify({ ...receipt, temporaryRetained: true, childOutput: output }));
