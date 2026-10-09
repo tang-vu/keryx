@@ -1,5 +1,23 @@
 # MCP package distribution
 
+## Coordinated release47 — October 9, 2026 source candidate
+
+App0.27.47 selects stdio and official Registry descriptor0.4.14 with hosted
+protocol0.3.10. This identifies the coordinated tool set including delegated
+`operator_obligations_read` once its source is integrated. The new read requires
+both explicit `operator:read` and exact protected server reader/role; partial
+native observations stay unknown with zero safe/advisory surplus. Existing
+buyer, recovery, account and evidence-draft boundaries remain intact.
+
+Desktop0.4.13 includes the checked saved-bibliography export choices;
+extension0.1.2's shipped graph and canonical formatter are unchanged. See
+[surface parity](surface-parity.md). No dependency closure, financial protocol,
+funding authority, storage enrollment or application version changes here.
+Exact-main CI, packed consumers, npm/Registry integrity, installer source/version
+and hosted/deployed readback remain gates. Owner installation is separate from
+published assets; these metadata candidates establish neither. Release the
+completed batch once and preserve the historical observations below.
+
 ## Coordinated release46 — October 9, 2026 source candidate
 
 App0.27.46 selects stdio0.4.13 and official Registry descriptor0.4.13 with hosted

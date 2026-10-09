@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Coordinated distribution metadata (2026-10-09, v0.27.47 candidate)
+
+- Select stdio/official Registry0.4.14 and remote MCP0.3.10 for the coordinated
+  delegated obligation tool after source integration. Explicit key and protected
+  server-reader gates remain; partial native results authorize no spend.
+- Align desktop npm, Tauri and Cargo metadata at0.4.13 for explicit checked
+  saved-bibliography exports. Preserve cited exports and original receipts.
+- Keep app/OpenAPI0.27.47, extension0.1.2, dependency closures and financial/A2A
+  protocol versions unchanged. Source metadata is not publication, installation,
+  activation or deployment; retain exact-main/platform/public-readback gates and
+  one deployment for the completed batch.
+
 ### Activity and historical creator rewards (2026-10-09, v0.27.47 candidate)
 
 - Put the retained testnet track record and recovered creator leaderboard near the

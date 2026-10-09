@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+## Identify the final app47 distribution graphs together — 2026-10-09
+
+The coordinated batch adds delegated read-only obligation inspection to hosted
+and packaged MCP, and explicit checked saved-bibliography exports to desktop.
+Select stdio/Registry0.4.14, remote0.3.10 and desktop0.4.13 together once final
+source is integrated. Keep app/OpenAPI0.27.47 and existing dependency closures;
+financial execution, original receipt and A2A protocol versions stay unchanged.
+The extension's eleven shipped files and canonical formatter remain byte-identical
+to the preceding distribution batch, so retain0.1.2 and its hosted-only role.
+Bots inherit shared hosted answers without new commands or treasury authority.
+
+Metadata does not enroll storage, configure a reader, fund custody or prove
+publication/deployment/installation. Preserve exact-main package/platform and
+public-readback gates, including installer version from its filename. Complete
+the agreed source batch and deploy it once; older candidates remain historical.
+See [surface parity](docs/surface-parity.md).
+
 **Lead the ledger with the retained track record and recover creator rankings — 2026-10-09.**
 The owner requested a more effective Activity & proof presentation and the missing
 testnet creator leaderboard. Show the retained testnet summary and original creator

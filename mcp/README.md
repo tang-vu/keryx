@@ -1,5 +1,17 @@
 # Keryx MCP
 
+The coordinated app0.27.47 candidate selects package **0.4.14** and the same
+official Registry descriptor, alongside hosted MCP **0.3.10** after final tool
+integration. `operator_obligations_read` uses a bounded HTTPS read with explicit
+`operator:read` on `KERYX_API_KEY` and exact server reader/role delegation.
+It initializes no wallet and adds no research, custody or spending permission;
+native history remains partial/unknown with zero safe/advisory surplus.
+Existing buyer, original recovery and account-tool gates remain unchanged.
+Publication, installed-client acceptance and hosted availability are separate;
+see the [distribution record](https://github.com/tang-vu/keryx/blob/main/docs/mcp-distribution.md).
+
+## Prior release46 distribution candidate
+
 Release46 source candidate selects package **0.4.13** with the official Registry
 descriptor at the same version. It adds local `evidence_draft`, explicit
 `history:read` summaries and `profile:read` verified-identity snapshots. Account
