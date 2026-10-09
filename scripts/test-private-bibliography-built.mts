@@ -57,7 +57,8 @@ try {
   const input = { title: "PRIVATE BUILT REVIEW", papers: [PAPER_CATALOG[0]] };
   const anonymous = { method: "POST", headers: { Origin: origin, "X-Keryx-Expected-Wallet": alice, "Content-Type": "application/json" }, body: "not-json" };
   assert.equal((await fetchPrivate("/api/me/bibliographies", anonymous)).status, 401);
-  for (const headers of [{ Origin: "https://foreign.invalid", Host: "foreign.invalid", "X-Forwarded-Host": "foreign.invalid", "X-Forwarded-Proto": "https" }, { Origin: origin, "Sec-Fetch-Site": "cross-site" }]) {
+  const rejectedHeaders: Record<string, string>[] = [{ Origin: "https://foreign.invalid", Host: "foreign.invalid", "X-Forwarded-Host": "foreign.invalid", "X-Forwarded-Proto": "https" }, { Origin: origin, "Sec-Fetch-Site": "cross-site" }];
+  for (const headers of rejectedHeaders) {
     const attempt = ownerRequest("POST", input);
     assert.equal((await fetchPrivate("/api/me/bibliographies", { ...attempt, headers: { ...attempt.headers, ...headers } })).status, 403);
   }

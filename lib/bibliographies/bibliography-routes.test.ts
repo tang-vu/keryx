@@ -53,7 +53,8 @@ describe("explicit private bibliography API", () => {
     });
     expect((await f.routes.create(internal("https://keryx.cc", { Host: "keryx.cc", "X-Forwarded-Proto": "https" }))).status).toBe(201);
     f.session.mockClear();
-    for (const headers of [{ Host: "evil.example", "X-Forwarded-Host": "evil.example", "X-Forwarded-Proto": "https" }, { "Sec-Fetch-Site": "cross-site" }]) {
+    const rejectedHeaders: Record<string, string>[] = [{ Host: "evil.example", "X-Forwarded-Host": "evil.example", "X-Forwarded-Proto": "https" }, { "Sec-Fetch-Site": "cross-site" }];
+    for (const headers of rejectedHeaders) {
       expect((await f.routes.create(internal("https://evil.example", headers))).status).toBe(403);
     }
     expect((await f.routes.create(internal("https://keryx.cc", { "Sec-Fetch-Site": "same-site" }))).status).toBe(403);
