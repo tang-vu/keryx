@@ -70,7 +70,8 @@ async function resolveAccess(
   if (rawKey?.startsWith("kx_live_")) {
     const key = await verifyApiKey(rawKey);
     if (!key) return jsonRpcHttpError(req, 401, -32001, "Invalid or revoked API key.");
-    if (!hasScope(parseScopes(key.scopes), "ask")) {
+    const scopes = parseScopes(key.scopes);
+    if (!hasScope(scopes, "ask") && (researchCall || !scopes.some(scope => scope === "profile:read" || scope === "profile:write"))) {
       return jsonRpcHttpError(req, 403, -32003, "API key is not scoped for research.");
     }
     if (researchCall) {
@@ -83,6 +84,7 @@ async function resolveAccess(
     return {
       budgetCap: config.a2aMaxBudget,
       actor: key.walletAddress.toLowerCase(),
+      profileScopes: scopes,
       clientChannel: normalizeMcpClient(req.nextUrl.searchParams.get("client")),
       paperCaller: clientIp(req), signal: req.signal,
     };
@@ -134,6 +136,7 @@ async function handle(req: NextRequest): Promise<Response> {
   await server.connect(transport);
   const response = await transport.handleRequest(req, { parsedBody });
   const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "no-store");
   corsHeaders(req).forEach((value, key) => headers.set(key, value));
   return new Response(response.body, { status: response.status, headers });
 }

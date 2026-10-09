@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   API_KEY_SCOPES,
+  LEGACY_API_KEY_SCOPES,
   hasScope,
   normalizeScopes,
   normalizeSourceIds,
@@ -18,10 +19,10 @@ describe("normalizeScopes", () => {
 
   it("grants everything when nothing usable was asked for", () => {
     // A key that can do nothing is a support ticket, not a security win.
-    expect(normalizeScopes(undefined)).toEqual([...API_KEY_SCOPES]);
-    expect(normalizeScopes([])).toEqual([...API_KEY_SCOPES]);
-    expect(normalizeScopes(["nonsense"])).toEqual([...API_KEY_SCOPES]);
-    expect(normalizeScopes("ask")).toEqual([...API_KEY_SCOPES]);
+    expect(normalizeScopes(undefined)).toEqual([...LEGACY_API_KEY_SCOPES]);
+    expect(normalizeScopes([])).toEqual([...LEGACY_API_KEY_SCOPES]);
+    expect(normalizeScopes(["nonsense"])).toEqual([...LEGACY_API_KEY_SCOPES]);
+    expect(normalizeScopes("ask")).toEqual([...LEGACY_API_KEY_SCOPES]);
   });
 
   it("returns scopes in declared order, not request order", () => {
@@ -31,8 +32,8 @@ describe("normalizeScopes", () => {
 
 describe("parseScopes", () => {
   it("reads a pre-scopes key as full power", () => {
-    expect(parseScopes(null)).toEqual([...API_KEY_SCOPES]);
-    expect(parseScopes("")).toEqual([...API_KEY_SCOPES]);
+    expect(parseScopes(null)).toEqual([...LEGACY_API_KEY_SCOPES]);
+    expect(parseScopes("")).toEqual([...LEGACY_API_KEY_SCOPES]);
   });
 
   it("round-trips a narrowed key", () => {
@@ -44,7 +45,19 @@ describe("parseScopes", () => {
   });
 
   it("falls back to full power rather than locking out a corrupted row", () => {
-    expect(parseScopes("retired-scope")).toEqual([...API_KEY_SCOPES]);
+    expect(parseScopes("retired-scope")).toEqual([...LEGACY_API_KEY_SCOPES]);
+  });
+});
+
+describe("explicit private profile scopes", () => {
+  it("declares new scopes but never adds them to historical implicit keys", () => {
+    expect(API_KEY_SCOPES).toContain("profile:read"); expect(API_KEY_SCOPES).toContain("profile:write");
+    for (const stored of [null, "", "retired-scope", "ask,export"]) {
+      expect(hasScope(parseScopes(stored), "profile:read")).toBe(false);
+      expect(hasScope(parseScopes(stored), "profile:write")).toBe(false);
+    }
+    expect(normalizeScopes(["profile:read"])).toEqual(["profile:read"]);
+    expect(parseScopes(serializeScopes(["profile:write"]))).toEqual(["profile:write"]);
   });
 });
 

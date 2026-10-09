@@ -84,6 +84,15 @@ See the repository's `docs/remote-mcp.md` for the remote trust model.
 
 ## Local stdio tools
 
+Source capability: `profile_read()` and `profile_update(profile)` use an explicitly
+profile-scoped `KERYX_API_KEY` to the selected HTTPS deployment. Profile ownership
+comes from that key, independently of the buyer wallet; no wallet/signer is loaded
+and no payment or research is submitted. `profile:write` does not imply read.
+The current sealed/native production profile domain remains unavailable pending
+its separate migration/acceptance. Verify coordinated package publication before
+claiming these source tools are installed. See
+[profile boundaries](../docs/engineering/private-profiles-2026-10-09.md).
+
 | Tool | Behavior |
 | --- | --- |
 | `ask_keryx` | Buy research with an exact service fee plus creator-spend cap. Default deep mode is 0.05 + 0.05 = 0.10 USDC. Checks the independently configured seller, exact total, token and signing domain before signing. |

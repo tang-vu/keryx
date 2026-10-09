@@ -6355,3 +6355,31 @@ checks without gaining body integrity. Hash consistency does not independently
 authenticate a publisher or establish general prompt-injection/semantic farming
 resistance. The public [adversarial catalog](docs/engineering/source-money-adversarial-2026-10-09.md)
 records checked boundaries and the still-open live testnet refusal gate.
+
+## Keep owner profiles private behind an additive ordinary-storage capability — 2026-10-09
+
+Issue260 adds owner-edited display fields without changing wallet authentication,
+source/creator ownership or payout authority. SIWE and explicit profile-scoped API
+keys select the owner; no body/URL wallet selector or public profile exists.
+Cookie writes additionally compare the editor's required expected-wallet header
+against independently authenticated SIWE authority before profile access; this
+precondition cannot select an owner. Changed owners refuse rather than applying
+a stale editor's fields to another wallet. Scoped key writes retain their verified
+actor and may use the same comparison without gaining rights.
+Historical/default API-key rights remain ask/export. Profile write does not imply
+read, and the developer portal never preselects new private permissions.
+
+The separate non-enumerable `privateProfiles` port is installed only on ordinary
+adapters. Its SQLite table and service-role-only Supabase RPC source migration do
+not change sealed schemas, exhaustive method inventories or provenance digests.
+Unsupported enrolled/native storage refuses before profile guard/DB/REST I/O,
+with no fallback. Production profile CRUD remains an explicit migration/enrollment
+and deployed-acceptance gate; source preparation does not close issue260.
+
+Case-folded handles use atomic uniqueness and reserved names. Text is bounded
+plain data; allowlisted HTTPS links are assertions, never verified identity or
+server-fetch authority. Deletion removes private fields only. Activity derives
+from the whole attributed current store; recorded creator payee counts do not
+establish that the profile owner funded those runs. Public receipts and immutable
+research/payment originals retain their existing contracts. See
+[implementation and acceptance boundaries](docs/engineering/private-profiles-2026-10-09.md).
