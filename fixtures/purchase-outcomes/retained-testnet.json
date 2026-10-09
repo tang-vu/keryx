@@ -1,0 +1,355 @@
+{
+  "provenance": {
+    "publicDispatch": "fe7c06fd-65da-41a6-867c-0597a63304df",
+    "publicReadDate": "2026-10-09",
+    "originalResponseSha256": "2dd22294582fde9de0f70db23f2e60d95e28b4e80e877b83663bd5c75766d0b0",
+    "minimization": "Question, answer text, reasons, source titles/URLs, wallets, authorizations, nonces and unrelated metadata omitted. All retained decisions and scorer-relevant payment/citation identities preserved; answer nonemptiness represented explicitly."
+  },
+  "snapshot": {
+    "id": "fe7c06fd-65da-41a6-867c-0597a63304df",
+    "createdAt": "2026-10-02T09:27:27.151Z",
+    "answer": "[Nonempty retained answer omitted from this minimized fixture]",
+    "decisions": [
+      {
+        "sourceId": "conzit-labs-59ad4d",
+        "itemId": "af060958-9c86-4c8d-ab06-db26322c4fad",
+        "contentVersion": "sha256:40b0f4ea1a08bc68e99fee652318a1e8de48c85b7a24e356a38ae8a2ce961e70",
+        "assetId": "item:af060958-9c86-4c8d-ab06-db26322c4fad",
+        "action": "BUY",
+        "expectedValue": 0.136,
+        "price": 0.002
+      },
+      {
+        "sourceId": "public:chip-huyen",
+        "itemId": "public-item:006d0f5af8f9abfeaf302a2e167701ccc4d8de10c59581c8a1caa1c1975cc0ed",
+        "contentVersion": "sha256:9625217433a3e0920973fbe4e7bf9833c928c51e1a3c6c355735b13ae03a1d2c",
+        "assetId": "public:chip-huyen",
+        "action": "SKIP",
+        "expectedValue": 0.045,
+        "price": 0
+      },
+      {
+        "sourceId": "public:cloudflare-workers",
+        "itemId": "public-item:ae74f801c5df7b171cac7fe7e7795b359c4fc48d52921135d5e877bd180e31d8",
+        "contentVersion": "sha256:e1a55e24159be54c548f56dcca5c671ed110919d53298527c1339830e1117099",
+        "assetId": "public:cloudflare-workers",
+        "action": "SKIP",
+        "expectedValue": 0.091,
+        "price": 0
+      },
+      {
+        "sourceId": "public:lilian-weng",
+        "itemId": "public-item:52c86e58a582771b58de7e476aae5a8e169b93e5463dc6cfeabab26187de9f4d",
+        "contentVersion": "sha256:13b230313c89b0f101cf4f292bf55db9b704d5fcbaad62a8716de65210e85579",
+        "assetId": "public:lilian-weng",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0
+      },
+      {
+        "sourceId": "public:super-simple-songs",
+        "itemId": "public-item:0db60d8f49d848556718d9d2dfdc5b608c2e25a7961611e7e76e850d62d1a74e",
+        "contentVersion": "sha256:c9b70de4ef7219e080522ce336397800050fe36f90eaf22fde93bce4e79f27ff",
+        "assetId": "public:super-simple-songs",
+        "action": "SKIP",
+        "expectedValue": 0.091,
+        "price": 0
+      },
+      {
+        "sourceId": "public:vicki-boykis",
+        "itemId": "public-item:128b614187db9506e2996a7f659da15bf141a0af8d594e6a192a7a5552f7bbbb",
+        "contentVersion": "sha256:891f1770a791210756a11d19ec23b0153c794b722b70fa70f1c071fdccc01714",
+        "assetId": "public:vicki-boykis",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0
+      },
+      {
+        "sourceId": "public:web:0bdb6d1c1bfba720597883695efaff76abafb2e003a21b4f8eab6d4639939e07",
+        "itemId": "0bdb6d1c1bfba720597883695efaff76abafb2e003a21b4f8eab6d4639939e07",
+        "contentVersion": "unread",
+        "assetId": "public:web:0bdb6d1c1bfba720597883695efaff76abafb2e003a21b4f8eab6d4639939e07",
+        "action": "SKIP",
+        "expectedValue": 0.318,
+        "price": 0
+      },
+      {
+        "sourceId": "public:web:2904c9bfe97006e4e3cd760766fb1f6777f7ad5acae3f4d5520c14ab330f5e13",
+        "itemId": "2904c9bfe97006e4e3cd760766fb1f6777f7ad5acae3f4d5520c14ab330f5e13",
+        "contentVersion": "unread",
+        "assetId": "public:web:2904c9bfe97006e4e3cd760766fb1f6777f7ad5acae3f4d5520c14ab330f5e13",
+        "action": "SKIP",
+        "expectedValue": 0.273,
+        "price": 0
+      },
+      {
+        "sourceId": "public:web:189e607db3b33f0d7112e48a42ae03002bb16e26af44ab3249e5a7d0a17ed471",
+        "itemId": "189e607db3b33f0d7112e48a42ae03002bb16e26af44ab3249e5a7d0a17ed471",
+        "contentVersion": "unread",
+        "assetId": "public:web:189e607db3b33f0d7112e48a42ae03002bb16e26af44ab3249e5a7d0a17ed471",
+        "action": "SKIP",
+        "expectedValue": 0.182,
+        "price": 0
+      },
+      {
+        "sourceId": "public:web:e88549e33e43f51d36ce7fe464d89793bbc569630bb16eb2ac6a288f2a96ef8e",
+        "itemId": "e88549e33e43f51d36ce7fe464d89793bbc569630bb16eb2ac6a288f2a96ef8e",
+        "contentVersion": "unread",
+        "assetId": "public:web:e88549e33e43f51d36ce7fe464d89793bbc569630bb16eb2ac6a288f2a96ef8e",
+        "action": "SKIP",
+        "expectedValue": 0.182,
+        "price": 0
+      },
+      {
+        "sourceId": "public:web:ef802620db870a45b1b31df1c94a7482ca1c67bbd1e32fbbe010efcd291a1914",
+        "itemId": "ef802620db870a45b1b31df1c94a7482ca1c67bbd1e32fbbe010efcd291a1914",
+        "contentVersion": "unread",
+        "assetId": "public:web:ef802620db870a45b1b31df1c94a7482ca1c67bbd1e32fbbe010efcd291a1914",
+        "action": "SKIP",
+        "expectedValue": 0.045,
+        "price": 0
+      },
+      {
+        "sourceId": "public:web:57353b3011aa22b38d18ea77caebba89aa0831a4f9df231101321ad77a3d2807",
+        "itemId": "57353b3011aa22b38d18ea77caebba89aa0831a4f9df231101321ad77a3d2807",
+        "contentVersion": "unread",
+        "assetId": "public:web:57353b3011aa22b38d18ea77caebba89aa0831a4f9df231101321ad77a3d2807",
+        "action": "SKIP",
+        "expectedValue": 0.091,
+        "price": 0
+      },
+      {
+        "sourceId": "public:web:cf336adb45bd6261cf8629af2190376c6f695986fe6a00689ad92fa4f79765db",
+        "itemId": "cf336adb45bd6261cf8629af2190376c6f695986fe6a00689ad92fa4f79765db",
+        "contentVersion": "unread",
+        "assetId": "public:web:cf336adb45bd6261cf8629af2190376c6f695986fe6a00689ad92fa4f79765db",
+        "action": "SKIP",
+        "expectedValue": 0.091,
+        "price": 0
+      },
+      {
+        "sourceId": "public:web:4a9523f1917204d56ef4cb54729e1c0a74049ae10d15b8c112ad6bdb62fd7a60",
+        "itemId": "4a9523f1917204d56ef4cb54729e1c0a74049ae10d15b8c112ad6bdb62fd7a60",
+        "contentVersion": "unread",
+        "assetId": "public:web:4a9523f1917204d56ef4cb54729e1c0a74049ae10d15b8c112ad6bdb62fd7a60",
+        "action": "SKIP",
+        "expectedValue": 0.227,
+        "price": 0
+      },
+      {
+        "sourceId": "public:web:acc5ad4063972046a38c2a3b8d591d3e18d9f3285ce1ad4bf2aafeba44b26328",
+        "itemId": "acc5ad4063972046a38c2a3b8d591d3e18d9f3285ce1ad4bf2aafeba44b26328",
+        "contentVersion": "unread",
+        "assetId": "public:web:acc5ad4063972046a38c2a3b8d591d3e18d9f3285ce1ad4bf2aafeba44b26328",
+        "action": "SKIP",
+        "expectedValue": 0.091,
+        "price": 0
+      },
+      {
+        "sourceId": "stablecoin-ledger-dadb40",
+        "itemId": "803a6236-7864-4d01-b8de-0ca9fd991ebd",
+        "contentVersion": "sha256:c00c38c5d2f961324d801db089e19a33530da1884b282f96f51cd9c6bf0dd770",
+        "assetId": "item:803a6236-7864-4d01-b8de-0ca9fd991ebd",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.003
+      },
+      {
+        "sourceId": "agent-economy-weekly-a5707e",
+        "itemId": "69047738-87ee-47fc-b8ee-20281ed41193",
+        "contentVersion": "sha256:643f333c08c13f7caf7e65b0ae570ffcedb42204c66ce85b6527ac3d88c8bd49",
+        "assetId": "item:69047738-87ee-47fc-b8ee-20281ed41193",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.004
+      },
+      {
+        "sourceId": "onchain-micropayments-digest-718c63",
+        "itemId": "9788f2d6-a213-4370-bca1-39e51d477fc7",
+        "contentVersion": "sha256:5b8544ea7cf2397c2cfde3cae701322e4431b87c7bb027a19ba1ab72d39210ec",
+        "assetId": "item:9788f2d6-a213-4370-bca1-39e51d477fc7",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.005
+      },
+      {
+        "sourceId": "distributed-systems-notes-58e7a6",
+        "itemId": "11106a04-336b-48cc-96d4-f5dcdb2da69e",
+        "contentVersion": "sha256:6c3bf98164b21441f0420e811f5967a9b805c16a5bf30c7c9c38b25d51a80c4f",
+        "assetId": "item:11106a04-336b-48cc-96d4-f5dcdb2da69e",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.003
+      },
+      {
+        "sourceId": "garden-soil-monthly-d68f61",
+        "itemId": "29bbc772-aafa-411e-8501-036efe21a84f",
+        "contentVersion": "sha256:a362659666bf2137079606f70364a0d196e4982958022a6335251ebb25693ecf",
+        "assetId": "item:29bbc772-aafa-411e-8501-036efe21a84f",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.002
+      },
+      {
+        "sourceId": "retro-game-hardware-fc400b",
+        "itemId": "8ca91d6a-5373-4ba5-bf4f-b40f55f5f039",
+        "contentVersion": "sha256:8ddafd7cff8c813ca95cde5fb015650fda9a36f5344490ade6db41e64e70db69",
+        "assetId": "item:8ca91d6a-5373-4ba5-bf4f-b40f55f5f039",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.002
+      },
+      {
+        "sourceId": "stripe-blog-3a7d97",
+        "itemId": "c9e22109-5ac9-4294-99c9-e61d75d981e9",
+        "contentVersion": "sha256:12a2d69fddeb84f3784310ca16d379ce4d9f8c40b5336cfb9a2d0e37c2687351",
+        "assetId": "item:c9e22109-5ac9-4294-99c9-e61d75d981e9",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.002
+      },
+      {
+        "sourceId": "ethereum-foundation-blog-78705c",
+        "itemId": "b53a492b-feb6-4459-a8cb-4fd0cdf4166b",
+        "contentVersion": "sha256:488c31158ccc7078f4c6f063012cf348a0090be761a5137ca1afe52a595ea0ee",
+        "assetId": "item:b53a492b-feb6-4459-a8cb-4fd0cdf4166b",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.002
+      },
+      {
+        "sourceId": "cointelegraph-com-news-8f8f63",
+        "itemId": "ab3f7df1-e36a-47b9-8df4-38f995b6f661",
+        "contentVersion": "sha256:d67c545478ce2a6c64f9d205deb09186dbd931fcfa0ccd090e0490538265168c",
+        "assetId": "item:ab3f7df1-e36a-47b9-8df4-38f995b6f661",
+        "action": "SKIP",
+        "expectedValue": 0.182,
+        "price": 0.002
+      },
+      {
+        "sourceId": "latent-space-ae8bf6",
+        "itemId": "9cf7cb2e-c0a1-494e-8c44-9b95804efe40",
+        "contentVersion": "sha256:01daecb6d388bd211e71c26dcfd7f6d786605f03d6f077126bd3317c1758e3fb",
+        "assetId": "item:9cf7cb2e-c0a1-494e-8c44-9b95804efe40",
+        "action": "SKIP",
+        "expectedValue": 0.091,
+        "price": 0.004
+      },
+      {
+        "sourceId": "simon-willison-s-weblog-ff2d63",
+        "itemId": "ccade860-79ed-45c2-aaf9-c9b728cf7e55",
+        "contentVersion": "sha256:14ef55b041979d2a361b004a62b5f8418d820c82618f686a9f9bb7f38701179a",
+        "assetId": "item:ccade860-79ed-45c2-aaf9-c9b728cf7e55",
+        "action": "SKIP",
+        "expectedValue": 0.045,
+        "price": 0.003
+      },
+      {
+        "sourceId": "hugging-face-blog-93471b",
+        "itemId": "5ad0bac6-dd59-4815-9099-c8477e6f9423",
+        "contentVersion": "sha256:ac6258a71bfc255a3425f33d1992e0bcff5ded118edfb4c19de581e944e53262",
+        "assetId": "item:5ad0bac6-dd59-4815-9099-c8477e6f9423",
+        "action": "SKIP",
+        "expectedValue": 0.045,
+        "price": 0.003
+      },
+      {
+        "sourceId": "vitalik-buterin-s-website-f0c68a",
+        "itemId": "d52f24d1-caac-4f04-82e7-0097303d2484",
+        "contentVersion": "sha256:11c491f4cfb5740e63fcb67444792717b7a7b09cba59fb8cd5e5acd57c54191a",
+        "assetId": "item:d52f24d1-caac-4f04-82e7-0097303d2484",
+        "action": "SKIP",
+        "expectedValue": 0.045,
+        "price": 0.004
+      },
+      {
+        "sourceId": "the-coinbase-blog-medium-f1336f",
+        "itemId": "02716297-acdf-4a3f-826f-ac31d1ffee8c",
+        "contentVersion": "sha256:eca03e1cb1bb6465af51cc8a44ceb72fd9c7897a68a26358f87199437a6cdf5d",
+        "assetId": "item:02716297-acdf-4a3f-826f-ac31d1ffee8c",
+        "action": "SKIP",
+        "expectedValue": 0.045,
+        "price": 0.003
+      },
+      {
+        "sourceId": "decrypt-fbd0f5",
+        "itemId": "e9f9b393-7a2f-412e-98e7-8857099434d2",
+        "contentVersion": "sha256:94ff944e9557608132a4b44e59dcfe926916142815f10904bc867cfacabcde75",
+        "assetId": "item:e9f9b393-7a2f-412e-98e7-8857099434d2",
+        "action": "SKIP",
+        "expectedValue": 0.091,
+        "price": 0.002
+      },
+      {
+        "sourceId": "coindesk-bitcoin-ethereum-crypto-news-an-337dc3",
+        "itemId": "8cc6edc1-5788-44e7-b783-ae33d2d5f140",
+        "contentVersion": "sha256:3bf77d2941888ac7e8785e668c0f9a5bc88405bdbe806bcef8b1653e66716845",
+        "assetId": "item:8cc6edc1-5788-44e7-b783-ae33d2d5f140",
+        "action": "SKIP",
+        "expectedValue": 0.045,
+        "price": 0.002
+      },
+      {
+        "sourceId": "inner-axiom-the-codex-648b7c",
+        "itemId": "cc6ba091-0484-43d4-b250-79f0366d4e0b",
+        "contentVersion": "sha256:bb882d4752201297073fbb911bb64df94138bdcef78157ee6d1c57f66e67068d",
+        "assetId": "item:cc6ba091-0484-43d4-b250-79f0366d4e0b",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.002
+      },
+      {
+        "sourceId": "arc-settlement-benchmarks-69af9e",
+        "itemId": "11203a0e-e458-421d-9722-a6a243f1f779",
+        "contentVersion": "sha256:f1823c1d02eb7043039aa848558586008a7e1084888cf714bef22c09889607d6",
+        "assetId": "item:11203a0e-e458-421d-9722-a6a243f1f779",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.003
+      },
+      {
+        "sourceId": "web-payments-review-d39fbc",
+        "itemId": "2f2c1d95-22f4-4722-ae19-350dd2386893",
+        "contentVersion": "sha256:7892bfea9aff4b7620ba549a8144a2f6a3e122de4249babcfe9361c78f3f4b77",
+        "assetId": "item:2f2c1d95-22f4-4722-ae19-350dd2386893",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.002
+      },
+      {
+        "sourceId": "0x2132de79e1f90f68e1726075a857ebfd2f8d3e608f7bc8e4dec84483fa9f675c",
+        "itemId": "e3fae538-4227-407d-a54a-bcb618c1fa0f",
+        "contentVersion": "sha256:772318eebddc6fdad8eb80eb97eee247ced0a8ebc0094cead579661a653f7f4d",
+        "assetId": "item:e3fae538-4227-407d-a54a-bcb618c1fa0f",
+        "action": "SKIP",
+        "expectedValue": 0,
+        "price": 0.002
+      }
+    ],
+    "citations": [],
+    "trace": [
+      {
+        "detail": {
+          "sourceId": "conzit-labs-59ad4d",
+          "itemId": "af060958-9c86-4c8d-ab06-db26322c4fad",
+          "contentVersion": "sha256:40b0f4ea1a08bc68e99fee652318a1e8de48c85b7a24e356a38ae8a2ce961e70",
+          "id": "x402:0x825225cac22a4d695bad8f8b5369d70234e89541c79c2eeee74452fb252f14c4",
+          "kind": "fetch",
+          "queryId": "fe7c06fd-65da-41a6-867c-0597a63304df",
+          "network": "eip155:5042002",
+          "settled": true,
+          "settlementStatus": "settled",
+          "amountUsdc": 0.002,
+          "txHash": "09ab0e57-bb5e-43a0-90e4-194e181de1be"
+        }
+      }
+    ],
+    "archive": {
+      "network": "eip155:5042002",
+      "label": "Arc testnet",
+      "capturedAt": "2026-10-03T00:26:18.665Z",
+      "sourceCommit": "f9dca8d04f4657abbf0153175feec65728ba6a99",
+      "databaseSha256": "c5d9c0d2bf01099de526d7510321eabd1b0e3519f2792d40b61e49062d766272"
+    }
+  }
+}
