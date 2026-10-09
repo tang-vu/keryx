@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+**Bind payment glossary review to exact content — 2026-10-09.**
+Prepare English, Vietnamese and Simplified Chinese payment/trust terminology as
+explicit agent-authored drafts, independently of locale routing and runtime
+catalogue migration. Critical labels reference canonical terms; protocol names
+and BUY/SKIP/CACHE remain unchanged. Human review covers the whole locale plus
+its English source, with content digests invalidating stale approvals. Offline
+CI validates structure and review bindings; actual human review, semantic
+accuracy and runtime integration remain separate gates. Existing interfaces
+are not retrospectively marked reviewed. No locale is activated by this
+development-only change. See [translation instructions](docs/translation-instructions.md).
+
 **Project obligations before investing Operator float — 2026-10-09.**
 Stage a read-only ownership-scoped projection using the existing complete prepaid
 inventory and original payment, withdrawal, funding and supplier journals. Keep
