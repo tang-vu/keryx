@@ -83,35 +83,66 @@ it does not replace a timed visual browser walkthrough.
 
 ## Recording gate
 
-**Current Tameion recording URL: pending.** No newly recorded or hosted video is
-asserted. Older testnet rehearsals and `npm run demo` are not current-release
-footage. Do not close [issue #254](https://github.com/tang-vu/keryx/issues/254)
-until a working reader walkthrough and a reviewed public video under three minutes
-are available, and deployment/provenance/figure checks have been refreshed.
+[Archived QA walkthrough (2m40s, app 0.27.43, recorded October 8, 2026)](https://github.com/tang-vu/keryx/releases/download/v0.27.43/keryx-current-release-6e591603-archived-qa-05.mp4)
+is now available as an unchanged, silent 160-second MP4 on the app43 release.
+It reopens the owner-operated, first-party MCP QA report above. No new research,
+source purchase or citation payment was submitted during recording. It is not a
+live-Ask test, a complete feature tour, or proof of outside adoption.
 
-After the intended runtime release is deployed and its commit verified, record an
-actual screen walkthrough of the public app. Use existing artifacts for this
-wallet-free example and label it **archived owner QA / first-party source**. Any
-separate fresh research or paid business demonstration needs its own admitted
-task, authorization, original receipts and usefulness evidence. This plan grants
-no funding, paid request or schedule authority.
+The capture observed production `6e591603` before and after; its source was
+[`6e591603d2842e4ad5ce5327daaa4c7b6a318caa`](https://github.com/tang-vu/keryx/tree/6e591603d2842e4ad5ce5327daaa4c7b6a318caa).
+The recording completed on October 8 at `20:32:35Z`. The original QA task took
+57,043 ms on that morning; this film is a later artifact walkthrough, not footage
+of its execution. The receipt remained byte-identical before and after.
 
-| Target time | Actual screen content | Required disclosure |
+| Approximate segment | Screen shown | Scope |
 | --- | --- | --- |
-| 0:00–0:15 | README product sentence and example link | Who it serves; archived result, not a fresh run |
-| 0:15–0:55 | Public cited answer and `[S1]` excerpts | First-party source; Low confidence and missing requested revision |
-| 0:55–1:25 | Expand Decision log and inspect CACHE/SKIP rationale | Reused cached article, zero access toll |
-| 1:25–1:55 | Receipt JSON and its digest/settlement fields | Real mainnet 0.025 USDC citation; Circle ID is not an Arc transaction hash |
-| 1:55–2:15 | Composer and sponsored admission explanation | No new ask required; shareable questions, quota/cap limits |
-| 2:15–2:40 | Dated usage, event delta and remaining evidence | Outside/team counts unavailable; testnet separate; no claimed independent paid demand |
+| 0:00-0:15 | Source README and stored report link | Product context; archived owner QA |
+| 0:15-0:55 | Archived answer and exact `[S1]` excerpts | Low confidence; requested revision still missing |
+| 0:55-1:25 | CACHE/SKIP rationale and receipt link | Cached first-party source; zero access toll |
+| 1:25-1:55 | Genuine native-browser formatted receipt | Real/settled/complete; 0.025 USDC citation; Circle ID and digest |
+| 1:55-2:15 | Sponsored composer budget area | No question submitted; no live admission test |
+| 2:15-2:40 | Source README and event delta | Dated scope; independent paid demand and usefulness remain open |
 
-Before adding a video URL to the README, measure the actual encoded duration
-below 180 seconds, watch the full export, verify readable UI/receipt text and
-accurate narration, and open the final hosted link without author credentials.
-Disclose cuts and elapsed time if footage covers a longer original run. Keep
-the deployed commit, original report/receipt identity, date, media hash and review
-result with the published artifact. Never paste private journals, signed payment
-headers, credentials or unapproved participant material into the video or repo.
+Review inspected a 40-image timeline sampled once per four seconds, nine full
+frames at 8/25/55/83/99/112/126/142/155 seconds, and all ten scene captions.
+It did not inspect every encoded frame. The report, quotations, CACHE/SKIP trace,
+receipt fields, Circle reference and integrity limit were readable in those
+samples. Captions occupy separate bars; the browser viewport was not replaced.
+There are no internal cuts; only the idle post-walkthrough tail was omitted.
+
+Visible limits are retained: external badge images and some GitHub metadata were
+blocked by the read-only request fence; research availability displayed unknown
+when activation was blocked. The Quick controls/question field are above the
+main composer budget view, and the dated usage table is not visible in its scene.
+Those controls, the full usage table and a new Ask are not visually accepted by
+this film. The historical README in the footage still describes recording as
+pending; its later public link does not change the captured pixels.
+
+### Published-file and reader-path check
+
+An anonymous whole-file GET returned HTTP 200 on **October 9, 2026 at 00:09 UTC**.
+Its 15,766,266 bytes matched the original encoded file exactly:
+
+`sha256:a6dc71e2fd460f8f75fa719337f79b6da7e8a698f66442d7e3d552884cff0e80`
+
+The same bounded anonymous readback checked health, current metrics, the report
+and receipt. All returned 200; health before and after reported `6e591603`.
+Metrics still matched every numeric value in the dated README table: 50 stored
+queries, seven settled payment records, 0.095 USDC gross volume, 0.065 USDC creator
+payouts, two earning creators and zero operating fees. The endpoint does not
+partition outside users, team and QA; historical testnet totals remain separate.
+The original October 8 snapshot is retained rather than relabelled as a new one.
+
+| Rechecked artifact | Response completed at (UTC, October 9) | Response SHA-256 |
+| --- | --- | --- |
+| [Metrics](https://keryx.cc/api/metrics) | 00:09:30.059Z | `e8d8ceb0e9e852599f498f222232fcb4eca7ad2360f0c964e0e552d8db2d972c` |
+| [Report page](https://keryx.cc/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913) | 00:09:32.044Z | `c77422849872f1c3174c9543bb44cd09190e55e8eb80a5f9beca5561bdc517f3` |
+| [Receipt JSON](https://keryx.cc/api/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913/receipt) | 00:09:32.533Z | `56f0e85d08626507d1679ae4a094b99c16264ff079e0f89bba3477c78780c973` |
+
+The wallet-free path still opens these existing artifacts. Reading them does not
+prove fresh-query availability or revalidate independent chain finality. This
+documentation/publication changes no runtime, release version or payment state.
 
 ## Surface boundary
 
