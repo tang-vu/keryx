@@ -1,5 +1,30 @@
 # Supported-surface release parity
 
+## Coordinated distributions47 — October 9, 2026 source candidate
+
+App **0.27.47** and OpenAPI's document-release label stay aligned. This batch
+selects stdio/official Registry **0.4.14**, remote MCP **0.3.10** and desktop
+**0.4.13** once its final source is integrated. It creates no intermediate
+application release. A2A execution package **1.0.0**, financial and original
+receipt protocols retain their versions and authority.
+
+| Surface | Applicable change and boundary |
+| --- | --- |
+| Web / API / OpenAI / A2A | Shared ordinary answer presentation and complete-answer word budgets retain their documented finite grammar and private/original exclusions. Receipt, payment and recorded walkthrough roles remain separate. |
+| Remote MCP0.3.10 | Coordinates `operator_obligations_read` after source integration. Both explicit `operator:read` bearer scope and the exact protected server reader/role are required. Native books remain partial/unknown with zero safe/advisory surplus; configuration stays disabled unless separately admitted. |
+| Stdio0.4.14 / official Registry | Packages the delegated tool's bounded HTTPS read alongside existing buyer/recovery and account tools. Inspection initializes no wallet and grants no signer, spending or scheduler role. |
+| Desktop0.4.13 / Operator CLI | Includes explicit checked saved-bibliography BibTeX/RIS/CSL-JSON exports, distinct from cited exports. Native dialogs retain receipt integrity, original task binding and overwrite refusal; no hosted account editor or external synchronization is added. |
+| Extension0.1.2 | All eleven shipped files and the canonical money formatter are unchanged from the preceding distribution batch. Its hosted/page role inherits server answers, without a new local tool, account or treasury command. |
+| Bots / repository CLI | Hosted bot adapters keep their answer/link role. Repository commands share the checked export or delegated inspection contracts without a separate binary version, identity inference or autonomous scheduler. |
+| Rust / enrolled stores | Native ABI, source migrations and sealed capability gates are unchanged. Distribution metadata is not production enrollment or activation. |
+
+Final combined-source CI and package/platform acceptance, npm/Registry integrity,
+installer source/filename/hash, hosted MCP/health and actual installed-client
+readback remain separate gates. The desktop release manifest identifies version
+through its NSIS installer filename, not a `version` field. These are source
+identities, not published, deployed or installed claims. Preserve prior failures
+and broader issue/funding/activation gates; deploy the completed batch once.
+
 ## Coordinated distributions46 — October 9, 2026 source candidate
 
 App **0.27.46** incorporates the twelve source-reviewed outcomes merged through

@@ -1,5 +1,16 @@
 # Remote MCP
 
+The coordinated app0.27.47 candidate selects hosted protocol0.3.10 and
+stdio/Registry0.4.14 after final tool-source integration. OpenAPI is already
+labelled0.27.47; no new application version or financial/receipt protocol follows.
+`operator_obligations_read` requires BOTH explicit `operator:read` and exact
+protected server reader/role. Disabled configuration remains closed; partial
+native books yield unknown and zero safe/advisory surplus, without custody,
+spending or scheduler authority. Source identity is not hosted deployment,
+publication, installation or activation. See [surface parity](surface-parity.md).
+
+## Prior release46 distribution candidate
+
 The app0.27.46 source candidate identifies this hosted tool set as protocol0.3.9.
 It includes `evidence_draft`, explicitly scoped `history_read` and
 `profile_identities_read`. The document-release label for OpenAPI is0.27.46;

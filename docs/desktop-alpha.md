@@ -1,5 +1,14 @@
 # Operator desktop alpha (Windows)
 
+The coordinated app0.27.47 candidate selects desktop **0.4.13** for the changed
+checked-export graph. Explicit saved-bibliography BibTeX, RIS and CSL-JSON choices
+remain distinct from cited exports and use integrity-checked original-task data,
+native save dialogs and overwrite refusal. No account editor, sharing upload,
+new payment authority or scheduler is added. See [checked bibliography exports](engineering/checked-bibliography-exports-2026-10-09.md)
+and [surface parity](surface-parity.md). Package/platform checks, source-bound
+installer publication and actual owner installation remain separate gates;
+the dated observations below do not establish this candidate's delivery.
+
 Research Monthly purchasing/redemption uses the [shared web/API product](research-monthly.md).
 The desktop remains a local task/inspection/recovery surface; it does not create
 another entitlement writer or schedule recurring research. Public production uses
