@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { IncomingMessage } from "node:http";
+import { Socket } from "node:net";
+import { NextRequestAdapter } from "next/dist/server/web/spec-extension/adapters/next-request";
+import { NodeNextRequest } from "next/dist/server/base-http/node";
 import type { KeryxDB } from "../db/keryx-db";
 import { identityCookieName } from "./identity-flow";
 import { createIdentityRoutes } from "./identity-route";
@@ -31,6 +35,60 @@ async function started(f: ReturnType<typeof fixture>) {
   return { cookie, state: url.searchParams.get("state")!, callback: request(`/github/callback?code=secret-code&state=${url.searchParams.get("state")}`, "GET", { Cookie: cookie }) };
 }
 describe("identity owner/OAuth route gates", () => {
+  it.each(["START", "DELETE"] as const)("%s admits actual Next zero-byte body streams to existing SIWE authentication", async method => {
+    const f = fixture(); f.session.mockResolvedValue(Response.json({ error: "Sign in to access your account." }, { status: 401 }));
+    const socket = new Socket(), incoming = new IncomingMessage(socket);
+    incoming.method = method === "START" ? "POST" : "DELETE"; incoming.url = "http://127.0.0.1:3939/api/me/profile/identities/github";
+    incoming.headers = { origin: headers.Origin, "x-keryx-expected-wallet": wallet, "content-length": "0" }; incoming.push(null);
+    const target = NextRequestAdapter.fromNodeNextRequest(new NodeNextRequest(incoming), new AbortController().signal);
+    try {
+      expect(target.body).not.toBeNull(); const response = await f.routes[method](target, "github");
+      expect(response.status).toBe(401); expect(await response.json()).toEqual({ error: "Sign in to access your account." });
+      expect(f.session).toHaveBeenCalledOnce(); expect(f.dbGetter).not.toHaveBeenCalled(); expect(f.provider).not.toHaveBeenCalled();
+      expect(f.store.begin).not.toHaveBeenCalled(); expect(f.store.unlink).not.toHaveBeenCalled(); expect(f.exchange).not.toHaveBeenCalled();
+    } finally { socket.destroy(); }
+  });
+  it("streamed payload cannot use Content-Length zero to cross request or dependency gates", async () => {
+    for (const method of ["START", "DELETE"] as const) for (const payload of [" ", "{}"])
+      for (const origin of [headers.Origin, "https://foreign.synthetic.invalid"]) {
+        const f = fixture(), target = new Request("http://127.0.0.1:3939/api/me/profile/identities/github", {
+          method: method === "START" ? "POST" : "DELETE", headers: { ...headers, Origin: origin, "Content-Length": "0" }, body: payload,
+        });
+        const response = await f.routes[method](target, "github");
+        expect(response.status).toBe(400); expect(await response.json()).toEqual({ error: "invalid_identity_request" });
+        expect(f.session).not.toHaveBeenCalled(); expect(f.key).not.toHaveBeenCalled(); expect(f.dbGetter).not.toHaveBeenCalled();
+        expect(f.provider).not.toHaveBeenCalled(); expect(f.store.begin).not.toHaveBeenCalled(); expect(f.store.unlink).not.toHaveBeenCalled();
+      }
+  });
+  it("stream EOF does not bypass the existing foreign Origin fence", async () => {
+    for (const method of ["START", "DELETE"] as const) {
+      const f = fixture(), target = new Request("http://127.0.0.1:3939/api/me/profile/identities/github", {
+        method: method === "START" ? "POST" : "DELETE", headers: { ...headers, Origin: "https://foreign.synthetic.invalid" },
+        body: new ReadableStream({ start(controller) { controller.close(); } }), duplex: "half",
+      } as RequestInit);
+      const response = await f.routes[method](target, "github"); expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: "same_origin_required" }); expect(f.session).not.toHaveBeenCalled(); expect(f.dbGetter).not.toHaveBeenCalled();
+    }
+  });
+  it("a stalled stream refuses within five seconds without waiting for cancellation or invoking late dependencies", async () => {
+    vi.useFakeTimers();
+    try {
+      for (const method of ["START", "DELETE"] as const) {
+        const f = fixture(), cancel = vi.fn(() => new Promise<void>(() => {}));
+        let finish: ((value: void) => void) | undefined;
+        const lateProducer = new Promise<void>(resolve => { finish = resolve; });
+        const body = new ReadableStream<Uint8Array>({ async pull() { await lateProducer; }, cancel });
+        const target = new Request("https://keryx.cc/api/me/profile/identities/github", {
+          method: method === "START" ? "POST" : "DELETE", headers, body, duplex: "half",
+        } as RequestInit);
+        const pending = f.routes[method](target, "github"); await vi.advanceTimersByTimeAsync(5000);
+        const response = await pending; expect(response.status).toBe(400); expect(await response.json()).toEqual({ error: "invalid_identity_request" });
+        expect(cancel).toHaveBeenCalledOnce(); finish?.(); await vi.advanceTimersByTimeAsync(1);
+        expect(f.session).not.toHaveBeenCalled(); expect(f.dbGetter).not.toHaveBeenCalled(); expect(f.provider).not.toHaveBeenCalled();
+        expect(f.store.begin).not.toHaveBeenCalled(); expect(f.store.unlink).not.toHaveBeenCalled(); expect(vi.getTimerCount()).toBe(0);
+      }
+    } finally { vi.useRealTimers(); }
+  });
   it("internal Next request URL still admits the configured public origin to session authentication", async () => {
     const f = fixture(); f.session.mockResolvedValue(Response.json({ error: "Sign in to access your account." }, { status: 401 }));
     const response = await f.routes.START(internalRequest("/github/start", "POST"), "github");

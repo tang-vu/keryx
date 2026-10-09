@@ -97,11 +97,13 @@ try {
     { headers: { Origin: "null", Host: "identity-origin.synthetic.invalid", "X-Forwarded-Proto": "https" }, status: 403, error: "same_origin_required" },
   ];
   for (const provider of ["github", "orcid"]) {
-    for (const method of ["POST", "DELETE"]) for (const scenario of cases) {
+    for (const method of ["POST", "DELETE"]) for (const [scenarioIndex, scenario] of cases.entries()) {
       const response = await call(`/api/me/profile/identities/${provider}${method === "POST" ? "/start" : ""}`, method, {
         ...scenario.headers, "X-Keryx-Expected-Wallet": wallet,
       });
-      assert.equal(response.status, scenario.status); assert.deepEqual(JSON.parse(response.body), { error: scenario.error });
+      const diagnostic = JSON.stringify({ provider, method, scenarioIndex, expectedStatus: scenario.status,
+        actualStatus: response.status, responseBody: response.body }); // Already bounded to 4096 bytes; synthetic pre-auth only.
+      assert.equal(response.status, scenario.status, diagnostic); assert.deepEqual(JSON.parse(response.body), { error: scenario.error }, diagnostic);
       assert.equal(response.headers["cache-control"], "no-store"); assert.equal(response.headers["referrer-policy"], "no-referrer");
       assert.equal(response.headers.location, undefined); assert.equal(response.headers["set-cookie"], undefined);
     }
