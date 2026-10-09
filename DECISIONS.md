@@ -6810,3 +6810,15 @@ or granting transfer authority. This alert-only source implements neither
 requests nor refunds.
 The [surface contract and remaining gates](docs/engineering/paid-job-overdue-escalation-257.md)
 record this source boundary; issue257 and deployment/distribution acceptance remain open.
+
+### 2026-10-09 — Guide reviewers through a retained partial QA job
+
+For issue305, provide a wallet-free recorded walkthrough before a funded live
+demo. Reuse the already public owner QA report, decisions, receipt and recording;
+preserve its mainnet identity, first-party attribution and incomplete deliverable.
+Check the current receipt in the browser only on request against a separately
+retained checkpoint, and describe that as integrity rather than Circle/chain
+settlement verification. Changed or unavailable records offer the retained copy.
+No research, payment, sponsor enrollment or allowance is added. Full live demo,
+budget/approval/replay and independent payment verification remain explicit
+[gates](docs/engineering/recorded-walkthrough-305.md).

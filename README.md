@@ -11,6 +11,7 @@ Keryx is a citation-toll reading agent for researchers and builders: a question 
 budget lead to a cited report, visible BUY/SKIP/CACHE decisions, and payment receipts
 for eligible creator rewards.
 
+**[Guided recorded walkthrough](https://keryx.cc/walkthrough)** ·
 **[Live app](https://keryx.cc)** · **[Public proof](https://keryx.cc/proof)** ·
 **[Archived QA walkthrough (2m40s, app 0.27.43, recorded Oct 8)](https://github.com/tang-vu/keryx/releases/download/v0.27.43/keryx-current-release-6e591603-archived-qa-05.mp4)**.
 Reopens an archived first-party report and receipt; no new research was submitted.
