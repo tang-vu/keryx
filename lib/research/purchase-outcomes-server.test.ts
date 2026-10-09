@@ -22,10 +22,13 @@ describe("public dispatch visibility and archive authority", () => {
   });
   it("refuses unsafe selectors before resolving and excludes observations from a different selected network", async () => {
     await expect(readPublicPurchaseOutcomes("../private")).rejects.toThrow(); expect(mocks.resolve).not.toHaveBeenCalled();
-    const run = structuredClone(retained.snapshot); delete (run as Record<string, unknown>).archive;
+    // Keep the run's stale/look-alike archive property intact. Only resolver
+    // metadata may select the historical network/provenance in hosted readers.
+    const run = structuredClone(retained.snapshot);
     mocks.resolve.mockResolvedValue({ run, archive: null });
     const result = await readPublicPurchaseOutcomes(run.id);
-    expect(result?.network).toBe("eip155:5042"); expect(result?.counts.excludedPaymentObservations).toBe(1);
+    expect(result?.network).toBe("eip155:5042"); expect(result?.archive).toBeNull();
+    expect(result?.counts.excludedPaymentObservations).toBe(1);
     expect(result?.hitRate).toBeNull();
   });
 });

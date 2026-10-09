@@ -11,6 +11,7 @@ export async function readPublicPurchaseOutcomes(id: string) {
   purchaseOutcomeId.parse(id);
   const dispatch = await resolveDispatch(id);
   if (!dispatch) return null;
-  return projectPurchaseOutcomes({ ...publicQueryRun(dispatch.run),
-    ...(dispatch.archive ? { archive: dispatch.archive } : {}) }, config.networkId);
+  // Resolver metadata, including explicit null for a current record, overrides
+  // any look-alike archive property retained in the run's arbitrary JSON data.
+  return projectPurchaseOutcomes({ ...publicQueryRun(dispatch.run), archive: dispatch.archive ?? null }, config.networkId);
 }

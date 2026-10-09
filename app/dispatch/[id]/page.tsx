@@ -96,7 +96,7 @@ export default async function DispatchPage({ params }: PageProps) {
   // Optional read-only enrichment from this exact retained public record. No
   // additional ledger/source/private-sidecar lookup or immutable receipt change.
   const purchaseOutcomes = (() => {
-    try { return projectPurchaseOutcomes({ ...publicQueryRun(run), ...(archive ? { archive } : {}) }, config.networkId); }
+    try { return projectPurchaseOutcomes({ ...publicQueryRun(run), archive: archive ?? null }, config.networkId); }
     catch { return null; }
   })();
   const parent = parentDispatch?.run ?? null;
