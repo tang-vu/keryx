@@ -6514,4 +6514,3 @@ remains ungrouped invariant decimal text with an explicit currency. Dates requir
 an explicit viewer zone and observed relative clock. The [source/gate record](docs/engineering/locale-foundation-2026-10-09.md)
 keeps full issue acceptance, privacy authority, human translation review and the
 operational main freeze open.
-
