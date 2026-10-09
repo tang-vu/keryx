@@ -13,6 +13,7 @@ import { monthlyOpenApiPath } from "./monthly/openapi";
 import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
 
 import { privateProfileOpenApiPaths } from "./profiles/openapi";
+import { profileIdentityOpenApiPaths } from "./profiles/identity-openapi";
 import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
@@ -609,6 +610,7 @@ export const openapiSpec = {
   },
   paths: {
     ...privateProfileOpenApiPaths,
+    ...profileIdentityOpenApiPaths,
     ...paperOpenApiPaths,
     ...sourceClaimOpenApiPaths,
     "/api/source/{id}": {

@@ -20,7 +20,9 @@ import { researchAdmissionError } from "../research/availability-contract";
 import { createPaperLookupHandler, paperLookupToolOptions } from "../papers/lookup";
 import { readHostedPaperLookup } from "../papers/hosted-lookup";
 import { registerProfileTools } from "../profiles/profile-mcp";
-import { requirePrivateProfiles } from "../profiles/private-profile";
+import { registerIdentityReadTool } from "../profiles/identity-mcp";
+import { identitySnapshotSchema, requireProfileIdentities } from "../profiles/verified-identities";
+import { profileWallet, requirePrivateProfiles } from "../profiles/private-profile";
 import type { ApiKeyScope } from "../api-key-scopes";
 
 export interface RemoteMcpAccess {
@@ -204,6 +206,13 @@ export function createRemoteMcpServer(
   registerProfileTools(server, {
     read: async () => (await profileStore("profile:read")).get(access.actor!, config.networkId),
     update: async input => ({ profile: await (await profileStore("profile:write")).update(access.actor!, input) }),
+  });
+  registerIdentityReadTool(server, async () => {
+    if (!access.actor || !access.profileScopes?.includes("profile:read")) throw new Error("Explicit profile scope required");
+    const owner = profileWallet(access.actor);
+    const body = identitySnapshotSchema.parse(await requireProfileIdentities(await getDb()).list(owner));
+    if (body.wallet !== owner) throw new Error("Invalid verified identity owner");
+    return body;
   });
   return server;
 }

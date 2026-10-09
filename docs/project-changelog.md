@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Private verified ORCID/GitHub links (2026-10-09, source candidate)
+
+- Ordinary private profiles gain dated account-control verification and immediate
+  unlink through an interactive session-bound, single-use OAuth flow. Typed links
+  stay unverified; only provider ID/name or login survives, and tokens are discarded.
+- API and remote/stdio MCP owner reads require explicit `profile:read`; existing
+  profile responses, SIWE and payment/creator authority remain unchanged. New
+  identity capability is absent on sealed/enrolled storage. Production activation,
+  public-profile integration and coordinated package/deploy acceptance remain open.
+
 ### Coordinated research surfaces (2026-10-09, v0.27.45 candidate)
 
 - Attribute new API and paid A2A research to independently verified owners and

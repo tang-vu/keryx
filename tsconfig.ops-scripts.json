@@ -5,6 +5,8 @@
     "incremental": false
   },
   "include": [
+    "scripts/test-profile-identities-postgres.mts",
+    "scripts/test-browser-profile-identities.mts",
     "scripts/test-private-profiles-postgres.mts",
     "scripts/test-browser-private-profiles.mts",
     "scripts/test-private-profiles-mcp-package.mts",

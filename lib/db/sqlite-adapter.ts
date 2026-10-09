@@ -1,5 +1,7 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
+import { createSqliteProfileIdentities } from "./profile-identities-sqlite";
+import { ProfileIdentityError, type ProfileIdentitiesStore } from "../profiles/verified-identities";
 import { PrivateProfileError, type PrivateProfilesStore } from "../profiles/private-profile";
 import { readSqliteOperatorInventory, type OperatorInventoryInput } from "../business-operator/inventory";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
@@ -130,6 +132,7 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 export class SqliteAdapter implements KeryxDB {
   declare readonly privateProfiles?: PrivateProfilesStore;
+  declare readonly profileIdentities?: ProfileIdentitiesStore;
   private db: DatabaseSync;
   private enrolledMode?: StorageIdentity["authorityMode"];
   private enrolledIdentity?: Readonly<StorageIdentity>;
@@ -197,6 +200,13 @@ export class SqliteAdapter implements KeryxDB {
         // An unknown optional profile schema disables that domain without repairing it
         // or taking existing ordinary research/account/payment reads offline.
         if (!(error instanceof PrivateProfileError && error.code === "profile_unavailable")) throw error;
+      }
+    }
+    if (this.privateProfiles && !this.profileIdentities) {
+      try { Object.defineProperty(this, "profileIdentities", { value: createSqliteProfileIdentities(this.db) }); }
+      catch (error) {
+        // An unknown additive identity domain stays unavailable without repairing it.
+        if (!(error instanceof ProfileIdentityError && error.code === "identity_unavailable")) throw error;
       }
     }
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer

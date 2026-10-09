@@ -6491,3 +6491,22 @@ exact-unit and recovery constraints, all supported surface roles and release gat
 Participant currency demand, rate-provider/fee policies, tiny-amount feasibility,
 browser-compatible custody and bounded testnet proof remain unaccepted. This records
 the evaluation boundary, not an accepted economic policy or enabled EURC product.
+
+### 2026-10-09 — Private verified identities remain separate from wallet authority
+
+Issue265's source increment verifies ORCID/GitHub account control on an existing
+ordinary private profile. Keep asserted URLs separate, dated provider ID/name or
+login minimal, tokens ephemeral, and ownership unique per provider ID. Bind the
+five-minute single-use OAuth lineage to an active durable SIWE session; atomically
+recheck session/expiry/current lineage at completion. Unlink/profile deletion
+invalidate in-flight callbacks. Verification grants no login, payout, creator,
+payment or allowance authority.
+
+An optional nonenumerable ordinary identity port and service-role-only source RPC
+migration preserve sealed/native inventories and exact receipt evidence. Missing
+or enrolled capability refuses without fallback. API/MCP reads require explicit
+profile:read; provider consent and mutations remain interactive SIWE. Existing
+profile snapshot contracts stay unchanged. Public-profile integration, reviewed
+sealed activation and live provider acceptance remain open, with current main
+freeze and combined exact-source release/distribution gates authoritative. See
+[the implementation contract](docs/engineering/private-verified-identities-2026-10-09.md).

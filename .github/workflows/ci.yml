@@ -81,6 +81,10 @@ jobs:
         if: needs.scope.outputs.scope == 'full'
         run: node --import tsx scripts/test-private-profiles-postgres.mts
 
+      - name: Private verified identities PostgreSQL lineage, ownership and ACL acceptance
+        if: needs.scope.outputs.scope == 'full'
+        run: node --import tsx scripts/test-profile-identities-postgres.mts
+
       - name: Engineering feed integrity (no settlement)
         run: node --import tsx scripts/build-engineering-feed.mts --check
 
@@ -443,6 +447,9 @@ jobs:
 
       - name: Private profile UI (production CSS, synthetic owner sessions, no outbound requests)
         run: node --import tsx scripts/test-browser-private-profiles.mts
+
+      - name: Private verified identity UI (production CSS, synthetic consent and owner isolation)
+        run: node --import tsx scripts/test-browser-profile-identities.mts
 
       - name: Report feedback confirmation and response races (built CSS, hermetic Chromium)
         env:
