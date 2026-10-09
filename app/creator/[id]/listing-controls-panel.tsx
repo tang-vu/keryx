@@ -23,6 +23,7 @@ import { getBrowserRegistryVersion, type RegistryVersion } from "@/lib/registry/
 import { listingPriceCall, listingDeactivateCall } from "@/lib/creator/listing-call";
 import { REGISTRY_ABI, REVISIONED_REGISTRY_ABI } from "@/lib/registry/registry-abi";
 import { parseListingSnapshot, sameListingSnapshot } from "@/lib/creator/listing-snapshot";
+import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
 
 interface ListingData {
   mode: "onchain" | "offline";
@@ -280,8 +281,8 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
               <summary className="cursor-pointer font-mono text-[11px]">Current registry details</summary>
               {reviewRequired && <p className="mt-2 text-sm text-amber-700">The listing changed. Review these details before choosing your change again.</p>}
               <p className="mt-2 text-xs">{data.registryVersion === 2 || data.registryVersion === 3
-                ? "Price updates change only the price. A concurrent edit requires a fresh review before signing."
-                : "Price updates also submit these fields. Avoid editing this source elsewhere while the wallet prompt is open."}</p>
+                ? copy.priceOnlyUpdateExplanation
+                : copy.legacyPriceUpdateExplanation}</p>
               <dl className="mt-3 space-y-2 break-all font-mono text-[11px]">
                 <div><dt>Payout wallet</dt><dd>{data.current.payoutWallet}</dd></div>
                 <div><dt>Author splits</dt><dd>{data.current.authors.length ? data.current.authors.map((a, i) => (

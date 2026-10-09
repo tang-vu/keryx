@@ -170,3 +170,24 @@ receipts cannot be repurposed as V3 activation consent or proof. See
 No synchronized package/installer publication or deployed sponsorship is inferred
 from these shared source changes. Each applicable release artifact and production
 commit needs its own accepted readback; current role boundaries remain explicit.
+
+## English copy and catalogue boundary
+
+The sponsored registration page, invitation, form and two new listing-control
+explanations use the immutable English area catalogue in
+[`locales/en/creator-registration.ts`](../locales/en/creator-registration.ts).
+Named interpolation receives already formatted display values; it changes no
+currency arithmetic, request state, wallet checks, endpoint or signing authority.
+Rendered-copy fixtures retain the original English, accessibility labels,
+recovery warnings and separation of sponsor gas from creator earnings. Existing
+listing-control copy is outside this narrow extraction. This introduces no
+locale activation, translation approval or general locale framework, and leaves
+all sponsorship funding, custody and operational activation gates above intact.
+
+When this PR rebases onto the UI-copy guard introduction, retire only the old
+listing-control `jsx-text` allowance for “Price updates also submit these fields.
+Avoid editing this source elsewhere while the wallet prompt is open.” Its
+SHA256 identity is `78cbcc36d747c6afd3eb685532c7c0cdb459bc76d8e0395cf92e4e7a5004e345`
+with count one. Before that rebase, the guard's existing-source branch still needs
+the allowance. The corrected joint inventory has 3,113 candidates in 201 JSX
+files and no new inline copy; this count does not establish migration completion.

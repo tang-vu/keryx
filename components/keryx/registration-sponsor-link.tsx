@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
 
 /** The ordinary registration flow stays available while sponsorship is disabled. */
 export function RegistrationSponsorLink({ claimId, wallet }: { claimId?: string; wallet: string }) {
@@ -14,8 +15,8 @@ export function RegistrationSponsorLink({ claimId, wallet }: { claimId?: string;
   }, [wallet]);
   if (result?.wallet !== wallet || !result.available) return null;
   return <section className="mb-4 border border-paid/30 bg-paper-2 p-4">
-    <h2 className="font-display text-xl">Registration gas covered by Keryx</h2>
-    <p className="mt-2 text-sm text-ink-2">Verify control of your feed, review the source terms and sign. You keep source management and payouts.</p>
-    <Link className="mt-3 inline-block text-sm underline" href={`/register/sponsored${claimId ? `?claimId=${encodeURIComponent(claimId)}` : ""}`}>Use sponsored registration ▸</Link>
+    <h2 className="font-display text-xl">{copy.invitationHeading}</h2>
+    <p className="mt-2 text-sm text-ink-2">{copy.invitationExplanation}</p>
+    <Link className="mt-3 inline-block text-sm underline" href={`/register/sponsored${claimId ? `?claimId=${encodeURIComponent(claimId)}` : ""}`}>{copy.sponsoredRegistrationLink}</Link>
   </section>;
 }
