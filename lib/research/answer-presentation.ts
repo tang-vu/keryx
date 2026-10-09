@@ -2,8 +2,8 @@ import { researchResponseLanguage } from "../agent/empty-public-evidence";
 
 /** Ordinary research presentation, derived only from the original caller request. */
 export interface AnswerPresentation {
-  language: "en" | "vi" | "pt";
-  requestedLanguage?: "en" | "vi" | "pt";
+  language: "en" | "vi" | "pt" | "es";
+  requestedLanguage?: "en" | "vi" | "pt" | "es";
   requestedBulletCount?: number;
 }
 
@@ -26,7 +26,7 @@ function negated(text: string, index: number): boolean {
 }
 
 /** Finite positive language/count instructions; ambiguous counts retain target layout. */
-export function answerPresentation(question: string): AnswerPresentation {
+export function answerPresentation(question: string, scope: "ordinary" | "retained" = "ordinary"): AnswerPresentation {
   const text = question.slice(0, 30_000).normalize("NFC").toLowerCase();
   const explicit = /(?<![\p{L}\p{N}_])(?:(?:answer|respond|reply|write)\s+(?:only\s+)?(?:in|using)\s+((?:brazilian\s+)?portuguese|[\p{L}-]+)|(?:trả lời|viết|đáp)\s+(?:bằng\s+)?tiếng\s+(bồ đào nha|[\p{L}-]+)|(?:responda em|escreva em)\s+(português(?:\s+(?:brasileiro|do brasil))?|[\p{L}-]+)|em\s+(português(?:\s+(?:brasileiro|do brasil))?|inglês|vietnamita|francês|espanhol|alemão|japonês|chinês)|(?:responda|responde|escriba|escribe)\s+(?:solo\s+)?en\s+(español)|en\s+(español|français)(?=\s*[,;:])|(?:antworte\s+(?:bitte\s+)?)?auf\s+(deutsch))(?![\p{L}\p{N}_])/gu;
   const requests = [...text.matchAll(explicit)];
@@ -49,6 +49,7 @@ export function answerPresentation(question: string): AnswerPresentation {
     const name = request.slice(1).find(value => value !== undefined)!;
     requestedLanguage = /^(?:vietnamese|việt|vietnamita)$/u.test(name) ? "vi"
       : /^(?:(?:brazilian )?portuguese|português(?: brasileiro| do brasil)?|bồ đào nha)$/u.test(name) ? "pt"
+      : scope === "ordinary" && /^(?:spanish|español|espanhol)$/u.test(name) ? "es"
       : /^(?:english|anh|inglês)$/u.test(name) ? "en" : undefined;
     // Unsupported requests use neutral labels without forcing statement translation.
     language = requestedLanguage ?? "en";
@@ -71,6 +72,6 @@ export function answerPresentation(question: string): AnswerPresentation {
 export function presentationStatementGuidance(presentation: AnswerPresentation): string {
   // An English label fallback does not authorize overriding an unsupported language request.
   if (!presentation.requestedLanguage) return "";
-  const language = { en: "English", vi: "Vietnamese", pt: "Brazilian Portuguese" }[presentation.requestedLanguage];
+  const language = { en: "English", vi: "Vietnamese", pt: "Brazilian Portuguese", es: "Spanish" }[presentation.requestedLanguage];
   return `For this ordinary research answer, write each statement in ${language}. The original caller's explicit output language takes precedence over the question's language. `;
 }

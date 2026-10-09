@@ -17,6 +17,20 @@ optional frozen display metadata grant no current publisher control or payment
 authority. A ranking outage preserves available summary/question history.
 See [release scope and acceptance](docs/engineering/ledger-testnet-creators-2026-10-09.md).
 
+**Use one ordinary answer language for labels and confidence — 2026-10-09.**
+Issue331's Spanish request was protected from false Portuguese inference by the
+earlier selector repair, but Spanish still had English scaffolding and ordinary
+Portuguese notices could use an English confidence rationale. Add Spanish to the
+finite ordinary presentation contract and format evidence confidence with the same
+trusted original-question language. Preserve the existing verdict calculations,
+Low delivery limit, admitted statement/quote bytes and complete evidence rationale;
+translate neither evidence nor reviewed statements at delivery. Unsupported
+languages retain English scaffolding. Retained/private, targeted paid-original and
+decision-brief contracts keep their prior path and stored receipts are unchanged.
+This is an offline source candidate with coordinated delivery and live usefulness
+gates, not a general language detector or broad interface localization. See
+[scope and acceptance](docs/engineering/ordinary-confidence-language-2026-10-09.md).
+
 ## Identify changed distribution graphs once per coordinated batch — 2026-10-09
 
 App0.27.46 includes additional remote and stdio tools plus the shared retained

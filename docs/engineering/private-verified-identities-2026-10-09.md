@@ -84,6 +84,11 @@ unchanged code directory so those configuration imports resolve, while retaining
 the original absolute app directory, default build and temporary database cwd.
 It checks the link's real target, unlinks it before successful temporary cleanup,
 and retains failure evidence without copying source, dependencies or build output.
+Start and unlink accept only a null body or streamed EOF with zero payload bytes.
+The identity-only checker ignores Content-Length as authority, stops at the first
+payload byte, and refuses aborted, used, locked, errored or stalled streams within
+five seconds and sixteen reads. Cancellation cannot extend that budget; provider,
+query, Origin, owner-precondition and interactive-session gates remain unchanged.
 Temporary ordinary SQLite and isolated PostgreSQL acceptance cover
 atomic uniqueness, lineage/session/privacy and migration ACLs. Hermetic actual
 components with built CSS and packed stdio client fixtures cover surface roles;
