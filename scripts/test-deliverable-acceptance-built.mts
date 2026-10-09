@@ -1,13 +1,12 @@
-/** Built private/public routes + actual client component/production CSS; synthetic durable sessions and bookkeeping only. */
+/** Built private/public routes + actual Next report UI; synthetic durable sessions and bookkeeping only. */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import { mkdir, readFile, readdir, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { build } from "esbuild";
 import { chromium, type Browser, type BrowserContext, type Page, type Route } from "playwright";
 import { SqliteAdapter } from "../lib/db/sqlite-adapter.ts";
 import { seedSyntheticA2aOriginal, syntheticA2aOriginal } from "../lib/db/a2a-original-fixture.ts";
@@ -24,6 +23,9 @@ const answer = "Synthetic delivered answer 😀", owner = `0x${"11".repeat(20)}`
 for (let index = 1; index <= 5; index++) {
   const original = await seedSyntheticA2aOriginal(sqlite, syntheticA2aOriginal(index)); originals.push(original);
   await sqlite.completeA2aOrder(original.order.id, { status: "completed", queryId: original.order.id, answer, researchPackage: original.order.researchPackage }, "2026-10-09T00:00:00.000Z");
+  await sqlite.saveQueryRun({ id: original.order.id, question: `Synthetic acceptance fixture ${index}`, answer, budget: 0.01,
+    engine: "heuristic", subClaims: [], decisions: [], citations: [], trace: [], totalSpent: 0, totalToCreators: 0,
+    paymentMode: "offline", fundingOwner: "offline", origin: "engine", createdAt: "2026-10-09T00:00:00.000Z" });
 }
 const secret = randomBytes(32).toString("hex"), session = await issueWebSession(sqlite, secret, owner, "asker"), otherSession = await issueWebSession(sqlite, secret, other, "dev");
 const key = `kx_live_${"1".repeat(96)}`, keyRow = await sqlite.mintApiKey(owner, key.slice(0, 16), createHash("sha256").update(key).digest("hex"), "synthetic acceptance", "deliverable:read,deliverable:write");
@@ -77,12 +79,6 @@ try {
   const shared = await request(`/api/deliverables/${id}/acceptance`); privacy(shared); const publicResult = await shared.json(); assert.deepEqual(Object.keys(publicResult).sort(), ["format", "state", "submittedAt"]); assert.equal(publicResult.state, "revision_requested");
   const keyRead = await request(path, { headers: { Authorization: `Bearer ${key}` } }); assert.equal(keyRead.status, 200); privacy(keyRead);
   await sqlite.revokeApiKey(keyRow.id, owner); assert.equal((await request(path, { headers: { Authorization: `Bearer ${key}` } })).status, 401);
-  const bundle = await build({ stdin: { contents: `import React from'react';import{createRoot}from'react-dom/client';import{DeliverableAcceptance}from'./components/keryx/deliverable-acceptance';window.renderAcceptance=(id,answer)=>root.render(<DeliverableAcceptance id={id} answer={answer}/>);const root=createRoot(document.getElementById('root'));`, loader: "tsx", resolveDir: source }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "synthetic-owner-display", setup(plugin) {
-    plugin.onResolve({ filter: /^(next\/link|@\/lib\/hooks\/use-siwe-auth)$/ }, args => ({ path: args.path, namespace: "fixture" }));
-    plugin.onLoad({ filter: /.*/, namespace: "fixture" }, args => ({ loader: "jsx", contents: args.path === "next/link" ? "import React from'react';export default function Link(p){return <a {...p}/>;}" : `export function useSiweAuth(){return{session:{address:${JSON.stringify(owner)}}};}` }));
-  } }] });
-  const chunks = join(dist, "static", "chunks"), cssFiles = (await readdir(chunks)).filter(file => file.endsWith(".css")); assert(cssFiles.length);
-  const css = (await Promise.all(cssFiles.map(file => readFile(join(chunks, file), "utf8")))).join("\n");
   browser = await chromium.launch({ headless: true });
   for (const [index, width] of [320, 390, 768, 1440].entries()) {
     const currentId: string = originals[index + 1].order.id;
@@ -91,21 +87,22 @@ try {
     let lostAck = true, posts = 0; const errors: string[] = [];
     try {
       await context.route("**/*", async (route: Route) => {
-        const url = new URL(route.request().url()); assert.equal(url.origin, origin, "No external browser traffic");
-        if (url.pathname === "/__acceptance_fixture") return route.fulfill({ contentType: "text/html", body: '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style><main id="root" style="max-width:900px;margin:auto"></main>' });
-        assert(url.pathname === `/api/me/deliverables/${currentId}/acceptance` || url.pathname === `/api/deliverables/${currentId}/acceptance`);
-        if (route.request().method() === "POST") { posts++; if (lostAck) { lostAck = false; const result = await route.fetch(); assert.equal(result.status(), 200); return route.abort("failed"); } }
+        const url = new URL(route.request().url());
+        if (url.origin !== origin) return route.abort("blockedbyclient");
+        const privatePath = `/api/me/deliverables/${currentId}/acceptance`;
+        if (url.pathname.startsWith("/api/") && ![privatePath, `/api/deliverables/${currentId}/acceptance`, "/api/auth/session"].includes(url.pathname)) return route.fulfill({ status: 503, json: { error: "synthetic_fixture_unavailable" } });
+        if (route.request().method() === "POST") { assert.equal(url.pathname, privatePath); posts++; if (lostAck) { lostAck = false; const result = await route.fetch(); assert.equal(result.status(), 200); return route.abort("failed"); } }
         return route.continue();
       });
       const page: Page = await context.newPage(); page.on("pageerror", (error: Error) => errors.push(error.message));
-      await page.goto(`${origin}/__acceptance_fixture`); await page.addScriptTag({ content: bundle.outputFiles[0].text });
-      await page.evaluate(({ id, answer }: { id: string; answer: string }) => (window as unknown as { renderAcceptance(id: string, answer: string): void }).renderAcceptance(id, answer), { id: currentId, answer });
-      const revise = page.getByRole("button", { name: "Request revision", exact: true }); await revise.waitFor(); await page.waitForFunction(() => Array.from(document.querySelectorAll("button")).some(button => button.textContent === "Request revision" && !button.disabled));
-      await page.getByLabel("Optional private reason").fill("Private synthetic browser reason"); await page.getByRole("checkbox").check(); await revise.click();
+      await page.goto(`${origin}/dispatch/${currentId}`);
+      const journal = page.getByRole("region", { name: "Your prepaid A2A deliverable choice" }); await journal.waitFor();
+      const revise = journal.getByRole("button", { name: "Request revision", exact: true }); await revise.waitFor(); await page.waitForFunction(() => Array.from(document.querySelectorAll("button")).some(button => button.textContent === "Request revision" && !button.disabled));
+      await journal.getByLabel("Optional private reason").fill("Private synthetic browser reason"); await journal.getByRole("checkbox").check(); await revise.click();
       const replay = page.getByRole("button", { name: "Replay the same submission", exact: true }); await replay.waitFor(); await page.waitForFunction(() => Array.from(document.querySelectorAll("button")).some(button => button.textContent === "Replay the same submission" && !button.disabled));
       await replay.click(); await page.getByText("Customer acceptance: Revision requested — awaiting owner review", { exact: true }).waitFor(); assert.equal(posts, 2);
       assert.equal((await sqlite.deliverableAcceptance!.read(owner, originals[index + 1].binding.network, currentId)).revision, 1);
-      await page.getByRole("checkbox").uncheck(); await page.getByRole("button", { name: "Reject", exact: true }).click();
+      await journal.getByRole("checkbox").uncheck(); await journal.getByRole("button", { name: "Reject", exact: true }).click();
       await page.getByText("The customer has not shared an acceptance state.", { exact: true }).waitFor();
       assert.equal((await sqlite.deliverableAcceptance!.read(owner, originals[index + 1].binding.network, currentId)).revision, 2);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false, `Overflow at ${width}`);
@@ -119,4 +116,4 @@ try {
   try { await browser?.close(); }
   finally { try { if (!didExit && child.pid !== undefined) { child.kill(); if (!await waitForExit(5000)) { child.kill("SIGKILL"); assert(await waitForExit(5000), "Owned server exit not observed"); } } } finally { sqlite.close(); } }
 }
-console.log("PASS built acceptance routes/cookie/key/privacy, original/payment byte parity and production-CSS 320/390/768/1440 owner UI with actual durable API, lost-ack exact-key replay and public consent withdrawal; owned server exit observed. Synthetic identity display/bookkeeping only; no SIWE provider, live settlement, revision/refund execution or native enrollment proof.");
+console.log("PASS built acceptance routes/cookie/key/privacy, original/payment byte parity and actual Next report/hydration/production-CSS 320/390/768/1440 owner UI with actual durable API, lost-ack exact-key replay and public consent withdrawal; owned server exit observed. Synthetic durable sessions/bookkeeping only; no SIWE provider, live settlement, revision/refund execution or native enrollment proof.");

@@ -165,7 +165,7 @@ and CLI against synthetic HTTPS, with exact requests and no wallet/payment files
 After the default Next build, `test-deliverable-acceptance-built.mts` checks actual
 cookie/key routes and owner UI with production CSS at 320/390/768/1440 widths,
 real isolated durable sessions, acknowledgement loss/replay and public withdrawal.
-Its identity display is synthetic; it does not test live SIWE/provider consent.
+Its durable sessions/bookkeeping are synthetic; it does not test live SIWE/provider consent.
 Both TypeScript graphs, scoped lint/copy checks, strict complete tool inventories,
 the default production build and paying-source-study reproduction bind the final
 candidate. Historical or failed harness attempts remain separate evidence.
