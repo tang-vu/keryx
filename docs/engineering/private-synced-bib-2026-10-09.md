@@ -37,8 +37,10 @@ separate, and an identifier collision refuses the complete export. Fields,
 escaping, metadata-only notes and publication limits remain unchanged. Earlier
 downloaded ordinal keys (`keryxPaper1`, etc.) do not change retrospectively; a
 writer adopting a new export must update their existing LaTeX citation commands.
-Original saved bibliography/receipt bytes and existing research-citation keys
-remain unchanged. Exact-URL identity does not merge DOI aliases across providers.
+Original-page bibliography generation and sanitized archive/checked-receipt
+projections explicitly retain their legacy ordinal keys; saved bibliography and
+receipt bytes and existing research-citation keys remain unchanged. Exact-URL
+identity does not merge DOI aliases across providers.
 
 ## API and privacy boundary
 
@@ -97,12 +99,15 @@ method inventory, enrollment identity, private-profile authority or custody.
 | Hosted API | Session-only owner writes and snapshot-scoped bearer pulls; no new research or public-listing contract. |
 | Desktop | Hosted account-page use when supported; the helper shares stable paper-key formatting. Native writers/inspection and original receipts retain authority. Packaging/distribution gates remain. |
 | Repository CLI / Operator | New generated saved-paper BibTeX shares stable keys. Saved export snapshots and checked-receipt recovery are not rewritten; no local sharing-store bypass or sync command. |
-| Remote and stdio MCP / A2A / OpenAI | Existing derived/server-generated bibliography exports receive stable keys when newly formatted. No tools or key scopes create private links; old response snapshots are unchanged. |
+| Remote and stdio MCP / A2A / OpenAI | Original-page bibliography projections retain ordinal keys; research-citation exports retain their existing keys. No tools or key scopes create private links. |
 | Extensions / bots | Existing hosted/page/answer roles; no account connection or private sharing command. |
 
 Runtime version selection, main merge, deployment, installer/package publication
 and synchronized version claims belong to the coordinated release after the
 current release45 freeze. This branch performs none of them.
+The shared formatter and original-page helper edits are source candidates subject
+to exact-source review and projection/receipt parity gates; they authorize no
+native or active original-completion-window cutover.
 
 ## Current provider documentation and remaining integration gates
 
@@ -140,6 +145,7 @@ With the pinned dependencies and explicit offline/testnet settings:
 
 ```powershell
 node node_modules/vitest/vitest.mjs run lib/db/private-bibliographies-sqlite.test.ts lib/bibliographies/bibliography-routes.test.ts lib/bibliographies/bibliography-browser.test.ts lib/papers/reference-export.test.ts lib/db/private-profiles-sqlite.test.ts lib/db/enrolled-sqlite-adapter.test.ts
+node node_modules/vitest/vitest.mjs run lib/research/surface-result.test.ts lib/research/bibliographic-original.test.ts lib/research/bibliographic-task.test.ts lib/research/receipt-exports.test.ts
 node node_modules/typescript/bin/tsc --noEmit
 node node_modules/typescript/bin/tsc --noEmit --project tsconfig.ops-scripts.json
 node node_modules/next/dist/bin/next build
@@ -148,7 +154,9 @@ node --import tsx scripts/test-private-bibliography-built.mts
 
 SQLite/route tests cover hashed secrets, exact snapshots, ownership, revision
 conflicts, revocation, bounds, enrollment/schema refusal and unchanged unrelated
-history. Hermetic Chromium fixtures exercise explicit actions and private-prose
+history. An old-ordinal archive fixture checks that the safe projection preserves
+the original BibTeX key without mutating stored run or receipt bytes. Hermetic
+Chromium fixtures exercise explicit actions and private-prose
 exclusion at 320/1366 pixels, plus delayed owner-change responses. The built
 fixture uses an isolated ordinary database and synthetic durable JWT sessions,
 verifies actual Next route/header behavior and revoked-session refusal, and
@@ -156,9 +164,23 @@ never connects a provider or shared store. It is not live SIWE/production or
 external Overleaf/Zotero acceptance. Main aggregate, independent review and
 applicable storage/domain/platform checks remain mandatory release gates.
 
+The first old-ordinal fixture failed because safe projection regenerated a stable
+key. The explicit original-page legacy mode corrected that regression; all 54
+formatter/original-bibliography/surface/receipt tests passed on the correction.
+
 The local Windows worktree's dependency junction crosses Turbopack's filesystem
 root and refuses the default build before compilation. `next build --webpack`
 may be used here for actual built-route/privacy validation without changing
 project configuration; this is distinct from the required hosted default
-Turbopack build against a physical locked dependency installation. A webpack
-result does not satisfy that default-build release gate.
+Turbopack build against a physical locked dependency installation. The local
+webpack attempt also stops on a baseline Wagmi/Base Account/Coinbase dependency
+import of missing `@x402/svm/exact/client`, before this candidate's routes can be
+built. Neither local build nor the built fixture passed; hosted exact-source CI
+and the built fixture remain open. A webpack result does not satisfy the
+default-build release gate.
+
+The app TypeScript check passed before those build attempts generated route
+validators. The later full check reports baseline `SourcesPage`'s defaulted props
+as possibly undefined in `.next/types/app/sources/page.ts` (TS2344); the source is
+unchanged from `f5565998`. This remains a full generated-route gate, separate from
+ops and a source-only check excluding generated build directories.

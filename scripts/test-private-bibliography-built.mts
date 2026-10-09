@@ -31,7 +31,13 @@ const environment = { ...process.env, NODE_ENV: "production", JWT_SECRET: secret
 for (const name of Object.keys(environment)) if (/^KERYX_(?:STORAGE|SQLITE|SUPABASE)/.test(name) || name === "NEXT_DIST_DIR") delete environment[name as keyof typeof environment];
 const child = spawn(process.execPath, [join(source, "node_modules", "next", "dist", "bin", "next"), "start", "-H", "127.0.0.1", "-p", String(port)],
   { cwd: fixture, env: environment, windowsHide: true, stdio: "ignore" });
-const stopped = new Promise<void>(resolve => child.once("exit", () => resolve()));
+let didExit = false, startupError: Error | undefined;
+const stopped = new Promise<void>(resolve => child.once("exit", () => { didExit = true; resolve(); }));
+child.once("error", error => { startupError = error; });
+const waitForExit = (milliseconds: number) => new Promise<boolean>(resolve => {
+  const timeout = setTimeout(() => resolve(false), milliseconds);
+  void stopped.then(() => { clearTimeout(timeout); resolve(true); });
+});
 const origin = `http://127.0.0.1:${port}`;
 const fetchPrivate = (path: string, init: RequestInit = {}) => fetch(origin + path, { redirect: "error", ...init, signal: AbortSignal.timeout(10000) });
 const ownerRequest = (method: string, body?: unknown, owner = alice, session = aliceSession.token, revision?: number) => ({ method,
@@ -40,7 +46,8 @@ const ownerRequest = (method: string, body?: unknown, owner = alice, session = a
 try {
   let ready = false;
   for (let attempts = 0; attempts < 80; attempts++) {
-    if (child.exitCode !== null) throw new Error("Fixture server exited before readiness");
+    if (startupError) throw new Error("Fixture server could not start");
+    if (didExit) throw new Error("Fixture server exited before readiness");
     try { const response = await fetchPrivate("/api/me/bibliographies", ownerRequest("GET")); if (response.status === 200) { ready = true; break; } } catch { /* server startup only */ }
     await new Promise(resolve => setTimeout(resolve, 250));
   }
@@ -66,7 +73,15 @@ try {
   assert.equal((await fetchPrivate(saved.urlPath)).status, 404);
   await sqlite.revokeWebSession((await sqlite.listWebSessions(alice, Date.now()))[0].hash, alice);
   assert.equal((await fetchPrivate("/api/me/bibliographies", ownerRequest("GET"))).status, 401);
-  console.log("Built private bibliography API: owner/session refusal, exact snapshot, stable update, revocation and framework privacy headers passed. Synthetic sessions only.");
 } finally {
-  child.kill(); await Promise.race([stopped, new Promise(resolve => setTimeout(resolve, 5000))]); sqlite.close();
+  try {
+    if (!didExit && child.pid !== undefined) {
+      child.kill();
+      if (!await waitForExit(5000)) {
+        child.kill("SIGKILL");
+        assert.ok(await waitForExit(5000), "Fixture server cleanup failed: child exit was not observed");
+      }
+    }
+  } finally { sqlite.close(); }
 }
+console.log("Built private bibliography API: owner/session refusal, exact snapshot, stable update, revocation, framework privacy headers and child exit passed. Synthetic sessions only.");
