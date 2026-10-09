@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 const m = vi.hoisted(() => ({ session: vi.fn(), db: vi.fn(), registry: vi.fn(), write: vi.fn(),
   config: { registryAddress: "", registryReadAddress: "" } }));
@@ -20,19 +20,45 @@ const get = () => GET(new NextRequest(url), ctx);
 const post = () => POST(new NextRequest(url, { method: "POST", headers: { "content-type": "application/json" },
   body: JSON.stringify({ fetchPrice: 0.002 }) }), ctx);
 beforeEach(() => {
+  vi.stubEnv("KERYX_REGISTRY_VERSION", "1"); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_VERSION", "1");
   vi.clearAllMocks();
   m.config.registryAddress = registry; m.config.registryReadAddress = registry;
   m.session.mockResolvedValue({ address: creator.toUpperCase() });
   m.db.mockResolvedValue({ getSource: async () => source, upsertSource: m.write });
   m.registry.mockResolvedValue(record);
 });
+afterEach(() => vi.unstubAllEnvs());
 
 it("lets the on-chain creator manage a separate payout wallet without trusting cached terms", async () => {
   const response = await get(); expect(response.status).toBe(200);
   expect(m.registry).toHaveBeenCalledWith(onchainId);
   expect(await response.json()).toMatchObject({ mode: "onchain", creator, fetchPrice: 0.0012,
+    registryVersion: 1,
     current: { payoutWallet: payout, authors: record.authors, fetchPriceUsdc6: "1200", contentCid: "synthetic-cid", tags: "research" } });
   expect(m.write).not.toHaveBeenCalled();
+});
+
+it.each(["2", "3"])("provides the atomic V%s revision as an exact string for creator-signed edits", version => {
+  vi.stubEnv("KERYX_REGISTRY_VERSION", version); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_VERSION", version);
+  m.registry.mockResolvedValue({ ...record, registryVersion: Number(version), revision: BigInt("9007199254740993") });
+  return get().then(async response => {
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ registryVersion: Number(version), revision: "9007199254740993", creator });
+    expect(m.write).not.toHaveBeenCalled();
+  });
+});
+
+it("refuses mismatched versions before reading listing authority", async () => {
+  vi.stubEnv("KERYX_REGISTRY_VERSION", "3"); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_VERSION", "1");
+  expect((await get()).status).toBe(409); expect(m.registry).not.toHaveBeenCalled();
+});
+
+it("refuses V3 terms that lack an atomic revision and never grants recipient edit authority", async () => {
+  vi.stubEnv("KERYX_REGISTRY_VERSION", "3"); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_VERSION", "3");
+  expect((await get()).status).toBe(409);
+  m.registry.mockResolvedValue({ ...record, registryVersion: 3, revision: BigInt(1) });
+  m.session.mockResolvedValue({ address: payout });
+  expect((await get()).status).toBe(403); expect(m.write).not.toHaveBeenCalled();
 });
 
 it.each([payout, author, `0x${"e".repeat(40)}`])("does not treat recipient %s as registry creator", async address => {

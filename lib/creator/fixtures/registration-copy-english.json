@@ -1,0 +1,1890 @@
+{
+  "sourceCommit": "2d34218231d861fd97090426c0a25c2dcac53f19",
+  "scope": "Original English DOM rendered with synthetic owner/requests; effects, I/O and signing forbidden",
+  "forms": [
+    {
+      "available": true,
+      "authenticated": false,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": null,
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "disconnected",
+      "visible": [
+        {
+          "tag": "p",
+          "text": "Connect and sign in with your creator wallet on Arc mainnet.",
+          "attributes": {}
+        },
+        {
+          "tag": "a",
+          "text": "Connect wallet ▸",
+          "attributes": {
+            "href": "/connect"
+          }
+        }
+      ]
+    },
+    {
+      "available": null,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": null,
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "availability pending",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Registration gas sponsorship is currently unavailable for this wallet. Existing requests can still be inspected.Recover original requestInspect saved requestWallet-funded registration ▸",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "p",
+          "text": "Registration gas sponsorship is currently unavailable for this wallet. Existing requests can still be inspected.",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Recover original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "value": ""
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect saved request",
+          "attributes": {
+            "disabled": ""
+          }
+        },
+        {
+          "tag": "a",
+          "text": "Wallet-funded registration ▸",
+          "attributes": {
+            "href": "/register"
+          }
+        }
+      ]
+    },
+    {
+      "available": false,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": null,
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "sponsorship unavailable",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Registration gas sponsorship is currently unavailable for this wallet. Existing requests can still be inspected.Recover original requestInspect saved requestWallet-funded registration ▸",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "p",
+          "text": "Registration gas sponsorship is currently unavailable for this wallet. Existing requests can still be inspected.",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Recover original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "value": ""
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect saved request",
+          "attributes": {
+            "disabled": ""
+          }
+        },
+        {
+          "tag": "a",
+          "text": "Wallet-funded registration ▸",
+          "attributes": {
+            "href": "/register"
+          }
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": null,
+      "row": null,
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "feed proof required",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Prove control of your exact feed first. Verify my source ▸Recover original requestInspect saved requestWallet-funded registration ▸",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "p",
+          "text": "Prove control of your exact feed first. Verify my source ▸",
+          "attributes": {}
+        },
+        {
+          "tag": "a",
+          "text": "Verify my source ▸",
+          "attributes": {
+            "href": "/claim-source"
+          }
+        },
+        {
+          "tag": "label",
+          "text": "Recover original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "value": ""
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect saved request",
+          "attributes": {
+            "disabled": ""
+          }
+        },
+        {
+          "tag": "a",
+          "text": "Wallet-funded registration ▸",
+          "attributes": {
+            "href": "/register"
+          }
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": null,
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "verified preparation",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Verified feed: https://feed.invalid/rssPrice per read (USDC)Prepare sponsored registrationRecover original requestInspect saved requestWallet-funded registration ▸",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "p",
+          "text": "Verified feed: https://feed.invalid/rss",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Price per read (USDC)",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "type": "number",
+            "min": "0",
+            "max": "1000000",
+            "step": "0.001",
+            "value": "0.016"
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Prepare sponsored registration",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Recover original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "value": ""
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect saved request",
+          "attributes": {
+            "disabled": ""
+          }
+        },
+        {
+          "tag": "a",
+          "text": "Wallet-funded registration ▸",
+          "attributes": {
+            "href": "/register"
+          }
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": null,
+      "error": "",
+      "price": "-1",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "invalid price",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Verified feed: https://feed.invalid/rssPrice per read (USDC)Prepare sponsored registrationRecover original requestInspect saved requestWallet-funded registration ▸",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "p",
+          "text": "Verified feed: https://feed.invalid/rss",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Price per read (USDC)",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "type": "number",
+            "min": "0",
+            "max": "1000000",
+            "step": "0.001",
+            "value": "-1"
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Prepare sponsored registration",
+          "attributes": {
+            "disabled": ""
+          }
+        },
+        {
+          "tag": "label",
+          "text": "Recover original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "value": ""
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect saved request",
+          "attributes": {
+            "disabled": ""
+          }
+        },
+        {
+          "tag": "a",
+          "text": "Wallet-funded registration ▸",
+          "attributes": {
+            "href": "/register"
+          }
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": {
+        "id": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "creator": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registryAddress": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "relayer": "0xcccccccccccccccccccccccccccccccccccccccc",
+        "canonicalUrl": "https://feed.invalid/science?view=<summary>",
+        "claimId": "1111111111111111111111111111111111111111111111111111111111111111",
+        "params": {
+          "authors": [
+            {
+              "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "basisPoints": 6000
+            },
+            {
+              "wallet": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "basisPoints": 4000
+            }
+          ],
+          "fetchPriceUsdc6": "16000",
+          "contentCid": "",
+          "tags": ""
+        },
+        "deadline": 2000000000,
+        "reservedWei": "20000000000000000",
+        "state": "prepared"
+      },
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "prepared",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Review the prepared registrationSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestSign reviewed registrationInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "h2",
+          "text": "Review the prepared registration",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Source: https://feed.invalid/science?view=<summary>",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Author rewards:",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016 USDC",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Content identifier: Feed content retained by Keryx",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Tags: None",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Network and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Gas sponsor: 0xcccccccccccccccccccccccccccccccccccccccc",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Keryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "readonly": "",
+            "value": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Sign reviewed registration",
+          "attributes": {}
+        },
+        {
+          "tag": "button",
+          "text": "Inspect original registration",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {}
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": {
+        "id": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "creator": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registryAddress": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "relayer": "0xcccccccccccccccccccccccccccccccccccccccc",
+        "canonicalUrl": "https://feed.invalid/science?view=<summary>",
+        "claimId": "1111111111111111111111111111111111111111111111111111111111111111",
+        "params": {
+          "authors": [
+            {
+              "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "basisPoints": 6000
+            },
+            {
+              "wallet": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "basisPoints": 4000
+            }
+          ],
+          "fetchPriceUsdc6": "16000",
+          "contentCid": "",
+          "tags": ""
+        },
+        "deadline": 2000000000,
+        "reservedWei": "20000000000000000",
+        "state": "signing"
+      },
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "signing",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Sponsor submission outcome unknownSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "h2",
+          "text": "Sponsor submission outcome unknown",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Source: https://feed.invalid/science?view=<summary>",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Author rewards:",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016 USDC",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Content identifier: Feed content retained by Keryx",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Tags: None",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Network and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Gas sponsor: 0xcccccccccccccccccccccccccccccccccccccccc",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Keryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "readonly": "",
+            "value": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect original registration",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {}
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": {
+        "id": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "creator": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registryAddress": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "relayer": "0xcccccccccccccccccccccccccccccccccccccccc",
+        "canonicalUrl": "https://feed.invalid/science?view=<summary>",
+        "claimId": "1111111111111111111111111111111111111111111111111111111111111111",
+        "params": {
+          "authors": [
+            {
+              "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "basisPoints": 6000
+            },
+            {
+              "wallet": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "basisPoints": 4000
+            }
+          ],
+          "fetchPriceUsdc6": "16000",
+          "contentCid": "",
+          "tags": ""
+        },
+        "deadline": 2000000000,
+        "reservedWei": "20000000000000000",
+        "state": "submitted"
+      },
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "submitted",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Original transaction submitted: confirmation pendingSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "h2",
+          "text": "Original transaction submitted: confirmation pending",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Source: https://feed.invalid/science?view=<summary>",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Author rewards:",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016 USDC",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Content identifier: Feed content retained by Keryx",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Tags: None",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Network and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Gas sponsor: 0xcccccccccccccccccccccccccccccccccccccccc",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Keryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "readonly": "",
+            "value": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect original registration",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {}
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": {
+        "id": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "creator": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registryAddress": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "relayer": "0xcccccccccccccccccccccccccccccccccccccccc",
+        "canonicalUrl": "https://feed.invalid/science?view=<summary>",
+        "claimId": "1111111111111111111111111111111111111111111111111111111111111111",
+        "params": {
+          "authors": [
+            {
+              "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "basisPoints": 6000
+            },
+            {
+              "wallet": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "basisPoints": 4000
+            }
+          ],
+          "fetchPriceUsdc6": "16000",
+          "contentCid": "",
+          "tags": ""
+        },
+        "deadline": 2000000000,
+        "reservedWei": "20000000000000000",
+        "state": "confirmed"
+      },
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "confirmed",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Registration confirmed: indexing pendingSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "h2",
+          "text": "Registration confirmed: indexing pending",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Source: https://feed.invalid/science?view=<summary>",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Author rewards:",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016 USDC",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Content identifier: Feed content retained by Keryx",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Tags: None",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Network and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Gas sponsor: 0xcccccccccccccccccccccccccccccccccccccccc",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Keryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "readonly": "",
+            "value": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect original registration",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {}
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": {
+        "id": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "creator": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registryAddress": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "relayer": "0xcccccccccccccccccccccccccccccccccccccccc",
+        "canonicalUrl": "https://feed.invalid/science?view=<summary>",
+        "claimId": "1111111111111111111111111111111111111111111111111111111111111111",
+        "params": {
+          "authors": [
+            {
+              "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "basisPoints": 6000
+            },
+            {
+              "wallet": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "basisPoints": 4000
+            }
+          ],
+          "fetchPriceUsdc6": "16000",
+          "contentCid": "",
+          "tags": ""
+        },
+        "deadline": 2000000000,
+        "reservedWei": "20000000000000000",
+        "state": "reverted"
+      },
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "reverted",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Registration revertedSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "h2",
+          "text": "Registration reverted",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Source: https://feed.invalid/science?view=<summary>",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Author rewards:",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016 USDC",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Content identifier: Feed content retained by Keryx",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Tags: None",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Network and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Gas sponsor: 0xcccccccccccccccccccccccccccccccccccccccc",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Keryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "readonly": "",
+            "value": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect original registration",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {}
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": {
+        "id": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "creator": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registryAddress": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "relayer": "0xcccccccccccccccccccccccccccccccccccccccc",
+        "canonicalUrl": "https://feed.invalid/science?view=<summary>",
+        "claimId": "1111111111111111111111111111111111111111111111111111111111111111",
+        "params": {
+          "authors": [
+            {
+              "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "basisPoints": 6000
+            },
+            {
+              "wallet": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "basisPoints": 4000
+            }
+          ],
+          "fetchPriceUsdc6": "16000",
+          "contentCid": "",
+          "tags": ""
+        },
+        "deadline": 2000000000,
+        "reservedWei": "20000000000000000",
+        "state": "expired"
+      },
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "expired",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Unsigned registration expiredSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestThis original expired before sponsor signing. A new reviewed request uses another sponsorship attempt and retains the original history.Prepare new unsigned requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "h2",
+          "text": "Unsigned registration expired",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Source: https://feed.invalid/science?view=<summary>",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Author rewards:",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016 USDC",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Content identifier: Feed content retained by Keryx",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Tags: None",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Network and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Gas sponsor: 0xcccccccccccccccccccccccccccccccccccccccc",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Keryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "readonly": "",
+            "value": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        },
+        {
+          "tag": "p",
+          "text": "This original expired before sponsor signing. A new reviewed request uses another sponsorship attempt and retains the original history.",
+          "attributes": {}
+        },
+        {
+          "tag": "button",
+          "text": "Prepare new unsigned request",
+          "attributes": {}
+        },
+        {
+          "tag": "button",
+          "text": "Inspect original registration",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {}
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": {
+        "id": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "creator": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registryAddress": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "relayer": "0xcccccccccccccccccccccccccccccccccccccccc",
+        "canonicalUrl": "https://feed.invalid/science?view=<summary>",
+        "claimId": "1111111111111111111111111111111111111111111111111111111111111111",
+        "params": {
+          "authors": [
+            {
+              "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "basisPoints": 6000
+            },
+            {
+              "wallet": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "basisPoints": 4000
+            }
+          ],
+          "fetchPriceUsdc6": "16000",
+          "contentCid": "",
+          "tags": ""
+        },
+        "deadline": 2000000000,
+        "reservedWei": "20000000000000000",
+        "state": "prepared"
+      },
+      "error": "",
+      "price": "0.016",
+      "busy": true,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [
+        "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      ],
+      "name": "busy attempted signing",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Review the prepared registrationSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestSign reviewed registrationInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "h2",
+          "text": "Review the prepared registration",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Source: https://feed.invalid/science?view=<summary>",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Author rewards:",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016 USDC",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Content identifier: Feed content retained by Keryx",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Tags: None",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Network and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Gas sponsor: 0xcccccccccccccccccccccccccccccccccccccccc",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Keryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "readonly": "",
+            "value": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Sign reviewed registration",
+          "attributes": {
+            "disabled": ""
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect original registration",
+          "attributes": {
+            "disabled": ""
+          }
+        },
+        {
+          "tag": "p",
+          "text": "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {}
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": {
+        "id": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "creator": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registryAddress": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "relayer": "0xcccccccccccccccccccccccccccccccccccccccc",
+        "canonicalUrl": "https://feed.invalid/science?view=<summary>",
+        "claimId": "1111111111111111111111111111111111111111111111111111111111111111",
+        "params": {
+          "authors": [
+            {
+              "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "basisPoints": 6000
+            },
+            {
+              "wallet": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "basisPoints": 4000
+            }
+          ],
+          "fetchPriceUsdc6": "16000",
+          "contentCid": "bafy-fixture",
+          "tags": "science"
+        },
+        "deadline": 2000000000,
+        "reservedWei": "20000000000000000",
+        "state": "confirmed",
+        "transactionHash": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "actualGasWei": "3000000000000000"
+      },
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": true,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "indexed confirmed gas",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Registration confirmed and indexedSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: bafy-fixtureTags: scienceNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestOriginal registration transaction: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffConfirmed sponsor gas cost: 0.003 USDCInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.Review this source's earnings policy ▸",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "h2",
+          "text": "Registration confirmed and indexed",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Source: https://feed.invalid/science?view=<summary>",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Author rewards:",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016 USDC",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Content identifier: bafy-fixture",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Tags: science",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Network and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Gas sponsor: 0xcccccccccccccccccccccccccccccccccccccccc",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Keryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "readonly": "",
+            "value": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        },
+        {
+          "tag": "a",
+          "text": "Original registration transaction: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "attributes": {
+            "href": "https://explorer.invalid/tx/0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "target": "_blank",
+            "rel": "noreferrer"
+          }
+        },
+        {
+          "tag": "p",
+          "text": "Confirmed sponsor gas cost: 0.003 USDC",
+          "attributes": {}
+        },
+        {
+          "tag": "button",
+          "text": "Inspect original registration",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {}
+        },
+        {
+          "tag": "a",
+          "text": "Review this source's earnings policy ▸",
+          "attributes": {
+            "href": "/claim-source?claimId=1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        }
+      ]
+    },
+    {
+      "available": false,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": {
+        "id": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "creator": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registryAddress": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "relayer": "0xcccccccccccccccccccccccccccccccccccccccc",
+        "canonicalUrl": "https://feed.invalid/science?view=<summary>",
+        "claimId": "1111111111111111111111111111111111111111111111111111111111111111",
+        "params": {
+          "authors": [
+            {
+              "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "basisPoints": 6000
+            },
+            {
+              "wallet": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "basisPoints": 4000
+            }
+          ],
+          "fetchPriceUsdc6": "16000",
+          "contentCid": "",
+          "tags": ""
+        },
+        "deadline": 2000000000,
+        "reservedWei": "20000000000000000",
+        "state": "submitted",
+        "transactionHash": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "error": "",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "",
+      "attemptedIds": [],
+      "name": "disabled original inspection",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Registration gas sponsorship is currently unavailable for this wallet. Existing requests can still be inspected.Original transaction submitted: confirmation pendingSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestOriginal registration transaction: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "p",
+          "text": "Registration gas sponsorship is currently unavailable for this wallet. Existing requests can still be inspected.",
+          "attributes": {}
+        },
+        {
+          "tag": "h2",
+          "text": "Original transaction submitted: confirmation pending",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Source: https://feed.invalid/science?view=<summary>",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Author rewards:",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016 USDC",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Content identifier: Feed content retained by Keryx",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Tags: None",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Network and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Gas sponsor: 0xcccccccccccccccccccccccccccccccccccccccc",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Keryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "readonly": "",
+            "value": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        },
+        {
+          "tag": "a",
+          "text": "Original registration transaction: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "attributes": {
+            "href": "https://explorer.invalid/tx/0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "target": "_blank",
+            "rel": "noreferrer"
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect original registration",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "attributes": {}
+        }
+      ]
+    },
+    {
+      "available": true,
+      "authenticated": true,
+      "claim": {
+        "id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "canonicalUrl": "https://feed.invalid/science",
+        "rssUrl": "https://feed.invalid/rss"
+      },
+      "row": null,
+      "error": "Retained warning <fixture>",
+      "price": "0.016",
+      "busy": false,
+      "indexed": false,
+      "manualId": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "attemptedIds": [],
+      "name": "manual saved request",
+      "visible": [
+        {
+          "tag": "section",
+          "text": "Retained warning <fixture>Verified feed: https://feed.invalid/rssPrice per read (USDC)Prepare sponsored registrationRecover original requestInspect saved requestWallet-funded registration ▸",
+          "attributes": {
+            "aria-label": "Sponsored source registration"
+          }
+        },
+        {
+          "tag": "p",
+          "text": "Retained warning <fixture>",
+          "attributes": {
+            "role": "alert"
+          }
+        },
+        {
+          "tag": "p",
+          "text": "Verified feed: https://feed.invalid/rss",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Price per read (USDC)",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "type": "number",
+            "min": "0",
+            "max": "1000000",
+            "step": "0.001",
+            "value": "0.016"
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Prepare sponsored registration",
+          "attributes": {}
+        },
+        {
+          "tag": "label",
+          "text": "Recover original request",
+          "attributes": {}
+        },
+        {
+          "tag": "input",
+          "text": "",
+          "attributes": {
+            "value": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        },
+        {
+          "tag": "button",
+          "text": "Inspect saved request",
+          "attributes": {}
+        },
+        {
+          "tag": "a",
+          "text": "Wallet-funded registration ▸",
+          "attributes": {
+            "href": "/register"
+          }
+        }
+      ]
+    }
+  ],
+  "invitations": [
+    {
+      "name": "available with claim",
+      "result": {
+        "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "available": true
+      },
+      "claimId": "1111111111111111111111111111111111111111111111111111111111111111",
+      "visible": [
+        {
+          "tag": "h2",
+          "text": "Registration gas covered by Keryx",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Verify control of your feed, review the source terms and sign. You keep source management and payouts.",
+          "attributes": {}
+        },
+        {
+          "tag": "a",
+          "text": "Use sponsored registration ▸",
+          "attributes": {
+            "href": "/register/sponsored?claimId=1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        }
+      ]
+    },
+    {
+      "name": "available without claim",
+      "result": {
+        "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "available": true
+      },
+      "visible": [
+        {
+          "tag": "h2",
+          "text": "Registration gas covered by Keryx",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Verify control of your feed, review the source terms and sign. You keep source management and payouts.",
+          "attributes": {}
+        },
+        {
+          "tag": "a",
+          "text": "Use sponsored registration ▸",
+          "attributes": {
+            "href": "/register/sponsored"
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong wallet",
+      "result": {
+        "wallet": "0xffffffffffffffffffffffffffffffffffffffff",
+        "available": true
+      },
+      "visible": []
+    },
+    {
+      "name": "disabled",
+      "result": {
+        "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "available": false
+      },
+      "visible": []
+    },
+    {
+      "name": "pending",
+      "result": null,
+      "visible": []
+    }
+  ],
+  "page": {
+    "metadata": {
+      "title": "Sponsored source registration — Keryx"
+    },
+    "visible": [
+      {
+        "tag": "h1",
+        "text": "Publish with sponsored gas",
+        "attributes": {}
+      },
+      {
+        "tag": "p",
+        "text": "Prove control of your RSS feed, review its terms, then sign the registration. Keryx covers admitted gas within its sponsorship limits. Your wallet keeps control and receives creator payments.",
+        "attributes": {}
+      }
+    ]
+  },
+  "listing": [
+    {
+      "version": 1,
+      "text": "Price updates also submit these fields. Avoid editing this source elsewhere while the wallet prompt is open."
+    },
+    {
+      "version": 2,
+      "text": "Price updates change only the price. A concurrent edit requires a fresh review before signing."
+    },
+    {
+      "version": 3,
+      "text": "Price updates change only the price. A concurrent edit requires a fresh review before signing."
+    }
+  ],
+  "errors": {
+    "requestUnavailable": "Registration request unavailable",
+    "originalWalletMismatch": "Original registration belongs to another wallet or registry",
+    "verifyConnectedWallet": "Verify this source with the connected wallet first",
+    "originalClaimMismatch": "Original registration belongs to another source claim",
+    "recoveryUnavailable": "Original recovery is unavailable. Keep this request; do not register again.",
+    "savedRecoveryUnavailable": "Saved original recovery is unavailable; retain its ID.",
+    "originalUnavailable": "Original registration unavailable",
+    "waitForExpiry": "Wait until the original unsigned request has conclusively expired.",
+    "saveRequestBeforeSigning": "Save the original request ID below before signing. Browser recovery storage is unavailable.",
+    "preparationUnavailable": "Preparation unavailable",
+    "signingAllowanceUnavailable": "This original has no current signing allowance. Inspect its status; do not register again.",
+    "submissionUnknown": "Submission unknown. Inspect the original request.",
+    "requestRecoveryUnavailable": "Original recovery unavailable; retain this request.",
+    "idRecoveryUnavailable": "Original recovery unavailable; retain its ID."
+  }
+}

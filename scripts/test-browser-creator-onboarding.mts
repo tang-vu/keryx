@@ -44,6 +44,7 @@ const html = `<div id="root"></div><script>${bundle.outputFiles[0].text}</script
     const bodies: Record<string, unknown>[] = [], errors: string[] = [];
     await context.route("**/*", async route => {
       const req = route.request(), path = new URL(req.url()).pathname;
+      if (path === '/api/sources/sponsor') { assert.equal(req.method(),'GET'); return route.fulfill({json:{available:false}}); }
       if (path === '/api/auth/session') return route.fulfill({ status: authenticated ? 200 : 401, json: { session: authenticated ? { address: sessionAddress, role } : null } });
       if (path === '/api/auth/nonce') { const now=Date.now(); return route.fulfill({ json: { nonce:'SyntheticNonce123',issuedAt:new Date(now).toISOString(),challengeExpiresAt:new Date(now+300000).toISOString(),sessionExpiresAt:new Date(now+7*86400000).toISOString() } }); }
       if (path === '/api/auth/verify') {

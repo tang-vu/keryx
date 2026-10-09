@@ -211,6 +211,11 @@ export interface KeryxDB {
   readonly privateBibliographies?: PrivateBibliographiesStore;
   /** Bounded ordinary current-store attribution only; absent on sealed/native/archive readers. */
   readonly personalHistory?: import("../history/personal-history").PersonalHistoryStore;
+  /** Atomic creator gas originals; absent on storage without a reviewed sponsor journal. */
+  admitRegistrationSponsor?(policy: import("../sources/registration-sponsor-protocol").RegistrationSponsorPolicy,
+    row: import("../sources/registration-sponsor-protocol").SponsoredRegistration, now?: number): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
+  getRegistrationSponsor?(input: { wallet: string; id?: string; canonicalUrl?: string }): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration | null>;
+  transitionRegistrationSponsor?(input: import("./registration-sponsor").RegistrationSponsorTransition): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
   /** Supervised SQLite scholarly pilot capability; absent on unsupported backends. */
   getPaperState?(sourceId: string): Promise<import("../scholarly/rights-protocol").PaperState | null>;
   beginPaperEnrollment?(sourceId: string, creator: string): Promise<void>;

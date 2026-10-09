@@ -46,6 +46,24 @@
   desktop smoke, publication/deployment and installed-client gates remain open.
   Zotero account sync and private revocable `.bib` URLs remain in issue285.
 
+### Creator registration gas sponsorship candidate (2026-10-09)
+
+- Add a default-disabled pilot where a verified creator reviews and signs exact
+  registration terms and Keryx pays admitted gas. Source control and payouts stay
+  with the creator; gas remains separate from paid reads and citation rewards.
+- Add an independent V3 contract candidate and explicit V1/V2/V3 readers and
+  revision-aware listing edits. Current V1 registry authority is unchanged.
+- Retain original requests, atomic finite gas/attempt limits and live proof
+  admission. Wallet changes, lost responses and reloads do not authorize another
+  transaction. Expired unsigned renewal requires an explicit predecessor pointer.
+- Check both Arc profiles with hermetic browser fixtures and local contract,
+  authentication, storage and signature tests. No funded testnet/mainnet evidence,
+  production sponsorship, custody enrollment or registry migration is claimed.
+- Web and hosted API share the pilot; CLI, desktop, MCP, extension and bot roles
+  acquire no publisher signing custody. Supabase relay support, operational
+  uncertainty recovery and financial/cutover acceptance remain open. See
+  [the implementation and activation gates](creator-registration-sponsorship.md).
+
 ### Report layout and research command boundaries (2026-10-09, v0.27.44 candidate)
 
 - Keep complete related-report questions inside the mobile layout, including long

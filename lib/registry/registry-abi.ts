@@ -116,3 +116,40 @@ export const REGISTRY_ABI = [
     inputs: [{ name: "id", type: "bytes32", indexed: true }],
   },
 ] as const;
+
+/** V2/V3 share revision-checked edits. Unchecked V1 selectors are absent. */
+export const REVISIONED_REGISTRY_ABI = [
+  ...REGISTRY_ABI.filter((entry): entry is Exclude<(typeof REGISTRY_ABI)[number], { name: "update" | "deactivate" }> =>
+    entry.name !== "update" && entry.name !== "deactivate"),
+  {
+    name: "registryVersion", type: "function", stateMutability: "pure", inputs: [],
+    outputs: [{ name: "", type: "uint8" }],
+  },
+  {
+    name: "getWithRevision", type: "function", stateMutability: "view",
+    inputs: [{ name: "id", type: "bytes32" }],
+    outputs: [
+      { name: "record", type: "tuple", components: REGISTRY_ABI[3].outputs[0].components },
+      { name: "revision", type: "uint64" },
+    ],
+  },
+  {
+    name: "update", type: "function", stateMutability: "nonpayable",
+    inputs: [
+      { name: "id", type: "bytes32" }, { name: "expectedRevision", type: "uint64" },
+      REGISTRY_ABI[1].inputs[1], REGISTRY_ABI[1].inputs[2], REGISTRY_ABI[1].inputs[3],
+      REGISTRY_ABI[1].inputs[4], REGISTRY_ABI[1].inputs[5],
+    ],
+    outputs: [],
+  },
+  {
+    name: "updatePrice", type: "function", stateMutability: "nonpayable",
+    inputs: [{ name: "id", type: "bytes32" }, { name: "expectedRevision", type: "uint64" }, { name: "fetchPriceUsdc6", type: "uint64" }],
+    outputs: [],
+  },
+  {
+    name: "deactivate", type: "function", stateMutability: "nonpayable",
+    inputs: [{ name: "id", type: "bytes32" }, { name: "expectedRevision", type: "uint64" }],
+    outputs: [],
+  },
+] as const;

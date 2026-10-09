@@ -320,6 +320,7 @@ jobs:
           node --import tsx scripts/test-browser-creator-listing.mts
           node --import tsx scripts/test-browser-creator-registration.mts
           node --import tsx scripts/test-browser-creator-onboarding.mts
+          node --import tsx scripts/test-browser-registration-sponsor.mts
 
       - name: Scholarly creator rights (hermetic wallet and HTTP, no settlement)
         run: npm run test:browser-scholarly-rights
@@ -530,6 +531,9 @@ jobs:
           # Real production startup correctly requires CONTENT_MASTER_KEY.
           KERYX_FORCE_OFFLINE: "1"
         run: node --import tsx scripts/test-withdrawal-framework-headers.mts
+
+      - name: Registration sponsor framework boundary (synthetic reverse proxy, no signing)
+        run: node --import tsx scripts/test-registration-sponsor-framework.mts
 
   lint:
     name: Lint (informational, outside merge gate)

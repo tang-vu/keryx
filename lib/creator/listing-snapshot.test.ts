@@ -6,6 +6,13 @@ const value = { mode: "onchain", active: true, fetchPrice: 0.002,
 it("normalizes address casing and ignores unrelated response fields", () => {
   expect(sameListingSnapshot(value, { ...value, registryAddress: `0x${"A".repeat(40)}`, extra: "not-authority" })).toBe(true);
 });
+it("defaults historical snapshots to V1 and projects version/revision into freshness checks", () => {
+  expect(parseListingSnapshot(value).registryVersion).toBe(1);
+  expect(sameListingSnapshot(value, { ...value, registryVersion: 1 })).toBe(true);
+  expect(sameListingSnapshot(value, { ...value, registryVersion: 3, revision: "1" })).toBe(false);
+  expect(sameListingSnapshot({ ...value, registryVersion: 3, revision: "1" }, { ...value, registryVersion: 3, revision: "2" })).toBe(false);
+  expect(parseListingSnapshot({ ...value, registryVersion: 3, revision: "18446744073709551615" }).revision).toBe("18446744073709551615");
+});
 it.each([
   { ...value, active: false }, { ...value, creator: `0x${"d".repeat(40)}` },
   { ...value, registryAddress: `0x${"d".repeat(40)}` }, { ...value, onchainId: `0x${"2".repeat(64)}` },
@@ -23,6 +30,11 @@ it.each([
   { ...value, current: { ...value.current, tags: "é".repeat(129) } },
   { ...value, current: { ...value.current, authors: [{ wallet: value.creator, basisPoints: 9999 }] } },
   { ...value, current: { ...value.current, authors: [] } },
+  { ...value, registryVersion: 4 }, { ...value, registryVersion: "3", revision: "1" },
+  { ...value, registryVersion: 2 }, { ...value, registryVersion: 3 },
+  { ...value, registryVersion: 3, revision: "0" }, { ...value, registryVersion: 3, revision: "01" },
+  { ...value, registryVersion: 3, revision: 1 }, { ...value, registryVersion: 3, revision: "18446744073709551616" },
+  { ...value, registryVersion: 1, revision: "1" },
 ])("refuses malformed or inconsistent state %#", fresh => {
   expect(() => parseListingSnapshot(fresh)).toThrow("Listing data is unavailable");
 });

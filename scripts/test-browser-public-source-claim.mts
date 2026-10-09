@@ -53,6 +53,7 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
       await context.route("**/*", async route => {
         const req = route.request(), url = new URL(req.url()), pathname = url.pathname;
         assert.equal(url.origin, "https://claim.test", `Unexpected external HTTP: ${req.url()}`);
+        if (pathname === "/api/sources/sponsor") { assert.equal(req.method(), "GET"); return route.fulfill({ json: { available: false } }); }
         if (pathname === "/api/auth/session") return route.fulfill({ status: authenticated ? 200 : 401, json: { session: authenticated ? { address: sessionOwner, role: "asker" } : null } });
         if (pathname === "/api/auth/nonce") { const now = Date.now(); return route.fulfill({ json: { nonce: "ClaimFixtureNonce123", issuedAt: new Date(now).toISOString(), challengeExpiresAt: new Date(now + 300000).toISOString(), sessionExpiresAt: new Date(now + 7 * 86400000).toISOString() } }); }
         if (pathname === "/api/auth/verify") { authenticated = true; return route.fulfill({ json: { ok: true, address: owner, role: "asker" } }); }
