@@ -140,8 +140,14 @@ Unknown schemas/policies, malformed/accessor properties and changed records
 refuse. Browser Web Crypto performs the same offline verification without a
 Keryx request. Retain v1 and its corpus when defining successors; do not silently
 change historical version semantics.
-The API is browser-safe; actual browser parity and the report verify control are
-still untested/unintegrated gates. Node Web Crypto tests do not establish either.
+An actual Chromium fixture on a secure loopback origin checks Node/browser
+canonical and SHA256 parity over ten synthetic vectors, all five actions, exact
+large integer amounts, reordered keys, tampered records and async mutation.
+It bundles only the two pure policy modules, blocks other requests and uses no
+app/environment/database/provider/payment access. Run it with
+`node --import tsx scripts/test-research-audit-browser.mts`; the full CI browser
+lane runs the same fixture. This establishes pure verification parity, not a
+report verify control or deployed policy integration.
 
 Open gates: all actual decision/stop/escalation capture, preceding portfolio/
 preview/eligibility rules, exact source/payee/policy-state bindings, durable
