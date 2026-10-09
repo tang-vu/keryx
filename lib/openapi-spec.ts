@@ -10,6 +10,7 @@ import { config } from "./config";
 import { paperOpenApiPaths, paperOpenApiSchemas } from "./papers/openapi";
 import { operatorStatusOpenApiPath } from "./business-operator/openapi";
 import { operatorObligationOpenApiPath } from "./operator-obligations/openapi";
+import { publicJobLedgerOpenApiPath } from "./operator-ledger/openapi";
 import { monthlyOpenApiPath } from "./monthly/openapi";
 import { paidJobEscalationOpenApiProperty, paidJobEscalationOpenApiSchemas } from "./a2a/overdue-openapi";
 import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
@@ -795,6 +796,7 @@ export const openapiSpec = {
     },
     "/api/operator/status": operatorStatusOpenApiPath,
     "/api/operator/obligations": operatorObligationOpenApiPath,
+    "/api/operator/ledger": publicJobLedgerOpenApiPath,
     "/api/agent/ask": {
       get: {
         operationId: "inspectOrPollAgentAsk",
