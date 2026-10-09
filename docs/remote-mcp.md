@@ -39,6 +39,12 @@ and a browser could attempt DNS-rebinding/cross-origin calls.
   `KERYX_MCP_ALLOWED_ORIGINS` entry. Invalid origins receive HTTP 403.
 - The endpoint is stateless and exposes no server-initiated notification stream or durable session.
 
+The staged [standalone-stream refusal](engineering/mcp-standalone-stream-lifetime.md)
+makes that boundary explicit: GET returns HTTP405 with `Allow: POST, DELETE, OPTIONS`;
+MCP messages continue through JSON POST. Remote protocol0.3.8 is required for its
+coordinated release. This source candidate does not establish hosted deployment
+or planned-maintenance acceptance.
+
 **Migration and rollback.** Supabase migration `0022_remote_mcp_origin.sql` expands the query-run
 origin constraint. SQLite stores origin as text and needs no schema rewrite. Rollback is to remove
 the `/mcp` route and registry `remotes` entry; existing `mcp` rows remain readable external history.
