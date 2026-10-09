@@ -65,6 +65,11 @@ jobs:
           node --test scripts/check-payment-glossaries.test.mjs
           node scripts/check-payment-glossaries.mjs
 
+      - name: UI copy regression guard (source parsing only)
+        run: |
+          node --test scripts/check-ui-copy.test.mjs
+          node scripts/check-ui-copy.mjs
+
       - name: Adversarial report lifecycle and source binding (offline)
         run: node --test scripts/source-money-adversarial-report.test.mjs
 
