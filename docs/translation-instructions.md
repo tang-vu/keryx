@@ -39,12 +39,15 @@ establish that any translated legal page exists or displays it.
 
 ## Human review and content binding
 
-Run the offline checks from any working directory:
+From the repository root, run the offline checks:
 
 ```sh
 node scripts/check-payment-glossaries.mjs
 node --test scripts/check-payment-glossaries.test.mjs
 ```
+
+The validator resolves its assets independently of the working directory when
+invoked using an absolute script path.
 
 The CLI prints each glossary's content SHA256. A qualified human reviews the
 entire English source first, then each target locale, including definitions,

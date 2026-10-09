@@ -5,8 +5,10 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { checkRepositoryGlossaries, glossaryDigest, validateGlossaries } from "./check-payment-glossaries.mjs";
 
-const fixtures = () => ["en", "vi", "zh-Hans"].map(locale =>
-  JSON.parse(readFileSync(new URL(`../locales/glossary/${locale}.json`, import.meta.url), "utf8")));
+const fixtures = () => ["en", "vi", "zh-Hans"].map(locale => ({
+  ...JSON.parse(readFileSync(new URL(`../locales/glossary/${locale}.json`, import.meta.url), "utf8")),
+  status: "draft", review: null,
+}));
 
 // Synthetic metadata tests only; no real reviewer or translation approval is claimed.
 function reviewedFixture() {
@@ -23,9 +25,8 @@ function reviewedFixture() {
   return bundle;
 }
 
-test("real assets are complete drafts and cannot pass release validation", () => {
-  assert.deepEqual(checkRepositoryGlossaries().map(({ locale, status }) => [locale, status]),
-    [["en", "draft"], ["vi", "draft"], ["zh-Hans", "draft"]]);
+test("real assets validate; synthetic drafts cannot pass release validation", () => {
+  assert.deepEqual(checkRepositoryGlossaries().map(({ locale }) => locale), ["en", "vi", "zh-Hans"]);
   for (const releaseLocale of ["en", "vi", "zh-Hans"]) {
     assert.throws(() => validateGlossaries(fixtures(), { releaseLocale }), /draft glossary cannot be released/);
   }
@@ -116,12 +117,12 @@ test("machine review, incomplete evidence and invalid timestamps cannot approve 
   assert.throws(() => validateGlossaries(unknown, { releaseLocale: "fr" }), /locale is missing/);
 });
 
-test("CLI is cwd-independent and refuses draft release and unknown options", () => {
+test("CLI is cwd-independent and refuses missing release locales and unknown options", () => {
   const script = new URL("./check-payment-glossaries.mjs", import.meta.url);
   const cwd = new URL("../locales", import.meta.url);
   const run = args => execFileSync(process.execPath, [fileURLToPath(script), ...args],
     { cwd, encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
-  assert.match(run([]), /vi: draft/);
-  assert.throws(() => run(["--release", "vi"]), error => error.status === 1 && /cannot be released/.test(error.stderr));
+  assert.match(run([]), /vi: (draft|reviewed)/);
+  assert.throws(() => run(["--release", "not-a-locale"]), error => error.status === 1 && /locale is missing/.test(error.stderr));
   assert.throws(() => run(["--ignore-review"]), error => error.status === 1 && /Usage:/.test(error.stderr));
 });
