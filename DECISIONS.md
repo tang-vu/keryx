@@ -6558,3 +6558,26 @@ coverage, count and row limits. Defaults and private originals remain unchanged.
 The [candidate and retained-fixture record](docs/engineering/short-item-presentation-2026-10-09.md)
 distinguishes synthetic layout/review inputs from public displayed pairs and keeps
 issue238's live usefulness, localization and coordinated-delivery gates open.
+
+## Prepare locale contracts without activating unreviewed language delivery — 2026-10-09
+
+Keep English as the sole shipped interface while preparing typed English keys,
+bounded explicit/stored/header preference admission, exact locale display and
+public language metadata contracts. Default allowlists refuse prepared Vietnamese
+and Simplified Chinese; glossary drafts are not translation release authority.
+Selected catalogue data may cross a server/client boundary without importing all
+locales. Runtime preference storage and a switcher remain separate integration gates.
+
+Preserve existing public report/profile paths without mandatory locale-prefix
+redirects. Advertise only actual published page variants, with an English
+`x-default` and a canonical among them. Reports need recorded output language and
+explicit public visibility; never infer either from a viewer or question. Current
+stored runs lack these fields, so metadata adapters remain unconnected. Unknown
+historical language is undetermined rather than retroactively labelled English.
+
+Locale USDC display adapts the existing exact bounded integer contract, keeps all
+micro digits and cannot influence signing/storage/comparison. Signing verification
+remains ungrouped invariant decimal text with an explicit currency. Dates require
+an explicit viewer zone and observed relative clock. The [source/gate record](docs/engineering/locale-foundation-2026-10-09.md)
+keeps full issue acceptance, privacy authority, human translation review and the
+operational main freeze open.
