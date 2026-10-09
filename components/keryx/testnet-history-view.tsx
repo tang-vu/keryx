@@ -5,7 +5,7 @@ import { shortAddr } from "./phase-style";
 
 function CreatorRows({ rows, start = 0 }: { rows: TestnetCreatorEntry[]; start?: number }) {
   return <ol start={start + 1} className="divide-y divide-line">
-    {rows.map((row, index) => <li key={`${row.sourceId}:${row.walletAddress}`} className="flex items-start gap-3 py-3">
+    {rows.map((row, index) => <li key={`${row.sourceId}:${row.walletAddress}`} className="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-x-3 gap-y-1 py-3 sm:grid-cols-[20px_minmax(0,1fr)_auto]">
       <span className="mt-1 w-5 shrink-0 font-mono text-xs text-seal">{start + index + 1}</span>
       <div className="min-w-0 flex-1">
         <p className="break-words font-serif text-base text-ink">{row.sourceName}</p>
@@ -16,7 +16,7 @@ function CreatorRows({ rows, start = 0 }: { rows: TestnetCreatorEntry[]; start?:
           {" · "}{row.citationCount.toLocaleString("en-US")} cites · {row.paymentCount.toLocaleString("en-US")} payments
         </p>
       </div>
-      <span className="shrink-0 font-mono text-xs tabular-nums text-paid">{formatUsdcMicros(row.totalEarnedMicroUsdc, { denomination: "test USDC" })}</span>
+      <span className="col-start-2 font-mono text-xs tabular-nums text-paid sm:col-start-3 sm:row-start-1 sm:mt-1">{formatUsdcMicros(row.totalEarnedMicroUsdc, { denomination: "test USDC" })}</span>
     </li>)}
   </ol>;
 }
