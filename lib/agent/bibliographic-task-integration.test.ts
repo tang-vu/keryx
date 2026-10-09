@@ -167,9 +167,17 @@ describe("portable metadata role identity and exports", () => {
     const run = await arxivRun();
     run.bibliography!.text = "FORGED DELIVERABLE"; run.bibliography!.bibliographyExports = { bibtex: { count: 1, content: "FORGED EXPORT" }, ris: { count: 1, content: "FORGED EXPORT" } };
     const projected = projectBibliographicTask(run.bibliography)!; expect(projected.text).not.toContain("FORGED"); expect(projected.bibliographyExports.bibtex.content).toContain(title);
-    const surface = surfaceResearch(run); expect(surface.bibliography).toEqual(projected); expect(surface.bibliographyExports).toEqual(projected.bibliographyExports);
+    const surface = surfaceResearch(run); expect(surface.bibliography).toEqual(projected);
+    expect(surface.bibliographyExports!.bibtex).toEqual(projected.bibliographyExports.bibtex);
+    expect(surface.bibliographyExports!.ris).toEqual(projected.bibliographyExports.ris);
+    expect(JSON.parse(surface.bibliographyExports!.cslJson.content)).toEqual([
+      expect.objectContaining({ title, archive_location: "2005.11401v4", URL: "https://arxiv.org/abs/2005.11401v4" }),
+    ]);
+    expect(surface.bibliographyExports!.cslJson.content).not.toContain("FORGED");
+    expect(projected.bibliographyExports).not.toHaveProperty("cslJson");
     expect(surface.citations).toEqual([]); expect(surface.evidence).toEqual([]); expect(surface.subClaims).toEqual([]); expect(surface.creatorsReferenced).toBe(0); expect(surface.creatorRewardAllocations).toBe(0); expect(surface.researchExports.bibtex.count).toBe(0);
     const receipt = buildResearchReceipt(run, []); expect(verifyResearchReceipt(receipt).valid).toBe(true); expect(bibliographyFromCheckedReceipt(receipt)).toEqual(projected);
+    expect(bibliographyFromCheckedReceipt(receipt)!.bibliographyExports).not.toHaveProperty("cslJson");
     expect(receipt.payload.citations).toEqual([]); expect(receipt.payload.claims).toEqual([]); expect(receipt.payload.agency.decisions).toEqual([]);
     expect(receipt.payload.settlement).toMatchObject({ recordedCreatorPayments: 0, settledCreators: 0, settledCreatorUsdc: 0, creatorPayments: [] });
     expect(exportsFromCheckedReceipt(receipt).ris.count).toBe(0);
