@@ -28,7 +28,7 @@ function exactMicros(value: number): number | null {
   if (!Number.isFinite(value) || value < 0) return null;
   const parts = /^(0|[1-9]\d*)(?:\.(\d{1,6}))?$/.exec(String(value));
   if (!parts) return null;
-  const micros = BigInt(parts[1]) * 1_000_000n + BigInt((parts[2] ?? "").padEnd(6, "0"));
+  const micros = BigInt(parts[1]) * BigInt(1_000_000) + BigInt((parts[2] ?? "").padEnd(6, "0"));
   return micros <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(micros) : null;
 }
 function recordedNetwork(order: A2aOrder) {
