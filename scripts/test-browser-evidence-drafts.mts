@@ -24,7 +24,7 @@ await new Promise<void>(resolve => listener.listen(0, "127.0.0.1", resolve));
 const address = listener.address(); assert(address && typeof address !== "string"); const port = address.port;
 await new Promise<void>((resolve, reject) => listener.close(error => error ? reject(error) : resolve()));
 const base = `http://127.0.0.1:${port}`;
-const environment = { ...process.env, NODE_ENV: "production", JWT_SECRET: randomBytes(32).toString("hex"),
+const environment = { ...process.env, NODE_ENV: "production", BASE_URL: base, JWT_SECRET: randomBytes(32).toString("hex"),
   KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "1",
   NEXT_PUBLIC_SUPABASE_URL: "", NEXT_PUBLIC_SUPABASE_ANON_KEY: "", SUPABASE_ANON_KEY: "", SUPABASE_SERVICE_ROLE_KEY: "", SUPABASE_URL: "" };
 for (const name of Object.keys(environment)) if (/^KERYX_(?:STORAGE|SQLITE|SUPABASE)/.test(name) || name === "NEXT_DIST_DIR") delete environment[name as keyof typeof environment];
@@ -50,6 +50,16 @@ try {
     if (ready) break; await delay(250);
   }
   assert(ready, `Built local draft server failed: ${output}`);
+  // A valid public Origin reaches session authentication even if Next canonicalizes
+  // Request.url internally to localhost. Forwarded request headers cannot widen it.
+  const apiRequest = (origin: string) => fetch(`${base}/api/research/evidence-draft`, {
+    method: "POST", headers: { Origin: origin, "Sec-Fetch-Site": "same-origin", "Content-Type": "application/json",
+      "X-Forwarded-Host": "attacker.example", "X-Forwarded-Proto": "https" }, body: "PRIVATE_INVALID_JSON", signal: AbortSignal.timeout(5000),
+  });
+  const unauthenticated = await apiRequest(base); assert.equal(unauthenticated.status, 401);
+  assert.equal(unauthenticated.headers.get("cache-control"), "private, no-store");
+  assert.equal((await apiRequest("https://attacker.example")).status, 403);
+  console.log("Built private draft API: configured public Origin reaches session authentication; foreign Origin refuses before parsing private input.");
   for (const width of [320, 390, 768, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce", acceptDownloads: true });
     const fixture = evidenceDraftFixture(), report = fixture.reports[0], expectedKey = buildEvidenceDraft(fixture).excerpts[0].id;

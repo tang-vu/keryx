@@ -87,6 +87,12 @@ guard accepts this source without rewriting its historical baseline.
 | Desktop | The existing hosted web workflow can be opened; no native task, bridge, signer or persistence contract is added. No installer upgrade is claimed. |
 | Extension / bots / OpenAI / A2A | Existing research and report-link roles remain. They do not automatically submit private passages or run claim assessments. No new bot command, message ingestion or paid job type. |
 
+Cookie requests must carry the exact public Origin selected by server-controlled
+`BASE_URL`, with `Sec-Fetch-Site: same-origin` when that header is present. Missing,
+foreign or malformed origins and invalid deployment origins fail before private
+body reading. Neither Next's internal request URL nor caller-controlled Host or
+forwarded headers selects that authority. The API-key path remains separate.
+
 Application/remote/stdio identities must be reconciled once the independent
 production source window closes. This draft has no version bump, publication,
 merge or deployment authorization beyond the current operational hold. A candidate

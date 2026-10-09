@@ -1,6 +1,8 @@
 import { getSession } from "@/lib/auth";
 import { verifyApiKey } from "@/lib/api-keys";
 import { hasScope, parseScopes } from "@/lib/api-key-scopes";
+import { isConfiguredSameOrigin } from "@/lib/auth-origin";
+import { config } from "@/lib/config";
 import { createEvidenceDraftRoute } from "@/lib/research/evidence-draft-route";
 
 export const runtime = "nodejs";
@@ -14,7 +16,7 @@ export const POST = createEvidenceDraftRoute(async request => {
     if (!hasScope(parseScopes(key.scopes), "export")) return Response.json({ error: "insufficient_scope" }, { status: 403 });
     return null;
   }
-  if (request.headers.get("origin") !== new URL(request.url).origin)
+  if (!isConfiguredSameOrigin(request, config.baseUrl))
     return Response.json({ error: "same_origin_required" }, { status: 403 });
   return await getSession() ? null : Response.json({ error: "unauthenticated" }, { status: 401 });
 });

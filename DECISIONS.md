@@ -9,6 +9,9 @@ asserted. Claim spans preserve the passage and optional named user assessments
 bind literal excerpt rows; missing retained evidence cannot become unsupported.
 Related-work themes export quotations, separately marked author notes and one
 matching reference set. Browser drafts stay in memory unless explicitly downloaded.
+Bind cookie API requests to the configured public `BASE_URL` Origin because Next
+may canonicalize its internal request URL. Caller-controlled Host/forwarded headers
+grant no origin authority; malformed deployment origins fail closed.
 Automatic reading/semantic review, expert metrics and coordinated deployment remain
 gated; no receipt, payment, budget or custody authority changes. See
 [scope, surfaces and acceptance](docs/evidence-drafts.md).
