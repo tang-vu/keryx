@@ -1,9 +1,8 @@
 begin;
 -- Additive ordinary SOURCE domain only. Never apply to enrolled storage.
-do $$ declare enrolled boolean; begin
-  if to_regclass('keryx_storage.identity') is not null then
-    execute 'select exists(select 1 from keryx_storage.identity)' into enrolled;
-    if enrolled then raise exception 'review_unavailable'; end if;
+do $$ begin
+  if to_regclass('keryx_storage.identity') is not null or to_regclass('public.keryx_storage_identity') is not null then
+    raise exception 'review_unavailable';
   end if;
 end; $$;
 create table public.decision_review_records (
@@ -31,12 +30,17 @@ grant select,insert,update on public.decision_review_records,public.decision_rev
 
 create function public.decision_review_ordinary_v1() returns void
 language plpgsql security invoker set search_path=pg_catalog,public as $$
-declare enrolled boolean; begin
-  if to_regclass('keryx_storage.identity') is not null then
-    execute 'select exists(select 1 from keryx_storage.identity)' into enrolled;
-    if enrolled then raise exception 'review_unavailable'; end if;
+begin
+  if to_regclass('keryx_storage.identity') is not null or to_regclass('public.keryx_storage_identity') is not null then
+    raise exception 'review_unavailable';
   end if;
 end; $$;
+-- Match shared Zod limits: a non-BMP scalar occupies two UTF-16 code units.
+-- PostgreSQL UTF8 text/JSON already refuses unpaired surrogate input.
+create function public.decision_review_text_units_v1(v text) returns integer
+language sql immutable strict security invoker set search_path=pg_catalog,public as $$
+  select coalesce(sum(case when ascii(substr(v,n,1))>65535 then 2 else 1 end),0)::integer from generate_series(1,char_length(v)) n;
+$$;
 create function public.decision_review_keys_v1(v jsonb,required text[],optional text[] default '{}') returns boolean
 language sql immutable security invoker set search_path=pg_catalog,public as $$
   select coalesce(jsonb_typeof(v)='object' and v ?& required and not exists(select 1 from jsonb_object_keys(v) k where not(k=any(required || optional))),false);
@@ -52,7 +56,7 @@ declare k text; begin
     if (v->>k)::numeric>9007199254740991 then return false; end if;
   end loop;
   foreach k in array array['assetId','sourceId','itemId','contentVersion','offerId'] loop
-    if (k in ('assetId','sourceId') or v ? k) and (jsonb_typeof(v->k)='string' and char_length(v->>k) between 1 and 256 and v->>k !~ '[[:cntrl:]]') is distinct from true then return false; end if;
+    if (k in ('assetId','sourceId') or v ? k) and (jsonb_typeof(v->k)='string' and public.decision_review_text_units_v1(v->>k) between 1 and 256 and v->>k !~ '[\x01-\x1f\x7f]') is distinct from true then return false; end if;
   end loop;
   if v ? 'claimDigest' and (jsonb_typeof(v->'claimDigest')='string' and v->>'claimDigest' ~ '^[0-9a-f]{64}$') is distinct from true then return false; end if;
   return true;
@@ -93,7 +97,7 @@ begin
   elsif p_operation='verdict' then
     if not public.decision_review_keys_v1(p_input,array['id','key','context','value'],array['reason','expectedCode']) or
       (jsonb_typeof(p_input->'key')='string' and p_input->>'key' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' and p_input->>'context' in ('gate','opinion') and p_input->>'value' in ('agree','disagree')) is distinct from true or
-      (p_input ? 'reason' and (jsonb_typeof(p_input->'reason')='string' and char_length(p_input->>'reason')<=1000 and p_input->>'reason' !~ '[\x01-\x08\x0b\x0c\x0e-\x1f\x7f]' and p_input->>'reason'=btrim(p_input->>'reason')) is distinct from true) then raise exception 'review_unavailable'; end if;
+      (p_input ? 'reason' and (jsonb_typeof(p_input->'reason')='string' and public.decision_review_text_units_v1(p_input->>'reason')<=1000 and p_input->>'reason' !~ '[\x01-\x08\x0b\x0c\x0e-\x1f\x7f]' and p_input->>'reason'=btrim(p_input->>'reason',U&'\0009\000a\000b\000c\000d\0020\00a0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200a\2028\2029\202f\205f\3000\feff')) is distinct from true) then raise exception 'review_unavailable'; end if;
     if p_input->>'context'='opinion' then
       if not public.decision_review_keys_v1(p_input->'expectedCode',array['action','rule']) or
         (p_input->'expectedCode'->>'action' in ('BUY','SKIP','CACHE') and p_input->'expectedCode'->>'rule'=any(rules)) is distinct from true then raise exception 'review_unavailable'; end if;
@@ -103,13 +107,13 @@ begin
   if p_operation='capture' then
     if not public.decision_review_keys_v1(p_input,array['policyVersion','engine','requestedModel','runId','round','ordinal','sourceName','modelAction','codeAction','codeRule','terms','reviewFirst','cohort','cohortEvidence']) or
       (jsonb_typeof(p_input->'round')='number' and (p_input->>'round') ~ '^[0-8]$' and jsonb_typeof(p_input->'ordinal')='number' and (p_input->>'ordinal') ~ '^[0-9]{1,3}$' and
-      jsonb_typeof(p_input->'sourceName')='string' and char_length(p_input->>'sourceName') between 1 and 256 and
+      jsonb_typeof(p_input->'sourceName')='string' and public.decision_review_text_units_v1(p_input->>'sourceName') between 1 and 256 and
       (p_input->'modelAction'='null'::jsonb or p_input->>'modelAction' in ('BUY','SKIP','CACHE')) and p_input->>'codeAction' in ('BUY','SKIP','CACHE') and p_input->>'codeRule'=any(rules) and
       jsonb_typeof(p_input->'reviewFirst')='boolean' and p_input->>'cohort' in ('outside','team','scripted','unknown') and
-      p_input->>'policyVersion'='captured-owner-decisions-v1' and jsonb_typeof(p_input->'engine')='string' and char_length(p_input->>'engine') between 1 and 256 and p_input->>'engine' !~ '[[:cntrl:]]' and
-      (p_input->'requestedModel'='null'::jsonb or (jsonb_typeof(p_input->'requestedModel')='string' and char_length(p_input->>'requestedModel') between 1 and 256 and p_input->>'requestedModel' !~ '[[:cntrl:]]')) and
+      p_input->>'policyVersion'='captured-owner-decisions-v1' and jsonb_typeof(p_input->'engine')='string' and public.decision_review_text_units_v1(p_input->>'engine') between 1 and 256 and p_input->>'engine' !~ '[\x01-\x1f\x7f]' and
+      (p_input->'requestedModel'='null'::jsonb or (jsonb_typeof(p_input->'requestedModel')='string' and public.decision_review_text_units_v1(p_input->>'requestedModel') between 1 and 256 and p_input->>'requestedModel' !~ '[\x01-\x1f\x7f]')) and
       ((p_input->>'cohort'='unknown' and p_input->'cohortEvidence'='null'::jsonb) or
-       (p_input->>'cohort'<>'unknown' and jsonb_typeof(p_input->'cohortEvidence')='string' and char_length(p_input->>'cohortEvidence') between 1 and 256 and p_input->>'cohortEvidence' !~ '[[:cntrl:]]'))) is distinct from true then raise exception 'review_unavailable'; end if;
+       (p_input->>'cohort'<>'unknown' and jsonb_typeof(p_input->'cohortEvidence')='string' and public.decision_review_text_units_v1(p_input->>'cohortEvidence') between 1 and 256 and p_input->>'cohortEvidence' !~ '[\x01-\x1f\x7f]'))) is distinct from true then raise exception 'review_unavailable'; end if;
     if (jsonb_typeof(p_input->'runId')='string' and p_input->>'runId' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') is distinct from true then raise exception 'review_unavailable'; end if;
     terms:=p_input->'terms'; if not public.decision_review_terms_v1(terms) then raise exception 'review_unavailable'; end if;
     perform pg_advisory_xact_lock(hashtextextended(p_wallet || ':' || (p_input->>'runId'),0));
@@ -180,6 +184,6 @@ begin
 end; $$;
 revoke all on function public.decision_review_record_v1(uuid,text),public.decision_reviews_v1(text,text,jsonb) from public,anon,authenticated;
 grant execute on function public.decision_review_record_v1(uuid,text),public.decision_reviews_v1(text,text,jsonb) to service_role;
-revoke all on function public.decision_review_ordinary_v1(),public.decision_review_keys_v1(jsonb,text[],text[]),public.decision_review_terms_v1(jsonb) from public,anon,authenticated;
-grant execute on function public.decision_review_ordinary_v1(),public.decision_review_keys_v1(jsonb,text[],text[]),public.decision_review_terms_v1(jsonb) to service_role;
+revoke all on function public.decision_review_ordinary_v1(),public.decision_review_text_units_v1(text),public.decision_review_keys_v1(jsonb,text[],text[]),public.decision_review_terms_v1(jsonb) from public,anon,authenticated;
+grant execute on function public.decision_review_ordinary_v1(),public.decision_review_text_units_v1(text),public.decision_review_keys_v1(jsonb,text[],text[]),public.decision_review_terms_v1(jsonb) to service_role;
 commit;

@@ -8,7 +8,10 @@ export const reviewRuleSchema = z.enum(["model-skip", "selected", "public-read",
 export const reviewCohortSchema = z.enum(["outside", "team", "scripted", "unknown"]);
 export const REVIEW_POLICY_VERSION = "captured-owner-decisions-v1" as const;
 const micros = z.string().regex(/^(0|[1-9][0-9]{0,15})$/).refine(value => BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER));
-const boundedText = z.string().min(1).max(256).refine(value => !/[\u0000-\u001f\u007f]/u.test(value));
+// JS length counts UTF-16 units; refuse lone surrogates rather than normalize them.
+const wellFormedText = (value: string) => !/[\uD800-\uDFFF]/u.test(value);
+const boundedText = z.string().min(1).max(256).refine(value => wellFormedText(value) && !/[\u0000-\u001f\u007f]/u.test(value));
+const reasonText = z.string().max(1000).refine(value => wellFormedText(value) && value === value.trim() && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value));
 export const decisionTermsSchema = z.object({
   assetId: boundedText, sourceId: boundedText, owned: z.boolean(),
   itemId: boundedText.optional(), contentVersion: boundedText.optional(),
@@ -20,7 +23,7 @@ export const decisionTermsSchema = z.object({
 const capturedFields = z.object({
   policyVersion: z.literal(REVIEW_POLICY_VERSION), engine: boundedText, requestedModel: boundedText.nullable(),
   runId: reviewIdSchema, round: z.number().int().min(0).max(8), ordinal: z.number().int().min(0).max(999),
-  sourceName: z.string().min(1).max(256), modelAction: reviewActionSchema.nullable(),
+  sourceName: z.string().min(1).max(256).refine(wellFormedText), modelAction: reviewActionSchema.nullable(),
   codeAction: reviewActionSchema, codeRule: reviewRuleSchema,
   terms: decisionTermsSchema, reviewFirst: z.boolean(),
   cohort: reviewCohortSchema, cohortEvidence: boundedText.nullable(),
@@ -32,14 +35,14 @@ export type CaptureDecision = z.infer<typeof captureDecisionSchema>;
 export const reviewVerdictSchema = z.object({
   id: reviewIdSchema, key: reviewIdSchema, context: z.enum(["gate", "opinion"]), value: z.enum(["agree", "disagree"]),
   expectedCode: z.object({ action: reviewActionSchema, rule: reviewRuleSchema }).strict().optional(),
-  reason: z.string().trim().max(1000).refine(value => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)).optional(),
+  reason: z.string().trim().pipe(reasonText).optional(),
 }).strict().refine(value => value.context === "opinion" ? value.expectedCode !== undefined : value.expectedCode === undefined);
 export type ReviewVerdictInput = z.infer<typeof reviewVerdictSchema>;
 export const decisionReviewSchema = capturedFields.extend({
   initialCodeAction: reviewActionSchema, initialCodeRule: reviewRuleSchema,
   id: reviewIdSchema, createdAt: z.string().datetime(), expiresAt: z.string().datetime().nullable(),
   state: z.enum(["observed", "held", "approved", "declined", "expired", "consumed", "cancelled"]),
-  verdict: z.object({ value: z.enum(["agree", "disagree"]), reason: z.string().optional(), context: z.enum(["gate", "opinion"]),
+  verdict: z.object({ value: z.enum(["agree", "disagree"]), reason: reasonText.optional(), context: z.enum(["gate", "opinion"]),
     codeAction: reviewActionSchema, codeRule: reviewRuleSchema, createdAt: z.string().datetime() }).strict().nullable(),
 }).strict().refine(cohortBinding);
 export type DecisionReview = z.infer<typeof decisionReviewSchema>;

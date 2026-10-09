@@ -17,6 +17,36 @@ function decision(patch: Partial<CaptureDecision> = {}): CaptureDecision {
 }
 async function held(store: DecisionReviewsStore) { const record = await store.capture(owner, decision(), at); return store.begin(owner, record.id, at); }
 describe("ordinary decision reviews", () => {
+  it("refuses an empty native marker before initialization and after ordinary initialization", async () => {
+    const unopened = new DatabaseSync(":memory:"); connections.push(unopened);
+    unopened.exec("CREATE TABLE keryx_storage_identity (invalid TEXT)");
+    expect(() => createSqliteDecisionReviews(unopened)).toThrow("enrolled storage");
+    expect(unopened.prepare("SELECT name FROM sqlite_schema WHERE name='decision_review_records'").get()).toBeUndefined();
+    const { db, store } = fixture(), record = await held(store);
+    db.exec("CREATE TABLE keryx_storage_identity (invalid TEXT)");
+    for (const action of [() => store.ready(), () => store.read(owner, record.id), () => store.capture(owner, decision(), at),
+      () => store.metrics("eip155:5042002", "2026-10-09T00:00:00.000Z", "2026-10-10T00:00:00.000Z")]) await expect(action()).rejects.toThrow("enrolled storage");
+    expect(db.prepare("SELECT count(*) AS n FROM decision_review_records").get()?.n).toBe(1);
+  });
+  it("bounds well-formed text in UTF-16 units before persistence, including non-BMP names, terms and reasons", async () => {
+    const { db, store } = fixture(), scalar = "\u{1f600}";
+    const patches = (text: string): Partial<CaptureDecision>[] => [
+      ...["engine", "requestedModel", "sourceName"].map(key => ({ [key]: text })),
+      { cohort: "scripted", cohortEvidence: text },
+      ...["assetId", "sourceId", "itemId", "contentVersion", "offerId"].map(key => ({ terms: { ...decision().terms, [key]: text } })),
+    ];
+    for (const patch of patches(scalar.repeat(128))) await store.capture(owner, decision(patch), at);
+    const count = db.prepare("SELECT count(*) AS n FROM decision_review_records").get()?.n;
+    for (const text of [scalar.repeat(129), "\ud800", "\udfff", "prefix\ud800suffix"]) {
+      for (const patch of patches(text)) await expect(store.capture(owner, decision(patch), at)).rejects.toThrow();
+    }
+    expect(db.prepare("SELECT count(*) AS n FROM decision_review_records").get()?.n).toBe(count);
+    const record = await held(store), reason = scalar.repeat(500);
+    const intent = { id: record.id, key: randomUUID(), context: "gate" as const, value: "agree" as const, reason };
+    for (const invalid of [scalar.repeat(501), "\ud800", "\udfff"]) await expect(store.verdict(owner, { ...intent, reason: invalid }, at + 1)).rejects.toThrow();
+    expect(db.prepare("SELECT count(*) AS n FROM decision_review_verdicts").get()?.n).toBe(0);
+    expect((await store.verdict(owner, intent, at + 1)).verdict?.reason).toBe(reason);
+  });
   it("atomically refuses an opinion for a stale displayed code snapshot while exact-key readback survives later change", async () => {
     const { db, store } = fixture(), record = await store.capture(owner, decision({ reviewFirst: false }), at);
     const intent = { id: record.id, key: randomUUID(), context: "opinion" as const, value: "agree" as const, expectedCode: { action: "BUY" as const, rule: "selected" as const } };

@@ -50,6 +50,11 @@ claim to preserve every model token or reconstruct a historical response.
 Ambiguous external proposals have an unavailable model action; internal proposals
 bind the exact asset selected by normalization.
 
+Bounded capture fields and private reasons use UTF-16 code-unit limits in both
+shared schemas and PostgreSQL. Non-BMP scalars count as two units; malformed lone
+surrogates refuse before JS persistence. Stored reasons retain canonical trimmed
+text, with no silent replacement or PostgreSQL code-point allowance.
+
 Last-mile code refusals update a separate projection while the immutable input
 stays intact. A source that changes terms/version/rights while awaiting review
 becomes a terminal per-source SKIP and cannot consume approval or earn a reward;
@@ -148,7 +153,10 @@ ABSOLUTE_DATA_DIRECTORY` against a verified synthetic loopback cluster. It strip
 PG credentials, checks data-directory/server identity before DDL, creates/drops
 only a unique synthetic database, and tests actual0086 owner/role/strict input,
 concurrent CAS, deadline, replay, opinion snapshot, individual cancellation and
-sealed refusal. A 1,201-decision whole cohort matches SQLite without row sampling.
+sealed refusal. Presence of either native marker refuses migration and runtime
+operations even when empty or enrollment-invalid, without reading marker rows.
+Non-BMP boundary fixtures prove shared-schema-compatible capture/reason storage.
+A 1,201-decision whole cohort matches SQLite without row sampling.
 Failed prior SQL/fixture evidence remains retained, including the real metrics
 alias correction; changed source requires new proof.
 

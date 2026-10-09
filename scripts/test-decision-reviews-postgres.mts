@@ -48,7 +48,16 @@ try {
   created = true; sql(`create database ${database};`, "postgres");
   // These global fixture roles are created only in a root-provisioned fresh cluster or our owned container.
   sql("do $$ begin if not exists(select 1 from pg_roles where rolname='anon') then create role anon; end if; if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated; end if; if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role; end if; end $$;");
-  sql(readFileSync("supabase/migrations/0086_decision_reviews.sql", "utf8"));
+  const migration = readFileSync("supabase/migrations/0086_decision_reviews.sql", "utf8");
+  // Marker presence is authoritative even when empty or enrollment-invalid.
+  for (const marker of ["keryx_storage.identity", "public.keryx_storage_identity"]) {
+    if (marker.startsWith("keryx_storage.")) sql("create schema keryx_storage;");
+    sql(`create table ${marker}(invalid text);`);
+    assert.throws(() => sql(migration), /review_unavailable/);
+    assert.equal(sql("select to_regclass('public.decision_review_records') is null;"), "t");
+    sql(`drop table ${marker};`); if (marker.startsWith("keryx_storage.")) sql("drop schema keryx_storage;");
+  }
+  sql(migration);
   assert.deepEqual(rpc("ready", {}, null), { ready: true });
   for (const role of ["anon", "authenticated"]) {
     assert.throws(() => sql(`set role ${role}; select * from public.decision_review_records;`), /permission denied/);
@@ -91,6 +100,19 @@ try {
     { network: "eip155:5042002", since: "2026-02-30T00:00:00.000Z", until: "2026-03-01T00:00:00.000Z" }]) assert.throws(() => rpc("metrics", invalid, null));
   rpc("observe", { id: expired.id, action: "SKIP", rule: "budget" }); assert.throws(() => rpc("observe", { id: expired.id, action: "SKIP", rule: "fabricated" }), /review_unavailable/);
   assert.equal(rpc("read", { id: expired.id }).initialCodeAction, "BUY");
+  const scalar = "\u{1f600}", boundedPatches = (text: string): Partial<CaptureDecision>[] => [
+    ...["engine", "requestedModel", "sourceName"].map(key => ({ [key]: text })), { cohort: "team", cohortEvidence: text },
+    ...["assetId", "sourceId", "itemId", "contentVersion", "offerId"].map(key => ({ terms: { ...input.terms, [key]: text } })),
+  ];
+  for (const patch of boundedPatches(scalar.repeat(128))) capture(patch);
+  const countBeforeInvalid = sql("select count(*) from public.decision_review_records;");
+  for (const patch of boundedPatches(scalar.repeat(129))) assert.throws(() => rpc("capture", { ...input, ...patch }), /review_unavailable/);
+  assert.equal(sql("select count(*) from public.decision_review_records;"), countBeforeInvalid);
+  const textRecord = capture({ reviewFirst: false }), textIntent = { id: textRecord.id, key: randomUUID(), context: "opinion", value: "agree", expectedCode: { action: "BUY", rule: "selected" }, reason: scalar.repeat(500) };
+  for (const reason of [scalar.repeat(501), "\u00a0not-canonical\u00a0", "\ufeffnot-canonical\ufeff"]) assert.throws(() => rpc("verdict", { ...textIntent, reason }), /review_unavailable/);
+  assert.equal(decisionReviewSchema.parse(rpc("verdict", textIntent)).verdict?.reason, textIntent.reason);
+  // PostgreSQL JSON refuses the same lone-surrogate inputs the shared JS ingress refuses.
+  assert.throws(() => rpc("capture", { ...input, sourceName: "\ud800" }), /surrogate/);
   sql("update public.decision_review_records set created_at='2026-10-09T12:00:00.000Z';");
   const period = { network: "eip155:5042002", since: "2026-10-09T00:00:00.000Z", until: "2026-10-10T00:00:00.000Z" };
   const metrics = decisionReviewMetricsSchema.parse(rpc("metrics", period, null)); assert.equal(metrics.cohorts[0].agreementRate, null);
@@ -109,9 +131,17 @@ try {
     assert.deepEqual(complete.cohorts[2], equivalent.cohorts[2]); assert.equal(complete.cohorts[2].decisions, 1201);
     assert.deepEqual(complete.cohorts[0], equivalent.cohorts[0]);
   } finally { connection.close(); }
-  sql("create schema keryx_storage; create table keryx_storage.identity(enrolled boolean); insert into keryx_storage.identity values(true); grant usage on schema keryx_storage to service_role; grant select on keryx_storage.identity to service_role;");
-  for (const statement of [call("ready", {}, null), call("read", { id: admitted.id }), call("metrics", period, null), `set role service_role; select public.decision_review_record_v1('${admitted.id}','${owner}');`]) assert.throws(() => sql(statement), /review_unavailable/);
-  console.log("Decision review PostgreSQL17 passed: actual0086 owner/ACL/strict terms+rule+period, per-request deadline, concurrent verdict/consume CAS, exact-intent current readback, stale opinion snapshot refusal/retained vote basis, individual source cancellation, expiry/cancel, whole1201-row aggregate/SQLite parity/privacy and sealed refusal. Synthetic only.");
+  for (const marker of ["keryx_storage.identity", "public.keryx_storage_identity"]) {
+    if (marker.startsWith("keryx_storage.")) sql("create schema keryx_storage; grant usage on schema keryx_storage to service_role;");
+    // No SELECT grant on the marker: refusal must not inspect its enrollment rows.
+    sql(`create table ${marker}(invalid text);`);
+    for (const populated of [false, true]) {
+      if (populated) sql(`insert into ${marker} values('invalid-enrollment');`);
+      for (const statement of [call("ready", {}, null), call("read", { id: admitted.id }), call("metrics", period, null), `set role service_role; select public.decision_review_record_v1('${admitted.id}','${owner}');`]) assert.throws(() => sql(statement), /review_unavailable/);
+    }
+    sql(`drop table ${marker};`); if (marker.startsWith("keryx_storage.")) sql("drop schema keryx_storage;");
+  }
+  console.log("Decision review PostgreSQL17 passed: actual0086 owner/ACL/strict terms+rule+period, per-request deadline, concurrent verdict/consume CAS, exact-intent current readback, stale opinion snapshot refusal/retained vote basis, individual source cancellation, expiry/cancel, whole1201-row aggregate/SQLite parity/privacy; empty/populated/invalid native marker migration+runtime refusal; UTF-16 non-BMP bounds/shared record parity. Synthetic only.");
 } finally {
   if (created) sql(`drop database if exists ${database} with (force);`, "postgres");
   if (container) { if (docker(["ps", "-aq", "--filter", `name=^/${name}$`]).trim()) docker(["rm", "-f", name]); assert.equal(docker(["ps", "-aq", "--filter", `name=^/${name}$`]).trim(), ""); }
