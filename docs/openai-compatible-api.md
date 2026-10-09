@@ -1,5 +1,11 @@
 # OpenAI-compatible API — integration recipes
 
+The [CSL-JSON export source candidate](engineering/csl-json-reference-export-2026-10-09.md)
+adds `keryx.researchExports.cslJson` with `content`, `count` and `omitted`, plus
+separate metadata-only `keryx.bibliographyExports.cslJson` with `content` and
+`count`. These are derived reference files; saved receipts and already returned
+responses are not rewritten. Deployed-source acceptance remains a release gate.
+
 Keryx exposes a drop-in **OpenAI Chat Completions** surface. Any tool that speaks the OpenAI wire
 format can ask Keryx a question; Keryx researches it over paid sources and settles a weighted USDC
 citation reward to eligible creators it cites on the configured Arc network. Public production

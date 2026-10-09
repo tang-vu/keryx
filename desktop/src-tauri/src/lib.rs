@@ -341,6 +341,7 @@ async fn export_brief(
         "brief" => ("private-research-brief.md", "md"),
         "bibtex" => ("private-references.bib", "bib"),
         "ris" => ("private-references.ris", "ris"),
+        "csl-json" => ("private-references.json", "json"),
         "evidence-csv" => ("private-evidence.csv", "csv"),
         _ => return Err("Unsupported private export format".into()),
     };

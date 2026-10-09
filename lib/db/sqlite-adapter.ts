@@ -1,4 +1,6 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
+import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
+import { PrivateProfileError, type PrivateProfilesStore } from "../profiles/private-profile";
 import { readSqliteOperatorInventory, type OperatorInventoryInput } from "../business-operator/inventory";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
@@ -127,6 +129,7 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 
 export class SqliteAdapter implements KeryxDB {
+  declare readonly privateProfiles?: PrivateProfilesStore;
   private db: DatabaseSync;
   private enrolledMode?: StorageIdentity["authorityMode"];
   private enrolledIdentity?: Readonly<StorageIdentity>;
@@ -188,6 +191,14 @@ export class SqliteAdapter implements KeryxDB {
     assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installOrdinarySqliteApplicationSchema(this.db);
+    if (!this.privateProfiles) {
+      try { Object.defineProperty(this, "privateProfiles", { value: createSqlitePrivateProfiles(this.db) }); }
+      catch (error) {
+        // An unknown optional profile schema disables that domain without repairing it
+        // or taking existing ordinary research/account/payment reads offline.
+        if (!(error instanceof PrivateProfileError && error.code === "profile_unavailable")) throw error;
+      }
+    }
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
     // value before verification. Remove those legacy counters during every startup so the live DB
     // and every restored snapshot converge back to the documented hash-only secret invariant.
@@ -1873,7 +1884,13 @@ export class SqliteAdapter implements KeryxDB {
     const since = new Date(nowMs - 24 * 60 * 60_000).toISOString();
     const rows = this.db
       .prepare(
-        `SELECT status,created_at,updated_at,started_at FROM a2a_orders
+        `SELECT status,created_at,updated_at,started_at,execution_journal_version,
+          CASE WHEN json_valid(package_data) THEN package_data END AS latency_package,
+          CASE WHEN json_valid(response_data) THEN CASE WHEN json_type(response_data,'$.serviceReceipt')='object'
+            THEN json_extract(response_data,'$.serviceReceipt') END END AS latency_receipt,
+          CASE WHEN resolution_data IS NULL THEN 'null'
+            WHEN json_valid(resolution_data) THEN resolution_data ELSE '{}' END AS latency_resolution
+          FROM a2a_orders
           WHERE status='running' OR updated_at>=?`,
       )
       .all(since)
@@ -1882,8 +1899,12 @@ export class SqliteAdapter implements KeryxDB {
         createdAt: String(row.created_at),
         updatedAt: String(row.updated_at),
         startedAt: row.started_at == null ? null : String(row.started_at),
+        executionJournalVersion: row.execution_journal_version,
+        researchPackage: row.latency_package == null ? undefined : JSON.parse(String(row.latency_package)),
+        serviceReceipt: row.latency_receipt == null ? undefined : JSON.parse(String(row.latency_receipt)),
+        resolution: JSON.parse(String(row.latency_resolution)),
       })) satisfies A2aOperationsRow[];
-    return summarizeA2aOperations(rows, nowMs);
+    return summarizeA2aOperations(rows, nowMs, true);
   }
 
   async operatorInventory(input: OperatorInventoryInput) {

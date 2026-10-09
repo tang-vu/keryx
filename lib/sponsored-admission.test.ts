@@ -34,6 +34,7 @@ import { POST as mint } from "../app/api/keys/route";
 import { POST as discord } from "../app/api/discord/interactions/route";
 import { POST as slack } from "../app/api/slack/commands/route";
 import { POST as telegram } from "../app/api/telegram/webhook/route";
+import { GET as walletHistory } from "../app/api/me/asks/route";
 
 const OWNER = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd";
 const wallet = (i: number) => `0x${i.toString(16).padStart(40, "0")}`;
@@ -106,6 +107,73 @@ afterEach(() => {
 });
 
 describe("shared sponsored admission with durable identity", () => {
+  it.each([false, true])("records verified keyed API ownership in wallet history (stream=%s) without trusting body identity", async stream => {
+    const key = await mintApiKey(OWNER, "ownership fixture", "ask");
+    mocks.collectRun.mockImplementation(async input => {
+      const run = { ...completedRun(), id: input.queryId, asker: input.asker, provenance: input.provenance };
+      await db.saveQueryRun(run); return run;
+    });
+    const response = await chat(request("/api/v1/chat/completions", {
+      messages: [{ role: "user", content: "Synthetic question" }], budget: 0, stream,
+      asker: wallet(2), provenance: { version: 1, surface: "desktop", ownershipMethod: "session" },
+    }, "192.0.2.1", key.rawKey));
+    expect(response.status).toBe(200); await response.text();
+    expect(mocks.collectRun.mock.calls[0][0]).toMatchObject({ asker: OWNER, budget: 0,
+      provenance: { version: 1, surface: "api", ownershipMethod: "api-key" } });
+    expect(await db.listQueryRunsByAsker(wallet(2), 200)).toEqual([]);
+    const history = await db.listQueryRunsByAsker(OWNER, 200);
+    expect(history).toHaveLength(1); expect(history[0].askerFunded).not.toBe(true);
+    expect(history[0].provenance).toEqual({ version: 1, surface: "api", ownershipMethod: "api-key" });
+    const historyRequest = new NextRequest("http://localhost/api/me/asks?limit=1", { headers: { authorization: `Bearer ${key.rawKey}` } });
+    expect((await walletHistory(historyRequest)).status).toBe(401); // A key never substitutes for a history session.
+    mocks.getSession.mockResolvedValue({ address: OWNER });
+    const view = await (await walletHistory(historyRequest)).json();
+    expect(view.asks).toHaveLength(1); expect(view.asks[0]).toMatchObject({ funded: false, provenance: history[0].provenance });
+    expect(view.totals.spentUsdc).toBe(0);
+    await db.revokeApiKey(key.id, OWNER);
+    expect((await chat(chatRequest("192.0.2.2", key.rawKey))).status).toBe(401);
+    expect(mocks.collectRun).toHaveBeenCalledOnce();
+    expect(await db.listQueryRunsByAsker(OWNER, 200)).toHaveLength(1);
+  });
+
+  it("records ownerless API/MCP ingress without inferring ownership from IP, body or editable client labels", async () => {
+    const response = await chat(request("/api/v1/chat/completions", {
+      messages: [{ role: "user", content: "Synthetic question" }], asker: OWNER,
+      provenance: { version: 1, surface: "extension", ownershipMethod: "session" },
+    }));
+    expect(response.status).toBe(200); await response.text();
+    const remote = await mcp(request("/mcp?client=codex", { jsonrpc: "2.0", id: 1, method: "tools/call",
+      params: { name: "research", arguments: { question: "Synthetic question", asker: OWNER } } }, "192.0.2.2"));
+    expect(remote.status).toBe(200); await remote.text();
+    for (const [input] of mocks.collectRun.mock.calls) expect(input.asker).toBeUndefined();
+    expect(mocks.collectRun.mock.calls[0][0].provenance).toEqual({ version: 1, surface: "api", ownershipMethod: "unknown" });
+    expect(mocks.collectRun.mock.calls[1][0]).toMatchObject({ mcpClient: "codex",
+      provenance: { version: 1, surface: "remote-mcp", ownershipMethod: "unknown" } });
+  });
+
+  it("stamps session/web and authenticated bot ingress while retaining unlinked platform users as ownerless", async () => {
+    mocks.getSession.mockResolvedValue({ address: OWNER });
+    const response = await web(webRequest("192.0.2.1", { asker: wallet(2), provenance: { surface: "desktop" } }));
+    expect(response.status).toBe(200); await response.text();
+    expect(mocks.runAgent.mock.calls[0][0]).toMatchObject({ asker: OWNER,
+      provenance: { version: 1, surface: "web", ownershipMethod: "session" } });
+    const replies = vi.fn(async () => Response.json({ ok: true, result: { message_id: 1 } }));
+    vi.stubGlobal("fetch", replies);
+    for (const call of [() => discord(discordRequest()), () => slack(slackRequest()), () => telegram(telegramRequest())]) {
+      expect((await call()).status).toBe(200);
+    }
+    for (const [deferred] of mocks.after.mock.calls) await deferred();
+    expect(mocks.collectRun.mock.calls.map(([input]) => input.provenance)).toEqual([
+      { version: 1, surface: "discord", ownershipMethod: "unknown" },
+      { version: 1, surface: "slack", ownershipMethod: "unknown" },
+      { version: 1, surface: "telegram", ownershipMethod: "unknown" },
+    ]);
+    for (const [input] of mocks.collectRun.mock.calls) {
+      expect(input.asker).toBeUndefined(); expect(JSON.stringify(input)).not.toContain("slack-user");
+      expect(JSON.stringify(input)).not.toContain("discord-user");
+    }
+  });
+
   it("two minted keys and both research APIs share one canonical wallet allowance", async () => {
     const first = await mintApiKey(OWNER, "first", "ask");
     const second = await mintApiKey(OWNER.toUpperCase().replace("0X", "0x"), "second", "ask");

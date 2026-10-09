@@ -39,6 +39,7 @@ import { isPublicReferenceId } from "../public-references/catalog";
 import { researchVerdict } from "./research-verdict";
 import { config } from "../config";
 import { ResearchSelectionError, readSelectionDiagnostics } from "../llm/research-selection";
+import { newRunProvenance, type RunProvenance } from "../research/run-provenance";
 import type {
   ClaimCoverageRecord,
   Citation,
@@ -143,6 +144,8 @@ export interface RunInput {
   mcpClient?: McpClientChannel;
   /** Stable actor verified by the server (SIWE/API key). Never accept an unverified client value. */
   asker?: string;
+  /** Closed ingress/proof metadata supplied only by the trusted adapter, never a public body. */
+  provenance?: RunProvenance;
   /** Trusted server-side funding provenance. Public request bodies must never populate this. */
   fundingOwner?: "browser" | "treasury" | "offline";
   /** Catalog model id the asker picked (model-catalog.ts). Read by collectRun when it builds
@@ -2064,6 +2067,7 @@ async function* runAdmittedAgent(
       trace,
       createdAt: new Date().toISOString(),
       origin,
+      ...(effects.scope.kind === "public" ? { provenance: newRunProvenance(input) } : {}),
       ...(origin === "mcp" && input.mcpClient ? { mcpClient: input.mcpClient } : {}),
       ...(input.asker ? { asker: input.asker.toLowerCase() } : {}),
       fundingOwner: gateway.mode === "offline" ? "offline" : (input.fundingOwner ?? "treasury"),

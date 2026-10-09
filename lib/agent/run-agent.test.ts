@@ -354,6 +354,16 @@ async function drive(
 const fetchBudget = (budget: number) => budget * (1 - config.citationPoolRatio);
 const citationPool = (budget: number) => budget * config.citationPoolRatio;
 
+it("records trusted ingress without deriving an owner or method from origin/client telemetry", async () => {
+  const provenance = { version: 1, surface: "api", ownershipMethod: "api-key" } as const;
+  const asker = `0x${"ab".repeat(20)}`;
+  const { run } = await drive({ question: "q", budget: 0, asker, provenance }, deps([], fakeEngine(), fakeGateway()));
+  expect(run.asker).toBe(asker); expect(run.provenance).toEqual(provenance);
+  const anonymous = await drive({ question: "q", budget: 0, origin: "mcp", mcpClient: "codex" }, deps([], fakeEngine(), fakeGateway()));
+  expect(anonymous.run).not.toHaveProperty("asker");
+  expect(anonymous.run.provenance).toEqual({ version: 1, surface: "unknown", ownershipMethod: "unknown" });
+});
+
 const paper = (arxivId = "1706.03762v7") => scholarlyCandidate({ provider: "arxiv", recordUrl: "https://export.arxiv.org/api/query?id_list=" + arxivId,
   retrievedAt: "2026-10-01T00:00:00Z", title: "Observed paper " + arxivId, authors: ["Observed Author"], arxivId, workType: "preprint", peerReview: "unknown" });
 function injectPapers(d: AgentDeps, ids = ["1706.03762v7"]) {

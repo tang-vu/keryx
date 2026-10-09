@@ -92,6 +92,7 @@ async function runAndReply(cmd: AskCommand, budget: number) {
       budget,
       queryId: crypto.randomUUID(),
       origin: "web",
+      provenance: { version: 1, surface: "discord", ownershipMethod: "unknown" },
     });
     message = buildAnswerMessage(run);
   } catch (err) {

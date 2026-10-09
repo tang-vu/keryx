@@ -1,15 +1,18 @@
 import { buildResearchReceipt, verifyResearchReceipt } from "../research-receipt";
 import { exportsFromCheckedReceipt } from "./receipt-exports";
 import { describe, expect, it } from "vitest";
+import fs from "node:fs";
 import { a2aResponseFromRun } from "../a2a/result";
 import { quoteA2aResearch } from "../a2a/pricing";
 import { buildAnswerContent, keryxMeta } from "../openai-compat";
-import { JSDOM } from "jsdom";
-import fs from "node:fs";
+import { replayExtensionPopup } from "../display/extension-popup.test-fixture";
 import { remoteResearchResult } from "../mcp/remote-server";
 import type { QueryRun } from "../types";
 import { surfaceResearch } from "./surface-result";
 import type { ReasoningAttempt } from "../llm/reasoning-engine";
+import { readBibliographicTask } from "./bibliographic-task";
+import { recognizeBibliographicTask } from "./bibliographic-task-request";
+import { frenchArxivTask } from "./fixtures/bibliographic-task-questions";
 
 function attempt(overrides: Partial<ReasoningAttempt> = {}): ReasoningAttempt {
   return { step: "decide", engine: "llm:deepseek:recorded-model", tier: 0, attempt: 1,
@@ -28,6 +31,37 @@ export function fixture(): QueryRun {
 }
 
 describe("research surface parity", () => {
+  it("exports only new closed ingress labels and leaves legacy projections and portable receipts unchanged", () => {
+    const legacy = fixture(), receipt = buildResearchReceipt(legacy, []);
+    expect(surfaceResearch(legacy)).not.toHaveProperty("provenance");
+    const provenance = { version: 1, surface: "api", ownershipMethod: "api-key" } as const;
+    const fresh = { ...legacy, provenance };
+    for (const result of [surfaceResearch(fresh), remoteResearchResult(fresh), keryxMeta(fresh),
+      a2aResponseFromRun(fresh, quoteA2aResearch(0.03, "deep"))]) {
+      expect(result.provenance).toEqual(provenance); expect(result.provenance).not.toBe(provenance);
+      expect(result).not.toHaveProperty("asker");
+    }
+    expect(buildResearchReceipt(fresh, [])).toEqual(receipt);
+    expect(surfaceResearch({ ...fresh, provenance: { ...provenance, wallet: "PRIVATE_WALLET" } as never })).not.toHaveProperty("provenance");
+  });
+
+  it("retains optional ingress beside metadata CSL downloads without extending stored bibliography or changing original receipt bytes", async () => {
+    const run = fixture();
+    run.provenance = { version: 1, surface: "api", ownershipMethod: "api-key" };
+    const body = fs.readFileSync(new URL("./fixtures/arxiv-2005.11401v4-bibliography.html", import.meta.url), "utf8");
+    run.bibliography = await readBibliographicTask(recognizeBibliographicTask(frenchArxivTask)!, { reader: async url => ({
+      requestedUrl: url, finalUrl: url, observedAt: run.createdAt, mediaType: "text/html", body, truncated: false,
+    }) });
+    const beforeRun = JSON.stringify(run), beforeReceipt = JSON.stringify(buildResearchReceipt(run, []));
+    const result = surfaceResearch(run);
+    expect(result.provenance).toEqual(run.provenance);
+    expect(result.bibliography).toEqual(run.bibliography);
+    expect(result.bibliography!.bibliographyExports).not.toHaveProperty("cslJson");
+    expect(JSON.parse(result.bibliographyExports!.cslJson.content)[0]).toMatchObject({ archive_location: "2005.11401v4" });
+    expect(result.bibliographyExports!.cslJson.content).toContain("no Keryx read, citation or settlement evidence");
+    expect(JSON.stringify(run)).toBe(beforeRun);
+    expect(JSON.stringify(buildResearchReceipt(run, []))).toBe(beforeReceipt);
+  });
   it("retains trace-only inner review ceilings across hosted transports without inventing attempts or exporting private detail", () => {
     const run = fixture();
     run.trace = [{ phase: "synthesize", ts: 1, message: "Fixed diagnostic",
@@ -45,7 +79,7 @@ describe("research surface parity", () => {
     expect(JSON.stringify(receipt)).not.toMatch(/outputTokenLimit|PRIVATE_REVIEW_BODY/);
   });
 
-  it("keeps operating fee allocations separate from creator totals and points to per-payment authority", () => {
+  it("keeps operating fee allocations separate from creator totals and points to per-payment authority", async () => {
     const run = fixture();
     run.operatingFee = { policy: "public-citation-operating-fee-v1", beneficiary: "0xfounder",
       amountUsdc: 0.004, status: "pending", paymentId: "original-fee", allocations: [
@@ -60,18 +94,12 @@ describe("research surface parity", () => {
     expect(remoteResearchResult(run).totalToCreatorsUsdc).toBe(0);
     expect(surfaceResearch(fixture()).operatingFee).toBeUndefined();
     expect(buildAnswerContent(run)).toContain("Keryx operating fee allocation: $0.004000 USDC (pending)");
-    const dom = new JSDOM(fs.readFileSync("extension/popup.html", "utf8"),
-      { url: "https://extension.example/popup", runScripts: "outside-only" });
-    try {
-      Object.assign(dom.window, { chrome: { tabs: { query: async () => [] } },
-        fetch: () => { throw new Error("Rendering cannot submit research"); } });
-      dom.window.eval(fs.readFileSync("extension/popup.js", "utf8"));
-      dom.window.eval(`applyChunk(${JSON.stringify({ choices: [{ delta: { content: buildAnswerContent(run) } }] })})`);
-      dom.window.eval(`applyChunk(${JSON.stringify({ keryx: keryxMeta(run) })})`);
-      expect(dom.window.document.getElementById("paid-total-usd")!.textContent).toBe("$0.0000");
-      expect(dom.window.document.getElementById("answer")!.textContent)
+    await replayExtensionPopup([{ choices: [{ delta: { content: buildAnswerContent(run) } }] },
+      { keryx: keryxMeta(run) }], document => {
+      expect(document.getElementById("paid-total-usd")!.textContent).toBe("$0.0000");
+      expect(document.getElementById("answer")!.textContent)
         .toContain("Keryx operating fee allocation: $0.004000 USDC (pending)");
-    } finally { dom.window.close(); }
+    });
   });
   it("retains typed request-local refusal metadata on the one shared bounded reasoning contract", () => {
     const run = fixture(); run.engine = "llm:deepseek:recorded-model";
@@ -189,6 +217,7 @@ describe("research surface parity", () => {
       expect(result.evidence[0]).toMatchObject({ qualifiesForAnswer: true, qualifiesForReward: false, itemId: "article-1" });
       expect(result.researchExports.bibtex.count).toBe(1);
       expect(result.researchExports.ris.content).toContain("TI  - Observed paper");
+      expect(JSON.parse(result.researchExports.cslJson.content)[0]).toMatchObject({ type: "webpage", title: "Observed paper", URL: "https://example.org/paper" });
       expect(result.researchExports.evidenceCsv).toContain("Exact original quote");
       expect(result.creatorsPaid).toBeNull();
       expect(result.creatorRewardAllocations).toBe(0);

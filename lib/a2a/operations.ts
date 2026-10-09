@@ -3,8 +3,10 @@ import {
   A2A_REVIEW_AFTER_MS,
   type A2aOrderStatus,
 } from "./order";
+import { completionLatencyCohorts, recordedCompletionCohort, type CompletionMarkers,
+  type CompletionLatencyCohorts, type CompletionLatencyCohort } from "./completion-latency";
 
-export interface A2aOperationsRow {
+export interface A2aOperationsRow extends CompletionMarkers {
   status: A2aOrderStatus;
   createdAt: string;
   updatedAt: string;
@@ -22,6 +24,8 @@ export interface A2aOperationsSnapshot {
   oldestProcessingAgeSeconds: number | null;
   completionLatencyP50Ms: number | null;
   completionLatencyP95Ms: number | null;
+  /** createdAt→updatedAt timing, including later bookkeeping. Old percentiles stay mixed; null means markers unavailable. */
+  completionLatencyCohorts: CompletionLatencyCohorts | null;
   degraded: boolean;
 }
 
@@ -40,6 +44,7 @@ function percentile(values: number[], fraction: number): number | null {
 export function summarizeA2aOperations(
   rows: A2aOperationsRow[],
   nowMs: number,
+  completionMarkersAvailable = false,
 ): A2aOperationsSnapshot {
   const sinceMs = nowMs - 24 * 60 * 60_000;
   let queued = 0;
@@ -50,6 +55,8 @@ export function summarizeA2aOperations(
   let oldestQueuedMs: number | null = null;
   let oldestProcessingMs: number | null = null;
   const completionLatencies: number[] = [];
+  const cohorts = completionMarkersAvailable ? completionLatencyCohorts() : null;
+  const cohortLatencies: Record<CompletionLatencyCohort, number[]> = { ordinary: [], recovered: [], unknown: [] };
 
   for (const row of rows) {
     if (row.status === "running") {
@@ -75,9 +82,12 @@ export function summarizeA2aOperations(
     if (!Number.isFinite(updatedMs) || updatedMs < sinceMs || updatedMs > nowMs) continue;
     if (row.status === "completed") {
       completedLast24h += 1;
+      const cohort = cohorts ? recordedCompletionCohort(row) : null;
+      if (cohort) cohorts![cohort].completed += 1;
       const createdMs = Date.parse(row.createdAt);
       if (Number.isFinite(createdMs) && updatedMs >= createdMs) {
         completionLatencies.push(updatedMs - createdMs);
+        if (cohort) cohortLatencies[cohort].push(updatedMs - createdMs);
       }
     } else {
       failedLast24h += 1;
@@ -85,6 +95,12 @@ export function summarizeA2aOperations(
   }
 
   const terminalLast24h = completedLast24h + failedLast24h;
+  if (cohorts) for (const cohort of ["ordinary", "recovered", "unknown"] as const) {
+    const samples = cohortLatencies[cohort];
+    cohorts[cohort].timedSamples = samples.length;
+    cohorts[cohort].p50Ms = percentile(samples, 0.5);
+    cohorts[cohort].p95Ms = percentile(samples, 0.95);
+  }
   return {
     queued,
     processing,
@@ -101,6 +117,7 @@ export function summarizeA2aOperations(
       oldestProcessingMs === null ? null : Math.floor(oldestProcessingMs / 1_000),
     completionLatencyP50Ms: percentile(completionLatencies, 0.5),
     completionLatencyP95Ms: percentile(completionLatencies, 0.95),
+    completionLatencyCohorts: cohorts,
     degraded: reviewRequired > 0 || (oldestQueuedMs ?? 0) > A2A_QUEUE_SLA_MS,
   };
 }

@@ -140,15 +140,17 @@ describe("keyless current funding availability issuer", () => {
   });
   it("reloads actual namespace state on unseal and rejects a changed ledger snapshot", async () => {
     const isolated = drift;
+    const next = { ...isolated.operation, operationId: randomUUID(), ownerAuthorizationId: randomUUID() };
+    // Prepare the independent owner grant before the real five-second token lifetime.
+    await installGatewayFundingSqliteOwnerAuthorization(isolated.file, isolated.request.expectedIdentity, next);
+    const beforeIssuance = isolated.snapshot();
     respond({ token: "USDC", balances: [{ depositor: isolated.operation.policy.spend, domain: 26, balance: "0.000100" }] });
     const token = await compose(endpoint)(isolated.request); expect(token).not.toBeNull();
-    const next = { ...isolated.operation, operationId: randomUUID(), ownerAuthorizationId: randomUUID() };
-    // Independent trusted owner/app activity, outside the readonly issuer.
-    await installGatewayFundingSqliteOwnerAuthorization(isolated.file, isolated.request.expectedIdentity, next);
+    // Independent actual namespace admission happens after issuance, outside the readonly issuer.
     const writer = openGatewayFundingSqliteLedger(isolated.file, isolated.request.expectedIdentity);
     try { await writer.admitOperation(next.operationId); } finally { writer.close(); }
     const afterIndependentWrite = isolated.snapshot();
-    expect(afterIndependentWrite).not.toEqual(isolated.original);
+    expect(afterIndependentWrite).not.toEqual(beforeIssuance);
     current(token!, isolated.request); // still live: rejection must reload the backend
     await expect(unseal(token!, isolated.request)).rejects.toThrow();
     expect(isolated.snapshot()).toEqual(afterIndependentWrite);

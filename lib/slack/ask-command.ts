@@ -10,6 +10,7 @@
  */
 
 import { config } from "../config";
+import { formatRecordedUsdc } from "../display/recorded-usdc";
 import { researchAdmissionError } from "../research/availability-contract";
 import type { QueryRun } from "../types";
 
@@ -70,7 +71,7 @@ export function buildAnswerText(run: QueryRun): string {
     parts.push("*Citations and planned rewards — weighted USDC citation rewards*");
     for (const c of run.citations) {
       parts.push(
-        escapeSlack(`${c.sourceName} — $${c.reward.toFixed(4)} (weight ${c.weight.toFixed(2)})`),
+        escapeSlack(`${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (weight ${c.weight.toFixed(2)})`),
       );
     }
     parts.push("");
@@ -78,7 +79,7 @@ export function buildAnswerText(run: QueryRun): string {
 
   const plural = run.citations.length === 1 ? "" : "s";
   parts.push(
-    `${run.citations.length} source${plural} cited · $${run.totalToCreators.toFixed(4)} recorded creator-payment total / ${run.paymentMode ?? "legacy"}`,
+    `${run.citations.length} source${plural} cited · ${formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 })} recorded creator-payment total / ${run.paymentMode ?? "legacy"}`,
     "Planned rewards are not settlement evidence. See the trace for settled, pending, failed or simulated payments.",
     `Full trace: ${config.baseUrl}/dispatch/${run.id}`,
   );

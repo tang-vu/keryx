@@ -1,5 +1,51 @@
 # Supported-surface release parity
 
+## Coordinated research surfaces45 — October 9, 2026 candidate
+
+App0.27.45 coordinates reviewed PR318/319/321/322/323/324 in one genuine merge
+graph and one intended runtime deployment. The candidate identities are
+stdio0.4.12, remote0.3.8, desktop0.4.11 and extension0.1.2. Publication and owner
+installation are separate; none of these new identities is claimed delivered yet.
+
+Web SSE, API, A2A and hosted clients share owner/ingress, derived CSL and exact
+human-money contracts. CLI uses the shared research path and receipt-bound local
+exports. Caller-funded stdio retains its buyer/recovery role and forwards server
+fields, with profile tools requiring separate explicit key scopes. Desktop keeps
+its local task/receipt/native-export role; it gains no profile editor or scheduler.
+Remote MCP advertises a finite405 GET policy and existing POST tools. Extension
+ships the canonical browser formatter and keeps its page/hosted-Ask role; bots
+retain hosted research and exact human money without inferred linked accounts.
+
+Profiles remain private, with wallet comparison before stale-editor reads/writes,
+and no public person page, verified link or payout claim. Their ordinary adapters
+are source-ready; the enrolled production store refuses the capability until a
+separate storage cutover. Source migrations0082/0083 are not applied to production
+by this release. Public latency cohorts preserve unavailable/unknown boundaries.
+Legacy receipt/run/answer bytes and original authority/storage/stock helpers remain
+protected; the changed82-module projection was separately checked offline.
+
+Required exact-source combined CI/platform/PG/build, packaged consumers, npm and
+Registry, installers, extension archive and production readback remain explicit
+gates. Broader acceptance in issues257/260/261/274/281/285 remains open.
+
+Release44 is separately accepted at380647b1: native deployment and eight GET-only
+production views passed, including320/390/1366px report geometry and unchanged
+receipt bytes. Issues245/254 are closed; the linked160-second app43 film remains
+dated archived owner QA. MCP initialization and external badge loading were not
+probed in that GET-only capture, and installed desktop versions remain unverified.
+
+## CSL-JSON export source candidate — October 9, 2026
+
+Recorded references gain shared CSL-JSON exports on web and hosted API/A2A/OpenAI/
+remote MCP, metadata-only bibliography and filtered local literature downloads.
+Repository Operator CLI and desktop0.4.11 candidate derive private JSON files
+from an integrity-checked original-task-bound receipt. Caller-funded stdio types
+forward optional server fields; its formatter-free bundle and published0.4.11
+identity remain unchanged. Extension and bots retain their hosted/page/answer
+roles. No provider/payment, account sync or schedule is added. See the
+[surface and acceptance record](engineering/csl-json-reference-export-2026-10-09.md);
+publication, production and installed-client evidence remain release gates.
+
 ## Coordinated issue batch, October 9, 2026
 
 Application **0.27.44 candidate** combines the contextual temporal-command boundary,

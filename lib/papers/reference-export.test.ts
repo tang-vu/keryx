@@ -1,9 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { PAPER_CATALOG } from "./catalog";
-import { paperReferencesBibtex, paperReferencesRis } from "./reference-export";
+import { paperReferencesBibtex, paperReferencesCslJson, paperReferencesRis } from "./reference-export";
 import type { PaperRecord } from "./types";
 
 const paper = PAPER_CATALOG[0];
+
+it("exports saved metadata as CSL-JSON with stable keys across filters, without personal or read data", () => {
+  const arxivId = paper.arxivId!.replace(/v\d+$/, "v99");
+  const version = { ...paper, arxivId, url: `https://arxiv.org/abs/${arxivId}`, metadataUrl: `https://export.arxiv.org/api/query?id_list=${arxivId}` };
+  const result = paperReferencesCslJson([paper, { ...paper, title: "Later snapshot" }, version]);
+  const entries = JSON.parse(result.content);
+  expect(result.count).toBe(2);
+  expect(entries[0]).toMatchObject({ title: paper.title, URL: paper.url, archive: "arXiv", archive_location: paper.arxivId,
+    author: paper.authors.map(literal => ({ literal })), issued: { "date-parts": [[paper.publishedYear]] } });
+  expect(entries[0].id).not.toBe(entries[1].id);
+  expect(JSON.parse(paperReferencesCslJson([version]).content)[0].id).toBe(entries[1].id);
+  expect(JSON.parse(paperReferencesCslJson([version, paper]).content)[1].id).toBe(entries[0].id);
+  expect(result.content).toContain("no Keryx read, citation or settlement evidence");
+  expect(result.content).toContain("Peer review unknown");
+  expect(result.content).not.toContain("Later snapshot");
+  expect(paperReferencesCslJson([])).toEqual({ count: 0, content: "[]\n" });
+  expect(() => paperReferencesCslJson([{ ...paper, notes: "PRIVATE NOTE" } as never])).toThrow();
+  expect(() => paperReferencesCslJson(Array.from({ length: 51 }, () => paper))).toThrow();
+});
 
 describe("saved bibliography RIS", () => {
   it("exports literal BibTeX names, provenance and exact identifiers without inferred surname or read authority", () => {

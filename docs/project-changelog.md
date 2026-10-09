@@ -1,5 +1,40 @@
 # Keryx Project Changelog
 
+### Coordinated research surfaces (2026-10-09, v0.27.45 candidate)
+
+- Attribute new API and paid A2A research to independently verified owners and
+  record closed ingress labels separately. Historical and unlinked chat ownership
+  remains unknown; this adds no payment rights or backfill.
+- Preserve exact micro-USDC in human summaries on web, hosted transports, CLI,
+  stdio and bots, with the same checked formatter in extension0.1.2. Invalid or
+  fractional-micro records remain unavailable; machine money and receipts stay
+  unchanged. CSL-JSON exports and desktop0.4.11 retain their scope below.
+- Separate ordinary, explicitly recovered and unknown recorded-completion cohorts.
+  These are acceptance-to-last-update timings, not first-answer or settlement SLOs.
+- Remote MCP0.3.8 declines standalone GET streams with405 before authentication or
+  storage; POST research and recovery remain intact. Stdio0.4.12 adds explicitly
+  scoped private-profile read/update tools. Private profile fields/API/editor are
+  staged for ordinary storage; production CRUD still requires its separate sealed
+  storage cutover and acceptance. No new migration is applied by this release.
+- This candidate preserves the reviewed feature heads in one real merge graph.
+  Final combined aggregate/domain/platform checks, exact-main package/installer
+  publication, production health and applicable readback remain release gates.
+  No fresh model call, payment, schedule, installed-client or adoption is claimed.
+
+### CSL-JSON reference exports (2026-10-09, source candidate)
+
+- Download recorded research references and separate metadata-only bibliographies
+  as CSL-JSON. The local literature workspace exports the current filtered papers
+  with stable exact-version keys and excludes personal notes and review questions.
+- Hosted API/A2A/OpenAI/remote MCP share derived export fields. Operator CLI adds
+  `brief --format csl-json`; desktop0.4.11 candidate adds the checked private JSON
+  export and native save-dialog choice. Original receipts and stored bibliography
+  text/BibTeX/RIS snapshots remain unchanged.
+- Focused format/transport/receipt/browser tests, app and desktop TypeScript and
+  upstream CSL schema checks passed locally. Full production build, packaged
+  desktop smoke, publication/deployment and installed-client gates remain open.
+  Zotero account sync and private revocable `.bib` URLs remain in issue285.
+
 ### Report layout and research command boundaries (2026-10-09, v0.27.44 candidate)
 
 - Keep complete related-report questions inside the mobile layout, including long

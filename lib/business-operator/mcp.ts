@@ -15,7 +15,7 @@ interface DiscoveryRegistrar {
 export function registerOperatorDiscovery(server: DiscoveryRegistrar, read: () => Promise<unknown>) {
   server.registerTool("keryx_operator_status", {
     title: "Keryx business Operator status",
-    description: "Observe public prepaid research operations, queue and hold/review rationale. No spending or execution authority; exact books and customer jobs stay private.",
+    description: "Observe public prepaid research operations, queue, recorded ordinary/recovered/unknown completion latency cohorts and hold/review rationale. Timing is order createdAt to updatedAt (acceptance to recorded completion/update); later reconciliation can extend it. It is not first-answer or settlement time. Missing capability stays null. No spending or execution authority; exact books and customer jobs stay private.",
     inputSchema: {}, annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   }, async () => {
     try {
