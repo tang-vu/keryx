@@ -37,12 +37,12 @@ export function microFromUsdc(value: number): bigint {
   if (!Number.isFinite(value) || value < 0) throw new Error("Invalid USDC amount");
   const match = /^(\d+)(?:\.(\d{1,6}))?$/.exec(String(value));
   if (!match) throw new Error("USDC amount is not an exact six-decimal value");
-  const micro = BigInt(match[1]) * 1_000_000n + BigInt((match[2] ?? "").padEnd(6, "0"));
+  const micro = BigInt(match[1]) * BigInt(1_000_000) + BigInt((match[2] ?? "").padEnd(6, "0"));
   if (micro > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Unsafe legacy USDC amount");
   return micro;
 }
 export function usdcFromMicro(value: string): number {
-  if (!/^(0|[1-9]\d{0,6})$/.test(value) || BigInt(value) > 1_000_000n) throw new Error("Study amount outside bound");
+  if (!/^(0|[1-9]\d{0,6})$/.test(value) || BigInt(value) > BigInt(1_000_000)) throw new Error("Study amount outside bound");
   const amount = Number(value) / 1_000_000;
   if (microFromUsdc(amount) !== BigInt(value)) throw new Error("Study amount did not round-trip");
   return amount;

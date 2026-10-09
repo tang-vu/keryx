@@ -3,19 +3,19 @@ import type { StudyTrial } from "./runner";
 import { BUDGETS, PRICES, canonical, sha256 } from "./contract";
 
 export interface StudyArtifact {
-  version: 1; corpusSha256: string; runtimeSources: Record<string, string>; lockSha256: string;
+  version: 1; corpusSha256: string; runtimeSources: Record<string, string>; unresolvedSourceInputs: string[]; lockSha256: string;
   design: { engine: "heuristic"; mode: "offline"; network: "eip155:5042002"; modelCalls: 0; searchCalls: 0;
     citationPoolRatio: 0.5; attentionLimit: 4; reevaluateRounds: 1; freshStoreAndCachePerTrial: true };
   outboundAttempts: number; canonicalOmissions: string[]; trials: StudyTrial[];
 }
-export function artifact(corpus: StudyCorpus, trials: StudyTrial[], runtimeSources: Record<string, string>, lockSha256: string,
+export function artifact(corpus: StudyCorpus, trials: StudyTrial[], inputs: { files: Record<string, string>; unresolved: string[] }, lockSha256: string,
   outboundAttempts: number): StudyArtifact {
   if (trials.length !== 48 || new Set(trials.map(trial => trial.id)).size !== 48 || outboundAttempts !== 0)
     throw new Error("Incomplete or unsafe study matrix");
-  return { version: 1, corpusSha256: sha256(canonical(corpus)), runtimeSources, lockSha256,
+  return { version: 1, corpusSha256: sha256(canonical(corpus)), runtimeSources: inputs.files, unresolvedSourceInputs: inputs.unresolved, lockSha256,
     design: { engine: "heuristic", mode: "offline", network: "eip155:5042002", modelCalls: 0, searchCalls: 0,
       citationPoolRatio: 0.5, attentionLimit: 4, reevaluateRounds: 1, freshStoreAndCachePerTrial: true }, outboundAttempts,
-    canonicalOmissions: ["QueryRun.createdAt", "QueryRun.durationMs", "TraceStep.ts", "PaymentRecord.id", "PaymentRecord.createdAt"], trials };
+    canonicalOmissions: ["QueryRun.createdAt", "QueryRun.durationMs", "TraceStep.ts", "PaymentRecord.id", "PaymentRecord.createdAt", "TraceStep.detail.PaymentRecord.id", "TraceStep.detail.PaymentRecord.createdAt"], trials };
 }
 function fraction(numerator: number, denominator: number): string {
   return denominator === 0 ? "not measured (0 observations)" : `${numerator}/${denominator} (${(100 * numerator / denominator).toFixed(1)}%)`;
@@ -28,8 +28,8 @@ function summarize(trials: StudyTrial[]) {
     claims: fraction(sum(t => t.metrics.literalReadBoundClaimRate.numerator), sum(t => t.metrics.literalReadBoundClaimRate.denominator)),
     facts: fraction(sum(t => t.metrics.requiredFactCompleteness.numerator), sum(t => t.metrics.requiredFactCompleteness.denominator)),
     citations: fraction(sum(t => t.metrics.literalReadBoundCitationRate.numerator), sum(t => t.metrics.literalReadBoundCitationRate.denominator)),
-    toll: String(trials.reduce((total, trial) => total + BigInt(trial.metrics.fetchMicro), 0n)),
-    reward: String(trials.reduce((total, trial) => total + BigInt(trial.metrics.citationMicro), 0n)), policyChanges };
+    toll: String(trials.reduce((total, trial) => total + BigInt(trial.metrics.fetchMicro), BigInt(0))),
+    reward: String(trials.reduce((total, trial) => total + BigInt(trial.metrics.citationMicro), BigInt(0))), policyChanges };
 }
 export function renderStudy(result: StudyArtifact, corpus: StudyCorpus): string {
   const row = (label: string, trials: StudyTrial[]) => {
@@ -93,7 +93,7 @@ The bounded CLI runs all 48 actual trials in a fresh process (120-second deadlin
 - [Actual canonical synthetic outputs, proposals, reads, simulated ledger and metrics](../../fixtures/evals/studies/paying-source-results-v1.json)
 - [Launcher](../../scripts/eval-paying-source-study.mts), [actual pipeline runner](../../lib/evals/paying-source-study/runner.ts), [literal rubric](../../lib/evals/paying-source-study/rubric.ts), [report generator](../../lib/evals/paying-source-study/report.ts)
 
-Corpus canonical SHA-256: \`${result.corpusSha256}\`. Lock SHA-256: \`${result.lockSha256}\`. The JSON pins SHA-256 for every non-test TypeScript file under \`lib/\` and the launcher, covering the study's application inputs; dependency bytes are bounded by the lockfile, not independently audited here. Canonicalization omits only ${result.canonicalOmissions.map(field => `\`${field}\``).join(", ")}; answer, decision, quote, policy trace and payment values are actual outputs. Numeric rates in tables are rounded only for display; exact counts/ratios and integer amounts are retained.
+Corpus canonical SHA-256: \`${result.corpusSha256}\`. Lock SHA-256: \`${result.lockSha256}\`. The JSON pins ${Object.keys(result.runtimeSources).length} application source files reachable by static literal relative/\`@/\` imports, exports and imports/requires from the launcher, including potential unexecuted branches. The TypeScript syntax walker does not prove a complete executed dependency graph; ${result.unresolvedSourceInputs.length} unresolved/nonliteral forms are listed in the JSON, and arbitrary filesystem reads/generated code are outside this source boundary. Source and lock hashes normalize CRLF to LF to match Git's text across Windows/Linux; no other source transformation occurs. Node built-ins use the declared supported runtime; package dependency bytes are bounded by the lockfile, not independently audited here. Relevant source/dependency changes require actual reproduction and review of the newly generated artifact, rather than waiving a drift. Canonicalization omits only ${result.canonicalOmissions.map(field => `\`${field}\``).join(", ")}; answer, decision, quote, policy trace and payment values are actual outputs. Numeric rates in tables are rounded only for display; exact counts/ratios and integer amounts are retained.
 
 ## Surface and acceptance boundaries
 

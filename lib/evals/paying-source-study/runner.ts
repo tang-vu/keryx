@@ -20,6 +20,14 @@ export function assertSimulated(payment: PaymentRecord, queryId: string): void {
     throw new Error("Study refused a non-simulation payment");
   microFromUsdc(payment.amountUsdc);
 }
+function canonicalTraceDetail(detail: unknown, queryId: string): unknown {
+  if (detail && typeof detail === "object" && "kind" in detail && ["fetch", "citation"].includes(String(detail.kind))) {
+    assertSimulated(detail as PaymentRecord, queryId);
+    const { id: _id, createdAt: _at, ...payment } = detail as PaymentRecord;
+    return payment;
+  }
+  return detail;
+}
 export async function runStudy(corpus: StudyCorpus): Promise<StudyTrial[]> {
   // These imports occur only after the CLI worker establishes its offline/outbound boundary.
   assertStudyBoundary();
@@ -32,7 +40,7 @@ export async function runStudy(corpus: StudyCorpus): Promise<StudyTrial[]> {
     const id = `study-${question.id}-b${budgetMicro}-p${paidPriceMicro}`;
     const store = new SqliteAdapter(":memory:");
     const payments: PaymentRecord[] = [];
-    const cache = new Map<string, string>();
+    const cache = new Map<string, { content: string; createdAt: string }>();
     const counts: Record<string, number> = {};
     const count = (key: string) => { counts[key] = (counts[key] ?? 0) + 1; };
     try {
@@ -40,18 +48,18 @@ export async function runStudy(corpus: StudyCorpus): Promise<StudyTrial[]> {
       for (const { source, item } of fixtureRows(question, paidPriceMicro)) {
         await store.upsertSource(source); await store.addItems([item]);
       }
-      const allowed = new Set(["listSources", "getSource", "getItems", "getItem", "getArticleOffer", "getSourceClaimForSource"]);
+      const allowed = new Set(["listSources", "getSource", "getItems", "getItem", "getArticleOffer", "getSourceClaimForSource", "listPublicReferences", "getPaperState"]);
       const db = new Proxy(store, { get(target, key) {
-        if (typeof key !== "string" || !allowed.has(key)) { count("db.denied"); throw new Error(`Study denied database method ${String(key)}`); }
+        if (typeof key !== "string" || !allowed.has(key)) { count(`db.denied.${String(key)}`); throw new Error(`Study denied database method ${String(key)}`); }
         const method = Reflect.get(target, key) as (...args: unknown[]) => unknown;
         return (...args: unknown[]) => { count(`db.${key}`); return method.apply(target, args); };
       } }) as KeryxDB;
       const effects: ResearchEffects = {
         scope: { kind: "job", queryId: id },
         recordPayment: async payment => { assertSimulated(payment, id); payments.push(structuredClone(payment)); },
-        getCached: async key => { count("cache.get"); return cache.get(key) ?? null; },
-        getCachedAt: async () => null,
-        setCached: async (key, body) => { count("cache.set"); cache.set(key, body); },
+        getCached: async key => { count("cache.get"); return cache.get(key)?.content ?? null; },
+        getCachedAt: async key => { count("cache.getAt"); return cache.get(key)?.createdAt ?? null; },
+        setCached: async (key, body) => { count("cache.set"); cache.set(key, { content: body, createdAt: new Date().toISOString() }); },
         saveQueryRun: async () => { throw new Error("Study does not persist query history"); },
         discoverExternal: async () => { count("discovery.disabled"); return []; },
         decisionContext: async () => ({ sample: 0 }),
@@ -78,15 +86,16 @@ export async function runStudy(corpus: StudyCorpus): Promise<StudyTrial[]> {
       if (run.engine !== "heuristic" || run.paymentMode !== "offline" || run.fundingOwner !== "offline"
         || run.settledPayments !== 0 || run.pendingPayments !== 0 || (run.llmCalls?.length ?? 0) !== 0
         || (run.llmUsage?.length ?? 0) !== 0) throw new Error("Study runtime escaped fixed offline contract");
-      const total = payments.reduce((sum, payment) => sum + microFromUsdc(payment.amountUsdc), 0n);
+      const total = payments.reduce((sum, payment) => sum + microFromUsdc(payment.amountUsdc), BigInt(0));
       if (total !== microFromUsdc(run.totalSpent) || total > BigInt(budgetMicro)
         || microFromUsdc(run.totalToCreators) !== total) throw new Error("Study accounting mismatch");
       const { createdAt: _createdAt, durationMs: _durationMs, trace, ...output } = run;
       const actualReads = [...reads.values()];
-      if (counts["db.denied"]) throw new Error("Study attempted an undeclared database method");
+      const denied = Object.keys(counts).filter(key => key.startsWith("db.denied."));
+      if (denied.length) throw new Error(`Study attempted undeclared database methods: ${denied.join(", ")}`);
       trials.push({ id, questionId: question.id, budgetMicro, paidPriceMicro, proposals, reads: actualReads,
         payments: payments.map(({ id: _id, createdAt: _at, ...payment }) => payment), output,
-        trace: trace.map(step => ({ phase: step.phase, message: step.message, ...(step.detail === undefined ? {} : { detail: step.detail }) })),
+        trace: trace.map(step => ({ phase: step.phase, message: step.message, ...(step.detail === undefined ? {} : { detail: canonicalTraceDetail(step.detail, id) }) })),
         effects: counts, metrics: gradeTrial(question, run, actualReads, payments) });
     } finally { store.close(); }
   }

@@ -5,6 +5,7 @@ import { spawn } from "node:child_process";
 import { artifact, renderStudy, type StudyArtifact } from "../lib/evals/paying-source-study/report";
 import { canonical, parseCorpus, sha256 } from "../lib/evals/paying-source-study/contract";
 import { denyOutbound, studyEnvironment } from "../lib/evals/paying-source-study/offline-boundary";
+import { sourceInputs } from "../lib/evals/paying-source-study/source-inputs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const corpusPath = path.join(root, "fixtures/evals/studies/paying-source-corpus-v1.json");
@@ -14,22 +15,13 @@ const args = process.argv.slice(2);
 if (args.length !== 1 || !["--check", "--write", "--internal-worker"].includes(args[0]))
   throw new Error("Use --check or --write; no provider, private input or payment options are accepted");
 
-function runtimeSources(): Record<string, string> {
-  const files: string[] = [];
-  function visit(directory: string) { for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name, "en"))) {
-    const absolute = path.join(directory, entry.name);
-    if (entry.isDirectory()) visit(absolute);
-    else if (entry.isFile() && /\.ts$/.test(entry.name) && !/\.test\.ts$/.test(entry.name)) files.push(absolute);
-  } }
-  visit(path.join(root, "lib")); files.push(fileURLToPath(import.meta.url));
-  return Object.fromEntries(files.map(file => [path.relative(root, file).replaceAll("\\", "/"), sha256(fs.readFileSync(file))]));
-}
 if (args[0] === "--internal-worker") {
   const boundary = denyOutbound();
   const corpus = parseCorpus(JSON.parse(fs.readFileSync(corpusPath, "utf8")));
   const { runStudy } = await import("../lib/evals/paying-source-study/runner");
   const trials = await runStudy(corpus);
-  process.stdout.write(canonical(artifact(corpus, trials, runtimeSources(), sha256(fs.readFileSync(path.join(root, "package-lock.json"))), boundary.attempts())));
+  const inputs = sourceInputs(root, fileURLToPath(import.meta.url));
+  process.stdout.write(canonical(artifact(corpus, trials, inputs, sha256(fs.readFileSync(path.join(root, "package-lock.json"), "utf8").replaceAll("\r\n", "\n")), boundary.attempts())));
 } else {
   const child = spawn(process.execPath, ["--import", "tsx", "--no-warnings", fileURLToPath(import.meta.url), "--internal-worker"],
     { cwd: root, env: studyEnvironment(), stdio: ["ignore", "pipe", "pipe"], windowsHide: true });

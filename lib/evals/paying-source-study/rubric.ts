@@ -13,7 +13,7 @@ export function gradeTrial(question: StudyQuestion, run: QueryRun, reads: Gather
     const read = reads.find(candidate => candidate.marker === evidence.marker && candidate.sourceId === evidence.sourceId);
     if (!doc || !read || evidence.sourceId !== `${question.id}-${doc.id}` || !evidence.quote.trim()
       || evidence.contentVersion !== doc.contentVersion || read.contentVersion !== doc.contentVersion
-      || evidence.itemUrl !== retainedItem(question.id, doc).link || read.itemId !== evidence.itemId
+      || evidence.itemUrl !== retainedItem(question.id, doc).link || read.itemUrl !== evidence.itemUrl || read.itemId !== evidence.itemId
       || evidence.contentReceipt?.bodyHash !== doc.bodyHash || read.contentReceipt?.bodyHash !== doc.bodyHash
       || !doc.body.includes(evidence.quote) || !read.text.includes(evidence.quote)
       || !run.answer.includes(`[${evidence.marker}]`) || !run.answer.includes(evidence.quote)
@@ -29,14 +29,14 @@ export function gradeTrial(question: StudyQuestion, run: QueryRun, reads: Gather
     evidence.quote.includes(fact.literal) && fact.documentIds.some(docId => evidence.sourceId === `${question.id}-${docId}`)));
   const cited = run.citations.filter(citation => verified.some(evidence => evidence.marker === citation.marker));
   const fetchMicro = payments.filter(payment => payment.kind === "fetch")
-    .reduce((sum, payment) => sum + microFromUsdc(payment.amountUsdc), 0n);
+    .reduce((sum, payment) => sum + microFromUsdc(payment.amountUsdc), BigInt(0));
   const rewards = new Map<string, bigint>();
   for (const payment of payments.filter(payment => payment.kind === "citation"))
-    rewards.set(payment.sourceId!, (rewards.get(payment.sourceId!) ?? 0n) + microFromUsdc(payment.amountUsdc));
+    rewards.set(payment.sourceId!, (rewards.get(payment.sourceId!) ?? BigInt(0)) + microFromUsdc(payment.amountUsdc));
   const sortedRewards = [...rewards].sort(([a], [b]) => a.localeCompare(b, "en"));
-  const citationMicro = sortedRewards.reduce((sum, [, amount]) => sum + amount, 0n);
-  const max = sortedRewards.reduce((highest, [, amount]) => amount > highest ? amount : highest, 0n);
-  const squares = sortedRewards.reduce((sum, [, amount]) => sum + amount * amount, 0n);
+  const citationMicro = sortedRewards.reduce((sum, [, amount]) => sum + amount, BigInt(0));
+  const max = sortedRewards.reduce((highest, [, amount]) => amount > highest ? amount : highest, BigInt(0));
+  const squares = sortedRewards.reduce((sum, [, amount]) => sum + amount * amount, BigInt(0));
   return { literalReadBoundClaimRate: rate(literalClaimIndexes.size, run.subClaims.length),
     requiredFactCompleteness: rate(completeFacts.length, question.facts.length),
     literalReadBoundCitationRate: rate(cited.length, run.citations.length),
@@ -44,7 +44,7 @@ export function gradeTrial(question: StudyQuestion, run: QueryRun, reads: Gather
     actualReads: reads.length, paidReads: payments.filter(payment => payment.kind === "fetch").length,
     fetchMicro: String(fetchMicro), citationMicro: String(citationMicro),
     rewardBySourceMicro: Object.fromEntries(sortedRewards.map(([source, amount]) => [source, String(amount)])),
-    topRewardShare: citationMicro === 0n ? null : { numerator: String(max), denominator: String(citationMicro) },
-    rewardHhi: citationMicro === 0n ? null : { numerator: String(squares), denominator: String(citationMicro * citationMicro) },
+    topRewardShare: citationMicro === BigInt(0) ? null : { numerator: String(max), denominator: String(citationMicro) },
+    rewardHhi: citationMicro === BigInt(0) ? null : { numerator: String(squares), denominator: String(citationMicro * citationMicro) },
     semanticCorrectness: null, counterfactualPolicyWinner: null, explorationEffect: null, realLlmSpend: null };
 }
