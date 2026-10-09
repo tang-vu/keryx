@@ -8,13 +8,14 @@ import { selectCitedStatements } from "../agent/cited-statements";
 const spanishQuestion = 'Soy verificador de información científica en México. Lea https://science.nasa.gov/moon/facts/, en especial "Orbit and Rotation". En español, escriba una nota breve de tres frases: explique si la Luna gira sobre su eje, por qué normalmente vemos el mismo hemisferio desde la Tierra y por qué llamar a la cara lejana "siempre oscura" es engañoso. Cite pasajes inspeccionables de esa página de NASA. No presente una lectura de texto como observación o experimento propio.';
 
 describe("ordinary scaffold language fallback", () => {
+  it("selects Spanish scaffolding and generation guidance for the frozen NASA request", () => {
+    const presentation = answerPresentation(spanishQuestion);
+    expect(presentation).toEqual({ language: "es", requestedLanguage: "es" });
+    expect(presentationStatementGuidance(presentation)).toContain("Spanish");
+  });
   it.each([
-    spanishQuestion,
     "Explique si la Luna gira sobre su eje y para qué sirve esa explicación.",
     "Preciso información sobre la Luna para esta investigación.",
-    "Sou professora e preciso de uma explicação. Reply in Spanish.",
-    "Sou professora e preciso de uma explicação. En español, responde brevemente.",
-    "Sou professora e preciso de uma explicação. Responda en español.",
     "Sou professora e preciso de uma explicação. En français, expliquez le comportement.",
     "Sou professora e preciso de uma explicação. Antworte auf Deutsch.",
     "Sou professora e preciso de uma explicação. Write in Klingon.",
@@ -23,6 +24,16 @@ describe("ordinary scaffold language fallback", () => {
     expect(presentation.language).toBe("en");
     expect(presentation.requestedLanguage).toBeUndefined();
     expect(presentationStatementGuidance(presentation)).toBe("");
+  });
+
+  it.each([
+    "Sou professora e preciso de uma explicação. Reply in Spanish.",
+    "Sou professora e preciso de uma explicação. En español, responde brevemente.",
+    "Sou professora e preciso de uma explicação. Responda en español.",
+    "Responda em espanhol.",
+    "En español, escriba sobre la Luna. Answer in Portuguese. Responde en español.",
+  ])("honors positive Spanish directives rather than Portuguese context: %s", question => {
+    expect(answerPresentation(question)).toEqual({ language: "es", requestedLanguage: "es" });
   });
 
   it.each([
@@ -54,9 +65,9 @@ describe("ordinary scaffold language fallback", () => {
   it.each(["\n", "\r\n", "\u2028", "\u2029"])("keeps a new positive clause after a negative discourse line (%j)", separator => {
     expect(answerPresentation(`No thanks${separator}Answer in Portuguese.`)).toEqual({language: "pt", requestedLanguage: "pt"});
     expect(answerPresentation(`No thanks${separator}Write one short bullet.`)).toEqual({language: "en", requestedBulletCount: 1});
-    const fallback = answerPresentation(`Sou professora e preciso de uma explicação. No thanks${separator}En español, responde brevemente.`);
-    expect(fallback).toEqual({language: "en"});
-    expect(presentationStatementGuidance(fallback)).toBe("");
+    const presentation = answerPresentation(`Sou professora e preciso de uma explicação. No thanks${separator}En español, responde brevemente.`);
+    expect(presentation).toEqual({language: "es", requestedLanguage: "es"});
+    expect(presentationStatementGuidance(presentation)).toContain("Spanish");
   });
 
   it.each([
@@ -92,7 +103,7 @@ describe("ordinary scaffold language fallback", () => {
     expect(answerPresentation(`Pas de problème${separator}Answer in Portuguese.`)).toEqual({language: "pt", requestedLanguage: "pt"});
   });
 
-  it("keeps the exact admitted quote, statement, markers and ledger while selecting the English scaffold fallback", () => {
+  it("keeps exact admitted evidence with Spanish scaffolding and preserves retained English bytes", () => {
     const quote = "Synthetic source text: the same side faces Earth.";
     const statement = "La misma cara mira hacia la Tierra.";
     const evidence = [{claimIndex: 0, marker: "S1", quote, quoteSpan: {start: 0, end: quote.length},
@@ -106,11 +117,31 @@ describe("ordinary scaffold language fallback", () => {
     const input = {question: spanishQuestion, answer: "Withheld draft [S1]", ledger,
       statements: selectCitedStatements(evidence, ledger)};
     const answer = finalizeGroundedAnswer({...input, presentation: answerPresentation(spanishQuestion)});
-    expect(answer).toContain("Research target 1");
+    expect(answer).toContain("Objetivo de investigación 1");
+    expect(answer).toContain("Tema solicitado (no verificado)");
     expect(answer).not.toContain("Objetivo de pesquisa");
-    expect(answer).toContain(`${statement} [S1] Source text: “${quote}”`);
+    expect(answer).toContain(`${statement} [S1] Texto de la fuente: “${quote}”`);
     expect(JSON.stringify(ledger, (_key, value) => value instanceof Set ? [...value] : value)).toBe(before);
     // A private/retained call without ordinary presentation keeps its existing bytes.
-    expect(finalizeGroundedAnswer(input)).toBe(answer);
+    const retained = finalizeGroundedAnswer(input);
+    expect(retained).toContain("Research target 1");
+    expect(retained).toContain(`${statement} [S1] Source text: “${quote}”`);
+    expect(answerPresentation(spanishQuestion, "retained")).toEqual({language: "en"});
+    expect(finalizeGroundedAnswer({...input, presentation: answerPresentation(spanishQuestion, "retained")})).toBe(retained);
+  });
+
+  it.each([false, true])("uses Spanish gap or unavailable copy without retaining a draft (%s)", synthesisUnavailable => {
+    const ledger = buildEvidenceLedger({subClaims: ["Iluminación"], gathered: [], answer: "UNSUPPORTED DRAFT",
+      declaredMarkers: [], proposedEvidence: [], finalAssessment: [{claim: "Iluminación", coverage: 0, coveredBy: []}]});
+    const before = JSON.stringify(ledger, (_key, value) => value instanceof Set ? [...value] : value);
+    const answer = finalizeGroundedAnswer({question: spanishQuestion, answer: "UNSUPPORTED DRAFT", ledger,
+      presentation: answerPresentation(spanishQuestion), synthesisUnavailable});
+    expect(answer).toContain("No hay una respuesta respaldada");
+    expect(answer).toContain("Objetivo de investigación 1");
+    expect(answer).toContain(synthesisUnavailable ? "No fue posible evaluar las evidencias" : "Falta de evidencia");
+    expect(answer).not.toContain("UNSUPPORTED DRAFT");
+    expect(answer).not.toContain("Research target");
+    expect(answer).not.toContain("Objetivo de pesquisa");
+    expect(JSON.stringify(ledger, (_key, value) => value instanceof Set ? [...value] : value)).toBe(before);
   });
 });
