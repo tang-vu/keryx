@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useAccount, useSignTypedData } from "wagmi";
+import { useAccount, useConfig, useSignTypedData } from "wagmi";
+import { getConnection } from "wagmi/actions";
 import { formatUnits, keccak256, toBytes } from "viem";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { browserPaymentProfile, browserRegistryAddress } from "@/lib/browser-payment-profile";
@@ -15,6 +16,7 @@ const labels: Record<SponsoredRegistration["state"], string> = { prepared: "Revi
   reverted: "Registration reverted", expired: "Unsigned registration expired" };
 export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
   const wallet = useAccount(), { session } = useSiweAuth(), { signTypedDataAsync } = useSignTypedData();
+  const walletConfig = useConfig();
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [claim, setClaim] = useState<{ id: string; canonicalUrl: string; rssUrl?: string; ownerWallet: string } | null>(null);
   const [row, setRow] = useState<SponsoredRegistration | null>(null), [error, setError] = useState("");
@@ -37,7 +39,10 @@ export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
   }
   function checkedOriginal(value: unknown) {
     const original = sponsoredRegistrationSchema.parse(value), identity = current.current;
-    if (identity.chainId !== profile.chainId || original.creator !== identity.address?.toLowerCase() || original.creator !== identity.session?.toLowerCase() ||
+    // The connection store can change while React still shows the prior wallet.
+    const connection = getConnection(walletConfig);
+    if (connection.status !== "connected" || connection.chainId !== profile.chainId || original.creator !== connection.address?.toLowerCase() ||
+      identity.chainId !== profile.chainId || original.creator !== identity.address?.toLowerCase() || original.creator !== identity.session?.toLowerCase() ||
       original.chainId !== profile.chainId || original.registryAddress !== registry.toLowerCase() ||
       original.params.payoutWallet !== original.creator || original.onchainId !== registrationId(original.creator, original.params.urlHash) ||
       original.params.urlHash !== keccak256(toBytes(original.canonicalUrl)) || original.id !== registrationIntentDigest(original))
@@ -109,12 +114,13 @@ export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
   }
   async function sign() {
     if (!row || row.state !== "prepared" || busy || !authenticated || attempted.current.has(row.id)) return;
-    const original = checkedOriginal(row), epoch = generation.current;
-    if (getBrowserRegistryVersion() !== 3 || !availability?.available || original.relayer !== availability.sponsorAddress || original.policyDigest !== availability.policyDigest || Date.now() > original.deadline * 1000) {
-      setError("This original has no current signing allowance. Inspect its status; do not register again."); return;
-    }
+    const epoch = generation.current;
     setBusy(true); setError("");
     try {
+      const original = checkedOriginal(row);
+      if (getBrowserRegistryVersion() !== 3 || !availability?.available || original.relayer !== availability.sponsorAddress || original.policyDigest !== availability.policyDigest || Date.now() > original.deadline * 1000) {
+        setError("This original has no current signing allowance. Inspect its status; do not register again."); return;
+      }
       const signature = await signTypedDataAsync({ ...registrationTypedData(original), account: original.creator });
       if (epoch !== generation.current) return;
       checkedOriginal(original);

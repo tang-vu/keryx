@@ -12,6 +12,8 @@ const registry = `0x${"b".repeat(40)}` as const, sponsor = `0x${"c".repeat(40)}`
 const claimId = "1".repeat(64), claimB = "2".repeat(64), hash = `0x${"d".repeat(64)}` as const;
 declare global { interface Window {
   sponsorWallet: { address: string; chainId: number };
+  sponsorConnection: { address: string; chainId: number; status: "connected" };
+  holdSponsorRender: boolean;
   sponsorSignatures: Record<string, unknown>[];
   setSponsorWallet: (value: { address: string; chainId: number }) => void;
   holdSponsorSignature: boolean; finishSponsorSignature: () => void;
@@ -37,9 +39,12 @@ try {
     const bundle = await build({ stdin: { resolveDir: process.cwd(), loader: "tsx", contents: `
 import React from 'react';import {createRoot} from 'react-dom/client';
 import {SponsoredRegistrationForm} from './components/keryx/sponsored-registration-form';
-window.sponsorSignatures=[];window.holdSponsorSignature=false;
+window.sponsorSignatures=[];window.holdSponsorSignature=false;window.holdSponsorRender=false;
+window.sponsorConnection={address:'${creator}',chainId:${profile.chainId},status:'connected'};
 function Harness(){const [wallet,setWallet]=React.useState({address:'${creator}',chainId:${profile.chainId}});
-window.sponsorWallet=wallet;window.setSponsorWallet=setWallet;
+window.sponsorWallet=wallet;window.setSponsorWallet=value=>{
+window.sponsorConnection={...value,status:'connected'};
+if(!window.holdSponsorRender)setWallet(value);};
 return React.createElement(SponsoredRegistrationForm,{claimId:new URL(location.href).searchParams.get('claimId')||undefined});}
 createRoot(document.getElementById('root')).render(React.createElement(Harness));
 ` }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,
@@ -48,11 +53,12 @@ createRoot(document.getElementById('root')).render(React.createElement(Harness))
         "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": JSON.stringify(registry),
         "process.env.NEXT_PUBLIC_KERYX_REGISTRY_VERSION": '"3"', "process.env.NODE_ENV": '"development"' },
       plugins: [{ name: "synthetic-sponsor-wallet", setup(b) {
-        b.onResolve({ filter: /^next\/link$|^wagmi$|use-siwe-auth$/ }, a => ({ path: a.path, namespace: "fixture" }));
+        b.onResolve({ filter: /^next\/link$|^wagmi(?:\/actions)?$|use-siwe-auth$/ }, a => ({ path: a.path, namespace: "fixture" }));
         b.onLoad({ filter: /.*/, namespace: "fixture" }, a => ({ resolveDir: process.cwd(), contents:
           a.path === "next/link" ? "import React from 'react';export default function Link(props){return React.createElement('a',props)}" :
-          a.path === "wagmi" ? `
+          a.path === "wagmi/actions" ? "export const getConnection=()=>window.sponsorConnection;" : a.path === "wagmi" ? `
 export const useAccount=()=>window.sponsorWallet;
+export const useConfig=()=>({});
 export const useSignTypedData=()=>({signTypedDataAsync:async args=>{
 window.sponsorSignatures.push(JSON.parse(JSON.stringify(args,(_,v)=>typeof v==='bigint'?String(v):v)));
 if(window.holdSponsorSignature)await new Promise(resolve=>window.finishSponsorSignature=resolve);
@@ -139,15 +145,23 @@ return '0x'+'1'.repeat(130);}});
     await page.evaluate(() => { window.holdSponsorSignature = true; });
     await sign.click(); await page.waitForFunction(() => typeof window.finishSponsorSignature === "function");
     const beforeSwitch = posts.length;
-    await page.evaluate(value => window.setSponsorWallet(value), { address: other, chainId: profile.chainId });
-    await page.evaluate(() => window.finishSponsorSignature());
+    await page.evaluate(value => {
+      window.holdSponsorRender = true; window.setSponsorWallet(value); window.finishSponsorSignature();
+    }, { address: other, chainId: profile.chainId });
+    await page.getByText("Original registration belongs to another wallet or registry", { exact: true }).waitFor();
+    assert.equal(posts.length, beforeSwitch, "A changed connection must fence submission before React commits the new wallet");
+    await page.evaluate(() => { window.holdSponsorRender = false; window.setSponsorWallet(window.sponsorConnection); });
     await page.getByText("Verify this source with the connected wallet first", { exact: true }).waitFor();
     assert.equal(posts.length, beforeSwitch);
     await load(claimB); await sign.waitFor();
     await page.evaluate(() => { window.holdSponsorSignature = true; });
     await sign.click(); await page.waitForFunction(() => typeof window.finishSponsorSignature === "function");
-    await page.evaluate(value => window.setSponsorWallet(value), { address: creator, chainId: 1 });
-    await page.evaluate(() => window.finishSponsorSignature());
+    await page.evaluate(value => {
+      window.holdSponsorRender = true; window.setSponsorWallet(value); window.finishSponsorSignature();
+    }, { address: creator, chainId: 1 });
+    await page.getByText("Original registration belongs to another wallet or registry", { exact: true }).waitFor();
+    assert.equal(posts.length, beforeSwitch, "A changed connection must fence submission before React commits the new chain");
+    await page.evaluate(() => { window.holdSponsorRender = false; window.setSponsorWallet(window.sponsorConnection); });
     await page.getByText(`Connect and sign in with your creator wallet on ${profile.label}.`, { exact: true }).waitFor();
     assert.equal(posts.length, beforeSwitch, "Changing chain during a signature prompt must not submit the previous intent");
 
@@ -170,6 +184,13 @@ return '0x'+'1'.repeat(130);}});
     assert.equal(await page.getByLabel("Original request", { exact: true }).inputValue(), renewedId);
     assert.equal(posts.length, beforeReload, "Lost renewal response reload must find the latest server original without another POST");
     assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
+    // A stale visible button must also refuse a changed connection before prompting.
+    await page.evaluate(value => { window.holdSponsorRender = true; window.setSponsorWallet(value); }, { address: other, chainId: profile.chainId });
+    await sign.click();
+    await page.getByText("Original registration belongs to another wallet or registry", { exact: true }).waitFor();
+    assert.equal(posts.length, beforeReload);
+    assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
+    await load(); await sign.waitFor();
     // Changed policy cannot open a wallet prompt for a retained original.
     row!.policyDigest = `0x${"e".repeat(64)}`; await load(); await sign.click();
     await page.getByText("This original has no current signing allowance", { exact: false }).waitFor();

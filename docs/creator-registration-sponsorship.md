@@ -36,6 +36,11 @@ not acquire this publishing role. SIWE establishes wallet authentication; it doe
 not replace the separate registration authorization. See the authoritative
 [SIWE specification](https://eips.ethereum.org/EIPS/eip-4361).
 
+Before opening the wallet prompt and again after it resolves, the browser reads
+the live Wagmi connection store. An account, chain or connection-state change
+refuses submission even before React renders the new identity. Retained intent
+checks and the server's session/signature checks remain required.
+
 Publishing control must already be proven through the existing website-file or
 RSS-channel claim flow. The exact canonical HTTPS source and RSS URL must share
 an origin. The claim must belong to the creator, retain the prepared source and
