@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { readRecordedReceipt, recordedWalkthrough } from "@/lib/recorded-walkthrough";
 import { walkthroughMessages as messages } from "@/locales/en/walkthrough";
 
@@ -67,7 +68,7 @@ export function RecordedWalkthrough() {
       <section className="space-y-3">
         <h2 className="font-display text-2xl text-ink">{messages.boundaryTitle}</h2>
         <p className="text-sm leading-relaxed text-ink-3">{messages.boundaryBody}</p>
-        <div className="flex flex-wrap gap-x-6"><a href="/operator" className={linkStyle}>{messages.operatorLink}</a><a href={recordedWalkthrough.scopeUrl} className={linkStyle}>{messages.evidenceLink}</a></div>
+        <div className="flex flex-wrap gap-x-6"><Link href="/operator" prefetch={false} className={linkStyle}>{messages.operatorLink}</Link><a href={recordedWalkthrough.scopeUrl} className={linkStyle}>{messages.evidenceLink}</a></div>
       </section>
       <section className="space-y-3 border-t border-line pt-6">
         <h2 className="font-display text-2xl text-ink">{messages.videoTitle}</h2>
@@ -77,7 +78,7 @@ export function RecordedWalkthrough() {
       <section className="space-y-3 border-t border-line pt-6">
         <h2 className="font-display text-2xl text-ink">{messages.newQuestionTitle}</h2>
         <p className="text-sm leading-relaxed text-ink-3">{messages.newQuestionBody}</p>
-        <a href="/" className={linkStyle}>{messages.composerLink}</a>
+        <Link href="/" prefetch={false} className={linkStyle}>{messages.composerLink}</Link>
       </section>
     </div>
   );

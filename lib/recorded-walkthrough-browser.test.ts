@@ -16,6 +16,10 @@ if(path!='/api/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913/receipt'||init.meth
 if(window.unavailable)return new Response('Unavailable',{status:503});return Response.json(window.receipt);};
 createRoot(document.getElementById('root')).render(<RecordedWalkthrough/>);` },
     bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' },
+    plugins: [{ name: "isolated-next-navigation", setup(plugin) {
+      plugin.onResolve({ filter: /^next\/link$/ }, () => ({ path: "link", namespace: "fixture-link" }));
+      plugin.onLoad({ filter: /.*/, namespace: "fixture-link" }, () => ({ resolveDir: process.cwd(), loader: "js", contents: "import React from'react';export default function Link({children,prefetch,...props}){return React.createElement('a',props,children)}" }));
+    } }],
   })).outputFiles[0].text;
   const browser = await chromium.launch({ headless: true });
   try { for (const width of [390, 1280]) {
