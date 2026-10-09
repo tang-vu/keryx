@@ -1198,6 +1198,13 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async a2aOperationsSnapshot(nowMs: number): Promise<A2aOperationsSnapshot> {
+    if (!this.#enrolled) {
+      // Keep completion cohorts and existing counts in one whole-database read.
+      // Never enrich this aggregate with a capped REST slice of private orders.
+      const snapshot = await this.operatorPublicSnapshot(nowMs);
+      if (!snapshot.jobs) throw new Error("A2A operations observation unavailable");
+      return snapshot.jobs;
+    }
     const since = new Date(nowMs - 24 * 60 * 60_000).toISOString();
     const { data, error } = await this.domainCall("a2a_operations_snapshot", { p_since: since }, () => this.#sb
       .from("a2a_orders")
@@ -1210,6 +1217,8 @@ export class SupabaseAdapter implements KeryxDB {
       updatedAt: String(row.updated_at),
       startedAt: row.started_at == null ? null : String(row.started_at),
     })) satisfies A2aOperationsRow[];
+    // The enrolled read contract intentionally returns no completion-path markers.
+    // A future sealed contract migration/enrollment must supply that capability.
     return summarizeA2aOperations(rows, nowMs);
   }
 

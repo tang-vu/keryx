@@ -3,6 +3,9 @@ import { z } from "zod";
 const microPattern = /^(0|[1-9][0-9]{0,15})$/;
 const micro = z.string().regex(microPattern).refine(value => microPattern.test(value) && BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER));
 const count = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const completionLatencySummary = z.object({
+  completed: count, timedSamples: count, p50Ms: count.nullable(), p95Ms: count.nullable(),
+}).strict();
 export const operatorInventorySchema = z.object({
   observedAt: z.string().datetime(), network: z.enum(["eip155:5042", "eip155:5042002"]),
   queuedJobs: count, processingJobs: count, reviewRequiredJobs: count, invalidJobs: count,
@@ -40,6 +43,9 @@ export const operatorBusinessStatusSchema = z.object({
     completionRateLast24h: z.number().min(0).max(1).nullable(),
     oldestQueuedAgeSeconds: count.nullable(), oldestProcessingAgeSeconds: count.nullable(),
     completionLatencyP50Ms: count.nullable(), completionLatencyP95Ms: count.nullable(),
+    // A rolling legacy SQL response has no marker capability, never zero ordinary latency.
+    completionLatencyCohorts: z.object({ ordinary: completionLatencySummary,
+      recovered: completionLatencySummary, unknown: completionLatencySummary }).strict().nullable().default(null),
     degraded: z.boolean(),
   }).strict().nullable(),
   creatorCatalog: z.object({ registered: count.nullable() }).strict(),

@@ -156,6 +156,21 @@ export function OperatorBusinessSnapshot({ status, readState = "ready" }: {
             <Metric label="Failed" value={count(jobs?.failedLast24h)} detail="Orders recorded as failed" Icon={CirclePause} />
           </dl>
           <p className="mt-3 font-serif text-sm leading-relaxed text-ink-3">{terminal === 0 ? "No terminal order outcomes are recorded in this window. That does not establish demand or a success rate." : "Order completion describes delivery state. It does not prove a useful answer, settled creator payments or independent customer demand."}</p>
+          <div className="mt-6" aria-labelledby="completion-latency-heading">
+            <h3 id="completion-latency-heading" className="font-mono text-[11px] uppercase tracking-wider text-ink-3">Completion timing by recorded path</h3>
+            <p className="mt-2 font-serif text-sm leading-relaxed text-ink-3">Acceptance to recorded completion/update, for completions in the last 24 hours. Later reconciliation can extend this time. Ordinary means a versioned service receipt with no recorded recovery. Recovered includes saved-result repair and original fulfillment; missing markers stay unknown.</p>
+            {jobs?.completionLatencyCohorts ? <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-left font-mono text-[10px]">
+                <caption className="sr-only">Recorded completion latency cohorts, not first-answer or payment settlement times</caption>
+                <thead><tr className="border-b border-line">{["Path", "Completed", "Timed samples", "Median", "95th percentile"].map(label => <th key={label} scope="col" className="px-2 py-2 font-normal text-ink-3">{label}</th>)}</tr></thead>
+                <tbody>{(["ordinary", "recovered", "unknown"] as const).map(path => {
+                  const cohort = jobs.completionLatencyCohorts![path];
+                  return <tr key={path} className="border-b border-line"><th scope="row" className="px-2 py-2 font-normal">{{ ordinary: "Ordinary", recovered: "Recovered", unknown: "Unknown path" }[path]}</th><td className="px-2 py-2">{count(cohort.completed)}</td><td className="px-2 py-2">{count(cohort.timedSamples)}</td><td className="px-2 py-2">{elapsed(cohort.p50Ms == null ? null : cohort.p50Ms / 1000)}</td><td className="px-2 py-2">{elapsed(cohort.p95Ms == null ? null : cohort.p95Ms / 1000)}</td></tr>;
+                })}</tbody>
+              </table>
+            </div> : <p className="mt-3 font-serif text-sm text-ink-3">Completion-path timing is unavailable on this storage contract. Missing capability is not zero ordinary latency.</p>}
+            <p className="mt-3 font-mono text-[10px] leading-relaxed text-ink-3">Timing does not measure the first answer or prove settled payments, customer demand or a completion guarantee.</p>
+          </div>
         </div>
         <div className="border border-line bg-panel p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-ink-3">Creator catalog</p>
