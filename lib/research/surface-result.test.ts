@@ -45,14 +45,16 @@ describe("research surface parity", () => {
     expect(surfaceResearch({ ...fresh, provenance: { ...provenance, wallet: "PRIVATE_WALLET" } as never })).not.toHaveProperty("provenance");
   });
 
-  it("derives separate metadata CSL downloads without extending stored bibliography or changing original receipt bytes", async () => {
+  it("retains optional ingress beside metadata CSL downloads without extending stored bibliography or changing original receipt bytes", async () => {
     const run = fixture();
+    run.provenance = { version: 1, surface: "api", ownershipMethod: "api-key" };
     const body = fs.readFileSync(new URL("./fixtures/arxiv-2005.11401v4-bibliography.html", import.meta.url), "utf8");
     run.bibliography = await readBibliographicTask(recognizeBibliographicTask(frenchArxivTask)!, { reader: async url => ({
       requestedUrl: url, finalUrl: url, observedAt: run.createdAt, mediaType: "text/html", body, truncated: false,
     }) });
     const beforeRun = JSON.stringify(run), beforeReceipt = JSON.stringify(buildResearchReceipt(run, []));
     const result = surfaceResearch(run);
+    expect(result.provenance).toEqual(run.provenance);
     expect(result.bibliography).toEqual(run.bibliography);
     expect(result.bibliography!.bibliographyExports).not.toHaveProperty("cslJson");
     expect(JSON.parse(result.bibliographyExports!.cslJson.content)[0]).toMatchObject({ archive_location: "2005.11401v4" });
