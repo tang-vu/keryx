@@ -19,7 +19,7 @@ function ProfileEditor({ wallet }: { wallet: string }) {
   useEffect(() => {
     const controller = new AbortController();
     ownerRequest.current = controller;
-    fetch("/api/me/profile", { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]) }).then(async response => {
+    fetch("/api/me/profile", { cache: "no-store", headers: { "X-Keryx-Expected-Wallet": wallet }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]) }).then(async response => {
       const value = await response.json(); if (!response.ok) throw new Error(value.message ?? "Private profile access is unavailable.");
       const parsed = privateProfileSnapshotSchema.parse(value);
       if (parsed.profile && parsed.profile.wallet !== wallet) throw new Error("Profile owner mismatch.");

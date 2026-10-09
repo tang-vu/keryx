@@ -6364,7 +6364,9 @@ keys select the owner; no body/URL wallet selector or public profile exists.
 Cookie writes additionally compare the editor's required expected-wallet header
 against independently authenticated SIWE authority before profile access; this
 precondition cannot select an owner. Changed owners refuse rather than applying
-a stale editor's fields to another wallet. Scoped key writes retain their verified
+a stale editor's fields to another wallet. The bound web editor also compares
+GET, withholding the new owner's activity even when that owner has no profile.
+Other GET clients may omit this comparison. Scoped key writes retain their verified
 actor and may use the same comparison without gaining rights.
 Historical/default API-key rights remain ask/export. Profile write does not imply
 read, and the developer portal never preselects new private permissions.

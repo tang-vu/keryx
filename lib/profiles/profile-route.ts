@@ -21,7 +21,7 @@ async function readBody(req: Request) {
     const bytes = new Uint8Array(size); let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
     return privateProfileInputSchema.parse(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)));
-  } finally { clearTimeout(timer); await reader.cancel().catch(() => undefined); reader.releaseLock(); }
+  } finally { clearTimeout(timer); void reader.cancel().catch(() => undefined); reader.releaseLock(); }
 }
 function errorResponse(error: unknown) {
   if (error instanceof PrivateProfileError && error.code === "handle_conflict") return authJson({ error: "handle_conflict", message: "That handle is unavailable." }, 409);
@@ -33,7 +33,7 @@ function errorResponse(error: unknown) {
 export function createProfileRoutes(deps: Dependencies) {
   const authenticate = async (req: Request, write: boolean) => {
     const header = req.headers.get("authorization");
-    const expected = write ? req.headers.get("x-keryx-expected-wallet") : null;
+    const expected = req.headers.get("x-keryx-expected-wallet");
     if (expected !== null && !/^0x[0-9a-fA-F]{40}$/.test(expected)) return authJson({ error: "invalid_owner_precondition" }, 400);
     const mismatch = (wallet: string) => expected !== null && expected.toLowerCase() !== profileWallet(wallet);
     if (header !== null) {

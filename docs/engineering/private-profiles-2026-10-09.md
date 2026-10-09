@@ -22,8 +22,11 @@ never fall back to cookie authentication. Cookie PUT and DELETE require exact
 same origin and `X-Keryx-Expected-Wallet` from the editor's bound wallet. This is
 a comparison-only precondition against the independently authenticated wallet;
 it cannot select ownership. Missing/malformed headers refuse (428/400), and a
-changed owner refuses (409) before profile access. Key writes may send the same
-optional precondition without gaining scopes. A wallet change remounts the editor,
+changed owner refuses (409) before profile access. GET also compares this header
+when supplied; the web editor sends it on its initial read, so another wallet's
+activity cannot populate a stale editor even when its profile is null. Existing
+API/key clients may omit it on GET. Key writes may send the same optional
+precondition without gaining scopes. A wallet change remounts the editor,
 cancels its old reads/mutations and withholds stale response updates; sign-out
 removes the entire editor. Cancelling a request is not a rollback promise for
 an already accepted owner-bound write, and no write is automatically retried.
@@ -79,7 +82,7 @@ simulations and are full-store aggregates, independent of REST page sizes.
 query memories joined to that wallet's dispatch IDs; they are recorded machine
 topics, not a user-edited biography or complete research classification.
 
-`creatorsPaid` is a legacy-shaped field name for **distinct creator payee wallets
+`creatorsPaid` is the API field name for **distinct creator payee wallets
 with recorded settled payments in attributed runs**, not a claim that the profile
 owner funded them. It includes positive fetch/citation events only, exact selected
 network, settled flag + settled status + nonempty recorded transfer ID; excludes

@@ -55,4 +55,27 @@ describe("owner private profile API", () => {
     expect((await f.routes.PUT(request("PUT", input, { ...headers, "X-Keryx-Expected-Wallet": bob.toUpperCase().replace("0X", "0x") }))).status).toBe(200); expect(f.store.update).toHaveBeenCalledWith(bob, input);
     const legacy = fixture(null); expect((await legacy.routes.PUT(request("PUT", input, { ...headers, "X-Keryx-Expected-Wallet": bob }))).status).toBe(403); expect(legacy.database).not.toHaveBeenCalled();
   });
+  it("optional GET precondition withholds distinct Bob activity from an Alice editor even when Bob has no profile", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      installSqliteApplicationSchema(sqlite); const port = createSqlitePrivateProfiles(sqlite);
+      sqlite.prepare("INSERT INTO query_runs(id,asker,origin,data) VALUES(?,?,?,?)").run("bob-recorded-run", bob, "mcp", "{}");
+      const db = {} as KeryxDB, profileRead = vi.fn(() => port); Object.defineProperty(db, "privateProfiles", { get: profileRead });
+      const routes = createProfileRoutes({ session: async () => ({ db, wallet: bob }), key: vi.fn(), db: vi.fn(), network: "eip155:5042" });
+      const rejected = await routes.GET(request("GET", undefined, { "X-Keryx-Expected-Wallet": alice }));
+      expect(rejected.status).toBe(409); expect(JSON.stringify(await rejected.json())).not.toContain(bob); expect(profileRead).not.toHaveBeenCalled();
+      for (const headers of [{}, { "X-Keryx-Expected-Wallet": bob }] as Record<string, string>[]) { const own = await routes.GET(request("GET", undefined, headers)); expect(own.status).toBe(200); expect(await own.json()).toMatchObject({ profile: null, activity: { questions: 1, surfacesUsed: ["mcp"] } }); }
+    } finally { sqlite.close(); }
+    const keyed = fixture("profile:read"); expect((await keyed.routes.GET(request("GET", undefined, { Authorization: `Bearer ${rawKey}`, "X-Keryx-Expected-Wallet": alice }))).status).toBe(409); expect(keyed.database).not.toHaveBeenCalled();
+    expect((await keyed.routes.GET(request("GET", undefined, { Authorization: `Bearer ${rawKey}`, "X-Keryx-Expected-Wallet": "malformed" }))).status).toBe(400);
+  });
+  it("the bounded body refuses at its read deadline even if cancellation never settles", async () => {
+    vi.useFakeTimers();
+    try {
+      const f = fixture(), cancel = vi.fn(() => new Promise<void>(() => undefined));
+      const body = new ReadableStream<Uint8Array>({ pull: () => new Promise<void>(() => undefined), cancel });
+      const pending = f.routes.PUT(new Request("https://keryx.cc/api/me/profile", { method: "PUT", body, duplex: "half", headers: { ...cookieHeaders, "Content-Type": "application/json" } } as RequestInit));
+      await vi.advanceTimersByTimeAsync(5001); expect((await pending).status).toBe(400); expect(cancel).toHaveBeenCalledOnce(); expect(f.store.update).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
 });

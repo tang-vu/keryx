@@ -10,11 +10,11 @@ const css = (await Promise.all(cssFiles.map(file => readFile(join(chunks, file),
 const output = join(process.cwd(), ".artifacts", "private-profile-browser"); await mkdir(output, { recursive: true });
 const alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`;
 const bundle = await build({ stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import{PrivateProfileView}from'./app/me/profile/private-profile-view';
-window.auth=null;window.calls=[];window.stores={};window.fail=false;window.held=[];window.delay=false;window.heldMutation=[];window.delayMutation=false;window.cancelledMutation=false;
+window.auth=null;window.calls=[];window.stores={};window.fail=false;window.held=[];window.delay=false;window.heldMutation=[];window.delayMutation=false;window.cancelledMutation=false;window.cookieOwner=null;window.rejectedOwnerReads=0;
 window.fetch=async(url,init={})=>{const method=init.method||'GET';window.calls.push({url:String(url),method});if(String(url)!=='/api/me/profile')throw Error('Unexpected request');
-const owner=window.auth.address.toLowerCase();if(window.fail)return Response.json({message:'Private profile unavailable'},{status:503});
+const owner=(window.cookieOwner||window.auth.address).toLowerCase();if(init.headers['X-Keryx-Expected-Wallet']!==owner){if(method==='GET')window.rejectedOwnerReads++;return Response.json({message:'Your signed-in owner changed.'},{status:409});}if(window.fail)return Response.json({message:'Private profile unavailable'},{status:503});
 if(method==='GET'){if(window.delay){window.delay=false;return new Promise(resolve=>window.held.push(()=>resolve(Response.json({profile:window.stores[owner]||null,activity:{firstSeenAt:null,questions:3,surfacesUsed:['web'],topics:['biology'],creatorsPaid:1,scope:'attributed-current-store',network:'eip155:5042'}}))));}
-return Response.json({profile:window.stores[owner]||null,activity:{firstSeenAt:null,questions:3,surfacesUsed:['web'],topics:['biology'],creatorsPaid:1,scope:'attributed-current-store',network:'eip155:5042'}});}
+return Response.json({profile:window.stores[owner]||null,activity:{firstSeenAt:null,questions:owner===${JSON.stringify(bob)}?77:3,surfacesUsed:['web'],topics:['biology'],creatorsPaid:1,scope:'attributed-current-store',network:'eip155:5042'}});}
 if(['PUT','DELETE'].includes(method)&&init.headers['X-Keryx-Expected-Wallet']!==owner)throw Error('Missing/wrong editor owner precondition');
 if(method==='PUT'){const input=JSON.parse(init.body);const respond=()=>{window.stores[owner]={...input,wallet:owner,createdAt:'2026-10-08T00:00:00.000Z',updatedAt:'2026-10-08T00:00:00.000Z'};return Response.json({profile:window.stores[owner]});};if(window.delayMutation){window.delayMutation=false;return new Promise(resolve=>window.heldMutation.push(()=>{window.cancelledMutation=init.signal.aborted;resolve(respond());}));}return respond();}
 if(method==='DELETE'){delete window.stores[owner];return Response.json({deleted:true});}throw Error('Unexpected mutation');};
@@ -56,8 +56,11 @@ try {
     await page.evaluate(() => { (window as unknown as { heldMutation: (() => void)[] }).heldMutation.splice(0).forEach(release => release()); });
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     assert.equal(await page.evaluate(() => (window as unknown as { cancelledMutation: boolean }).cancelledMutation), true); assert.equal(await page.getByLabel("Display name", { exact: true }).inputValue(), ""); assert.equal(await page.getByText("Private profile saved.", { exact: true }).count(), 0);
+    // A stale Alice UI session must not display Bob's activity when his cookie profile is null.
+    await page.evaluate(bob => { (window as unknown as { cookieOwner: string }).cookieOwner = bob; }, bob); await signIn(page, alice); await page.getByText("Your signed-in owner changed.", { exact: true }).waitFor();
+    assert.equal(await page.getByRole("textbox").count(), 0); assert.equal(await page.getByText(/Attributed dispatches: 77/).count(), 0); assert.equal(await page.evaluate(() => (window as unknown as { rejectedOwnerReads: number }).rejectedOwnerReads), 1);
     // Failed next-owner lookup never leaves the prior owner's fields visible.
-    await page.evaluate(() => { (window as unknown as { fail: boolean }).fail = true; }); await signIn(page, alice); await page.getByText("Private profile unavailable", { exact: true }).waitFor(); assert.equal(await page.getByRole("textbox").count(), 0);
+    await page.evaluate(() => { const fixture = window as unknown as { fail: boolean; cookieOwner: string | null }; fixture.fail = true; fixture.cookieOwner = null; }); await signIn(page, bob); await page.getByText("Private profile unavailable", { exact: true }).waitFor(); assert.equal(await page.getByRole("textbox").count(), 0);
     const calls = await page.evaluate(() => (window as unknown as { calls: { url: string; method: string }[] }).calls); assert(calls.every(call => call.url === "/api/me/profile" && ["GET", "PUT", "DELETE"].includes(call.method))); assert.deepEqual(external, []); assert.deepEqual(errors, []);
     results.push({ width, geometry, calls, external, errors, synthetic: true }); await context.close();
   }
