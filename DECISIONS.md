@@ -33,6 +33,19 @@ Automatic reading/semantic review, expert metrics and coordinated deployment rem
 gated; no receipt, payment, budget or custody authority changes. See
 [scope, surfaces and acceptance](docs/evidence-drafts.md).
 
+## 2026-10-09 — Keep exact native proof for one retained pre-CSL presentation
+
+Derived CSL exports changed the current A2A constructor without changing a
+retained native original's run or saved response. Keep modern full-order equality
+first, then admit one complete pre-CSL expected presentation only after the
+existing result-v1/v2 claim, run digest, evidence and settlement checks succeed.
+Never drop actual fields or rewrite old receipts. All money, identity, evidence,
+versions and unknown fields continue to compare exactly; new writes stay modern
+and PostgreSQL fulfillment stays unsupported. The old protocols did not bind a
+presentation stamp, so absence of the derived CSL companions cannot prove an old
+creation date. That narrow limitation is explicit rather than inferred authority.
+See [compatibility and acceptance gates](docs/engineering/native-original-response-compatibility.md).
+
 **Record verified run ingress without inferring account ownership — 2026-10-09.**
 New shared research runs carry optional closed JSON provenance separately from
 payment origin and editable MCP client telemetry. Ownership continues to use the
