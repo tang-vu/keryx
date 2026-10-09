@@ -1,6 +1,6 @@
 import type { KeryxDB } from "../../db/keryx-db";
 import type { ResearchEffects } from "../../agent/research-effects";
-import type { GatheredContent } from "../../llm/reasoning-engine";
+import type { GatheredContent, ReevaluateInput, ReevaluateOutput } from "../../llm/reasoning-engine";
 import type { Decision, PaymentRecord, QueryRun } from "../../types";
 import { BUDGETS, PRICES, fixtureRows, microFromUsdc, usdcFromMicro, type StudyCorpus } from "./contract";
 import { gradeTrial } from "./rubric";
@@ -8,7 +8,8 @@ import { assertStudyBoundary } from "./offline-boundary";
 
 export interface StudyTrial {
   id: string; questionId: string; budgetMicro: string; paidPriceMicro: string;
-  proposals: Decision[][]; reads: GatheredContent[]; payments: Omit<PaymentRecord, "id" | "createdAt">[];
+  proposals: Decision[][]; reevaluations: { input: ReevaluateInput; output: ReevaluateOutput }[];
+  reads: GatheredContent[]; payments: Omit<PaymentRecord, "id" | "createdAt">[];
   output: Omit<QueryRun, "createdAt" | "durationMs" | "trace">;
   trace: { phase: string; message: string; detail?: unknown }[];
   effects: Record<string, number>;
@@ -70,12 +71,16 @@ export async function runStudy(corpus: StudyCorpus): Promise<StudyTrial[]> {
       };
       const engine = new HeuristicEngine();
       const proposals: Decision[][] = [];
+      const reevaluations: StudyTrial["reevaluations"] = [];
       const reads = new Map<string, GatheredContent>();
       const observe = (gathered: GatheredContent[]) => { for (const read of gathered) reads.set(read.marker, structuredClone(read)); };
       const decide = engine.decide.bind(engine);
       engine.decide = async input => { const output = await decide(input); proposals.push(structuredClone(output)); return output; };
       const sufficiency = engine.sufficiency.bind(engine);
       engine.sufficiency = async input => { observe(input.gathered); return sufficiency(input); };
+      const reevaluate = engine.reevaluate.bind(engine);
+      engine.reevaluate = async input => { observe(input.gathered); const snapshot = structuredClone(input);
+        const output = await reevaluate(input); reevaluations.push({ input: snapshot, output: structuredClone(output) }); return output; };
       const synthesize = engine.synthesize.bind(engine);
       engine.synthesize = async input => { observe(input.gathered); return synthesize(input); };
       const iterator = runAgent({ question: question.question, budget: usdcFromMicro(budgetMicro), queryId: id,
@@ -93,7 +98,7 @@ export async function runStudy(corpus: StudyCorpus): Promise<StudyTrial[]> {
       const actualReads = [...reads.values()];
       const denied = Object.keys(counts).filter(key => key.startsWith("db.denied."));
       if (denied.length) throw new Error(`Study attempted undeclared database methods: ${denied.join(", ")}`);
-      trials.push({ id, questionId: question.id, budgetMicro, paidPriceMicro, proposals, reads: actualReads,
+      trials.push({ id, questionId: question.id, budgetMicro, paidPriceMicro, proposals, reevaluations, reads: actualReads,
         payments: payments.map(({ id: _id, createdAt: _at, ...payment }) => payment), output,
         trace: trace.map(step => ({ phase: step.phase, message: step.message, ...(step.detail === undefined ? {} : { detail: canonicalTraceDetail(step.detail, id) }) })),
         effects: counts, metrics: gradeTrial(question, run, actualReads, payments) });
