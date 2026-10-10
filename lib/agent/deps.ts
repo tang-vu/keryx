@@ -11,6 +11,8 @@ import type { SourceCandidate } from "../llm";
 import type { ResearchEffects } from "./research-effects";
 
 export interface AgentDeps {
+  /** Trusted optional observer; failure only makes checkpoint evidence unavailable. */
+  readCheckpointSink?: (record: import("../research-audit/actual-read-record").ActualReadRecord) => void;
   /** Exact raw metadata reader. Separate from ordinary article/body evidence. */
   readBibliographicOriginal?: import("../research/bibliographic-original").BibliographicOriginalReader;
   discoverScholarly?: import("../scholarly/discovery").ScholarlyDiscover;

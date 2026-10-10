@@ -1,5 +1,17 @@
 # Keryx MCP
 
+The combined app0.27.50 source candidate selects package/official Registry
+**0.4.15** and hosted MCP **0.3.11** for the changed READ checkpoint graph.
+Ordinary ask/recovery returns only a bounded public assertion packet with its
+separately retained digest, or explicit unavailable evidence. Download/Verify on
+the hosted report is entirely offline; repository CLI verification requires the
+expected digest separately. Replay proves neither source facts nor payment or
+settlement, and grants no read, retry, funding or signing authority. Private,
+original and unsupported native records are not reconstructed or disclosed.
+Full issue301, source/payment anchoring291, exact-source CI and packaged-consumer
+acceptance, npm/Registry integrity and deployed/installed readback remain gates.
+See [the milestone boundary](../docs/engineering/actual-read-checkpoints-301.md).
+
 Interactive review-first research is available only in the authenticated live web
 browser. `ask_keryx` refuses `reviewFirst: true` and review-mode aliases before the
 buyer path; an MCP verdict cannot sign, resume, refund or spend. Private decision
@@ -130,6 +142,15 @@ integrity are independent artifact gates. Check release manifests, npm integrity
 the hosted `/api/health` commit separately; a package does not switch the hosted server.
 
 Hosted results can include `reasoningAttempts`, `reasoning.steps` and `reasoning.telemetry`.
+New ordinary hosted results may also carry bounded `readCheckpoints` assertion
+sidecars. The stdio buyer projects the closed packet before ask/recovery output;
+unknown or private payload fields become unavailable. This projection cannot sign,
+fund, pay or retry. Report Verify and `research-audit verify-actual` run offline
+against a digest retained separately from the submitted sidecar. Integrity and
+predicate agreement do not prove source authenticity or payment anchoring. Private,
+original and native runs are not reconstructed. This source milestone has separate
+coordinated publication/installer/deployment gates; existing published identities
+are not evidence of its delivery.
 The package forwards them and includes the recorded per-step serving summary in tool text.
 For example, `decide: heuristic (degraded)` identifies local source selection even when other
 steps used a model. The aggregate engine label alone does not identify each serving tier.

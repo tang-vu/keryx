@@ -1,5 +1,27 @@
 # MCP package distribution
 
+## Combined release50 — October 11, 2026 source candidate
+
+App/OpenAPI0.27.50 selects stdio/official Registry0.4.15 and hosted MCP0.3.11.
+Actual compiled buyer and hosted engine/projection graphs now carry bounded public
+post-portfolio READ assertions or explicit unavailable evidence. Offline report/CLI
+verification uses an expected digest retained separately from the submitted packet;
+it grants no read, payment, retry, funding or settlement authority. Private/original/
+native records are not reconstructed or exposed.
+
+Desktop0.4.14 identifies the changed compiled helper through checked receipt
+exports; it keeps its original-task/native export role with no ordinary capture or
+Verify UI. Renderer and bridge project payloads, and extension0.1.3's twelve shipped
+canonical inputs, are unchanged. No dependency or financial/original protocol changes.
+
+Fresh initialized stdio identity and bounded GET-only synthetic recovery, remote
+contracts, final combined source CI/build, exact packaged consumers/platforms,
+npm/Registry integrity, installer provenance and actual hosted/installed readback
+remain coordinated release gates. Full issue301 and source/payment anchoring291
+stay open. This source identity does not claim publication, installation or deployment.
+See [surface parity](surface-parity.md) and
+[checkpoint coverage](engineering/actual-read-checkpoints-301.md).
+
 ## Coordinated release47 — October 9, 2026 source candidate
 
 App0.27.47 selects stdio and official Registry descriptor0.4.14 with hosted

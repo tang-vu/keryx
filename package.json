@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.27.49",
+  "version": "0.27.50",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -98,6 +98,8 @@
     "migrate-ipfs": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/migrate-content-to-ipfs.mts",
     "pack:extension": "node --import tsx --no-warnings scripts/pack-extension.mts",
     "test:browser-extension": "node --import tsx scripts/test-extension-browser.mts",
+    "test:actual-read-browser": "node --import tsx scripts/test-actual-read-browser.mts",
+    "test:actual-read-package": "node --import tsx scripts/test-actual-read-mcp-package.mts",
     "grant:media": "node --env-file-if-exists=.env.local scripts/create-circle-grant-media.mjs",
     "economics:plan": "node --import tsx --no-warnings scripts/plan-business.mts",
     "economics:private-report": "node --import tsx --no-warnings scripts/economics-private-report.mts",

@@ -9,6 +9,8 @@ import { replayExtensionPopup } from "../display/extension-popup.test-fixture";
 import { remoteResearchResult } from "../mcp/remote-server";
 import type { QueryRun } from "../types";
 import { surfaceResearch } from "./surface-result";
+import { createReadCheckpointCapture } from "../agent/read-checkpoint-capture";
+import { actualReadCheckpoint } from "../research-audit/actual-read-policy";
 import type { ReasoningAttempt } from "../llm/reasoning-engine";
 import { readBibliographicTask } from "./bibliographic-task";
 import { recognizeBibliographicTask } from "./bibliographic-task-request";
@@ -31,6 +33,19 @@ export function fixture(): QueryRun {
 }
 
 describe("research surface parity", () => {
+  it("projects one closed assertion packet consistently without changing historical receipt bytes or adding private sidecars", () => {
+    const run = fixture(), receipt = buildResearchReceipt(run, []), capture = createReadCheckpointCapture(true);
+    const check = { kind: "channel", creatorFree: false, cache: true } as const;
+    capture.append(check, actualReadCheckpoint(check), { candidate: 1, round: 0, proposal: "BUY", plan: "CACHE", price: 0.002 });
+    const retained = capture.finish(); expect(retained?.status).toBe("available");
+    run.trace = [{ phase: "done", message: "done", ts: 0, readCheckpoints: retained }];
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "deep"))]) {
+      expect(result.readCheckpoints).toEqual(retained);
+      const privateRun = { ...run, id: "prv_private-fixture" };
+      expect(surfaceResearch(privateRun).readCheckpoints).toEqual({ status: "unavailable" });
+    }
+    expect(buildResearchReceipt(run, [])).toEqual(receipt);
+  });
   it("exports only new closed ingress labels and leaves legacy projections and portable receipts unchanged", () => {
     const legacy = fixture(), receipt = buildResearchReceipt(legacy, []);
     expect(surfaceResearch(legacy)).not.toHaveProperty("provenance");

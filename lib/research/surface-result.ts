@@ -9,6 +9,7 @@ import { projectTeachingProposalDelivery } from "./teaching-proposals-surface";
 import { projectSourceRecencyResult } from "../sources/source-recency-result";
 import { parseRunProvenance } from "./run-provenance";
 import { paperReferencesCslJson } from "../papers/reference-export";
+import { projectActualReadCheckpoints } from "../research-audit/actual-read-projection";
 
 /** Public recorded metadata only; no enrichment, network calls or payment authority. */
 export function surfaceCitation(citation: Citation) {
@@ -28,6 +29,7 @@ export function surfaceResearch(run: QueryRun) {
   const teachingProposals = projectTeachingProposalDelivery(run.teachingProposals, run);
   const sourceRecency = projectSourceRecencyResult(run.sourceRecency);
   const provenance = parseRunProvenance(run.provenance);
+  const readCheckpoints = projectActualReadCheckpoints(run);
   // Reuse the reading UI's exact claim/article/version and bounded-excerpt gate.
   const evidence = buildEvidenceMatrix(run).flatMap(row => row.evidence).map(item => ({
     claimIndex: item.claimIndex, claim: item.claim, marker: item.marker,
@@ -36,6 +38,7 @@ export function surfaceResearch(run: QueryRun) {
     qualifiesForReward: item.qualifiesForReward, ...receiptAsset(item),
   }));
   return { citations: run.citations.map(surfaceCitation), evidence,
+    readCheckpoints: readCheckpoints ?? { status: "unavailable" as const },
     ...(provenance ? { provenance } : {}),
     ...(bibliography ? { bibliography, bibliographyExports: { ...bibliography.bibliographyExports,
       cslJson: paperReferencesCslJson(bibliography.record.paper ? [bibliography.record.paper] : []) } } : {}),

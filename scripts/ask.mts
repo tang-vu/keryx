@@ -9,6 +9,7 @@
 
 import { c, printStep } from "./trace-console.mts";
 import { formatRecordedUsdc } from "../lib/display/recorded-usdc.ts";
+import { projectActualReadCheckpoints } from "../lib/research-audit/actual-read-projection.ts";
 
 // ── parse args ──
 const argv = process.argv.slice(2);
@@ -64,6 +65,9 @@ const run = await collectRun({ question, budget, model, origin: "engine", allowE
 console.log(c.dim("─".repeat(72)));
 console.log(c.bold("\n📝 Answer\n"));
 console.log(run.answer);
+const readCheckpoints = projectActualReadCheckpoints(run);
+console.log(readCheckpoints ? `READ checkpoint assertions retained: ${readCheckpoints.retainedDigest}. Verify the downloaded report sidecar offline with research-audit verify-actual; this does not prove source authenticity or settlement.`
+  : "READ checkpoint evidence unavailable; historical/private/native runs are not reconstructed.");
 const outputLimit = reasoningOutputLimitText(run.reasoningAttempts, /[ăâđêôơưĂÂĐÊÔƠƯ\u1ea0-\u1ef9]/u.test(question) ? "vi" : "en", run.trace);
 if (outputLimit) console.log(`\n${outputLimit}`);
 

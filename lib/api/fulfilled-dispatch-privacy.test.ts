@@ -5,6 +5,21 @@ import { syntheticFailedOriginal, syntheticFulfilledRun } from "../db/a2a-fulfil
 import { a2aResponseFromRun, quoteFromA2aOrder, publicA2aResolution } from "../a2a/result";
 import { buildResearchReceipt } from "../research-receipt";
 
+it("removes forged future checkpoint sidecars before the actual public original API erases its private marker", async () => {
+  const fixture = syntheticFailedOriginal(), completion = syntheticFulfilledRun({ ...fixture.input, failedOrder: fixture.order });
+  const run = completion.run, receipt = JSON.stringify(buildResearchReceipt(run, []));
+  const oldTrace = JSON.stringify(run.trace);
+  run.trace = [...run.trace, { phase: "done", message: "Retained original", ts: 0,
+    readCheckpoints: { status: "available", packet: { schema: 999, question: "private-checkpoint-sentinel" }, retainedDigest: "a".repeat(64) } as never }];
+  mocked.getDb.mockResolvedValue({ getQueryRun: vi.fn(async () => run) });
+  const response = await GET(new NextRequest("https://keryx.test/api/dispatch/synthetic"), { params: Promise.resolve({ id: run.id }) });
+  expect(response.status).toBe(200); const projected = await response.json();
+  expect(JSON.stringify(projected)).not.toContain("private-checkpoint-sentinel");
+  expect(projected.trace.slice(0, -1)).toEqual(JSON.parse(oldTrace));
+  expect(JSON.stringify(buildResearchReceipt(run, []))).toBe(receipt);
+  expect(JSON.stringify(run.trace)).toContain("private-checkpoint-sentinel");
+});
+
 const mocked = vi.hoisted(() => ({ getDb: vi.fn() }));
 vi.mock("@/lib/db", () => ({ getDb: mocked.getDb }));
 import { GET } from "@/app/api/dispatch/[id]/route";

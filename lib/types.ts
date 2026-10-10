@@ -448,6 +448,8 @@ export interface TraceStep {
   message: string;
   detail?: unknown;
   ts: number;
+  /** Bounded ordinary-public checkpoint assertions; no read/payment authority. */
+  readCheckpoints?: import("./agent/read-checkpoint-capture").ReadCheckpointCapture;
 }
 
 /** How much the agent trusts its own answer, derived from its coverage signals (sources

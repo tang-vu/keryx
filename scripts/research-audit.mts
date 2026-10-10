@@ -6,25 +6,27 @@ import { scorePurchases } from "../lib/research-audit/purchase-outcomes.ts";
 import { classifyUsage } from "../lib/research-audit/usage-cohort.ts";
 import { summarizeUsage } from "../lib/research-audit/usage-summary.ts";
 import { sourceLearningRecord, learnedValue } from "../lib/research-audit/source-learning.ts";
+import { MAX_READ_PACKET_BYTES, verifyActualReadPacket } from "../lib/research-audit/actual-read-record.ts";
 
 const MAX_INPUT = 2 * 1024 * 1024;
 const [command, file, expectedHash, ...extra] = process.argv.slice(2);
 try {
-  if (!file || extra.length || !["record", "verify", "score", "cohort", "usage", "learn"].includes(command)
-    || (command !== "verify" && expectedHash)) throw new Error("Usage: research-audit <record|verify|score|cohort|usage|learn> <json-file> [retained-hash-for-verify]");
+  if (!file || extra.length || !["record", "verify", "verify-actual", "score", "cohort", "usage", "learn"].includes(command)
+    || (!["verify", "verify-actual"].includes(command) && expectedHash)) throw new Error("Invalid audit command");
   const handle = await open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  const inputLimit = command === "verify-actual" ? MAX_READ_PACKET_BYTES : MAX_INPUT;
   let input;
   try {
     const info = await handle.stat();
-    if (!info.isFile() || info.size > MAX_INPUT) throw new Error("Audit input must be a regular file no larger than 2 MiB");
-    const buffer = Buffer.alloc(MAX_INPUT + 1);
+    if (!info.isFile() || info.size > inputLimit) throw new Error("Audit input exceeds its regular-file bound");
+    const buffer = Buffer.alloc(inputLimit + 1);
     let bytesRead = 0;
     while (bytesRead < buffer.length) {
       const read = await handle.read(buffer, bytesRead, buffer.length - bytesRead, null);
       if (!read.bytesRead) break;
       bytesRead += read.bytesRead;
     }
-    if (bytesRead > MAX_INPUT) throw new Error("Audit input exceeds 2 MiB");
+    if (bytesRead > inputLimit) throw new Error("Audit input exceeds its regular-file bound");
     input = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, bytesRead)));
   } finally { await handle.close(); }
   let output;
@@ -32,6 +34,10 @@ try {
   else if (command === "verify") {
     const verified = await verifyDecisionRecord(input, expectedHash ?? "");
     output = { verified }; if (!verified) process.exitCode = 1;
+  } else if (command === "verify-actual") {
+    const verified = await verifyActualReadPacket(input, expectedHash ?? "");
+    output = { verified, scope: "post-portfolio-checkpoints", facts: "assertions", sourceAuthenticity: "unproven", paymentAnchoring: "unproven" };
+    if (!verified) process.exitCode = 1;
   } else if (command === "score") output = scorePurchases(input.run, input.payments, input.network);
   else if (command === "cohort") output = classifyUsage(input);
   else if (command === "usage") output = summarizeUsage(input);

@@ -15,6 +15,7 @@ import { purchaseOutcomesOpenApiPath } from "./research/purchase-outcomes-openap
 import { monthlyOpenApiPath } from "./monthly/openapi";
 import { paidJobEscalationOpenApiProperty, paidJobEscalationOpenApiSchemas } from "./a2a/overdue-openapi";
 import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
+import { actualReadOpenApiSchemas } from "./research-audit/actual-read-openapi";
 
 import { privateProfileOpenApiPaths } from "./profiles/openapi";
 import { deliverableAcceptanceOpenApiPaths } from "./deliverable-acceptance/openapi";
@@ -52,7 +53,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.27.49",
+    version: "0.27.50",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -91,6 +92,7 @@ export const openapiSpec = {
       },
     },
     schemas: {
+      ...actualReadOpenApiSchemas,
       ...paidJobEscalationOpenApiSchemas,
       ...paperOpenApiSchemas,
       ...sourceClaimOpenApiSchemas,
@@ -370,6 +372,7 @@ export const openapiSpec = {
           feePaid: { type: "number" },
           totalPricePaid: { type: "number" },
           researchExports: { $ref: "#/components/schemas/ResearchExports" },
+          readCheckpoints: { $ref: "#/components/schemas/ActualReadCheckpointCapture" },
           pricing: {
             type: "object",
             properties: {
@@ -449,6 +452,7 @@ export const openapiSpec = {
               totalToCreators: { type: "number" },
               dispatchUrl: { type: "string" },
               researchExports: { $ref: "#/components/schemas/ResearchExports" },
+              readCheckpoints: { $ref: "#/components/schemas/ActualReadCheckpointCapture" },
               evidence: { type: "array", items: { type: "object" } },
               ...outputLimitMetadataProperties,
               ...runProvenanceProperty,
