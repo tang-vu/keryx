@@ -52,9 +52,13 @@ const transport = new StdioClientTransport({ command: process.execPath,
   args: ["--import", pathToFileURL(bootstrap).href, resolve("mcp/dist/keryx-mcp.mjs")], cwd: folder, env, stderr: "pipe" });
 const client = new Client({ name: "read-checkpoint-package-fixture", version: "1.0.0" }); let child: ChildProcess | undefined;
 let phase = "connect"; let childDiagnostic = "";
+let initializedPackageVersion: string | undefined;
 transport.stderr?.on("data", chunk => { childDiagnostic += String(chunk); assert(childDiagnostic.length <= 16_384); });
 try {
   await bounded(client.connect(transport)); child = Reflect.get(transport, "_process") as ChildProcess; assert(child?.pid);
+  const packageInfo = JSON.parse(await readFile("mcp/package.json", "utf8"));
+  initializedPackageVersion = client.getServerVersion()?.version;
+  assert.equal(initializedPackageVersion, packageInfo.version);
   phase = "valid-recovery";
   const first = await bounded(client.callTool({ name: "keryx_recover", arguments: {} })); assert(!first.isError);
   const retained = JSON.parse((first.content as { text: string }[])[0].text);
@@ -83,4 +87,5 @@ try {
   }
 }
 console.log(JSON.stringify({ gate: "actual-read-built-stdio", validRetainedPacket: true, unknownPrivatePacketRefused: true,
-  heldJournalUnchanged: true, actualOwnedChildExit: true, loopbackGetRequests: requests.length, fundingCalls: 0, paymentCalls: 0 }));
+  initializedPackageVersion, heldJournalUnchanged: true, actualOwnedChildExit: true,
+  loopbackGetRequests: requests.length, fundingCalls: 0, paymentCalls: 0 }));

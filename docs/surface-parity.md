@@ -1,5 +1,38 @@
 # Supported-surface release parity
 
+## Combined release50 — October 11, 2026 source candidate
+
+App/OpenAPI **0.27.50**, stdio/official Registry **0.4.15**, remote MCP **0.3.11**
+and desktop **0.4.14** identify the combined mobile layout and bounded ordinary
+post-portfolio READ checkpoint milestone. The initial source milestone and its
+same-mounted Verify correction were reviewed before integration. Final combined
+source, CI/build and platform acceptance remain separate gates.
+
+| Surface | Actual graph change and retained role |
+| --- | --- |
+| Web / API / OpenAI / A2A | The engine and shared public projection retain bounded assertion packets; report download/Verify uses a separately retained expected digest entirely offline. Private/original/native evidence remains unavailable. App50 also includes the mobile layout below. |
+| Remote MCP0.3.11 | The actual compiled engine/projection graph changes. Existing scoped ingress, read/payment and private-store guards remain authoritative; replay grants no action or settlement authority. |
+| Stdio0.4.15 / Registry | The actual compiled buyer/projection graph changes. Ask/recovery exposes only the closed public packet or unavailable state. Fresh built stdio acceptance checks initialized identity, GET-only held-journal recovery and zero funding/payment calls. |
+| Desktop0.4.14 / Operator | The actual compiled helper changes through checked receipt exports importing the shared surface module; renderer and bridge project payloads are unchanged. This is a binary source identity change, not ordinary capture/Verify support. Original/native receipt, enrollment and signer boundaries remain closed. |
+| Extension0.1.3 | All twelve allowlisted canonical shipped blobs and the canonical money formatter are unchanged. The hosted answer/report-link role inherits app50; no local verifier, tool or signer is added. |
+| Repository CLI / bots | Repository ask/audit and hosted Telegram/Discord graphs change under app50. CLI verifies a bounded sidecar against a separately supplied expected digest; bots keep their answer/report-link role. No independent binary identity or scheduler is added. |
+
+The graph audit compares actual in-memory esbuild outputs with canonical baseline
+source. Desktop helper comparison holds the source-commit define constant to
+separate payload changes from provenance stamping; the bridge's unchanged Tauri
+import is external in the local probe because desktop dependencies are unavailable.
+No native installer/platform acceptance follows from that probe. Exact-source
+desktop/MCP packaging, npm/Registry integrity, installed-client and hosted/health
+readback remain gates. Extension publication gaps remain explicit. Dependency
+closures, original/financial/A2A protocol versions and custody are unchanged.
+
+Full issue301 remains open: optimizer/normalization and complete runtime/integer
+coverage, source authenticity and payment anchoring291 are not established by
+checkpoint assertions. The controlled study remains 48 synthetic offline trials
+with no outbound calls or settled payments. Root coordinates final combined
+source acceptance and one deployment; source versions claim no synchronized delivery.
+See [checkpoint coverage](engineering/actual-read-checkpoints-301.md).
+
 ## Unreleased mobile research layout — October 11, 2026 candidate
 
 PR374 retains app/OpenAPI **0.27.49 source metadata** for the compact mobile

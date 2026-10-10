@@ -1,6 +1,6 @@
 {
   "name": "keryx-mcp",
-  "version": "0.4.14",
+  "version": "0.4.15",
   "mcpName": "io.github.tang-vu/keryx",
   "description": "Research through MCP with a caller-funded Arc x402 toll, cited source evidence, and explicit creator-payment state.",
   "type": "module",

@@ -1,5 +1,17 @@
 # Keryx MCP
 
+The combined app0.27.50 source candidate selects package/official Registry
+**0.4.15** and hosted MCP **0.3.11** for the changed READ checkpoint graph.
+Ordinary ask/recovery returns only a bounded public assertion packet with its
+separately retained digest, or explicit unavailable evidence. Download/Verify on
+the hosted report is entirely offline; repository CLI verification requires the
+expected digest separately. Replay proves neither source facts nor payment or
+settlement, and grants no read, retry, funding or signing authority. Private,
+original and unsupported native records are not reconstructed or disclosed.
+Full issue301, source/payment anchoring291, exact-source CI and packaged-consumer
+acceptance, npm/Registry integrity and deployed/installed readback remain gates.
+See [the milestone boundary](../docs/engineering/actual-read-checkpoints-301.md).
+
 Interactive review-first research is available only in the authenticated live web
 browser. `ask_keryx` refuses `reviewFirst: true` and review-mode aliases before the
 buyer path; an MCP verdict cannot sign, resume, refund or spend. Private decision

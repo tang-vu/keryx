@@ -44,7 +44,9 @@ payment anchoring (issue291).
 Owned files: new pure policy/record/collector/projection and focused tests;
 `run-agent.ts`, `types.ts`, `surface-result.ts`, `lib/research/public-query-run.ts`; report Verify component/dispatch;
 offline audit CLI; adapter/browser/packaged-consumer checks; shared-contract
-documentation/catalogue copy. No app/client versions or study artifacts change.
+documentation/catalogue copy. The initially reviewed source checkpoint changed no
+versions or study artifacts. The final combined release source coordinates the
+identities and controlled-study binding documented below.
 
 Acceptance: differential normal/reevaluation tests cover the runtime branches
 listed below and preserve actions, payees, amounts, call counts and effect order
@@ -112,8 +114,32 @@ Exact edited shared boundaries are `lib/agent/run-agent.ts`, `lib/agent/deps.ts`
 policy/record/projection/OpenAPI/copy, ordinary collector, Verify component and
 focused unit/adapter/browser/built-package checks. Existing fixtures gain focused
 privacy and differential checks. CI and ops TypeScript include the new acceptance
-scripts. No account editor, ops/production inventory, versions or study files are
-owned by this outcome.
+scripts. No account editor or ops/production inventory is owned by this outcome.
+
+## Combined source identity and graph audit
+
+The last combined-source PR373 integrates reviewed checkpoint source onto PR374's
+app49 mobile source, then owns app/OpenAPI0.27.50, stdio/Registry0.4.15, remote
+MCP0.3.11 and desktop0.4.14 metadata. The mobile files and prior notes remain intact;
+no intermediate app50 tag should precede both coherent outcomes.
+
+Actual in-memory esbuild comparison against the checkpoint's canonical main218
+baseline shows changed stdio, remote, web/API/A2A, CLI and hosted bot graphs. The
+desktop helper also changes by 85 bytes through checked receipt exports importing
+the shared surface module, even though its original-task role gains no ordinary
+capture or Verify capability. Holding the same source-commit define excludes
+stamp-only drift. Renderer and bridge project payloads are unchanged; the local
+bridge probe externalizes the unavailable Tauri package and is not platform
+acceptance. Extension0.1.3's twelve allowlisted canonical blobs and money formatter
+are unchanged. Binary/source version choices do not assert delivered versions.
+
+The root-allocated metadata changes only identity fields, not dependency closures,
+native ABI, original/financial/A2A protocols or custody. The actual controlled
+paying-source study is regenerated and checked for final combined source/lock
+pins using its unchanged fresh-process testnet/offline/blank-credential boundary,
+in-memory stores and zero outbound attempts. All 48 trials remain simulations;
+no policy threshold or source/settlement truth is added. Prior study artifacts and
+reviewed checkpoint evidence remain preserved in the local immutable release record.
 
 ## Acceptance and release status
 
@@ -127,9 +153,9 @@ deadline refusal remains preserved; it is not relabeled as packaged acceptance.
 
 App/ops TypeScript, proportionate lint/copy checks, the default Next production
 build, independent source review and actual applicable hosted aggregate/platform
-CI remain candidate gates. Root coordinates physical dependency QA and the future
-combined version/distribution release. App/client version changes, npm/Registry,
-installers, extension artifacts, actual deployed/installed source readback and
+CI remain candidate gates. Root coordinates physical dependency QA and the one
+combined version/distribution release. Coordinated source metadata does not qualify
+npm/Registry publication, installers, extension artifacts, actual deployed/installed source readback or
 production health are not inferred from local checks and are not performed here.
 
 Full issue301 also requires actual optimizer/normalization and complete runtime

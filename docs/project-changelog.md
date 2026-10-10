@@ -1,5 +1,24 @@
 # Keryx Project Changelog
 
+### Combined reading checkpoints and mobile layout (2026-10-11, v0.27.50 candidate)
+
+- Retain bounded ordinary post-portfolio BUY/SKIP/CACHE/FREE/STOP and escalation
+  assertions from the same pure predicates that drive execution. Missing or failed
+  capture preserves payment actions, amounts, effect order and completed delivery.
+- Download a privacy-safe sidecar and verify it offline against the report's
+  separately retained digest. Reset selected files and results on a new/null
+  capture; stale asynchronous results cannot show PASS under a different report.
+- Combine the mobile research layout below with app/OpenAPI0.27.50, stdio/Registry
+  0.4.15, remote MCP0.3.11 and desktop0.4.14. Actual compiled graphs justify the
+  changed stdio, hosted engine/projection and desktop helper identities. Desktop
+  remains an original-task/checked-export client; it gains no ordinary capture or
+  Verify capability. Extension0.1.3's twelve shipped inputs remain unchanged.
+- Reproduce the actual 48-trial controlled offline study for the combined source
+  and lock binding. No thresholds, provider, funding or settlement authority change.
+  Full issue301, source authenticity/payment anchoring291, exact-source CI/build,
+  package/platform acceptance, one deployment and public readback remain gates.
+  [Checkpoint coverage and boundaries](engineering/actual-read-checkpoints-301.md).
+
 ### Unreleased: mobile research layout (2026-10-11, combined release pending)
 
 - Keep the primary research action within the original 640px mobile viewport
