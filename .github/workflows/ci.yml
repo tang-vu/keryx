@@ -277,6 +277,7 @@ jobs:
           node --import tsx scripts/test-personal-history-mcp-package.mts
           node --import tsx scripts/test-operator-obligations-transports.mts
           node --import tsx scripts/test-public-job-ledger-mcp-package.mts
+          npm run test:actual-read-package
           node --import tsx scripts/test-deliverable-acceptance-transports.mts
           node --import tsx scripts/test-purchase-outcomes-transports.mts
 
@@ -330,6 +331,8 @@ jobs:
 
       - name: Research decision replay browser WebCrypto parity (offline corpus)
         run: node --import tsx scripts/test-research-audit-browser.mts
+      - name: Actual ordinary READ report offline verification
+        run: npm run test:actual-read-browser
 
       - name: Unpacked MV3 extension (synthetic HTTP, no research or payments)
         run: npm run test:browser-extension

@@ -2,6 +2,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createReadCheckpointCapture } from "../lib/agent/read-checkpoint-capture.ts";
+import { actualReadCheckpoint } from "../lib/research-audit/actual-read-policy.ts";
 const dirs: string[] = [];
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.resetModules(); for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true }); });
 async function buyer(content?: string) {
@@ -14,6 +16,19 @@ async function buyer(content?: string) {
   vi.resetModules();
   return { api: await import("./keryx-buyer.mts"), wallet, dir, fetcher };
 }
+it("projects only closed ordinary checkpoint assertions without custody or transport effects", async () => {
+  const f = await buyer();
+  const collector = createReadCheckpointCapture(true), check = { kind: "selection", plan: "SKIP", external: false } as const;
+  collector.append(check, actualReadCheckpoint(check), { candidate: 1, round: 0, proposal: "SKIP", plan: "SKIP" });
+  const captured = collector.finish(); expect(captured?.status).toBe("available");
+  const answer = { answer: "Synthetic answer", citations: [], creatorsPaid: null, totalToCreators: 0, feePaid: 0, readCheckpoints: captured };
+  expect(f.api.publicBuyerReadCheckpoints(answer)).toEqual(answer);
+  const unknown = { ...answer, readCheckpoints: { ...captured, ownerId: "synthetic-private-marker" } };
+  const projected = f.api.publicBuyerReadCheckpoints(unknown as unknown as Parameters<typeof f.api.publicBuyerReadCheckpoints>[0]);
+  expect(projected.readCheckpoints).toEqual({ status: "unavailable" });
+  expect(JSON.stringify(projected)).not.toContain("synthetic-private-marker");
+  expect(f.fetcher).not.toHaveBeenCalled(); expect(fs.readdirSync(f.dir)).toEqual([]);
+});
 it("initializes metadata and missing-custody status without creating files or attempting network", async () => {
   const f = await buyer();
   expect(f.api.meta.baseUrl).toBeDefined(); expect(fs.readdirSync(f.dir)).toEqual([]);

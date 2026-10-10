@@ -18,6 +18,8 @@
     "scripts/test-private-bibliography-built.mts",
     "scripts/research-audit.mts",
     "scripts/test-research-audit-browser.mts",
+    "scripts/test-actual-read-browser.mts",
+    "scripts/test-actual-read-mcp-package.mts",
     "scripts/test-browser-evidence-drafts.mts",
     "scripts/test-evidence-drafts-mcp-package.mts",
     "scripts/test-personal-history-postgres.mts",

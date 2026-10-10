@@ -130,6 +130,15 @@ integrity are independent artifact gates. Check release manifests, npm integrity
 the hosted `/api/health` commit separately; a package does not switch the hosted server.
 
 Hosted results can include `reasoningAttempts`, `reasoning.steps` and `reasoning.telemetry`.
+New ordinary hosted results may also carry bounded `readCheckpoints` assertion
+sidecars. The stdio buyer projects the closed packet before ask/recovery output;
+unknown or private payload fields become unavailable. This projection cannot sign,
+fund, pay or retry. Report Verify and `research-audit verify-actual` run offline
+against a digest retained separately from the submitted sidecar. Integrity and
+predicate agreement do not prove source authenticity or payment anchoring. Private,
+original and native runs are not reconstructed. This source milestone has separate
+coordinated publication/installer/deployment gates; existing published identities
+are not evidence of its delivery.
 The package forwards them and includes the recorded per-step serving summary in tool text.
 For example, `decide: heuristic (degraded)` identifies local source selection even when other
 steps used a model. The aggregate engine label alone does not identify each serving tier.

@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+## Retain actual post-portfolio READ checkpoints without new authority — 2026-10-10
+
+Use the same pure, versioned evaluator for ordinary READ admission and bounded
+capture, with model proposal and selected plan separated. Keep asynchronous source,
+rights, duplicate, cache and human-review observations labelled assertions. Preserve
+the current finite Number budget predicate and tolerance; publish integer micros
+only where the existing converter accepts them without rounding. This is a bounded
+issue301 milestone, leaving complete runtime/integer coverage and issue291 anchoring
+open. It changes no funding, signing, payee, reservation, retry or reward authority.
+
+Use existing ordinary trace JSON only after both adapters prove retention. Optional
+capture failure cannot change execution. Private/original/native/unknown packets
+fail closed at public projections, without a storage fallback. Browser Verify checks
+an uploaded sidecar offline against the report's separately retained digest; the
+uploaded packet cannot supply its own trust anchor. Preserve prospective-v1 and
+historical receipts. Scope, coverage and coordinated next-batch release gates are
+recorded in [the checkpoint ledger](docs/engineering/actual-read-checkpoints-301.md).
+
 ## Keep the extension current within its hosted research role — 2026-10-10
 
 The owner requested comparing the extension with current web/app/MCP capabilities

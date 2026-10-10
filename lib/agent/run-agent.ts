@@ -1,4 +1,6 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
+import { actualReadCheckpoint, type ReadCheck, type PlannedReadAction } from "../research-audit/actual-read-policy";
+import { createReadCheckpointCapture, ordinaryCheckpointCapability } from "./read-checkpoint-capture";
 import { answerPresentation } from "../research/answer-presentation";
 import { confidenceBanner, ordinaryConfidence } from "../research/confidence-copy";
 import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../research/source-requirements";
@@ -259,6 +261,11 @@ async function* runAdmittedAgent(
   const reviewRecords = new Map<string, DecisionReview>();
   const reviewedAssets = new Set<string>();
   const codeRules = new Map<string, CaptureDecision["codeRule"]>();
+  const checkpointCandidates = new Map<string, number>();
+  const checkpointPlans = new Map<string, PlannedReadAction>();
+  const checkpointProposals = new Map<string, PlannedReadAction | "UNKNOWN">();
+  const checkpointCapture = createReadCheckpointCapture(effects.scope.kind === "public" && !queryId.startsWith("prv_") &&
+    ordinaryCheckpointCapability(db), deps.readCheckpointSink);
   let citations: Citation[] = [];
   let teachingProposals: TeachingProposalDelivery | undefined;
   let operatingFee: QueryRun["operatingFee"];
@@ -297,6 +304,17 @@ async function* runAdmittedAgent(
     throw new Error("invalid trusted agent execution limits");
   }
   let spentTolls = 0;
+
+  function checkpoint(check: ReadCheck, assetId?: string, round = 0) {
+    const outcome = actualReadCheckpoint(check);
+    if (assetId && !checkpointCandidates.has(assetId)) checkpointCandidates.set(assetId, checkpointCandidates.size + 1);
+    checkpointCapture.append(check, outcome, { candidate: assetId ? checkpointCandidates.get(assetId)! : 0, round,
+      proposal: round > 0 ? "BUY" : assetId ? checkpointProposals.get(assetId) ?? "UNKNOWN" : "UNKNOWN",
+      plan: assetId ? checkpointPlans.get(assetId) ?? "UNKNOWN" : "UNKNOWN",
+      price: assetId ? assetById.get(assetId)?.priceUsdc ?? (publicCandidates.has(assetId) || webCandidates.has(assetId) ? 0 : undefined) : undefined,
+      remaining: check.kind === "budget" ? Number(check.remaining) : undefined });
+    return outcome;
+  }
 
   function emit(phase: TracePhase, message: string, detail?: unknown): TraceStep {
     const s: TraceStep = { phase, message, detail, ts: Date.now() };
@@ -999,6 +1017,7 @@ async function* runAdmittedAgent(
   for (const [ordinal, decision] of finalDecisions.entries()) {
     const assetId = decision.assetId ?? decision.sourceId;
     const externalMatches = decision.external ? proposed.filter(item => item.sourceId === decision.sourceId) : [];
+    checkpointProposals.set(assetId, decision.external ? externalMatches.length === 1 ? externalMatches[0].action : "UNKNOWN" : modelActions.get(assetId) ?? "UNKNOWN");
     const record = await captureReview(decision, decision.external ? externalMatches.length === 1 ? externalMatches[0].action : null : modelActions.get(assetId) ?? null,
       decision.external ? "external-only" : codeRules.get(assetId) ?? (decision.action === "SKIP" ? "model-skip" : publicCandidates.has(assetId) ? "public-read" : decision.action === "CACHE" ? "cache-selected" : "selected"), 0, ordinal);
     if (record) reviewRecords.set(assetId, record);
@@ -1008,7 +1027,11 @@ async function* runAdmittedAgent(
   let markerN = 0;
   let fetchFailures = 0;
   const buys = finalDecisions.filter(
-    (d) => (d.action === "BUY" || d.action === "CACHE") && !d.external,
+    (d) => {
+      const assetId = d.assetId ?? d.sourceId;
+      checkpointPlans.set(assetId, d.action);
+      return checkpoint({ kind: "selection", plan: d.action, external: !!d.external }, assetId).action === "CONTINUE";
+    },
   );
 
   // Ensure the spend wallet holds a settle-able Gateway balance before any payment
@@ -1037,14 +1060,14 @@ async function* runAdmittedAgent(
   let interimAssessment: { result: SufficiencyResult; reads: number } | undefined;
 
   for (const d of buys) {
-    if (documentAlreadyRead(d, gathered)) {
+    if (checkpoint({ kind: "duplicate", found: documentAlreadyRead(d, gathered) }, d.assetId ?? d.sourceId).action === "SKIP") {
       await observeReview(d.assetId ?? d.sourceId, "duplicate");
       const was = markUnread(d, "this canonical document was already read through another delivery channel; no second attention slot, access toll or independent contribution.");
       if (was === "BUY" && assetById.has(d.assetId ?? d.sourceId)) spentTolls = Math.max(0, round(spentTolls - d.price));
       yield emit("fetch", `SKIP ${d.sourceName}: this canonical document already contributes once; no redundant read or toll.`);
       continue;
     }
-    if (webCandidates.has(d.assetId ?? d.sourceId)) {
+    if (checkpoint({ kind: "public-route", available: webCandidates.has(d.assetId ?? d.sourceId) }, d.assetId ?? d.sourceId).action === "FREE") {
       yield emit("fetch", `READ ${d.sourceName} - selected original public page, 0 USDC; not a cache hit.`);
       const read = await fetchWeb(d.assetId ?? d.sourceId);
       for (const message of scholarlyReadFailures.splice(0)) yield emit("fetch", message);
@@ -1055,8 +1078,8 @@ async function* runAdmittedAgent(
       continue;
     }
     const publicRead = publicReads.get(d.assetId ?? d.sourceId);
-    if (publicRead) {
-      if (gathered.some(read => read.itemUrl === publicRead.itemUrl && contentBodyHash(read.text) === contentBodyHash(publicRead.text))) {
+    if (checkpoint({ kind: "public-route", available: !!publicRead }, d.assetId ?? d.sourceId).action === "FREE" && publicRead) {
+      if (checkpoint({ kind: "duplicate", found: gathered.some(read => read.itemUrl === publicRead.itemUrl && contentBodyHash(read.text) === contentBodyHash(publicRead.text)) }, d.assetId ?? d.sourceId).action === "SKIP") {
         yield emit("fetch", `SKIP ${d.sourceName}: this exact article already contributes once to the answer.`);
         continue;
       }
@@ -1066,36 +1089,37 @@ async function* runAdmittedAgent(
       continue;
     }
     const asset = assetById.get(d.assetId ?? d.sourceId);
-    if (!asset) continue;
-    if (fundingUnavailable && asset.priceUsdc > 0) { await observeReview(d.assetId ?? d.sourceId, "funding-unavailable"); continue; }
+    if (checkpoint({ kind: "present", found: !!asset }, d.assetId ?? d.sourceId).action === "SKIP" || !asset) continue;
+    if (checkpoint({ kind: "funding", unavailable: fundingUnavailable, positivePrice: asset.priceUsdc > 0 }, d.assetId ?? d.sourceId).action === "SKIP") { await observeReview(d.assetId ?? d.sourceId, "funding-unavailable"); continue; }
     const { source, item, cacheKey } = asset;
     try {
       const currentTerms = await sourceFetchTerms(source, { refresh: true });
       if (sourceRecipientIsExcluded(source, currentTerms, outsideFundedAsker)) throw new Error("Source recipient is excluded");
       const currentAccess = await sourceClaimAccess(db, source, currentTerms, { expected: asset.claimPolicy ?? null });
-      if (!currentAccess.readAllowed || currentTerms.listPriceUsdc !== asset.listPriceUsdc) throw new Error("Source terms changed");
+      if (checkpoint({ kind: "terms", allowed: currentAccess.readAllowed && currentTerms.listPriceUsdc === asset.listPriceUsdc }, d.assetId ?? d.sourceId).action === "SKIP") throw new Error("Source terms changed");
     } catch {
+      checkpoint({ kind: "terms", allowed: false }, d.assetId ?? d.sourceId);
       await observeReview(d.assetId ?? d.sourceId, "terms-changed");
       yield emit("fetch", `SKIP ${source.name}: source claim or registry terms changed after discovery; no new payment.`);
       continue;
     }
-    if (item && asset.claimPolicy && gathered.some(read => publicDuplicateOfOwnedItem(item, read, contentBodyHash))) {
+    if (checkpoint({ kind: "duplicate", found: !!(item && asset.claimPolicy && gathered.some(read => publicDuplicateOfOwnedItem(item, read, contentBodyHash))) }, d.assetId ?? d.sourceId).action === "SKIP") {
       await observeReview(d.assetId ?? d.sourceId, "duplicate");
       yield emit("fetch", `SKIP ${source.name}: this exact article was already read; no duplicate contribution or reward.`);
       continue;
     }
-    if (await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text))) {
+    if (checkpoint({ kind: "duplicate", found: await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text)) }, d.assetId ?? d.sourceId).action === "SKIP") {
       await observeReview(d.assetId ?? d.sourceId, "duplicate");
       yield emit("fetch", `SKIP paid manuscript ${source.name}: identical body was already read publicly, no duplicate access or reward.`);
       continue;
     }
-    if (!await paperCanResearch(db, source, input.paidScholarly === true && origin === "web")) {
+    if (checkpoint({ kind: "rights", allowed: await paperCanResearch(db, source, input.paidScholarly === true && origin === "web") }, d.assetId ?? d.sourceId).action === "SKIP") {
       await observeReview(d.assetId ?? d.sourceId, "rights");
       yield emit("fetch", `SKIP ${source.name}: manuscript rights or registry terms changed before this read.`);
       continue;
     }
     const admission = await admitReview(asset, reviewRecords.get(d.assetId ?? d.sourceId));
-    if (admission !== "admitted") {
+    if (checkpoint({ kind: "review-verdict", verdict: admission }, d.assetId ?? d.sourceId).action === "SKIP") {
       const reason = admission === "source-changed" ? "source terms changed during review; no read or payment was admitted"
         : "human review did not admit this read; waiting, decline and expiry are not code refusals";
       yield emit("fetch", `SKIP ${source.name}: ${reason}.`);
@@ -1106,7 +1130,8 @@ async function* runAdmittedAgent(
     const itemIdentity = { ...asset.candidate.item, evidenceProvenance: asset.candidate.item?.evidenceProvenance ?? source.evidenceProvenance };
     const assetLabel = item ? `${source.name} — ${item.title}` : source.name;
     const marker = `S${++markerN}`;
-    if (asset.priceUsdc === 0 && item) {
+    const delivery = checkpoint({ kind: "channel", creatorFree: asset.priceUsdc === 0 && !!item, cache: d.action === "CACHE" }, d.assetId ?? d.sourceId).action;
+    if (delivery === "FREE" && item) {
       try {
         const text = await resolveFreeSourceItemContent(db, source, item, asset.claimPolicy ?? null);
         gathered.push({ assetId: asset.candidate.id, sourceId: source.id, sourceName: source.name,
@@ -1118,7 +1143,7 @@ async function* runAdmittedAgent(
           yield emit("fetch", `READ ${assetLabel}: creator delivery unavailable; original public reference retained, no creator reward — ${marker}`);
         } else yield emit("fetch", `Free creator article ${assetLabel} unavailable; continuing with other evidence.`);
       }
-    } else if (d.action === "CACHE") {
+    } else if (delivery === "CACHE") {
       const cached = (await effects.getCached(cacheKey)) ?? "";
       gathered.push({
         assetId: asset.candidate.id,
@@ -1131,7 +1156,7 @@ async function* runAdmittedAgent(
       });
       yield emit("fetch", `Reused cached ${assetLabel} (free) — ${marker}`);
     } else {
-      if (budget === 0) {
+      if (checkpoint({ kind: "zero-budget", zero: budget === 0 }, d.assetId ?? d.sourceId).action === "SKIP") {
         await observeReview(d.assetId ?? d.sourceId, "zero-budget");
         yield emit("fetch", `SKIP ${assetLabel}: this delivery requires the payment gateway; the question authorizes 0 USDC and no payment attempt.`);
         continue;
@@ -1235,8 +1260,10 @@ async function* runAdmittedAgent(
       try { suf = await engine.sufficiency({ question: input.question, subClaims, gathered }); }
       catch {
         readingAssessmentUnavailable = true;
+        const assessment = checkpoint({ kind: "sufficiency", sufficient: false, unavailable: true }, d.assetId ?? d.sourceId);
         for (const unread of buys.slice(buys.indexOf(d) + 1)) await observeReview(unread.assetId ?? unread.sourceId, "assessment-unavailable");
         yield emit("sufficiency", "Reading assessment unavailable; stopping further purchases and retaining completed reads and receipts.");
+        if (assessment.action !== "STOP") throw new Error("Invalid unavailable assessment policy");
         break;
       }
       interimAssessment = { result: suf, reads: gathered.length };
@@ -1250,7 +1277,7 @@ async function* runAdmittedAgent(
       yield emit("sufficiency", suf.rationale, { sufficient: suf.sufficient, perClaim: suf.perClaim });
       lastSufficient = suf.sufficient;
       lastGaps = suf.perClaim ? suf.perClaim.filter((c) => c.coverage < 0.4).length : 0;
-      if (suf.sufficient) {
+      if (checkpoint({ kind: "sufficiency", sufficient: suf.sufficient, unavailable: false }, d.assetId ?? d.sourceId).action === "STOP") {
         // Record what actually happened: an unread selection is not a purchase, and its toll
         // reservation returns to the fetch budget for any later gap-filling read. A decision
         // already withheld by a funding failure keeps its reservation and its own rationale.
@@ -1280,16 +1307,19 @@ async function* runAdmittedAgent(
   const gatheredIds = new Set(gathered.map((g) => g.assetId ?? g.sourceId));
   let remainingBudget = fetchBudget - spentTolls;
 
+  const expansion = checkpoint({ kind: "expansion", unavailable: readingAssessmentUnavailable,
+    sufficient: lastSufficient, gaps: lastGaps, rounds: reevaluateRounds, reads: gathered.length }).action;
+
   // Skip re-evaluation when the last sufficiency check already confirmed full coverage —
   // no point burning an LLM call to discover there are no gaps.
   if (readingAssessmentUnavailable) {
     yield emit("reevaluate", "Additional purchases withheld because the reading assessment was unavailable.");
   } else if (lastSufficient && lastGaps === 0 && reevaluateRounds > 0) {
     yield emit("reevaluate", `All sub-claims already well-covered (sufficiency passed with 0 gaps) — skipping re-evaluation to save latency.`);
-  } else if (gathered.length > 0 && reevaluateRounds > 0) {
+  } else if (expansion === "CONTINUE") {
     for (let round = 0; round < reevaluateRounds; round++) {
       if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
-      if (attentionUsed >= attentionLimit) {
+      if (checkpoint({ kind: "attention", used: attentionUsed, limit: attentionLimit }, undefined, round + 1).action === "STOP") {
         yield emit(
           "reevaluate",
           `Attention budget is full at ${attentionLimit} source(s); no broader context will be purchased.`,
@@ -1318,7 +1348,7 @@ async function* runAdmittedAgent(
           };
         }).filter(candidate => candidate.price === 0 || candidate.price <= remainingBudget);
 
-      if (skipped.length === 0) break;
+      if (checkpoint({ kind: "recommendation", more: true, count: skipped.length }, undefined, round + 1).action === "STOP") break;
 
       let reeval: ReevaluateOutput;
       try { reeval = await engine.reevaluate({
@@ -1328,7 +1358,9 @@ async function* runAdmittedAgent(
         skippedSources: skipped,
         remainingBudget,
       }); } catch {
+        const assessment = checkpoint({ kind: "sufficiency", sufficient: false, unavailable: true }, undefined, round + 1);
         yield emit("reevaluate", "Gap assessment unavailable; retaining completed reads and withholding additional purchases.");
+        if (assessment.action !== "STOP") throw new Error("Invalid unavailable assessment policy");
         break;
       }
 
@@ -1355,24 +1387,24 @@ async function* runAdmittedAgent(
         recommended: reeval.recommendedIds,
       });
 
-      if (!reeval.shouldBuyMore || reeval.recommendedIds.length === 0) break;
+      if (checkpoint({ kind: "recommendation", more: reeval.shouldBuyMore, count: reeval.recommendedIds.length }, undefined, round + 1).action === "STOP") break;
 
       // Buy additional sources the engine recommended to fill coverage gaps
       for (const recId of reeval.recommendedIds) {
         if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
         const recommended = webCandidates.get(recId) ?? publicCandidates.get(recId) ?? assetById.get(recId)?.candidate;
-        if (recommended && documentAlreadyRead({ ...recommended.item, assetId: recommended.id, sourceId: recommended.sourceId ?? recommended.id }, gathered)) {
+        if (checkpoint({ kind: "duplicate", found: !!recommended && documentAlreadyRead({ ...recommended.item, assetId: recommended.id, sourceId: recommended.sourceId ?? recommended.id }, gathered) }, recId, round + 1).action === "SKIP") {
           await captureRecommendation(recId, "SKIP", "duplicate", round + 1, reeval.recommendedIds.indexOf(recId));
-          yield emit("reevaluate", `SKIP ${recommended.name}: this canonical document was already read through another delivery channel; no redundant access toll or independent corroboration.`);
+          yield emit("reevaluate", `SKIP ${recommended!.name}: this canonical document was already read through another delivery channel; no redundant access toll or independent corroboration.`);
           continue;
         }
-        if (discussionBlockedIds.has(recId) || discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl) ||
-            subClaims.length > 0 && subClaims.every(claim => discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl, claim))) {
+        if (checkpoint({ kind: "discussion", excluded: discussionBlockedIds.has(recId) || discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl) ||
+            subClaims.length > 0 && subClaims.every(claim => discussionDoesNotMeetDocumentRequest(input.question, recommended?.item?.itemUrl, claim)) }, recId, round + 1).action === "SKIP") {
           await captureRecommendation(recId, "SKIP", "discussion", round + 1, reeval.recommendedIds.indexOf(recId));
           yield emit("reevaluate", "Discussion-page recommendation withheld: the request requires official documentation.");
           continue;
         }
-        if (attentionUsed >= attentionLimit) {
+        if (checkpoint({ kind: "attention", used: attentionUsed, limit: attentionLimit }, recId, round + 1).action === "STOP") {
           for (const unread of reeval.recommendedIds.slice(reeval.recommendedIds.indexOf(recId))) await captureRecommendation(unread, "SKIP", "attention", round + 1, reeval.recommendedIds.indexOf(unread));
           yield emit(
             "reevaluate",
@@ -1380,7 +1412,7 @@ async function* runAdmittedAgent(
           );
           break;
         }
-        if (webCandidates.has(recId) && !gatheredIds.has(recId)) {
+        if (checkpoint({ kind: "public-route", available: webCandidates.has(recId) && !gatheredIds.has(recId) }, recId, round + 1).action === "FREE") {
           await captureRecommendation(recId, "CACHE", "public-read", round + 1, reeval.recommendedIds.indexOf(recId));
           const read = await fetchWeb(recId);
           for (const message of scholarlyReadFailures.splice(0)) yield emit("reevaluate", message);
@@ -1391,9 +1423,9 @@ async function* runAdmittedAgent(
           continue;
         }
         const publicRead = publicReads.get(recId);
-        if (publicRead && !gatheredIds.has(recId)) {
+        if (checkpoint({ kind: "public-route", available: !!publicRead && !gatheredIds.has(recId) }, recId, round + 1).action === "FREE" && publicRead) {
           await captureRecommendation(recId, "CACHE", "public-read", round + 1, reeval.recommendedIds.indexOf(recId));
-          if (gathered.some(read => read.itemUrl === publicRead.itemUrl && contentBodyHash(read.text) === contentBodyHash(publicRead.text))) continue;
+          if (checkpoint({ kind: "duplicate", found: gathered.some(read => read.itemUrl === publicRead.itemUrl && contentBodyHash(read.text) === contentBodyHash(publicRead.text)) }, recId, round + 1).action === "SKIP") continue;
           const marker = `S${++markerN}`;
           gathered.push({ ...publicRead, marker });
           attentionUsed++;
@@ -1405,10 +1437,11 @@ async function* runAdmittedAgent(
         const source = asset?.source;
         // Guard against an engine recommending a source we already read (duplicate marker +
         // double payment) or that no longer fits the remaining budget.
-        if (!asset || !source || gatheredIds.has(recId) || (remainingBudget <= 0 && asset.priceUsdc > 0) || asset.priceUsdc > remainingBudget + 1e-9) {
+        if (checkpoint({ kind: "budget", present: !!asset && !!source, gathered: gatheredIds.has(recId),
+          price: String(asset?.priceUsdc ?? 0), remaining: String(remainingBudget) }, recId, round + 1).action === "SKIP" || !asset || !source) {
           await captureRecommendation(recId, "SKIP", !asset || !source ? "not-admitted" : gatheredIds.has(recId) ? "duplicate" : "budget", round + 1, reeval.recommendedIds.indexOf(recId)); continue;
         }
-        if (fundingUnavailable && asset.priceUsdc > 0) {
+        if (checkpoint({ kind: "funding", unavailable: fundingUnavailable, positivePrice: asset.priceUsdc > 0 }, recId, round + 1).action === "SKIP") {
           await captureRecommendation(recId, "SKIP", "funding-unavailable", round + 1, reeval.recommendedIds.indexOf(recId));
           yield* await withholdOwnedReads("reevaluate", recId);
           continue;
@@ -1417,23 +1450,24 @@ async function* runAdmittedAgent(
           const currentTerms = await sourceFetchTerms(source, { refresh: true });
           if (sourceRecipientIsExcluded(source, currentTerms, outsideFundedAsker)) throw new Error("Source recipient is excluded");
           const access = await sourceClaimAccess(db, source, currentTerms, { expected: asset.claimPolicy ?? null });
-          if (!access.readAllowed || currentTerms.listPriceUsdc !== asset.listPriceUsdc) throw new Error("Source terms changed");
-        } catch { await captureRecommendation(recId, "SKIP", "terms-changed", round + 1, reeval.recommendedIds.indexOf(recId)); yield emit("reevaluate", `SKIP ${source.name}: claim or registry terms changed; no new payment.`); continue; }
-        if (asset.item && asset.claimPolicy && gathered.some(read => publicDuplicateOfOwnedItem(asset.item!, read, contentBodyHash))) { await captureRecommendation(recId, "SKIP", "duplicate", round + 1, reeval.recommendedIds.indexOf(recId)); continue; }
-        if (await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text))) {
+          if (checkpoint({ kind: "terms", allowed: access.readAllowed && currentTerms.listPriceUsdc === asset.listPriceUsdc }, recId, round + 1).action === "SKIP") throw new Error("Source terms changed");
+        } catch { checkpoint({ kind: "terms", allowed: false }, recId, round + 1); await captureRecommendation(recId, "SKIP", "terms-changed", round + 1, reeval.recommendedIds.indexOf(recId)); yield emit("reevaluate", `SKIP ${source.name}: claim or registry terms changed; no new payment.`); continue; }
+        if (checkpoint({ kind: "duplicate", found: !!(asset.item && asset.claimPolicy && gathered.some(read => publicDuplicateOfOwnedItem(asset.item!, read, contentBodyHash))) }, recId, round + 1).action === "SKIP") { await captureRecommendation(recId, "SKIP", "duplicate", round + 1, reeval.recommendedIds.indexOf(recId)); continue; }
+        if (checkpoint({ kind: "duplicate", found: await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text)) }, recId, round + 1).action === "SKIP") {
           await captureRecommendation(recId, "SKIP", "duplicate", round + 1, reeval.recommendedIds.indexOf(recId));
           yield emit("reevaluate", `SKIP paid manuscript ${source.name}: identical public body is already evidence, no duplicate payment.`);
           continue;
         }
-        if (!await paperCanResearch(db, source, input.paidScholarly === true && origin === "web")) {
+        if (checkpoint({ kind: "rights", allowed: await paperCanResearch(db, source, input.paidScholarly === true && origin === "web") }, recId, round + 1).action === "SKIP") {
           await captureRecommendation(recId, "SKIP", "rights", round + 1, reeval.recommendedIds.indexOf(recId));
           yield emit("reevaluate", `SKIP ${source.name}: manuscript rights or registry terms changed before this read.`);
           continue;
         }
         const retainedCache = asset.priceUsdc > 0 && freshCache.has(recId) ? await effects.getCached(asset.cacheKey).catch(() => null) : null;
+        checkpointPlans.set(recId, retainedCache ? "CACHE" : "BUY");
         const reviewRecord = await captureRecommendation(recId, retainedCache ? "CACHE" : "BUY", retainedCache ? "cache-selected" : "selected", round + 1, reeval.recommendedIds.indexOf(recId));
-        const admission = await admitReview(asset, reviewRecord);
-        if (admission !== "admitted") {
+        const admission = await admitReview(asset, reviewRecord, round + 1);
+        if (checkpoint({ kind: "review-verdict", verdict: admission }, recId, round + 1).action === "SKIP") {
           yield emit("reevaluate", admission === "source-changed" ? `SKIP ${source.name}: source terms changed during review; no new read or payment.`
             : `Human review withheld ${source.name}; no new read or payment. This is not a code refusal.`);
           continue;
@@ -1443,14 +1477,16 @@ async function* runAdmittedAgent(
         const assetLabel = asset.item ? `${source.name} — ${asset.item.title}` : source.name;
         const itemIdentity = { ...asset.candidate.item, evidenceProvenance: asset.candidate.item?.evidenceProvenance ?? source.evidenceProvenance };
         // A fresh cached copy is already paid for: read it instead of buying the same article again.
-        if (retainedCache) {
+        const delivery = checkpoint({ kind: "channel", creatorFree: asset.priceUsdc === 0 && !!asset.item,
+          cache: !!retainedCache }, recId, round + 1).action;
+        if (delivery === "CACHE") {
             gathered.push({ assetId: asset.candidate.id, sourceId: source.id, sourceName: source.name,
-              ...itemIdentity, marker, text: retainedCache, creatorRewardEligible: asset.rewardAllowed !== false });
+              ...itemIdentity, marker, text: retainedCache!, creatorRewardEligible: asset.rewardAllowed !== false });
             attentionUsed++; gatheredIds.add(recId);
             yield emit("reevaluate", `Filling gap — reused cached ${assetLabel} (free) — ${marker}`);
             continue;
         }
-        if (asset.priceUsdc === 0 && asset.item) {
+        if (delivery === "FREE" && asset.item) {
           try {
             const text = await resolveFreeSourceItemContent(db, source, asset.item, asset.claimPolicy ?? null);
             gathered.push({ assetId: asset.candidate.id, sourceId: source.id, sourceName: source.name,
@@ -1462,7 +1498,7 @@ async function* runAdmittedAgent(
         }
         // Funding errors have their own uncertainty boundary. They are never
         // interpreted as a creator payment record or permission to retry funding.
-        if (budget === 0) {
+        if (checkpoint({ kind: "zero-budget", zero: budget === 0 }, recId, round + 1).action === "SKIP") {
           await observeReview(recId, "zero-budget");
           yield emit("reevaluate", `SKIP ${assetLabel}: no payment gateway delivery is authorized by a 0 USDC question.`);
           continue;
@@ -2109,8 +2145,8 @@ async function* runAdmittedAgent(
     try { await input.decisionReviews.observe(record, "SKIP", rule); }
     catch (error) { if (input.reviewFirst) throw error; }
   }
-  async function admitReview(asset: InternalAsset, record?: DecisionReview): Promise<"admitted" | "human-withheld" | "source-changed"> {
-    if (!input.reviewFirst) return "admitted";
+  async function admitReview(asset: InternalAsset, record?: DecisionReview, round = 0): Promise<"admitted" | "human-withheld" | "source-changed"> {
+    if (checkpoint({ kind: "review", required: !!input.reviewFirst }, asset.candidate.id, round).action !== "ESCALATE") return "admitted";
     if (!record || !input.decisionReviews) throw new DecisionReviewError("review_unavailable");
     let approved: boolean;
     try { approved = await input.decisionReviews.admit(record, async () => {
@@ -2246,10 +2282,12 @@ async function* runAdmittedAgent(
       // so the honest label is Low rather than an absent field the surfaces would have to guess at.
       confidence: runConfidence,
     };
-    emit(
+    const done = emit(
       "done",
       `Done. Spent $${totalSpent} across ${payments.length - pendingPayments} confirmed/simulated payment(s)${operatingFee ? "; Keryx operating fees are separate from creator rewards" : " to creators"}${pendingPayments ? `; ${pendingPayments} authorization(s) await settlement confirmation` : ""}.${fundingUnavailable ? " Creator-payment amounts only; wallet funding effects remain unknown." : ""}`,
     );
+    const captured = checkpointCapture.finish();
+    if (captured) done.readCheckpoints = captured;
     return demoteSyntheticEvidence(run);
   }
 }

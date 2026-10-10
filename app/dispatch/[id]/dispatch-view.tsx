@@ -8,6 +8,8 @@ import { ConfidenceBadge } from "@/components/keryx/confidence-badge";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { projectBibliographicTask } from "@/lib/research/bibliographic-task-result";
 import { DecisionReviews } from "@/components/keryx/decision-reviews";
+import { ReadCheckpointVerify } from "@/components/keryx/read-checkpoint-verify";
+import { projectActualReadCheckpoints } from "@/lib/research-audit/actual-read-projection";
 
 export function DispatchView({
   run,
@@ -24,6 +26,7 @@ export function DispatchView({
   const confidence = bibliography ? null : deriveConfidence(run);
   const mode = run.paymentMode ?? null;
   const recordedNetwork = historical ? historicalNetwork ?? "unknown" : undefined;
+  const readCheckpoints = historical ? null : projectActualReadCheckpoints(run);
 
   return (
     <>
@@ -58,6 +61,7 @@ export function DispatchView({
         </div>
       </details>
       {!historical && <DecisionReviews runId={run.id} />}
+      <ReadCheckpointVerify key={readCheckpoints?.retainedDigest ?? "unavailable"} capture={readCheckpoints} />
     </>
   );
 }
