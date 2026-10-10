@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 export const ORDINARY_BROWSER_FIXTURE_EXTENSIONS = Object.freeze({
   "0086_decision_reviews.sql": "review_unavailable",
   "0087_deliverable_acceptance.sql": "acceptance_unavailable",
+  "0088_anonymous_run_claims.sql": "claims_unavailable",
 });
 export function postgresBrowserMigrationProfiles(files: readonly string[]) {
   const migrations = files.filter(file => /^\d{4}.*\.sql$/.test(file)).sort();

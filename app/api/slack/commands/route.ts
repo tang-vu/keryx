@@ -18,6 +18,9 @@
 
 import { NextRequest, after } from "next/server";
 import { collectRun } from "@/lib/agent";
+import { hostedRunClaimsEnabled, prepareHostedRunClaim } from "@/lib/run-claims/hosted-delivery";
+import { privateRunClaimText } from "@/lib/run-claims/delivery";
+import { privateSlackResponseUrl } from "@/lib/run-claims/slack-private";
 import { config } from "@/lib/config";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { verifyRequestSignature } from "@/lib/slack/verify-request-signature";
@@ -72,16 +75,20 @@ function ephemeral(text: string) {
 
 /** Runs the agent after the ack, then posts the answer (or a failure note) to the response_url. */
 async function runAndReply(cmd: SlashCommand, budget: number) {
+  if (hostedRunClaimsEnabled() && !privateSlackResponseUrl(cmd.responseUrl)) return;
   let text: string;
   try {
+    const queryId = crypto.randomUUID();
+    const privateClaim = await prepareHostedRunClaim(queryId);
     const run = await collectRun({
       question: cmd.question,
       budget,
-      queryId: crypto.randomUUID(),
+      queryId,
       origin: "web",
       provenance: { version: 1, surface: "slack", ownershipMethod: "unknown" },
     });
-    text = buildAnswerText(run);
+    const packet = await privateClaim?.complete(run);
+    text = buildAnswerText(run) + (packet ? `\n\n${privateRunClaimText(packet)}` : "");
   } catch (err) {
     console.error("[slack] /keryx run failed:", err);
     text = buildErrorText(err);
@@ -90,7 +97,7 @@ async function runAndReply(cmd: SlashCommand, budget: number) {
 }
 
 /**
- * Deliver the finished answer in-channel via the command's response_url (valid ~30 min / 5 uses;
+ * Deliver the finished answer privately via the command's response_url (valid ~30 min / 5 uses;
  * one post suffices). The URL arrives in the request body, so even though signature verification
  * already gates the request, the host is checked before any outbound fetch — this endpoint must
  * never be turned into an SSRF/spam relay. The response_url carries a secret token, so it is never
@@ -112,10 +119,10 @@ async function postToResponseUrl(responseUrl: string, text: string) {
     const res = await fetch(responseUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ response_type: "in_channel", text }),
+      body: JSON.stringify({ response_type: "ephemeral", text, unfurl_links: false, unfurl_media: false }),
     });
     if (!res.ok) console.error(`[slack] response_url post failed: ${res.status}`);
   } catch (err) {
-    console.error("[slack] response_url post failed:", err);
+    console.error("[slack] response_url post failed", err instanceof Error ? err.name : "DeliveryError");
   }
 }

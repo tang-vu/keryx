@@ -49,6 +49,7 @@ import { researchAdmissionError } from "@/lib/research/availability-contract";
 import { isConfiguredSameOrigin } from "@/lib/auth-origin";
 import { createLiveDecisionReviews } from "@/lib/research/decision-review-live";
 import { unsupportedDecisionReviewIntent, type DecisionReviewsStore } from "@/lib/research/decision-review-types";
+import { hostedRunClaimsEnabled } from "@/lib/run-claims/hosted-delivery";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -232,6 +233,10 @@ export async function POST(req: NextRequest) {
     : Math.min(coercedBudget, config.anonMaxBudget);
 
   const isBot = !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
+  // Gated web claims need an actually protected initial document. The reviewed
+  // private document/nonce boundary is not yet wired; never deliver a credential
+  // into the existing analytics-allowed research page or start an unclaimable run.
+  if (hostedRunClaimsEnabled() && !asker && !isBot) return Response.json({ error: "private_research_document_required" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   if (!isBot) {
     await recordActivationEvent(await getDb(), "reader_ask_started");
   }

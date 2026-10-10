@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { replayExtensionPopup } from "./extension-popup.test-fixture";
 
 function bindings() {
-  return ["document", "location", "chrome", "KERYX_API", "fetch"]
+  return ["document", "location", "window", "chrome", "KERYX_API", "fetch"]
     .map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
 }
 function chunk(reward: unknown) {
@@ -12,6 +12,23 @@ function chunk(reward: unknown) {
 }
 
 describe("actual popup module replay isolation", () => {
+  it("keeps a private packet in the popup closure, never recent storage/DOM/export, and opens only on explicit one-shot click", async () => {
+    const id = "12345678-1234-1234-1234-123456789abc", token = "c".repeat(64), opened: { url: string }[] = [], stored: unknown[] = [];
+    const claimUrl = `https://extension.example/claim-run#${token}`;
+    const completion = { ...chunk(0), id: `chatcmpl-${id}`, keryx_private: { version: 1, runId: id, status: "available",
+      delivery: { version: 1, claimUrl, expiresAt: new Date(Date.now() + 60000).toISOString() } } };
+    await replayExtensionPopup([completion], document => {
+      expect(document.getElementById("claim-panel")!.hidden).toBe(false);
+      expect(document.documentElement.outerHTML).not.toContain(token); expect(JSON.stringify(stored)).not.toContain(token); expect(opened).toEqual([]);
+      document.getElementById("claim-run")!.click(); document.getElementById("claim-run")!.click();
+      expect(opened).toEqual([{ url: claimUrl }]); expect(document.getElementById("claim-panel")!.hidden).toBe(true);
+    }, { onStored: value => stored.push(value), onOpenTab: value => opened.push(value) });
+    expect(JSON.stringify(stored)).not.toContain("claim-run");
+    await replayExtensionPopup([completion], document => {
+      document.defaultView!.dispatchEvent(new document.defaultView!.Event("pagehide")); document.getElementById("claim-run")!.click();
+      expect(opened).toHaveLength(1);
+    }, { onOpenTab: value => opened.push(value) });
+  });
   it("binds each new DOM and renders exact or unavailable amounts without interpreting creator markup", async () => {
     const before = bindings();
     for (const [reward, expected] of [[0.000001, "$0.000001"], [0.0000001, "Amount unavailable"]] as const) {

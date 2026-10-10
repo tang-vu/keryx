@@ -92,7 +92,7 @@ export function pong() {
 
 /** "Keryx is thinking…" placeholder — buys the run time beyond Discord's 3s response window. */
 export function deferredResponse() {
-  return { type: CallbackType.DeferredChannelMessage };
+  return { type: CallbackType.DeferredChannelMessage, data: { flags: EPHEMERAL } };
 }
 
 /** Only-you-can-see-this reply, for errors and throttles that shouldn't clutter the channel. */

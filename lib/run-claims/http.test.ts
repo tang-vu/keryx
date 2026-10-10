@@ -80,7 +80,7 @@ describe("private claim HTTP authority", () => {
     const g = await fixture(); expect((await g.routes.POST(g.request(undefined, { "X-Keryx-Expected-Wallet": bob }))).status).toBe(409);
     expect(g.observed).not.toHaveBeenCalled();
   });
-  it("requires SIWE plus an owner precondition, never API-key claim authority", async () => {
+  it("requires an interactive wallet session plus an owner precondition, never API-key claim authority", async () => {
     const f = await fixture(), request = f.request(); request.headers.delete("X-Keryx-Expected-Wallet");
     expect((await f.routes.POST(request)).status).toBe(428);
     expect((await f.routes.POST(f.request(undefined, { Authorization: `Bearer kx_live_${"a".repeat(96)}` }))).status).toBe(403);

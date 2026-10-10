@@ -7042,3 +7042,24 @@ discriminator. This is a description of existing authentication, not an inferred
 owner policy change. Ordinary PostgreSQL acceptance, every applicable ingress and
 client, combined release and deployment/schema admission remain open. See
 `docs/anonymous-run-claims.md`; no native/archive enrollment is changed.
+
+## 2026-10-11 — Anonymous claim delivery stays in private request responses
+
+The ordinary claim domain is admitted before providers and completed after the
+existing saved-run boundary. A request-local one-shot packet travels separately
+from public answers, reports and accounting projections; late issuance failure
+preserves the saved answer and cannot regenerate a lost credential. Direct
+OpenAI-compatible and remote MCP callers receive a private response extra or
+separate caller-conversation item. Bot delivery requires initial Discord ephemeral
+visibility, explicit Slack ephemeral responses, or a freshly confirmed Telegram
+sender-private placeholder before research. A Telegram failure cannot fall back
+to its group. The extension retains only closure memory and an explicit one-shot
+tab handoff, with no recent storage, export, clipboard or DOM token.
+
+The analytics-allowed web research document cannot receive these credentials.
+Enabled anonymous web admission remains closed until its dedicated protected
+initial document, hard navigation, nonce CSP and built-browser evidence pass.
+Owned/payer-bound and native original paths remain unchanged, with no claim-domain
+fallback. Local engine CLI and claimant history/profile client integration remain
+explicit outstanding surface decisions. This checkpoint is default-off source
+preparation, not shared DDL, activation, complete issue acceptance or release.

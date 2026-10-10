@@ -38,7 +38,7 @@ async function claimBody(request: Request) {
 }
 
 /** This boundary never derives authority from request URLs/Host, body wallets or a bearer key.
- * Durable counters precede body/token parsing; the store rechecks the same SIWE session atomically. */
+ * Durable counters precede body/token parsing; the store rechecks the same interactive wallet session atomically. */
 export function createRunClaimRoutes(deps: Dependencies) {
   const binding = runClaimBindingSchema.safeParse(deps.binding);
   const available = deps.enabled && binding.success;

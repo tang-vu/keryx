@@ -33,6 +33,7 @@ export interface AskMessage {
   chatId: number;
   userId: number;
   messageId?: number;
+  chatType?: string;
 }
 
 /**
@@ -58,7 +59,7 @@ export function parseAskMessage(update: TelegramUpdate): AskMessage | null {
   }
   if (!question || unsupportedDecisionReviewFlag(question)) return null;
 
-  return { question, chatId, userId, messageId: msg?.message_id };
+  return { question, chatId, userId, messageId: msg?.message_id, chatType: msg?.chat?.type };
 }
 
 /** True for /start and /help — the two commands that should get the usage text. */

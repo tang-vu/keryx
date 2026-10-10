@@ -176,7 +176,11 @@ try {
   } cases.push(`actual SQL/JS canonical origin parity (${origins.length} cases)`);
   const guardCompleted = save("guard-new"), ticketCompleted = save("guard-ticket"); sql(issueSql("guard-ticket", ticketCompleted));
   const mutates = (description: string, mutate: string, restore: string) => {
-    const claims = claimRows(), originals = originalRows(); sql(mutate);
+    const originals = originalRows(); sql(mutate);
+    // Intentional DDL can add a null column to to_jsonb(row). Snapshot the exact
+    // post-DDL row shape before guarded operations; compare every field afterwards.
+    // The original/financial snapshot still precedes the intentional mutation.
+    const claims = claimRows();
     try {
       for (const statement of ["set role service_role;select public.anonymous_run_claims_ready_v1();", issueSql("guard-new", guardCompleted), consumeSql("guard-ticket"), historyListSql(), historyReadSql("first")])
         assert.throws(() => sql(statement), /claims_unavailable/, description);
