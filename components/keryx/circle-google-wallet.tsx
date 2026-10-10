@@ -6,6 +6,10 @@ import { toast } from "sonner";
 import { CIRCLE_GOOGLE_CONNECTOR_ID } from "@/lib/circle-wallet-config";
 import { circleWalletIdentity, circleWalletCanSign, startGoogleWalletLogin, resumeGoogleWalletLogin } from "@/lib/circle-wallet-browser";
 import { circleWalletPublicConfigured } from "@/lib/circle-wallet-config";
+import { createMessages } from "@/lib/i18n/messages";
+
+const copy = createMessages("en");
+
 
 /** Absent configuration is an honest unavailable option, never a simulated wallet. */
 type GoogleWalletButtonProps = {
@@ -38,13 +42,13 @@ function ConfiguredGoogleWalletButton({ disabled = false, onSelect, onConnected,
   return <button type="button" disabled={disabled || isPending} onClick={() => {
     onSelect?.();
     if (circleWalletIdentity() && !circleWalletCanSign()) {
-      void startGoogleWalletLogin().catch(() => toast.error("Google wallet sign-in could not start. Please try again."));
+      void startGoogleWalletLogin().catch(() => toast.error(copy("googleWallet.startFailed")));
       return;
     }
-    void connectAsync({ connector }).then(() => onConnected?.()).catch(() => toast.error("Google wallet sign-in could not start. Please try again."));
+    void connectAsync({ connector }).then(() => onConnected?.()).catch(() => toast.error(copy("googleWallet.startFailed")));
   }} className="flex w-full items-center gap-3 border border-ink bg-paper px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-ink transition-colors hover:bg-seal hover:text-cream disabled:cursor-not-allowed disabled:opacity-60">
     {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <span aria-hidden="true" className="w-4 text-center font-sans text-base font-semibold">G</span>}
-    <span>{reconnectOnly ? "Reconnect Google wallet" : "Continue with Google"}</span>
+    <span>{reconnectOnly ? copy("googleWallet.reconnect") : copy("googleWallet.continue")}</span>
   </button>;
 }
 
@@ -65,10 +69,10 @@ function ConfiguredGoogleCallback({ onConnected }: { onConnected?: () => void })
     void resumeGoogleWalletLogin().then(async identity => {
       if (!identity || !active || completed.current) return;
       completed.current = true;
-      setStatus("Connecting your Google wallet…");
+      setStatus(copy("googleWallet.connecting"));
       await connectAsync({ connector });
-      if (active) { setStatus("Google wallet connected. Choose a research budget to continue."); connectedCallback.current?.(); }
-    }).catch(error => { if (active) setStatus(error instanceof Error ? error.message : "Google sign-in could not complete. Please try again."); });
+      if (active) { setStatus(copy("googleWallet.connected")); connectedCallback.current?.(); }
+    }).catch(error => { if (active) setStatus(error instanceof Error ? error.message : copy("googleWallet.completeFailed")); });
     return () => { active = false; };
   }, [connectors, connectAsync]);
   return status ? <p role="status" className="font-mono text-xs leading-relaxed text-ink-2">{status}</p> : null;
