@@ -4,6 +4,10 @@ import { deliverableSha256, gradeDeliverable, topLevelBulletCount, validateDeliv
 import manifest from "../../scripts/fixtures/deliverable-corpus-v1.json";
 import mdn from "../../scripts/fixtures/deliverable-mdn-public-20261009.json";
 import rfc from "../../scripts/fixtures/deliverable-rfc-public-20261009.json";
+import nasa from "../../scripts/fixtures/deliverable-nasa-public-20261009.json";
+import arxiv from "../../scripts/fixtures/deliverable-arxiv-public-20261009.json";
+import sqlite from "../../scripts/fixtures/deliverable-sqlite-public-20261009.json";
+import originalScorecard from "../../fixtures/evals/quality/scorecard-20261009-corrected.json";
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 function withAnswer(answer: string) {
@@ -13,6 +17,11 @@ function withAnswer(answer: string) {
 }
 
 describe("retained public deliverable contracts", () => {
+  it.each([[0, mdn], [1, rfc]] as const)("reproduces the exact original version1 grade for case %s", (index, snapshot) => {
+    const historical = Object.fromEntries(Object.entries(originalScorecard.cases[index]).filter(([key]) =>
+      !["fixtureSha256", "historicalCaptureAllowance", "historicalCaptureAllowanceStatus"].includes(key)));
+    expect(gradeDeliverable(manifest.cases[index].contract, snapshot)).toEqual(historical);
+  });
   it("reports the actual MDN layout failure separately from five intact recorded bindings", () => {
     const before = JSON.stringify(mdn);
     const result = gradeDeliverable(manifest.cases[0].contract, mdn);
@@ -94,6 +103,54 @@ describe("retained public deliverable contracts", () => {
     for (const value of [getter, hook, cycle, deep, { ...mdn, answer: "\ud800" }, { ...mdn, answer: "a".repeat(100000) }])
       expect(() => gradeDeliverable(manifest.cases[0].contract, value)).toThrow("MALFORMED_OR_UNBOUNDED_INPUT");
     expect(invoked).toBe(false);
+  });
+});
+
+describe("version2 retained target-binding diagnostics", () => {
+  const contractFor = (id: string) => manifest.cases.find(row => row.contract.id === id)!.contract;
+  it("admits the real zero-binding arXiv refusal without scoring it as a supported answer", () => {
+    const result = gradeDeliverable(contractFor(arxiv.id), arxiv);
+    expect(result.version).toBe(2);
+    expect(result.measured).toMatchObject({ retainedBindingCount: 0, targetCount: 4, matchedTargetCount: 0 });
+    expect(result.checks.retainedBindings.status).toBe("PASS"); // The empty retained set matches, not semantic support.
+    expect(result.checks.retainedTargetBindings.status).toBe("FAIL");
+    expect(result.checks.bulletCount.status).toBe("FAIL");
+    expect(result.deterministicContractPassed).toBe(false);
+    expect(result.deliverableAccepted).toBe(false);
+    expect(result.checks.requiredFacts.status).toBe("UNJUDGED");
+  });
+  it("keeps the NASA missing binding distinct from unknown language and sentence judgments", () => {
+    const result = gradeDeliverable(contractFor(nasa.id), nasa);
+    expect(result.measured).toMatchObject({ retainedBindingCount: 2, targetCount: 3, matchedTargetCount: 2 });
+    expect(result.checks.retainedTargetBindings.status).toBe("FAIL");
+    expect(result.checks.language.status).toBe("UNJUDGED");
+    expect(result.checks.sentenceCount.status).toBe("UNJUDGED");
+    expect(result.checks.sentenceCount.detail).toContain("3 sentences requested");
+  });
+  it("admits the qualitative SQLite checklist without inventing a numeric format requirement", () => {
+    const result = gradeDeliverable(contractFor(sqlite.id), sqlite);
+    expect(result.measured).toMatchObject({ targetCount: 8, matchedTargetCount: 5 });
+    expect(result.checks.retainedTargetBindings.status).toBe("FAIL");
+    expect(result.checks.bulletCount.status).toBe("UNJUDGED");
+    expect(result.checks.wordLimit.status).toBe("UNJUDGED");
+  });
+  it("refuses zero targets, malformed bindings, absent receipt provenance and mixed versions", () => {
+    const contract = contractFor(arxiv.id);
+    expect(() => gradeDeliverable({ ...contract, targets: [] }, arxiv)).toThrow();
+    expect(() => gradeDeliverable(contract, { ...arxiv, bindings: [{ ...nasa.bindings[0], qualifiesForReward: true }] })).toThrow();
+    expect(() => gradeDeliverable(contract, { ...arxiv, bindings: [{ ...nasa.bindings[0], contentVersion: "invalid" }] })).toThrow();
+    expect(() => gradeDeliverable(contract, { ...arxiv, provenance: { ...arxiv.provenance, retainedReceipt: undefined } })).toThrow();
+    expect(() => gradeDeliverable(contractFor(nasa.id), { ...mdn, id: nasa.id })).toThrow("CASE_OR_QUESTION_BINDING_MISMATCH");
+  });
+  it("does not weaken version1 admission or add successor checks to historical grades", () => {
+    const old = manifest.cases[0].contract;
+    expect(() => gradeDeliverable({ ...old, requiredBindings: [] }, mdn)).toThrow();
+    expect(() => gradeDeliverable({ ...old, format: {} }, mdn)).toThrow();
+    expect(() => gradeDeliverable({ ...old, format: { ...old.format, requestedSentenceCount: 3 } }, mdn)).toThrow();
+    const result = gradeDeliverable(old, mdn);
+    expect(result.version).toBe(1);
+    expect(result.checks.retainedTargetBindings).toBeUndefined();
+    expect(result.checks.sentenceCount).toBeUndefined();
   });
 });
 

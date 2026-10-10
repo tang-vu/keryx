@@ -9,7 +9,9 @@
       "requiredKinds": [
         "exact-metadata"
       ],
-      "caseIds": []
+      "caseIds": [
+        "arxiv-public-20261009"
+      ]
     },
     {
       "number": 158,
@@ -44,21 +46,27 @@
       "requiredKinds": [
         "teaching-note"
       ],
-      "caseIds": []
+      "caseIds": [
+        "teacher-public-c700-e719b085"
+      ]
     },
     {
       "number": 212,
       "requiredKinds": [
         "comparison"
       ],
-      "caseIds": []
+      "caseIds": [
+        "sqlite-public-20261009"
+      ]
     },
     {
       "number": 217,
       "requiredKinds": [
         "newest-release"
       ],
-      "caseIds": []
+      "caseIds": [
+        "newest-public-c700-76fa4ed9"
+      ]
     },
     {
       "number": 230,
@@ -67,6 +75,15 @@
       ],
       "caseIds": [
         "rfc-public-20261009"
+      ]
+    },
+    {
+      "number": 231,
+      "requiredKinds": [
+        "single-page"
+      ],
+      "caseIds": [
+        "nasa-public-20261009"
       ]
     },
     {
@@ -83,14 +100,19 @@
       "requiredKinds": [
         "single-page"
       ],
-      "caseIds": []
+      "caseIds": [
+        "nasa-public-20261009",
+        "etag-public-20261009"
+      ]
     },
     {
       "number": 331,
       "requiredKinds": [
         "single-page"
       ],
-      "caseIds": []
+      "caseIds": [
+        "nasa-public-20261009"
+      ]
     }
   ],
   "removals": []

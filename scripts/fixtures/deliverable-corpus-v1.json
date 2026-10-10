@@ -1,7 +1,7 @@
 {
   "version": 1,
   "id": "public-retained-deliverables-v1",
-  "description": "Two public owner-operated app0.27.44 snapshots. Structure and recorded binding inspection only; semantic and language correctness remain unjudged. Not complete open-quality-issue coverage.",
+  "description": "Eight owner-operated public archived snapshots on app0.27.44 and c700 app0.27.18. Version1 grades retained; version2 diagnoses absent retained target bindings across five question kinds. Semantic/language and qualitative/sentence-format judgments remain unjudged. Incomplete failure-class coverage.",
   "cases": [
     {
       "file": "deliverable-mdn-public-20261009.json",
@@ -145,6 +145,389 @@
           "maxWhitespaceWords": 180,
           "excludedBulletSuffixSha256": "a852f0a7bf565d7d166241956f82353ff9bd45ad4cbf6d346ecd44cbfc6cc0f7"
         }
+      }
+    },
+    {
+      "file": "deliverable-nasa-public-20261009.json",
+      "sha256": "77b27ec2ce331b6b1c531e245f9d6094daca0a93f1e7fe7e1060d6ecb890312c",
+      "contract": {
+        "version": 2,
+        "id": "nasa-public-20261009",
+        "issues": [
+          231,
+          276,
+          331
+        ],
+        "kind": "single-page",
+        "requestedLanguage": "es",
+        "questionSha256": "ac2a8909b023a9170cafe622d04539da5557155079d82602708d35cf0e1ccc1f",
+        "targets": [
+          {
+            "claimIndex": 0,
+            "label": "Según la página de NASA indicada, ¿la Luna gira sobre su propio eje?"
+          },
+          {
+            "claimIndex": 1,
+            "label": "Según esa página, ¿por qué normalmente se ve el mismo hemisferio de la Luna desde la Tierra?"
+          },
+          {
+            "claimIndex": 2,
+            "label": "Según esa página, ¿por qué es engañoso llamar a la cara lejana de la Luna \"siempre oscura\"?"
+          }
+        ],
+        "requiredBindings": [
+          {
+            "claimIndex": 0,
+            "marker": "S1",
+            "sourceId": "public:web:a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+            "itemId": "a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+            "itemUrl": "https://science.nasa.gov/moon/facts/",
+            "contentVersion": "003c225b5fb9b295d7dcd0391966667a2553bb3be4d48915ff80e3b6c5fcef09",
+            "quoteSha256": "a2fad6dac2c6fa25f388908f7046ccb42e6e8c7c0a58722a9e2b7e25be1d1d5d"
+          },
+          {
+            "claimIndex": 1,
+            "marker": "S1",
+            "sourceId": "public:web:a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+            "itemId": "a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+            "itemUrl": "https://science.nasa.gov/moon/facts/",
+            "contentVersion": "003c225b5fb9b295d7dcd0391966667a2553bb3be4d48915ff80e3b6c5fcef09",
+            "quoteSha256": "f655624ba11493fc2f43693b37e3a75e5f884a809650c8d738435f8e99dfc6cb"
+          }
+        ],
+        "format": {
+          "requestedSentenceCount": 3,
+          "excludedBulletSuffixSha256": "6073a3502018ad00e552c1136abbe68b6733a10f583e72c5a475e3b1697c949f"
+        }
+      }
+    },
+    {
+      "file": "deliverable-etag-public-20261009.json",
+      "sha256": "07f620bee382c14fd5b1399dfa8ce740482eb705e2971b4e824de31aed9057b2",
+      "contract": {
+        "version": 2,
+        "id": "etag-public-20261009",
+        "issues": [
+          276
+        ],
+        "kind": "single-page",
+        "requestedLanguage": "de",
+        "questionSha256": "2d2a351e2c50dd01e82462deb3cae1188cb064af8560ba4886c7709e10803ae2",
+        "targets": [
+          {
+            "claimIndex": 0,
+            "label": "Wozu dient ein ETag laut der MDN-Seite?"
+          },
+          {
+            "claimIndex": 1,
+            "label": "Wie schützt If-Match laut der MDN-Seite vor dem Überschreiben einer inzwischen geänderten Datei?"
+          },
+          {
+            "claimIndex": 2,
+            "label": "Wann kann If-None-Match laut der MDN-Seite zu 304 Not Modified führen?"
+          }
+        ],
+        "requiredBindings": [
+          {
+            "claimIndex": 0,
+            "marker": "S1",
+            "sourceId": "public:web:58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+            "itemId": "58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+            "itemUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag",
+            "contentVersion": "f98d07670ae40a8f2b487d9a6db4ce079f26795285bf5e19c9f4212a1c7fa20d",
+            "quoteSha256": "f45ff00f39532a8a89c549b00840c06faa19232cc76b1eb74adc90dcc5b5733e"
+          },
+          {
+            "claimIndex": 0,
+            "marker": "S1",
+            "sourceId": "public:web:58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+            "itemId": "58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+            "itemUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag",
+            "contentVersion": "f98d07670ae40a8f2b487d9a6db4ce079f26795285bf5e19c9f4212a1c7fa20d",
+            "quoteSha256": "451aad90b082189c486f26020896a8391df54b14e3147bcec51d992eecf87f02"
+          },
+          {
+            "claimIndex": 1,
+            "marker": "S1",
+            "sourceId": "public:web:58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+            "itemId": "58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+            "itemUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag",
+            "contentVersion": "f98d07670ae40a8f2b487d9a6db4ce079f26795285bf5e19c9f4212a1c7fa20d",
+            "quoteSha256": "49b965b662bbf997c17371e4dcc6e3917d6ac4181534d0858eba1475ab3a9385"
+          },
+          {
+            "claimIndex": 1,
+            "marker": "S2",
+            "sourceId": "public:web:d2d3aae7c1e5408cbe3cab1879e80936425ae664942cb7bffc5afac79288a4a1",
+            "itemId": "d2d3aae7c1e5408cbe3cab1879e80936425ae664942cb7bffc5afac79288a4a1",
+            "itemUrl": "https://developer.mozilla.org/de/docs/Web/HTTP/Reference/Headers/ETag",
+            "contentVersion": "4004e09cef39961fea0fb8b04bf1db6353d056d54ae60226804fdafed066631d",
+            "quoteSha256": "955efc8f762181cdfccbb1a5c9a620e8955e74ae38c1e27dc8d4869d2e5e01c4"
+          }
+        ],
+        "format": {
+          "bulletCount": 3,
+          "excludedBulletSuffixSha256": "ce284209da9274684e80684b3d6d32ea8271a434959461a1bfdef7723574babd"
+        }
+      }
+    },
+    {
+      "file": "deliverable-arxiv-public-20261009.json",
+      "sha256": "8a215866ebf63d9486916a5941881ab591654c7c823fd08e08ceddaa8120ad5d",
+      "contract": {
+        "version": 2,
+        "id": "arxiv-public-20261009",
+        "issues": [
+          128
+        ],
+        "kind": "exact-metadata",
+        "requestedLanguage": "en",
+        "questionSha256": "51fc0fa2259b14cbd2f33048b262c566366d7171fa68dc2de14882b11e6f40d0",
+        "targets": [
+          {
+            "claimIndex": 0,
+            "label": "What is the paper title shown on the exact arXiv abstract page https://arxiv.org/abs/2005.11401v4?"
+          },
+          {
+            "claimIndex": 1,
+            "label": "Who is the first author shown on the exact arXiv abstract page https://arxiv.org/abs/2005.11401v4?"
+          },
+          {
+            "claimIndex": 2,
+            "label": "What exact versioned arXiv identifier is shown on the exact arXiv abstract page https://arxiv.org/abs/2005.11401v4?"
+          },
+          {
+            "claimIndex": 3,
+            "label": "What reading or publication status is actually shown on the exact arXiv abstract page https://arxiv.org/abs/2005.11401v4, without inferring a DOI or peer-review status?"
+          }
+        ],
+        "requiredBindings": [],
+        "format": {
+          "bulletCount": 4,
+          "excludedBulletSuffixSha256": "7aac90813c78f3dfb8c583bb51a019f6bbcdc352ad2886436deb5cc4bfdca9c4"
+        }
+      }
+    },
+    {
+      "file": "deliverable-sqlite-public-20261009.json",
+      "sha256": "0c0ef20ec6189299f7ed641eb23e4cdded3076fe5b12aeb62adff3ef30dea371",
+      "contract": {
+        "version": 2,
+        "id": "sqlite-public-20261009",
+        "issues": [
+          212
+        ],
+        "kind": "comparison",
+        "requestedLanguage": "vi",
+        "questionSha256": "733ba7e981f55e6ff7dbd373a0ba3f7e64cf6290213d35df4d3b4186e5334be5",
+        "targets": [
+          {
+            "claimIndex": 0,
+            "label": "Theo https://sqlite.org/wal.html, việc chỉ copy file .db đang chạy trong chế độ WAL có đảm bảo tính nhất quán của snapshot không, và các file WAL/-shm liên quan được xử lý thế nào?"
+          },
+          {
+            "claimIndex": 1,
+            "label": "Theo https://sqlite.org/wal.html, khi copy file .db đang chạy trong WAL, những điều kiện đồng thời và khóa nào cần chú ý (ví dụ ghi đang diễn ra, checkpoint, thay đổi file)?"
+          },
+          {
+            "claimIndex": 2,
+            "label": "Theo https://sqlite.org/backup.html, Online Backup API tạo snapshot nhất quán như thế nào khi database vẫn nhận ghi?"
+          },
+          {
+            "claimIndex": 3,
+            "label": "Theo https://sqlite.org/backup.html, Online Backup API có những điều kiện đồng thời và khóa nào cần chú ý trong lúc sao lưu?"
+          },
+          {
+            "claimIndex": 4,
+            "label": "Theo https://sqlite.org/backup.html, các bước và lưu ý để kiểm tra bản sao trước khi dùng để phục hồi là gì?"
+          },
+          {
+            "claimIndex": 5,
+            "label": "Theo https://sqlite.org/wal.html, có hướng dẫn nào để kiểm tra bản sao .db đã copy trước khi dùng để phục hồi không?"
+          },
+          {
+            "claimIndex": 6,
+            "label": "Trong hai tài liệu, bước nào của quy trình tạo snapshot không dừng service được tài liệu hỗ trợ trực tiếp và bước nào còn cần kiểm chứng?"
+          },
+          {
+            "claimIndex": 7,
+            "label": "Theo hai tài liệu, các hạn chế hoặc trường hợp không được hỗ trợ của mỗi cách (copy file .db đang chạy và Online Backup API) là gì?"
+          }
+        ],
+        "requiredBindings": [
+          {
+            "claimIndex": 0,
+            "marker": "S1",
+            "sourceId": "public:web:05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+            "itemId": "05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+            "itemUrl": "https://sqlite.org/wal.html",
+            "contentVersion": "a100a9b383334871465475aea40acc576f20c9d38617be257881115e0ee6b53f",
+            "quoteSha256": "9d6a2a2c078809bdb9db8d3ebd407242799d3328b8835d20e8349c4f1a495b0f"
+          },
+          {
+            "claimIndex": 0,
+            "marker": "S1",
+            "sourceId": "public:web:05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+            "itemId": "05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+            "itemUrl": "https://sqlite.org/wal.html",
+            "contentVersion": "a100a9b383334871465475aea40acc576f20c9d38617be257881115e0ee6b53f",
+            "quoteSha256": "56910da9c558b3012def07774aae4c2eda1885bc658278448a7d10fc721079cc"
+          },
+          {
+            "claimIndex": 1,
+            "marker": "S1",
+            "sourceId": "public:web:05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+            "itemId": "05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+            "itemUrl": "https://sqlite.org/wal.html",
+            "contentVersion": "a100a9b383334871465475aea40acc576f20c9d38617be257881115e0ee6b53f",
+            "quoteSha256": "82f3d70462d3608a03702d5fae160828f10efc4557c630b39264314aa52464ca"
+          },
+          {
+            "claimIndex": 2,
+            "marker": "S2",
+            "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemUrl": "https://sqlite.org/backup.html",
+            "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+            "quoteSha256": "b3dab984c79a760e6da71ee20a4febc725fd5dac24e0908b85b92d48e0f8361f"
+          },
+          {
+            "claimIndex": 2,
+            "marker": "S2",
+            "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemUrl": "https://sqlite.org/backup.html",
+            "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+            "quoteSha256": "2c3ccbb5961088ce026b021c45d392382f25500471a355954747dbdd5473437a"
+          },
+          {
+            "claimIndex": 3,
+            "marker": "S2",
+            "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemUrl": "https://sqlite.org/backup.html",
+            "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+            "quoteSha256": "b3dab984c79a760e6da71ee20a4febc725fd5dac24e0908b85b92d48e0f8361f"
+          },
+          {
+            "claimIndex": 3,
+            "marker": "S2",
+            "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemUrl": "https://sqlite.org/backup.html",
+            "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+            "quoteSha256": "fecaae25501c96a4067117c32ab934407e6abd391caedcbcd31954aa3d86ab57"
+          },
+          {
+            "claimIndex": 6,
+            "marker": "S2",
+            "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemUrl": "https://sqlite.org/backup.html",
+            "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+            "quoteSha256": "b3dab984c79a760e6da71ee20a4febc725fd5dac24e0908b85b92d48e0f8361f"
+          },
+          {
+            "claimIndex": 6,
+            "marker": "S2",
+            "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+            "itemUrl": "https://sqlite.org/backup.html",
+            "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+            "quoteSha256": "2c3ccbb5961088ce026b021c45d392382f25500471a355954747dbdd5473437a"
+          }
+        ],
+        "format": {
+          "excludedBulletSuffixSha256": "49338c623665711009d6e2b2e26e97825b959ab112dc9addaf414529cbdf208f"
+        }
+      }
+    },
+    {
+      "file": "deliverable-teacher-public-c700-e719b085.json",
+      "sha256": "c9b5bcdea9bb071ea5f0a46ecc5752a99e89507cefba0255952cf564c99b8e7f",
+      "contract": {
+        "version": 2,
+        "id": "teacher-public-c700-e719b085",
+        "issues": [
+          211
+        ],
+        "kind": "teaching-note",
+        "requestedLanguage": "vi",
+        "questionSha256": "07e1139179946a054c655fedf70a8250757ed84d731ecad9fc01239477b7b2e2",
+        "targets": [
+          {
+            "claimIndex": 0,
+            "label": "Theo nguồn NASA đã cho, thời tiết được định nghĩa như thế nào?"
+          },
+          {
+            "claimIndex": 1,
+            "label": "Theo nguồn NASA đã cho, khí hậu được định nghĩa như thế nào?"
+          },
+          {
+            "claimIndex": 2,
+            "label": "Theo nguồn NASA đã cho, sự khác biệt cốt lõi giữa thời tiết và khí hậu là gì (ví dụ: phạm vi thời gian và không gian)?"
+          },
+          {
+            "claimIndex": 3,
+            "label": "Theo nguồn NASA đã cho, vì sao không thể suy ra xu hướng khí hậu chỉ từ thời tiết của một ngày?"
+          },
+          {
+            "claimIndex": 4,
+            "label": "Hoạt động 10 phút nào (do người trả lời đề xuất, không phải NASA đã thực nghiệm) giúp học sinh lớp 7 phân biệt thời tiết với khí hậu?"
+          },
+          {
+            "claimIndex": 5,
+            "label": "Hai ví dụ nào (do người trả lời đề xuất, không phải NASA đã thực nghiệm) để học sinh lớp 7 phân loại là thời tiết hay khí hậu?"
+          },
+          {
+            "claimIndex": 6,
+            "label": "Câu hỏi cuối giờ nào (kèm đáp án) kiểm tra học sinh lớp 7 phân biệt được thời tiết với khí hậu?"
+          },
+          {
+            "claimIndex": 7,
+            "label": "Cách trình bày phần giải thích dưới 100 từ bằng tiếng Việt cho học sinh lớp 7, có trích dẫn nguồn NASA cho kiến thức và ghi rõ hoạt động/ví dụ do người trả lời đề xuất, nên như thế nào?"
+          }
+        ],
+        "requiredBindings": [],
+        "format": {}
+      }
+    },
+    {
+      "file": "deliverable-newest-public-c700-76fa4ed9.json",
+      "sha256": "7b49e5e2cd66bd538ae924b5d4de10a2d23c425ee0e5ff6d7f43f38492685fa0",
+      "contract": {
+        "version": 2,
+        "id": "newest-public-c700-76fa4ed9",
+        "issues": [
+          217
+        ],
+        "kind": "newest-release",
+        "requestedLanguage": "en",
+        "questionSha256": "48036087f811c822a7ad3414a2123294aa9669b63cb4472dc17e7dcc9ea7c155",
+        "targets": [
+          {
+            "claimIndex": 0,
+            "label": "What is the newest release tag actually present in the registered, verified creator release source associated with https://github.com/tang-vu/keryx/releases.atom?"
+          },
+          {
+            "claimIndex": 1,
+            "label": "What is one explicit change stated for that newest release in the registered, verified creator release source associated with https://github.com/tang-vu/keryx/releases.atom?"
+          },
+          {
+            "claimIndex": 2,
+            "label": "What is one compatibility or deployment fact that the release entry for that newest release does not establish?"
+          },
+          {
+            "claimIndex": 3,
+            "label": "What were the actual access outcomes when using the eligible registered creator path within the admitted source/reward budget?"
+          },
+          {
+            "claimIndex": 4,
+            "label": "What were the actual citation payment outcomes when using the eligible registered creator path within the admitted source/reward budget?"
+          }
+        ],
+        "requiredBindings": [],
+        "format": {}
       }
     }
   ]

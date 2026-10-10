@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { boundedPortableCopy } from "../research/bounded-portable-json";
 
-export const DELIVERABLE_SCHEMA_VERSION = 1;
+export const DELIVERABLE_SCHEMA_VERSION = 2;
 export const MAX_DELIVERABLE_BYTES = 98304;
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const identifier = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
@@ -19,33 +19,39 @@ const expectedBinding = z.object({ ...identity, quoteSha256: digest }).strict();
 const observedBinding = z.object({ ...identity, quote: z.string().min(1).max(2048).refine(value => Boolean(value.trim())),
   qualifiesForAnswer: z.literal(true), qualifiesForReward: z.literal(false) }).strict();
 export const deliverableContractSchema = z.object({
-  version: z.literal(1), id: identifier,
+  version: z.union([z.literal(1), z.literal(2)]), id: identifier,
   issues: z.array(z.number().int().positive()).min(1).max(16),
   kind: z.enum(["single-page", "exact-metadata", "comparison", "teaching-note", "newest-release"]),
   requestedLanguage: z.string().regex(/^[a-z]{2}(?:-[A-Z]{2})?$/),
   questionSha256: digest,
   targets: z.array(z.object({ claimIndex: index, label: z.string().min(1).max(256) }).strict()).min(1).max(32),
-  requiredBindings: z.array(expectedBinding).min(1).max(64),
+  requiredBindings: z.array(expectedBinding).max(64),
   format: z.object({
     bulletCount: z.number().int().min(1).max(32).optional(),
     maxWhitespaceWords: z.number().int().min(1).max(30000).optional(),
+    requestedSentenceCount: z.number().int().min(1).max(32).optional(),
     excludedBulletSuffixSha256: digest.optional(),
-  }).strict().refine(value => value.bulletCount !== undefined || value.maxWhitespaceWords !== undefined),
-}).strict();
+  }).strict(),
+}).strict().refine(value => value.version === 2 || (value.requiredBindings.length > 0 &&
+  value.format.requestedSentenceCount === undefined &&
+  (value.format.bulletCount !== undefined || value.format.maxWhitespaceWords !== undefined)));
 export const deliverableSnapshotSchema = z.object({
-  version: z.literal(1), id: identifier, question: z.string().min(1).max(30000),
+  version: z.union([z.literal(1), z.literal(2)]), id: identifier, question: z.string().min(1).max(30000),
   answer: z.string().min(1).max(60000), answerSha256: digest,
   // Reviewed corpus ranges exclude only recorded scaffolding; they are not inferred from headings.
   bulletRegion: z.object({ start: z.literal(0), end: z.number().int().positive(), sha256: digest }).strict(),
-  bindings: z.array(observedBinding).min(1).max(64),
+  bindings: z.array(observedBinding).max(64),
   provenance: z.object({
     kind: z.literal("retained-public-report"),
     reportUrl: z.string().regex(/^https:\/\/keryx\.cc\/dispatch\/[a-f0-9-]{36}$/),
     capturedAt: z.string().datetime(), deployedCommit: z.string().regex(/^[a-f0-9]{40}$/),
     rawCaptureSha256: digest,
     projection: z.literal("question-answer-qualified-public-bindings-only"),
+    retainedReceipt: z.object({ capturedAt: z.string().datetime(), rawCaptureSha256: digest,
+      payloadSha256: digest }).strict().optional(),
   }).strict(),
-}).strict();
+}).strict().refine(value => value.version === 2 ? value.provenance.retainedReceipt !== undefined :
+  value.bindings.length > 0 && value.provenance.retainedReceipt === undefined);
 
 export type DeliverableContract = z.infer<typeof deliverableContractSchema>;
 export type DeliverableSnapshot = z.infer<typeof deliverableSnapshotSchema>;
@@ -70,7 +76,7 @@ export function validateDeliverableInputs(contractInput: unknown, snapshotInput:
 } {
   const contract = boundedParse(deliverableContractSchema, contractInput);
   const snapshot = boundedParse(deliverableSnapshotSchema, snapshotInput);
-  if (contract.id !== snapshot.id || contract.questionSha256 !== deliverableSha256(snapshot.question))
+  if (contract.version !== snapshot.version || contract.id !== snapshot.id || contract.questionSha256 !== deliverableSha256(snapshot.question))
     throw new DeliverableInputError("CASE_OR_QUESTION_BINDING_MISMATCH");
   if (snapshot.answerSha256 !== deliverableSha256(snapshot.answer) ||
       snapshot.bulletRegion.end > snapshot.answer.length ||
@@ -85,7 +91,7 @@ export function validateDeliverableInputs(contractInput: unknown, snapshotInput:
   if (new Set(targetIds).size !== targetIds.length || new Set(expectedKeys).size !== expectedKeys.length ||
       new Set(actualKeys).size !== actualKeys.length ||
       contract.requiredBindings.some(binding => !targetIds.includes(binding.claimIndex)) ||
-      targetIds.some(target => !contract.requiredBindings.some(binding => binding.claimIndex === target)))
+      (contract.version === 1 && targetIds.some(target => !contract.requiredBindings.some(binding => binding.claimIndex === target))))
     throw new DeliverableInputError("DUPLICATE_OR_UNBOUND_TARGET");
   if (new Set(contract.issues).size !== contract.issues.length)
     throw new DeliverableInputError("DUPLICATE_ISSUE");
@@ -140,8 +146,14 @@ export function gradeDeliverable(contractInput: unknown, snapshotInput: unknown)
     language: { status: "UNJUDGED", detail: `Requested ${contract.requestedLanguage}; no language judge supplied.` },
     requiredFacts: { status: "UNJUDGED", detail: "Recorded target/quote identity is not semantic completeness or factual correctness." },
   };
+  if (contract.version === 2) {
+    checks.retainedTargetBindings = { status: matchedTargetCount === contract.targets.length ? "PASS" : "FAIL",
+      detail: `${matchedTargetCount}/${contract.targets.length} declared targets have a matching retained qualifying binding. Absence is recorded provenance only, not an independent semantic completeness judgment.` };
+    checks.sentenceCount = { status: "UNJUDGED", detail: contract.format.requestedSentenceCount === undefined
+      ? "No sentence-count contract." : `${contract.format.requestedSentenceCount} sentences requested; no multilingual sentence/format judge supplied.` };
+  }
   const deterministicContractPassed = !Object.values(checks).some(check => check.status === "FAIL");
-  return { version: DELIVERABLE_SCHEMA_VERSION, id: contract.id, issues: contract.issues, kind: contract.kind,
+  return { version: contract.version, id: contract.id, issues: contract.issues, kind: contract.kind,
     requestedLanguage: contract.requestedLanguage, provenance: snapshot.provenance,
     measured: { wordCount, bulletCount, retainedBindingCount: snapshot.bindings.length,
       targetCount: contract.targets.length, matchedTargetCount, missingBindingCount, unexpectedBindingCount,

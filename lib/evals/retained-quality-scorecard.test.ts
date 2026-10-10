@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { deliverableSha256 } from "./deliverable-contract";
 import { loadDeliverableCorpus } from "./deliverable-corpus";
@@ -7,6 +8,9 @@ import { buildRetainedQualityScorecard, compareRetainedQualityScorecards } from 
 const canonical = (value: unknown) => JSON.stringify(value, null, 2) + "\n";
 function inputs() {
   const corpus = structuredClone(loadDeliverableCorpus(fileURLToPath(new URL("../../scripts/fixtures/deliverable-corpus-v1.json", import.meta.url))));
+  // Preserve the original two-case comparison tests as an explicit historical subset.
+  corpus.cases = corpus.cases.slice(0, 2); corpus.manifest.cases = corpus.manifest.cases.slice(0, 2);
+  corpus.corpusSha256 = deliverableSha256(canonical(corpus.manifest));
   const inventory = { version: 1, capturedAt: "2026-10-09T10:00:00.000Z", source: "public-github-open-issue-list",
     issues: [230, 238, 217, 331].map(number => ({ number, title: `Public issue ${number}`,
       url: `https://github.com/tang-vu/keryx/issues/${number}` })) };
@@ -34,6 +38,52 @@ const policy = { version: 1, id: "fixture-diagnostic-policy", metric: "determini
   allowedDropBasisPoints: 4999, rationale: "Synthetic unit-test comparison only.", evidenceSha256: "c".repeat(64) };
 
 describe("retained scorecard composition", () => {
+  it("includes all eight actual public captures, every missing binding and five language denominators", () => {
+    const read = (file: string) => JSON.parse(readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8"));
+    const result = buildRetainedQualityScorecard({
+      corpus: loadDeliverableCorpus(fileURLToPath(new URL("../../scripts/fixtures/deliverable-corpus-v1.json", import.meta.url))),
+      inventory: read("../../fixtures/evals/quality/open-issues-20261009.json"),
+      coverage: read("../../fixtures/evals/quality/coverage-v1.json"),
+      inspection: { ...inputs().inspection, inspectedAt: "2026-10-10T17:00:00.000Z" } });
+    expect(result.overall).toEqual({ cases: 8, deterministicPasses: 0, deterministicFailures: 8,
+      deterministicPassRate: 0, semanticUnjudged: 8, languageUnjudged: 8, usefulAnswerRate: null });
+    expect(result.byLanguage.map(row => [row.language, row.cases])).toEqual([["de", 1], ["en", 3], ["es", 1], ["pt-BR", 1], ["vi", 2]]);
+    expect(result.coverage.missingKinds).toEqual([]);
+    expect(result.coverage.completeOpenIssueCoverage).toBe(false);
+    expect(result.cases.every(row => row.historicalCaptureAllowance === null && !row.deliverableAccepted)).toBe(true);
+    expect(result.failures.find(row => row.id === "arxiv-public-20261009")?.failedChecks).toContain("retainedTargetBindings");
+    expect(result.cases.find(row => row.id === "nasa-public-20261009")?.checks.sentenceCount.status).toBe("UNJUDGED");
+  });
+  it.each(["teacher-public-c700-e719b085", "newest-public-c700-76fa4ed9"])(
+    "keeps the archived refusal %s bound to its new capture and all missing targets", id => {
+      const corpus = loadDeliverableCorpus(fileURLToPath(new URL("../../scripts/fixtures/deliverable-corpus-v1.json", import.meta.url)));
+      const c = corpus.cases.find(row => row.snapshot.id === id)!;
+      expect(c.snapshot.bindings).toEqual([]);
+      expect(c.contract.requiredBindings).toEqual([]);
+      expect(c.contract.targets.length).toBeGreaterThan(0);
+      expect(c.contract.format).toEqual({});
+      expect(c.snapshot.provenance.deployedCommit).toBe("c70006182a4d187b2c8b82f17ce9dc671a4b6c6c");
+      expect(c.snapshot.provenance.capturedAt.startsWith("2026-10-10T")).toBe(true);
+      const read = (file: string) => JSON.parse(readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8"));
+      const result = buildRetainedQualityScorecard({ corpus, inventory: read("../../fixtures/evals/quality/open-issues-20261009.json"),
+        coverage: read("../../fixtures/evals/quality/coverage-v1.json"),
+        inspection: { ...inputs().inspection, inspectedAt: "2026-10-10T17:00:00.000Z" } });
+      const grade = result.cases.find(row => row.id === id)!;
+      expect(grade.checks.retainedTargetBindings.status).toBe("FAIL");
+      for (const check of ["bulletCount", "wordLimit", "sentenceCount", "language", "requiredFacts"])
+        expect(grade.checks[check].status).toBe("UNJUDGED");
+      expect(grade.deliverableAccepted).toBe(false);
+    });
+  it("refuses successor receipt capture metadata dated after the inspection", () => {
+    const corpus = structuredClone(loadDeliverableCorpus(fileURLToPath(new URL("../../scripts/fixtures/deliverable-corpus-v1.json", import.meta.url))));
+    corpus.cases[2].snapshot.provenance.retainedReceipt!.capturedAt = "2027-01-01T00:00:00.000Z";
+    const c = corpus.cases[2]; c.sha256 = deliverableSha256(canonical(c.snapshot));
+    corpus.manifest.cases[2] = { file: c.file, sha256: c.sha256, contract: c.contract };
+    corpus.corpusSha256 = deliverableSha256(canonical(corpus.manifest));
+    const read = (file: string) => JSON.parse(readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8"));
+    expect(() => buildRetainedQualityScorecard({ corpus, inventory: read("../../fixtures/evals/quality/open-issues-20261009.json"),
+      coverage: read("../../fixtures/evals/quality/coverage-v1.json"), inspection: inputs().inspection })).toThrow("CAPTURE_AFTER_INSPECTION");
+  });
   it("retains both real failures, all denominators and explicit unknown judgments/allowance", () => {
     const result = buildRetainedQualityScorecard(inputs());
     expect(result.overall).toEqual({ cases: 2, deterministicPasses: 0, deterministicFailures: 2,
