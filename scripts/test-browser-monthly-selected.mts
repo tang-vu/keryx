@@ -27,7 +27,7 @@ const bundle = await build({ stdin: { contents: `
     signMessage:async value=>window.syntheticSignMessage(value.message),signTypedData:async value=>window.syntheticSignTyped(value.message)};
   createRoot(document.getElementById('root')).render(React.createElement(ResearchMonthly,{quote:${JSON.stringify(quote)}}));`,
   resolveDir: process.cwd(), loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false, metafile: true,
-  define: { "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" }, plugins: [signedOutResearchAuthFixture(), circleSdkBrowserPlugin(), { name: "hermetic-monthly", setup(b) {
+  define: { "process.env": "{}", "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" }, plugins: [signedOutResearchAuthFixture(), circleSdkBrowserPlugin(), { name: "hermetic-monthly", setup(b) {
     b.onResolve({ filter: /^(wagmi|next\/image)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /wallet-picker|gateway\/read-credit/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onLoad({ filter: /.*/, namespace: "synthetic" }, args => ({ contents:
@@ -65,7 +65,10 @@ try {
       purchase: { id, network:profile.networkId, payer: account.address, expiresAt: new Date(Date.now() + 86400_000).toISOString() }, redemptions: [] }) }); }
     throw new Error(`Unexpected hermetic route ${url.pathname}`);
   });
-  const page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
+  const page = await context.newPage(); page.on("pageerror", error => {
+    errors.push(error.message);
+    console.error(`${profile.name} Monthly fixture page error: ${error.message}`);
+  });
   await page.addInitScript(({ intent, id, mainnet, owner, network }) => { if (!localStorage.getItem("fixture-ready")) {
     localStorage.setItem("fixture-ready", "1"); const prefix=mainnet?`keryx.monthly.${network}.https://keryx.cc.${owner.toLowerCase()}`:"keryx.monthly";
     if(mainnet)localStorage.setItem("keryx.monthly.last",JSON.stringify(`monthly_${"f".repeat(64)}`));

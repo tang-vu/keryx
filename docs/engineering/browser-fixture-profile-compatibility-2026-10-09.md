@@ -58,6 +58,10 @@ The subsequent Monthly fixture failure reaches wallet authentication through its
 real ResearchMonthly, ResearchJob, ResearchJobDetails and DeliverableAcceptance
 composition. Reuse the same explicit signed-out authentication boundary while
 asserting all four real components remain in the bundle and Node JWT stays out.
+The standalone bundle defines an empty client `process.env` alongside its exact
+selected-network and production definitions, preserving their precedence. Browser
+page errors are logged before a visibility timeout so composition failures retain
+their actual cause.
 Both selected network profiles retain synthetic EOA message/typed-data signing,
 original plan restoration, malformed/foreign recovery refusal, intercepted HTTP,
 uncertain-debit and refresh purchase guards, and exact mainnet funding amounts.
