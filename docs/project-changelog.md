@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Historical native completion compatibility (2026-10-11, v0.27.51 candidate)
+### Historical native completion and maintenance errors (2026-10-11, v0.27.51 candidate)
 
 - Read completed originals written before the public checkpoint field without
   rewriting their receipts. After validating the retained run, claim, payment and
@@ -15,6 +15,14 @@
 - App/OpenAPI0.27.51 and hosted MCP0.3.12 identify the changed server/source graph.
   Actual compiled stdio/desktop graphs and extension inputs are unchanged; retain
   stdio/Registry0.4.15, desktop0.4.14 and extension0.1.3 without republishing them.
+- Show validated front-door maintenance refusals as plain text with a fixed local
+  status link and an informational wait. Restore the submitted research question
+  while preserving later edits; never retry or sign automatically. Malformed
+  nested error bodies receive a plain HTTP fallback. The embed shares the safer
+  parser and keeps its populated question field. The existing front door remains
+  inactive; full issue281 still requires its lifecycle, remaining client handling
+  and operational acceptance. Combine this browser fix with the native correction
+  above in one accepted server deployment.
 
 
 ### Combined reading checkpoints and mobile layout (2026-10-11, v0.27.50 candidate)

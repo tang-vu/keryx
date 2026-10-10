@@ -22,6 +22,26 @@ original whole financial equality check remains an independent gate, and
 Supabase native fulfillment stays unadmitted. See the
 [historical compatibility boundary](engineering/actual-read-checkpoints-301.md#historical-native-receipt-compatibility--october-11-follow-up).
 
+### Browser maintenance errors in the same release51 batch
+
+The validated nested503 parser and retained-question presentation change the web
+chat and embed graphs. A separate actual compiled comparison against canonical
+`dd6f49fa` includes all five changed runtime inputs, with version/provenance
+metadata held constant. The eighteen existing stdio, desktop, server, API
+projector, repository CLI and bot graph outputs remain byte-identical; all twelve
+extension inputs remain unchanged. The native server correction above retains
+its independently observed graph changes. App/OpenAPI0.27.51 and hosted MCP0.3.12
+coordinate the combined server release; no further package/client version bump
+or publication follows from this browser change.
+
+Web chat shows a fixed same-origin service-status link and restores the submitted
+question without overwriting later edits or retrying/signing. Embed gets plain
+error text and keeps its existing question field, without a new status action.
+This preparation does not enable the independent front door. Remaining supported
+client handling, advance notice, lifecycle/ingress binding and operational
+acceptance continue to gate complete issue281; installed-client synchronization
+is not claimed. See [the maintenance boundary](engineering/planned-maintenance-2026-10-08.md#browser-refusal-preparation--2026-10-11).
+
 ## Combined release50 — October 11, 2026 source candidate
 
 App/OpenAPI **0.27.50**, stdio/official Registry **0.4.15**, remote MCP **0.3.11**
