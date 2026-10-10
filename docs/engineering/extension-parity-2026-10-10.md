@@ -44,3 +44,21 @@ citation text, failure state, bounded device history/clear and 400/440px horizon
 It intercepts all external transport and performs no useful live research or settlement.
 The full CI browser-source lane now runs this fixture; the checks lane packages the
 allowlisted extension and retains an artifact identified by the exact CI commit.
+
+The first PR CI preserved a failed aggregate: three older cross-surface popup
+fixtures omitted the server's terminal `finish_reason: stop`, and the controlled
+study correctly rejected the application-version lockfile fingerprint change.
+The fixtures now supply the real terminal shape without weakening the stream rule.
+The composed commerce fixture also verifies the report fence preserves existing
+deterministic public A2A IDs alongside UUIDs, while refusing private IDs, foreign
+origins, credentials, query/fragment and extra paths.
+All 48 offline study trials were actually reproduced with zero outbound attempts;
+only the lockfile digest changed in the retained outputs/write-up, with identical
+source inputs, decisions, answers and metrics. The failed run remains evidence,
+and the corrected candidate requires fresh full acceptance.
+
+The corrections passed 31 extension/channel/result cases, the composed R24 case,
+the exact 48-trial study check, focused lint and a fresh unpacked MV3 fixture.
+An earlier broad Windows run retained an unchanged R21 new-process 20-second
+timeout and the causal R24 URL-fence failure; it is not full-suite acceptance.
+R24 now matches the configured synthetic hosted origin and exact metadata URL.

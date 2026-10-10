@@ -31,7 +31,8 @@ export function hostedReportUrl(value, origin) {
   try {
     const url = new URL(value);
     if (url.origin !== new URL(origin).origin || url.username || url.password || url.search || url.hash ||
-      !/^\/dispatch\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(url.pathname)) return null;
+      // Public runs use UUIDs or the existing deterministic A2A original ID.
+      !/^\/dispatch\/(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|a2a_[a-f0-9]{64})$/i.test(url.pathname)) return null;
     return url.href;
   } catch { return null; }
 }

@@ -4,6 +4,7 @@ import { JSDOM } from "jsdom";
 import { expect, vi } from "vitest";
 
 interface ReplayOptions {
+  hostedOrigin?: string;
   prepare?: (document: Document) => void;
   afterClick?: (document: Document) => void;
   response?: (init: RequestInit) => Response | Promise<Response>;
@@ -21,7 +22,7 @@ export async function replayExtensionPopup<T>(chunks: readonly unknown[], inspec
 ) => T, options: ReplayOptions = {}): Promise<T> {
   const dom = new JSDOM(readFileSync("extension/popup.html", "utf8"),
     { url: "https://extension.example/popup", runScripts: "outside-only" });
-  const api = "https://extension.example/api/v1/chat/completions";
+  const api = `${options.hostedOrigin ?? "https://extension.example"}/api/v1/chat/completions`;
   const question = "Synthetic popup replay";
   const requests: { url: string; method: string; question: string }[] = [];
   const bindings = {

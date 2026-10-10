@@ -24,6 +24,10 @@ describe("extension hosted request boundaries", () => {
   });
   it("bounds original reports to the hosted origin and never auto-runs web handoffs", () => {
     expect(hostedReportUrl(report, origin)).toBe(report);
+    const a2aReport = `${origin}/dispatch/a2a_${"a".repeat(64)}`;
+    expect(hostedReportUrl(a2aReport, origin)).toBe(a2aReport);
+    for (const url of [a2aReport + "/receipt", `${origin}/dispatch/a2a_short`, `${origin}/dispatch/prv_${"a".repeat(64)}`])
+      expect(hostedReportUrl(url, origin)).toBeNull();
     for (const url of [report + "?run=1", report + "#x", report.replace(origin, "https://evil.example"), "https://keryx.cc/dispatch/not-a-uuid"]) expect(hostedReportUrl(url, origin)).toBeNull();
     const url = new URL(webDraftUrl(origin, "A & B", 0, "deep"));
     expect(url.searchParams.get("q")).toBe("A & B");

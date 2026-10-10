@@ -20,7 +20,8 @@ it.each(["real", "offline"] as const)("thin channel summaries separate public ci
 });
 
 it("the actual extension stream renderer marks allocations and offline state without claiming settlement", async () => {
-  const chunk = { keryx: { citations: [{ source: "Public publisher", reward: 0 }], totalToCreators: 0, paymentMode: "offline" } };
+  const chunk = { choices: [{ delta: {}, finish_reason: "stop" }],
+    keryx: { citations: [{ source: "Public publisher", reward: 0 }], totalToCreators: 0, paymentMode: "offline" } };
   await replayExtensionPopup([chunk], document => {
     expect(document.getElementById("paid-panel")!.hidden).toBe(false);
     expect(document.getElementById("status")!.textContent).toContain("offline");
