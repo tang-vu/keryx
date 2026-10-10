@@ -22,6 +22,41 @@ original whole financial equality check remains an independent gate, and
 Supabase native fulfillment stays unadmitted. See the
 [historical compatibility boundary](engineering/actual-read-checkpoints-301.md#historical-native-receipt-compatibility--october-11-follow-up).
 
+### Browser maintenance notice and refusal follow-up — release52 candidate
+
+The validated nested503 parser and retained-question presentation change the web
+chat and embed graphs. A separate actual compiled comparison against canonical
+`dd6f49fa` includes all five changed runtime inputs, with version/provenance
+metadata held constant. The eighteen existing stdio, desktop, server, API
+projector, repository CLI and bot graph outputs remain byte-identical; all twelve
+extension inputs remain unchanged. The native server correction above retains
+its independently observed graph changes. This initial refusal comparison predates
+the advance-notice/shared-validator follow-up; final consumer graph acceptance is
+recorded separately. The final actual compiled comparison uses ten reviewed
+runtime inputs against590 canonical baseline inputs: seven native consumers,
+web chat/embed and the maintenance CLI change; eleven other entrypoints and all
+twelve extension inputs remain unchanged. The new global banner compiles with
+its bounded observer/validator. Root-layout integration still requires the
+default hosted Next build; this graph comparison is not runtime or installer
+acceptance. App/OpenAPI0.27.52 follows the immutable0.27.51 source tag and
+coordinates the combined server deployment with hosted MCP0.3.12. Unchanged
+stdio/Registry0.4.15, desktop0.4.14 and extension0.1.3 retain their artifacts.
+
+Web chat shows a fixed same-origin service-status link and restores the submitted
+question without overwriting later edits or retrying/signing. Embed gets plain
+error text and keeps its existing question field, without a new status action.
+One root-layout notice observes only the fixed unauthenticated public status GET,
+with bounded bytes, timeout, calls and elapsed lifetime. It uses the server's
+checkedAt and labels retained snapshots, expected-end uncertainty and unprobed
+health. The shared validator also rejects coercible server control phases.
+Source inspection found no blind paid503 retry in the supported clients; local
+CLI/desktop inspection roles remain outside hosted ingress, and external API/MCP
+transports still require acceptance. This preparation does not enable the front
+door. Lifecycle/ingress binding, a non-production real-app exercise, final
+combined build/CI and deployed/client readback continue to gate complete issue281;
+installed-client synchronization is not claimed. See
+[the maintenance boundary](engineering/planned-maintenance-2026-10-08.md#advance-window-banner-preparation--2026-10-11).
+
 ## Combined release50 — October 11, 2026 source candidate
 
 App/OpenAPI **0.27.50**, stdio/official Registry **0.4.15**, remote MCP **0.3.11**

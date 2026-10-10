@@ -10,6 +10,9 @@ import { fmtUsdc } from "./phase-style";
 import { ReportActions } from "./report-actions";
 import { SelectionFailureDownload } from "./selection-failure-download";
 import { DecisionReviews } from "./decision-reviews";
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
 
 export interface ResearchTurnData {
   id: number;
@@ -44,6 +47,10 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
       {stopped && <p role="status" className="border border-line bg-paper p-4 text-sm text-ink-2">Stopped waiting for this research. Payments already signed may still settle; stopping does not refund them.</p>}
       {!stopped && state.status === "error" && <div role="alert" className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
         <p>{state.error ?? "Research could not finish. Try another question."}</p>
+        {state.errorKind === "maintenance" && state.maintenance && <div className="mt-2">
+          <a href="/maintenance/status" className="underline underline-offset-4">{message("researchError.serviceStatus")}</a>
+          {state.retryAfter !== null && <p>{message("researchError.checkStatusAfter", { seconds: state.retryAfter })}</p>}
+        </div>}
         <SelectionFailureDownload diagnostic={state.selectionDiagnostic} />
         {state.errorKind === "rate-limit" && <p className="mt-2">Try again{state.retryAfter ? ` in ${state.retryAfter}s` : " shortly"}. Your saved reports remain available.</p>}
       </div>}

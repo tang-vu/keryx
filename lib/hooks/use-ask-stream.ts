@@ -36,6 +36,7 @@ import { browserPaymentProfile } from "../browser-payment-profile";
 import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/selection-diagnostic";
 import { isDecisionRecord } from "../research/decision-record";
 import { decisionReviewSchema, type DecisionReview } from "../research/decision-review-types";
+import { parseAskHttpError, type MaintenanceRefusal } from "./ask-error-response";
 
 export type StreamMode = "real" | "offline";
 
@@ -50,9 +51,10 @@ export interface AskMeta {
  * Distinguishes an expected throttle from a real failure so the UI can respond
  * differently: `rate-limit` (research capacity used up → wait before another
  * request), `session-expired` (grant lapsed → recover prompt), `generic` (any
- * other failure → plain error box).
+ * other failure → plain error box), or `maintenance` (validated front-door503
+ * → fixed status link and retained draft, with no automatic retry).
  */
-export type AskErrorKind = "generic" | "rate-limit" | "session-expired" | "research-paused";
+export type AskErrorKind = "generic" | "rate-limit" | "session-expired" | "research-paused" | "maintenance";
 
 export interface AskStreamState {
   status: "idle" | "streaming" | "done" | "error";
@@ -70,8 +72,10 @@ export interface AskStreamState {
   selectionDiagnostic?: SelectionDiagnostic;
   /** What kind of error this is, when status === "error". null otherwise. */
   errorKind: AskErrorKind | null;
-  /** Seconds until the free-trial throttle resets, when errorKind === "rate-limit". */
+  /** Informational wait for rate-limit or validated maintenance; never a retry timer. */
   retryAfter: number | null;
+  /** Validated front-door refusal only; fixed local status action, never retry authority. */
+  maintenance?: MaintenanceRefusal;
 }
 
 const INITIAL: AskStreamState = {
@@ -424,18 +428,13 @@ export function useAskStream(opts?: AskStreamOpts) {
           // structured session_expired without consuming the stream body twice.
           const bodyText = await res.text().catch(() => "");
           if (!isCurrent()) return;
-          let errCode: string | undefined;
-          let errMsg = bodyText;
-          const retryHeader = res.headers.get("Retry-After");
-          let retryAfter: number | null = retryHeader && /^[0-9]{1,6}$/.test(retryHeader)
-            ? Number(retryHeader) : null;
-          try {
-            const j = JSON.parse(bodyText) as { error?: string; message?: string; retryAfter?: number };
-            errCode = j.error;
-            errMsg = j.message ?? j.error ?? bodyText;
-            if (typeof j.retryAfter === "number" && Number.isFinite(j.retryAfter) && j.retryAfter >= 0)
-              retryAfter = j.retryAfter;
-          } catch { /* not JSON — keep the raw text */ }
+          const { code: errCode, message: errMsg, retryAfter, maintenance } =
+            parseAskHttpError(bodyText, res.status, res.headers.get("Retry-After"));
+
+          if (maintenance) {
+            setState((s) => ({ ...s, status: "error", errorKind: "maintenance", error: errMsg, retryAfter, maintenance }));
+            return;
+          }
 
           if (errCode === "research_paused") {
             setState((s) => ({ ...s, status: "error", errorKind: "research-paused", error: RESEARCH_PAUSED_MESSAGE }));

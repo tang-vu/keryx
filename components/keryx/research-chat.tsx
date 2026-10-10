@@ -82,7 +82,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
       </div>}
       <AskForm disabled={streaming} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit
         showLaunchBadge={showLaunchBadge && !hasTurns}
-        restoreQuestion={request && (state.errorKind === "research-paused" || state.errorKind === "rate-limit")
+        restoreQuestion={request && (state.errorKind === "research-paused" || state.errorKind === "rate-limit" || state.errorKind === "maintenance")
           ? { ...request, researchPaused: state.errorKind === "research-paused" } : undefined} />
       {payer === "treasury" && !hasTurns && <div className="mt-3"><SponsoredTrialNotice /></div>}
       <div className="mt-3"><SessionGrantPanel onBindingChange={handleBindingChange} /></div>
