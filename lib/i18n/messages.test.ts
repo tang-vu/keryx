@@ -1,9 +1,31 @@
 import { describe, expect, it, vi } from "vitest";
 import { createMessages, englishMessages, validateMessageCatalogue } from "./messages";
+import { selectPlural } from "./format";
 
 describe("typed English catalogue and selected translations", () => {
   it("validates the complete English catalogue", () => {
     expect(validateMessageCatalogue(englishMessages)).toEqual({ missing: [], invalid: [] });
+  });
+
+  it("selects account count forms while preserving the existing English and allowing distinct translated grammar", () => {
+    const copy = createMessages("en");
+    for (const count of [0, 1, 2]) {
+      const one = selectPlural(count, "en") === "one";
+      expect(copy(one ? "apiKeys.callsOnDay.one" : "apiKeys.callsOnDay.other", { day: "2026-10-11", count }))
+        .toBe(`2026-10-11: ${count} calls`);
+      expect(copy(one ? "apiKeys.pinnedSources.one" : "apiKeys.pinnedSources.other", { count }))
+        .toBe(` · ${count} pinned source(s)`);
+    }
+    const translated = createMessages("vi", {
+      "apiKeys.callsOnDay.one": "{day}: {count} single call",
+      "apiKeys.callsOnDay.other": "{day}: {count} several calls",
+      "apiKeys.pinnedSources.one": "{count} single pinned source",
+      "apiKeys.pinnedSources.other": "{count} several pinned sources",
+    });
+    expect(translated("apiKeys.callsOnDay.one", { day: "day", count: 1 })).toBe("day: 1 single call");
+    expect(translated("apiKeys.callsOnDay.other", { day: "day", count: 2 })).toBe("day: 2 several calls");
+    expect(translated("apiKeys.pinnedSources.one", { count: 1 })).toBe("1 single pinned source");
+    expect(translated("apiKeys.pinnedSources.other", { count: 2 })).toBe("2 several pinned sources");
   });
 
   it("renders missing translations in English and reports the locale/key only", () => {

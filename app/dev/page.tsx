@@ -21,6 +21,7 @@ import { personalHistoryCopy } from "@/locales/en/personal-history";
 import { operatorObligationsCopy } from "@/locales/en/operator-obligations";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { selectPlural } from "@/lib/i18n/format";
 
 const copy = createMessages("en");
 const richCopy = createRichMessages("en");
@@ -58,7 +59,7 @@ function UsageBar({ usage }: { usage: ApiKeyUsage[] }) {
   return (
     <div className="flex items-end gap-px" style={{ height: 32 }}>
       {visible.map((u) => (
-        <div key={u.day} className="group relative flex-1" title={copy("apiKeys.callsOnDay", { day: u.day, count: u.count })}>
+        <div key={u.day} className="group relative flex-1" title={copy(selectPlural(u.count, "en") === "one" ? "apiKeys.callsOnDay.one" : "apiKeys.callsOnDay.other", { day: u.day, count: u.count })}>
           <div
             className="w-full rounded-sm bg-seal/70 transition-all group-hover:bg-seal"
             style={{ height: `${Math.max(2, Math.round((u.count / max) * 32))}px` }}
@@ -160,7 +161,7 @@ function KeyCard({
             <span>{copy("apiKeys.scopes")}{" "}
               <span className="text-ink-2">
                 {apiKey.scopes.join(" + ")}
-                {apiKey.sourceIds && copy("apiKeys.pinnedSources", { count: apiKey.sourceIds.length })}
+                {apiKey.sourceIds && copy(selectPlural(apiKey.sourceIds.length, "en") === "one" ? "apiKeys.pinnedSources.one" : "apiKeys.pinnedSources.other", { count: apiKey.sourceIds.length })}
               </span>
             </span>
           </div>

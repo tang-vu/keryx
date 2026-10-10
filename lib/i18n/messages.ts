@@ -385,8 +385,11 @@ export const englishMessages = Object.freeze({
   "apiKeys.profileWriteScope": "(replace private profile fields)",
   "apiKeys.loading": "Loading keys…",
   "apiKeys.empty": "No API keys yet. Issue one above.",
-  "apiKeys.callsOnDay": "{day}: {count} calls",
-  "apiKeys.pinnedSources": " · {count} pinned source(s)",
+  // English arms preserve the original wording; translations may supply distinct grammar.
+  "apiKeys.callsOnDay.one": "{day}: {count} calls",
+  "apiKeys.callsOnDay.other": "{day}: {count} calls",
+  "apiKeys.pinnedSources.one": " · {count} pinned source(s)",
+  "apiKeys.pinnedSources.other": " · {count} pinned source(s)",
   "apiKeys.httpError": "HTTP {status}",
 } as const);
 export type MessageKey = keyof typeof englishMessages;

@@ -107,3 +107,10 @@ from this extraction. Root owns combined release identity, hosted build/CI,
 review and deployment. This source preparation does not establish synchronized
 delivery or finish issue272: other UI areas and human semantic approval of
 payment/signature/legal translations remain open.
+
+The API-key daily-call tooltip and pinned-source count select catalogue
+`.one`/`.other` forms through the existing plural selector. Both English arms
+deliberately keep `calls` and `source(s)` exactly as previously displayed, even
+for one item: this extraction preserves English output rather than editing it.
+The separate keys let a future selected translation use its own grammar without
+splitting the counted sentence or changing the named `day`/`count` parameters.
