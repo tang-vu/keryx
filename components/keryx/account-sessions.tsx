@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 
 const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 interface SessionRow { id: string; issuedAt: number; expiresAt: number; current: boolean }
 interface SessionList { sessions: SessionRow[]; truncated: boolean }
@@ -71,8 +73,8 @@ export function AccountSessions() {
       {data?.sessions.map(row => <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
         <div className="min-w-0 text-sm">
           <p className="font-medium text-ink">{row.current ? message("accountSessions.current") : message("accountSessions.session", { id: row.id.slice(0, 8) })}</p>
-          <p className="mt-1 text-ink-2">{message("accountSessions.issuedAt", { date: date(row.issuedAt) })}</p>
-          <p className="text-ink-2">{message("accountSessions.expiresAt", { date: date(row.expiresAt) })}</p>
+          <p className="mt-1 text-ink-2">{richMessage("accountSessions.issuedAt", { date: date(row.issuedAt) })}</p>
+          <p className="text-ink-2">{richMessage("accountSessions.expiresAt", { date: date(row.expiresAt) })}</p>
         </div>
         {!row.current && <button className={button} disabled={busy} onClick={() => { void revoke(row.id); }} aria-label={message("accountSessions.signOutLabel", { id: row.id.slice(0, 8) })}>{message("account.signOut")}</button>}
       </li>)}

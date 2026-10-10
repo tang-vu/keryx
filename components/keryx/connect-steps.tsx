@@ -54,7 +54,7 @@ export function ChainBanner({ guard }: { guard: ArcChainGuard }) {
           {message("account.wrongNetwork")}
         </p>
         <p className="mt-0.5 text-[12px] leading-snug text-ink-2">
-          {message("account.networkInstruction", { network: browserPaymentProfile().label, chainId: browserPaymentProfile().chainId })}
+          {richMessage("account.networkInstruction", { network: browserPaymentProfile().label, chainId: browserPaymentProfile().chainId })}
         </p>
       </div>
       <button
@@ -78,7 +78,7 @@ export function ConnectStep({ isBusy }: { isBusy: boolean }) {
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">{message("account.step", { number: 1 })}</p>
         <p className="mt-1 font-display text-xl font-medium text-ink">{message("account.connectWallet")}</p>
         <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
-          {message("account.walletInstruction", { network: browserPaymentProfile().label })}
+          {richMessage("account.walletInstruction", { network: browserPaymentProfile().label })}
         </p>
       </div>
       {/* EIP-6963 multi-wallet picker — lists all discovered injected wallets */}

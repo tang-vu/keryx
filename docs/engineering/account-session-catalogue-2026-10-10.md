@@ -17,6 +17,9 @@ selected-catalogue snapshot and English fallback, then inserts keyed Fragments
 without DOM wrappers. It permits sentence order changes and repeated named
 nodes, refuses missing or extra parameters, and never parses inserted strings
 as templates or HTML. The existing plain-text formatter keeps its behavior.
+The network instructions and session date sentences also retain their original
+adjacent text-node boundaries through named Fragment insertion, preserving font
+shaping at those data boundaries.
 
 Only 54 retired copy allowances from the three migrated files are removed from
 the UI-copy baseline. Other files, its original source provenance and parser
