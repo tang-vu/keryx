@@ -218,3 +218,9 @@ test("common shell and observation wrapper copy is catalogued; protocol names, b
     assert.deepEqual(findings.map(finding => finding.text), data, file);
   }
 });
+
+test("personal dispatch metadata, accessibility, empty states and toast copy are catalogued", () => {
+  for (const file of ["app/me/asks/page.tsx", "app/me/asks/my-asks-view.tsx"]) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
+  }
+});

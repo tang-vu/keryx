@@ -13,6 +13,11 @@ import { toast } from "sonner";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { CurrentHistoryPane } from "./current-history-view";
 import { personalHistoryCopy as copy } from "@/locales/en/personal-history";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 interface AskCreator {
   sourceId: string;
@@ -49,22 +54,22 @@ interface Totals {
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return message("myHistory.justNow");
+  if (mins < 60) return message("myHistory.minutesAgo", { minutes: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return message("myHistory.hoursAgo", { hours: hrs });
+  return message("myHistory.daysAgo", { days: Math.floor(hrs / 24) });
 }
 
 export function MyAsksView() {
   const [historical, setHistorical] = useState(false);
   const [browse, setBrowse] = useState(false);
   return <div>
-    <nav className="mb-6 flex flex-wrap gap-3" aria-label="Dispatch history network">
-      <button type="button" aria-pressed={!historical} onClick={() => setHistorical(false)} className="min-h-11 border border-line px-4 text-sm">Current network</button>
-      <button type="button" aria-pressed={historical} onClick={() => setHistorical(true)} className="min-h-11 border border-line px-4 text-sm">Arc testnet history</button>
+    <nav className="mb-6 flex flex-wrap gap-3" aria-label={message("myHistory.networkLabel")}>
+      <button type="button" aria-pressed={!historical} onClick={() => setHistorical(false)} className="min-h-11 border border-line px-4 text-sm">{message("myHistory.currentNetwork")}</button>
+      <button type="button" aria-pressed={historical} onClick={() => setHistorical(true)} className="min-h-11 border border-line px-4 text-sm">{message("myHistory.testnetHistory")}</button>
     </nav>
-    {historical && <p className="mb-5 text-sm leading-relaxed text-ink-2">Original testnet dispatches attributed to this wallet. These test USDC amounts are separate from current mainnet spend; archived source names do not grant current payout rights.</p>}
+    {historical && <p className="mb-5 text-sm leading-relaxed text-ink-2">{message("myHistory.testnetScope")}</p>}
     {!historical && <button type="button" className="mb-5 min-h-11 border border-line px-4 text-sm" onClick={() => setBrowse(value => !value)}>{browse ? copy.recent : copy.browse}</button>}
     {!historical && browse ? <CurrentHistoryPane /> : <MyAsksLedger key={historical ? "testnet" : "current"} historical={historical} />}
   </div>;
@@ -98,7 +103,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
         setTotals(d.totals);
         setTruncated(d.truncated);
       } catch {
-        if (!controller.signal.aborted) { setFailed(true); toast.error("Couldn't load your dispatches — try again."); }
+        if (!controller.signal.aborted) { setFailed(true); toast.error(message("myHistory.loadFailed")); }
       } finally {
         setLoading(false);
       }
@@ -106,17 +111,17 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
     return () => controller.abort();
   }, [historical, revision]);
 
-  if (loading) return <p className="font-mono text-xs text-ink-3">Loading your dispatches…</p>;
-  if (failed) return <p role="status" className="text-sm">Your dispatch history is unavailable. <button type="button" onClick={() => { setLoading(true); setFailed(false); setRevision(value => value + 1); }} className="min-h-11 px-2 text-seal underline">Retry</button></p>;
+  if (loading) return <p className="font-mono text-xs text-ink-3">{message("myHistory.loading")}</p>;
+  if (failed) return <p role="status" className="text-sm">{richMessage("myHistory.unavailable", { action: <button type="button" onClick={() => { setLoading(true); setFailed(false); setRevision(value => value + 1); }} className="min-h-11 px-2 text-seal underline">{message("myHistory.retry")}</button> })}</p>;
 
   if (signedOut)
     return (
       <div className="rounded border border-dashed border-line p-8 text-center">
         <p className="mb-2 font-serif text-sm text-ink-2">
-          Sign in with the wallet you ask from to see its dispatches.
+          {message("myHistory.signInInstruction")}
         </p>
         <Link href="/connect" className="font-mono text-xs text-seal underline underline-offset-2">
-          Connect wallet →
+          {message("myHistory.connect")}
         </Link>
       </div>
     );
@@ -125,11 +130,10 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
     return (
       <div className="rounded border border-dashed border-line p-8 text-center">
         <p className="mb-2 font-serif text-sm text-ink-2">
-          {historical ? "No testnet dispatches attributed to this wallet. " : "No dispatches from this wallet yet. "}Dispatches you ran signed out aren&apos;t attributed
-          to anyone — sign in first and the next one lands here.
+          {historical ? message("myHistory.emptyTestnet") : message("myHistory.emptyCurrent")}{message("myHistory.attributionInstruction")}
         </p>
         <Link href="/" className="font-mono text-xs text-seal underline underline-offset-2">
-          Ask a question →
+          {message("myHistory.ask")}
         </Link>
       </div>
     );
@@ -140,39 +144,37 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
       {totals && (
         <section className="border border-line bg-paper p-5">
           <h2 className="mb-4 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-            <Receipt className="h-3.5 w-3.5 text-seal" /> {historical ? "Your recorded testnet tolls" : "Your tolls"}
+            <Receipt className="h-3.5 w-3.5 text-seal" /> {historical ? message("myHistory.testnetTolls") : message("myHistory.tolls")}
           </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
               <p className="font-serif text-xl text-ink">{totals.dispatches}</p>
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                dispatches
+                {message(totals.dispatches === 1 ? "myHistory.dispatchLabel.one" : "myHistory.dispatchLabel.other")}
               </p>
             </div>
             <div>
               <p className="font-serif text-xl text-ink">${fmtUsdc(totals.spentUsdc)}</p>
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                creator spend from your wallet
+                {message("myHistory.walletCreatorSpend")}
               </p>
             </div>
             <div>
               <p className="font-serif text-xl text-seal">${fmtUsdc(totals.toCreatorsUsdc)}</p>
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                of it to creators
+                {message("myHistory.toCreators")}
               </p>
             </div>
             <div>
               <p className="font-serif text-xl text-ink">{totals.citations}</p>
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                citations paid
+                {message(totals.citations === 1 ? "myHistory.citationsLabel.one" : "myHistory.citationsLabel.other")}
               </p>
             </div>
           </div>
           {totals.trialDispatches > 0 && (
             <p className="mt-4 border-t border-line pt-3 font-mono text-[10px] text-ink-3">
-              {totals.trialDispatches} of these have no recorded browser-wallet creator funding:
-              {" "}${fmtUsdc(totals.trialToCreatorsUsdc)} recorded to creators.
-              {" "}Original purchases, service fees and gas are separate.
+              {richMessage(totals.trialDispatches === 1 ? "myHistory.otherFunding.one" : "myHistory.otherFunding.other", { count: totals.trialDispatches, fundingGap: " ", amount: fmtUsdc(totals.trialToCreatorsUsdc), separateGap: " " })}
             </p>
           )}
         </section>
@@ -191,33 +193,33 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
               </Link>
               <span className="font-mono text-[11px] text-ink-2">
                 ${fmtUsdc(a.spentUsdc)}
-                {!a.funded && <span className="text-ink-3"> · creator funding not recorded from your browser wallet</span>}
+                {!a.funded && <span className="text-ink-3">{message("myHistory.browserFundingNotRecorded")}</span>}
               </span>
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] text-ink-3">
               <span>{timeAgo(a.createdAt)}</span>
-              <span>{a.citationCount} cited</span>
-              {a.confidence && <span>{a.confidence.toLowerCase()} confidence</span>}
-              {a.isFollowUp && <span>follow-up</span>}
+              <span>{richMessage(a.citationCount === 1 ? "myHistory.cited.one" : "myHistory.cited.other", { count: a.citationCount ?? null })}</span>
+              {a.confidence && <span>{richMessage("myHistory.confidence", { level: a.confidence.toLowerCase() })}</span>}
+              {a.isFollowUp && <span>{message("myHistory.followUp")}</span>}
               {a.hasNewMaterial && (
                 <Link
                   href={`/?q=${encodeURIComponent(a.question)}&parent=${a.id}&run=1`}
-                  title="A source this dispatch cited has published since — re-asking buys the new material"
+                  title={message("myHistory.newMaterialTitle")}
                   className="border border-seal px-1.5 py-0.5 uppercase tracking-[0.1em] text-seal transition-colors hover:bg-seal hover:text-cream"
                 >
-                  new material · re-ask
+                  {message("myHistory.reask")}
                 </Link>
               )}
             </div>
             {a.creators.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
                 {a.creators.map((c) => historical ? (
-                  <span key={c.sourceId} className="border border-line px-2 py-0.5 font-mono text-[10px] text-ink-2">{c.name} · {fmtUsdc(c.rewardUsdc)} test USDC recorded</span>
+                  <span key={c.sourceId} className="border border-line px-2 py-0.5 font-mono text-[10px] text-ink-2">{richMessage("myHistory.testnetCreatorRecord", { creator: c.name ?? null, amount: fmtUsdc(c.rewardUsdc) })}</span>
                 ) : (
                   <Link
                     key={c.sourceId}
                     href={`/creator/${c.sourceId}`}
-                    title={`Paid $${fmtUsdc(c.rewardUsdc)} for this citation`}
+                    title={message("myHistory.citationPaymentTitle", { amount: fmtUsdc(c.rewardUsdc) })}
                     className="border border-line px-2 py-0.5 font-mono text-[10px] text-ink-2 transition-colors hover:border-seal hover:text-seal"
                   >
                     {c.name} · ${fmtUsdc(c.rewardUsdc)}
@@ -231,7 +233,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
 
       {truncated && (
         <p className="font-mono text-[10px] text-ink-3">
-          Showing your most recent {asks.length} dispatches.
+          {richMessage(asks.length === 1 ? "myHistory.recentLimit.one" : "myHistory.recentLimit.other", { count: asks.length })}
         </p>
       )}
     </div>
