@@ -7005,3 +7005,20 @@ diagnostic margin cannot authorize semantic acceptance or deployment. This is a
 maintainer-only offline tool; no application, payment, database, runtime version
 or package surface changes. Full issue287 corpus, consent, semantic/human review,
 agreed release margin and public/live acceptance remain open.
+
+## Preserve complete historical native receipt verification — 2026-10-11
+
+The public checkpoint-unavailable presentation added by PR373 must not make an
+already completed original unverifiable. Preserve exact modern response equality
+and all immutable run/claim/completion, payer, settlement, journal and creator
+attempt checks. Then compare finite complete historical expected responses:
+pre-CSL, pre-checkpoint and their combination. The pre-checkpoint shape may omit
+only an exactly generated unavailable marker; never normalize the stored response,
+drop unknown fields, or accept a malformed or available checkpoint as missing.
+Read-only proof and duplicate completion preserve every retained native row.
+Historical shape tests must be built independently of today's projection.
+
+This is presentation compatibility, not a new payment or native storage authority.
+Supabase native fulfillment remains unadmitted; no data migration, funding,
+additional execution or background schedule is authorized. Whole final original
+financial readback and actual affected consumer/release acceptance remain gates.

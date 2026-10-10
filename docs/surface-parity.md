@@ -1,5 +1,27 @@
 # Supported-surface release parity
 
+## Historical native completion — October 11, 2026 source candidate
+
+App/OpenAPI **0.27.51** and hosted MCP **0.3.12** identify the server native
+historical receipt compatibility correction. Actual in-memory compiled graph
+comparison against canonical `dd6f49fa` holds app/OpenAPI metadata and desktop
+source provenance constant: the native helper changes ask/API, agent engine,
+remote MCP and its hosted route, repository ask CLI, Telegram and Discord outputs.
+The compiled stdio buyer, desktop helper/renderer/bridge, dispatch UI, pure
+OpenAI/A2A projectors and operator/read-only CLI entrypoints remain byte-identical.
+All twelve extension allowlist inputs are canonically unchanged. Their existing
+roles remain intact; no new tool, signer, native storage enrollment or scheduler.
+
+Stdio/official Registry **0.4.15**, desktop **0.4.14** and extension **0.1.3**
+therefore retain their versions and artifacts for this helper correction. The
+first two have public release50 publication evidence; installed owner clients
+remain unverified. Do not republish unchanged packages or claim installed-client
+synchronization. Changed hosted/source consumers require combined source review,
+required CI/build, one server deployment and actual health/MCP readback. The
+original whole financial equality check remains an independent gate, and
+Supabase native fulfillment stays unadmitted. See the
+[historical compatibility boundary](engineering/actual-read-checkpoints-301.md#historical-native-receipt-compatibility--october-11-follow-up).
+
 ## Combined release50 — October 11, 2026 source candidate
 
 App/OpenAPI **0.27.50**, stdio/official Registry **0.4.15**, remote MCP **0.3.11**

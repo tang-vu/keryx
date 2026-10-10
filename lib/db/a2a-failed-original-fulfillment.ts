@@ -89,6 +89,15 @@ function preCslNativeResponse(run: QueryRun, response: ReturnType<typeof a2aResp
   return { ...response, researchExports: { bibtex, ris, evidenceCsv },
     ...(response.bibliography ? { bibliographyExports: response.bibliography.bibliographyExports } : {}) };
 }
+/** Older original receipts predate the public checkpoint-unavailable marker.
+ * Construct only that complete historical expected shape; never normalize the
+ * stored response or discard a present checkpoint, money, evidence or unknown field. */
+function preCheckpointNativeResponse<T extends { readCheckpoints: unknown }>(run: QueryRun, response: T) {
+  if (run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v1" &&
+      run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v2") return null;
+  const { readCheckpoints, ...historical } = response;
+  return same(readCheckpoints, { status: "unavailable" }) ? historical : null;
+}
 function hasCompletion(db: DatabaseSync, authority: FulfillmentAuthority,
   readOrder: (row: Record<string, unknown>) => A2aOrder, evidenceCapability?: FulfillmentEvidenceCapability): boolean {
   const record = readRecord(db, authority.original.id);
@@ -112,7 +121,11 @@ function hasCompletion(db: DatabaseSync, authority: FulfillmentAuthority,
       { acceptedAt: record.claim.failedOrder.createdAt, startedAt: record.claim.failedOrder.startedAt }) };
   if (same(order, expected)) return true;
   const legacyResponse = preCslNativeResponse(run, expected.response);
-  return legacyResponse !== null && same(order, { ...expected, response: legacyResponse });
+  if (legacyResponse !== null && same(order, { ...expected, response: legacyResponse })) return true;
+  const historicalResponse = preCheckpointNativeResponse(run, expected.response);
+  if (historicalResponse !== null && same(order, { ...expected, response: historicalResponse })) return true;
+  const historicalPreCsl = legacyResponse === null ? null : preCheckpointNativeResponse(run, legacyResponse);
+  return historicalPreCsl !== null && same(order, { ...expected, response: historicalPreCsl });
 }
 /** One native transaction inserts the actual run once and commits only the matching failed
  * original. A rollback cannot strand a saved run or erase the immutable failure snapshot. */

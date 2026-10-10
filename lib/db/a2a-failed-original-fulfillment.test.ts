@@ -56,7 +56,25 @@ async function completedPresentationFixture(withBibliography = false) {
     bibtex: buildCitationExport(result.run.citations, "bibtex"), ris: buildCitationExport(result.run.citations, "ris"),
     evidenceCsv: evidenceMatrixCsv(result.run) },
     ...(result.run.bibliography ? { bibliographyExports: result.run.bibliography.bibliographyExports } : {}) };
-  return { ...f, claim, result, modern, legacy };
+  // The complete pre-checkpoint receipt schema, rather than spreading today's
+  // response or deleting one of its fields. Unchanged presentation values come
+  // from the same recorded run; newly added fields cannot enter this fixture.
+  const historical = {
+    status: "completed", queryId: result.run.id, answer: result.run.answer,
+    citations: modern.citations, evidence: modern.evidence,
+    ...(withBibliography ? { bibliography: modern.bibliography, bibliographyExports: modern.bibliographyExports } : {}),
+    reasoningAttempts: modern.reasoningAttempts, reasoning: modern.reasoning,
+    creatorsPaid: null, creatorsPaidAuthority: "distinct-settled-count-unavailable",
+    creatorsReferenced: 1, creatorRewardAllocations: 0, paymentMode: "real", pendingSpendUsdc: 0,
+    subClaims: result.run.subClaims, claimCoverage: result.run.claimCoverage,
+    researchExports: modern.researchExports, totalToCreators: 0,
+    feePaid: claim.failedOrder.serviceFeeUsdc, totalPricePaid: claim.failedOrder.amountUsdc,
+    pricing: modern.pricing, engine: result.run.engine,
+    researchPackage: modern.researchPackage, serviceReceipt: modern.serviceReceipt,
+  };
+  const historicalPreCsl = { ...historical, researchExports: legacy.researchExports,
+    ...(withBibliography ? { bibliographyExports: result.run.bibliography!.bibliographyExports } : {}) };
+  return { ...f, claim, result, modern, legacy, historical, historicalPreCsl };
 }
 function retainedRows(native: DatabaseSync) {
   return canonicalJson(["a2a_orders", "query_runs", "a2a_failed_original_fulfillments",
@@ -205,6 +223,50 @@ describe("same failed original native fulfillment", () => {
     expect(retainedRows(f.native)).toBe(legacyRows); // idempotent completion does not upgrade a saved receipt
   });
 
+  it.each([[false, false], [false, true], [true, false], [true, true]])(
+    "reads exact pre-checkpoint native receipts without upgrading rows (bibliography=%s, pre-CSL=%s)", async (bibliography, preCsl) => {
+      const f = await completedPresentationFixture(bibliography);
+      expect(f.modern.readCheckpoints).toEqual({ status: "unavailable" });
+      expect(f.historical).not.toHaveProperty("readCheckpoints");
+      expect({ ...f.historical, readCheckpoints: { status: "unavailable" } }).toEqual(f.modern);
+      const historical = preCsl ? f.historicalPreCsl : f.historical;
+      storeResponse(f, historical); const before = retainedRows(f.native);
+      const readonly = new SqliteAdapter(f.file, { readOnly: true }); cleanup.push(() => readonly.close());
+      expect(await readonly.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(true);
+      expect((await readonly.getA2aOrder(f.result.originalId))!.response).toEqual(historical);
+      expect(retainedRows(f.native)).toBe(before);
+      expect(await f.db.completeA2aFailedOriginalFulfillment(f.result)).toBe(true);
+      expect(retainedRows(f.native)).toBe(before);
+    });
+
+  it.each(["null", "malformed", "extra", "available"])(
+    "refuses a present %s checkpoint instead of treating it as historical", async kind => {
+      const f = await completedPresentationFixture();
+      const readCheckpoints = kind === "null" ? null : kind === "malformed" ? {} : kind === "extra"
+        ? { status: "unavailable", unknown: true }
+        : { status: "available", packet: {}, retainedDigest: "aa".repeat(32) };
+      storeResponse(f, { ...f.historicalPreCsl, readCheckpoints }); const before = retainedRows(f.native);
+      expect(await f.db.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(false);
+      expect(retainedRows(f.native)).toBe(before);
+    });
+
+  it.each(["money", "pricing", "answer", "evidence", "unknown", "export-unknown", "bibtex", "missing-export"])(
+    "refuses corrupted %s in a pre-checkpoint receipt without changing rows", async kind => {
+      const f = await completedPresentationFixture();
+      const response = JSON.parse(JSON.stringify(f.historicalPreCsl));
+      if (kind === "money") response.totalPricePaid += 0.000001;
+      if (kind === "pricing") response.pricing.unknownAuthority = "forged";
+      if (kind === "answer") response.answer += " An unreviewed assertion.";
+      if (kind === "evidence") response.evidence[0].quote = "Altered quote";
+      if (kind === "unknown") response.futureReceiptField = "forged";
+      if (kind === "export-unknown") response.researchExports.futureFormat = "forged";
+      if (kind === "bibtex") response.researchExports.bibtex.content += "FORGED";
+      if (kind === "missing-export") delete response.researchExports.ris;
+      storeResponse(f, response); const before = retainedRows(f.native);
+      expect(await f.db.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(false);
+      expect(retainedRows(f.native)).toBe(before);
+    });
+
   it.each(["money", "pricing", "answer", "evidence", "version", "unknown", "export-unknown", "bibtex", "ris", "csv", "missing-export"])(
     "refuses corrupted %s in the complete pre-CSL response without changing native rows", async kind => {
       const f = await completedPresentationFixture();
@@ -248,8 +310,8 @@ describe("same failed original native fulfillment", () => {
       expect(await f.db.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(false);
     });
 
-  it("keeps retained run hashes and original financial/claim evidence mandatory for legacy presentation", async () => {
-    const f = await completedPresentationFixture(); storeResponse(f, f.legacy);
+  it.each([false, true])("keeps retained run hashes and original financial/claim evidence mandatory (pre-checkpoint=%s)", async historical => {
+    const f = await completedPresentationFixture(); storeResponse(f, historical ? f.historicalPreCsl : f.legacy);
     const before = retainedRows(f.native);
     const savedRun = String(f.native.prepare("SELECT data FROM query_runs WHERE id=?").get(f.result.run.id)!.data);
     const run = JSON.parse(savedRun);
