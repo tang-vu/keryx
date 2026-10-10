@@ -163,3 +163,23 @@ branch coverage, underlying exact integer monetary authority where absent, and
 the issue291 payment-hash/source-authenticity boundary. Replay assertions establish
 neither source truth nor read/payment/settlement authority. Issue301 remains open;
 unknown or unsupported evidence remains unavailable.
+
+## Historical native receipt compatibility — October 11 follow-up
+
+The first production original-read check after app0.27.50 refused a previously
+completed native receipt. The shared surface projection now generates an explicit
+`readCheckpoints: { status: "unavailable" }` marker for originals, whereas the
+historical stored response predates that field. Whole-object equality correctly
+rejects that presentation mismatch; passing tests built from the current response
+had preserved the new field and missed the historical shape.
+
+The app0.27.51 candidate retains exact modern comparison first. Only after all
+existing original binding, immutable run hash, claim, completion, settlement and
+creator-attempt checks pass may it compare complete pre-checkpoint expected
+responses, including the already supported pre-CSL presentation. It omits only
+the generated exactly-unavailable marker from those expected shapes. Stored
+receipts remain untouched; available, malformed, extra or unknown stored fields
+and changed payment/evidence data remain refusals. This changes no capture,
+replay, signer, custody, spend, migration or schedule authority. Supabase native
+original fulfillment remains unadmitted. Required source/consumer acceptance and
+fresh final original financial readback are still independent release gates.

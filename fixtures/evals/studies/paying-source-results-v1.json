@@ -20,7 +20,7 @@
     "reevaluateRounds": 1,
     "searchCalls": 0
   },
-  "lockSha256": "2faea624a2f4c7bff525e638f8738e8f0c9b6f001998f10af23dcd94503bd37c",
+  "lockSha256": "9ef4171e7fe2cfc18bb15ef2f113f65bbece515a9e12a37bb825fdcbc28909c8",
   "outboundAttempts": 0,
   "runtimeSources": {
     "lib/a2a/amount-micros.ts": "ad39789195855cc02b4dc12186e64ef25e265f2ecc562274ffa90c5f30249a25",
@@ -102,7 +102,7 @@
     "lib/canonical-json.ts": "5dacd620db3698a6cbd0f92614161e85c98975310869495a0ee56cda88070a9a",
     "lib/chains.ts": "e9b78314d6c54f8fb1d11732ed17d183647b88d4b52131e6568def1510b6aee6",
     "lib/config.ts": "62d43f8630ee3f8bcac807e2bf3161a790b3d664d07583bce3955d0de0530ae7",
-    "lib/db/a2a-failed-original-fulfillment.ts": "929342468dc3c1966e347d242332fcb0136f92027af5f31cd918bcc992b57b31",
+    "lib/db/a2a-failed-original-fulfillment.ts": "d998acac8dbbc9f3ae5f865b119b3519055f5b51a2d5abb22811c1b5f63cf663",
     "lib/db/a2a-fulfillment-schema.ts": "06649d4e9841cfdd29a64eed2559e1e3d680100264c7fc7fadaa75263724f0fd",
     "lib/db/a2a-original-claim.ts": "fe7f28247de3976b5feb41a83b9dde6b25a67f4c33252e9c89d8adbd5125607b",
     "lib/db/application-storage.ts": "06f55557633467ce38c075a1a9d2496e18dc1c013404739e4b6e24e23ec6a359",

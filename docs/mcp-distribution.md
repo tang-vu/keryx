@@ -1,5 +1,18 @@
 # MCP package distribution
 
+## Native historical compatibility — October 11, 2026 source candidate
+
+App/OpenAPI0.27.51 selects hosted MCP0.3.12 for the changed server native helper
+graph. Public tool, original financial and storage-enrollment contracts remain
+unchanged. Actual compiled stdio buyer and desktop helper/renderer/bridge payloads
+are identical to the release50 baseline when provenance metadata is held constant;
+stdio/official Registry0.4.15 and desktop0.4.14 retain their published artifacts.
+No unchanged package or installer publication is needed for this correction.
+Installed owner clients are unverified. Exact changed server source CI/build,
+normal deployment and hosted identity plus whole original financial readback
+remain gates; source versions alone claim no delivered synchronization.
+See [surface parity](surface-parity.md).
+
 ## Combined release50 — October 11, 2026 source candidate
 
 App/OpenAPI0.27.50 selects stdio/official Registry0.4.15 and hosted MCP0.3.11.

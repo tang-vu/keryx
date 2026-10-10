@@ -30,6 +30,23 @@ still need actual successful aggregate and applicable domain checks plus review.
 An original failed PR run remains failed even when later combined source passes.
 The normal [development workflow](../development-workflow.md) applies.
 
+### Later bounded closure — October 11, 2026
+
+App0.27.50/`dd6f49fa` completed one combined deployment. Actual public readback
+returned HTTP200 for operational Arc health, the Proof page with the exact
+canonical paying-source study link, and remote MCP0.3.11 initialization. Issue302
+was then closed/completed at `2026-10-10T20:33:13Z`, with all five study criteria
+checked. The later GitHub readback had67 open issues and no open PRs; that count
+is another dated observation. The48 synthetic offline trials retain their stated
+limitations; semantic value and causal exploration gains are unmeasured.
+
+The separate final native original verifier refused a historical receipt because
+the shared checkpoint presentation introduced an unavailable marker absent from
+the stored response. A focused compatibility correction is prepared under
+[the checkpoint follow-up](actual-read-checkpoints-301.md#historical-native-receipt-compatibility--october-11-follow-up).
+Whole original financial acceptance remains open. Issue302's bounded study
+closure does not close any financial, live-answer-quality or outside-user gate.
+
 ## Answer-quality defects and acceptance
 
 These rows combine the [original disposition](open-issues-2026-10-08.md) with

@@ -1,5 +1,22 @@
 # Keryx Project Changelog
 
+### Historical native completion compatibility (2026-10-11, v0.27.51 candidate)
+
+- Read completed originals written before the public checkpoint field without
+  rewriting their receipts. After validating the retained run, claim, payment and
+  completion evidence, compare the entire receipt against exact modern or complete
+  historical presentation shapes. Only the generated exactly-unavailable marker
+  may be absent in the pre-checkpoint shape; malformed, extra or available stored
+  checkpoint fields and changed money/evidence still refuse verification.
+- Cover pre-checkpoint and pre-CSL combinations, read-only row preservation and
+  corrupted receipt/claim/payment cases. Source review, required CI, affected
+  consumer graph acceptance, deployment and whole original financial readback
+  remain release gates. No financial migration or additional execution authority.
+- App/OpenAPI0.27.51 and hosted MCP0.3.12 identify the changed server/source graph.
+  Actual compiled stdio/desktop graphs and extension inputs are unchanged; retain
+  stdio/Registry0.4.15, desktop0.4.14 and extension0.1.3 without republishing them.
+
+
 ### Combined reading checkpoints and mobile layout (2026-10-11, v0.27.50 candidate)
 
 - Retain bounded ordinary post-portfolio BUY/SKIP/CACHE/FREE/STOP and escalation
