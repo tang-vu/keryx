@@ -12,6 +12,16 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.research-options { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; }
+.research-options select { background: var(--cream); color: var(--ink); border: 1px solid var(--line); padding: 4px; }
+.help { font-size: 11px; line-height: 1.5; color: var(--ink-2); overflow-wrap: anywhere; }
+.page-option { display: block; font-size: 12px; }
+.panel-help { padding: 0 12px; }
+.exports, .workspace-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; font-size: 11px; }
+.foot { flex-wrap: wrap; }
+.workspace-links { flex-basis: 100%; }
+.paid-list a, .workspace-links a { color: var(--seal); overflow-wrap: anywhere; }
 
 body {
   width: 400px;

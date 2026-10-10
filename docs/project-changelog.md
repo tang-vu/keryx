@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Extension research parity (2026-10-10, app0.27.48 / extension0.1.3 candidate)
+
+- Expose existing Quick/Deep and scholarly controls, preserve a zero source budget,
+  and include the displayed page URL only after explicit selection.
+- Show safe original citation/report links, recorded BibTeX/RIS/CSL-JSON/evidence CSV,
+  bounded recent report URLs and deliberate web/workspace handoffs.
+- Fail visibly on HTTP/stream errors and incomplete replies; prevent duplicate
+  keyboard requests. Stop/timeout disconnect observation with no cancellation,
+  refund or retry promise. Preserve payment and account authority on existing surfaces.
+- Record the owner-confirmed future coordination checklist and actual distribution
+  gaps. [Scope, audit and remaining release gates](engineering/extension-parity-2026-10-10.md).
+
 ### Coordinated distribution metadata (2026-10-09, v0.27.47 candidate)
 
 - Select stdio/official Registry0.4.14 and remote MCP0.3.10 for the coordinated

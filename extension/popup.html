@@ -20,6 +20,7 @@
       <textarea
         id="question"
         rows="3"
+        maxlength="2000"
         placeholder="Highlight text on a page, or type a question…"
       ></textarea>
 
@@ -28,17 +29,28 @@
           <label class="field-label" for="budget">Budget</label>
           <div class="budget-input">
             <span class="usd">$</span>
-            <input id="budget" type="number" min="0.005" max="0.10" step="0.005" value="0.03" />
+            <input id="budget" type="number" min="0" max="0.08" step="0.005" value="0.03" />
           </div>
         </div>
         <button id="ask" class="ask-btn">Ask Keryx ▸</button>
+        <button id="stop" class="link-btn" hidden>Stop watching</button>
       </div>
+      <div class="research-options">
+        <label for="mode">Research depth</label>
+        <select id="mode"><option value="quick">Quick</option><option value="deep">Deep</option></select>
+        <label><input id="scholarly" type="checkbox" /> Search scholarly sources</label>
+      </div>
+      <p class="help">Keryx sponsors this request within server limits. $0 disables source spending; model and search costs are separate. Scholarly search sends your question to public discovery services.</p>
+      <label class="page-option"><input id="include-page" type="checkbox" disabled /> Include this page URL as a source</label>
+      <p id="page-context" class="help">Only your question or selected text is sent by default.</p>
+      <button id="web-draft" class="link-btn">Open editable question on web ▸</button>
+      <p id="availability" class="help" role="status">Each question requires server admission.</p>
 
       <section id="output" class="output" hidden>
         <div class="panel trace-panel">
           <div class="panel-label">
             <span>Agent reasoning</span>
-            <span id="status" class="status"></span>
+            <span id="status" class="status" role="status" aria-live="polite"></span>
           </div>
           <pre id="trace" class="trace"></pre>
         </div>
@@ -53,17 +65,36 @@
           <ul id="paid-list" class="paid-list"></ul>
           <div class="paid-total">
             <span id="paid-total-usd" class="paid-total-usd"></span> recorded to creators / USDC on Arc ·
-            <a id="dispatch-link" href="#" target="_blank" rel="noopener">view receipt ▸</a>
+            <span id="pending-total"></span>
           </div>
+          <p class="help panel-help">Planned rewards and recorded totals are separate from confirmed settlement. Public references may earn no creator reward.</p>
+        </div>
+        <a id="dispatch-link" hidden target="_blank" rel="noopener noreferrer" class="link-btn">Open full report and receipt ▸</a>
+        <div id="exports" class="exports" hidden>
+          <span>Recorded references:</span>
+          <button class="link-btn" data-export="bibtex">BibTeX</button>
+          <button class="link-btn" data-export="ris">RIS</button>
+          <button class="link-btn" data-export="cslJson">CSL-JSON</button>
+          <button class="link-btn" data-export="evidenceCsv">Evidence CSV</button>
         </div>
 
         <div class="panel error-panel" id="error-panel" hidden>
           <div class="panel-label">Something went wrong</div>
-          <div id="error" class="error"></div>
+          <div id="error" class="error" role="alert"></div>
         </div>
+      </section>
+      <section id="recent-panel" hidden aria-label="Recent completed reports">
+        <p class="field-label">Recent completed reports on this device</p>
+        <button id="clear-recent" class="link-btn">Clear device list</button>
+        <ul id="recent-list" class="paid-list"></ul>
       </section>
 
       <footer class="foot">
+        <nav aria-label="Keryx workspaces" class="workspace-links">
+          <a href="https://keryx.cc/sources" target="_blank" rel="noopener noreferrer">Sources</a>
+          <a href="https://keryx.cc/literature" target="_blank" rel="noopener noreferrer">Literature</a>
+          <a href="https://keryx.cc/me/asks" target="_blank" rel="noopener noreferrer">My research</a>
+        </nav>
         <button id="list-page" class="link-btn">List this page as a paid source ▸</button>
         <a href="https://keryx.cc" target="_blank" rel="noopener" class="link-btn subtle">keryx.cc</a>
       </footer>

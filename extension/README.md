@@ -15,9 +15,20 @@ and pending payments remain separate from settled creator payouts. See
 
 ## What it does
 
-- **Toolbar popup** — click the herald, type or paste a question (auto-filled with your current
-  text selection), set a budget, and watch the agent's live buy / skip / trust reasoning stream in
-  before the grounded answer and the list of creators it paid.
+- **Toolbar popup** — type a question or use your selection, choose Quick/Deep and a source
+  budget from $0 to $0.08, and inspect the live research trace and cited answer. Server admission
+  and sponsored limits remain authoritative; model/search costs are separate from source spending.
+- **Optional context** — deliberately include the displayed page URL as a source, or opt into
+  public scholarly discovery. Full page content is never collected automatically.
+- **Recorded results** — inspect original-source links, planned rewards, recorded totals and
+  pending source spend; open the full report/receipt or download its recorded BibTeX, RIS,
+  CSL-JSON and evidence CSV without another research request.
+- **Recovery and handoff** — Stop watching disconnects this popup; it does not promise to cancel
+  server work or payments. Errors and incomplete streams remain failures, with no automatic retry.
+  Opening an editable web question never auto-submits it. Sources, Literature and My research
+  link to their existing hosted workspaces.
+- **Recent reports** — keep at most ten completed report URLs and timestamps on this device.
+  The device list stores no question, answer, page content, token or wallet key and can be cleared.
 - **Right-click → "Ask Keryx about …"** — on any selected text; opens the same panel pre-filled.
 - **Right-click → "List this page as a paid source on Keryx"** — deep-links to `/register` with the
   page URL + title filled in, so a page you control can start earning per citation.
@@ -44,10 +55,15 @@ Works on any Chromium browser (Chrome, Edge, Brave, Arc). Manifest V3.
 | `popup.html` / `popup.css` / `popup.js` | the ask panel — resolves the question, streams the answer, shows creators paid |
 | `keryx-config.js` | shared origin + endpoint constants |
 | `recorded-usdc.mjs` | exact recorded-money display; byte-identical to `lib/display/recorded-usdc.mjs` and checked before packing |
+| `research-client.mjs` | bounded request, safe URL/handoff and streamed completion rules |
 | `icons/` | herald-seal icons (generated from `app/icon.svg`) |
 
 ## Privacy
 
-The only network call is to `https://keryx.cc/api/v1/chat/completions` with the question you ask.
-No analytics, no tracking, no other hosts. The page URL/title are only used — and only sent to
-keryx.cc — when you explicitly pick "List this page as a paid source".
+The popup reads public availability from `https://keryx.cc/api/research/availability` and sends
+your submitted question to `https://keryx.cc/api/v1/chat/completions`. Including the page URL is
+unchecked by default; when selected it becomes a visible source URL in that question. Scholarly
+opt-in allows the hosted service to send the question to public scholarly discovery providers.
+Page URL/title are also sent when you explicitly list a page as a source. No analytics or tracking
+are added. Opening the web question or workspace sends its URL to the hosted service only through
+your deliberate navigation. [Supported roles and future update checklist](../docs/browser-extension.md).

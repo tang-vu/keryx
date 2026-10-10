@@ -35,6 +35,7 @@ const FILES = [
   "popup.css",
   "popup.js",
   "recorded-usdc.mjs",
+  "research-client.mjs",
   "icons/icon-16.png",
   "icons/icon-32.png",
   "icons/icon-48.png",
