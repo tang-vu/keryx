@@ -123,7 +123,7 @@ language sql stable security invoker set search_path=pg_catalog,public as $$
       'acl',(select jsonb_agg(jsonb_build_array(x.grantor,x.grantee,x.privilege_type,x.is_grantable)
         order by x.grantor,x.grantee,x.privilege_type,x.is_grantable) from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) x),
       'definition',pg_get_functiondef(p.oid)) order by p.oid::regprocedure::text)
-      from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and left(p.proname,19)='anonymous_run_claim'))
+      from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and left(p.proname,19)='anonymous_run_claim')
   )
 $$;
 create function public.anonymous_run_claims_guard_v1() returns void
@@ -165,6 +165,7 @@ begin
   perform public.anonymous_run_claims_guard_v1();
   select * into q from public.query_runs where id=p_run_id for share;
   if not found or q.asker is not null or jsonb_typeof(q.data) is distinct from 'object'
+    or jsonb_typeof(q.data->'id') is distinct from 'string' or jsonb_typeof(q.data->'createdAt') is distinct from 'string'
     or q.data->>'id' is distinct from p_run_id or q.data->>'createdAt' is distinct from p_completed_at
     or q.data ? 'asker' or q.data ? 'originalFulfillment' or q.data->'askerFunded'='true'::jsonb
     or q.data->>'fundingOwner'='browser' or q.created_at is distinct from p_completed_at::timestamptz
@@ -223,6 +224,109 @@ begin
   return jsonb_build_object('version',1,'runId',c.run_id,'wallet',p_wallet,'binding',jsonb_build_object('network',p_network,'origin',p_origin),
     'claimedAt',to_char(to_timestamp(stamp/1000.0) at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'));
 end; $$;
+-- Private ownership reads share the same sealed ordinary domain. A recorded
+-- owner and a valid claimed owner are one predicate, never a UNION of payments.
+create function public.anonymous_run_claim_history_list_v1(p_wallet text,p_network text,p_origin text,p_filters jsonb,p_take integer,p_upper jsonb,p_before jsonb)
+returns jsonb language plpgsql security invoker set search_path=pg_catalog,public as $$
+declare r record; result jsonb;
+begin
+  perform public.anonymous_run_claims_guard_v1();
+  if p_wallet is null or p_wallet !~ '^0x[0-9a-f]{40}$' or p_network is null or p_network not in ('eip155:5042','eip155:5042002')
+    or not coalesce(public.anonymous_run_claim_origin_valid_v1(p_origin),false)
+    or p_take is null or p_take not between 1 and 51 or p_filters is null or jsonb_typeof(p_filters)<>'object'
+    or octet_length(p_filters::text)>2048 then raise exception 'claims_unavailable'; end if;
+  if exists(select 1 from jsonb_each(p_filters) where key not in ('search','surface','funding','from','to') or jsonb_typeof(value)<>'string')
+    or char_length(p_filters->>'search')>200
+    or (p_filters ? 'surface' and p_filters->>'surface' not in ('web','remote-mcp','stdio-mcp','api','agent-to-agent','telegram','discord','slack','extension','desktop','cli','unknown'))
+    or (p_filters ? 'funding' and p_filters->>'funding' not in ('browser-recorded','other-or-unknown')) then raise exception 'claims_unavailable'; end if;
+  for r in select value from (values(p_upper),(p_before)) positions(value) where value is not null loop
+    if jsonb_typeof(r.value)<>'object' or not (r.value ?& array['createdAt','id']) or (select count(*) from jsonb_object_keys(r.value))<>2
+      or jsonb_typeof(r.value->'createdAt')<>'string' or jsonb_typeof(r.value->'id')<>'string'
+      or r.value->>'id' !~ '^[a-zA-Z0-9_-]{1,128}$' then raise exception 'claims_unavailable'; end if;
+  end loop;
+  for r in select value from jsonb_each(p_filters) where key in ('from','to') union all
+    select value->'createdAt' from (values(p_upper),(p_before)) positions(value) where value is not null loop
+    if r.value #>> '{}' !~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
+      or to_char((r.value #>> '{}')::timestamptz at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')<>r.value #>> '{}'
+      then raise exception 'claims_unavailable'; end if;
+  end loop;
+  if (p_filters->>'from')::timestamptz>(p_filters->>'to')::timestamptz then raise exception 'claims_unavailable'; end if;
+  with selected as (
+    select q.id,q.created_at,q.data,case when q.asker is not null then null::bigint else c.claimed_at end claimed_at,
+      case when jsonb_typeof(q.data->'provenance')='object' then
+        case when (select count(*) from jsonb_object_keys(q.data->'provenance'))=3
+          and q.data->'provenance'->'version'='1'::jsonb
+          and q.data->'provenance'->>'surface' in ('web','remote-mcp','stdio-mcp','api','agent-to-agent','telegram','discord','slack','extension','desktop','cli','unknown')
+          and q.data->'provenance'->>'ownershipMethod' in ('session','api-key','verified-payer','unknown') then q.data->'provenance' end end provenance
+    from public.query_runs q left join public.anonymous_run_claims c on c.run_id=q.id and c.network=p_network and c.origin=p_origin
+    where q.asker=p_wallet or (q.asker is null and c.claimed_wallet=p_wallet and c.claimed_at is not null
+      and c.completed_at=q.data->>'createdAt' and q.created_at=c.completed_at::timestamptz
+      and jsonb_typeof(q.data)='object' and jsonb_typeof(q.data->'id')='string' and jsonb_typeof(q.data->'createdAt')='string'
+      and q.data->>'id'=q.id and not q.data ? 'asker' and not q.data ? 'originalFulfillment'
+      and q.data->'askerFunded' is distinct from 'true'::jsonb and q.data->>'fundingOwner' is distinct from 'browser'
+      and octet_length(q.data::text)<=4000000 and encode(sha256(convert_to(q.data::text,'UTF8')),'hex')=c.original_sha256
+      and not exists(select 1 from public.a2a_orders o where o.query_id=q.id))
+  ), page as (
+    select * from selected where
+      (p_upper is null or created_at<(p_upper->>'createdAt')::timestamptz or (created_at=(p_upper->>'createdAt')::timestamptz and id collate "C" <= (p_upper->>'id') collate "C"))
+      and (p_before is null or created_at<(p_before->>'createdAt')::timestamptz or (created_at=(p_before->>'createdAt')::timestamptz and id collate "C" < (p_before->>'id') collate "C"))
+      and (not (p_filters ? 'from') or created_at>=(p_filters->>'from')::timestamptz)
+      and (not (p_filters ? 'to') or created_at<=(p_filters->>'to')::timestamptz)
+      and (not (p_filters ? 'search') or strpos(data->>'question',p_filters->>'search')>0)
+      and (not (p_filters ? 'surface') or coalesce(provenance->>'surface','unknown')=p_filters->>'surface')
+      and (not (p_filters ? 'funding') or case when data->'askerFunded'='true'::jsonb then 'browser-recorded' else 'other-or-unknown' end=p_filters->>'funding')
+    order by created_at desc,id collate "C" desc limit p_take
+  ) select jsonb_build_object('rows',coalesce(jsonb_agg(jsonb_build_object(
+      'id',id,'createdAt',data->'createdAt','question',data->'question','provenance',provenance,
+      'funding',case when data->'askerFunded'='true'::jsonb then 'browser-recorded' else 'other-or-unknown' end,
+      'recordedSpendUsdc',data->'totalSpent','recordedCreatorAllocationUsdc',data->'totalToCreators','paymentMode',data->'paymentMode',
+      'isFollowUp',coalesce(data->'parentId'<>'null'::jsonb,false),
+      'ownership',jsonb_build_object('method',case when claimed_at is null then 'recorded' else 'claimed' end,
+        'claimedAt',case when claimed_at is not null then to_char(to_timestamp(claimed_at/1000.0) at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') end)
+    ) order by created_at desc,id collate "C" desc),'[]'::jsonb),
+    'invalid',coalesce(bool_or(jsonb_typeof(data) is distinct from 'object' or jsonb_typeof(data->'id') is distinct from 'string'
+      or jsonb_typeof(data->'createdAt') is distinct from 'string' or data->>'id' is distinct from id
+      or data->>'createdAt' is distinct from to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+      or octet_length(data::text)>4000000 or id !~ '^[a-zA-Z0-9_-]{1,128}$'
+      or jsonb_typeof(data->'question') is distinct from 'string' or char_length(data->>'question')>8192
+      or jsonb_typeof(data->'totalSpent') is distinct from 'number' or jsonb_typeof(data->'totalToCreators') is distinct from 'number'
+      or (claimed_at is null and data ? 'asker' and data->'asker'<>'null'::jsonb and
+        (jsonb_typeof(data->'asker')<>'string' or lower(data->>'asker')<>p_wallet))),false)) into result from page;
+  if result->'invalid'='true'::jsonb then raise exception 'claims_unavailable'; end if;
+  return (result-'invalid') || jsonb_build_object('version',1,'wallet',p_wallet,'binding',jsonb_build_object('network',p_network,'origin',p_origin));
+end; $$;
+create function public.anonymous_run_claim_history_read_v1(p_wallet text,p_network text,p_origin text,p_run_id text)
+returns jsonb language plpgsql security invoker set search_path=pg_catalog,public as $$
+declare h record; item jsonb:=null;
+begin
+  perform public.anonymous_run_claims_guard_v1();
+  if p_wallet is null or p_wallet !~ '^0x[0-9a-f]{40}$' or p_network is null or p_network not in ('eip155:5042','eip155:5042002')
+    or not coalesce(public.anonymous_run_claim_origin_valid_v1(p_origin),false)
+    or p_run_id is null or p_run_id !~ '^[a-zA-Z0-9_-]{1,128}$' then raise exception 'claims_unavailable'; end if;
+  select q.id,q.created_at,q.data,case when q.asker is not null then null::bigint else c.claimed_at end claimed_at into h
+    from public.query_runs q left join public.anonymous_run_claims c on c.run_id=q.id and c.network=p_network and c.origin=p_origin
+    where q.id=p_run_id and (q.asker=p_wallet or (q.asker is null and c.claimed_wallet=p_wallet and c.claimed_at is not null
+      and c.completed_at=q.data->>'createdAt' and q.created_at=c.completed_at::timestamptz
+      and jsonb_typeof(q.data)='object' and jsonb_typeof(q.data->'id')='string' and jsonb_typeof(q.data->'createdAt')='string'
+      and q.data->>'id'=q.id and not q.data ? 'asker' and not q.data ? 'originalFulfillment'
+      and q.data->'askerFunded' is distinct from 'true'::jsonb and q.data->>'fundingOwner' is distinct from 'browser'
+      and octet_length(q.data::text)<=4000000 and encode(sha256(convert_to(q.data::text,'UTF8')),'hex')=c.original_sha256
+      and not exists(select 1 from public.a2a_orders o where o.query_id=q.id)));
+  if found then
+    if jsonb_typeof(h.data) is distinct from 'object' or jsonb_typeof(h.data->'id') is distinct from 'string'
+      or jsonb_typeof(h.data->'createdAt') is distinct from 'string' or h.data->>'id' is distinct from h.id
+      or h.data->>'createdAt' is distinct from to_char(h.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+      or octet_length(h.data::text)>4000000 or (h.claimed_at is null and h.data ? 'asker' and h.data->'asker'<>'null'::jsonb
+        and (jsonb_typeof(h.data->'asker')<>'string' or lower(h.data->>'asker')<>p_wallet)) then raise exception 'claims_unavailable'; end if;
+    item:=jsonb_build_object('run',h.data,'ownership',jsonb_build_object('method',case when h.claimed_at is null then 'recorded' else 'claimed' end,
+      'claimedAt',case when h.claimed_at is not null then to_char(to_timestamp(h.claimed_at/1000.0) at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') end));
+  end if;
+  return jsonb_build_object('version',1,'wallet',p_wallet,'binding',jsonb_build_object('network',p_network,'origin',p_origin),'item',item);
+end; $$;
+revoke all on function public.anonymous_run_claim_history_list_v1(text,text,text,jsonb,integer,jsonb,jsonb),
+  public.anonymous_run_claim_history_read_v1(text,text,text,text) from public,anon,authenticated;
+grant execute on function public.anonymous_run_claim_history_list_v1(text,text,text,jsonb,integer,jsonb,jsonb),
+  public.anonymous_run_claim_history_read_v1(text,text,text,text) to service_role;
 revoke all on function public.anonymous_run_claims_ordinary_v1(),public.anonymous_run_claim_origin_valid_v1(text),public.anonymous_run_claims_immutable_v1(),
   public.anonymous_run_claims_seal_immutable_v1(),public.anonymous_run_claims_catalog_v1(),public.anonymous_run_claims_guard_v1(),public.anonymous_run_claims_ready_v1(),
   public.anonymous_run_claim_original_v1(text,text),public.anonymous_run_claim_issue_v1(text,text,text,text,text),
@@ -270,7 +374,7 @@ begin
       and atttypid='text'::regtype and attnotnull and attidentity='' and attgenerated='' and atttypmod=-1)
     or not exists(select 1 from pg_constraint k join pg_index i on i.indexrelid=k.conindid where k.conrelid='public.a2a_orders'::regclass
       and k.contype='u' and pg_get_constraintdef(k.oid)='UNIQUE (query_id)' and not k.condeferrable and k.convalidated and i.indisvalid and i.indisready and i.indislive and i.indimmediate)
-    or (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and left(p.proname,19)='anonymous_run_claim')<>10
+    or (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and left(p.proname,19)='anonymous_run_claim')<>12
     then raise exception 'claims_unavailable'; end if;
   insert into public.anonymous_run_claims_catalog_seal values(true,public.anonymous_run_claims_catalog_v1());
   perform public.anonymous_run_claims_guard_v1();

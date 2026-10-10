@@ -4,6 +4,9 @@ on:
     paths:
       - "lib/run-claims/**"
       - "lib/db/run-claims-*"
+      - "lib/db/run-ownership-history-*"
+      - "lib/history/personal-history.ts"
+      - "lib/research/run-provenance.ts"
       - "lib/db/keryx-db.ts"
       - "lib/db/sqlite-adapter.ts"
       - "lib/db/supabase-adapter.ts"
@@ -20,6 +23,9 @@ on:
     paths:
       - "lib/run-claims/**"
       - "lib/db/run-claims-*"
+      - "lib/db/run-ownership-history-*"
+      - "lib/history/personal-history.ts"
+      - "lib/research/run-provenance.ts"
       - "lib/db/keryx-db.ts"
       - "lib/db/sqlite-adapter.ts"
       - "lib/db/supabase-adapter.ts"
@@ -51,7 +57,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Claim core and ordinary storage tests
-        run: npx vitest run lib/run-claims/service.test.ts lib/db/run-claims-sqlite.test.ts lib/db/run-claims-supabase.test.ts
+        run: npx vitest run lib/run-claims/service.test.ts lib/db/run-claims-sqlite.test.ts lib/db/run-claims-supabase.test.ts lib/db/run-ownership-history-sqlite.test.ts lib/db/run-ownership-history-supabase.test.ts
       - name: Provision official PG17 fixture image
         run: docker pull postgres:17-alpine
       - name: Actual isolated ordinary SQL, catalog, ACL and concurrency acceptance
@@ -69,4 +75,4 @@ jobs:
           npx tsc --noEmit
           npx tsc --noEmit --project tsconfig.anonymous-run-claims.json
       - name: Scoped lint
-        run: npx eslint lib/run-claims/*.ts lib/db/run-claims-*.ts scripts/test-anonymous-run-claims-postgres.mts
+        run: npx eslint lib/run-claims/*.ts lib/db/run-claims-*.ts lib/db/run-ownership-history-*.ts scripts/test-anonymous-run-claims-postgres.mts

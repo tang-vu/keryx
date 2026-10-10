@@ -41,7 +41,7 @@ CREATE INDEX IF NOT EXISTS web_sessions_wallet ON web_sessions(wallet, expires_a
 const shape = (db: DatabaseSync) => db.prepare(`SELECT type,name,tbl_name,substr(sql,1,16385) AS sql FROM sqlite_schema
   WHERE tbl_name IN ('anonymous_run_claims','web_sessions') ORDER BY type,name LIMIT 20`).all();
 let expectedShape: string | undefined;
-function assertShape(db: DatabaseSync) {
+export function assertSqliteRunClaimsSchema(db: DatabaseSync) {
   try {
     assertOrdinarySqliteResearchAuthority(db);
     if (!expectedShape) {
@@ -74,15 +74,15 @@ function original(db: DatabaseSync, id: string, completedAt: string) {
 /** Ordinary, exact pre-existing schema only. No initialization, repair or native adoption.
  * Fixture clock is solely for explicit synthetic temporary-store acceptance. */
 export function createSqliteRunClaims(db: DatabaseSync, options: { fixtureClock?: () => number } = {}): RunClaimsStore {
-  assertShape(db);
+  assertSqliteRunClaimsSchema(db);
   if (options.fixtureClock) db.function("keryx_run_claim_fixture_clock", options.fixtureClock);
   const clock = options.fixtureClock ? "keryx_run_claim_fixture_clock()" : "CAST(unixepoch('subsec')*1000 AS INTEGER)";
   function transaction<T>(action: (now: number) => T): T {
-    assertShape(db);
+    assertSqliteRunClaimsSchema(db);
     let started = false;
     try {
       db.exec("BEGIN IMMEDIATE"); started = true;
-      assertShape(db);
+      assertSqliteRunClaimsSchema(db);
       const now = db.prepare(`SELECT ${clock} AS now`).get()?.now;
       if (typeof now !== "number" || !Number.isSafeInteger(now) || now < 0 || now > 8640000000000000 - RUN_CLAIM_TTL_MS)
         throw new RunClaimError("claims_unavailable");
@@ -94,7 +94,7 @@ export function createSqliteRunClaims(db: DatabaseSync, options: { fixtureClock?
     }
   }
   return Object.freeze({
-    async assertAvailable() { assertShape(db); },
+    async assertAvailable() { assertSqliteRunClaimsSchema(db); },
     async issue(raw) {
       let input;
       try { input = runClaimIssueSchema.parse(raw); } catch { throw new RunClaimError("claim_unavailable"); }

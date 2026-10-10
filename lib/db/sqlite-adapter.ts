@@ -2,6 +2,8 @@ import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenanc
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
 import { createSqliteRunClaims } from "./run-claims-sqlite";
 import { RunClaimError, runClaimsEnabled, type RunClaimsStore } from "../run-claims/contracts";
+import { createSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
+import type { RunOwnershipHistoryStore } from "../run-claims/history";
 import { createSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
 import { AcceptanceError, type DeliverableAcceptanceStore } from "../deliverable-acceptance/contracts";
 import { createSqlitePrivateBibliographies } from "./private-bibliographies-sqlite";
@@ -144,6 +146,7 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 export class SqliteAdapter implements KeryxDB {
   declare readonly runClaims?: RunClaimsStore;
+  declare readonly runOwnershipHistory?: RunOwnershipHistoryStore;
   declare readonly deliverableAcceptance?: DeliverableAcceptanceStore;
   declare readonly privateProfiles?: PrivateProfilesStore;
   declare readonly privateBibliographies?: PrivateBibliographiesStore;
@@ -212,7 +215,11 @@ export class SqliteAdapter implements KeryxDB {
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installOrdinarySqliteApplicationSchema(this.db);
     if (runClaimsEnabled(process.env) && !this.runClaims) {
-      try { Object.defineProperty(this, "runClaims", { value: createSqliteRunClaims(this.db) }); }
+      try {
+        const claims = createSqliteRunClaims(this.db), history = createSqliteRunOwnershipHistory(this.db);
+        Object.defineProperty(this, "runClaims", { value: claims });
+        Object.defineProperty(this, "runOwnershipHistory", { value: history });
+      }
       catch (error) { if (!(error instanceof RunClaimError && error.code === "claims_unavailable")) throw error; }
     }
     if (!this.decisionReviews) {
