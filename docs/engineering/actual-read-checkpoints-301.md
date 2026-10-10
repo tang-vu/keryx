@@ -32,6 +32,11 @@ retention before default capture is accepted.
 
 The report's Verify action uses local Web Crypto and a digest retained separately
 from submitted sidecar JSON. A rewritten sidecar/hash pair cannot self-attest.
+The mounted verifier binds its file, status and asynchronous attempt to the expected
+capture identity and retained-digest prop. A new capture or unavailable/null capture
+clears the selection and result; completion for an earlier report cannot show PASS
+under the new report. Same-mounted browser checks exercise completed-result changes
+and deferred real file-read/WebCrypto completion across new-digest and null props.
 Unknown versions/fields, tampering, oversize, accessors and mutation fail closed.
 Integrity and deterministic checkpoint agreement do not attest source facts or
 payment anchoring (issue291).

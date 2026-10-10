@@ -23,7 +23,28 @@ const bundled = await build({ absWorkingDir: root, stdin: { resolveDir: root, so
   import { ReadCheckpointVerify } from "./components/keryx/read-checkpoint-verify";
   import * as audit from "./lib/research-audit/actual-read-record";
   const root = createRoot(document.getElementById("report"));
-  window.fixture = { audit, mount: capture => root.render(<ReadCheckpointVerify key={capture?.retainedDigest ?? "unavailable"} capture={capture} />) };
+  const counters = { digests: 0, completedDigests: 0 };
+  const originalDigest = crypto.subtle.digest;
+  crypto.subtle.digest = async function(...args) {
+    counters.digests++;
+    try { return await originalDigest.apply(this, args); }
+    finally { counters.completedDigests++; }
+  };
+  let gate;
+  window.fixture = { audit, counters, mount: capture => root.render(<ReadCheckpointVerify capture={capture} />),
+    defer: stage => {
+      const target = stage === "file" ? File.prototype : crypto.subtle;
+      const member = stage === "file" ? "arrayBuffer" : "digest", original = target[member];
+      let release;
+      const wait = new Promise(resolve => { release = resolve; });
+      gate = { started: 0, read: 0, completed: 0, release, restore: () => { target[member] = original; } };
+      target[member] = async function(...args) {
+        gate.started++;
+        const result = await original.apply(this, args); gate.read++;
+        await wait; gate.completed++; return result;
+      };
+    }, release: () => gate.release(), restore: () => gate.restore(),
+    observed: () => ({ started: gate.started, read: gate.read, completed: gate.completed }) };
 ` }, bundle: true, write: false, platform: "browser", format: "iife", target: "es2022", metafile: true,
   define: { "process.env.NODE_ENV": '"production"' }, logLevel: "silent" });
 const inputs = Object.keys(bundled.metafile!.inputs);
@@ -34,6 +55,9 @@ assert(bundled.outputFiles[0].contents.byteLength < 1_500_000);
 const collector = createReadCheckpointCapture(true), check = { kind: "channel", creatorFree: false, cache: false } as const;
 collector.append(check, actualReadCheckpoint(check), { candidate: 1, round: 0, proposal: "BUY", plan: "BUY", price: 0.002 });
 const capture = collector.finish(); assert(capture?.status === "available");
+const otherCollector = createReadCheckpointCapture(true), otherCheck = { ...check, cache: true };
+otherCollector.append(otherCheck, actualReadCheckpoint(otherCheck), { candidate: 1, round: 0, proposal: "BUY", plan: "BUY", price: 0.002 });
+const otherCapture = otherCollector.finish(); assert(otherCapture?.status === "available"); assert.notEqual(capture.retainedDigest, otherCapture.retainedDigest);
 const requests: string[] = [], refused: string[] = [];
 const server = createServer((request, response) => {
   requests.push(`${request.method} ${request.url}`);
@@ -60,7 +84,9 @@ try {
   });
   const page = await context.newPage(), errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto(origin, { waitUntil: "load", timeout: 5000 }); await context.setOffline(true);
-  type Fixture = { audit: typeof Audit; mount(capture: ReadCheckpointCapture | null): void };
+  type Fixture = { audit: typeof Audit; mount(capture: ReadCheckpointCapture | null): void;
+    counters: { digests: number; completedDigests: number }; defer(stage: "file" | "digest"): void;
+    release(): void; restore(): void; observed(): { started: number; read: number; completed: number } };
   await page.evaluate(capture => (window as unknown as { fixture: Fixture }).fixture.mount(capture), capture);
   await page.getByText(copy.boundary, { exact: true }).waitFor();
   const downloaded = page.waitForEvent("download", { timeout: 5000 });
@@ -73,6 +99,53 @@ try {
   const upload = async (value: unknown) => { await page.getByLabel(copy.choose).setInputFiles({ name: "synthetic-checkpoints.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) }); };
   await upload(downloadedPacket); await page.getByRole("button", { name: copy.verify, exact: true }).click();
   await page.getByText(copy.passed, { exact: true }).waitFor();
+  // Keep the component and section mounted: no digest key may conceal stale prop-bound state.
+  const mount = async (value: ReadCheckpointCapture | null) => {
+    await page.evaluate(async capture => {
+      const section = document.querySelector("section");
+      (window as unknown as { fixture: Fixture }).fixture.mount(capture);
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      if (section !== document.querySelector("section")) throw Error("Report component was remounted");
+    }, value);
+  };
+  const state = () => page.evaluate(({ passed, verify }) => ({
+    passed: Array.from(document.querySelectorAll('[role="status"]')).filter(node => node.textContent === passed).length,
+    statuses: document.querySelectorAll('[role="status"]').length,
+    files: document.querySelector<HTMLInputElement>('input[type="file"]')?.files?.length ?? 0,
+    verifyEnabled: Array.from(document.querySelectorAll<HTMLButtonElement>("button")).some(button => button.textContent === verify && !button.disabled),
+  }), { passed: copy.passed, verify: copy.verify });
+  const propChecks: { label: string; passed: number; statuses: number; files: number; verifyEnabled: boolean }[] = [];
+  await mount(otherCapture); propChecks.push({ label: "completed-to-new-digest", ...await state() });
+  await upload(otherCapture.packet); await page.getByRole("button", { name: copy.verify, exact: true }).click();
+  await page.getByText(copy.passed, { exact: true }).waitFor();
+  await mount(null); await page.getByText(copy.unavailable, { exact: true }).waitFor(); await mount(capture);
+  propChecks.push({ label: "completed-through-null", ...await state() });
+  await upload(capture.packet); await page.getByRole("button", { name: copy.verify, exact: true }).click();
+  await page.getByText(copy.passed, { exact: true }).waitFor();
+  await mount(structuredClone(capture)); propChecks.push({ label: "completed-to-new-identity-same-digest", ...await state() });
+  for (const stage of ["file", "digest"] as const) for (const unavailable of [false, true]) {
+    await mount(capture); await upload(capture.packet);
+    const digestBefore = await page.evaluate(stage => {
+      const fixture = (window as unknown as { fixture: Fixture }).fixture;
+      fixture.defer(stage); return fixture.counters.completedDigests;
+    }, stage);
+    await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.busy, { exact: true }).waitFor();
+    await page.waitForFunction(() => (window as unknown as { fixture: Fixture }).fixture.observed().read === 1, undefined, { timeout: 5000 });
+    await mount(unavailable ? null : otherCapture);
+    await page.evaluate(() => (window as unknown as { fixture: Fixture }).fixture.release());
+    await page.waitForFunction(before => {
+      const fixture = (window as unknown as { fixture: Fixture }).fixture;
+      return fixture.observed().completed === 1 && fixture.counters.completedDigests > before;
+    }, digestBefore, { timeout: 5000 });
+    if (unavailable) await mount(otherCapture);
+    else await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    propChecks.push({ label: `deferred-${stage}-to-${unavailable ? "null" : "new-digest"}`, ...await state() });
+    await page.evaluate(() => (window as unknown as { fixture: Fixture }).fixture.restore());
+  }
+  console.log(JSON.stringify({ gate: "actual-read-report-prop-binding", sameMountedComponent: true, completedTransitions: 3,
+    deferredFileReads: 2, deferredRealWebCrypto: 2, observations: propChecks, externalRequests: refused.length, paymentAuthority: false }));
+  assert(propChecks.every(value => value.passed === 0 && value.statuses === 0 && value.files === 0 && !value.verifyEnabled), "Expected capture identity/digest must reset state and reject stale completion");
+  await mount(capture);
   const changed = structuredClone(capture.packet); changed.records[0].check = { kind: "channel", creatorFree: false, cache: true };
   changed.records[0].outcome = actualReadCheckpoint(changed.records[0].check);
   await upload(changed); await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.refused, { exact: true }).waitFor();
@@ -97,7 +170,8 @@ try {
   assert.deepEqual(errors, []); assert.deepEqual(refused, []); assert.deepEqual(requests.sort(), ["GET /", "GET /fixture.js"]);
   console.log(JSON.stringify({ gate: "actual-read-report-offline-browser", node: process.version, browser: browser.version(),
     actualReactReport: true, actualPacketDownload: true, separatelyRetainedDigest: true, forgedPairRefused: true, accessorNotInvoked: true,
-    mutationRefused: true, unavailableReset: true, externalRequests: 0, paymentAuthority: false }));
+    mutationRefused: true, unavailableReset: true, sameMountedPropResets: propChecks.length, deferredOldResultsDiscarded: 4,
+    externalRequests: 0, paymentAuthority: false }));
 } finally {
   try { if (browser) await bounded(browser.close(), 5000); }
   finally { if (server.listening) { const closed = new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
