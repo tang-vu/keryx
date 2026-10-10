@@ -58,6 +58,21 @@ it("preserves ordinary flat errors, message-only responses and non-JSON text", (
   expect(parseAskHttpError("Upstream unavailable", 502, null).message).toBe("Upstream unavailable");
 });
 
+it("keeps normal front-door draining, expired windows and unplanned unknown outcomes distinct", () => {
+  const draining = JSON.parse(body);
+  Object.assign(draining.error, { code: "KERYX_FRONT_DOOR_DRAINING", planned: false, frontDoorDraining: true });
+  Object.assign(draining.error.maintenance, { state: "normal", planned: false, admissionClosed: false, window: null });
+  expect(parseAskHttpError(JSON.stringify(draining), 503, null).maintenance?.upstreamOutcome).toBe("not-dispatched");
+  const expired = JSON.parse(body);
+  Object.assign(expired.error, { code: "KERYX_MAINTENANCE_WINDOW_EXPIRED", planned: false, retryAfterSeconds: 60 });
+  Object.assign(expired.error.maintenance, { state: "overrun", planned: false, checkedAt: expired.error.maintenance.window.endsAt });
+  expect(parseAskHttpError(JSON.stringify(expired), 503, null).code).toBe("KERYX_MAINTENANCE_WINDOW_EXPIRED");
+  const unavailable = JSON.parse(body);
+  Object.assign(unavailable.error, { code: "KERYX_MAINTENANCE_CONTROL_UNAVAILABLE", planned: false, retryAfterSeconds: 60 });
+  Object.assign(unavailable.error.maintenance, { state: "control-unavailable", planned: false, window: null });
+  expect(parseAskHttpError(JSON.stringify(unavailable), 503, null).code).toBe("KERYX_MAINTENANCE_CONTROL_UNAVAILABLE");
+});
+
 it("renders malformed or unknown nested bodies as plain fallback with no status authority", () => {
   const changes = [
     { statusPath: "https://evil.invalid/" }, { code: "UNKNOWN" }, { retryAfterSeconds: 0 },

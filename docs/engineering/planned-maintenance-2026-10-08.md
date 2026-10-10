@@ -86,10 +86,11 @@ stopping the app. Unknown payment outcomes retain their original recovery path;
    protected stock/private originals and rollback provenance. Preserve all old
    fences and failed records. Review canonical protected control paths and trust
    ingress metadata; direct application admission must not bypass the front door.
-2. Publish the real upcoming window before closing admission. Root-owned app banner
-   and supported-client adapters must expose the independent status URL and
-   preserve the original request/journal on503. The current candidate adds the
-   endpoint and headers; it does **not** mount an app banner or change client code.
+2. Publish the real upcoming window before closing admission. The app banner and
+   supported-client handling must be qualified with the independent status URL
+   and preservation of the original request/journal on503. The source candidate
+   now mounts a banner and handles the browser refusal; this does not activate
+   the front door or prove deployed/client lifecycle acceptance.
 3. At the approved start, replace the protected marker atomically with `draining`
    while preserving ID/start/end. No control writer or schedule is supplied here.
    Observe new paid/auth/signed admission refusing before reaching the application.
@@ -143,7 +144,7 @@ and ambiguous upstream-response-loss case used no production, provider, database
 or transaction calls.
 
 Exact-source independent review/CI, native protected-file acceptance, final
-root/peer ingress and recovery binding, advance in-app banner, supported client
+root/peer ingress and recovery binding, deployed advance in-app banner, supported client
 handling, production exercise/readback and coordinated distribution remain open.
 The existing redeploy scripts, role/stock38 and one-use helpers are byte-identical;
 there is no package/version bump, current release mutation or `Fixes #281` claim.
@@ -162,11 +163,52 @@ Focused tests use the real local front-door emitter and browser conversation wit
 a synthetic refusal and an inert wallet panel, plus the existing successful-stream
 and sign/abort scope regressions. They do not establish normal boot, live payment,
 deployed client handling or operational maintenance acceptance. This source-only
-preparation does not enable the front door, change service/ingress lifecycle or add
-an advance banner. Exact combined-source hosted build/CI and the independent
+preparation does not enable the front door or change service/ingress lifecycle.
+The follow-up below adds the separate advance notice. Exact combined-source hosted build/CI and the independent
 front-door lifecycle, non-production exercise and production readback still gate
 the complete issue281 outcome. The shared browser hook also gives the embed plain
 error text; its existing question field stays populated, but it has no new status
 action. Server API/MCP contracts, repository CLIs, client binaries, extension and
 bot adapters are unchanged. Complete supported-client handling remains a separate
 issue281 gate; no synchronized delivery or client version change is claimed here.
+
+## Advance-window banner preparation — 2026-10-11
+
+One client component in the request-independent root layout reads only the fixed
+same-origin public `GET /maintenance/status`. It omits credentials, rejects
+redirects, accepts at most8192 bytes, and times out after5 seconds. One initial
+visible-page read and subsequent60-second visible-page observations have a
+maximum11-call budget and a10-minute elapsed lifetime. Hidden pages do not read;
+visibility changes and effect restarts preserve the instance's budget/deadline.
+Any404, malformed response, oversized body, redirect or transport failure stops
+observation. An initially absent/inert front door remains hidden. A failed read
+after a visible notice reports current status unavailable and labels the retained
+snapshot last observed. Finishing the budget/lifetime reports that refresh ended.
+The fixed status link lets the reader inspect a newer independent observation.
+
+The shared browser-safe validator copies only the exact public window/status
+fields, rejects arrays, coercible enums, accessors and incoherent state/time
+packets, and always retains `applicationStatus:not-probed`. The control reader
+uses the same literal window validator; a singleton array/object phase no longer
+passes through string coercion. Upcoming/active/overrun are derived from the
+server's `checkedAt`, never the browser clock. Start and expected-end copy is UTC,
+labels the last-observed public status and denies a reopening guarantee. All
+window content is rendered as text; every action is the fixed same-origin link.
+The banner cannot alter a draft, disable/dispatch research, sign, recover a
+payment or extend/reopen a window. These finite public GET observations are
+separate from the refusal panel: that panel never automatically probes or retries.
+
+Source inspection found no in-repository blind paid503 retry. Stdio/hosted buyer
+`mcp/local-payment.mts` refuses a non402 quote before signing; a failed signed
+response retains its original journal/HTTP status and requires recovery before
+another payment. Its bounded queue observation/recovery uses GET only. The
+extension's `research-client.mjs` renders nested `error.message` as plain text and
+has no signer/retry. Local `scripts/ask.mts` runs locally, outside hosted ingress.
+Desktop's helper is local inspection/workspace IPC. Bot handlers execute their
+accepted server run once; external webhook redelivery is not an in-app retry
+guarantee. API/remote-MCP consumers receive the independent front door's exact503
+contract; third-party transport behavior still needs client acceptance. No new
+adapter, client binary, version, storage capability or operational schedule is
+introduced. Actual front-door integration, non-production real-app lifecycle,
+final combined build/CI, deployed banner/client readback and production maintenance
+acceptance remain root-owned gates; these source fixtures do not close issue281.

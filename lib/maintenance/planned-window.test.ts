@@ -18,7 +18,8 @@ describe("bounded maintenance control", () => {
     expect(maintenanceStatus({ kind: "unavailable" }, 0).admissionClosed).toBe(true);
   });
   it("refuses scope extensions, invalid time/clock, unbounded windows and unsafe messages", () => {
-    for (const change of [{ phase: "normal" }, { extra: true }, { id: "../unsafe" }, { message: "x\n" }, { message: "x".repeat(301) },
+    for (const change of [{ phase: "normal" }, { phase: ["draining"] }, { phase: ["active"] }, { phase: { value: "active" } },
+      { extra: true }, { id: "../unsafe" }, { message: "x\n" }, { message: "x".repeat(301) },
       { startsAt: fixtureWindow.endsAt }, { announcedAt: fixtureWindow.startsAt }, { announcedAt: fixtureWindow.endsAt }, { endsAt: new Date(Date.parse(fixtureWindow.startsAt) + MAX_WINDOW_MS + 1).toISOString() },
       { endsAt: "2026-10-08" }]) expect(() => parsePlannedWindow({ ...fixtureWindow, ...change })).toThrow();
     expect(() => maintenanceStatus({ kind: "absent" }, NaN)).toThrow();

@@ -8,6 +8,7 @@ import { MintEngravings } from "@/components/keryx/mint-engravings";
 import { safeInlineJson } from "@/lib/safe-json";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { Providers } from "./providers";
+import { MaintenanceBanner } from "@/components/keryx/maintenance-banner";
 import "./globals.css";
 
 // Public origin for OG/canonical metadata. Explicit BASE_URL wins (set to the live
@@ -161,6 +162,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <PaperGrain />
         <InkBleedCursor />
         <Providers>
+          <MaintenanceBanner />
           <TooltipProvider>{children}</TooltipProvider>
         </Providers>
         <Toaster richColors position="bottom-right" />

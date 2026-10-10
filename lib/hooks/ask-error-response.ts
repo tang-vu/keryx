@@ -1,9 +1,9 @@
 import { createMessages } from "../i18n/messages";
+import { parsePublicMaintenanceStatus } from "../maintenance/public-status";
 
 const message = createMessages("en");
 const codes = new Set(["KERYX_PLANNED_MAINTENANCE", "KERYX_MAINTENANCE_WINDOW_EXPIRED",
   "KERYX_MAINTENANCE_CONTROL_UNAVAILABLE", "KERYX_FRONT_DOOR_DRAINING", "KERYX_UPSTREAM_UNAVAILABLE"]);
-const states = new Set(["normal", "upcoming", "draining", "active", "overrun", "control-unavailable"]);
 export interface MaintenanceRefusal {
   statusPath: "/maintenance/status";
   upstreamOutcome: "not-dispatched" | "unknown";
@@ -19,19 +19,6 @@ const record = (value: unknown): value is Record<string, unknown> =>
 function keys(value: Record<string, unknown>, names: string[]): boolean {
   return Object.keys(value).length === names.length && names.every(name => Object.hasOwn(value, name));
 }
-function utc(value: unknown): value is string {
-  return typeof value === "string" && Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value;
-}
-function publicWindow(value: unknown): boolean {
-  if (value === null) return true;
-  if (!record(value) || !keys(value, ["format", "id", "announcedAt", "startsAt", "endsAt", "phase", "message"]) ||
-    value.format !== "keryx-planned-maintenance-v1" || typeof value.id !== "string" || !/^[a-zA-Z0-9-]{1,64}$/.test(value.id) ||
-    typeof value.phase !== "string" || !["draining", "active"].includes(value.phase) || typeof value.message !== "string" ||
-    !value.message.trim() || value.message.length > 300 || /[\u0000-\u001f\u007f]/.test(value.message) ||
-    !utc(value.announcedAt) || !utc(value.startsAt) || !utc(value.endsAt)) return false;
-  const [announced, start, end] = [value.announcedAt, value.startsAt, value.endsAt].map(Date.parse);
-  return announced < start && start < end && end - start <= 1800_000;
-}
 function frontDoor(value: unknown): value is Record<string, unknown> & { code: string; message: string;
   retryAfterSeconds: number; upstreamOutcome: MaintenanceRefusal["upstreamOutcome"] } {
   if (!record(value) || !keys(value, ["code", "planned", "message", "statusPath", "maintenance", "retryAfterSeconds",
@@ -41,12 +28,8 @@ function frontDoor(value: unknown): value is Record<string, unknown> & { code: s
     typeof value.planned !== "boolean" || typeof value.frontDoorDraining !== "boolean" || value.automaticRetry !== false ||
     value.authorizationConsumedByFrontDoor !== false || typeof value.upstreamOutcome !== "string" || !["not-dispatched", "unknown"].includes(value.upstreamOutcome) ||
     !Number.isInteger(value.retryAfterSeconds) || Number(value.retryAfterSeconds) < 1 || Number(value.retryAfterSeconds) > 1800) return false;
-  const status = value.maintenance;
-  if (!(record(status) && keys(status, ["state", "planned", "admissionClosed", "window", "checkedAt", "statusPath", "applicationStatus"]) &&
-    typeof status.state === "string" && states.has(status.state) && typeof status.planned === "boolean" && typeof status.admissionClosed === "boolean" &&
-    utc(status.checkedAt) && status.statusPath === "/maintenance/status" && status.applicationStatus === "not-probed" && publicWindow(status.window))) return false;
-  if (status.planned !== ["upcoming", "draining", "active"].includes(status.state) ||
-    status.admissionClosed !== !["normal", "upcoming"].includes(status.state)) return false;
+  const status = parsePublicMaintenanceStatus(value.maintenance);
+  if (!status) return false;
   const unplanned = value.code === "KERYX_UPSTREAM_UNAVAILABLE";
   if (value.planned !== (!unplanned && status.planned)) return false;
   if (unplanned) return !value.frontDoorDraining && !status.admissionClosed && value.upstreamOutcome === "unknown";

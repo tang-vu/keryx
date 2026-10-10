@@ -1,48 +1,16 @@
 import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, realpathSync, type BigIntStats } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
+import { parsePublicMaintenanceWindow, type MaintenanceState, type MaintenanceStatus, type PlannedWindow } from "./public-status";
+export { WINDOW_FORMAT, MAX_WINDOW_MS, STATUS_PATH } from "./public-status";
+export type { MaintenanceState, MaintenanceStatus, PlannedWindow } from "./public-status";
 
-export const WINDOW_FORMAT = "keryx-planned-maintenance-v1";
-export const MAX_WINDOW_MS = 30 * 60 * 1000;
-export const STATUS_PATH = "/maintenance/status";
+import { STATUS_PATH } from "./public-status";
 export const NOTICE_PATH = "/maintenance";
-export interface PlannedWindow {
-  format: typeof WINDOW_FORMAT;
-  id: string;
-  announcedAt: string;
-  startsAt: string;
-  endsAt: string;
-  phase: "draining" | "active";
-  message: string;
-}
 export type WindowControl = { kind: "absent" } | { kind: "valid"; window: PlannedWindow } | { kind: "unavailable" };
-export type MaintenanceState = "normal" | "upcoming" | "draining" | "active" | "overrun" | "control-unavailable";
-export interface MaintenanceStatus {
-  state: MaintenanceState;
-  planned: boolean;
-  admissionClosed: boolean;
-  window: PlannedWindow | null;
-  checkedAt: string;
-  statusPath: typeof STATUS_PATH;
-  applicationStatus: "not-probed";
-}
-
-function time(value: unknown): number {
-  if (typeof value !== "string") throw Error("Invalid maintenance window");
-  const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== value) throw Error("Invalid maintenance window");
-  return parsed;
-}
 export function parsePlannedWindow(value: unknown): PlannedWindow {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw Error("Invalid maintenance window");
-  const row = value as Record<string, unknown>;
-  const keys = ["format", "id", "announcedAt", "startsAt", "endsAt", "phase", "message"];
-  if (Object.keys(row).length !== keys.length || keys.some(key => !Object.hasOwn(row, key)) || row.format !== WINDOW_FORMAT ||
-      typeof row.id !== "string" || !/^[a-zA-Z0-9-]{1,64}$/.test(row.id) ||
-      !["draining", "active"].includes(String(row.phase)) || typeof row.message !== "string" ||
-      !row.message.trim() || row.message.length > 300 || /[\u0000-\u001f\u007f]/.test(row.message)) throw Error("Invalid maintenance window");
-  const announced = time(row.announcedAt), starts = time(row.startsAt), ends = time(row.endsAt);
-  if (announced >= starts || starts >= ends || ends - starts > MAX_WINDOW_MS) throw Error("Invalid maintenance window");
-  return structuredClone(row) as unknown as PlannedWindow;
+  const window = parsePublicMaintenanceWindow(value);
+  if (!window) throw Error("Invalid maintenance window");
+  return window;
 }
 
 export function maintenanceStatus(control: WindowControl, now: number): MaintenanceStatus {
