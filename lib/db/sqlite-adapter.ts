@@ -1,5 +1,7 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
+import { createSqliteRunClaims } from "./run-claims-sqlite";
+import { RunClaimError, runClaimsEnabled, type RunClaimsStore } from "../run-claims/contracts";
 import { createSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
 import { AcceptanceError, type DeliverableAcceptanceStore } from "../deliverable-acceptance/contracts";
 import { createSqlitePrivateBibliographies } from "./private-bibliographies-sqlite";
@@ -141,6 +143,7 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 
 export class SqliteAdapter implements KeryxDB {
+  declare readonly runClaims?: RunClaimsStore;
   declare readonly deliverableAcceptance?: DeliverableAcceptanceStore;
   declare readonly privateProfiles?: PrivateProfilesStore;
   declare readonly privateBibliographies?: PrivateBibliographiesStore;
@@ -208,6 +211,10 @@ export class SqliteAdapter implements KeryxDB {
     assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installOrdinarySqliteApplicationSchema(this.db);
+    if (runClaimsEnabled(process.env) && !this.runClaims) {
+      try { Object.defineProperty(this, "runClaims", { value: createSqliteRunClaims(this.db) }); }
+      catch (error) { if (!(error instanceof RunClaimError && error.code === "claims_unavailable")) throw error; }
+    }
     if (!this.decisionReviews) {
       try { Object.defineProperty(this, "decisionReviews", { value: createSqliteDecisionReviews(this.db) }); }
       catch (error) { if (!(error instanceof DecisionReviewError && error.code === "review_unavailable")) throw error; }
