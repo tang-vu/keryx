@@ -1,6 +1,27 @@
 # Keryx Project Changelog
 
-### Historical native completion and maintenance errors (2026-10-11, v0.27.51 candidate)
+### Maintenance refusals and advance notice (2026-10-11, v0.27.52 candidate)
+
+- Render validated maintenance refusals as plain text with a fixed local status
+  link and informational wait. Restore submitted research questions while
+  preserving later edits; malformed nested errors get a plain HTTP fallback.
+  The embed shares the safer parser and retains its question field.
+- Add a root-layout notice for the independent public maintenance window. Its
+  fixed unauthenticated GET observations reject redirects, bound response bytes,
+  time and call count, and stop on failure. Display server-observed state, UTC
+  start/expected end and unknown application health without retrying research,
+  signing, recovering payments or guaranteeing reopening.
+- Share one strict public window/status validator between the server control
+  reader, refusal parser and notice. Reject coercible phases, accessors and
+  incoherent state/time packets. Preserve existing recovery and payment authority.
+- App/OpenAPI0.27.52 follows the immutable0.27.51 source tag. Hosted MCP0.3.12,
+  stdio/Registry0.4.15, desktop0.4.14 and extension0.1.3 retain their identities.
+  Reproduce the actual 48-trial offline study for the changed root lock binding.
+  Final source review, required CI/default build and combined deployment/readback
+  remain gates. The independent front door remains inactive; full issue281 also
+  requires non-production lifecycle and deployed operational acceptance.
+
+### Historical native completion (2026-10-11, v0.27.51 source)
 
 - Read completed originals written before the public checkpoint field without
   rewriting their receipts. After validating the retained run, claim, payment and
@@ -15,14 +36,9 @@
 - App/OpenAPI0.27.51 and hosted MCP0.3.12 identify the changed server/source graph.
   Actual compiled stdio/desktop graphs and extension inputs are unchanged; retain
   stdio/Registry0.4.15, desktop0.4.14 and extension0.1.3 without republishing them.
-- Show validated front-door maintenance refusals as plain text with a fixed local
-  status link and an informational wait. Restore the submitted research question
-  while preserving later edits; never retry or sign automatically. Malformed
-  nested error bodies receive a plain HTTP fallback. The embed shares the safer
-  parser and keeps its populated question field. The existing front door remains
-  inactive; full issue281 still requires its lifecycle, remaining client handling
-  and operational acceptance. Combine this browser fix with the native correction
-  above in one accepted server deployment.
+- The immutable0.27.51 tag records this source correction. Production still serves
+  the accepted0.27.50 deployment; include the correction with the maintenance
+  follow-up above in one accepted server deployment and whole-original readback.
 
 
 ### Combined reading checkpoints and mobile layout (2026-10-11, v0.27.50 candidate)
