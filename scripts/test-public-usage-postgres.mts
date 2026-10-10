@@ -1,13 +1,13 @@
 /** Actual ordinary0089 acceptance only in one fresh owner-labelled PG17 fixture.
  * No ambient database credentials, shared DDL, application initialization or providers. */
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { projectUsageCorpus, usageWindow } from "../lib/usage/contracts.ts";
 import { createTrustedUsageContext, newRunUsage } from "../lib/research/usage-provenance.ts";
+import { capturePublicUsageFixtureCommand, publicUsageFixtureCommandSucceeded, publicUsageFixtureCommandDiagnostic } from "../test-support/public-usage-fixture-command.ts";
 assert.deepEqual(process.argv.slice(2), ["--acceptance"]);
 const fixtureId = randomUUID(), name = `keryx-public-usage-${fixtureId}`, labelKey = "keryx.public-usage.fixture";
 const config = mkdtempSync(join(tmpdir(), "keryx-public-usage-docker-"));
@@ -17,22 +17,16 @@ const hash = (value: string | Buffer) => createHash("sha256").update(value).dige
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 const receipts: Record<string, unknown>[] = [], cases: string[] = [];
 let sequence = 0, containerId: string | undefined, imageId: string | undefined, sourceCommit: string | undefined, version: string | undefined, failure: unknown;
-async function command(executable: string, args: string[], input = "") {
-  const child = spawn(executable, args, { env, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
-  let stdout = Buffer.alloc(0), stderr = Buffer.alloc(0), errorCode: string | null = null, overflow = false, timedOut = false, outEOF = false, errEOF = false;
-  const keep = (current: Buffer, chunk: Buffer) => { if (current.length + chunk.length > 2 * 1024 * 1024) { overflow = true; child.kill(); } return Buffer.concat([current, chunk]).subarray(0, 2 * 1024 * 1024); };
-  child.stdout.on("data", chunk => { stdout = keep(stdout, chunk); }); child.stderr.on("data", chunk => { stderr = keep(stderr, chunk); });
-  child.stdout.on("end", () => { outEOF = true; }); child.stderr.on("end", () => { errEOF = true; });
-  child.on("error", cause => { errorCode = cause.name; }); child.stdin.on("error", cause => { errorCode = cause.name; });
-  const timer = setTimeout(() => { timedOut = true; child.kill(); }, 30000); child.stdin.end(input);
-  const result = await new Promise<{ exitCode: number | null; signal: string | null }>(done => child.on("close", (exitCode, signal) => done({ exitCode, signal })));
-  clearTimeout(timer); const label = `command-${String(++sequence).padStart(4, "0")}`;
+async function command(executable: string, args: string[], input?: string) {
+  const capture = await capturePublicUsageFixtureCommand(executable, args, env, input);
+  const { stdout, stderr, ...lifecycle } = capture;
+  const label = `command-${String(++sequence).padStart(4, "0")}`;
   writeFileSync(join(out, `${label}.stdout.raw`), stdout, { flag: "wx" }); writeFileSync(join(out, `${label}.stderr.raw`), stderr, { flag: "wx" });
-  const receipt = { label, executable, args, ...result, closeObserved: true, outEOF, errEOF, errorCode, overflow, timedOut,
-    inputSha256: hash(input), stdoutSha256: hash(stdout), stderrSha256: hash(stderr), stdoutBytes: stdout.length, stderrBytes: stderr.length };
+  const receipt = { label, executable, args, ...lifecycle,
+    inputSha256: hash(input ?? ""), stdoutSha256: hash(stdout), stderrSha256: hash(stderr), stdoutBytes: stdout.length, stderrBytes: stderr.length };
   receipts.push(receipt); writeFileSync(join(out, `${label}.json`), JSON.stringify(receipt, null, 2), { flag: "wx" });
-  if (result.exitCode !== 0 || result.signal || errorCode || overflow || timedOut || !outEOF || !errEOF)
-    throw Error(`Owned fixture command refused: ${stderr.toString("utf8")}`);
+  if (!publicUsageFixtureCommandSucceeded(capture))
+    throw Error(`Owned fixture command refused: ${JSON.stringify(publicUsageFixtureCommandDiagnostic(label, capture))}`);
   return stdout.toString("utf8").trim();
 }
 const docker = (args: string[], input?: string) => command("docker", args, input);
@@ -105,7 +99,7 @@ finally {
   }
   assert.ok(resolve(config).startsWith(resolve(tmpdir()) + sep) && config.includes("keryx-public-usage-docker-")); rmSync(config, { recursive: true, force: true });
   for (const receipt of receipts) for (const channel of ["stdout", "stderr"]) assert.equal(hash(readFileSync(join(out, `${receipt.label}.${channel}.raw`))), receipt[`${channel}Sha256`]);
-  const sourcePaths = ["supabase/migrations/0001_keryx_schema.sql", "supabase/migrations/0017_query_run_asker.sql", "supabase/migrations/0028_payment_settlement_state.sql", "supabase/migrations/0089_public_usage_window.sql", "lib/usage/contracts.ts", "lib/research/usage-provenance.ts", "lib/research/run-provenance.ts", "lib/research-audit/usage-cohort.ts", "lib/research-audit/usage-summary.ts", "lib/research-audit/exact-units.ts", "lib/db/public-usage-supabase.ts", "scripts/test-public-usage-postgres.mts", "tsconfig.public-usage.json", ".github/workflows/public-usage-postgres.yml"];
+  const sourcePaths = ["supabase/migrations/0001_keryx_schema.sql", "supabase/migrations/0017_query_run_asker.sql", "supabase/migrations/0028_payment_settlement_state.sql", "supabase/migrations/0089_public_usage_window.sql", "lib/usage/contracts.ts", "lib/research/usage-provenance.ts", "lib/research/run-provenance.ts", "lib/research-audit/usage-cohort.ts", "lib/research-audit/usage-summary.ts", "lib/research-audit/exact-units.ts", "lib/db/public-usage-supabase.ts", "scripts/test-public-usage-postgres.mts", "test-support/public-usage-fixture-command.ts", "scripts/public-usage-fixture-command.test.ts", "tsconfig.public-usage.json", ".github/workflows/public-usage-postgres.yml"];
   writeFileSync(join(out, "acceptance.json"), JSON.stringify({ format: "keryx-ordinary-public-usage-postgres-acceptance-v1", accepted: !failure,
     syntheticOnly: true, productionMeasurements: false, nativeEnrollment: false, sharedDDL: false, operationalClearance: false,
     sourceCommit, serverVersion: version, imageId, cases, receipts, sourceHashes: Object.fromEntries(sourcePaths.map(file => [file, hash(readFileSync(file))])),
