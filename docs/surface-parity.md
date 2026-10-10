@@ -1,5 +1,21 @@
 # Supported-surface release parity
 
+## Extension hosted research parity — October 10, 2026 candidate
+
+App/OpenAPI **0.27.48** and extension **0.1.3 candidate** expose existing Quick/Deep, zero budget, explicit
+page-URL/scholarly consent, safe original citation/report links, recorded exports,
+bounded device report history and deliberate editable web/workspace handoffs.
+HTTP/stream errors, truncation, stop and timeout remain distinguishable from
+completion, with one request and no automatic retry. The shared hosted payment,
+auth/storage, desktop/CLI and remote/stdio MCP/bot contracts retain their authority.
+See [capabilities and coordinated future-update rule](browser-extension.md).
+
+The [dated audit](engineering/extension-parity-2026-10-10.md) distinguishes GitHub
+MCP0.4.14/desktop0.4.13 from observed npm/Registry0.4.12 and deployed remote0.3.9.
+No synchronized publication/installation is inferred. Exact-source CI/review,
+extension ZIP publication, hosted deployment and installed/Store acceptance remain
+separate gates; historical candidates below are not current delivery evidence.
+
 ## Coordinated distributions47 — October 9, 2026 source candidate
 
 App **0.27.47** and OpenAPI's document-release label stay aligned. This batch

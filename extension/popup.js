@@ -1,205 +1,242 @@
-// Popup controller: resolve the question (from a context-menu stash or the active tab's selection),
-// stream the Keryx agent's reasoning + answer over the OpenAI-compatible endpoint, and show which
-// creators got paid. No wallet or key needed — the anonymous free tier is treasury-funded.
-
+// Thin hosted research client. The server owns admission, payment and stored report authority.
 import { formatRecordedUsdc } from "./recorded-usdc.mjs";
+import { hostedReportUrl, publicPageUrl, readResearchStream, researchQuestion,
+  responseError, sourceBudget, webDraftUrl } from "./research-client.mjs";
 
-const els = {
-  question: document.getElementById("question"),
-  budget: document.getElementById("budget"),
-  ask: document.getElementById("ask"),
-  output: document.getElementById("output"),
-  status: document.getElementById("status"),
-  trace: document.getElementById("trace"),
-  answerPanel: document.getElementById("answer-panel"),
-  answer: document.getElementById("answer"),
-  paidPanel: document.getElementById("paid-panel"),
-  paidList: document.getElementById("paid-list"),
-  paidTotalUsd: document.getElementById("paid-total-usd"),
-  dispatchLink: document.getElementById("dispatch-link"),
-  errorPanel: document.getElementById("error-panel"),
-  error: document.getElementById("error"),
-  listPage: document.getElementById("list-page"),
-};
-
-// Page context for the "list this page" action — set from the menu stash or the active tab.
+const els = Object.fromEntries([
+  "question", "budget", "ask", "stop", "mode", "scholarly", "include-page", "page-context",
+  "web-draft", "availability", "output", "status", "trace", "answer-panel", "answer",
+  "paid-panel", "paid-list", "paid-total-usd", "pending-total", "dispatch-link",
+  "exports", "error-panel", "error", "list-page", "recent-panel", "recent-list", "clear-recent",
+].map(id => [id, document.getElementById(id)]));
+const origin = new URL(KERYX_API).origin;
+const RECENT_KEY = "keryx_recent_reports_v1";
 let pageCtx = { url: "", title: "" };
+let activeRequest = null;
+let recordedExports = null;
+let recent = [];
 
-/** Best-effort read of the highlighted text in the active tab (toolbar-popup case). */
 async function readActiveTabSelection() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id) return { selection: "", url: "", title: "" };
     let selection = "";
     try {
-      const res = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => window.getSelection().toString(),
-      });
+      const res = await chrome.scripting.executeScript({ target: { tabId: tab.id },
+        func: () => window.getSelection().toString() });
       selection = (res?.[0]?.result || "").trim();
-    } catch {
-      // Restricted page (chrome://, web store, PDF viewer) — no scripting; just use the URL.
-    }
+    } catch { /* Restricted tabs cannot expose selection. */ }
     return { selection, url: tab.url || "", title: tab.title || "" };
-  } catch {
-    return { selection: "", url: "", title: "" };
-  }
+  } catch { return { selection: "", url: "", title: "" }; }
 }
 
-/** Decide the initial question + page context. A context menu hands us a stash; otherwise we read
- *  the toolbar tab's current selection. */
 async function initContext() {
-  const fromMenu = new URLSearchParams(location.search).get("src") === "menu";
-  if (fromMenu) {
-    const stash = await chrome.storage.local.get(KERYX_PENDING_KEY);
-    const pending = stash[KERYX_PENDING_KEY];
-    await chrome.storage.local.remove(KERYX_PENDING_KEY);
-    if (pending) {
-      els.question.value = pending.question || "";
-      pageCtx = { url: pending.sourceUrl || "", title: pending.sourceTitle || "" };
-      return;
+  try {
+    if (new URLSearchParams(location.search).get("src") === "menu") {
+      const stash = await chrome.storage.local.get(KERYX_PENDING_KEY);
+      const pending = stash[KERYX_PENDING_KEY];
+      await chrome.storage.local.remove(KERYX_PENDING_KEY);
+      if (pending) {
+        els.question.value = pending.question || "";
+        pageCtx = { url: pending.sourceUrl || "", title: pending.sourceTitle || "" };
+        return;
+      }
     }
+    const { selection, url, title } = await readActiveTabSelection();
+    if (selection) els.question.value = selection;
+    pageCtx = { url, title };
+  } finally {
+    els["include-page"].disabled = !publicPageUrl(pageCtx.url);
+    els["page-context"].textContent = publicPageUrl(pageCtx.url) || "Only your question or selected text is sent by default.";
   }
-  const { selection, url, title } = await readActiveTabSelection();
-  if (selection) els.question.value = selection;
-  pageCtx = { url, title };
-}
-
-function show(el) { el.hidden = false; }
-function hide(el) { el.hidden = true; }
-
-function resetOutput() {
-  show(els.output);
-  els.trace.textContent = "";
-  els.answer.textContent = "";
-  els.paidList.innerHTML = "";
-  hide(els.answerPanel);
-  hide(els.paidPanel);
-  hide(els.errorPanel);
-  els.status.textContent = "working…";
 }
 
 function showError(message) {
-  show(els.errorPanel);
+  els.output.hidden = false;
+  els["error-panel"].hidden = false;
   els.error.textContent = message;
   els.status.textContent = "failed";
 }
 
-/** Render the vendor `keryx` settlement summary (creators + amounts + receipt link). */
-function renderPaid(meta) {
-  if (!meta) return;
-  const citations = Array.isArray(meta.citations) ? meta.citations : [];
-  if (citations.length === 0) {
-    els.status.textContent = "done · no sources cited";
-    return;
-  }
-  for (const c of citations) {
+function reportLink(value) {
+  const url = hostedReportUrl(value, origin);
+  if (!url) return;
+  els["dispatch-link"].href = url;
+  els["dispatch-link"].hidden = false;
+}
+
+function renderSummary(meta) {
+  els["paid-list"].replaceChildren();
+  for (const c of Array.isArray(meta.citations) ? meta.citations : []) {
     const li = document.createElement("li");
-    const src = document.createElement("span");
+    const url = publicPageUrl(c.itemUrl);
+    const src = document.createElement(url ? "a" : "span");
     src.className = "src";
-    src.textContent = c.source || "source";
+    src.textContent = `${c.marker ? `[${c.marker}] ` : ""}${c.itemTitle || c.sourceName || c.source || "source"}`;
+    if (url) { src.href = url; src.target = "_blank"; src.rel = "noopener noreferrer"; }
     const amt = document.createElement("span");
     amt.className = "amt";
     amt.textContent = formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 });
     li.append(src, amt);
-    els.paidList.appendChild(li);
+    els["paid-list"].appendChild(li);
   }
-  els.paidTotalUsd.textContent = formatRecordedUsdc(meta.totalToCreators, { minimumFractionDigits: 4 });
-  if (meta.dispatchUrl) els.dispatchLink.href = meta.dispatchUrl;
-  show(els.paidPanel);
-  els.status.textContent = `done / ${meta.paymentMode || "legacy"} / planned rewards are not settlement proof`;
+  els["paid-total-usd"].textContent = formatRecordedUsdc(meta.totalToCreators, { minimumFractionDigits: 4 });
+  els["pending-total"].textContent = ` Pending source spend: ${formatRecordedUsdc(meta.pendingSpendUsdc, { minimumFractionDigits: 4 })}.`;
+  els["paid-panel"].hidden = false;
+  reportLink(meta.dispatchUrl);
+  recordedExports = meta.researchExports ?? null;
+  els.exports.hidden = !recordedExports;
+  for (const button of els.exports.querySelectorAll("[data-export]")) {
+    const value = recordedExports?.[button.dataset.export];
+    button.disabled = typeof value === "string" ? !value : !value?.content || !value?.count;
+  }
+  els.status.dataset.paymentMode = meta.paymentMode || "legacy";
+  els.status.textContent = "checking completion…";
 }
 
-/** Apply one streamed chat.completion.chunk to the UI. */
-function applyChunk(chunk) {
-  const delta = chunk?.choices?.[0]?.delta || {};
-  if (delta.reasoning_content) {
-    els.trace.textContent += delta.reasoning_content;
-    els.trace.scrollTop = els.trace.scrollHeight;
+function renderRecent() {
+  els["recent-list"].replaceChildren();
+  for (const report of recent) {
+    const li = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = report.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = `Report · ${new Date(report.at).toLocaleString()}`;
+    li.appendChild(link);
+    els["recent-list"].appendChild(li);
   }
-  if (delta.content) {
-    show(els.answerPanel);
-    els.answer.textContent += delta.content;
-  }
-  if (chunk?.keryx) renderPaid(chunk.keryx);
+  els["recent-panel"].hidden = recent.length === 0;
+}
+
+async function loadRecent() {
+  try {
+    const stored = (await chrome.storage.local.get(RECENT_KEY))[RECENT_KEY];
+    recent = (Array.isArray(stored) ? stored : []).filter(row => row && hostedReportUrl(row.url, origin) &&
+      Number.isSafeInteger(row.at) && row.at > 0 && row.at <= Date.now()).slice(0, 10)
+      .map(row => ({ url: hostedReportUrl(row.url, origin), at: row.at }));
+    renderRecent();
+  } catch { /* Optional device history must not block research. */ }
+}
+
+async function saveReport() {
+  await recentReady;
+  const url = hostedReportUrl(els["dispatch-link"].getAttribute("href"), origin);
+  if (!url || els["dispatch-link"].hidden) return;
+  recent = [{ url, at: Date.now() }, ...recent.filter(row => row.url !== url)].slice(0, 10);
+  renderRecent();
+  try { await chrome.storage.local.set({ [RECENT_KEY]: recent }); } catch { /* Report remains available on web. */ }
+}
+
+function requestFields() {
+  return { question: researchQuestion(els.question.value, pageCtx.url, els["include-page"].checked),
+    budget: sourceBudget(els.budget.value), mode: els.mode.value === "deep" ? "deep" : "quick",
+    scholarly: els.scholarly.checked };
 }
 
 async function ask() {
-  const question = els.question.value.trim();
-  if (!question) { els.question.focus(); return; }
-  const budget = Math.max(0.005, Number(els.budget.value) || 0.03);
-
+  if (activeRequest) return;
+  let fields;
+  try { fields = requestFields(); } catch (err) { showError(err.message); return; }
+  const controller = new AbortController();
+  activeRequest = controller;
   els.ask.disabled = true;
   els.ask.textContent = "Asking…";
-  resetOutput();
-
+  els.stop.hidden = false;
+  els.output.hidden = false;
+  els.trace.textContent = "";
+  els.answer.textContent = "";
+  els.status.textContent = "working…";
+  recordedExports = null;
+  for (const id of ["answer-panel", "paid-panel", "error-panel", "exports", "dispatch-link"]) els[id].hidden = true;
+  els["dispatch-link"].removeAttribute("href");
+  let timedOut = false;
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 300_000);
   try {
-    const res = await fetch(KERYX_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "keryx",
-        stream: true,
-        budget,
-        messages: [{ role: "user", content: question }],
-      }),
-    });
-
-    if (!res.ok || !res.body) {
-      let msg = `Keryx returned ${res.status}`;
-      try {
-        const err = await res.json();
-        if (err?.error?.message) msg = err.error.message;
-      } catch { /* non-JSON body */ }
-      showError(msg);
-      return;
+    const res = await fetch(KERYX_API, { method: "POST", signal: controller.signal,
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "keryx", stream: true,
+        budget: fields.budget, mode: fields.mode, scholarly: fields.scholarly,
+        messages: [{ role: "user", content: fields.question }] }) });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(responseError(body, res.status));
     }
-
-    // Parse the SSE stream: events are separated by a blank line; payload lines start with "data: ".
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const events = buffer.split("\n\n");
-      buffer = events.pop() || "";
-      for (const evt of events) {
-        for (const line of evt.split("\n")) {
-          if (!line.startsWith("data:")) continue;
-          const data = line.slice(5).trim();
-          if (!data || data === "[DONE]") continue;
-          try { applyChunk(JSON.parse(data)); } catch { /* skip partial frame */ }
-        }
+    await readResearchStream(res, chunk => {
+      if (typeof chunk?.id === "string" && chunk.id.startsWith("chatcmpl-")) reportLink(`${origin}/dispatch/${chunk.id.slice(9)}`);
+      const delta = chunk?.choices?.[0]?.delta || {};
+      if (typeof delta.reasoning_content === "string") {
+        els.trace.textContent += delta.reasoning_content;
+        els.trace.scrollTop = els.trace.scrollHeight;
       }
-    }
-    if (els.status.textContent === "working…") els.status.textContent = "done";
+      if (typeof delta.content === "string") {
+        els["answer-panel"].hidden = false;
+        els.answer.textContent += delta.content;
+      }
+      if (chunk?.keryx) renderSummary(chunk.keryx);
+    });
+    if (controller.signal.aborted) throw new DOMException("Stopped", "AbortError");
+    els.status.textContent = `done / ${els.status.dataset.paymentMode || "legacy"} / planned rewards are not settlement proof`;
+    await saveReport();
   } catch (err) {
-    showError(err instanceof Error ? err.message : String(err));
+    if (controller.signal.aborted) {
+      showError(`${timedOut ? "Watching timed out." : "Stopped watching."} The server may still finish research or payments. Inspect the report before starting another request.`);
+      els.status.textContent = timedOut ? "timed out" : "stopped";
+    } else showError(err instanceof Error ? err.message : String(err));
+    els.exports.hidden = true;
   } finally {
+    clearTimeout(timeout);
+    activeRequest = null;
     els.ask.disabled = false;
     els.ask.textContent = "Ask Keryx ▸";
+    els.stop.hidden = true;
   }
 }
 
-/** Deep-link the creator to /register with this page's URL + title pre-filled. */
-async function listPage() {
-  let { url, title } = pageCtx;
-  if (!url) {
-    const active = await readActiveTabSelection();
-    url = active.url;
-    title = active.title;
-  }
-  const target = `${KERYX_REGISTER}?url=${encodeURIComponent(url)}&name=${encodeURIComponent(title || "")}`;
-  chrome.tabs.create({ url: target });
+function downloadExport(key) {
+  const value = recordedExports?.[key];
+  const content = typeof value === "string" ? value : value?.content;
+  if (typeof content !== "string" || !content) return;
+  const formats = { bibtex: ["bib", "text/plain"], ris: ["ris", "application/x-research-info-systems"],
+    cslJson: ["json", "application/json"], evidenceCsv: ["csv", "text/csv"] };
+  const format = formats[key];
+  if (!format) return;
+  const url = URL.createObjectURL(new Blob([content], { type: `${format[1]};charset=utf-8` }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `keryx-recorded-references.${format[0]}`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 els.ask.addEventListener("click", ask);
-els.question.addEventListener("keydown", (e) => {
-  // Ctrl/Cmd+Enter submits, matching the site's ask box.
-  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") ask();
+els.stop.addEventListener("click", () => activeRequest?.abort());
+els.question.addEventListener("keydown", event => {
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); void ask(); }
 });
-els.listPage.addEventListener("click", listPage);
-
-initContext();
+els["web-draft"].addEventListener("click", () => {
+  try {
+    const fields = requestFields();
+    chrome.tabs.create({ url: webDraftUrl(origin, fields.question, fields.budget, fields.mode) });
+  } catch (err) { showError(err.message); }
+});
+els["list-page"].addEventListener("click", async () => {
+  const page = pageCtx.url ? pageCtx : await readActiveTabSelection();
+  chrome.tabs.create({ url: `${KERYX_REGISTER}?url=${encodeURIComponent(page.url || "")}&name=${encodeURIComponent(page.title || "")}` });
+});
+for (const button of els.exports.querySelectorAll("[data-export]")) button.addEventListener("click", () => downloadExport(button.dataset.export));
+void initContext().catch(() => { /* Manual questions remain available. */ });
+const recentReady = loadRecent();
+els["clear-recent"].addEventListener("click", async () => {
+  await recentReady;
+  recent = [];
+  renderRecent();
+  try { await chrome.storage.local.remove(RECENT_KEY); } catch {
+    showError("The device list could not be cleared from storage.");
+  }
+});
+// This GET observes the global pause only; the POST always enforces admission again.
+void fetch(`${origin}/api/research/availability`, { cache: "no-store", signal: AbortSignal.timeout(5000) })
+  .then(async response => response.ok ? response.json() : null)
+  .then(value => { els.availability.textContent = value?.state === "paused" ? "New research is paused. Saved reports remain available; connecting a wallet does not remove the pause." :
+    value?.state === "not-paused" ? "Each question requires server admission; no automatic retry runs." : "Availability could not be checked. Each question still requires server admission." ; })
+  .catch(() => { els.availability.textContent = "Availability could not be checked. Each question still requires server admission."; });

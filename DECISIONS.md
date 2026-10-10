@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+## Keep the extension current within its hosted research role — 2026-10-10
+
+The owner requested comparing the extension with current web/app/MCP capabilities
+and recording coordinated future updates. Expose existing Quick/Deep, zero budgets,
+explicit page-URL/scholarly consent, recorded exports and report/workspace handoffs
+through the existing hosted contract. Preserve a single active request, terminal
+stream proof, honest stop/timeout/error states and exact canonical money display.
+Keep recent device history to bounded completed report URLs/timestamps only.
+
+Account ownership, creator signing, caller-funded custody, local Operator files and
+scheduling stay in their established hosted/native surfaces. Opening an editable
+question cannot dispatch or spend. Feature parity is an audited capability/role
+decision, not identical UI or aligned version numbers. Record source, published,
+deployed and installed identities separately in [the durable checklist](docs/browser-extension.md)
+and [dated scope/evidence](docs/engineering/extension-parity-2026-10-10.md).
+
 ## Identify the final app47 distribution graphs together — 2026-10-09
 
 The coordinated batch adds delegated read-only obligation inspection to hosted

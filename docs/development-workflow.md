@@ -96,6 +96,14 @@ completed user-visible changes indefinitely undeployed.
 
 ## Evidence and supported surfaces
 
+Owner-confirmed October 10, 2026: each product update must compare applicable current
+web, desktop/app, CLI, API, remote/stdio MCP, extension and bot capabilities and update
+them together within their established roles. Keep the extension in that audit even
+when its previous version was unchanged. Record implemented behavior, deliberate
+handoffs, remaining work and actual source/deployed/published/installed identities.
+Follow the [extension capability and future-update checklist](browser-extension.md);
+version alignment alone does not satisfy the requirement.
+
 This increment changes development instructions and GitHub validation scheduling.
 Web/API, desktop, CLI, remote/stdio MCP, extensions and bots retain their runtime
 contracts and distribution versions. Their applicable platform/domain workflows

@@ -99,7 +99,7 @@ describe("research surface parity", () => {
     expect(surfaceResearch(fixture()).operatingFee).toBeUndefined();
     expect(buildAnswerContent(run)).toContain("Keryx operating fee allocation: $0.004000 USDC (pending)");
     await replayExtensionPopup([{ choices: [{ delta: { content: buildAnswerContent(run) } }] },
-      { keryx: keryxMeta(run) }], document => {
+      { choices: [{ delta: {}, finish_reason: "stop" }], keryx: keryxMeta(run) }], document => {
       expect(document.getElementById("paid-total-usd")!.textContent).toBe("$0.0000");
       expect(document.getElementById("answer")!.textContent)
         .toContain("Keryx operating fee allocation: $0.004000 USDC (pending)");

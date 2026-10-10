@@ -373,13 +373,14 @@ it("R24 retains identities/read limits through result, recovery and export adapt
   expect(await savePrivateExport(async () => ({ canceled: false, filePath: exportPath }), baseline.researchExports.evidenceCsv)).toBe(true);
   expect(fs.readFileSync(exportPath, "utf8")).toBe(baseline.researchExports.evidenceCsv);
 
-  const extension = await replayExtensionPopup([{ keryx: keryxMeta(run) }], (document, requests) => ({
+  const extensionMetadata = keryxMeta(run);
+  const extension = await replayExtensionPopup([{ choices: [{ delta: {}, finish_reason: "stop" }], keryx: extensionMetadata }], (document, requests) => ({
     status: document.getElementById("status")!.textContent,
     handoff: (document.getElementById("dispatch-link") as HTMLAnchorElement).href,
     inMemorySseRequests: requests, actualHttpRequests: 0,
-  }));
+  }), { hostedOrigin: new URL(extensionMetadata.dispatchUrl).origin });
   expect(extension.status).toContain("planned rewards are not settlement proof");
-  expect(extension.handoff).toContain(`/dispatch/${id}`);
+  expect(extension.handoff).toBe(extensionMetadata.dispatchUrl);
   const telegram = buildAnswerText(run), discord = buildAnswerMessage(run);
   expect(telegram).toContain(`/dispatch/${id}`);
   expect(discord.embeds[0].url).toContain(`/dispatch/${id}`);

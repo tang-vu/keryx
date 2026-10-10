@@ -99,6 +99,18 @@ jobs:
       - name: Engineering feed integrity (no settlement)
         run: node --import tsx scripts/build-engineering-feed.mts --check
 
+      - name: Pack allowlisted browser extension and verify canonical formatter
+        if: needs.scope.outputs.scope == 'full'
+        run: npm run pack:extension
+
+      - name: Retain exact-source browser extension candidate
+        if: needs.scope.outputs.scope == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: keryx-extension-${{ github.sha }}
+          path: keryx-extension-v*.zip
+          if-no-files-found: error
+
       - name: Compile contracts
         if: needs.scope.outputs.scope == 'full'
         run: npx hardhat compile
@@ -318,6 +330,9 @@ jobs:
 
       - name: Research decision replay browser WebCrypto parity (offline corpus)
         run: node --import tsx scripts/test-research-audit-browser.mts
+
+      - name: Unpacked MV3 extension (synthetic HTTP, no research or payments)
+        run: npm run test:browser-extension
 
       - name: Zotero RIS parser compatibility (pinned source, synthetic metadata)
         run: |

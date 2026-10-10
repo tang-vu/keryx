@@ -3,23 +3,44 @@ import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
 import { expect, vi } from "vitest";
 
+interface ReplayOptions {
+  hostedOrigin?: string;
+  prepare?: (document: Document) => void;
+  afterClick?: (document: Document) => void;
+  response?: (init: RequestInit) => Response | Promise<Response>;
+  expectedStatus?: RegExp;
+  expectedQuestion?: string;
+  expectedRequests?: number;
+  pageUrl?: string;
+  savedReports?: unknown;
+  onRequest?: (body: Record<string, unknown>) => void;
+  onStored?: (value: unknown) => void;
+}
+
 export async function replayExtensionPopup<T>(chunks: readonly unknown[], inspect: (
   document: Document, requests: { url: string; method: string; question: string }[],
-) => T): Promise<T> {
+) => T, options: ReplayOptions = {}): Promise<T> {
   const dom = new JSDOM(readFileSync("extension/popup.html", "utf8"),
     { url: "https://extension.example/popup", runScripts: "outside-only" });
-  const api = "https://extension.example/api/v1/chat/completions";
+  const api = `${options.hostedOrigin ?? "https://extension.example"}/api/v1/chat/completions`;
   const question = "Synthetic popup replay";
   const requests: { url: string; method: string; question: string }[] = [];
   const bindings = {
     document: dom.window.document, location: dom.window.location,
-    chrome: { tabs: { query: async () => [] } }, KERYX_API: api,
+    chrome: { tabs: { query: async () => options.pageUrl ? [{ id: 1, url: options.pageUrl }] : [] },
+      scripting: { executeScript: async () => [{ result: "" }] }, storage: { local: {
+      get: async () => ({ keryx_recent_reports_v1: options.savedReports }),
+      set: async (value: unknown) => { options.onStored?.(value); }, remove: async () => {},
+    } } }, KERYX_API: api,
     fetch: async (url: string, init: RequestInit) => {
+      if (url.endsWith("/api/research/availability")) return Response.json({ state: "not-paused" });
       expect(url).toBe(api);
       expect(init.method).toBe("POST");
       const request = JSON.parse(String(init.body));
-      expect(request.messages).toEqual([{ role: "user", content: question }]);
-      requests.push({ url, method: init.method!, question });
+      expect(request.messages).toEqual([{ role: "user", content: options.expectedQuestion ?? question }]);
+      options.onRequest?.(request);
+      requests.push({ url, method: init.method!, question: request.messages[0].content });
+      if (options.response) return options.response(init);
       return new Response(chunks.map(chunk => `data: ${JSON.stringify(chunk)}\n\n`).join("") + "data: [DONE]\n\n");
     },
   };
@@ -32,10 +53,15 @@ export async function replayExtensionPopup<T>(chunks: readonly unknown[], inspec
     await import(popupModulePath);
     const document = dom.window.document as unknown as Document;
     (document.getElementById("question") as HTMLTextAreaElement).value = question;
+    // Let selection/device-history initialization finish before simulating user input.
+    await Promise.resolve();
+    await Promise.resolve();
+    options.prepare?.(document);
     (document.getElementById("ask") as HTMLButtonElement).click();
+    options.afterClick?.(document);
     await vi.waitFor(() => {
-      expect(requests).toHaveLength(1);
-      expect(document.getElementById("status")!.textContent).toMatch(/^done/);
+      expect(requests).toHaveLength(options.expectedRequests ?? 1);
+      expect(document.getElementById("status")!.textContent).toMatch(options.expectedStatus ?? /^done/);
       expect((document.getElementById("ask") as HTMLButtonElement).disabled).toBe(false);
     });
     return inspect(document, requests);
