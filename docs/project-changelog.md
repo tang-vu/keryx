@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Mobile research layout and combined release50 (2026-10-11, source candidate)
+### Unreleased: mobile research layout (2026-10-11, combined release pending)
 
 - Keep the primary research action within the original 640px mobile viewport
   when the settled-citation feed is present or unavailable. Compact the mobile
@@ -10,11 +10,12 @@
   Preserve the original responsive/control/privacy assertions, add synthetic
   retained/error-feed and wrapped-disclosure regressions, and retain bounded
   geometry diagnostics alongside screenshots.
-- Coordinate app/OpenAPI0.27.50 with the integrated recorded-citation-history
-  wording. The immutable0.27.49 tag points to cd37a051 before that runtime change.
-  Independent clients retain their versions; the retained 48-trial offline study
-  is reproduced for the root lockfile binding. Exact-source CI, review, combined
-  deployment and publication readback remain gates.
+- Keep PR374 source metadata at app/OpenAPI0.27.49 until the last combined-source
+  PR373 coordinates release0.27.50. The immutable0.27.49 tag points to cd37a051
+  before the integrated recorded-citation-history change. Independent clients
+  retain their versions; the retained 48-trial offline study is reproduced for
+  the matching source49 lock binding. Exact-source CI, review, final combined50
+  acceptance, deployment and publication readback remain gates.
   [Scope and acceptance](engineering/mobile-research-layout-2026-10-11.md).
 
 ### Recorded citation history wording (2026-10-10, source candidate)
