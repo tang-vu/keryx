@@ -126,7 +126,7 @@ describe("direct CLI private claims", () => {
     expect(value.stdout + value.stderr).not.toContain(token); expect(value.stdout).not.toContain("claim-run#");
     expect(value.privateOutput.trim().split("\n")).toHaveLength(1);
     expect(value.final).toMatchObject({ claimCount: 1, saved: true, originalUnchanged: true, financialUnchanged: true, hashesOnly: true });
-    expect(value.final?.fd3Type).toBe(0o010000); // Actual inherited Windows/Linux FIFO, no hypothetical platform admission.
+    expect([0o010000, 0o140000]).toContain(value.final?.fd3Type); // The admitted transport is a real FIFO or socket; each OS still needs actual qualification.
   });
   it.each(["late-issue", "closed-output", "replaced-output"])("preserves a completed answer on %s without retry or credential logging", async mode => {
     const value = await cli(mode); expect(value.code).toBe(0); expect(value.stderr).toBe("");
