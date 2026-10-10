@@ -1,7 +1,7 @@
 # Retained quality scorecard — issue #287
 
-> October10: the default composition now retains six public cases/five requested
-> languages and partial/zero-binding failures. See the
+> October10: the default composition now retains eight public cases, five
+> question kinds/five requested languages and partial/zero-binding failures. See the
 > [successor corpus record](retained-failure-corpus-2026-10-10.md). Both original
 > frozen scorecards and their two-case results below remain unchanged; the
 > expanded suite is not comparable as a release trend.

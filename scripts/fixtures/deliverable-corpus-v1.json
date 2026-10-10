@@ -1,7 +1,7 @@
 {
   "version": 1,
   "id": "public-retained-deliverables-v1",
-  "description": "Six owner-operated public app0.27.44 snapshots. Version1 format/binding inspections retained; version2 additionally diagnoses absent retained target bindings. Semantic/language judgments and qualitative/sentence format remain unjudged. Incomplete quality-issue coverage.",
+  "description": "Eight owner-operated public archived snapshots on app0.27.44 and c700 app0.27.18. Version1 grades retained; version2 diagnoses absent retained target bindings across five question kinds. Semantic/language and qualitative/sentence-format judgments remain unjudged. Incomplete failure-class coverage.",
   "cases": [
     {
       "file": "deliverable-mdn-public-20261009.json",
@@ -440,6 +440,94 @@
         "format": {
           "excludedBulletSuffixSha256": "49338c623665711009d6e2b2e26e97825b959ab112dc9addaf414529cbdf208f"
         }
+      }
+    },
+    {
+      "file": "deliverable-teacher-public-c700-e719b085.json",
+      "sha256": "c9b5bcdea9bb071ea5f0a46ecc5752a99e89507cefba0255952cf564c99b8e7f",
+      "contract": {
+        "version": 2,
+        "id": "teacher-public-c700-e719b085",
+        "issues": [
+          211
+        ],
+        "kind": "teaching-note",
+        "requestedLanguage": "vi",
+        "questionSha256": "07e1139179946a054c655fedf70a8250757ed84d731ecad9fc01239477b7b2e2",
+        "targets": [
+          {
+            "claimIndex": 0,
+            "label": "Theo nguồn NASA đã cho, thời tiết được định nghĩa như thế nào?"
+          },
+          {
+            "claimIndex": 1,
+            "label": "Theo nguồn NASA đã cho, khí hậu được định nghĩa như thế nào?"
+          },
+          {
+            "claimIndex": 2,
+            "label": "Theo nguồn NASA đã cho, sự khác biệt cốt lõi giữa thời tiết và khí hậu là gì (ví dụ: phạm vi thời gian và không gian)?"
+          },
+          {
+            "claimIndex": 3,
+            "label": "Theo nguồn NASA đã cho, vì sao không thể suy ra xu hướng khí hậu chỉ từ thời tiết của một ngày?"
+          },
+          {
+            "claimIndex": 4,
+            "label": "Hoạt động 10 phút nào (do người trả lời đề xuất, không phải NASA đã thực nghiệm) giúp học sinh lớp 7 phân biệt thời tiết với khí hậu?"
+          },
+          {
+            "claimIndex": 5,
+            "label": "Hai ví dụ nào (do người trả lời đề xuất, không phải NASA đã thực nghiệm) để học sinh lớp 7 phân loại là thời tiết hay khí hậu?"
+          },
+          {
+            "claimIndex": 6,
+            "label": "Câu hỏi cuối giờ nào (kèm đáp án) kiểm tra học sinh lớp 7 phân biệt được thời tiết với khí hậu?"
+          },
+          {
+            "claimIndex": 7,
+            "label": "Cách trình bày phần giải thích dưới 100 từ bằng tiếng Việt cho học sinh lớp 7, có trích dẫn nguồn NASA cho kiến thức và ghi rõ hoạt động/ví dụ do người trả lời đề xuất, nên như thế nào?"
+          }
+        ],
+        "requiredBindings": [],
+        "format": {}
+      }
+    },
+    {
+      "file": "deliverable-newest-public-c700-76fa4ed9.json",
+      "sha256": "7b49e5e2cd66bd538ae924b5d4de10a2d23c425ee0e5ff6d7f43f38492685fa0",
+      "contract": {
+        "version": 2,
+        "id": "newest-public-c700-76fa4ed9",
+        "issues": [
+          217
+        ],
+        "kind": "newest-release",
+        "requestedLanguage": "en",
+        "questionSha256": "48036087f811c822a7ad3414a2123294aa9669b63cb4472dc17e7dcc9ea7c155",
+        "targets": [
+          {
+            "claimIndex": 0,
+            "label": "What is the newest release tag actually present in the registered, verified creator release source associated with https://github.com/tang-vu/keryx/releases.atom?"
+          },
+          {
+            "claimIndex": 1,
+            "label": "What is one explicit change stated for that newest release in the registered, verified creator release source associated with https://github.com/tang-vu/keryx/releases.atom?"
+          },
+          {
+            "claimIndex": 2,
+            "label": "What is one compatibility or deployment fact that the release entry for that newest release does not establish?"
+          },
+          {
+            "claimIndex": 3,
+            "label": "What were the actual access outcomes when using the eligible registered creator path within the admitted source/reward budget?"
+          },
+          {
+            "claimIndex": 4,
+            "label": "What were the actual citation payment outcomes when using the eligible registered creator path within the admitted source/reward budget?"
+          }
+        ],
+        "requiredBindings": [],
+        "format": {}
       }
     }
   ]

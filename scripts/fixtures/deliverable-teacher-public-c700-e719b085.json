@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "id": "teacher-public-c700-e719b085",
+  "question": "Tôi dạy lớp 7 và cần một hoạt động 10 phút để học sinh phân biệt thời tiết với khí hậu. Hãy đọc nguồn NASA https://www.nasa.gov/learning-resources/for-kids-and-students/what-are-climate-and-climate-change-grades-5-8/ . Viết bằng tiếng Việt: giải thích dưới 100 từ, hai ví dụ để học sinh phân loại, và một câu hỏi cuối giờ có đáp án. Trích nguồn cho kiến thức; ghi rõ hoạt động hoặc ví dụ do bạn đề xuất, không nói NASA đã thực nghiệm chúng. Không suy từ thời tiết một ngày ra xu hướng khí hậu và không mua nguồn trả phí.",
+  "answer": "Chưa có câu trả lời được bằng chứng hỗ trợ. Nội dung đã đọc chưa cung cấp trích đoạn đủ điều kiện cho các yêu cầu nghiên cứu; bản nháp không được giữ như kết luận.\n\n### Yêu cầu nghiên cứu 1\n\nChủ đề yêu cầu (chưa xác minh): “Theo nguồn NASA đã cho, thời tiết được định nghĩa như thế nào?”\n\nThiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này.\n\n### Yêu cầu nghiên cứu 2\n\nChủ đề yêu cầu (chưa xác minh): “Theo nguồn NASA đã cho, khí hậu được định nghĩa như thế nào?”\n\nThiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này.\n\n### Yêu cầu nghiên cứu 3\n\nChủ đề yêu cầu (chưa xác minh): “Theo nguồn NASA đã cho, sự khác biệt cốt lõi giữa thời tiết và khí hậu là gì (ví dụ: phạm vi thời gian và không gian)?”\n\nThiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này.\n\n### Yêu cầu nghiên cứu 4\n\nChủ đề yêu cầu (chưa xác minh): “Theo nguồn NASA đã cho, vì sao không thể suy ra xu hướng khí hậu chỉ từ thời tiết của một ngày?”\n\nThiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này.\n\n### Yêu cầu nghiên cứu 5\n\nChủ đề yêu cầu (chưa xác minh): “Hoạt động 10 phút nào (do người trả lời đề xuất, không phải NASA đã thực nghiệm) giúp học sinh lớp 7 phân biệt thời tiết với khí hậu?”\n\nThiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này.\n\n### Yêu cầu nghiên cứu 6\n\nChủ đề yêu cầu (chưa xác minh): “Hai ví dụ nào (do người trả lời đề xuất, không phải NASA đã thực nghiệm) để học sinh lớp 7 phân loại là thời tiết hay khí hậu?”\n\nThiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này.\n\n### Yêu cầu nghiên cứu 7\n\nChủ đề yêu cầu (chưa xác minh): “Câu hỏi cuối giờ nào (kèm đáp án) kiểm tra học sinh lớp 7 phân biệt được thời tiết với khí hậu?”\n\nThiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này.\n\n### Yêu cầu nghiên cứu 8\n\nChủ đề yêu cầu (chưa xác minh): “Cách trình bày phần giải thích dưới 100 từ bằng tiếng Việt cho học sinh lớp 7, có trích dẫn nguồn NASA cho kiến thức và ghi rõ hoạt động/ví dụ do người trả lời đề xuất, nên như thế nào?”\n\nThiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này.\n\nTrích đoạn chỉ xác lập mức bám nguồn, không chứng minh tính đúng đắn, quan hệ suy ra hay toàn bộ nội dung bài. Mức hỗ trợ và độ bao phủ là ước lượng, không chứng nhận câu trả lời đầy đủ. Nội dung nguồn có thể sai hoặc mâu thuẫn. Các kết luận trong bản nháp không được giữ; cần đối chiếu văn bản gốc và đánh giá thêm. Trạng thái thanh toán vẫn nằm trong biên nhận riêng.\n\n### Trạng thái nguồn gốc đã cung cấp\n\n- `https://www.nasa.gov/learning-resources/for-kids-and-students/what-are-climate-and-climate-change-grades-5-8/`: Đã trích xuất có giới hạn từ `https://www.nasa.gov/learning-resources/for-kids-and-students/what-are-climate-and-climate-change-grades-5-8/`; chưa giữ được bằng chứng đủ điều kiện.",
+  "answerSha256": "a7bebfeededdd96bbd51bac2b22a34351f971e7f23e7514b596d3c03c9416591",
+  "bulletRegion": {
+    "start": 0,
+    "end": 2783,
+    "sha256": "a7bebfeededdd96bbd51bac2b22a34351f971e7f23e7514b596d3c03c9416591"
+  },
+  "bindings": [],
+  "provenance": {
+    "kind": "retained-public-report",
+    "reportUrl": "https://keryx.cc/dispatch/e719b085-2528-4fd9-9dfb-7cb60cdf50c4",
+    "capturedAt": "2026-10-10T16:47:32.654Z",
+    "deployedCommit": "c70006182a4d187b2c8b82f17ce9dc671a4b6c6c",
+    "rawCaptureSha256": "0869253f071354d589a92508c92f24f291dbd7f9b3e0ec531005a2a65c7f6ef1",
+    "projection": "question-answer-qualified-public-bindings-only",
+    "retainedReceipt": {
+      "capturedAt": "2026-10-10T16:47:33.147Z",
+      "rawCaptureSha256": "d6c4a35bffafe222cb1fd288eda3b6a876bb1d2e1d3f088fd10e31ac01b77b74",
+      "payloadSha256": "a8afc1bf95fa8cfc55935bbb4a83fa790ba43addc583144e5450c62e945df642"
+    }
+  }
+}

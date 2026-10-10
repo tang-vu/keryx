@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "id": "newest-public-c700-76fa4ed9",
+  "question": "I am a technical analyst deciding which Keryx release to evaluate for a small startup. Read the registered, verified creator release source associated with https://github.com/tang-vu/keryx/releases.atom. In English, name the newest release tag actually present in the feed and one explicit change stated for that release, with inspectable citations. Explain one compatibility or deployment fact the release entry does not establish. Use the eligible registered creator path within the admitted source/reward budget; disclose actual access and citation payment outcomes separately. Do not treat an unpaid public reference as a creator payment or treat a transfer alone as proof the answer is useful.",
+  "answer": "No supported answer. The read content supplied no qualifying excerpts for the research targets; the draft is withheld as a conclusion.\n\n### Research target 1\n\nRequested topic (unverified): “What is the newest release tag actually present in the registered, verified creator release source associated with https://github.com/tang-vu/keryx/releases.atom?”\n\nEvidence gap: no qualifying excerpt for this research target.\n\n### Research target 2\n\nRequested topic (unverified): “What is one explicit change stated for that newest release in the registered, verified creator release source associated with https://github.com/tang-vu/keryx/releases.atom?”\n\nEvidence gap: no qualifying excerpt for this research target.\n\n### Research target 3\n\nRequested topic (unverified): “What is one compatibility or deployment fact that the release entry for that newest release does not establish?”\n\nEvidence gap: no qualifying excerpt for this research target.\n\n### Research target 4\n\nRequested topic (unverified): “What were the actual access outcomes when using the eligible registered creator path within the admitted source/reward budget?”\n\nEvidence gap: no qualifying excerpt for this research target.\n\n### Research target 5\n\nRequested topic (unverified): “What were the actual citation payment outcomes when using the eligible registered creator path within the admitted source/reward budget?”\n\nEvidence gap: no qualifying excerpt for this research target.\n\nExcerpts establish source grounding, not factual truth, entailment or whole-paper coverage. Support and coverage are estimates, not certification of a complete answer. Source statements may be wrong or conflicting. Draft conclusions are withheld; inspect the original text and obtain further review. Payment states remain in the separate receipt.\n\n### Next steps to complete this research\n\nThese are suggested follow-up steps; this run has not performed them. They do not change the recorded evidence or payment state.\n\n- “https://github.com/tang-vu/keryx/releases.atom”: Original text was unavailable. Check the publisher URL and provide an accessible original of the same document; this failure does not establish that the document does not exist.\n\n### Supplied original source status\n\n- `https://github.com/tang-vu/keryx/releases.atom`: Read failed: transport-unavailable.",
+  "answerSha256": "5ffafd6e92b384aa492d5d44d2110176d178079d583d30fae8e43494b5d71881",
+  "bulletRegion": {
+    "start": 0,
+    "end": 2319,
+    "sha256": "5ffafd6e92b384aa492d5d44d2110176d178079d583d30fae8e43494b5d71881"
+  },
+  "bindings": [],
+  "provenance": {
+    "kind": "retained-public-report",
+    "reportUrl": "https://keryx.cc/dispatch/76fa4ed9-615b-4db5-a813-9362faf177d7",
+    "capturedAt": "2026-10-10T16:47:33.526Z",
+    "deployedCommit": "c70006182a4d187b2c8b82f17ce9dc671a4b6c6c",
+    "rawCaptureSha256": "dccd3a9c5ac709a0814a577ae8db7f2e19db12aa7aa283c74276384d4ebbfe9b",
+    "projection": "question-answer-qualified-public-bindings-only",
+    "retainedReceipt": {
+      "capturedAt": "2026-10-10T16:47:33.974Z",
+      "rawCaptureSha256": "bdc91074fe0928374e722f34568fbefdebe646ca9288f710059aebc9435ef63a",
+      "payloadSha256": "c7a7ee298593a8eb0520581d9f6367938f98e213012b2a64e590bbd3192d49ec"
+    }
+  }
+}

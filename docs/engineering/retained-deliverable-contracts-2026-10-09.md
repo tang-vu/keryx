@@ -1,6 +1,7 @@
 # Retained deliverable contracts — issue287
 
-> October10: the default corpus now includes six archived public cases. The
+> October10: the default corpus now includes eight archived public cases across
+> five question kinds. The
 > [successor corpus record](retained-failure-corpus-2026-10-10.md) documents
 > version2 zero-binding/partial-target diagnostics. The initial two-case evidence
 > and version1 rubric below remain historical and unchanged; no new live answer
