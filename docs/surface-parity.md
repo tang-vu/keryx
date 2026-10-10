@@ -1,5 +1,30 @@
 # Supported-surface release parity
 
+## Unreleased mobile research layout — October 11, 2026 candidate
+
+PR374 retains app/OpenAPI **0.27.49 source metadata** for the compact mobile
+research layout. The last combined-source PR373 owns the release0.27.50 label,
+after this outcome joins the reviewed batch. The observed immutable0.27.49 tag
+points to cd37a051d8ad8c50a360dcb341745bdb25f53a5c, before runtime PR370; it is
+preserved and does not establish delivery of the later runtime bytes.
+
+The layout change applies to `/` and `/research` through the web ResearchChat
+component. Hosted API/SSE, remote MCP, hosted bots and the source CLI share the
+already integrated history wording. Desktop, extension and packaged stdio MCP
+retain their hosted handoff/task roles and embed neither changed history module
+nor the web hero. The source-only evaluation corpus from PR372 adds no runtime
+adapter or product capability. This PR changes no API/OpenAPI contract or label.
+
+Desktop0.4.13, stdio/Registry0.4.14, remote MCP0.3.10 and extension0.1.3 remain
+independent source identities. Their publication/installation gaps below remain
+separate from source acceptance. Root package/lock metadata and dependency closure
+match main241 source49; the paying-source study is actually reproduced as 48 offline
+simulations for that matching lock binding. No provider, search, real settlement or
+human-quality claim follows. Fresh exact374 hosted49 build/CI/review, final373
+combined50 acceptance, one combined deploy, health and distribution readback remain
+gates. See the
+[mobile scope and acceptance](engineering/mobile-research-layout-2026-10-11.md).
+
 ## English account and session catalogue — October 10, 2026 candidate
 
 App/OpenAPI **0.27.49 candidate** identifies the English account/session catalogue
