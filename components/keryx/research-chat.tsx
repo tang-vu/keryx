@@ -59,13 +59,13 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
   };
   const hasTurns = history.length > 0 || request !== null;
   return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-tour="hero" aria-label="Research conversation">
-    <header className="relative mb-2 min-h-[122px] sm:mb-4 sm:min-h-[140px]">
-      <div aria-hidden="true" data-testid="chat-globe" className="pointer-events-none absolute right-0 top-[52px] h-[70px] w-[70px] opacity-60 sm:top-0 sm:h-[140px] sm:w-[140px]">
-        <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-50 sm:scale-100" />
+    <header className="relative mb-2 min-h-[100px] sm:mb-4 sm:min-h-[140px]">
+      <div aria-hidden="true" data-testid="chat-globe" className="pointer-events-none absolute right-0 top-[44px] h-[56px] w-[56px] opacity-60 sm:top-0 sm:h-[140px] sm:w-[140px]">
+        <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-[0.4] sm:scale-100" />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p data-testid="hero-kicker" className="font-mono text-[11px] uppercase tracking-wide text-seal">Research with Keryx</p>
-        <div data-testid="hero-guide" className="sm:mr-[156px]"><OnboardingTour /></div>
+        <div data-testid="hero-guide" className="absolute right-0 top-0 sm:static sm:mr-[156px]"><OnboardingTour /></div>
       </div>
       <h1 className="mt-1 font-display text-[clamp(32px,5vw,46px)] leading-none sm:mt-2 sm:leading-tight">Ask Keryx</h1>
       <p className="mt-1 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:mt-2 sm:max-w-[64ch] sm:text-base sm:leading-normal">Get a cited answer. Inspect source decisions.</p>

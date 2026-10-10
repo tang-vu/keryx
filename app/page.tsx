@@ -33,5 +33,5 @@ export default function AskPage() {
     }
   }, []);
 
-  return <div className="min-h-screen bg-paper-2"><SiteHeader /><main><div className="mx-auto max-w-[960px] px-4 pt-5 sm:px-[30px]"><Link href="/walkthrough" prefetch={false} className="text-sm text-paid underline underline-offset-4">{walkthroughMessages.landingLink}</Link></div><ResearchChat showLaunchBadge /><div className="mx-auto max-w-[960px] px-4 sm:px-[30px]"><ActivityTicker /></div><HowItWorks /><ForCreators /></main><SiteFooter /></div>;
+  return <div className="min-h-screen bg-paper-2"><SiteHeader /><main><div className="mx-auto max-w-[960px] px-4 sm:px-[30px] sm:pt-5"><Link href="/walkthrough" prefetch={false} className="text-sm text-paid underline underline-offset-4">{walkthroughMessages.landingLink}</Link></div><ResearchChat showLaunchBadge /><div className="mx-auto max-w-[960px] px-4 sm:px-[30px]"><ActivityTicker /></div><HowItWorks /><ForCreators /></main><SiteFooter /></div>;
 }
