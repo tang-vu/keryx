@@ -28,6 +28,11 @@ import {
   PendingReconciliationSection,
   type PendingReconciliationHealth,
 } from "@/components/keryx/pending-reconciliation-section";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 interface Health {
   ok: boolean;
@@ -120,15 +125,13 @@ export default function StatusPage() {
   }, []);
 
   const up = reachable && health?.ok && health.status !== "degraded";
-  const label = !reachable ? "Unreachable" : !health ? "Checking service" : up ? "Service available" : "Degraded";
+  const label = !reachable ? message("statusPage.unreachable") : !health ? message("statusPage.checkingService") : up ? message("statusPage.serviceAvailable") : message("statusPage.degraded");
 
   return (
     <div className="min-h-screen bg-paper-2">
       <SiteHeader />
       <main className="mx-auto max-w-[760px] px-4 py-12 sm:px-[30px]">
-        <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-          Service status
-        </div>
+        <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-seal">{message("statusPage.serviceStatus")}</div>
         <div className="border-2 border-ink bg-paper p-1.5">
           <div className="border border-ink p-6 sm:p-8">
             <div className="flex items-center gap-3">
@@ -143,27 +146,25 @@ export default function StatusPage() {
             </div>
 
             <dl className="mt-7 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
-              <Row k="Uptime" v={health ? fmtUptime(health.uptimeSeconds) : "—"} />
-              <Row k="Datastore" v={health?.db ?? "—"} />
-              <Row k="Settlement" v={health?.settles ?? "—"} />
-              <Row k="Reasoning" v={health?.reasoning ?? "—"} />
-              <Row k="Network" v={health?.network ?? "—"} />
-              <Row k="RPC provider" v={health?.rpcProvider ?? "—"} />
-              <Row k="Commit" v={health?.commit ?? "—"} />
+              <Row k={message("statusPage.uptime")} v={health ? fmtUptime(health.uptimeSeconds) : "—"} />
+              <Row k={message("statusPage.datastore")} v={health?.db ?? "—"} />
+              <Row k={message("statusPage.settlement")} v={health?.settles ?? "—"} />
+              <Row k={message("statusPage.reasoning")} v={health?.reasoning ?? "—"} />
+              <Row k={message("statusPage.network")} v={health?.network ?? "—"} />
+              <Row k={message("statusPage.rpcProvider")} v={health?.rpcProvider ?? "—"} />
+              <Row k={message("statusPage.commit")} v={health?.commit ?? "—"} />
             </dl>
 
             {health?.traction && (
               <>
-                <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-                  Live traction
-                </div>
+                <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">{message("statusPage.liveTraction")}</div>
                 <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
-                  <Row k="Total queries" v={health.traction.totalQueries.toLocaleString()} />
-                  <Row k="Settled payments" v={health.traction.totalPayments.toLocaleString()} />
-                  <Row k="Creator rewards" v={`$${health.traction.creatorPayoutsUsdc.toFixed(4)}`} />
-                  <Row k="Creators earning" v={String(health.traction.creatorsEarning)} />
-                  <Row k="Keryx operating fees" v={health.traction.settledOperatingFeeUsdc != null ? `$${health.traction.settledOperatingFeeUsdc.toFixed(6)}` : "Unavailable"} />
-                  <Row k="Operating fee transfers" v={health.traction.settledOperatingFeePayments != null ? String(health.traction.settledOperatingFeePayments) : "Unavailable"} />
+                  <Row k={message("statusPage.totalQueries")} v={health.traction.totalQueries.toLocaleString()} />
+                  <Row k={message("statusPage.settledPayments")} v={health.traction.totalPayments.toLocaleString()} />
+                  <Row k={message("statusPage.creatorRewards")} v={`$${health.traction.creatorPayoutsUsdc.toFixed(4)}`} />
+                  <Row k={message("statusPage.creatorsEarning")} v={String(health.traction.creatorsEarning)} />
+                  <Row k={message("statusPage.keryxOperatingFees")} v={health.traction.settledOperatingFeeUsdc != null ? `$${health.traction.settledOperatingFeeUsdc.toFixed(6)}` : message("statusPage.unavailable")} />
+                  <Row k={message("statusPage.operatingFeeTransfers")} v={health.traction.settledOperatingFeePayments != null ? String(health.traction.settledOperatingFeePayments) : message("statusPage.unavailable")} />
                 </dl>
               </>
             )}
@@ -180,52 +181,36 @@ export default function StatusPage() {
               <PendingReconciliationSection reconciliation={health.reconciliation} />
             )}
 
-
             {treasury?.observation && (
               <>
-                <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-                  Public research treasury · Arc mainnet
-                </div>
+                <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">{message("statusPage.publicResearchTreasuryArcMainnet")}</div>
                 <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
-                  <Row k="Gateway available USDC" v={treasury.observation.availableUsdc === null ? "Unknown" : `$${treasury.observation.availableUsdc}`} />
+                  <Row k={message("statusPage.gatewayAvailableUSDC")} v={treasury.observation.availableUsdc === null ? message("statusPage.unknown") : `$${treasury.observation.availableUsdc}`} />
                 </dl>
-                <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
-                  {treasury.observation.address.slice(0, 6)}…{treasury.observation.address.slice(-4)} · Circle Gateway balance observation.
-                  Available balance is checked again before research spending.
-                </p>
+                <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">{richMessage("statusPage.gatewayBalanceObservation", { addressPrefix: treasury.observation.address.slice(0, 6), addressSuffix: treasury.observation.address.slice(-4) })}</p>
               </>
             )}
 
             {treasury?.available && treasury.unifiedBalance && (
               <>
-                <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-                  Settlement treasury — unified balance · Circle App Kit
-                </div>
+                <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">{message("statusPage.settlementTreasuryUnifiedBalanceCircleAppKit")}</div>
                 <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
                   <Row
-                    k="Confirmed (all chains)"
+                    k={message("statusPage.confirmedAllChains")}
                     v={`$${treasury.unifiedBalance.totalConfirmedUsdc}`}
                   />
-                  <Row k="Pending deposits" v={`$${treasury.unifiedBalance.totalPendingUsdc}`} />
+                  <Row k={message("statusPage.pendingDeposits")} v={`$${treasury.unifiedBalance.totalPendingUsdc}`} />
                   {treasury.unifiedBalance.perChain
                     .filter((c) => c.chain === "Arc_Testnet" || parseFloat(c.confirmed) > 0)
                     .map((c) => (
                       <Row key={c.chain} k={c.chain.replace(/_/g, " ")} v={`$${c.confirmed}`} />
                     ))}
                 </dl>
-                <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
-                  Chain-abstracted Gateway balance of the agent&apos;s settlement wallet{" "}
-                  {treasury.unifiedBalance.address.slice(0, 6)}…
-                  {treasury.unifiedBalance.address.slice(-4)}, read via
-                  @circle-fin/unified-balance-kit.
-                </p>
+                <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">{richMessage("statusPage.unifiedBalanceObservation", { gap: " ", addressPrefix: treasury.unifiedBalance.address.slice(0, 6), addressSuffix: treasury.unifiedBalance.address.slice(-4) })}</p>
               </>
             )}
 
-            <p className="mt-8 font-mono text-[10px] tracking-wide text-faint">
-              Auto-refreshes every 10s
-              {health?.time ? ` · checked ${new Date(health.time).toUTCString()}` : ""}
-            </p>
+            <p className="mt-8 font-mono text-[10px] tracking-wide text-faint">{richMessage("statusPage.refreshNotice", { checkedNotice: health?.time ? message("statusPage.checkedAt", { checkedAt: new Date(health.time).toUTCString() }) : "" })}</p>
           </div>
         </div>
       </main>

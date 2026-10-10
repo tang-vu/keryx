@@ -3,19 +3,24 @@
 import { useRef, useState } from "react";
 import { businessScenarioSchema, calculateBusinessScenario } from "@/lib/economics/business-scenario";
 import template from "@/docs/business-scenario-template.json";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 const fields = [
-  ["paidJobsPerMonth", "Paid jobs per month", "Whole jobs; leave blank when demand is unknown."],
-  ["serviceFeeUsdPerJob", "Service fee per job", "The service-fee portion of the modeled package price."],
-  ["creatorBudgetUsdPerJob", "Creator budget per job", "Budget collected for source access and citation rewards."],
-  ["creatorSpendUsdPerJob", "Creator spend per job", "Include creator obligations; pending spend is not unused reserve."],
-  ["llm", "AI model cost per job", "Include retries and unsuccessful calls."],
-  ["infrastructure", "Variable infrastructure per job", "Exclude costs entered as fixed monthly expenses."],
-  ["paymentAndGas", "Payment and gas per job", "Expected transaction and payment processing costs."],
-  ["support", "Support cost per job", "Expected variable support effort."],
-  ["refundAndLoss", "Refunds and losses per job", "Expected losses, refunds and service recovery costs."],
-  ["fixedMonthlyUsd", "Fixed operating costs per month", "Hosting, tools and other fixed expenses."],
-  ["acquisitionMonthlyUsd", "Customer acquisition per month", "Marketing and acquisition costs, without double counting."],
+  ["paidJobsPerMonth", message("businessCalculator.paidJobsPerMonth"), message("businessCalculator.wholeJobsLeaveBlankWhenDemandIsUnknown")],
+  ["serviceFeeUsdPerJob", message("businessCalculator.serviceFeePerJob"), message("businessCalculator.theServiceFeePortionOfTheModeledPackage")],
+  ["creatorBudgetUsdPerJob", message("businessCalculator.creatorBudgetPerJob"), message("businessCalculator.budgetCollectedForSourceAccessAndCitationRewards")],
+  ["creatorSpendUsdPerJob", message("businessCalculator.creatorSpendPerJob"), message("businessCalculator.includeCreatorObligationsPendingSpendIsNotUnused")],
+  ["llm", message("businessCalculator.aiModelCostPerJob"), message("businessCalculator.includeRetriesAndUnsuccessfulCalls")],
+  ["infrastructure", message("businessCalculator.variableInfrastructurePerJob"), message("businessCalculator.excludeCostsEnteredAsFixedMonthlyExpenses")],
+  ["paymentAndGas", message("businessCalculator.paymentAndGasPerJob"), message("businessCalculator.expectedTransactionAndPaymentProcessingCosts")],
+  ["support", message("businessCalculator.supportCostPerJob"), message("businessCalculator.expectedVariableSupportEffort")],
+  ["refundAndLoss", message("businessCalculator.refundsAndLossesPerJob"), message("businessCalculator.expectedLossesRefundsAndServiceRecoveryCosts")],
+  ["fixedMonthlyUsd", message("businessCalculator.fixedOperatingCostsPerMonth"), message("businessCalculator.hostingToolsAndOtherFixedExpenses")],
+  ["acquisitionMonthlyUsd", message("businessCalculator.customerAcquisitionPerMonth"), message("businessCalculator.marketingAndAcquisitionCostsWithoutDoubleCounting")],
 ] as const;
 type Field = typeof fields[number][0];
 type Form = Record<Field, string> & { basis: "illustrative" | "operator-estimate" };
@@ -36,8 +41,8 @@ function scenario(form: Form): Scenario {
     fixedMonthlyUsd: optional("fixedMonthlyUsd"), acquisitionMonthlyUsd: optional("acquisitionMonthlyUsd"),
   });
 }
-const money = (value: string | null) => value === null ? "Unknown" : `$${value}`;
-const button = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
+const money = (value: string | null) => value === null ? message("businessCalculator.unknown") : `$${value}`;
+const button = message("businessCalculator.borderBorderInkPx4Py2Font");
 
 export function BusinessCalculator() {
   const [form, setForm] = useState<Form>(initial);
@@ -58,58 +63,58 @@ export function BusinessCalculator() {
   }
   return <div className="space-y-8">
     <section className="border border-line bg-paper p-5 sm:p-8" aria-labelledby="assumptions-title">
-      <h2 id="assumptions-title" className="font-display text-3xl">Your assumptions</h2>
-      <p className="mt-3 font-serif text-ink-2">Enter USD estimates. Leave unknown values blank; enter 0 only when a cost is known to be zero. No live exchange-rate conversion is performed.</p>
-      <label className="mt-5 grid max-w-sm gap-2 font-mono text-xs">Scenario basis<select value={form.basis} onChange={event => edit("basis", event.target.value)} className="border border-line bg-paper-2 p-3">
-        <option value="illustrative">Illustrative example</option><option value="operator-estimate">My operating estimates</option>
-      </select></label>
+      <h2 id="assumptions-title" className="font-display text-3xl">{message("businessCalculator.yourAssumptions")}</h2>
+      <p className="mt-3 font-serif text-ink-2">{message("businessCalculator.enterUSDEstimatesLeaveUnknownValuesBlankEnter")}</p>
+      <label className="mt-5 grid max-w-sm gap-2 font-mono text-xs">{richMessage("businessCalculator.scenarioBasisContent", { content: <select value={form.basis} onChange={event => edit("basis", event.target.value)} className="border border-line bg-paper-2 p-3">
+        <option value="illustrative">{message("businessCalculator.illustrativeExample")}</option><option value="operator-estimate">{message("businessCalculator.myOperatingEstimates")}</option>
+      </select> })}</label>
       <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {fields.map(([key, label, hint]) => <label key={key} className="grid content-start gap-2 font-mono text-xs">{label}
-          <input aria-label={label} value={form[key]} onChange={event => edit(key, event.target.value)} inputMode={key === "paidJobsPerMonth" ? "numeric" : "decimal"} autoComplete="off" placeholder={key === "serviceFeeUsdPerJob" || key === "creatorBudgetUsdPerJob" ? "Required" : "Unknown"} className="min-w-0 w-full border border-line bg-paper-2 p-3" />
+          <input aria-label={label} value={form[key]} onChange={event => edit(key, event.target.value)} inputMode={key === "paidJobsPerMonth" ? "numeric" : "decimal"} autoComplete="off" placeholder={key === "serviceFeeUsdPerJob" || key === "creatorBudgetUsdPerJob" ? message("businessCalculator.required") : message("businessCalculator.unknown")} className="min-w-0 w-full border border-line bg-paper-2 p-3" />
           <span className="font-serif text-sm text-ink-3">{hint}</span>
         </label>)}
       </div>
       <div className="mt-6 flex flex-wrap gap-3">
-        <button type="button" className={button} disabled={!result} onClick={() => download("inputs")}>Export inputs</button>
-        <button type="button" className={button} disabled={!result} onClick={() => download("report")}>Export scenario report</button>
-        <label className={`${button} cursor-pointer`}>Import inputs<input aria-label="Import scenario inputs" type="file" accept=".json,application/json" className="sr-only" onChange={async event => {
+        <button type="button" className={button} disabled={!result} onClick={() => download("inputs")}>{message("businessCalculator.exportInputs")}</button>
+        <button type="button" className={button} disabled={!result} onClick={() => download("report")}>{message("businessCalculator.exportScenarioReport")}</button>
+        <label className={`${button} cursor-pointer`}>{richMessage("businessCalculator.importInputsContent", { content: <input aria-label={message("businessCalculator.importScenarioInputs")} type="file" accept=".json,application/json" className="sr-only" onChange={async event => {
           const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
           const version = ++revision.current;
           try {
             if (file.size > 8192) throw new Error("Oversized file");
             const parsed = businessScenarioSchema.parse(JSON.parse((await file.text()).replace(/^\uFEFF/, "")));
             if (version !== revision.current) return;
-            setForm(toForm(parsed)); setNotice("Scenario inputs imported locally.");
-          } catch { if (version === revision.current) setNotice("Could not import inputs. Use a Keryx inputs JSON file under 8 KB; your existing values were kept."); }
-        }} /></label>
-        <button type="button" className={button} onClick={() => { revision.current++; setForm(initial()); setNotice("Reset to illustrative fees with unknown costs and demand."); }}>Reset assumptions</button>
+            setForm(toForm(parsed)); setNotice(message("businessCalculator.scenarioInputsImportedLocally"));
+          } catch { if (version === revision.current) setNotice(message("businessCalculator.couldNotImportInputsUseAKeryxInputs")); }
+        }} /> })}</label>
+        <button type="button" className={button} onClick={() => { revision.current++; setForm(initial()); setNotice(message("businessCalculator.resetToIllustrativeFeesWithUnknownCostsAnd")); }}>{message("businessCalculator.resetAssumptions")}</button>
       </div>
-      <p className="mt-3 font-serif text-sm text-ink-3">Calculations and imported files stay in this page. Export inputs to keep them; reloading clears your edits. A report includes your inputs, so review it before sharing.</p>
+      <p className="mt-3 font-serif text-sm text-ink-3">{message("businessCalculator.calculationsAndImportedFilesStayInThisPage")}</p>
       {notice && <p role="status" className="mt-3 font-serif text-sm">{notice}</p>}
     </section>
-    {!result ? <p role="alert" className="border border-seal p-5 font-serif">Enter nonnegative amounts with up to six decimal places and whole monthly job counts. Service fee and creator budget are required; creator spend cannot exceed its budget. Results are hidden until the inputs are valid.</p> : <>
+    {!result ? <p role="alert" className="border border-seal p-5 font-serif">{message("businessCalculator.enterNonnegativeAmountsWithUpToSixDecimal")}</p> : <>
       <section aria-labelledby="results-title" className="space-y-4">
-        <h2 id="results-title" className="font-display text-3xl">Modeled operating results</h2>
-        <p className="font-serif text-ink-2">{form.basis === "illustrative" ? "Illustrative scenario" : "Your operating estimates"} · {result.missingInputs.length} unknown inputs. These are two alternative views; do not add them together.</p>
+        <h2 id="results-title" className="font-display text-3xl">{message("businessCalculator.modeledOperatingResults")}</h2>
+        <p className="font-serif text-ink-2">{richMessage(result.missingInputs.length === 1 ? "businessCalculator.unknownInputs.one" : "businessCalculator.unknownInputs.other", { basis: form.basis === "illustrative" ? message("businessCalculator.illustrativeScenario") : message("businessCalculator.yourOperatingEstimates"), count: result.missingInputs.length })}</p>
         <div className="grid gap-4 md:grid-cols-2">
           {([
-            ["Service fee only", result.serviceFeeOnly, "Contribution = service fee − variable operating costs"],
-            ["Fixed-price reserve retention", result.fixedPriceRetentionScenario, "Contribution = service fee + creator budget − creator spend − variable operating costs"],
+            [message("businessCalculator.serviceFeeOnly"), result.serviceFeeOnly, message("businessCalculator.contributionServiceFeeVariableOperatingCosts")],
+            [message("businessCalculator.fixedPriceReserveRetention"), result.fixedPriceRetentionScenario, message("businessCalculator.contributionServiceFeeCreatorBudgetCreatorSpendVariable")],
           ] as const).map(([title, value, formula]) => <article key={title} className="min-w-0 border border-line bg-paper p-5" aria-label={title}>
             <h3 className="font-display text-2xl">{title}</h3><p className="mt-3 font-serif text-sm text-ink-3">{formula}</p>
             <dl className="mt-5 space-y-4 font-serif">
-              <div><dt>Contribution per job</dt><dd className="break-all font-mono text-lg">{money(value.perJobUsd)}</dd></div>
-              <div><dt>Monthly operating result before tax</dt><dd className="break-all font-mono text-xl">{money(value.monthlyOperatingResultBeforeTaxUsd)}</dd></div>
-              <div><dt>Break-even paid jobs per month</dt><dd className="font-mono">{value.breakEvenPaidJobs ?? (value.breakEvenStatus === "no_positive_contribution" ? "No positive contribution" : "Unknown costs")}</dd></div>
+              <div><dt>{message("businessCalculator.contributionPerJob")}</dt><dd className="break-all font-mono text-lg">{money(value.perJobUsd)}</dd></div>
+              <div><dt>{message("businessCalculator.monthlyOperatingResultBeforeTax")}</dt><dd className="break-all font-mono text-xl">{money(value.monthlyOperatingResultBeforeTaxUsd)}</dd></div>
+              <div><dt>{message("businessCalculator.breakEvenPaidJobsPerMonth")}</dt><dd className="font-mono">{value.breakEvenPaidJobs ?? (value.breakEvenStatus === "no_positive_contribution" ? message("businessCalculator.noPositiveContribution") : message("businessCalculator.unknownCosts"))}</dd></div>
             </dl>
           </article>)}
         </div>
-        <p className="font-serif text-sm text-ink-3">Monthly result = paid jobs × contribution − fixed and acquisition costs. Break-even rounds up to whole jobs and requires positive contribution. Taxes and financing are excluded.</p>
+        <p className="font-serif text-sm text-ink-3">{message("businessCalculator.monthlyResultPaidJobsContributionFixedAndAcquisition")}</p>
         <dl className="grid gap-4 border border-line p-5 font-serif sm:grid-cols-2 lg:grid-cols-3">
           {([
-            ["Monthly package receipts", result.monthly.packageReceiptsUsd], ["Service-fee component", result.monthly.serviceFeeComponentUsd],
-            ["Creator payments", result.monthly.creatorPaymentsUsd], ["Unused creator budget", result.monthly.unusedCreatorBudgetUsd],
-            ["Variable operating costs", result.monthly.variableOperatingCostsUsd], ["Fixed and acquisition costs", result.monthly.fixedAndAcquisitionCostsUsd],
+            [message("businessCalculator.monthlyPackageReceipts"), result.monthly.packageReceiptsUsd], [message("businessCalculator.serviceFeeComponent"), result.monthly.serviceFeeComponentUsd],
+            [message("businessCalculator.creatorPayments"), result.monthly.creatorPaymentsUsd], [message("businessCalculator.unusedCreatorBudget"), result.monthly.unusedCreatorBudgetUsd],
+            [message("businessCalculator.variableOperatingCosts"), result.monthly.variableOperatingCostsUsd], [message("businessCalculator.fixedAndAcquisitionCosts"), result.monthly.fixedAndAcquisitionCostsUsd],
           ] as const).map(([label, value]) => <div key={label} className="min-w-0"><dt>{label}</dt><dd className="break-all font-mono">{money(value)}</dd></div>)}
         </dl>
       </section>

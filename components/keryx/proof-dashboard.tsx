@@ -6,6 +6,11 @@ import type { WithdrawalRecord } from "@/lib/types";
 import { CreatorCashoutsPanel } from "./creator-cashouts-panel";
 import { RegistryStatusSection, type RegistryHealth } from "./registry-status-section";
 import { SettlementProofSection, type SettlementHealth } from "./settlement-proof-section";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 const REPO = "https://github.com/tang-vu/keryx";
 
@@ -94,7 +99,7 @@ export function ProofDashboard() {
   if (!health) {
     return (
       <div className="mt-10 border border-line bg-paper p-6 font-mono text-[11px] text-ink-3">
-        {reachable ? "Reading the public evidence ledger…" : "Evidence API is temporarily unreachable."}
+        {reachable ? message("proofDashboard.readingThePublicEvidenceLedger") : message("proofDashboard.evidenceAPIIsTemporarilyUnreachable")}
       </div>
     );
   }
@@ -108,86 +113,62 @@ export function ProofDashboard() {
         <div className="border border-ink p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
-                Keryx in numbers
-              </div>
-              <h2 className="mt-1 font-display text-[26px] font-semibold tracking-tight text-ink">
-                Combined usage and settled payments
-              </h2>
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">{message("proofDashboard.keryxInNumbers")}</div>
+              <h2 className="mt-1 font-display text-[26px] font-semibold tracking-tight text-ink">{message("proofDashboard.combinedUsageAndSettledPayments")}</h2>
             </div>
             <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-paid">
               <span className="h-2 w-2 rounded-full bg-paid" />
-              {health.settles === "real" ? "real settlement" : "offline mode"}
+              {health.settles === "real" ? message("proofDashboard.realSettlement") : message("proofDashboard.offlineMode")}
             </span>
           </div>
 
           {t ? (
             <dl className="mt-7 grid grid-cols-2 gap-6 sm:grid-cols-4">
-              <Metric label="Total queries" value={t.totalQueries.toLocaleString()} />
-              <Metric label="Settled payments" value={t.totalPayments.toLocaleString()} />
-              <Metric label="Creator rewards" value={money(t.creatorPayoutsUsdc)} />
-              <Metric label="Creators earning" value={t.creatorsEarning.toLocaleString()} />
-              <Metric label="Keryx operating fees" value={t.settledOperatingFeeUsdc != null ? money(t.settledOperatingFeeUsdc) : "Unavailable"} />
-              <Metric label="Operating fee transfers" value={t.settledOperatingFeePayments?.toLocaleString() ?? "Unavailable"} />
+              <Metric label={message("proofDashboard.totalQueries")} value={t.totalQueries.toLocaleString()} />
+              <Metric label={message("proofDashboard.settledPayments")} value={t.totalPayments.toLocaleString()} />
+              <Metric label={message("proofDashboard.creatorRewards")} value={money(t.creatorPayoutsUsdc)} />
+              <Metric label={message("proofDashboard.creatorsEarning")} value={t.creatorsEarning.toLocaleString()} />
+              <Metric label={message("proofDashboard.keryxOperatingFees")} value={t.settledOperatingFeeUsdc != null ? money(t.settledOperatingFeeUsdc) : message("proofDashboard.unavailable")} />
+              <Metric label={message("proofDashboard.operatingFeeTransfers")} value={t.settledOperatingFeePayments?.toLocaleString() ?? message("proofDashboard.unavailable")} />
             </dl>
           ) : (
-            <p className="mt-6 font-mono text-[11px] text-ink-3">Traction ledger unavailable.</p>
+            <p className="mt-6 font-mono text-[11px] text-ink-3">{message("proofDashboard.tractionLedgerUnavailable")}</p>
           )}
-          <p className="mt-6 font-mono text-[10px] leading-relaxed text-faint">
-            Query count includes all recorded use. Only settled records count. Keryx operating fees and creator rewards are shown separately.
-          </p>
+          <p className="mt-6 font-mono text-[10px] leading-relaxed text-faint">{message("proofDashboard.queryCountIncludesAllRecordedUseOnlySettled")}</p>
         </div>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="border border-line bg-paper p-6">
-          <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal">
-            Open-source build
-          </div>
-          <h2 className="mt-1 font-display text-[23px] font-semibold tracking-tight text-ink">
-            The deployed code has a name
-          </h2>
+          <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal">{message("proofDashboard.openSourceBuild")}</div>
+          <h2 className="mt-1 font-display text-[23px] font-semibold tracking-tight text-ink">{message("proofDashboard.theDeployedCodeHasAName")}</h2>
           <dl className="mt-6 grid grid-cols-1 gap-4 font-mono text-[11px] sm:grid-cols-2">
-            <ProofRow label="Deployed commit">
-              <EvidenceLink href={commitUrl}>{health.commit ?? "repository"}</EvidenceLink>
+            <ProofRow label={message("proofDashboard.deployedCommit")}>
+              <EvidenceLink href={commitUrl}>{health.commit ?? message("proofDashboard.repository")}</EvidenceLink>
             </ProofRow>
-            <ProofRow label="CI">
-              <EvidenceLink href={`${REPO}/actions/workflows/ci.yml`}>
-                tests · contracts · build
-              </EvidenceLink>
+            <ProofRow label={message("proofDashboard.ci")}>
+              <EvidenceLink href={`${REPO}/actions/workflows/ci.yml`}>{message("proofDashboard.testsContractsBuild")}</EvidenceLink>
             </ProofRow>
-            <ProofRow label="Application source">
+            <ProofRow label={message("proofDashboard.applicationSource")}>
               <EvidenceLink href={REPO}>tang-vu/keryx</EvidenceLink>
             </ProofRow>
-            <ProofRow label="Reusable Arc primitives">
-              <EvidenceLink href="https://github.com/tang-vu/keryx-arc-primitives">
-                forkable package
-              </EvidenceLink>
+            <ProofRow label={message("proofDashboard.reusableArcPrimitives")}>
+              <EvidenceLink href="https://github.com/tang-vu/keryx-arc-primitives">{message("proofDashboard.forkablePackage")}</EvidenceLink>
             </ProofRow>
           </dl>
-          <p className="mt-5 font-mono text-[10px] leading-relaxed text-faint">
-            GitHub proves what was reviewed. The runtime commit above binds that source to the build
-            currently answering requests.
-          </p>
+          <p className="mt-5 font-mono text-[10px] leading-relaxed text-faint">{message("proofDashboard.gitHubProvesWhatWasReviewedTheRuntimeCommit")}</p>
         </div>
 
         <div className="border border-line bg-paper p-6">
-          <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal">
-            Arc read path
-          </div>
-          <h2 className="mt-1 font-display text-[23px] font-semibold tracking-tight text-ink">
-            RPC provenance, without the credential
-          </h2>
+          <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal">{message("proofDashboard.arcReadPath")}</div>
+          <h2 className="mt-1 font-display text-[23px] font-semibold tracking-tight text-ink">{message("proofDashboard.rPCProvenanceWithoutTheCredential")}</h2>
           <dl className="mt-6 space-y-4 font-mono text-[11px]">
-            <ProofRow label="Network">{health.network}</ProofRow>
-            <ProofRow label="RPC provider">{health.rpcProvider}</ProofRow>
-            <ProofRow label="RPC head">{health.registry?.parity?.headBlock ?? "—"}</ProofRow>
-            <ProofRow label="Registry indexed">{health.registry?.lastSyncedBlock ?? "—"}</ProofRow>
+            <ProofRow label={message("proofDashboard.network")}>{health.network}</ProofRow>
+            <ProofRow label={message("proofDashboard.rpcProvider")}>{health.rpcProvider}</ProofRow>
+            <ProofRow label={message("proofDashboard.rpcHead")}>{health.registry?.parity?.headBlock ?? "—"}</ProofRow>
+            <ProofRow label={message("proofDashboard.registryIndexed")}>{health.registry?.lastSyncedBlock ?? "—"}</ProofRow>
           </dl>
-          <p className="mt-5 font-mono text-[10px] leading-relaxed text-faint">
-            Tokenized RPC paths stay server-only. This page publishes the provider label and block
-            evidence, never the URL or access token.
-          </p>
+          <p className="mt-5 font-mono text-[10px] leading-relaxed text-faint">{message("proofDashboard.tokenizedRPCPathsStayServerOnlyThisPage")}</p>
         </div>
       </section>
 
@@ -200,9 +181,7 @@ export function ProofDashboard() {
 
       <CreatorCashoutsPanel withdrawals={withdrawals} />
 
-      <p className="text-center font-mono text-[9.5px] tracking-wide text-faint">
-        Auto-refreshes every 30s · checked {new Date(health.time).toUTCString()}
-      </p>
+      <p className="text-center font-mono text-[9.5px] tracking-wide text-faint">{richMessage("proofDashboard.autoRefreshesEvery30sCheckedValue", { checkedAt: new Date(health.time).toUTCString() })}</p>
     </div>
   );
 }

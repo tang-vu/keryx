@@ -1,7 +1,9 @@
 import type { UiLocale } from "./locales";
+import { operationsMessages } from "@/locales/en/operations";
 
 /** English source keys. Payment/legal prose remains in its separate review gate. */
 export const englishMessages = Object.freeze({
+  ...operationsMessages,
   "navigation.home": "Home",
   "navigation.archive": "The archive",
   "navigation.newDispatch": "New dispatch",
