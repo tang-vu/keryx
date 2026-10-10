@@ -1,5 +1,21 @@
 # Supported-surface release parity
 
+## Operator and observation catalogue — unreleased October 11 batch
+
+The area-five source increment adds 351 English keys for twelve Operator,
+economics, proof and status UI files. Exact local render/action comparisons
+preserve 74 cases, three metadata exports and three polling callbacks. Adjacent
+cashout/history wrappers and common header/footer remain outside this increment.
+The shared catalogue's existing body and English values remain unchanged.
+
+The import census confines the new catalogue to web presentation and the
+existing browser refusal helper. Server API, CLI, remote/stdio MCP, desktop,
+extension and bot protocols retain their current role boundaries. App/OpenAPI
+0.27.53 is the merged parent identity; this source checkpoint allocates no new
+release or client identity. Actual exact-source hosted build/CI, final combined
+release acceptance and one batch deployment remain gates. Local synthetic HTML
+equality is not CSS/pixel, financial or installed-client acceptance.
+
 ## Account-area catalogue — October 11, 2026 source candidate
 
 App/OpenAPI **0.27.53** adds English catalogue presentation for the private
