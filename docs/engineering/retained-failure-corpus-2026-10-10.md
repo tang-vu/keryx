@@ -85,6 +85,17 @@ comparison to the original two-case suite NOT_COMPARABLE; adding cases never
 establishes a quality improvement. The new dated composition is recorded after
 actual offline execution, separately from the historical answer commit/date.
 
+The [actual six-case composition](../../fixtures/evals/quality/scorecard-20261010.json)
+ran at `2026-10-10T16:42:38.664Z` on inspector checkpoint
+`52f52260f44661ecec5392bfcf67321dded06dc3`, using Node `v24.21.0`. Its
+complete-file SHA256 is
+`5ab158a520efe26fe81b722143ccd0e96565fb2b1e0fd38759c0f67ffb66a6de`;
+the unchanged before/after inspector source fingerprint is
+`ff801472462d655f964b896f24beef1a5d1e25c64bcc5858b1e591532987303f`.
+Corpus validation and composition actually exited0; ordinary grading actually
+exited1 for its retained diagnostic failures. Later documentation/artifact commits
+do not relabel that execution or the historical answer cohort.
+
 This local maintainer CLI/data outcome changes no runtime contract or research
 behavior on web, desktop, API, buyer CLI, remote/stdio MCP, extension or bots. It
 needs source review, proportionate local validation and actual hosted aggregate
