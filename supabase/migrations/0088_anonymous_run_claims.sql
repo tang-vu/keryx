@@ -93,7 +93,10 @@ language sql stable security invoker set search_path=pg_catalog,public as $$
       'columns',(select jsonb_agg(jsonb_build_object('position',a.attnum,'name',a.attname,'type',a.atttypid,'modifier',a.atttypmod,
         'notNull',a.attnotnull,'collation',a.attcollation,'identity',a.attidentity,'generated',a.attgenerated,
         'acl',(select jsonb_agg(jsonb_build_array(x.grantor,x.grantee,x.privilege_type,x.is_grantable)
-          order by x.grantor,x.grantee,x.privilege_type,x.is_grantable) from aclexplode(coalesce(a.attacl,'{}'::aclitem[])) x),
+          -- NULL column ACL adds no grants to the relation ACL. A literal empty
+          -- PostgreSQL array has zero dimensions and cannot enter aclexplode.
+          order by x.grantor,x.grantee,x.privilege_type,x.is_grantable)
+          from aclexplode(case when cardinality(a.attacl)>0 then a.attacl else null::aclitem[] end) x),
         'default',pg_get_expr(d.adbin,d.adrelid)) order by a.attnum)
         from pg_attribute a left join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
         where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped and

@@ -7022,3 +7022,23 @@ This is presentation compatibility, not a new payment or native storage authorit
 Supabase native fulfillment remains unadmitted; no data migration, funding,
 additional execution or background schedule is authorized. Whole final original
 financial readback and actual affected consumer/release acceptance remain gates.
+
+## 2026-10-11 — Private run claims use existing interactive wallet authority
+
+Anonymous-run claims attach ownership in a separate ordinary, default-off domain;
+they do not rewrite the saved run or establish payment/settlement authority. The
+fragment landing is a dedicated HTML route so its synchronous credential removal
+and hash-only CSP precede application layouts and analytics. Credentials stay only
+in a closure; separate-window sign-in carries no credential or return selector.
+Consumption requires explicit owner confirmation, durable wallet/hashed-IP limits
+before token lookup, and atomic session/original rechecks. No GET or history read
+can mint or consume a credential.
+
+The existing durable web session is minted by both SIWE and the reviewed Circle
+Google wallet flow; its schema does not distinguish issuance methods. The claim
+write uses this verified interactive wallet authority and denies bearer keys. The
+earlier “SIWE-only” design shorthand must not be read as proof of an absent login
+discriminator. This is a description of existing authentication, not an inferred
+owner policy change. Ordinary PostgreSQL acceptance, every applicable ingress and
+client, combined release and deployment/schema admission remain open. See
+`docs/anonymous-run-claims.md`; no native/archive enrollment is changed.

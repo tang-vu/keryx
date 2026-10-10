@@ -101,6 +101,11 @@ try {
   for (const file of ["0001_keryx_schema.sql", "0017_query_run_asker.sql", "0038_a2a_orders.sql", "0043_web_sessions.sql", "0044_web_session_wallet_index.sql"])
     sql(readFileSync(`supabase/migrations/${file}`, "utf8"));
   sql("grant select,insert,update,delete on public.query_runs,public.a2a_orders,public.payment_events to service_role;grant select on public.query_runs to anon,authenticated;");
+  // Real PostgreSQL ACL semantics: column NULL/empty adds no independent grants,
+  // while explicit grants remain visible. Relation/function defaults are separate.
+  for (const [acl, count] of [["null::aclitem[]", "0"], ["'{}'::aclitem[]", "0"], ["array['anon=r/postgres'::aclitem]", "1"]])
+    assert.equal(sql(`select count(*) from aclexplode(case when cardinality(${acl})>0 then ${acl} else null::aclitem[] end);`), count);
+  cases.push("real null, zero-dimensional empty and explicit nonempty column ACL normalization");
   const migration = readFileSync("supabase/migrations/0088_anonymous_run_claims.sql", "utf8");
   for (const marker of ["public.keryx_storage_identity", "keryx_storage.identity"]) {
     if (marker.startsWith("keryx_storage.")) sql("create schema keryx_storage;"); sql(`create table ${marker}(invalid text);`);
