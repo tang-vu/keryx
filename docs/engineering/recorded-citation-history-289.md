@@ -38,6 +38,13 @@ the two root lockfile version fields; that equivalence is local tooling evidence
 not exact-lock release acceptance. Independent review, actual hosted aggregate
 success and the combined deployment/readback remain release gates.
 
+The changed runner/scorer are among the controlled paying-source study's 336
+source inputs. Actual offline `--write` followed by `--check` regenerated its
+two public artifacts with zero outbound attempts. All 48 trials, outputs,
+metrics, corpus and lock binding remain identical; only those two runtime source
+pins change in JSON. The regenerated write-up is identical after Git's existing
+CRLF/LF normalization. No result or hash was edited by hand.
+
 Issue289 remains open for actual ERC-8004 registration, separate identity-key
 custody, customer-verdict-bound reputation events, counterparty registry checks,
 public proof and separately authorized testnet/mainnet acceptance. A local score
