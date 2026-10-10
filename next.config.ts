@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
-import { runClaimLandingCsp } from "./lib/run-claims/landing";
-import { runClaimPrivateHeaders } from "./lib/run-claims/private-response";
+import { runClaimLandingCsp } from "./lib/run-claims/landing-assets.cjs";
+import { runClaimPrivateHeaders } from "./lib/run-claims/private-headers.cjs";
 import {
   appSecurityHeaders,
   contentSecurityPolicy,

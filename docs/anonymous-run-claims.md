@@ -35,7 +35,11 @@ providers, analytics or third-party scripts. Its first synchronous allowed scrip
 keeps the fragment in closure memory and replaces the URL with `/claim-run`.
 Exact emitted-byte script/style hashes are the only CSP permissions. HTTP
 no-store/no-referrer/noindex and framing refusal apply through final matching Next
-header rules. Sign-in opens the existing `/connect` in a separate window without
+header rules. Config and the response renderer import the same plain JavaScript
+literal-asset and header modules with explicit file extensions. Next evaluates
+configuration before application bundling; it must not depend on resolving the
+response renderer's TypeScript graph to compute these hashes. Sign-in opens the
+existing `/connect` in a separate window without
 the credential or a return selector. Focus/session return only refreshes the
 displayed owner; saving requires an explicit click and a fresh owner comparison.
 Reload/close loses the delivered secret. A submitted request is never automatically

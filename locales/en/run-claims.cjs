@@ -1,4 +1,4 @@
-export const runClaimCopy = {
+const runClaimCopy = Object.freeze({
   title: "Save this research to your account",
   introduction: "This private link can be used once within 24 hours. Claiming adds the saved run to your history. It does not change who paid or any payment or creator reward.",
   memory: "The link has been removed from this address bar. Keep this tab open while signing in. Reloading or closing it loses this copy of the link; Keryx cannot reissue it.",
@@ -15,4 +15,6 @@ export const runClaimCopy = {
   serviceUnavailable: "Run claims are unavailable on this deployment.",
   authUnavailable: "Your signed-in account could not be checked. Try checking again.",
   unconfirmed: "The claim request could not be confirmed. Check your private history. This tab will not submit the link again.",
-} as const;
+});
+
+module.exports = { runClaimCopy };

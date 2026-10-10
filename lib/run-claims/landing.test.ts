@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { chromium, type Browser } from "playwright";
 import { runClaimLandingCsp, runClaimLandingResponse } from "./landing";
-import { runClaimCopy as copy } from "../../locales/en/run-claims";
+import { runClaimCopy as copy } from "../../locales/en/run-claims.cjs";
 import nextConfig from "../../next.config";
 const token = "c".repeat(64), alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`;
 const origin = "http://localhost:3939";
