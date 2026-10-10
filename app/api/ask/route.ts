@@ -40,6 +40,7 @@ import type {
   PaymentRequirements,
 } from "@/lib/payments/browser-cosign-gateway";
 import type { QueryRun, ResearchMode } from "@/lib/types";
+import { createTrustedUsageContext } from "@/lib/research/usage-provenance";
 import { MAX_ASK_QUESTION_CHARS, parseAskQuestion, parseResearchMode } from "@/lib/ask-input";
 import { recordActivationEvent } from "@/lib/activation";
 import { isAddress } from "viem";
@@ -336,6 +337,7 @@ export async function POST(req: NextRequest) {
             // asker's own sources.
             asker,
             provenance: { version: 1, surface: "web", ownershipMethod: asker ? "session" : "unknown" },
+            usageContext: isBot ? createTrustedUsageContext(config.profile.networkId, { actor: "unknown", funding: "unknown", scripted: true }) : undefined,
             researchMode,
             scholarly: body.scholarly === true,
             paidScholarly: body.paidScholarly === true,

@@ -15,6 +15,7 @@
 
 import { collectRun, getAgentDeps } from "../lib/agent/index.ts";
 import { config } from "../lib/config.ts";
+import { createTrustedUsageContext } from "../lib/research/usage-provenance.ts";
 import { c, printStep } from "./trace-console.mts";
 
 // ── parse args (mirrors ask.mts) ──
@@ -63,7 +64,8 @@ if (real) {
   }
 }
 
-const run = await collectRun({ question, budget: b }, { deps, onStep: printStep });
+const run = await collectRun({ question, budget: b, usageContext: createTrustedUsageContext(config.profile.networkId,
+  { actor: "unknown", funding: "unknown", scripted: true }) }, { deps, onStep: printStep });
 const elapsed = ((Date.now() - t0) / 1000).toFixed(0);
 
 console.log(c.dim("─".repeat(72)));

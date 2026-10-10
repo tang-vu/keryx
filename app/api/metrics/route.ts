@@ -59,6 +59,9 @@ export async function GET() {
     historicalArchive = archive ? { status: "available", info: archive.info, summary: await archive.summary() } : { status: "not-configured" };
   } catch { historicalArchive = { status: "unavailable" }; }
   return Response.json({
+    usage: { endpoint: "/api/usage", page: "/usage", classification: "outside/team/scripted/unknown", unclassifiedIsOutside: false },
+    metricsScope: { cohort: "mixed-all-origins", period: "all-time", network: "not-row-partitioned",
+      countingRule: "Existing recorded activity totals; not outside-user traction. Use /api/usage for explicit network/period/cohort figures." },
     historicalArchive,
     metrics: {
       ...metrics,

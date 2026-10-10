@@ -1,5 +1,6 @@
 import type { QueryRun } from "../types";
 import type { TestnetArchiveInfo } from "./testnet-archive";
+import { parseRunUsage } from "../research/usage-provenance";
 
 export function mergeQuestionHistory(current: QueryRun[], historical: QueryRun[], limit: number) {
   const records = new Map(historical.map(run => [run.id, { run, historical: true }]));
@@ -8,9 +9,11 @@ export function mergeQuestionHistory(current: QueryRun[], historical: QueryRun[]
 }
 
 export function questionSummary(run: QueryRun, archive?: TestnetArchiveInfo) {
+  const usage = parseRunUsage(run.usage);
   return { id: run.id, question: run.question, createdAt: run.createdAt, engine: run.engine,
     totalSpent: run.totalSpent, totalToCreators: run.totalToCreators,
     citationCount: run.citations?.length ?? 0, answerSnippet: run.answer?.slice(0, 120) ?? "",
+    usage: { cohort: usage?.cohort ?? "unknown", payment: usage?.payment ?? "unknown", network: usage?.network ?? "unattributed" },
     ...(archive ? { archive } : {}) };
 }
 

@@ -19,7 +19,7 @@ export function classifyUsage(facts: CohortFacts): CohortClassification {
     : facts.funding === "independent" && facts.actor === "outside" ? "independent"
     : facts.funding === "sponsored" && facts.actor === "outside" ? "sponsored" : "unknown";
   const cohort = facts.scripted ? "scripted" : facts.actor;
-  return { cohort, payment: cohort === "team" || cohort === "scripted" ? "team" : payment };
+  return { cohort, payment: cohort === "team" ? "team" : cohort === "scripted" ? (payment === "team" ? "team" : "unknown") : payment };
 }
 
 /** An execution channel alone (web/MCP/engine) cannot identify a person or their funding. */

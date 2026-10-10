@@ -479,6 +479,8 @@ export interface OperatingFeeSnapshot {
 }
 
 export interface QueryRun {
+  /** Write-time server classification. Missing historical observations remain unknown. */
+  usage?: import("./research/usage-provenance").RunUsage;
   /** Trusted ingress and owner-proof method. Absent historical metadata is unknown, not inferred. */
   provenance?: import("./research/run-provenance").RunProvenance;
   /** Reviewed, hypothetical teaching suggestions; never factual/payment authority. */

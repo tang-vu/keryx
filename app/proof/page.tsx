@@ -3,6 +3,7 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { ProofDashboard } from "@/components/keryx/proof-dashboard";
 import { HistoricalHistorySection } from "@/components/keryx/testnet-history-summary";
+import { usageMessages } from "@/locales/en/usage";
 import { proofMessages } from "@/locales/en/proof";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
@@ -85,6 +86,7 @@ export default function ProofPage() {
         </section>
 
         <ProofDashboard />
+        <p className="mt-6 font-serif text-ink-2"><a href="/usage" className="text-paid underline underline-offset-4">{usageMessages.proofLink}</a> {usageMessages.proofLimit}</p>
         <HistoricalHistorySection />
       </main>
       <SiteFooter />

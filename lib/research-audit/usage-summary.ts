@@ -2,6 +2,8 @@ import type { PaymentRecord } from "../types";
 import { decimalMicros, micros } from "./exact-units";
 import type { CohortClassification, UsageCohort } from "./usage-cohort";
 import { auditArray, auditObject, auditString, auditWallet } from "./input-contract";
+export type AuditUsagePayment = Pick<PaymentRecord, "id" | "queryId" | "network" | "kind" | "settled" | "payee">
+  & { amountUsdc: number | string; settlementStatus?: string | null; txHash?: string | null; payer?: string };
 
 export interface AuditUsageRun {
   id: string;
@@ -26,7 +28,7 @@ function validClassification(value: CohortClassification): boolean {
 
 /** Explicit complete supplied corpus; never presents a recent/paginated sample as all-time production usage. */
 export function summarizeUsage(input: { network: string; since: string; until: string;
-  runs: readonly AuditUsageRun[]; payments: readonly PaymentRecord[] }) {
+  runs: readonly AuditUsageRun[]; payments: readonly AuditUsagePayment[] }) {
   auditObject(input); auditString(input.network); auditString(input.since); auditString(input.until);
   auditArray(input.runs); auditArray(input.payments);
   if (!/^eip155:[1-9]\d*$/.test(input.network)) throw new Error("Explicit network required");
@@ -48,7 +50,7 @@ export function summarizeUsage(input: { network: string; since: string; until: s
   const payments = input.payments.filter(payment => {
     auditObject(payment); auditString(payment.id, true); auditString(payment.queryId); auditString(payment.network);
     if (payment.txHash != null) auditString(payment.txHash);
-    if (typeof payment.settled !== "boolean" || typeof payment.amountUsdc !== "number"
+    if (typeof payment.settled !== "boolean" || !["number", "string"].includes(typeof payment.amountUsdc)
       || !["fetch", "citation", "inbound", "operating-fee"].includes(payment.kind)) throw new Error("Invalid payment fields");
     auditWallet(payment.payee);
     if (payment.id) {

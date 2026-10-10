@@ -2,6 +2,8 @@ import type { ReasoningEngine } from "../llm/reasoning-engine";
 import { SqliteAdapter } from "../db/sqlite-adapter";
 import { OfflineGateway } from "../payments/offline-gateway";
 import { collectRun } from "../agent";
+import { config } from "../config";
+import { createTrustedUsageContext } from "../research/usage-provenance";
 import { AGENT_EVAL_CORPUS, corpusFingerprint } from "./corpus";
 import { aggregateMetrics, assertOnlySimulatedPayments, gradeAgentRun } from "./grader";
 import { EVAL_SCHEMA_VERSION, type AgentEvalCase, type EvalReport } from "./types";
@@ -31,6 +33,7 @@ export async function runAgentEvaluation(options: {
           budget: testCase.budget,
           researchMode: testCase.researchMode ?? "quick",
           origin: "engine",
+          usageContext: createTrustedUsageContext(config.profile.networkId, { actor: "unknown", funding: "unknown", scripted: true }),
           queryId: `eval-${testCase.id}`,
         },
         {

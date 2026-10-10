@@ -206,6 +206,8 @@ export interface FeedbackStats {
 }
 
 export interface KeryxDB {
+  /** Optional ordinary-storage classified usage. Enrolled/native profiles expose no fallback. */
+  readonly publicUsage?: import("../usage/contracts").PublicUsageStore;
   /** Additive ordinary customer-request journal; no native/enrolled, execution or financial capability. */
   readonly deliverableAcceptance?: import("../deliverable-acceptance/contracts").DeliverableAcceptanceStore;
   /** Additive ordinary-storage domain. Absent on sealed/native adapters; never restore by fallback. */

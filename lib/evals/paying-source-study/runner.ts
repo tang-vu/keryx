@@ -5,6 +5,7 @@ import type { Decision, PaymentRecord, QueryRun } from "../../types";
 import { BUDGETS, PRICES, fixtureRows, microFromUsdc, usdcFromMicro, type StudyCorpus } from "./contract";
 import { gradeTrial } from "./rubric";
 import { assertStudyBoundary } from "./offline-boundary";
+import { createTrustedUsageContext } from "../../research/usage-provenance";
 
 export interface StudyTrial {
   id: string; questionId: string; budgetMicro: string; paidPriceMicro: string;
@@ -84,6 +85,7 @@ export async function runStudy(corpus: StudyCorpus): Promise<StudyTrial[]> {
       const synthesize = engine.synthesize.bind(engine);
       engine.synthesize = async input => { observe(input.gathered); return synthesize(input); };
       const iterator = runAgent({ question: question.question, budget: usdcFromMicro(budgetMicro), queryId: id,
+        usageContext: createTrustedUsageContext("eip155:5042002", { actor: "unknown", funding: "unknown", scripted: true }),
         origin: "engine", fundingOwner: "offline", researchMode: "deep", executionLimits: { attentionLimit: 4, reevaluateRounds: 1 } },
       { db, engine, gateway: new OfflineGateway(db), effects });
       let run: QueryRun;

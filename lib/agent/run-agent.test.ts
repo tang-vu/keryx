@@ -82,6 +82,7 @@ import { createSqliteDecisionReviews } from "../db/decision-reviews-sqlite";
 import { createLiveDecisionReviews, recordLiveReviewVerdict } from "../research/decision-review-live";
 import type { DecisionReview } from "../research/decision-review-types";
 import { projectActualReadCheckpoints } from "../research-audit/actual-read-projection";
+import { createTrustedUsageContext } from "../research/usage-provenance";
 import { verifyActualReadPacket } from "../research-audit/actual-read-record";
 
 const AGENT = "0xAGENT";
@@ -455,6 +456,16 @@ async function drive(
 
 const fetchBudget = (budget: number) => budget * (1 - config.citationPoolRatio);
 const citationPool = (budget: number) => budget * config.citationPoolRatio;
+
+it("shared public run completion stamps trusted usage while private originals retain their unchanged shape", async () => {
+  const usageContext = createTrustedUsageContext(config.profile.networkId, { actor: "unknown", funding: "unknown", scripted: true });
+  const publicRun = await drive({ question: "Inspect fixture content", budget: 0.04, usageContext }, deps([makeSource({ id: "usage" })], fakeEngine(), fakeGateway()));
+  expect(publicRun.run.usage).toMatchObject({ version: 1, network: config.profile.networkId, cohort: "scripted", payment: "unknown" });
+  const queryId = `prv_${"e".repeat(64)}`;
+  const privateRun = await drive({ question: "Inspect fixture content", budget: 0.04, usageContext, queryId },
+    { ...deps([makeSource({ id: "usage-private" })], fakeEngine(), fakeGateway()), effects: isolatedTestEffects(queryId) });
+  expect(privateRun.run).not.toHaveProperty("usage");
+});
 
 describe("recorded citation history in the research trace", () => {
   it.each(["recorded", "absent", "unavailable"] as const)("reports the actual history basis and preserves execution when history is %s", async history => {

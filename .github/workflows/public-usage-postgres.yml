@@ -1,0 +1,73 @@
+name: Ordinary public usage PostgreSQL
+on:
+  pull_request:
+    paths:
+      - "lib/usage/**"
+      - "lib/research/usage-provenance*"
+      - "lib/research/run-provenance*"
+      - "lib/research-audit/**"
+      - "lib/db/public-usage-*"
+      - "lib/db/keryx-db.ts"
+      - "lib/db/sqlite-adapter.ts"
+      - "lib/db/supabase-adapter.ts"
+      - "supabase/migrations/**"
+      - "lib/types.ts"
+      - "scripts/test-public-usage-postgres.mts"
+      - "tsconfig*.json"
+      - "eslint.config.*"
+      - "package*.json"
+      - ".github/workflows/public-usage-postgres.yml"
+  push:
+    branches: [main]
+    paths:
+      - "lib/usage/**"
+      - "lib/research/usage-provenance*"
+      - "lib/research/run-provenance*"
+      - "lib/research-audit/**"
+      - "lib/db/public-usage-*"
+      - "lib/db/keryx-db.ts"
+      - "lib/db/sqlite-adapter.ts"
+      - "lib/db/supabase-adapter.ts"
+      - "supabase/migrations/**"
+      - "lib/types.ts"
+      - "scripts/test-public-usage-postgres.mts"
+      - "tsconfig*.json"
+      - "eslint.config.*"
+      - "package*.json"
+      - ".github/workflows/public-usage-postgres.yml"
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  public-usage-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm ci
+      - name: Trusted provenance and finite ordinary storage tests
+        run: npx vitest run lib/research/usage-provenance.test.ts lib/usage/contracts.test.ts lib/db/public-usage-sqlite.test.ts lib/db/public-usage-supabase.test.ts
+      - run: docker pull postgres:17-alpine
+      - name: Actual isolated ordinary SQL, complete-window, exact-money and ACL acceptance
+        run: node --import tsx --no-warnings scripts/test-public-usage-postgres.mts --acceptance
+      - name: Retain actual bounded SQL receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-usage-postgres-${{ github.sha }}
+          path: artifacts/public-usage-postgres/
+          if-no-files-found: error
+          retention-days: 7
+      - name: App and isolated fixture TypeScript
+        run: |
+          npx tsc --noEmit
+          npx tsc --noEmit --project tsconfig.public-usage.json
+      - name: Scoped lint
+        run: npx eslint lib/usage/*.ts lib/research/usage-provenance*.ts lib/db/public-usage-*.ts scripts/test-public-usage-postgres.mts

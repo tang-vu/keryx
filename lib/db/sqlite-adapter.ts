@@ -107,6 +107,7 @@ import { claimSqliteA2aFulfillment, getSqliteA2aFulfillment, completeSqliteA2aFu
 import type { FulfillmentClaimInput, A2aFulfillmentCompletion, FulfillmentAuthority } from "../a2a/failed-original-fulfillment-protocol";
 import type { FulfillmentEvidenceCapability } from "../a2a/fulfillment-supplement-evidence";
 import { writeSqliteQueryRun } from "./query-run-record";
+import { createSqlitePublicUsage } from "./public-usage-sqlite";
 import type { PrivateResearchIntent } from "../a2a/private-research-intent";
 import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
 import { claimSqlitePrivatePayment, getSqlitePrivatePayment, confirmSqlitePrivatePayment } from "./private-research-payments";
@@ -146,6 +147,7 @@ export class SqliteAdapter implements KeryxDB {
   declare readonly privateBibliographies?: PrivateBibliographiesStore;
   declare readonly personalHistory?: PersonalHistoryStore;
   declare readonly decisionReviews?: DecisionReviewsStore;
+  declare readonly publicUsage?: import("../usage/contracts").PublicUsageStore;
   declare readonly profileIdentities?: ProfileIdentitiesStore;
   private db: DatabaseSync;
   private enrolledMode?: StorageIdentity["authorityMode"];
@@ -208,6 +210,7 @@ export class SqliteAdapter implements KeryxDB {
     assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installOrdinarySqliteApplicationSchema(this.db);
+    if (!this.publicUsage) Object.defineProperty(this, "publicUsage", { value: createSqlitePublicUsage(this.db) });
     if (!this.decisionReviews) {
       try { Object.defineProperty(this, "decisionReviews", { value: createSqliteDecisionReviews(this.db) }); }
       catch (error) { if (!(error instanceof DecisionReviewError && error.code === "review_unavailable")) throw error; }

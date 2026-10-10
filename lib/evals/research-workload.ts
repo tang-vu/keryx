@@ -2,6 +2,8 @@
  * This measures reading/orchestration and delivery, not web-search recall or customer demand. */
 import { createHash } from "node:crypto";
 import { collectRun } from "../agent";
+import { config } from "../config";
+import { createTrustedUsageContext } from "../research/usage-provenance";
 import type { ResearchEffects } from "../agent/research-effects";
 import { SqliteAdapter } from "../db/sqlite-adapter";
 import type { ReasoningEngine } from "../llm/reasoning-engine";
@@ -60,6 +62,7 @@ export async function executeResearchWorkload(input: InternalResearchInput, read
     const hits = input.sources.map((source, index) => ({ url: workloadSourceUrl(input, index), title: source.title, snippet: source.title }));
     const run = await collectRun({ question: input.question, queryId: `workload-${input.id}-${startedAt}`,
       budget: 0.01, researchMode: "deep", origin: "engine", fundingOwner: "offline", allowExternalWeb: true,
+      usageContext: createTrustedUsageContext(config.profile.networkId, { actor: "unknown", funding: "unknown", scripted: true }),
       executionLimits: { attentionLimit: 8, reevaluateRounds: 1 } }, { deps: {
       engine, db, gateway, effects, discoverExternal: async () => [],
       discoverScholarly: async () => ({ candidates: new Map(), succeeded: 0, unavailable: 0, requestedDois: 0, resolvedDois: 0 }),

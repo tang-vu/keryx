@@ -5,8 +5,9 @@ export function micros(value: string): bigint {
 }
 
 /** Legacy decimal fields are admissible only when their printed value is exactly representable. */
-export function decimalMicros(value: number): string | null {
-  if (!Number.isFinite(value) || value < 0 || Object.is(value, -0)) return null;
+export function decimalMicros(value: number | string): string | null {
+  if (typeof value === "number" ? !Number.isFinite(value) || value < 0 || Object.is(value, -0)
+    : typeof value !== "string" || value.length > 64 || !/^(0|[1-9]\d*)(?:\.\d+)?$/.test(value)) return null;
   const match = /^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/.exec(String(value));
   if (!match) return null;
   const digits = match[1] + (match[2] ?? "");

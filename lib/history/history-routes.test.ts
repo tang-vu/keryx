@@ -42,12 +42,13 @@ it("leaves current account money separate and refuses unavailable testnet histor
   const response = await asks(new NextRequest("https://keryx.cc/api/me/asks?network=arcTestnet"));
   expect(response.status).toBe(503); expect(JSON.stringify(await response.json())).not.toContain("private");
 });
-it("merges public question history with labels and preserves current availability during archive outage", async () => {
-  const body = await (await runs()).json();
-  expect(body).toHaveLength(2); expect(body.find((row: { id: string }) => row.id === "old").archive.network).toBe(info.network);
-  mocks.archive.mockRejectedValue(new Error("archive unavailable"));
+it("keeps unpartitioned legacy public history an explicit current-store sample without merging another network", async () => {
   const response = await runs(); expect(response.status).toBe(200);
-  expect(await response.json()).toHaveLength(1); expect(response.headers.get("X-Keryx-Testnet-History")).toBe("unavailable");
+  const body = await response.json(); expect(body).toHaveLength(1); expect(body[0].id).toBe("current");
+  expect(body[0].usage).toEqual({ cohort: "unknown", payment: "unknown", network: "unattributed" });
+  expect(mocks.archive).not.toHaveBeenCalled();
+  expect(response.headers.get("X-Keryx-History-Coverage")).toContain("incomplete");
+  expect(response.headers.get("X-Keryx-History-Network")).toBe("unpartitioned");
 });
 it("pages public history without exposing raw runs and rejects malformed pages", async () => {
   const response = await history(new Request("https://keryx.cc/api/history/testnet"));
