@@ -1,5 +1,9 @@
 # Open issue resolution and acceptance - October 8, 2026
 
+The [October10 closure audit](issue-closure-audit-2026-10-10.md) covers the later
+68-issue inventory, newer main source, deployed identity and remaining gates.
+The dated release observations and original disposition below remain historical.
+
 ## Current integrated candidate — app0.27.43
 
 The Operator original has completed. PR244 and all ten ancestor PRs are merged
