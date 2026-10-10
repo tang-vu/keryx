@@ -1,5 +1,13 @@
 # Keryx Project Changelog
 
+### Recorded citation history wording (2026-10-10, source candidate)
+
+- Describe research source scores as recorded citation history instead of claiming
+  ERC-8004 reputation was loaded. Preserve the score, model context, trace fields
+  and purchase/payment behavior; absent or failed history stays optional.
+- Keep actual on-chain agent identity and reputation under issue289 open.
+  [Scope, surface roles and release boundary](engineering/recorded-citation-history-289.md).
+
 ### English account and session catalogue (2026-10-10, app0.27.49 candidate)
 
 - Extract existing English account, connection and session copy into typed catalogue

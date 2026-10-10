@@ -191,7 +191,7 @@ function memoryLines(records: SourceRecord[], sample: number): string {
   );
 }
 
-/** ERC-8004-style composite score: how often it is cited when available, times how much it carried. */
+/** Local composite score from recorded citations: citation rate times average weight carried. */
 function reputationLines(records: SourceRecord[]): string {
   const ranked = records
     .map((r) => ({ name: r.name, score: Math.round(r.rate * r.avgWeight * 100), cited: r.cited }))
