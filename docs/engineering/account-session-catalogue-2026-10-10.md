@@ -43,7 +43,16 @@ stdio MCP, API, extension and bot account roles keep their existing contracts;
 this migration changes no shared authentication/payment protocol or client
 distribution. Nested wallet/Google-auth widgets, profiles, API keys, other web
 areas and other surfaces still require their own catalogue migration. No
-locale, translation pilot or package/installer version is activated or changed.
+locale or translation pilot is activated. App/OpenAPI0.27.49 identifies this
+coherent release candidate because app0.27.48 was already published from
+acf818e3. The root lockfile changes only its two root version fields; dependency
+closures and independent client/installer versions remain unchanged. Catalogue
+imports are confined to the web app/components; the other supported surfaces
+import no changed account copy graph. OpenAPI changes only its document release
+label. The retained source study binds the complete normalized root lockfile,
+so its artifact and write-up are reproducibly refreshed through the documented
+offline command. All 48 trials remain deterministic simulations with denied
+outbound calls, an in-memory fixture store and zero real settlement.
 
 Issue272 remains open. This extraction does not establish human approval of
 payment, signature-consent or legal translations. The separate

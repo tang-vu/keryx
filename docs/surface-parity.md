@@ -1,5 +1,25 @@
 # Supported-surface release parity
 
+## English account and session catalogue — October 10, 2026 candidate
+
+App/OpenAPI **0.27.49 candidate** identifies the English account/session catalogue
+outcome after app0.27.48 was published from acf818e3. The changed catalogue and
+rich-node helper are imported by the web app/components; desktop, repository CLI,
+remote/stdio MCP, extension and bots import no changed account copy graph. Their
+account roles, shared authentication/payment/API contracts and independent
+distribution versions remain unchanged: desktop0.4.13, stdio/Registry0.4.14,
+remote MCP0.3.10 and extension0.1.3 are source identities, with the separate
+publication/installation gaps recorded below. OpenAPI changes only its document
+release label. The version-only root lockfile change requires a reproducible
+refresh of the retained 48-trial offline source study, without a live-study claim.
+
+Existing English, DOM text boundaries, controls and `en-US` session dates are
+preserved. Remaining issue272 migrations, issue274 formatting, translation pilot
+and human payment/consent/legal review stay open. Exact-source build, hosted CI
+and review, combined deployment/health and publication readback remain separate
+gates; this candidate is not a synchronized-delivery claim. See the
+[account acceptance scope](engineering/account-session-catalogue-2026-10-10.md).
+
 ## Extension hosted research parity — October 10, 2026 candidate
 
 App/OpenAPI **0.27.48** and extension **0.1.3 candidate** expose existing Quick/Deep, zero budget, explicit
