@@ -7028,7 +7028,14 @@ financial readback and actual affected consumer/release acceptance remain gates.
 Issue 249 cannot be answered by labelling a recent history page as all-time outside
 traction. Stamp public run completion through one server-local evidence capability;
 public telemetry and historical missing evidence remain unknown. Keep funding separate
-from participation, and do not manufacture team funding from a scripted label.
+from participation, and do not manufacture team funding from a scripted label or verified
+team membership. Every nonunknown funding snapshot needs separate retained evidence.
+
+Preserve the separately labelled default current/historical-testnet compatibility
+reader and archive availability contract. Classified current-store windows explicitly
+exclude archives; an explicit testnet archive selector uses only the existing guarded
+reader and refuses unsupported cohort/time-window qualification. Finite scanned history
+does not become complete cohort coverage, and unknown legacy rows remain accessible.
 
 Ordinary storage may provide one bounded read-only metadata window for a single Arc
 network and UTC interval, with cohort filtering before history page selection. Overflow

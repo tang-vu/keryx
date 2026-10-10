@@ -41,6 +41,16 @@ describe("bounded usage corpus", () => {
     expect(projectUsageCorpus(input, window).summary.unattributedNetworkRuns).toBe(1);
     input.payments = []; expect(projectUsageCorpus(input, window).summary.unattributedNetworkRuns).toBe(1);
   });
+  it("a verified configured team actor with a settled row has unknown funding unless a separate reviewed digest exists", () => {
+    const input = corpus(); const row = input.runs[0];
+    row.usage = newRunUsage({ asker: wallet, provenance: { version: 1, surface: "api", ownershipMethod: "api-key" } }, network, [wallet]);
+    let column = projectUsageCorpus(input, window).summary.columns[1];
+    expect(column).toMatchObject({ people: 1, researchRuns: 1, payingRuns: 1, teamFundedPayingRuns: 0, unknownFundingPayingRuns: 1 });
+    row.usage = newRunUsage({ usageContext: createTrustedUsageContext(network,
+      { actor: "team", funding: "treasury", scripted: false, fundingEvidenceSha256: proof }) }, network, [wallet]);
+    column = projectUsageCorpus(input, window).summary.columns[1];
+    expect(column).toMatchObject({ teamFundedPayingRuns: 1, unknownFundingPayingRuns: 0 });
+  });
   it("refuses duplicate/foreign rows, partial corpus, wrong binding, overflow, rather than advertising a complete sample", () => {
     for (const input of [{ ...corpus(), complete: false }, { ...corpus(), window: { ...window, network: "eip155:5042002" } },
       { ...corpus(), runs: Array.from({ length: 10001 }, (_, i) => ({ ...corpus().runs[0], id: String(i) })) },

@@ -31,8 +31,8 @@ export function createTrustedUsageContext(network: RunUsage["network"], input: T
     throw new Error("Invalid trusted usage facts");
   const classification = classifyUsage(row as unknown as CohortFacts);
   if (classification.cohort === "outside" && !digest(row.actorEvidenceSha256)) throw new Error("Outside actor evidence required");
-  if (classification.cohort === "outside" && classification.payment !== "unknown" && !digest(row.fundingEvidenceSha256))
-    throw new Error("Outside funding evidence required");
+  if (classification.payment !== "unknown" && !digest(row.fundingEvidenceSha256))
+    throw new Error("Funding evidence required");
   const token = Object.freeze({});
   const usage: RunUsage = { version: 1, network, ...classification,
     actorEvidenceSha256: digest(row.actorEvidenceSha256) ? row.actorEvidenceSha256 : null,
@@ -51,7 +51,8 @@ export function parseRunUsage(value: unknown): RunUsage | undefined {
     || typeof row.payment !== "string" || !["independent", "sponsored", "team", "unknown"].includes(row.payment)) return;
   if (![row.actorEvidenceSha256, row.fundingEvidenceSha256].every(value => value === null || digest(value))) return;
   if (row.cohort !== "outside" && ["independent", "sponsored"].includes(row.payment)) return;
-  if (row.cohort === "outside" && (!digest(row.actorEvidenceSha256) || row.payment !== "unknown" && !digest(row.fundingEvidenceSha256))) return;
+  if (row.cohort === "outside" && !digest(row.actorEvidenceSha256)) return;
+  if (row.payment !== "unknown" && !digest(row.fundingEvidenceSha256)) return;
   return { version: 1, network: row.network as RunUsage["network"], cohort: row.cohort as RunUsage["cohort"],
     payment: row.payment as RunUsage["payment"], actorEvidenceSha256: row.actorEvidenceSha256 as string | null,
     fundingEvidenceSha256: row.fundingEvidenceSha256 as string | null };
@@ -64,6 +65,6 @@ export function newRunUsage(input: { usageContext?: object; asker?: string; prov
   if (qualified?.network === network) return { ...qualified };
   const owned = parseRunProvenance(input.provenance)?.ownershipMethod !== "unknown" && parseRunProvenance(input.provenance) !== undefined;
   const team = owned && typeof input.asker === "string" && teamWallets.some(wallet => wallet.toLowerCase() === input.asker!.toLowerCase());
-  return { version: 1, network, cohort: team ? "team" : "unknown", payment: team ? "team" : "unknown",
+  return { version: 1, network, cohort: team ? "team" : "unknown", payment: "unknown",
     actorEvidenceSha256: null, fundingEvidenceSha256: null };
 }

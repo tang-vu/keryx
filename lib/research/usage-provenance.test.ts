@@ -8,7 +8,23 @@ describe("server-local usage evidence", () => {
       expect(newRunUsage({ usageContext, asker: wallet }, network, [wallet])).toMatchObject({ cohort: "unknown", payment: "unknown" });
     const provenance = { version: 1, surface: "cli", ownershipMethod: "unknown" } as const;
     expect(newRunUsage({ asker: wallet, provenance }, network, [wallet]).cohort).toBe("unknown");
-    expect(newRunUsage({ asker: wallet, provenance: { ...provenance, ownershipMethod: "api-key" } }, network, [wallet])).toMatchObject({ cohort: "team", payment: "team" });
+    expect(newRunUsage({ asker: wallet, provenance: { ...provenance, ownershipMethod: "api-key" } }, network, [wallet])).toMatchObject({ cohort: "team", payment: "unknown" });
+  });
+  it("verified team membership proves only actor; unknown/independent/sponsored facts and copied funding cannot create team-funded activity", () => {
+    const provenance = { version: 1, surface: "api", ownershipMethod: "api-key" } as const;
+    const unproved = { actor: "team", funding: "team", scripted: false, fundingEvidenceSha256: proof };
+    expect(newRunUsage({ asker: wallet, provenance, usageContext: unproved }, network, [wallet])).toMatchObject({ cohort: "team", payment: "unknown" });
+    for (const funding of ["unknown", "independent", "sponsored"] as const) {
+      const token = createTrustedUsageContext(network, { actor: "team", funding, scripted: false, fundingEvidenceSha256: proof });
+      expect(newRunUsage({ usageContext: token }, network, [wallet])).toMatchObject({ cohort: "team", payment: "unknown" });
+    }
+    for (const funding of ["team", "treasury"] as const) {
+      expect(() => createTrustedUsageContext(network, { actor: "team", funding, scripted: false })).toThrow("Funding evidence required");
+      const token = createTrustedUsageContext(network, { actor: "team", funding, scripted: false, fundingEvidenceSha256: proof });
+      const usage = newRunUsage({ usageContext: token }, network, [wallet]);
+      expect(usage).toMatchObject({ cohort: "team", payment: "team" });
+      expect(parseRunUsage({ ...usage, fundingEvidenceSha256: null })).toBeUndefined();
+    }
   });
   it("requires separate outside actor and funding evidence; sponsors and treasury never become outside payers", () => {
     expect(() => createTrustedUsageContext(network, { ...outside, actorEvidenceSha256: undefined })).toThrow();

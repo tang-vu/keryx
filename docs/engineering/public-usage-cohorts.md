@@ -17,6 +17,11 @@ wallet requires existing verified ownership provenance. Everything else defaults
 unknown. An execution channel, IP, client name, question, header or public request option
 does not identify an outside user or supply funding evidence.
 
+Configured team membership establishes only the actor. Its funding stays unknown until
+a separate reviewed funding fact/digest exists. Unknown, independent or sponsored
+caller facts do not manufacture team funding; a team/treasury funding label itself
+requires a separate retained digest even for team or scripted actors.
+
 The token lives in a module-private WeakMap; serialized or forged public objects do not
 qualify. An outside actor needs a retained evidence digest; independent, sponsored or
 treasury/team funding requires a separate digest. No active ingress in this source
@@ -51,16 +56,23 @@ because a source fixture passes.
 
 ## History and storage boundaries
 
-`/api/runs?cohort=outside` selects only outside runs. The default hides scripted activity.
+`/api/runs?cohort=outside` selects only outside runs in the current classified storage
+profile; archives are explicitly excluded from this window. The default hides scripted activity.
 Supported ordinary stores classify/filter the whole finite metadata window **before**
 selecting the bounded history page. SQLite uses one read transaction. Supabase selects
 the page from one RPC snapshot, then rechecks later body identity/time/cohort; body reads
 are not claimed to share that snapshot. Only selected public run bodies are loaded.
 
 Without that capability, explicit cohort/network/period filtering returns unavailable.
-The legacy default reader remains a clearly labelled incomplete 50-row current-store
-sample, with scripted records removed after scanning. It cannot establish a complete
-outside-only page. Historical testnet archives retain their original profile and reader.
+The default compatibility reader preserves PR296's current/archive merge and
+`X-Keryx-Testnet-History` availability header. Current records win duplicate IDs before
+known scripted records are hidden; historical unknown/unpaid rows remain visible with
+their archive profile. It uses separate finite current/archive 50-row scans and declares
+incomplete coverage; it cannot establish a complete outside/network/period page.
+`?archive=testnet` selects only the unchanged guarded archive recent reader, labels its
+fixed testnet profile and incomplete scanned coverage, and never reads the current store.
+Unsupported archive cohort/time-window filters refuse rather than claiming a complete
+filtered page. Historical testnet archives retain their original profile and reader.
 Existing `/api/metrics` totals are labelled mixed all-origin/all-time figures and point to
 the classified endpoint; they are not independent outside-user traction.
 

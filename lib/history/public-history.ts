@@ -13,7 +13,7 @@ export function questionSummary(run: QueryRun, archive?: TestnetArchiveInfo) {
   return { id: run.id, question: run.question, createdAt: run.createdAt, engine: run.engine,
     totalSpent: run.totalSpent, totalToCreators: run.totalToCreators,
     citationCount: run.citations?.length ?? 0, answerSnippet: run.answer?.slice(0, 120) ?? "",
-    usage: { cohort: usage?.cohort ?? "unknown", payment: usage?.payment ?? "unknown", network: usage?.network ?? "unattributed" },
+    usage: { cohort: usage?.cohort ?? "unknown", payment: usage?.payment ?? "unknown", network: archive?.network ?? usage?.network ?? "unattributed" },
     ...(archive ? { archive } : {}) };
 }
 

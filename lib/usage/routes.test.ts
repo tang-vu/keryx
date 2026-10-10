@@ -5,9 +5,10 @@ import { newRunUsage, createTrustedUsageContext } from "../research/usage-proven
 import { config } from "../config";
 import { GET as figures } from "../../app/api/usage/route";
 import { GET as history } from "../../app/api/runs/route";
-const { getDb } = vi.hoisted(() => ({ getDb: vi.fn() }));
+const { getDb, getArchive } = vi.hoisted(() => ({ getDb: vi.fn(), getArchive: vi.fn().mockResolvedValue(null) }));
 vi.mock("../db", () => ({ getDb }));
-afterEach(() => vi.resetAllMocks());
+vi.mock("../history/testnet-archive", () => ({ getTestnetArchive: getArchive }));
+afterEach(() => { vi.resetAllMocks(); getArchive.mockResolvedValue(null); });
 const run = (id: string, scripted = false) => ({ id, question: "Synthetic", createdAt: "2026-10-10T00:00:00.000Z", answer: "Fixture",
   usage: newRunUsage({ usageContext: createTrustedUsageContext(config.profile.networkId, { actor: "unknown", funding: "unknown", scripted }) }, config.profile.networkId, []) } as QueryRun);
 describe("public classified usage/history routes", () => {
