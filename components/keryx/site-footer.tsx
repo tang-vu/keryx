@@ -8,6 +8,11 @@ import Link from "next/link";
 import { KeryxGlyph } from "./keryx-mark";
 import { browserPaymentProfile,browserRegistryAddress } from "@/lib/browser-payment-profile";
 import { currentArcLabel } from "@/lib/arc-network-display";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 const profile=browserPaymentProfile(),EXPLORER=profile.explorerUrl;
 const configuredRegistry=browserRegistryAddress();
@@ -18,29 +23,29 @@ type FooterLink = { label: string; href: string; external?: boolean };
 
 // Product surfaces. "API for agents" is the OpenAPI reference (also the A2A entry point).
 const HOUSE: FooterLink[] = [
-  { label: "Ask a question", href: "/" },
-  { label: "Past answers", href: "/answers" },
-  { label: "Sources", href: "/sources" },
-  { label: "Literature workspace", href: "/literature" },
-  { label: "Activity & proof", href: "/dashboard" },
-  { label: "Public proof", href: "/proof" },
-  { label: "For creators", href: "/register" },
-  { label: "Playground", href: "/playground" },
-  { label: "Paid research", href: "/research" },
-  { label: "Business calculator", href: "/economics" },
-  { label: "Remote MCP", href: "/integrations/mcp" },
-  { label: "API for agents ↗", href: "/api/docs", external: true },
+  { label: message("shellNavigation.ask"), href: "/" },
+  { label: message("shellNavigation.answers"), href: "/answers" },
+  { label: message("shellNavigation.sources"), href: "/sources" },
+  { label: message("shellNavigation.literature"), href: "/literature" },
+  { label: message("shellNavigation.activity"), href: "/dashboard" },
+  { label: message("shellFooter.publicProof"), href: "/proof" },
+  { label: message("shellNavigation.creators"), href: "/register" },
+  { label: message("shellNavigation.playground"), href: "/playground" },
+  { label: message("shellNavigation.research"), href: "/research" },
+  { label: message("shellFooter.businessCalculator"), href: "/economics" },
+  { label: message("shellFooter.remoteMcp"), href: "/integrations/mcp" },
+  { label: message("shellFooter.agentApi"), href: "/api/docs", external: true },
 ];
 
 // Current configured contract references; historical receipt links keep their original rail.
 const DOCS: FooterLink[] = [
-  { label: "GitHub ↗", href: "https://github.com/tang-vu/keryx", external: true },
-  { label: "Registry contract ↗", href: `${EXPLORER}/address/${REGISTRY}#code`, external: true },
-  { label: "USDC on Arc ↗", href: `${EXPLORER}/address/${USDC}`, external: true },
-  { label: "x402 + Gateway ↗", href: "https://github.com/circlefin/arc-nanopayments", external: true },
-  { label: "Arc network ↗", href: profile.testnet?"https://docs.arc.network":"https://docs.arc.io", external: true },
-  { label: "Privacy", href: "/privacy" },
-  { label: "Terms", href: "/terms" },
+  { label: message("shellFooter.github"), href: "https://github.com/tang-vu/keryx", external: true },
+  { label: message("shellFooter.registryContract"), href: `${EXPLORER}/address/${REGISTRY}#code`, external: true },
+  { label: message("shellFooter.usdcOnArc"), href: `${EXPLORER}/address/${USDC}`, external: true },
+  { label: message("shellFooter.x402Gateway"), href: "https://github.com/circlefin/arc-nanopayments", external: true },
+  { label: message("shellFooter.arcNetwork"), href: profile.testnet?"https://docs.arc.network":"https://docs.arc.io", external: true },
+  { label: message("shellFooter.privacy"), href: "/privacy" },
+  { label: message("shellFooter.terms"), href: "/terms" },
 ];
 
 function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
@@ -85,19 +90,17 @@ export function SiteFooter() {
               </span>
             </div>
             <p className="mt-4 max-w-[42ch] font-serif text-[16px] leading-[1.55] text-ink-3">
-              From the Greek{" "}
-              <span className="italic text-ink">κῆρυξ</span> — a herald: the one
-              sent to carry a message, and paid for the carrying.
+              {richMessage("shellFooter.etymology", { gap: " ", word: <span className="italic text-ink">κῆρυξ</span> })}
             </p>
           </div>
 
-          <FooterCol title="The house" links={HOUSE} />
-          <FooterCol title="Docs & proof" links={DOCS} />
+          <FooterCol title={message("shellFooter.house")} links={HOUSE} />
+          <FooterCol title={message("shellFooter.docsAndProof")} links={DOCS} />
         </div>
 
         <div className="mt-10 flex flex-wrap justify-between gap-3 border-t border-ink pt-5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-3">
-          <span>© 2026 Keryx — legal tender for attention</span>
-          <span className="text-seal">{currentArcLabel} · inspect original settlement evidence</span>
+          <span>{message("shellFooter.copyright", { year: 2026 })}</span>
+          <span className="text-seal">{richMessage("shellFooter.originalEvidence", { network: currentArcLabel })}</span>
         </div>
       </div>
     </footer>

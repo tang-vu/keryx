@@ -14,23 +14,26 @@ import { KeryxWordmark } from "./keryx-mark";
 import { DispatchWire } from "./dispatch-wire";
 import { WalletMenu } from "./wallet-menu";
 import { cn } from "@/lib/utils";
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
 
 const NAV = [
-  { href: "/", label: "Ask a question" },
-  { href: "/dashboard", label: "Activity & proof" },
-  { href: "/operator", label: "Operator" },
-  { href: "/answers", label: "Past answers" },
-  { href: "/sources", label: "Sources" },
-  { href: "/literature", label: "Literature workspace" },
-  { href: "/market", label: "Market" },
+  { href: "/", label: message("shellNavigation.ask") },
+  { href: "/dashboard", label: message("shellNavigation.activity") },
+  { href: "/operator", label: message("shellNavigation.operator") },
+  { href: "/answers", label: message("shellNavigation.answers") },
+  { href: "/sources", label: message("shellNavigation.sources") },
+  { href: "/literature", label: message("shellNavigation.literature") },
+  { href: "/market", label: message("shellNavigation.market") },
   { href: "/integrations/mcp", label: "MCP" },
-  { href: "/wanted", label: "Wanted" },
-  { href: "/register", label: "For creators" },
-  { href: "/me/sources", label: "My sources" },
-  { href: "/me/asks", label: "My dispatches" },
-  { href: "/playground", label: "Playground" },
-  { href: "/research", label: "Paid research" },
-  { href: "/dev", label: "Dev portal" },
+  { href: "/wanted", label: message("shellNavigation.wanted") },
+  { href: "/register", label: message("shellNavigation.creators") },
+  { href: "/me/sources", label: message("shellNavigation.mySources") },
+  { href: "/me/asks", label: message("shellNavigation.myDispatches") },
+  { href: "/playground", label: message("shellNavigation.playground") },
+  { href: "/research", label: message("shellNavigation.research") },
+  { href: "/dev", label: message("shellNavigation.developer") },
 ];
 
 export function SiteHeader() {
@@ -105,7 +108,7 @@ export function SiteHeader() {
               href="/register"
               className="ml-2 border border-ink bg-seal px-3 py-2.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none"
             >
-              For creators ▸
+              {message("shellHeader.creatorAction")}
             </Link>
             <div className="ml-2">
               <WalletMenu />
@@ -119,7 +122,7 @@ export function SiteHeader() {
               type="button"
               onClick={toggle}
               className="flex h-11 w-11 items-center justify-center border border-line text-ink-3 transition-colors hover:border-ink hover:text-ink"
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-label={menuOpen ? message("shellHeader.closeMenu") : message("shellHeader.openMenu")}
               aria-expanded={menuOpen}
               aria-controls="mobile-site-menu"
             >
@@ -151,8 +154,8 @@ export function SiteHeader() {
             {/* Slide-down menu */}
             {menuOpen && (
               <div id="mobile-site-menu" className="absolute left-0 right-0 top-[66px] z-50 max-h-[calc(100dvh-66px)] overflow-y-auto overscroll-contain border-b border-ink bg-paper shadow-lg">
-                <nav className="mx-auto flex max-w-[1180px] flex-col px-4 py-3" aria-label="Mobile navigation">
-                  <span className="px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-seal">Explore</span>
+                <nav className="mx-auto flex max-w-[1180px] flex-col px-4 py-3" aria-label={message("shellHeader.mobileNavigation")}>
+                  <span className="px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-seal">{message("shellHeader.explore")}</span>
                   {NAV.slice(0, 5).map((link) => {
                     const active =
                       link.href === "/"
@@ -173,9 +176,9 @@ export function SiteHeader() {
                       </Link>
                     );
                   })}
-                  <Link href="/register" className={cn("flex min-h-11 items-center border-l-2 px-4 py-2 font-mono text-[12px] uppercase tracking-[0.08em]", pathname.startsWith("/register") ? "border-seal text-ink" : "border-transparent text-seal")}>For creators</Link>
+                  <Link href="/register" className={cn("flex min-h-11 items-center border-l-2 px-4 py-2 font-mono text-[12px] uppercase tracking-[0.08em]", pathname.startsWith("/register") ? "border-seal text-ink" : "border-transparent text-seal")}>{message("shellNavigation.creators")}</Link>
                   <details className="mt-2 border-t border-line pt-2">
-                    <summary className="flex min-h-11 cursor-pointer items-center px-4 font-mono text-[11px] uppercase tracking-wider text-ink">More tools</summary>
+                    <summary className="flex min-h-11 cursor-pointer items-center px-4 font-mono text-[11px] uppercase tracking-wider text-ink">{message("shellHeader.moreTools")}</summary>
                     {NAV.slice(5).filter((link) => link.href !== "/register").map((link) => <Link key={link.href} href={link.href} className="flex min-h-11 items-center px-4 font-mono text-[11px] uppercase text-ink-2">{link.label}</Link>)}
                   </details>
                   <div className="mt-3 border-t border-line px-4 pt-3">

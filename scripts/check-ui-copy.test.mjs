@@ -205,3 +205,16 @@ test("Operator, status, proof and calculator copy is catalogued; numbered layers
       file === "app/proof/page.tsx" ? ["0"] : file.endsWith("proof-dashboard.tsx") ? ["tang-vu/keryx"] : file.endsWith("settlement-proof-section.tsx") ? ["0x…"] : [], file);
   }
 });
+
+test("common shell and observation wrapper copy is catalogued; protocol names, brand and source examples remain data", () => {
+  const remaining = {
+    "components/keryx/site-header.tsx": ["MCP"],
+    "components/keryx/site-footer.tsx": ["Keryx", "κῆρυξ"],
+    "components/keryx/creator-cashouts-panel.tsx": ["/tx/"],
+    "components/keryx/testnet-history-summary.tsx": [],
+  };
+  for (const [file, data] of Object.entries(remaining)) {
+    const findings = extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
+    assert.deepEqual(findings.map(finding => finding.text), data, file);
+  }
+});
