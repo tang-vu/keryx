@@ -124,6 +124,21 @@ Corpus validation and composition actually exited0; ordinary grading actually
 exited1 for its retained diagnostic failures. Later documentation/artifact commits
 do not relabel that execution or the historical answer cohort.
 
+The separate [actual eight-case composition](../../fixtures/evals/quality/scorecard-20261010-eight.json)
+ran at `2026-10-10T16:59:22.754Z` on inspector checkpoint
+`84c96d21c1091f416fe3cea13a8edc849e962602`, using Node `v24.21.0`. Its
+complete-file SHA256 is
+`732882b620480fe6dbbd757fdab9af03df0f18269bde80adc1af34bc6697768a`;
+its unchanged before/after inspector source fingerprint is
+`e89176988aa0167ba57c78cfc29a21a5928f04337fb4407c5aea25f7f4e78b68`.
+Actual validation/composition exited0 and ordinary grading exited1, with eight
+failures, every semantic/language judgment UNJUDGED and useful-answer rates null.
+The initial six-case composition and all first-six fixture bytes/manifest entries
+remain unchanged; a changed suite is not a release-quality comparison. Fifty
+focused tests, both nonincremental TypeScript graphs and scoped lint passed on
+unchanged before/after inputs for the eight-case candidate. These local checks
+do not replace hosted exact-head acceptance.
+
 This local maintainer CLI/data outcome changes no runtime contract or research
 behavior on web, desktop, API, buyer CLI, remote/stdio MCP, extension or bots. It
 needs source review, proportionate local validation and actual hosted aggregate
