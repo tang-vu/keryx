@@ -61,8 +61,8 @@ to manufacture one.
 ## Coverage ledger
 
 The checkpoint is the finite predicate at its actual callsite, not a fabricated
-replacement for the selection pass or the portfolio optimizer. Both outcomes have
-pure vectors. Runtime differential fixtures execute ordinary admission with missing,
+replacement for the selection pass or the portfolio optimizer. Pure vectors cover
+the finite predicates. Runtime differential fixtures execute ordinary admission with missing,
 enabled and synchronously failing collection; rejected asynchronous observers also
 make evidence unavailable without awaiting or escaping into execution.
 
