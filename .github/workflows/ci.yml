@@ -331,6 +331,9 @@ jobs:
       - name: Research decision replay browser WebCrypto parity (offline corpus)
         run: node --import tsx scripts/test-research-audit-browser.mts
 
+      - name: Unpacked MV3 extension (synthetic HTTP, no research or payments)
+        run: npm run test:browser-extension
+
       - name: Zotero RIS parser compatibility (pinned source, synthetic metadata)
         run: |
           mkdir -p .artifacts/reference-export

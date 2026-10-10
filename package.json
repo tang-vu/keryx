@@ -97,6 +97,7 @@
     "refresh-feeds": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/refresh-feeds.mts",
     "migrate-ipfs": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/migrate-content-to-ipfs.mts",
     "pack:extension": "node --import tsx --no-warnings scripts/pack-extension.mts",
+    "test:browser-extension": "node --import tsx scripts/test-extension-browser.mts",
     "grant:media": "node --env-file-if-exists=.env.local scripts/create-circle-grant-media.mjs",
     "economics:plan": "node --import tsx --no-warnings scripts/plan-business.mts",
     "economics:private-report": "node --import tsx --no-warnings scripts/economics-private-report.mts",

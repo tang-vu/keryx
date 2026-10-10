@@ -35,3 +35,12 @@ source packaging checks, TypeScript/lint, real Chromium layout/fixture checks, i
 source review, full required CI and exact-source release ZIP verification. Source-ready,
 published, deployed, installed and live usefulness remain separate; update the final
 readback after completion. This task grants no paid live test or new production activation.
+
+Local verification passed: 35 focused tests across extension client/popup, monetary surface
+parity and OpenAI compatibility; application and operations TypeScript; focused lint; and
+the real unpacked MV3 Chromium fixture. The browser fixture verifies opt-in page URL wiring,
+zero/Deep/scholarly controls, four byte-identical exports without a second request, safe
+citation text, failure state, bounded device history/clear and 400/440px horizontal layout.
+It intercepts all external transport and performs no useful live research or settlement.
+The full CI browser-source lane now runs this fixture; the checks lane packages the
+allowlisted extension and retains an artifact identified by the exact CI commit.
