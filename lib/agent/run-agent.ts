@@ -766,7 +766,7 @@ async function* runAdmittedAgent(
       );
     }
     if (reputationContext) {
-      yield emit("discover", "ERC-8004 reputation loaded — composite scores on this subject.", { reputation: true });
+      yield emit("discover", "Loaded local scores from recorded citation history on this subject.", { reputation: true });
     }
   } catch {
     // Memory is best-effort — never block a run on memory load failure

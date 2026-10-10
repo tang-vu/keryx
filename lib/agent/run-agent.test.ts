@@ -427,6 +427,40 @@ async function drive(
 const fetchBudget = (budget: number) => budget * (1 - config.citationPoolRatio);
 const citationPool = (budget: number) => budget * config.citationPoolRatio;
 
+describe("recorded citation history in the research trace", () => {
+  it.each(["recorded", "absent", "unavailable"] as const)("reports the actual history basis and preserves execution when history is %s", async history => {
+    const source = makeSource({ id: "recorded-history" }), engine = fakeEngine(), gateway = fakeGateway();
+    const d = deps([source], engine, gateway);
+    const readHistory = vi.spyOn(d.db, "loadQueryMemories");
+    if (history === "unavailable") readHistory.mockRejectedValue(new Error("Synthetic history outage"));
+    else readHistory.mockResolvedValue(history === "absent" ? [] : Array.from({ length: 5 }, (_, index) => ({
+      id: `history-${index}`, topics: ["x402"], sourcesRead: [source.id],
+      sourceScores: { [source.id]: { name: source.name, weight: 0.9, reward: 0.001 } },
+      createdAt: "2026-07-26T00:00:00.000Z",
+    })));
+
+    const { run, steps } = await drive({ question: "How does x402 work?", budget: 0.05 }, d);
+    const historySteps = steps.filter(step => (step.detail as { reputation?: boolean } | undefined)?.reputation);
+    expect(readHistory).toHaveBeenCalledOnce();
+    if (history === "recorded") {
+      expect(historySteps).toHaveLength(1);
+      expect(historySteps[0]).toMatchObject({ phase: "discover", detail: { reputation: true } });
+      expect(historySteps[0].message).toContain("local scores from recorded citation history");
+      expect(engine.decideInput?.memoryContext).toContain(`${source.name}: reputation 90/100`);
+      expect(run.trace).toContainEqual(historySteps[0]);
+    } else {
+      expect(historySteps).toEqual([]);
+      expect(engine.decideInput?.memoryContext).toBeUndefined();
+    }
+    expect(steps.some(step => /ERC-8004|on.chain reputation/i.test(step.message))).toBe(false);
+    expect(gateway.fetchCalls).toEqual([source.id]);
+    expect(gateway.citationCalls).toHaveLength(1);
+    expect(run.decisions).toEqual([expect.objectContaining({ sourceId: source.id, action: "BUY" })]);
+    expect(run.totalSpent).toBeCloseTo(0.027, 6);
+    expect(run.answer).not.toBe("");
+  });
+});
+
 describe("ordinary complete-answer word budget", () => {
   const quote = "The protocol binds approval to canonical action identity.";
   const statement = "Approval binds to canonical action identity.";
