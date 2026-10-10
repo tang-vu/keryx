@@ -5,7 +5,7 @@ import { getDb } from "@/lib/db";
 import { usageWindow, type PublicUsageSummary } from "@/lib/usage/contracts";
 import { usageMessages as copy } from "@/locales/en/usage";
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Who uses Keryx — recorded usage" };
+export const metadata = { title: copy.metadataTitle };
 function usdc(micros: string) { const value = BigInt(micros), unit = BigInt(1000000); return `${value / unit}.${(value % unit).toString().padStart(6, "0")} USDC`; }
 export default async function UsagePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const input = await searchParams, params = new URLSearchParams();
@@ -38,7 +38,7 @@ export default async function UsagePage({ searchParams }: { searchParams: Promis
       <button className="border border-line px-4 py-2">{copy.apply}</button>
     </form>
     {!view ? <p role="status">{invalid ? copy.invalid : copy.unavailable}</p> : <>
-      <p className="mb-4 font-mono text-sm">{view.network} · {view.period} · [{view.since}, {view.until}) UTC</p>
+      <p className="mb-4 font-mono text-sm">{view.network} · {view.period} · [{view.since}, {view.until}{copy.windowEnd}</p>
       <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-sm"><caption className="mb-3 text-left">{copy.actorLimit}</caption>
         <thead><tr><th className="p-3">{copy.figure}</th>{view.columns.map(c => <th className="p-3" key={c.cohort}>{copy[c.cohort]}</th>)}<th className="p-3">{copy.rule}</th></tr></thead>
         <tbody>{rows.map(([label, rule, value]) => <tr key={label} className="border-t border-line"><th className="p-3">{label}</th>{view!.columns.map(c => <td key={c.cohort} className="p-3 font-mono">{value(c)}</td>)}<td className="max-w-sm p-3">{rule}</td></tr>)}</tbody>

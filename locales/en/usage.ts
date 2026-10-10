@@ -1,8 +1,10 @@
 export const usageMessages = {
+  metadataTitle: "Who uses Keryx — recorded usage",
   title: "Who uses Keryx",
   introduction: "Recorded activity by participant and funding evidence. Historical unknown activity is kept separate from outside use.",
   network: "Network", period: "Period", since: "Since (UTC date)", apply: "Show figures",
   all: "All time", week: "Last 7 days", month: "Last 30 days",
+  windowEnd: ") UTC",
   unavailable: "A complete classified view is unavailable for this storage profile or period. Figures are withheld.",
   invalid: "Choose a valid network, period and UTC date.",
   outside: "Outside users", team: "Team", scripted: "Scripted tests", unknown: "Unknown",
