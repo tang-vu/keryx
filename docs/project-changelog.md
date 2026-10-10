@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### English account and session catalogue (2026-10-10, app0.27.49 candidate)
+
+- Extract existing English account, connection and session copy into typed catalogue
+  keys. Preserve the rendered text, controls, authentication and payment behavior,
+  including named rich-node placeholders and original text-node boundaries.
+- Retire only 54 owned copy allowances. Keep session dates in their existing
+  `en-US` format and leave the remaining issue272, locale and human review gates open.
+- Coordinate app/OpenAPI0.27.49 after the already published app0.27.48. Independent
+  desktop, CLI, MCP, extension and bot distributions import no changed account
+  catalogue graph and retain their versions and contracts. Regenerate the retained
+  offline source study for the changed root lockfile binding; its 48 trials remain
+  simulations. [Scope and acceptance](engineering/account-session-catalogue-2026-10-10.md).
+
 ### Extension research parity (2026-10-10, app0.27.48 / extension0.1.3 candidate)
 
 - Expose existing Quick/Deep and scholarly controls, preserve a zero source budget,

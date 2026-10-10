@@ -30,6 +30,11 @@ import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { sourceReturnWithOwner, safeRegistrationReturn, registrationOwnerMatches } from "@/lib/registration-return";
 import { AccountSessions } from "@/components/keryx/account-sessions";
 import { CircleGoogleCallback, CircleGoogleWalletButton } from "@/components/keryx/circle-google-wallet";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 export default function ConnectPage() {
   const { disconnect, disconnectAsync } = useDisconnect();
@@ -56,12 +61,12 @@ export default function ConnectPage() {
     try {
       const res = await signIn();
       if (res.ok) {
-        toast.success(res.created ? "Account created" : "Signed in to Keryx", {
-          description: `Role: ${res.role}`,
+        toast.success(message(res.created ? "account.created" : "account.signedIn"), {
+          description: message("account.role", { role: String(res.role) }),
         });
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Sign-in failed";
+      const msg = err instanceof Error ? err.message : message("account.signInFailed");
       // User rejected the signature request — don't show an error toast for that.
       if (!msg.toLowerCase().includes("rejected") && !msg.toLowerCase().includes("denied")) {
         toast.error(msg);
@@ -75,8 +80,8 @@ export default function ConnectPage() {
     try {
       await signOut();
       try { await disconnectAsync(); } catch { /* Connector may already be disconnected. */ }
-      toast("Signed out");
-    } catch { toast.error("Sign-out could not be confirmed. Please retry."); }
+      toast(message("account.signedOut"));
+    } catch { toast.error(message("account.signOutUnconfirmed")); }
   }, [disconnectAsync, signOut]);
 
   return (
@@ -86,14 +91,13 @@ export default function ConnectPage() {
         <CircleGoogleCallback onConnected={handleGoogleConnected} />
         <header className="mb-12 max-w-2xl">
           <div className="font-mono text-[12px] uppercase tracking-[0.2em] text-seal">
-            Your Keryx account
+            {message("account.eyebrow")}
           </div>
           <h1 className="letterpress mt-2.5 font-display text-[clamp(34px,6vw,68px)] font-medium leading-[0.96] tracking-[-0.01em] text-ink">
-            Sign in to <em className="italic text-paid">Keryx.</em>
+            {richMessage("account.signInTitle", { brand: <em className="italic text-paid">{message("account.signInBrand")}</em> })}
           </h1>
           <p className="mt-3 max-w-[54ch] text-[18px] leading-relaxed text-ink-2">
-            Sign in to research, publish sources, and manage your account.
-            Your wallet holds your USDC; you choose how much the agent can spend.
+            {message("account.introduction")}
           </p>
         </header>
 
@@ -121,7 +125,7 @@ export default function ConnectPage() {
             )}
             {isConnected && <div className="mt-4"><CircleGoogleWalletButton reconnectOnly onConnected={handleGoogleConnected} /></div>}
 
-            {isConnected && session && identityMatches && returnTo === undefined && <p role="status" className="text-sm">Checking sign-in return context...</p>}
+            {isConnected && session && identityMatches && returnTo === undefined && <p role="status" className="text-sm">{message("account.checkingReturn")}</p>}
             {isConnected && session && identityMatches && returnTo !== undefined && (
               <SignedInStep session={session} onSignOut={handleSignOut} busy={authState !== "idle"} returnTo={returnTo} returnBlocked={!!returnTo && !registrationOwnerMatches(returnTo, session.address)} />
             )}

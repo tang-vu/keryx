@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 interface SessionRow { id: string; issuedAt: number; expiresAt: number; current: boolean }
 interface SessionList { sessions: SessionRow[]; truncated: boolean }
@@ -21,7 +26,7 @@ export function AccountSessions() {
       const response = await fetch("/api/auth/sessions", { cache: "no-store", signal: AbortSignal.timeout(15000) });
       if (response.status === 401) {
         if (attempt === revision.current) {
-          setData(null); setError("Your session has ended. Sign in again to manage sessions.");
+          setData(null); setError(message("accountSessions.ended"));
           window.dispatchEvent(new Event("keryx:auth"));
         }
         return;
@@ -30,7 +35,7 @@ export function AccountSessions() {
       const result = await response.json() as SessionList;
       if (attempt === revision.current) { setData(result); setError(""); }
     } catch {
-      if (attempt === revision.current) setError("Sessions could not be refreshed. Please retry.");
+      if (attempt === revision.current) setError(message("accountSessions.refreshFailed"));
     }
   }, []);
   useEffect(() => {
@@ -46,32 +51,32 @@ export function AccountSessions() {
     try {
       const response = await fetch(`/api/auth/sessions${id ? `/${id}` : ""}`, { method: "DELETE", cache: "no-store", signal: AbortSignal.timeout(15000) });
       if (!response.ok || (await response.json()).ok !== true) throw new Error("unconfirmed");
-      setNotice(id ? "The selected session has been signed out." : "Other sessions have been signed out. This session remains active.");
+      setNotice(message(id ? "accountSessions.selectedSignedOut" : "accountSessions.othersSignedOut"));
       await refresh();
-    } catch { setError("Sign-out could not be confirmed. Refresh the list and retry."); }
+    } catch { setError(message("accountSessions.signOutUnconfirmed")); }
     finally { mutation.current = false; setBusy(false); }
   };
 
   return <section aria-labelledby="account-sessions-title" className="mt-8 border border-line bg-paper p-5 sm:p-8">
-    <h2 id="account-sessions-title" className="font-display text-2xl text-ink">Signed-in sessions</h2>
-    <p className="mt-2 text-sm leading-relaxed text-ink-2">Review account access across browsers. Each sign-in creates a session; device names and locations are not collected.</p>
-    <p className="mt-2 text-sm leading-relaxed text-ink-2">Signing out ends account access. It does not cancel accepted research jobs or already signed payment authorizations.</p>
+    <h2 id="account-sessions-title" className="font-display text-2xl text-ink">{message("accountSessions.title")}</h2>
+    <p className="mt-2 text-sm leading-relaxed text-ink-2">{message("accountSessions.introduction")}</p>
+    <p className="mt-2 text-sm leading-relaxed text-ink-2">{message("accountSessions.signOutBoundary")}</p>
     <div className="mt-4 flex flex-wrap gap-2">
-      <button className={button} disabled={busy} onClick={() => { void refresh(); }}>Refresh sessions</button>
-      <button className={button} disabled={busy || !data || (!data.truncated && !data.sessions.some(row => !row.current))} onClick={() => { void revoke(); }}>Sign out all other sessions</button>
+      <button className={button} disabled={busy} onClick={() => { void refresh(); }}>{message("accountSessions.refresh")}</button>
+      <button className={button} disabled={busy || !data || (!data.truncated && !data.sessions.some(row => !row.current))} onClick={() => { void revoke(); }}>{message("accountSessions.signOutOthers")}</button>
     </div>
     {error && <p role="alert" className="mt-3 text-sm text-seal">{error}</p>}
     {notice && <p role="status" className="mt-3 text-sm text-paid">{notice}</p>}
-    {!data && !error && <p role="status" className="mt-4 text-sm text-ink-2">Loading sessions…</p>}
-    {data?.truncated && <p className="mt-3 text-sm text-ink-2">Showing the 100 newest sessions. Sign out all other sessions also includes older sessions.</p>}
+    {!data && !error && <p role="status" className="mt-4 text-sm text-ink-2">{message("accountSessions.loading")}</p>}
+    {data?.truncated && <p className="mt-3 text-sm text-ink-2">{message("accountSessions.truncated")}</p>}
     <ul className="mt-4 divide-y divide-line">
       {data?.sessions.map(row => <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
         <div className="min-w-0 text-sm">
-          <p className="font-medium text-ink">{row.current ? "This browser session" : `Session ${row.id.slice(0, 8)}`}</p>
-          <p className="mt-1 text-ink-2">Signed in {date(row.issuedAt)}</p>
-          <p className="text-ink-2">Expires {date(row.expiresAt)}</p>
+          <p className="font-medium text-ink">{row.current ? message("accountSessions.current") : message("accountSessions.session", { id: row.id.slice(0, 8) })}</p>
+          <p className="mt-1 text-ink-2">{richMessage("accountSessions.issuedAt", { date: date(row.issuedAt) })}</p>
+          <p className="text-ink-2">{richMessage("accountSessions.expiresAt", { date: date(row.expiresAt) })}</p>
         </div>
-        {!row.current && <button className={button} disabled={busy} onClick={() => { void revoke(row.id); }} aria-label={`Sign out session ${row.id.slice(0, 8)}`}>Sign out</button>}
+        {!row.current && <button className={button} disabled={busy} onClick={() => { void revoke(row.id); }} aria-label={message("accountSessions.signOutLabel", { id: row.id.slice(0, 8) })}>{message("account.signOut")}</button>}
       </li>)}
     </ul>
   </section>;
