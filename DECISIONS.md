@@ -7022,3 +7022,25 @@ This is presentation compatibility, not a new payment or native storage authorit
 Supabase native fulfillment remains unadmitted; no data migration, funding,
 additional execution or background schedule is authorized. Whole final original
 financial readback and actual affected consumer/release acceptance remain gates.
+
+## 2026-10-11 — Public usage needs trusted cohorts and a complete bounded window
+
+Issue 249 cannot be answered by labelling a recent history page as all-time outside
+traction. Stamp public run completion through one server-local evidence capability;
+public telemetry and historical missing evidence remain unknown. Keep funding separate
+from participation, and do not manufacture team funding from a scripted label or verified
+team membership. Every nonunknown funding snapshot needs separate retained evidence.
+
+Preserve the separately labelled default current/historical-testnet compatibility
+reader and archive availability contract. Classified current-store windows explicitly
+exclude archives; an explicit testnet archive selector uses only the existing guarded
+reader and refuses unsupported cohort/time-window qualification. Finite scanned history
+does not become complete cohort coverage, and unknown legacy rows remain accessible.
+
+Ordinary storage may provide one bounded read-only metadata window for a single Arc
+network and UTC interval, with cohort filtering before history page selection. Overflow
+or missing capability refuses figures. Native/sealed storage receives no fallback or
+registry/identity change. Keep unrecorded acceptance/first-answer figures unmeasured,
+and distinguish source fixture acceptance from production measurements or rollout.
+See [public usage cohorts](docs/engineering/public-usage-cohorts.md) for the counting
+rules, ordinary PostgreSQL qualification and remaining deployed closure gates.

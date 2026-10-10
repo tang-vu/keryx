@@ -47,8 +47,11 @@ describe("cohort/funding boundaries (#249)", () => {
     expect(classifyUsage({ actor: "outside", funding: "treasury", scripted: false })).toEqual({ cohort: "outside", payment: "team" });
   });
   it("scripted/team callers never become outside payers", () => {
-    expect(classifyUsage({ actor: "outside", funding: "independent", scripted: true })).toEqual({ cohort: "scripted", payment: "team" });
-    expect(classifyUsage({ actor: "team", funding: "independent", scripted: false })).toEqual({ cohort: "team", payment: "team" });
+    expect(classifyUsage({ actor: "outside", funding: "independent", scripted: true })).toEqual({ cohort: "scripted", payment: "unknown" });
+    for (const funding of ["unknown", "independent", "sponsored"] as const)
+      expect(classifyUsage({ actor: "team", funding, scripted: false })).toEqual({ cohort: "team", payment: "unknown" });
+    for (const funding of ["team", "treasury"] as const)
+      expect(classifyUsage({ actor: "team", funding, scripted: false })).toEqual({ cohort: "team", payment: "team" });
     expect(publicHistoryIncludes("scripted")).toBe(false); expect(publicHistoryIncludes("unknown", true)).toBe(false);
     expect(publicHistoryIncludes("outside", true)).toBe(true);
   });

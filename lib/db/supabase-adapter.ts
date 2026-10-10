@@ -84,6 +84,7 @@ import type { PrivatePaymentConfirmation } from "../a2a/private-payment-state";
 import { claimSupabasePrivatePayment, getSupabasePrivatePayment, confirmSupabasePrivatePayment } from "./private-research-payments";
 import { getSupabasePrivateResearchIntent, reserveSupabasePrivateResearchIntent, listSupabasePrivateResearchHistory, type PrivateHistoryCursor } from "./private-research-intents";
 import { recordedRunProvenance } from "../research/run-provenance";
+import { createSupabasePublicUsage } from "./public-usage-supabase";
 import {
   summarizeA2aOperations,
   type A2aOperationsRow,
@@ -157,6 +158,7 @@ export class SupabaseAdapter implements KeryxDB {
   declare readonly privateProfiles?: PrivateProfilesStore;
   declare readonly personalHistory?: PersonalHistoryStore;
   declare readonly decisionReviews?: DecisionReviewsStore;
+  declare readonly publicUsage?: import("../usage/contracts").PublicUsageStore;
   declare readonly profileIdentities?: ProfileIdentitiesStore;
   #sb: SupabaseClient;
   #enrolled?: { deployment: Readonly<StorageDeploymentManifest>; authority: SupabaseAuthority;
@@ -179,6 +181,7 @@ export class SupabaseAdapter implements KeryxDB {
     if (!deployment) Object.defineProperty(this, "deliverableAcceptance", { value: createSupabaseDeliverableAcceptance(this.#sb) });
     if (!deployment) Object.defineProperty(this, "personalHistory", { value: createSupabasePersonalHistory(this.#sb) });
     if (!deployment) Object.defineProperty(this, "decisionReviews", { value: createSupabaseDecisionReviews(this.#sb) });
+    if (!deployment) Object.defineProperty(this, "publicUsage", { value: createSupabasePublicUsage(this.#sb) });
     if (!deployment && this.privateProfiles) Object.defineProperty(this, "profileIdentities", { value: createSupabaseProfileIdentities(this.#sb, this.privateProfiles) });
     if (deployment) this.#enrolled = { deployment, ready: false, readDeployment: construction!.readDeployment,
       authority: new SupabaseAuthority(this.#sb, deployment.identity, () => { this.assertEntry(); return this.#enrolled?.ready === true; }) };

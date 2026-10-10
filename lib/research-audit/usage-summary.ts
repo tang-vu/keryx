@@ -1,7 +1,12 @@
 import type { PaymentRecord } from "../types";
 import { decimalMicros, micros } from "./exact-units";
 import type { CohortClassification, UsageCohort } from "./usage-cohort";
-import { auditArray, auditObject, auditString, auditWallet } from "./input-contract";
+import { auditArray, auditObject, auditString, auditWallet, MAX_AUDIT_ROWS } from "./input-contract";
+export const PUBLIC_USAGE_SUMMARY_LIMITS = Object.freeze({ runs: 10000, payments: 50000 });
+const AUDIT_SUMMARY_LIMITS = Object.freeze({ runs: MAX_AUDIT_ROWS, payments: MAX_AUDIT_ROWS });
+export type UsageSummaryProfile = "audit" | "public-window";
+export type AuditUsagePayment = Pick<PaymentRecord, "id" | "queryId" | "network" | "kind" | "settled" | "payee">
+  & { amountUsdc: number | string; settlementStatus?: string | null; txHash?: string | null; payer?: string };
 
 export interface AuditUsageRun {
   id: string;
@@ -26,9 +31,11 @@ function validClassification(value: CohortClassification): boolean {
 
 /** Explicit complete supplied corpus; never presents a recent/paginated sample as all-time production usage. */
 export function summarizeUsage(input: { network: string; since: string; until: string;
-  runs: readonly AuditUsageRun[]; payments: readonly PaymentRecord[] }) {
+  runs: readonly AuditUsageRun[]; payments: readonly AuditUsagePayment[] }, profile: UsageSummaryProfile = "audit") {
+  const limits = profile === "audit" ? AUDIT_SUMMARY_LIMITS : profile === "public-window" ? PUBLIC_USAGE_SUMMARY_LIMITS : undefined;
+  if (!limits) throw new Error("Invalid usage summary profile");
   auditObject(input); auditString(input.network); auditString(input.since); auditString(input.until);
-  auditArray(input.runs); auditArray(input.payments);
+  auditArray(input.runs, limits.runs); auditArray(input.payments, limits.payments);
   if (!/^eip155:[1-9]\d*$/.test(input.network)) throw new Error("Explicit network required");
   const since = timestamp(input.since), until = timestamp(input.until);
   if (since >= until) throw new Error("Invalid period");
@@ -48,7 +55,7 @@ export function summarizeUsage(input: { network: string; since: string; until: s
   const payments = input.payments.filter(payment => {
     auditObject(payment); auditString(payment.id, true); auditString(payment.queryId); auditString(payment.network);
     if (payment.txHash != null) auditString(payment.txHash);
-    if (typeof payment.settled !== "boolean" || typeof payment.amountUsdc !== "number"
+    if (typeof payment.settled !== "boolean" || !["number", "string"].includes(typeof payment.amountUsdc)
       || !["fetch", "citation", "inbound", "operating-fee"].includes(payment.kind)) throw new Error("Invalid payment fields");
     auditWallet(payment.payee);
     if (payment.id) {

@@ -44,6 +44,7 @@ import { researchVerdict } from "./research-verdict";
 import { config } from "../config";
 import { ResearchSelectionError, readSelectionDiagnostics } from "../llm/research-selection";
 import { newRunProvenance, type RunProvenance } from "../research/run-provenance";
+import { newRunUsage } from "../research/usage-provenance";
 import type {
   ClaimCoverageRecord,
   Citation,
@@ -158,6 +159,8 @@ export interface RunInput {
   asker?: string;
   /** Closed ingress/proof metadata supplied only by the trusted adapter, never a public body. */
   provenance?: RunProvenance;
+  /** Server-local classification capability; serialized public options cannot supply it. */
+  usageContext?: object;
   /** Trusted server-side funding provenance. Public request bodies must never populate this. */
   fundingOwner?: "browser" | "treasury" | "offline";
   /** Catalog model id the asker picked (model-catalog.ts). Read by collectRun when it builds
@@ -212,6 +215,8 @@ export async function* runAgent(
     throw new DecisionReviewError("review_unsupported");
   const queryId = input.queryId ?? crypto.randomUUID();
   const effects = resolveResearchEffects(deps.db, deps.effects, deps.discoverExternal, queryId);
+  const stamp = (run: QueryRun): QueryRun => effects.scope.kind === "public"
+    ? { ...run, usage: newRunUsage(input, config.profile.networkId, config.devWallets) } : run;
   if (input.reviewFirst && effects.scope.kind !== "public") throw new DecisionReviewError("review_unsupported");
   // The original caller alone can select this free, exact metadata task. Private
   // originals, package execution, wanted assets and paid-paper flows keep their
@@ -219,7 +224,7 @@ export async function* runAgent(
   const bibliography = effects.scope.kind === "public" && !input.answerFormat && !input.executionLimits &&
     !input.targetAsset && !input.paidScholarly && ((input.origin ?? "engine") !== "engine" || input.allowExternalWeb === true)
     ? recognizeBibliographicTask(input.originalQuestion ?? input.question) : null;
-  if (bibliography) return yield* runBibliographicAgent({ ...input, queryId }, deps, bibliography);
+  if (bibliography) return stamp(yield* runBibliographicAgent({ ...input, queryId }, deps, bibliography));
   const canary = admitBusinessCanaryRun({ question: input.question, queryId, origin: input.origin,
     researchMode: input.researchMode, budget: input.budget, fundingOwner: input.fundingOwner,
     privateScope: effects.scope.kind !== "public", paidScholarly: input.paidScholarly });
@@ -235,8 +240,8 @@ export async function* runAgent(
     throw new Error("Bounded research allowance requires the fixed basic Tavily transport");
   const generator = runAdmittedAgent({ ...input, queryId }, { ...deps,
     effects: canary ? { ...effects, discoverExternal: async () => [] } : effects });
-  if (canary) return yield* bindBusinessCanaryAdmission(canary, generator, input.signal);
-  return yield* (admission ? bindBoundedResearchAdmission(admission, generator, input.signal) : generator);
+  if (canary) return stamp(yield* bindBusinessCanaryAdmission(canary, generator, input.signal));
+  return stamp(yield* (admission ? bindBoundedResearchAdmission(admission, generator, input.signal) : generator));
 }
 
 async function* runAdmittedAgent(
