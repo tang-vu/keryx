@@ -69,7 +69,7 @@ async function hold(statement: string) {
   return async () => { child.stdin.end("commit;\n\\q\n"); await complete; };
 }
 const alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`, network = "eip155:5042002", origin = "https://synthetic-claims.example";
-const timestamp = () => sql(`select to_char(clock_timestamp()-interval '1 second' at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');`);
+const timestamp = () => sql(`select to_char((clock_timestamp()-interval '1 second') at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');`);
 const save = (id: string, patch: Record<string, unknown> = {}) => {
   const completed = typeof patch.createdAt === "string" ? patch.createdAt : timestamp(), run = { id, createdAt: completed,
     question: "Synthetic %_ claim fixture", answer: "Synthetic answer", budget: 0, engine: "heuristic", totalSpent: 0.01, totalToCreators: 0.005,
@@ -215,7 +215,7 @@ try {
   cases.push("owned/original/browser/modified/binding mismatches refuse without transfer");
   // Explicit synthetic backdated fixture, not a clock override or a historical
   // mint API: exercise actual expiration without a 24-hour acceptance sleep.
-  const past = sql(`select to_char(clock_timestamp()-interval '2 days' at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');`);
+  const past = sql(`select to_char((clock_timestamp()-interval '2 days') at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');`);
   save("expired"); sql(`update public.query_runs set created_at=${text(past)},data=jsonb_set(data,'{createdAt}',to_jsonb(${text(past)}::text)) where id='expired';
     with t as materialized(select floor(extract(epoch from clock_timestamp())*1000)::bigint as stamp)
     insert into public.anonymous_run_claims(run_id,network,origin,token_hash,original_sha256,completed_at,issued_at,expires_at)
