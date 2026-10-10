@@ -14,6 +14,7 @@
     "scripts/test-decision-reviews-postgres.mts",
     "scripts/test-decision-reviews-built.mts",
     "scripts/grade-retained-deliverables.mts",
+    "scripts/compose-retained-quality-scorecard.mts",
     "scripts/test-private-bibliography-built.mts",
     "scripts/research-audit.mts",
     "scripts/test-research-audit-browser.mts",

@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "id": "retained-quality-selected-issues-v1",
+  "scope": "selected-open-answer-quality-issues",
+  "inventorySha256": "bcc049c0a50e54850faa8292c2bc96c8bcd52bb380e1a58cfff4db6fe0466d34",
+  "issues": [
+    {
+      "number": 128,
+      "requiredKinds": [
+        "exact-metadata"
+      ],
+      "caseIds": []
+    },
+    {
+      "number": 158,
+      "requiredKinds": [
+        "comparison"
+      ],
+      "caseIds": []
+    },
+    {
+      "number": 169,
+      "requiredKinds": [
+        "comparison"
+      ],
+      "caseIds": []
+    },
+    {
+      "number": 172,
+      "requiredKinds": [
+        "comparison"
+      ],
+      "caseIds": []
+    },
+    {
+      "number": 181,
+      "requiredKinds": [
+        "comparison"
+      ],
+      "caseIds": []
+    },
+    {
+      "number": 211,
+      "requiredKinds": [
+        "teaching-note"
+      ],
+      "caseIds": []
+    },
+    {
+      "number": 212,
+      "requiredKinds": [
+        "comparison"
+      ],
+      "caseIds": []
+    },
+    {
+      "number": 217,
+      "requiredKinds": [
+        "newest-release"
+      ],
+      "caseIds": []
+    },
+    {
+      "number": 230,
+      "requiredKinds": [
+        "single-page"
+      ],
+      "caseIds": [
+        "rfc-public-20261009"
+      ]
+    },
+    {
+      "number": 238,
+      "requiredKinds": [
+        "single-page"
+      ],
+      "caseIds": [
+        "mdn-public-20261009"
+      ]
+    },
+    {
+      "number": 276,
+      "requiredKinds": [
+        "single-page"
+      ],
+      "caseIds": []
+    },
+    {
+      "number": 331,
+      "requiredKinds": [
+        "single-page"
+      ],
+      "caseIds": []
+    }
+  ],
+  "removals": []
+}

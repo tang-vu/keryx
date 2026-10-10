@@ -1,0 +1,491 @@
+{
+  "version": 1,
+  "scope": "retained-public-snapshot-inspection",
+  "inspection": {
+    "inspectedAt": "2026-10-09T12:33:38.255Z",
+    "inspectorCommit": "21a328484236198740e76ee7e8c07c9f551254a9",
+    "inspectorSourceSha256": "6e25148c2c320c73685cb90e67b50bd8a6fd23ae7808ca5c651dab0dc6363a10",
+    "runtime": "v24.21.0"
+  },
+  "corpusId": "public-retained-deliverables-v1",
+  "corpusSha256": "abc83ab3a545f5a7d155cb85e4fdfcdf8d08583f16fb87422cfc0cf8785be9c4",
+  "suiteDefinitionSha256": "1615a9a2556ee35d2571ef18bb2b1e57d75ad729f3ad6d2681103e7c78b58fde",
+  "captureFingerprintSha256": "d8dd043af91a9a8051e40cba153f2a7c00f7906bb982e386d1b044fa577ac8c8",
+  "inventorySha256": "bcc049c0a50e54850faa8292c2bc96c8bcd52bb380e1a58cfff4db6fe0466d34",
+  "coverageRegistrySha256": "7f68b69606ea6f841e434d7cfbf956659ecf5f009abf3d4df613337d7c605413",
+  "inspectionCalls": {
+    "model": 0,
+    "search": 0,
+    "payment": 0,
+    "database": 0
+  },
+  "historicalCaptureAllowanceStatus": "UNKNOWN",
+  "historicalCaptureAllowance": null,
+  "overall": {
+    "cases": 2,
+    "deterministicPasses": 0,
+    "deterministicFailures": 2,
+    "deterministicPassRate": 0,
+    "semanticUnjudged": 2,
+    "languageUnjudged": 2,
+    "usefulAnswerRate": null
+  },
+  "byKind": [
+    {
+      "kind": "single-page",
+      "cases": 2,
+      "deterministicPasses": 0,
+      "deterministicFailures": 2,
+      "deterministicPassRate": 0,
+      "semanticUnjudged": 2,
+      "languageUnjudged": 2,
+      "usefulAnswerRate": null
+    },
+    {
+      "kind": "exact-metadata",
+      "cases": 0,
+      "deterministicPasses": 0,
+      "deterministicFailures": 0,
+      "deterministicPassRate": null,
+      "semanticUnjudged": 0,
+      "languageUnjudged": 0,
+      "usefulAnswerRate": null
+    },
+    {
+      "kind": "comparison",
+      "cases": 0,
+      "deterministicPasses": 0,
+      "deterministicFailures": 0,
+      "deterministicPassRate": null,
+      "semanticUnjudged": 0,
+      "languageUnjudged": 0,
+      "usefulAnswerRate": null
+    },
+    {
+      "kind": "teaching-note",
+      "cases": 0,
+      "deterministicPasses": 0,
+      "deterministicFailures": 0,
+      "deterministicPassRate": null,
+      "semanticUnjudged": 0,
+      "languageUnjudged": 0,
+      "usefulAnswerRate": null
+    },
+    {
+      "kind": "newest-release",
+      "cases": 0,
+      "deterministicPasses": 0,
+      "deterministicFailures": 0,
+      "deterministicPassRate": null,
+      "semanticUnjudged": 0,
+      "languageUnjudged": 0,
+      "usefulAnswerRate": null
+    }
+  ],
+  "byLanguage": [
+    {
+      "language": "en",
+      "cases": 1,
+      "deterministicPasses": 0,
+      "deterministicFailures": 1,
+      "deterministicPassRate": 0,
+      "semanticUnjudged": 1,
+      "languageUnjudged": 1,
+      "usefulAnswerRate": null
+    },
+    {
+      "language": "pt-BR",
+      "cases": 1,
+      "deterministicPasses": 0,
+      "deterministicFailures": 1,
+      "deterministicPassRate": 0,
+      "semanticUnjudged": 1,
+      "languageUnjudged": 1,
+      "usefulAnswerRate": null
+    }
+  ],
+  "failures": [
+    {
+      "id": "mdn-public-20261009",
+      "issues": [
+        238
+      ],
+      "failedChecks": [
+        "bulletCount"
+      ]
+    },
+    {
+      "id": "rfc-public-20261009",
+      "issues": [
+        230
+      ],
+      "failedChecks": [
+        "wordLimit"
+      ]
+    }
+  ],
+  "coverage": {
+    "scope": "selected-open-answer-quality-issues",
+    "inventoryCapturedAt": "2026-10-09T12:27:34.006Z",
+    "issues": [
+      {
+        "number": 128,
+        "title": "Research user receives no supported answer despite relevant scholarly candidates; validate end-to-end research and Arc payment evidence",
+        "url": "https://github.com/tang-vu/keryx/issues/128",
+        "requiredKinds": [
+          "exact-metadata"
+        ],
+        "caseIds": [],
+        "missingKinds": [
+          "exact-metadata"
+        ],
+        "semanticAcceptance": "UNJUDGED"
+      },
+      {
+        "number": 158,
+        "title": "Research decide fallback is unusable after shared circuits open, while Remote MCP hides the heuristic serving tier",
+        "url": "https://github.com/tang-vu/keryx/issues/158",
+        "requiredKinds": [
+          "comparison"
+        ],
+        "caseIds": [],
+        "missingKinds": [
+          "comparison"
+        ],
+        "semanticAcceptance": "UNJUDGED"
+      },
+      {
+        "number": 169,
+        "title": "Ordinary browser research aborts at planning for systemd and SQLite comparisons",
+        "url": "https://github.com/tang-vu/keryx/issues/169",
+        "requiredKinds": [
+          "comparison"
+        ],
+        "caseIds": [],
+        "missingKinds": [
+          "comparison"
+        ],
+        "semanticAcceptance": "UNJUDGED"
+      },
+      {
+        "number": 172,
+        "title": "Ordinary browser SQLite backup research aborts during decide with invalid target links",
+        "url": "https://github.com/tang-vu/keryx/issues/172",
+        "requiredKinds": [
+          "comparison"
+        ],
+        "caseIds": [],
+        "missingKinds": [
+          "comparison"
+        ],
+        "semanticAcceptance": "UNJUDGED"
+      },
+      {
+        "number": 181,
+        "title": "Decision brief ends with an empty answer on real multi-page reads (deepseek-v4-flash)",
+        "url": "https://github.com/tang-vu/keryx/issues/181",
+        "requiredKinds": [
+          "comparison"
+        ],
+        "caseIds": [],
+        "missingKinds": [
+          "comparison"
+        ],
+        "semanticAcceptance": "UNJUDGED"
+      },
+      {
+        "number": 211,
+        "title": "Quick teacher lesson returns missing-evidence placeholders for requested facts and proposed activities",
+        "url": "https://github.com/tang-vu/keryx/issues/211",
+        "requiredKinds": [
+          "teaching-note"
+        ],
+        "caseIds": [],
+        "missingKinds": [
+          "teaching-note"
+        ],
+        "semanticAcceptance": "UNJUDGED"
+      },
+      {
+        "number": 212,
+        "title": "Two-original Quick SQLite synthesis hits its 2560-token ceiling and drops to fallback",
+        "url": "https://github.com/tang-vu/keryx/issues/212",
+        "requiredKinds": [
+          "comparison"
+        ],
+        "caseIds": [],
+        "missingKinds": [
+          "comparison"
+        ],
+        "semanticAcceptance": "UNJUDGED"
+      },
+      {
+        "number": 217,
+        "title": "Paid newest-release research selects an older article and returns no supported answer",
+        "url": "https://github.com/tang-vu/keryx/issues/217",
+        "requiredKinds": [
+          "newest-release"
+        ],
+        "caseIds": [],
+        "missingKinds": [
+          "newest-release"
+        ],
+        "semanticAcceptance": "UNJUDGED"
+      },
+      {
+        "number": 230,
+        "title": "HTML preformatted RFC evidence loses wrapped rule continuations and omits CSV quoting answers",
+        "url": "https://github.com/tang-vu/keryx/issues/230",
+        "requiredKinds": [
+          "single-page"
+        ],
+        "caseIds": [
+          "rfc-public-20261009"
+        ],
+        "missingKinds": [],
+        "semanticAcceptance": "UNJUDGED"
+      },
+      {
+        "number": 238,
+        "title": "Portuguese MDN button research drops the intact submit/default rule while retaining obsolete browser examples",
+        "url": "https://github.com/tang-vu/keryx/issues/238",
+        "requiredKinds": [
+          "single-page"
+        ],
+        "caseIds": [
+          "mdn-public-20261009"
+        ],
+        "missingKinds": [],
+        "semanticAcceptance": "UNJUDGED"
+      },
+      {
+        "number": 276,
+        "title": "Chat bots, emails and report scaffolding reply in English regardless of the question language",
+        "url": "https://github.com/tang-vu/keryx/issues/276",
+        "requiredKinds": [
+          "single-page"
+        ],
+        "caseIds": [],
+        "missingKinds": [
+          "single-page"
+        ],
+        "semanticAcceptance": "UNJUDGED"
+      },
+      {
+        "number": 331,
+        "title": "Spanish question receives Portuguese section labels and an English confidence banner",
+        "url": "https://github.com/tang-vu/keryx/issues/331",
+        "requiredKinds": [
+          "single-page"
+        ],
+        "caseIds": [],
+        "missingKinds": [
+          "single-page"
+        ],
+        "semanticAcceptance": "UNJUDGED"
+      }
+    ],
+    "missingKinds": [
+      "exact-metadata",
+      "comparison",
+      "teaching-note",
+      "newest-release"
+    ],
+    "issuesWithoutRetainedCases": [
+      128,
+      158,
+      169,
+      172,
+      181,
+      211,
+      212,
+      217,
+      276,
+      331
+    ],
+    "completeOpenIssueCoverage": false
+  },
+  "removals": [],
+  "cases": [
+    {
+      "fixtureSha256": "351840af8f58f8c066d74c7f45d2bf5895fabe8a3ff4dd087183e92bdb9147d4",
+      "version": 1,
+      "id": "mdn-public-20261009",
+      "issues": [
+        238
+      ],
+      "kind": "single-page",
+      "requestedLanguage": "pt-BR",
+      "provenance": {
+        "kind": "retained-public-report",
+        "reportUrl": "https://keryx.cc/dispatch/6c41b95d-7877-4403-8b52-988d924f132d",
+        "capturedAt": "2026-10-09T02:23:08.694Z",
+        "deployedCommit": "380647b10a924e231ebe98123028877d8c5ee187",
+        "rawCaptureSha256": "69d8f81b43fca4262a07a36c52fbfdfb2168027291bd19e63bd659c88728d8a5",
+        "projection": "question-answer-qualified-public-bindings-only"
+      },
+      "measured": {
+        "wordCount": 415,
+        "bulletCount": 0,
+        "retainedBindingCount": 5,
+        "targetCount": 4,
+        "matchedTargetCount": 4,
+        "missingBindingCount": 0,
+        "unexpectedBindingCount": 0,
+        "bulletRegion": {
+          "start": 0,
+          "end": 2587,
+          "sha256": "cfe0fe6f6defb11814cc3dd3dd6ac4269307d49bd37ad7b624322485c12b661f"
+        }
+      },
+      "checks": {
+        "nonemptyAnswer": {
+          "status": "PASS",
+          "detail": "Recorded text presence only; does not establish an answered question."
+        },
+        "retainedBindings": {
+          "status": "PASS",
+          "detail": "5 recorded public rows; 0 missing bindings, 0 unexpected bindings, 0 absent excerpt/marker pairs. No independent entailment or source-body verification."
+        },
+        "bulletCount": {
+          "status": "FAIL",
+          "detail": "0 unindented bullets; expected 3."
+        },
+        "wordLimit": {
+          "status": "UNJUDGED",
+          "detail": "No word-limit contract."
+        },
+        "language": {
+          "status": "UNJUDGED",
+          "detail": "Requested pt-BR; no language judge supplied."
+        },
+        "requiredFacts": {
+          "status": "UNJUDGED",
+          "detail": "Recorded target/quote identity is not semantic completeness or factual correctness."
+        }
+      },
+      "deterministicContractPassed": false,
+      "outcome": "FAIL",
+      "deliverableAccepted": false,
+      "historicalCaptureAllowance": null,
+      "historicalCaptureAllowanceStatus": "UNKNOWN"
+    },
+    {
+      "fixtureSha256": "a20b1697b9bb45febb799d393da262cc6ce36b17b921545f376635486b3e3257",
+      "version": 1,
+      "id": "rfc-public-20261009",
+      "issues": [
+        230
+      ],
+      "kind": "single-page",
+      "requestedLanguage": "en",
+      "provenance": {
+        "kind": "retained-public-report",
+        "reportUrl": "https://keryx.cc/dispatch/52b1aa1e-fce4-4a55-94f4-d35ca65407c6",
+        "capturedAt": "2026-10-09T02:23:57.739Z",
+        "deployedCommit": "380647b10a924e231ebe98123028877d8c5ee187",
+        "rawCaptureSha256": "5140cd4bf5f4af6fcb6029c2a5e7bc91d021b71a8f7bae96de5a4f5d0e99ac31",
+        "projection": "question-answer-qualified-public-bindings-only"
+      },
+      "measured": {
+        "wordCount": 296,
+        "bulletCount": 0,
+        "retainedBindingCount": 3,
+        "targetCount": 3,
+        "matchedTargetCount": 3,
+        "missingBindingCount": 0,
+        "unexpectedBindingCount": 0,
+        "bulletRegion": {
+          "start": 0,
+          "end": 1899,
+          "sha256": "99bfbdcf1d43579d09c78aa85ae3b134ea7e42a712edcdbdd401e1cc738eedca"
+        }
+      },
+      "checks": {
+        "nonemptyAnswer": {
+          "status": "PASS",
+          "detail": "Recorded text presence only; does not establish an answered question."
+        },
+        "retainedBindings": {
+          "status": "PASS",
+          "detail": "3 recorded public rows; 0 missing bindings, 0 unexpected bindings, 0 absent excerpt/marker pairs. No independent entailment or source-body verification."
+        },
+        "bulletCount": {
+          "status": "UNJUDGED",
+          "detail": "No bullet-count contract."
+        },
+        "wordLimit": {
+          "status": "FAIL",
+          "detail": "296 full-answer whitespace tokens; maximum 180."
+        },
+        "language": {
+          "status": "UNJUDGED",
+          "detail": "Requested en; no language judge supplied."
+        },
+        "requiredFacts": {
+          "status": "UNJUDGED",
+          "detail": "Recorded target/quote identity is not semantic completeness or factual correctness."
+        }
+      },
+      "deterministicContractPassed": false,
+      "outcome": "FAIL",
+      "deliverableAccepted": false,
+      "historicalCaptureAllowance": null,
+      "historicalCaptureAllowanceStatus": "UNKNOWN"
+    }
+  ],
+  "releaseQualityRegression": {
+    "status": "NOT_COMPARABLE",
+    "reason": "No independent semantic/language rubric and agreed useful-answer margin."
+  },
+  "operationalOrSemanticAcceptance": false,
+  "inspectorSourceFiles": [
+    {
+      "path": "lib/evals/retained-quality-scorecard.ts",
+      "sha256": "7b12d5883fdef800e26ebb13190987075640907be5d2718a03167750c5f8df6a"
+    },
+    {
+      "path": "lib/evals/deliverable-contract.ts",
+      "sha256": "0382d488a05217af3a36ec1cfe78860aab7ffdc1b2269164ab0b297f7abed2f2"
+    },
+    {
+      "path": "lib/evals/deliverable-corpus.ts",
+      "sha256": "4b2561024db3cb975bfa380c87c04d85494ff49980d5b56d7b9f80c526ffcf3f"
+    },
+    {
+      "path": "lib/research/bounded-portable-json.ts",
+      "sha256": "cee5f2633df9e14d86e6b53fcf99e85e0530699e477f721374f042a7a3c970b0"
+    },
+    {
+      "path": "lib/llm/well-formed-utf16.ts",
+      "sha256": "5baaf31c1d87dc40e6e9795fcb3530fdf3ad8b011037c1daadb17db9098a91a9"
+    },
+    {
+      "path": "scripts/compose-retained-quality-scorecard.mts",
+      "sha256": "3be7eedf4fd7710946cbd03f10fab01c9c6a79ee6ec4d1ec0788f6483c4dd289"
+    },
+    {
+      "path": "scripts/fixtures/.gitattributes",
+      "sha256": "583ba73fb727b8e15f9714dae3cde00a0c173846e2998b0e5883e6e5e9de5ed0"
+    },
+    {
+      "path": "fixtures/evals/quality/.gitattributes",
+      "sha256": "5c0ccd4346d40a9a257042b8a485544d843749688aee93ed1bcf52679a9a2441"
+    },
+    {
+      "path": "fixtures/evals/quality/open-issues-20261009.json",
+      "sha256": "bcc049c0a50e54850faa8292c2bc96c8bcd52bb380e1a58cfff4db6fe0466d34"
+    },
+    {
+      "path": "fixtures/evals/quality/coverage-v1.json",
+      "sha256": "7f68b69606ea6f841e434d7cfbf956659ecf5f009abf3d4df613337d7c605413"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "83d884d2bb4e55dfaa1e05ee7428d37a7ec28f28bbea2c1543b926eb904e781f"
+    }
+  ],
+  "sourceAttestation": "local-byte-fingerprint-and-recorded-HEAD-not-clean-Git-or-deployment",
+  "compositionCompleted": true,
+  "deterministicContractsPassed": false
+}
