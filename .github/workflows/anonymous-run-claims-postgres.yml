@@ -15,6 +15,22 @@ on:
       - "eslint.config.*"
       - "package*.json"
       - ".github/workflows/anonymous-run-claims-postgres.yml"
+  push:
+    branches: [main]
+    paths:
+      - "lib/run-claims/**"
+      - "lib/db/run-claims-*"
+      - "lib/db/keryx-db.ts"
+      - "lib/db/sqlite-adapter.ts"
+      - "lib/db/supabase-adapter.ts"
+      - "supabase/migrations/**"
+      - "lib/types.ts"
+      - "scripts/test-anonymous-run-claims-postgres.mts"
+      - "tsconfig.anonymous-run-claims.json"
+      - "tsconfig.json"
+      - "eslint.config.*"
+      - "package*.json"
+      - ".github/workflows/anonymous-run-claims-postgres.yml"
   workflow_dispatch:
 
 concurrency:
