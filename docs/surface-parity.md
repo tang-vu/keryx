@@ -1,5 +1,29 @@
 # Supported-surface release parity
 
+## Account-area catalogue — October 11, 2026 source candidate
+
+App/OpenAPI **0.27.53** adds English catalogue presentation for the private
+profile, developer API-key portal, wallet controls, active budget, session
+cashout and withdrawal account gate. The nine components retain their rendered
+English and existing authentication/payment behavior. A compiled comparison of
+the combined source against canonical `dd6f49fa` holds release metadata constant:
+the existing 21 entrypoints retain the maintenance/native correction's ten
+changed and eleven unchanged outputs; three additional real account roots
+change and import all nine account components. The banner compiles, root-layout
+source is included, and all twelve extension inputs remain unchanged. The
+default hosted Next build remains the root-layout and production release gate.
+
+This extraction adds no shared account or payment protocol. Hosted MCP **0.3.12**
+retains the preceding native correction; stdio/official Registry **0.4.15**,
+desktop **0.4.14** and extension **0.1.3** retain their existing artifacts.
+CLI, API and bot role boundaries are unchanged. No independent package
+publication or installed-client synchronization follows from this web-only
+change. Local render comparisons use synthetic hooks and establish exact HTML
+equality; they do not establish CSS/pixel, real-authentication or financial
+acceptance. Required CI/build, combined deployment and deployed health/MCP
+readback remain gates. Other catalogue areas and translation approval remain
+open under [issue272](https://github.com/tang-vu/keryx/issues/272).
+
 ## Historical native completion — October 11, 2026 source candidate
 
 App/OpenAPI **0.27.51** and hosted MCP **0.3.12** identify the server native

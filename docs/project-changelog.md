@@ -1,5 +1,21 @@
 # Keryx Project Changelog
 
+### Account-area English catalogue (2026-10-11, v0.27.53 candidate)
+
+- Move private-profile, API-key, wallet, active-budget, session-cashout and
+  withdrawal-account presentation into 184 semantic English catalogue keys.
+  Preserve existing text, controls, ARIA, prompts, errors and recovery notices;
+  keep questions, user data, protocol values and code examples as data.
+- Keep counted sentences whole with named parameters and existing plural forms.
+  Remove only the nine migrated components' retired copy allowances and add a
+  scoped guard regression. Authentication, signing, storage, budget, payment and
+  recovery decisions are unchanged; no locale or translation pilot is activated.
+- App/OpenAPI0.27.53 records this web presentation increment. Hosted MCP0.3.12
+  and unchanged stdio/Registry0.4.15, desktop0.4.14 and extension0.1.3 retain
+  their identities. Reproduce the 48-trial offline study for the root lock binding.
+  Required CI/default production build, one combined deployment and public
+  readback remain release gates. Other UI areas keep issue272 open.
+
 ### Maintenance refusals and advance notice (2026-10-11, v0.27.52 candidate)
 
 - Render validated maintenance refusals as plain text with a fixed local status
