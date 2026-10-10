@@ -25,18 +25,20 @@ async function waitForLayout(page: Page) {
 
 async function recordGeometry(page: Page, name: string) {
   const geometry = await page.evaluate(() => {
-    const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().toJSON();
+    const rects = Object.fromEntries(Object.entries({
+      action: '[data-tour="dispatch-btn"]',
+      metadata: '[data-testid="paper-metadata-handoff"]',
+      cap: '[data-testid="composer-source-cap"]',
+      header: '[aria-label="Research conversation"] > header',
+      globe: '[data-testid="chat-globe"]',
+      canvas: '[data-testid="chat-globe"] canvas',
+    }).map(([name, selector]) => [name, document.querySelector(selector)?.getBoundingClientRect().toJSON()]));
     const feed = document.querySelector("header.sticky")?.nextElementSibling;
     return {
       viewport: { width: innerWidth, height: innerHeight },
       fontsStatus: document.fonts.status,
       docWidth: document.documentElement.scrollWidth,
-      action: rect('[data-tour="dispatch-btn"]'),
-      metadata: rect('[data-testid="paper-metadata-handoff"]'),
-      cap: rect('[data-testid="composer-source-cap"]'),
-      header: rect('[aria-label="Research conversation"] > header'),
-      globe: rect('[data-testid="chat-globe"]'),
-      canvas: rect('[data-testid="chat-globe"] canvas'),
+      ...rects,
       feedHeight: feed?.matches("div.h-10") ? feed.getBoundingClientRect().height : 0,
     };
   });
