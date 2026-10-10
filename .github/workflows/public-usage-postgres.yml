@@ -53,7 +53,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Trusted provenance and finite ordinary storage tests
-        run: npx vitest run lib/research/usage-provenance.test.ts lib/usage/contracts.test.ts lib/db/public-usage-sqlite.test.ts lib/db/public-usage-supabase.test.ts
+        run: npx vitest run lib/research/usage-provenance.test.ts lib/research-audit/usage-summary-bounds.test.ts lib/usage/contracts.test.ts lib/db/public-usage-sqlite.test.ts lib/db/public-usage-supabase.test.ts
       - run: docker pull postgres:17-alpine
       - name: Actual isolated ordinary SQL, complete-window, exact-money and ACL acceptance
         run: node --import tsx --no-warnings scripts/test-public-usage-postgres.mts --acceptance
@@ -70,4 +70,4 @@ jobs:
           npx tsc --noEmit
           npx tsc --noEmit --project tsconfig.public-usage.json
       - name: Scoped lint
-        run: npx eslint lib/usage/*.ts lib/research/usage-provenance*.ts lib/db/public-usage-*.ts scripts/test-public-usage-postgres.mts
+        run: npx eslint lib/usage/*.ts lib/research/usage-provenance*.ts lib/research-audit/usage-summary*.ts lib/db/public-usage-*.ts scripts/test-public-usage-postgres.mts

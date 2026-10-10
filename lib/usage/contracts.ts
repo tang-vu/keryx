@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { USAGE_NETWORKS, parseRunUsage, type RunUsage } from "../research/usage-provenance";
 import { parseRunProvenance } from "../research/run-provenance";
-import { summarizeUsage, type AuditUsageRun } from "../research-audit/usage-summary";
+import { summarizeUsage, PUBLIC_USAGE_SUMMARY_LIMITS, type AuditUsageRun } from "../research-audit/usage-summary";
 import type { QueryRun } from "../types";
 
-export const MAX_USAGE_RUNS = 10000, MAX_USAGE_PAYMENTS = 50000, MAX_USAGE_BYTES = 8 * 1024 * 1024;
+export const MAX_USAGE_RUNS = PUBLIC_USAGE_SUMMARY_LIMITS.runs, MAX_USAGE_PAYMENTS = PUBLIC_USAGE_SUMMARY_LIMITS.payments,
+  MAX_USAGE_BYTES = 8 * 1024 * 1024;
 const utc = z.string().max(32).refine(value => { try { return new Date(value).toISOString() === value; } catch { return false; } });
 export const usageWindowSchema = z.object({ network: z.enum(USAGE_NETWORKS), since: utc, until: utc,
   period: z.enum(["all", "7d", "30d", "custom"]) }).strict().refine(value => value.since < value.until)
@@ -74,7 +75,7 @@ export function projectUsageCorpus(raw: unknown, requested: UsageWindow) {
       classifications.set(row.id, usage);
     }
     const summary = summarizeUsage({ network: requested.network, since: requested.since, until: requested.until,
-      runs, payments: corpus.payments });
+      runs, payments: corpus.payments }, "public-window");
     return { runs, classifications, summary: { ...summary, basis: "complete-bounded-database-window" as const,
       period: requested.period, complete: true as const, unattributedNetworkRuns,
       networkRule: "write-time recorded network; legacy only when all recorded payment rows agree on one canonical network; unpaid/mixed legacy unattributed",

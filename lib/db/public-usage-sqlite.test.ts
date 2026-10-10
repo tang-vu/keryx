@@ -20,14 +20,23 @@ function fixture() {
 describe("ordinary SQLite public usage", () => {
   it("filters scripted/outside BEFORE bounded page selection and preserves original rows/schema", async () => {
     const save = fixture(); save("outside-old", "outside", "2026-10-01T00:00:00.000Z");
-    for (let i = 0; i < 120; i++) save(`scripted-${i}`, "scripted"); save("unknown", "unknown");
+    const pay = db.prepare("INSERT INTO payment_events VALUES(?,?,?,?,?,?,?,?,?)");
+    for (let i = 0; i < 2100; i++) {
+      save(`scripted-${i}`, "scripted");
+      pay.run(`payment-${i}`, `scripted-${i}`, network, "fetch", 0.000001, 1, "settled", "synthetic-recorded-reference", wallet);
+    }
+    save("unknown", "unknown");
     const before = JSON.stringify(db.prepare("SELECT * FROM query_runs ORDER BY id").all());
+    const paymentsBefore = JSON.stringify(db.prepare("SELECT * FROM payment_events ORDER BY id").all());
     const schema = JSON.stringify(db.prepare("SELECT sql FROM sqlite_schema ORDER BY name").all());
     const store = createSqlitePublicUsage(db);
     expect((await store.history(window, "outside", 1)).map(run => run.id)).toEqual(["outside-old"]);
     expect((await store.history(window, "default", 50)).map(run => run.id)).toEqual(["unknown", "outside-old"]);
-    expect((await store.summary(window)).columns.map(c => c.researchRuns)).toEqual([1, 0, 120, 1]);
+    const summary = await store.summary(window);
+    expect(summary.columns.map(c => c.researchRuns)).toEqual([1, 0, 2100, 1]);
+    expect(summary.columns[2]).toMatchObject({ payingRuns: 2100, unknownFundingPayingRuns: 2100, settledPayments: 2100, settledMicros: "2100" });
     expect(JSON.stringify(db.prepare("SELECT * FROM query_runs ORDER BY id").all())).toBe(before);
+    expect(JSON.stringify(db.prepare("SELECT * FROM payment_events ORDER BY id").all())).toBe(paymentsBefore);
     expect(JSON.stringify(db.prepare("SELECT sql FROM sqlite_schema ORDER BY name").all())).toBe(schema);
   });
   it("refuses excessive corpus/invalid page bounds and later native markers", async () => {

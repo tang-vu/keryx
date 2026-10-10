@@ -39,7 +39,7 @@ const docker = (args: string[], input?: string) => command("docker", args, input
 const sql = (statement: string) => docker(["exec", "-i", name, "psql", "-X", "-w", "-h", "127.0.0.1", "-U", "postgres", "-d", "postgres", "-qAt", "-v", "ON_ERROR_STOP=1"], `set statement_timeout='15s';${statement}`);
 const window = usageWindow(new URLSearchParams("since=2026-10-01"), "eip155:5042", new Date("2026-10-11T00:00:00.000Z"));
 const rpc = (value: unknown = window, role = "service_role") => sql(`set role ${role};select public.public_usage_window_v1(${quote(JSON.stringify(value))}::jsonb);`);
-const originals = () => sql("select jsonb_build_array((select jsonb_agg(to_jsonb(q) order by id) from public.query_runs q),(select jsonb_agg(to_jsonb(p) order by id) from public.payment_events p));");
+const originals = () => sql("select encode(sha256(convert_to(jsonb_build_array((select jsonb_agg(to_jsonb(q) order by id) from public.query_runs q),(select jsonb_agg(to_jsonb(p) order by id) from public.payment_events p))::text,'UTF8')),'hex');");
 try {
   sourceCommit = await command("git", ["rev-parse", "HEAD"]); assert.match(sourceCommit, /^[a-f0-9]{40}$/);
   await docker(["info", "--format", "{{.ServerVersion}}"]);
@@ -63,18 +63,23 @@ try {
   const save = (id: string, value: unknown, date = "2026-10-01T00:00:00.000Z") => sql(`insert into public.query_runs(id,created_at,question,budget,engine,asker,data) values(${quote(id)},${quote(date)},'Synthetic question never returned',0,'heuristic',${quote(wallet)},${quote(JSON.stringify({ id, createdAt: date, usage: value, answer: "Synthetic private body never returned" }))}::jsonb);`);
   await save("outside-old", usage); await save("legacy", null); await save("other-network", { ...usage, network: "eip155:5042002" });
   await save("upper-bound", usage, window.until); await save("before-lower", usage, "2026-09-30T23:59:59.999Z");
-  await sql(`insert into public.query_runs(id,created_at,question,budget,engine,data) select 'scripted-'||n,'2026-10-10T00:00:00Z','Synthetic question',0,'heuristic',jsonb_build_object('usage',${quote(JSON.stringify(scripted))}::jsonb) from generate_series(1,1200) n;
+  await sql(`insert into public.query_runs(id,created_at,question,budget,engine,data) select 'scripted-'||n,'2026-10-10T00:00:00Z','Synthetic question',0,'heuristic',jsonb_build_object('usage',${quote(JSON.stringify(scripted))}::jsonb) from generate_series(1,2100) n;
+    insert into public.payment_events(id,query_id,source_id,kind,payer,payee,amount_usdc,network,settled,settlement_status,tx_hash)
+    select 'script-payment-'||n,'scripted-'||n,'fixture','fetch',${quote(wallet)},${quote(wallet)},0.000001,${quote(window.network)},true,'settled','synthetic-recorded-reference' from generate_series(1,2100) n;
     insert into public.payment_events(id,query_id,source_id,kind,payer,payee,amount_usdc,network,settled,settlement_status,tx_hash) values
     ('one','outside-old','fixture','fetch',${quote(wallet)},${quote(wallet)},0.000001,${quote(window.network)},true,'settled','synthetic-recorded-reference'),
     ('fraction','outside-old','fixture','fetch',${quote(wallet)},${quote(wallet)},0.12345600000000000001,${quote(window.network)},true,'settled','synthetic-recorded-reference'),
     ('pending','outside-old','fixture','fetch',${quote(wallet)},${quote(wallet)},1,${quote(window.network)},false,'pending',null),
     ('legacy-net','legacy','fixture','citation',${quote(wallet)},${quote(wallet)},0.000001,${quote(window.network)},true,'settled','synthetic-recorded-reference');`);
   const before = await originals(), raw = await rpc(), corpus = JSON.parse(raw), summary = projectUsageCorpus(corpus, window).summary;
-  assert.equal(corpus.runs.length, 1203); assert.equal(summary.columns[0].researchRuns, 1); assert.equal(summary.columns[2].researchRuns, 1200);
+  assert.equal(corpus.runs.length, 2103); assert.equal(corpus.payments.length, 2104);
+  assert.equal(summary.columns[0].researchRuns, 1); assert.equal(summary.columns[2].researchRuns, 2100);
+  assert.equal(summary.columns[2].settledPayments, 2100); assert.equal(summary.columns[2].settledMicros, "2100");
+  assert.equal(summary.columns[2].payingRuns, 2100); assert.equal(summary.columns[2].unknownFundingPayingRuns, 2100);
   assert.equal(summary.columns[0].settledMicros, "1"); assert.equal(summary.columns[0].sponsoredPayingRuns, 1); assert.equal(summary.columns[0].independentPayingRuns, 0);
   assert.equal(summary.columns[3].researchRuns, 1); assert.equal(summary.columns[3].people, 0); assert.equal(summary.columns[0].acceptedDeliverables, null);
-  assert.doesNotMatch(raw, /Synthetic question|Synthetic private body|payer/); assert.equal(await originals(), before);
-  cases.push("whole1203-row window beyond REST1000, exact UTC/network/projection/sponsorship/micro-USDC with unchanged original rows");
+  assert.doesNotMatch(raw, /Synthetic question|Synthetic private body|payer/); assert.match(before, /^[a-f0-9]{64}$/); assert.equal(await originals(), before);
+  cases.push("whole2103-run/2104-payment window beyond reducer2000 and REST1000; exact UTC/network/projection/sponsorship/micro-USDC and unchanged original-row SHA256");
   for (const role of ["anon", "authenticated"]) await assert.rejects(rpc(window, role), /permission denied/);
   for (const value of [{}, { ...window, extra: true }, { ...window, network: "other" }, { ...window, since: window.until }, { ...window, until: "2026-10-11" }, { ...window, period: "other" }, { ...window, period: "all" }, { ...window, period: "7d" }, { ...window, since: "2026-10-01T00:00:00.001Z" }]) await assert.rejects(rpc(value), /usage_unavailable/);
   cases.push("service-role-only execution, finite closed/canonical filter contracts");

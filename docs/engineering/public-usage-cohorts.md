@@ -43,6 +43,9 @@ the captured server until. Settled rows are attributed to runs in that interval;
 does not reconstruct settlement-time history. One complete metadata window is limited
 to 10,000 runs, 50,000 payment rows and 8 MiB. Overflow, missing RPC/schema, wrong binding
 or malformed evidence refuses figures rather than reporting a partial sample as complete.
+The public projector selects the reducer's fixed public-window profile using those same
+collection constants. Other audit consumers keep their 2,000-row defaults; callers cannot
+supply arbitrary maxima. The public window must also fit the unchanged 8 MiB limit.
 
 Money uses exact integer micro-USDC. Positive recorded rows must have unique IDs,
 `settled=true`, `settlementStatus=settled` and a settlement reference. Pending, simulated,
@@ -88,8 +91,9 @@ Literal issue acceptance is implemented in source: write-time tags, default/ out
 history, single-network UTC windows and rules, funding separation, conservative unknown
 history, and classification/storage tests. The dedicated PostgreSQL17 workflow creates
 one owner-labelled network-isolated fixture, retains full raw command receipts and checks
-SQL/JS projection, ACL, native refusal, >1000-row completeness, all caps and unchanged
-original rows. That workflow must actually succeed; source authoring is not SQL acceptance.
+SQL/JS projection, ACL, native refusal, completeness above 2,000 for both run and payment
+collections, all caps and unchanged original-row SHA256. That workflow must actually
+succeed; source authoring is not SQL acceptance.
 
 Normal source review, hosted aggregate/production-build gates and coordinated runtime
 distribution remain required. This outcome is not full deployed issue closure while the

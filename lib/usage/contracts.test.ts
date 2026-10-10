@@ -51,6 +51,18 @@ describe("bounded usage corpus", () => {
     column = projectUsageCorpus(input, window).summary.columns[1];
     expect(column).toMatchObject({ teamFundedPayingRuns: 1, unknownFundingPayingRuns: 0 });
   });
+  it("projects both complete collections above 2,000 with exact settled totals", () => {
+    const input = corpus(), original = input.runs[0], paid = input.payments[0];
+    input.runs = Array.from({ length: 2101 }, (_, i) => ({ ...original, id: String(i) }));
+    input.payments = input.runs.map(row => ({ ...paid, id: row.id, queryId: row.id }));
+    expect(projectUsageCorpus(input, window).summary.columns[0]).toMatchObject({ people: 1, researchRuns: 2101,
+      payingRuns: 2101, sponsoredPayingRuns: 2101, settledPayments: 2101, settledMicros: "2101" });
+  });
+  it("retains the 8 MiB domain limit even when collection counts fit", () => {
+    const input = corpus(); input.payments = [];
+    input.runs = Array.from({ length: 6000 }, (_, i) => ({ ...input.runs[0], id: String(i), usage: { fixture: "x".repeat(1800) } }));
+    expect(() => projectUsageCorpus(input, window)).toThrow(UsageUnavailable);
+  });
   it("refuses duplicate/foreign rows, partial corpus, wrong binding, overflow, rather than advertising a complete sample", () => {
     for (const input of [{ ...corpus(), complete: false }, { ...corpus(), window: { ...window, network: "eip155:5042002" } },
       { ...corpus(), runs: Array.from({ length: 10001 }, (_, i) => ({ ...corpus().runs[0], id: String(i) })) },
