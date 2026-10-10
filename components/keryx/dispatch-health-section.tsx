@@ -1,6 +1,11 @@
 "use client";
 
 import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 /**
  * /status section for what the agent has actually been doing lately: how many dispatches completed in
@@ -36,10 +41,10 @@ export interface DispatchHealth {
 
 function ago(iso: string): string {
   const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return message("statusDispatch.justNow");
+  if (mins < 60) return message("statusObservation.minutesAgo", { minutes: mins });
   const h = Math.floor(mins / 60);
-  return h < 48 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
+  return h < 48 ? message("statusObservation.hoursAgo", { hours: h }) : message("statusObservation.daysAgo", { days: Math.floor(h / 24) });
 }
 
 export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchHealth }) {
@@ -48,47 +53,42 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
   const reasonedLabel =
     d.runs === 0
       ? "—"
-      : `${d.modelReasoned}/${d.runs}` + (d.partlyHeuristic > 0 ? ` · ${d.partlyHeuristic} partial` : "");
+      : `${d.modelReasoned}/${d.runs}` + (d.partlyHeuristic > 0 ? message(d.partlyHeuristic === 1 ? "statusDispatch.partial.one" : "statusDispatch.partial.other", { count: d.partlyHeuristic }) : "");
 
   return (
     <>
-      <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-        Agent output — last {d.windowHours}h
-      </div>
+      <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">{richMessage("statusDispatch.agentOutputLastWindowHoursH", { windowHours: d.windowHours })}</div>
       <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
-        <Row k="Dispatches completed" v={String(d.runs)} alert={d.alarms.some(a => a.code === "silent")} />
-        <Row k="Model-reasoned" v={reasonedLabel} alert={unreasoned} />
+        <Row k={message("statusDispatch.dispatchesCompleted")} v={String(d.runs)} alert={d.alarms.some(a => a.code === "silent")} />
+        <Row k={message("statusDispatch.modelReasoned")} v={reasonedLabel} alert={unreasoned} />
         <Row
-          k="Dispatches that paid"
+          k={message("statusDispatch.dispatchesThatPaid")}
           v={d.runs === 0 ? "—" : `${d.paying}/${d.runs}`}
           alert={d.alarms.some(a => a.code === "nothing-bought" || a.code === "payment-unsettled")}
         />
-        <Row k="To creators" v={formatRecordedUsdc(d.creatorPayoutUsdc, { minimumFractionDigits: 4 })} />
+        <Row k={message("statusDispatch.toCreators")} v={formatRecordedUsdc(d.creatorPayoutUsdc, { minimumFractionDigits: 4 })} />
         <Row
-          k="Cross-provider saves"
-          v={d.reasoningAttemptSamples ? String(d.providerFailoverSteps ?? 0) : "collecting"}
+          k={message("statusDispatch.crossProviderSaves")}
+          v={d.reasoningAttemptSamples ? String(d.providerFailoverSteps ?? 0) : message("statusDispatch.collecting")}
         />
         <Row
-          k="Provider failures"
+          k={message("statusDispatch.providerFailures")}
           v={
             d.reasoningAttemptSamples
               ? `${d.providerFailures ?? 0}${
-                  d.circuitOpenSkips ? ` · ${d.circuitOpenSkips} circuit skips` : ""
+                  d.circuitOpenSkips ? message(d.circuitOpenSkips === 1 ? "statusDispatch.circuitSkips.one" : "statusDispatch.circuitSkips.other", { count: d.circuitOpenSkips }) : ""
                 }`
-              : "collecting"
+              : message("statusDispatch.collecting")
           }
         />
-        <Row k="Last dispatch" v={d.lastDispatchAt ? ago(d.lastDispatchAt) : "—"} />
-        <Row k="Checked" v={ago(d.checkedAt)} />
+        <Row k={message("statusDispatch.lastDispatch")} v={d.lastDispatchAt ? ago(d.lastDispatchAt) : "—"} />
+        <Row k={message("statusDispatch.checked")} v={ago(d.checkedAt)} />
       </dl>
       {d.activity === "idle" && (
-        <p className="mt-3 font-mono text-[11px] text-ink-3">Idle: no completed caller requests in this window. Research starts when a caller asks.</p>
+        <p className="mt-3 font-mono text-[11px] text-ink-3">{message("statusDispatch.idleNoCompletedCallerRequestsInThisWindow")}</p>
       )}
       {(d.servedBy?.length ?? 0) > 0 && (
-        <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
-          Served steps:{" "}
-          {d.servedBy!.map((item) => `${item.engine.replace(/^llm:/, "")} ${item.steps}`).join(" · ")}
-        </p>
+        <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">{richMessage("statusDispatch.servedStepsGapValue", { gap: " ", servedSteps: d.servedBy!.map((item) => `${item.engine.replace(/^llm:/, "")} ${item.steps}`).join(" · ") })}</p>
       )}
       {d.alarms.length > 0 && (
         <ul className="mt-4 space-y-1.5 font-mono text-[11px] text-destructive">
@@ -99,12 +99,7 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
           ))}
         </ul>
       )}
-      <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">
-        Recorded inspection of the agent&apos;s own dispatches. A failed provider crosses to another
-        configured model before the deterministic heuristic; every attempt and circuit skip is
-        carried on the completed run receipt. Worker and settlement health are monitored separately;
-        requests that fail before saving a receipt are outside this window.
-      </p>
+      <p className="mt-3 font-mono text-[10px] tracking-wide text-faint">{message("statusDispatch.recordedInspectionOfTheAgentSOwnDispatches")}</p>
     </>
   );
 }

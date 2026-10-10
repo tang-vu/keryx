@@ -1,6 +1,11 @@
 "use client";
 
 import { arcProfileLabel, recordedArcProfile } from "@/lib/arc-network-display";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 /**
  * /status section for settlement parity: what Keryx's payout ledger claims is still sitting in
@@ -37,10 +42,10 @@ export interface SettlementHealth {
 
 function ago(iso: string): string {
   const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return message("statusSettlement.justNow");
+  if (mins < 60) return message("statusObservation.minutesAgo", { minutes: mins });
   const h = Math.floor(mins / 60);
-  return h < 48 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
+  return h < 48 ? message("statusObservation.hoursAgo", { hours: h }) : message("statusObservation.daysAgo", { days: Math.floor(h / 24) });
 }
 
 const usd = (n: number) => `$${n.toFixed(6)}`;
@@ -51,9 +56,9 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
       settlement.owedUsdc === 0 && settlement.confirmedUsdc === 0 && settlement.cashedOutUsdc === 0 &&
       Object.values(counts).every(count => count === 0)) {
     return <section className="mt-8 border-t border-line pt-5">
-      <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">Settlement — empty ledger</h2>
-      <p className="mt-3 text-sm text-ink-3">No settled outbound payments were recorded at this check. Circle balances were not queried; this does not prove payment readiness or settlement.</p>
-      <p className="mt-2 font-mono text-[10px] text-faint">Checked {ago(settlement.checkedAt)}</p>
+      <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">{message("statusSettlement.settlementEmptyLedger")}</h2>
+      <p className="mt-3 text-sm text-ink-3">{message("statusSettlement.noSettledOutboundPaymentsWereRecordedAtThis")}</p>
+      <p className="mt-2 font-mono text-[10px] text-faint">{richMessage("statusSettlement.checkedCheckedAt", { checkedAt: ago(settlement.checkedAt) })}</p>
     </section>;
   }
   // "Backed" includes wallets whose money the creator has since moved out to their own address:
@@ -66,12 +71,10 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
 
   return (
     <>
-      <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-        Settlement — confirmed by Circle
-      </div>
+      <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">{message("statusSettlement.settlementConfirmedByCircle")}</div>
       <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
         <Row
-          k="Wallets backed"
+          k={message("statusSettlement.walletsBacked")}
           v={
             answered === 0
               ? "—"
@@ -79,21 +82,21 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
           }
           alert={counts.short > 0}
         />
-        <Row k="Ledger claims held" v={usd(settlement.owedUsdc)} />
+        <Row k={message("statusSettlement.ledgerClaimsHeld")} v={usd(settlement.owedUsdc)} />
         <Row
-          k="Circle confirms"
+          k={message("statusSettlement.circleConfirms")}
           v={
             usd(settlement.confirmedUsdc) +
-            (settlement.cashedOutUsdc > 0 ? ` · ${usd(settlement.cashedOutUsdc)} cashed out` : "")
+            (settlement.cashedOutUsdc > 0 ? message("statusSettlement.cashedOutAmount", { amount: usd(settlement.cashedOutUsdc) }) : "")
           }
         />
         <Row
-          k={counts.unknown > 0 ? "Short · unverified" : "Short"}
+          k={counts.unknown > 0 ? message("statusSettlement.shortUnverified") : message("statusSettlement.short")}
           v={
             // An unverified wallet is not a clean row: Circle or the Arc RPC did not complete the
             // evidence chain, so "Circle confirms" above understates what is really backed.
-            (counts.short === 0 ? "none" : `${counts.short} wallet${counts.short === 1 ? "" : "s"}`) +
-            (counts.unknown > 0 ? ` · ${counts.unknown} unverified` : "")
+            (counts.short === 0 ? message("statusSettlement.none") : message(counts.short === 1 ? "statusSettlement.shortWallets.one" : "statusSettlement.shortWallets.other", { count: counts.short })) +
+            (counts.unknown > 0 ? message(counts.unknown === 1 ? "statusSettlement.unverified.one" : "statusSettlement.unverified.other", { count: counts.unknown }) : "")
           }
           alert={counts.short > 0}
         />
@@ -104,10 +107,10 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
           <table className="w-full min-w-[30rem] border-collapse font-mono text-[11px]">
             <thead>
               <tr className="border-b border-line text-left text-ink-3">
-                <th className="py-1.5 pr-3 font-normal">Payee wallet</th>
-                <th className="py-1.5 pr-3 text-right font-normal">Keryx claims</th>
-                <th className="py-1.5 pr-3 text-right font-normal">Circle holds</th>
-                <th className="py-1.5 text-right font-normal">Verdict</th>
+                <th className="py-1.5 pr-3 font-normal">{message("statusSettlement.payeeWallet")}</th>
+                <th className="py-1.5 pr-3 text-right font-normal">{message("statusSettlement.keryxClaims")}</th>
+                <th className="py-1.5 pr-3 text-right font-normal">{message("statusSettlement.circleHolds")}</th>
+                <th className="py-1.5 text-right font-normal">{message("statusSettlement.verdict")}</th>
               </tr>
             </thead>
             <tbody>
@@ -122,13 +125,13 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
                   <td className="py-1.5 pr-3 text-right tabular-nums text-ink-2">
                     {a.heldUsdc === null ? "—" : usd(a.heldUsdc)}
                     {a.verdict === "cashedOut" && typeof a.onchainUsdc === "number" && (
-                      <span className="text-faint"> +{usd(a.onchainUsdc)} in wallet</span>
+                      <span className="text-faint">{richMessage("statusSettlement.onchainUsdcInWallet", { onchainUsdc: usd(a.onchainUsdc) })}</span>
                     )}
                   </td>
                   <td
                     className={`py-1.5 text-right ${a.verdict === "short" ? "text-destructive" : "text-ink-3"}`}
                   >
-                    {a.verdict === "cashedOut" ? "cashed out" : a.verdict}
+                    {a.verdict === "cashedOut" ? message("statusSettlement.cashedOut") : a.verdict}
                   </td>
                 </tr>
               ))}
@@ -137,21 +140,15 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
         </div>
       )}
 
-      <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">
-        Gateway settlement leaves no per-payment explorer hash. Keryx compares the payout ledger
-        with observed Circle balances for each payee and publishes both numbers. A wallet holding <em>more</em> than
-        Keryx accounts for belongs to that payee and never flags; one holding less is
-        read against its on-chain balance first, because a payee may cash out by any route they
-        like.
-      </p>
+      <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">{richMessage("statusSettlement.gatewaySettlementLeavesNoPerPaymentExplorerHash", { emphasis: <em>{message("statusSettlement.more")}</em> })}</p>
       {recordedProfile ? <>
-      <p className="mt-2 text-xs text-ink-2">Check a current balance on this observation&apos;s original network: {arcProfileLabel(recordedProfile)}.</p>
+      <p className="mt-2 text-xs text-ink-2">{richMessage("statusSettlement.checkACurrentBalanceOnThisObservationS", { networkLabel: arcProfileLabel(recordedProfile) })}</p>
       <pre className="mt-2 overflow-x-auto border border-line bg-paper-2 p-3 font-mono text-[10px] leading-relaxed text-ink-2">
 {`curl -s ${recordedProfile.gatewayApiUrl}/v1/balances \\
   -H 'content-type: application/json' \\
   -d '{"token":"USDC","sources":[{"depositor":"${top[0]?.address ?? "0x…"}","domain":26}]}'`}
       </pre>
-      </> : <p className="mt-2 text-xs text-ink-2">This saved observation has no recognized original network. Confirm its network before querying a current Gateway balance.</p>}
+      </> : <p className="mt-2 text-xs text-ink-2">{message("statusSettlement.thisSavedObservationHasNoRecognizedOriginalNetwork")}</p>}
     </>
   );
 }

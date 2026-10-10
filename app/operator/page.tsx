@@ -5,9 +5,11 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { OperatorBusinessView } from "@/components/keryx/operator-business-view";
 
+const message = createMessages("en");
+
 export const metadata: Metadata = {
-  title: "Operator — Keryx",
-  description: "Follow Keryx's prepaid research operations, recorded decisions, delivery queue and review needs.",
+  title: message("operatorPage.metadataTitle"),
+  description: message("operatorPage.metadataDescription"),
 };
 
 export default function OperatorPage() {

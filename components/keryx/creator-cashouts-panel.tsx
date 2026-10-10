@@ -20,6 +20,11 @@ import {
 } from "@/components/ui/table";
 import { fmtUsdc, shortAddr } from "./phase-style";
 import { recordedArcTransactionUrl,recordedArcLabel } from "@/lib/arc-network-display";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 function timeAgo(iso: string): string {
   const d = new Date(iso).getTime();
@@ -44,18 +49,18 @@ export function CreatorCashoutsPanel({
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="font-serif text-lg font-normal">
-          Creator cash-outs
+          {message("cashouts.title")}
         </CardTitle>
         <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-paid">
           <span className="h-1.5 w-1.5 rounded-full bg-paid" />
-          on-chain
+          {message("cashouts.onchain")}
         </span>
       </CardHeader>
       {compact ? (
         <CardContent className="space-y-2">
           {withdrawals.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No cash-outs yet.
+              {message("cashouts.compactEmpty")}
             </p>
           )}
           {withdrawals.map((w) => (
@@ -71,7 +76,7 @@ export function CreatorCashoutsPanel({
                   {w.sourceName ?? w.label}
                 </p>
                 <p className="font-mono text-[10px] text-ink-3">
-                  {timeAgo(w.createdAt)} · {recordedArcLabel(w.network)} · on-chain cash-out
+                  {richMessage("cashouts.recordedObservation", { time: timeAgo(w.createdAt), network: recordedArcLabel(w.network) })}
                 </p>
               </div>
               <a
@@ -79,7 +84,7 @@ export function CreatorCashoutsPanel({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="shrink-0 font-mono text-sm font-semibold text-paid hover:underline"
-                title={`View Arc transaction ${w.txHash}`}
+                title={message("cashouts.viewTransaction", { hash: w.txHash })}
               >
                 ${fmtUsdc(w.amountUsdc)}{" "}
                 <ArrowUpRight className="inline h-3 w-3" />
@@ -90,30 +95,27 @@ export function CreatorCashoutsPanel({
       ) : (
         <CardContent className="px-0">
           <p className="px-6 pb-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
-            Creators minting earned USDC out of Circle Gateway to their own
-            wallet. Each row is a real EVM tx that opens at{" "}
-            <span className="text-ink-2">/tx/</span> on ArcScan — the per-tx
-            proof the batched settlement IDs above can&apos;t give.
+            {richMessage("cashouts.evidenceExplanation", { gap: " ", transactionPath: <span className="text-ink-2">/tx/</span> })}
           </p>
           {withdrawals.length === 0 ? (
             <p className="px-6 py-6 text-center font-mono text-[11px] text-muted-foreground">
-              No cash-outs yet. They appear here the moment a creator withdraws.
+              {message("cashouts.empty")}
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-6 font-mono text-[10px] uppercase tracking-[0.1em]">
-                    When
+                    {message("cashouts.when")}
                   </TableHead>
                   <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em]">
-                    Creator
+                    {message("cashouts.creator")}
                   </TableHead>
                   <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em]">
-                    Amount
+                    {message("cashouts.amount")}
                   </TableHead>
                   <TableHead className="pr-6 text-right font-mono text-[10px] uppercase tracking-[0.1em]">
-                    On-chain
+                    {message("cashouts.onchainColumn")}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -138,9 +140,7 @@ export function CreatorCashoutsPanel({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground hover:text-paid hover:underline"
-                        title={`View the on-chain mint tx for $${fmtUsdc(
-                          w.amountUsdc
-                        )} → ${w.recipient}`}
+                        title={message("cashouts.viewMint", { amount: fmtUsdc(w.amountUsdc), recipient: w.recipient })}
                       >
                         {shortAddr(w.txHash)}
                         <ArrowUpRight className="h-3 w-3" />

@@ -1,3 +1,7 @@
+
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
 export interface PendingReconciliationHealth {
   checkedAt: string;
   scanned: number;
@@ -40,88 +44,79 @@ export function PendingReconciliationSection({
 }) {
   const clean = reconciliation.status === "clean";
   const label = {
-    clean: "clean",
-    acknowledged: "acknowledged legacy",
-    awaiting: "awaiting Circle",
-    stale: "stale pending",
-    critical: "critical pending",
-    mismatch: "review required",
+    clean: message("statusReconciliation.clean"),
+    acknowledged: message("statusReconciliation.acknowledgedLegacy"),
+    awaiting: message("statusReconciliation.awaitingCircle"),
+    stale: message("statusReconciliation.stalePending"),
+    critical: message("statusReconciliation.criticalPending"),
+    mismatch: message("statusReconciliation.reviewRequired"),
   }[reconciliation.status];
   return (
     <section className="mt-8 border-t border-line pt-5">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-          Ambiguous payment reconciliation
-        </h2>
+        <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">{message("statusReconciliation.ambiguousPaymentReconciliation")}</h2>
         <span className={`font-mono text-[10px] uppercase tracking-[0.12em] ${clean ? "text-paid" : reconciliation.degraded ? "text-red-700" : "text-amber-700"}`}>
           {label}
         </span>
       </div>
       <dl className="mt-3">
-        <Row k="Accepted by Circle" v={reconciliation.promoted.toLocaleString()} />
-        <Row k="Still awaiting proof" v={reconciliation.awaiting.toLocaleString()} />
+        <Row k={message("statusReconciliation.acceptedByCircle")} v={reconciliation.promoted.toLocaleString()} />
+        <Row k={message("statusReconciliation.stillAwaitingProof")} v={reconciliation.awaiting.toLocaleString()} />
         <Row
-          k="Acknowledged legacy treasury"
+          k={message("statusReconciliation.acknowledgedLegacyTreasury")}
           v={(reconciliation.acknowledgedAwaiting ?? 0).toLocaleString()}
         />
         <Row
-          k="Unacknowledged alerts"
+          k={message("statusReconciliation.unacknowledgedAlerts")}
           v={(reconciliation.unacknowledgedAwaiting ?? reconciliation.awaiting).toLocaleString()}
         />
         <Row
-          k="Browser reservations held"
+          k={message("statusReconciliation.browserReservationsHeld")}
           v={(reconciliation.browserAwaiting ?? 0).toLocaleString()}
         />
-        <Row k="Exposed, possibly unsigned" v={(reconciliation.exposedAwaiting ?? 0).toLocaleString()} />
-        <Row k="Signed, no recorded submission" v={(reconciliation.signedAwaiting ?? 0).toLocaleString()} />
-        <Row k="Submission attempted" v={(reconciliation.submittedAwaiting ?? 0).toLocaleString()} />
+        <Row k={message("statusReconciliation.exposedPossiblyUnsigned")} v={(reconciliation.exposedAwaiting ?? 0).toLocaleString()} />
+        <Row k={message("statusReconciliation.signedNoRecordedSubmission")} v={(reconciliation.signedAwaiting ?? 0).toLocaleString()} />
+        <Row k={message("statusReconciliation.submissionAttempted")} v={(reconciliation.submittedAwaiting ?? 0).toLocaleString()} />
         <Row
-          k="Treasury attempts pending"
+          k={message("statusReconciliation.treasuryAttemptsPending")}
           v={(reconciliation.treasuryAwaiting ?? 0).toLocaleString()}
         />
         <Row
-          k="Expired, still unresolved"
+          k={message("statusReconciliation.expiredStillUnresolved")}
           v={(reconciliation.expiredAwaiting ?? 0).toLocaleString()}
         />
         <Row
-          k="Exact expiry unavailable"
+          k={message("statusReconciliation.exactExpiryUnavailable")}
           v={(reconciliation.unknownExpiryAwaiting ?? 0).toLocaleString()}
         />
         <Row
-          k="Earliest signed expiry"
+          k={message("statusReconciliation.earliestSignedExpiry")}
           v={formatDate(reconciliation.earliestAuthorizationExpiresAt)}
         />
         <Row
-          k="Terminal failures"
-          v={`${reconciliation.failed.toLocaleString()} (${(reconciliation.releasedReservations ?? 0).toLocaleString()} reservations released)`}
+          k={message("statusReconciliation.terminalFailures")}
+          v={message((reconciliation.releasedReservations ?? 0) === 1 ? "statusReconciliation.terminalFailures.one" : "statusReconciliation.terminalFailures.other", { failed: reconciliation.failed.toLocaleString(), released: (reconciliation.releasedReservations ?? 0).toLocaleString() })}
         />
-        <Row k="Tuple mismatches" v={reconciliation.mismatched.toLocaleString()} />
+        <Row k={message("statusReconciliation.tupleMismatches")} v={reconciliation.mismatched.toLocaleString()} />
         <Row
-          k="Oldest pending age"
+          k={message("statusReconciliation.oldestPendingAge")}
           v={formatAge(reconciliation.oldestPendingAgeSeconds)}
         />
-        <Row k="Last checked" v={new Date(reconciliation.checkedAt).toLocaleString()} />
+        <Row k={message("statusReconciliation.lastChecked")} v={new Date(reconciliation.checkedAt).toLocaleString()} />
       </dl>
-      <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">
-        Accepted transfers settle only on an exact tuple. Circle-terminal failures close without
-        earnings and release capacity only for the same grant generation. Missing or conflicting
-        evidence stays pending. A reviewed legacy treasury ambiguity may be acknowledged to stop a
-        permanent readiness alert, but remains pending, outside earnings, and under reconciliation.
-        Browser reservations can never use this acknowledgement path. Expiry is operational
-        context, never proof that Circle failed or that a browser reservation can be released.
-      </p>
+      <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">{message("statusReconciliation.acceptedTransfersSettleOnlyOnAnExactTuple")}</p>
     </section>
   );
 }
 
 function formatDate(value: string | null | undefined): string {
-  if (!value) return "none";
+  if (!value) return message("statusReconciliation.none");
   const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? new Date(parsed).toLocaleString() : "unknown";
+  return Number.isFinite(parsed) ? new Date(parsed).toLocaleString() : message("statusReconciliation.unknown");
 }
 
 function formatAge(seconds: number | null): string {
-  if (seconds === null) return "none";
+  if (seconds === null) return message("statusReconciliation.none");
   const days = Math.floor(seconds / 86_400);
   const hours = Math.floor((seconds % 86_400) / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);

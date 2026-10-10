@@ -1,5 +1,15 @@
 # Keryx Project Changelog
 
+### Operator and observation English catalogue (2026-10-11, unreleased batch)
+
+- Move Operator, economics, public proof and status presentation in twelve UI
+  files into 351 semantic English keys. Preserve observed state distinctions,
+  decision explanations, exact English HTML, metadata, controls and polling.
+  Retire 195 scoped copy allowances while retaining recorded values and examples.
+- Keep this increment in the current implementation batch. The final combined
+  runtime identity and required source/build/package acceptance are release
+  gates; this checkpoint does not claim deployment or full issue272 completion.
+
 ### Account-area English catalogue (2026-10-11, v0.27.53 candidate)
 
 - Move private-profile, API-key, wallet, active-budget, session-cashout and

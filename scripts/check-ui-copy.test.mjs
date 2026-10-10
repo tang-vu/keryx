@@ -191,3 +191,30 @@ test("CLI resolves assets from another cwd and CI cannot rewrite the baseline", 
   assert.throws(() => run(["--ignore-new-copy"]), error => error.status === 1 && /Usage:/.test(error.stderr));
   assert.throws(() => run(["--write-baseline"], { ...process.env, CI: "true" }), error => error.status === 1 && /CI cannot rewrite/.test(error.stderr));
 });
+
+test("Operator, status, proof and calculator copy is catalogued; numbered layers and protocol examples remain data", () => {
+  const files = ["app/operator/page.tsx", "app/economics/page.tsx", "app/status/page.tsx", "app/proof/page.tsx",
+    "components/keryx/operator-business-view.tsx", "components/keryx/business-calculator.tsx", "components/keryx/proof-dashboard.tsx",
+    "components/keryx/monitoring-status-section.tsx", "components/keryx/registry-status-section.tsx", "components/keryx/dispatch-health-section.tsx",
+    "components/keryx/settlement-proof-section.tsx", "components/keryx/pending-reconciliation-section.tsx"];
+  for (const file of files) {
+    const findings = extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
+    const examples = findings.filter(finding => finding.text.startsWith("curl -s ${value}/v1/balances"));
+    assert.equal(examples.length, file.endsWith("settlement-proof-section.tsx") ? 1 : 0, file);
+    assert.deepEqual(findings.filter(finding => !examples.includes(finding)).map(finding => finding.text),
+      file === "app/proof/page.tsx" ? ["0"] : file.endsWith("proof-dashboard.tsx") ? ["tang-vu/keryx"] : file.endsWith("settlement-proof-section.tsx") ? ["0x…"] : [], file);
+  }
+});
+
+test("common shell and observation wrapper copy is catalogued; protocol names, brand and source examples remain data", () => {
+  const remaining = {
+    "components/keryx/site-header.tsx": ["MCP"],
+    "components/keryx/site-footer.tsx": ["Keryx", "κῆρυξ"],
+    "components/keryx/creator-cashouts-panel.tsx": ["/tx/"],
+    "components/keryx/testnet-history-summary.tsx": [],
+  };
+  for (const [file, data] of Object.entries(remaining)) {
+    const findings = extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
+    assert.deepEqual(findings.map(finding => finding.text), data, file);
+  }
+});
