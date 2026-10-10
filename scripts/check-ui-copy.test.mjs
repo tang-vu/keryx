@@ -165,6 +165,24 @@ test("actual repository baseline matches its source and includes desktop JSX", (
   assert.ok(inventory.findings.some(finding => finding.file.startsWith("desktop/src/")));
 });
 
+test("account/profile/session/key copy is catalogued; only protocol examples and vendor marks remain inline", () => {
+  const files = ["app/me/profile/page.tsx", "app/me/profile/private-profile-view.tsx", "app/dev/page.tsx",
+    "components/keryx/wallet-menu.tsx", "components/keryx/wallet-picker.tsx", "components/keryx/circle-google-wallet.tsx",
+    "components/keryx/session-active-card.tsx", "components/keryx/session-cashout-panel.tsx", "components/keryx/withdrawal-account.tsx"];
+  const retained = new Map([
+    ["app/dev/page.tsx", ["/api/agent/ask", "payment-signature", "https://keryx.cc/api/v1", "keryx", "kx_live_…",
+      "stream:true", "reasoning_content", "kx_live_…"]],
+    ["components/keryx/wallet-picker.tsx", ["MetaMask", "WalletConnect"]],
+    ["components/keryx/circle-google-wallet.tsx", ["G"]],
+  ]);
+  for (const file of files) {
+    const findings = extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
+    const examples = findings.filter(finding => finding.text.startsWith("curl https://keryx.cc/"));
+    assert.equal(examples.length, file === "app/dev/page.tsx" ? 2 : 0);
+    assert.deepEqual(findings.filter(finding => !examples.includes(finding)).map(finding => finding.text), retained.get(file) ?? [], file);
+  }
+});
+
 test("CLI resolves assets from another cwd and CI cannot rewrite the baseline", () => {
   const script = fileURLToPath(new URL("./check-ui-copy.mjs", import.meta.url));
   const run = (args, env = process.env) => execFileSync(process.execPath, [script, ...args],

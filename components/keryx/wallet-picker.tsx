@@ -25,6 +25,10 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { useSyncExternalStore } from "react";
 import { CircleGoogleWalletButton } from "./circle-google-wallet";
+import { createMessages } from "@/lib/i18n/messages";
+
+const copy = createMessages("en");
+
 
 const subscribeHydration = () => () => {};
 const clientSnapshot = () => true;
@@ -81,7 +85,7 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
       { connector },
       {
         onError: (err) => {
-          const msg = err instanceof Error ? err.message : "Could not connect";
+          const msg = err instanceof Error ? err.message : copy("walletPicker.connectFailed");
           if (!/reject|denied|cancel|closed/i.test(msg)) toast.error(msg);
         },
       },
@@ -90,7 +94,7 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
 
   // Browser-only WalletConnect and injected discovery can differ from SSR.
   // Keep the first client render identical; expose live connectors after hydration.
-  if (!hydrated) return <p role="status" className="font-mono text-xs text-ink-3">Loading wallet options…</p>;
+  if (!hydrated) return <p role="status" className="font-mono text-xs text-ink-3">{copy("walletPicker.loading")}</p>;
 
   // Nothing usable: no injected wallet, no MetaMask SDK, no WalletConnect.
   // Guide the user to a path that works.
@@ -100,14 +104,9 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
         <CircleGoogleWalletButton disabled={busy} onSelect={onSelect} onConnected={_onConnected} />
         <div className="flex items-start gap-3 border border-ink/40 bg-paper-2 px-4 py-3.5">
           <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" />
-          <p className="font-mono text-[11px] leading-relaxed text-ink-2">
-            No browser wallet detected.
-          </p>
+          <p className="font-mono text-[11px] leading-relaxed text-ink-2">{copy("walletPicker.notDetected")}</p>
         </div>
-        <p className="font-mono text-[10px] leading-relaxed text-faint">
-          On mobile: open keryx.cc inside your wallet app&apos;s browser
-          (MetaMask, Rabby…). On desktop: install MetaMask or Rabby, then refresh.
-        </p>
+        <p className="font-mono text-[10px] leading-relaxed text-faint">{copy("walletPicker.guidance")}</p>
       </div>
     );
   }
@@ -165,9 +164,7 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
           )}
           <span className="flex-1 text-left">
             MetaMask
-            <span className="ml-2 normal-case tracking-normal text-current/70">
-              mobile · QR
-            </span>
+            <span className="ml-2 normal-case tracking-normal text-current/70">{copy("walletPicker.mobileQr")}</span>
           </span>
         </button>
       )}
@@ -186,9 +183,7 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
           )}
           <span className="flex-1 text-left">
             WalletConnect
-            <span className="ml-2 normal-case tracking-normal text-current/70">
-              QR · mobile
-            </span>
+            <span className="ml-2 normal-case tracking-normal text-current/70">{copy("walletPicker.qrMobile")}</span>
           </span>
         </button>
       )}

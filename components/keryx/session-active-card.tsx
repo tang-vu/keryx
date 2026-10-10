@@ -6,6 +6,12 @@ import type { ResearchBudgetOptions } from "@/lib/hooks/use-mainnet-session-gran
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { UsdcPresetChips } from "./usdc-preset-chips";
 import { parseBudgetAmount } from "./research-budget-fields";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const copy = createMessages("en");
+const richCopy = createRichMessages("en");
+
 
 interface Props {
   grantState: GrantState;
@@ -20,13 +26,13 @@ function useRemainingMs(expiresAt: string | null) {
   return expiresAt ? new Date(expiresAt).getTime() - now : null;
 }
 function formatRemaining(ms: number) {
-  if (ms <= 0) return "expired";
-  if (ms < 60_000) return "under a minute";
+  if (ms <= 0) return copy("sessionBudget.expired");
+  if (ms < 60_000) return copy("sessionBudget.underAMinute");
   const minutes = Math.ceil(ms / 60_000);
-  if (minutes < 60) return minutes + " min";
+  if (minutes < 60) return copy("sessionBudget.minutes", { minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return hours + "h " + (minutes % 60) + "m";
-  return Math.floor(hours / 24) + "d " + (hours % 24) + "h";
+  if (hours < 24) return copy("sessionBudget.hoursMinutes", { hours, minutes: minutes % 60 });
+  return copy("sessionBudget.daysHours", { days: Math.floor(hours / 24), hours: hours % 24 });
 }
 
 export function SessionActiveCard({ grantState, onTopUp, onRevoke, onExtend }: Props) {
@@ -44,62 +50,50 @@ export function SessionActiveCard({ grantState, onTopUp, onRevoke, onExtend }: P
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-paid" aria-hidden />
-        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-2">
-          {mainnet ? "Research budget" : "Session active"} — {remaining.toFixed(6)} USDC remaining
-        </span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-2">{richCopy("sessionBudget.remaining", { budgetKind: mainnet ? copy("sessionBudget.researchBudget") : copy("sessionBudget.sessionActive"), amount: remaining.toFixed(6) })}</span>
       </div>
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => setShowTopUp(value => !value)}
-          className="text-xs text-paid underline underline-offset-2">Add to budget</button>
+          className="text-xs text-paid underline underline-offset-2">{copy("sessionBudget.addToBudget")}</button>
         <button type="button" onClick={onRevoke}
-          className="border border-destructive/40 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10">
-          Stop spending
-        </button>
+          className="border border-destructive/40 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10">{copy("sessionBudget.stopSpending")}</button>
       </div>
     </div>
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-line" aria-hidden>
       <div className="h-full rounded-full bg-seal transition-all" style={{ width: spentPct + "%" }} />
     </div>
     <div className="flex flex-wrap justify-between gap-2 font-mono text-[10px] text-ink-3">
-      <span>{grantState.spent.toFixed(6)} USDC {mainnet ? "used or held" : "spent"}</span>
-      <span>{grantState.cap.toFixed(6)} USDC ceiling</span>
+      <span>{richCopy("sessionBudget.used", { amount: grantState.spent.toFixed(6), usageKind: mainnet ? copy("sessionBudget.usedOrHeld") : copy("sessionBudget.spent") })}</span>
+      <span>{richCopy("sessionBudget.ceiling", { amount: grantState.cap.toFixed(6) })}</span>
     </div>
-    {grantState.researchBudget && <p className="text-xs text-ink-2">
-      Maximum per question: {grantState.researchBudget.questionCapUsdc.toFixed(6)} USDC.
-      {" "}Shared across your conversations.
-    </p>}
+    {grantState.researchBudget && <p className="text-xs text-ink-2">{richCopy("sessionBudget.questionCap", { amount: grantState.researchBudget.questionCapUsdc.toFixed(6), gap: " " })}</p>}
     {remainingMs !== null && <div className="flex flex-wrap items-center justify-between gap-2">
-      <span className="text-xs text-ink-3">Budget {remainingMs <= 0 ? "expired" : "expires in " + formatRemaining(remainingMs)}</span>
+      <span className="text-xs text-ink-3">{richCopy("sessionBudget.expiry", { state: remainingMs <= 0 ? copy("sessionBudget.expired") : copy("sessionBudget.expiresIn", { duration: formatRemaining(remainingMs) }) })}</span>
       <button type="button" disabled={extending} onClick={async () => {
         setExtending(true); setExtendFailed(false);
         try { if (!await onExtend()) setExtendFailed(true); }
         catch { setExtendFailed(true); }
         finally { setExtending(false); }
       }} className="text-xs text-ink-3 underline underline-offset-2 disabled:opacity-50">
-        {extending ? "Renewing…" : mainnet ? "Renew duration" : "Extend session ▸"}
+        {extending ? copy("sessionBudget.renewing") : mainnet ? copy("sessionBudget.renewDuration") : copy("sessionBudget.extendSession")}
       </button>
     </div>}
-    {extendFailed && <p role="alert" className="text-xs text-destructive">Renewal did not complete. Your saved budget and prior payments remain recorded.</p>}
-    {mainnet && <p className="text-[11px] leading-relaxed text-ink-3">
-      Pending payments count against the remaining budget. Renewal keeps the existing ceiling.
-      Stopping blocks new payments; funds stay in Gateway for your withdrawal.
-    </p>}
+    {extendFailed && <p role="alert" className="text-xs text-destructive">{copy("sessionBudget.renewalFailed")}</p>}
+    {mainnet && <p className="text-[11px] leading-relaxed text-ink-3">{copy("sessionBudget.pendingBoundary")}</p>}
     {showTopUp && <div className="space-y-2 border-t border-line pt-3">
       <div className="flex flex-wrap items-center gap-2">
-        <label htmlFor="research-budget-add" className="text-xs text-ink-2">Add (USDC)</label>
+        <label htmlFor="research-budget-add" className="text-xs text-ink-2">{copy("sessionBudget.addLabel")}</label>
         <UsdcPresetChips value={topUpInput} onPick={setTopUpInput} />
         <input id="research-budget-add" type="text" inputMode="decimal" value={topUpInput}
           onChange={event => setTopUpInput(event.target.value)}
           className="w-24 border border-ink/30 bg-paper px-3 py-2 font-mono text-xs text-ink focus:border-seal focus:outline-none" />
         <button type="button" disabled={topUpAmount === null} onClick={() => {
           if (topUpAmount !== null) { setShowTopUp(false); onTopUp(topUpAmount); }
-        }} className="border border-ink bg-ink px-4 py-2 font-mono text-xs text-cream disabled:opacity-50">
-          Review increase
-        </button>
+        }} className="border border-ink bg-ink px-4 py-2 font-mono text-xs text-cream disabled:opacity-50">{copy("sessionBudget.reviewIncrease")}</button>
       </div>
       <p className="text-[11px] leading-relaxed text-ink-3">
-        {mainnet ? "Review funding and a new budget confirmation before the ceiling increases. Your per-question maximum stays the same. Native gas is extra."
-          : "Deposit into your existing testnet session and confirm its new allowance."}
+        {mainnet ? copy("sessionBudget.mainnetIncreaseBoundary")
+          : copy("sessionBudget.testnetIncreaseBoundary")}
       </p>
     </div>}
   </div>;

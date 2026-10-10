@@ -29,6 +29,10 @@ import {
 import { WalletPicker } from "./wallet-picker";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { shortAddress } from "@/lib/utils";
+import { createMessages } from "@/lib/i18n/messages";
+
+const copy = createMessages("en");
+
 
 const CHIP =
   "flex items-center gap-2 border border-ink bg-paper px-3.5 py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-wait disabled:opacity-70";
@@ -64,8 +68,8 @@ export function WalletMenu() {
       await signOut();
       setSignedOut(true);
       try { await disconnectAsync(); } catch { /* Connector may already be disconnected. */ }
-      toast("Signed out");
-    } catch { toast.error("Sign-out could not be confirmed. Please retry."); }
+      toast(copy("account.signedOut"));
+    } catch { toast.error(copy("account.signOutUnconfirmed")); }
   }, [disconnectAsync, signOut]);
   // Set true only when the user picks a wallet here — gates auto-sign-in so a
   // rehydrated connection on page load never pops an unsolicited signature.
@@ -76,12 +80,12 @@ export function WalletMenu() {
     try {
       const res = await signIn();
       if (res.ok) {
-        toast.success(res.created ? "Account created" : "Welcome back", {
-          description: `Signed in${res.role ? ` as ${res.role}` : ""}`,
+        toast.success(res.created ? copy("account.created") : copy("walletMenu.welcomeBack"), {
+          description: res.role ? copy("walletMenu.signedInAs", { role: res.role }) : copy("walletMenu.signedIn"),
         });
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Sign-in failed";
+      const msg = err instanceof Error ? err.message : copy("account.signInFailed");
       // Don't surface user-cancelled signature prompts as errors.
       if (!/reject|denied|cancel/i.test(msg)) toast.error(msg);
     }
@@ -109,9 +113,7 @@ export function WalletMenu() {
   if (!hydrated || ((status === "reconnecting" || status === "connecting") && !session)) {
     return (
       <span className={`${CHIP} cursor-default opacity-70`} aria-busy>
-        <Wallet className="h-3.5 w-3.5" />
-        Wallet
-      </span>
+        <Wallet className="h-3.5 w-3.5" />{copy("walletMenu.wallet")}</span>
     );
   }
 
@@ -134,48 +136,41 @@ export function WalletMenu() {
             className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink"
             onClick={() => {
               void navigator.clipboard?.writeText(session.address);
-              toast("Address copied");
+              toast(copy("walletMenu.addressCopied"));
             }}
           >
-            <Copy className="h-3.5 w-3.5" /> Copy address
-          </DropdownMenuItem>
+            <Copy className="h-3.5 w-3.5" />{copy("walletMenu.copyAddress")}</DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/dashboard">
-              <BookOpen className="h-3.5 w-3.5" /> Ledger
-            </Link>
+              <BookOpen className="h-3.5 w-3.5" />{copy("walletMenu.ledger")}</Link>
           </DropdownMenuItem>
           {/* Unconditional (not isCreator-gated): the role snapshot can lag a wallet's first
               registration, and the page's empty state already routes non-owners to /register. */}
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/me/sources">
-              <Library className="h-3.5 w-3.5" /> My sources
-            </Link>
+              <Library className="h-3.5 w-3.5" />{copy("walletMenu.mySources")}</Link>
           </DropdownMenuItem>
           {/* The paying side of the same wallet: what it dispatched and what those tolls cost. */}
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
-            <Link href="/me/profile"><ShieldCheck className="h-3.5 w-3.5" /> Private profile</Link>
+            <Link href="/me/profile"><ShieldCheck className="h-3.5 w-3.5" />{copy("walletMenu.privateProfile")}</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/me/asks">
-              <Receipt className="h-3.5 w-3.5" /> My dispatches
-            </Link>
+              <Receipt className="h-3.5 w-3.5" />{copy("walletMenu.myDispatches")}</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/research#account-jobs-heading">
-              <Receipt className="h-3.5 w-3.5" /> Paid jobs
-            </Link>
+              <Receipt className="h-3.5 w-3.5" />{copy("walletMenu.paidJobs")}</Link>
           </DropdownMenuItem>
           {isCreator && (
             <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
               <Link href="/register">
-                <Stamp className="h-3.5 w-3.5" /> Issue a toll
-              </Link>
+                <Stamp className="h-3.5 w-3.5" />{copy("walletMenu.issueToll")}</Link>
             </DropdownMenuItem>
           )}
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/connect#account-sessions-title">
-              <ShieldCheck className="h-3.5 w-3.5" /> Manage sessions
-            </Link>
+              <ShieldCheck className="h-3.5 w-3.5" />{copy("walletMenu.manageSessions")}</Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-line" />
           <DropdownMenuItem
@@ -183,7 +178,7 @@ export function WalletMenu() {
             onClick={handleSignOut}
             disabled={busy}
           >
-            <LogOut className="h-3.5 w-3.5" /> {authState === "signing-out" ? "Signing out…" : "Sign out"}
+            <LogOut className="h-3.5 w-3.5" /> {authState === "signing-out" ? copy("account.signingOut") : copy("account.signOut")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -208,7 +203,7 @@ export function WalletMenu() {
           ) : (
             <ShieldCheck className="h-3.5 w-3.5" />
           )}
-          {loading ? "…" : authState === "verifying" ? "Verifying…" : busy ? "Sign…" : "Sign in"}
+          {loading ? "…" : authState === "verifying" ? copy("account.verifying") : busy ? copy("walletMenu.signing") : copy("account.signIn")}
           <span className="text-ink-3">{shortAddress(address)}</span>
           {!busy && !loading && <ChevronDown className="h-3.5 w-3.5 text-ink-3" />}
         </DropdownMenuTrigger>
@@ -220,8 +215,7 @@ export function WalletMenu() {
             className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink"
             onClick={doSignIn}
           >
-            <ShieldCheck className="h-3.5 w-3.5" /> Sign in with this wallet
-          </DropdownMenuItem>
+            <ShieldCheck className="h-3.5 w-3.5" />{copy("walletMenu.signInWithWallet")}</DropdownMenuItem>
           <DropdownMenuSeparator className="bg-line" />
           <DropdownMenuItem
             className="cursor-pointer rounded-none text-seal focus:bg-seal/10 focus:text-seal"
@@ -230,8 +224,7 @@ export function WalletMenu() {
               setSignedOut(true); // force the Connect Wallet picker
             }}
           >
-            <Wallet className="h-3.5 w-3.5" /> Use a different wallet
-          </DropdownMenuItem>
+            <Wallet className="h-3.5 w-3.5" />{copy("walletMenu.differentWallet")}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -241,17 +234,13 @@ export function WalletMenu() {
   return (
     <DropdownMenu open={pickerOpen} onOpenChange={setPickerOpen}>
       <DropdownMenuTrigger className={CHIP}>
-        <Wallet className="h-3.5 w-3.5" />
-        Connect Wallet
-        <ChevronDown className="h-3.5 w-3.5 text-ink-3" />
+        <Wallet className="h-3.5 w-3.5" />{copy("walletMenu.connectWallet")}<ChevronDown className="h-3.5 w-3.5 text-ink-3" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
         className="w-[260px] rounded-none border-ink bg-paper p-3"
       >
-        <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
-          Choose a wallet
-        </p>
+        <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">{copy("walletMenu.chooseWallet")}</p>
         <WalletPicker
           isBusy={busy}
           onConnected={() => {}}
@@ -264,9 +253,7 @@ export function WalletMenu() {
             setPickerOpen(false);
           }}
         />
-        <p className="mt-2.5 font-mono text-[9.5px] leading-relaxed text-faint">
-          Connecting creates your account &amp; signs you in.
-        </p>
+        <p className="mt-2.5 font-mono text-[9.5px] leading-relaxed text-faint">{copy("walletMenu.connectBoundary")}</p>
       </DropdownMenuContent>
     </DropdownMenu>
   );
