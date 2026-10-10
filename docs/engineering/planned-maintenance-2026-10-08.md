@@ -147,3 +147,26 @@ root/peer ingress and recovery binding, advance in-app banner, supported client
 handling, production exercise/readback and coordinated distribution remain open.
 The existing redeploy scripts, role/stock38 and one-use helpers are byte-identical;
 there is no package/version bump, current release mutation or `Fixes #281` claim.
+
+## Browser refusal preparation — 2026-10-11
+
+The research browser accepts the exact nested front-door503 error as plain text,
+offers the fixed same-origin `/maintenance/status` link, and restores the submitted
+question in the existing tab draft. The bounded wait is informational; it does not
+resubmit, sign, probe status automatically, or replace a newly edited draft.
+Unknown upstream outcomes explicitly retain the original recovery record. Unknown
+or malformed nested errors receive a plain HTTP fallback with no status action;
+ordinary flat application errors and accepted SSE handling remain supported.
+
+Focused tests use the real local front-door emitter and browser conversation with
+a synthetic refusal and an inert wallet panel, plus the existing successful-stream
+and sign/abort scope regressions. They do not establish normal boot, live payment,
+deployed client handling or operational maintenance acceptance. This source-only
+preparation does not enable the front door, change service/ingress lifecycle or add
+an advance banner. Exact combined-source hosted build/CI and the independent
+front-door lifecycle, non-production exercise and production readback still gate
+the complete issue281 outcome. The shared browser hook also gives the embed plain
+error text; its existing question field stays populated, but it has no new status
+action. Server API/MCP contracts, repository CLIs, client binaries, extension and
+bot adapters are unchanged. Complete supported-client handling remains a separate
+issue281 gate; no synchronized delivery or client version change is claimed here.
