@@ -1,0 +1,126 @@
+{
+  "version": 2,
+  "id": "sqlite-public-20261009",
+  "question": "SQLite của tôi đang dùng WAL và vẫn nhận ghi khi sao lưu. Dựa trên hai tài liệu chính thức https://sqlite.org/wal.html và https://sqlite.org/backup.html, hãy so sánh việc chỉ copy file .db đang chạy với Online Backup API. Tôi cần chọn một cách tạo snapshot nhất quán mà không dừng cả service: đưa checklist thao tác, điều kiện đồng thời/khóa cần chú ý, và cách kiểm tra bản sao trước khi dùng để phục hồi. Nói rõ bước nào tài liệu hỗ trợ và bước nào còn cần kiểm chứng; không mua nguồn trả phí.",
+  "answer": "> ⚠ Độ tin cậy thấp — Mỗi câu tóm tắt gắn với một trích đoạn nguyên văn và đã qua kiểm tra bằng mô hình; chưa xác minh tính đầy đủ hoặc tính đúng đắn độc lập. Kết quả chưa hoàn chỉnh.\n\nTóm tắt do mô hình viết, trích dẫn theo từng câu. Sau mỗi câu là nguyên văn đoạn nguồn mà câu đó đã được đối chiếu; câu không có trích đoạn đủ điều kiện đã bị loại.\n\n### Yêu cầu nghiên cứu 1\n\nChủ đề yêu cầu (chưa xác minh): “Theo https://sqlite.org/wal.html, việc chỉ copy file .db đang chạy trong chế độ WAL có đảm bảo tính nhất quán của snapshot không, và các file WAL/-shm liên quan được xử lý thế nào?”\n\nKhi đọc, SQLite trước tiên kiểm tra WAL và lấy bản sao trang cuối cùng xuất hiện trong WAL trước end mark của reader. [S1] Nguyên văn nguồn: “When a reader needs a page of content, it first checks the WAL to see if that page appears there, and if so it pulls in the last copy of the page that occurs in the WAL prior to the reader's end mark.”\n\nNếu trang không có trong WAL trước end mark của reader thì SQLite đọc trang đó từ file database gốc. [S1] Nguyên văn nguồn: “If no copy of the page exists in the WAL prior to the reader's end mark, then the page is read from the original database file.”\n\nThiếu bằng chứng: đánh giá ghi nhận vẫn dưới ngưỡng hỗ trợ cho yêu cầu này.\n\n### Yêu cầu nghiên cứu 2\n\nChủ đề yêu cầu (chưa xác minh): “Theo https://sqlite.org/wal.html, khi copy file .db đang chạy trong WAL, những điều kiện đồng thời và khóa nào cần chú ý (ví dụ ghi đang diễn ra, checkpoint, thay đổi file)?”\n\nMặc định SQLite tự động checkpoint khi một COMMIT làm WAL đạt từ 1000 trang trở lên, hoặc khi kết nối cuối cùng tới file database đóng lại. [S1] Nguyên văn nguồn: “By default, SQLite will automatically checkpoint whenever a COMMIT occurs that causes the WAL file to be 1000 pages or more in size, or when the last database connection on a database file closes.”\n\nThiếu bằng chứng: đánh giá ghi nhận vẫn dưới ngưỡng hỗ trợ cho yêu cầu này.\n\n### Yêu cầu nghiên cứu 3\n\nChủ đề yêu cầu (chưa xác minh): “Theo https://sqlite.org/backup.html, Online Backup API tạo snapshot nhất quán như thế nào khi database vẫn nhận ghi?”\n\nOnline Backup API có thể copy tăng dần, khi đó database nguồn không cần bị khóa suốt quá trình copy mà chỉ khóa trong các khoảng ngắn lúc thực sự đọc. [S2] Nguyên văn nguồn: “The copy operation may be done incrementally, in which case the source database does not need to be locked for the duration of the copy, only for the brief periods of time when it is actually being read from.”\n\nHoàn tất chuỗi lệnh backup làm đích trở thành bản copy giống hệt từng bit với database nguồn tại thời điểm bắt đầu copy. [S2] Nguyên văn nguồn: “The effect of completing the backup call sequence is to make the destination a bit-wise identical copy of the source database as it was when the copying commenced.”\n\n### Yêu cầu nghiên cứu 4\n\nChủ đề yêu cầu (chưa xác minh): “Theo https://sqlite.org/backup.html, Online Backup API có những điều kiện đồng thời và khóa nào cần chú ý trong lúc sao lưu?”\n\nVới copy tăng dần, database nguồn chỉ bị khóa trong các khoảng ngắn khi thực sự được đọc, không bị khóa suốt thời gian copy. [S2] Nguyên văn nguồn: “The copy operation may be done incrementally, in which case the source database does not need to be locked for the duration of the copy, only for the brief periods of time when it is actually being read from.”\n\nTrong lúc hàm backup chạy, một thread khác có thể dùng database pDb hoặc một tiến trình khác có thể truy cập file database qua kết nối riêng. [S2] Nguyên văn nguồn: “*​*​ *​*​ While this function is running, another thread may use the database pDb, or *​*​ another process may access the underlying database file via a separate  *​*​ connection.”\n\n### Yêu cầu nghiên cứu 5\n\nChủ đề yêu cầu (chưa xác minh): “Theo https://sqlite.org/backup.html, các bước và lưu ý để kiểm tra bản sao trước khi dùng để phục hồi là gì?”\n\nThiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này.\n\n### Yêu cầu nghiên cứu 6\n\nChủ đề yêu cầu (chưa xác minh): “Theo https://sqlite.org/wal.html, có hướng dẫn nào để kiểm tra bản sao .db đã copy trước khi dùng để phục hồi không?”\n\nThiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này.\n\n### Yêu cầu nghiên cứu 7\n\nChủ đề yêu cầu (chưa xác minh): “Trong hai tài liệu, bước nào của quy trình tạo snapshot không dừng service được tài liệu hỗ trợ trực tiếp và bước nào còn cần kiểm chứng?”\n\nTài liệu hỗ trợ trực tiếp rằng copy tăng dần của Online Backup API không cần khóa database nguồn suốt quá trình, chỉ khóa ngắn khi đọc. [S2] Nguyên văn nguồn: “The copy operation may be done incrementally, in which case the source database does not need to be locked for the duration of the copy, only for the brief periods of time when it is actually being read from.”\n\nTài liệu hỗ trợ trực tiếp rằng hoàn tất chuỗi backup tạo ra bản copy giống hệt từng bit tại thời điểm bắt đầu copy. [S2] Nguyên văn nguồn: “The effect of completing the backup call sequence is to make the destination a bit-wise identical copy of the source database as it was when the copying commenced.”\n\n### Yêu cầu nghiên cứu 8\n\nChủ đề yêu cầu (chưa xác minh): “Theo hai tài liệu, các hạn chế hoặc trường hợp không được hỗ trợ của mỗi cách (copy file .db đang chạy và Online Backup API) là gì?”\n\nThiếu bằng chứng: chưa có trích đoạn đủ điều kiện cho yêu cầu này.\n\nCác câu tóm tắt do mô hình viết và mô hình kiểm tra, chưa được xác minh độc lập; chúng không vượt quá nội dung trích đoạn đi kèm và không phải là tổng hợp đầy đủ. Trích đoạn chỉ xác lập mức bám nguồn, không chứng minh tính đúng đắn của nguồn. Nội dung nguồn có thể sai hoặc mâu thuẫn. Trạng thái thanh toán vẫn nằm trong biên nhận riêng.\n\n### Trạng thái nguồn gốc đã cung cấp\n\n- `https://sqlite.org/wal.html`: Đã trích xuất có giới hạn từ `https://sqlite.org/wal.html`; giữ được đoạn trích đủ điều kiện.\n\n- `https://sqlite.org/backup.html`: Đã trích xuất có giới hạn từ `https://sqlite.org/backup.html`; giữ được đoạn trích đủ điều kiện.",
+  "answerSha256": "d36cda94770588e88810d7b4c3163de9f8285f8e66b73c3119794194c7d12f4b",
+  "bulletRegion": {
+    "start": 0,
+    "end": 5672,
+    "sha256": "2dfe5e68c3cec9b5315fcd17902892f341e860625a5aaa44ef8c8694157cd245"
+  },
+  "bindings": [
+    {
+      "claimIndex": 0,
+      "marker": "S1",
+      "sourceId": "public:web:05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+      "itemId": "05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+      "itemUrl": "https://sqlite.org/wal.html",
+      "contentVersion": "a100a9b383334871465475aea40acc576f20c9d38617be257881115e0ee6b53f",
+      "quote": "When a reader needs a page of content, it first checks the WAL to see if that page appears there, and if so it pulls in the last copy of the page that occurs in the WAL prior to the reader's end mark.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 0,
+      "marker": "S1",
+      "sourceId": "public:web:05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+      "itemId": "05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+      "itemUrl": "https://sqlite.org/wal.html",
+      "contentVersion": "a100a9b383334871465475aea40acc576f20c9d38617be257881115e0ee6b53f",
+      "quote": "If no copy of the page exists in the WAL prior to the reader's end mark, then the page is read from the original database file.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 1,
+      "marker": "S1",
+      "sourceId": "public:web:05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+      "itemId": "05cae033cedcdc829e2c930a4fd66e4e72cb3286f6ba0fd16dc574636404c6c9",
+      "itemUrl": "https://sqlite.org/wal.html",
+      "contentVersion": "a100a9b383334871465475aea40acc576f20c9d38617be257881115e0ee6b53f",
+      "quote": "By default, SQLite will automatically checkpoint whenever a COMMIT occurs that causes the WAL file to be 1000 pages or more in size, or when the last database connection on a database file closes.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 2,
+      "marker": "S2",
+      "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemUrl": "https://sqlite.org/backup.html",
+      "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+      "quote": "The copy operation may be done incrementally, in which case the source database does not need to be locked for the duration of the copy, only for the brief periods of time when it is actually being read from.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 2,
+      "marker": "S2",
+      "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemUrl": "https://sqlite.org/backup.html",
+      "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+      "quote": "The effect of completing the backup call sequence is to make the destination a bit-wise identical copy of the source database as it was when the copying commenced.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 3,
+      "marker": "S2",
+      "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemUrl": "https://sqlite.org/backup.html",
+      "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+      "quote": "The copy operation may be done incrementally, in which case the source database does not need to be locked for the duration of the copy, only for the brief periods of time when it is actually being read from.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 3,
+      "marker": "S2",
+      "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemUrl": "https://sqlite.org/backup.html",
+      "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+      "quote": "**\n** While this function is running, another thread may use the database pDb, or\n** another process may access the underlying database file via a separate \n** connection.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 6,
+      "marker": "S2",
+      "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemUrl": "https://sqlite.org/backup.html",
+      "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+      "quote": "The copy operation may be done incrementally, in which case the source database does not need to be locked for the duration of the copy, only for the brief periods of time when it is actually being read from.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 6,
+      "marker": "S2",
+      "sourceId": "public:web:d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemId": "d9055676581af38c29dc8ab09997274bf51de45baf411ac38b6fd9a3f4d32f6c",
+      "itemUrl": "https://sqlite.org/backup.html",
+      "contentVersion": "bef51cfed1f9f4e2e4884d30facff995c102fbafb05825111396ecaf3c156eb2",
+      "quote": "The effect of completing the backup call sequence is to make the destination a bit-wise identical copy of the source database as it was when the copying commenced.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    }
+  ],
+  "provenance": {
+    "kind": "retained-public-report",
+    "reportUrl": "https://keryx.cc/dispatch/6b382d55-e2a7-4201-a5cc-fe82af151640",
+    "capturedAt": "2026-10-09T02:27:10.072Z",
+    "deployedCommit": "380647b10a924e231ebe98123028877d8c5ee187",
+    "rawCaptureSha256": "a51e5360c23e0f11401663c07e57f2c51e98db63a40d5579f47b218998ecc80f",
+    "projection": "question-answer-qualified-public-bindings-only",
+    "retainedReceipt": {
+      "capturedAt": "2026-10-09T02:27:05.204Z",
+      "rawCaptureSha256": "bcbf44710ef886e45b4854a60f8592d5505a5fec3bf7d22c9ff24907dd4e1755",
+      "payloadSha256": "a4b9e54964ae1b44d4392c698213f125b46a26e3c270a5c17b87b84882186139"
+    }
+  }
+}

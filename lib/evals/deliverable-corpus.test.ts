@@ -25,14 +25,14 @@ afterEach(() => {
 });
 
 describe("SHA-bound public corpus", () => {
-  it("reports two real retained format failures and explicitly incomplete issue-class coverage", () => {
+  it("retains six public failures including zero bindings and incomplete issue-class coverage", () => {
     const corpus = loadDeliverableCorpus(corpusPath), result = gradeDeliverableCorpus(corpus);
-    expect(result.caseCount).toBe(2);
-    expect(result.deterministicFailures).toBe(2);
+    expect(result.caseCount).toBe(6);
+    expect(result.deterministicFailures).toBe(6);
     expect(result.deterministicPassRate).toBe(0);
     expect(result.acceptedDeliverableRate).toBeNull();
-    expect(result.coverage).toEqual({ coveredClasses: ["single-page"],
-      missingClasses: ["exact-metadata", "comparison", "teaching-note", "newest-release"], completeOpenIssueCoverage: false });
+    expect(result.coverage).toEqual({ coveredClasses: ["single-page", "exact-metadata", "comparison"],
+      missingClasses: ["teaching-note", "newest-release"], completeOpenIssueCoverage: false });
     expect(result.gradingCalls).toEqual({ provider: 0, search: 0, payment: 0, database: 0 });
     expect(corpus.corpusSha256).toMatch(/^[a-f0-9]{64}$/);
   });
@@ -85,7 +85,7 @@ describe("standalone CLI with no operational dependencies", () => {
     const validation = run(["--validate-corpus"]);
     expect(validation.error).toBeUndefined(); expect(validation.signal).toBeNull(); expect(validation.status).toBe(0);
     const report = JSON.parse(validation.stdout);
-    expect(report).toMatchObject({ corpusValid: true, outcome: "FAIL", deterministicFailures: 2, operationalOrSemanticAcceptance: false });
+    expect(report).toMatchObject({ corpusValid: true, outcome: "FAIL", deterministicFailures: 6, operationalOrSemanticAcceptance: false });
     expect(report.graderSource.sha256).toMatch(/^[a-f0-9]{64}$/);
     const grading = run([]); expect(grading.error).toBeUndefined(); expect(grading.signal).toBeNull(); expect(grading.status).toBe(1);
     expect(JSON.parse(grading.stdout).acceptedDeliverables).toBe(0);

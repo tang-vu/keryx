@@ -1,0 +1,71 @@
+{
+  "version": 2,
+  "id": "etag-public-20261009",
+  "question": "Ich betreue ein Web-Redaktionsteam in Deutschland. Lesen Sie https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag . Schreiben Sie auf Deutsch eine kurze Betriebsnotiz mit drei Stichpunkten: Wozu dient ein ETag, wie schützt If-Match vor dem Überschreiben einer inzwischen geänderten Datei, und wann kann If-None-Match zu 304 Not Modified führen? Belegen Sie die Aussagen mit prüfbaren Zitaten aus dieser Seite. Behaupten Sie keinen tatsächlich ausgeführten Server-Test. Kaufen Sie keine kostenpflichtigen Quellen.",
+  "answer": "> ⚠ Low confidence — Each summary sentence is tied to a verbatim excerpt and model-checked; completeness and independent factual correctness remain unverified. Evidence assessment: 1 sub-claim remains below the evidence threshold. Treat this as provisional.\n\nModel-written summary with sentence-level citations. Each sentence is followed by the verbatim source text it was checked against; sentences without a qualifying excerpt were removed.\n\n### Research target 1\n\nRequested topic (unverified): “Wozu dient ein ETag laut der MDN-Seite?”\n\nEin ETag ist ein Antwort-Header, der eine bestimmte Version einer Ressource identifiziert. [S1] Source text: “The HTTP ETag (entity tag) response header is an identifier for a specific version of a resource.”\n\nETags helfen zusätzlich, dass gleichzeitige Aktualisierungen einer Ressource sich nicht gegenseitig überschreiben. [S1] Source text: “Additionally, ETags help to prevent simultaneous updates of a resource from overwriting each other (\"mid-air collisions\").”\n\n### Research target 2\n\nRequested topic (unverified): “Wie schützt If-Match laut der MDN-Seite vor dem Überschreiben einer inzwischen geänderten Datei?”\n\nMit ETag und If-Match lassen sich Mid-air-Edit-Kollisionen (Konflikte) erkennen. [S1] Source text: “With the help of the ETag and the If-Match headers, you can detect mid-air edit collisions (conflicts).”\n\nBeim Speichern von Änderungen an einer Wiki-Seite enthält die POST-Anfrage den If-Match-Header mit den ETag-Werten, um die Aktualität zu überprüfen. [S2] Source text: “Beim Speichern von Änderungen an einer Wiki-Seite (Daten werden gesendet) enthält die POST-Anfrage den If-Match-Header mit den ETag-Werten, um die Aktualität zu überprüfen.”\n\n### Research target 3\n\nRequested topic (unverified): “Wann kann If-None-Match laut der MDN-Seite zu 304 Not Modified führen?”\n\nEvidence gap: no qualifying excerpt for this research target.\n\nSummary sentences are model-written and model-checked, not independently verified; they claim no more than their excerpts and are not a complete synthesis. Excerpts establish source grounding, not that a source is correct. Source statements may be wrong or conflicting. Payment states remain in the separate receipt.\n\n### Supplied original source status\n\n- `https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag`: Bounded text extracted from `https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag`; qualifying excerpts retained.",
+  "answerSha256": "b12b808660551a01d5807ac3c55b14e00cf3a152086e5cb046198652bf1097c2",
+  "bulletRegion": {
+    "start": 0,
+    "end": 2217,
+    "sha256": "3decfd6c9667710cf5c32376c481bb822aad511c3b186ee6a422eed66ded52a2"
+  },
+  "bindings": [
+    {
+      "claimIndex": 0,
+      "marker": "S1",
+      "sourceId": "public:web:58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+      "itemId": "58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+      "itemUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag",
+      "contentVersion": "f98d07670ae40a8f2b487d9a6db4ce079f26795285bf5e19c9f4212a1c7fa20d",
+      "quote": "The HTTP ETag (entity tag) response header is an identifier for a specific version of a resource.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 0,
+      "marker": "S1",
+      "sourceId": "public:web:58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+      "itemId": "58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+      "itemUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag",
+      "contentVersion": "f98d07670ae40a8f2b487d9a6db4ce079f26795285bf5e19c9f4212a1c7fa20d",
+      "quote": "Additionally, ETags help to prevent simultaneous updates of a resource from overwriting each other (\"mid-air collisions\").",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 1,
+      "marker": "S1",
+      "sourceId": "public:web:58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+      "itemId": "58cccfbe41ef19846f5ef127d2c2ad9e1902563d610ee0fbee05c1c1b0b097ab",
+      "itemUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag",
+      "contentVersion": "f98d07670ae40a8f2b487d9a6db4ce079f26795285bf5e19c9f4212a1c7fa20d",
+      "quote": "With the help of the ETag and the If-Match headers, you can detect mid-air edit collisions (conflicts).",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 1,
+      "marker": "S2",
+      "sourceId": "public:web:d2d3aae7c1e5408cbe3cab1879e80936425ae664942cb7bffc5afac79288a4a1",
+      "itemId": "d2d3aae7c1e5408cbe3cab1879e80936425ae664942cb7bffc5afac79288a4a1",
+      "itemUrl": "https://developer.mozilla.org/de/docs/Web/HTTP/Reference/Headers/ETag",
+      "contentVersion": "4004e09cef39961fea0fb8b04bf1db6353d056d54ae60226804fdafed066631d",
+      "quote": "Beim Speichern von Änderungen an einer Wiki-Seite (Daten werden gesendet) enthält die POST-Anfrage den If-Match-Header mit den ETag-Werten, um die Aktualität zu überprüfen.",
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    }
+  ],
+  "provenance": {
+    "kind": "retained-public-report",
+    "reportUrl": "https://keryx.cc/dispatch/6c17a259-9d69-4a30-b18a-e5c8a840ae97",
+    "capturedAt": "2026-10-09T02:32:08.538Z",
+    "deployedCommit": "380647b10a924e231ebe98123028877d8c5ee187",
+    "rawCaptureSha256": "a601201097ced2c260260eb9d1f2a53b710291c41fa7d1b6e4ba3a739752fb5b",
+    "projection": "question-answer-qualified-public-bindings-only",
+    "retainedReceipt": {
+      "capturedAt": "2026-10-09T02:32:06.953Z",
+      "rawCaptureSha256": "8579bb33bb3ce540c4e758d4b38cd5d8c447c296b11a0463a0703e093eb56796",
+      "payloadSha256": "aa7adcd439db9672bc94281b8f4b3559964b3334d73be62418f8efeccdd4dde2"
+    }
+  }
+}

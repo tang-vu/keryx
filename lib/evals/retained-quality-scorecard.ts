@@ -66,7 +66,9 @@ export function buildRetainedQualityScorecard(inputs: RetainedQualityInputs) {
     if (canonical({ file: row.file, sha256: row.sha256, contract: row.contract }) !== canonical(expected) ||
         deliverableSha256(canonical(row.snapshot)) !== row.sha256)
       throw new DeliverableInputError("SCORECARD_CASE_SET_MISMATCH");
-    if (Date.parse(row.snapshot.provenance.capturedAt) > Date.parse(inspection.inspectedAt))
+    if (Date.parse(row.snapshot.provenance.capturedAt) > Date.parse(inspection.inspectedAt) ||
+        (row.snapshot.provenance.retainedReceipt &&
+          Date.parse(row.snapshot.provenance.retainedReceipt.capturedAt) > Date.parse(inspection.inspectedAt)))
       throw new DeliverableInputError("CAPTURE_AFTER_INSPECTION");
   }
   const publicIssues = new Map(inventory.issues.map(i => [i.number, i]));

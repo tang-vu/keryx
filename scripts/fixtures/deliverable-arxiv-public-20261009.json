@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "id": "arxiv-public-20261009",
+  "question": "I need a reference for a reading list. Read the exact original abstract page https://arxiv.org/abs/2005.11401v4 and give four short bullets: the paper title, first author, exact versioned arXiv identifier, and the reading/publication status actually shown on that page. Keep metadata or abstract reading distinct from full-paper reading. Preserve the version for bibliography reuse and do not invent a DOI or peer-review status. Use only free public sources.",
+  "answer": "Could not present 4 short bullets while preserving every target and qualifying excerpt; the target layout follows.\n\nNo supported answer. The read content supplied no qualifying excerpts for the research targets; the draft is withheld as a conclusion.\n\n### Research target 1\n\nRequested topic (unverified): “What is the paper title shown on the exact arXiv abstract page https://arxiv.org/abs/2005.11401v4?”\n\nEvidence gap: no qualifying excerpt for this research target.\n\n### Research target 2\n\nRequested topic (unverified): “Who is the first author shown on the exact arXiv abstract page https://arxiv.org/abs/2005.11401v4?”\n\nEvidence gap: no qualifying excerpt for this research target.\n\n### Research target 3\n\nRequested topic (unverified): “What exact versioned arXiv identifier is shown on the exact arXiv abstract page https://arxiv.org/abs/2005.11401v4?”\n\nEvidence gap: no qualifying excerpt for this research target.\n\n### Research target 4\n\nRequested topic (unverified): “What reading or publication status is actually shown on the exact arXiv abstract page https://arxiv.org/abs/2005.11401v4, without inferring a DOI or peer-review status?”\n\nEvidence gap: no qualifying excerpt for this research target.\n\nExcerpts establish source grounding, not factual truth, entailment or whole-paper coverage. Support and coverage are estimates, not certification of a complete answer. Source statements may be wrong or conflicting. Draft conclusions are withheld; inspect the original text and obtain further review. Payment states remain in the separate receipt.\n\n### Next steps to complete this research\n\nThese are suggested follow-up steps; this run has not performed them. They do not change the recorded evidence or payment state.\n\n- “2005.11401v4 Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks”: only the abstract page was read. Obtain the exact full-text version before comparing methods, evaluations or limitations absent from the abstract.\n\n### Supplied original source status\n\n- `https://arxiv.org/abs/2005.11401v4`: Bounded text extracted from `https://arxiv.org/abs/2005.11401v4`; no qualifying evidence retained. Only the abstract page was read; full-paper evidence is unavailable.",
+  "answerSha256": "cac3428bc48aa31eb1b2d42aa05603f6633b0f425424d4ac753fd22f215031e0",
+  "bulletRegion": {
+    "start": 0,
+    "end": 1557,
+    "sha256": "31f9f684064e7409be7940f426484f1d6f3aa23f6370f8bf606ec0554d67e028"
+  },
+  "bindings": [],
+  "provenance": {
+    "kind": "retained-public-report",
+    "reportUrl": "https://keryx.cc/dispatch/3287df75-ac16-4ccd-8fde-636a678fc7c3",
+    "capturedAt": "2026-10-09T02:30:35.824Z",
+    "deployedCommit": "380647b10a924e231ebe98123028877d8c5ee187",
+    "rawCaptureSha256": "dd0ae353bdfb26f10f79de65a274e5eb0a8e7dff4c56ebab4176faa9860a7536",
+    "projection": "question-answer-qualified-public-bindings-only",
+    "retainedReceipt": {
+      "capturedAt": "2026-10-09T02:30:35.157Z",
+      "rawCaptureSha256": "f2c745930d61756172f259fbb58a33536fdd46810c40b19679dbc0c595977f02",
+      "payloadSha256": "769c37f46eafeb8fb27c3b7193ed76e9a0f46a6b578b44a336899bf4700b05e9"
+    }
+  }
+}
