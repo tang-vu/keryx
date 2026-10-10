@@ -4,6 +4,7 @@ import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { chromium } from "playwright";
+import { parseResearchAvailability } from "../lib/research/availability-contract";
 
 const base = process.env.KERYX_UX_BASE_URL ?? "http://127.0.0.1:3957";
 const screenshots = process.env.KERYX_UX_SCREENSHOT_DIR ?? join(tmpdir(), "keryx-chat-first-ux");
@@ -146,15 +147,32 @@ try {
       assert.equal(new URL(page.url()).hash, "#paid-research");
     }
     const quotaPage = await context.newPage();
-    await quotaPage.route("**/api/ask", route => route.fulfill({ status: 429, headers: { "Retry-After": "60" }, json: {} }));
+    const quotaDraft = "A question held by trial capacity";
+    const available = parseResearchAvailability({ state: "not-paused" });
+    assert(available);
+    let quotaAsks = 0;
+    await quotaPage.route("**/api/ask", route => {
+      quotaAsks++;
+      assert.equal(route.request().postDataJSON().question, quotaDraft);
+      return route.fulfill({ status: 429, headers: { "Retry-After": "60" }, json: {} });
+    });
     await quotaPage.goto(base, { waitUntil: "domcontentloaded" });
-    await quotaPage.getByLabel("What do you want to know?").fill("A question held by trial capacity");
-    await quotaPage.locator('[data-tour="dispatch-btn"]').click();
+    // Rendered effect-driven availability proves hydration consumed the fixture.
+    await quotaPage.getByText(available.message, { exact: true }).waitFor();
+    const quotaQuestion = quotaPage.getByLabel("What do you want to know?");
+    const quotaDispatch = quotaPage.locator('[data-tour="dispatch-btn"]');
+    await quotaQuestion.fill(quotaDraft);
+    assert.equal(await quotaQuestion.inputValue(), quotaDraft);
+    await quotaPage.locator('[data-tour="dispatch-btn"]:enabled').waitFor();
+    assert.equal(await quotaDispatch.isEnabled(), true);
+    assert.equal(quotaAsks, 0, "Readiness and entering a draft never submit research");
+    await quotaDispatch.click();
     const quotaAlert = quotaPage.getByRole("alert");
     await quotaAlert.getByText("Try again in 60s.", { exact: false }).waitFor();
     assert.equal(await quotaAlert.getByText(/connect.*funded|deposit|top.up/i).count(), 0,
       "Trial throttling gives a wait path without treating wallet funding as quota recovery");
     assert.equal(await quotaPage.getByLabel("What do you want to know?").inputValue(), "A question held by trial capacity");
+    assert.equal(quotaAsks, 1, "One ordinary click makes one quota request without retry");
     await quotaPage.screenshot({ path: join(screenshots, `chat-quota-${width}.png`), fullPage: true });
     await quotaPage.close();
     console.log(`PASS ${width}px: natural progress/Stop visibility, older-report scroll retained on steps, two turns, follow-up/settings, export, errors and stop isolation; synthetic requests only.`);
