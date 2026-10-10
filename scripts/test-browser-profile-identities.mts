@@ -13,16 +13,18 @@ const output = join(process.cwd(), ".artifacts", "profile-identity-browser"); aw
 const alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`;
 const identity = { provider: "github", externalId: "123", label: "alice", wallet: alice, verifiedAt: "2026-10-09T00:00:00.000Z" };
 const bundle = await build({ stdin: { contents: `import React,{useEffect,useState}from'react';import{createRoot}from'react-dom/client';import{VerifiedIdentityPanel}from'./app/me/profile/verified-identity-panel';
-window.wallet=${JSON.stringify(alice)};window.cookieOwner=window.wallet;window.saved=false;window.identities={};window.calls=[];window.held=[];window.delay=false;window.heldMutation=[];window.delayMutation=false;window.fail=false;window.unsafe=false;
+window.wallet=${JSON.stringify(alice)};window.cookieOwner=window.wallet;window.saved=false;window.fixtureOwnerSubscribed=false;window.identities={};window.calls=[];window.held=[];window.delay=false;window.heldMutation=[];window.delayMutation=false;window.fail=false;window.unsafe=false;
 window.fetch=async(url,init={})=>{url=String(url);const method=init.method||'GET',owner=window.cookieOwner;window.calls.push({url,method,expected:init.headers['X-Keryx-Expected-Wallet']});
 if(owner!==init.headers['X-Keryx-Expected-Wallet'])return Response.json({error:'profile_owner_changed'},{status:409});if(window.fail)return Response.json({error:'identity_unavailable'},{status:503});
 if(url==='/api/me/profile/identities'&&method==='GET'){const body={wallet:owner,identities:window.identities[owner]||[]};if(window.delay){window.delay=false;return new Promise(resolve=>window.held.push(()=>resolve(Response.json(body))));}return Response.json(body);}
 if(url==='/api/me/profile/identities/github'&&method==='DELETE'){const respond=()=>{window.identities[owner]=[];return Response.json({unlinked:true});};if(window.delayMutation){window.delayMutation=false;return new Promise(resolve=>window.heldMutation.push(()=>resolve(respond())));}return respond();}
 if(url.endsWith('/start')&&method==='POST')return Response.json({authorizationUrl:window.unsafe?'https://evil.invalid/steal':'https://github.com/login/oauth/authorize?client_id=fixture&scope=&state=fixture'});
 throw Error('Unexpected identity request');};
-function Probe(){const[state,set]=useState({wallet:window.wallet,saved:window.saved});useEffect(()=>{const update=()=>set({wallet:window.wallet,saved:window.saved});window.addEventListener('fixture-owner',update);return()=>window.removeEventListener('fixture-owner',update)},[]);return state.wallet?<VerifiedIdentityPanel key={state.wallet} wallet={state.wallet} saved={state.saved}/>:null;}
+function Probe(){const[state,set]=useState({wallet:window.wallet,saved:window.saved});useEffect(()=>{const update=()=>set({wallet:window.wallet,saved:window.saved});window.addEventListener('fixture-owner',update);window.fixtureOwnerSubscribed=true;return()=>{window.fixtureOwnerSubscribed=false;window.removeEventListener('fixture-owner',update)}},[]);return state.wallet?<VerifiedIdentityPanel key={state.wallet} wallet={state.wallet} saved={state.saved}/>:null;}
 createRoot(document.getElementById('root')).render(<Probe/>);`, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' } });
 const update = async (page: Page, wallet: string | null, saved: boolean, cookieOwner = wallet) => {
+  // createRoot may render before its passive effect subscribes; deliver each owner update only after that fixture boundary is ready.
+  await page.waitForFunction(() => (window as unknown as { fixtureOwnerSubscribed: boolean }).fixtureOwnerSubscribed === true);
   await page.evaluate(input => { Object.assign(window, input); window.dispatchEvent(new Event("fixture-owner")); }, { wallet, saved, cookieOwner });
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 };
