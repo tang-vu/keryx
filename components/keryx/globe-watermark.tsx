@@ -187,7 +187,7 @@ export function GlobeWatermark({ className }: { className?: string }) {
           <circle cx="100" cy="183" r="1.5" fill="#1b1712" fillOpacity="0.5" />
         </g>
       </svg>
-      <canvas ref={canvasRef} className="relative z-[1] block" />
+      <canvas ref={canvasRef} className="relative z-[1] block aspect-square w-[78%]" />
     </div>
   );
 }
