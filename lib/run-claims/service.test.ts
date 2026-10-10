@@ -92,4 +92,13 @@ describe("caller-local anonymous run claim delivery", () => {
       `javascript:secret`, `https://secret@synthetic.example/claim-run#${"a".repeat(64)}`])
       expect(runClaimDeliverySchema.safeParse({ version: 1, claimUrl, expiresAt: new Date(now + RUN_CLAIM_TTL_MS).toISOString() }).success).toBe(false);
   });
+  it("defines one canonical ASCII DNS/loopback origin subset for ordinary JS and SQL", () => {
+    for (const origin of ["https://claims.example", "https://one-two.claims.example:8443", "https://localhost", "http://localhost:3939",
+      "http://127.0.0.1", "https://127.0.0.1:3939", "http://[::1]:3939", "https://[::1]"])
+      expect(runClaimBindingSchema.safeParse({ ...binding, origin }).success).toBe(true);
+    for (const origin of ["http://remote.example", "https://remote.example:443", "http://localhost:80", "https://remote.example:0",
+      "https://remote.example:08443", "https://REMOTE.example", "https://remote.example.", "https://8.8.8.8", "https://127.1",
+      "https://xn--bcher-kva.example", "https://b\u00fccher.example", "https://under_score.example", "https://-label.example"])
+      expect(runClaimBindingSchema.safeParse({ ...binding, origin }).success).toBe(false);
+  });
 });

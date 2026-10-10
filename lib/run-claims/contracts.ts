@@ -12,11 +12,18 @@ export const runClaimDateSchema = z.string().datetime().refine(value => {
 });
 export const runClaimBindingSchema = z.object({
   network: z.enum(["eip155:5042", "eip155:5042002"]),
+  // Common JS/SQL subset: canonical lower-case ASCII DNS over HTTPS, or exact
+  // localhost/127.0.0.1/[::1] loopback over HTTP(S). No IDNA, remote IP literals,
+  // trailing DNS dot, default/zero/zero-padded port, credentials or path.
   origin: z.string().max(2048).refine(value => {
     try {
       const url = new URL(value);
-      return url.origin === value && !url.username && !url.password && url.pathname === "/" && !url.search && !url.hash
-        && (url.protocol === "https:" || url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname));
+      if (url.origin !== value || url.username || url.password || url.pathname !== "/" || url.search || url.hash
+        || !["https:", "http:"].includes(url.protocol) || url.port && Number(url.port) === 0) return false;
+      if (["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) return true;
+      const labels = url.hostname.split(".");
+      return url.protocol === "https:" && url.hostname.length <= 253 && /[a-z]/.test(labels.at(-1)!)
+        && labels.every(label => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label) && !label.startsWith("xn--"));
     } catch { return false; }
   }),
 }).strict();
