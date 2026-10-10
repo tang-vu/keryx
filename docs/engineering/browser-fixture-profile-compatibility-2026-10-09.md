@@ -53,3 +53,13 @@ journal entries, unknown populated tables and activated browser controls still
 refuse. Missing, malformed, duplicate or widened identity rows refuse as well.
 No runtime schema, journal, auth or payment authority changes are made by this
 fixture compatibility correction.
+
+The subsequent Monthly fixture failure reaches wallet authentication through its
+real ResearchMonthly, ResearchJob, ResearchJobDetails and DeliverableAcceptance
+composition. Reuse the same explicit signed-out authentication boundary while
+asserting all four real components remain in the bundle and Node JWT stays out.
+Both selected network profiles retain synthetic EOA message/typed-data signing,
+original plan restoration, malformed/foreign recovery refusal, intercepted HTTP,
+uncertain-debit and refresh purchase guards, and exact mainnet funding amounts.
+This fixture qualifies Monthly recovery and purchase behavior, not wallet login
+or customer acceptance; those actual built auth/owner gates remain separate.
