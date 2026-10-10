@@ -12,6 +12,11 @@ import Link from "next/link";
 import { WalletPicker } from "@/components/keryx/wallet-picker";
 import type { ArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -46,10 +51,10 @@ export function ChainBanner({ guard }: { guard: ArcChainGuard }) {
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
       <div className="flex-1">
         <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-amber-700">
-          Wrong network
+          {message("account.wrongNetwork")}
         </p>
         <p className="mt-0.5 text-[12px] leading-snug text-ink-2">
-          Keryx runs on {browserPaymentProfile().label} (chainId {browserPaymentProfile().chainId}). Switch to continue.
+          {message("account.networkInstruction", { network: browserPaymentProfile().label, chainId: browserPaymentProfile().chainId })}
         </p>
       </div>
       <button
@@ -58,7 +63,7 @@ export function ChainBanner({ guard }: { guard: ArcChainGuard }) {
         disabled={guard.isSwitching}
         className="shrink-0 border border-amber-600 bg-amber-600 px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-white transition-all hover:bg-amber-700 disabled:cursor-wait disabled:opacity-60"
       >
-        {guard.isSwitching ? <Loader2 className="h-3 w-3 animate-spin" /> : "Switch ▸"}
+        {guard.isSwitching ? <Loader2 className="h-3 w-3 animate-spin" /> : message("account.switchNetwork")}
       </button>
     </div>
   );
@@ -70,11 +75,10 @@ export function ConnectStep({ isBusy }: { isBusy: boolean }) {
   return (
     <div className="space-y-5">
       <div>
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">Step 1</p>
-        <p className="mt-1 font-display text-xl font-medium text-ink">Connect wallet</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">{message("account.step", { number: 1 })}</p>
+        <p className="mt-1 font-display text-xl font-medium text-ink">{message("account.connectWallet")}</p>
         <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
-          Choose your browser wallet. {browserPaymentProfile().label} will be added automatically
-          if not already configured.
+          {message("account.walletInstruction", { network: browserPaymentProfile().label })}
         </p>
       </div>
       {/* EIP-6963 multi-wallet picker — lists all discovered injected wallets */}
@@ -100,10 +104,10 @@ export function SignInStep({
 }) {
   const label =
     authState === "signing"
-      ? "Waiting for signature…"
+      ? message("account.waitingForSignature")
       : authState === "verifying"
-      ? "Verifying…"
-      : "Sign in with Ethereum ▸";
+      ? message("account.verifying")
+      : message("account.signInWithEthereum");
 
   // Block sign-in when on the wrong chain: SIWE embeds the configured chain ID.
   // and the server rejects messages with a mismatched chainId.
@@ -113,19 +117,18 @@ export function SignInStep({
     <div className="space-y-5">
       <ChainBanner guard={chainGuard} />
       <div>
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">Step 2</p>
-        <p className="mt-1 font-display text-xl font-medium text-ink">Sign in</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">{message("account.step", { number: 2 })}</p>
+        <p className="mt-1 font-display text-xl font-medium text-ink">{message("account.signIn")}</p>
         <p className="mt-0.5 break-all font-mono text-[11px] text-ink-3">{address}</p>
         <p className="mt-2 text-sm leading-relaxed text-ink-2">
-          Sign a message in your wallet to prove ownership. No gas required —
-          this is a signature, not a transaction.
+          {message("account.signatureInstruction")}
         </p>
       </div>
       <button
         type="button"
         onClick={onSignIn}
         disabled={authState !== "idle" || wrongChain}
-        title={wrongChain ? `Switch to ${browserPaymentProfile().label} first` : undefined}
+        title={wrongChain ? message("account.switchFirst", { network: browserPaymentProfile().label }) : undefined}
         className="flex w-full items-center justify-center gap-2 border border-ink bg-seal px-4 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
       >
         {authState !== "idle" ? (
@@ -140,7 +143,7 @@ export function SignInStep({
         onClick={onDisconnect}
         className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3 hover:text-seal hover:underline"
       >
-        ← Use a different wallet
+        {message("account.useDifferentWallet")}
       </button>
     </div>
   );
@@ -164,8 +167,8 @@ export function SignedInStep({
   return (
     <div className="space-y-5">
       <div>
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">Step 3</p>
-        <p className="mt-1 font-display text-xl font-medium text-ink">Authenticated</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">{message("account.step", { number: 3 })}</p>
+        <p className="mt-1 font-display text-xl font-medium text-ink">{message("account.authenticated")}</p>
         <p className="mt-0.5 break-all font-mono text-[11px] text-ink-3">{session.address}</p>
         <div className="mt-3 inline-flex items-center gap-1.5 border border-paid/30 bg-paid/[0.08] px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.1em] text-paid">
           <ShieldCheck className="h-3 w-3" />
@@ -174,22 +177,22 @@ export function SignedInStep({
       </div>
 
       {returnBlocked ? (
-        <p role="alert" className="text-sm text-seal">This registration draft belongs to the wallet that started sign-in. Switch back to that wallet or <Link href={returnTo?.startsWith('/claim-source') ? '/claim-source' : '/register'} className="underline">start a new draft</Link>.</p>
+        <p role="alert" className="text-sm text-seal">{richMessage("account.registrationWalletMismatch", { restartLink: <Link href={returnTo?.startsWith('/claim-source') ? '/claim-source' : '/register'} className="underline">{message("account.startNewDraft")}</Link> })}</p>
       ) : returnTo ? (
-        <Link href={returnTo} className="flex w-full justify-center border border-ink bg-seal px-4 py-3.5 font-mono text-xs text-cream">{returnTo.startsWith('/claim-source') ? 'Resume source claim' : 'Resume source registration'}</Link>
+        <Link href={returnTo} className="flex w-full justify-center border border-ink bg-seal px-4 py-3.5 font-mono text-xs text-cream">{message(returnTo.startsWith('/claim-source') ? 'account.resumeSourceClaim' : 'account.resumeSourceRegistration')}</Link>
       ) : session.role === "creator" || session.role === "dev" ? (
         <Link
           href="/register"
           className="flex w-full items-center justify-center gap-2 border border-ink bg-seal px-4 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none"
         >
-          Issue a toll ▸
+          {message("account.issueToll")}
         </Link>
       ) : (
         <Link
           href="/"
           className="flex w-full items-center justify-center gap-2 border border-ink bg-seal px-4 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none"
         >
-          Ask a question ▸
+          {message("account.askQuestion")}
         </Link>
       )}
 
@@ -200,7 +203,7 @@ export function SignedInStep({
         className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3 hover:text-seal hover:underline"
       >
         <LogOut className="h-3.5 w-3.5" />
-        {busy ? "Signing out…" : "Sign out"}
+        {message(busy ? "account.signingOut" : "account.signOut")}
       </button>
     </div>
   );
