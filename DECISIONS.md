@@ -7171,3 +7171,15 @@ deployment/readback belongs to the existing serialized runtime batch. Packaging
 refuses invalid descriptions/versions before archive writes. Keep the historical
 legal extraction fixture and require every paragraph outside the reviewed extension
 section and dated update to retain its exact markup.
+
+## 2026-10-11 — English Wanted catalogue area
+
+Extract the demand board and creator-response presentation into140 typed English
+messages, preserving the current English, complete rich-link sentences and
+singular/plural branches. Retire only116 scoped copy occurrences; retain brand,
+address and example data. Preserve coverage arithmetic, retry terms, signed
+discount inputs, registry-price revocation and share fallbacks. Exact render and
+intercepted action checks qualify this source extraction; root owns the shared
+status helper, pre-existing offer-barrel build qualification and combined review,
+CI/distribution/delivery. Original272 and held glossary/locale gates stay open.
+See `docs/engineering/wanted-catalogue-2026-10-11.md`.

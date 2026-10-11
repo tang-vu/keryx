@@ -224,3 +224,17 @@ test("personal dispatch metadata, accessibility, empty states and toast copy are
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("Wanted copy is catalogued while brand, address and feed example data remain inline", () => {
+  const retained = {
+    "app/wanted/page.tsx": [],
+    "app/wanted/[id]/page.tsx": [],
+    "app/wanted/[id]/opengraph-image.tsx": ["K", "Keryx", "keryx.cc/wanted"],
+    "components/keryx/feed-match-form.tsx": ["https://yourblog.com/feed.xml"],
+    "components/keryx/existing-article-response-form.tsx": [],
+    "components/keryx/wanted-share-button.tsx": [],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+});
