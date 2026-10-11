@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { spawn, execFileSync, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
-import { closeSync, openSync, readFileSync } from "node:fs";
+import { closeSync, existsSync, openSync, readFileSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, readFile, rename, symlink, unlink, writeFile } from "node:fs/promises";
 import { request as httpRequest } from "node:http";
 import { createServer as httpsServer, request as httpsRequest } from "node:https";
@@ -11,7 +11,6 @@ import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
-import { copyNextConfigFixture } from "../test-support/next-config-fixture";
 import { createMaintenanceFrontDoor } from "../lib/maintenance/front-door";
 import { readWindowControl, WINDOW_FORMAT, type PlannedWindow } from "../lib/maintenance/planned-window";
 import { parseAskHttpError } from "../lib/hooks/ask-error-response";
@@ -25,15 +24,16 @@ assert.equal(process.env.KERYX_MAINTENANCE_REHEARSAL, "isolated-network");
 assert.deepEqual((await readFile("/proc/net/dev", "utf8")).split("\n").slice(2).filter(line => line.includes(":"))
   .map(line => line.split(":")[0].trim()), ["lo"]);
 const source = resolve(import.meta.dirname, ".."), dist = join(source, ".next");
+for (const name of [".env", ".env.local", ".env.production", ".env.production.local"])
+  assert.ok(!existsSync(join(source, name)), "Rehearsal refuses application environment files");
 const buildId = (await readFile(join(dist, "BUILD_ID"), "utf8")).trim(); assert.ok(buildId);
 const evidence = resolve(process.env.KERYX_MAINTENANCE_EVIDENCE ?? join(source, ".artifacts", "maintenance-built"));
 await mkdir(evidence, { recursive: true });
 const fixture = await mkdtemp(join(tmpdir(), "keryx-maintenance-built-"));
 await mkdir(join(fixture, "data")); await mkdir(join(fixture, "control"), { mode: 0o700 });
-await copyNextConfigFixture(source, fixture);
-await symlink(join(source, "node_modules"), join(fixture, "node_modules"));
-await symlink(dist, join(fixture, ".next"));
-await symlink(join(source, "public"), join(fixture, "public"));
+// Established built-origin fixture pattern: unchanged application/build path,
+// isolated DB cwd, and only config-evaluation code exposed through a read-only link.
+await symlink(join(source, "lib"), join(fixture, "lib"));
 const control = join(fixture, "control"), marker = join(control, "window.json");
 const database = join(fixture, "data", "keryx.sqlite");
 const environment = { PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR,
@@ -75,7 +75,7 @@ async function stopApp() {
   assert.match(output, /"httpDrained":true/); assert.equal(app.exitCode, 143);
 }
 try {
-  app = spawn(process.execPath, [join(source, "scripts/test-fixtures/maintenance-built-app.mjs")],
+  app = spawn(process.execPath, [join(source, "scripts/test-fixtures/maintenance-built-app.mjs"), source],
     { cwd: fixture, env: environment, stdio: ["ignore", log, log, "ipc"] });
   exited = new Promise<void>(accept => app!.once("exit", (code, signal) => { appExited = true; exits.push({ code, signal }); accept(); }));
   const ready = new Promise<number>((accept, reject) => {

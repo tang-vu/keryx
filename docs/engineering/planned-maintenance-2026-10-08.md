@@ -230,6 +230,11 @@ The actual request path is Chromium/HTTPS client → disposable Node TLS ingress
 with the actual `.next` build. The TLS ingress supplies the documented trusted
 Host/forwarded HTTPS metadata. A rehearsal-only listener records method/path at
 the built app boundary; no cookies, bodies, signatures or query values are logged.
+Next keeps its original application/build directory so absolute stylesheet
+manifest keys remain valid; only the process cwd and SQLite store are isolated.
+The established built-origin fixture pattern exposes config code via a read-only
+`lib` link and refuses application ENV files. Chromium must load the actual
+stylesheet and show the advance banner inside the initial viewport.
 The browser receives real documents, assets, API and status responses: no canned
 upstream, `route.fulfill`, mocked application handler or synthetic health response.
 This qualifies a real isolated ingress profile, not Cloudflare production ingress.

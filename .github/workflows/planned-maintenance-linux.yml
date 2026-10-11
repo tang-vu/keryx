@@ -11,7 +11,6 @@ on:
       - "scripts/next-public-server.mjs"
       - "scripts/test-maintenance-built.mts"
       - "scripts/test-fixtures/maintenance-built-app.mjs"
-      - "test-support/next-config-fixture.ts"
       - "deploy/maintenance/**"
       - "docs/engineering/planned-maintenance-2026-10-08.md"
       - "next.config.ts"
