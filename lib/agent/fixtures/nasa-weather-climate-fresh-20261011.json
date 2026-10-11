@@ -1,0 +1,20 @@
+{
+  "format": "keryx-fresh-official-nasa-teaching-snapshot-v1",
+  "requestUrl": "https://www.nasa.gov/learning-resources/for-kids-and-students/what-are-climate-and-climate-change-grades-5-8/",
+  "finalUrl": "https://www.nasa.gov/learning-resources/for-kids-and-students/what-are-climate-and-climate-change-grades-5-8/",
+  "capturedAtUtc": "2026-10-11T11:18:40.0224607Z",
+  "httpStatus": 200,
+  "getAttempts": 1,
+  "redirectsFollowed": 0,
+  "contentType": "text/html; charset=UTF-8",
+  "rawBytes": 294179,
+  "rawSha256": "3bec96d10b89a909213c0b18d263656c9acb8912b4b31c50fd238a7a23df4d9b",
+  "gzipBytes": 44305,
+  "gzipSha256": "a83d748f98b2836f693ba526409bc340f316304991a24dc733fa9e24513e967e",
+  "extractedTextLength": 6190,
+  "contentVersion": "4b27d693928d419503d9354fe36395157b8a4f56649001814f6f3024407cd759",
+  "normalizedBodyHash": "a5ae2a0d24a8bf1ba4f03f9bd50125f5c567c91d10454afb36f540354486dbd5",
+  "fullEof": true,
+  "truncated": false,
+  "qualification": "Fresh official NASA HTML snapshot, not the original October 7 production read or a reconstruction of its body/hash. The original question/refusal fixture is unchanged. Generated Vietnamese statements, proposed examples, coverage and review judgments in the offline test are explicitly synthetic; actual source bytes, extraction, quote selection and final admission are exercised. No live model/search/payment or production activation."
+}

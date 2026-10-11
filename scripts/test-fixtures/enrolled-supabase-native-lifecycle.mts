@@ -14,7 +14,7 @@ export function launchOwnedSupabaseCurl(
 ): void {
   const name = curlName(postgresContainer);
   ownContainer(name);
-  // The 20-minute job and all child/request deadlines stay unchanged. This
+  // The 29-minute job and all child/request deadlines stay unchanged. This
   // bounded executor must survive the entire suite, then parent finally removes it.
   docker(["run", "-d", "--name", name, "--network", `container:${postgresContainer}`, "--memory", "64m",
     "--entrypoint", "sh", "curlimages/curl:8.12.1", "-c", "sleep 1800"]);

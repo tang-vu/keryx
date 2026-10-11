@@ -103,6 +103,11 @@ export function buildDraftCheck(value: unknown) {
       }
       cited.add(target.reference);
       const reference = references.find(row => row.key === target.reference)!;
+      // Caller text cannot repair an unreadable or unidentified reference entry.
+      if (reference.status === "unresolved") {
+        citations.push({ token: target.token, reference: reference.key, verdict: "source-unavailable", evidence: "source-unavailable", unavailableReason: "reference-unresolved" });
+        continue;
+      }
       if (impliesDifferentWork(marker, reference))
         flags.push({ kind: "possible-different-work", claim: id, reference: reference.key, impliedAuthor: marker.impliedAuthor! });
       const source = sources.get(reference.key);

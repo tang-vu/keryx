@@ -26,7 +26,7 @@ it("launches an executor lasting beyond the CI suite and retains parent cleanup 
   expect(lifetime).not.toBeNull();
   const workflow = readFileSync(new URL("../../.github/workflows/enrolled-supabase-runtime-postgres.yml", import.meta.url), "utf8");
   const suiteMinutes = /timeout-minutes: ([0-9]+)/.exec(workflow);
-  expect(suiteMinutes?.[1]).toBe("20");
+  expect(suiteMinutes?.[1]).toBe("29");
   expect(Number(lifetime![1])).toBeGreaterThan(Number(suiteMinutes![1]) * 60);
   expect(Number(lifetime![1])).toBeLessThanOrEqual(1800);
   // The actual outer evaluator consumes this set in its finally removal loop.
