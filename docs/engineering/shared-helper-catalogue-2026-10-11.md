@@ -39,6 +39,15 @@ projection `lib/i18n/creator-preview.ts`; do not add another set of messages.
 Independent creator review and root's exact combined-source reconciliation remain
 gates. This checkpoint does not change creator-owned files.
 
+Root subsequently integrated the independently accepted creator and helper
+checkpoints. The compatibility `PREVIEW_DEPTH_LABELS` export now reads those six
+existing keys directly from the dependency-free English creator catalogue.
+Preview enums, normalization, truncation and the creator presentation projection
+remain unchanged; no runtime message-engine or browser/server dependency is added
+to the source helper. This is part of the combined candidate, with final checks
+and delivery still pending. The earlier helper-only checkpoint and study source
+hashes remain historical evidence for their original inputs.
+
 Local acceptance on Node 24.21.0 and npm 11.19.0 uses the existing junction at
 `.shared/dependencies-main09-20261010/node_modules`. The nine inspected dependency
 versions match this worktree's lockfile. No install or junction change occurred.
@@ -47,7 +56,8 @@ than claiming they are the same lockfile or the requested QA junction.
 
 - Ten existing focused test files pass all 95 tests; full `tsc --noEmit
   --incremental false`, scoped ESLint and `git diff --check` pass.
-- A retained harness compares 112 exact results against the base with identical
+- A retained harness records 111 exact before/after comparisons and one catalogue
+  validation result against the expected empty missing/invalid lists, with identical
   dependencies: Markdown/bibliography, CSV/status/header/escaping, screening,
   validation/comparison errors, names, publisher authority labels, serving variants,
   and unchanged English/Vietnamese limits. Hostile braces, markup, multiline text,
