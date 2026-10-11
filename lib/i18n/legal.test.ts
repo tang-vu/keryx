@@ -51,7 +51,24 @@ describe("exact English legal page catalogue", () => {
     it(`${area} on ${network} retains complete markup, metadata, headings and link actions`, async () => {
       const [base, candidate] = await Promise.all([compiledPage(area, "base", network), compiledPage(area, "candidate", network)]);
       const before = renderToStaticMarkup(createElement(base.default)), after = renderToStaticMarkup(createElement(candidate.default));
-      expect(after).toBe(before); expect(candidate.metadata).toEqual(base.metadata);
+      // Keep the original extraction fixture frozen. Only the reviewed extension
+      // section and policy date may differ; every other policy paragraph is exact.
+      const extensionSection = /<section[^>]*><h2[^>]*>The browser extension<\/h2>[\s\S]*?<\/section>/g;
+      if (area === "privacy") {
+        expect([...before.matchAll(extensionSection)]).toHaveLength(1);
+        expect([...after.matchAll(extensionSection)]).toHaveLength(1);
+        expect(after.replace(extensionSection, "<extension-policy/>")).toBe(
+          before.replace(extensionSection, "<extension-policy/>").replace("October 7, 2026", "October 11, 2026"));
+        const extension = after.match(extensionSection)![0];
+        for (const disclosure of ["Opening the popup checks research availability", "Include this page URL as a source",
+          "are published and retained", "AI provider processes", "discovery services", "Open editable question on web",
+          "at most ten completed public report URLs with timestamps", "does not delete hosted reports"]) {
+          expect(extension).toContain(disclosure);
+        }
+        expect(extension).not.toContain("only time a page URL leaves");
+        expect(extension).not.toContain("holds only the hand-off");
+      } else expect(after).toBe(before);
+      expect(candidate.metadata).toEqual(base.metadata);
       expect((after.match(/<main\b/g) ?? []).length).toBe(1); expect((after.match(/<h1\b/g) ?? []).length).toBe(1);
       expect((after.match(/<h2\b/g) ?? []).length).toBe(area === "privacy" ? 11 : 6);
       const links = (html: string) => [...html.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>/g)].map(match => match[0]);
@@ -64,7 +81,7 @@ describe("exact English legal page catalogue", () => {
         const label = `${area}-${network}`;
         writeFileSync(path.join(evidenceDirectory, `${label}-base.html`), before, { flag: "wx" });
         writeFileSync(path.join(evidenceDirectory, `${label}-candidate.html`), after, { flag: "wx" });
-        writeFileSync(path.join(evidenceDirectory, `${label}.json`), JSON.stringify({ area, network, exactHtml: true, exactMetadata: true,
+        writeFileSync(path.join(evidenceDirectory, `${label}.json`), JSON.stringify({ area, network, exactHtml: area === "terms", reviewedExtensionPolicyDelta: area === "privacy", exactMetadata: true,
           baseSourceSha256: hash(base.source), candidateSourceSha256: hash(candidate.source), htmlSha256: hash(after),
           baseCompiledSha256: hash(base.compiled), candidateCompiledSha256: hash(candidate.compiled), metadata: candidate.metadata,
           links: links(after), boundary: "Actual legal page, real React/Next Link, unchanged shell fixtures, actual pinned network helper. No CSS/pixel/Next boot acceptance." }, null, 2) + "\n", { flag: "wx" });

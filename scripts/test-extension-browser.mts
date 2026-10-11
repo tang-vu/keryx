@@ -12,7 +12,7 @@ const context = await chromium.launchPersistentContext(profile, { headless: true
 try {
   const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
   const id = new URL(worker.url()).hostname;
-  assert.equal(await worker.evaluate("chrome.runtime.getManifest().version"), "0.1.3");
+  assert.equal(await worker.evaluate("chrome.runtime.getManifest().version"), "0.1.3.1");
   let failure = false;
   let includePage = false;
   const calls: unknown[] = [];
@@ -55,6 +55,9 @@ try {
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(`chrome-extension://${id}/popup.html?src=menu`);
   await page.waitForFunction(() => (document.getElementById("question") as HTMLTextAreaElement).value === "Synthetic extension question");
+  assert(await page.locator("#public-disclosure").isVisible(), "Public-data disclosure must be visible before submission");
+  assert.equal(await page.locator("#public-disclosure a").getAttribute("href"), "https://github.com/tang-vu/keryx/blob/main/docs/extension-privacy.md");
+  assert.equal(calls.length, 0, "Opening the popup must not submit selected content");
   await page.locator("#budget").fill("0");
   await page.locator("#mode").selectOption("deep");
   await page.locator("#scholarly").check();

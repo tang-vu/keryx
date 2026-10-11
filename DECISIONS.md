@@ -7044,3 +7044,19 @@ registry/identity change. Keep unrecorded acceptance/first-answer figures unmeas
 and distinguish source fixture acceptance from production measurements or rollout.
 See [public usage cohorts](docs/engineering/public-usage-cohorts.md) for the counting
 rules, ordinary PostgreSQL qualification and remaining deployed closure gates.
+
+## 2026-10-11 — Store-preparation extension patch and public disclosures
+
+Use extension 0.1.3.1 for the independently reviewable Store-preparation patch.
+Chrome accepts four numeric version parts; this sorts after published 0.1.3 and
+before the separately prepared, unmerged 0.1.4 private-claim work. Keep app and
+agent package versions unchanged because no request/payment contract is changed.
+
+Publish a dedicated extension privacy policy in the public repository and link it
+before Ask. Disclose public questions/results, explicit page URL submission,
+editable web URL/history, availability request metadata and the bounded local
+report list. The hosted privacy source receives the same correction, with actual
+live deployment and readback owned by the existing serialized runtime batch.
+A packaging preflight rejects invalid descriptions/versions before archive writes.
+Retain the historical legal extraction fixture and permit only the reviewed
+extension section and dated policy change; preserve all other policy markup.

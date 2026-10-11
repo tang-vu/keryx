@@ -5,7 +5,7 @@ desktop, API, CLI, remote/stdio MCP and bot capabilities, implement the applicab
 parts, and leave durable notes so subsequent updates consider these surfaces together.
 Version numbers alone do not establish feature parity, publication or installation.
 
-Extension **0.1.3 candidate** remains a Chromium Manifest V3 hosted research client.
+Extension **0.1.3.1 store-preparation patch** remains a Chromium Manifest V3 hosted research client.
 It uses the existing OpenAI-compatible endpoint and permissions; it has no signer,
 account token, local Operator task engine, funding action or scheduler.
 
@@ -42,3 +42,33 @@ The [October 10 scope and evidence](engineering/extension-parity-2026-10-10.md) 
 the audit baseline, changes and remaining gates. Installation uses the released ZIP's
 extracted directory with Load unpacked; reload an already installed copy only after
 its actual source path and version are verified.
+
+## Chrome Web Store preparation — October 11, 2026
+
+The 0.1.3.1 patch shortens the manifest description to 119 characters, adds a
+public-research notice and policy link before submission, and documents explicit
+page-URL submission, web drafts and the ten-entry local report list. Packaging
+refuses invalid Chrome version syntax or descriptions longer than 132 characters.
+The four-part version sorts after 0.1.3 and before the separately prepared 0.1.4;
+it does not incorporate the unmerged private-claim feature.
+
+Use the public [extension privacy policy](https://github.com/tang-vu/keryx/blob/main/docs/extension-privacy.md)
+as the Store privacy URL. The matching hosted `/privacy` source is updated in
+this patch; its live deployment belongs to the existing serialized deployment
+batch and must be observed before claiming that URL is current.
+
+The patch changes only the extension presentation/distribution and shared legal
+copy. API, web research, desktop, CLI, remote/stdio MCP and bot request/payment
+contracts retain their roles and need no version bump for these disclosure changes.
+The app version is retained to avoid colliding with the pending combined runtime
+release. A dedicated `extension-v0.1.3.1` GitHub release carries the accepted ZIP;
+publication and current main acceptance are checked separately from Store approval.
+
+In the Store dashboard, declare the actual user-generated question content, selected
+website content and explicitly submitted URLs; local storage also counts as data
+handling. Explain activeTab/scripting (invoked selection only), contextMenus,
+storage (handoff/recent reports), and the keryx.cc host permission. The package
+contains its executable code and loads no remote JavaScript. Supply the listing
+description, category/language, icon, screenshots and promotional image as required
+by the dashboard, then review all data-use certifications against the actual behavior.
+Installing or publishing this ZIP does not submit the Store listing automatically.

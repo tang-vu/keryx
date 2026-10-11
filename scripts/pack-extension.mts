@@ -15,6 +15,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
+import { validateExtensionManifest } from "./extension-manifest.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const extDir = resolve(root, "extension");
@@ -24,6 +25,7 @@ if (!readFileSync(resolve(root, "lib/display/recorded-usdc.mjs")).equals(readFil
 }
 
 const manifest = JSON.parse(readFileSync(resolve(extDir, "manifest.json"), "utf8"));
+validateExtensionManifest(manifest);
 const version: string = manifest.version;
 
 // Explicit allowlist — a stray editor swap file or local test config must never ship.
