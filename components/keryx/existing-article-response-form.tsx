@@ -1,4 +1,5 @@
 "use client";
+import { SigningAmount } from "./signing-amount";
 
 import { createMessages } from "@/lib/i18n/messages";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -230,6 +231,7 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
           <p className="mt-3 font-mono text-[9.5px] text-ink-3">
             {uiCopy("wantedResponse.versionCeiling", { version: choice.article.contentVersion.slice(0, 34), ceiling: fmtUsdc(choice.listPriceUsdc) })}
           </p>
+          <p className="mt-3 text-xs"><SigningAmount micros={Math.round(Number(price) * 1_000_000)} /></p>
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <label className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
               {uiCopy("wantedResponse.readPrice")}

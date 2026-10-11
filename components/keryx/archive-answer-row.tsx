@@ -1,3 +1,5 @@
+import { formatRecordedUsdc, selectPlural } from "@/lib/i18n/format";
+import { DisplayTime } from "@/components/keryx/display-time";
 /**
  * One answer card in the archive — shared by the main archive and every topic page so the two
  * surfaces can never drift apart. Server component: the card's text is the thing crawlers read,
@@ -6,18 +8,13 @@
 
 import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
-import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import type { ArchiveEntry } from "@/lib/answers-archive";
 import { ConfidenceBadge } from "./confidence-badge";
 
 const copy = createMessages("en");
 
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+function fmtDate(iso: string) {
+  return <DisplayTime value={iso} dateOnly />;
 }
 
 export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
@@ -34,9 +31,9 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
             </span>
             {entry.confidence ? <ConfidenceBadge confidence={entry.confidence} /> : null}
           </span>
-          <time className="font-mono text-[10px] text-ink-3" dateTime={entry.createdAt}>
+          <span className="font-mono text-[10px] text-ink-3">
             {fmtDate(entry.createdAt)}
-          </time>
+          </span>
         </div>
         <h2 className="mt-2 font-display text-[19px] font-medium leading-snug text-ink transition-colors group-hover:text-seal">
           {entry.question}
@@ -48,7 +45,7 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
         )}
         <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.06em] text-ink-3">
           <span>
-            {copy(entry.citationCount === 1 ? "report.citedSources.one" : "report.citedSources.other", { count: entry.citationCount })}
+            {copy(selectPlural(entry.citationCount) === "one" ? "report.citedSources.one" : "report.citedSources.other", { count: entry.citationCount })}
           </span>
           <span className="text-paid">{copy("archiveReport.creatorRewards", { amount: formatRecordedUsdc(entry.toCreators, { minimumFractionDigits: 4, denomination: entry.archivedNetwork ? "test USDC" : "$" }) })}</span>
           {entry.sourceNames.length > 0 && (

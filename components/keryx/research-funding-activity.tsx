@@ -1,8 +1,9 @@
 "use client";
+import { formatAmount } from "@/lib/i18n/format";
 
 import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useRef, useState } from "react";
-import { formatUnits, type PublicClient } from "viem";
+import { type PublicClient } from "viem";
 import { inspectPastGatewayDeposit, type PastGatewayDeposit } from "@/lib/buyer/funding-activity";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
@@ -31,7 +32,7 @@ export function ResearchFundingActivity({ payer, chain }: { payer: string; chain
     <button type="button" disabled={busy || !chain || !/^0x[a-fA-F0-9]{64}$/.test(hash.trim())} onClick={() => { void inspect(); }} className="border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40">{busy ? copy("fundingActivity.checking") : copy("fundingActivity.check")}</button>
     {error && <p role="status" className="font-serif text-sm">{copy("fundingActivity.unknown")}</p>}
     {observed && <div role="status" className="space-y-2 font-serif text-sm">
-      <p>{copy(observed.status === "success" ? "fundingActivity.successfulCall" : "fundingActivity.revertedCall", { amount: formatUnits(BigInt(observed.amountMicros), 6) })}</p>
+      <p>{copy(observed.status === "success" ? "fundingActivity.successfulCall" : "fundingActivity.revertedCall", { amount: formatAmount(BigInt(observed.amountMicros), { minimumFractionDigits: 6, useGrouping: false }) })}</p>
       <p>{observed.status === "success" ? copy("fundingActivity.pastDeposit") : copy("fundingActivity.reverted")}</p>
       <a className="break-all font-mono text-xs underline" href={`${browserPaymentProfile().explorerUrl}/tx/${observed.hash}`} target="_blank" rel="noreferrer">{copy("fundingActivity.viewTransaction")}</a>
     </div>}

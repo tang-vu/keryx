@@ -1,4 +1,5 @@
 "use client";
+import { formatNumber, formatRecordedAmount } from "@/lib/i18n/format";
 
 /**
  * Hero totals from /api/metrics. Displays the deployment's lifetime settled creator
@@ -40,13 +41,13 @@ export function HeroStats() {
     <div className="flex w-full border border-ink">
       <Cell
         target={m.paid}
-        fmt={(n) => `$${n.toFixed(2)}`}
+        fmt={(n) => `$${formatRecordedAmount(n, { minimumFractionDigits: 2 })}`}
         label={uiCopy("landingTotals.paid", { network: currentArcLabel })}
         money
       />
       <Cell
         target={m.cites}
-        fmt={(n) => Math.round(n).toLocaleString()}
+        fmt={(n) => formatNumber(Math.round(n))}
         label={uiCopy("landingTotals.payments")}
       />
     </div>

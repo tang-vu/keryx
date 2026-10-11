@@ -1,8 +1,9 @@
 "use client";
+import { formatAmount } from "@/lib/i18n/format";
 
 import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { formatUnits, parseUnits } from "viem";
+import { parseUnits } from "viem";
 import { withdrawPolicySchema, type WithdrawPolicy } from "@/lib/gateway/withdraw-protocol";
 import { withdrawalOwnerSchema } from "@/lib/gateway/withdrawal-request";
 import { prepareWithdrawalBrowserDraft } from "@/lib/gateway/withdrawal-browser-prepare";
@@ -64,7 +65,7 @@ function OwnerWorkspace({ owner, wallet, limits }: { owner: string; wallet: Wall
       <h2 className="text-lg font-semibold">{uiCopy("withdrawalWorkspace.title")}</h2>
       <p>{uiCopy("withdrawalWorkspace.networkInstruction")}</p>
       <p className="break-all text-sm">{uiCopy("withdrawalWorkspace.recipient", { owner })}</p>
-      <p className="text-sm">{uiCopy("withdrawalWorkspace.limits", { amount: formatUnits(BigInt(limits.maxValueMicros), 6), fee: formatUnits(BigInt(limits.maxFeeMicros), 6) })}</p>
+      <p className="text-sm">{uiCopy("withdrawalWorkspace.limits", { amount: formatAmount(BigInt(limits.maxValueMicros), { minimumFractionDigits: 6, useGrouping: false }), fee: formatAmount(BigInt(limits.maxFeeMicros), { minimumFractionDigits: 6, useGrouping: false }) })}</p>
       {!id ? <form onSubmit={event => void prepare(event)} className="space-y-3">
         <label className="block">{uiCopy("withdrawalWorkspace.amount")}
           <input className="mt-1 block w-full rounded border bg-transparent p-2" aria-label={uiCopy("withdrawalWorkspace.amount")}

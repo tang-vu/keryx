@@ -170,8 +170,11 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
       const owned = page.getByRole("region", { name: "Your source claims" });
       await owned.getByText(/Control verification expired/).waitFor();
       const deadline = new Date(Date.parse(staleVerifiedAt) + 86400000).toISOString();
+      assert.equal(await owned.locator("time").count(), 2, "Verification and deadline each have one time element");
+      assert.equal(await owned.locator("time time").count(), 0, "Claim timestamps are not nested");
+      assert.equal(await owned.locator("time").nth(0).getAttribute("datetime"), staleVerifiedAt);
       assert.equal(await owned.locator("time").nth(1).getAttribute("datetime"), deadline);
-      assert.match(await owned.locator("time").nth(1).innerText(), /UTC|GMT/, "Deadline includes the viewer timezone");
+      assert.equal(await owned.locator("time").nth(1).getAttribute("title"), deadline, "Exact UTC deadline remains available on hover");
       assert.deepEqual({ challengeCalls, verifyCalls, policies: policies.length }, beforeRenewal);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Saved claim list fits the viewport");
       await page.screenshot({ path: path.join(artifacts, `${profile.name}-${viewport.width}-saved-claims.png`), fullPage: true });

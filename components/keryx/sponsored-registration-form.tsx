@@ -1,9 +1,13 @@
 "use client";
+import { SigningAmount } from "./signing-amount";
+import { DisplayTime } from "./display-time";
+import { formatUnits } from "viem";
+import { formatAmount, formatNumber } from "@/lib/i18n/format";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAccount, useConfig, useSignTypedData } from "wagmi";
 import { getConnection } from "wagmi/actions";
-import { formatUnits, keccak256, toBytes } from "viem";
+import { keccak256, toBytes } from "viem";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { browserPaymentProfile, browserRegistryAddress } from "@/lib/browser-payment-profile";
 import { registrationId, confirmsIndex } from "@/lib/sources/registration-status";
@@ -146,13 +150,14 @@ export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
       <p className="break-all text-sm">{copy.source({ sourceUrl: row.canonicalUrl })}</p>
       <p className="break-all text-sm">{copy.creatorWallet({ wallet: row.creator })}</p>
       <div className="space-y-1 text-sm"><p>{copy.authorRewardsLabel}</p>{row.params.authors.map((author, index) =>
-        <p className="break-all" key={`${author.wallet}:${index}`}>{author.wallet}: {(author.basisPoints / 100).toFixed(2)}%</p>)}</div>
-      <p className="text-sm">{copy.readPrice({ priceUsdc: formatUnits(BigInt(row.params.fetchPriceUsdc6), 6) })}</p>
+        <p className="break-all" key={`${author.wallet}:${index}`}>{author.wallet}: {formatNumber((author.basisPoints / 100), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</p>)}</div>
+      <p className="text-xs"><SigningAmount micros={row.params.fetchPriceUsdc6} /></p>
+      <p className="text-sm">{copy.readPrice({ priceUsdc: formatAmount(BigInt(row.params.fetchPriceUsdc6), { minimumFractionDigits: 6, useGrouping: false }) })}</p>
       <p className="break-all text-sm">{copy.contentIdentifier({ contentId: row.params.contentCid || copy.retainedFeedContent })}</p>
       <p className="break-all text-sm">{copy.tags({ tags: row.params.tags || copy.noTags })}</p>
       <p className="break-all text-sm">{copy.networkRegistry({ network: profile.label, registry: row.registryAddress })}</p>
       <p className="break-all text-sm">{copy.gasSponsor({ wallet: row.relayer })}</p>
-      <p className="text-sm">{copy.authorizationExpiry({ expiresAt: new Date(row.deadline * 1000).toISOString() })}</p>
+      <p className="text-sm">{copy.authorizationExpiry({ expiresAt: "" })}<DisplayTime value={row.deadline * 1000} /></p>
       <p className="text-sm">{copy.gasReservation({ gasUsdc: formatUnits(BigInt(row.reservedWei), 18) })}</p>
       <label className="block text-xs">{copy.originalRequestLabel}<input className="mt-1 w-full border border-line bg-paper p-2 font-mono text-xs" readOnly value={row.id} /></label>
       {row.transactionHash && <a className="block break-all text-xs underline" href={`${profile.explorerUrl}/tx/${row.transactionHash}`} target="_blank" rel="noreferrer">{copy.originalTransaction({ transactionHash: row.transactionHash })}</a>}

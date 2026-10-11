@@ -1,6 +1,9 @@
 "use client";
+import { formatRecordedUsdc, selectPlural } from "@/lib/i18n/format";
 
-import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
+import { DisplayTime } from "@/components/keryx/display-time";
+
+
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 
@@ -39,12 +42,8 @@ export interface DispatchHealth {
   alarms: { code: string; message: string }[];
 }
 
-function ago(iso: string): string {
-  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (mins < 1) return message("statusDispatch.justNow");
-  if (mins < 60) return message("statusObservation.minutesAgo", { minutes: mins });
-  const h = Math.floor(mins / 60);
-  return h < 48 ? message("statusObservation.hoursAgo", { hours: h }) : message("statusObservation.daysAgo", { days: Math.floor(h / 24) });
+function ago(iso: string) {
+  return <DisplayTime value={iso} relative />;
 }
 
 export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchHealth }) {
@@ -53,7 +52,7 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
   const reasonedLabel =
     d.runs === 0
       ? "—"
-      : `${d.modelReasoned}/${d.runs}` + (d.partlyHeuristic > 0 ? message(d.partlyHeuristic === 1 ? "statusDispatch.partial.one" : "statusDispatch.partial.other", { count: d.partlyHeuristic }) : "");
+      : `${d.modelReasoned}/${d.runs}` + (d.partlyHeuristic > 0 ? message(selectPlural(d.partlyHeuristic) === "one" ? "statusDispatch.partial.one" : "statusDispatch.partial.other", { count: d.partlyHeuristic }) : "");
 
   return (
     <>
@@ -76,7 +75,7 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
           v={
             d.reasoningAttemptSamples
               ? `${d.providerFailures ?? 0}${
-                  d.circuitOpenSkips ? message(d.circuitOpenSkips === 1 ? "statusDispatch.circuitSkips.one" : "statusDispatch.circuitSkips.other", { count: d.circuitOpenSkips }) : ""
+                  d.circuitOpenSkips ? message(selectPlural(d.circuitOpenSkips) === "one" ? "statusDispatch.circuitSkips.one" : "statusDispatch.circuitSkips.other", { count: d.circuitOpenSkips }) : ""
                 }`
               : message("statusDispatch.collecting")
           }
@@ -104,7 +103,7 @@ export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchH
   );
 }
 
-function Row({ k, v, alert = false }: { k: string; v: string; alert?: boolean }) {
+function Row({ k, v, alert = false }: { k: string; v: React.ReactNode; alert?: boolean }) {
   return (
     <div className="flex flex-col gap-1">
       <dt className="text-ink-3">{k}</dt>

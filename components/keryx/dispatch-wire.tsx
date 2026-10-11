@@ -1,7 +1,7 @@
 "use client";
 
 import { createMessages } from "@/lib/i18n/messages";
-import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
+import { formatRecordedUsdc } from "@/lib/i18n/format";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PaymentRecord } from "@/lib/types";
