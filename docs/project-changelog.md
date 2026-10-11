@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Purchase planning and pooled recorded outcomes (source candidate)
+
+- Retain each initial BUY/SKIP/CACHE planning basis, including the quoted price,
+  budget and selected alternative, in the existing decision records. Later guards
+  preserve that initial basis; dynamic reevaluation capture remains open.
+- Add a public pooled outcome page and GET API with exact-version scoring,
+  recorded cohort/sample/counting rules and explicit unmeasured fields. Detached
+  evaluation and regression helpers grant no new payment or reading authority.
+- Keep issue #298's remaining acceptance and coordinated release gates explicit
+  in the [scope record](engineering/purchase-outcomes-298.md).
+
 ### Private manual overdue-job observation (source candidate)
 
 - Add `npm run operator:overdue` to inspect running/failed originals against

@@ -224,6 +224,8 @@ export interface Decision extends Partial<SourceItemIdentity> {
   targets: number[]; // indexes of sub-claims this source is expected to address
   /** Present only on a downward-only local validator SKIP; absent on model-authored choices. */
   selectionRefusal?: import("./research/selection-diagnostic").SelectionRefusalReason;
+  /** Structured planning snapshot (price, budget left, alternative, rule). Absent on legacy runs. */
+  basis?: import("./research/decision-basis").DecisionBasis;
   external?: boolean; // true = a marketplace endpoint, always discovery-only regardless of advertised network
 }
 

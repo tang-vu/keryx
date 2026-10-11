@@ -39,6 +39,7 @@ import { contentBodyHash } from "../sources/content-receipt";
 import { afterEach, beforeAll, beforeEach, describe, it, expect, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { runAgent, type RunInput } from "./run-agent";
+import { parseDecisionBasis } from "../research/decision-basis";
 import { collectRun } from "./index";
 import { buildFollowUpQuestion } from "./follow-up-question";
 import type { ResearchEffects } from "./research-effects";
@@ -141,6 +142,14 @@ describe("identity-bound review-first pipeline", () => {
         origin: "web", fundingOwner: "browser", asker: owner, signal: signal.signal, researchMode: "deep", executionLimits: { attentionLimit: 2, reevaluateRounds: reeval ? 1 : 0 } }, d);
       {
         const { run } = await result;
+        const recordedBasis = parseDecisionBasis(run.decisions.find(row => row.sourceId === source.id)?.basis);
+        expect(recordedBasis).toBeDefined();
+        // Reconsidering a skip never rewrites what the initial plan actually proposed.
+        if (reeval) expect(recordedBasis?.plannedAction).toBe("SKIP");
+        else if (cached) expect(recordedBasis?.plannedAction).toBe("CACHE");
+        else expect(recordedBasis?.plannedAction).toBe("BUY");
+        if (fundingFails || changed || decline)
+          expect(recordedBasis?.fetchBudgetMicroUsdc).toBe(String(Math.round(fetchBudget(0.05) * 1_000_000)));
         proof = { economic: { answer: run.answer, decisions: run.decisions, citations: run.citations,
           totalSpent: run.totalSpent, totalToCreators: run.totalToCreators, fundingCalls: funding.mock.calls,
           fetchCalls: gateway.fetchCalls, fetchItems: gateway.fetchItems, fetchPrices: gateway.fetchPrices,
@@ -461,6 +470,16 @@ async function drive(
   while (!res.done) {
     steps.push(res.value);
     res = await gen.next();
+  }
+  // Qualify the prospective basis across every successful runner fixture: public/free/cache,
+  // private isolation, empty/early returns, gap reevaluation and late payment degradation.
+  for (const decision of res.value.decisions) {
+    expect(parseDecisionBasis(decision.basis)).toBeDefined();
+    const initial = steps.find(step => step.phase === "decide"
+      && (step.detail as Decision | undefined)?.assetId === decision.assetId
+      && (step.detail as Decision | undefined)?.sourceId === decision.sourceId)?.detail as Decision | undefined;
+    expect(initial?.basis).toEqual(decision.basis);
+    expect(initial?.basis?.plannedAction).toBe(initial?.action);
   }
   return { run: res.value, steps };
 }
@@ -1402,6 +1421,13 @@ it("continues past partial or explicitly incomplete answers, then stops before a
     // The unread third selection is recorded as skipped, not as a purchase that never happened.
     expect(run.decisions.filter(decision => decision.action === "BUY")).toHaveLength(2);
     expect(run.decisions.find(decision => decision.action === "SKIP")?.rationale).toContain("stopped early");
+    // Every row keeps its planning basis; an unread selection stays a planned BUY that became a SKIP.
+    const bases = run.decisions.map(decision => parseDecisionBasis(decision.basis));
+    expect(bases.every(basis => basis?.fetchBudgetMicroUsdc === bases[0]?.fetchBudgetMicroUsdc && basis?.rule === "selected" && basis?.plannedAction === "BUY")).toBe(true);
+    expect(bases.map(basis => BigInt(basis!.budgetLeftMicroUsdc!))).toEqual(bases.map((_, index) =>
+      BigInt(bases[0]!.fetchBudgetMicroUsdc) - bases.slice(0, index).reduce((sum, basis) => sum + BigInt(basis!.quotedPriceMicroUsdc!), BigInt(0))));
+    expect(BigInt(bases[0]!.quotedPriceMicroUsdc!)).toBeGreaterThan(BigInt(0));
+    expect(steps.filter(step => step.phase === "decide").every(step => parseDecisionBasis((step.detail as { basis?: unknown }).basis))).toBe(true);
   }
 });
 
