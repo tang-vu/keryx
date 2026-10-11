@@ -7584,6 +7584,24 @@ funded evaluation transport, supported-claim review, question taxonomy and the
 actual pre-deployment comparison remain open. See the
 [scope and surface boundaries](docs/engineering/purchase-outcomes-298.md).
 
+**Keep mobile wallet intent across browser portals — 2026-10-12.**
+
+Safari touch events exposed a lifetime bug in the header: a body-portaled wallet
+choice was treated as outside the mobile menu and unmounted before click. Mark
+header wallet portals and retain the mobile wallet control after its first opening,
+using native hidden state for menu visibility. An external SDK modal can dismiss
+that outer menu without destroying the selected wallet's one-time SIWE intent.
+Handle connection outcomes through their promise so picker removal cannot suppress
+errors. Clear failed or cancelled intent only for its selection token, including
+Google connection and OAuth startup failures; a retained hidden control must not
+sign in after a later choice, and an older failure must not clear a newer choice.
+Keep the two new plain English labels in a typed web-only source catalogue,
+outside the shared aggregate embedded by MCP and desktop; no translated locale is
+activated. Add loading shells only to the public data pages that have no nested page
+routes; preserve private document bootstraps and existing not-found boundaries.
+See [iPhone header repair](docs/engineering/iphone-header-2026-10-12.md) for surface
+boundaries and separate browser, deployment and physical-device acceptance gates.
+
 ## 2026-10-11 — Inspect overdue originals through selected read-only storage
 
 Continue issue #257 with an explicit private operator command, reusing the

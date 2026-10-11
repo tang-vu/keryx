@@ -57,7 +57,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.27.57",
+    version: "0.27.58",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +

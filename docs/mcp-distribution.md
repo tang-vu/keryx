@@ -1,5 +1,15 @@
 # MCP package distribution
 
+## App58 web repair — October 12 source candidate
+
+App/OpenAPI0.27.58 changes web header interaction and loading shells. Web-only
+copy stays outside the shared catalogue embedded in packaged runtimes. Hosted
+MCP0.3.15 and stdio/Registry0.4.17 retain their existing tool contracts and release
+identities; this increment requires no fresh MCP package. Their actual publication
+and installed provenance remain independently verified distribution evidence.
+See [surface parity](surface-parity.md) and the
+[iPhone acceptance record](engineering/iphone-header-2026-10-12.md).
+
 ## App57 caller-text tools - October 11 source candidate
 
 App/OpenAPI0.27.57 selects hosted MCP0.3.15 and new stdio/official Registry0.4.17.

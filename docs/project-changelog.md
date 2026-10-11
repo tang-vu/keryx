@@ -1,5 +1,27 @@
 # Keryx Project Changelog
 
+### Bounded source outcomes (source candidate)
+
+- Share one bounded source/topic outcome record across the creator page, public
+  read API and remote/stdio MCP, with sample limits and observation periods visible.
+- Exclude known owners, private jobs and unclassified history from eligible
+  learning. Purchased outcomes require exact recorded settlement and a completed
+  read; public records omit questions, actors and receipt identifiers.
+- Keep live learned selection and exploration withheld. The bounded planner is
+  offline only; issue #299's classifier, usefulness and coordinated delivery
+  gates remain open in the [scope record](engineering/source-learning-299.md).
+
+### Purchase planning and pooled recorded outcomes (source candidate)
+
+- Retain each initial BUY/SKIP/CACHE planning basis, including the quoted price,
+  budget and selected alternative, in the existing decision records. Later guards
+  preserve that initial basis; dynamic reevaluation capture remains open.
+- Add a public pooled outcome page and GET API with exact-version scoring,
+  recorded cohort/sample/counting rules and explicit unmeasured fields. Detached
+  evaluation and regression helpers grant no new payment or reading authority.
+- Keep issue #298's remaining acceptance and coordinated release gates explicit
+  in the [scope record](engineering/purchase-outcomes-298.md).
+
 ### Private manual overdue-job observation (source candidate)
 
 - Add `npm run operator:overdue` to inspect running/failed originals against
@@ -10,6 +32,21 @@
   Native PostgreSQL queue enrollment, automatic/staffed escalation and customer
   remedy requests remain open under issue #257. Runtime versions, review/CI,
   combined deployment and published distribution remain root release gates.
+
+### iPhone header responsiveness (v0.27.58 candidate)
+
+- Fix Safari touch selection of MetaMask and WalletConnect in the mobile header.
+  Preserve the chosen wallet's sign-in intent through external SDK modals and
+  retain error reporting after the picker closes.
+- Clear failed or cancelled wallet selections before a later connection can
+  trigger their sign-in. Preserve a newer selection when an older failure arrives.
+- Close the mobile menu when navigation begins and stream loading shells for
+  the public Activity, Sources and Market data pages. Private research and
+  existing not-found boundaries retain their behavior.
+- Verify touch/portal/sign-in scenarios in Chromium and WebKit, plus actual built
+  Next partial prefetch with a deliberately delayed route response. Physical
+  iPhone wallet approval remains a separate acceptance check. See the
+  [repair evidence and supported-surface audit](engineering/iphone-header-2026-10-12.md).
 
 ### Bounded source-language retrieval and public metadata (v0.27.57 candidate)
 
