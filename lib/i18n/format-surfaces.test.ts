@@ -3,6 +3,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DisplayTime } from "../../components/keryx/display-time";
 import { SigningAmount } from "../../components/keryx/signing-amount";
+import { GrantSpendDialog } from "../../components/keryx/grant-spend-dialog";
+import { SessionActiveCard } from "../../components/keryx/session-active-card";
+import type { GrantState } from "../hooks/use-session-grant";
 import { formatAmount, formatNumber, type DisplayLocale } from "./format";
 import { shippedUiLocales } from "./locales";
 import { buildCitationExport } from "../research-citation-export";
@@ -14,6 +17,47 @@ import { toCsv } from "../creator/csv";
 import type { QueryRun } from "../types";
 
 describe("locale display consumers preserve verification and machine contracts", () => {
+  it("keeps every grant consent variant ungrouped, exact and free of callback execution", () => {
+    const forbidden = () => { throw new Error("Display review must not call an action"); };
+    for (const durationSeconds of [undefined, 3600]) for (const questionCapUsdc of [undefined, 1000.000001]) {
+      const grantState: GrantState = { status: "registering", sessAddr: null, sessionId: null,
+        cap: 1234.000001, spent: 0, expiresAt: null, grantEpoch: null, error: null,
+        consentReview: { cumulativeCapUsdc: 1234.000001, confirmedSpentUsdc: 0, retainedSpentUsdc: 0,
+          remainingCapacityUsdc: 1234.000001, availableUsdc: 1234.000001, questionCapUsdc, durationSeconds } };
+      const html = renderToStaticMarkup(createElement(GrantSpendDialog, { grantState, onActivate: forbidden,
+        onTopUp: forbidden, onExtend: async () => forbidden(), onRevoke: forbidden,
+        onTryRecover: forbidden, onRecoverViaSignature: forbidden }));
+      expect(html).toContain("1234.000001 USDC");
+      expect(html).not.toContain("1,234");
+      expect(html).not.toContain("1,000");
+      if (questionCapUsdc !== undefined) expect(html).toContain("1000.000001 USDC");
+    }
+  });
+  it("keeps active budget, spent and question limits ungrouped for verification", () => {
+    const forbidden = () => { throw new Error("Display review must not call an action"); };
+    const grantState: GrantState = { status: "active", sessAddr: null, sessionId: null,
+      cap: 1234.000001, spent: 0, expiresAt: null, grantEpoch: null, error: null,
+      researchBudget: { questionCapUsdc: 1000.000001, durationSeconds: 3600 } };
+    const html = renderToStaticMarkup(createElement(SessionActiveCard, { grantState,
+      onTopUp: forbidden, onRevoke: forbidden, onExtend: async () => forbidden() }));
+    expect(html).toContain("1234.000001");
+    expect(html).toContain("1000.000001");
+    expect(html).toContain("USDC");
+    expect(html).not.toContain("1,234");
+    expect(html).not.toContain("1,000");
+  });
+  it("keeps remaining budget exact when binary subtraction would add fractional micros", () => {
+    const forbidden = () => { throw new Error("Display review must not call an action"); };
+    const grantState: GrantState = { status: "active", sessAddr: null, sessionId: null,
+      cap: 0.3, spent: 0.2, expiresAt: null, grantEpoch: null, error: null };
+    const html = renderToStaticMarkup(createElement(SessionActiveCard, { grantState,
+      onTopUp: forbidden, onRevoke: forbidden, onExtend: async () => forbidden() }));
+    expect(html).toContain("0.100000");
+    expect(html).toContain("0.200000");
+    expect(html).not.toContain("Amount unavailable");
+    expect(grantState.cap).toBe(0.3);
+    expect(grantState.spent).toBe(0.2);
+  });
   it.each(shippedUiLocales)("shows canonical exact confirmation details for shipped %s", () => {
     for (const micros of ["1", "9999", "1000000000", "9007199254740991"]) {
       const html = renderToStaticMarkup(createElement(SigningAmount, { micros }));

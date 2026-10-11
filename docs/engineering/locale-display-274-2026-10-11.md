@@ -100,3 +100,15 @@ pass on the final PR source. Root review, full built signing/confirmation accept
 for the shipped English UI, coordinated distribution/deployment and original
 issue acceptance remain gates. Root owns merge, release versions, deployment and
 issue closure. Local tests or source review alone do not establish delivery.
+
+Independent comparison with existing PR410 at `61c592a9` identified a useful
+verification detail: budget labels should remain ungrouped throughout Ask,
+session budgets and every grant-consent variant. This candidate now applies that
+detail through its existing exact module and exercises actual grant/session
+components without executing action callbacks. PR410 remains the integration
+destination while open; its bound API and author changes must be reconciled by
+root, rather than opening a duplicate PR or installing a second money algorithm.
+The remaining-budget label subtracts the exact micro integer legs before display,
+so valid `0.3` and `0.2` records show `0.100000` without repairing a binary float.
+This derivation changes presentation only; stored state and action values retain
+their existing authority.
