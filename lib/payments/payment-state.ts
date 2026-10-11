@@ -1,4 +1,5 @@
 import type { PaymentRecord, PaymentSettlementStatus } from "../types";
+import { sharedHelperMessages } from "../../locales/en/shared-helpers";
 
 /** Legacy false rows predate an explicit status and were offline simulations. New ambiguous real
  * attempts always persist `pending`, so this fallback cannot silently promote them to settled. */
@@ -10,11 +11,11 @@ export function paymentSettlementStatus(
 
 export function pendingAuthorizationStatusLabel(payment: Pick<PaymentRecord,'authorizationPhase'>): string {
   switch(payment.authorizationPhase){
-    case 'prepared': return 'reserved, not exposed';
-    case 'exposed': return 'reserved, possibly unsigned';
-    case 'signed': return 'signed, pending proof';
-    case 'submission_attempted': return 'submitted, pending proof';
-    default: return 'pending proof';
+    case 'prepared': return sharedHelperMessages['paymentAuthorization.prepared'];
+    case 'exposed': return sharedHelperMessages['paymentAuthorization.exposed'];
+    case 'signed': return sharedHelperMessages['paymentAuthorization.signed'];
+    case 'submission_attempted': return sharedHelperMessages['paymentAuthorization.submitted'];
+    default: return sharedHelperMessages['paymentAuthorization.pending'];
   }
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,6 +10,8 @@ import { useAccount, useSignTypedData } from "wagmi";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { articleOfferTypedData } from "@/lib/offers/article-offer";
+
+const uiCopy = createMessages("en");
 
 interface ResponseSource {
   sourceId: string;
@@ -60,7 +63,7 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
         cache: "no-store",
       });
       const next = (await response.json()) as ResponseData & { error?: string };
-      if (!response.ok) throw new Error(next.error ?? "Could not load your articles");
+      if (!response.ok) throw new Error(next.error ?? uiCopy("wantedResponse.loadError"));
       setData(next);
       const first = next.sources[0];
       if (first) {
@@ -68,7 +71,7 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
         setPrice((current) => current || String(first.article.priceUsdc));
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load your articles");
+      setError(cause instanceof Error ? cause.message : uiCopy("wantedResponse.loadError"));
     } finally {
       setLoading(false);
     }
@@ -102,12 +105,12 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
       const listPriceUsdc6 = Math.round(choice.listPriceUsdc * 1_000_000);
       const minPriceUsdc6 = Math.round(choice.minPriceUsdc * 1_000_000);
       if (!Number.isSafeInteger(priceUsdc6) || priceUsdc6 < minPriceUsdc6 || priceUsdc6 > listPriceUsdc6) {
-        throw new Error(`Price must be $${fmtUsdc(choice.minPriceUsdc)}–$${fmtUsdc(choice.listPriceUsdc)}.`);
+        throw new Error(uiCopy("wantedResponse.priceRange", { minimum: fmtUsdc(choice.minPriceUsdc), maximum: fmtUsdc(choice.listPriceUsdc) }));
       }
 
       if (priceUsdc6 < listPriceUsdc6 && priceUsdc6 !== Math.round(choice.article.priceUsdc * 1_000_000)) {
         if (!address || address.toLowerCase() !== choice.creator.toLowerCase()) {
-          throw new Error("Connect the registry creator wallet to sign this discount.");
+          throw new Error(uiCopy("wantedResponse.creatorRequired"));
         }
         const expiresAt = Math.floor(Date.now() / 1_000) + 7 * 24 * 60 * 60;
         const offerNonce = nonce();
@@ -133,7 +136,7 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
         });
         const offerResult = (await offerResponse.json()) as { offer?: { id: string }; error?: string };
         if (!offerResponse.ok || !offerResult.offer) {
-          throw new Error(offerResult.error ?? "Could not publish the signed article offer");
+          throw new Error(offerResult.error ?? uiCopy("wantedResponse.publishError"));
         }
         articleOfferId = offerResult.offer.id;
       } else if (priceUsdc6 === listPriceUsdc6 && choice.article.offerId) {
@@ -144,7 +147,7 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
         });
         if (!revokeResponse.ok) {
           const revokeResult = (await revokeResponse.json()) as { error?: string };
-          throw new Error(revokeResult.error ?? "Could not restore the registry price");
+          throw new Error(revokeResult.error ?? uiCopy("wantedResponse.restoreError"));
         }
         articleOfferId = undefined;
       }
@@ -161,12 +164,12 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
         }),
       });
       const result = (await response.json()) as { intent?: { id: string }; error?: string };
-      if (!response.ok || !result.intent) throw new Error(result.error ?? "Could not queue the response");
+      if (!response.ok || !result.intent) throw new Error(result.error ?? uiCopy("wantedResponse.queueError"));
       setReceipt(result.intent.id);
       await load();
       router.refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not offer this article");
+      setError(cause instanceof Error ? cause.message : uiCopy("wantedResponse.offerError"));
     } finally {
       setWorking(false);
     }
@@ -175,11 +178,10 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
   return (
     <section className="mt-9 border border-line bg-paper p-5">
       <h2 className="flex items-center gap-2 font-display text-[23px] font-medium text-ink">
-        <FileCheck2 className="h-5 w-5 text-seal" /> Already listed? Offer the exact article.
+        <FileCheck2 className="h-5 w-5 text-seal" /> {uiCopy("wantedResponse.title")}
       </h2>
       <p className="mt-2 max-w-[66ch] font-serif text-[14px] leading-relaxed text-ink-2">
-        Keryx rechecks your registry authority and public preview, then guarantees this version a
-        place in the retry. The agent still decides BUY or SKIP; only grounded, settled evidence fills the claim.
+        {uiCopy("wantedResponse.authorityBoundary")}
       </p>
 
       {session === null && (
@@ -193,11 +195,11 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
               disabled={authState !== "idle"}
               className="border border-ink bg-ink px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-cream disabled:opacity-50"
             >
-              Sign in to see your articles
+              {uiCopy("wantedResponse.signIn")}
             </button>
           ) : (
             <Link href="/connect" className="border border-ink bg-ink px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-cream">
-              Connect creator wallet
+              {uiCopy("wantedResponse.connect")}
             </Link>
           )}
         </div>
@@ -206,13 +208,13 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
       {session && loading && <Loader2 className="mt-4 h-4 w-4 animate-spin text-seal" />}
       {session && !loading && data?.sources.length === 0 && (
         <p className="mt-4 font-mono text-[10.5px] leading-relaxed text-ink-3">
-          None of your active, verified articles passes this claim&apos;s public-preview match yet.
+          {uiCopy("wantedResponse.noMatches")}
         </p>
       )}
       {choice && (
         <div className="mt-5 border-y border-line py-4">
           <label className="block font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-            Matching article
+            {uiCopy("wantedResponse.matchingArticle")}
             <select
               value={selected}
               onChange={(event) => choose(event.target.value)}
@@ -226,11 +228,11 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
             </select>
           </label>
           <p className="mt-3 font-mono text-[9.5px] text-ink-3">
-            {choice.article.contentVersion.slice(0, 34)}… · registry ceiling ${fmtUsdc(choice.listPriceUsdc)}
+            {uiCopy("wantedResponse.versionCeiling", { version: choice.article.contentVersion.slice(0, 34), ceiling: fmtUsdc(choice.listPriceUsdc) })}
           </p>
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <label className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-              Read price
+              {uiCopy("wantedResponse.readPrice")}
               <span className="mt-1 flex w-36 items-center border border-line bg-paper-2 px-3 py-2">
                 $<input value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" className="ml-1 min-w-0 flex-1 bg-transparent text-ink outline-none" />
               </span>
@@ -242,7 +244,7 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
               className="inline-flex items-center gap-2 border border-ink bg-seal px-4 py-2.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-cream disabled:opacity-50"
             >
               {working ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-              {Number(price) < choice.listPriceUsdc ? "Sign discount + offer" : "Offer at registry price"}
+              {Number(price) < choice.listPriceUsdc ? uiCopy("wantedResponse.signOffer") : uiCopy("wantedResponse.registryOffer")}
             </button>
           </div>
         </div>
@@ -250,7 +252,7 @@ export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
       {error && <p className="mt-4 font-mono text-[10.5px] text-destructive">{error}</p>}
       {receipt && (
         <p className="mt-4 border border-paid/40 bg-paid/10 p-3 font-mono text-[10.5px] text-paid">
-          Response admitted · {receipt.slice(0, 8)}… · waiting for the bounded autonomous retry.
+          {uiCopy("wantedResponse.admitted", { receipt: receipt.slice(0, 8) })}
         </p>
       )}
     </section>

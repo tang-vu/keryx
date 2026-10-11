@@ -1,11 +1,15 @@
+import { createMessages } from "@/lib/i18n/messages";
 import { ImageResponse } from "next/og";
 
-export const alt = "Keryx — citations are currency";
+const uiCopy = createMessages("en");
+
+export const alt = uiCopy("landingCard.alt");
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 // Social card — the banknote masthead, rendered server-side with system serif.
 export default function OpengraphImage() {
+  const [titleLine, emphasizedLine] = uiCopy("landingCard.title").split("\n");
   return new ImageResponse(
     (
       <div
@@ -32,12 +36,12 @@ export default function OpengraphImage() {
             textTransform: "uppercase",
           }}
         >
-          <span>x402 · USDC · settled on Arc</span>
-          <span>Series 2026 — No. 00481</span>
+          <span>{uiCopy("landingCard.settlement", { protocol: "x402", asset: "USDC", network: "Arc" })}</span>
+          <span>{uiCopy("landingCard.series", { year: 2026, number: "00481" })}</span>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 104, lineHeight: 1, fontWeight: 700 }}>Citations are</div>
+          <div style={{ fontSize: 104, lineHeight: 1, fontWeight: 700 }}>{titleLine}</div>
           <div
             style={{
               fontSize: 104,
@@ -47,7 +51,7 @@ export default function OpengraphImage() {
               color: "#1C5D45",
             }}
           >
-            currency.
+            {emphasizedLine}
           </div>
         </div>
 
@@ -70,7 +74,7 @@ export default function OpengraphImage() {
           </div>
           <div style={{ fontSize: 30, fontWeight: 700 }}>Keryx</div>
           <div style={{ fontSize: 19, color: "#7A6F58", letterSpacing: 2 }}>
-            The citation toll — creators paid every time an AI cites them
+            {uiCopy("landingCard.creatorRewards")}
           </div>
         </div>
       </div>

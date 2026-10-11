@@ -1,5 +1,9 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
+
 import { selectionFailureExport } from "@/lib/research/selection-failure-export";
 import type { SelectionDiagnostic } from "@/lib/research/selection-diagnostic";
 
@@ -18,9 +22,9 @@ export function SelectionFailureDownload({ diagnostic }: { diagnostic?: Selectio
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return <div className="mt-3 space-y-2">
-    <p>This diagnostic records why source selection was blocked. It is not a completed report or payment receipt.</p>
+    <p>{message("sourceDecision.diagnosticNotice")}</p>
     <button type="button" onClick={download} className="min-h-11 border border-current px-3 font-mono text-xs focus-visible:outline-2 focus-visible:outline-seal">
-      Download failure diagnostic
+      {message("sourceDecision.downloadDiagnostic")}
     </button>
   </div>;
 }

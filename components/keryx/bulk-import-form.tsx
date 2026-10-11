@@ -13,6 +13,7 @@
  * Offline dev (registry unset): the bulk POST writes rows directly, so feeds land "done" with no tx.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Wallet, Upload, ListPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -30,6 +31,8 @@ import {
   type BulkFeed,
   type BulkPhase,
 } from "./bulk-import-results";
+
+const uiCopy = createMessages("en");
 
 interface OnchainRegisterParams {
   urlHash: `0x${string}`;
@@ -74,14 +77,14 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
     const creator = identity.current.signedIn as Address | undefined;
     if (!creator || identity.current.address?.toLowerCase() !== creator.toLowerCase()
       || (requireNetwork && (identity.current.chainId !== profile.chainId || !publicClient)))
-      throw new Error(`Connect your signed-in creator wallet on ${profile.label} before continuing.`);
+      throw new Error(uiCopy("bulkRegistration.connectNetwork", { network: profile.label }));
     const revision = generation.current;
     return { creator, assertCurrent: () => {
       if (!mounted.current || generation.current !== revision
         || identity.current.address?.toLowerCase() !== creator.toLowerCase()
         || identity.current.signedIn?.toLowerCase() !== creator.toLowerCase()
         || (requireNetwork && identity.current.chainId !== profile.chainId))
-        throw new Error("Creator wallet or network changed. The batch stopped; check any original transaction before continuing.");
+        throw new Error(uiCopy("bulkRegistration.walletChanged"));
     } };
   };
 
@@ -90,9 +93,9 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
       || !/^0x[0-9a-f]{40}$/i.test(feed.registryAddress)
       || !/^0x[0-9a-f]{64}$/i.test(feed.registerParams.urlHash)
       || feed.registerParams.payoutWallet.toLowerCase() !== creator.toLowerCase())
-      throw new Error("Prepared registration differs from your signed-in creator wallet. Read the feeds again.");
+      throw new Error(uiCopy("bulkRegistration.walletMismatch"));
     if (!profile.testnet && feed.registryAddress.toLowerCase() !== browserRegistryAddress().toLowerCase())
-      throw new Error("Registration target differs from the reviewed network registry.");
+      throw new Error(uiCopy("bulkRegistration.registryMismatch"));
     return { registry: feed.registryAddress, creator, onchainId: registrationId(creator, feed.registerParams.urlHash) };
   };
 
@@ -114,7 +117,7 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
     if (active.current || feeds.some(f => ["signing", "confirming", "unknown"].includes(f.phase))) return;
     const urls = parseFeedList(input);
     if (urls.length === 0) {
-      toast.error("Paste at least one feed URL, or load an OPML file.");
+      toast.error(uiCopy("bulkRegistration.inputRequired"));
       return;
     }
     active.current = true;
@@ -130,7 +133,7 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
       });
       const data = (await res.json()) as { results?: PreparedFeed[]; error?: string };
       owner.assertCurrent();
-      if (!res.ok) throw new Error(data.error ?? "Import failed");
+      if (!res.ok) throw new Error(data.error ?? uiCopy("bulkRegistration.importFailed"));
       const prepared = (data.results ?? []).map<PreparedFeed>((r) => ({
         ...r,
         // On-chain returns the id at the top level; the offline DB-direct path nests it under
@@ -144,9 +147,9 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
       }
       setFeeds(prepared);
       const ok = prepared.filter((f) => f.ok).length;
-      toast.success(`${ok} of ${prepared.length} feeds ready.`);
+      toast.success(uiCopy(prepared.length === 1 ? "bulkRegistration.ready.one" : "bulkRegistration.ready.other", { ready: ok, count: prepared.length }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Import failed");
+      toast.error(err instanceof Error ? err.message : uiCopy("bulkRegistration.importFailed"));
     } finally {
       active.current = false;
       if (mounted.current) setPreparing(false);
@@ -155,7 +158,7 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
 
   const observeRegistration = async (feed: PreparedFeed, hash: Hex, owner: ReturnType<typeof captureOwner>) => {
     const expected = registrationIdentity(feed, owner.creator);
-    if (!publicClient || await publicClient.getChainId() !== profile.chainId) throw new Error("Registration RPC network changed");
+    if (!publicClient || await publicClient.getChainId() !== profile.chainId) throw new Error(uiCopy("bulkRegistration.rpcChanged"));
     owner.assertCurrent();
     const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
     owner.assertCurrent();
@@ -163,12 +166,12 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
     if (!confirmsRegistration(receipt, expected)) {
       if (!feed.submittedTxHash || hash.toLowerCase() !== feed.submittedTxHash.toLowerCase()
         || receipt.transactionHash.toLowerCase() !== feed.submittedTxHash.toLowerCase()) {
-        patch(feed.rssUrl, { phase: "unknown", error: "This receipt does not confirm the expected registration or resolve the wallet-submitted original. Check the original transaction; do not resubmit." });
+        patch(feed.rssUrl, { phase: "unknown", error: uiCopy("bulkRegistration.receiptUnresolved") });
         return false;
       }
       patch(feed.rssUrl, { phase: "failed", error: receipt.status === "reverted"
-        ? "Transaction reverted. This attempt did not register the source; gas may have been charged."
-        : "Transaction mined without the expected registration event. Registration is not confirmed." });
+        ? uiCopy("bulkRegistration.reverted")
+        : uiCopy("bulkRegistration.eventMissing") });
       return true;
     }
     patch(feed.rssUrl, { phase: "done", error: undefined });
@@ -179,7 +182,7 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
     if (active.current || !/^0x[0-9a-f]{64}$/i.test(feed.txHash ?? "")) return;
     active.current = true; setChecking(true);
     try { await observeRegistration(feed, feed.txHash as Hex, captureOwner()); onRegistered?.(); }
-    catch (err) { if (mounted.current) patch(feed.rssUrl, { phase: "unknown", error: err instanceof Error ? err.message : "Confirmation remains unknown; do not resubmit." }); }
+    catch (err) { if (mounted.current) patch(feed.rssUrl, { phase: "unknown", error: err instanceof Error ? err.message : uiCopy("bulkRegistration.confirmationUnknown") }); }
     finally { active.current = false; if (mounted.current) setChecking(false); }
   };
 
@@ -189,7 +192,7 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
       (f) => f.selected && f.ok && f.phase === "ready" && f.mode === "onchain" && f.registerParams,
     );
     if (targets.length === 0) {
-      toast.error("Nothing ready to register — select at least one ingested feed.");
+      toast.error(uiCopy("bulkRegistration.nothingReady"));
       return;
     }
     active.current = true;
@@ -201,7 +204,7 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
         try {
           owner.assertCurrent();
           registrationIdentity(f, owner.creator);
-          if (!publicClient || await publicClient.getChainId() !== profile.chainId) throw new Error("Registration RPC network changed");
+          if (!publicClient || await publicClient.getChainId() !== profile.chainId) throw new Error(uiCopy("bulkRegistration.rpcChanged"));
           owner.assertCurrent();
           const p = f.registerParams!;
           patch(f.rssUrl, { phase: "signing", error: undefined });
@@ -218,10 +221,10 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
           owner.assertCurrent();
           if (!await observeRegistration({ ...f, submittedTxHash: hash }, hash, owner)) break;
         } catch (err) {
-          const msg = err instanceof Error ? err.message : "Signature rejected";
+          const msg = err instanceof Error ? err.message : uiCopy("bulkRegistration.signatureRejected");
           const unknown = walletRequestStarted && !walletRequestWasRejected(err);
           if (mounted.current) patch(f.rssUrl, { phase: unknown ? "unknown" : "failed", error: unknown
-            ? "Confirmation is unknown. Check the original transaction or enter its hash from wallet activity; do not resubmit. " + msg.slice(0, 160)
+            ? uiCopy("bulkRegistration.unknownWithReason", { reason: msg.slice(0, 160) })
             : msg.slice(0, 200) });
           // An unknown wallet result or changed identity never authorizes the next prompt.
           if (unknown) break;
@@ -230,7 +233,7 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
       }
       onRegistered?.();
     } catch (err) {
-      if (mounted.current) toast.error(err instanceof Error ? err.message : "Registration stopped");
+      if (mounted.current) toast.error(err instanceof Error ? err.message : uiCopy("bulkRegistration.stopped"));
     } finally {
       active.current = false;
       if (mounted.current) setRegistering(false);
@@ -258,8 +261,8 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
     setVerifiedCount(verified);
     setVerifying(false);
     toast[verified === done.length ? "success" : "message"](
-      `${verified} of ${done.length} feeds verified.`,
-      { description: verified < done.length ? "Add the token to the rest, then check again." : undefined },
+      uiCopy(done.length === 1 ? "bulkRegistration.verified.one" : "bulkRegistration.verified.other", { verified, count: done.length }),
+      { description: verified < done.length ? uiCopy("bulkRegistration.tokenRemaining") : undefined },
     );
     onRegistered?.();
   };
@@ -275,21 +278,21 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
     <div className="space-y-6 border border-ink bg-paper p-7">
       <div className="space-y-2">
         <label className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
-          <ListPlus className="h-3.5 w-3.5 text-seal" /> Feed URLs or OPML
+          <ListPlus className="h-3.5 w-3.5 text-seal" /> {uiCopy("bulkRegistration.feedLabel")}
         </label>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           rows={6}
-          placeholder={"https://blog-one.com/feed.xml\nhttps://blog-two.com/rss\n…or paste an OPML export"}
+          placeholder={uiCopy("bulkRegistration.placeholder", { firstUrl: "https://blog-one.com/feed.xml", secondUrl: "https://blog-two.com/rss" })}
           className="w-full resize-y rounded-md border border-line bg-paper-2 px-3 py-2 font-mono text-[12px] text-ink outline-none focus:border-ink"
         />
         <div className="flex items-center justify-between">
           <label className="flex cursor-pointer items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-seal hover:underline">
-            <Upload className="h-3.5 w-3.5" /> Load OPML file
+            <Upload className="h-3.5 w-3.5" /> {uiCopy("bulkRegistration.loadFile")}
             <input type="file" accept=".opml,.xml,text/xml,text/plain" onChange={readFile} className="hidden" />
           </label>
-          <span className="font-mono text-[10.5px] text-ink-3">up to {MAX_BULK_FEEDS} feeds per import</span>
+          <span className="font-mono text-[10.5px] text-ink-3">{uiCopy(Number(MAX_BULK_FEEDS) === 1 ? "bulkRegistration.limit.one" : "bulkRegistration.limit.other", { count: MAX_BULK_FEEDS })}</span>
         </div>
       </div>
 
@@ -297,7 +300,7 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
       <div className="space-y-2">
         <div className="flex items-baseline justify-between">
           <label className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
-            Price per read (all feeds)
+            {uiCopy("bulkRegistration.priceLabel")}
           </label>
           <span className="font-display text-[22px] font-bold tabular-nums text-seal">
             ${fmtUsdc(priceNum)}
@@ -321,13 +324,13 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
         className="flex w-full items-center justify-center gap-2 border border-ink bg-paper-2 px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
       >
         {preparing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListPlus className="h-4 w-4" />}
-        {preparing ? "Reading feeds…" : "Read feeds ▸"}
+        {preparing ? uiCopy("bulkRegistration.reading") : uiCopy("bulkRegistration.readFeeds")}
       </button>
 
       <BulkImportResults feeds={feeds} onToggle={toggle} busy={busy}
         onCheck={rssUrl => { const feed = feeds.find(f => f.rssUrl === rssUrl); if (feed) void checkRegistration(feed); }}
         onHashChange={(rssUrl, txHash) => patch(rssUrl, { txHash })} />
-      {feeds.some(f => f.phase === "done" && f.mode === "onchain") && <p className="text-xs text-ink-2">Registration confirmed on-chain. Indexing and feed ownership verification may still be pending. If verification is not available yet, check again later in My sources.</p>}
+      {feeds.some(f => f.phase === "done" && f.mode === "onchain") && <p className="text-xs text-ink-2">{uiCopy("bulkRegistration.confirmedNotice")}</p>}
 
       {pendingOnchain > 0 && (
         <button
@@ -338,8 +341,8 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
         >
           {registering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
           {registering
-            ? "Signing on-chain…"
-            : `Register ${feeds.filter((f) => f.selected && f.phase === "ready").length} on-chain ▸`}
+            ? uiCopy("bulkRegistration.signing")
+            : uiCopy("bulkRegistration.registerSelected", { count: feeds.filter((f) => f.selected && f.phase === "ready").length })}
         </button>
       )}
 

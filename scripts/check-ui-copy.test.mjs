@@ -224,3 +224,213 @@ test("personal dispatch metadata, accessibility, empty states and toast copy are
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("research conversation, decision, payment and job recovery copy is catalogued; protocol samples remain data", () => {
+  const files = ["app/embed/page.tsx", "app/embed/embed-client.tsx", "components/keryx/a2a-call-card.tsx",
+    "components/keryx/budget-meter.tsx", "components/keryx/creators-paid-panel.tsx", "components/keryx/follow-up-form.tsx",
+    "components/keryx/gateway-contract-references.tsx", "components/keryx/onboarding-tour.tsx", "components/keryx/paid-stamp.tsx",
+    "components/keryx/phase-style.ts", "components/keryx/reasoning-console.tsx", "components/keryx/research-account-jobs.tsx",
+    "components/keryx/research-chat.tsx", "components/keryx/research-decisions.tsx", "components/keryx/research-job-details.tsx",
+    "components/keryx/research-job.tsx", "components/keryx/research-private-jobs.tsx", "components/keryx/research-saved-jobs.tsx",
+    "components/keryx/research-turn.tsx", "components/keryx/selection-failure-download.tsx", "components/keryx/sponsored-trial-notice.tsx",
+    "components/keryx/trace-row.tsx"];
+  const retained = new Map([
+    ["app/embed/embed-client.tsx", ["Keryx"]],
+    ["components/keryx/a2a-call-card.tsx", ["https://keryx.cc", 'claude mcp add --transport http keryx &quot;https://keryx.cc/mcp?client=claude&quot;', "/api/docs ↗"]],
+    ["components/keryx/research-job.tsx", ["a2a_…"]],
+  ]);
+  for (const file of files) {
+    const findings = extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
+    const samples = findings.filter(finding => finding.text.startsWith("# 1 · inspect the default package"));
+    assert.equal(samples.length, file.endsWith("a2a-call-card.tsx") ? 1 : 0, file);
+    assert.deepEqual(findings.filter(finding => !samples.includes(finding)).map(finding => finding.text), retained.get(file) ?? [], file);
+  }
+});
+
+test("funding, consent, checkout, request and evidence inspection copy is catalogued; currencies and protocol identities remain data", () => {
+  const retained = {
+    "app/research/page.tsx": ["USDC"],
+    "components/keryx/arc-card-onramp-panel.tsx": [],
+    "components/keryx/faucet-panel.tsx": ["USDC"],
+    "components/keryx/grant-spend-dialog.tsx": [],
+    "components/keryx/research-budget-fields.tsx": [],
+    "components/keryx/research-checkout.tsx": [],
+    "components/keryx/research-evidence-browser.tsx": [],
+    "components/keryx/research-funding-activity.tsx": [],
+    "components/keryx/research-funding.tsx": ["0x…"],
+    "components/keryx/research-monthly.tsx": [],
+    "components/keryx/research-private-checkout.tsx": [],
+    "components/keryx/research-request.tsx": ["POST /api/agent/ask"],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"))
+      .map(finding => finding.text), data, file);
+  }
+});
+
+test("report/archive/export/paper-workspace copy is catalogued; only brand, network, currency and record limits remain data", () => {
+  const files = ["app/answers/page.tsx", "app/answers/page/[n]/page.tsx", "app/answers/topic/[slug]/page.tsx",
+    "app/dispatch/[id]/page.tsx", "app/dispatch/[id]/dispatch-view.tsx", "app/dispatch/[id]/opengraph-image.tsx",
+    "app/history/testnet/page.tsx", "app/literature/page.tsx",
+    ...["report-actions", "research-citation-export", "bibliography-exports", "portable-receipt-panel",
+      "evidence-matrix-export", "answer-delta", "mode-badge", "confidence-badge", "answer-markdown",
+      "historical-dispatch-note", "related-dispatches", "archive-answer-row", "dispatch-history",
+      "research-private-result", "answer-feedback", "scholarly-metadata", "answer-card", "citation-evidence-panel",
+      "paper-card", "paper-save-button", "paper-search-panel", "literature-comparison-preview", "archive-index-view",
+      "archive-search", "archive-topic-chips", "archive-pagination", "dispatch-wire", "freshness-note",
+      "literature-workspace", "source-evidence-lens"].map(name => `components/keryx/${name}.tsx`)];
+  const retained = {
+    "app/dispatch/[id]/opengraph-image.tsx": ["K", "Keryx"],
+    "app/dispatch/[id]/page.tsx": ["KERYX", "Arc testnet", "Arc mainnet"],
+    "components/keryx/dispatch-wire.tsx": ["USDC"],
+    "components/keryx/literature-comparison-preview.tsx": ["arXiv"],
+    "components/keryx/literature-workspace.tsx": ["/50"],
+  };
+  for (const file of files) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"))
+      .map(finding => finding.text), retained[file] ?? [], file);
+  }
+});
+
+test("source discovery, retained-feed and market copy is catalogued; vendor links, currency and example year remain data", () => {
+  const files = ["app/sources/page.tsx", "app/market/page.tsx", ...["source-library-filters",
+    "public-reference-card", "cited-source-card", "explore-source-card", "source-registry-row",
+    "sources-list", "source-directory-preview"].map(name => `components/keryx/${name}.tsx`)];
+  const retained = {
+    "app/sources/page.tsx": ["OpenAlex ↗", "DOAJ ↗", "USDC"],
+    "components/keryx/source-library-filters.tsx": ["2024"],
+  };
+  for (const file of files) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"))
+      .map(finding => finding.text), retained[file] ?? [], file);
+  }
+});
+
+test("native Desktop copy is catalogued; executable buyer command remains invariant protocol data", () => {
+  const file = "desktop/src/renderer.tsx";
+  const findings = extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
+  assert.deepEqual(findings.map(finding => finding.text), [
+    "$env:KERYX_NETWORK=${value}; $env:NEXT_PUBLIC_KERYX_NETWORK=${value}; npm run buyer -- buy --request ${value} --payee ${value} --max-total ${value} --state ${value}",
+  ]);
+});
+
+test("public source claim proof, policy, status and accessible controls are catalogued", () => {
+  for (const file of ["app/claim-source/page.tsx", "components/keryx/public-source-claim-form.tsx",
+    "components/keryx/public-source-claim-policy.tsx", "components/keryx/public-source-claim-status.tsx",
+    "components/keryx/public-source-claims.tsx"]) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text),
+      file.endsWith("public-source-claim-form.tsx") ? ["https://your-site.example/article"] : [], file);
+  }
+});
+
+test("registration, bulk import and feed verification copy is catalogued; protocol and source examples stay data", () => {
+  const retained = {
+    "app/register/page.tsx": ["https://your-site.example/feed.xml"],
+    "components/keryx/register-form.tsx": ["register-tx", "register-tx", "https://yourblog.com/feed.xml",
+      "Stablecoin Ledger", "https://yourblog.com", "$0.005", "$0.040", "https://your-agent.com/keryx-hook",
+      "X-Keryx-Signature", "sha256=hex(hmac_sha256(secret, rawBody))"],
+    "components/keryx/bulk-import-form.tsx": [],
+    "components/keryx/bulk-import-results.tsx": [],
+    "components/keryx/feed-verification-panel.tsx": [],
+    "components/keryx/owner-feed-verification.tsx": [],
+    "components/keryx/claim-onchain-panel.tsx": [],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+});
+
+test("creator management copy is catalogued; protocol, contact, currency and brand data remain inline", () => {
+  const retained = {
+    "app/creator/[id]/page.tsx": ["KERYX"],
+    "app/creator/[id]/creator-detail-view.tsx": ["tx"],
+    "app/creator/[id]/article-content-panel.tsx": [],
+    "app/creator/[id]/article-offers-panel.tsx": [],
+    "app/creator/[id]/scholarly-rights-panel.tsx": ["submitted", "submitted"],
+    "app/creator/[id]/listing-controls-panel.tsx": ["listing-tx", "listing-tx", "$0.001", "$0.040"],
+    "app/creator/[id]/decision-feedback-panel.tsx": [],
+    "app/creator/[id]/notify-email-panel.tsx": ["you@example.com"],
+    "app/creator/[id]/notify-webhook-panel.tsx": ["https://your-agent.com/keryx-hook", "sha256=hex(hmac_sha256(secret, rawBody))"],
+    "app/creator/[id]/preview-depth-panel.tsx": [],
+    "app/creator/[id]/embed-badge-panel.tsx": ["Markdown", "HTML"],
+    "app/creator/[id]/embed-widget-panel.tsx": ['<script src="${value}/keryx-widget.js" data-keryx-source="${value}" async></script>'],
+    "app/creator/[id]/opengraph-image.tsx": ["K", "Keryx"],
+    "app/me/sources/page.tsx": [],
+    "app/me/sources/my-sources-view.tsx": ["you@example.com"],
+    "components/keryx/creator-leaderboard.tsx": [],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+  const proof = "app/creator/[id]/gateway-proof-panel.tsx";
+  const findings = extractUiCopy(proof, readFileSync(new URL(`../${proof}`, import.meta.url), "utf8"));
+  assert.equal(findings.length, 1);
+  assert.match(findings[0].text, /^curl -s \$\{value\}\/v1\/balances/u);
+});
+
+test("withdrawal instructions, accessibility and recovery states are catalogued; network and currency identities remain data", () => {
+  const retained = {
+    "app/me/withdrawals/page.tsx": [],
+    "components/keryx/withdrawal-workspace.tsx": [],
+    "components/keryx/withdrawal-review-panel.tsx": ["Arc Testnet · USDC", "USDC", "USDC", "USDC"],
+    "components/keryx/withdrawal-recovery-panel.tsx": ["USDC"],
+    "components/keryx/withdrawal-history-panel.tsx": [],
+    "components/keryx/withdrawal-history-progress.tsx": [],
+    "components/keryx/withdraw-earnings-panel.tsx": [],
+    "components/keryx/creator-owner-withdrawal-panel.tsx": [],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+});
+
+test("landing, metadata, fallback and dialog copy is catalogued; protocol and brand data remain inline", () => {
+  const retained = {
+    "app/layout.tsx": ["%s · Keryx"],
+    "app/error.tsx": [],
+    "app/global-error.tsx": [],
+    "app/not-found.tsx": ["404"],
+    "app/opengraph-image.tsx": ["K", "Keryx"],
+    "components/keryx/landing-sections.tsx": [],
+    "components/keryx/hero-stats.tsx": [],
+    "components/keryx/activity-ticker.tsx": [],
+    "components/keryx/keryx-mark.tsx": ["K", "Keryx"],
+    "components/keryx/herald-seal.tsx": ["K"],
+    "components/keryx/product-hunt-badge.tsx": [],
+    "components/ui/dialog.tsx": [],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+});
+
+test("Wanted copy is catalogued while brand, address and feed example data remain inline", () => {
+  const retained = {
+    "app/wanted/page.tsx": [],
+    "app/wanted/[id]/page.tsx": [],
+    "app/wanted/[id]/opengraph-image.tsx": ["K", "Keryx", "keryx.cc/wanted"],
+    "components/keryx/feed-match-form.tsx": ["https://yourblog.com/feed.xml"],
+    "components/keryx/existing-article-response-form.tsx": [],
+    "components/keryx/wanted-share-button.tsx": [],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+});
+
+test("integration setup and playground copy is catalogued; protocols, URLs and example prompts stay data", () => {
+  const retained = {
+    "app/integrations/mcp/page.tsx": [],
+    "app/integrations/mcp/mcp-integration-client.tsx": ["Remote MCP", "io.github.tang-vu/keryx", "MCP Registry", "https://keryx.cc/mcp", "paper_lookup", "searchRepositories: true", "Use Keryx research to explain how micropayments make citation rewards practical for AI agents. Include the paid sources and dispatch receipt."],
+    "app/playground/page.tsx": ["https://keryx.cc/api/v1", "/chat/completions", "keryx", "stream:true", "kx_live_…", "/dev", "/api/docs"],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+});
+
+test("dashboard notices, counts, payment labels and accessibility copy are catalogued", () => {
+  for (const file of ["app/dashboard/page.tsx", "components/keryx/dashboard-view.tsx", "components/keryx/payments-feed.tsx"]) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
+  }
+});

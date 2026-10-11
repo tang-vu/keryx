@@ -4,8 +4,11 @@
  * The active topic renders as a marked chip rather than a link back to itself.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import type { ArchiveTopic } from "@/lib/answers-topics";
+
+const copy = createMessages("en");
 
 const CHIP =
   "border px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.1em] transition-colors";
@@ -19,13 +22,13 @@ export function ArchiveTopicChips({
 }) {
   if (topics.length === 0) return null;
   return (
-    <nav aria-label="Answer topics" className="mt-6 flex flex-wrap items-center gap-1.5">
+    <nav aria-label={copy("archiveTopics.label")} className="mt-6 flex flex-wrap items-center gap-1.5">
       <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-3">
-        Topics
+        {copy("archiveTopics.title")}
       </span>
       {activeSlug && (
         <Link href="/answers" className={`${CHIP} border-line text-ink-3 hover:border-ink hover:text-ink`}>
-          ← all
+          {copy("archiveTopics.all")}
         </Link>
       )}
       {topics.slice(0, 5).map((t) =>
@@ -45,7 +48,7 @@ export function ArchiveTopicChips({
       )}
       {topics.length > 5 && (
         <details className="w-full">
-          <summary className={`${CHIP} inline-flex min-h-11 cursor-pointer items-center border-line text-ink-2`}>More topics ({topics.length - 5})</summary>
+          <summary className={`${CHIP} inline-flex min-h-11 cursor-pointer items-center border-line text-ink-2`}>{copy(topics.length - 5 === 1 ? "archiveTopics.more.one" : "archiveTopics.more.other", { count: topics.length - 5 })}</summary>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {topics.slice(5).map((t) => t.slug === activeSlug ? (
               <span key={t.slug} className={`${CHIP} border-ink bg-ink text-paper`}>{t.label} {t.count}</span>

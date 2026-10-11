@@ -1,5 +1,6 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePublicClient, useWalletClient } from "wagmi";
 import { formatUnits, parseUnits, type PublicClient } from "viem";
@@ -13,6 +14,8 @@ import { ResearchFundingActivity } from "./research-funding-activity";
 import { ArcCardOnrampPanel } from "./arc-card-onramp-panel";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "@/lib/arc-network-profile";
+
+const copy = createMessages("en");
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 function fundingExplorer(record: FundingRecord) {
@@ -28,15 +31,15 @@ function reviewedDeposit(value: string) {
 
 function outcomeMessage(record: FundingRecord, step: FundingStep) {
   const leg = record[step];
-  if (leg.status === "replaced") return "The original transaction was replaced by a different call. This does not confirm the planned deposit. Check wallet activity and Gateway balance before preparing another deposit.";
-  if (leg.status === "reverted") return "The matching transaction reverted. Gas may have been charged; this was not a successful deposit.";
-  if (leg.status !== "confirmed") return "The transaction remains unconfirmed. Check wallet activity; do not send it again.";
+  if (leg.status === "replaced") return copy("gatewayFunding.replaced");
+  if (leg.status === "reverted") return copy("gatewayFunding.reverted");
+  if (leg.status !== "confirmed") return copy("gatewayFunding.unconfirmed");
   if (leg.resolution) return step === "deposit"
-    ? "The matching deposit is finalized according to the configured RPC. Check Gateway balance before buying; credit may still be updating."
-    : "The matching approval is finalized according to the configured RPC. Review the deposit separately.";
+    ? copy("gatewayFunding.finalizedDeposit")
+    : copy("gatewayFunding.finalizedApproval");
   return step === "deposit"
-    ? "Deposit confirmed on chain. Check Gateway balance before buying; Circle credit may still be updating."
-    : "Approval confirmed. Review the deposit step separately.";
+    ? copy("gatewayFunding.confirmedDeposit")
+    : copy("gatewayFunding.confirmedApproval");
 }
 
 export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRevision = 0, disabled, onBusy, onChanged }: {
@@ -73,13 +76,13 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
       const value = await connectedBuyerWallet(wallet, payer).readWallet();
       if (live.current && epoch === creditEpoch.current) setCredit({ micros: value.gatewayBalanceMicros, revision: creditRevision });
     } catch {
-      if (live.current && epoch === creditEpoch.current) setMessage("Gateway balance is unavailable. Refresh the balance; do not deposit based on an unknown balance.");
+      if (live.current && epoch === creditEpoch.current) setMessage(copy("gatewayFunding.creditUnknown"));
     } finally { if (live.current && epoch === creditEpoch.current) { setCreditChecked(creditRevision); setCreditChecking(false); } }
-  }, [wallet, payer, creditRevision]);
+  }, [wallet, payer, creditRevision, setMessage]);
 
   useEffect(() => {
     live.current = true;
-    void refresh().catch(() => { if (live.current) { setRecordsAvailable(false); setMessage("Funding records could not be read. Check browser storage before depositing."); } });
+    void refresh().catch(() => { if (live.current) { setRecordsAvailable(false); setMessage(copy("gatewayFunding.recordsUnavailable")); } });
     return () => { live.current = false; operation.current?.abort(); onBusy(false); };
   }, [refresh, onBusy]);
 
@@ -105,7 +108,7 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
       }
       catch { /* Missing/mismatched or unconfirmed evidence never permits another wallet request. */ }
       if (!cancelled && attempts < 30) timer = setTimeout(poll, 4000);
-      else if (!cancelled) setMessage("Confirmation lookup paused. Refresh funding status to continue; do not send the transaction again.");
+      else if (!cancelled) setMessage(copy("gatewayFunding.lookupPaused"));
     }
     timer = setTimeout(poll, 2000);
     return () => { cancelled = true; clearTimeout(timer); };
@@ -115,9 +118,9 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
     if (disabled || operation.current) return;
     const abort = new AbortController(); operation.current = abort; setBusy(true); onBusy(true);
     try { await action(abort.signal); }
-    catch { if (live.current) setMessage("Could not complete this step. Check your wallet, funds, gas and saved funding status. No transaction will be retried automatically."); }
+    catch { if (live.current) setMessage(copy("gatewayFunding.stepIncomplete")); }
     finally {
-      if (live.current) { await refresh().catch(() => setMessage("Could not refresh funding records. Keep this tab and check your wallet activity.")); setBusy(false); onBusy(false); }
+      if (live.current) { await refresh().catch(() => setMessage(copy("gatewayFunding.recordsNotRefreshed"))); setBusy(false); onBusy(false); }
       operation.current = null;
     }
   }
@@ -125,13 +128,13 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
   function send(step: FundingStep) {
     if (!wallet || !chain || !active) return;
     void run(async signal => {
-      setMessage(`Check the exact ${step === "approval" ? "approval" : "deposit"} amount and gas in your wallet.`);
+      setMessage(copy(step === "approval" ? "gatewayFunding.checkApproval" : "gatewayFunding.checkDeposit"));
       const result = await submitFundingStep({ id: active.id, step, wallet, chain, signal });
       if (!live.current) return;
       if (result.hash) setLookupHash(result.hash);
-      setMessage(result.state === "submitted" ? "Transaction submitted. Waiting for matching on-chain confirmation."
-        : result.state === "rejected" ? "Your wallet rejected the request. You can review and try this step again."
-        : "Wallet or storage response is uncertain. Check wallet activity and recover the original transaction hash; do not send it again.");
+      setMessage(result.state === "submitted" ? copy("gatewayFunding.submitted")
+        : result.state === "rejected" ? copy("gatewayFunding.rejected")
+        : copy("gatewayFunding.walletUncertain"));
       creditEpoch.current++; setCredit(null); setCreditChecked(null); setCreditChecking(false); onChanged();
     });
   }
@@ -158,62 +161,62 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
   }
 
   return <div className="space-y-3">
-    <section className="border border-line bg-paper p-4" aria-label="Gateway funding readiness">
-      <h4 className="font-display text-xl">Funding readiness</h4>
-      <p className="mt-2 font-mono text-xs">Price: {formatUnits(BigInt(requiredMicros), 6)} USDC · Gateway available: {currentCredit === null ? "unavailable or not checked" : `${formatUnits(BigInt(currentCredit), 6)} USDC`}</p>
-      <p role="status" className="mt-2 font-serif text-sm">{creditChecking && creditChecked !== creditRevision ? "Checking Gateway balance…" : !recordsAvailable ? "Funding history unavailable. Inspect your wallet activity before adding funds." : creditChecked !== creditRevision && readiness !== "deposit-unverified" ? "Check Gateway balance to see whether this price is covered. This read sends no transaction." : readiness === "ready"
-        ? "At the last check, enough Gateway USDC was available for this price. Review the purchase terms, then buy. The purchase checks funds again before signing."
-        : readiness === "deposit-unverified" ? "The latest deposit is confirmed on chain; Gateway credit for this price is not yet verified. Funds may still be updating or may already have been spent. Refresh Gateway balance before buying or adding funds."
-        : readiness === "insufficient" ? `Gateway funds are below this price.${rows[0]?.deposit.status === "confirmed" ? " The latest deposit is confirmed on chain, but current Gateway credit is still below the price; it may already have been spent or credit may not yet be visible." : ""} Check any existing transaction before preparing another deposit. Wallet USDC and gas are separate from Gateway credit.`
-        : "Gateway balance unavailable. Refresh it before buying or adding funds."}</p>
-      {uncertain && <p className="mt-2 font-serif text-sm text-seal">A funding transaction may already have been sent. Inspect the existing transaction below; do not submit it again.</p>}
-      <button type="button" className={`${control} mt-3`} disabled={disabled || busy || creditChecking || !wallet} onClick={() => { void checkCredit(); void refresh().catch(() => { setRecordsAvailable(false); setMessage("Funding records could not be read."); }); }}>Refresh Gateway balance and funding status</button>
-      {recordsAvailable && readiness === "insufficient" && !uncertain && <button type="button" className={`${control} mt-3 ml-2`} onClick={() => { if (fundingDetails.current) fundingDetails.current.open = true; }}>Review deposit options</button>}
-      {recordsAvailable && (readiness === "deposit-unverified" || uncertain) && <button type="button" className={`${control} mt-3 ml-2`} onClick={() => { if (fundingDetails.current) fundingDetails.current.open = true; }}>Inspect existing transaction</button>}
+    <section className="border border-line bg-paper p-4" aria-label={copy("gatewayFunding.readinessLabel")}>
+      <h4 className="font-display text-xl">{copy("gatewayFunding.readinessTitle")}</h4>
+      <p className="mt-2 font-mono text-xs">{currentCredit === null ? copy("gatewayFunding.priceUnknownBalance", { price: formatUnits(BigInt(requiredMicros), 6) }) : copy("gatewayFunding.priceBalance", { price: formatUnits(BigInt(requiredMicros), 6), balance: formatUnits(BigInt(currentCredit), 6) })}</p>
+      <p role="status" className="mt-2 font-serif text-sm">{creditChecking && creditChecked !== creditRevision ? copy("gatewayFunding.checkingBalance") : !recordsAvailable ? copy("gatewayFunding.historyUnknown") : creditChecked !== creditRevision && readiness !== "deposit-unverified" ? copy("gatewayFunding.checkPriceCoverage") : readiness === "ready"
+        ? copy("gatewayFunding.ready")
+        : readiness === "deposit-unverified" ? copy("gatewayFunding.unverifiedCredit")
+        : readiness === "insufficient" ? copy(rows[0]?.deposit.status === "confirmed" ? "gatewayFunding.insufficientAfterDeposit" : "gatewayFunding.insufficient")
+        : copy("gatewayFunding.unavailableBalance")}</p>
+      {uncertain && <p className="mt-2 font-serif text-sm text-seal">{copy("gatewayFunding.existingTransaction")}</p>}
+      <button type="button" className={`${control} mt-3`} disabled={disabled || busy || creditChecking || !wallet} onClick={() => { void checkCredit(); void refresh().catch(() => { setRecordsAvailable(false); setMessage(copy("gatewayFunding.recordsNotRead")); }); }}>{copy("gatewayFunding.refreshBalance")}</button>
+      {recordsAvailable && readiness === "insufficient" && !uncertain && <button type="button" className={`${control} mt-3 ml-2`} onClick={() => { if (fundingDetails.current) fundingDetails.current.open = true; }}>{copy("gatewayFunding.reviewDeposit")}</button>}
+      {recordsAvailable && (readiness === "deposit-unverified" || uncertain) && <button type="button" className={`${control} mt-3 ml-2`} onClick={() => { if (fundingDetails.current) fundingDetails.current.open = true; }}>{copy("gatewayFunding.inspectTransaction")}</button>}
     </section>
     <details ref={fundingDetails} className="border border-line p-4">
-    <summary className="cursor-pointer font-mono text-xs">Add USDC to Gateway</summary>
-    <p className="mt-3 font-serif text-sm">Approve an exact amount, then deposit it into your own Gateway balance. Each transaction needs a wallet confirmation and costs gas. This does not buy research or pay Keryx.</p>
-    <p className="mt-2 break-all font-mono text-xs">{browserPaymentProfile().label} Gateway: {BUYER_GATEWAY}</p>
+    <summary className="cursor-pointer font-mono text-xs">{copy("gatewayFunding.addToGateway")}</summary>
+    <p className="mt-3 font-serif text-sm">{copy("gatewayFunding.depositNotice")}</p>
+    <p className="mt-2 break-all font-mono text-xs">{copy("gatewayFunding.gateway", { network: browserPaymentProfile().label, gateway: BUYER_GATEWAY })}</p>
     {!profile.testnet && <div className="mt-3"><ArcCardOnrampPanel /></div>}
     {!active && <div className="mt-4 space-y-3">
-      <label className="grid gap-2 font-mono text-xs">Deposit amount ({profile.label} USDC)<input value={amount} disabled={busy || disabled} onChange={event => { setAmount(event.target.value); setAccepted(false); }} inputMode="decimal" className="w-full border border-line bg-paper p-3 sm:w-48" /></label>
-      <label className="flex items-start gap-3 font-serif text-sm"><input type="checkbox" checked={accepted} disabled={busy || disabled} onChange={event => setAccepted(event.target.checked)} className="mt-1" /><span>I want to add this amount to my own Gateway balance, plus transaction gas. I will keep my wallet transaction hashes for recovery.</span></label>
+      <label className="grid gap-2 font-mono text-xs">{copy("gatewayFunding.amount", { network: profile.label })}<input value={amount} disabled={busy || disabled} onChange={event => { setAmount(event.target.value); setAccepted(false); }} inputMode="decimal" className="w-full border border-line bg-paper p-3 sm:w-48" /></label>
+      <label className="flex items-start gap-3 font-serif text-sm"><input type="checkbox" checked={accepted} disabled={busy || disabled} onChange={event => setAccepted(event.target.checked)} className="mt-1" /><span>{copy("gatewayFunding.depositConsent")}</span></label>
       <button type="button" disabled={busy || disabled || !accepted || !wallet || !reviewedDeposit(amount)} className={control} onClick={() => {
         if (!wallet) return;
         void run(async signal => {
           const value = reviewedDeposit(amount); if (!value) throw new Error("Invalid amount");
           await connectedBuyerWallet(wallet, payer, signal).readWallet();
           signal.throwIfAborted(); await createFundingRecord(payer, value);
-          if (live.current) { setAccepted(false); setLookupHash(""); setMessage("Funding plan saved. Review the approval step below; no transaction has been sent."); }
+          if (live.current) { setAccepted(false); setLookupHash(""); setMessage(copy("gatewayFunding.planSaved")); }
         });
-      }}>Prepare deposit</button>
-      <p className="font-serif text-xs text-ink-3">{profile.testnet ? "Up to 1 testnet USDC per deposit. " : "Review your chosen mainnet amount before funding. "}Leave wallet USDC for gas. Browser storage can be lost; wallet activity remains the source for transaction hashes.</p>
+      }}>{copy("gatewayFunding.prepareDeposit")}</button>
+      <p className="font-serif text-xs text-ink-3">{copy(profile.testnet ? "gatewayFunding.testnetGasNotice" : "gatewayFunding.mainnetGasNotice")}</p>
     </div>}
     {active && <div className="mt-4 space-y-3">
-      <p className="font-mono text-xs">Planned deposit: {formatUnits(BigInt(active.amount), 6)} USDC</p>
+      <p className="font-mono text-xs">{copy("gatewayFunding.plannedDeposit", { amount: formatUnits(BigInt(active.amount), 6) })}</p>
       {(["approval", "deposit"] as const).map(step => <div key={step} className="border border-line p-3">
-        <p className="font-mono text-xs">{step === "approval" ? "1. Approve" : "2. Deposit"}: {active[step].status}</p>
-        {["ready", "rejected"].includes(active[step].status) && <button type="button" className={`${control} mt-2`} disabled={busy || disabled || (step === "deposit" && active.approval.status !== "confirmed")} onClick={() => send(step)}>{step === "approval" ? "Approve" : "Deposit"} {formatUnits(BigInt(active.amount), 6)} USDC</button>}
+        <p className="font-mono text-xs">{copy(step === "approval" ? "gatewayFunding.approvalStatus" : "gatewayFunding.depositStatus", { status: active[step].status })}</p>
+        {["ready", "rejected"].includes(active[step].status) && <button type="button" className={`${control} mt-2`} disabled={busy || disabled || (step === "deposit" && active.approval.status !== "confirmed")} onClick={() => send(step)}>{copy(step === "approval" ? "gatewayFunding.approveAmount" : "gatewayFunding.depositAmount", { amount: formatUnits(BigInt(active.amount), 6) })}</button>}
         {["possible", "submitted"].includes(active[step].status) && <>
-          <label className="mt-3 grid gap-2 font-serif text-sm">Transaction hash from your wallet<input value={lookupHash} onChange={event => setLookupHash(event.target.value)} autoComplete="off" spellCheck={false} placeholder="0x…" className="min-w-0 border border-line bg-paper p-2 font-mono text-xs" /></label>
-          <button type="button" className={`${control} mt-2`} disabled={busy || disabled || (!active[step].hash && !/^0x[a-fA-F0-9]{64}$/.test(lookupHash.trim()))} onClick={() => recover(step)}>Check original transaction</button>
-          <p className="mt-2 font-serif text-xs">If your wallet sped up or cancelled this transaction, enter the replacement hash. This check sends no transaction and requires finalized evidence from the configured RPC.</p>
-          <button type="button" className={`${control} mt-2`} disabled={busy || disabled || !/^0x[a-fA-F0-9]{64}$/.test(lookupHash.trim())} onClick={() => recoverReplacement(step)}>Check replacement transaction</button>
+          <label className="mt-3 grid gap-2 font-serif text-sm">{copy("gatewayFunding.transactionHash")}<input value={lookupHash} onChange={event => setLookupHash(event.target.value)} autoComplete="off" spellCheck={false} placeholder="0x…" className="min-w-0 border border-line bg-paper p-2 font-mono text-xs" /></label>
+          <button type="button" className={`${control} mt-2`} disabled={busy || disabled || (!active[step].hash && !/^0x[a-fA-F0-9]{64}$/.test(lookupHash.trim()))} onClick={() => recover(step)}>{copy("gatewayFunding.checkOriginal")}</button>
+          <p className="mt-2 font-serif text-xs">{copy("gatewayFunding.replacementNotice")}</p>
+          <button type="button" className={`${control} mt-2`} disabled={busy || disabled || !/^0x[a-fA-F0-9]{64}$/.test(lookupHash.trim())} onClick={() => recoverReplacement(step)}>{copy("gatewayFunding.checkReplacement")}</button>
         </>}
-        {active[step].hash && <a className="mt-2 block break-all font-mono text-xs underline" href={`${fundingExplorer(active)}/tx/${active[step].hash}`} target="_blank" rel="noreferrer">View original network transaction</a>}
-        {active[step].originalHash && <a className="mt-2 block break-all font-mono text-xs underline" href={`${fundingExplorer(active)}/tx/${active[step].originalHash}`} target="_blank" rel="noreferrer">Original transaction</a>}
+        {active[step].hash && <a className="mt-2 block break-all font-mono text-xs underline" href={`${fundingExplorer(active)}/tx/${active[step].hash}`} target="_blank" rel="noreferrer">{copy("gatewayFunding.viewNetworkTransaction")}</a>}
+        {active[step].originalHash && <a className="mt-2 block break-all font-mono text-xs underline" href={`${fundingExplorer(active)}/tx/${active[step].originalHash}`} target="_blank" rel="noreferrer">{copy("gatewayFunding.originalTransaction")}</a>}
       </div>)}
       {["ready", "rejected"].includes(active.deposit.status) && ["ready", "rejected", "confirmed"].includes(active.approval.status) && <button type="button" className={control} disabled={busy || disabled} onClick={() => {
-        void run(async () => { if (!await cancelFundingRecord(active.id)) throw new Error("Funding state changed"); if (live.current) setMessage("Local funding plan cancelled. Any confirmed token approval remains on chain."); });
-      }}>Cancel unsubmitted deposit plan</button>}
+        void run(async () => { if (!await cancelFundingRecord(active.id)) throw new Error("Funding state changed"); if (live.current) setMessage(copy("gatewayFunding.planCancelled")); });
+      }}>{copy("gatewayFunding.cancelPlan")}</button>}
     </div>}
     <button type="button" className={`${control} mt-4`} disabled={busy || disabled} onClick={() => {
-      if (pendingStep) recover(pendingStep); else void refresh().catch(() => setMessage("Funding records could not be read."));
-    }}>Refresh funding status</button>
-    {rows.some(row => row.deposit.status === "confirmed") && <p className="mt-3 font-serif text-sm">A saved deposit is confirmed on chain. Check the current Gateway balance before buying; previous deposits may already have been spent.</p>}
+      if (pendingStep) recover(pendingStep); else void refresh().catch(() => setMessage(copy("gatewayFunding.recordsNotRead")));
+    }}>{copy("gatewayFunding.refreshStatus")}</button>
+    {rows.some(row => row.deposit.status === "confirmed") && <p className="mt-3 font-serif text-sm">{copy("gatewayFunding.savedDepositNotice")}</p>}
     <p role="status" className="mt-3 font-serif text-sm">{message}</p>
-    <ul className="mt-3 space-y-2">{rows.filter(row => !row.activePayer).slice(0, 5).map(row => <li key={row.id} className="font-mono text-xs">{formatUnits(BigInt(row.amount), 6)} USDC · {row.cancelled ? "plan cancelled" : row.deposit.status === "confirmed" ? "deposit confirmed" : row.deposit.status === "replaced" || row.approval.status === "replaced" ? "original replaced by a different call; deposit not confirmed" : "transaction reverted"}{(row.deposit.hash ?? row.approval.hash) && <> · <a className="underline" href={`${fundingExplorer(row)}/tx/${row.deposit.hash ?? row.approval.hash}`} target="_blank" rel="noreferrer">Transaction</a></>}{(row.deposit.originalHash ?? row.approval.originalHash) && <> · <a className="underline" href={`${fundingExplorer(row)}/tx/${row.deposit.originalHash ?? row.approval.originalHash}`} target="_blank" rel="noreferrer">Original transaction</a></>}</li>)}</ul>
+    <ul className="mt-3 space-y-2">{rows.filter(row => !row.activePayer).slice(0, 5).map(row => <li key={row.id} className="font-mono text-xs">{copy(row.cancelled ? "gatewayFunding.history.cancelled" : row.deposit.status === "confirmed" ? "gatewayFunding.history.confirmed" : row.deposit.status === "replaced" || row.approval.status === "replaced" ? "gatewayFunding.history.replaced" : "gatewayFunding.history.reverted", { amount: formatUnits(BigInt(row.amount), 6) })}{(row.deposit.hash ?? row.approval.hash) && <> · <a className="underline" href={`${fundingExplorer(row)}/tx/${row.deposit.hash ?? row.approval.hash}`} target="_blank" rel="noreferrer">{copy("gatewayFunding.transaction")}</a></>}{(row.deposit.originalHash ?? row.approval.originalHash) && <> · <a className="underline" href={`${fundingExplorer(row)}/tx/${row.deposit.originalHash ?? row.approval.originalHash}`} target="_blank" rel="noreferrer">{copy("gatewayFunding.originalTransaction")}</a></>}</li>)}</ul>
     <ResearchFundingActivity key={payer.toLowerCase()} payer={payer} chain={chain} />
   </details></div>;
 }

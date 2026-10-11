@@ -9,10 +9,14 @@
  * truth (the inspect step prints the real price + schema).
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+
 import { useState } from "react";
 import Link from "next/link";
 import { Check, Copy, Terminal } from "lucide-react";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+
+const message = createMessages("en");
 
 const ORIGIN = "https://keryx.cc";
 
@@ -39,29 +43,26 @@ export function A2aCallCard() {
     <section className="mt-6 border border-ink bg-paper">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-line px-5 py-3.5">
         <h2 className="font-display text-[19px] font-medium text-ink">
-          Call Keryx from your own agent
+          {message("agentIntegration.title")}
         </h2>
         <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
-          POST /api/agent/ask · dynamic fixed price · {browserPaymentProfile().networkId}
+          {message("agentIntegration.endpoint", { endpoint: "POST /api/agent/ask", network: browserPaymentProfile().networkId })}
         </span>
       </div>
 
       <p className="px-5 pt-3.5 text-sm leading-relaxed text-ink-2">
-        Keryx is itself a paid x402 endpoint. The request prepays a fixed Quick/Deep service fee
-        plus its hard creator-spend cap; the receipt itemizes what reached creators and what reserve
-        stayed unused. Package v1 pins the execution contract and returns measured latency and
-        evidence quality; its initial SLO is provisional, not a refund-backed SLA.
+        {message("agentIntegration.packageNotice")}
       </p>
 
       <div className="relative m-5 mt-3.5 border border-line bg-paper-2">
         <button
           type="button"
           onClick={copy}
-          title="Copy to clipboard"
+          title={message("agentIntegration.copyTitle")}
           className="absolute right-2 top-2 inline-flex items-center gap-1.5 border border-line bg-paper px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-2 transition-colors hover:border-seal hover:text-seal"
         >
           {copied ? <Check size={12} /> : <Copy size={12} />}
-          {copied ? "copied" : "copy"}
+          {copied ? message("agentIntegration.copied") : message("agentIntegration.copy")}
         </button>
         <pre className="overflow-x-auto px-4 py-3.5 font-mono text-[12px] leading-relaxed text-ink">
           <code>{SNIPPET}</code>
@@ -70,20 +71,20 @@ export function A2aCallCard() {
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line px-5 py-3 font-mono text-[11px] text-ink-3">
         <Terminal size={13} className="text-seal" />
-        <span className="text-ink-2">Remote MCP service tools:</span>
+        <span className="text-ink-2">{message("agentIntegration.remoteTools")}</span>
         <code className="break-all text-ink">claude mcp add --transport http keryx &quot;https://keryx.cc/mcp?client=claude&quot;</code>
         <Link
           href="/integrations/mcp"
           className="font-semibold text-seal hover:underline"
         >
-          setup and tool roles ↗
+          {message("agentIntegration.setupLink")}
         </Link>
-        <span>Remote research uses the service budget; local stdio pays from your configured wallet.</span>
+        <span>{message("agentIntegration.payerNotice")}</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-line px-5 py-3 font-mono text-[11px] text-ink-3">
         <Terminal size={13} className="text-seal" />
-        Full schema, response shape, and buyer integration →
+        {message("agentIntegration.schemaLinkNotice")}
         <a
           href="/api/docs"
           target="_blank"

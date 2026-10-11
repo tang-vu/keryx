@@ -14,6 +14,8 @@
  *   locked  — title only; the summary is withheld until the toll is paid
  */
 
+import { creatorMessages } from "../../locales/en/creator";
+
 export type PreviewDepth = "full" | "excerpt" | "locked";
 
 export const PREVIEW_DEPTHS: readonly PreviewDepth[] = ["full", "excerpt", "locked"] as const;
@@ -48,9 +50,18 @@ export function previewSummary(summary: string | undefined, depth: PreviewDepth)
   return depth === "excerpt" ? truncateAtWord(s, EXCERPT_CHARS) : s;
 }
 
-/** Human-readable one-liner for the picker UI, so the copy lives next to the levels it describes. */
+/** Compatibility labels reuse the English creator catalogue; preview rules remain source-owned. */
 export const PREVIEW_DEPTH_LABELS: Record<PreviewDepth, { label: string; hint: string }> = {
-  full: { label: "Full summary", hint: "Title + full summary — most discoverable" },
-  excerpt: { label: "Short excerpt", hint: "Title + a brief teaser of each item" },
-  locked: { label: "Titles only", hint: "Headlines only; the summary needs the toll" },
+  full: {
+    label: creatorMessages["creatorPreview.fullLabel"],
+    hint: creatorMessages["creatorPreview.fullHint"],
+  },
+  excerpt: {
+    label: creatorMessages["creatorPreview.excerptLabel"],
+    hint: creatorMessages["creatorPreview.excerptHint"],
+  },
+  locked: {
+    label: creatorMessages["creatorPreview.lockedLabel"],
+    hint: creatorMessages["creatorPreview.lockedHint"],
+  },
 };

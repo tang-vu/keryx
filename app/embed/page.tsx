@@ -1,6 +1,10 @@
+import { createMessages } from "@/lib/i18n/messages";
+
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { EmbedClient } from "./embed-client";
+
+const message = createMessages("en");
 
 /**
  * /embed — the compact ask surface that public/widget.js iframes into third-party
@@ -8,7 +12,7 @@ import { EmbedClient } from "./embed-client";
  * noindex: this is a widget surface, not a page — keryx.cc/ is the canonical ask.
  */
 export const metadata: Metadata = {
-  title: "Ask Keryx",
+  title: message("embedResearch.pageTitle"),
   robots: { index: false, follow: false },
 };
 

@@ -12,9 +12,12 @@
  * Renders nothing when the wallet owns no unclaimed rows, so almost nobody ever sees it.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { Link2 } from "lucide-react";
 import type { SourceCardData } from "./sources-list";
 import { fmtUsdc } from "./phase-style";
+
+const uiCopy = createMessages("en");
 
 export function ClaimOnchainPanel({
   sources,
@@ -41,12 +44,10 @@ export function ClaimOnchainPanel({
     <div className="mb-4 space-y-3 rounded-md border border-seal/40 bg-seal/[0.06] p-4">
       <div className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-seal">
         <Link2 className="h-3.5 w-3.5" />
-        Not on the registry yet
+        {uiCopy("registrationAdoption.title")}
       </div>
       <p className="text-xs text-ink-2">
-        {unclaimed.length === 1 ? "This source was" : "These sources were"} listed before the
-        on-chain registry existed. Registering from this wallet claims the same listing on-chain —
-        earnings, feed, and verification carry over. Review wallet funding below for registration gas.
+        {uiCopy(unclaimed.length === 1 ? "registrationAdoption.explanation.one" : "registrationAdoption.explanation.other")}
       </p>
       <ul className="space-y-2">
         {unclaimed.map((s) => (
@@ -57,7 +58,7 @@ export function ClaimOnchainPanel({
             <div className="min-w-0">
               <p className="truncate font-serif text-[15px] leading-tight text-ink">{s.name}</p>
               <p className="truncate font-mono text-[10.5px] text-ink-3">
-                {s.rssUrl || s.url} · ${fmtUsdc(s.fetchPrice)}/read
+                {uiCopy("registrationAdoption.readPrice", { url: s.rssUrl || s.url || "", price: fmtUsdc(s.fetchPrice) })}
               </p>
             </div>
             <button
@@ -65,7 +66,7 @@ export function ClaimOnchainPanel({
               onClick={() => onClaim(s)}
               className="shrink-0 border border-ink bg-paper-2 px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_3px_0_var(--ink)] active:translate-y-0 active:shadow-none"
             >
-              Move on-chain ▸
+              {uiCopy("registrationAdoption.move")}
             </button>
           </li>
         ))}

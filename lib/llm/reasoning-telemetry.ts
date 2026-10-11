@@ -1,6 +1,9 @@
 import { z } from "zod";
 import type { ReasoningAttempt, ReasoningStep } from "./reasoning-engine";
 import { collectOutputLimits, MAX_OUTPUT_LIMIT_TRACE_STEPS, outputLimitText, type OutputLimitDiagnostic } from "./output-limit-diagnostic";
+import { createMessages } from "../i18n/messages";
+
+const copy = createMessages("en");
 
 const reasoningSteps = ["decompose", "decide", "sufficiency", "reevaluate", "synthesize", "attribute"] as const;
 const MAX_PUBLIC_REASONING_ATTEMPTS = 256;
@@ -75,15 +78,16 @@ export function reasoningServingText(result: Partial<ReasoningSurface>): string 
   const limit = outputLimitText([...attemptLimits, ...hostedLimits], "en", result.outputLimitTraceStepsOmitted);
   const withLimit = (message: string) => message + (limit ? `\n${limit}` : "");
   const reasoning = result.reasoning;
-  if (!reasoning || !Array.isArray(reasoning.steps)) return withLimit("Per-step serving tiers: unavailable in this recorded result.");
-  if (!reasoning.steps.length) return withLimit(`Per-step serving tiers: no recorded steps (${reasoning.telemetry} attempt telemetry).`);
-  const serving = `Per-step serving tiers (${reasoning.telemetry} attempt telemetry): ` + reasoning.steps.map(step => {
-    const engines = step.servingEngines.slice(0, 4).join(" + ") || "none recorded";
-    const remainder = step.servingEngines.length > 4 ? ` + ${step.servingEngines.length - 4} more` : "";
-    const fallback = step.fallbackUsed === true ? "fallback served" : step.fallbackUsed === false ? "requested tier served" : "fallback use unknown";
-    return `${step.step}: ${engines}${remainder} (${step.state}; ${fallback})`;
+  if (!reasoning || !Array.isArray(reasoning.steps)) return withLimit(copy("reasoningServing.unavailable"));
+  if (!reasoning.steps.length) return withLimit(copy("reasoningServing.noSteps", { telemetry: reasoning.telemetry }));
+  const steps = reasoning.steps.map(step => {
+    const engines = step.servingEngines.slice(0, 4).join(" + ") || copy("reasoningServing.noneRecorded");
+    const fallback = step.fallbackUsed === true ? copy("reasoningServing.fallbackServed") : step.fallbackUsed === false ? copy("reasoningServing.requestedServed") : copy("reasoningServing.fallbackUnknown");
+    const values = { step: step.step, engines, state: step.state, fallback };
+    const count = step.servingEngines.length - 4;
+    return count > 0 ? copy(count === 1 ? "reasoningServing.stepMore.one" : "reasoningServing.stepMore.other", { ...values, count }) : copy("reasoningServing.step", values);
   }).join("; ");
-  return withLimit(serving);
+  return withLimit(copy("reasoningServing.summary", { telemetry: reasoning.telemetry, steps }));
 }
 
 /** A proven response stop, never inferred from token usage, a generic 503 or missing history. */

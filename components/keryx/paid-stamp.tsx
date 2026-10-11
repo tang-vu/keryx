@@ -6,6 +6,9 @@
  */
 
 import { cn } from "@/lib/utils";
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
 
 export function PaidStamp({ className }: { className?: string }) {
   return (
@@ -33,7 +36,7 @@ export function PaidStamp({ className }: { className?: string }) {
             style={{ fontSize: 13, letterSpacing: ".26em", stroke: "none" }}
           >
             <textPath href="#kxStampRing" startOffset="0">
-              ★ PAID IN FULL ★ KERYX ★ USDC ON ARC&nbsp;
+              {message("creatorPayments.stampRing")}
             </textPath>
           </text>
           <line x1="44" y1="92" x2="176" y2="92" strokeWidth="1.5" />
@@ -44,7 +47,7 @@ export function PaidStamp({ className }: { className?: string }) {
             className="font-serif"
             style={{ fontWeight: 700, fontSize: 42, stroke: "none" }}
           >
-            PAID
+            {message("creatorPayments.stampPaid")}
           </text>
           <line x1="44" y1="146" x2="176" y2="146" strokeWidth="1.5" />
           <text
@@ -54,7 +57,7 @@ export function PaidStamp({ className }: { className?: string }) {
             className="font-mono"
             style={{ fontSize: 11, letterSpacing: ".22em", stroke: "none" }}
           >
-            SETTLED · ARC
+            {message("creatorPayments.stampSettled")}
           </text>
         </g>
       </svg>
