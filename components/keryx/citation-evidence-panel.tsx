@@ -1,11 +1,12 @@
 "use client";
+import { formatRecordedUsdc, formatUsdcMicros, selectPlural, sumRecordedUsdc } from "@/lib/i18n/format";
+
 
 import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { Citation, EvidenceRecord, PaymentRecord } from "@/lib/types";
 import { paymentSettlementStatus } from "@/lib/payments/payment-state";
-import { formatRecordedUsdc, formatUsdcMicros, sumRecordedUsdc } from "@/lib/display/recorded-usdc";
 import { ScholarlyMetadataDetails } from "./scholarly-metadata";
 import { recordedArcLabel,recordedArcTransactionUrl } from "@/lib/arc-network-display";
 import { GatewayContractReferences } from "./gateway-contract-references";
@@ -138,12 +139,12 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
           <h3 className="font-mono text-xs uppercase tracking-widest text-ink-3">{copy("citationEvidence.reward")}</h3>
           <p className="mt-2 font-serif text-lg text-ink">{copy("citationEvidence.contribution", { weight: Math.round(citation.weight * 100) })}</p>
           <p className="mt-2 text-sm text-ink-2">
-            {settled.length ? settledAmount === null ? copy(settled.length === 1 ? "citationEvidence.settledUnknown.one" : "citationEvidence.settledUnknown.other", { count: settled.length }) : copy(settled.length === 1 ? "citationEvidence.settled.one" : "citationEvidence.settled.other", { amount: formatUsdcMicros(settledAmount), count: settled.length }) : copy("citationEvidence.noSettledPayment")}
+            {settled.length ? settledAmount === null ? copy(selectPlural(settled.length) === "one" ? "citationEvidence.settledUnknown.one" : "citationEvidence.settledUnknown.other", { count: settled.length }) : copy(selectPlural(settled.length) === "one" ? "citationEvidence.settled.one" : "citationEvidence.settled.other", { amount: formatUsdcMicros(settledAmount), count: settled.length }) : copy("citationEvidence.noSettledPayment")}
           </p>
-          {pending.length > 0 && <p className="mt-1 text-sm text-amber-700">{copy(pending.length === 1 ? "citationEvidence.pending.one" : "citationEvidence.pending.other", { count: pending.length })}</p>}
-          {failed.length > 0 && <p className="mt-1 text-sm text-red-700">{copy(failed.length === 1 ? "citationEvidence.failed.one" : "citationEvidence.failed.other", { count: failed.length })}</p>}
-          {simulated.length > 0 && <p className="mt-1 text-sm text-ink-3">{copy(simulated.length === 1 ? "citationEvidence.simulated.one" : "citationEvidence.simulated.other", { count: simulated.length })}</p>}
-          {inconsistent.length > 0 && <p className="mt-1 text-sm text-amber-700">{copy(inconsistent.length === 1 ? "citationEvidence.conflicting.one" : "citationEvidence.conflicting.other", { count: inconsistent.length })}</p>}
+          {pending.length > 0 && <p className="mt-1 text-sm text-amber-700">{copy(selectPlural(pending.length) === "one" ? "citationEvidence.pending.one" : "citationEvidence.pending.other", { count: pending.length })}</p>}
+          {failed.length > 0 && <p className="mt-1 text-sm text-red-700">{copy(selectPlural(failed.length) === "one" ? "citationEvidence.failed.one" : "citationEvidence.failed.other", { count: failed.length })}</p>}
+          {simulated.length > 0 && <p className="mt-1 text-sm text-ink-3">{copy(selectPlural(simulated.length) === "one" ? "citationEvidence.simulated.one" : "citationEvidence.simulated.other", { count: simulated.length })}</p>}
+          {inconsistent.length > 0 && <p className="mt-1 text-sm text-amber-700">{copy(selectPlural(inconsistent.length) === "one" ? "citationEvidence.conflicting.one" : "citationEvidence.conflicting.other", { count: inconsistent.length })}</p>}
           {legs.length === 0 && <p className="mt-1 text-sm text-ink-3">{copy("citationEvidence.paymentUnavailable")}</p>}
           {legs.length > 0 && (
             <ul className="mt-3 space-y-1 font-mono text-xs text-ink-3">

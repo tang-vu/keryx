@@ -11,11 +11,13 @@ import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { fmtUsdc } from "@/components/keryx/phase-style";
+import { DisplayTime } from "@/components/keryx/display-time";
 import { CurrentHistoryPane } from "./current-history-view";
 import { ClaimantHistoryPane } from "./claimant-history-view";
 import { personalHistoryCopy as copy } from "@/locales/en/personal-history";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { selectPlural } from "@/lib/i18n/format";
 
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
@@ -52,14 +54,8 @@ interface Totals {
   trialToCreatorsUsdc: number;
 }
 
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return message("myHistory.justNow");
-  if (mins < 60) return message("myHistory.minutesAgo", { minutes: mins });
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return message("myHistory.hoursAgo", { hours: hrs });
-  return message("myHistory.daysAgo", { days: Math.floor(hrs / 24) });
+function timeAgo(iso: string) {
+  return <DisplayTime value={iso} relative />;
 }
 
 export function MyAsksView() {
@@ -153,7 +149,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
             <div>
               <p className="font-serif text-xl text-ink">{totals.dispatches}</p>
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                {message(totals.dispatches === 1 ? "myHistory.dispatchLabel.one" : "myHistory.dispatchLabel.other")}
+          {message(selectPlural(totals.dispatches) === "one" ? "myHistory.dispatchLabel.one" : "myHistory.dispatchLabel.other")}
               </p>
             </div>
             <div>
@@ -171,13 +167,13 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
             <div>
               <p className="font-serif text-xl text-ink">{totals.citations}</p>
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                {message(totals.citations === 1 ? "myHistory.citationsLabel.one" : "myHistory.citationsLabel.other")}
+          {message(selectPlural(totals.citations) === "one" ? "myHistory.citationsLabel.one" : "myHistory.citationsLabel.other")}
               </p>
             </div>
           </div>
           {totals.trialDispatches > 0 && (
             <p className="mt-4 border-t border-line pt-3 font-mono text-[10px] text-ink-3">
-              {richMessage(totals.trialDispatches === 1 ? "myHistory.otherFunding.one" : "myHistory.otherFunding.other", { count: totals.trialDispatches, fundingGap: " ", amount: fmtUsdc(totals.trialToCreatorsUsdc), separateGap: " " })}
+        {richMessage(selectPlural(totals.trialDispatches) === "one" ? "myHistory.otherFunding.one" : "myHistory.otherFunding.other", { count: totals.trialDispatches, fundingGap: " ", amount: fmtUsdc(totals.trialToCreatorsUsdc), separateGap: " " })}
             </p>
           )}
         </section>
@@ -201,7 +197,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] text-ink-3">
               <span>{timeAgo(a.createdAt)}</span>
-              <span>{richMessage(a.citationCount === 1 ? "myHistory.cited.one" : "myHistory.cited.other", { count: a.citationCount ?? null })}</span>
+              <span>{richMessage(selectPlural(a.citationCount ?? 0) === "one" ? "myHistory.cited.one" : "myHistory.cited.other", { count: a.citationCount ?? null })}</span>
               {a.confidence && <span>{richMessage("myHistory.confidence", { level: a.confidence.toLowerCase() })}</span>}
               {a.isFollowUp && <span>{message("myHistory.followUp")}</span>}
               {a.hasNewMaterial && (
@@ -236,7 +232,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
 
       {truncated && (
         <p className="font-mono text-[10px] text-ink-3">
-          {richMessage(asks.length === 1 ? "myHistory.recentLimit.one" : "myHistory.recentLimit.other", { count: asks.length })}
+          {richMessage(selectPlural(asks.length) === "one" ? "myHistory.recentLimit.one" : "myHistory.recentLimit.other", { count: asks.length })}
         </p>
       )}
     </div>

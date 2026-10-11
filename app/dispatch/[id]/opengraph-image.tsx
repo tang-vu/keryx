@@ -1,3 +1,4 @@
+import { formatRecordedAmount, formatDate, selectPlural } from "@/lib/i18n/format";
 import { createMessages } from "@/lib/i18n/messages";
 import { ImageResponse } from "next/og";
 import { config } from "@/lib/config";
@@ -39,7 +40,8 @@ export default async function DispatchOgImage({
       cited = run.citations.length;
       spent = run.totalSpent;
       toCreators = run.totalToCreators;
-      dateLabel = new Date(run.createdAt).toISOString().slice(0, 10);
+      const date = formatDate(run.createdAt, "en", "UTC", { timeStyle: undefined });
+      dateLabel = date ? `${date.text} UTC` : "Unavailable";
     }
   } catch {
     // fall back to generic copy below
@@ -100,10 +102,10 @@ export default async function DispatchOgImage({
         </div>
 
         <div style={{ display: "flex", gap: 56 }}>
-          <Denomination value={String(cited)} label={copy(cited === 1 ? "reportSocial.cited.one" : "reportSocial.cited.other")} />
-          <Denomination value={`$${spent.toFixed(4)}`} label={historical ? copy("reportSocial.testnetRecorded") : copy("reportSocial.recorded")} />
+          <Denomination value={String(cited)} label={copy(selectPlural(cited) === "one" ? "reportSocial.cited.one" : "reportSocial.cited.other")} />
+          <Denomination value={`$${formatRecordedAmount(spent, { minimumFractionDigits: 4 })}`} label={historical ? copy("reportSocial.testnetRecorded") : copy("reportSocial.recorded")} />
           <Denomination
-            value={`$${toCreators.toFixed(4)}`}
+            value={`$${formatRecordedAmount(toCreators, { minimumFractionDigits: 4 })}`}
             label={copy("reportSocial.creators")}
             accent
           />

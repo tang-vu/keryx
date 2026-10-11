@@ -1,9 +1,11 @@
 "use client";
+import { SigningAmount } from "./signing-amount";
+import { formatAmount } from "@/lib/i18n/format";
 
 import { createMessages } from "@/lib/i18n/messages";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePublicClient, useWalletClient } from "wagmi";
-import { formatUnits, parseUnits, type PublicClient } from "viem";
+import { parseUnits, type PublicClient } from "viem";
 import { createFundingRecord, listFundingRecords, cancelFundingRecord } from "@/lib/buyer/funding-journal";
 import { submitFundingStep, recoverFundingStep, recoverFundingReplacement } from "@/lib/buyer/funding-client";
 import { connectedBuyerWallet } from "@/lib/buyer/connected-wallet";
@@ -163,7 +165,7 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
   return <div className="space-y-3">
     <section className="border border-line bg-paper p-4" aria-label={copy("gatewayFunding.readinessLabel")}>
       <h4 className="font-display text-xl">{copy("gatewayFunding.readinessTitle")}</h4>
-      <p className="mt-2 font-mono text-xs">{currentCredit === null ? copy("gatewayFunding.priceUnknownBalance", { price: formatUnits(BigInt(requiredMicros), 6) }) : copy("gatewayFunding.priceBalance", { price: formatUnits(BigInt(requiredMicros), 6), balance: formatUnits(BigInt(currentCredit), 6) })}</p>
+      <p className="mt-2 font-mono text-xs">{currentCredit === null ? copy("gatewayFunding.priceUnknownBalance", { price: formatAmount(BigInt(requiredMicros), { minimumFractionDigits: 6, useGrouping: false }) }) : copy("gatewayFunding.priceBalance", { price: formatAmount(BigInt(requiredMicros), { minimumFractionDigits: 6, useGrouping: false }), balance: formatAmount(BigInt(currentCredit), { minimumFractionDigits: 6, useGrouping: false }) })}</p>
       <p role="status" className="mt-2 font-serif text-sm">{creditChecking && creditChecked !== creditRevision ? copy("gatewayFunding.checkingBalance") : !recordsAvailable ? copy("gatewayFunding.historyUnknown") : creditChecked !== creditRevision && readiness !== "deposit-unverified" ? copy("gatewayFunding.checkPriceCoverage") : readiness === "ready"
         ? copy("gatewayFunding.ready")
         : readiness === "deposit-unverified" ? copy("gatewayFunding.unverifiedCredit")
@@ -194,10 +196,11 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
       <p className="font-serif text-xs text-ink-3">{copy(profile.testnet ? "gatewayFunding.testnetGasNotice" : "gatewayFunding.mainnetGasNotice")}</p>
     </div>}
     {active && <div className="mt-4 space-y-3">
-      <p className="font-mono text-xs">{copy("gatewayFunding.plannedDeposit", { amount: formatUnits(BigInt(active.amount), 6) })}</p>
+      <p className="text-xs"><SigningAmount micros={active.amount} /></p>
+      <p className="font-mono text-xs">{copy("gatewayFunding.plannedDeposit", { amount: formatAmount(BigInt(active.amount), { minimumFractionDigits: 6, useGrouping: false }) })}</p>
       {(["approval", "deposit"] as const).map(step => <div key={step} className="border border-line p-3">
         <p className="font-mono text-xs">{copy(step === "approval" ? "gatewayFunding.approvalStatus" : "gatewayFunding.depositStatus", { status: active[step].status })}</p>
-        {["ready", "rejected"].includes(active[step].status) && <button type="button" className={`${control} mt-2`} disabled={busy || disabled || (step === "deposit" && active.approval.status !== "confirmed")} onClick={() => send(step)}>{copy(step === "approval" ? "gatewayFunding.approveAmount" : "gatewayFunding.depositAmount", { amount: formatUnits(BigInt(active.amount), 6) })}</button>}
+        {["ready", "rejected"].includes(active[step].status) && <button type="button" className={`${control} mt-2`} disabled={busy || disabled || (step === "deposit" && active.approval.status !== "confirmed")} onClick={() => send(step)}>{copy(step === "approval" ? "gatewayFunding.approveAmount" : "gatewayFunding.depositAmount", { amount: formatAmount(BigInt(active.amount), { minimumFractionDigits: 6, useGrouping: false }) })}</button>}
         {["possible", "submitted"].includes(active[step].status) && <>
           <label className="mt-3 grid gap-2 font-serif text-sm">{copy("gatewayFunding.transactionHash")}<input value={lookupHash} onChange={event => setLookupHash(event.target.value)} autoComplete="off" spellCheck={false} placeholder="0x…" className="min-w-0 border border-line bg-paper p-2 font-mono text-xs" /></label>
           <button type="button" className={`${control} mt-2`} disabled={busy || disabled || (!active[step].hash && !/^0x[a-fA-F0-9]{64}$/.test(lookupHash.trim()))} onClick={() => recover(step)}>{copy("gatewayFunding.checkOriginal")}</button>
@@ -216,7 +219,7 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
     }}>{copy("gatewayFunding.refreshStatus")}</button>
     {rows.some(row => row.deposit.status === "confirmed") && <p className="mt-3 font-serif text-sm">{copy("gatewayFunding.savedDepositNotice")}</p>}
     <p role="status" className="mt-3 font-serif text-sm">{message}</p>
-    <ul className="mt-3 space-y-2">{rows.filter(row => !row.activePayer).slice(0, 5).map(row => <li key={row.id} className="font-mono text-xs">{copy(row.cancelled ? "gatewayFunding.history.cancelled" : row.deposit.status === "confirmed" ? "gatewayFunding.history.confirmed" : row.deposit.status === "replaced" || row.approval.status === "replaced" ? "gatewayFunding.history.replaced" : "gatewayFunding.history.reverted", { amount: formatUnits(BigInt(row.amount), 6) })}{(row.deposit.hash ?? row.approval.hash) && <> · <a className="underline" href={`${fundingExplorer(row)}/tx/${row.deposit.hash ?? row.approval.hash}`} target="_blank" rel="noreferrer">{copy("gatewayFunding.transaction")}</a></>}{(row.deposit.originalHash ?? row.approval.originalHash) && <> · <a className="underline" href={`${fundingExplorer(row)}/tx/${row.deposit.originalHash ?? row.approval.originalHash}`} target="_blank" rel="noreferrer">{copy("gatewayFunding.originalTransaction")}</a></>}</li>)}</ul>
+    <ul className="mt-3 space-y-2">{rows.filter(row => !row.activePayer).slice(0, 5).map(row => <li key={row.id} className="font-mono text-xs">{copy(row.cancelled ? "gatewayFunding.history.cancelled" : row.deposit.status === "confirmed" ? "gatewayFunding.history.confirmed" : row.deposit.status === "replaced" || row.approval.status === "replaced" ? "gatewayFunding.history.replaced" : "gatewayFunding.history.reverted", { amount: formatAmount(BigInt(row.amount), { minimumFractionDigits: 6, useGrouping: false }) })}{(row.deposit.hash ?? row.approval.hash) && <> · <a className="underline" href={`${fundingExplorer(row)}/tx/${row.deposit.hash ?? row.approval.hash}`} target="_blank" rel="noreferrer">{copy("gatewayFunding.transaction")}</a></>}{(row.deposit.originalHash ?? row.approval.originalHash) && <> · <a className="underline" href={`${fundingExplorer(row)}/tx/${row.deposit.originalHash ?? row.approval.originalHash}`} target="_blank" rel="noreferrer">{copy("gatewayFunding.originalTransaction")}</a></>}</li>)}</ul>
     <ResearchFundingActivity key={payer.toLowerCase()} payer={payer} chain={chain} />
   </details></div>;
 }

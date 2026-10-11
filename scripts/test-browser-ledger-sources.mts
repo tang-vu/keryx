@@ -134,7 +134,7 @@ try {
       mode = "error";
       // Retry against an error after an accepted read must retain visibly dated data.
       await page.clock.fastForward(10_100);
-      await page.getByText(/Showing the last successful read from \d{2}\/\d{2}\/\d{4}, .* UTC/).waitFor();
+      await page.getByText(/Showing the last successful read from [A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2}\s[AP]M UTC\./).waitFor();
       await page.getByText("12 guest questions · last successful read", { exact: true }).waitFor();
 
       mode = "malformed";

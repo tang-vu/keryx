@@ -1,4 +1,5 @@
 "use client";
+import { SigningRecordedAmount } from "./signing-amount";
 
 /**
  * Creator onboarding form. Primary path: paste an RSS URL → one-click register.
@@ -463,6 +464,7 @@ export function RegisterForm({
               ${fmtUsdc(price)}
             </span>
           </div>
+          <p className="text-xs"><SigningRecordedAmount value={fetchPrice.trim() ? Number(fetchPrice) : undefined} /></p>
           {prefill?.sourceClaimId ? <>
             <Input id="price" type="number" min="0" step="0.000001" value={fetchPrice} onChange={event => setFetchPrice(event.target.value)} className="bg-paper-2" />
             <p className="text-xs text-ink-2">{uiCopy("registrationForm.claimPrice")}</p>

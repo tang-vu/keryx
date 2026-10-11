@@ -1,4 +1,8 @@
 "use client";
+import { formatNumber, selectPlural } from "@/lib/i18n/format";
+
+import { DisplayTime } from "@/components/keryx/display-time";
+import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messages";
 
 /**
  * Public "how the agent decides on this source" panel.
@@ -55,7 +59,7 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
         <Scale className="h-3.5 w-3.5 text-seal" /> {uiCopy("creatorDecisions.title")}
       </h2>
       <p className="mb-4 max-w-xl font-serif text-[13px] text-ink-2">
-        {uiCopy(data?.windowRuns === 1 ? "creatorDecisions.window.one" : "creatorDecisions.window.other", { window: data?.windowRuns ?? "", considered: perf.considered })}
+        {uiCopy(selectPlural(data?.windowRuns) === "one" ? "creatorDecisions.window.one" : "creatorDecisions.window.other", { window: data?.windowRuns ?? "", considered: perf.considered })}
       </p>
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -70,15 +74,15 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
             perf.bought > 0 && perf.reused > 0
               ? `${perf.bought} BUY / ${perf.reused} CACHE`
               : perf.bought > 0
-                ? uiCopy(perf.bought === 1 ? "creatorDecisions.buy.one" : "creatorDecisions.buy.other", { count: perf.bought })
-                : uiCopy(perf.reused === 1 ? "creatorDecisions.cache.one" : "creatorDecisions.cache.other", { count: perf.reused })
+                ? uiCopy(selectPlural(perf.bought) === "one" ? "creatorDecisions.buy.one" : "creatorDecisions.buy.other", { count: perf.bought })
+                : uiCopy(selectPlural(perf.reused) === "one" ? "creatorDecisions.cache.one" : "creatorDecisions.cache.other", { count: perf.reused })
           }
           accent
         />
         <Cell
           label={uiCopy("creatorDecisions.citations")}
           value={String(perf.cited)}
-          sub={perf.citeThrough !== null ? uiCopy(chosen === 1 ? "creatorDecisions.citeThrough.one" : "creatorDecisions.citeThrough.other", { percent: pct(perf.citeThrough), count: chosen }) : "—"}
+          sub={perf.citeThrough !== null ? uiCopy(selectPlural(chosen) === "one" ? "creatorDecisions.citeThrough.one" : "creatorDecisions.citeThrough.other", { percent: pct(perf.citeThrough), count: chosen }) : "—"}
           accent
         />
         <Cell
@@ -93,7 +97,7 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
       {/* The bar this source was measured against — same question, same budget, same minute. */}
       {perf.rivalPriceOnSkip !== null && perf.price !== null && (
         <p className="mb-4 border-l-2 border-line pl-3 font-serif text-[13px] text-ink-2">
-          {perf.evChosen !== null && perf.evSkipped !== null ? uiRichCopy("creatorDecisions.ratedComparison", { rivalPrice: <span className="font-mono text-ink">${fmtUsdc(perf.rivalPriceOnSkip)}</span>, price: <span className="font-mono text-ink">${fmtUsdc(perf.price)}</span>, chosenValue: perf.evChosen.toFixed(2), skippedValue: perf.evSkipped.toFixed(2) }) : uiRichCopy("creatorDecisions.priceComparison", { rivalPrice: <span className="font-mono text-ink">${fmtUsdc(perf.rivalPriceOnSkip)}</span>, price: <span className="font-mono text-ink">${fmtUsdc(perf.price)}</span> })}
+          {perf.evChosen !== null && perf.evSkipped !== null ? uiRichCopy("creatorDecisions.ratedComparison", { rivalPrice: <span className="font-mono text-ink">${fmtUsdc(perf.rivalPriceOnSkip)}</span>, price: <span className="font-mono text-ink">${fmtUsdc(perf.price)}</span>, chosenValue: formatNumber(perf.evChosen, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), skippedValue: formatNumber(perf.evSkipped, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }) : uiRichCopy("creatorDecisions.priceComparison", { rivalPrice: <span className="font-mono text-ink">${fmtUsdc(perf.rivalPriceOnSkip)}</span>, price: <span className="font-mono text-ink">${fmtUsdc(perf.price)}</span> })}
         </p>
       )}
 
@@ -116,7 +120,7 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
                   “{s.rationale}”
                 </p>
                 <p className="mt-1 font-mono text-[10px] text-ink-3">
-                  {s.rivalPrice !== null ? uiCopy("creatorDecisions.skipWithRival", { value: s.expectedValue.toFixed(2), price: fmtUsdc(s.price), rivalPrice: fmtUsdc(s.rivalPrice), date: new Date(s.createdAt).toLocaleDateString() }) : uiCopy("creatorDecisions.skip", { value: s.expectedValue.toFixed(2), price: fmtUsdc(s.price), date: new Date(s.createdAt).toLocaleDateString() })}
+                  {s.rivalPrice !== null ? dateCopy("creatorDecisions.skipWithRival", { value: formatNumber(s.expectedValue, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), price: fmtUsdc(s.price), rivalPrice: fmtUsdc(s.rivalPrice), date: <DisplayTime value={s.createdAt} dateOnly /> }) : dateCopy("creatorDecisions.skip", { value: formatNumber(s.expectedValue, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), price: fmtUsdc(s.price), date: <DisplayTime value={s.createdAt} dateOnly /> })}
                 </p>
               </div>
             ))}
@@ -150,3 +154,5 @@ function Cell({
     </div>
   );
 }
+
+const dateCopy = createDateMessages("en");

@@ -1,8 +1,10 @@
 "use client";
+import { SigningAmount } from "./signing-amount";
+import { formatAmount } from "@/lib/i18n/format";
 
 import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useRef, useState } from "react";
-import { formatUnits, maxUint256 } from "viem";
+import { maxUint256 } from "viem";
 import { readWithdrawalBrowserJournal } from "@/lib/gateway/withdrawal-browser-journal";
 import { signWithdrawalBrowserDraft, submitWithdrawalBrowserHttpOnce } from "@/lib/gateway/withdrawal-browser-flow";
 import { withdrawalIdSchema, withdrawalOwnerSchema } from "@/lib/gateway/withdrawal-request";
@@ -55,9 +57,9 @@ function ReviewOriginal({ id, owner, wallet }: { id: string; owner: string; wall
     <h2 className="text-lg font-semibold">{uiCopy("withdrawalReview.title")}</h2>
     <p>Arc Testnet · USDC</p>
     {intent && <dl className="space-y-2 text-sm">
-      <div><dt>{uiCopy("withdrawalReview.amount")}</dt><dd>{formatUnits(BigInt(intent.spec.value), 6)} USDC</dd></div>
-      <div><dt>{uiCopy("withdrawalReview.fee")}</dt><dd>{formatUnits(BigInt(intent.maxFee), 6)} USDC</dd></div>
-      <div><dt>{uiCopy("withdrawalReview.debit")}</dt><dd>{formatUnits(BigInt(intent.spec.value) + BigInt(intent.maxFee), 6)} USDC</dd></div>
+      <div><dt>{uiCopy("withdrawalReview.amount")}</dt><dd><SigningAmount micros={intent.spec.value} /></dd></div>
+      <div><dt>{uiCopy("withdrawalReview.fee")}</dt><dd><SigningAmount micros={intent.maxFee} /></dd></div>
+      <div><dt>{uiCopy("withdrawalReview.debit")}</dt><dd><SigningAmount micros={BigInt(intent.spec.value) + BigInt(intent.maxFee)} /></dd></div>
       <div><dt>{uiCopy("withdrawalReview.recipient")}</dt><dd className="break-all">{row!.draft.policy.recipient}</dd></div>
       <div><dt>{uiCopy("withdrawalReview.expiry")}</dt><dd>{finite ? intent.maxBlockHeight : uiCopy("withdrawalReview.noExpiry")}</dd></div>
     </dl>}

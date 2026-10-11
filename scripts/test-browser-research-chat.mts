@@ -7,12 +7,119 @@ import { chromium } from "playwright";
 import { parseResearchAvailability } from "../lib/research/availability-contract";
 
 const base = process.env.KERYX_UX_BASE_URL ?? "http://127.0.0.1:3957";
+const args = process.argv.slice(2);
+const signingDisplayOnly = args.length === 1 && args[0] === "--signing-display-only";
+assert(args.length === 0 || signingDisplayOnly, "Use no arguments or --signing-display-only");
+if (signingDisplayOnly) assert(process.env.KERYX_UX_BASE_URL, "Signing display requires an explicitly bound built cohort URL");
 const screenshots = process.env.KERYX_UX_SCREENSHOT_DIR ?? join(tmpdir(), "keryx-chat-first-ux");
-await mkdir(screenshots, { recursive: true });
+if (!signingDisplayOnly) await mkdir(screenshots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const frame = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 
+/** Observe the compiled idle grant preview only; never invoke a wallet or research action. */
+async function checkSigningDisplay() {
+  const target = new URL(base);
+  assert(["http:", "https:"].includes(target.protocol) && !target.username && !target.password && !target.search && !target.hash,
+    "Bind a plain HTTP(S) built cohort URL without credentials, query or fragment");
+  const cases = [
+    { input: "1000.000001", amount: "1000.000001 USDC", micros: "1000000001", enabled: true },
+    { input: "0.000001", amount: "0.000001 USDC", micros: "1", enabled: false },
+  ];
+  for (const width of [320, 1366]) {
+    const context = await browser.newContext({ viewport: { width, height: 768 }, locale: "en-US",
+      reducedMotion: "reduce", serviceWorkers: "block" });
+    try {
+      const apiGets: string[] = [], blocked: string[] = [], workers: string[] = [], errors: string[] = [];
+      const builtAssets: Array<{ path: string; status: number }> = [], failedBuiltAssets: string[] = [];
+      let popups = 0;
+      await context.routeWebSocket("**/*", socket => { blocked.push(`WebSocket ${socket.url()}`); socket.close(); });
+      await context.route("**/*", async route => {
+        const request = route.request(), url = new URL(request.url());
+        if (url.origin !== target.origin || request.method() !== "GET") {
+          blocked.push(`${request.method()} ${url.origin}${url.pathname}`); return route.abort();
+        }
+        if (!url.pathname.startsWith("/api/")) {
+          return route.continue();
+        }
+        // Idle without a connected wallet must not even dispatch a recovery/status request.
+        if (url.pathname.startsWith("/api/session/") || url.pathname === "/api/ask" || url.pathname.startsWith("/api/agent/")) {
+          blocked.push(`Forbidden GET ${url.pathname}`); return route.abort();
+        }
+        apiGets.push(url.pathname);
+        if (url.pathname === "/api/auth/session") return route.fulfill({ status: 200,
+          json: { session: { address: `0x${"11".repeat(20)}`, role: "reader" } } });
+        if (url.pathname === "/api/models") return route.fulfill({ json: { models: [] } });
+        if (url.pathname === "/api/research/availability") return route.fulfill({ json: { state: "not-paused" } });
+        if (url.pathname === "/api/onramp/session") return route.fulfill({ json: { available: false } });
+        return route.fulfill({ json: { sources: [], payments: [], activity: [], runs: [], jobs: [] } });
+      });
+      const page = await context.newPage();
+      page.on("response", response => {
+        const url = new URL(response.url());
+        if (url.origin !== target.origin || !url.pathname.startsWith("/_next/static/")) return;
+        const status = response.status();
+        if (status !== 200) failedBuiltAssets.push(`${url.pathname}: HTTP ${status}`);
+        else if (/\.(js|css)$/.test(url.pathname)) builtAssets.push({ path: url.pathname, status });
+      });
+      page.on("requestfailed", request => {
+        const url = new URL(request.url());
+        if (url.origin === target.origin && url.pathname.startsWith("/_next/static/"))
+          failedBuiltAssets.push(`${url.pathname}: ${request.failure()?.errorText ?? "request failed"}`);
+      });
+      page.on("pageerror", error => errors.push(error.message));
+      page.on("worker", worker => workers.push(worker.url()));
+      page.on("popup", () => { popups++; });
+      const response = await page.goto(base, { waitUntil: "domcontentloaded" });
+      assert(response?.ok(), "The bound built cohort must serve the actual page successfully");
+      await page.evaluate(() => document.fonts.ready);
+      const input = page.getByLabel("Total budget (USDC)", { exact: true });
+      await input.waitFor();
+      assert.equal(await input.getAttribute("id"), "research-total-budget");
+      const panel = input.locator("xpath=../..");
+      await panel.getByText("Research budget", { exact: true }).waitFor();
+      await panel.getByLabel("Maximum per question (USDC)", { exact: true }).waitFor();
+      await panel.getByRole("button", { name: "Recover a saved budget", exact: true }).waitFor();
+      await page.waitForLoadState("networkidle");
+      assert.equal(await page.evaluate(() => typeof (window as unknown as { ethereum?: unknown }).ethereum), "undefined");
+      assert(apiGets.includes("/api/auth/session"), "Actual hydration must consume the synthetic authenticated GET");
+      assert.deepEqual(failedBuiltAssets, [], "Every actual Next static load must succeed with HTTP 200");
+      assert(builtAssets.some(asset => asset.status === 200 && asset.path.endsWith(".js"))
+        && builtAssets.some(asset => asset.status === 200 && asset.path.endsWith(".css")),
+        "Observe successful HTTP 200 compiled Next JS and CSS responses; requested paths alone are not acceptance");
+      for (const value of cases) {
+        await input.fill(value.input);
+        assert.equal(await input.inputValue(), value.input, "Display never rewrites the control value");
+        const details = panel.getByText(`(${value.micros} micro-USDC; decimal point, no grouping)`, { exact: true });
+        await details.waitFor();
+        assert.equal(await details.evaluate(node => node.tagName), "SMALL", "Exact micros are real visible verification details");
+        const amount = details.locator("..");
+        assert.equal((await amount.evaluate(node => Array.from(node.childNodes).filter(child => child.nodeType === Node.TEXT_NODE)
+          .map(child => child.textContent).join(""))).trim(), value.amount, "Pre-sign text has six places, USDC and no grouping");
+        assert(await amount.isVisible());
+        assert.equal(await panel.getByRole("button", { name: "Enable research budget", exact: true }).isEnabled(), value.enabled,
+          "The original per-question cap still controls readiness; never click enable");
+        await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, "Built English signing display fits the viewport");
+        assert(await amount.evaluate(node => { const box = node.getBoundingClientRect(); return box.left >= 0 && box.right <= innerWidth; }),
+          "Exact signing amount and micro details stay within the viewport");
+        assert.equal(await page.getByLabel("What do you want to know?").inputValue(), "", "No research draft or submission");
+        assert.deepEqual(blocked, [], "Zero writes, asks, recovery dispatches, external requests or WebSockets");
+        assert.deepEqual(workers, [], "Disconnected idle preview never dispatches a signer/recovery worker");
+        assert.equal(popups, 0); assert.deepEqual(errors, []);
+        assert.deepEqual(failedBuiltAssets, [], "Reject late failed/non-200 Next static loads before accepting each observation");
+        console.log(JSON.stringify({ mode: "built-signing-display-only", width, input: value.input, amount: value.amount,
+          exactMicros: value.micros, visibleDetails: await details.textContent(), compiledAssets: builtAssets.length,
+          successfulCompiledAssets: builtAssets,
+          authenticatedReadOnlyGet: true, forbiddenCalls: blocked.length, workers: workers.length, popups, overflow: false }));
+      }
+    } finally { await context.close(); }
+  }
+  console.log("PASS: four built English idle grant signing-display observations; no activation, research, recovery, wallet, signing or funding action. Registering/connected-wallet states are not observed.");
+}
+
 try {
+  if (signingDisplayOnly) await checkSigningDisplay();
+  else {
   for (const width of [320, 390, 1366]) {
     const context = await browser.newContext({ viewport: { width, height: width === 1366 ? 768 : 740 }, reducedMotion: "reduce", acceptDownloads: true });
     const calls: Array<Record<string, unknown>> = [];
@@ -179,4 +286,5 @@ try {
     await context.close();
   }
   console.log(`Chat screenshots: ${screenshots}`);
+  }
 } finally { await browser.close(); }

@@ -9,7 +9,7 @@
  */
 
 import { c, printStep } from "./trace-console.mts";
-import { formatRecordedUsdc } from "../lib/display/recorded-usdc.ts";
+import { formatRecordedUsdc, formatNumber } from "../lib/i18n/format.ts";
 import { projectActualReadCheckpoints } from "../lib/research-audit/actual-read-projection.ts";
 import { parsePrivateCliClaimFd, preparePrivateCliClaim } from "./private-cli-claims.mts";
 
@@ -90,7 +90,7 @@ if (run.citations.length === 0) {
 } else {
   for (const cit of run.citations) {
     console.log(
-      `  • ${cit.sourceName}: ${c.green(formatRecordedUsdc(cit.reward, { denomination: "USDC" }))} ${c.dim(`(${(cit.weight * 100).toFixed(0)}% contribution)`)}`,
+      `  • ${cit.sourceName}: ${c.green(formatRecordedUsdc(cit.reward, { denomination: "USDC" }))} ${c.dim(`(${formatNumber(cit.weight * 100, { maximumFractionDigits: 0 })}% contribution)`)}`,
     );
   }
 }

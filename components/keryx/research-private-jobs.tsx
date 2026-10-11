@@ -1,4 +1,7 @@
 "use client";
+import { formatSigningUsdc } from "@/lib/i18n/format";
+import { DisplayTime } from "@/components/keryx/display-time";
+import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messages";
 
 import { createMessages } from "@/lib/i18n/messages";
 
@@ -6,7 +9,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { readBoundedJson } from "@/lib/read-bounded-json";
-import { privateWorkspaceHistorySchema, privateWorkspaceResultSchema, privateUsdc,
+import { privateWorkspaceHistorySchema, privateWorkspaceResultSchema,
   type PrivateWorkspaceHistory, type PrivateWorkspaceResult } from "@/lib/a2a/private-workspace";
 import { ResearchPrivateResult } from "./research-private-result";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
@@ -96,7 +99,7 @@ function PrivateJobs({ wallet }: { wallet: string }) {
     {history?.jobs.length === 0 && !busy && <p className="mt-4 text-sm">{message("privateResearchJobs.empty")}</p>}
     <ul className="mt-4 divide-y divide-line">{history?.jobs.map(job => <li key={job.id} className="py-4">
       <p className="break-words font-serif">{job.question}</p>
-      <p className="mt-1 text-sm text-ink-3">{message("privateResearchJobs.jobSummary", { mode: job.researchMode, date: new Date(job.createdAt).toLocaleString("en-US"), amount: privateUsdc(job.priceMicros) })}</p>
+      <p className="mt-1 text-sm text-ink-3">{dateCopy("privateResearchJobs.jobSummary", { mode: job.researchMode, date: <DisplayTime value={job.createdAt} />, amount: formatSigningUsdc(job.priceMicros) })}</p>
       <button className={`${control} mt-2`} onClick={() => open(job)}>{message("privateResearchJobs.viewJob")}</button>
     </li>)}</ul>
     {history?.nextCursor && <button className={control} disabled={busy} onClick={() => refresh(history.nextCursor)}>{message("privateResearchJobs.loadOlder")}</button>}
@@ -108,3 +111,5 @@ function PrivateJobs({ wallet }: { wallet: string }) {
     </div>}
   </div>;
 }
+
+const dateCopy = createDateMessages("en");

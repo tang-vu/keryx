@@ -88,11 +88,12 @@ describe("bot result evidence and payment parity", () => {
       expect(embed.title).toBe(original.question);
       expect(embed.color).toBe(0xc0381c);
       expect(embed.fields[0].name).toBe(botResearchMessages(question)("citationHeading"));
-      expect(embed.fields[0].value).toContain("Original & <creator> — $0.000001");
+      const amount = answerPresentation(question, "ordinary").language === "en" ? "$0.000001" : "$0,000001";
+      expect(embed.fields[0].value).toContain(`Original & <creator> — ${amount}`);
       expect(embed.footer.text).toContain(`(${paymentMode ?? "legacy"})`);
       for (const text of [telegram(original), slack(original)]) {
         expect(text).toContain(escapedAnswer);
-        expect(text).toContain("Original &amp; &lt;creator&gt; — $0.000001");
+        expect(text).toContain(`Original &amp; &lt;creator&gt; — ${amount}`);
         expect(text).toContain(`/ ${paymentMode ?? "legacy"}`);
         expect(text).toContain("/dispatch/synthetic-run");
         expect(text).not.toContain("/claim-run#");

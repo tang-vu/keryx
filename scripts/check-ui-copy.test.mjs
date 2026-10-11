@@ -372,7 +372,8 @@ test("withdrawal instructions, accessibility and recovery states are catalogued;
   const retained = {
     "app/me/withdrawals/page.tsx": [],
     "components/keryx/withdrawal-workspace.tsx": [],
-    "components/keryx/withdrawal-review-panel.tsx": ["Arc Testnet · USDC", "USDC", "USDC", "USDC"],
+    // Amount currency codes are emitted by shared SigningAmount, covered by its consumer tests.
+    "components/keryx/withdrawal-review-panel.tsx": ["Arc Testnet · USDC"],
     "components/keryx/withdrawal-recovery-panel.tsx": ["USDC"],
     "components/keryx/withdrawal-history-panel.tsx": [],
     "components/keryx/withdrawal-history-progress.tsx": [],

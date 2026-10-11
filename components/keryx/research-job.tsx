@@ -1,5 +1,7 @@
 "use client";
 
+import { DisplayTime } from "@/components/keryx/display-time";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { createMessages } from "@/lib/i18n/messages";
 
 import { useEffect, useId, useState } from "react";
@@ -34,7 +36,7 @@ export function ResearchJob({ initialId }: { initialId?: string } = {}) {
         const parsed = buyerJobSchema.safeParse(await response.json());
         if (!parsed.success || parsed.data.queryId !== lookup.id) throw new Error(message("researchJob.responseUnverified"));
         if (abort.signal.aborted) return;
-        setJob(parsed.data); setUpdated(new Date().toLocaleTimeString()); setLoading(false);
+        setJob(parsed.data); setUpdated(new Date().toISOString()); setLoading(false);
         calls++;
         if (shouldPollBuyerJob(parsed.data.status)) {
           if (calls < 150) timer = setTimeout(poll, 4_000);
@@ -70,7 +72,7 @@ export function ResearchJob({ initialId }: { initialId?: string } = {}) {
       <button className={control}>{message("researchJob.open")}</button>
       {lookup && <button type="button" className={control} onClick={() => { setLookup(null); setInput(""); setJob(null); setError(""); setUpdated(""); setLoading(false); }}>{message("researchJob.clear")}</button>}
     </form>
-    <div role="status" aria-live="polite" className="mt-4 font-mono text-xs">{loading ? message("researchJob.loading") : job ? message("researchJob.updated", { status: job.status.replaceAll("_", " "), time: updated }) : ""}</div>
+    <div role="status" aria-live="polite" className="mt-4 font-mono text-xs">{loading ? message("researchJob.loading") : job ? createRichMessages("en")("researchJob.updated", { status: job.status.replaceAll("_", " "), time: <DisplayTime value={updated} /> }) : ""}</div>
     {error && <p role="alert" className="mt-3 font-serif text-seal">{error}</p>}
     {job && <ResearchJobDetails job={job} />}
   </section>;

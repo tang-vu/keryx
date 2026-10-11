@@ -10,7 +10,8 @@
 
 import { config } from "../config";
 import { unsupportedDecisionReviewFlag } from "../research/decision-review-types";
-import { formatRecordedUsdc } from "../display/recorded-usdc";
+import { formatRecordedUsdc, formatNumber, selectPlural } from "../i18n/format";
+import { answerPresentation } from "../research/answer-presentation";
 import { botResearchFailure, botResearchMessages } from "../bots/research-messages";
 import type { QueryRun } from "../types";
 
@@ -115,10 +116,11 @@ export function followupUrl(applicationId: string, token: string): string {
  */
 export function buildAnswerMessage(run: QueryRun) {
   const message = botResearchMessages(run.question);
+  const locale = answerPresentation(run.question, "ordinary").language;
   const fields = [];
   if (run.citations.length > 0) {
     const lines = run.citations.map(
-      (c) => `${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (${message("weight", { weight: c.weight.toFixed(2) })})`,
+      (c) => `${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 }, locale)} (${message("weight", { weight: formatNumber(c.weight, { minimumFractionDigits: 2, maximumFractionDigits: 2 }, locale) })})`,
     );
     fields.push({
       name: message("citationHeading"),
@@ -135,8 +137,8 @@ export function buildAnswerMessage(run: QueryRun) {
         fields,
         footer: {
           text:
-            `Keryx · ${message(run.citations.length === 1 ? "sourcesOne" : "sourcesOther", { count: run.citations.length })}` +
-            ` · ${message("recordedCreators", { amount: formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 }) })} (${run.paymentMode ?? "legacy"}) · ${message("discordSettlementNotice")}`,
+            `Keryx · ${message(run.citations.length > 0 && selectPlural(run.citations.length, locale) === "one" ? "sourcesOne" : "sourcesOther", { count: run.citations.length })}` +
+            ` · ${message("recordedCreators", { amount: formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 }, locale) })} (${run.paymentMode ?? "legacy"}) · ${message("discordSettlementNotice")}`,
         },
       },
     ],

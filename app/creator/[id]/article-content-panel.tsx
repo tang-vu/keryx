@@ -1,4 +1,6 @@
 "use client";
+import { formatNumber, selectPlural } from "@/lib/i18n/format";
+
 
 import { createMessages } from "@/lib/i18n/messages";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -159,7 +161,7 @@ export function ArticleContentPanel({ creatorId }: { creatorId: string }) {
         />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="font-mono text-[10px] text-ink-3">
-            {selected?.contentReceipt?.manifestId ? uiCopy(bytes === 1 ? "creatorContent.publishedBytes.one" : "creatorContent.publishedBytes.other", { count: bytes.toLocaleString() }) : uiCopy(bytes === 1 ? "creatorContent.bytes.one" : "creatorContent.bytes.other", { count: bytes.toLocaleString() })}
+            {selected?.contentReceipt?.manifestId ? uiCopy(selectPlural(bytes) === "one" ? "creatorContent.publishedBytes.one" : "creatorContent.publishedBytes.other", { count: formatNumber(bytes) }) : uiCopy(selectPlural(bytes) === "one" ? "creatorContent.bytes.one" : "creatorContent.bytes.other", { count: formatNumber(bytes) })}
           </p>
           <button
             type="button"

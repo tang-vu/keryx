@@ -1,4 +1,6 @@
 "use client";
+import { SigningAmount } from "./signing-amount";
+import { formatSigningUsdc } from "@/lib/i18n/format";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
@@ -8,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
-import { privateUsdc, type PrivateWorkspaceResult } from "@/lib/a2a/private-workspace";
+import { type PrivateWorkspaceResult } from "@/lib/a2a/private-workspace";
 import type { PrivateMerchantPolicy } from "@/lib/buyer/private-merchant-policy";
 import { previewPrivateBrowserQuote } from "@/lib/buyer/private-browser-quote";
 import { buyPrivateBrowserResearch } from "@/lib/buyer/private-browser-client";
@@ -144,8 +146,9 @@ function PrivateCheckout({ payer, merchants }: { payer: string; merchants: Priva
     <p className="font-serif text-sm text-ink-3">{copy("privateCheckout.priceLimits")}</p>
     <button className={control} disabled={locked || !!activeId || !limits || !question.trim()} onClick={preview}>{copy("privateCheckout.reviewPrice")}</button>
     {review && <div className="space-y-3 border border-line p-4">
-      <p className="font-display text-2xl">{copy("privateCheckout.total", { amount: privateUsdc(review.quote.pricing.totalMicros) })}</p>
-      <p className="text-sm">{copy("privateCheckout.pricing", { cap: privateUsdc(review.quote.pricing.creatorBudgetMicros), fee: privateUsdc(review.quote.pricing.serviceFeeMicros) })}</p>
+      <p className="text-xs"><SigningAmount micros={review.quote.pricing.totalMicros} /></p>
+      <p className="font-display text-2xl">{copy("privateCheckout.total", { amount: formatSigningUsdc(review.quote.pricing.totalMicros) })}</p>
+      <p className="text-sm">{copy("privateCheckout.pricing", { cap: formatSigningUsdc(review.quote.pricing.creatorBudgetMicros), fee: formatSigningUsdc(review.quote.pricing.serviceFeeMicros) })}</p>
       <p className="break-all font-mono text-xs">{copy("privateCheckout.payee", { payee: merchants.privatePayee })}</p>
       <p className="break-all text-sm">{richCopy("privateCheckout.aiPolicy", { provider: review.quote.request.reasoning.provider, model: review.quote.request.reasoning.wireModel, endpoint: review.quote.request.reasoning.endpoint, lineBreak: <br /> })}</p>
       <p className="text-sm">{copy("privateCheckout.fixedPriceNotice")}</p>

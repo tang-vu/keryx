@@ -1,4 +1,7 @@
 "use client";
+import { DisplayTime } from "@/components/keryx/display-time";
+import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messages";
+import { formatAmount } from "@/lib/i18n/format";
 
 /**
  * FaucetPanel — "Get testnet USDC" affordance shown near the grant-spend panel.
@@ -57,7 +60,7 @@ function MainnetFundingPanel() {
   return <section className="space-y-2 border border-line bg-paper-2 px-4 py-3 text-sm" aria-label={copy("walletFunding.label")}>
     <h2 className="font-mono text-xs">{copy("walletFunding.title", { network: currentArcLabel })}</h2>
     <p>{copy("walletFunding.introduction", { network: currentArcLabel })}</p>
-    <p className="font-mono text-xs">{copy("walletFunding.balance", { balance: isError || rawBalance === undefined ? copy("walletFunding.unavailable") : formatUnits(rawBalance, profile.erc20Decimals) })}</p>
+    <p className="font-mono text-xs">{copy("walletFunding.balance", { balance: isError || rawBalance === undefined ? copy("walletFunding.unavailable") : formatAmount(rawBalance) })}</p>
     <button type="button" disabled={isFetching} onClick={() => void refetch()} className="font-mono text-xs underline disabled:opacity-50">{isFetching ? copy("walletFunding.checking") : copy("walletFunding.refresh")}</button>
     <p className="text-xs text-ink-3">{copy("walletFunding.networkNotice", { network: currentArcLabel })}</p>
   </section>;
@@ -134,7 +137,7 @@ function TestnetFaucetPanel() {
   if (!isConnected) return null;
 
   const usdcBalance = rawBalance !== undefined
-    ? (Number(rawBalance) / 1e6).toFixed(4)
+    ? formatAmount(rawBalance, { minimumFractionDigits: 4 })
     : null;
 
   return (
@@ -180,7 +183,7 @@ function TestnetFaucetPanel() {
             {result.error}
             {result.claimedAt && (
               <span className="ml-1 text-ink-3">
-                {copy("walletFunding.claimedAt", { time: new Date(result.claimedAt).toLocaleTimeString() })}
+                {dateCopy("walletFunding.claimedAt", { time: <DisplayTime value={result.claimedAt} /> })}
               </span>
             )}
           </p>
@@ -239,3 +242,5 @@ function TestnetFaucetPanel() {
     </div>
   );
 }
+
+const dateCopy = createDateMessages("en");
