@@ -40,6 +40,8 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "24.21.0"
@@ -71,6 +73,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: planned-maintenance-built-linux-${{ github.sha }}
+          name: planned-maintenance-built-linux-${{ github.event.pull_request.head.sha || github.sha }}
           path: .artifacts/maintenance-built/
           if-no-files-found: warn

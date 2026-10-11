@@ -117,7 +117,9 @@ try {
     });
   }
   const health = await request("/api/health"); assert.equal(health.status, 200); assert.equal(JSON.parse(health.body).settles, "offline");
+  assert.equal(JSON.parse(health.body).network, "arcTestnet");
   assert.equal((await request("/api/metrics")).status, 200);
+  assert.equal((await request("/mcp")).status, 405, "The actual built remote MCP route is present");
   const { SqliteAdapter } = await import("../lib/db/sqlite-adapter");
   const nonce = "Maintenance281DeterministicNonce", hash = digest(`keryx-siwe-v1:${nonce}`);
   const authHeaders = { Cookie: `siwe_nonce=${nonce}`, Origin: "https://keryx.cc", "Content-Type": "application/json" };
@@ -166,10 +168,13 @@ try {
   await page.close(); assert.deepEqual(forbidden, []);
   await delay(Math.max(0, Date.parse(window.startsAt) - Date.now() + 20));
   const baseline = snapshot(), admittedBefore = audit.length;
+  await writeFile(join(evidence, "database-before.json"), baseline);
   const refusedPaths = ["/api/auth/verify", "/api/ask", "/api/ask/sign", "/api/session/grant", "/api/source/isolated281",
     "/api/cite/isolated281", "/api/agent/ask", "/api/telegram/webhook", "/api/discord/interactions", "/mcp", "/mcp/"];
   async function refusal(path: string, method = "POST", expectedState = "draining") {
-    const result = await request(path, method, { ...authHeaders, Authorization: "Bearer isolated281", "Payment-Signature": "isolated-not-a-payment" }, authBody);
+    // Health/metrics GETs carry no body. Signed-shaped POSTs carry the retained deterministic body.
+    const result = await request(path, method, { ...authHeaders, Authorization: "Bearer isolated281", "Payment-Signature": "isolated-not-a-payment" }, method === "POST" ? authBody : undefined);
+    observations.push({ path, method, ...result });
     assert.equal(result.status, 503); assert.match(String(result.headers["content-type"]), /^application\/json/);
     const { error } = JSON.parse(result.body);
     assert.equal(error.code, "KERYX_PLANNED_MAINTENANCE"); assert.equal(error.planned, true);
@@ -180,7 +185,6 @@ try {
     assert.equal(error.retryAfterSeconds, Number(result.headers["retry-after"]));
     assert.equal(error.retryAfterSeconds, Math.max(1, Math.min(1800, Math.ceil((Date.parse(window.endsAt) - Date.parse(error.maintenance.checkedAt)) / 1000))));
     assert.equal(result.headers["cache-control"], "no-store");
-    observations.push({ path, method, ...result });
   }
   for (const path of refusedPaths) await refusal(path);
   await delay(100); assert.equal(audit.length, admittedBefore, "No refused request reaches the actual built listener");
@@ -204,6 +208,7 @@ try {
   assert.equal(snapshot(), baseline); assert.equal(challengePresent(), 1); assert.equal(audit.length, admittedBefore);
   proof.refusedRequestCount = observations.length; proof.authorizationPositiveControlConsumed = true;
   proof.wholeDatabaseBefore = digest(baseline); proof.wholeDatabaseAfter = digest(snapshot()); proof.applicationAudit = audit;
+  await writeFile(join(evidence, "database-after.json"), snapshot());
   const late = Date.now();
   await publish({ ...window, announcedAt: new Date(late - 180000).toISOString(), startsAt: new Date(late - 120000).toISOString(),
     endsAt: new Date(late - 1000).toISOString(), phase: "active" });
@@ -225,18 +230,22 @@ try {
 } catch (error) {
   proof.failure = error instanceof Error ? { message: error.message, stack: error.stack } : String(error); throw error;
 } finally {
-  await browser?.close();
+  const cleanupFailures: string[] = [];
+  try { await browser?.close(); } catch { cleanupFailures.push("Owned browser close failed"); }
   if (app && !appExited) {
     app.kill("SIGTERM");
-    await Promise.race([exited, delay(10000)]);
-    if (!appExited) { app.kill("SIGKILL"); await Promise.race([exited, delay(5000)]); passed = false; }
+    await Promise.race([exited, delay(10000, undefined, { ref: false })]);
+    if (!appExited) { app.kill("SIGKILL"); await Promise.race([exited, delay(5000, undefined, { ref: false })]); cleanupFailures.push("Owned app required forced cleanup"); }
   }
-  if (ingress) await new Promise<void>((accept, reject) => ingress!.close(error => error ? reject(error) : accept()));
-  await front?.close(); closeSync(log);
-  proof.passed = passed && appExited; proof.ownedApplicationExited = appExited;
+  try { if (ingress) await new Promise<void>((accept, reject) => ingress!.close(error => error ? reject(error) : accept())); }
+  catch { cleanupFailures.push("Owned TLS ingress close failed"); }
+  try { await front?.close(); } catch { cleanupFailures.push("Owned front door close failed"); }
+  closeSync(log); proof.applicationAudit = audit; proof.cleanupFailures = cleanupFailures;
+  proof.passed = passed && appExited && cleanupFailures.length === 0; proof.ownedApplicationExited = appExited;
   proof.frontDoorSources = Object.fromEntries(["lib/maintenance/front-door.ts", "lib/maintenance/planned-window.ts", "scripts/next-public-server.mjs"]
     .map(file => [file, digest(readFileSync(join(source, file)).toString().replace(/\r\n/g, "\n"))]));
   await writeFile(join(evidence, "proof.json"), JSON.stringify(proof, null, 2));
+  assert.deepEqual(cleanupFailures, [], "Owned resource cleanup must complete");
   // Preserve failure logs and isolated DB/control evidence. Hosted runner removal cleans only this disposable profile.
 }
 console.log(`Real built Linux maintenance rehearsal passed. Evidence: ${evidence}`);

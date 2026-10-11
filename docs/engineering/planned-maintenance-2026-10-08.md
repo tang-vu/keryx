@@ -268,7 +268,11 @@ Both failed and successful runs retain `proof.json`, application drain logs and
 advance/static/unplanned Chromium screenshots in the hosted artifact named
 `planned-maintenance-built-linux-<source SHA>`. The proof binds Git SHA/tree,
 build ID, front-door/launcher hashes, actual ports, responses, audited requests,
-exit observations and whole-database equality hashes. Owned application,
+exit observations and whole-database equality hashes. The workflow explicitly
+checks out the PR head; the receipt therefore binds the actual candidate instead
+of a transient pull-request merge ref. Complete synthetic database snapshots
+before/after the refusal phase are retained for independent equality inspection.
+Owned application,
 front-door, TLS and browser resources are closed; diagnostic profile files stay
 on the disposable runner until its normal teardown. Failure is never promoted
 to rehearsal acceptance. A passing run URL and exact source binding must be
@@ -281,7 +285,7 @@ recorded before the original non-production exercise is claimed complete.
 | Browser and embed | Shared `use-ask-stream` validates the exact nested503 through `ask-error-response`; the browser restores the question draft, uses a fixed status link, and never signs or resubmits. The finite advance banner reads independent public status. Embed keeps its original question and plain error. |
 | Health, metrics and HTTP API | All `/api/*` routes are refused at the front door before application dispatch. Status never fabricates app/database health, commit or payment recovery. |
 | Remote MCP | `/mcp` and descendants receive the same stable503 JSON/Retry-After. It is transport unavailability, not a fabricated JSON-RPC result or successful tool response. |
-| Stdio MCP and paid CLI buyers | `mcp/local-payment.mts` refuses a non402 quote before signing. After a signed request, it preserves the original journal and HTTP status, treats settlement independently of delivery, and requires recovery before another payment. GET-only status observation does not spend. |
+| Stdio MCP and paid CLI buyers | `mcp/local-payment.mts` and `lib/buyer/quote.ts` refuse a non402 quote before signing. After a signed request, MCP payment and `lib/buyer/client.ts` preserve the original journal/HTTP status and treat settlement independently of delivery. Recovery polls the original job; no repeat paid POST. The headless web wrapper preserves custody/original attempts on failure. |
 | Bots | Actual `/api/telegram/webhook` and `/api/discord/interactions` admission is refused before handlers run. Already accepted bot execution is not replayed. Provider webhook redelivery is outside the app's retry authority; no bot acknowledgement/success is fabricated. |
 | Extension | `extension/research-client.mjs` displays nested `error.message` as text and has no signer or automatic request retry. |
 | Local CLI and desktop/native | `scripts/ask.mts` runs locally; desktop/native inspection and workspace IPC do not traverse hosted ingress. Existing local error and recovery contracts remain authoritative. No package/installer or role change is required by this rehearsal-only increment. |
