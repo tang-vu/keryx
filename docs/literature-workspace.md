@@ -8,6 +8,10 @@ paper export only with a citation and a selected retained excerpt. Imported orig
 and model-written synthesis remain unverified; full issues 282/283 acceptance and
 deployment are separate gates. No automatic paper read, upload or payment occurs.
 
+The [private draft check](draft-check.md) at `/literature/check` compares each cited
+sentence of a pasted passage with source text the user supplies, in the tab. It is a
+wording comparison, not semantic review, and reads no cited work itself.
+
 `/literature` adds a personal shortlist to the research-paper library. Use it to
 screen papers against a review question, keep your reasons and prepare a comparison.
 The candidate is not production delivery or evidence of independent demand.

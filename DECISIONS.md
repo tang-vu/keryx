@@ -1,5 +1,25 @@
 # Keryx — Decision Log
 
+## Check cited draft sentences against supplied text, by wording only — 2026-10-11
+
+Advance issue282 with a second zero-I/O private contract, `private-draft-check`
+version 1, shared by `/literature/check`, the authenticated API and remote/stdio
+`draft_check`. It reads BibTeX, RIS or DOI/link lists without resolving them, keeps
+exact sentence spans, binds numeric, LaTeX, Pandoc and author-year markers, and
+compares each cited sentence with caller-supplied source text. A deterministic
+wording comparison was chosen over a model reviewer because no paid model or source
+read is authorized for this stage and its errors can be measured and reproduced.
+It is named as a method (`lexical-overlap-v1`) so a reviewed semantic assessor can
+replace it under the same verdict contract. Every supported or partly-supported
+verdict carries an exact slice of the supplied text; a source without supplied text
+is always unavailable and outranks not-found for a sentence with several citations.
+Negation, listed opposite terms, differing figures and tentative wording withhold
+"supported". The fixed synthetic set reports 3 false "supported" in 32 (role
+reversals) and stays in the test suite with its known failures. Nothing is stored,
+fetched, bought or rewarded. Reading cited works under budget and BUY/SKIP/CACHE
+rules, reference resolution, semantic and expert evaluation, suggested sources and
+release identities remain open. See [scope and measurements](docs/draft-check.md).
+
 ## Advertise published public interfaces and render preview glyphs locally — 2026-10-11
 
 Keep existing indexed URLs and publish reciprocal English/x-default metadata only
@@ -7462,3 +7482,22 @@ remain root's shared-helper qualification. The 93-key area has exact render and
 existing dashboard browser evidence; final combined Next.js/CI and serialized
 delivery remain root-owned. See the [ledger presentation catalogue
 record](docs/engineering/ledger-presentation-catalogue-2026-10-11.md).
+
+## 2026-10-11 — Verify the recorded walkthrough payment against Circle and Arc directly
+
+For issue305, the recorded walkthrough's payment step now reads two third-party
+records from the visitor's browser instead of asking Keryx to vouch for itself:
+Circle's public Gateway transfer record and the Arc mainnet SourceRegistry. The
+expected recipient, amount, token, network and source are constants bound by test
+to the retained, digest-checked receipt, so neither a live Keryx response nor the
+third party's own reply can choose what counts as a match. Every read is explicit,
+single, credential-free and bounded; failure is unavailable, never a pass.
+
+Do not present the Circle-reported transaction hash as chain proof: the public
+Arc RPC returned nothing for it when checked, so per-payment finality stays an
+open claim. The registry read shows current payout authority only. Add no server
+route, proxy or content-security-policy origin; a proxy would turn an independent
+check back into a Keryx assertion. The ledger step restates receipt figures and
+declines to state a margin. The live sponsored run, replay and limit
+demonstrations stay gated; see the
+[criteria status](docs/engineering/recorded-walkthrough-305.md).
