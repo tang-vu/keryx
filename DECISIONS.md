@@ -7501,3 +7501,21 @@ check back into a Keryx assertion. The ledger step restates receipt figures and
 declines to state a margin. The live sponsored run, replay and limit
 demonstrations stay gated; see the
 [criteria status](docs/engineering/recorded-walkthrough-305.md).
+
+## 2026-10-11 — Record purchase planning separately from observed outcomes
+
+For issue298, add an immutable initial planning basis to existing decision JSON
+instead of reconstructing historical budgets or alternatives from prose. Preserve
+that basis when a later guard withholds the planned read. Pool the existing exact
+article/version purchase scorer in a bounded newest-run sample per recorded
+cohort, with interval, counts, rules and missing measures explicit. This keeps
+recorded citations and settlement bookkeeping distinct from model reasoning,
+expert usefulness, independent traffic and third-party payment verification.
+
+Keep the separately bounded skip-evaluation helper detached from live research:
+its synthetic reservations are accounting rather than payment authority. Require
+explicit margins and minimum samples for an offline release comparison; invent
+no accepted regression policy. Dynamic reevaluation capture, real independently
+funded evaluation transport, supported-claim review, question taxonomy and the
+actual pre-deployment comparison remain open. See the
+[scope and surface boundaries](docs/engineering/purchase-outcomes-298.md).

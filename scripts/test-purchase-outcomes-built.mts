@@ -13,6 +13,9 @@ import type { QueryRun } from "../lib/types";
 import { config } from "../lib/config";
 import { projectPurchaseOutcomes } from "../lib/research/purchase-outcomes-projector";
 import { validatePurchaseOutcomes } from "../lib/research/purchase-outcomes-contract";
+import { validatePurchaseAggregate } from "../lib/research/purchase-outcome-aggregate";
+import { createTrustedUsageContext, newRunUsage } from "../lib/research/usage-provenance";
+import { purchaseAggregateMessages as aggregateCopy } from "../locales/en/purchase-outcome-aggregate";
 import copy from "../locales/en/purchase-outcomes.json" with { type: "json" };
 
 assert.equal(config.networkId, "eip155:5042002"); assert.equal(process.env.KERYX_FORCE_OFFLINE, "1");
@@ -29,6 +32,10 @@ const { archive: _archive, ...snapshot } = retained.snapshot;
 // the frozen archive or a new live settlement assertion.
 const run: QueryRun = { ...snapshot, question: "Synthetic public replay of retained purchase inputs", budget: 0,
   engine: "heuristic", subClaims: [], totalSpent: 0, totalToCreators: 0, paymentMode: "offline",
+  // The new local records are explicitly scripted; neither replayed settlement shapes
+  // nor this annotation attest fresh settlement, outside ownership or independent use.
+  usage: newRunUsage({ usageContext: createTrustedUsageContext("eip155:5042002",
+    { actor: "unknown", funding: "unknown", scripted: true }) }, "eip155:5042002", []),
   decisions: snapshot.decisions.map((row: object) => ({ ...row, sourceName: "Public fixture source", rationale: "Retained fixture decision" })) };
 const sqlite = new SqliteAdapter(join(fixture, "data/keryx.sqlite")); await sqlite.init(); await sqlite.saveQueryRun(run);
 const empty = { ...run, id: randomUUID(), decisions: [], citations: [], trace: [] }; await sqlite.saveQueryRun(empty);
@@ -73,6 +80,16 @@ try {
   assert.equal((await request(path + "?network=eip155:5042")).status, 400);
   assert.equal((await request(`/api/dispatch/${randomUUID()}/purchase-outcomes`)).status, 404);
   assert.equal((await request(`/api/dispatch/${incomplete.id}/purchase-outcomes`)).status, 503);
+  const pooled = await request("/api/purchase-outcomes?network=eip155:5042002");
+  assert.equal(pooled.status, 200); assert.equal(pooled.headers.get("cache-control"), "no-store");
+  const aggregate = validatePurchaseAggregate(await pooled.json());
+  assert.equal(aggregate.network, "eip155:5042002");
+  assert.deepEqual(aggregate.columns.map(row => [row.cohort, row.sampledRuns, row.scoredPurchases, row.unscorableRuns]),
+    [["outside", 0, 0, 0], ["team", 0, 0, 0], ["scripted", 3, 1, 1], ["unknown", 0, 0, 0]]);
+  assert.equal(aggregate.columns[2].uncitedAccessMicros, "2000");
+  assert.doesNotMatch(JSON.stringify(aggregate), /PRIVATE|question|payer|payee|wallet|nonce|authorization|rationale|sourceId|itemId/);
+  for (const query of ["period=1y", "period=7d&period=30d", "cohort=outside", "network=eip155:1"])
+    assert.equal((await request(`/api/purchase-outcomes?${query}`)).status, 400);
   const remote = await request("/mcp", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "keryx_purchase_outcomes", arguments: { dispatchId: run.id } } }) });
   assert.equal(remote.status, 200); const rpc = await remote.json(); assert(!rpc.result.isError);
@@ -99,6 +116,20 @@ try {
       assert.equal(await panel.getByRole("link", { name: copy.viewJson, exact: true }).getAttribute("href"), path);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await panel.screenshot({ path: join(fixture, `outcome-${width}.png`) });
+      await panel.getByRole("link", { name: copy.allReports, exact: true }).click();
+      await page.getByRole("heading", { name: aggregateCopy.title, exact: true }).waitFor();
+      await page.getByText(aggregateCopy.recordedOnly, { exact: true }).waitFor();
+      await page.getByLabel(aggregateCopy.network, { exact: true }).selectOption("eip155:5042002");
+      await page.getByRole("button", { name: aggregateCopy.apply, exact: true }).click();
+      const sampled = page.getByRole("table").first();
+      assert.equal(await sampled.getByRole("row", { name: /^Scored purchases / }).getByRole("cell").nth(2).innerText(), "1");
+      await page.getByText(aggregateCopy.rows.missed[1], { exact: true }).waitFor();
+      await page.getByText(aggregateCopy.rows.questionType[1], { exact: true }).waitFor();
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.screenshot({ path: join(fixture, `pooled-outcome-${width}.png`) });
+      await page.getByLabel(aggregateCopy.network, { exact: true }).selectOption("eip155:5042");
+      await page.getByRole("button", { name: aggregateCopy.apply, exact: true }).click();
+      assert.equal(await page.getByRole("table").first().getByRole("row", { name: /^Scored purchases / }).getByRole("cell").nth(2).innerText(), "0");
       await page.goto(`${origin}/dispatch/${empty.id}`);
       await page.getByText(copy.noSample, { exact: true }).waitFor();
       assert.deepEqual(external, []); assert.deepEqual(errors, []);
@@ -113,5 +144,5 @@ try {
   }
 }
 assert(didExit, "Actual owned process exit required");
-console.log(JSON.stringify({ gate: "purchase-outcomes-built-public-api-report", syntheticReplay: true, actualHostedMcpPublicRead: true, privateSidecarOmitted: true,
+console.log(JSON.stringify({ gate: "purchase-outcomes-built-public-api-report", syntheticReplay: true, actualHostedMcpPublicRead: true, pooledPageAndApi: true, privateSidecarOmitted: true,
   networkBound: true, sampleAndUnmeasured: true, immutableRunAndReceipt: true, widths: [320, 390, 768, 1366], observedChildExit: true, evidence: fixture }));
