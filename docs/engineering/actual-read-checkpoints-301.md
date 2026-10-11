@@ -1,5 +1,39 @@
 # Actual READ checkpoints — issue301, bounded milestone
 
+## Reader replay access — October 12 source follow-up
+
+The report now displays the existing checkpoint policy version and the SHA-256
+retained by that report, separately from its downloadable sidecar. Readers can
+use that digest with the existing zero-I/O-to-Keryx audit command:
+
+```text
+node --import tsx scripts/research-audit.mts verify-actual <sidecar-file> <report-retained-digest>
+```
+
+The report states that recorded model proposals and selected plan actions are
+distinct, and that model generation is not replayed or expected to reproduce.
+Verify checks only deterministic checkpoints. Uploaded JSON cannot replace the
+displayed report digest; a new report updates it and unavailable capture hides it.
+No versioned policy, canonical packet, digest calculation, capture, payment,
+reader/visibility guard or export format changes. This is a next-batch source
+follow-up; the current combined release cohort does not depend on it.
+
+Current original [issue301](https://github.com/tang-vu/keryx/issues/301) criteria:
+
+| Original criterion | Source status and remaining gate |
+| --- | --- |
+| Every BUY/SKIP/CACHE, stop and escalation has a canonical record | Partial. `run-agent.ts` and `read-checkpoint-capture.ts` retain ordinary-public post-portfolio checkpoints. Preceding proposal normalization/portfolio selection are not replayed; missing capabilities, private/original runs, overflow and capture failure stay unavailable. Complete runtime capture remains open. |
+| Release-corpus replay reproduces actions and exact integer amounts | Partial. Prospective `bounded-read-admission-v1` uses integer strings, and actual checkpoint replay uses the same pure evaluator as execution. Actual budget predicates retain Number operands and the existing 1e-9 tolerance; nonmicro monetary assertions remain null. Complete integer authority/coverage remains open. |
+| Altered records fail verification | Existing closed canonical contracts check the separately retained digest and deterministic result. Unit/browser fixtures cover tampering, unknown fields/policies, accessors, oversize and asynchronous mutation. This follow-up preserves those semantics and extends the mounted digest/control checks. Exact candidate CI remains required. |
+| Report Verify runs in the browser without calling Keryx | Implemented in `ReadCheckpointVerify`: local File/JSON/Web Crypto with no server action or fetch. The existing actual React fixture sets the browser offline after two allowlisted synthetic GETs. This follow-up exposes the policy/digest and model boundary; production compiled/delivery acceptance is separate. |
+| Public records exclude/redact private question text | Existing closed packets contain run-local candidate numbers, flags/operands, actions and qualified amounts; no question, model text, rationale, URL or account/payment identity. Shared projection withholds private/original packets and strips unknown fields before public output. This follow-up exposes only existing policy and report digest. |
+
+Retain prospective-v1 and actual-post-portfolio-v1 replayability. A valid hash
+does not prove source truth, a model's reasoning, settlement or independent origin.
+Issue291 payment anchoring remains its own outcome; no chain, real-money trial,
+new pilot or translation gate is added here. Original301 stays open for the
+remaining original source coverage, exact-source CI/review and verified delivery.
+
 This source milestone records the ordinary engine's post-portfolio admission
 checkpoints. Issue301 remains open. The prospective `bounded-read-admission-v1`
 helper, corpus and historical receipts remain unchanged.

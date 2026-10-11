@@ -89,6 +89,9 @@ try {
     release(): void; restore(): void; observed(): { started: number; read: number; completed: number } };
   await page.evaluate(capture => (window as unknown as { fixture: Fixture }).fixture.mount(capture), capture);
   await page.getByText(copy.boundary, { exact: true }).waitFor();
+  await page.getByText(copy.modelBoundary, { exact: true }).waitFor();
+  await page.getByText(capture.packet.policy, { exact: true }).waitFor();
+  await page.getByText(capture.retainedDigest, { exact: true }).waitFor();
   const downloaded = page.waitForEvent("download", { timeout: 5000 });
   await page.getByRole("button", { name: copy.download, exact: true }).click();
   const artifact = await downloaded; assert.equal(artifact.suggestedFilename(), "read-checkpoints.json");
@@ -116,9 +119,14 @@ try {
   }), { passed: copy.passed, verify: copy.verify });
   const propChecks: { label: string; passed: number; statuses: number; files: number; verifyEnabled: boolean }[] = [];
   await mount(otherCapture); propChecks.push({ label: "completed-to-new-digest", ...await state() });
+  await page.getByText(otherCapture.retainedDigest, { exact: true }).waitFor();
+  assert.equal(await page.getByText(capture.retainedDigest, { exact: true }).count(), 0);
   await upload(otherCapture.packet); await page.getByRole("button", { name: copy.verify, exact: true }).click();
   await page.getByText(copy.passed, { exact: true }).waitFor();
-  await mount(null); await page.getByText(copy.unavailable, { exact: true }).waitFor(); await mount(capture);
+  await mount(null); await page.getByText(copy.unavailable, { exact: true }).waitFor();
+  assert.equal(await page.getByText(otherCapture.retainedDigest, { exact: true }).count(), 0);
+  assert.equal(await page.getByText(copy.digest, { exact: true }).count(), 0);
+  await mount(capture);
   propChecks.push({ label: "completed-through-null", ...await state() });
   await upload(capture.packet); await page.getByRole("button", { name: copy.verify, exact: true }).click();
   await page.getByText(copy.passed, { exact: true }).waitFor();
@@ -149,6 +157,8 @@ try {
   const changed = structuredClone(capture.packet); changed.records[0].check = { kind: "channel", creatorFree: false, cache: true };
   changed.records[0].outcome = actualReadCheckpoint(changed.records[0].check);
   await upload(changed); await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.refused, { exact: true }).waitFor();
+  await page.getByText(capture.retainedDigest, { exact: true }).waitFor();
+  assert.equal(await page.getByText(otherCapture.retainedDigest, { exact: true }).count(), 0);
   await upload(capture); await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.refused, { exact: true }).waitFor();
   await page.getByLabel(copy.choose).setInputFiles({ name: "oversized.json", mimeType: "application/json", buffer: Buffer.alloc(256 * 1024 + 1, 32) });
   await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.refused, { exact: true }).waitFor();
@@ -170,6 +180,7 @@ try {
   assert.deepEqual(errors, []); assert.deepEqual(refused, []); assert.deepEqual(requests.sort(), ["GET /", "GET /fixture.js"]);
   console.log(JSON.stringify({ gate: "actual-read-report-offline-browser", node: process.version, browser: browser.version(),
     actualReactReport: true, actualPacketDownload: true, separatelyRetainedDigest: true, forgedPairRefused: true, accessorNotInvoked: true,
+    retainedDigestVisibleAndPropBound: true, policyVisible: true, modelReplayBoundaryVisible: true,
     mutationRefused: true, unavailableReset: true, sameMountedPropResets: propChecks.length, deferredOldResultsDiscarded: 4,
     externalRequests: 0, paymentAuthority: false }));
 } finally {
