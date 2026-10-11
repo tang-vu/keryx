@@ -11,6 +11,19 @@
   remedy requests remain open under issue #257. Runtime versions, review/CI,
   combined deployment and published distribution remain root release gates.
 
+### iPhone header responsiveness (v0.27.58 candidate)
+
+- Fix Safari touch selection of MetaMask and WalletConnect in the mobile header.
+  Preserve the chosen wallet's sign-in intent through external SDK modals and
+  retain error reporting after the picker closes.
+- Close the mobile menu when navigation begins and stream loading shells for
+  the public Activity, Sources and Market data pages. Private research and
+  existing not-found boundaries retain their behavior.
+- Verify touch/portal/sign-in scenarios in Chromium and WebKit, plus actual built
+  Next partial prefetch with a deliberately delayed route response. Physical
+  iPhone wallet approval remains a separate acceptance check. See the
+  [repair evidence and supported-surface audit](engineering/iphone-header-2026-10-12.md).
+
 ### Bounded source-language retrieval and public metadata (v0.27.57 candidate)
 
 - Reserve existing bounded context for a unique parser-observed heading matching
