@@ -224,3 +224,11 @@ test("personal dispatch metadata, accessibility, empty states and toast copy are
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("public source claim proof, policy, status and accessible controls are catalogued", () => {
+  for (const file of ["app/claim-source/page.tsx", "components/keryx/public-source-claim-form.tsx",
+    "components/keryx/public-source-claim-policy.tsx", "components/keryx/public-source-claim-status.tsx",
+    "components/keryx/public-source-claims.tsx"]) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
+  }
+});

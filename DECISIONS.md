@@ -7171,3 +7171,20 @@ deployment/readback belongs to the existing serialized runtime batch. Packaging
 refuses invalid descriptions/versions before archive writes. Keep the historical
 legal extraction fixture and require every paragraph outside the reviewed extension
 section and dated update to retain its exact markup.
+
+## 2026-10-11 — Catalogue public-source claim presentation without changing authority
+
+Keep source-control proof and earning-policy activation separate while moving their
+existing English notices into a typed catalogue. File/token instructions and
+freshness, price and policy notices use whole variants with named interpolation;
+dates, links, source data and exact proof bytes retain their existing render/action
+contracts. Metadata, accessibility labels and the request helper's fallback belong
+to this presentation area. Retire only its 104 actually migrated guard occurrences,
+leaving other areas and protocol/data identities intact. No payment, proof, wallet,
+permission or database condition changes, and glossary/locale gates remain held.
+
+Exact render parity and the existing synthetic claim browser fixture qualify source
+behavior; retained CSS and intercepted wallets do not certify a production release.
+See [the claim catalogue record](docs/engineering/source-claims-catalogue-2026-10-11.md).
+Original #272 remains open for remaining areas and root's reviewed combined
+integration, exact-source CI and serialized delivery.
