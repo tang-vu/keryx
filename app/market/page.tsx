@@ -1,3 +1,6 @@
+import { selectPlural } from "@/lib/i18n/format";
+import { DisplayTime } from "@/components/keryx/display-time";
+import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messages";
 import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
@@ -69,9 +72,9 @@ export default async function MarketPage({
         </div>
 
         <div className="my-5 flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-          <span>{copy(entries.length === 1 ? "sourceMarket.versions.one" : "sourceMarket.versions.other", { count: entries.length })}</span>
+          <span>{copy(selectPlural(entries.length) === "one" ? "sourceMarket.versions.one" : "sourceMarket.versions.other", { count: entries.length })}</span>
           <span>·</span>
-          <span className="text-paid">{copy(signed === 1 ? "sourceMarket.offers.one" : "sourceMarket.offers.other", { count: signed })}</span>
+          <span className="text-paid">{copy(selectPlural(signed) === "one" ? "sourceMarket.offers.one" : "sourceMarket.offers.other", { count: signed })}</span>
           {query && <span>{copy("sourceMarket.matching", { query })}</span>}
         </div>
 
@@ -132,7 +135,7 @@ export default async function MarketPage({
                     {entry.offer && (
                       <>
                         <span>·</span>
-                        <Clock3 className="h-3 w-3" /> {copy("sourceMarket.until", { date: new Date(entry.offer.expiresAt * 1_000).toLocaleDateString("en-US", { timeZone: "UTC" }) })}
+                        <Clock3 className="h-3 w-3" /> {dateCopy("sourceMarket.until", { date: <DisplayTime value={entry.offer.expiresAt * 1_000} dateOnly /> })}
                         <span>{copy("sourceMarket.signer", { signer: shortAddr(entry.offer.signer) })}</span>
                       </>
                     )}
@@ -147,3 +150,5 @@ export default async function MarketPage({
     </div>
   );
 }
+
+const dateCopy = createDateMessages("en");

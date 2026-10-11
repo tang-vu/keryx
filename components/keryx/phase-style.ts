@@ -1,3 +1,4 @@
+import { formatRecordedAmount } from "@/lib/i18n/format";
 /**
  * Visual vocabulary for the agent's reasoning trace. Maps trace phases and
  * decision actions onto "The Mint" palette — the vermillion seal marks a
@@ -102,8 +103,5 @@ export function shortHash(hash?: string | null): string {
 
 /** Format a USDC amount with up to 6 decimals, trimmed. */
 export function fmtUsdc(n: number | undefined | null, opts?: { sign?: boolean }): string {
-  const v = typeof n === "number" && isFinite(n) ? n : 0;
-  const s = v.toFixed(6).replace(/\.?0+$/, "");
-  const out = s === "" || s === "-" ? "0" : s;
-  return opts?.sign ? `$${out}` : out;
+  return formatRecordedAmount(n, { denomination: opts?.sign ? "$" : undefined });
 }

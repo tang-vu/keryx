@@ -1,5 +1,6 @@
 /** Existing English helper presentation. Canonical exports stay English; no locale or authority rollout. */
 export const sharedHelperMessages = Object.freeze({
+  "signingAmount.exactDetails": "({micros} micro-USDC; decimal point, no grouping)",
   "paymentAuthorization.prepared": "reserved, not exposed",
   "paymentAuthorization.exposed": "reserved, possibly unsigned",
   "paymentAuthorization.signed": "signed, pending proof",

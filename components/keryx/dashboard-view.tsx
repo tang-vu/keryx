@@ -1,4 +1,7 @@
 "use client";
+import { selectPlural } from "@/lib/i18n/format";
+
+import { DisplayTime } from "@/components/keryx/display-time";
 
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -66,7 +69,7 @@ function runBody(body: unknown): RunSummary[] {
 function ResourceNotice({ resource, label }: { resource: LedgerResource<unknown> & { retry: () => void }; label: string }) {
   if (resource.status === "ready") return null;
   return <div role="status" className="mb-3 text-sm leading-relaxed text-ink-2">
-    {resource.status === "loading" ? uiCopy("ledgerResource.loading", { label }) : resource.data !== null && resource.observedAt ? uiRichCopy("ledgerResource.unavailableWithObservation", { label, observed: new Date(resource.observedAt).toLocaleString("en-GB", { timeZone: "UTC" }), retry: <button type="button" onClick={resource.retry} className="min-h-11 px-2 text-seal underline">{uiCopy("ledgerResource.retry")}</button> }) : uiRichCopy("ledgerResource.unavailable", { label, retry: <button type="button" onClick={resource.retry} className="min-h-11 px-2 text-seal underline">{uiCopy("ledgerResource.retry")}</button> })}
+    {resource.status === "loading" ? uiCopy("ledgerResource.loading", { label }) : resource.data !== null && resource.observedAt ? uiRichCopy("ledgerResource.unavailableWithObservation", { label, observed: <DisplayTime value={resource.observedAt} />, retry: <button type="button" onClick={resource.retry} className="min-h-11 px-2 text-seal underline">{uiCopy("ledgerResource.retry")}</button> }) : uiRichCopy("ledgerResource.unavailable", { label, retry: <button type="button" onClick={resource.retry} className="min-h-11 px-2 text-seal underline">{uiCopy("ledgerResource.retry")}</button> })}
   </div>;
 }
 
@@ -137,8 +140,8 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
           <p className="mt-3 text-sm leading-relaxed text-ink-2">{uiCopy("ledgerPresentation.settlementBoundary")}</p>
           <ResourceNotice resource={metricsResource} label={uiCopy("ledgerPresentation.totals")} />
           {metrics && <>
-            {metrics.pendingPaymentConfirmations > 0 && <p className="mt-3 text-sm text-amber-800">{uiCopy(metrics.pendingPaymentConfirmations === 1 ? "ledgerPresentation.pending.one" : "ledgerPresentation.pending.other", { count: metrics.pendingPaymentConfirmations, amount: fmtUsdc(metrics.pendingPaymentVolumeUsdc) })}</p>}
-            {metrics.failedPaymentAttempts > 0 && <p className="mt-3 text-sm text-red-700">{uiCopy(metrics.failedPaymentAttempts === 1 ? "ledgerPresentation.failed.one" : "ledgerPresentation.failed.other", { count: metrics.failedPaymentAttempts, amount: fmtUsdc(metrics.failedPaymentVolumeUsdc) })}</p>}
+            {metrics.pendingPaymentConfirmations > 0 && <p className="mt-3 text-sm text-amber-800">{uiCopy(selectPlural(metrics.pendingPaymentConfirmations) === "one" ? "ledgerPresentation.pending.one" : "ledgerPresentation.pending.other", { count: metrics.pendingPaymentConfirmations, amount: fmtUsdc(metrics.pendingPaymentVolumeUsdc) })}</p>}
+            {metrics.failedPaymentAttempts > 0 && <p className="mt-3 text-sm text-red-700">{uiCopy(selectPlural(metrics.failedPaymentAttempts) === "one" ? "ledgerPresentation.failed.one" : "ledgerPresentation.failed.other", { count: metrics.failedPaymentAttempts, amount: fmtUsdc(metrics.failedPaymentVolumeUsdc) })}</p>}
             <details className="mt-4 border-t border-line pt-2" open={metrics.totalPayments > 0 || undefined}>
               <summary className="min-h-11 cursor-pointer py-3 font-mono text-xs text-ink">{uiCopy("ledgerPresentation.inspectTotals")}</summary>
               <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-3 text-sm text-ink-2">

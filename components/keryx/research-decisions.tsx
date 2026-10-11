@@ -1,4 +1,6 @@
 "use client";
+import { formatRecordedAmount, selectPlural } from "@/lib/i18n/format";
+
 
 import { createMessages } from "@/lib/i18n/messages";
 
@@ -40,7 +42,7 @@ export function ResearchDecisions({ queryId, answer, claims }: {
   }, [queryId, answer, revision]);
 
   return <details className="border border-line p-4">
-    <summary className="cursor-pointer"><h3 className="inline font-display text-2xl">{decisions ? message(decisions.length === 1 ? "researchDecisions.count.one" : "researchDecisions.count.other", { count: decisions.length }) : message("researchDecisions.title")}</h3></summary>
+    <summary className="cursor-pointer"><h3 className="inline font-display text-2xl">{decisions ? message(selectPlural(decisions.length) === "one" ? "researchDecisions.count.one" : "researchDecisions.count.other", { count: decisions.length }) : message("researchDecisions.title")}</h3></summary>
     <p className="mt-2 font-serif text-sm text-ink-3">{message("researchDecisions.boundary")}</p>
     {decisions !== null && <p role="status" className="mt-2 font-mono text-xs">{message("researchDecisions.integrityNotice")}</p>}
     {error ? <div role="status" className="mt-3 font-serif text-sm">
@@ -49,7 +51,7 @@ export function ResearchDecisions({ queryId, answer, claims }: {
     </div> : decisions === null ? <p role="status" className="mt-3 font-mono text-xs">{message("researchDecisions.loading")}</p>
       : decisions.length === 0 ? <p className="mt-3 font-serif">{message("researchDecisions.empty")}</p>
       : <ol className="mt-4 space-y-3">{decisions.map((decision, index) => <li key={index} className="border border-line p-4">
-        <p className="font-mono text-xs">{message("researchDecisions.quotedPrice", { action: decision.action, amount: decision.priceUsdc.toFixed(6) })}</p>
+        <p className="font-mono text-xs">{message("researchDecisions.quotedPrice", { action: decision.action, amount: formatRecordedAmount(decision.priceUsdc, { minimumFractionDigits: 6 }) })}</p>
         <p className="mt-2 font-serif font-semibold">{decision.sourceName}{decision.itemTitle && decision.sourceName !== decision.itemTitle && !decision.sourceName.endsWith(` — ${decision.itemTitle}`) ? ` — ${decision.itemTitle}` : ""}</p>
         <p className="mt-2 font-serif">{decision.rationale}</p>
         {!!decision.targets.length && <ul className="mt-3 list-inside list-disc font-serif text-sm text-ink-3">{decision.targets.map((target, i) => <li key={i}>{claims.find(claim => claim.claimIndex === target)?.claim ?? message("researchDecisions.unavailableTarget", { number: target + 1 })}</li>)}</ul>}

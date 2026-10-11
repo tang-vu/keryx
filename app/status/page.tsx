@@ -1,4 +1,6 @@
 "use client";
+import { formatNumber, formatRecordedAmount } from "@/lib/i18n/format";
+import { DisplayTime } from "@/components/keryx/display-time";
 
 /**
  * /status — uptime and settlement health. Polls /api/health and shows whether the
@@ -159,11 +161,11 @@ export default function StatusPage() {
               <>
                 <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">{message("statusPage.liveTraction")}</div>
                 <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
-                  <Row k={message("statusPage.totalQueries")} v={health.traction.totalQueries.toLocaleString()} />
-                  <Row k={message("statusPage.settledPayments")} v={health.traction.totalPayments.toLocaleString()} />
-                  <Row k={message("statusPage.creatorRewards")} v={`$${health.traction.creatorPayoutsUsdc.toFixed(4)}`} />
+                  <Row k={message("statusPage.totalQueries")} v={formatNumber(health.traction.totalQueries)} />
+                  <Row k={message("statusPage.settledPayments")} v={formatNumber(health.traction.totalPayments)} />
+                  <Row k={message("statusPage.creatorRewards")} v={`$${formatRecordedAmount(health.traction.creatorPayoutsUsdc, { minimumFractionDigits: 4 })}`} />
                   <Row k={message("statusPage.creatorsEarning")} v={String(health.traction.creatorsEarning)} />
-                  <Row k={message("statusPage.keryxOperatingFees")} v={health.traction.settledOperatingFeeUsdc != null ? `$${health.traction.settledOperatingFeeUsdc.toFixed(6)}` : message("statusPage.unavailable")} />
+                  <Row k={message("statusPage.keryxOperatingFees")} v={health.traction.settledOperatingFeeUsdc != null ? `$${formatRecordedAmount(health.traction.settledOperatingFeeUsdc, { minimumFractionDigits: 6 })}` : message("statusPage.unavailable")} />
                   <Row k={message("statusPage.operatingFeeTransfers")} v={health.traction.settledOperatingFeePayments != null ? String(health.traction.settledOperatingFeePayments) : message("statusPage.unavailable")} />
                 </dl>
               </>
@@ -210,7 +212,7 @@ export default function StatusPage() {
               </>
             )}
 
-            <p className="mt-8 font-mono text-[10px] tracking-wide text-faint">{richMessage("statusPage.refreshNotice", { checkedNotice: health?.time ? message("statusPage.checkedAt", { checkedAt: new Date(health.time).toUTCString() }) : "" })}</p>
+            <p className="mt-8 font-mono text-[10px] tracking-wide text-faint">{richMessage("statusPage.refreshNotice", { checkedNotice: health?.time ? richMessage("statusPage.checkedAt", { checkedAt: <DisplayTime value={health.time} /> }) : "" })}</p>
           </div>
         </div>
       </main>

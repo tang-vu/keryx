@@ -1,7 +1,8 @@
 "use client";
+import { formatNumber, formatRecordedUsdc } from "@/lib/i18n/format";
+import { DisplayTime } from "./display-time";
 
 import { useEffect, useState } from "react";
-import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import type { WithdrawalRecord } from "@/lib/types";
 import { CreatorCashoutsPanel } from "./creator-cashouts-panel";
 import { RegistryStatusSection, type RegistryHealth } from "./registry-status-section";
@@ -124,12 +125,12 @@ export function ProofDashboard() {
 
           {t ? (
             <dl className="mt-7 grid grid-cols-2 gap-6 sm:grid-cols-4">
-              <Metric label={message("proofDashboard.totalQueries")} value={t.totalQueries.toLocaleString()} />
-              <Metric label={message("proofDashboard.settledPayments")} value={t.totalPayments.toLocaleString()} />
+              <Metric label={message("proofDashboard.totalQueries")} value={formatNumber(t.totalQueries)} />
+              <Metric label={message("proofDashboard.settledPayments")} value={formatNumber(t.totalPayments)} />
               <Metric label={message("proofDashboard.creatorRewards")} value={money(t.creatorPayoutsUsdc)} />
-              <Metric label={message("proofDashboard.creatorsEarning")} value={t.creatorsEarning.toLocaleString()} />
+              <Metric label={message("proofDashboard.creatorsEarning")} value={formatNumber(t.creatorsEarning)} />
               <Metric label={message("proofDashboard.keryxOperatingFees")} value={t.settledOperatingFeeUsdc != null ? money(t.settledOperatingFeeUsdc) : message("proofDashboard.unavailable")} />
-              <Metric label={message("proofDashboard.operatingFeeTransfers")} value={t.settledOperatingFeePayments?.toLocaleString() ?? message("proofDashboard.unavailable")} />
+              <Metric label={message("proofDashboard.operatingFeeTransfers")} value={(t.settledOperatingFeePayments == null ? undefined : formatNumber(t.settledOperatingFeePayments)) ?? message("proofDashboard.unavailable")} />
             </dl>
           ) : (
             <p className="mt-6 font-mono text-[11px] text-ink-3">{message("proofDashboard.tractionLedgerUnavailable")}</p>
@@ -181,7 +182,7 @@ export function ProofDashboard() {
 
       <CreatorCashoutsPanel withdrawals={withdrawals} />
 
-      <p className="text-center font-mono text-[9.5px] tracking-wide text-faint">{richMessage("proofDashboard.autoRefreshesEvery30sCheckedValue", { checkedAt: new Date(health.time).toUTCString() })}</p>
+      <p className="text-center font-mono text-[9.5px] tracking-wide text-faint">{richMessage("proofDashboard.autoRefreshesEvery30sCheckedValue", { checkedAt: <DisplayTime value={health.time} /> })}</p>
     </div>
   );
 }

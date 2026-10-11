@@ -1,10 +1,11 @@
 "use client";
+import { SigningAmount } from "./signing-amount";
+import { formatAmount } from "@/lib/i18n/format";
 import { createMessages } from "@/lib/i18n/messages";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
-import { formatUnits } from "viem";
 import { WalletPicker } from "./wallet-picker";
 import { ResearchFunding } from "./research-funding";
 import { useResearchWorkspace } from "./research-workspace";
@@ -94,13 +95,14 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
     </>}
     {review && <div className="space-y-3 border-t border-line pt-4">
       <p className="whitespace-pre-wrap break-words font-serif">{review.request.question}</p>
-      <p className="font-mono text-xs">{copy(review.request.researchMode === "quick" ? "researchCheckout.quickSummary" : "researchCheckout.deepSummary", { amount: formatUnits(BigInt(review.amount), 6), cap: review.request.budget })}</p>
+      <p className="text-xs"><SigningAmount micros={review.amount} /></p>
+      <p className="font-mono text-xs">{copy(review.request.researchMode === "quick" ? "researchCheckout.quickSummary" : "researchCheckout.deepSummary", { amount: formatAmount(BigInt(review.amount), { minimumFractionDigits: 6, useGrouping: false }), cap: review.request.budget })}</p>
       <p className="break-all font-mono text-xs">{copy("researchCheckout.payee", { payee: review.payee })}</p>
       <label className="flex items-start gap-3 font-serif text-sm"><input type="checkbox" checked={accepted} disabled={busy} onChange={event => setAccepted(event.target.checked)} className="mt-1" />
         <span>{copy("researchCheckout.consent")}</span>
       </label>
       {!reviewCurrent && <p role="status" className="text-seal">{copy("researchCheckout.reviewChanged")}</p>}
-      <button type="button" disabled={!accepted || !reviewCurrent || busy || fundingBusy} className={`${control} bg-ink text-paper`} onClick={() => { void purchase(); }}>{busy ? copy("researchCheckout.purchasing") : copy("researchCheckout.buy", { amount: formatUnits(BigInt(review.amount), 6) })}</button>
+      <button type="button" disabled={!accepted || !reviewCurrent || busy || fundingBusy} className={`${control} bg-ink text-paper`} onClick={() => { void purchase(); }}>{busy ? copy("researchCheckout.purchasing") : copy("researchCheckout.buy", { amount: formatAmount(BigInt(review.amount), { minimumFractionDigits: 6, useGrouping: false }) })}</button>
     </div>}
     {recovery && <button type="button" className={control} onClick={() => downloadBuyerJson(recovery, "recovery")}>{copy("researchCheckout.downloadRecovery")}</button>}
     <p role="status" aria-live="polite" className="font-serif text-sm">{message}</p>

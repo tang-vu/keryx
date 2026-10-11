@@ -1,4 +1,6 @@
 "use client";
+import { formatRecordedUsdc, selectPlural } from "@/lib/i18n/format";
+
 
 /**
  * Creator leaderboard. Rank, source name, total earned, citations, payments.
@@ -11,7 +13,6 @@ import Link from "next/link";
 import { Crown, Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { shortAddr } from "./phase-style";
-import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import { cn } from "@/lib/utils";
 
 const uiCopy = createMessages("en");
@@ -64,7 +65,7 @@ export function CreatorLeaderboard({ rows, title = uiCopy("creatorLeaderboard.ti
                 {row.sourceName}
               </p>
               <p className="font-mono text-[11px] text-ink-3">
-                {uiCopy(row.citationCount === 1 ? "creatorLeaderboard.row.one" : "creatorLeaderboard.row.other", { wallet: shortAddr(row.walletAddress), citations: row.citationCount, payments: row.paymentCount })}
+                {uiCopy(selectPlural(row.citationCount) === "one" ? "creatorLeaderboard.row.one" : "creatorLeaderboard.row.other", { wallet: shortAddr(row.walletAddress), citations: row.citationCount, payments: row.paymentCount })}
               </p>
             </div>
             <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-paid">

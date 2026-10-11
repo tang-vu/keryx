@@ -1,4 +1,5 @@
 "use client";
+import { SigningRecordedAmount } from "./signing-amount";
 
 /**
  * Bulk import — paste many RSS feed URLs (or an OPML file) and register them all in one pass.
@@ -327,7 +328,8 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
         {preparing ? uiCopy("bulkRegistration.reading") : uiCopy("bulkRegistration.readFeeds")}
       </button>
 
-      <BulkImportResults feeds={feeds} onToggle={toggle} busy={busy}
+      <p className="text-xs"><SigningRecordedAmount value={priceNum} /></p>
+      <BulkImportResults prices={Object.fromEntries(feeds.map(feed => [feed.rssUrl, feed.registerParams?.fetchPriceUsdc6]))} feeds={feeds} onToggle={toggle} busy={busy}
         onCheck={rssUrl => { const feed = feeds.find(f => f.rssUrl === rssUrl); if (feed) void checkRegistration(feed); }}
         onHashChange={(rssUrl, txHash) => patch(rssUrl, { txHash })} />
       {feeds.some(f => f.phase === "done" && f.mode === "onchain") && <p className="text-xs text-ink-2">{uiCopy("bulkRegistration.confirmedNotice")}</p>}

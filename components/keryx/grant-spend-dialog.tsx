@@ -1,4 +1,7 @@
 "use client";
+import { formatRecordedAmount, selectPlural } from "@/lib/i18n/format";
+
+import { SigningRecordedAmount } from "./signing-amount";
 
 import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useState } from "react";
@@ -58,12 +61,13 @@ export function GrantSpendDialog({ grantState, onActivate, onTopUp, onExtend, on
     {grantState.status === "registering" && grantState.consentReview && <p className="mt-2 text-xs leading-relaxed text-ink-2">
       {grantState.consentReview.durationSeconds !== undefined
         ? grantState.consentReview.questionCapUsdc !== undefined
-          ? copy("budgetGrant.consentCapDuration", { amount: grantState.consentReview.remainingCapacityUsdc.toFixed(6), cap: grantState.consentReview.questionCapUsdc.toFixed(6), duration: copy(grantState.consentReview.durationSeconds / 3600 === 1 ? "budgetGrant.duration.one" : "budgetGrant.duration.other", { count: grantState.consentReview.durationSeconds / 3600 }) })
-          : copy("budgetGrant.consentDuration", { amount: grantState.consentReview.remainingCapacityUsdc.toFixed(6), duration: copy(grantState.consentReview.durationSeconds / 3600 === 1 ? "budgetGrant.duration.one" : "budgetGrant.duration.other", { count: grantState.consentReview.durationSeconds / 3600 }) })
+          ? copy("budgetGrant.consentCapDuration", { amount: formatRecordedAmount(grantState.consentReview.remainingCapacityUsdc, { minimumFractionDigits: 6, useGrouping: false }), cap: formatRecordedAmount(grantState.consentReview.questionCapUsdc, { minimumFractionDigits: 6 }), duration: copy(selectPlural(grantState.consentReview.durationSeconds / 3600) === "one" ? "budgetGrant.duration.one" : "budgetGrant.duration.other", { count: grantState.consentReview.durationSeconds / 3600 }) })
+          : copy("budgetGrant.consentDuration", { amount: formatRecordedAmount(grantState.consentReview.remainingCapacityUsdc, { minimumFractionDigits: 6 }), duration: copy(selectPlural(grantState.consentReview.durationSeconds / 3600) === "one" ? "budgetGrant.duration.one" : "budgetGrant.duration.other", { count: grantState.consentReview.durationSeconds / 3600 }) })
         : grantState.consentReview.questionCapUsdc !== undefined
-          ? copy("budgetGrant.consentCap", { amount: grantState.consentReview.remainingCapacityUsdc.toFixed(6), cap: grantState.consentReview.questionCapUsdc.toFixed(6) })
-          : copy("budgetGrant.consent", { amount: grantState.consentReview.remainingCapacityUsdc.toFixed(6) })}
+          ? copy("budgetGrant.consentCap", { amount: formatRecordedAmount(grantState.consentReview.remainingCapacityUsdc, { minimumFractionDigits: 6 }), cap: formatRecordedAmount(grantState.consentReview.questionCapUsdc, { minimumFractionDigits: 6 }) })
+          : copy("budgetGrant.consent", { amount: formatRecordedAmount(grantState.consentReview.remainingCapacityUsdc, { minimumFractionDigits: 6 }) })}
     </p>}
+    {grantState.consentReview && <p className="text-xs"><SigningRecordedAmount value={grantState.consentReview.remainingCapacityUsdc} /></p>}
     {grantState.status === "confirming" && <p className="mt-2 text-xs leading-relaxed text-ink-2">
       {copy("budgetGrant.confirmingNotice")}
     </p>}
@@ -103,6 +107,7 @@ export function GrantSpendDialog({ grantState, onActivate, onTopUp, onExtend, on
     {mainnet && <ResearchBudgetFields questionInput={questionInput} onQuestionChange={setQuestionInput}
       durationSeconds={durationSeconds} onDurationChange={setDurationSeconds} />}
     {mainnet && budget !== null && question !== null && question > budget && <p role="alert" className="text-xs text-destructive">{copy("budgetGrant.questionCapTooHigh")}</p>}
+    {budget !== null && <p className="text-xs"><SigningRecordedAmount value={budget} /></p>}
     <div className="flex flex-wrap items-center gap-3">
       <button type="button" disabled={!budgetValid || resuming} onClick={() => { if (budgetValid && budget !== null) onActivate(budget, options); }}
         className="border border-ink bg-ink px-5 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-cream disabled:cursor-not-allowed disabled:opacity-50">

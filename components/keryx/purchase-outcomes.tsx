@@ -1,14 +1,14 @@
+import { formatNumber, formatUsdcMicros } from "@/lib/i18n/format";
 import copy from "@/locales/en/purchase-outcomes.json";
-import { formatUsdcMicros } from "@/lib/display/recorded-usdc";
 import type { RecordedPurchaseOutcomes } from "@/lib/research/purchase-outcomes-contract";
 
 function message(template: string, values: Record<string, string | number>) {
   return template.replace(/\{([A-Za-z][A-Za-z0-9]*)\}/gu, (_, name: string) => String(values[name]));
 }
 const percent = (value: number | null) => value === null ? copy.unmeasured :
-  new Intl.NumberFormat("en", { style: "percent", maximumFractionDigits: 1 }).format(value);
+  formatNumber(value, { style: "percent", maximumFractionDigits: 1 });
 const predicted = (value: number | null) => value === null ? copy.unmeasured :
-  new Intl.NumberFormat("en", { maximumFractionDigits: 3 }).format(value);
+  formatNumber(value, { maximumFractionDigits: 3 });
 
 /** Server-rendered public observation. No wallets, source fetches or client-side sidecars. */
 export function PurchaseOutcomesPanel({ dispatchId, report }: { dispatchId: string; report: RecordedPurchaseOutcomes | null }) {

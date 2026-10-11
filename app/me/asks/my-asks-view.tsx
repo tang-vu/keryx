@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { fmtUsdc } from "@/components/keryx/phase-style";
+import { DisplayTime } from "@/components/keryx/display-time";
 import { CurrentHistoryPane } from "./current-history-view";
 import { ClaimantHistoryPane } from "./claimant-history-view";
 import { personalHistoryCopy as copy } from "@/locales/en/personal-history";
@@ -52,14 +53,8 @@ interface Totals {
   trialToCreatorsUsdc: number;
 }
 
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return message("myHistory.justNow");
-  if (mins < 60) return message("myHistory.minutesAgo", { minutes: mins });
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return message("myHistory.hoursAgo", { hours: hrs });
-  return message("myHistory.daysAgo", { days: Math.floor(hrs / 24) });
+function timeAgo(iso: string) {
+  return <DisplayTime value={iso} relative />;
 }
 
 export function MyAsksView() {

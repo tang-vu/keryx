@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatLocalizedDate, formatLocalizedNumber, formatLocalizedRelativeTime, formatLocalizedUsdc, formatSigningUsdc, selectPlural } from "./format";
 import { formatUsdcMicros } from "../display/recorded-usdc";
+import { formatAmount, formatDate, formatCalendarDate, formatNumber, formatRelativeTime, selectPlural as plural, type DisplayLocale } from "./format";
 
 describe("locale presentation preserves exact monetary authority", () => {
   it.each([["en", "1,234.000001 USDC"], ["vi", "1.234,000001 USDC"], ["zh-Hans", "1,234.000001 USDC"]] as const)(
@@ -52,9 +53,44 @@ describe("date, clock and plural presentation", () => {
     expect(formatLocalizedRelativeTime("invalid", "2026-10-09T00:30:00Z", "en")).toBe("Unavailable");
   });
 
+  it("admits recorded RFC3339 offsets without losing sub-millisecond UTC details", () => {
+    expect(formatDate("2026-10-11T07:30:00.123456+07:00")!.utc).toBe("2026-10-11T00:30:00.123456Z");
+    expect(formatDate("2026-02-30T07:30:00+07:00")).toBeNull();
+    expect(formatDate("2026-10-11T07:30:00+24:00")).toBeNull();
+    expect(formatCalendarDate("2026-10-11")!.date).toBe("2026-10-11");
+    expect(formatCalendarDate("2026-02-30")).toBeNull();
+  });
+
   it("uses locale plural rules rather than English count heuristics", () => {
     expect(selectPlural(1, "en")).toBe("one"); expect(selectPlural(2, "en")).toBe("other");
     expect(selectPlural(1, "vi")).toBe("other"); expect(selectPlural(1, "zh-Hans")).toBe("other");
     expect(() => selectPlural(NaN, "en")).toThrow("finite");
+  });
+});
+
+// Includes the shipped English UI and each bot research-copy locale; Chinese is preparation only.
+describe.each(["en", "vi", "pt", "es", "zh-Hans"] as DisplayLocale[])("display boundaries in %s", locale => {
+  it("preserves all micro digits at the sub-cent and maximum safe boundaries", () => {
+    const decimal = ["vi", "pt", "es"].includes(locale) ? "," : ".";
+    expect(formatAmount(1, { denomination: "USDC" }, locale)).toBe(`0${decimal}000001 USDC`);
+    expect(formatAmount(9999, { denomination: "USDC" }, locale)).toBe(`0${decimal}009999 USDC`);
+    expect(formatAmount("9007199254740991", { useGrouping: false }, locale)).toBe(`9007199254${decimal}740991`);
+    expect(formatAmount("9007199254740992", {}, locale)).toBe("Amount unavailable");
+    expect(formatSigningUsdc("9007199254740991")).toBe("9007199254.740991 USDC");
+  });
+  it("keeps explicit instants through a DST fold and both sides of midnight", () => {
+    const first = formatDate("2026-11-01T08:30:00Z", locale, "America/Los_Angeles")!;
+    const second = formatDate("2026-11-01T09:30:00Z", locale, "America/Los_Angeles")!;
+    expect(first.text).toBe(second.text);
+    expect(first.utc).not.toBe(second.utc);
+    expect(formatDate("2026-10-11T00:30:00Z", locale, "America/Los_Angeles")!.utc).toBe("2026-10-11T00:30:00.000Z");
+    expect(formatDate("2026-10-11T00:30:00Z", locale, "Asia/Ho_Chi_Minh")!.utc).toBe("2026-10-11T00:30:00.000Z");
+    expect(formatRelativeTime("2026-10-11T00:29:00Z", "2026-10-11T00:30:00Z", locale)).not.toBe("Unavailable");
+  });
+  it("keeps ordinary number precision separate from exact monetary input", () => {
+    expect(formatNumber(BigInt("12345678901234567890"), { useGrouping: false }, locale)).toBe("12345678901234567890");
+    expect(formatNumber(NaN, {}, locale)).toBe("Unavailable");
+    expect(plural(1, locale)).toBe(locale === "vi" || locale === "zh-Hans" ? "other" : "one");
+    expect(plural(2, locale)).toBe("other");
   });
 });

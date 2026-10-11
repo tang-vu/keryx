@@ -1,4 +1,7 @@
 "use client";
+import { selectPlural } from "@/lib/i18n/format";
+
+import { DisplayTime } from "@/components/keryx/display-time";
 
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
@@ -123,7 +126,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
           icon={Hash}
           label={uiCopy("creatorDetail.citations")}
           value={String(stats.citationCount)}
-          sub={uiCopy(stats.paymentCount === 1 ? "creatorDetail.payments.one" : "creatorDetail.payments.other", { count: stats.paymentCount })}
+          sub={uiCopy(selectPlural(stats.paymentCount) === "one" ? "creatorDetail.payments.one" : "creatorDetail.payments.other", { count: stats.paymentCount })}
         />
         <StatTile
           icon={Calendar}
@@ -210,7 +213,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
       <section className="border border-line bg-paper p-5">
         <div className="mb-4 flex items-baseline justify-between gap-3">
           <h2 className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-            {uiCopy(recentPayments.length === 1 ? "creatorDetail.recentPayments.one" : "creatorDetail.recentPayments.other", { count: recentPayments.length })}
+            {uiCopy(selectPlural(recentPayments.length) === "one" ? "creatorDetail.recentPayments.one" : "creatorDetail.recentPayments.other", { count: recentPayments.length })}
           </h2>
           {/* The panel shows a slice; the export is the whole ledger — what a creator needs
               to reconcile a withdrawal or file the income. */}
@@ -250,7 +253,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
                     >
                       {p.kind === "citation" ? uiCopy("creatorDetail.cited") : uiCopy("creatorDetail.read")}
                     </span>
-                    {new Date(p.createdAt).toLocaleString()}
+                    {<DisplayTime value={p.createdAt} />}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">

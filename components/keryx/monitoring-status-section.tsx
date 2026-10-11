@@ -1,6 +1,7 @@
 import type { MonitoringObservations } from "@/lib/ops/monitoring-observations";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { DisplayTime } from "./display-time";
 
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
@@ -15,7 +16,7 @@ export function MonitoringStatusSection({ monitoring }: { monitoring: Monitoring
             <dt className="text-ink-3">{check.label}</dt>
             <dd className={check.state === "recent" ? "text-ink" : "text-seal"}>
               {check.state === "recent" ? message("statusMonitoring.recentObservation") : check.state === "stale" ? message("statusMonitoring.staleObservation") : message("statusMonitoring.noCurrentObservation")}
-              {check.checkedAt && <time className="mt-1 block text-[10px] text-ink-3" dateTime={check.checkedAt}>{new Date(check.checkedAt).toUTCString()}</time>}
+              {check.checkedAt && <span className="mt-1 block text-[10px] text-ink-3"><DisplayTime value={check.checkedAt} /></span>}
             </dd>
           </div>
         ))}

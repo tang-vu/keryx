@@ -1,3 +1,4 @@
+import { formatRecordedAmount, selectPlural } from "@/lib/i18n/format";
 /** Public receipt-to-receipt comparison for a same-question re-ask. */
 
 import { createMessages } from "@/lib/i18n/messages";
@@ -12,7 +13,7 @@ function pct(value: number): string {
 
 function signedUsdc(value: number): string {
   if (Math.abs(value) < 0.0000005) return "$0.0000";
-  return `${value > 0 ? "+" : "−"}$${Math.abs(value).toFixed(4)}`;
+  return `${value > 0 ? "+" : "−"}$${formatRecordedAmount(Math.abs(value), { minimumFractionDigits: 4 })}`;
 }
 
 export function AnswerDeltaPanel({ delta }: { delta: AnswerDelta }) {
@@ -35,14 +36,14 @@ export function AnswerDeltaPanel({ delta }: { delta: AnswerDelta }) {
         <DeltaCell
           label={copy("answerDelta.citations")}
           value={`${delta.previousCitations} → ${delta.currentCitations}`}
-          detail={copy(delta.retainedSources === 1 ? "answerDelta.retained.one" : "answerDelta.retained.other", { count: delta.retainedSources })}
+          detail={copy(selectPlural(delta.retainedSources) === "one" ? "answerDelta.retained.one" : "answerDelta.retained.other", { count: delta.retainedSources })}
         />
         <DeltaCell
           label={copy("answerDelta.coverage")}
           value={coverage ? `${pct(coverage.previousAverage)} → ${pct(coverage.currentAverage)}` : copy("answerDelta.notSampled")}
           detail={
             coverage
-              ? [copy(coverage.improvedClaims === 1 ? "answerDelta.improved.one" : "answerDelta.improved.other", { count: coverage.improvedClaims }), copy(coverage.regressedClaims === 1 ? "answerDelta.regressed.one" : "answerDelta.regressed.other", { count: coverage.regressedClaims })].join(" · ")
+              ? [copy(selectPlural(coverage.improvedClaims) === "one" ? "answerDelta.improved.one" : "answerDelta.improved.other", { count: coverage.improvedClaims }), copy(selectPlural(coverage.regressedClaims) === "one" ? "answerDelta.regressed.one" : "answerDelta.regressed.other", { count: coverage.regressedClaims })].join(" · ")
               : copy("answerDelta.historicalNoCoverage")
           }
         />
@@ -56,7 +57,7 @@ export function AnswerDeltaPanel({ delta }: { delta: AnswerDelta }) {
           value={delta.settlement ? signedUsdc(delta.settlement.deltaUsdc) : copy("answerDelta.notProvable")}
           detail={
             delta.settlement
-              ? `$${delta.settlement.previousTotalUsdc.toFixed(4)} → $${delta.settlement.currentTotalUsdc.toFixed(4)}`
+              ? `$${formatRecordedAmount(delta.settlement.previousTotalUsdc, { minimumFractionDigits: 4 })} → $${formatRecordedAmount(delta.settlement.currentTotalUsdc, { minimumFractionDigits: 4 })}`
               : copy("answerDelta.incompleteLedger")
           }
         />

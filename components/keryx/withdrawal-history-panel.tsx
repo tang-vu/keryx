@@ -1,9 +1,10 @@
 "use client";
+import { formatAmount } from "@/lib/i18n/format";
+import { DisplayTime } from "./display-time";
 
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useEffect, useRef, useState } from "react";
-import { formatUnits } from "viem";
 import { withdrawalOwnerSchema } from "@/lib/gateway/withdrawal-request";
 import { readWithdrawalBrowserHistory } from "@/lib/gateway/withdrawal-browser-history";
 import type { WithdrawalHistoryEntry, WithdrawalHistoryPage } from "@/lib/gateway/withdrawal-history-types";
@@ -83,10 +84,10 @@ function OwnerHistory({ owner }: { owner: string }) {
     {page?.requests.length === 0 && <p>{uiCopy("withdrawalHistory.empty")}</p>}
     {page && page.requests.length > 0 && <ul className="space-y-3">
       {page.requests.map(row => <li key={row.id} className="space-y-2 rounded border p-3 text-sm">
-        <p className="font-medium">{uiCopy("withdrawalHistory.amount", { amount: formatUnits(BigInt(row.amountMicros), 6) })}</p>
-        <p>{uiCopy("withdrawalHistory.fee", { fee: formatUnits(BigInt(row.maxFeeMicros), 6) })}</p>
+        <p className="font-medium">{uiCopy("withdrawalHistory.amount", { amount: formatAmount(BigInt(row.amountMicros), { minimumFractionDigits: 6, useGrouping: false }) })}</p>
+        <p>{uiCopy("withdrawalHistory.fee", { fee: formatAmount(BigInt(row.maxFeeMicros), { minimumFractionDigits: 6, useGrouping: false }) })}</p>
         <p className="break-all">{uiCopy("withdrawalHistory.recipient", { recipient: row.recipient })}</p>
-        <p>{uiRichCopy("withdrawalHistory.saved", { time: <time dateTime={row.createdAt}>{new Date(row.createdAt).toISOString()}</time> })}</p>
+        <p>{uiRichCopy("withdrawalHistory.saved", { time: <DisplayTime value={row.createdAt} /> })}</p>
         <p className="break-all">{uiCopy("withdrawalHistory.request", { id: row.id })}</p>
         <WithdrawalHistoryProgress result={progress[row.id]} />
         <button type="button" className={button} disabled={busy} onClick={() => void check(row)}>{uiCopy("withdrawalHistory.check")}</button>

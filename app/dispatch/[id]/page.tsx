@@ -1,3 +1,4 @@
+import { formatRecordedAmount } from "@/lib/i18n/format";
 import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import { dispatchMetadataCopy } from "@/lib/i18n/report-metadata";
@@ -64,8 +65,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const conf = deriveConfidence(run);
     const descriptions = dispatchMetadataCopy({
       historical: Boolean(archive), bibliographic: Boolean(projectBibliographicTask(run.bibliography)),
-      confidence: conf ? String(conf.level) : undefined, count: cited, spent: run.totalSpent.toFixed(4),
-      creators: run.totalToCreators.toFixed(4), excerpt: snippet,
+      confidence: conf ? String(conf.level) : undefined, count: cited, spent: formatRecordedAmount(run.totalSpent, { minimumFractionDigits: 4 }),
+      creators: formatRecordedAmount(run.totalToCreators, { minimumFractionDigits: 4 }), excerpt: snippet,
     });
     return {
       title: copy("reportDispatch.title", { question: run.question }),

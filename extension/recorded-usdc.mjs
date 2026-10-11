@@ -61,3 +61,93 @@ export function sumRecordedUsdc(values) {
   }
   return total;
 }
+
+// Display locales are separate from UI activation. pt/es are shipped bot copy locales.
+const DISPLAY_LOCALES = { en: "en-US", vi: "vi-VN", "zh-Hans": "zh-CN", pt: "pt-BR", es: "es-ES" };
+function intlLocale(locale) {
+  if (!Object.hasOwn(DISPLAY_LOCALES, locale)) throw new Error("Unsupported display locale");
+  return DISPLAY_LOCALES[locale];
+}
+
+/** Exact display only: locale separators never enter payment data. */
+export function formatAmount(micros, options = {}, locale = "en") {
+  const canonical = formatUsdcMicros(micros, { ...options, denomination: "USDC" });
+  if (canonical === UNAVAILABLE) return canonical;
+  const [whole, fraction] = canonical.slice(0, -5).split(".");
+  const language = intlLocale(locale);
+  const wholeText = new Intl.NumberFormat(language, { useGrouping: options.useGrouping ?? true, maximumFractionDigits: 0 }).format(BigInt(whole));
+  const decimal = new Intl.NumberFormat(language).formatToParts(1.1).find(part => part.type === "decimal").value;
+  const amount = wholeText + (fraction ? decimal + fraction : "");
+  return options.denomination === "$" ? "$" + amount : options.denomination ? amount + " " + options.denomination : amount;
+}
+
+/** Legacy adapter refuses fractional micro values; it never repairs accounting by rounding. */
+export function formatRecordedAmount(value, options = {}, locale = "en") {
+  return formatAmount(recordedUsdcMicros(value), options, locale);
+}
+export function formatLocalizedRecordedUsdc(value, options = {}, locale = "en") {
+  return formatRecordedAmount(value, { denomination: "$", ...options }, locale);
+}
+
+/** Pre-sign display uses ungrouped decimal notation and an explicit currency code. */
+export function formatSigningUsdc(micros) {
+  return formatUsdcMicros(micros, { denomination: "USDC", minimumFractionDigits: 6 });
+}
+export function formatSigningRecordedUsdc(value) {
+  return formatSigningUsdc(recordedUsdcMicros(value));
+}
+
+/** Metrics can round for display. Never use this to format monetary authority. */
+export function formatNumber(value, options = {}, locale = "en") {
+  if ((typeof value !== "number" && typeof value !== "bigint") || (typeof value === "number" && !Number.isFinite(value))) return "Unavailable";
+  return new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 6, ...options }).format(value);
+}
+
+function instant(value) {
+  if (typeof value === "number") {
+    const date = new Date(value);
+    return Number.isSafeInteger(value) && Number.isFinite(date.getTime()) ? { date, utc: date.toISOString() } : null;
+  }
+  if (typeof value !== "string") return null;
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?(Z|[+-](\d{2}):(\d{2}))$/u.exec(value);
+  if (!match || Number(match[4] ?? 0) > 23 || Number(match[5] ?? 0) > 59) return null;
+  const wall = new Date(match[1] + "Z");
+  if (!Number.isFinite(wall.getTime()) || wall.toISOString().slice(0, 19) !== match[1]) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  // Offset conversion is minute-exact; retain original sub-millisecond digits in UTC details.
+  const fraction = (match[2] ?? "0").padEnd(3, "0");
+  return { date, utc: date.toISOString().replace(/\.\d{3}Z$/u, "." + fraction + "Z") };
+}
+
+/** A publication day has no clock or viewer-zone conversion; do not invent an instant. */
+export function formatCalendarDate(value, locale = "en") {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) return null;
+  const date = new Date(value + "T00:00:00Z");
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) return null;
+  return { text: new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeZone: "UTC" }).format(date), date: value };
+}
+
+/** Explicit zone and retained UTC make SSR and the displayed instant unambiguous. */
+export function formatDate(value, locale = "en", timeZone = "UTC", options = {}) {
+  const observed = instant(value);
+  if (!observed || typeof timeZone !== "string" || !timeZone || timeZone.length > 64) return null;
+  try {
+    return { text: new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeStyle: "short", ...options, timeZone }).format(observed.date), utc: observed.utc };
+  } catch { return null; }
+}
+
+/** Caller supplies its observation clock; no hidden timer or scheduler. */
+export function formatRelativeTime(value, now, locale = "en") {
+  const date = instant(value), clock = instant(now);
+  if (!date || !clock) return "Unavailable";
+  const seconds = (date.date.getTime() - clock.date.getTime()) / 1000;
+  const [unit, divisor] = Math.abs(seconds) < 60 ? ["second", 1] : Math.abs(seconds) < 3600 ? ["minute", 60]
+    : Math.abs(seconds) < 86400 ? ["hour", 3600] : ["day", 86400];
+  return new Intl.RelativeTimeFormat(intlLocale(locale), { numeric: "auto" }).format(Math.trunc(seconds / divisor) || 0, unit);
+}
+
+export function selectPlural(count, locale = "en") {
+  if (!Number.isFinite(count) || count < 0) throw new Error("Plural count must be finite and nonnegative");
+  return new Intl.PluralRules(intlLocale(locale)).select(count);
+}

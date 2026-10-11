@@ -2,8 +2,13 @@
 
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { formatNumber, selectPlural } from "@/lib/i18n/format";
+import { DisplayTime } from "./display-time";
+import type { ReactNode } from "react";
 
 const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 /**
  * /status section for the on-chain SourceRegistry: the contract (linked to ArcScan),
@@ -26,12 +31,8 @@ export interface RegistryHealth {
   } | null;
 }
 
-function ago(iso: string): string {
-  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (mins < 1) return message("statusRegistry.justNow");
-  if (mins < 60) return message("statusObservation.minutesAgo", { minutes: mins });
-  const h = Math.floor(mins / 60);
-  return h < 48 ? message("statusObservation.hoursAgo", { hours: h }) : message("statusObservation.daysAgo", { days: Math.floor(h / 24) });
+function ago(iso: string) {
+  return <DisplayTime value={iso} relative />;
 }
 
 export function RegistryStatusSection({ registry }: { registry: RegistryHealth }) {
@@ -39,8 +40,8 @@ export function RegistryStatusSection({ registry }: { registry: RegistryHealth }
   const parityLabel = !parity
     ? message("statusRegistry.notYetChecked")
     : parity.issueCount === 0
-      ? message("statusRegistry.parityMatch", { compared: parity.comparedCount, checkedAgo: ago(parity.checkedAt) })
-      : message(parity.issueCount === 1 ? "statusRegistry.mismatch.one" : "statusRegistry.mismatch.other", { count: parity.issueCount, checkedAgo: ago(parity.checkedAt) });
+      ? richMessage("statusRegistry.parityMatch", { compared: formatNumber(parity.comparedCount), checkedAgo: ago(parity.checkedAt) })
+      : richMessage(selectPlural(parity.issueCount) === "one" ? "statusRegistry.mismatch.one" : "statusRegistry.mismatch.other", { count: formatNumber(parity.issueCount), checkedAgo: ago(parity.checkedAt) });
 
   return (
     <>
@@ -60,7 +61,7 @@ export function RegistryStatusSection({ registry }: { registry: RegistryHealth }
             </a>
           </dd>
         </div>
-        <Row k={message("statusRegistry.sourcesOnChain")} v={parity ? String(parity.chainCount) : "—"} />
+        <Row k={message("statusRegistry.sourcesOnChain")} v={parity ? formatNumber(parity.chainCount) : "—"} />
         <Row
           k={message("statusRegistry.chainCacheParity")}
           v={parityLabel}
@@ -74,7 +75,7 @@ export function RegistryStatusSection({ registry }: { registry: RegistryHealth }
   );
 }
 
-function Row({ k, v, alert = false }: { k: string; v: string; alert?: boolean }) {
+function Row({ k, v, alert = false }: { k: string; v: ReactNode; alert?: boolean }) {
   return (
     <div className="flex flex-col gap-1">
       <dt className="text-ink-3">{k}</dt>

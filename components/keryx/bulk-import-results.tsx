@@ -1,4 +1,5 @@
 "use client";
+import { SigningAmount } from "./signing-amount";
 
 /**
  * Presentational results for a bulk feed import: one row per pasted feed with its live phase, plus
@@ -58,12 +59,14 @@ function PhaseIcon({ phase }: { phase: BulkPhase }) {
 
 export function BulkImportResults({
   feeds,
+  prices,
   onToggle,
   busy,
   onCheck,
   onHashChange,
 }: {
   feeds: BulkFeed[];
+  prices?: Record<string, string | undefined>;
   onToggle: (rssUrl: string) => void;
   busy: boolean;
   onCheck: (rssUrl: string) => void;
@@ -89,6 +92,7 @@ export function BulkImportResults({
               <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
                 {f.ok ? f.phase === "done" && f.mode === "offline" ? uiCopy("bulkRegistration.offlineLabel") : PHASE_LABEL[f.phase] : f.error || uiCopy("bulkRegistration.readFailed")}
               </p>
+              {prices?.[f.rssUrl] !== undefined && <p className="text-xs"><SigningAmount micros={prices[f.rssUrl]} /></p>}
               {f.ok && f.error && <p role="status" className="mt-1 text-xs text-seal">{f.error}</p>}
               {(f.phase === "unknown" || f.phase === "confirming") && <div className="mt-2 space-y-2">
                 <label className="block text-xs">{uiCopy("bulkRegistration.transactionHashLabel")}
