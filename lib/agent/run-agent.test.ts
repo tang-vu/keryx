@@ -2899,12 +2899,12 @@ describe("actual READ checkpoint capture differentials", () => {
     ["public", "public-route", "FREE"], ["reeval-public", "public-route", "FREE"],
     ["external", "selection", "SKIP"], ["reeval-discussion", "discussion", "SKIP"],
   ] as const;
-  async function fixture(scenario: typeof cases[number][0], capture: "missing" | "available" | "throwing" | "rejecting", stamp: string) {
+  async function fixture(scenario: typeof cases[number][0], capture: "missing" | "available" | "throwing" | "rejecting", stamp: string, budget?: number) {
     const expansion = scenario.startsWith("reeval-"), order: string[] = [];
     let selected = false, expanding = false;
     const sources = [makeSource({ id: "checkpoint-a", fetchPrice: scenario === "zero-delivery" ? 0 : scenario === "reeval-budget" ? 0.05 : 0.002 }),
       makeSource({ id: "checkpoint-b", fetchPrice: 0.002 })];
-    const price = scenario === "zero-delivery" ? 0 : 0.05;
+    const price = budget ?? (scenario === "zero-delivery" ? 0 : 0.05);
     const engine = fakeEngine({ decide: input => {
       selected = true;
       return input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
@@ -2956,6 +2956,7 @@ describe("actual READ checkpoint capture differentials", () => {
       const packet = projectActualReadCheckpoints(run);
       return { packet, status: run.trace.at(-1)?.readCheckpoints?.status,
         economic: { order, answer: run.answer, decisions: run.decisions, citations: run.citations, totalSpent: run.totalSpent,
+          plannedFetchUsdc: run.evidencePortfolio?.selectedBuyUsdc,
           totalToCreators: run.totalToCreators, fetchCalls: gateway.fetchCalls, fetchPrices: gateway.fetchPrices, citationCalls: gateway.citationCalls,
           trace: steps.map(({ phase, message }) => ({ phase, message })) } };
     } finally { terms.mockRestore(); rights.mockRestore(); duplicate.mockRestore(); for (const spy of spies) spy.mockRestore(); }
@@ -2972,6 +2973,42 @@ describe("actual READ checkpoint capture differentials", () => {
     if (scenario === "external") expect(available.packet!.packet.records.some(record => record.check.kind === "selection" && record.check.external && record.outcome.action === "SKIP")).toBe(true);
     if (scenario === "reeval-discussion") expect(available.packet!.packet.records.some(record => record.check.kind === "discussion" && record.check.excluded && record.outcome.action === "SKIP")).toBe(true);
     expect(await verifyActualReadPacket(available.packet!.packet, available.packet!.retainedDigest)).toBe(true);
+  });
+
+  it.each(["paid", "cache", "model-skip", "funding-refusal", "reeval-paid"] as const)(
+    "records the actual exact remaining fetch budget for %s without changing execution", async scenario => {
+      const stamp = new Date().toISOString();
+      const budget = 0.1 / (1 - config.citationPoolRatio);
+      expect(fetchBudget(budget)).toBe(0.1);
+      const absent = await fixture(scenario, "missing", stamp, budget);
+      const available = await fixture(scenario, "available", stamp, budget);
+      const throwing = await fixture(scenario, "throwing", stamp, budget);
+      expect(available.economic).toEqual(absent.economic); expect(throwing.economic).toEqual(absent.economic);
+      const capture = available.packet!;
+      expect(capture).not.toBeNull();
+      const records = capture.packet.records;
+      const reserved = scenario === "paid" || scenario === "funding-refusal";
+      expect(available.economic.plannedFetchUsdc).toBe(reserved ? 0.004 : 0);
+      expect(records.filter(row => row.check.kind === "selection").every(row => row.amounts.remainingMicros === (reserved ? "96000" : "100000"))).toBe(true);
+      if (scenario === "paid") {
+        expect(records.find(row => row.check.kind === "channel" && row.outcome.action === "BUY")?.amounts)
+          .toEqual({ priceMicros: "2000", remainingMicros: "96000" });
+        expect(records.find(row => row.check.kind === "sufficiency" && row.outcome.action === "STOP")?.amounts.remainingMicros).toBe("96000");
+        expect(records.find(row => row.check.kind === "expansion")?.amounts.remainingMicros).toBe("98000");
+      }
+      if (scenario === "cache") expect(records.filter(row => row.check.kind === "channel").every(row => row.amounts.remainingMicros === "100000")).toBe(true);
+      if (scenario === "funding-refusal") expect(records.find(row => row.check.kind === "funding" && row.outcome.action === "SKIP")?.amounts.remainingMicros).toBe("96000");
+      if (scenario === "reeval-paid") expect(records.find(row => row.round === 1 && row.check.kind === "channel" && row.outcome.action === "BUY")?.amounts.remainingMicros).toBe("100000");
+      expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
+      const changed = structuredClone(capture.packet); changed.records[0].amounts.remainingMicros = "99999";
+      expect(await verifyActualReadPacket(changed, capture.retainedDigest)).toBe(false);
+    });
+
+  it("keeps a nonmicro initial budget operand unavailable instead of repairing it", async () => {
+    const capture = (await fixture("paid", "available", new Date().toISOString(), 0.1 + 0.2)).packet!;
+    // The finite Number budget is not rounded to an authoritative whole-micro reserve.
+    expect(capture.packet.records.find(row => row.check.kind === "selection")?.amounts.remainingMicros).toBeNull();
+    expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
   });
 });
 

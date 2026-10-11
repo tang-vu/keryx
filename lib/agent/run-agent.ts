@@ -323,7 +323,9 @@ async function* runAdmittedAgent(
       proposal: round > 0 ? "BUY" : assetId ? checkpointProposals.get(assetId) ?? "UNKNOWN" : "UNKNOWN",
       plan: assetId ? checkpointPlans.get(assetId) ?? "UNKNOWN" : "UNKNOWN",
       price: assetId ? assetById.get(assetId)?.priceUsdc ?? (publicCandidates.has(assetId) || webCandidates.has(assetId) ? 0 : undefined) : undefined,
-      remaining: check.kind === "budget" ? Number(check.remaining) : undefined });
+      // Observe the active ledger operand, never reconstruct an integer reserve or settlement.
+      // Initial checkpoints precede remainingBudget's declaration; later rounds use its actual state.
+      remaining: check.kind === "budget" ? Number(check.remaining) : round === 0 ? fetchBudget - spentTolls : remainingBudget });
     return outcome;
   }
 

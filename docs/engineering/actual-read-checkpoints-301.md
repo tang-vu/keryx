@@ -2,6 +2,22 @@
 
 ## Reader replay access — October 12 source follow-up
 
+The same follow-up now supplies the existing active fetch-budget operand to every
+actual checkpoint, including initial BUY/CACHE/SKIP and STOP/ESCALATE predicates.
+Before this correction, only reevaluation's explicit budget check recorded it.
+Initial capture observes `fetchBudget - spentTolls`; later rounds observe the
+existing `remainingBudget` ledger (explicit budget checks retain their own operand).
+The unchanged strict converter produces integer micros only when that actual
+decimal is representable. A value such as `0.04000000000000001` remains null;
+no rounded reserve, payment settlement or model outcome is reconstructed. The
+packet schema, v1 policy/replay/hash and historical null-valued records remain
+unchanged. The initial operand includes the full portfolio reservation, not
+only completed purchases; unread-release and reevaluation debit timing remain
+the existing policy's facts. Differential runtime fixtures check those exact
+budget snapshots, cache/no-spend/refusal paths and capture failure without
+changing payment arguments, call counts, order or answers. Pre-portfolio capture,
+empty-discovery stops and complete underlying integer authority remain open.
+
 The report now displays the existing checkpoint policy version and the SHA-256
 retained by that report, separately from its downloadable sidecar. Readers can
 use that digest with the existing zero-I/O-to-Keryx audit command:
