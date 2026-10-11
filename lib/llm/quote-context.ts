@@ -1,7 +1,7 @@
 import type { evidenceContext } from "./evidence-context";
 import type { GatheredContent } from "./reasoning-engine";
 import { isWellFormedUtf16 } from "./well-formed-utf16";
-import { completeEvidenceSpans } from "./evidence-span";
+import { completeEvidenceSpans, isCompleteEvidenceSpan } from "./evidence-span";
 import { sourceSentenceSegments, type SourceExtraction } from "./source-sentences";
 import { sourceHtmlLayout, sourceTextBlocks } from "./source-text-blocks";
 import type { HtmlTextLayout } from "../web-research/html-text-layout";
@@ -130,6 +130,26 @@ function completeShortItems(original: GatheredContent, scanned: string, selected
   return items;
 }
 
+/** Spare-capacity alternatives for finite notes. Slice two adjacent complete
+ * sentences from one selected passage, including their exact original whitespace.
+ * The existing strict gate remains authoritative; no gaps or skipped prose join.
+ */
+function adjacentSentences(original: GatheredContent, scanned: string, selected: ReturnType<typeof evidenceContext>[number]["passages"],
+  completeSpans: ReturnType<typeof completeEvidenceSpans>) {
+  if (original.webProvenance?.extraction === "pdf" || original.webProvenance?.truncated || scanned.length !== original.text.length) return [];
+  const pairs: { start: number; end: number; text: string }[] = [];
+  for (let index = 1; index < completeSpans.length && pairs.length < MAX_QUOTES; index++) {
+    const first = completeSpans[index - 1], second = completeSpans[index];
+    if (second.end - first.start > MAX_QUOTE_CHARACTERS ||
+        !/^\s+$/u.test(scanned.slice(first.end, second.start)) ||
+        !selected.some(passage => passage.start <= first.start && passage.end >= second.end)) continue;
+    const text = original.text.slice(first.start, second.end);
+    if (isCompleteEvidenceSpan(original, text, { start: first.start, end: second.end }))
+      pairs.push({ start: first.start, end: second.end, text });
+  }
+  return pairs;
+}
+
 /**
  * Literal options from actual evidenceContext passages, bound to their gathered
  * source by unique marker, sourceId and exact offsets. Invalid bindings throw;
@@ -139,7 +159,7 @@ function completeShortItems(original: GatheredContent, scanned: string, selected
  * unread document truncation and delivery-kind provenance remain separate.
  */
 export function buildContextualQuoteOptions(sources: ReturnType<typeof evidenceContext>, gathered: GatheredContent[],
-  policy: { completeSentencesOnly?: boolean; includeShortBlocks?: boolean } = {}): ContextualQuoteOption[] {
+  policy: { completeSentencesOnly?: boolean; includeShortBlocks?: boolean; includeAdjacentSentences?: boolean } = {}): ContextualQuoteOption[] {
   const byMarker = new Map<string, GatheredContent>();
   for (const source of gathered) {
     if (!source.marker?.trim() || byMarker.has(source.marker)) invalid("ambiguous gathered marker");
@@ -179,6 +199,9 @@ export function buildContextualQuoteOptions(sources: ReturnType<typeof evidenceC
       // Existing sentence choices and their IDs retain first claim on the menu.
       // Alternatives use spare capacity; compactness cannot evict a late fact.
       passages = [...passages, ...completeShortItems(original, scanned, source.passages, completeSpans, layout)];
+    }
+    if (policy.completeSentencesOnly && policy.includeAdjacentSentences === true) {
+      passages = [...passages, ...adjacentSentences(original, scanned, source.passages, completeSpans)];
     }
     passages: for (const passage of passages) {
       // Strict spans already have shared source boundaries. Resegmenting original

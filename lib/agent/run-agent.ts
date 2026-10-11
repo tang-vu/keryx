@@ -11,7 +11,7 @@ import { synthesisFailureDetail } from "./synthesis-failure";
 import { parseSynthesisOutputLimit, synthesisOutputLimitFromError } from "../llm/output-limit-diagnostic";
 import { finalizeGroundedAnswer } from "./answer-grounding";
 import { compactWordBudgetAnswer, finishWordBudgetAnswer } from "./word-budget-answer";
-import { compactSentenceNoteAnswer, finishSentenceNoteAnswer } from "./sentence-note-answer";
+import { compactSentenceNoteAnswer, finishSentenceNoteAnswer, withSentenceNoteNotices, type SentenceNoteAnswer } from "./sentence-note-answer";
 import { selectCitedStatements } from "./cited-statements";
 import { deliverDecisionBrief } from "./decision-brief";
 import { discoverPublicReferences } from "./public-reference-evidence";
@@ -291,7 +291,7 @@ async function* runAdmittedAgent(
   const initialWordBudget = initialPresentation?.requestedMaximumWords;
   let finalWordBudget: { maximumWords: number; compactAnswer?: string } | undefined = initialWordBudget
     ? { maximumWords: initialWordBudget } : undefined;
-  let finalSentenceNote: { count: number; compactAnswer?: string } | undefined = initialPresentation?.requestedSentenceCount
+  let finalSentenceNote: { count: number; compactAnswer?: SentenceNoteAnswer } | undefined = initialPresentation?.requestedSentenceCount
     ? { count: initialPresentation.requestedSentenceCount } : undefined;
 
   const fetchBudget = budget * (1 - config.citationPoolRatio);
@@ -1691,8 +1691,11 @@ async function* runAdmittedAgent(
     !input.targetAsset && !input.paidScholarly && !input.answerFormat && process.env.KERYX_DECISION_BRIEF !== "1" &&
     (input.originalQuestion === undefined || input.originalQuestion === input.question)
     ? parseTeachingProposalRequest(input.originalQuestion ?? input.question) : undefined;
+  // A retained/package/teaching path must not acquire note generation from a
+  // stray count recognized later than the ordinary first-turn admission.
+  const { requestedSentenceCount: _withheldNoteCount, ...withoutNoteCount } = presentation;
   try { synthesized = await engine.synthesize({ question: input.question, subClaims, gathered, generationFormat: "evidence-only",
-    answerPresentation: presentation,
+    answerPresentation: finalSentenceNote && !teachingRequest ? presentation : withoutNoteCount,
     ...(teachingRequest ? { teachingRequest } : {}),
     ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
       ? { answerFormat: "decision-brief" as const } : {}) }); }
@@ -2122,7 +2125,7 @@ async function* runAdmittedAgent(
   if (followUp) {
     answer += `\n\n${followUp}`;
     if (finalWordBudget?.compactAnswer !== undefined) finalWordBudget.compactAnswer += `\n\n${followUp}`;
-    if (finalSentenceNote?.compactAnswer !== undefined) finalSentenceNote.compactAnswer += `\n\n${followUp}`;
+    if (finalSentenceNote) finalSentenceNote.compactAnswer = withSentenceNoteNotices(finalSentenceNote.compactAnswer, body => `${body}\n\n${followUp}`);
   }
   // Append proposals after contribution allocation and settlement. Their text,
   // labels and gaps cannot enter factual coverage or model attribution input.
@@ -2244,11 +2247,12 @@ async function* runAdmittedAgent(
     }
     if (finalSentenceNote) {
       const delivered = finishSentenceNoteAnswer(answer,
-        finalSentenceNote.compactAnswer === undefined ? undefined : withOperationalNotices(finalSentenceNote.compactAnswer),
+        withSentenceNoteNotices(finalSentenceNote.compactAnswer, withOperationalNotices),
         finalSentenceNote.count);
       answer = delivered.answer;
-      emit("synthesize", "Final complete-answer sentence-note projection; evidence and payment decisions are unchanged.",
-        { answer, requestedSentenceCount: finalSentenceNote.count, sentenceSegments: delivered.sentenceSegments, outcome: delivered.outcome });
+      emit("synthesize", "Final sentence-note projection with separately labeled exact originals and mandatory notices; evidence and payment decisions are unchanged.",
+        { answer, requestedSentenceCount: finalSentenceNote.count, noteSentenceCount: delivered.noteSentenceCount,
+          sentenceSegments: delivered.sentenceSegments, outcome: delivered.outcome });
     }
     const totalSpent = round(
       payments
