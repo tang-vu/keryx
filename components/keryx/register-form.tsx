@@ -15,6 +15,8 @@
  * Styled as a banknote registration slip (The Mint aesthetic).
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Loader2, Rss, Wallet, PartyPopper, ExternalLink, ShieldCheck, Copy, Webhook } from "lucide-react";
 import { toast } from "sonner";
@@ -22,10 +24,14 @@ import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fmtUsdc } from "./phase-style";
-import { confirmsIndex, confirmsRegistration, registrationId, registrationTitles, walletRequestWasRejected, type RegistrationIdentity, type RegistrationPhase } from "@/lib/sources/registration-status";
+import { confirmsIndex, confirmsRegistration, registrationId, walletRequestWasRejected, type RegistrationIdentity, type RegistrationPhase } from "@/lib/sources/registration-status";
+import { registrationTitles } from "@/lib/i18n/registration-status";
 import { REGISTRY_ABI } from "@/lib/registry/registry-abi";
 import { browserPaymentProfile, browserRegistryAddress } from "@/lib/browser-payment-profile";
 import { FeedVerificationPanel } from "./feed-verification-panel";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 interface CreatedSource {
   id: string;
@@ -128,37 +134,37 @@ export function RegisterForm({
     try {
       if (!target.eventConfirmed) {
         setPhase("mining");
-        setStatusMessage("Waiting for a mined registration receipt. Do not resubmit this registration.");
+        setStatusMessage(uiCopy("registrationForm.waitingReceipt"));
         const receipt = await publicClient.waitForTransactionReceipt({ hash: target.hash, timeout: 60_000 });
         if (!current()) return;
         target.hash = receipt.transactionHash;
         setPendingTxHash(receipt.transactionHash);
         if (receipt.status === "reverted") {
-          setPhase("failed"); setStatusMessage("Transaction reverted. This attempt did not register the source."); return;
+          setPhase("failed"); setStatusMessage(uiCopy("registrationForm.reverted")); return;
         }
         if (!confirmsRegistration(receipt, target)) {
-          setPhase("failed"); setStatusMessage("Transaction mined without the expected registration event. It may have been cancelled or replaced; this attempt did not confirm registration."); return;
+          setPhase("failed"); setStatusMessage(uiCopy("registrationForm.eventMissing")); return;
         }
         target.eventConfirmed = true;
         setPhase("indexing");
-        setStatusMessage(prefill?.sourceClaimId ? "Registration confirmed on-chain. Indexing is not yet confirmed; claim policy activation is still required before earning." : "Registration confirmed on-chain. Indexing is not yet confirmed; feed ownership is still required before earning.");
+        setStatusMessage(prefill?.sourceClaimId ? uiCopy("registrationForm.claimIndexing") : uiCopy("registrationForm.feedIndexing"));
       }
       // One exact owner-only read per check; never treat elapsed time as indexing evidence.
       const res = await fetch(`/api/creator/${encodeURIComponent(target.sourceId)}/listing`, { signal: AbortSignal.timeout(10_000) });
       const data: unknown = res.ok ? await res.json() : null;
       if (!current()) return;
       if (confirmsIndex(data, target)) {
-        setPhase("indexed"); setStatusMessage(prefill?.sourceClaimId ? "Registration confirmed and indexed. Return to your source claim to review and explicitly activate its policy." : "Registration confirmed and indexed. Verify feed ownership before this source can earn.");
+        setPhase("indexed"); setStatusMessage(prefill?.sourceClaimId ? uiCopy("registrationForm.claimIndexed") : uiCopy("registrationForm.feedIndexed"));
         onCreated?.();
       } else {
-        setPhase("indexing"); setStatusMessage("Registration confirmed on-chain. Indexing is not yet confirmed. Check again later; do not resubmit this registration.");
+        setPhase("indexing"); setStatusMessage(uiCopy("registrationForm.indexPending"));
       }
     } catch {
       if (current()) {
         setPhase(target.eventConfirmed ? "indexing" : "unknown");
         setStatusMessage(target.eventConfirmed
-          ? "Registration confirmed on-chain; the index could not be checked. Check again later."
-          : "Confirmation could not be established. The transaction may still mine. Check its status; do not resubmit this registration.");
+          ? uiCopy("registrationForm.indexUnavailable")
+          : uiCopy("registrationForm.confirmationUnknown"));
       }
     } finally {
       if (current()) { busy.current = false; setChecking(false); }
@@ -169,7 +175,7 @@ export function RegisterForm({
     if (busy.current || pending.current) return;
     const requestedPrice = Number(fetchPrice);
     if (!fetchPrice.trim() || !Number.isFinite(requestedPrice) || requestedPrice < 0 || !Number.isSafeInteger(Math.round(requestedPrice * 1_000_000)) || Math.round(requestedPrice * 1_000_000) / 1_000_000 !== requestedPrice) {
-      toast.error("Use an exact, nonnegative USDC read price with at most six decimal places.");
+      toast.error(uiCopy("registrationForm.priceInvalid"));
       return;
     }
     const baseBody = {
@@ -199,11 +205,11 @@ export function RegisterForm({
 
     if (!("rssUrl" in body)) {
       if (!body.name) {
-        toast.error("Add an RSS URL or a source name.");
+        toast.error(uiCopy("registrationForm.nameRequired"));
         return;
       }
       if (!body.url) {
-        toast.error("A manual source needs its URL — it's what binds the source to your wallet.");
+        toast.error(uiCopy("registrationForm.urlRequired"));
         return;
       }
     }
@@ -222,7 +228,7 @@ export function RegisterForm({
       });
       const data = await res.json() as Record<string, unknown>;
       if (!current()) return;
-      if (!res.ok) throw new Error((data?.error as string) ?? "Registration failed");
+      if (!res.ok) throw new Error((data?.error as string) ?? uiCopy("registrationForm.failed"));
 
       // Webhook secret (when a notify URL was supplied) — shown once on the success card.
       setNotify((data.notify as { url: string; secret: string } | null) ?? null);
@@ -234,7 +240,7 @@ export function RegisterForm({
         const params = data.registerParams as OnchainRegisterParams;
         const registryAddress = data.registryAddress as `0x${string}`;
         if (!browserPaymentProfile().testnet && registryAddress?.toLowerCase() !== browserRegistryAddress().toLowerCase())
-          throw new Error("Registration target differs from the reviewed network registry");
+          throw new Error(uiCopy("registrationForm.registryMismatch"));
         const returnedSourceId = data.sourceId as string;
 
         // On-chain rows are indexed unverified — surface the feed-ownership proof step.
@@ -252,15 +258,15 @@ export function RegisterForm({
           authors: params.authors.map(a => ({ name: a.wallet, splitWeight: a.basisPoints / 10_000 })),
         });
         if (!creator || walletRef.current.address?.toLowerCase() !== creator.toLowerCase() || walletRef.current.chainId !== browserPaymentProfile().chainId || !publicClient) {
-          throw new Error(`Connect your signed-in creator wallet on ${browserPaymentProfile().label} before signing.`);
+          throw new Error(uiCopy("registrationForm.connectNetwork", { network: browserPaymentProfile().label }));
         }
         // Initial registration preparation binds payout to the authenticated SIWE session.
         // A wallet switch does not update that session: never sign its preparation as another creator.
         if (params.payoutWallet.toLowerCase() !== creator.toLowerCase()) {
-          throw new Error("Sign in again with the connected creator wallet. This prepared registration belongs to another signed-in wallet.");
+          throw new Error(uiCopy("registrationForm.walletMismatch"));
         }
-        if (await publicClient.getChainId() !== browserPaymentProfile().chainId) throw new Error("Registration RPC network changed");
-        toast.loading("Waiting for wallet signature...", { id: "register-tx" });
+        if (await publicClient.getChainId() !== browserPaymentProfile().chainId) throw new Error(uiCopy("registrationForm.rpcChanged"));
+        toast.loading(uiCopy("registrationForm.waitingSignature"), { id: "register-tx" });
 
         walletRequestStarted = true;
         const txHash = await writeContractAsync({
@@ -284,19 +290,19 @@ export function RegisterForm({
           onchainId: registrationId(creator, params.urlHash), eventConfirmed: false };
         setPendingTxHash(txHash);
         setPhase("mining");
-        setStatusMessage("Transaction submitted. Waiting for a mined registration receipt; this source is not confirmed yet.");
+        setStatusMessage(uiCopy("registrationForm.submitted"));
         toast.dismiss("register-tx");
         busy.current = false;
         void checkRegistration(generation);
       } else {
-        if (!browserPaymentProfile().testnet) throw new Error("Mainnet registration requires confirmed on-chain authority");
+        if (!browserPaymentProfile().testnet) throw new Error(uiCopy("registrationForm.mainnetAuthority"));
         setPhase("offline");
         // Offline / DB-direct path — source written immediately.
         const source = data.source as CreatedSource;
         setCreated(source);
         setVerification((data.verification as Verification) ?? null);
-        toast.success(`${source.name} saved locally (offline).`, {
-          description: "No on-chain transaction. Feed ownership must be verified before earning.",
+        toast.success(uiCopy("registrationForm.savedOffline", { name: source.name }), {
+          description: uiCopy("registrationForm.offlineNotice"),
         });
         setRssUrl("");
         setName("");
@@ -309,12 +315,12 @@ export function RegisterForm({
       const unknownSubmission = walletRequestStarted && !walletRequestWasRejected(err);
       setPhase(unknownSubmission ? "unknown" : "failed");
       setStatusMessage(unknownSubmission
-        ? "The wallet did not return a transaction hash. Submission is unknown; check your wallet history before taking further action. Do not resubmit this registration."
+        ? uiCopy("registrationForm.submissionUnknown")
         : walletRequestStarted
-          ? "Registration was not submitted. The wallet request was rejected."
-          : err instanceof Error ? err.message : "Registration could not be started.");
+          ? uiCopy("registrationForm.rejected")
+          : err instanceof Error ? err.message : uiCopy("registrationForm.startFailed"));
       toast.dismiss("register-tx");
-      toast.error(err instanceof Error ? err.message : "Registration failed");
+      toast.error(err instanceof Error ? err.message : uiCopy("registrationForm.failed"));
     } finally {
       if (current()) { setLoading(false); if (!pending.current) busy.current = false; }
     }
@@ -366,7 +372,7 @@ export function RegisterForm({
             htmlFor="rss"
             className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3"
           >
-            <Rss className="h-3.5 w-3.5 text-seal" /> RSS feed URL
+            <Rss className="h-3.5 w-3.5 text-seal" /> {uiCopy("registrationForm.rssLabel")}
           </Label>
           <Input
             id="rss"
@@ -377,7 +383,7 @@ export function RegisterForm({
             className="bg-paper-2 font-mono text-sm"
           />
           <p className="text-xs text-ink-2">
-            {prefill?.sourceClaimId ? "This feed is bound to your verified source claim. Registration does not activate its earning policy." : "Sign with your wallet, then prove feed ownership before this source can earn. A paid read and a cited answer have separate rewards."}
+            {prefill?.sourceClaimId ? uiCopy("registrationForm.claimFeed") : uiCopy("registrationForm.feedInstruction")}
           </p>
         </div>
 
@@ -386,7 +392,7 @@ export function RegisterForm({
           onClick={() => setShowManual((s) => !s)}
           className="font-mono text-[11px] uppercase tracking-[0.08em] text-seal hover:underline"
         >
-          {showManual ? "Hide manual setup" : "No feed? Add manually"}
+          {showManual ? uiCopy("registrationForm.hideManual") : uiCopy("registrationForm.showManual")}
         </button>
 
         {showManual && (
@@ -396,7 +402,7 @@ export function RegisterForm({
                 htmlFor="name"
                 className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3"
               >
-                Source name
+                {uiCopy("registrationForm.nameLabel")}
               </Label>
               <Input
                 id="name"
@@ -411,7 +417,7 @@ export function RegisterForm({
                 htmlFor="url"
                 className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3"
               >
-                Source URL
+                {uiCopy("registrationForm.urlLabel")}
               </Label>
               <Input
                 id="url"
@@ -422,7 +428,7 @@ export function RegisterForm({
                 className="bg-card font-mono text-sm"
               />
               <p className="text-xs text-ink-2">
-                Bound into your on-chain source id, so nobody else can register this URL.
+                {uiCopy("registrationForm.urlIdentity")}
               </p>
             </div>
             <div className="space-y-2">
@@ -430,13 +436,13 @@ export function RegisterForm({
                 htmlFor="desc"
                 className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3"
               >
-                Description
+                {uiCopy("registrationForm.descriptionLabel")}
               </Label>
               <Input
                 id="desc"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="What your source covers…"
+                placeholder={uiCopy("registrationForm.descriptionPlaceholder")}
                 className="bg-card"
               />
             </div>
@@ -451,7 +457,7 @@ export function RegisterForm({
               htmlFor="price"
               className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3"
             >
-              Price per read
+              {uiCopy("registrationForm.priceLabel")}
             </Label>
             <span className="font-display text-[22px] font-bold tabular-nums text-seal">
               ${fmtUsdc(price)}
@@ -459,7 +465,7 @@ export function RegisterForm({
           </div>
           {prefill?.sourceClaimId ? <>
             <Input id="price" type="number" min="0" step="0.000001" value={fetchPrice} onChange={event => setFetchPrice(event.target.value)} className="bg-paper-2" />
-            <p className="text-xs text-ink-2">Zero preserves free reads for free or citation-only mode. A positive toll is required for paid mode. This registration stays off the claim&apos;s earning path until you return and explicitly activate its policy.</p>
+            <p className="text-xs text-ink-2">{uiCopy("registrationForm.claimPrice")}</p>
           </> : <><input
             id="price"
             type="range"
@@ -482,7 +488,7 @@ export function RegisterForm({
             htmlFor="notify"
             className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3"
           >
-            <Webhook className="h-3.5 w-3.5 text-seal" /> Citation webhook <span className="text-ink-3/70 normal-case tracking-normal">(optional)</span>
+            <Webhook className="h-3.5 w-3.5 text-seal" /> {uiCopy("registrationForm.webhookLabel")} <span className="text-ink-3/70 normal-case tracking-normal">{uiCopy("registrationForm.optional")}</span>
           </Label>
           <Input
             id="notify"
@@ -492,7 +498,7 @@ export function RegisterForm({
             className="bg-paper-2 font-mono text-sm"
           />
           <p className="text-xs text-ink-2">
-            Get a signed POST the instant the agent cites you and pays — no dashboard polling.
+            {uiCopy("registrationForm.webhookNotice")}
           </p>
         </div>
 
@@ -508,8 +514,8 @@ export function RegisterForm({
             <Wallet className="h-4 w-4" />
           )}
           {loading
-            ? "Registering…"
-            : "Publish source ▸"}
+            ? uiCopy("registrationForm.registering")
+            : uiCopy("registrationForm.publish")}
         </button>
       </div>
     </div>
@@ -547,15 +553,15 @@ function SuccessCard({
       <div className="flex items-center gap-2 border-b border-ink bg-paid/[0.08] px-6 py-4">
         {phase === "offline" || phase === "indexed" ? <PartyPopper className="h-5 w-5 text-paid" /> : <Wallet className="h-5 w-5 text-seal" />}
         <span className="font-display text-lg font-medium text-ink">
-          {registrationTitles[phase]}: {source.name}
+          {uiCopy("registrationForm.resultTitle", { status: registrationTitles[phase], name: source.name })}
         </span>
       </div>
       <div className="space-y-4 p-6">
         {statusMessage && <p role="status" className="text-sm text-ink-2">{statusMessage}</p>}
-        {sourceClaimId && <p className="text-sm">This listing is reserved for your verified public-source claim. Earnings remain disabled until its policy is explicitly activated. <a className="underline" href={`/claim-source?claimId=${encodeURIComponent(sourceClaimId)}`}>Return to source claim</a> after indexing.</p>}
+        {sourceClaimId && <p className="text-sm">{uiRichCopy("registrationForm.reservedClaim", { claimLink: <a className="underline" href={`/claim-source?claimId=${encodeURIComponent(sourceClaimId)}`}>{uiCopy("registrationForm.returnClaim")}</a> })}</p>}
         {pendingTxHash && (phase === "unknown" || phase === "indexing") && (
           <button type="button" disabled={checking} onClick={onCheck} className="text-sm text-seal underline disabled:opacity-60">
-            {checking ? "Checking status..." : "Check registration status"}
+            {checking ? uiCopy("registrationForm.checking") : uiCopy("registrationForm.check")}
           </button>
         )}
         {needsVerify && !sourceClaimId && (
@@ -565,7 +571,7 @@ function SuccessCard({
         {gapIntent && <GapIntentPanel intent={gapIntent} />}
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
-            Configured payout wallet
+            {uiCopy("registrationForm.payoutLabel")}
           </p>
           <p className="mt-1.5 break-all rounded-md border border-line bg-paper-2 px-3 py-2 font-mono text-sm text-ink">
             {source.walletAddress}
@@ -573,13 +579,13 @@ function SuccessCard({
         </div>
         <div className="flex gap-6 text-sm">
           <div>
-            <span className="text-ink-3">Fetch price </span>
+            <span className="text-ink-3">{uiCopy("registrationForm.fetchPrice")} </span>
             <span className="font-mono font-semibold text-ink">
               ${fmtUsdc(source.fetchPrice)}
             </span>
           </div>
           <div>
-            <span className="text-ink-3">Authors </span>
+            <span className="text-ink-3">{uiCopy("registrationForm.authors")} </span>
             <span className="font-semibold text-ink">{source.authors.length}</span>
           </div>
         </div>
@@ -591,7 +597,7 @@ function SuccessCard({
             className="flex items-center gap-1.5 font-mono text-[11px] text-seal hover:underline"
           >
             <ExternalLink className="h-3 w-3" />
-            View on ArcScan
+            {uiCopy("registrationForm.explorer")}
           </a>
         )}
         {!sourceClaimId && <button
@@ -600,7 +606,7 @@ function SuccessCard({
           disabled={checking || phase === "signing" || phase === "mining" || phase === "unknown" || phase === "indexing"}
           className="w-full rounded-md border border-line px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-paper-2"
         >
-          Register another source
+          {uiCopy("registrationForm.another")}
         </button>}
       </div>
     </div>
@@ -611,12 +617,10 @@ function GapIntentPanel({ intent }: { intent: GapIntentReceipt }) {
   return (
     <div className="rounded-md border border-seal/40 bg-seal/[0.06] p-4">
       <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-seal">
-        Targeted retry queued
+        {uiCopy("registrationForm.retryQueued")}
       </p>
       <p className="mt-2 text-sm leading-relaxed text-ink-2">
-        Once this source is indexed and feed ownership is verified, Keryx will retry the paid
-        question with a bounded treasury budget. The claim counts as filled only if this post
-        supplies qualifying evidence and its citation reward really settles.
+        {uiCopy("registrationForm.retryNotice")}
       </p>
       <p className="mt-2 font-serif text-[14px] leading-snug text-ink">
         “{intent.claim}”
@@ -634,21 +638,19 @@ function NotifySecretPanel({ notify }: { notify: { url: string; secret: string }
   const copy = async (value: string, label: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      toast.success(`${label} copied.`);
+      toast.success(uiCopy("registrationWebhook.copied", { label }));
     } catch {
-      toast.error(`Couldn't copy — select and copy the ${label.toLowerCase()} manually.`);
+      toast.error(uiCopy("registrationWebhook.copyFailed", { label: label.toLowerCase() }));
     }
   };
   return (
     <div className="space-y-3 rounded-md border border-seal/40 bg-seal/[0.06] p-4">
       <div className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-seal">
         <Webhook className="h-3.5 w-3.5" />
-        Citation webhook armed
+        {uiCopy("registrationWebhook.armed")}
       </div>
       <p className="text-xs text-ink-2">
-        We&apos;ll POST a signed payload to <span className="break-all font-mono text-ink">{notify.url}</span>{" "}
-        each time you&apos;re cited and paid. Save this signing secret now — it is shown once and verifies the{" "}
-        <code className="font-mono text-ink">X-Keryx-Signature</code> header.
+        {uiRichCopy("registrationWebhook.instructions", { url: <span className="break-all font-mono text-ink">{notify.url}</span>, header: <code className="font-mono text-ink">X-Keryx-Signature</code> })}
       </p>
       <div className="flex items-center gap-2">
         <code className="flex-1 break-all rounded border border-line bg-paper px-2.5 py-1.5 font-mono text-xs text-ink">
@@ -656,15 +658,15 @@ function NotifySecretPanel({ notify }: { notify: { url: string; secret: string }
         </code>
         <button
           type="button"
-          onClick={() => copy(notify.secret, "Secret")}
-          title="Copy secret"
+          onClick={() => copy(notify.secret, uiCopy("registrationWebhook.secretLabel"))}
+          title={uiCopy("registrationWebhook.copyTitle")}
           className="shrink-0 rounded-md border border-line px-2 py-1.5 text-ink transition-colors hover:bg-paper-2"
         >
           <Copy className="h-3.5 w-3.5" />
         </button>
       </div>
       <p className="font-mono text-[10px] text-ink-3">
-        Verify: <code>sha256=hex(hmac_sha256(secret, rawBody))</code>
+        {uiRichCopy("registrationWebhook.verify", { formula: <code>sha256=hex(hmac_sha256(secret, rawBody))</code> })}
       </p>
     </div>
   );

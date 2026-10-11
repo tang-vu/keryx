@@ -4,10 +4,15 @@
  * and the treasury-green "For creators" plate.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
 import { MintIcon, type MintIconName } from "./mint-icons";
 import { cn } from "@/lib/utils";
 import { currentArcLabel } from "@/lib/arc-network-display";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 const STEPS: {
   num: string;
@@ -17,21 +22,21 @@ const STEPS: {
 }[] = [
   {
     num: "I",
-    kicker: "Decide",
+    kicker: uiCopy("landingSteps.decide"),
     icon: "weighted",
-    body: "Given a spending cap, Keryx compares public previews and prices, then explains which sources it buys or skips. Unspent budget stays with the buyer.",
+    body: uiCopy("landingSteps.decideBody"),
   },
   {
     num: "II",
-    kicker: "Cite",
+    kicker: uiCopy("landingSteps.cite"),
     icon: "citation",
-    body: "It reads purchased content and writes an answer with citations to sources that support its claims. It can also say when evidence is thin.",
+    body: uiCopy("landingSteps.citeBody"),
   },
   {
     num: "III",
-    kicker: "Settle",
+    kicker: uiCopy("landingSteps.settle"),
     icon: "paid",
-    body: `Eligible cited creators receive weighted USDC rewards on ${currentArcLabel}. The answer and public ledger distinguish settled, pending, and simulated payments.`,
+    body: uiCopy("landingSteps.settleBody", { network: currentArcLabel }),
   },
 ];
 
@@ -40,7 +45,7 @@ export function HowItWorks() {
     <section className="mx-auto max-w-[1180px] px-4 pb-2.5 pt-16 sm:px-[30px]">
       <div className="mb-7 flex items-baseline gap-4">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-          The minting
+          {uiCopy("landingSteps.title")}
         </span>
         <span className="h-px flex-1 bg-line" />
       </div>
@@ -91,30 +96,26 @@ export function ForCreators() {
             <use href="#eng-rose1" fill="none" stroke="currentColor" strokeWidth="0.4" />
           </svg>
           <div className="relative font-mono text-[11px] uppercase tracking-[0.2em] text-paper/75">
-            For creators
+            {uiCopy("landingSteps.creators")}
           </div>
           <h2 className="relative mt-4 max-w-[18ch] font-display text-[clamp(32px,5.4vw,72px)] font-medium leading-[0.98] tracking-[-0.01em]">
-            Your words are the answer.{" "}
-            <em className="font-semibold italic">Be paid like it.</em>
+            {uiRichCopy("landingCreators.title", { emphasis: <em className="font-semibold italic">{uiCopy("landingCreators.titleEmphasis")}</em> })}
           </h2>
           <p className="relative mt-6 max-w-[54ch] font-serif text-[clamp(16px,1.5vw,19px)] leading-[1.55] text-paper/85">
-            Add an RSS feed you control, choose its access toll, and prove ownership.
-            Keryx can pay for a read when it buys an article, then send a separate
-            weighted reward if that article supports a cited answer. See each payment
-            and its state in the public ledger. Payments use {currentArcLabel} USDC.
+            {uiCopy("landingCreators.introduction", { network: currentArcLabel })}
           </p>
           <div className="relative mt-8 flex flex-wrap gap-3">
             <Link
               href="/register"
               className="border border-paper bg-paper px-6 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_rgba(15,42,30,0.6)] active:translate-y-0 active:shadow-none"
             >
-              List your feed ▸
+              {uiCopy("landingSteps.listFeed")}
             </Link>
             <Link
               href="/dashboard"
               className="border border-paper/55 px-6 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-paper transition-colors hover:bg-paper hover:text-paid"
             >
-              See the ledger
+              {uiCopy("landingSteps.ledger")}
             </Link>
           </div>
         </div>

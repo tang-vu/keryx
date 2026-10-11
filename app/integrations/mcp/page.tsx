@@ -1,11 +1,14 @@
+import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { McpIntegrationClient } from "./mcp-integration-client";
 
+const uiCopy = createMessages("en");
+
 export const metadata: Metadata = {
-  title: "Remote MCP setup",
+  title: uiCopy("mcpSetup.metadataTitle"),
   description:
-    "Connect Codex, Claude Code, or Cursor to Keryx research and pay cited creators in Arc USDC.",
+    uiCopy("mcpSetup.description"),
   alternates: englishPublicAlternates("/integrations/mcp"),
 };
 

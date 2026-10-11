@@ -1,3 +1,4 @@
+import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -6,6 +7,8 @@ import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { safeInlineJson } from "@/lib/safe-json";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { CreatorDetailView } from "./creator-detail-view";
+
+const uiCopy = createMessages("en");
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
@@ -24,9 +27,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   try {
     const db = await getDb();
     const source = await db.getSource(id);
-    if (!source) return { title: "Creator not found — Keryx", robots: { index: false } };
-    const title = `${source.name} — Keryx Creator`;
-    const description = `Source listing, citation activity and recorded creator payments for ${source.name} on Keryx.`;
+    if (!source) return { title: uiCopy("creatorPage.missing"), robots: { index: false } };
+    const title = uiCopy("creatorPage.title", { name: source.name });
+    const description = uiCopy("creatorPage.description", { name: source.name });
     return {
       title,
       description,
@@ -37,7 +40,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       twitter: { card: "summary_large_image", title, description },
     };
   } catch {
-    return { title: "Keryx Creator" };
+    return { title: uiCopy("creatorPage.fallbackTitle") };
   }
 }
 
@@ -59,12 +62,12 @@ export default async function CreatorPage({ params }: PageProps) {
         "@type": "Organization",
         name: source.name,
         ...(source.url ? { url: source.url } : {}),
-        description: `${source.name} is listed with Keryx. Citation activity and recorded creator payments are shown separately.`,
+        description: uiCopy("creatorPage.profileDescription", { name: source.name }),
       },
     },
     breadcrumbJsonLd(BASE, [
       { name: "Keryx", path: "/" },
-      { name: "Sources", path: "/sources" },
+      { name: uiCopy("creatorPage.sources"), path: "/sources" },
       { name: source.name },
     ]),
   ];
@@ -87,7 +90,7 @@ export default async function CreatorPage({ params }: PageProps) {
             href="/dashboard"
             className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3 transition-colors hover:text-ink"
           >
-            ← Back to ledger
+            {uiCopy("creatorPage.back")}
           </Link>
         </div>
       </header>

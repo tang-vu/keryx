@@ -1,3 +1,5 @@
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { cache } from "react";
 import type { Metadata } from "next";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
@@ -17,6 +19,9 @@ import {
   type PublicWantedOffer,
 } from "@/lib/wanted-board";
 
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
+
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
 export const revalidate = 600;
@@ -35,27 +40,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   try {
     const brief = findWantedBrief(await getBoard(), id);
-    if (!brief) return { title: "Wanted claim not found — Keryx" };
+    if (!brief) return { title: uiCopy("wantedClaim.notFound") };
     const { gap, state } = brief;
-    const stateLabel = state === "open" ? "Open creator brief" : "Filled creator brief";
+    const stateLabel = state === "open" ? uiCopy("wantedClaim.openLabel") : uiCopy("wantedClaim.filledLabel");
     const description =
       state === "open"
-        ? `${gap.seen} paid dispatch${gap.seen === 1 ? "" : "es"} left this claim ${Math.round(gap.coverage * 100)}% covered. Check whether your RSS feed can close it.`
-        : `This claim moved from ${Math.round(gap.coverage * 100)}% to ${Math.round(gap.filledBy?.coverage ?? 0)}% coverage. Inspect the dispatch and creator payout receipt.`;
+        ? uiCopy(gap.seen === 1 ? "wantedClaim.openDescription.one" : "wantedClaim.openDescription.other", { count: gap.seen, coverage: Math.round(gap.coverage * 100) })
+        : uiCopy("wantedClaim.filledDescription", { before: Math.round(gap.coverage * 100), after: Math.round(gap.filledBy?.coverage ?? 0) });
     return {
-      title: `${gap.claim} — Keryx Wanted`,
+      title: uiCopy("wantedClaim.metadataTitle", { claim: gap.claim }),
       description,
       alternates: englishPublicAlternates(`/wanted/${gap.id}`),
       openGraph: {
-        title: `${stateLabel} — Keryx`,
+        title: uiCopy("wantedClaim.socialTitle", { stateLabel }),
         description,
         url: `${BASE}/wanted/${gap.id}`,
         type: "article",
       },
-      twitter: { card: "summary_large_image", title: `${stateLabel} — Keryx`, description },
+      twitter: { card: "summary_large_image", title: uiCopy("wantedClaim.socialTitle", { stateLabel }), description },
     };
   } catch {
-    return { title: "Wanted claim — Keryx" };
+    return { title: uiCopy("wantedClaim.fallbackTitle") };
   }
 }
 
@@ -79,23 +84,23 @@ export default async function WantedClaimPage({ params }: PageProps) {
           href="/wanted"
           className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3 underline decoration-line underline-offset-4 transition-colors hover:text-ink"
         >
-          ← All wanted claims
+          {uiCopy("wantedClaim.back")}
         </Link>
 
         <article className="mt-7 border-2 border-ink bg-paper p-[5px]">
           <div className="border border-ink">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink bg-ink px-5 py-3 text-paper">
               <span className="font-mono text-[10.5px] uppercase tracking-[0.18em]">
-                Wanted claim · {state}
+                {uiCopy("wantedClaim.state", { state })}
               </span>
               <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-paper/65">
-                Demand with a receipt
+                {uiCopy("wantedClaim.receipt")}
               </span>
             </header>
 
             <div className="p-5 sm:p-8">
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal">
-                A claim Keryx was paid to support
+                {uiCopy("wantedClaim.paidClaim")}
               </div>
               <h1 className="mt-3 font-display text-[clamp(28px,5vw,44px)] font-medium leading-[1.08] tracking-tight text-ink">
                 {gap.claim}
@@ -103,23 +108,23 @@ export default async function WantedClaimPage({ params }: PageProps) {
 
               <div className="mt-7 grid border-y border-line sm:grid-cols-3">
                 <BriefStat
-                  label="Coverage"
+                  label={uiCopy("wantedClaim.coverage")}
                   value={`${Math.round(gap.coverage * 100)}%`}
-                  detail={state === "open" ? "finished short" : "before it was filled"}
+                  detail={state === "open" ? uiCopy("wantedClaim.short") : uiCopy("wantedClaim.beforeFilled")}
                   accent={state === "open"}
                 />
                 <BriefStat
-                  label="Reader demand"
+                  label={uiCopy("wantedClaim.demand")}
                   value={`${gap.seen}×`}
-                  detail="paid dispatches; agent retries excluded"
+                  detail={uiCopy("wantedClaim.retriesExcluded")}
                 />
                 <BriefStat
-                  label="Last measured"
+                  label={uiCopy("wantedClaim.lastMeasured")}
                   value={new Date(gap.createdAt).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                   })}
-                  detail="from a public dispatch receipt"
+                  detail={uiCopy("wantedClaim.publicReceipt")}
                 />
               </div>
 
@@ -129,7 +134,7 @@ export default async function WantedClaimPage({ params }: PageProps) {
                   href={`/dispatch/${gap.queryId}`}
                   className="inline-flex items-center border border-line px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-2 transition-colors hover:border-ink hover:text-ink"
                 >
-                  Inspect the failed dispatch ↗
+                  {uiCopy("wantedClaim.inspectFailed")}
                 </Link>
               </div>
             </div>
@@ -140,14 +145,10 @@ export default async function WantedClaimPage({ params }: PageProps) {
           <>
             <section className="mt-9 border-l-2 border-seal pl-5">
               <h2 className="font-display text-[23px] font-medium text-ink">
-                This is an invitation, not a guaranteed bounty.
+                {uiCopy("wantedClaim.invitationTitle")}
               </h2>
               <p className="mt-2 max-w-[66ch] font-serif text-[15.5px] leading-[1.6] text-ink-2">
-                Offer a post only after Keryx judges its public RSS preview relevant. Once the
-                source is registered, indexed, and ownership-verified, Keryx sponsors one bounded
-                retry with at most $0.05 on {currentArcLabel}. A payout happens only when the paid full
-                text supplies qualifying evidence, the agent cites it, and Circle settlement
-                succeeds.
+                {uiCopy("wantedClaim.invitation", { network: currentArcLabel })}
               </p>
             </section>
 
@@ -160,14 +161,13 @@ export default async function WantedClaimPage({ params }: PageProps) {
         ) : (
           <section className="mt-10 border border-paid/50 bg-paid/[0.06] p-6">
             <div className="font-mono text-[10.5px] uppercase tracking-[0.17em] text-paid">
-              Covered now
+              {uiCopy("wantedClaim.covered")}
             </div>
             <h2 className="mt-2 font-display text-[28px] font-medium text-ink">
-              {Math.round(gap.coverage * 100)}% → {Math.round(fill?.coverage ?? 0)}% coverage
+              {uiCopy("wantedClaim.transition", { before: Math.round(gap.coverage * 100), after: Math.round(fill?.coverage ?? 0) })}
             </h2>
             <p className="mt-3 max-w-[66ch] font-serif text-[15.5px] leading-[1.6] text-ink-2">
-              A later dispatch found qualifying evidence for this claim. The creator offer is only
-              called fulfilled when its citation reward also carries a real settlement receipt.
+              {uiCopy("wantedClaim.settlementBoundary")}
             </p>
             {fill && (
               <div className="mt-5">
@@ -175,11 +175,11 @@ export default async function WantedClaimPage({ params }: PageProps) {
                   href={`/dispatch/${fill.queryId}`}
                   className="font-mono text-[11px] uppercase tracking-[0.13em] text-ink underline underline-offset-4 hover:text-seal"
                 >
-                  Inspect the closing dispatch ↗
+                  {uiCopy("wantedClaim.inspectClosing")}
                 </Link>
                 {fill.paid.length > 0 && (
                   <p className="mt-3 font-mono text-[10.5px] leading-relaxed text-ink-3">
-                    Cited and paid: {fill.paid.map((source) => source.sourceName).join(", ")}
+                    {uiCopy("wantedClaim.cited", { sources: fill.paid.map((source) => source.sourceName).join(", ") })}
                   </p>
                 )}
               </div>
@@ -199,38 +199,21 @@ function OffersList({ offers }: { offers: PublicWantedOffer[] }) {
   return (
     <section className="mt-9">
       <h2 className="font-mono text-[10.5px] uppercase tracking-[0.17em] text-ink-3">
-        Offers against this claim
+        {uiCopy("wantedClaim.offers")}
       </h2>
       <ul className="mt-3 divide-y divide-line border border-line bg-paper">
         {offers.map((offer) => (
           <li key={offer.id} className="px-4 py-3">
             <p className="font-serif text-[15px] text-ink">{offer.sourceName}</p>
             <p className="mt-1 font-mono text-[10.5px] leading-relaxed text-ink-3">
-              {wantedOfferStatus(offer)}
-              {offer.sourceItemLink ? (
-                <>
-                  {" · "}
-                  <a
-                    href={offer.sourceItemLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline underline-offset-4 hover:text-seal"
-                  >
-                    offered post
-                  </a>
-                </>
-              ) : null}
-              {offer.contentVersion ? (
-                <> · exact {offer.contentVersion.slice(0, 18)}…</>
-              ) : null}
-              {offer.articleOfferId ? <> · signed price</> : null}
+              {offerDescription(offer)}
             </p>
             {offer.retryRunId ? (
               <Link
                 href={`/dispatch/${offer.retryRunId}`}
                 className="mt-1 inline-block font-mono text-[10px] text-seal underline underline-offset-4"
               >
-                inspect autonomous retry ↗
+                {uiCopy("wantedClaim.inspectRetry")}
               </Link>
             ) : null}
           </li>
@@ -262,4 +245,14 @@ function BriefStat({
       <div className="mt-1 font-mono text-[9.5px] leading-snug text-ink-3">{detail}</div>
     </div>
   );
+}
+
+function offerDescription(offer: PublicWantedOffer) {
+  const status = wantedOfferStatus(offer);
+  const post = offer.sourceItemLink ? <a href={offer.sourceItemLink} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-seal">{uiCopy("wantedClaim.offeredPost")}</a> : null;
+  const version = offer.contentVersion?.slice(0, 18);
+  if (post && version) return uiRichCopy(offer.articleOfferId ? "wantedClaim.offerPostVersionPrice" : "wantedClaim.offerPostVersion", { status, post, version });
+  if (post) return uiRichCopy(offer.articleOfferId ? "wantedClaim.offerPostPrice" : "wantedClaim.offerPost", { status, post });
+  if (version) return uiRichCopy(offer.articleOfferId ? "wantedClaim.offerVersionPrice" : "wantedClaim.offerVersion", { status, version });
+  return uiRichCopy(offer.articleOfferId ? "wantedClaim.offerPrice" : "wantedClaim.offer", { status });
 }

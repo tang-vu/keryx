@@ -14,12 +14,17 @@
  * can see their Arc USDC balance without manually importing the token address.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, useReadContract, useConnectorClient } from "wagmi";
 import { erc20Abi, formatUnits } from "viem";
 import { Loader2, Droplets, ExternalLink, PlusCircle } from "lucide-react";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { currentArcLabel } from "@/lib/arc-network-display";
+
+const copy = createMessages("en");
+const richCopy = createRichMessages("en");
 
 const CIRCLE_FAUCET = "https://faucet.circle.com/";
 const EXPLORER = "https://testnet.arcscan.app";
@@ -49,12 +54,12 @@ function MainnetFundingPanel() {
     query: { enabled: isConnected && !!address },
   });
   if (!isConnected) return null;
-  return <section className="space-y-2 border border-line bg-paper-2 px-4 py-3 text-sm" aria-label="Creator wallet funding">
-    <h2 className="font-mono text-xs">{currentArcLabel} wallet funding</h2>
-    <p>Fund your connected wallet with real USDC on {currentArcLabel} before registering. Leave USDC in the wallet for native gas; Gateway credit cannot pay wallet transaction gas.</p>
-    <p className="font-mono text-xs">Wallet USDC: {isError || rawBalance === undefined ? "unavailable" : formatUnits(rawBalance, profile.erc20Decimals)}</p>
-    <button type="button" disabled={isFetching} onClick={() => void refetch()} className="font-mono text-xs underline disabled:opacity-50">{isFetching ? "Checking wallet balance…" : "Refresh wallet balance"}</button>
-    <p className="text-xs text-ink-3">Select {currentArcLabel} in your wallet. Each registration needs your wallet confirmation and costs gas.</p>
+  return <section className="space-y-2 border border-line bg-paper-2 px-4 py-3 text-sm" aria-label={copy("walletFunding.label")}>
+    <h2 className="font-mono text-xs">{copy("walletFunding.title", { network: currentArcLabel })}</h2>
+    <p>{copy("walletFunding.introduction", { network: currentArcLabel })}</p>
+    <p className="font-mono text-xs">{copy("walletFunding.balance", { balance: isError || rawBalance === undefined ? copy("walletFunding.unavailable") : formatUnits(rawBalance, profile.erc20Decimals) })}</p>
+    <button type="button" disabled={isFetching} onClick={() => void refetch()} className="font-mono text-xs underline disabled:opacity-50">{isFetching ? copy("walletFunding.checking") : copy("walletFunding.refresh")}</button>
+    <p className="text-xs text-ink-3">{copy("walletFunding.networkNotice", { network: currentArcLabel })}</p>
   </section>;
 }
 
@@ -93,7 +98,7 @@ function TestnetFaucetPanel() {
       setResult(data);
       setStatus(res.ok ? "done" : "error");
     } catch {
-      setResult({ error: "Network error — try the Circle faucet instead." });
+      setResult({ error: copy("walletFunding.networkError") });
       setStatus("error");
     }
   }, []);
@@ -139,12 +144,12 @@ function TestnetFaucetPanel() {
         <div className="flex items-center gap-1.5">
           <Droplets className="h-3.5 w-3.5 text-seal" />
           <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-3">
-            Testnet USDC faucet
+            {copy("walletFunding.testnetTitle")}
           </span>
         </div>
         {usdcBalance !== null && (
           <span className="font-mono text-[10px] text-ink-3">
-            Balance: <span className="text-ink">{usdcBalance} USDC</span>
+            {richCopy("walletFunding.testnetBalance", { balance: <span className="text-ink">{usdcBalance} USDC</span> })}
           </span>
         )}
       </div>
@@ -153,7 +158,7 @@ function TestnetFaucetPanel() {
       {status === "done" && result?.ok && (
         <div className="mb-2 space-y-1">
           <p className="font-mono text-[11px] text-paid">
-            Dripped {result.amount} USDC
+            {copy("walletFunding.dripped", { amount: result.amount ?? "" })}
           </p>
           {result.tx && (
             <a
@@ -162,7 +167,7 @@ function TestnetFaucetPanel() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-mono text-[10px] text-seal underline underline-offset-2 hover:text-ink"
             >
-              View on ArcScan <ExternalLink className="h-2.5 w-2.5" />
+              {copy("walletFunding.arcScan")} <ExternalLink className="h-2.5 w-2.5" />
             </a>
           )}
         </div>
@@ -175,7 +180,7 @@ function TestnetFaucetPanel() {
             {result.error}
             {result.claimedAt && (
               <span className="ml-1 text-ink-3">
-                (claimed {new Date(result.claimedAt).toLocaleTimeString()})
+                {copy("walletFunding.claimedAt", { time: new Date(result.claimedAt).toLocaleTimeString() })}
               </span>
             )}
           </p>
@@ -196,7 +201,7 @@ function TestnetFaucetPanel() {
             ) : (
               <Droplets className="h-3 w-3" />
             )}
-            {status === "loading" ? "Claiming…" : "Claim testnet USDC"}
+            {status === "loading" ? copy("walletFunding.claiming") : copy("walletFunding.claim")}
           </button>
         )}
 
@@ -208,12 +213,12 @@ function TestnetFaucetPanel() {
             className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3 underline underline-offset-2 hover:text-seal"
           >
             <PlusCircle className="h-2.5 w-2.5" />
-            {watchStatus === "ok" ? "USDC added" : "Add USDC to wallet"}
+            {watchStatus === "ok" ? copy("walletFunding.added") : copy("walletFunding.addToken")}
           </button>
         )}
         {watchStatus === "unsupported" && (
           <span className="font-mono text-[10px] text-faint">
-            (import USDC manually: {profile.usdcAddress.slice(0, 10)}…)
+            {copy("walletFunding.importManually", { address: profile.usdcAddress.slice(0, 10) })}
           </span>
         )}
 
@@ -224,12 +229,12 @@ function TestnetFaucetPanel() {
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3 underline underline-offset-2 hover:text-seal"
         >
-          Circle faucet <ExternalLink className="h-2.5 w-2.5" />
+          {copy("walletFunding.circleFaucet")} <ExternalLink className="h-2.5 w-2.5" />
         </a>
       </div>
 
       <p className="mt-1.5 font-mono text-[9px] leading-relaxed tracking-wide text-faint">
-        One claim per address · Arc Testnet only · covers gas + a session grant
+        {copy("walletFunding.testnetNotice")}
       </p>
     </div>
   );

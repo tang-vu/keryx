@@ -8,9 +8,12 @@
  * Complements the static badge (proof) with a live surface (demand).
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { Copy, MessageSquareQuote } from "lucide-react";
 import { toast } from "sonner";
 import { useBrowserOrigin } from "@/lib/hooks/use-browser-origin";
+
+const uiCopy = createMessages("en");
 
 // SSR + first client render agree on the canonical host; refined on mount so
 // localhost/preview copies carry the right URL.
@@ -25,21 +28,19 @@ export function EmbedWidgetPanel({ creatorId }: { creatorId: string }) {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(snippet);
-      toast.success("Widget snippet copied.");
+      toast.success(uiCopy("creatorWidget.copied"));
     } catch {
-      toast.error("Couldn't copy — select and copy manually.");
+      toast.error(uiCopy("creatorWidget.copyFailed"));
     }
   };
 
   return (
     <section className="mb-8 border border-line bg-paper p-5">
       <h2 className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        <MessageSquareQuote className="h-3.5 w-3.5 text-seal" /> Put the herald on your site
+        <MessageSquareQuote className="h-3.5 w-3.5 text-seal" /> {uiCopy("creatorWidget.title")}
       </h2>
       <p className="mb-4 max-w-xl font-serif text-[13px] text-ink-2">
-        One line adds a floating &ldquo;Ask Keryx&rdquo; button to your own site. Your readers ask
-        for free — no wallet — and every time the herald cites you in an answer, you&rsquo;re paid
-        for it. Your audience becomes your toll traffic.
+        {uiCopy("creatorWidget.description")}
       </p>
 
       <div className="flex items-center gap-2">
@@ -49,7 +50,7 @@ export function EmbedWidgetPanel({ creatorId }: { creatorId: string }) {
         <button
           type="button"
           onClick={copy}
-          title="Copy widget snippet"
+          title={uiCopy("creatorWidget.copyTitle")}
           className="shrink-0 rounded-md border border-line px-2 py-1.5 text-ink transition-colors hover:bg-paper-2"
         >
           <Copy className="h-3.5 w-3.5" />
@@ -62,7 +63,7 @@ export function EmbedWidgetPanel({ creatorId }: { creatorId: string }) {
         rel="noopener noreferrer"
         className="mt-3 inline-block font-mono text-[10px] uppercase tracking-[0.12em] text-seal hover:underline"
       >
-        Preview the panel ↗
+        {uiCopy("creatorWidget.preview")}
       </a>
     </section>
   );

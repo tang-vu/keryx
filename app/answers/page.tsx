@@ -9,6 +9,7 @@
  * see lib/answers-pagination for why the index is sliced at all.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { buildTopics } from "@/lib/answers-topics";
@@ -21,13 +22,15 @@ import { archiveIndexJsonLd } from "./archive-index-json-ld";
 import { safeInlineJson } from "@/lib/safe-json";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 
+const copy = createMessages("en");
+
 // Recompute a few times an hour — the corpus grows as new dispatches settle.
 export const revalidate = 600;
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
-const TITLE = "The Archive — cited answers from Keryx";
+const TITLE = copy("reportArchiveRoute.title");
 const DESCRIPTION =
-  "Browse cited answers from Keryx research history. Open a dispatch to inspect its sources, decisions, and payment states, including settled, pending, or simulated rewards.";
+  copy("reportArchiveRoute.description");
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -35,7 +38,7 @@ export const metadata: Metadata = {
   alternates: {
     ...englishPublicAlternates("/answers"),
     types: {
-      "application/atom+xml": [{ url: "/answers/feed.xml", title: "Keryx Answer Archive" }],
+      "application/atom+xml": [{ url: "/answers/feed.xml", title: copy("reportArchiveRoute.name") }],
     },
   },
   openGraph: { title: TITLE, description: DESCRIPTION, url: `${BASE}/answers`, type: "website" },
@@ -51,12 +54,12 @@ export default async function AnswersPage() {
     archiveIndexJsonLd({
       base: BASE,
       url: `${BASE}/answers`,
-      name: "Keryx Answer Archive",
+      name: copy("reportArchiveRoute.name"),
       description: DESCRIPTION,
       slice,
       totalEntries: entries.length,
     }),
-    breadcrumbJsonLd(BASE, [{ name: "Keryx", path: "/" }, { name: "The Archive" }]),
+    breadcrumbJsonLd(BASE, [{ name: "Keryx", path: "/" }, { name: copy("reportArchiveRoute.crumb") }]),
   ];
 
   return (

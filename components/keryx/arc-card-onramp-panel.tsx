@@ -11,12 +11,15 @@
  * Renders nothing unless the server reports the feature as configured.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useRef, useState } from "react";
 import type { OnrampKit, OnrampSession, OnrampWidget } from "@circle-fin/onramp-kit";
 
+const copy = createMessages("en");
+
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 const ENDPOINT = "/api/onramp/session";
-const UNAVAILABLE = "Card funding is unavailable right now. No purchase was started.";
+const UNAVAILABLE = copy("cardFunding.unavailable");
 
 export function ArcCardOnrampPanel() {
   const [available, setAvailable] = useState(false);
@@ -50,8 +53,8 @@ export function ArcCardOnrampPanel() {
       const value = await response.json().catch(() => null);
       if (!live.current) return;
       if (!response.ok || !value?.session) {
-        setMessage(response.status === 401 ? "Sign in with your wallet before buying USDC."
-          : response.status === 429 ? "Too many purchase sessions were prepared. Wait a minute, then try again."
+        setMessage(response.status === 401 ? copy("cardFunding.signIn")
+          : response.status === 429 ? copy("cardFunding.rateLimited")
           : UNAVAILABLE);
         return;
       }
@@ -67,37 +70,37 @@ export function ArcCardOnrampPanel() {
       widget.current?.close();
       const result = prepared.kit.openWindow({
         session: prepared.session,
-        onDepositSubmitted: () => say("The provider received your purchase. USDC reaches your wallet after the provider settles it; refresh your wallet balance to confirm."),
-        onDepositSettled: () => say("The provider reports this purchase as settled. Confirm the USDC in your wallet balance before depositing to Gateway."),
+        onDepositSubmitted: () => say(copy("cardFunding.providerReceived")),
+        onDepositSettled: () => say(copy("cardFunding.providerSettled")),
         onDepositNotCompleted: ({ code }) => say(code === "CANCELED_BY_CUSTOMER"
-          ? "The purchase window was closed before a purchase was submitted."
-          : "The provider did not complete this purchase. Check the provider's own messages before trying again."),
+          ? copy("cardFunding.windowClosed")
+          : copy("cardFunding.providerIncomplete")),
         // Also fires when the window simply never reports back, so it must not claim a failure.
-        onInitializationError: () => say("Keryx received no confirmation that the purchase window loaded. If it shows Circle's purchase page, continue there; otherwise prepare a new purchase."),
-        onSessionExpired: () => { if (live.current) { setPrepared(null); setMessage("This purchase session expired. Prepare a new one to continue."); } },
+        onInitializationError: () => say(copy("cardFunding.windowUnknown")),
+        onSessionExpired: () => { if (live.current) { setPrepared(null); setMessage(copy("cardFunding.expired")); } },
       });
       if (result.status === "blocked") {
         setMessage(result.reason === "popup_blocked"
-          ? "Your browser blocked the purchase window. Allow pop-ups for this site, then select Open again."
-          : "This browser cannot open the purchase window. Open Keryx in your device's regular browser.");
+          ? copy("cardFunding.popupBlocked")
+          : copy("cardFunding.browserUnsupported"));
         return;
       }
       widget.current = result.widget;
-      setMessage("Purchase window opened. Keep this page open until you finish there.");
+      setMessage(copy("cardFunding.opened"));
     } catch {
       setPrepared(null);
-      setMessage("This purchase session is no longer valid. Prepare a new one to continue.");
+      setMessage(copy("cardFunding.invalidSession"));
     }
   }
 
-  return <section className="space-y-2 border border-line bg-paper-2 px-4 py-3 text-sm" aria-label="Buy USDC with a card">
-    <h2 className="font-mono text-xs">Buy USDC on Arc with a card</h2>
-    <p className="font-serif text-sm">Pay with a debit card, Apple Pay or Google Pay through Circle&apos;s Arc Onramp. Circle&apos;s payment providers verify your identity and take the payment in a separate window. Availability depends on your country, credit cards are not supported, and the providers show their own fees before you pay.</p>
-    <p className="font-serif text-sm">USDC is delivered to your signed-in wallet on Arc. Keryx never receives the funds or your card details. This does not buy research or fund a budget: deposit to Gateway as a separate step afterwards.</p>
-    {prepared && <p className="break-all font-mono text-xs">Delivery wallet: {String(prepared.session.destinationWallet ?? "")} · session valid until {new Date(prepared.session.expiresAt).toLocaleTimeString()}</p>}
+  return <section className="space-y-2 border border-line bg-paper-2 px-4 py-3 text-sm" aria-label={copy("cardFunding.label")}>
+    <h2 className="font-mono text-xs">{copy("cardFunding.title")}</h2>
+    <p className="font-serif text-sm">{copy("cardFunding.providerNotice")}</p>
+    <p className="font-serif text-sm">{copy("cardFunding.deliveryNotice")}</p>
+    {prepared && <p className="break-all font-mono text-xs">{copy("cardFunding.session", { wallet: String(prepared.session.destinationWallet ?? ""), expiresAt: new Date(prepared.session.expiresAt).toLocaleTimeString() })}</p>}
     <div className="flex flex-wrap gap-2">
-      <button type="button" className={control} disabled={busy} onClick={() => void prepare()}>{busy ? "Preparing…" : prepared ? "Prepare a new purchase" : "Prepare card purchase"}</button>
-      {prepared && <button type="button" className={control} disabled={busy} onClick={open}>Open Arc Onramp</button>}
+      <button type="button" className={control} disabled={busy} onClick={() => void prepare()}>{busy ? copy("cardFunding.preparing") : prepared ? copy("cardFunding.prepareNew") : copy("cardFunding.prepare")}</button>
+      {prepared && <button type="button" className={control} disabled={busy} onClick={open}>{copy("cardFunding.open")}</button>}
     </div>
     <p role="status" className="font-serif text-sm">{message}</p>
   </section>;

@@ -1,8 +1,11 @@
+import { createMessages } from "@/lib/i18n/messages";
 import { ImageResponse } from "next/og";
 import { getDb } from "@/lib/db";
 import { publicPreviewFonts, publicPreviewFontFamily } from "@/lib/og-fonts";
 
-export const alt = "Keryx creator — paid in USDC every time an AI cites them";
+const uiCopy = createMessages("en");
+
+export const alt = uiCopy("creatorSocial.alt");
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -15,7 +18,7 @@ export default async function CreatorOgImage({
 }) {
   const { id } = await params;
 
-  let name = "A Keryx creator";
+  let name = uiCopy("creatorSocial.fallbackName");
   let earned = 0;
   let citations = 0;
   let rank = 0;
@@ -72,8 +75,8 @@ export default async function CreatorOgImage({
             textTransform: "uppercase",
           }}
         >
-          <span>Keryx Creator · paid on Arc</span>
-          <span>Series 2026 — No. {serialLabel}</span>
+          <span>{uiCopy("creatorSocial.network")}</span>
+          <span>{uiCopy("creatorSocial.serial", { serial: serialLabel })}</span>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -86,7 +89,7 @@ export default async function CreatorOgImage({
               fontWeight: 700,
             }}
           >
-            Earns USDC every time an AI cites them
+            {uiCopy("creatorSocial.earns")}
           </div>
           <div style={{ fontSize: 64, lineHeight: 1.05, fontWeight: 700 }}>
             {headline}
@@ -94,10 +97,10 @@ export default async function CreatorOgImage({
         </div>
 
         <div style={{ display: "flex", gap: 56 }}>
-          <Denomination value={earnedLabel} label="USDC earned" accent />
-          <Denomination value={String(citations)} label="AI citations" />
+          <Denomination value={earnedLabel} label={uiCopy("creatorSocial.earned")} accent />
+          <Denomination value={String(citations)} label={uiCopy("creatorSocial.citations")} />
           {rank > 0 ? (
-            <Denomination value={`#${rank}`} label="on the ledger" />
+            <Denomination value={`#${rank}`} label={uiCopy("creatorSocial.rank")} />
           ) : null}
         </div>
 
@@ -121,7 +124,7 @@ export default async function CreatorOgImage({
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 28, fontWeight: 700 }}>Keryx</div>
             <div style={{ fontSize: 17, color: "#7A6F58", letterSpacing: 1 }}>
-              The citation toll — creators paid every time an AI cites them
+              {uiCopy("creatorSocial.tagline")}
             </div>
           </div>
         </div>

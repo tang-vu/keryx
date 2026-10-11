@@ -7,6 +7,8 @@
  * the questions themselves (lib/answers-topics), so the set grows as the corpus does.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -22,6 +24,9 @@ import { ArchiveSearch } from "@/components/keryx/archive-search";
 import { ArchiveTopicChips } from "@/components/keryx/archive-topic-chips";
 import { safeInlineJson } from "@/lib/safe-json";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
+
+const copy = createMessages("en");
+const richCopy = createRichMessages("en");
 
 // Same cadence as the archive it slices — new dispatches join a topic without a redeploy.
 export const revalidate = 600;
@@ -72,12 +77,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const { topic, entries } = await loadTopic(slug);
-  if (!topic) return { title: "Topic not found — Keryx", robots: { index: false } };
+  if (!topic) return { title: copy("reportTopic.notFound"), robots: { index: false } };
 
-  const title = `${topic.label} — cited Keryx answers`;
-  const description = `${entries.length} question${
-    entries.length !== 1 ? "s" : ""
-  } about ${topic.label} answered by Keryx with cited sources. Open a dispatch to inspect its payment states.`;
+  const title = copy("reportTopic.metadataTitle", { topic: topic.label });
+  const description = copy(entries.length === 1 ? "reportTopic.description.one" : "reportTopic.description.other", { count: entries.length, topic: topic.label });
 
   return {
     title,
@@ -109,9 +112,9 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
       "@context": "https://schema.org",
       "@type": "CollectionPage",
       inLanguage: "en",
-      name: `${topic.label} — Keryx answers`,
+      name: copy("reportTopic.collectionName", { topic: topic.label }),
       url: `${BASE}/answers/topic/${topic.slug}`,
-      isPartOf: { "@type": "CollectionPage", name: "Keryx Answer Archive", url: `${BASE}/answers` },
+      isPartOf: { "@type": "CollectionPage", name: copy("reportTopic.archiveName"), url: `${BASE}/answers` },
       mainEntity: {
         "@type": "ItemList",
         numberOfItems: entries.length,
@@ -127,7 +130,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
     },
     breadcrumbJsonLd(BASE, [
       { name: "Keryx", path: "/" },
-      { name: "The Archive", path: "/answers" },
+      { name: copy("reportTopic.archiveCrumb"), path: "/answers" },
       { name: topic.label },
     ]),
   ];
@@ -145,14 +148,13 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
           href="/answers"
           className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal underline-offset-4 hover:underline"
         >
-          The archive
+          {copy("reportTopic.archive")}
         </Link>
         <h1 className="mt-2 font-display text-[clamp(28px,4.5vw,42px)] font-medium leading-[1.05] tracking-tight text-ink">
-          Answers about <em className="italic text-paid">{topic.label}</em>
+          {richCopy("reportTopic.heading", { topic: <em className="italic text-paid">{topic.label}</em> })}
         </h1>
         <p className="mt-4 max-w-[62ch] font-serif text-[17px] leading-[1.55] text-ink-2">
-          {entries.length} cited answer{entries.length !== 1 ? "s" : ""} on this topic.{" "}
-          Each dispatch retains its network and recorded creator rewards. Testnet amounts remain separate from the current ledger; open individual receipts for settlement states.
+          {copy(entries.length === 1 ? "reportTopic.summary.one" : "reportTopic.summary.other", { count: entries.length })}
         </p>
 
         <ArchiveSearch
@@ -162,7 +164,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
             question: e.question,
             sources: e.sourceNames.join(" "),
           }))}
-          placeholder={`Filter ${topic.label} answers…`}
+          placeholder={copy("reportTopic.filter", { topic: topic.label })}
           filters={<ArchiveTopicChips topics={topics} activeSlug={topic.slug} />}
         >
           {shown.map((e) => (
@@ -172,15 +174,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
 
         {rest.length > 0 && (
           <p className="mt-8 border-t border-line pt-5 font-serif text-[15px] leading-[1.55] text-ink-2">
-            Showing the {shown.length} most recent of {entries.length} on this beat — the filter
-            above still searches all of them, and{" "}
-            <Link
-              href="/answers"
-              className="underline decoration-line underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
-            >
-              the full archive
-            </Link>{" "}
-            is paginated end to end.
+            {richCopy("reportTopic.coverage", { shown: shown.length, total: entries.length, archive: <Link href="/answers" className="underline decoration-line underline-offset-4 transition-colors hover:text-ink hover:decoration-ink">{copy("reportTopic.fullArchive")}</Link> })}
           </p>
         )}
 
@@ -189,7 +183,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
             href="/"
             className="inline-block border border-ink bg-seal px-[18px] py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
           >
-            Ask your own question ▸
+            {copy("reportTopic.ask")}
           </Link>
         </div>
       </main>

@@ -1,4 +1,5 @@
 "use client";
+import { createMessages } from "@/lib/i18n/messages";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 import { useEffect, useRef, useState } from "react";
@@ -11,6 +12,8 @@ import { buyerRequestSchema, type BuyerRequest } from "@/lib/buyer/protocol";
 import { connectedBuyerWallet } from "@/lib/buyer/connected-wallet";
 import { buyBrowserResearch } from "@/lib/buyer/browser-client";
 import { downloadBuyerJson } from "@/lib/buyer/download";
+
+const copy = createMessages("en");
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:cursor-not-allowed disabled:opacity-40";
 type Review = { request: BuyerRequest; payer: string; payee: string; amount: string };
@@ -41,7 +44,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
     if (!wallet || !review || !reviewCurrent || !accepted || operation.current || fundingBusy) return;
     const abort = new AbortController(); operation.current = abort;
     setCreditRevision(value => value + 1);
-    setBusy(true); setRecovery(null); setMessage("Checking the current price and wallet…");
+    setBusy(true); setRecovery(null); setMessage(copy("researchCheckout.checking"));
     let preparedId: string | null = null;
     try {
       const signer = connectedBuyerWallet(wallet, review.payer, abort.signal);
@@ -51,55 +54,55 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
           abort.signal.throwIfAborted(); preparedId = intent.queryId;
           const text = JSON.stringify(intent, null, 2) + "\n";
           setRecovery(text); workspace.refresh();
-          setMessage("Recovery file is ready. Check the exact amount and payee in your wallet before signing.");
+          setMessage(copy("researchCheckout.recoveryReady"));
           downloadBuyerJson(text, "recovery");
         },
       });
       if (!abort.signal.aborted) {
         workspace.select(result.queryId); setReview(null); setAccepted(false);
-        setMessage(result.status === "submitted" ? "Purchase acknowledged. Following the original job below. Keep your recovery file."
-          : "The submission is uncertain. Keep the recovery file and open this job below; do not pay again to recover it.");
-        if (result.evidence && !result.acknowledgementPersisted) setMessage("The seller returned a payment acknowledgement, but it could not be saved locally. Keep this tab and recovery file; use the same job for lookup.");
+        setMessage(result.status === "submitted" ? copy("researchCheckout.acknowledged")
+          : copy("researchCheckout.uncertain"));
+        if (result.evidence && !result.acknowledgementPersisted) setMessage(copy("researchCheckout.acknowledgementNotSaved"));
       }
     } catch (error) {
       if (!abort.signal.aborted) {
         if (preparedId) workspace.select(preparedId);
         const detail = error instanceof Error ? error.message : "";
-        setMessage(/reject|denied|cancel/i.test(detail) ? "Wallet request cancelled. No signed purchase request was sent by this attempt."
-          : /price|challenge|SKIP/i.test(detail) ? "The current quote did not match this review. Review the price again before buying."
-          : /Insufficient Gateway/i.test(detail) ? "This wallet has insufficient Gateway funds. No signed purchase request was sent."
-          : "Purchase stopped before submitting a signed request. Check your wallet, balance and browser storage, then review again. Any saved job remains available below.");
+        setMessage(/reject|denied|cancel/i.test(detail) ? copy("researchCheckout.walletCancelled")
+          : /price|challenge|SKIP/i.test(detail) ? copy("researchCheckout.quoteChanged")
+          : /Insufficient Gateway/i.test(detail) ? copy("researchCheckout.insufficient")
+          : copy("researchCheckout.stopped"));
         setReview(null); setAccepted(false);
       }
     } finally { if (operation.current === abort) operation.current = null; if (!abort.signal.aborted) setBusy(false); }
   }
 
   return <div className="mt-5 space-y-4 border border-line bg-paper-2 p-4">
-    <h3 className="font-display text-2xl">Buy with your wallet</h3>
-    <p className="font-serif text-sm text-ink-2">One signature authorizes this fixed-price research job from your wallet’s Gateway balance. {browserPaymentProfile().label}. Externally owned accounts (EOAs) are supported.</p>
+    <h3 className="font-display text-2xl">{copy("researchCheckout.title")}</h3>
+    <p className="font-serif text-sm text-ink-2">{copy("researchCheckout.authorization", { network: browserPaymentProfile().label })}</p>
     {!address ? <WalletPicker isBusy={busy} onConnected={() => {}} /> : <>
-      <p className="break-all font-mono text-xs">Buyer wallet: {address}</p>
+      <p className="break-all font-mono text-xs">{copy("researchCheckout.wallet", { wallet: address })}</p>
       {chainId !== browserPaymentProfile().chainId ? <button type="button" disabled={busy || switching} className={control} onClick={() => {
-        void switchChainAsync({ chainId: browserPaymentProfile().chainId }).catch(() => setMessage(`Network switch was not completed. Choose ${browserPaymentProfile().label} in your wallet.`));
-      }}>{switching ? "Switching…" : `Switch to ${browserPaymentProfile().label}`}</button> : <>
+        void switchChainAsync({ chainId: browserPaymentProfile().chainId }).catch(() => setMessage(copy("researchCheckout.switchFailed", { network: browserPaymentProfile().label })));
+      }}>{switching ? copy("researchCheckout.switching") : copy("researchCheckout.switchNetwork", { network: browserPaymentProfile().label })}</button> : <>
         <ResearchFunding key={address} payer={address} initialAmount={total} requiredMicros={amount} creditRevision={creditRevision} disabled={busy} onBusy={setFundingBusy} onChanged={() => {}} />
         <button type="button" className={control} disabled={busy || !parsed.success || !wallet || BigInt(amount) > BigInt(1_000_000)} onClick={() => {
           if (!parsed.success || !address) return;
           setReview({ request: parsed.data, payer: address, payee, amount }); setAccepted(false); setMessage("");
-        }}>Review {total} USDC purchase</button>
+        }}>{copy("researchCheckout.reviewPrice", { amount: total })}</button>
       </>}
     </>}
     {review && <div className="space-y-3 border-t border-line pt-4">
       <p className="whitespace-pre-wrap break-words font-serif">{review.request.question}</p>
-      <p className="font-mono text-xs">{review.request.researchMode === "quick" ? "Quick" : "Deep"} · {formatUnits(BigInt(review.amount), 6)} USDC total · {review.request.budget} USDC creator cap</p>
-      <p className="break-all font-mono text-xs">Payee: {review.payee}</p>
+      <p className="font-mono text-xs">{copy(review.request.researchMode === "quick" ? "researchCheckout.quickSummary" : "researchCheckout.deepSummary", { amount: formatUnits(BigInt(review.amount), 6), cap: review.request.budget })}</p>
+      <p className="break-all font-mono text-xs">{copy("researchCheckout.payee", { payee: review.payee })}</p>
       <label className="flex items-start gap-3 font-serif text-sm"><input type="checkbox" checked={accepted} disabled={busy} onChange={event => setAccepted(event.target.checked)} className="mt-1" />
-        <span>I accept the fixed, non-refundable price and best-effort research. Unused creator reserve is retained, not refunded. My question and recovery journal will be stored on this device; I will keep a private recovery file in case browser data is lost.</span>
+        <span>{copy("researchCheckout.consent")}</span>
       </label>
-      {!reviewCurrent && <p role="status" className="text-seal">The question, price or wallet changed. Review the purchase again.</p>}
-      <button type="button" disabled={!accepted || !reviewCurrent || busy || fundingBusy} className={`${control} bg-ink text-paper`} onClick={() => { void purchase(); }}>{busy ? "Purchase in progress…" : `Buy research — ${formatUnits(BigInt(review.amount), 6)} USDC`}</button>
+      {!reviewCurrent && <p role="status" className="text-seal">{copy("researchCheckout.reviewChanged")}</p>}
+      <button type="button" disabled={!accepted || !reviewCurrent || busy || fundingBusy} className={`${control} bg-ink text-paper`} onClick={() => { void purchase(); }}>{busy ? copy("researchCheckout.purchasing") : copy("researchCheckout.buy", { amount: formatUnits(BigInt(review.amount), 6) })}</button>
     </div>}
-    {recovery && <button type="button" className={control} onClick={() => downloadBuyerJson(recovery, "recovery")}>Download recovery file</button>}
+    {recovery && <button type="button" className={control} onClick={() => downloadBuyerJson(recovery, "recovery")}>{copy("researchCheckout.downloadRecovery")}</button>}
     <p role="status" aria-live="polite" className="font-serif text-sm">{message}</p>
   </div>;
 }

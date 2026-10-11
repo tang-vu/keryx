@@ -14,9 +14,14 @@
  * at dispatch time on the full text it pays for.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useState } from "react";
 import Link from "next/link";
 import { Loader2, Rss } from "lucide-react";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 interface Match {
   id: string;
@@ -70,14 +75,14 @@ export function FeedMatchForm({
         setError(
           data.message ??
             (res.status === 429
-              ? "That is a few feeds in a row — give it a minute."
-              : "Something went wrong reading that feed."),
+              ? uiCopy("wantedFeed.rateLimit")
+              : uiCopy("wantedFeed.readError")),
         );
       } else {
         setResult(data as Result);
       }
     } catch {
-      setError("Could not reach Keryx. Try again in a moment.");
+      setError(uiCopy("wantedFeed.unreachable"));
     } finally {
       setBusy(false);
     }
@@ -88,16 +93,16 @@ export function FeedMatchForm({
       <div className="border border-ink">
         <div className="flex items-center justify-between gap-4 border-b border-ink bg-ink px-5 py-3 text-cream">
           <span className="font-mono text-[10.5px] uppercase tracking-[0.18em]">
-            {gapId ? "Would Keryx buy your feed for this claim?" : "Would Keryx buy your feed?"}
+            {gapId ? uiCopy("wantedFeed.claimTitle") : uiCopy("wantedFeed.title")}
           </span>
           <span className="hidden font-mono text-[10.5px] uppercase tracking-[0.12em] text-cream/70 sm:inline">
-            No wallet · nothing stored
+            {uiCopy("wantedFeed.privacy")}
           </span>
         </div>
 
         <div className="px-5 py-5 sm:px-6">
           <label htmlFor="feed-check" className="sr-only">
-            Your RSS feed URL
+            {uiCopy("wantedFeed.urlLabel")}
           </label>
           <div className="flex items-center gap-2.5 border-b border-line pb-2 focus-within:border-ink">
             <Rss className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
@@ -118,8 +123,7 @@ export function FeedMatchForm({
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="max-w-[46ch] font-mono text-[10px] leading-[1.5] text-ink-3">
-              The agent sees your recent titles and summaries — the same free preview a listed source
-              gets judged on. Takes a few seconds.
+              {uiCopy("wantedFeed.previewBoundary")}
             </p>
             <button
               type="button"
@@ -128,7 +132,7 @@ export function FeedMatchForm({
               className="inline-flex items-center gap-2 border border-ink bg-ink px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-cream transition-opacity disabled:opacity-40"
             >
               {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
-              {busy ? "Reading your feed…" : "Put it to the agent"}
+              {busy ? uiCopy("wantedFeed.reading") : uiCopy("wantedFeed.submit")}
             </button>
           </div>
 
@@ -158,8 +162,7 @@ function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
   return (
     <div className="mt-6 border-t border-line pt-5">
       <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-3">
-        {feed.title} · {feed.posts} posts read · {gapsChecked} open claims offered ·{" "}
-        {byModel ? "decided by the agent" : "word overlap (reasoning offline)"}
+        {uiCopy(byModel ? (feed.posts === 1 ? (gapsChecked === 1 ? "wantedFeed.summaryAgent.oneOne" : "wantedFeed.summaryAgent.oneOther") : (gapsChecked === 1 ? "wantedFeed.summaryAgent.otherOne" : "wantedFeed.summaryAgent.otherOther")) : (feed.posts === 1 ? (gapsChecked === 1 ? "wantedFeed.summaryOffline.oneOne" : "wantedFeed.summaryOffline.oneOther") : (gapsChecked === 1 ? "wantedFeed.summaryOffline.otherOne" : "wantedFeed.summaryOffline.otherOther")), { title: feed.title, posts: feed.posts, claims: gapsChecked })}
       </p>
 
       {byModel && (
@@ -170,10 +173,10 @@ function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
                 wouldBuy ? "text-paid" : "text-ink-2"
               }`}
             >
-              {wouldBuy ? "Would buy" : "Would skip"}
+              {wouldBuy ? uiCopy("wantedFeed.buy") : uiCopy("wantedFeed.skip")}
             </span>
             <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-              expected value {Math.round(result.expectedValue * 100)}%
+              {uiCopy("wantedFeed.expectedValue", { value: Math.round(result.expectedValue * 100) })}
             </span>
           </div>
           {rationale && (
@@ -185,64 +188,27 @@ function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
       {matches.length > 0 ? (
         <>
           <p className="mt-5 max-w-[62ch] font-serif text-[15px] leading-[1.55] text-ink-2">
-            {byModel ? (
-              <>
-                It expects your posts to address{" "}
-                {matches.length === 1 ? "this open claim" : `these ${matches.length} open claims`} —
-                each one left short by a dispatch a reader paid for.
-              </>
-            ) : (
-              <>
-                Reasoning was unreachable, so this is word overlap only:{" "}
-                {matches.length === 1 ? "one claim shares" : `${matches.length} claims share`} enough
-                vocabulary with a post to be worth your own look.
-              </>
-            )}
+            {byModel ? matches.length === 1 ? uiCopy("wantedFeed.matchesAgent.one") : uiCopy("wantedFeed.matchesAgent.other", { count: matches.length }) : matches.length === 1 ? uiCopy("wantedFeed.matchesOffline.one") : uiCopy("wantedFeed.matchesOffline.other", { count: matches.length })}
           </p>
 
           <ol className="mt-5 flex flex-col gap-3">
             {matches.map((m) => (
               <li key={m.claim} className="border border-line bg-paper-2 p-4">
                 <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
-                  {Math.round(m.coverage * 100)}% covered
-                  {m.seen > 1 && <> · asked {m.seen}×</>}
+                  {m.seen > 1 ? uiCopy("wantedFeed.coverageAsked", { coverage: Math.round(m.coverage * 100), count: m.seen }) : uiCopy("wantedFeed.coverage", { coverage: Math.round(m.coverage * 100) })}
                 </span>
 
                 <p className="mt-2 font-serif text-[15px] leading-snug text-ink">{m.claim}</p>
 
                 <p className="mt-2.5 font-mono text-[10.5px] leading-relaxed text-ink-3">
-                  {m.post && (
-                    <>
-                      your post{" "}
-                      {m.post.link ? (
-                        <a
-                          href={m.post.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline underline-offset-4 transition-colors hover:text-seal"
-                        >
-                          “{m.post.title}”
-                        </a>
-                      ) : (
-                        <>“{m.post.title}”</>
-                      )}
-                      {m.shared.length > 0 && <> · shares {m.shared.join(", ")}</>} ·{" "}
-                    </>
-                  )}
-                  asked as{" "}
-                  <Link
-                    href={`/dispatch/${m.queryId}`}
-                    className="underline underline-offset-4 transition-colors hover:text-seal"
-                  >
-                    “{m.question}”
-                  </Link>
+                  {matchDescription(m)}
                 </p>
                 {m.post?.link && (
                   <Link
                     href={registrationHref(rssUrl, m)}
                     className="mt-3 inline-block border border-ink bg-seal px-3 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-paper transition-transform hover:-translate-y-0.5"
                   >
-                    Offer this post for this claim ▸
+                    {uiCopy("wantedFeed.offerPost")}
                   </Link>
                 )}
               </li>
@@ -253,15 +219,11 @@ function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
         <p className="mt-5 max-w-[62ch] font-serif text-[15px] leading-[1.55] text-ink-2">
           {byModel && wouldBuy ? (
             <>
-              It would pay for this feed, but judged it broadly rather than pointing at particular
-              claims — so there is no shortlist to show you. A listed source is read against every
-              question that arrives, not only the ones open today.
+              {uiCopy("wantedFeed.buyWithoutMatches")}
             </>
           ) : (
             <>
-              Nothing on today&rsquo;s board. That is a statement about the holes currently open, not
-              about your writing — the board turns over as dispatches land, and a listed source is
-              read against every question that arrives.
+              {uiCopy("wantedFeed.noMatches")}
             </>
           )}
         </p>
@@ -276,11 +238,10 @@ function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
           }
           className="inline-block border border-ink bg-seal px-[18px] py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
         >
-          {matches.length > 0 ? "List this feed ▸" : "List it anyway ▸"}
+          {matches.length > 0 ? uiCopy("wantedFeed.list") : uiCopy("wantedFeed.listAnyway")}
         </Link>
         <p className="mt-3 max-w-[62ch] font-mono text-[10.5px] leading-relaxed text-ink-3">
-          One decision, on this feed alone — a real dispatch ranks it against every other source
-          competing for the same budget, and scores it again on the full text it pays for.
+          {uiCopy("wantedFeed.decisionBoundary")}
         </p>
       </div>
     </div>
@@ -294,4 +255,11 @@ function registrationHref(rssUrl: string, match: Match): string {
     post: match.post?.link ?? "",
   });
   return `/register?${params.toString()}`;
+}
+
+function matchDescription(match: Match) {
+  const question = <Link href={`/dispatch/${match.queryId}`} className="underline underline-offset-4 transition-colors hover:text-seal">“{match.question}”</Link>;
+  if (!match.post) return uiRichCopy("wantedFeed.asked", { question });
+  const post = match.post.link ? <a href={match.post.link} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 transition-colors hover:text-seal">“{match.post.title}”</a> : <>“{match.post.title}”</>;
+  return match.shared.length > 0 ? uiRichCopy("wantedFeed.postSharedAsked", { post, shared: match.shared.join(", "), question }) : uiRichCopy("wantedFeed.postAsked", { post, question });
 }

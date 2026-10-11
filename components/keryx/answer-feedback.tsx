@@ -1,7 +1,10 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+
+const copy = createMessages("en");
 
 type Rating = "up" | "down";
 type Phase = "loading" | "ready" | "unavailable" | "sending" | "confirmed" | "unconfirmed";
@@ -85,19 +88,19 @@ function ReportFeedback({ queryId }: { queryId: string }) {
 
   const total = counts ? counts.up + counts.down : null;
   const disabled = phase !== "ready" && phase !== "unavailable";
-  const message = phase === "loading" ? "Loading feedback…"
-    : phase === "unavailable" ? "Feedback counts unavailable."
-    : phase === "sending" ? "Sending feedback…"
-    : phase === "confirmed" ? "Feedback recorded."
-    : phase === "unconfirmed" ? "Couldn’t confirm feedback. It may have been recorded."
+  const message = phase === "loading" ? copy("reportFeedback.loading")
+    : phase === "unavailable" ? copy("reportFeedback.unavailable")
+    : phase === "sending" ? copy("reportFeedback.sending")
+    : phase === "confirmed" ? copy("reportFeedback.confirmed")
+    : phase === "unconfirmed" ? copy("reportFeedback.unconfirmed")
     : null;
 
-  return <div className="flex flex-wrap items-center gap-3 border-t border-line px-6 py-3 sm:px-9" role="group" aria-label="Report feedback">
-    <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">Helpful?</span>
+  return <div className="flex flex-wrap items-center gap-3 border-t border-line px-6 py-3 sm:px-9" role="group" aria-label={copy("reportFeedback.label")}>
+    <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">{copy("reportFeedback.helpful")}</span>
     {(["up", "down"] as const).map(rating => <button
       key={rating}
       type="button"
-      aria-label={`${rating === "up" ? "Mark this answer as helpful" : "Mark this answer as not helpful"}${counts ? `; ${counts[rating]} recorded votes` : ""}`}
+      aria-label={counts ? copy(rating === "up" ? counts[rating] === 1 ? "reportFeedback.up.one" : "reportFeedback.up.other" : counts[rating] === 1 ? "reportFeedback.down.one" : "reportFeedback.down.other", { count: counts[rating] }) : copy(rating === "up" ? "reportFeedback.up" : "reportFeedback.down")}
       aria-pressed={recorded === rating}
       disabled={disabled}
       onClick={() => void vote(rating)}
@@ -106,7 +109,7 @@ function ReportFeedback({ queryId }: { queryId: string }) {
           : "border-line text-ink-3 enabled:hover:border-ink enabled:hover:text-ink")}
     ><span aria-hidden="true">{rating === "up" ? "👍" : "👎"}</span>{counts && <span>{counts[rating]}</span>}</button>)}
     {total !== null && total > 0 && counts && <span className="font-mono text-[10px] text-ink-3">
-      {total} vote{total !== 1 ? "s" : ""} · {Math.round(counts.up / total * 100)}% positive
+      {copy(total === 1 ? "reportFeedback.summary.one" : "reportFeedback.summary.other", { count: total, positive: Math.round(counts.up / total * 100) })}
     </span>}
     {message && <p className="w-full text-sm text-ink-2" role={phase === "unconfirmed" ? "alert" : "status"}>{message}</p>}
   </div>;

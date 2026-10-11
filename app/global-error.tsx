@@ -1,6 +1,9 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useEffect } from "react";
+
+const uiCopy = createMessages("en");
 
 /**
  * Root error boundary — replaces the whole document when the root layout itself throws,
@@ -46,13 +49,13 @@ export default function GlobalError({
             margin: 0,
           }}
         >
-          Dispatch interrupted
+          {uiCopy("globalError.eyebrow")}
         </p>
         <h1 style={{ fontSize: "clamp(36px,7vw,64px)", fontWeight: 600, margin: 0, lineHeight: 1 }}>
-          The mint is down.
+          {uiCopy("globalError.title")}
         </h1>
         <p style={{ fontStyle: "italic", fontSize: "1.25rem", color: "#3a342a", maxWidth: 460, margin: 0 }}>
-          Something went wrong at the root. Your funds are untouched — nothing settles on a failed render.
+          {uiCopy("globalError.body")}
         </p>
         <button
           onClick={reset}
@@ -68,7 +71,7 @@ export default function GlobalError({
             cursor: "pointer",
           }}
         >
-          ⟳ Try again
+          {uiCopy("globalError.retry")}
         </button>
       </body>
     </html>

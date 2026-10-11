@@ -7229,3 +7229,196 @@ Attribution, evidence and financial projections retain their authority, with no
 new call/retry/cap, payment or private/package authority. Required source CI/review
 and root's verified combined delivery remain closure gates; original frozen
 criteria imply no new paid-live gate. See the updated finite presentation contract.
+
+## Keep research catalogue extraction independent of research and payment authority — 2026-10-11
+
+Use the existing typed English catalogue and named React-node interpolation for
+research conversation, decision logs, creator-payment presentation and paid-job
+recovery. Preserve exact English, count arms, data identities and callbacks;
+parallel diagnostic statistics are complete count labels rather than assembled
+sentences. Payment uncertainty, receipt integrity and public/private access
+notices keep their original distinctions. Retire only migrated guard allowances
+and explicitly retain executable protocol examples as data.
+
+Catalogue extraction does not activate a locale or approve financial, privacy or
+consent translation. Qualify changed presentation with exact before/after render
+states and practical browser actions/accessibility, reusing unchanged CSS and
+unaffected evidence. Keep the remaining original issue272 areas and root-owned
+combined-source CI, review and delivery gates explicit in the
+[area record](docs/engineering/research-flow-catalogue-2026-10-11.md).
+
+## Preserve consent and recovery truth in the English funding catalogue — 2026-10-11
+
+Extract funding, budget consent, public/private checkout, Monthly and evidence
+inspection into the existing typed English catalogue. Whole-message variants
+retain exact English for uncertain transactions, finalized observations, Gateway
+credit, recovery/deletion limits and non-refundable research terms. Named React
+nodes preserve links, retry actions, emphasis and line breaks; count arms permit
+future grammar without enabling a locale or changing the shipped English.
+
+Keep quote/payer guards, payment/authentication/storage authority, recovery bytes,
+callbacks and protocol identities unchanged. Explicitly listing a stable React
+setter satisfies the compiler's dependency analysis without changing callback
+lifetime. Retire only migrated guard allowances, retain currency/protocol examples
+and qualify the changed surfaces with exact renders and existing synthetic browser
+actions. The [area record](docs/engineering/research-funding-catalogue-2026-10-11.md)
+keeps remaining original272 work, root-owned native desktop coordination, actual
+hosted acceptance, independent review and combined delivery gates open.
+
+## 2026-10-11 — Catalogue report, archive and paper-workspace presentation
+
+Keep the rendered English report and archive interface unchanged while moving its
+reading, citation accessibility, export/receipt controls, freshness, metadata and
+paper-workspace notifications to typed English keys. Select whole metadata and
+freshness variants with named values and count arms; preserve original links,
+callbacks, text and recorded financial truth. Reuse existing English catalogues
+for unchanged draft, bibliography, purchase-outcome and acceptance surfaces.
+Retire only the 506 migrated guard occurrences; retain eight scoped brand,
+network, currency and record-limit identities and all other area allowances.
+Excluded research/LLM/export helper copy and native desktop require root
+qualification. Existing narrow archive layout findings are a separate root
+coordination item. Human glossary approvals and locale flags remain held; this
+area does not close original #272. See the [scope, evidence and remaining gates](docs/engineering/reports-catalogue-2026-10-11.md).
+
+## 2026-10-11 — Catalogue source-library and article-market presentation
+
+Preserve English source discovery and market behavior while moving the inspected
+metadata, labels, tooltips, availability, policy, earnings and count text into a
+typed English catalogue. Use whole variants and named values; keep source metadata,
+identities, generated question drafts, GET filter values and payment/claim conditions
+unchanged. Retire only 204 migrated guard occurrences and preserve four scoped data
+allowances. Imported library/control labels and previously identified excluded
+helper/native boundaries remain root qualification items. Human glossary approvals
+and locale flags remain held; this focused area does not close original #272. See
+the [scope, browser evidence and remaining gates](docs/engineering/source-directory-catalogue-2026-10-11.md).
+
+## Reuse the English message contract in the native Desktop renderer — 2026-10-11
+
+Extract native Operator presentation into a focused English catalogue and reuse
+the existing typed, one-pass message contract. Make only its English imports
+relative so native bundling and tests need no second engine or resolver. Preserve
+the exact English, whole-message count grammar, controls, data and action bytes.
+Keep the executable buyer handoff as invariant protocol data with its one explicit
+guard allowance; locale copy cannot change purchasing or original-job recovery.
+Native host/package acceptance and coordinated delivery remain distinct from
+hermetic rendering. See [scope and gates](docs/engineering/native-desktop-catalogue-2026-10-11.md).
+
+## 2026-10-11 — Catalogue public-source claim presentation without changing authority
+
+Keep source-control proof and earning-policy activation separate while moving their
+existing English notices into a typed catalogue. File/token instructions and
+freshness, price and policy notices use whole variants with named interpolation;
+dates, links, source data and exact proof bytes retain their existing render/action
+contracts. Metadata, accessibility labels and the request helper's fallback belong
+to this presentation area. Retire only its 103 actually migrated guard occurrences,
+leaving other areas and protocol/data identities intact. No payment, proof, wallet,
+permission or database condition changes, and glossary/locale gates remain held.
+
+Exact render parity and the existing synthetic claim browser fixture qualify source
+behavior; retained CSS and intercepted wallets do not certify a production release.
+See [the claim catalogue record](docs/engineering/source-claims-catalogue-2026-10-11.md).
+Original #272 remains open for remaining areas and root's reviewed combined
+integration, exact-source CI and serialized delivery.
+
+## 2026-10-11 — Catalogue registration presentation while preserving phase authority
+
+Move ordinary creator registration, bulk import, feed proof and pre-registry
+adoption English into a typed catalogue. Whole messages and named interpolation
+preserve links, emphasis and data; one/other count arms retain the original English.
+Project the seven existing phase titles in `lib/i18n/` without changing registry
+preparation, receipt/index evidence, wallet fences, price limits or verification
+callbacks. Keep example URLs/names/prices, toast IDs and webhook identities as data,
+and retire only the 155 actually migrated guard occurrences. Glossary and locale
+activation remain held. Existing unnamed bulk controls and externally supplied
+helper prose are separate root qualification items, not hidden behavior changes.
+
+See [the registration catalogue record](docs/engineering/registration-catalogue-2026-10-11.md)
+for exact render/status, intercepted action and retained-CSS evidence. Original #272
+remains open for remaining areas and root's reviewed combined integration,
+exact-source CI and serialized delivery.
+
+## 2026-10-11 — English creator management catalogue area
+
+Catalogue creator management as one coherent original272 area, with 304 messages
+and 263 scoped original guard retirements. Whole sentences and named data/React
+parameters preserve English output, including optional empty dates, legacy count
+wording and signature/snippet bytes. Preview labels get an i18n presentation
+projection; source preview semantics and the old export remain unchanged for
+root qualification. Retain protocol/contact/currency/brand allowances, without
+changing guard detection. Exact render and intercepted action evidence qualify
+changed presentation; existing listing/rights fixtures cover its signing gates.
+Record the pre-existing offer barrel's Node-only import and unnamed controls for
+separate root decisions. Combined review/CI/distribution/delivery and remaining
+original272 areas stay open; see
+`docs/engineering/creator-catalogue-2026-10-11.md`.
+
+## 2026-10-11 — Catalogue fixed English helper output without changing export contracts
+
+Reuse the typed message engine for helper presentation and canonical English
+exports. Keep CSV machine headers/enums, exact status literal types, schema and
+authority conditions, escaping, filenames and actual English/Vietnamese guidance
+selection unchanged. Whole messages use named values; fixed CSV labels read the
+English catalogue directly. Reuse existing area keys, retire no unrelated guard
+allowances, and reuse the creator candidate's six preview keys only after root
+accepts that candidate. See the [scope, byte parity and remaining gates](docs/engineering/shared-helper-catalogue-2026-10-11.md).
+
+## 2026-10-11 — English withdrawal catalogue area
+
+Keep withdrawal presentation extraction separate from original signing and
+recovery authority. Catalogue 171 messages and retire 143 scoped original copy
+allowances, retaining network/currency identities and data. Resolve complete
+transfer/mint sentences in an i18n helper rather than joining message fragments.
+Preserve finite expiry, original IDs/terms, one-use submission, private recovery
+bytes, owner isolation and finality semantics. Exact render comparisons and
+existing browser journal/history fixtures qualify the change; intercepted owner
+callback checks do not claim live payment integration. Record unchanged320px
+overflow for a separate root layout decision. Remaining original272 areas and
+combined review/CI/distribution/delivery stay open; see
+`docs/engineering/withdrawal-catalogue-2026-10-11.md`.
+
+## 2026-10-11 — English landing and fallback catalogue
+
+Extract marketing, metadata/JSON-LD, activity/totals, fallback pages, brand prose,
+launch accessibility and dialog close labels into65 typed English messages. Keep
+the social headline as one message with its explicit presentation line break.
+Retire only44 scoped guard occurrences; preserve protocol, status and brand data.
+Exact render comparisons, practical browser/control checks and existing catalogue
+tests qualify English parity; root qualifies the combined Next layout/build and
+owns review/CI/distribution/delivery. Original272 and glossary/locale gates remain
+open. See `docs/engineering/landing-catalogue-2026-10-11.md`.
+
+## 2026-10-11 — English Wanted catalogue area
+
+Extract the demand board and creator-response presentation into140 typed English
+messages, preserving the current English, complete rich-link sentences and
+singular/plural branches. Retire only116 scoped copy occurrences; retain brand,
+address and example data. Preserve coverage arithmetic, retry terms, signed
+discount inputs, registry-price revocation and share fallbacks. Exact render and
+intercepted action checks qualify this source extraction; root owns the shared
+status helper, pre-existing offer-barrel build qualification and combined review,
+CI/distribution/delivery. Original272 and held glossary/locale gates stay open.
+See `docs/engineering/wanted-catalogue-2026-10-11.md`.
+
+## 2026-10-11 — English integration setup and playground catalogue
+
+Extract47 complete typed English presentation messages while keeping setup
+commands, protocol fields, model/client identities, copied snippets and example
+prompts as data. Retire only48 scoped original allowances; preserve fourteen data
+findings and other areas. Exact renders and intercepted frontend callbacks qualify
+English/byte parity without executing research or billing endpoints. Root owns
+availability helpers, combined Next/domain/platform acceptance and delivery; hold
+locale/glossary activation and keep original272 open. See
+`docs/engineering/integrations-catalogue-2026-10-11.md`.
+
+## 2026-10-11 — Preserve ledger proof meaning during English extraction
+
+Catalogue dashboard loading/error/stale notices, recorded counts and compact/full
+payment copy as complete named messages with explicit one/other variants. Keep
+the original English, including historical count grammar, UTC formatting and
+empty transaction-reference behavior. Retire only the 83 migrated presentation
+allowances; do not change payment status interpretation, financial totals, network
+identity, data validation or retry authority. Imported authorization-phase labels
+remain root's shared-helper qualification. The 93-key area has exact render and
+existing dashboard browser evidence; final combined Next.js/CI and serialized
+delivery remain root-owned. See the [ledger presentation catalogue
+record](docs/engineering/ledger-presentation-catalogue-2026-10-11.md).

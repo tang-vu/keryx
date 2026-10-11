@@ -1,3 +1,4 @@
+import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +13,8 @@ import { Providers } from "./providers";
 import { MaintenanceBanner } from "@/components/keryx/maintenance-banner";
 import "./globals.css";
 
+const uiCopy = createMessages("en");
+
 // Public origin for OG/canonical metadata. Explicit BASE_URL wins (set to the live
 // Cloudflare Tunnel domain); fall back to Vercel preview URL, then the prod domain, then localhost.
 const defaultUrl =
@@ -19,9 +22,9 @@ const defaultUrl =
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
   (process.env.NODE_ENV === "production" ? "https://keryx.cc" : "http://localhost:3939");
 
-const TITLE = "Keryx — citations are currency";
+const TITLE = uiCopy("landingMetadata.title");
 const DESCRIPTION =
-  `Keryx researches questions using cited evidence, pays verified creators for qualifying paid citations, and includes free public references with no publisher payout. List your writing, prove feed ownership, and earn USDC rewards on ${currentArcLabel}.`;
+  uiCopy("landingMetadata.description", { network: currentArcLabel });
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
@@ -30,17 +33,17 @@ export const metadata: Metadata = {
   applicationName: "Keryx",
   keywords: [
     "Keryx",
-    "citation toll",
+    uiCopy("landingMetadata.citationToll"),
     "x402",
     "USDC",
     "Arc network",
-    "nanopayments",
-    "AI agent payments",
-    "autonomous agent commerce",
-    "stablecoin settlement",
-    "creators paid",
-    "pay per citation",
-    "reading agent",
+    uiCopy("landingMetadata.nanopayments"),
+    uiCopy("landingMetadata.agentPayments"),
+    uiCopy("landingMetadata.agentCommerce"),
+    uiCopy("landingMetadata.stablecoinSettlement"),
+    uiCopy("landingMetadata.creatorsPaid"),
+    uiCopy("landingMetadata.payPerCitation"),
+    uiCopy("landingMetadata.readingAgent"),
   ],
   authors: [{ name: "Keryx" }],
   creator: "Keryx",
@@ -48,7 +51,7 @@ export const metadata: Metadata = {
   alternates: {
     ...englishPublicAlternates("/"),
     types: {
-      "application/atom+xml": [{ url: "/answers/feed.xml", title: "Keryx Answer Archive" }],
+      "application/atom+xml": [{ url: "/answers/feed.xml", title: uiCopy("landingMetadata.archiveFeed") }],
     },
   },
   openGraph: {
@@ -116,7 +119,7 @@ const JSON_LD = {
       "@id": `${defaultUrl}/#org`,
       name: "Keryx",
       url: defaultUrl,
-      slogan: "Citations are currency.",
+      slogan: uiCopy("landingMetadata.slogan"),
       description: DESCRIPTION,
     },
     {

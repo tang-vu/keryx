@@ -1,5 +1,9 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
+
 import { useEffect, useState } from "react";
 import { verifyBrowserDecisions, type BuyerDecisions } from "@/lib/a2a/buyer-decisions";
 import { readBoundedJson } from "@/lib/read-bounded-json";
@@ -36,19 +40,19 @@ export function ResearchDecisions({ queryId, answer, claims }: {
   }, [queryId, answer, revision]);
 
   return <details className="border border-line p-4">
-    <summary className="cursor-pointer"><h3 className="inline font-display text-2xl">Source decisions{decisions ? ` (${decisions.length})` : ""}</h3></summary>
-    <p className="mt-2 font-serif text-sm text-ink-3">Why the agent chose BUY, SKIP or CACHE. A decision is a plan, not proof of a completed read or payment.</p>
-    {decisions !== null && <p role="status" className="mt-2 font-mono text-xs">Receipt integrity checked in this browser. Matches the displayed job and answer. Settlement remains server-reported; original request verification requires the buyer journal.</p>}
+    <summary className="cursor-pointer"><h3 className="inline font-display text-2xl">{decisions ? message(decisions.length === 1 ? "researchDecisions.count.one" : "researchDecisions.count.other", { count: decisions.length }) : message("researchDecisions.title")}</h3></summary>
+    <p className="mt-2 font-serif text-sm text-ink-3">{message("researchDecisions.boundary")}</p>
+    {decisions !== null && <p role="status" className="mt-2 font-mono text-xs">{message("researchDecisions.integrityNotice")}</p>}
     {error ? <div role="status" className="mt-3 font-serif text-sm">
-      Source decisions could not be loaded or verified. Your answer is still available.
-      <button type="button" onClick={() => setRevision(value => value + 1)} className="ml-3 border border-ink px-3 py-2 font-mono text-xs">Retry loading decisions</button>
-    </div> : decisions === null ? <p role="status" className="mt-3 font-mono text-xs">Loading source decisions…</p>
-      : decisions.length === 0 ? <p className="mt-3 font-serif">No source decisions were recorded for this job.</p>
+      {message("researchDecisions.failed")}
+      <button type="button" onClick={() => setRevision(value => value + 1)} className="ml-3 border border-ink px-3 py-2 font-mono text-xs">{message("researchDecisions.retry")}</button>
+    </div> : decisions === null ? <p role="status" className="mt-3 font-mono text-xs">{message("researchDecisions.loading")}</p>
+      : decisions.length === 0 ? <p className="mt-3 font-serif">{message("researchDecisions.empty")}</p>
       : <ol className="mt-4 space-y-3">{decisions.map((decision, index) => <li key={index} className="border border-line p-4">
-        <p className="font-mono text-xs">{decision.action} · quoted access price {decision.priceUsdc.toFixed(6)} USDC</p>
+        <p className="font-mono text-xs">{message("researchDecisions.quotedPrice", { action: decision.action, amount: decision.priceUsdc.toFixed(6) })}</p>
         <p className="mt-2 font-serif font-semibold">{decision.sourceName}{decision.itemTitle && decision.sourceName !== decision.itemTitle && !decision.sourceName.endsWith(` — ${decision.itemTitle}`) ? ` — ${decision.itemTitle}` : ""}</p>
         <p className="mt-2 font-serif">{decision.rationale}</p>
-        {!!decision.targets.length && <ul className="mt-3 list-inside list-disc font-serif text-sm text-ink-3">{decision.targets.map((target, i) => <li key={i}>{claims.find(claim => claim.claimIndex === target)?.claim ?? `Research target ${target + 1} (text unavailable)`}</li>)}</ul>}
+        {!!decision.targets.length && <ul className="mt-3 list-inside list-disc font-serif text-sm text-ink-3">{decision.targets.map((target, i) => <li key={i}>{claims.find(claim => claim.claimIndex === target)?.claim ?? message("researchDecisions.unavailableTarget", { number: target + 1 })}</li>)}</ul>}
       </li>)}</ol>}
   </details>;
 }

@@ -9,6 +9,8 @@
  * links to the trace that proves it.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import type { Metadata } from "next";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
@@ -20,14 +22,17 @@ import { buildBoard, type DemandGap } from "@/lib/demand-signal";
 import { WANTED_WINDOW_RUNS } from "@/lib/wanted-limits";
 import type { GapIntentStatus } from "@/lib/types";
 
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
+
 // The window moves with the daemon; a few times an hour is fresh enough for a board people act on
 // over days, and keeps the trace parsing off the request path.
 export const revalidate = 600;
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
-const TITLE = "Wanted — questions Keryx was paid to answer and couldn't";
+const TITLE = uiCopy("wantedBoard.metadataTitle");
 const DESCRIPTION =
-  "Real sub-claims from paid dispatches that Keryx's corpus left uncovered. Demand with a receipt: list a source that covers one and every citation pays your wallet in USDC.";
+  uiCopy("wantedBoard.description");
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -98,25 +103,13 @@ export default async function WantedPage() {
 
       <main className="mx-auto max-w-[860px] px-4 pb-20 pt-12 sm:px-[30px]">
         <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-          Wanted
+          {uiCopy("wantedBoard.eyebrow")}
         </div>
         <h1 className="font-display text-[clamp(30px,5vw,46px)] font-medium leading-[1.05] tracking-tight text-ink">
-          What the corpus <em className="italic text-paid">couldn&apos;t answer.</em>
+          {uiRichCopy("wantedBoard.title", { emphasis: <em className="italic text-paid">{uiCopy("wantedBoard.titleEmphasis")}</em> })}
         </h1>
         <p className="mt-4 max-w-[62ch] font-serif text-[17px] leading-[1.55] text-ink-2">
-          {gaps.length > 0 ? (
-            <>
-              Every dispatch breaks its question into claims, buys what looks worth buying, then
-              scores how well it actually covered each one. These {gaps.length} claims finished
-              short across the last {WANTED_WINDOW_RUNS} dispatches — readers paid, and Keryx came back
-              thin. Publish on one and the next agent that asks has somewhere to spend.
-            </>
-          ) : (
-            <>
-              Nothing on the board: across the last {WANTED_WINDOW_RUNS} dispatches, the corpus covered
-              every claim it was asked to support. Come back after the next quiet week.
-            </>
-          )}
+          {gaps.length > 0 ? uiCopy(gaps.length === 1 ? "wantedBoard.introduction.one" : "wantedBoard.introduction.other", { count: gaps.length, window: WANTED_WINDOW_RUNS }) : uiCopy("wantedBoard.empty", { window: WANTED_WINDOW_RUNS })}
         </p>
 
         {gaps.length > 0 && (
@@ -125,8 +118,7 @@ export default async function WantedPage() {
               <li key={gap.claim} className="border border-line bg-paper p-5">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
-                    {Math.round(gap.coverage * 100)}% covered
-                    {gap.seen > 1 && <> · asked {gap.seen}×</>}
+                    {gap.seen > 1 ? uiCopy("wantedBoard.coverageAsked", { coverage: Math.round(gap.coverage * 100), count: gap.seen }) : uiCopy("wantedBoard.coverage", { coverage: Math.round(gap.coverage * 100) })}
                   </span>
                   <span className="shrink-0 font-mono text-[10px] text-ink-3">
                     {new Date(gap.createdAt).toLocaleDateString()}
@@ -151,13 +143,7 @@ export default async function WantedPage() {
                 </div>
 
                 <p className="mt-3 font-mono text-[10.5px] leading-relaxed text-ink-3">
-                  asked as{" "}
-                  <Link
-                    href={`/dispatch/${gap.queryId}`}
-                    className="underline underline-offset-4 transition-colors hover:text-seal"
-                  >
-                    “{gap.question}”
-                  </Link>
+                  {uiRichCopy("wantedBoard.asked", { question: <Link href={`/dispatch/${gap.queryId}`} className="underline underline-offset-4 transition-colors hover:text-seal">“{gap.question}”</Link> })}
                 </p>
                 {(offersByGap.get(gap.id)?.length ?? 0) > 0 && (
                   <ul className="mt-3 border-t border-line pt-3">
@@ -166,20 +152,7 @@ export default async function WantedPage() {
                         key={offer.id}
                         className="font-mono text-[10.5px] leading-relaxed text-ink-3"
                       >
-                        {offer.sourceName} · {offerStatus(offer)}
-                        {offer.sourceItemLink && (
-                          <>
-                            {" · "}
-                            <a
-                              href={offer.sourceItemLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="underline underline-offset-4 hover:text-seal"
-                            >
-                              offered post
-                            </a>
-                          </>
-                        )}
+                        {offer.sourceItemLink ? uiRichCopy("wantedBoard.offerWithPost", { source: offer.sourceName, status: offerStatus(offer), post: <a href={offer.sourceItemLink} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-seal">{uiCopy("wantedBoard.offeredPost")}</a> }) : uiCopy("wantedBoard.offer", { source: offer.sourceName, status: offerStatus(offer) })}
                       </li>
                     ))}
                   </ul>
@@ -200,13 +173,10 @@ export default async function WantedPage() {
         {filled.length > 0 && (
           <section className="mt-14">
             <h2 className="font-display text-[22px] font-medium tracking-tight text-ink">
-              Filled — and <em className="italic text-paid">covered now.</em>
+              {uiRichCopy("wantedBoard.filledTitle", { emphasis: <em className="italic text-paid">{uiCopy("wantedBoard.filledEmphasis")}</em> })}
             </h2>
             <p className="mt-2 max-w-[62ch] font-serif text-[15px] leading-[1.55] text-ink-2">
-              Claims the corpus was missing and now covers. When something new lands that might
-              answer an open claim, Keryx puts the question again — a real dispatch that buys the
-              new material. A targeted creator offer is only marked fulfilled when its citation
-              reward also settles.
+              {uiCopy("wantedBoard.filledIntroduction")}
             </p>
 
             <ol className="mt-6 flex flex-col gap-3">
@@ -219,8 +189,7 @@ export default async function WantedPage() {
                   <li key={gap.claim} className="border border-line bg-paper p-4">
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-paid">
-                        {Math.round(gap.coverage * 100)}% → {Math.round(fill.coverage * 100)}% covered
-                        {fill.byRetry && <> · re-asked by Keryx</>}
+                        {uiCopy(fill.byRetry ? "wantedBoard.transitionRetry" : "wantedBoard.transition", { before: Math.round(gap.coverage * 100), after: Math.round(fill.coverage * 100) })}
                       </span>
                       <span className="shrink-0 font-mono text-[10px] text-ink-3">
                         {new Date(fill.createdAt).toLocaleDateString()}
@@ -237,25 +206,14 @@ export default async function WantedPage() {
                     </p>
 
                     <p className="mt-2 font-mono text-[10.5px] leading-relaxed text-ink-3">
-                      {fill.paid.length > 0 ? (
-                        <>
-                          cited {fill.paid.map((p) => p.sourceName).join(", ")} ·{" "}
-                        </>
-                      ) : null}
-                      <Link
-                        href={`/dispatch/${fill.queryId}`}
-                        className="underline underline-offset-4 transition-colors hover:text-seal"
-                      >
-                        closed by this dispatch
-                      </Link>
+                      {fill.paid.length > 0 ? uiRichCopy("wantedBoard.closedWithCitations", { sources: fill.paid.map(p => p.sourceName).join(", "), dispatch: <Link href={`/dispatch/${fill.queryId}`} className="underline underline-offset-4 transition-colors hover:text-seal">{uiCopy("wantedBoard.closedDispatch")}</Link> }) : <Link href={`/dispatch/${fill.queryId}`} className="underline underline-offset-4 transition-colors hover:text-seal">{uiCopy("wantedBoard.closedDispatch")}</Link>}
                     </p>
                     {fulfilledOffers.map((offer) => (
                       <p
                         key={offer.id}
                         className="mt-1 font-mono text-[10.5px] text-paid"
                       >
-                        offer fulfilled · {offer.sourceName} received $
-                        {(offer.rewardUsdc ?? 0).toFixed(6)} settled USDC
+                        {uiCopy("wantedBoard.fulfilled", { source: offer.sourceName, reward: (offer.rewardUsdc ?? 0).toFixed(6) })}
                       </p>
                     ))}
                   </li>
@@ -270,15 +228,10 @@ export default async function WantedPage() {
             href="/register"
             className="inline-block border border-ink bg-seal px-[18px] py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
           >
-            List a source that covers one ▸
+            {uiCopy("wantedBoard.listSource")}
           </Link>
           <p className="mt-3 max-w-[62ch] font-mono text-[10.5px] leading-relaxed text-ink-3">
-            Listing is permissionless — paste an RSS feed, prove you own it, and every citation pays
-            your wallet directly. See{" "}
-            <Link href="/sources" className="underline underline-offset-4 hover:text-seal">
-              what is already listed
-            </Link>
-            .
+            {uiRichCopy("wantedBoard.listingBoundary", { listed: <Link href="/sources" className="underline underline-offset-4 hover:text-seal">{uiCopy("wantedBoard.alreadyListed")}</Link> })}
           </p>
         </div>
       </main>
@@ -291,18 +244,18 @@ export default async function WantedPage() {
 function offerStatus(offer: PublicOffer): string {
   switch (offer.status) {
     case "pending":
-      return "queued until the source is indexed + verified";
+      return uiCopy("wantedBoard.pending");
     case "running":
-      return `targeted retry running · attempt ${offer.attempts}/3`;
+      return uiCopy("wantedBoard.running", { attempt: offer.attempts });
     case "filled":
-      return `fulfilled · $${(offer.rewardUsdc ?? 0).toFixed(6)} settled`;
+      return uiCopy("wantedBoard.settled", { reward: (offer.rewardUsdc ?? 0).toFixed(6) });
     case "unpaid":
-      return "evidence passed, settlement did not complete";
+      return uiCopy("wantedBoard.unpaid");
     case "missed":
-      return "retry completed, evidence still fell short";
+      return uiCopy("wantedBoard.missed");
     case "stale":
-      return "closed without retry because the claim was already filled";
+      return uiCopy("wantedBoard.stale");
     case "failed":
-      return "retry stopped after bounded failures";
+      return uiCopy("wantedBoard.failed");
   }
 }

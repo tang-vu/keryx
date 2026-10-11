@@ -16,9 +16,12 @@
  * deposits, or payouts from any other x402 service) and is shown as such, never as a discrepancy.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+
+const uiCopy = createMessages("en");
 
 export interface GatewayProof {
   checkedAt: string;
@@ -34,10 +37,10 @@ export interface GatewayProof {
 
 function ago(iso: string): string {
   const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return uiCopy("creatorGateway.justNow");
+  if (mins < 60) return uiCopy(mins === 1 ? "creatorGateway.minutesAgo.one" : "creatorGateway.minutesAgo.other", { count: mins });
   const h = Math.floor(mins / 60);
-  return h < 48 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
+  return h < 48 ? uiCopy(h === 1 ? "creatorGateway.hoursAgo.one" : "creatorGateway.hoursAgo.other", { count: h }) : uiCopy(Math.floor(h / 24) === 1 ? "creatorGateway.daysAgo.one" : "creatorGateway.daysAgo.other", { count: Math.floor(h / 24) });
 }
 
 export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
@@ -56,10 +59,10 @@ export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
           <TriangleAlert className="h-4 w-4 text-destructive" />
         )}
         <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
-          Server-reported Circle balance
+          {uiCopy("creatorGateway.title")}
         </h2>
         <span className="ml-auto font-mono text-[10px] text-faint">
-          checked {ago(proof.checkedAt)}
+          {uiCopy("creatorGateway.checked", { ago: ago(proof.checkedAt) })}
         </span>
       </div>
 
@@ -67,10 +70,10 @@ export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
         <table className="w-full min-w-[26rem] border-collapse font-mono text-[11.5px]">
           <thead>
             <tr className="border-b border-line text-left text-ink-3">
-              <th className="py-1.5 pr-3 font-normal">Payee wallet</th>
-              <th className="py-1.5 pr-3 text-right font-normal">Keryx says held</th>
-              <th className="py-1.5 pr-3 text-right font-normal">Circle holds</th>
-              <th className="py-1.5 text-right font-normal">Verdict</th>
+              <th className="py-1.5 pr-3 font-normal">{uiCopy("creatorGateway.payee")}</th>
+              <th className="py-1.5 pr-3 text-right font-normal">{uiCopy("creatorGateway.claimedHeld")}</th>
+              <th className="py-1.5 pr-3 text-right font-normal">{uiCopy("creatorGateway.circleHeld")}</th>
+              <th className="py-1.5 text-right font-normal">{uiCopy("creatorGateway.verdict")}</th>
             </tr>
           </thead>
           <tbody>
@@ -85,16 +88,16 @@ export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
                 <td className="py-2 pr-3 text-right tabular-nums text-ink-2">
                   {w.heldUsdc === null ? "—" : `$${fmtUsdc(w.heldUsdc)}`}
                   {w.verdict === "cashedOut" && typeof w.onchainUsdc === "number" && (
-                    <span className="text-faint"> +${fmtUsdc(w.onchainUsdc)} in your wallet</span>
+                    <span className="text-faint">{uiCopy("creatorGateway.walletBalance", { amount: fmtUsdc(w.onchainUsdc) })}</span>
                   )}
                 </td>
                 <td
                   className={`py-2 text-right ${w.verdict === "short" ? "text-destructive" : "text-ink-3"}`}
                 >
                   {w.verdict === "surplus"
-                    ? "backed +extra"
+                    ? uiCopy("creatorGateway.surplus")
                     : w.verdict === "cashedOut"
-                      ? "cashed out"
+                      ? uiCopy("creatorGateway.cashedOut")
                       : w.verdict}
                 </td>
               </tr>
@@ -104,10 +107,7 @@ export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
       </div>
 
       <p className="mt-3 font-serif text-[13px] leading-relaxed text-ink-2">
-        Citation payouts settle inside Circle&rsquo;s Gateway, so they carry a Circle transfer id
-        instead of a block-explorer hash. Rather than ask you to take our ledger&rsquo;s word,
-        Keryx checks it hourly against Circle&rsquo;s public balance API — and you can run the same
-        request yourself:
+        {uiCopy("creatorGateway.explanation")}
       </p>
       <pre className="mt-2 overflow-x-auto border border-line bg-paper-2 p-3 font-mono text-[10px] leading-relaxed text-ink-2">
 {`curl -s ${browserPaymentProfile().gatewayApiUrl}/v1/balances \\
@@ -115,10 +115,7 @@ export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
   -d '{"token":"USDC","sources":[{"depositor":"${proof.wallets[0].address}","domain":26}]}'`}
       </pre>
       <p className="mt-2 font-mono text-[10px] leading-relaxed text-faint">
-        A balance above the claim is your own money — deposits, or payouts from any other x402
-        service that pays this wallet. If you have already cashed out, the money shows in your own
-        wallet on-chain instead and the row reads &ldquo;cashed out&rdquo;. Keryx only flags a
-        balance that neither the Gateway nor your wallet accounts for.
+        {uiCopy("creatorGateway.boundary")}
       </p>
     </section>
   );

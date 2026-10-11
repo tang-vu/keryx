@@ -5,9 +5,12 @@
  * vs "offline preview — payments simulated" (quiet ink).
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import type { StreamMode } from "@/lib/hooks/use-ask-stream";
 import { cn } from "@/lib/utils";
 import { currentArcLabel } from "@/lib/arc-network-display";
+
+const copy = createMessages("en");
 
 export function ModeBadge({
   mode,
@@ -34,7 +37,7 @@ export function ModeBadge({
           real ? "animate-pulse bg-paid" : "bg-ink-3/50",
         )}
       />
-      {real ? `live on ${currentArcLabel}` : "offline preview · simulated"}
+      {real ? copy("reportMode.live", { network: currentArcLabel }) : copy("reportMode.offline")}
     </span>
   );
 }

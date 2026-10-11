@@ -5,8 +5,11 @@
  * payouts and payment counts, with explicit loading and unavailable states.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useState } from "react";
 import { currentArcLabel } from "@/lib/arc-network-display";
+
+const uiCopy = createMessages("en");
 
 export function HeroStats() {
   const [m, setM] = useState<{ paid: number; cites: number } | null>(null);
@@ -31,20 +34,20 @@ export function HeroStats() {
     };
   }, []);
 
-  if (state !== "ready" || !m) return <p className="border border-ink px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? `Loading settled ${currentArcLabel} totals…` : "Settled totals unavailable."}</p>;
+  if (state !== "ready" || !m) return <p className="border border-ink px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? uiCopy("landingTotals.loading", { network: currentArcLabel }) : uiCopy("landingTotals.unavailable")}</p>;
 
   return (
     <div className="flex w-full border border-ink">
       <Cell
         target={m.paid}
         fmt={(n) => `$${n.toFixed(2)}`}
-        label={`Paid to creators · lifetime · ${currentArcLabel}`}
+        label={uiCopy("landingTotals.paid", { network: currentArcLabel })}
         money
       />
       <Cell
         target={m.cites}
         fmt={(n) => Math.round(n).toLocaleString()}
-        label="Settled payments · lifetime"
+        label={uiCopy("landingTotals.payments")}
       />
     </div>
   );
