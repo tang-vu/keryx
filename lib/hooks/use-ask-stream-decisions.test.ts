@@ -13,7 +13,7 @@ it("keeps only source decisions from both streamed and canonical final records",
     "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
   } });
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(process.env.KERYX_CLAIMS_BROWSER_EXECUTABLE ? { executablePath: process.env.KERYX_CLAIMS_BROWSER_EXECUTABLE } : {}) });
   try {
     const page = await browser.newPage();
     await page.route("**/*", route => route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' }));

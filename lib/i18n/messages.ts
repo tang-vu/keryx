@@ -1,6 +1,7 @@
 import { legalMessages } from "@/locales/en/legal";
 import type { UiLocale } from "./locales";
 import { myHistoryMessages } from "@/locales/en/my-history";
+import { claimantHistoryMessages } from "@/locales/en/claimant-history";
 import { shellMessages } from "@/locales/en/shell";
 import { operationsMessages } from "@/locales/en/operations";
 
@@ -10,6 +11,7 @@ export const englishMessages = Object.freeze({
   ...operationsMessages,
   ...shellMessages,
   ...myHistoryMessages,
+  ...claimantHistoryMessages,
   "navigation.home": "Home",
   "navigation.archive": "The archive",
   "navigation.newDispatch": "New dispatch",

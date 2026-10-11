@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+## Localize ordinary bot wrappers from the original question — 2026-10-11
+
+Use the existing finite ordinary-answer selector for Telegram, Discord and Slack
+product notices, with typed English source copy and en/vi/pt/es catalogues (`pt`
+maps explicitly to Brazilian Portuguese). Keep selection request-local and leave
+reviewed answers, excerpts, diagnostics, amounts, raw payment modes and private
+claim delivery unchanged. Recorded rewards remain distinct from settlement.
+Bare help remains English until an admitted preference exists. No UI locale or
+human translation approval is implied; preferences, recipient notifications,
+other-surface scaffolding and exact-source delivery remain issue276 gates. See
+[the source scope](docs/engineering/bot-wrapper-language-276-2026-10-11.md).
+
 ## Retain actual post-portfolio READ checkpoints without new authority — 2026-10-10
 
 Use the same pure, versioned evaluator for ordinary READ admission and bounded
@@ -7045,18 +7057,117 @@ and distinguish source fixture acceptance from production measurements or rollou
 See [public usage cohorts](docs/engineering/public-usage-cohorts.md) for the counting
 rules, ordinary PostgreSQL qualification and remaining deployed closure gates.
 
-## 2026-10-11 — Store-preparation extension patch and public disclosures
+## 2026-10-11 — Private run claims use existing interactive wallet authority
 
-Use extension 0.1.3.1 for the independently reviewable Store-preparation patch.
-Chrome accepts four numeric version parts; this sorts after published 0.1.3 and
-before the separately prepared, unmerged 0.1.4 private-claim work. Keep app and
-agent package versions unchanged because no request/payment contract is changed.
+Anonymous-run claims attach ownership in a separate ordinary, default-off domain;
+they do not rewrite the saved run or establish payment/settlement authority. The
+fragment landing is a dedicated HTML route so its synchronous credential removal
+and hash-only CSP precede application layouts and analytics. Credentials stay only
+in a closure; separate-window sign-in carries no credential or return selector.
+Consumption requires explicit owner confirmation, durable wallet/hashed-IP limits
+before token lookup, and atomic session/original rechecks. No GET or history read
+can mint or consume a credential.
 
-Publish a dedicated extension privacy policy in the public repository and link it
-before Ask. Disclose public questions/results, explicit page URL submission,
-editable web URL/history, availability request metadata and the bounded local
-report list. The hosted privacy source receives the same correction, with actual
-live deployment and readback owned by the existing serialized runtime batch.
-A packaging preflight rejects invalid descriptions/versions before archive writes.
-Retain the historical legal extraction fixture and permit only the reviewed
-extension section and dated policy change; preserve all other policy markup.
+The existing durable web session is minted by both SIWE and the reviewed Circle
+Google wallet flow; its schema does not distinguish issuance methods. The claim
+write uses this verified interactive wallet authority and denies bearer keys. The
+earlier “SIWE-only” design shorthand must not be read as proof of an absent login
+discriminator. This is a description of existing authentication, not an inferred
+owner policy change. Ordinary PostgreSQL acceptance, every applicable ingress and
+client, combined release and deployment/schema admission remain open. See
+`docs/anonymous-run-claims.md`; no native/archive enrollment is changed.
+
+## 2026-10-11 — Anonymous claim delivery stays in private request responses
+
+The ordinary claim domain is admitted before providers and completed after the
+existing saved-run boundary. A request-local one-shot packet travels separately
+from public answers, reports and accounting projections; late issuance failure
+preserves the saved answer and cannot regenerate a lost credential. Direct
+OpenAI-compatible and remote MCP callers receive a private response extra or
+separate caller-conversation item. Bot delivery requires initial Discord ephemeral
+visibility, explicit Slack ephemeral responses, or a freshly confirmed Telegram
+sender-private placeholder before research. A Telegram failure cannot fall back
+to its group. The extension retains only closure memory and an explicit one-shot
+tab handoff, with no recent storage, export, clipboard or DOM token.
+
+The analytics-allowed web research document cannot receive these credentials.
+Enabled anonymous web admission remains closed until its dedicated protected
+initial document, hard navigation, nonce CSP and built-browser evidence pass.
+Owned/payer-bound and native original paths remain unchanged, with no claim-domain
+fallback. Local engine CLI and claimant history/profile client integration remain
+explicit outstanding surface decisions. This checkpoint is default-off source
+preparation, not shared DDL, activation, complete issue acceptance or release.
+
+## 2026-10-11 — Web claim handoffs require a protected initial document
+
+Anonymous web claim delivery uses a dedicated dynamic research document with
+native full-page entry, a fresh nonce CSP, no external analytics or wallet/RPC
+connections, no referrer or storage caching, framing denial and same-origin COOP.
+Its visible copy distinguishes ordinary question/report visibility from protection
+of the account claim link. Funded browser controls remain on ordinary research.
+
+A parser-executed initial script installs only a nonenumerable document closure.
+The fixed 24-hour admission ticket uses a domain-separated HMAC from the existing
+strong session secret and grants neither account ownership nor payment authority.
+Next's listener-origin reconstruction requires an exact configured Host/protocol
+entry check; API authority retains the configured-Origin CSRF check and signed
+ticket. Required browser Fetch Metadata refuses SPA/fetch admission even though
+Next strips internal Flight headers before user Proxy code.
+
+The separate post-save private SSE packet stays in a one-shot closure, with an
+explicit handoff only after clean EOF. No credential enters a saved run, public
+projector, React report state, DOM, storage, clipboard, logs or exports. Abort,
+expiry, reload or lost acknowledgement forgets it without paid-research replay.
+Trusted first-party scripts remain within the boundary; this is not protection
+from privileged malicious same-origin JavaScript. Exact built-browser evidence
+and fresh combined hosted acceptance govern release; ordinary-schema admission,
+native enrollment and production activation remain separate and default off.
+
+## 2026-10-11 — CLI claims and claimant history preserve separate ownership
+
+An unowned local ask requires an explicitly inherited private FIFO/socket descriptor
+before any enabled research starts. Standard output and error remain public answer
+channels. The private descriptor receives one bounded post-save packet; a failed or
+uncertain write cannot trigger a new credential or research replay. The account UI
+reads recorded and claimed ownership through the owner-private history port, using
+the server-session wallet and original record with separate sidecar metadata. It
+does not infer a payer, receipt, reward or settlement from claimant attribution.
+
+All five ordinary Supabase claim/history RPCs have a fixed 15-second transport
+deadline. Issuance failure preserves the saved answer; an uncertain consume response
+cannot prove rollback or permit a retry. These source boundaries and synthetic
+acceptance do not activate a database, extend native capabilities or authorize
+funding. Final combined CI, distribution and separately admitted deployment remain
+required. See the CLI, claimant-history and RPC-deadline engineering notes.
+
+## 2026-10-11 — Exact Spanish note counts must preserve admitted evidence
+
+Recognize only a finite positive short-note sentence command from the original
+ordinary Spanish request; quoted, negated, ambiguous and unsupported forms gain
+no presentation contract. Apply its projection after attribution, settlement
+and all operational notices. Repeated target scaffolding may be removed only
+when every admitted statement retains its exact source excerpt and binding;
+confidence, gaps, limitations and financial notices remain visible. Measure the
+complete visible answer, including quotes and notices, and report an unmet exact
+count rather than drop facts, merge attributed statements or invent padding.
+This is a presentation-only source outcome. The retained five-pair NASA answer
+still does not meet three sentences, so #231 stays open. No evidence/reward gate,
+model/search budget, private/native authority or payment decision changes. See
+[the finite presentation contract](docs/engineering/sentence-note-presentation-2026-10-11.md).
+
+## 2026-10-11 — Chrome Store patch and extension privacy disclosures
+
+Use extension 0.1.4.1 for Store preparation on the merged 0.1.4 source, preserving
+its anonymous-original account-claim behavior. The app and agent package versions
+remain unchanged because this patch changes extension presentation/distribution
+and legal copy, without changing request/payment authority or enabling claims.
+
+Publish a dedicated extension policy in the public repository and link it before
+Ask. Disclose public questions/results, explicit page URLs, editable web URL/history,
+availability request metadata, bounded local report history, and the account-claim
+ticket held only in popup memory before deliberate web handoff. Claims do not make
+public research private. Hosted policy source receives the same correction; actual
+deployment/readback belongs to the existing serialized runtime batch. Packaging
+refuses invalid descriptions/versions before archive writes. Keep the historical
+legal extraction fixture and require every paragraph outside the reviewed extension
+section and dated update to retain its exact markup.

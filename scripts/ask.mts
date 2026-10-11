@@ -5,17 +5,20 @@
  * Usage: npm run ask -- "How do x402 and stablecoins enable AI agent commerce?" --budget 0.05
  *        npm run ask -- "…" --model deepseek-v4-pro   (catalog id; see lib/llm/model-catalog.ts)
  *        npm run ask -- "…" --web   (explicit external search provider disclosure)
+ * Private claims require a direct Node launcher with a dedicated inherited pipe; see private-cli-claims-262.md.
  */
 
 import { c, printStep } from "./trace-console.mts";
 import { formatRecordedUsdc } from "../lib/display/recorded-usdc.ts";
 import { projectActualReadCheckpoints } from "../lib/research-audit/actual-read-projection.ts";
+import { parsePrivateCliClaimFd, preparePrivateCliClaim } from "./private-cli-claims.mts";
 
 // ── parse args ──
 const argv = process.argv.slice(2);
 let budget: number | undefined;
 let model: string | undefined;
 let allowExternalWeb = false;
+let privateClaimFd: number | undefined;
 const qParts: string[] = [];
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === "--budget") {
@@ -30,6 +33,9 @@ for (let i = 0; i < argv.length; i++) {
     model = value.trim();
   } else if (argv[i] === "--web") {
     allowExternalWeb = true;
+  } else if (argv[i] === "--private-claim-fd") {
+    if (privateClaimFd !== undefined) throw new Error("Duplicate private claim output option.");
+    privateClaimFd = parsePrivateCliClaimFd(argv[++i]);
   } else if (argv[i].startsWith("--")) {
     throw new Error("Unsupported option. Review-first requires the authenticated live browser.");
   } else {
@@ -41,6 +47,10 @@ const question =
   "How do x402 and stablecoin micropayments enable autonomous AI agent commerce?";
 
 // Refuse unsupported execution intent before initializing the agent/provider graph.
+const privateClaim = await preparePrivateCliClaim({ env: process.env, fd: privateClaimFd, prepare: async runId => {
+  const { prepareHostedRunClaim } = await import("../lib/run-claims/hosted-delivery.ts");
+  return prepareHostedRunClaim(runId);
+} });
 const [{ collectRun }, { getReasoningEngine }, { ResearchPlanningError, researchFailureMessage },
   { ResearchSelectionError }, { reasoningOutputLimitText }] = await Promise.all([
   import("../lib/agent/index.ts"), import("../lib/llm/index.ts"), import("../lib/llm/research-plan.ts"),
@@ -55,12 +65,15 @@ if (allowExternalWeb) console.log("Public web search may send this question to t
 console.log(c.dim("─".repeat(72)));
 
 const run = await collectRun({ question, budget, model, origin: "engine", allowExternalWeb,
+  ...(privateClaim ? { queryId: privateClaim.queryId } : {}),
   provenance: { version: 1, surface: "cli", ownershipMethod: "unknown" } }, { onStep: printStep }).catch(error => {
   if (!(error instanceof ResearchPlanningError) && !(error instanceof ResearchSelectionError)) throw error;
   console.error(researchFailureMessage(error));
   if (error instanceof ResearchSelectionError) console.error(JSON.stringify({ selectionDiagnostic: error.diagnostic }));
   process.exit(1);
 });
+// collectRun returns only after saving the original. The packet never joins this run or its trace.
+const privateClaimStatus = await privateClaim?.complete(run);
 
 console.log(c.dim("─".repeat(72)));
 console.log(c.bold("\n📝 Answer\n"));
@@ -90,4 +103,6 @@ console.log(c.dim(`Payment mode: ${run.paymentMode === "offline" ? "offline simu
 console.log(c.dim("Model and search operating costs are separate from the source cap and recorded source total."));
 if (run.operatingFee) console.log(`Keryx operating fee allocation: ${formatRecordedUsdc(run.operatingFee.amountUsdc, { denomination: "USDC" })} · ${run.operatingFee.status}. Separate from creator rewards; inspect the original payment ledger for settlement evidence.`);
 console.log(c.dim(`\nrun id: ${run.id}\n`));
+if (privateClaimStatus === "written") console.log(c.dim("Private account claim written once to the dedicated private pipe. Keep it private; lost delivery cannot be reissued."));
+if (privateClaimStatus === "unavailable") console.log(c.dim("The completed answer is saved, but its private account claim is unavailable. Do not repeat paid research to recover it."));
 process.exit(0);

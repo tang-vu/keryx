@@ -20,6 +20,8 @@ import { isRequestObject } from "@/lib/request-object";
 import { unsupportedDecisionReviewIntent } from "@/lib/research/decision-review-types";
 import { NextRequest } from "next/server";
 import { collectRun } from "@/lib/agent";
+import { prepareHostedRunClaim } from "@/lib/run-claims/hosted-delivery";
+import { RunClaimError } from "@/lib/run-claims/contracts";
 import { resolveModelChoice } from "@/lib/llm";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
@@ -147,10 +149,13 @@ export async function POST(req: NextRequest) {
   // ── Non-streaming: run to completion, return one ChatCompletion object. ──
   if (!body.stream) {
     try {
+      const privateClaim = isBot ? null : await prepareHostedRunClaim(queryId, keyIdentity?.walletAddress);
       const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep", ...(keyIdentity ? { asker: keyIdentity.walletAddress } : {}),
         provenance: { version: 1, surface: "api", ownershipMethod: keyIdentity ? "api-key" : "unknown" } });
-      return Response.json(buildCompletion(run, modelName), { headers: CORS });
+      const packet = await privateClaim?.complete(run);
+      return Response.json({ ...buildCompletion(run, modelName), ...(packet ? { keryx_private: packet } : {}) }, { headers: { ...CORS, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
     } catch (error) {
+      if (error instanceof RunClaimError) return openaiError("Private run claims are unavailable on this deployment.", 503, "claims_unavailable");
       const held = researchAdmissionError(error);
       if (held) return openaiError(held.message, 503, held.code);
       if (!(error instanceof ResearchPlanningError) && !(error instanceof ResearchSelectionError)) throw error;
@@ -172,6 +177,7 @@ export async function POST(req: NextRequest) {
         }
       };
       try {
+        const privateClaim = isBot ? null : await prepareHostedRunClaim(queryId, keyIdentity?.walletAddress);
         send(buildChunk(id, modelName, { role: "assistant" }));
         // Stream each trace step as an o1-style reasoning delta. Clients that don't support
         // reasoning_content ignore it and still receive the answer content below.
@@ -181,7 +187,8 @@ export async function POST(req: NextRequest) {
           { onStep: (s) => send(buildChunk(id, modelName, { reasoning_content: traceLine(s) })) },
         );
         send(buildChunk(id, modelName, { content: buildAnswerContent(run) }));
-        send(buildChunk(id, modelName, {}, "stop", { keryx: keryxMeta(run) }));
+        const packet = await privateClaim?.complete(run);
+        send(buildChunk(id, modelName, {}, "stop", { keryx: keryxMeta(run), ...(packet ? { keryx_private: packet } : {}) }));
         try {
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         } catch {
@@ -205,7 +212,8 @@ export async function POST(req: NextRequest) {
     headers: {
       ...CORS,
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
+      "Cache-Control": "no-store, no-transform",
+      "Referrer-Policy": "no-referrer",
       Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     },

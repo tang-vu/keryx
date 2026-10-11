@@ -12,6 +12,7 @@ import { Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { CurrentHistoryPane } from "./current-history-view";
+import { ClaimantHistoryPane } from "./claimant-history-view";
 import { personalHistoryCopy as copy } from "@/locales/en/personal-history";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
@@ -64,14 +65,16 @@ function timeAgo(iso: string): string {
 export function MyAsksView() {
   const [historical, setHistorical] = useState(false);
   const [browse, setBrowse] = useState(false);
+  const [claimantHistory, setClaimantHistory] = useState(false);
   return <div>
     <nav className="mb-6 flex flex-wrap gap-3" aria-label={message("myHistory.networkLabel")}>
       <button type="button" aria-pressed={!historical} onClick={() => setHistorical(false)} className="min-h-11 border border-line px-4 text-sm">{message("myHistory.currentNetwork")}</button>
       <button type="button" aria-pressed={historical} onClick={() => setHistorical(true)} className="min-h-11 border border-line px-4 text-sm">{message("myHistory.testnetHistory")}</button>
     </nav>
     {historical && <p className="mb-5 text-sm leading-relaxed text-ink-2">{message("myHistory.testnetScope")}</p>}
-    {!historical && <button type="button" className="mb-5 min-h-11 border border-line px-4 text-sm" onClick={() => setBrowse(value => !value)}>{browse ? copy.recent : copy.browse}</button>}
-    {!historical && browse ? <CurrentHistoryPane /> : <MyAsksLedger key={historical ? "testnet" : "current"} historical={historical} />}
+    {!historical && !claimantHistory && <button type="button" className="mb-5 min-h-11 border border-line px-4 text-sm" onClick={() => setBrowse(value => !value)}>{browse ? copy.recent : copy.browse}</button>}
+    {!historical && <button type="button" className="mb-5 min-h-11 border border-line px-4 text-sm" aria-pressed={claimantHistory} onClick={() => setClaimantHistory(value => !value)}>{claimantHistory ? message("claimantHistory.close") : message("claimantHistory.open")}</button>}
+    {!historical && claimantHistory ? <ClaimantHistoryPane /> : !historical && browse ? <CurrentHistoryPane /> : <MyAsksLedger key={historical ? "testnet" : "current"} historical={historical} />}
   </div>;
 }
 

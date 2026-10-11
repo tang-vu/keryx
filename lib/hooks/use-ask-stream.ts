@@ -37,6 +37,9 @@ import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/
 import { isDecisionRecord } from "../research/decision-record";
 import { decisionReviewSchema, type DecisionReview } from "../research/decision-review-types";
 import { parseAskHttpError, type MaintenanceRefusal } from "./ask-error-response";
+import { PRIVATE_DOCUMENT_HEADER } from "../run-claims/web-contract";
+import type { PrivateClaimHandoff } from "../run-claims/web-handoff";
+import { privateResearchCopy } from "../../locales/en/run-claim-research";
 
 export type StreamMode = "real" | "offline";
 
@@ -105,6 +108,8 @@ function parseFrame(block: string): { event: string; data: string } | null {
 }
 
 interface AskStreamOpts {
+  /** Transport-only closure; never copied into the stream state or a saved turn. */
+  privateClaimHandoff?: PrivateClaimHandoff;
   /** Mainnet worker reads the authenticated journal original itself; SSE is notification only. */
   authorizeSessionPayment?: (reqId: string, question: import("../session/browser-session-runtime").BrowserQuestionBudget) => Promise<string>;
   /**
@@ -145,6 +150,7 @@ export function useAskStream(opts?: AskStreamOpts) {
     questionCapUsdc,
     sourceIndex,
     onSessionExpired,
+    privateClaimHandoff,
   } = opts ?? {};
   const [state, setState] = useState<AskStreamState>(INITIAL);
   const abortRef = useRef<AbortController | null>(null);
@@ -157,10 +163,15 @@ export function useAskStream(opts?: AskStreamOpts) {
     abortRef.current = null;
     signBudgetRef.current = null;
     questionBudgetRef.current = null;
+    privateClaimHandoff?.clear();
     setState(INITIAL);
-  }, []);
+  }, [privateClaimHandoff]);
 
   const handleEvent = useCallback((event: string, raw: string, question: import("../session/browser-session-runtime").BrowserQuestionBudget | null) => {
+    if (event === "private-run-claim") {
+      privateClaimHandoff?.packet(raw);
+      return;
+    }
     let data: unknown;
     try {
       data = JSON.parse(raw);
@@ -342,6 +353,7 @@ export function useAskStream(opts?: AskStreamOpts) {
 
     if (event === "done") {
       const run = data as QueryRun;
+      privateClaimHandoff?.saved(run.id);
       setState((s) => ({
         ...s,
         status: "done",
@@ -354,6 +366,7 @@ export function useAskStream(opts?: AskStreamOpts) {
     }
 
     if (event === "error") {
+      privateClaimHandoff?.fail();
       const { message, code, selectionDiagnostic } = data as { message: string; code?: string; selectionDiagnostic?: unknown };
       const diagnostic = parseSelectionDiagnostic(selectionDiagnostic);
       setState((s) => ({ ...s, status: "error", errorKind: code === "research_paused" ? "research-paused" : "generic",
@@ -363,7 +376,7 @@ export function useAskStream(opts?: AskStreamOpts) {
   // opts is an object reference — destructure the primitive/stable values into the dep array
   // so the hook re-creates handleEvent when the grant activates or the cap changes.
   // sourceIndex is a Map: stable after the one-time /api/sources fetch in app/page.tsx.
-  }, [sessionId, getSessionWalletClient, authorizeSessionPayment, sourceIndex]);
+  }, [sessionId, getSessionWalletClient, authorizeSessionPayment, sourceIndex, privateClaimHandoff]);
 
   const ask = useCallback(
     async (
@@ -377,6 +390,11 @@ export function useAskStream(opts?: AskStreamOpts) {
       reviewFirst = false,
     ) => {
       reset();
+      const privateDocument = privateClaimHandoff?.begin();
+      if (privateClaimHandoff && !privateDocument) {
+        setState({ ...INITIAL, status: "error", errorKind: "generic", error: privateResearchCopy.fullNavigation });
+        return;
+      }
       // Reset reservations for this ask before any SSE frame can arrive.
       signBudgetRef.current = new BrowserSignBudget(grantCap);
       if (!browserPaymentProfile().testnet) {
@@ -403,7 +421,8 @@ export function useAskStream(opts?: AskStreamOpts) {
       try {
         const res = await fetch("/api/ask", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(privateDocument ? { [PRIVATE_DOCUMENT_HEADER]: privateDocument } : {}) },
+          ...(privateDocument ? { cache: "no-store", credentials: "same-origin", referrerPolicy: "no-referrer", redirect: "error" } as const : {}),
           body: JSON.stringify({
             question,
             budget,
@@ -424,6 +443,7 @@ export function useAskStream(opts?: AskStreamOpts) {
         if (!isCurrent()) return;
 
         if (!res.ok || !res.body) {
+          privateClaimHandoff?.fail();
           // Read the error body once (as text), then try JSON — so we can react to a
           // structured session_expired without consuming the stream body twice.
           const bodyText = await res.text().catch(() => "");
@@ -500,6 +520,7 @@ export function useAskStream(opts?: AskStreamOpts) {
         const tail = parseFrame(buffer);
         if (!isCurrent()) return;
         if (tail) handleEvent(tail.event, tail.data, questionScope);
+        privateClaimHandoff?.finish();
 
         setState((s) => {
           // A `done` or `error` event already moved us out of "streaming" — keep that.
@@ -517,8 +538,9 @@ export function useAskStream(opts?: AskStreamOpts) {
         });
       } catch (err) {
         if (!isCurrent()) return;
+        privateClaimHandoff?.fail();
         if ((err as Error)?.name === "AbortError") return;
-        setState((s) => ({
+        setState((s) => privateClaimHandoff && s.run ? { ...s, status: "done" } : ({
           ...s,
           status: "error",
           errorKind: "generic",
@@ -526,7 +548,7 @@ export function useAskStream(opts?: AskStreamOpts) {
         }));
       }
     },
-    [handleEvent, reset, sessionId, grantCap, questionCapUsdc, onSessionExpired],
+    [handleEvent, reset, sessionId, grantCap, questionCapUsdc, onSessionExpired, privateClaimHandoff],
   );
 
   return { state, ask, reset };

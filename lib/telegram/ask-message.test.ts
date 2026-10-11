@@ -40,6 +40,7 @@ describe("parseAskMessage", () => {
       chatId: -100123,
       userId: 789,
       messageId: 42,
+      chatType: "group",
     });
   });
 

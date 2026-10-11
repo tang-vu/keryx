@@ -1,0 +1,20 @@
+const runClaimCopy = Object.freeze({
+  title: "Save this research to your account",
+  introduction: "This private link can be used once within 24 hours. Claiming adds the saved run to your history. It does not change who paid or any payment or creator reward.",
+  memory: "The link has been removed from this address bar. Keep this tab open while signing in. Reloading or closing it loses this copy of the link; Keryx cannot reissue it.",
+  signIn: "Sign in in a separate window",
+  check: "Check signed-in account",
+  claim: "Save to this account",
+  ready: "Confirm the account below, then save this research.",
+  signedOut: "Sign in, then return to this tab and check your account.",
+  changed: "Your signed-in account changed. Check the account below before confirming again.",
+  checking: "Checking your signed-in account…",
+  saving: "Saving to your account…",
+  saved: "This research is now in this account’s private history. Its original payment records are unchanged.",
+  unavailable: "This claim link is unavailable. It may be invalid, expired, already used or no longer eligible.",
+  serviceUnavailable: "Run claims are unavailable on this deployment.",
+  authUnavailable: "Your signed-in account could not be checked. Try checking again.",
+  unconfirmed: "The claim request could not be confirmed. Check your private history. This tab will not submit the link again.",
+});
+
+module.exports = { runClaimCopy };

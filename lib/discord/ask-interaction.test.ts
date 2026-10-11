@@ -161,7 +161,7 @@ function fakeRun(overrides: Partial<QueryRun> = {}): QueryRun {
 describe("response builders", () => {
   it("pong/deferred/ephemeral carry Discord's callback types and flags", () => {
     expect(pong()).toEqual({ type: 1 });
-    expect(deferredResponse()).toEqual({ type: 5 });
+    expect(deferredResponse()).toEqual({ type: 5, data: { flags: 64 } });
     const eph = ephemeralReply("nope");
     expect(eph.type).toBe(4);
     expect(eph.data.flags).toBe(64);

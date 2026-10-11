@@ -5,7 +5,7 @@ desktop, API, CLI, remote/stdio MCP and bot capabilities, implement the applicab
 parts, and leave durable notes so subsequent updates consider these surfaces together.
 Version numbers alone do not establish feature parity, publication or installation.
 
-Extension **0.1.3.1 store-preparation patch** remains a Chromium Manifest V3 hosted research client.
+Extension **0.1.4.1 store-preparation patch** remains a Chromium Manifest V3 hosted research client.
 It uses the existing OpenAI-compatible endpoint and permissions; it has no signer,
 account token, local Operator task engine, funding action or scheduler.
 
@@ -18,6 +18,7 @@ account token, local Operator task engine, funding action or scheduler.
 | Answer, citations and money | Safe text answer, original HTTP(S) article links, exact canonical USDC display, planned rewards/recorded totals/pending spend. The complete hosted report owns evidence review and per-payment receipts. No distinct-settled-creator count inferred. |
 | Recorded exports | Download the returned BibTeX/RIS/CSL-JSON/evidence CSV bytes. No new model call, reference enrichment or recomputation. Answer rendering remains plain text; rich Markdown/evidence editing stays on web. |
 | Reopening reports | At most ten completed same-origin public dispatch URLs (UUID or deterministic A2A ID) plus timestamps in device storage, with a clear control. No prompts, answers, page contents, tokens or keys saved to this list. It is best-effort device history, not hosted account history. |
+| Account claim | An eligible anonymous completed run exposes a deliberate Save this research to your account action. Its short-lived single-use ticket stays in popup memory, outside storage/reports/exports, and the hosted account flow verifies it. Claiming does not hide published research. |
 | Hosted workspaces and follow-up | Deliberate editable `q`, `budget`, `mode` web draft, omitting `run=1`; Sources, Literature and My research links. Hosted account auth, private drafts, bibliography editing and creator administration keep their existing controls. The scholarly option is chosen again on web because the current editable-link contract does not carry it. |
 | Desktop/CLI/MCP/bots | Keep local receipt/export, caller-funded buyer/recovery, delegated read and hosted answer roles. Extension parity does not transplant their keys, filesystem access or account authority into the popup. |
 
@@ -45,12 +46,12 @@ its actual source path and version are verified.
 
 ## Chrome Web Store preparation — October 11, 2026
 
-The 0.1.3.1 patch shortens the manifest description to 119 characters, adds a
+The 0.1.4.1 patch shortens the manifest description to 119 characters, adds a
 public-research notice and policy link before submission, and documents explicit
 page-URL submission, web drafts and the ten-entry local report list. Packaging
 refuses invalid Chrome version syntax or descriptions longer than 132 characters.
-The four-part version sorts after 0.1.3 and before the separately prepared 0.1.4;
-it does not incorporate the unmerged private-claim feature.
+The four-part version sorts after merged 0.1.4 and preserves its anonymous-original
+account-claim feature. Claims do not make the public research private.
 
 Use the public [extension privacy policy](https://github.com/tang-vu/keryx/blob/main/docs/extension-privacy.md)
 as the Store privacy URL. The matching hosted `/privacy` source is updated in
@@ -60,8 +61,7 @@ batch and must be observed before claiming that URL is current.
 The patch changes only the extension presentation/distribution and shared legal
 copy. API, web research, desktop, CLI, remote/stdio MCP and bot request/payment
 contracts retain their roles and need no version bump for these disclosure changes.
-The app version is retained to avoid colliding with the pending combined runtime
-release. A dedicated `extension-v0.1.3.1` GitHub release carries the accepted ZIP;
+The app version is retained; its existing combined runtime release owns deployment. A dedicated `extension-v0.1.4.1` GitHub release carries the accepted ZIP;
 publication and current main acceptance are checked separately from Store approval.
 
 In the Store dashboard, declare the actual user-generated question content, selected

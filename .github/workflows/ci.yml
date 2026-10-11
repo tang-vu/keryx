@@ -461,6 +461,19 @@ jobs:
       - name: Build (Next.js)
         run: npm run build
 
+      - name: Private claim initial document and one-shot web handoff (built, synthetic)
+        env:
+          KERYX_PRIVATE_WEB_RESULT: ${{ runner.temp }}/private-run-claim-built.json
+        run: node --import tsx scripts/test-run-claims-private-web-built.mts
+
+      - name: Retain private claim built-browser acceptance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-run-claim-built-${{ github.sha }}
+          path: ${{ runner.temp }}/private-run-claim-built.json
+          if-no-files-found: ignore
+
       - name: Public transfer ledger (built API, sealed offline SQLite and production CSS)
         run: node --import tsx scripts/test-public-job-ledger-built.mts
 

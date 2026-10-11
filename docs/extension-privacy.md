@@ -1,7 +1,7 @@
 # Keryx browser extension privacy policy
 
 Last updated: October 11, 2026. Covers the Keryx Manifest V3 extension, including
-version 0.1.3.1. The extension is a client for public research at keryx.cc.
+version 0.1.4.1. The extension is a client for public research at keryx.cc.
 
 ## Information you choose to submit
 
@@ -48,6 +48,18 @@ The extension displays recorded public payment evidence and does not hold wallet
 keys, sign transactions, connect a wallet or create a spending authorization.
 Wallet actions on the linked website follow its separate disclosures. On-chain
 payment records are public and cannot be erased by Keryx.
+
+## Optional account claim
+
+An eligible completed anonymous public run can return a private, short-lived,
+single-use claim ticket so you can associate that run with your account. The
+extension holds it only in popup memory: it is excluded from extension storage,
+report links and reference exports. Closing the popup or starting another request
+loses it. **Save this research to your account** deliberately opens the Keryx
+claim page with the ticket in a URL fragment, which the website processes for
+the claim flow. The link can be retained in browser history; treat it as a secret
+and do not share it. Website sign-in and account ownership checks apply. Claiming
+a run does not make its published question, answer or payment records private.
 
 ## Storage, retention and deletion
 

@@ -62,7 +62,7 @@ describe("exact English legal page catalogue", () => {
         const extension = after.match(extensionSection)![0];
         for (const disclosure of ["Opening the popup checks research availability", "Include this page URL as a source",
           "are published and retained", "AI provider processes", "discovery services", "Open editable question on web",
-          "at most ten completed public report URLs with timestamps", "does not delete hosted reports"]) {
+          "at most ten completed public report URLs with timestamps", "does not delete hosted reports", "held only in popup memory", "URL fragment", "does not make published research private"]) {
           expect(extension).toContain(disclosure);
         }
         expect(extension).not.toContain("only time a page URL leaves");

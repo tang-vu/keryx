@@ -1,0 +1,16 @@
+export const privateResearchCopy = {
+  metadataTitle: "Account claim research — Keryx",
+  title: "Private account claim delivery",
+  introduction: "Ask here to receive a private, single-use account link for a new unowned report. The link changes history ownership only, never who paid, receipts or creator rewards.",
+  visibility: "Question and report visibility follows ordinary research. This tab protects the account claim link.",
+  fullNavigation: "Open private research in a new page before asking. An in-app transition does not protect an existing document.",
+  unavailable: "Private account links are unavailable. Open ordinary research to continue without a claim link.",
+  limits: "This private tab allows only same-origin connections. Funded wallet sessions, external wallet connections and card funding are available on ordinary research. Opening another page or a new request discards this tab's previous account link.",
+  ordinary: "Open ordinary research and funded-session controls",
+  entry: "Open private research for an account claim link",
+  available: "This completed report has a private account link. Open it once to save the report to your signed-in account. Keep the new tab open while signing in; a lost handoff cannot be reissued.",
+  open: "Open private account claim",
+  failed: "The report and payment records are unchanged, but this private account link is unavailable. Do not repeat paid research to recover it.",
+  lost: "The private delivery could not be confirmed. No link can be recovered or retried. The completed report and existing payment records remain unchanged.",
+  opened: "The private handoff was attempted once. Check the new tab or your account history. This tab cannot submit the link again.",
+} as const;

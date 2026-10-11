@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hostedReportUrl, publicPageUrl, readResearchStream, researchQuestion,
+import { hostedReportUrl, privateClaimDelivery, publicPageUrl, readResearchStream, researchQuestion,
   responseError, sourceBudget, webDraftUrl } from "../../extension/research-client.mjs";
 import { MAX_ASK_QUESTION_CHARS } from "../ask-input";
 
@@ -9,6 +9,18 @@ const terminal = { choices: [{ delta: {}, finish_reason: "stop" }], keryx: { cit
 const event = (value: unknown) => `data: ${JSON.stringify(value)}\r\n\r\n`;
 
 describe("extension hosted request boundaries", () => {
+  it("accepts only live run-bound private fragment packets, never report URLs", () => {
+    const runId = "12345678-1234-1234-1234-123456789abc", claimUrl = `${origin}/claim-run#${"c".repeat(64)}`;
+    const packet = { version: 1, runId, status: "available", delivery: { version: 1, claimUrl, expiresAt: new Date(Date.now() + 60000).toISOString() } };
+    expect(privateClaimDelivery(packet, origin, runId)).toEqual({ claimUrl, expiresAt: packet.delivery.expiresAt });
+    expect(hostedReportUrl(claimUrl, origin)).toBeNull();
+    for (const value of [{ ...packet, runId: "other" }, { ...packet, token: "c".repeat(64) }, { ...packet, status: "unavailable" },
+      { ...packet, delivery: { ...packet.delivery, expiresAt: new Date(Date.now() - 1).toISOString() } },
+      { ...packet, delivery: { ...packet.delivery, claimUrl: claimUrl.replace(origin, "https://foreign.example") } },
+      { ...packet, delivery: { ...packet.delivery, claimUrl: `${origin}/claim-run?token=${"c".repeat(64)}` } },
+      { ...packet, delivery: { ...packet.delivery, token: "c".repeat(64) } }]) expect(privateClaimDelivery(value, origin, runId)).toBeNull();
+    expect(privateClaimDelivery({ ...packet, runId: "prv_old" }, origin, "prv_old")).toBeNull();
+  });
   it("preserves zero, rejects invalid budgets and mirrors the editable web cap", () => {
     expect(sourceBudget("0")).toBe(0);
     expect(sourceBudget("0.08")).toBe(0.08);
