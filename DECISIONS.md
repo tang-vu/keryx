@@ -7667,3 +7667,31 @@ replacement evidence. Source continuity and synthetic ledger inputs do not prove
 useful model delivery or authorize paid research, proposals, payments or closure.
 Root owns coordinated CI/review, distribution and deployment; both original live
 acceptance gates remain open. See the [source-unit selection record](docs/engineering/source-unit-selection-2026-10-11.md).
+
+## 2026-10-11 — Explicit, gated Zotero reference sending
+
+Relates to #285. Reuse canonical CSL-JSON/stable reference identities for a
+session-only personal Zotero connection and selected-collection send action.
+Require a dedicated key with only personal library read, note read and write;
+notes are needed for ambiguous child-note reconciliation, while file/group access
+is rejected. Encrypt with the existing owner/user/domain-bound GCM envelope.
+Use an opt-in ordinary SQLite capability, durable work/note keys, version-zero
+creates, observed-version updates, complete bounded library reconciliation and
+store-wide provider holds. Refuse unsupported/enrolled/Supabase storage and
+private originals; never add research/API-key/Operator/MCP write authority.
+Synthetic account/transport/browser acceptance is source evidence only. Root
+owns accepted main synchronization, review/CI, source graph, distribution and
+rollout; live provider and prior Overleaf acceptance keep original285 open. See
+[the Zotero source and rollout contract](docs/engineering/zotero-references-2026-10-11.md).
+
+## 2026-10-11 — Bind each Zotero library to one Keryx wallet
+
+Relates to #285. Durably bind an actual personal-library user ID to its first
+Keryx wallet; revocation removes the credential but retains that binding and
+reserved keys. Refuse a second wallet and do not offer automatic transfer: a
+revoked request can still complete, making independently keyed ownership unsafe.
+This restriction is local to the admitted store and remains subject to root's
+independent source/product review. Admit the entire canonical reference plan
+before POST; refuse overlapping source/item identities rather than collapsing
+citation keys, and preserve explicit content/arXiv versions even with one DOI.
+See [the Zotero contract](docs/engineering/zotero-references-2026-10-11.md).
