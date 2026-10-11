@@ -33,9 +33,13 @@ admission, native enrollment, funding or schedule is added.
 
 English source and target notices are agent-authored. No human translation
 approval, trust-glossary approval or deployed localization is claimed. Human
-review of financial/trust prose remains a release gate alongside independent
-source review and exact combined hosted CI. These catalogues do not activate
-the UI locale foundation or override its enabled-locale list.
+review of financial/trust prose remains work for issue273 and full localization
+acceptance; this bounded issue276 increment does not mark those translations
+reviewed or satisfy that work. It does not consume the gated trust glossary or
+activate the UI locale foundation. Its partial source release requires independent
+review, exact combined hosted CI and verified delivery, without inventing a
+standalone human-approval gate for ordinary bot notices. The UI enabled-locale
+list is unchanged.
 
 ## Applicable surfaces and remaining issue276 scope
 
