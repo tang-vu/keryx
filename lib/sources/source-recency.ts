@@ -70,7 +70,7 @@ function continuesNonCommandPrefix(question: string, start: number): boolean {
   return negative.test(before) || example.test(before);
 }
 
-/** Later sentence commands are refusal scope only, never a new native-feed capability. */
+/** Find an unquoted positive sentence command; this alone never grants a feed capability. */
 function contextualRecencyStart(question: string, families: readonly RegExp[]): number | null {
   let scanned = 0, quote: string | null = null;
   for (const boundary of question.matchAll(/(?:^|[.!?]["'\u2019\u201d`]*\s+|\n)\s*/gu)) {
@@ -95,14 +95,36 @@ function contextualRecencyStart(question: string, families: readonly RegExp[]): 
 }
 
 /**
- * Qualified native forms stay at the beginning of the original question. A later positive
- * sentence command preserves a visible hold without inferring scope from surrounding prose.
+ * One finite adjacent binding, not general anaphora: the caller explicitly identifies a
+ * registered creator release feed in a positive Read sentence, then names the newest tag
+ * in that feed. URL equality binds selection only; registration/payment authority is still
+ * checked by the existing source loop. Neither sentence supplies an observed feed cohort.
+ */
+function qualifiedContextualFeedSpan(question: string, start: number, feedUrls: readonly string[]): number | null {
+  if (feedUrls.length !== 1) return null;
+  const command = /^in\s+English,\s+name\s+the\s+newest\s+release\s+tag\s+actually\s+present\s+in\s+the\s+feed(?=\s+and\b|[,.!?]|$)/iu.exec(question.slice(start));
+  if (!command) return null;
+  const anotherCommand = /^\s*(?:please\s+)?(?:name|identify|find|compare)\s+(?:the\s+)?(?:newest|latest)\s+(?:(?:stable|prerelease|non-prerelease)\s+)?(?:releases?|versions?|entries|entry|articles?)\b/iu;
+  // Keep a leading sentence terminator observable after the boundary scanner's initial match.
+  if (contextualRecencyStart(" " + question.slice(start + command[0].length), [anotherCommand]) !== null ||
+    /\b(?:do\s+not|don['\u2019]t|never|must\s+not|should\s+not)\s+(?:name|identify|find)\s+(?:the\s+)?(?:newest|latest)\s+release\b/iu.test(question)) return null;
+  const readFamily = /^read\s+the\s+registered,\s+verified\s+creator\s+release\s+source\s+associated\s+with\s+(https?:\/\/[^\s<>"'`]+)\.\s+/iu;
+  const before = question.slice(0, start);
+  const read = /read\s+the\s+registered,\s+verified\s+creator\s+release\s+source\s+associated\s+with\s+(https?:\/\/[^\s<>"'`]+)\.\s*$/iu.exec(before);
+  if (!read || feedIdentity(read[1]) !== feedUrls[0] ||
+    contextualRecencyStart(question, [readFamily]) !== read.index) return null;
+  return start + command[0].length;
+}
+
+/**
+ * Qualified native forms start the question or use the finite adjacent registered-feed
+ * binding above. Other later positive commands preserve a visible hold without guessing scope.
  * This does not claim general temporal-language understanding or infer ordering, freshness,
  * completeness, stable/prerelease status or an observation from retained rows.
  */
 export function recognizeSourceRecency(question: string): SourceRecencyRequirement | null {
   const bounded = question.slice(0, 30000);
-  const family = /^\s*(?:please\s+)?(?:name|identify|find|compare)\s+(?:the\s+)?(?:newest|latest)\s+(?:(?:stable|prerelease|non-prerelease)\s+)?(?:releases?|versions?|entries|entry|articles?)\b/iu;
+  const family = /^\s*(?:please\s+)?(?:name|identify|find|compare)\s+(?:the\s+)?(?:newest|latest)\s+(?:(?:stable|prerelease|non-prerelease)\s+)?(?:releases?|prereleases?|non-prereleases?|versions?|entries|entry|articles?)\b/iu;
   const viFamily = /^\s*(?:hãy\s+)?(?:nêu|xác định|tìm|so sánh)\s+bản phát hành\s+(?:ổn định\s+)?mới nhất\b/iu;
   const initialCommand = family.test(bounded) || viFamily.test(bounded);
   const contextualStart = initialCommand ? null : contextualRecencyStart(bounded, [family, viFamily]);
@@ -115,15 +137,16 @@ export function recognizeSourceRecency(question: string): SourceRecencyRequireme
   const supplied = requestedSourceUrls(question);
   const identities = supplied.urls.map(feedIdentity);
   const feedUrls = [...new Set(identities.filter((url): url is string => url !== null))];
+  const contextualEnd = contextualStart === null ? null : qualifiedContextualFeedSpan(bounded, contextualStart, feedUrls);
   const incomplete = question.length > bounded.length || !!supplied.scanTruncated || supplied.omitted > 0;
   const unresolved = incomplete || feedUrls.length === 0 || identities.some(url => url === null);
-  const unsupportedForm = contextualStart !== null || !match || /\b(?:stable|prerelease|non-prerelease|before|after|cutoff|cached|retained|among|compare)\b|(?:^|[^\p{L}\p{N}])(?:trước|sau|ổn định|đã lưu)(?=$|[^\p{L}\p{N}])/iu.test(bounded);
+  const unsupportedForm = (contextualStart !== null ? contextualEnd === null : !match) || /\b(?:stable|prerelease|non-prerelease|before|after|cutoff|cached|retained|among|compare)\b|(?:^|[^\p{L}\p{N}])(?:trước|sau|ổn định|đã lưu)(?=$|[^\p{L}\p{N}])/iu.test(bounded);
   const reason: RecencyGapReason = incomplete ? "question-scan-limit" : unresolved ? "source-binding-unresolved"
     : feedUrls.length > 1 ? "ambiguous-feed-urls" : unsupportedForm ? "unsupported-temporal-form" : "newest-feed-observation-unqualified";
   const status = reason === "newest-feed-observation-unqualified" ? "explicit-single-feed" : "unsupported";
   return Object.freeze({ kind: "newest-feed-entry", status, binding: unresolved ? "unresolved" : "exact-feeds",
     feedUrls: Object.freeze(feedUrls), reason,
-    originalSpan: Object.freeze({ start: contextualStart ?? 0, end: status === "unsupported" ? bounded.length : match![0].length }) });
+    originalSpan: Object.freeze({ start: contextualStart ?? 0, end: status === "unsupported" ? bounded.length : contextualEnd ?? match![0].length }) });
 }
 
 /** A missing catalog match cannot erase the caller's unresolved request. */
