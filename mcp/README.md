@@ -1,5 +1,13 @@
 # Keryx MCP
 
+The app0.27.56 English catalogue candidate selects stdio/package and official
+Registry **0.4.16**, with hosted MCP **0.3.14**. The shared reasoning, evidence
+matrix and literature-workspace runtime inputs changed, requiring coordinated
+package builds and publication. Existing research, payment, receipt and recovery
+authority remains unchanged. Accepted combined source/CI, npm and Registry
+integrity, and actual hosted/published readback are remaining delivery gates;
+these candidate versions do not claim publication or deployment.
+
 The combined app0.27.50 source candidate selects package/official Registry
 **0.4.15** and hosted MCP **0.3.11** for the changed READ checkpoint graph.
 Ordinary ask/recovery returns only a bounded public assertion packet with its
