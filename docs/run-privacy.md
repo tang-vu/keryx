@@ -17,6 +17,8 @@ native, archive and private research facades acquire no fallback capability.
 Public detail fails unavailable without admission; lists/memory return no text.
 Internal canonical `getQueryRun` remains an original/financial reader, never a
 public authorization check. Public HTTP, discovery and enrichment use the port.
+Authorized permalink reads retain the existing recorded-evidence presentation;
+owner export/claim digests retain the exact stored original.
 
 Public lists select only `public` and unerased rows **before body retrieval and
 paging**. PublicUsage keeps its complete bounded financial metadata corpus and

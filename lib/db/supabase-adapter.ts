@@ -13,6 +13,7 @@ import { createSupabasePrivateProfiles } from "./private-profiles-supabase";
 import { createSupabaseRunClaims } from "./run-claims-supabase";
 import { runClaimsEnabled, type RunClaimsStore } from "../run-claims/contracts";
 import { createSupabaseRunPrivacy } from "./run-privacy-supabase";
+import { withRunReadProjection } from "../run-privacy/projection";
 import { requirePrivacy, type RunPrivacyStore } from "../run-privacy/contracts";
 import { createSupabaseRunOwnershipHistory } from "./run-ownership-history-supabase";
 import type { RunOwnershipHistoryStore } from "../run-claims/history";
@@ -190,7 +191,8 @@ export class SupabaseAdapter implements KeryxDB {
       Object.defineProperty(this, "runClaims", { value: createSupabaseRunClaims(this.#sb) });
       Object.defineProperty(this, "runOwnershipHistory", { value: createSupabaseRunOwnershipHistory(this.#sb) });
     }
-    if (!deployment && process.env.KERYX_RUN_PRIVACY_ENABLED === "true") Object.defineProperty(this,"runPrivacy",{value:createSupabaseRunPrivacy(this.#sb,runClaimsEnabled(process.env))});
+    if (!deployment && process.env.KERYX_RUN_PRIVACY_ENABLED === "true") Object.defineProperty(this,"runPrivacy",{value:withRunReadProjection(
+      createSupabaseRunPrivacy(this.#sb,runClaimsEnabled(process.env)),run=>projectRecordedEvidenceProvenance(lookup=>this.readEvidenceProvenance(lookup),run))});
     if (!deployment) Object.defineProperty(this, "privateProfiles", { value: createSupabasePrivateProfiles(this.#sb) });
     if (!deployment) Object.defineProperty(this, "deliverableAcceptance", { value: createSupabaseDeliverableAcceptance(this.#sb) });
     if (!deployment) Object.defineProperty(this, "personalHistory", { value: createSupabasePersonalHistory(this.#sb) });

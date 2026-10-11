@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { assertOrdinarySqliteResearchAuthority } from "./research-monthly";
+import { assertOrdinarySqliteResearchAuthority, initializeSqliteResearchMonthly } from "./research-monthly";
 import { sqliteSchemaMatches, type SqliteSchemaExpectation } from "./sqlite-schema-match";
 import { erasedRun, PrivacyError, privacyId, privacyMutation, privacySession, privacyWallet, validatePrivacyRun, visibilitySchema,
   type PrivacyActor, type PrivacyState, type RunPrivacyStore } from "../run-privacy/contracts";
@@ -54,7 +54,7 @@ CREATE TRIGGER run_privacy_memory_no_resurrection_update BEFORE UPDATE ON query_
 WHEN EXISTS(SELECT 1 FROM run_privacy WHERE run_id=new.id AND erased=1)
 BEGIN SELECT RAISE(ABORT,'privacy_erased'); END;
 `;
-let expectations: SqliteSchemaExpectation[] | undefined;
+let expectations: SqliteSchemaExpectation[][] | undefined;
 export function assertRunPrivacySchema(db: DatabaseSync) {
   assertOrdinarySqliteResearchAuthority(db);
   if (!expectations) {
@@ -63,17 +63,20 @@ export function assertRunPrivacySchema(db: DatabaseSync) {
       // Only source-known ordinary relations are admitted, including the existing
       // hash-only SIWE session definition. No caller schema becomes authority.
       installSqliteApplicationSchema(reference); reference.exec(RUN_PRIVACY_SQL);
-      expectations = reference.prepare(`SELECT name,type,sql FROM sqlite_schema WHERE sql IS NOT NULL AND
+      const sourceShape=()=>reference.prepare(`SELECT name,type,sql FROM sqlite_schema WHERE sql IS NOT NULL AND
         (name LIKE 'run_privacy%' OR name IN ('query_runs','query_memories','web_sessions','a2a_orders','gap_intents','payment_events')
           OR type='trigger' AND tbl_name IN ('query_runs','query_memories','web_sessions','a2a_orders','gap_intents','payment_events'))`).all()
-        .map(row => [String(row.name), row.type as "table" | "trigger", String(row.sql)]);
+        .map(row => [String(row.name), row.type as "table" | "trigger", String(row.sql)] as SqliteSchemaExpectation);
+      expectations=[sourceShape()];
+      // The existing ordinary initializer adds one authorization trigger on
+      // a2a_orders. Admit that exact compiled variant, never observed target DDL.
+      initializeSqliteResearchMonthly(reference); expectations.push(sourceShape());
     } finally { reference.close(); }
   }
-  if (!sqliteSchemaMatches(db, expectations)) throw new PrivacyError("privacy_unavailable");
-  const expectedTriggers=expectations.filter(value=>value[1]==="trigger").length;
   const actualTriggers=Number(db.prepare(`SELECT count(*) n FROM sqlite_schema WHERE type='trigger'
     AND (tbl_name IN ('query_runs','query_memories','web_sessions','a2a_orders','gap_intents','payment_events','run_privacy','run_privacy_defaults','run_privacy_audit') OR name LIKE 'run_privacy%')`).get()?.n);
-  if(actualTriggers!==expectedTriggers)throw new PrivacyError("privacy_unavailable");
+  if(!expectations.some(shape=>actualTriggers===shape.filter(value=>value[1]==="trigger").length && sqliteSchemaMatches(db,shape)))
+    throw new PrivacyError("privacy_unavailable");
 }
 const digest = (text: string) => createHash("sha256").update(text).digest("hex");
 const stateOf = (row: Record<string, unknown>): PrivacyState => ({ visibility: visibilitySchema.parse(row.visibility ?? "unlisted"),

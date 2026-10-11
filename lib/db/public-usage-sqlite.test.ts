@@ -4,15 +4,14 @@ import { createSqlitePublicUsage } from "./public-usage-sqlite";
 import { createSqliteRunPrivacy,RUN_PRIVACY_SQL } from "./run-privacy-sqlite";
 import { createTrustedUsageContext, newRunUsage } from "../research/usage-provenance";
 import { UsageUnavailable, usageWindow } from "../usage/contracts";
+import {installSqliteApplicationSchema} from "./sqlite-application-schema";
 const network = "eip155:5042", wallet = `0x${"a".repeat(40)}`, proof = "a".repeat(64);
 const window = usageWindow(new URLSearchParams(), network, new Date("2026-10-11T00:00:00.000Z"));
 let db: DatabaseSync; afterEach(() => db?.close());
 function fixture() {
-  db = new DatabaseSync(":memory:"); db.exec(`CREATE TABLE query_runs(id TEXT PRIMARY KEY,created_at TEXT,asker TEXT,data TEXT);
-    CREATE TABLE query_memories(id TEXT);
-    CREATE TABLE payment_events(id TEXT,query_id TEXT,network TEXT,kind TEXT,amount_usdc REAL,settled INTEGER,settlement_status TEXT,tx_hash TEXT,payee TEXT);`);
+  db = new DatabaseSync(":memory:"); installSqliteApplicationSchema(db);
   db.exec(RUN_PRIVACY_SQL);db.prepare("INSERT INTO run_privacy_defaults VALUES(?,?)").run(wallet,"public");
-  const insert = db.prepare("INSERT INTO query_runs VALUES(?,?,?,?)");
+  const insert = db.prepare("INSERT INTO query_runs(id,created_at,asker,data) VALUES(?,?,?,?)");
   return (id: string, cohort: "outside" | "scripted" | "unknown", time = "2026-10-10T00:00:00.000Z") => {
     const usage = newRunUsage({ usageContext: createTrustedUsageContext(network, { actor: cohort === "outside" ? "outside" : "unknown",
       funding: "unknown", scripted: cohort === "scripted", ...(cohort === "outside" ? { actorEvidenceSha256: proof } : {}) }) }, network, []);
@@ -24,7 +23,7 @@ function fixture() {
 describe("ordinary SQLite public usage", () => {
   it("filters scripted/outside BEFORE bounded page selection and preserves original rows/schema", async () => {
     const save = fixture(); save("outside-old", "outside", "2026-10-01T00:00:00.000Z");
-    const pay = db.prepare("INSERT INTO payment_events VALUES(?,?,?,?,?,?,?,?,?)");
+    const pay = db.prepare("INSERT INTO payment_events(id,query_id,network,kind,amount_usdc,settled,settlement_status,tx_hash,payee) VALUES(?,?,?,?,?,?,?,?,?)");
     for (let i = 0; i < 2100; i++) {
       save(`scripted-${i}`, "scripted");
       pay.run(`payment-${i}`, `scripted-${i}`, network, "fetch", 0.000001, 1, "settled", "synthetic-recorded-reference", wallet);

@@ -10,6 +10,8 @@ import { createSqlitePublicUsage } from "../db/public-usage-sqlite";
 import { PrivacyError, type PrivacyActor, type RunVisibility } from "./contracts";
 import { listedQuestion, settlementReceipt } from "./public";
 import type { QueryRun } from "../types";
+import {withRunReadProjection} from "./projection";
+import {projectRecordedEvidenceProvenance,SYNTHETIC_EVIDENCE_NOTICE} from "../research/evidence-provenance";
 
 const connections:DatabaseSync[]=[];
 const alice=`0x${"a".repeat(40)}`,bob=`0x${"b".repeat(40)}`, hash=(value:string)=>createHash("sha256").update(value).digest("hex");
@@ -32,6 +34,15 @@ function fixture() {
   return {db,store,save,change,claims,date,historical};
 }
 describe("#266 ordinary privacy and financial retention",()=>{
+  it("preserves canonical evidence presentation after visibility authorization and keeps owner exports original",async()=>{
+    const f=fixture(),original=f.save("demo",alice,{citations:[{sourceId:"fixture-source",marker:"S1",sourceName:"Fixture",weight:1,reward:0.000001,rationale:"Synthetic"}]});
+    let lookups=0;const projected=withRunReadProjection(f.store,run=>projectRecordedEvidenceProvenance(async()=>{lookups++;return new Set(["source:fixture-source"]);},run));
+    expect((await projected.read(original.id)).item).toBeNull();expect(lookups).toBe(0);
+    await f.change(original.id,"public");const read=(await projected.read(original.id)).item!.run;
+    expect(read.answer).toContain(SYNTHETIC_EVIDENCE_NOTICE);expect(read.totalSpent).toBe(original.totalSpent);expect(read.totalToCreators).toBe(original.totalToCreators);
+    expect((await projected.export(original.id,actor(),randomUUID())).run.answer).toBe(original.answer);
+    expect(JSON.parse(String(f.db.prepare("SELECT data FROM query_runs WHERE id=?").get(original.id)?.data)).answer).toBe(original.answer);
+  });
   it("preserves every historical link unlisted; captures authenticated private and anonymous unlisted defaults",async()=>{
     const f=fixture();f.save("owned",alice);f.save("anonymous");f.save("foreign",bob);
     for(const id of ["historical","historical-unowned","anonymous"])expect((await f.store.read(id)).item?.state.visibility).toBe("unlisted");

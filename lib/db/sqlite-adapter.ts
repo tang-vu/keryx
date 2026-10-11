@@ -1,6 +1,7 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
 import { createSqliteRunPrivacy } from "./run-privacy-sqlite";
+import { withRunReadProjection } from "../run-privacy/projection";
 import { PrivacyError, requirePrivacy, type RunPrivacyStore } from "../run-privacy/contracts";
 import { createSqliteRunClaims } from "./run-claims-sqlite";
 import { RunClaimError, runClaimsEnabled, type RunClaimsStore } from "../run-claims/contracts";
@@ -229,7 +230,8 @@ export class SqliteAdapter implements KeryxDB {
       catch (error) { if (!(error instanceof RunClaimError && error.code === "claims_unavailable")) throw error; }
     }
     if (process.env.KERYX_RUN_PRIVACY_ENABLED === "true" && !this.runPrivacy) {
-      try { Object.defineProperty(this, "runPrivacy", { value:createSqliteRunPrivacy(this.db,this.runOwnershipHistory) }); }
+      try { Object.defineProperty(this, "runPrivacy", { value:withRunReadProjection(createSqliteRunPrivacy(this.db,this.runOwnershipHistory),
+        run=>projectRecordedEvidenceProvenance(lookup=>this.readEvidenceProvenance(lookup),run)) }); }
       catch(error) { if (!(error instanceof PrivacyError && error.code === "privacy_unavailable")) throw error; }
     }
     if (!this.decisionReviews) {
