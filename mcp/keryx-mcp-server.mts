@@ -27,6 +27,7 @@ import { createProfileClient } from "../lib/profiles/profile-client.ts";
 import { registerObligationInspection } from "../lib/operator-obligations/mcp.ts";
 import { createObligationClient } from "../lib/operator-obligations/client.ts";
 import { registerEvidenceDraftTool } from "../lib/research/evidence-draft-tool.ts";
+import { registerDraftCheckTool } from "../lib/research/draft-check-tool.ts";
 import { createHistoryClient } from "../lib/history/personal-history-client.ts";
 import { registerHistoryTool } from "../lib/history/personal-history-mcp.ts";
 import { registerAcceptanceTools } from "../lib/deliverable-acceptance/mcp.ts";
@@ -35,6 +36,7 @@ import { createAcceptanceClient } from "../lib/deliverable-acceptance/client.ts"
 const server = new McpServer({ name: "keryx", version: packageInfo.version });
 registerObligationInspection(server, () => createObligationClient(meta.baseUrl, () => process.env.KERYX_API_KEY).read());
 registerEvidenceDraftTool(server);
+registerDraftCheckTool(server);
 const acceptanceClient = () => createAcceptanceClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
 registerAcceptanceTools(server, { read: id => acceptanceClient().read(id), submit: (id, input) => acceptanceClient().submit(id, input) });
 const profileClient = () => createProfileClient(meta.baseUrl, () => process.env.KERYX_API_KEY);

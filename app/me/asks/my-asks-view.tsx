@@ -17,6 +17,7 @@ import { ClaimantHistoryPane } from "./claimant-history-view";
 import { personalHistoryCopy as copy } from "@/locales/en/personal-history";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { selectPlural } from "@/lib/i18n/format";
 
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
@@ -148,7 +149,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
             <div>
               <p className="font-serif text-xl text-ink">{totals.dispatches}</p>
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                {message(totals.dispatches === 1 ? "myHistory.dispatchLabel.one" : "myHistory.dispatchLabel.other")}
+          {message(selectPlural(totals.dispatches) === "one" ? "myHistory.dispatchLabel.one" : "myHistory.dispatchLabel.other")}
               </p>
             </div>
             <div>
@@ -166,13 +167,13 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
             <div>
               <p className="font-serif text-xl text-ink">{totals.citations}</p>
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                {message(totals.citations === 1 ? "myHistory.citationsLabel.one" : "myHistory.citationsLabel.other")}
+          {message(selectPlural(totals.citations) === "one" ? "myHistory.citationsLabel.one" : "myHistory.citationsLabel.other")}
               </p>
             </div>
           </div>
           {totals.trialDispatches > 0 && (
             <p className="mt-4 border-t border-line pt-3 font-mono text-[10px] text-ink-3">
-              {richMessage(totals.trialDispatches === 1 ? "myHistory.otherFunding.one" : "myHistory.otherFunding.other", { count: totals.trialDispatches, fundingGap: " ", amount: fmtUsdc(totals.trialToCreatorsUsdc), separateGap: " " })}
+        {richMessage(selectPlural(totals.trialDispatches) === "one" ? "myHistory.otherFunding.one" : "myHistory.otherFunding.other", { count: totals.trialDispatches, fundingGap: " ", amount: fmtUsdc(totals.trialToCreatorsUsdc), separateGap: " " })}
             </p>
           )}
         </section>
@@ -196,7 +197,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] text-ink-3">
               <span>{timeAgo(a.createdAt)}</span>
-              <span>{richMessage(a.citationCount === 1 ? "myHistory.cited.one" : "myHistory.cited.other", { count: a.citationCount ?? null })}</span>
+              <span>{richMessage(selectPlural(a.citationCount ?? 0) === "one" ? "myHistory.cited.one" : "myHistory.cited.other", { count: a.citationCount ?? null })}</span>
               {a.confidence && <span>{richMessage("myHistory.confidence", { level: a.confidence.toLowerCase() })}</span>}
               {a.isFollowUp && <span>{message("myHistory.followUp")}</span>}
               {a.hasNewMaterial && (
@@ -231,7 +232,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
 
       {truncated && (
         <p className="font-mono text-[10px] text-ink-3">
-          {richMessage(asks.length === 1 ? "myHistory.recentLimit.one" : "myHistory.recentLimit.other", { count: asks.length })}
+          {richMessage(selectPlural(asks.length) === "one" ? "myHistory.recentLimit.one" : "myHistory.recentLimit.other", { count: asks.length })}
         </p>
       )}
     </div>

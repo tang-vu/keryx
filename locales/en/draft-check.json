@@ -1,0 +1,93 @@
+{
+  "page": {
+    "metadataTitle": "Check a draft's citations — Keryx",
+    "metadataDescription": "Compare each cited sentence of a private draft with source text you supply. Every result quotes that text exactly or says no supporting passage was found.",
+    "back": "Back to your saved review",
+    "heading": "Check a draft against the sources it cites.",
+    "introduction": "Paste a passage, its reference list and the source text you hold. Each cited sentence gets a result with the exact passage it rests on.",
+    "noScript": "Enable JavaScript for this local checker. No passage, reference or source text is uploaded.",
+    "navigation": "Check a draft's citations"
+  },
+  "workspace": {
+    "label": "Private draft check",
+    "privacy": "Your passage, references and source text stay in this tab’s memory and are compared in your browser. Nothing is uploaded, saved or added to public history. Reloading or leaving loses them. Your browser and same-origin scripts can access this page.",
+    "check": "Check cited sentences",
+    "clear": "Clear this tab’s check",
+    "cleared": "Check cleared from this tab.",
+    "refused": "This check could not run. Keep the passage, references and source text within 64 KiB in total, with at most 64 references and 128 sentences. Your text remains below.",
+    "stale": "Your text changed. Run the check again to update the results.",
+    "done": "Check complete. Read each excerpt before relying on a result.",
+    "download": "Download results as private JSON",
+    "downloaded": "Download started. It contains your passage and excerpts; keep it private."
+  },
+  "passage": {
+    "label": "Your passage",
+    "guidance": "Sentences are checked as written and never reworded. Citations may be written as [3], \\cite{key}, [@key], Smith et al. (2020) or (Smith, 2020). A sentence without a citation is listed but not checked."
+  },
+  "references": {
+    "label": "Reference list",
+    "guidance": "Paste BibTeX, RIS, or one DOI, https link or formatted reference per line. Numbered citations follow the order of this list. References are read as written; no DOI or link is looked up.",
+    "format": "Read as {format}",
+    "formats": {
+      "bibtex": "BibTeX",
+      "ris": "RIS",
+      "list": "one reference per line"
+    },
+    "heading": "Source text for each reference",
+    "sourceGuidance": "Paste the text you hold for each cited work. A cited work without text is reported as unavailable, never as unsupported.",
+    "entry": "[{number}] {key}",
+    "untitled": "No title, DOI or link was read from this entry.",
+    "status": {
+      "identified": "DOI or link written",
+      "described": "Described, but no DOI or link",
+      "unresolved": "Could not be identified"
+    },
+    "sourceLabel": "Source text for {key}",
+    "complete": "This is the complete text of the work",
+    "unreadable": "The reference list could not be read. Use at most 64 references."
+  },
+  "results": {
+    "label": "Check results",
+    "heading": "Results",
+    "summary": "Sentences: {claims} · supported: {supported} · partly supported: {partlySupported} · not found: {notFound} · source unavailable: {sourceUnavailable} · not checked: {notChecked}",
+    "verdicts": {
+      "supported": "Wording supported by the quoted passage",
+      "partly-supported": "Partly supported by the quoted passage",
+      "not-found": "No supporting passage found in the supplied text",
+      "source-unavailable": "Source unavailable — not checked",
+      "not-checked": "Not checked"
+    },
+    "notChecked": {
+      "no-citation": "This sentence has no citation.",
+      "script-without-word-spacing": "This check compares words separated by spaces and cannot read this sentence’s script."
+    },
+    "citation": "Cited as {token} · {reference}",
+    "citationUnbound": "Cited as {token}",
+    "unavailable": {
+      "source-text-not-supplied": "No text was supplied for this work, so it was not checked.",
+      "reference-unresolved": "This citation matches nothing in the reference list.",
+      "reference-ambiguous": "This citation matches more than one listed work.",
+      "reference-year-differs": "The list has this author with a different year."
+    },
+    "partialCoverage": "Only part of this work was supplied; the rest was not searched.",
+    "noPassage": "No supporting passage found in the text you supplied.",
+    "missingTerms": "Not in the quoted passage: {terms}",
+    "missingEverywhere": "Not in the supplied text: {terms}",
+    "tentative": "The quoted passage is tentative where your sentence is not.",
+    "closestHeading": "Closest passage, not counted as support",
+    "difference": {
+      "negation": "It differs in negation.",
+      "opposite-term": "It uses an opposite term.",
+      "different-number": "It states a different figure."
+    }
+  },
+  "flags": {
+    "heading": "Reference and citation flags",
+    "none": "No reference or citation flags.",
+    "reference-unresolved": "Reference {reference} could not be identified from the list.",
+    "reference-not-cited": "Reference {reference} is listed but not cited in the passage.",
+    "citation-unresolved": "{claim}: citation {token} could not be matched to one listed work.",
+    "possible-different-work": "{claim}: the text names {author}, who is not an author of {reference}. Check that the citation points to the intended work.",
+    "claim": "Sentence {number}"
+  }
+}

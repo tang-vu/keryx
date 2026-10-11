@@ -1,5 +1,5 @@
 // Thin hosted research client. The server owns admission, payment and stored report authority.
-import { formatLocalizedRecordedUsdc as formatRecordedUsdc, formatDate } from "./recorded-usdc.mjs";
+import { formatLocalizedRecordedUsdc as formatRecordedUsdc, formatDate, resolveViewerTimeZone } from "./recorded-usdc.mjs";
 import { hostedReportUrl, privateClaimDelivery, publicPageUrl, readResearchStream, researchQuestion,
   responseError, sourceBudget, webDraftUrl } from "./research-client.mjs";
 
@@ -105,7 +105,7 @@ function renderRecent() {
     link.href = report.url;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    const date = formatDate(report.at, "en", Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
+    const date = formatDate(report.at, "en", resolveViewerTimeZone());
     link.textContent = `Report · ${date?.text ?? "Unavailable"}`;
     if (date) link.title = date.utc;
     li.appendChild(link);

@@ -15,6 +15,7 @@ import { SigningRecordedAmount } from "./signing-amount";
  */
 
 import { createMessages } from "@/lib/i18n/messages";
+import { selectPlural } from "@/lib/i18n/format";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Wallet, Upload, ListPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -148,7 +149,7 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
       }
       setFeeds(prepared);
       const ok = prepared.filter((f) => f.ok).length;
-      toast.success(uiCopy(prepared.length === 1 ? "bulkRegistration.ready.one" : "bulkRegistration.ready.other", { ready: ok, count: prepared.length }));
+      toast.success(uiCopy(selectPlural(prepared.length) === "one" ? "bulkRegistration.ready.one" : "bulkRegistration.ready.other", { ready: ok, count: prepared.length }));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : uiCopy("bulkRegistration.importFailed"));
     } finally {
@@ -262,7 +263,7 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
     setVerifiedCount(verified);
     setVerifying(false);
     toast[verified === done.length ? "success" : "message"](
-      uiCopy(done.length === 1 ? "bulkRegistration.verified.one" : "bulkRegistration.verified.other", { verified, count: done.length }),
+      uiCopy(selectPlural(done.length) === "one" ? "bulkRegistration.verified.one" : "bulkRegistration.verified.other", { verified, count: done.length }),
       { description: verified < done.length ? uiCopy("bulkRegistration.tokenRemaining") : undefined },
     );
     onRegistered?.();
@@ -293,7 +294,7 @@ export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) 
             <Upload className="h-3.5 w-3.5" /> {uiCopy("bulkRegistration.loadFile")}
             <input type="file" accept=".opml,.xml,text/xml,text/plain" onChange={readFile} className="hidden" />
           </label>
-          <span className="font-mono text-[10.5px] text-ink-3">{uiCopy(Number(MAX_BULK_FEEDS) === 1 ? "bulkRegistration.limit.one" : "bulkRegistration.limit.other", { count: MAX_BULK_FEEDS })}</span>
+          <span className="font-mono text-[10.5px] text-ink-3">{uiCopy(selectPlural(Number(MAX_BULK_FEEDS)) === "one" ? "bulkRegistration.limit.one" : "bulkRegistration.limit.other", { count: MAX_BULK_FEEDS })}</span>
         </div>
       </div>
 

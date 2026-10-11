@@ -18,3 +18,4 @@ export function formatDate(value: string | number, locale?: DisplayLocale, timeZ
 export function formatCalendarDate(value: string, locale?: DisplayLocale): { text: string; date: string } | null;
 export function formatRelativeTime(value: string | number, now: string | number, locale?: DisplayLocale): string;
 export function selectPlural(count: number, locale?: DisplayLocale): Intl.LDMLPluralRule;
+export function resolveViewerTimeZone(): string;

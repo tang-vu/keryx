@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatLocalizedDate, formatLocalizedNumber, formatLocalizedRelativeTime, formatLocalizedUsdc, formatSigningUsdc, selectPlural } from "./format";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { createFormatters, formatLocalizedDate, formatLocalizedNumber, formatLocalizedRelativeTime, formatLocalizedUsdc, formatSigningUsdc,
+  formatVerifiableUsdcAmount, selectPlural, usdcDisplayMicros } from "./format";
+import { preparedLocales } from "./locales";
 import { formatUsdcMicros } from "../display/recorded-usdc";
 import { formatAmount, formatDate, formatCalendarDate, formatNumber, formatRelativeTime, selectPlural as plural, type DisplayLocale } from "./format";
 
@@ -92,5 +96,100 @@ describe.each(["en", "vi", "pt", "es", "zh-Hans"] as DisplayLocale[])("display b
     expect(formatNumber(NaN, {}, locale)).toBe("Unavailable");
     expect(plural(1, locale)).toBe(locale === "vi" || locale === "zh-Hans" ? "other" : "one");
     expect(plural(2, locale)).toBe("other");
+  });
+});
+
+describe("bound display formatters", () => {
+  const cases = [
+    [0.000001, 6, "0.000001", "0,000001", "0.000001"],
+    [0.000049, 6, "0.000049", "0,000049", "0.000049"],
+    [0.004, 2, "0.004", "0,004", "0.004"],
+    [0.005, 2, "0.005", "0,005", "0.005"],
+    [0.00005, 4, "0.00005", "0,00005", "0.00005"],
+    [1234.5, 4, "1,234.5000", "1.234,5000", "1,234.5000"],
+    [1234567.891234, 6, "1,234,567.891234", "1.234.567,891234", "1,234,567.891234"],
+    [-0.25, 4, "Unavailable", "Unavailable", "Unavailable"],
+    [-0.0000001, 6, "Unavailable", "Unavailable", "Unavailable"],
+  ] as const;
+
+  it.each(cases)("derives %s USDC at %s places from its exact micro integer in every prepared locale", (usdc, digits, en, vi, zh) => {
+    expect(preparedLocales.map(locale => createFormatters(locale).usdc(usdc, digits))).toEqual([en, vi, zh]);
+  });
+
+  it("refuses fractional-micro repair and keeps the facade on the canonical recorded contract", () => {
+    expect(usdcDisplayMicros(0.1 + 0.2)).toBeNull();
+    expect(usdcDisplayMicros(1.005)).toBe(BigInt(1005000));
+    expect(createFormatters("vi").usdc(1.005, 2)).toBe("1,005");
+    expect(usdcDisplayMicros(Number.MAX_SAFE_INTEGER)).toBeNull();
+    for (const invalid of [NaN, Infinity, "1", null, undefined, BigInt(1), 0.0000009, 0.0000001, -0]) expect(createFormatters("en").usdc(invalid)).toBe("Unavailable");
+  });
+
+  it("keeps verification amounts identical and ungrouped in every prepared locale", () => {
+    for (const locale of preparedLocales) {
+      const format = createFormatters(locale);
+      expect(format.usdcVerifiable(1000)).toBe("1000.000000");
+      expect(format.usdcVerifiable(1.000001)).toBe("1.000001");
+      expect(format.usdcVerifiable(0.05)).toBe("0.050000");
+    }
+    expect(formatVerifiableUsdcAmount(1234.5, 2)).toBe("1234.50");
+    expect(formatVerifiableUsdcAmount(NaN)).toBe("Unavailable");
+  });
+
+  it("trims trailing zeros without changing the amount", () => {
+    expect(createFormatters("en").usdcTrimmed(0)).toBe("0");
+    expect(createFormatters("en").usdcTrimmed(0.05)).toBe("0.05");
+    expect(createFormatters("vi").usdcTrimmed(1234.5)).toBe("1.234,5");
+    expect(createFormatters("en").usdcTrimmed(-0.0000001)).toBe("Unavailable");
+    expect(createFormatters("en").usdcTrimmed(2)).toBe("2");
+  });
+
+  it("formats counts, fixed decimals and percentages by locale", () => {
+    expect(createFormatters("en").number(12345)).toBe("12,345");
+    expect(createFormatters("vi").number(12345)).toBe("12.345");
+    expect(createFormatters("en").decimal(0.5, 2)).toBe("0.50");
+    expect(createFormatters("vi").decimal(87.25, 1)).toBe("87,3");
+    expect(createFormatters("en").percent(0.875, 1)).toBe("87.5%");
+    expect(createFormatters("en").percent(0.5, 1)).toBe("50.0%");
+    expect(createFormatters("en").percent(0.5, 1, false)).toBe("50%");
+    expect(createFormatters("vi").percent(0.875, 1)).toBe("87,5%");
+    expect(createFormatters("en").percent(NaN)).toBe("Unavailable");
+  });
+
+  it("formats recorded instants in an explicit zone and refuses invalid values", () => {
+    const format = createFormatters("en");
+    expect(format.date("2026-10-09T00:30:00.000Z", "UTC")).toBe("Oct 9, 2026");
+    expect(format.date("2026-10-09T00:30:00.000Z", "America/Los_Angeles")).toBe("Oct 8, 2026");
+    expect(format.date(Date.UTC(2026, 9, 9), "UTC")).toBe("Oct 9, 2026");
+    expect(format.instant("2026-10-09T00:30:00.000Z", "monthDay", "UTC")).toBe("Oct 9");
+    expect(format.dateTime("2026-10-09T00:30:00.000Z", "UTC")).toMatch(/^Oct 9, 2026, 12:30\sAM$/u);
+    expect(format.instant("2026-10-09T00:30:05.000Z", "dateTimeSecondsZone", "UTC")).toMatch(/^Oct 9, 2026, 12:30:05\sAM UTC$/u);
+    expect(createFormatters("vi").date("2026-10-09T00:30:00.000Z", "UTC")).toBe("9 thg 10, 2026");
+    expect(format.date("nonsense", "UTC")).toBe("Unavailable");
+    expect(format.date("2026-10-09T00:30:00.000Z", "Invalid/Zone")).toBe("Unavailable");
+    expect(format.date("2026-02-30", "UTC")).toBe("Unavailable");
+    expect(format.date("2026-10-09")).toBe("Oct 9, 2026");
+    expect(format.dateTime("2026-10-09T00:30:00")).toBe("Unavailable");
+    expect(format.dateTime(new Date("invalid"))).toBe("Unavailable");
+    expect(format.date("2026-10-09T00:30:00.000Z")).toBe(format.date("2026-10-09T00:30:00.000Z", "UTC"));
+  });
+});
+
+describe("display formatting has one owner", () => {
+  // Canvas colour channels are not user-visible text.
+  const exempt = new Set(["components/keryx/ink-bleed-cursor.tsx"]);
+  const adHoc = /\.toFixed\(|\.toLocale(?:Date|Time)?String\(|Intl\.(?:NumberFormat|DateTimeFormat|RelativeTimeFormat|PluralRules)\b/u;
+  function sources(directory: string): string[] {
+    return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+      const file = path.posix.join(directory, entry.name);
+      if (entry.isDirectory()) return sources(file);
+      // Route handlers emit machine-readable responses, which keep one fixed format.
+      return /\.tsx?$/u.test(entry.name) && !/\.test\.tsx?$/u.test(entry.name) && entry.name !== "route.ts" ? [file] : [];
+    });
+  }
+
+  it("keeps ad-hoc number, amount and date formatting out of pages and components", () => {
+    const offenders = ["app", "components"].flatMap(sources)
+      .filter(file => !exempt.has(file) && adHoc.test(readFileSync(file, "utf8")));
+    expect(offenders).toEqual([]);
   });
 });

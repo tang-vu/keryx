@@ -22,7 +22,13 @@ have not been measured. Neither issue's full acceptance is established.
    Selecting/clearing one theme never overwrites another theme's notes. The exporter
    characterises papers only through quotations; author notes remain visibly
    unverified. It does not automatically invent themes, contributions or gaps.
-6. Download Markdown/LaTeX and its matching BibTeX/RIS. LaTeX uses `biblatex`,
+6. Optionally write the section one sentence at a time with **Add statement**.
+   Choose what the sentence does (one paper's contribution, agreement,
+   disagreement or a gap), tick the papers it names and tick the retained excerpt
+   it relies on for each. A paper without a retained excerpt cannot be ticked. A
+   sentence that is still incomplete is shown as not exported yet and stays out
+   of every download; the rest of the draft exports normally.
+7. Download Markdown/LaTeX and its matching BibTeX/RIS. LaTeX uses `biblatex`,
    `\addbibresource{references.bib}`, `\autocite` and `\printbibliography`. Markdown
    uses the same stable citation keys and includes an explicit reference list.
    The RIS library contains exactly the cited records, although RIS importers need
@@ -68,10 +74,47 @@ remain together in the explicitly labelled retention-gap list. Existing BUY/SKIP
 CACHE reasons, source purchases and creator rewards remain in the original report.
 This transformation does not rerun research or change receipt/payment authority.
 
-The related-work reference set derives only from selected theme excerpt URLs.
-Multiple themes using one exact record produce one reference; different exact
-versions keep different stable keys. Unread entries have no citation/reference
-entry. Markdown/LaTeX escape author/provider text and retain excerpt anchors/labels.
+The related-work reference set derives only from selected theme excerpt URLs and
+the excerpts of exported statements. Multiple themes using one exact record produce
+one reference; different exact versions keep different stable keys. Unread entries
+have no citation/reference entry. Markdown/LaTeX escape author/provider text and
+retain excerpt anchors/labels; an excerpt quoted in several themes is anchored once.
+
+## Statements
+
+A theme may carry up to 24 `statements`. Each is one author-written sentence with a
+draft-unique `id`, a `kind`, `text` (600 characters), up to 8 exact Include
+`paperUrls` and up to 16 `excerptIds`. `lib/research/related-work-statements.ts`
+resolves each one to a status:
+
+| Status | Rule | Export |
+| --- | --- | --- |
+| `excerpt-bound` | Every named paper has at least one selected retained excerpt from that exact record and version. A contribution names exactly one paper; agreement and disagreement name at least two; a gap may name any number. | The sentence, a citation for every named paper and a link to each selected excerpt, which is quoted in the same theme. |
+| `author-gap` | A gap that names no paper. | The sentence, labelled as author-stated, citing no paper and unverified. |
+| `withheld` | The paper count does not fit the kind (`paper-count`), or a named paper has no selected retained excerpt (`paper-without-selected-excerpt`, with `missingPaperUrls`). | Only a count of withheld statements. The text, its citations and its references are omitted. |
+
+A selected excerpt that is unknown, changed, from another version or from a paper
+the statement does not name refuses the whole request, exactly as theme and claim
+selections do. An Include paper with no retained excerpt therefore cannot be
+described by a statement: it stays in the separate retention-gap list.
+
+The binding is structural. Keryx checks that the sentence names a paper it holds a
+retained excerpt for and that the export cites and links it. It does not read the
+sentence, and it does not decide whether the excerpt supports the wording. Nothing
+stops an author from naming a paper in free text without selecting it; the author
+note and an author-stated gap are labelled unverified for that reason. No model
+writes or rewrites any statement. The browser editor keeps a sentence with no text
+in tab memory only and leaves it out of the packet and the private draft JSON.
+
+## Citation and reference correspondence
+
+`lib/research/evidence-draft-parity.ts` re-reads the four finished exports before
+they are returned. Every key cited in the Markdown and LaTeX bodies must have
+exactly one BibTeX entry, one Markdown reference line and one RIS record for the
+same exact URL, and no entry may exist without a citation. Any difference refuses
+the export. RIS has no citation-key field, so its records are matched by record
+URL. Markdown escapes `@` in author and provider text, so that text cannot form a
+Pandoc citation key.
 
 New static browser labels, accessibility text, metadata and status messages use
 `locales/en/evidence-drafts.json` with named interpolation through the typed source
@@ -102,14 +145,51 @@ production source window closes. This draft has no version bump, publication,
 merge or deployment authorization beyond the current operational hold. A candidate
 tool registration is not evidence of installed/published client delivery.
 
+## Evaluation scorer
+
+`npm run eval:related-work -- <evaluation.json>` scores drafts offline. It reads
+one local JSON file and prints one JSON report. It makes no provider, database,
+wallet or network call. The version-1 `related-work-evaluation` packet holds up to
+50 reviews, each with:
+
+- `id` and `referenceOrigin`: `expert-written` or `synthetic-fixture`;
+- `expertWorks`: the works cited by the reference section, each an exact `url`,
+  a `doi`, or both;
+- `draft`: a version-1 `private-evidence-draft` packet;
+- `judgments`: a reviewer's `supported` or `unsupported` verdict for a statement
+  that is exported with a citation, with the reviewer's name.
+
+For each review it reports coverage (expert works the draft cites, matched by
+exact URL or exact normalized DOI and never by title), draft references outside
+the expert list, statement counts by status, and the unsupported-statement rate
+over the judged statements. The aggregate covers `expert-written` reviews only and
+is `measured` only when every one of them has every citing statement judged;
+otherwise it is `not-measured`. Synthetic fixtures are scored for regression tests
+and excluded from the aggregate.
+
+The scorer restates what it is given. It does not verify that a reference section
+was written by an expert, who the reviewer is, or that a judgment is right. No
+expert-written review set has been collected and no result has been measured. The
+repository tests use synthetic fixtures only.
+
 ## Remaining issue and release gates
+
+The separate [private draft check](draft-check.md) now covers automatic sentence
+spans, reference-list reading, citation-marker binding and a deterministic wording
+comparison against caller-supplied source text for issue 282. It does not change
+this manual contract and does not read cited works.
 
 Automatic claim extraction/reference resolution, exact-original read integration
 under existing budgets/BUY/SKIP/CACHE/reward rules, automated support review with
 retained quote neighborhoods, mismatch explanations and separate suggested sources
-remain open for issue 282. Issue 283 still needs model-assisted themes/contribution/
-agreement/gap prose with independently reviewed sentence evidence, expert review
-coverage and unsupported-statement metrics. No borrowed metric from issue 287 or
+remain open for issue 282. Issue 283 has author-written statements with enforced
+citation and excerpt binding, a verified one-to-one reference set and an offline
+scorer. It still needs a set of reviews with expert-written reference sections,
+reviewer judgments of the statements and the resulting coverage and
+unsupported-statement rate. Model-assisted themes/contribution/agreement/gap prose,
+agent-proposed candidates within a stated budget and normal bounded reading from
+this workflow also remain open; they need provider calls and spending that this
+source does not start. No borrowed metric from issue 287 or
 synthetic test is semantic acceptance or user usefulness.
 
 Release also requires independent source/security review, both TypeScript graphs,

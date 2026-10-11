@@ -112,3 +112,37 @@ The remaining-budget label subtracts the exact micro integer legs before display
 so valid `0.3` and `0.2` records show `0.100000` without repairing a binary float.
 This derivation changes presentation only; stored state and action values retain
 their existing authority.
+
+The authorized source convergence preserves both worker `43745785` and author
+PR410 `61c592a9` histories. All four author-only additions remain: the appended
+decision, historical author receipt, creator-copy formatter mapping, and ledger
+browser expectation. `createFormatters` keeps its author API as wrappers around
+the strict browser-safe canonical implementation. Legacy fractional micros,
+negative recorded amounts and unknown records remain unavailable; requested
+money digits are minimums, with every authoritative micro digit retained.
+The ledger observation explicitly renders UTC and seconds, with UTC details,
+while ordinary time elements resolve the viewer zone after hydration. Desktop
+and extension use the same canonical zone resolver. Remaining plural choices
+in the existing owned My Asks, bulk registration and Desktop paths now use the
+shared rules without activating another UI locale. Native 18-place gas and
+machine command, payment, signature, store and serializer authority remain fixed.
+
+Fresh combined-source validation covers 200 formatter, actual-surface,
+creator-copy, existing bot-locale and export regressions; the final narrow
+source/plural corrections additionally pass the 64 applicable source tests.
+Creator-copy fixtures retain all original accessibility and control assertions,
+forbidden I/O/signing, and original payloads; only reviewed exact-price details,
+six-place price text and UTC-first deadline text change. Two targeted synthetic
+browser zones test the changed resolver and explicit UTC observation, with no
+network requests or action callbacks. Grant remains covered by SSR: its existing
+mount-time recovery callback is not a browser signing acceptance test. Old
+screenshots and all original failed/successful receipts remain intact.
+
+This convergence inherits accepted `e9a97de9` source through the author parent,
+but still contains the worker's unaccepted `343d10d0` root candidate. PR406
+`efdf7b3a` was still open when inspected; its versions and source must be synced
+after root qualification. Current full generated-framework, built English
+signing-screen, independent review, aggregate/domain/platform CI and delivery
+gates remain open. The retained local Turbopack junction, missing
+`@x402/svm/exact/client`, Tauri dependency and stale generated-type errors are
+qualified to their original receipts; no dependency or cleanup workaround is used.

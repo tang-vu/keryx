@@ -1,4 +1,5 @@
 import { createElement } from "react";
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DisplayTime } from "../../components/keryx/display-time";
@@ -78,6 +79,14 @@ describe("locale display consumers preserve verification and machine contracts",
     const relative = renderToStaticMarkup(createElement(DisplayTime, { value, now: "2026-10-11T00:32:00Z" }));
     expect(relative).toContain("2 minutes ago");
     expect(relative).toContain('title="2026-10-11T00:30:00.000Z"');
+  });
+  it("keeps UTC-labelled ledger observations in UTC with the author's seconds display", () => {
+    const html = renderToStaticMarkup(createElement(DisplayTime, { value: "2026-10-11T00:30:05Z", timeZone: "UTC", timeStyle: "medium" }));
+    expect(html).toMatch(/Oct 11, 2026, 12:30:05\sAM/u);
+    expect(html).toContain('title="2026-10-11T00:30:05.000Z"');
+    const source = readFileSync("components/keryx/dashboard-view.tsx", "utf8");
+    expect(source).toContain('value={resource.observedAt} timeZone="UTC" timeStyle="medium"');
+    expect(readFileSync("scripts/test-browser-ledger-sources.mts", "utf8")).toContain("Showing the last successful read from");
   });
   it("keeps real serializers byte-identical while each display locale formats the same original", () => {
     const run: QueryRun = { id: "locale-fixture", question: "Synthetic offline formatting fixture", budget: 0.05,

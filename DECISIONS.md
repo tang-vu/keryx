@@ -1,5 +1,25 @@
 # Keryx — Decision Log
 
+## Check cited draft sentences against supplied text, by wording only — 2026-10-11
+
+Advance issue282 with a second zero-I/O private contract, `private-draft-check`
+version 1, shared by `/literature/check`, the authenticated API and remote/stdio
+`draft_check`. It reads BibTeX, RIS or DOI/link lists without resolving them, keeps
+exact sentence spans, binds numeric, LaTeX, Pandoc and author-year markers, and
+compares each cited sentence with caller-supplied source text. A deterministic
+wording comparison was chosen over a model reviewer because no paid model or source
+read is authorized for this stage and its errors can be measured and reproduced.
+It is named as a method (`lexical-overlap-v1`) so a reviewed semantic assessor can
+replace it under the same verdict contract. Every supported or partly-supported
+verdict carries an exact slice of the supplied text; a source without supplied text
+is always unavailable and outranks not-found for a sentence with several citations.
+Negation, listed opposite terms, differing figures and tentative wording withhold
+"supported". The fixed synthetic set reports 3 false "supported" in 32 (role
+reversals) and stays in the test suite with its known failures. Nothing is stored,
+fetched, bought or rewarded. Reading cited works under budget and BUY/SKIP/CACHE
+rules, reference resolution, semantic and expert evaluation, suggested sources and
+release identities remain open. See [scope and measurements](docs/draft-check.md).
+
 ## Advertise published public interfaces and render preview glyphs locally — 2026-10-11
 
 Keep existing indexed URLs and publish reciprocal English/x-default metadata only
@@ -201,6 +221,26 @@ grant no origin authority; malformed deployment origins fail closed.
 Automatic reading/semantic review, expert metrics and coordinated deployment remain
 gated; no receipt, payment, budget or custody authority changes. See
 [scope, surfaces and acceptance](docs/evidence-drafts.md).
+
+**Bind related-work statements to retained excerpts and verify the reference set — 2026-10-11.**
+Issue 283 asks that every sentence about a paper cite it and link the excerpt it
+relies on. Free-form theme notes could not carry that guarantee, so themes gain
+optional author-written statements with a kind, the exact Include papers they
+name and the retained excerpts they rely on. A statement is exported only when
+every named paper has a selected excerpt from that exact record and version;
+otherwise it is withheld with a reason, not exported without evidence and not
+refused, so one unfinished sentence never blocks the rest of a draft. Unknown,
+changed or foreign excerpt selections still refuse the request. The binding is
+structural: no model writes a statement and nothing judges whether an excerpt
+supports the wording. Exports are now re-read and refused unless cited keys and
+BibTeX, RIS and Markdown reference entries correspond one to one, and Markdown
+escapes `@` so author text cannot form a citation key. The contract stays
+version 1 because the field is optional and existing packets build unchanged.
+An offline scorer reports coverage against a supplied reference section and the
+unsupported-statement rate from supplied reviewer judgments; it marks synthetic
+fixtures and partly judged reviews as not measured. Expert review sets, measured
+rates, model-assisted prose and agent-proposed candidates remain open. See
+[statements, correspondence and scorer](docs/evidence-drafts.md).
 
 ## 2026-10-09 — Keep exact native proof for one retained pre-CSL presentation
 
@@ -7487,3 +7527,53 @@ remain root's shared-helper qualification. The 93-key area has exact render and
 existing dashboard browser evidence; final combined Next.js/CI and serialized
 delivery remain root-owned. See the [ledger presentation catalogue
 record](docs/engineering/ledger-presentation-catalogue-2026-10-11.md).
+
+## 2026-10-11 — Verify the recorded walkthrough payment against Circle and Arc directly
+
+For issue305, the recorded walkthrough's payment step now reads two third-party
+records from the visitor's browser instead of asking Keryx to vouch for itself:
+Circle's public Gateway transfer record and the Arc mainnet SourceRegistry. The
+expected recipient, amount, token, network and source are constants bound by test
+to the retained, digest-checked receipt, so neither a live Keryx response nor the
+third party's own reply can choose what counts as a match. Every read is explicit,
+single, credential-free and bounded; failure is unavailable, never a pass.
+
+Do not present the Circle-reported transaction hash as chain proof: the public
+Arc RPC returned nothing for it when checked, so per-payment finality stays an
+open claim. The registry read shows current payout authority only. Add no server
+route, proxy or content-security-policy origin; a proxy would turn an independent
+check back into a Keryx assertion. The ledger step restates receipt figures and
+declines to state a margin. The live sponsored run, replay and limit
+demonstrations stay gated; see the
+[criteria status](docs/engineering/recorded-walkthrough-305.md).
+
+## 2026-10-11 — One display formatting owner for pages and components
+
+Pages and components format numbers, percentages, USDC amounts and dates only
+through `createFormatters(locale)` in `lib/i18n/format.ts`; a source guard
+refuses new `toFixed`, `toLocale*String` and private `Intl` formatters under
+`app/` and `components/`. Amount text is derived from the exact integer
+micro-USDC value. Amounts a user verifies before authorizing use an invariant
+decimal point with no grouping so that locales cannot make `1.000` and `1,000`
+ambiguous. Route handlers and exports stay outside the module because machine
+output must not vary by locale. Dates now follow the interface locale rather
+than the browser locale, and the ledger observation notice names UTC instead of
+using a numeric `en-GB` date. English stays the only shipped locale; viewer
+time zone negotiation, locale plural selection, `lib/` display text and human
+review of translated signing screens remain open. See the [display formatting
+record](docs/engineering/display-formatting-274-2026-10-11.md).
+
+### Same-outcome source convergence for #274
+
+Preserve the PR410 locale-bound API and its original receipt as provenance, and
+delegate all formatting to the existing browser-safe exact implementation.
+Recorded legacy values must describe whole safe micro-USDC; display never repairs
+fractional micros, negative records or unknown amounts. Money precision requests
+are minimums so that a known sub-cent amount remains visible. Verification keeps
+ungrouped decimal text, explicit USDC and authoritative integer details. Hydrated
+date surfaces retain UTC details and resolve the viewer zone through that same
+implementation; the explicitly UTC-labelled ledger observation stays UTC with
+seconds. Desktop, extension, CLI and the already-shipped bot copy locales retain
+their applicable parity. English remains the sole activated UI locale. Source
+tests and synthetic fixtures do not establish built signing-screen acceptance,
+hosted CI, delivery or issue closure; root owns those remaining gates.

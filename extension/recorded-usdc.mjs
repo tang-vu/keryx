@@ -151,3 +151,9 @@ export function selectPlural(count, locale = "en") {
   if (!Number.isFinite(count) || count < 0) throw new Error("Plural count must be finite and nonnegative");
   return new Intl.PluralRules(intlLocale(locale)).select(count);
 }
+
+/** Resolve the browser's viewer zone after hydration; never format text at the call site. */
+export function resolveViewerTimeZone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }
+  catch { return "UTC"; }
+}

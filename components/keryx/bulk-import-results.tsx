@@ -8,6 +8,7 @@ import { SigningAmount } from "./signing-amount";
  */
 
 import { createMessages } from "@/lib/i18n/messages";
+import { selectPlural } from "@/lib/i18n/format";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { CheckCircle2, Loader2, XCircle, ShieldCheck, Copy, ExternalLink, PenLine } from "lucide-react";
 import { toast } from "sonner";
@@ -154,7 +155,7 @@ export function BulkVerifyPanel({
     <div className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/[0.07] p-4">
       <div className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-amber-700">
         <PenLine className="h-3.5 w-3.5" />
-        {uiCopy(registeredCount === 1 ? "bulkVerification.title.one" : "bulkVerification.title.other", { count: registeredCount })}
+        {uiCopy(selectPlural(registeredCount) === "one" ? "bulkVerification.title.one" : "bulkVerification.title.other", { count: registeredCount })}
       </div>
       <p className="text-xs text-ink-2">{instructions}</p>
       <div className="flex items-center gap-2">
