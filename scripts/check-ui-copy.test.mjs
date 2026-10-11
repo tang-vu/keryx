@@ -224,3 +224,11 @@ test("personal dispatch metadata, accessibility, empty states and toast copy are
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("native Desktop copy is catalogued; executable buyer command remains invariant protocol data", () => {
+  const file = "desktop/src/renderer.tsx";
+  const findings = extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
+  assert.deepEqual(findings.map(finding => finding.text), [
+    "$env:KERYX_NETWORK=${value}; $env:NEXT_PUBLIC_KERYX_NETWORK=${value}; npm run buyer -- buy --request ${value} --payee ${value} --max-total ${value} --state ${value}",
+  ]);
+});

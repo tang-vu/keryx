@@ -7199,3 +7199,14 @@ Attribution, evidence and financial projections retain their authority, with no
 new call/retry/cap, payment or private/package authority. Required source CI/review
 and root's verified combined delivery remain closure gates; original frozen
 criteria imply no new paid-live gate. See the updated finite presentation contract.
+
+## Reuse the English message contract in the native Desktop renderer — 2026-10-11
+
+Extract native Operator presentation into a focused English catalogue and reuse
+the existing typed, one-pass message contract. Make only its English imports
+relative so native bundling and tests need no second engine or resolver. Preserve
+the exact English, whole-message count grammar, controls, data and action bytes.
+Keep the executable buyer handoff as invariant protocol data with its one explicit
+guard allowance; locale copy cannot change purchasing or original-job recovery.
+Native host/package acceptance and coordinated delivery remain distinct from
+hermetic rendering. See [scope and gates](docs/engineering/native-desktop-catalogue-2026-10-11.md).
