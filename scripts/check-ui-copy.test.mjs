@@ -428,3 +428,9 @@ test("integration setup and playground copy is catalogued; protocols, URLs and e
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
   }
 });
+
+test("dashboard notices, counts, payment labels and accessibility copy are catalogued", () => {
+  for (const file of ["app/dashboard/page.tsx", "components/keryx/dashboard-view.tsx", "components/keryx/payments-feed.tsx"]) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
+  }
+});
