@@ -1,6 +1,7 @@
 import type { PublicReference } from "../public-references/catalog";
 import type { PrivateProfilesStore } from "../profiles/private-profile";
 import type { PrivateBibliographiesStore } from "../bibliographies/private-bibliography";
+import type { ZoteroStore } from "../references/zotero-contract";
 import type { ProfileIdentitiesStore } from "../profiles/verified-identities";
 import type { SourceClaim, SourceClaimChallenge, IssueSourceClaimChallenge, VerifySourceClaim, BindSourceClaim, UpdateSourceClaimPolicy } from "../sources/public-source-claim";
 /**
@@ -219,6 +220,8 @@ export interface KeryxDB {
   readonly privateProfiles?: PrivateProfilesStore;
   /** Explicit owner-controlled metadata snapshots; absent on unsupported/enrolled adapters. */
   readonly privateBibliographies?: PrivateBibliographiesStore;
+  /** Explicitly enabled ordinary encrypted reference integration only. */
+  readonly zotero?: ZoteroStore;
   /** Bounded ordinary current-store attribution only; absent on sealed/native/archive readers. */
   readonly personalHistory?: import("../history/personal-history").PersonalHistoryStore;
   /** Ordinary-only decision opinions/admission sidecars; never payment authority. */

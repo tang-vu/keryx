@@ -42,6 +42,9 @@ const nextConfig: NextConfig = {
       ...["/api/me/bibliographies/:path*", "/api/bibliographies/:path*", "/me/bibliographies"].map(source => ({
         source, headers: [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
       })),
+      ...["/api/me/references/:path*", "/me/references"].map(source => ({
+        source, headers: [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      })),
       ...["/api/me/deliverables/:id/acceptance", "/api/deliverables/:id/acceptance", "/api/deliverables/acceptance/metrics"].map(source => ({
         source, headers: [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
       })),

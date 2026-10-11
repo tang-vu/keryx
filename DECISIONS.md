@@ -7487,3 +7487,19 @@ remain root's shared-helper qualification. The 93-key area has exact render and
 existing dashboard browser evidence; final combined Next.js/CI and serialized
 delivery remain root-owned. See the [ledger presentation catalogue
 record](docs/engineering/ledger-presentation-catalogue-2026-10-11.md).
+
+## 2026-10-11 — Explicit, gated Zotero reference sending
+
+Relates to #285. Reuse canonical CSL-JSON/stable reference identities for a
+session-only personal Zotero connection and selected-collection send action.
+Require a dedicated key with only personal library read, note read and write;
+notes are needed for ambiguous child-note reconciliation, while file/group access
+is rejected. Encrypt with the existing owner/user/domain-bound GCM envelope.
+Use an opt-in ordinary SQLite capability, durable work/note keys, version-zero
+creates, observed-version updates, complete bounded library reconciliation and
+store-wide provider holds. Refuse unsupported/enrolled/Supabase storage and
+private originals; never add research/API-key/Operator/MCP write authority.
+Synthetic account/transport/browser acceptance is source evidence only. Root
+owns accepted main synchronization, review/CI, source graph, distribution and
+rollout; live provider and prior Overleaf acceptance keep original285 open. See
+[the Zotero source and rollout contract](docs/engineering/zotero-references-2026-10-11.md).

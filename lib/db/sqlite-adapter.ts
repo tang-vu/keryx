@@ -7,6 +7,8 @@ import type { RunOwnershipHistoryStore } from "../run-claims/history";
 import { createSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
 import { AcceptanceError, type DeliverableAcceptanceStore } from "../deliverable-acceptance/contracts";
 import { createSqlitePrivateBibliographies } from "./private-bibliographies-sqlite";
+import { createSqliteZotero } from "./zotero-sqlite";
+import { ZoteroError, type ZoteroStore } from "../references/zotero-contract";
 import { createSqliteDecisionReviews } from "./decision-reviews-sqlite";
 import { DecisionReviewError, type DecisionReviewsStore } from "../research/decision-review-types";
 import { PrivateBibliographyError, type PrivateBibliographiesStore } from "../bibliographies/private-bibliography";
@@ -151,6 +153,7 @@ export class SqliteAdapter implements KeryxDB {
   declare readonly deliverableAcceptance?: DeliverableAcceptanceStore;
   declare readonly privateProfiles?: PrivateProfilesStore;
   declare readonly privateBibliographies?: PrivateBibliographiesStore;
+  declare readonly zotero?: ZoteroStore;
   declare readonly personalHistory?: PersonalHistoryStore;
   declare readonly decisionReviews?: DecisionReviewsStore;
   declare readonly publicUsage?: import("../usage/contracts").PublicUsageStore;
@@ -236,6 +239,10 @@ export class SqliteAdapter implements KeryxDB {
     if (!this.privateBibliographies) {
       try { Object.defineProperty(this, "privateBibliographies", { value: createSqlitePrivateBibliographies(this.db) }); }
       catch (error) { if (!(error instanceof PrivateBibliographyError && error.code === "bibliography_unavailable")) throw error; }
+    }
+    if (process.env.KERYX_ZOTERO_ENABLED === "1" && !this.zotero) {
+      try { Object.defineProperty(this, "zotero", { value: createSqliteZotero(this.db) }); }
+      catch (error) { if (!(error instanceof ZoteroError && error.code === "zotero_unavailable")) throw error; }
     }
     if (!this.personalHistory) Object.defineProperty(this, "personalHistory", { value: createSqlitePersonalHistory(this.db) });
     if (!this.privateProfiles) {
