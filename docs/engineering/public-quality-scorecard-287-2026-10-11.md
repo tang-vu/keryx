@@ -125,8 +125,9 @@ was submitted. Temporary `turbopack.root` and Next-generated tsconfig edits were
 restored and are excluded from the source outcome.
 
 Local validation used Node 24.21.0, the retained npm 11.19.0 toolchain and the
-read-only QA dependency junction. Its Vitest is 4.1.11 (the repository lock pins
-4.1.9); no dependency installation or exact-lock-equivalence claim is made.
+read-only QA dependency junction. Its Vitest is 4.1.11, matching the repository
+lock's resolved Vitest version (the manifest requests `^4.1.9`); no dependency
+installation or exact equivalence of the entire dependency closure is claimed.
 Unadjusted local Turbopack could not resolve the junction outside its filesystem
 root; the full build used the documented common-ancestor root locally, preserving
 the source config's loader rules. An initial route-filter build compiled but did
