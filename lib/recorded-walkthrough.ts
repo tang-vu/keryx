@@ -1,5 +1,6 @@
 import { verifyBrowserReceipt } from "./browser-receipt-integrity";
 import { readBoundedJson } from "./read-bounded-json";
+import { parseResearchAvailability } from "./research/availability-contract";
 
 /** Public owner-operated QA, already published in docs/reviewer-start.md.
  * These fixed identifiers confer no payment or private-job authority. */
@@ -27,4 +28,17 @@ export async function readRecordedReceipt(signal: AbortSignal, fetcher: typeof f
   });
   if (!response.ok) { await response.body?.cancel(); throw new Error("Recorded receipt unavailable"); }
   return checkRecordedReceipt(await readBoundedJson(response, 262_144));
+}
+
+/** One caller-initiated read of the existing public pause observation. It never submits a
+ * question or consumes quota, and "not-paused" is not admission for a new sponsored job. */
+export async function readResearchAdmission(signal: AbortSignal, fetcher: typeof fetch = fetch): Promise<"paused" | "not-paused"> {
+  const response = await fetcher("/api/research/availability", {
+    method: "GET", headers: { Accept: "application/json" }, credentials: "omit",
+    cache: "no-store", redirect: "error", signal: AbortSignal.any([signal, AbortSignal.timeout(8_000)]),
+  });
+  if (!response.ok) { await response.body?.cancel(); throw new Error("Research availability unavailable"); }
+  const availability = parseResearchAvailability(await readBoundedJson(response, 4_096));
+  if (!availability) throw new Error("Research availability unavailable");
+  return availability.state;
 }

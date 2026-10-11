@@ -22,6 +22,7 @@
     "scripts/test-actual-read-mcp-package.mts",
     "scripts/test-browser-evidence-drafts.mts",
     "scripts/test-evidence-drafts-mcp-package.mts",
+    "scripts/eval-related-work.mts",
     "scripts/test-personal-history-postgres.mts",
     "scripts/test-personal-history-mcp-package.mts",
     "scripts/test-server-profile-identities-origin.mts",

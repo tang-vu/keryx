@@ -89,9 +89,20 @@ try {
     await themes.getByLabel("Your synthesis notes (unverified)").nth(1).fill("Second-theme edits");
     await themes.getByRole("button", { name: "Clear this theme’s excerpt selections", exact: true }).nth(1).click();
     assert.equal(await themes.getByLabel("Your synthesis notes (unverified)").first().inputValue(), "My retained first-theme edits");
+    // One author statement: withheld until it names one paper and a retained excerpt of that paper.
+    await themes.getByRole("button", { name: "Add statement", exact: true }).first().click();
+    await themes.getByText("Write the sentence to include it in the draft.", { exact: true }).waitFor();
+    await themes.getByLabel("Your sentence").fill("The fixture method improved its measured outcome.");
+    await themes.getByText("Not exported yet: a contribution names exactly one paper.", { exact: true }).waitFor();
+    await themes.getByRole("group", { name: "Papers this sentence names" }).getByRole("checkbox").check();
+    await themes.getByText("Not exported yet: select a retained excerpt for every paper this sentence names.", { exact: true }).waitFor();
+    await themes.getByRole("group", { name: "Retained excerpts this sentence relies on" }).getByRole("checkbox").check();
+    await themes.getByText("Will be exported with its citation and excerpt links.", { exact: true }).waitFor();
+    assert.equal(await themes.getByLabel("Your synthesis notes (unverified)").nth(1).inputValue(), "Second-theme edits");
     const download = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download Markdown", exact: true }).click()]);
     const mdPath = await download[0].path(); assert(mdPath); const md = await readFile(mdPath, "utf8");
     assert(md.includes(`id="${expectedKey}"`)); assert(md.includes(report.evidence![0].quote)); assert(md.includes("unverified"));
+    assert(md.includes("**Contribution.** The fixture method improved its measured outcome. [@keryxDraft")); assert(md.includes(`retained excerpts: [1](#${expectedKey})`));
     const bibDownload = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download BibTeX", exact: true }).click()]);
     const bibPath = await bibDownload[0].path(); assert(bibPath); const bib = await readFile(bibPath, "utf8");
     const citedKey = md.match(/\[@(keryxDraft[a-f0-9]+)\]/)?.[1]; assert(citedKey); assert(bib.includes(`{${citedKey},`));
@@ -100,7 +111,7 @@ try {
     await page.screenshot({ path: join(artifacts, `drafts-${width}.png`), fullPage: true });
     await page.reload(); assert.equal(await page.getByLabel("Your original passage").inputValue(), "");
     assert.equal(blocked.filter(path => path.includes("research/evidence-draft") || path.includes("ask")).length, 0);
-    await context.close(); console.log(`Built private drafts ${width}px: exact claim, named assessment, theme preservation, citation/reference downloads and memory reset passed.`);
+    await context.close(); console.log(`Built private drafts ${width}px: exact claim, named assessment, theme preservation, excerpt-bound statement, citation/reference downloads and memory reset passed.`);
   }
 } finally {
   try { await browser?.close(); } finally {
