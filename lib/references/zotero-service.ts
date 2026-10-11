@@ -59,7 +59,8 @@ export function createZoteroService(store: ZoteroStore, transport: typeof fetch 
     collections: (owner: string, signal?: AbortSignal) => operation(owner, true, signal, async (lease, provider) => {
       const user = await provider.permissions(lease.userId!); return provider.collections(user);
     }),
-    send: (owner: string, collection: string, references: ZoteroReference[], signal?: AbortSignal) => operation(owner, true, signal, async (lease, provider) => {
+    send: (owner: string, collection: string, references: ZoteroReference[], signal?: AbortSignal, reportAdmission?: () => Promise<void>) => operation(owner, true, signal, async (lease, provider) => {
+      await reportAdmission?.();
       if (!references.length || references.length > 50 || new Set(references.map(row => row.identity)).size !== references.length) throw new ZoteroError("zotero_limit");
       // Admit the complete canonical set before reserving keys or posting. Distinct
       // source/item identities can share a URL/version; never collapse their keys
@@ -100,7 +101,12 @@ export function createZoteroService(store: ZoteroStore, transport: typeof fetch 
           planned.push({ key: noteKey, version: 0, itemType: "note", parentItem: key, note: reference.note, tags: [], collections: [], relations: {} });
         }
       }
-      for (let start = 0; start < planned.length; start += 50) await provider.write(user, planned.slice(start, start + 50));
+      for (let start = 0; start < planned.length; start += 50) {
+        // Publication can be revoked while provider reads are held. Recheck the
+        // exact admitted revision/export before each new write, without retries.
+        await reportAdmission?.();
+        await provider.write(user, planned.slice(start, start + 50));
+      }
       return { references: references.length, writes: planned.length, collection, provider: "zotero" as const };
     }),
   };

@@ -149,6 +149,35 @@ are cleared on submission and account remount; they are never persisted locally.
 
 ## Supported surfaces and concrete rollout gates
 
+The source-only integration with the incoming #266 privacy port does not install
+or activate that producer's schema or readers. A captured OFF stage preserves the
+existing owner-history behavior. When privacy reads are active, a report send
+requires the actual port, a public and unerased current publication, and a valid
+nonnegative revision. The owner reader still supplies the exact wallet/network/
+origin binding. Publication must match that original's ID, creation time and
+canonical reference/excerpt export; no `QueryRun.visibility` hint is authority.
+Missing capabilities refuse with a private unavailable response, never empty
+success. The admitted revision/export is checked again after held provider reads
+and before each write batch. A later revocation cannot recall an in-flight write;
+no automatic retry or new private-report sharing authority is added.
+
+Bootstrap review is source-only. The new four Zotero tables are reached only
+through the ordinary adapter's exact `KERYX_ZOTERO_ENABLED=1` branch; this opt-in
+currently executes `CREATE TABLE IF NOT EXISTS` before the service master-key
+check. Enabling it is therefore also a schema-admission decision, not authority
+granted by this source merge. Existing private-bibliography initialization is
+unchanged from accepted b1. No ENV value, shared schema or data was inspected or
+changed here. An absent Zotero schema is currently created, while an unknown
+existing schema refuses. The constructor's `BEGIN IMMEDIATE` is outside its
+error-conversion block: a failure there can escape the optional-port catch and
+abort ordinary initialization when the flag is enabled. This conditional legacy
+regression is a frozen source blocker. The smallest proposed correction is a
+readiness-only factory that checks the existing exact schema and converts all
+initialization failures to `zotero_unavailable`, leaving explicit installation
+and target migration admission to root. No bootstrap/SQL correction is performed
+without root's scope confirmation. External provider operations independently
+refuse a missing master key; status and revocation do not require decryption.
+
 | Surface | Source behavior / boundary |
 | --- | --- |
 | Hosted web/session API | Dedicated-key connection and explicit sends when the gated ordinary port is available. |

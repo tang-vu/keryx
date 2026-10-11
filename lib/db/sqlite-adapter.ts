@@ -77,6 +77,7 @@ import { listSqlitePrivateWorkerCandidates, listSqlitePrivateReconciliationCandi
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { decodeUnfinishedA2aOrders, unfinishedA2aOrderLimit, type UnfinishedA2aOrders } from "../a2a/overdue-escalation-queue";
 import type {
   ActivationEvent,
   ActivationFunnel,
@@ -1733,6 +1734,12 @@ export class SqliteAdapter implements KeryxDB {
       ? this.db.prepare("SELECT * FROM a2a_orders WHERE LOWER(payer) = LOWER(?) AND (created_at < ? OR (created_at = ? AND id < ?)) ORDER BY created_at DESC, id DESC LIMIT 26").all(wallet, before.createdAt, before.createdAt, before.id)
       : this.db.prepare("SELECT * FROM a2a_orders WHERE LOWER(payer) = LOWER(?) ORDER BY created_at DESC, id DESC LIMIT 26").all(wallet);
     return rows.map(rowToA2aOrder);
+  }
+
+  async listUnfinishedA2aOrders(limit: number): Promise<UnfinishedA2aOrders> {
+    const bound = unfinishedA2aOrderLimit(limit);
+    const rows = this.db.prepare("SELECT * FROM a2a_orders WHERE status IN ('running','failed') ORDER BY created_at ASC, id ASC LIMIT ?").all(bound + 1);
+    return decodeUnfinishedA2aOrders(rows, bound, rowToA2aOrder);
   }
 
   async hasA2aOriginalSettlement(expected: A2aOriginalClaim): Promise<boolean> {

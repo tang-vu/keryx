@@ -3,6 +3,13 @@ import { isConfiguredSameOrigin } from "../auth-origin";
 import { ZoteroError, zoteroConnectSchema, zoteroOwner, zoteroSendSchema } from "./zotero-contract";
 import { zoteroPaperReferences, zoteroReportReferences } from "./zotero-export";
 import { createZoteroService } from "./zotero-service";
+import type { QueryRun } from "../types";
+
+// Read-only subset of the incoming #266 port. No privacy schema, adapter or
+// activation is installed here; the owning producer supplies that capability.
+type PublicationStage = { readonly runPrivacyActive?: boolean; readonly runPrivacy?: {
+  read(id: string): Promise<{ exists: boolean; item: { run: QueryRun; state: { visibility: "private" | "unlisted" | "public"; revision: number; erased: boolean } } | null }>;
+} };
 
 const headers = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow", "X-Content-Type-Options": "nosniff" };
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers });
@@ -45,6 +52,7 @@ export function createZoteroRoutes(session: Session, baseUrl: string, network: s
       const parsed = zoteroSendSchema.safeParse(raw); if (!parsed.success) return json({ error: "invalid_zotero_request" }, 400);
       const value = parsed.data;
       let references;
+      let reportAdmission: (() => Promise<void>) | undefined;
       if (value.kind === "papers") references = zoteroPaperReferences(value.papers);
       else {
         // The established owner reader verifies recorded/claimed ownership. There
@@ -54,8 +62,30 @@ export function createZoteroRoutes(session: Session, baseUrl: string, network: s
         const record = await history.read(context.wallet, { network, origin: new URL(baseUrl).origin }, value.reportId);
         if (!record || record.run.originalFulfillment || record.run.id.startsWith("prv_")) throw new ZoteroError("zotero_report_not_found");
         references = zoteroReportReferences(record.run, baseUrl);
+        const stage = context.db as KeryxDB & PublicationStage;
+        // Match #266's captured-stage semantics. Explicit OFF keeps the admitted
+        // legacy owner reader, even when a future environment flag has changed.
+        const active = stage.runPrivacyActive ?? (!!stage.runPrivacy || process.env.KERYX_RUN_PRIVACY_ENABLED === "true");
+        if (active) {
+          if (!stage.runPrivacy || typeof stage.runPrivacy.read !== "function") throw new ZoteroError("zotero_unavailable");
+          const expected = JSON.stringify(references);
+          let revision: number | undefined;
+          reportAdmission = async () => {
+            const result = await stage.runPrivacy!.read(value.reportId);
+            if (!result || typeof result.exists !== "boolean") throw new ZoteroError("zotero_unavailable");
+            if (!result.item) throw new ZoteroError("zotero_report_not_found");
+            const { run, state } = result.item;
+            if (!result.exists || !state || !Number.isSafeInteger(state.revision) || state.revision < 0 || typeof state.erased !== "boolean"
+              || !["private", "unlisted", "public"].includes(state.visibility)) throw new ZoteroError("zotero_unavailable");
+            if (state.erased || state.visibility !== "public") throw new ZoteroError("zotero_report_not_found");
+            if (run.id !== record.run.id || run.createdAt !== record.run.createdAt || revision !== undefined && state.revision !== revision
+              || JSON.stringify(zoteroReportReferences(run, baseUrl)) !== expected) throw new ZoteroError("zotero_conflict");
+            revision = state.revision;
+          };
+          await reportAdmission();
+        }
       }
-      return json(await service.send(context.wallet, value.collection, references, req.signal));
+      return json(await service.send(context.wallet, value.collection, references, req.signal, reportAdmission));
     } catch (error) {
       const code = error instanceof ZoteroError ? error.code : "zotero_unavailable";
       return json({ error: code }, code === "zotero_report_not_found" ? 404 : code === "zotero_limit" ? 422 : ["zotero_conflict", "zotero_library_bound", "zotero_busy", "zotero_disconnected"].includes(code) ? 409 : code === "zotero_backoff" ? 429 : code === "zotero_scopes" ? 403 : 503);

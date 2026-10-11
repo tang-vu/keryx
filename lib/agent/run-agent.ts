@@ -46,6 +46,7 @@ import { config } from "../config";
 import { ResearchSelectionError, readSelectionDiagnostics } from "../llm/research-selection";
 import { newRunProvenance, type RunProvenance } from "../research/run-provenance";
 import { newRunUsage } from "../research/usage-provenance";
+import { captureSourceLearning } from "../research/source-learning-observations";
 import type {
   ClaimCoverageRecord,
   Citation,
@@ -128,6 +129,7 @@ import {
   attachEvidencePortfolioOutcome,
   selectEvidencePortfolio,
 } from "./evidence-portfolio";
+import { withDecisionBasis } from "../research/decision-basis";
 
 export interface RunInput {
   /** Interactive same-owner browser admission only; other adapters fail before effects. */
@@ -391,6 +393,11 @@ async function* runAdmittedAgent(
   const unverifiedCount = allSources.filter((source) => source.verified === false).length;
   const candidates: SourceCandidate[] = [];
   const assetById = new Map<string, InternalAsset>();
+  const learningAuthoritySnapshots = new Map<string, SourceFetchTerms[]>();
+  function rememberLearningAuthority(sourceId: string, terms: SourceFetchTerms): void {
+    const snapshots = learningAuthoritySnapshots.get(sourceId) ?? [];
+    snapshots.push(terms); learningAuthoritySnapshots.set(sourceId, snapshots);
+  }
   // Sources whose cached copy still matches what they publish. A copy the source has published
   // past is not a free read of it any more, so it is offered as a paid fetch instead — otherwise
   // the first purchase of a source would be the last toll it ever earned, and every later answer
@@ -1001,6 +1008,8 @@ async function* runAdmittedAgent(
     });
   }
 
+  // Record the structured basis once the plan is fixed, before it is streamed or persisted.
+  finalDecisions = withDecisionBasis(finalDecisions, { fetchBudgetUsdc: fetchBudget, ruleFor: planningRule });
   previewCoverage = buildPreviewCoverage(subClaims, finalDecisions);
   const selectedCached = finalDecisions.filter((decision) => decision.action === "CACHE").length;
   const selectedBought = finalDecisions.filter((decision) => decision.action === "BUY").length;
@@ -1028,7 +1037,7 @@ async function* runAdmittedAgent(
     const externalMatches = decision.external ? proposed.filter(item => item.sourceId === decision.sourceId) : [];
     checkpointProposals.set(assetId, decision.external ? externalMatches.length === 1 ? externalMatches[0].action : "UNKNOWN" : modelActions.get(assetId) ?? "UNKNOWN");
     const record = await captureReview(decision, decision.external ? externalMatches.length === 1 ? externalMatches[0].action : null : modelActions.get(assetId) ?? null,
-      decision.external ? "external-only" : codeRules.get(assetId) ?? (decision.action === "SKIP" ? "model-skip" : publicCandidates.has(assetId) ? "public-read" : decision.action === "CACHE" ? "cache-selected" : "selected"), 0, ordinal);
+      planningRule(decision), 0, ordinal);
     if (record) reviewRecords.set(assetId, record);
   }
 
@@ -1103,6 +1112,7 @@ async function* runAdmittedAgent(
     const { source, item, cacheKey } = asset;
     try {
       const currentTerms = await sourceFetchTerms(source, { refresh: true });
+      rememberLearningAuthority(source.id, currentTerms);
       if (sourceRecipientIsExcluded(source, currentTerms, outsideFundedAsker)) throw new Error("Source recipient is excluded");
       const currentAccess = await sourceClaimAccess(db, source, currentTerms, { expected: asset.claimPolicy ?? null });
       if (checkpoint({ kind: "terms", allowed: currentAccess.readAllowed && currentTerms.listPriceUsdc === asset.listPriceUsdc }, d.assetId ?? d.sourceId).action === "SKIP") throw new Error("Source terms changed");
@@ -1457,6 +1467,7 @@ async function* runAdmittedAgent(
         }
         try {
           const currentTerms = await sourceFetchTerms(source, { refresh: true });
+          rememberLearningAuthority(source.id, currentTerms);
           if (sourceRecipientIsExcluded(source, currentTerms, outsideFundedAsker)) throw new Error("Source recipient is excluded");
           const access = await sourceClaimAccess(db, source, currentTerms, { expected: asset.claimPolicy ?? null });
           if (checkpoint({ kind: "terms", allowed: access.readAllowed && currentTerms.listPriceUsdc === asset.listPriceUsdc }, recId, round + 1).action === "SKIP") throw new Error("Source terms changed");
@@ -1956,6 +1967,7 @@ async function* runAdmittedAgent(
     if (!source || c.reward <= 0) continue;
     try {
       const terms = await sourceFetchTerms(source, { refresh: true });
+      rememberLearningAuthority(source.id, terms);
       if (sourceRecipientIsExcluded(source, terms, outsideFundedAsker)) throw new Error("Source recipient is excluded");
       const access = await sourceClaimAccess(db, source, terms, { expected: c.sourceClaim ?? null });
       if (!access.rewardAllowed) throw new Error("Creator rewards are disabled");
@@ -2142,6 +2154,11 @@ async function* runAdmittedAgent(
       priceMicroUsdc: reviewMicros(action === "CACHE" ? 0 : asset?.priceUsdc ?? 0), listPriceMicroUsdc: reviewMicros(asset?.listPriceUsdc ?? 0),
       citationBudgetMicroUsdc: reviewMicros(round(citationPool)) };
   }
+  function planningRule(decision: Decision): CaptureDecision["codeRule"] {
+    const assetId = decision.assetId ?? decision.sourceId;
+    return decision.external ? "external-only" : codeRules.get(assetId) ?? (decision.action === "SKIP" ? "model-skip"
+      : publicCandidates.has(assetId) ? "public-read" : decision.action === "CACHE" ? "cache-selected" : "selected");
+  }
   async function captureReview(decision: Decision, modelAction: CaptureDecision["modelAction"], codeRule: CaptureDecision["codeRule"], round: number, ordinal: number) {
     if (!input.decisionReviews) return undefined;
     try {
@@ -2314,7 +2331,24 @@ async function* runAdmittedAgent(
     );
     const captured = checkpointCapture.finish();
     if (captured) done.readCheckpoints = captured;
-    return demoteSyntheticEvidence(run);
+    const completed = demoteSyntheticEvidence(run);
+    if (effects.scope.kind === "public") {
+      try {
+        const learningTerms = new Map(learningAuthoritySnapshots);
+        for (const asset of assetById.values()) {
+          const snapshots = learningTerms.get(asset.source.id) ?? [];
+          learningTerms.set(asset.source.id, [...snapshots, asset.terms]);
+        }
+        completed.sourceLearning = captureSourceLearning({
+          run: { ...completed, usage: newRunUsage(input, config.profile.networkId, config.devWallets) },
+          sources: [...new Map([...assetById.values()].map(asset => [asset.source.id, asset.source])).values()],
+          terms: learningTerms,
+          payments, readSourceIds: new Set(gathered.map(item => item.sourceId)),
+          readAssetIds: new Set(gathered.map(item => item.assetId ?? item.sourceId)),
+        });
+      } catch { /* Learning telemetry cannot discard a completed answer or change payment state. */ }
+    }
+    return completed;
   }
 }
 

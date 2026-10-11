@@ -12,6 +12,8 @@ import { operatorStatusOpenApiPath } from "./business-operator/openapi";
 import { operatorObligationOpenApiPath } from "./operator-obligations/openapi";
 import { publicJobLedgerOpenApiPath } from "./operator-ledger/openapi";
 import { purchaseOutcomesOpenApiPath } from "./research/purchase-outcomes-openapi";
+import { sourceLearningOpenApiPath } from "./research/source-learning-openapi";
+import { purchaseOutcomeAggregateOpenApiPath } from "./research/purchase-outcome-aggregate-openapi";
 import { monthlyOpenApiPath } from "./monthly/openapi";
 import { paidJobEscalationOpenApiProperty, paidJobEscalationOpenApiSchemas } from "./a2a/overdue-openapi";
 import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
@@ -55,7 +57,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.27.57",
+    version: "0.27.58",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -744,6 +746,8 @@ export const openapiSpec = {
     },
     "/api/research/monthly": monthlyOpenApiPath,
     "/api/dispatch/{id}/purchase-outcomes": purchaseOutcomesOpenApiPath,
+    "/api/source/{id}/learning": sourceLearningOpenApiPath,
+    "/api/purchase-outcomes": purchaseOutcomeAggregateOpenApiPath,
     "/api/dispatch/{id}/receipt": {
       get: {
         operationId: "getDispatchResearchReceipt",

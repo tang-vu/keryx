@@ -45,6 +45,18 @@ quota, available capacity and spend caps, so a new answer within two minutes is
 not guaranteed. Submitted questions become public reports. See
 [sponsored trial limits](docs/sponsored-research-trial.md).
 
+## Recorded purchase outcomes
+
+The October 11 source candidate adds `/purchase-outcomes` and its read-only
+`/api/purchase-outcomes` view. It compares recorded exact-version purchases with
+citations, showing the newest-run sample, UTC interval and separate recorded
+outside/team/scripted/unknown groups. Uncited spend is descriptive; missed value,
+question-type splits and cost per supported claim remain unmeasured. Initial
+planning decisions retain exact price and planned-budget snapshots, without
+rewriting history or changing payment authority. See the
+[scope, offline comparison command and remaining acceptance gates](docs/engineering/purchase-outcomes-298.md).
+This source entry does not claim deployment or independently verified settlement.
+
 ## Usage so far
 
 Read-only snapshot of [public metrics](https://keryx.cc/api/metrics),

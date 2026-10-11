@@ -170,6 +170,7 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   createA2aOrder: "write",
   getA2aOrder: "read",
   listA2aOrdersByPayer: "read",
+  listUnfinishedA2aOrders: "read", // Private operator observation; grants no claim or resolution authority.
   claimNextA2aOrder: "write", // Includes exact-original binding; readonly cannot start a queued original.
   hasA2aOriginalSettlement: "read", // Native settled proof does not grant a writer/claim capability.
   claimA2aFailedOriginalFulfillment: "mainnet-write",
