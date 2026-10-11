@@ -9,6 +9,14 @@ native books yield unknown and zero safe/advisory surplus, without custody,
 spending or scheduler authority. Source identity is not hosted deployment,
 publication, installation or activation. See [surface parity](surface-parity.md).
 
+The October 11 [purchase-outcome source candidate](engineering/purchase-outcomes-298.md)
+adds pooled public figures at `/purchase-outcomes` and GET `/api/purchase-outcomes`.
+The keyless `keryx_purchase_outcomes(dispatchId)` tool retains its bounded
+per-dispatch exact-version observation role. Neither the aggregate nor the tool
+reads a paid source, evaluates skipped content, infers outside users or grants a
+private-original capability. Hosted deployment and package acceptance remain
+separate from source qualification.
+
 ## Prior release46 distribution candidate
 
 The app0.27.46 source candidate identifies this hosted tool set as protocol0.3.9.

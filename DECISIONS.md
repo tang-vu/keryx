@@ -7565,3 +7565,39 @@ bounded planner only as a prospective offline policy: no signer, default
 exploration allowance or live selection activation. Controlled purchase replay
 is not causal exploration benefit or production acceptance. See the
 [source, surface and remaining-gate record](docs/engineering/source-learning-299.md).
+
+## 2026-10-11 — Record purchase planning separately from observed outcomes
+
+For issue298, add an immutable initial planning basis to existing decision JSON
+instead of reconstructing historical budgets or alternatives from prose. Preserve
+that basis when a later guard withholds the planned read. Pool the existing exact
+article/version purchase scorer in a bounded newest-run sample per recorded
+cohort, with interval, counts, rules and missing measures explicit. This keeps
+recorded citations and settlement bookkeeping distinct from model reasoning,
+expert usefulness, independent traffic and third-party payment verification.
+
+Keep the separately bounded skip-evaluation helper detached from live research:
+its synthetic reservations are accounting rather than payment authority. Require
+explicit margins and minimum samples for an offline release comparison; invent
+no accepted regression policy. Dynamic reevaluation capture, real independently
+funded evaluation transport, supported-claim review, question taxonomy and the
+actual pre-deployment comparison remain open. See the
+[scope and surface boundaries](docs/engineering/purchase-outcomes-298.md).
+
+## 2026-10-11 — Inspect overdue originals through selected read-only storage
+
+Continue issue #257 with an explicit private operator command, reusing the
+existing accepted target, original-order payment reference and conservative
+creator-leg projection. Include running and failed undelivered originals;
+failure alone does not close a paid-delivery obligation. Keep observation out of
+public aggregate/MCP packets and leave customer remedies to the confirmed policy.
+
+Use the selected enrolled read-only facade, with disposal and no ordinary
+initialization/schema fallback. Bounded reads report unreadable/truncated data;
+ordinary Supabase requires exact count to expose server row caps. Native
+PostgreSQL explicitly refuses until its own sealed queue domain is accepted.
+No schedule, notification, new signer, retry, purchase, reconciliation, refund,
+hold release, production DDL or version/deployment claim is introduced. This
+gives a person a concrete original packet while preserving payment uncertainty
+and the remaining target-window/service gates. See the
+[scope and release boundaries](docs/engineering/paid-job-overdue-queue-257.md).

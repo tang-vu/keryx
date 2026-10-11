@@ -129,6 +129,7 @@ import {
   attachEvidencePortfolioOutcome,
   selectEvidencePortfolio,
 } from "./evidence-portfolio";
+import { withDecisionBasis } from "../research/decision-basis";
 
 export interface RunInput {
   /** Interactive same-owner browser admission only; other adapters fail before effects. */
@@ -1007,6 +1008,8 @@ async function* runAdmittedAgent(
     });
   }
 
+  // Record the structured basis once the plan is fixed, before it is streamed or persisted.
+  finalDecisions = withDecisionBasis(finalDecisions, { fetchBudgetUsdc: fetchBudget, ruleFor: planningRule });
   previewCoverage = buildPreviewCoverage(subClaims, finalDecisions);
   const selectedCached = finalDecisions.filter((decision) => decision.action === "CACHE").length;
   const selectedBought = finalDecisions.filter((decision) => decision.action === "BUY").length;
@@ -1034,7 +1037,7 @@ async function* runAdmittedAgent(
     const externalMatches = decision.external ? proposed.filter(item => item.sourceId === decision.sourceId) : [];
     checkpointProposals.set(assetId, decision.external ? externalMatches.length === 1 ? externalMatches[0].action : "UNKNOWN" : modelActions.get(assetId) ?? "UNKNOWN");
     const record = await captureReview(decision, decision.external ? externalMatches.length === 1 ? externalMatches[0].action : null : modelActions.get(assetId) ?? null,
-      decision.external ? "external-only" : codeRules.get(assetId) ?? (decision.action === "SKIP" ? "model-skip" : publicCandidates.has(assetId) ? "public-read" : decision.action === "CACHE" ? "cache-selected" : "selected"), 0, ordinal);
+      planningRule(decision), 0, ordinal);
     if (record) reviewRecords.set(assetId, record);
   }
 
@@ -2150,6 +2153,11 @@ async function* runAdmittedAgent(
       ...(asset?.claimPolicy ? { claimDigest: createHash("sha256").update(canonicalJson(asset.claimPolicy)).digest("hex") } : {}),
       priceMicroUsdc: reviewMicros(action === "CACHE" ? 0 : asset?.priceUsdc ?? 0), listPriceMicroUsdc: reviewMicros(asset?.listPriceUsdc ?? 0),
       citationBudgetMicroUsdc: reviewMicros(round(citationPool)) };
+  }
+  function planningRule(decision: Decision): CaptureDecision["codeRule"] {
+    const assetId = decision.assetId ?? decision.sourceId;
+    return decision.external ? "external-only" : codeRules.get(assetId) ?? (decision.action === "SKIP" ? "model-skip"
+      : publicCandidates.has(assetId) ? "public-read" : decision.action === "CACHE" ? "cache-selected" : "selected");
   }
   async function captureReview(decision: Decision, modelAction: CaptureDecision["modelAction"], codeRule: CaptureDecision["codeRule"], round: number, ordinal: number) {
     if (!input.decisionReviews) return undefined;

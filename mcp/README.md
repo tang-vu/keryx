@@ -71,6 +71,11 @@ is executed. Recorded settlement is not revalidated. Sample/exclusion counts sta
 visible; cohort, missed value and cost per supported claim remain unknown or
 unmeasured. See [the source and release gates](../docs/engineering/purchase-outcomes-298.md).
 
+The October 11 pooled purchase-outcome candidate uses the public page and GET
+`/api/purchase-outcomes`; this MCP tool keeps its original per-dispatch contract.
+Pooled cohorts come only from write-time records, never from the client channel.
+No evaluation reader, user-budget debit or creator reward is added by that view.
+
 The issue 286 source candidate adds keyless `keryx_public_job_ledger` (`days: 1..31`, default
 7). It reads a bounded public web-dispatch transfer ledger with separate browser/treasury/
 unknown/offline funding and balanced exact integer vouchers. It omits questions, customers,

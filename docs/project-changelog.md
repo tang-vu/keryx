@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Private manual overdue-job observation (source candidate)
+
+- Add `npm run operator:overdue` to inspect running/failed originals against
+  their accepted targets through selected enrolled read-only storage. Include
+  original references, recorded stage and pending payment without retrying or
+  changing an obligation. Incomplete/corrupt reads require explicit attention.
+- Preserve existing customer alerts, latency cohorts and public API/MCP roles.
+  Native PostgreSQL queue enrollment, automatic/staffed escalation and customer
+  remedy requests remain open under issue #257. Runtime versions, review/CI,
+  combined deployment and published distribution remain root release gates.
+
 ### Bounded source-language retrieval and public metadata (v0.27.57 candidate)
 
 - Reserve existing bounded context for a unique parser-observed heading matching
