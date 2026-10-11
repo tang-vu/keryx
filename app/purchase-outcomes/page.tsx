@@ -55,9 +55,9 @@ export default async function PurchaseOutcomesPage({ searchParams }: { searchPar
     <p className="mt-4 max-w-3xl">{copy.introduction}</p>
     <p className="mt-3 max-w-3xl text-sm text-ink-2">{copy.recordedOnly}</p>
     <form method="get" className="my-6 flex flex-wrap items-end gap-4">
-      <label>{copy.network}<select name="network" defaultValue={params.get("network") ?? view?.network ?? "eip155:5042"} className="block border border-line p-2"><option value="eip155:5042">{copy.mainnet}</option><option value="eip155:5042002">{copy.testnet}</option></select></label>
-      <label>{copy.period}<select name="period" defaultValue={params.get("period") ?? "all"} className="block border border-line p-2"><option value="all">{copy.all}</option><option value="7d">{copy.week}</option><option value="30d">{copy.month}</option></select></label>
-      <label>{copy.since}<input type="date" name="since" defaultValue={params.get("since") ?? ""} className="block border border-line p-2" /></label>
+      <div><label htmlFor="purchase-outcomes-network">{copy.network}</label><select id="purchase-outcomes-network" name="network" defaultValue={params.get("network") ?? view?.network ?? "eip155:5042"} className="block border border-line p-2"><option value="eip155:5042">{copy.mainnet}</option><option value="eip155:5042002">{copy.testnet}</option></select></div>
+      <div><label htmlFor="purchase-outcomes-period">{copy.period}</label><select id="purchase-outcomes-period" name="period" defaultValue={params.get("period") ?? "all"} className="block border border-line p-2"><option value="all">{copy.all}</option><option value="7d">{copy.week}</option><option value="30d">{copy.month}</option></select></div>
+      <div><label htmlFor="purchase-outcomes-since">{copy.since}</label><input id="purchase-outcomes-since" type="date" name="since" defaultValue={params.get("since") ?? ""} className="block border border-line p-2" /></div>
       <button className="border border-line px-4 py-2">{copy.apply}</button>
     </form>
     {!view ? <p role="status">{invalid ? copy.invalid : copy.unavailable}</p> : <>

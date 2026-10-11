@@ -6,6 +6,7 @@ import { aggregatePurchaseOutcomes, PURCHASE_AGGREGATE_COHORTS } from "./purchas
 import { projectPurchaseOutcomes } from "./purchase-outcomes-projector";
 import retained from "../../fixtures/purchase-outcomes/retained-testnet.json";
 import { createElement } from "react";
+import { JSDOM } from "jsdom";
 
 const { read } = vi.hoisted(() => ({ read: vi.fn() }));
 vi.mock("./purchase-outcome-aggregate-server", async importOriginal => ({
@@ -47,4 +48,28 @@ it("withholds figures on storage failure and refuses duplicate filters before re
   const invalid = renderToStaticMarkup(await PurchaseOutcomesPage({ searchParams: Promise.resolve({ period: ["7d", "30d"] }) }));
   expect(invalid).toContain(copy.invalid); expect(invalid).not.toContain("<table");
   expect(read.mock.calls).toHaveLength(0);
+});
+
+it("gives each filter a unique control with its exact text-only label", async () => {
+  read.mockResolvedValue(undefined);
+  const html = renderToStaticMarkup(await PurchaseOutcomesPage({ searchParams: Promise.resolve({
+    network: "eip155:5042002", period: "30d", since: "2026-10-01",
+  }) }));
+  const { document } = new JSDOM(html).window;
+  const labels = [...document.querySelectorAll<HTMLLabelElement>("form label")];
+  expect(labels).toHaveLength(3);
+  for (const [name, text, value] of [
+    ["network", copy.network, "eip155:5042002"],
+    ["period", copy.period, "30d"],
+    ["since", copy.since, "2026-10-01"],
+  ]) {
+    const matching = labels.filter(label => label.textContent === text);
+    expect(matching).toHaveLength(1);
+    const control = matching[0].control as HTMLSelectElement | HTMLInputElement | null;
+    expect(control?.name).toBe(name);
+    expect(control?.value).toBe(value);
+    expect(matching[0].querySelector("input, select")).toBeNull();
+    expect(document.querySelectorAll(`[id="${control?.id}"]`)).toHaveLength(1);
+    expect(control?.labels).toHaveLength(1);
+  }
 });
