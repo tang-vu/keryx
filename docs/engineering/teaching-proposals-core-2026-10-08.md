@@ -20,10 +20,14 @@ It checks the exclusive 99-word explanatory ceiling, one 10-minute activity, two
 invented classification examples, an exit question/answer, distinct proposal
 labels and the caller's prohibition on inferring climate from one day's weather.
 
-When a proposal is blocked by `missing-premise` or `final-premise-withheld`, its
+When a proposal is blocked by `final-premise-withheld`, its
 presentation identifies inadequate final factual support and directs the reader
 to locate directly answering passages for the missing topics in the requested
-original. A separately admitted factual statement can remain useful beside a
+original. An unresolved `missing-premise` reference receives a different next
+step: match proposal references against cited statements, and only seek a source
+passage if the factual topic itself lacks evidence. A draft's invalid reference
+does not establish missing knowledge in the original source. A separately
+admitted factual statement can remain useful beside a
 partial-coverage gap even when it cannot support the proposal. Accepted independent
 proposal siblings remain visible. An unavailable/rejected review, malformed packet
 or count/word mismatch does not acquire a false missing-fact diagnosis. The notice

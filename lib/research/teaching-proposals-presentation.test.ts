@@ -9,8 +9,8 @@ function delivery(reason: TeachingProposalGap["reason"], language: "vi" | "en" =
     proposals: [], admittedStatements: [], gaps: [{ reason }], explanationWords: 0, complete: false };
 }
 
-it.each(["missing-premise", "final-premise-withheld"] as const)("gives a bounded factual repair for %s without asserting a source fact", reason => {
-  const answer = teachingProposalAnswer(delivery(reason));
+it("gives a bounded factual repair for withheld final support without asserting a source fact", () => {
+  const answer = teachingProposalAnswer(delivery("final-premise-withheld"));
   expect(answer).toContain("bằng chứng cuối cùng chưa đủ");
   expect(answer).toContain("các mục kiến thức còn thiếu ở phần trả lời trên với nguồn gốc bạn đã yêu cầu");
   expect(answer).toContain("tìm đoạn trực tiếp trả lời từng mục");
@@ -18,6 +18,15 @@ it.each(["missing-premise", "final-premise-withheld"] as const)("gives a bounded
   expect(answer).not.toContain("NASA");
   expect(answer).not.toContain("ngân sách");
   expect(answer).not.toContain("thử lại tự động");
+});
+
+it("distinguishes an unresolved proposal reference from absence of source knowledge", () => {
+  const answer = teachingProposalAnswer(delivery("missing-premise"));
+  expect(answer).toContain("tham chiếu kiến thức không khớp với câu đã dẫn nguồn");
+  expect(answer).toContain("chưa xác định rằng nguồn gốc thiếu kiến thức");
+  expect(answer).toContain("Nếu một mục kiến thức chưa có bằng chứng");
+  expect(answer).toContain("tình huống giả định không thay thế bằng chứng");
+  expect(answer).not.toContain("bằng chứng cuối cùng chưa đủ");
 });
 
 it.each(["review-unavailable", "review-rejected", "invalid-proposals", "requested-count", "explanation-word-limit"] as const)(

@@ -34,20 +34,20 @@ afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
 class OriginalTeachingEngine extends JsonChatEngine {
   readonly name = "controlled-original-teaching-synthesis";
   packets: { system: string; packet: Record<string, unknown>; cap?: number }[] = [];
-  constructor(private readonly missing?: "climate" | "all") { super(); }
+  constructor(private readonly options: { missing?: "climate" | "all"; invalidReference?: boolean }) { super(); }
   protected async chatJson(_model: string, system: string, user: string, cap?: number) {
     const packet = JSON.parse(user);
     this.packets.push({ system, packet, cap });
     if (this.packets.length === 1) {
       const quotes = packet.quoteOptions as { quoteId: string; marker: string; text: string }[];
-      const evidence = this.missing === "all" ? [] : source.map((quote, claimIndex) => {
+      const evidence = this.options.missing === "all" ? [] : source.map((quote, claimIndex) => {
         const option = quotes.find(row => row.text === quote);
         if (!option) throw new Error("Synthetic factual passage was not selected for generation");
         return { claimIndex, marker: option.marker, quoteId: option.quoteId, statement: statements[claimIndex], support: 0.9 };
       });
       const teachingProposals = [
         { id: "t1", kind: "activity", text: "Đề xuất: đọc các kiến thức đã dẫn nguồn trong 2 phút, phân loại thẻ giả định trong 5 phút, giải thích lựa chọn trong 3 phút.", durationMinutes: 10,
-          premiseIds: ["e1", "e2", "e3"], conditions: ["Không suy xu hướng khí hậu từ tình huống thời tiết một ngày."] },
+          premiseIds: this.options.invalidReference ? ["e32"] : ["e1", "e2", "e3"], conditions: ["Không suy xu hướng khí hậu từ tình huống thời tiết một ngày."] },
         { id: "t2", kind: "classification-example", text: "Tình huống giả định: hôm nay có mưa.", answer: "Thời tiết.", premiseIds: ["e1"], conditions: [] },
         { id: "t3", kind: "classification-example", text: "Tình huống giả định: lượng mưa trung bình qua nhiều thập kỷ.", answer: "Khí hậu.", premiseIds: ["e2"], conditions: [] },
         { id: "t4", kind: "exit-question", text: "Theo hai định nghĩa đã đọc, mô tả thời tiết trung bình trong thời gian dài thuộc khái niệm nào?",
@@ -65,7 +65,7 @@ class OriginalTeachingEngine extends JsonChatEngine {
   }
 }
 
-async function drive(options: { enabled?: boolean; missing?: "climate" | "all" } = {}) {
+async function drive(options: { enabled?: boolean; missing?: "climate" | "all"; invalidReference?: boolean } = {}) {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-11T00:00:00.000Z"));
   vi.stubEnv("KERYX_TEACHING_PROPOSALS", options.enabled === false ? "0" : "1");
@@ -73,7 +73,7 @@ async function drive(options: { enabled?: boolean; missing?: "climate" | "all" }
   const attribute = vi.fn(async (input: { used: { sourceId: string }[] }) => input.used.map(row =>
     ({ sourceId: row.sourceId, weight: 1, rationale: "Controlled factual excerpt contribution" })));
   const decompose = vi.fn(async () => subClaims);
-  const synthesis = new OriginalTeachingEngine(options.missing);
+  const synthesis = new OriginalTeachingEngine(options);
   const synthesize = vi.fn((input: SynthInput) => synthesis.synthesize(input));
   const coverage = () => subClaims.map((claim, index) => ({ claim,
     coverage: options.missing === "all" || options.missing === "climate" && index === 1 ? 0 : 0.9, coveredBy: ["S1"] }));
@@ -159,9 +159,21 @@ it("does not invent NASA evidence or a lesson when all factual premises are unav
   expect(f.run.teachingProposals!.proposals).toEqual([]);
   expect(f.run.teachingProposals!.complete).toBe(false);
   expect(f.run.evidence).toEqual([]); expect(f.run.citations).toEqual([]);
-  expect(f.run.answer).toContain("Thiếu kiến thức làm cơ sở:");
-  expect(f.run.answer).toContain("tìm đoạn trực tiếp trả lời từng mục");
+  expect(f.run.answer).toContain("Liên kết kiến thức của đề xuất còn thiếu:");
+  expect(f.run.answer).toContain("tìm đoạn trực tiếp trả lời mục đó");
   expect(f.run.answer).not.toContain("Tình huống giả định: hôm nay có mưa.");
+  expect(f.deniedPayment).not.toHaveBeenCalled();
+});
+
+it("keeps supported facts and examples when a draft uses an invalid premise reference", async () => {
+  const f = await drive({ invalidReference: true });
+  expect(f.run.teachingProposals!.complete).toBe(false);
+  expect(f.run.teachingProposals!.proposals.map(row => row.proposal.id)).toEqual(["t2", "t3", "t4"]);
+  expect(f.run.teachingProposals!.admittedStatements.map(row => row.text)).toEqual(statements);
+  expect(f.run.answer).toContain("tham chiếu kiến thức không khớp với câu đã dẫn nguồn");
+  expect(f.run.answer).not.toContain("bằng chứng cuối cùng chưa đủ");
+  expect(f.synthesis.packets).toHaveLength(2);
+  expect(f.read).toHaveBeenCalledOnce();
   expect(f.deniedPayment).not.toHaveBeenCalled();
 });
 
