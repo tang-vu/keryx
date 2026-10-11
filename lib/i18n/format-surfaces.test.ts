@@ -8,6 +8,7 @@ import { GrantSpendDialog } from "../../components/keryx/grant-spend-dialog";
 import { SessionActiveCard } from "../../components/keryx/session-active-card";
 import { AnswerDeltaPanel } from "../../components/keryx/answer-delta";
 import { PendingReconciliationSection } from "../../components/keryx/pending-reconciliation-section";
+import { ClaimTime } from "../../components/keryx/public-source-claim-status";
 import type { AnswerDelta } from "../answers-delta";
 import type { GrantState } from "../hooks/use-session-grant";
 import { formatAmount, formatNumber, type DisplayLocale } from "./format";
@@ -21,6 +22,15 @@ import { toCsv } from "../creator/csv";
 import type { QueryRun } from "../types";
 
 describe("locale display consumers preserve verification and machine contracts", () => {
+  it("renders one validated claim timestamp without nesting time nodes or retaining invalid date attributes", () => {
+    const value = "2026-10-11T00:30:00Z";
+    const html = renderToStaticMarkup(createElement(ClaimTime, { value }));
+    expect(html.match(/<time\b/g)).toHaveLength(1);
+    expect(html).toContain('dateTime="2026-10-11T00:30:00.000Z"');
+    expect(html).toContain('title="2026-10-11T00:30:00.000Z"');
+    const invalid = renderToStaticMarkup(createElement(ClaimTime, { value: "2026-02-30T00:00:00Z" }));
+    expect(invalid).toBe("<span>Unavailable</span>");
+  });
   it("subtracts known settlement legs in integer micros without repairing unknown legs", () => {
     const base: AnswerDelta = { previousId: "previous", currentId: "current", addedSources: [],
       removedSources: [], retainedSources: 0, changedAssets: [], previousCitations: 0,

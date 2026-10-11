@@ -7,7 +7,7 @@ const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
 
 export function ClaimTime({ value }: { value: string }) {
-  return <time dateTime={value}>{<DisplayTime value={value} />}</time>;
+  return <DisplayTime value={value} />;
 }
 
 export function ClaimControlStatus({ claim, now }: { claim: SourceClaim; now: number }) {
