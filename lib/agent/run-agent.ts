@@ -11,6 +11,7 @@ import { synthesisFailureDetail } from "./synthesis-failure";
 import { parseSynthesisOutputLimit, synthesisOutputLimitFromError } from "../llm/output-limit-diagnostic";
 import { finalizeGroundedAnswer } from "./answer-grounding";
 import { compactWordBudgetAnswer, finishWordBudgetAnswer } from "./word-budget-answer";
+import { compactSentenceNoteAnswer, finishSentenceNoteAnswer } from "./sentence-note-answer";
 import { selectCitedStatements } from "./cited-statements";
 import { deliverDecisionBrief } from "./decision-brief";
 import { discoverPublicReferences } from "./public-reference-evidence";
@@ -283,12 +284,15 @@ async function* runAdmittedAgent(
   // uninitialized binding with the later verdict declaration, stranding finish() in its TDZ.
   let runConfidence: Confidence = { level: "Low", reason: "no source was read for this question" };
   // finish() also handles early returns; never read synthesis-phase lexical bindings there.
-  const initialWordBudget = effects.scope.kind === "public" && !input.targetAsset && !input.paidScholarly &&
+  const initialPresentation = effects.scope.kind === "public" && !input.targetAsset && !input.paidScholarly &&
     !input.answerFormat && !input.executionLimits && process.env.KERYX_DECISION_BRIEF !== "1" &&
     process.env.KERYX_TEACHING_PROPOSALS !== "1"
-    ? answerPresentation(input.originalQuestion ?? input.question).requestedMaximumWords : undefined;
+    ? answerPresentation(input.originalQuestion ?? input.question) : undefined;
+  const initialWordBudget = initialPresentation?.requestedMaximumWords;
   let finalWordBudget: { maximumWords: number; compactAnswer?: string } | undefined = initialWordBudget
     ? { maximumWords: initialWordBudget } : undefined;
+  let finalSentenceNote: { count: number; compactAnswer?: string } | undefined = initialPresentation?.requestedSentenceCount
+    ? { count: initialPresentation.requestedSentenceCount } : undefined;
 
   const fetchBudget = budget * (1 - config.citationPoolRatio);
   const citationPool = budget * config.citationPoolRatio;
@@ -1829,6 +1833,10 @@ async function* runAdmittedAgent(
     finalWordBudget = { maximumWords: presentation.requestedMaximumWords,
       compactAnswer: compactWordBudgetAnswer(ledger, citedStatements, verdict) };
   } else finalWordBudget = undefined;
+  if (finalSentenceNote && ordinaryPresentation && !brief && !teachingRequest && presentation.requestedSentenceCount) {
+    finalSentenceNote = { count: presentation.requestedSentenceCount,
+      compactAnswer: compactSentenceNoteAnswer(ledger, citedStatements, verdict) };
+  } else finalSentenceNote = undefined;
 
   if (verdict.level === "Low" && used.length > 0) {
     answer = ordinaryPresentation && !brief ? confidenceBanner(answer, verdict, presentation.language)
@@ -2114,6 +2122,7 @@ async function* runAdmittedAgent(
   if (followUp) {
     answer += `\n\n${followUp}`;
     if (finalWordBudget?.compactAnswer !== undefined) finalWordBudget.compactAnswer += `\n\n${followUp}`;
+    if (finalSentenceNote?.compactAnswer !== undefined) finalSentenceNote.compactAnswer += `\n\n${followUp}`;
   }
   // Append proposals after contribution allocation and settlement. Their text,
   // labels and gaps cannot enter factual coverage or model attribution input.
@@ -2232,6 +2241,14 @@ async function* runAdmittedAgent(
       answer = delivered.answer;
       emit("synthesize", "Final complete-answer word-budget projection; evidence and payment decisions are unchanged.",
         { answer, maximumWords: finalWordBudget.maximumWords, words: delivered.words, outcome: delivered.outcome });
+    }
+    if (finalSentenceNote) {
+      const delivered = finishSentenceNoteAnswer(answer,
+        finalSentenceNote.compactAnswer === undefined ? undefined : withOperationalNotices(finalSentenceNote.compactAnswer),
+        finalSentenceNote.count);
+      answer = delivered.answer;
+      emit("synthesize", "Final complete-answer sentence-note projection; evidence and payment decisions are unchanged.",
+        { answer, requestedSentenceCount: finalSentenceNote.count, sentenceSegments: delivered.sentenceSegments, outcome: delivered.outcome });
     }
     const totalSpent = round(
       payments

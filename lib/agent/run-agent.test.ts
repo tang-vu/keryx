@@ -609,6 +609,79 @@ describe("ordinary complete-answer word budget", () => {
   });
 });
 
+describe("ordinary complete-answer sentence note", () => {
+  const question = "Explique la identidad de aprobación.";
+  const quote = "The protocol binds approval to canonical action identity.";
+  const statement = "La aprobación se vincula a la identidad canónica de la acción.";
+  async function sentenceRun(options: { count?: boolean; private?: boolean; executionLimits?: boolean; pending?: boolean } = {}) {
+    const originalQuestion = "En español, " + (options.count === false ? "explique la identidad de aprobación." : "escriba una nota breve de tres frases: explique la identidad de aprobación.");
+    const item: SourceItem = { id: "sentence-note-item", sourceId: "sentence-note-source", title: "Synthetic approval protocol",
+      link: "https://owned.example/sentence-note", summary: "Synthetic protocol", content: quote };
+    const source = makeSource({ id: item.sourceId, fetchPrice: 0.004 });
+    const engine = fakeEngine({ synthesize: () => ({ answer: "Unsupported raw draft [S1]", citedMarkers: ["S1"],
+      evidence: [{ claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport: 0.9 }] }) });
+    engine.decompose = async () => ["Identidad de aprobación"];
+    const attribute = vi.spyOn(engine, "attribute"), gateway = fakeGateway();
+    if (options.pending) gateway.payCitation = async ({ source, author, amount, weight, queryId, rationale }) => {
+      gateway.citationCalls.push({ sourceId: source.id, payee: author.walletAddress, amount });
+      throw new PaymentPendingError("Synthetic pending original", makePayment({ kind: "citation", queryId,
+        sourceId: source.id, sourceName: source.name, payer: AGENT, payee: author.walletAddress,
+        amountUsdc: amount, weight, rationale, settled: false, settlementStatus: "pending" }));
+    };
+    const queryId = options.private ? `prv_${"d".repeat(64)}` : undefined, effects = isolatedTestEffects(queryId);
+    const run = await collectRun({ question, originalQuestion, budget: 0.03, ...(queryId ? { queryId } : {}),
+      ...(options.executionLimits ? { executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } } : {}) },
+      { deps: { ...deps([source], engine, gateway, { items: { [source.id]: [item] } }), effects } });
+    return { run, attribute, gateway, effects };
+  }
+  it("projects only after identical canonical attribution and preserves money, bindings and exports", async () => {
+    const canonical = await sentenceRun({ count: false }), note = await sentenceRun();
+    expect(note.attribute.mock.calls[0][0]).toEqual(canonical.attribute.mock.calls[0][0]);
+    expect((note.attribute.mock.calls[0][0] as { answer: string }).answer).toContain("### Objetivo de investigación 1");
+    expect(note.run.answer).not.toContain("### Objetivo de investigación 1");
+    expect(note.run.answer).toContain(`${statement} [S1] Texto de la fuente: “${quote}”`);
+    expect(note.run.answer).toContain("No fue posible presentar la respuesta completa en 3 frases");
+    expect(note.run.evidence).toEqual(canonical.run.evidence);
+    expect(note.run.claimCoverage).toEqual(canonical.run.claimCoverage);
+    expect(note.run.citations).toEqual(canonical.run.citations);
+    expect(note.gateway.citationCalls).toEqual(canonical.gateway.citationCalls);
+    expect(note.run.totalSpent).toBe(canonical.run.totalSpent);
+    expect(note.run.totalToCreators).toBe(canonical.run.totalToCreators);
+    expect(note.effects.saveQueryRun).toHaveBeenCalledWith(note.run);
+    const payments = vi.mocked(note.effects.recordPayment).mock.calls.map(([payment]) => payment), receipt = buildResearchReceipt(note.run, payments);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.dispatch.answer).toBe(note.run.answer);
+    expect(researchReportMarkdown(note.run, null, payments)).toContain(note.run.answer);
+    expect(remoteResearchResult(note.run).answer).toBe(note.run.answer);
+    expect(note.run.trace.find(step => step.message.includes("sentence-note projection"))?.detail)
+      .toMatchObject({ answer: note.run.answer, requestedSentenceCount: 3, outcome: "compact-unmet" });
+  });
+  it("retains the same post-settlement recovery guidance without a paid retry", async () => {
+    const canonical = await sentenceRun({ count: false, pending: true }), note = await sentenceRun({ pending: true });
+    const suffix = canonical.run.answer.slice(canonical.run.answer.indexOf("### Next steps to complete this research"));
+    expect(suffix).toContain("Before any new paid attempt");
+    expect(note.run.answer).toContain(suffix);
+    expect(note.run.pendingPayments).toBe(canonical.run.pendingPayments);
+    expect(note.gateway.citationCalls).toEqual(canonical.gateway.citationCalls);
+    expect(note.attribute.mock.calls[0][0]).toEqual(canonical.attribute.mock.calls[0][0]);
+  });
+  it("keeps private and execution-limited original policies unchanged", async () => {
+    for (const options of [{ private: true }, { executionLimits: true }]) {
+      const data = await sentenceRun(options), canonical = await sentenceRun({ ...options, count: false });
+      expect(data.run.answer).toBe(canonical.run.answer);
+      expect(data.run.answer).not.toContain("No fue posible presentar");
+      expect(data.run.trace.some(step => step.message.includes("sentence-note projection"))).toBe(false);
+    }
+  });
+  it("discloses an early unavailable answer without touching late synthesis bindings or attempting another run", async () => {
+    const { run } = await drive({ question: "En español, escriba una nota breve de tres frases: explique el resultado.", budget: 0 },
+      deps([], fakeEngine(), fakeGateway()));
+    expect(run.answer).toContain("No fue posible presentar la respuesta completa en 3 frases");
+    expect(run.evidence).toEqual([]);
+    expect(run.totalSpent).toBe(0);
+  });
+});
+
 it("records trusted ingress without deriving an owner or method from origin/client telemetry", async () => {
   const provenance = { version: 1, surface: "api", ownershipMethod: "api-key" } as const;
   const asker = `0x${"ab".repeat(20)}`;
