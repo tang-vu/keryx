@@ -1,5 +1,31 @@
 # MCP package distribution
 
+## App57 caller-text tools - October 11 source candidate
+
+App/OpenAPI0.27.57 selects hosted MCP0.3.15 and new stdio/official Registry0.4.17.
+Current main registers local `draft_check` and changes `evidence_draft` retained
+excerpt/statement handling. Their changed runtime inputs require a new package;
+the published0.4.16 keeps its delivered56 source provenance. These tools process
+caller-supplied text without research, source fetching, providers, storage or
+payment. Imported origin and semantic usefulness remain unverified; lexical
+matching and synthetic fixtures do not establish source truth or researcher
+acceptance. Existing funding, signing, recovery and private-role contracts remain.
+
+The final stdio archive's actual bundle hash must bind the existing
+`test-evidence-drafts-mcp-package.mts` fixture for both private tools. Preserve
+the separate initialized identity and clean-consumer buyer/recovery checks;
+the latter alone does not exercise the new tools. Exact final CI/build/review,
+npm bytes/integrity, official Registry exact/latest and hosted identity/readback
+remain publication and delivery gates. Version literals allocate candidates;
+they do not establish published availability or installation.
+
+Desktop0.4.15's 94 executable inputs, native/Rust inputs and extension0.1.4.1's
+tracked inputs are unchanged from delivered56. Keep those genuine identities;
+fresh final Desktop assets still need actual source/version/readback acceptance.
+Do not relabel retained artifacts as a new-source build. Teaching stays default
+off, and original researcher, walkthrough and staged-release gates stay open.
+See [surface parity](surface-parity.md).
+
 ## Native historical compatibility — October 11, 2026 source candidate
 
 App/OpenAPI0.27.51 selects hosted MCP0.3.12 for the changed server native helper

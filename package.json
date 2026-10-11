@@ -40,6 +40,7 @@
     "test:watch": "vitest",
     "eval:agent": "node --import tsx --no-warnings scripts/eval-agent.mts",
     "eval:paying-source-study": "node --import tsx --no-warnings scripts/eval-paying-source-study.mts",
+    "eval:related-work": "node --import tsx --no-warnings scripts/eval-related-work.mts",
     "eval:agent:ci": "node --import tsx --no-warnings scripts/eval-agent.mts --json",
     "eval:workload:research": "node --import tsx --no-warnings scripts/eval-research-workload.mts",
     "eval:workload:commerce": "node --import tsx --no-warnings scripts/eval-commerce-workload.mts --json",
