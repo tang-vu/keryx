@@ -291,3 +291,17 @@ test("report/archive/export/paper-workspace copy is catalogued; only brand, netw
       .map(finding => finding.text), retained[file] ?? [], file);
   }
 });
+
+test("source discovery, retained-feed and market copy is catalogued; vendor links, currency and example year remain data", () => {
+  const files = ["app/sources/page.tsx", "app/market/page.tsx", ...["source-library-filters",
+    "public-reference-card", "cited-source-card", "explore-source-card", "source-registry-row",
+    "sources-list", "source-directory-preview"].map(name => `components/keryx/${name}.tsx`)];
+  const retained = {
+    "app/sources/page.tsx": ["OpenAlex ↗", "DOAJ ↗", "USDC"],
+    "components/keryx/source-library-filters.tsx": ["2024"],
+  };
+  for (const file of files) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"))
+      .map(finding => finding.text), retained[file] ?? [], file);
+  }
+});

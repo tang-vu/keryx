@@ -1,12 +1,17 @@
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
 import type { PublicReference } from "@/lib/public-references/catalog";
 import { librarySearchMatches } from "@/lib/sources/library-browse";
 
+const copy = createMessages("en");
+const richCopy = createRichMessages("en");
+
 const CONTENT_LABELS: Record<PublicReference["items"][number]["deliveryKind"], string> = {
-  full_text: "Full text in feed",
-  excerpt: "Excerpt in feed",
-  abstract: "Abstract in feed",
-  metadata_only: "Metadata only",
+  full_text: copy("sourceFeed.fullText"),
+  excerpt: copy("sourceFeed.excerpt"),
+  abstract: copy("sourceFeed.abstract"),
+  metadata_only: copy("sourceFeed.metadata"),
 };
 
 function displayDate(value?: string, includeTime = false): string | null {
@@ -22,10 +27,10 @@ function FeedItem({ item }: { item: PublicReference["items"][number] }) {
   return (
     <li className="border-t border-line py-3 first:border-t-0">
       <a href={item.link} target="_blank" rel="noopener noreferrer" className="block break-words font-serif text-[14px] leading-snug text-ink underline decoration-line underline-offset-4 hover:decoration-ink">
-        {item.title || "Untitled feed item"} ↗
+        {item.title || copy("sourceFeed.untitled")} ↗
       </a>
       <p className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1 font-mono text-[11px] leading-relaxed text-ink-3">
-        {published ? <time dateTime={item.publishedAt}>Published {published}</time> : <span>Publication date unavailable</span>}
+        {published ? <time dateTime={item.publishedAt}>{copy("sourceFeed.published", { date: published })}</time> : <span>{copy("sourceFeed.dateUnavailable")}</span>}
         <span>· {CONTENT_LABELS[item.deliveryKind]}</span>
       </p>
     </li>
@@ -48,7 +53,7 @@ export function PublicReferenceCard({ reference, compact = false, matchingQuery 
 
   return (
     <article className="flex min-w-0 flex-col border border-line bg-paper p-5 sm:p-6">
-      <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-paid">Free public reference</p>
+      <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-paid">{copy("sourceFeed.kicker")}</p>
       <h3 className="mt-2 font-display text-[21px] font-medium leading-snug text-ink">
         <a href={reference.url} target="_blank" rel="noopener noreferrer" className="break-words transition-colors hover:text-seal">
           {reference.name} ↗
@@ -57,35 +62,35 @@ export function PublicReferenceCard({ reference, compact = false, matchingQuery 
       <p className="mt-1 break-words font-mono text-[11px] text-ink-3">{domain}</p>
       {reference.description && <p className={`mt-3 font-serif text-[14px] leading-relaxed text-ink-2 ${compact ? "line-clamp-2" : ""}`}>{reference.description}</p>}
       {reference.tags.length > 0 && (
-        <ul aria-label="Topics" className="mt-3 flex flex-wrap gap-1.5">
+        <ul aria-label={copy("sourceFeed.topics")} className="mt-3 flex flex-wrap gap-1.5">
           {reference.tags.slice(0, compact ? 3 : 5).map((tag) => <li key={tag} className="rounded border border-line bg-paper-2 px-1.5 py-0.5 font-mono text-[11px] text-ink-3">{tag}</li>)}
         </ul>
       )}
 
       <div className="mt-4 border-t border-line pt-3">
         <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">
-          {compact ? "From the retained feed" : matchingItems.length ? `Matching retained feed items · ${items.length} of ${recentItems.length}` : `Latest retained feed items · ${items.length} in snapshot`}
+          {compact ? copy("sourceFeed.compactItems") : matchingItems.length ? copy(items.length === 1 ? "sourceFeed.matching.one" : "sourceFeed.matching.other", { count: items.length, total: recentItems.length }) : copy(items.length === 1 ? "sourceFeed.latest.one" : "sourceFeed.latest.other", { count: items.length })}
         </p>
         {items.length > 0 ? (
           <>
             <ul className="mt-1">{items.slice(0, shownCount).map((item) => <FeedItem key={item.id} item={item} />)}</ul>
             {!compact && remaining.length > 0 && (
               <details className="mt-1">
-                <summary className="min-h-11 cursor-pointer py-3 font-mono text-[11px] text-seal underline underline-offset-4">Show {remaining.length} more retained item{remaining.length === 1 ? "" : "s"}</summary>
+                <summary className="min-h-11 cursor-pointer py-3 font-mono text-[11px] text-seal underline underline-offset-4">{copy(remaining.length === 1 ? "sourceFeed.more.one" : "sourceFeed.more.other", { count: remaining.length })}</summary>
                 <ul>{remaining.map((item) => <FeedItem key={item.id} item={item} />)}</ul>
               </details>
             )}
           </>
-        ) : <p className="mt-2 font-serif text-sm text-ink-3">No feed items retained in this snapshot.</p>}
+        ) : <p className="mt-2 font-serif text-sm text-ink-3">{copy("sourceFeed.empty")}</p>}
       </div>
 
       <div className="mt-auto border-t border-line pt-3">
         <p className="font-mono text-[11px] leading-relaxed text-ink-3">
-          {refreshed ? <>Feed collected <time dateTime={reference.refreshedAt}>{refreshed}</time></> : "Feed collection time unavailable"}
+          {refreshed ? <>{richCopy("sourceFeed.collected", { date: <time dateTime={reference.refreshedAt}>{refreshed}</time> })}</> : copy("sourceFeed.collectedUnavailable")}
         </p>
-        <p className="mt-1 font-serif text-xs leading-relaxed text-ink-3">No creator payment for this reference. Publisher control is not reported here.</p>
+        <p className="mt-1 font-serif text-xs leading-relaxed text-ink-3">{copy("sourceFeed.paymentNotice")}</p>
         {supportsClaim && !compact && (
-          <Link href={`/claim-source?referenceId=${encodeURIComponent(reference.id)}`} className="mt-1 inline-block min-h-11 py-3 font-mono text-[11px] text-seal underline underline-offset-4">This is my source ▸</Link>
+          <Link href={`/claim-source?referenceId=${encodeURIComponent(reference.id)}`} className="mt-1 inline-block min-h-11 py-3 font-mono text-[11px] text-seal underline underline-offset-4">{copy("sourceFeed.claim")}</Link>
         )}
       </div>
     </article>

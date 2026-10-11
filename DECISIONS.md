@@ -7268,3 +7268,15 @@ Excluded research/LLM/export helper copy and native desktop require root
 qualification. Existing narrow archive layout findings are a separate root
 coordination item. Human glossary approvals and locale flags remain held; this
 area does not close original #272. See the [scope, evidence and remaining gates](docs/engineering/reports-catalogue-2026-10-11.md).
+
+## 2026-10-11 — Catalogue source-library and article-market presentation
+
+Preserve English source discovery and market behavior while moving the inspected
+metadata, labels, tooltips, availability, policy, earnings and count text into a
+typed English catalogue. Use whole variants and named values; keep source metadata,
+identities, generated question drafts, GET filter values and payment/claim conditions
+unchanged. Retire only 204 migrated guard occurrences and preserve four scoped data
+allowances. Imported library/control labels and previously identified excluded
+helper/native boundaries remain root qualification items. Human glossary approvals
+and locale flags remain held; this focused area does not close original #272. See
+the [scope, browser evidence and remaining gates](docs/engineering/source-directory-catalogue-2026-10-11.md).
