@@ -224,3 +224,23 @@ test("personal dispatch metadata, accessibility, empty states and toast copy are
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("landing, metadata, fallback and dialog copy is catalogued; protocol and brand data remain inline", () => {
+  const retained = {
+    "app/layout.tsx": ["%s · Keryx"],
+    "app/error.tsx": [],
+    "app/global-error.tsx": [],
+    "app/not-found.tsx": ["404"],
+    "app/opengraph-image.tsx": ["K", "Keryx"],
+    "components/keryx/landing-sections.tsx": [],
+    "components/keryx/hero-stats.tsx": [],
+    "components/keryx/activity-ticker.tsx": [],
+    "components/keryx/keryx-mark.tsx": ["K", "Keryx"],
+    "components/keryx/herald-seal.tsx": ["K"],
+    "components/keryx/product-hunt-badge.tsx": [],
+    "components/ui/dialog.tsx": [],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+});

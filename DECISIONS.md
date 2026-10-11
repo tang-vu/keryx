@@ -7171,3 +7171,14 @@ deployment/readback belongs to the existing serialized runtime batch. Packaging
 refuses invalid descriptions/versions before archive writes. Keep the historical
 legal extraction fixture and require every paragraph outside the reviewed extension
 section and dated update to retain its exact markup.
+
+## 2026-10-11 — English landing and fallback catalogue
+
+Extract marketing, metadata/JSON-LD, activity/totals, fallback pages, brand prose,
+launch accessibility and dialog close labels into65 typed English messages. Keep
+the social headline as one message with its explicit presentation line break.
+Retire only44 scoped guard occurrences; preserve protocol, status and brand data.
+Exact render comparisons, practical browser/control checks and existing catalogue
+tests qualify English parity; root qualifies the combined Next layout/build and
+owns review/CI/distribution/delivery. Original272 and glossary/locale gates remain
+open. See `docs/engineering/landing-catalogue-2026-10-11.md`.
