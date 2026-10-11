@@ -325,6 +325,11 @@ inspection, without changing their input trees or executable bits. The inspector
 continues to refuse writable artifacts. Runtime rehearsal completion waits for
 child close and both stdout/stderr pipes, retaining the full positive drain receipt
 even when buffered output arrives after process exit.
+The raw log retains at most 4 MiB of exact Buffer bytes. Both pipes continue to
+be consumed and hashed after that cap. Receipts record observed, retained,
+overflow and dropped bytes, hashes, EOF and capture errors. After graceful drain
+and actual close, overflow, incomplete capture or capture errors refuse successful
+rehearsal evidence; retained logs and any captured closed receipt remain available.
 Preparation runs Vitest in its normal `NODE_ENV=test` runtime and compilation in
 `production`, recording the setting with each command. Both retain the same fresh
 credential-free testnet/offline storage environment.

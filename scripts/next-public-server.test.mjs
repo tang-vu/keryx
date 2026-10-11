@@ -8,7 +8,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { startNextPublicServer, NEXT_VERSION } from './next-public-server.mjs';
-import { startPreparedPublicRole, readPreparedPublicHealth } from './rehearse-prepared-release.mjs';
+import { startPreparedPublicRole, readPreparedPublicHealth, drainPreparedPublicRole } from './rehearse-prepared-release.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const modules = resolve(process.env.KERYX_NEXT_FIXTURE_NODE_MODULES || join(root, 'node_modules'));
@@ -126,8 +126,7 @@ export async function GET(request){
       assert.equal(response.headers['x-cohort-fixture'], 'prepared-config-header');
       assert.equal((await readPreparedPublicHealth(fixtureCommit)).commit, fixtureCommit);
     } finally {
-      if (process.platform === 'win32') role.child.send('drain'); else role.child.kill('SIGTERM');
-      assert.deepEqual(await role.exited, { code: 143, signal: null });
+      assert.equal((await drainPreparedPublicRole(role)).httpDrained, true);
     }
     assert.match(role.output(), /"httpDrained":true/);
     assert.doesNotMatch(role.output(), /NEXT_PUBLIC_SERVER_START_FAILED/);
