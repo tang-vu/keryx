@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { installSqliteApplicationSchema } from "../db/sqlite-application-schema";
@@ -61,7 +61,9 @@ function held() {
 function sharedLibrary() {
   vi.stubEnv("CONTENT_MASTER_KEY", "11".repeat(32));
   // Two real SQLite connections/stores, one isolated retained file, one provider.
-  const path = join(mkdtempSync(join(process.cwd(), ".artifacts/zotero-reviewfix-db-")), "synthetic.sqlite");
+  const artifacts = join(process.cwd(), ".artifacts");
+  mkdirSync(artifacts, { recursive: true });
+  const path = join(mkdtempSync(join(artifacts, "zotero-reviewfix-db-")), "synthetic.sqlite");
   const first = new DatabaseSync(path), second = new DatabaseSync(path); databases.push(first, second);
   installSqliteApplicationSchema(first);
   return { first: createSqliteZotero(first), second: createSqliteZotero(second), provider: syntheticZotero(), db: first };
