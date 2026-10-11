@@ -120,4 +120,3 @@ it.each(["lock", "conflict", "signature"] as const)("still fails when a %s refus
   await expect(exerciseSeparatedBindingControl(damage === "lock" ? "grant-lock" : "binding", damage))
     .rejects.toMatchObject({ code: "ERR_ASSERTION" });
 });
-
