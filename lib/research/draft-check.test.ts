@@ -32,7 +32,7 @@ describe("reference lists", () => {
     const ris = "TY  - JOUR\nID  - a1\nAU  - Lewis, Patrick\nTI  - Retrieval study\nPY  - 2020/05/01\nDO  - 10.5555/abc.1\nER  - \nTY  - JOUR\nID  - a1\nT1  - Second\nUR  - http://insecure.example/x\nER  - \nTY  - BOOK\nTI  - Never closed";
     expect(detectDraftReferenceFormat(ris)).toBe("ris");
     const rows = parseDraftReferences("ris", ris);
-    expect(rows[0]).toMatchObject({ key: "a1", status: "identified", authorFamilies: ["Lewis"], year: "2020", doi: "10.5555/abc.1" });
+    expect(rows[0]).toMatchObject({ key: "a1", status: "unresolved", problem: "duplicate-key", authorFamilies: ["Lewis"], year: "2020", doi: "10.5555/abc.1" });
     // An http link is not accepted as a locator; the duplicate key cannot be cited unambiguously.
     expect(rows[1]).toMatchObject({ key: "a1#2", status: "unresolved", problem: "duplicate-key" });
     expect(rows[1]).not.toHaveProperty("url");

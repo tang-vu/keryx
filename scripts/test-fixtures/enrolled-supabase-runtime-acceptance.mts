@@ -355,7 +355,7 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
           sql("alter function public.storage_get_source(jsonb,text) cost 101");
           child.stdin!.end("resume\n");
         }
-        if (mode === "domain-binding") {
+        if (mode === "domain-grant-lock") {
           const deadline = performance.now() + 100_000;
           while (!output.includes("READY synthetic grant lock") && !childTerminal && performance.now() < deadline) {
             await new Promise<void>(resolveDelay => setTimeout(resolveDelay, 20));
@@ -514,6 +514,10 @@ export async function acceptOwnedEnrolledSupabaseRuntime(
     assert.equal(sql("select count(*) from keryx_storage.writer"), "0");
     registry = await startEnrolledSupabaseNativeRegistry();
     await runChild("domains");
+    // Independent lock-expiry and original-binding controls each construct a
+    // fresh native facade/state under the unchanged per-child deadline. Neither
+    // child may borrow elapsed time or skip its authority/snapshot assertions.
+    await runChild("domain-grant-lock");
     await runChild("domain-binding");
     await runChild("domain-capacity");
     await runChild("domain-terminal");

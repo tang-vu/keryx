@@ -18,6 +18,8 @@ cited works itself. Issue 282 is not complete; see [what remains open](#what-rem
    - `unresolved`: nothing usable, an unterminated entry, or a duplicate key.
 
    Nothing is looked up. `identified` does not mean the DOI or link resolves.
+   Every occurrence of a duplicate key is unresolved; the first work is never chosen
+   as a default. Duplicate display labels cannot collide with another written key.
 2. **Splits the passage** into sentences with exact UTF-16 offsets. A sentence is
    never reworded, repaired or merged with other prose. A caller may instead pass its
    own ordered, non-overlapping spans. More than 128 sentences is refused, not truncated.
@@ -26,6 +28,8 @@ cited works itself. Issue 282 is not complete; see [what remains open](#what-rem
    `Smith et al. (2020)` and `(Smith, 2020; Lee and Park, 2019)`. Numeric markers
    follow list order. Author-year markers need the first author's family name and the
    year to match exactly one reference; a different year is reported, never guessed.
+   A marker may cite all 64 references; keys and author-year entries are not silently
+   truncated after the sixteenth citation.
 4. **Compares the sentence with the supplied text** of each cited reference and
    returns a verdict per citation and one per sentence.
 
@@ -36,7 +40,7 @@ cited works itself. Issue 282 is not complete; see [what remains open](#what-rem
 | `supported` | One passage contains at least 80% of the sentence's content words (the sentence has at least three) and every figure, with the same negation, no listed opposite term and no tentative wording the sentence lacks. | `verbatim-excerpt` |
 | `partly-supported` | A passage contains at least half of the content words. Unmatched words and figures are listed. | `verbatim-excerpt` |
 | `not-found` | No such passage in the **supplied** text. Words found nowhere in it are listed. A near passage that differs in negation, an opposite term or a figure is shown separately as `closest` and is never counted as support. | `no-supporting-passage-found` |
-| `source-unavailable` | No text was supplied for the cited reference, or the citation matches no reference, several references, or the right author with another year. | `source-unavailable` |
+| `source-unavailable` | No text was supplied for the cited reference, the reference entry is unresolved, or the citation matches no reference, several references, or the right author with another year. | `source-unavailable` |
 | `not-checked` (sentence only) | The sentence has no citation, or is written in a script without word spacing (Chinese, Japanese, Thai, Lao, Khmer, Burmese), which this method cannot compare. | — |
 
 Rules that hold for every result:
@@ -109,6 +113,10 @@ sentences. Unknown fields, source text for a reference that is not in the list,
 duplicate source text and malformed UTF-16 are refused. The result returns parsed
 references, claims with spans, per-citation checks, flags and a summary. Supplied
 source text is not echoed beyond its excerpts.
+
+Text naming a duplicate reference key is refused because its work cannot be bound
+unambiguously. Supplying text for an unreadable or otherwise unresolved entry does
+not repair that entry: its citation remains `source-unavailable`, with no excerpt.
 
 Supplied text is caller asserted. The check does not establish that it is the cited
 work, that it is complete, or that it was lawfully obtained.

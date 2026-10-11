@@ -44,7 +44,7 @@ export function exportEvidenceDraft(value: unknown) {
     `Review question: ${latex(draft.question)}`, ""];
   const anchored = new Set<string>();
   for (const theme of draft.themes) {
-    md.push(`##${markdown(single(theme.title))}`, ""); tex.push(`\\subsection{${latex(single(theme.title))}}`, "");
+    md.push(`## ${markdown(single(theme.title))}`, ""); tex.push(`\\subsection{${latex(single(theme.title))}}`, "");
     if (theme.authorNote) {
       md.push("Author notes (unverified; review before use):", "", ...theme.authorNote.split(/\r?\n/).map(line => markdown(line)), "");
       tex.push("\\paragraph{Author notes (unverified; review before use)}", latex(theme.authorNote), "");
