@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { prepareImmutableRelease } from './prepare-immutable-release.mjs';
 
 export const REVIEWED_CONTROLS = Object.freeze([
   'KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER',
@@ -50,7 +51,17 @@ export async function runRedeploy(environment = process.env, launch = spawn, pro
   });
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  runRedeploy().then(code => { process.exitCode = code; }).catch(error => {
-    console.error(error.message); process.exitCode = 1;
-  });
+  if (process.argv[2] === '--prepare-release') {
+    try {
+      const [repo, releasesDir, commit, dependencies, npmCli] = process.argv.slice(3);
+      if (process.argv.length !== 8) throw Error('Expected --prepare-release REPO RELEASES FULL_COMMIT DEPENDENCIES NPM_CLI');
+      console.log(JSON.stringify(prepareImmutableRelease({ repo, releasesDir, commit, dependencies, npmCli })));
+    } catch (error) { console.error(error.message); process.exitCode = 1; }
+  } else if (process.argv.length !== 2) {
+    console.error('Unknown redeploy arguments; no deployment started'); process.exitCode = 1;
+  } else {
+    runRedeploy().then(code => { process.exitCode = code; }).catch(error => {
+      console.error(error.message); process.exitCode = 1;
+    });
+  }
 }
