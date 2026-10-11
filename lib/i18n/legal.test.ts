@@ -80,16 +80,14 @@ describe("exact English legal page catalogue", () => {
     expect(rendered).not.toContain("<script>");
     expect(message("legal.privacy.updated", { date: "<date>{network}" })).toContain("<date>{network}");
   });
-  it("has only original protocol/contact data inline and retires no unrelated allowances", async () => {
-    const { extractUiCopy } = await import("../../scripts/check-ui-copy.mjs");
-    const privacy = extractUiCopy("app/privacy/page.tsx", readFileSync("app/privacy/page.tsx", "utf8")).map(item => item.text);
-    const terms = extractUiCopy("app/terms/page.tsx", readFileSync("app/terms/page.tsx", "utf8")).map(item => item.text);
-    expect(privacy).toEqual(["/dispatch/…", "https://keryx.cc", "chrome.storage.local", "vutang2212@gmail.com"]);
-    expect(terms).toEqual(["vutang2212@gmail.com"]);
+  it("has exactly the original five protocol/contact data allowances without copy waivers", async () => {
+    const { extractUiCopy, makeBaseline } = await import("../../scripts/check-ui-copy.mjs");
+    const privacy = extractUiCopy("app/privacy/page.tsx", readFileSync("app/privacy/page.tsx", "utf8"));
+    const terms = extractUiCopy("app/terms/page.tsx", readFileSync("app/terms/page.tsx", "utf8"));
+    expect(privacy.map(item => item.text)).toEqual(["/dispatch/…", "https://keryx.cc", "chrome.storage.local", "vutang2212@gmail.com"]);
+    expect(terms.map(item => item.text)).toEqual(["vutang2212@gmail.com"]);
     const baseline = JSON.parse(readFileSync("locales/ui-copy-baseline.json", "utf8"));
-    const outside = (values: { file: string }[]) => values.filter(value => !["app/privacy/page.tsx", "app/terms/page.tsx"].includes(value.file));
-    expect(hash(JSON.stringify(outside(baseline.entries)))).toBe(frozen.outsideBaselineSha256);
-    expect({ schemaVersion: baseline.schemaVersion, sourceCommit: baseline.sourceCommit, parserVersion: baseline.parserVersion }).toEqual(frozen.baselineHeader);
-    expect(baseline.entries.filter((value: { file: string }) => ["app/privacy/page.tsx", "app/terms/page.tsx"].includes(value.file))).toHaveLength(5);
+    expect(baseline.entries.filter((value: { file: string }) => ["app/privacy/page.tsx", "app/terms/page.tsx"].includes(value.file)))
+      .toEqual(makeBaseline([...privacy, ...terms], baseline.sourceCommit).entries);
   });
 });

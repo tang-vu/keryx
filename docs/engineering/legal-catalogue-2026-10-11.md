@@ -28,7 +28,12 @@ approval, and this boundary alone does not close all #272 criteria.
 
 The regression fixture pins the exact two original canonical Git source blobs.
 It is committed so clean/shallow CI needs no ignored evidence or historical Git
-objects. The focused renderer compiles the actual original and candidate pages,
+objects. Its outside-baseline digest and header are historical extraction provenance,
+not permanent legal-test constraints on future catalogue areas or parser versions.
+The source proof verifies those values are unchanged for this extraction; ongoing
+legal CI checks only the exact five owned data allowances, while the global guard
+owns repository-wide baseline validation. The focused renderer compiles the actual
+original and candidate pages,
 uses real React and installed Next Link, and runs both actual pinned network
 helper profiles. The unchanged SiteHeader/Footer are explicit shell boundaries.
 It compares complete markup and metadata, heading structure and original link
