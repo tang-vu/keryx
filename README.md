@@ -13,9 +13,15 @@ for eligible creator rewards.
 
 **[Guided recorded walkthrough](https://keryx.cc/walkthrough)** ·
 **[Live app](https://keryx.cc)** · **[Public proof](https://keryx.cc/proof)** ·
+**[Dated quality scorecard](https://keryx.cc/quality)** ·
 **[Archived QA walkthrough (2m40s, app 0.27.43, recorded Oct 8)](https://github.com/tang-vu/keryx/releases/download/v0.27.43/keryx-current-release-6e591603-archived-qa-05.mp4)**.
 Reopens an archived first-party report and receipt; no new research was submitted.
 See the [recording scope and public checks](docs/reviewer-start.md#recording-gate).
+
+The [quality scorecard](docs/engineering/public-quality-scorecard-287-2026-10-11.md)
+publishes frozen diagnostics with all eight failures retained. Semantic and language
+judgments are unjudged, useful-answer rates are unavailable and historical allowance
+is unknown. Different archive sizes do not establish a release improvement.
 
 ## Try it in two minutes — no wallet
 
