@@ -224,3 +224,24 @@ test("personal dispatch metadata, accessibility, empty states and toast copy are
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("funding, consent, checkout, request and evidence inspection copy is catalogued; currencies and protocol identities remain data", () => {
+  const retained = {
+    "app/research/page.tsx": ["USDC"],
+    "components/keryx/arc-card-onramp-panel.tsx": [],
+    "components/keryx/faucet-panel.tsx": ["USDC"],
+    "components/keryx/grant-spend-dialog.tsx": [],
+    "components/keryx/research-budget-fields.tsx": [],
+    "components/keryx/research-checkout.tsx": [],
+    "components/keryx/research-evidence-browser.tsx": [],
+    "components/keryx/research-funding-activity.tsx": [],
+    "components/keryx/research-funding.tsx": ["0x…"],
+    "components/keryx/research-monthly.tsx": [],
+    "components/keryx/research-private-checkout.tsx": [],
+    "components/keryx/research-request.tsx": ["POST /api/agent/ask"],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"))
+      .map(finding => finding.text), data, file);
+  }
+});

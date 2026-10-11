@@ -7171,3 +7171,21 @@ deployment/readback belongs to the existing serialized runtime batch. Packaging
 refuses invalid descriptions/versions before archive writes. Keep the historical
 legal extraction fixture and require every paragraph outside the reviewed extension
 section and dated update to retain its exact markup.
+
+## Preserve consent and recovery truth in the English funding catalogue — 2026-10-11
+
+Extract funding, budget consent, public/private checkout, Monthly and evidence
+inspection into the existing typed English catalogue. Whole-message variants
+retain exact English for uncertain transactions, finalized observations, Gateway
+credit, recovery/deletion limits and non-refundable research terms. Named React
+nodes preserve links, retry actions, emphasis and line breaks; count arms permit
+future grammar without enabling a locale or changing the shipped English.
+
+Keep quote/payer guards, payment/authentication/storage authority, recovery bytes,
+callbacks and protocol identities unchanged. Explicitly listing a stable React
+setter satisfies the compiler's dependency analysis without changing callback
+lifetime. Retire only migrated guard allowances, retain currency/protocol examples
+and qualify the changed surfaces with exact renders and existing synthetic browser
+actions. The [area record](docs/engineering/research-funding-catalogue-2026-10-11.md)
+keeps remaining original272 work, root-owned native desktop coordination, actual
+hosted acceptance, independent review and combined delivery gates open.
