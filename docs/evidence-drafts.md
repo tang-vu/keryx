@@ -116,6 +116,12 @@ the export. RIS has no citation-key field, so its records are matched by record
 URL. Markdown escapes `@` in author and provider text, so that text cannot form a
 Pandoc citation key.
 
+The guard compares each Markdown reference and each BibTeX entry's key-to-URL
+association with the canonical draft reference, including the formatter's escaped
+BibTeX URL bytes. Substituted or swapped URLs, duplicate or missing URL fields and
+unexpected records refuse the export; matching key and URL sets alone do not pass.
+This checks export identity, not whether an excerpt supports an author's statement.
+
 New static browser labels, accessibility text, metadata and status messages use
 `locales/en/evidence-drafts.json` with named interpolation through the typed source
 import. This is English source preparation only; no locale is activated and no
