@@ -1,7 +1,7 @@
 /** Real Linux TLS ingress -> existing front door -> built Next. No canned application responses. */
 import assert from "node:assert/strict";
 import { spawn, execFileSync, type ChildProcess } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, X509Certificate } from "node:crypto";
 import { closeSync, existsSync, openSync, readFileSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, readFile, rename, symlink, unlink, writeFile } from "node:fs/promises";
 import { request as httpRequest } from "node:http";
@@ -94,7 +94,10 @@ try {
   execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=localhost",
     "-keyout", join(fixture, "tls.key"), "-out", join(fixture, "tls.crt")], { stdio: "ignore" });
   await chmod(join(fixture, "tls.key"), 0o600);
-  ingress = httpsServer({ key: readFileSync(join(fixture, "tls.key")), cert: readFileSync(join(fixture, "tls.crt")) }, (req, res) => {
+  const certificate = readFileSync(join(fixture, "tls.crt"));
+  const certificateSpki = createHash("sha256").update(new X509Certificate(certificate).publicKey
+    .export({ type: "spki", format: "der" })).digest("base64");
+  ingress = httpsServer({ key: readFileSync(join(fixture, "tls.key")), cert: certificate }, (req, res) => {
     const headers = { ...req.headers, host: "keryx.cc", "x-forwarded-proto": "https", "x-forwarded-host": "keryx.cc", "x-forwarded-port": "443" };
     delete headers.connection;
     const outgoing = httpRequest({ host: "127.0.0.1", port: frontPort, method: req.method, path: req.url, headers, agent: false }, incoming => {
@@ -151,8 +154,13 @@ try {
     message: "Isolated built Linux maintenance rehearsal. No payment or provider calls." };
   await publish(window);
   const upcoming = await request("/maintenance/status"); assert.equal(upcoming.status, 200); assert.equal(JSON.parse(upcoming.body).state, "upcoming");
-  browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ ignoreHTTPSErrors: true, serviceWorkers: "block" });
+  // Trust only this disposable ingress certificate, including stylesheet requests.
+  // Context-wide CDP certificate suppression did not qualify the retained failed run.
+  browser = await chromium.launch({ headless: true,
+    args: [`--ignore-certificate-errors-spki-list=${certificateSpki}`] });
+  const context = await browser.newContext({ serviceWorkers: "block" });
+  proof.browserCertificateTrust = { strategy: "disposable-ingress-spki", sha256Base64: certificateSpki,
+    contextWideCertificateSuppression: false };
   const forbidden: string[] = [];
   await context.route("**/*", route => {
     const req = route.request(), url = new URL(req.url());
@@ -161,9 +169,20 @@ try {
   });
   const page = await context.newPage();
   const browserDiagnostics: string[] = [];
+  const browserAssets: { kind: string; path: string; status?: number; failure?: string }[] = [];
   page.on("console", message => { if (message.type() === "error") browserDiagnostics.push(message.text()); });
   page.on("pageerror", error => browserDiagnostics.push(error.message));
+  page.on("requestfailed", request => {
+    if (request.resourceType() === "stylesheet" && browserAssets.length < 64)
+      browserAssets.push({ kind: "failed", path: new URL(request.url()).pathname.slice(0, 256),
+        failure: (request.failure()?.errorText ?? "unknown").slice(0, 256) });
+  });
+  page.on("response", response => {
+    if (response.request().resourceType() === "stylesheet" && browserAssets.length < 64)
+      browserAssets.push({ kind: "response", path: new URL(response.url()).pathname.slice(0, 256), status: response.status() });
+  });
   proof.browserDiagnostics = browserDiagnostics;
+  proof.browserAssets = browserAssets;
   const navigation = await page.goto(origin + "/decision-reviews"); assert.equal(navigation?.status(), 200);
   assert.equal(navigation.headers()["x-keryx-maintenance-starts-at"], window.startsAt);
   await page.getByRole("status").filter({ hasText: window.message }).waitFor({ timeout: 10000 });
@@ -171,10 +190,17 @@ try {
   await writeFile(join(evidence, "advance-document.html"), await page.content());
   const styles = await page.evaluate(() => ({ sheets: document.styleSheets.length,
     bodyMargin: getComputedStyle(document.body).margin,
-    links: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(link => link.getAttribute("href")) }));
+    links: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(link => link.getAttribute("href")),
+    external: Array.from(document.styleSheets).filter(sheet => sheet.href).map(sheet => ({
+      path: new URL(sheet.href!).pathname, rules: sheet.cssRules.length,
+    })) }));
   proof.advanceStyles = styles;
   await page.screenshot({ path: join(evidence, "advance-announcement.png"), fullPage: true });
   assert.ok(styles.sheets > 0, "Actual built application stylesheet must load through ingress");
+  assert.ok(styles.external.some(sheet => sheet.path.startsWith("/_next/") && sheet.path.endsWith(".css")
+    && sheet.rules > 0 && browserAssets.some(asset => asset.kind === "response" && asset.path === sheet.path && asset.status === 200)),
+  "Actual external built application CSS must load through TLS ingress and expose its rules");
+  assert.equal(styles.bodyMargin, "0px", "Built application reset must apply; inline component styles alone do not qualify");
   const noticeBox = await page.getByRole("status").filter({ hasText: window.message }).boundingBox();
   assert.ok(noticeBox && noticeBox.y >= 0 && noticeBox.y + noticeBox.height <= 720, "Advance banner must be visible in the initial viewport");
   await page.close(); assert.deepEqual(forbidden, []);
