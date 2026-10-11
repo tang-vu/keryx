@@ -1,5 +1,55 @@
 # Reviewed teaching proposal core - October 8, 2026
 
+## Fresh NASA source qualification and retrieval gap — October 11, 2026
+
+The exact retained issue211 Vietnamese caller now has an additional positive
+fixture using actual HTML from its requested NASA grades 5–8 page. One read-only
+official GET on October 11 returned 294,179 bytes, SHA-256
+`3bec96d10b89a909213c0b18d263656c9acb8912b4b31c50fd238a7a23df4d9b`.
+This is a fresh snapshot, not the original October 7 production body or hash.
+The historical question/refusal fixture remains unchanged and still has zero
+qualified bindings. The lossless gzip envelope and capture metadata are retained
+in `lib/agent/fixtures/nasa-weather-climate-fresh-20261011.*`.
+
+The real inert HTML worker extracts 6,190 characters without truncation. Actual
+passages define weather as short-term changes, climate as weather averaged over
+many years, and weather as varying between days or within a day. Controlled
+source-language factual targets select those passages through the ordinary
+bounded quote menu. Explicitly synthetic generation, coverage and independent
+review responses then exercise the unchanged final factual/proposal admission
+and rendered/shared report/receipt paths. The Vietnamese explanation is below
+100 words, with one labeled 10-minute proposed activity, two labeled hypothetical
+classification examples and an exit question/answer. The lesson prohibits using
+one day's weather to infer a climate trend and never attributes its classroom
+activity to NASA. Proposal rows still add no factual, citation or reward authority.
+
+The controlled source-language targets are not an observed live decomposition.
+A paired regression retains a factual retrieval gap: Vietnamese target text that
+repeats the publisher name NASA selects NASA-study/climate-change snippets while
+omitting the required definition quotes, even though those definitions exist in
+the read body. The ordinary gates withhold the lesson and retain a targeted next
+step rather than invent evidence or make a proposal-only review/repair call.
+This does not establish missing knowledge in NASA's article. Review teaching
+target construction and its cross-language retrieval behavior before claiming
+ordinary model usefulness; the fixture does not silently change the ranker or
+translate the user's question.
+
+Negative cases retain final climate-support withdrawal, rejection of a false
+NASA-performed activity claim, unavailable review without another supplier call,
+and absent-flag factual/financial parity on the same real source. The earlier
+112-test teaching evidence remains valid for unchanged source and inputs; this
+increment runs only its new focused cases and required source checks.
+The controlled empty search transport receives the ordinary two calls but
+performs no external search. No live model/search/payment allowance, installation,
+ENV, production flag or private authority changes.
+
+This closes the missing source-backed offline qualification slice, not issue211.
+The teaching flag remains default-off. Source review/CI and the existing explicit
+rollout decision plus accepted useful ordinary delivery remain separate gates;
+the original frozen-fixture criteria do not create a new paid-live requirement
+or surviving supplier allowance. Web/API, desktop, CLI, remote/stdio MCP and bot
+consumers retain the existing shared contract and client versions.
+
 ## Exact original caller and factual-gap preparation — October 11, 2026
 
 The source candidate now exercises issue211's complete Vietnamese caller through

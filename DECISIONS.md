@@ -7076,6 +7076,23 @@ automatically require new paid testing, but complete ordinary delivery and the
 existing activation hold remain unresolved. See
 [the teaching preparation record](docs/engineering/teaching-proposals-core-2026-10-08.md).
 
+## 2026-10-11 — Qualify the original teacher request against fresh NASA bytes
+
+Retain a single fresh official NASA weather/climate HTML snapshot separately from
+issue211's unchanged historical question/refusal. Exercise the real parser, bounded
+quote selection and final fact/proposal admission with explicitly synthetic
+source-language planning, generation and independent review. This can qualify a
+useful bounded Vietnamese lesson from actual passages without a new live supplier
+request or false claim that NASA performed the invented classroom activity.
+
+Keep the paired untranslated-target retrieval gap visible: available definitions
+can be omitted when controlled Vietnamese targets emphasize the publisher name.
+Do not call that missing source knowledge or silently broaden the evidence gate.
+Source-language controlled success does not certify ordinary live decomposition,
+semantic review or delivery. Default-off rollout, all private holds, zero proposal
+payment authority and the explicit useful-delivery decision remain unchanged.
+See [the teaching source qualification](docs/engineering/teaching-proposals-core-2026-10-08.md).
+
 ## 2026-10-11 — Private run claims use existing interactive wallet authority
 
 Anonymous-run claims attach ownership in a separate ordinary, default-off domain;
