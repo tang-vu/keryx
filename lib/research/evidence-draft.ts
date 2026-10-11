@@ -4,6 +4,7 @@ import { boundedPortableCopy } from "./bounded-portable-json";
 import { referenceKey } from "./reference-export-core";
 import { hasKnownSeedFingerprint } from "./seed-evidence-fingerprints";
 import { isWellFormedUtf16 } from "../llm/well-formed-utf16";
+import { assertRelatedWorkStatementShape, RELATED_WORK_STATEMENT_KINDS, resolveRelatedWorkStatements } from "./related-work-statements";
 
 export const MAX_EVIDENCE_DRAFT_BYTES = 65_536;
 const text = (max: number, min = 0) => z.string().min(min).max(max).refine(isWellFormedUtf16);
@@ -38,8 +39,12 @@ const assessmentSchema = z.object({
 const claimSchema = z.object({ id, start: z.number().int().nonnegative(), end: z.number().int().positive(),
   paperUrls: z.array(url).min(1).max(4), excerptIds: z.array(id).max(16), assessment: assessmentSchema.optional(),
 }).strict();
+/** One author-written sentence. A paper it names must be cited with a selected retained excerpt. */
+export const relatedWorkStatementSchema = z.object({ id, kind: z.enum(RELATED_WORK_STATEMENT_KINDS),
+  text: text(600, 1).refine(value => !!value.trim()), paperUrls: z.array(url).max(8), excerptIds: z.array(id).max(16) }).strict();
 export const evidenceDraftThemeSchema = z.object({ id, title: text(120, 1),
-  authorNote: text(2000), excerptIds: z.array(id).max(32) }).strict();
+  authorNote: text(2000), excerptIds: z.array(id).max(32),
+  statements: z.array(relatedWorkStatementSchema).max(24).optional() }).strict();
 export const evidenceDraftRequestSchema = z.object({
   version: z.literal(1), scope: z.literal("private-evidence-draft"), workspace: literatureWorkspaceSchema,
   reports: z.array(evidenceDraftReportSchema).max(8), passage: text(12_000),
@@ -67,6 +72,7 @@ export function parseEvidenceDraftRequest(value: unknown): EvidenceDraftRequest 
       || !unique(claim.paperUrls) || !unique(claim.excerptIds)) throw new Error("Invalid exact claim span");
   }
   for (const theme of input.themes) if (!unique(theme.excerptIds)) throw new Error("Duplicate theme excerpts");
+  assertRelatedWorkStatementShape(input.themes.flatMap(theme => theme.statements ?? []));
   return input;
 }
 
@@ -118,8 +124,11 @@ export function buildEvidenceDraft(value: unknown) {
       ...(accepted ? { assessment } : {}), assessmentStale: !!assessment && !accepted,
       evidenceNotice: rows.length ? "Selected retained excerpts; semantic support remains a separate assessment." : "No supporting passage selected. This is not an exhaustive search or an unsupported verdict." };
   });
-  const themes = input.themes.map(theme => ({ ...theme, excerpts: selected(theme.excerptIds) }));
-  const citedUrls = [...new Set(themes.flatMap(theme => theme.excerpts.map(row => row.paperUrl)))];
+  const themes = input.themes.map(theme => ({ ...theme, excerpts: selected(theme.excerptIds),
+    statements: resolveRelatedWorkStatements(theme.statements ?? [], selected) }));
+  // Withheld statements are never exported, so their selections cite nothing.
+  const citedUrls = [...new Set(themes.flatMap(theme => [...theme.excerpts,
+    ...theme.statements.flatMap(row => row.status === "withheld" ? [] : row.excerpts)].map(row => row.paperUrl)))];
   const references = citedUrls.map(paperUrl => {
     const paper = input.workspace.entries.find(row => row.paper.url === paperUrl)!.paper;
     return { key: referenceKey(paperUrl, "keryxDraft"), paper };

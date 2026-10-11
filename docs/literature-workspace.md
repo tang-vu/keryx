@@ -3,7 +3,8 @@
 The [retained-evidence draft source candidate](evidence-drafts.md) adds a manual
 tab-memory workflow at `/literature/drafts`: Include records plus explicitly imported
 Keryx excerpt ledgers, exact claim spans, named user assessments and quote-based
-related-work themes with matching references. Imported origin, semantic support
+related-work themes with matching references. Author-written statements about a
+paper export only with a citation and a selected retained excerpt. Imported origin, semantic support
 and model-written synthesis remain unverified; full issues 282/283 acceptance and
 deployment are separate gates. No automatic paper read, upload or payment occurs.
 

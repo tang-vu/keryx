@@ -192,7 +192,9 @@ See the repository's `docs/remote-mcp.md` for the remote trust model.
 
 Source candidate: `evidence_draft(draft)` assembles private manual claim assessments
 and related-work quotation themes from caller-retained report excerpts and saved
-Include paper records. This is a local transformation: no HTTP/model/wallet/DB call,
+Include paper records. Optional author-written theme statements are exported only
+with a citation and a selected retained excerpt for every paper they name;
+incomplete ones are returned as withheld. This is a local transformation: no HTTP/model/wallet/DB call,
 research purchase or reward. Imported report origin and semantic support remain
 unverified; names/timestamps identify user assertions only. MCP clients may retain
 private tool messages. Use the [shared contract and boundaries](../docs/evidence-drafts.md).

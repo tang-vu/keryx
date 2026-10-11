@@ -39,12 +39,16 @@
     "recordAssessment": "Record my {assessment} assessment",
     "unavailableGuidance": "An unavailable source is never reported as unsupported.",
     "excerptVersion": "{version} · report {report}",
-    "verdicts": { "supported": "supported", "partly-supported": "partly supported", "not-found": "not found" }
+    "verdicts": {
+      "supported": "supported",
+      "partly-supported": "partly supported",
+      "not-found": "not found"
+    }
   },
   "theme": {
     "label": "Related-work themes",
     "heading": "Related-work evidence themes",
-    "guidance": "Group exact excerpts before writing. Exported paper accounts are quotations; your own synthesis, agreements and gaps stay marked as unverified author notes.",
+    "guidance": "Group exact excerpts before writing. A statement about a paper is exported only with a citation and the retained excerpt you select for it; quotations and your free-form notes stay separate, and notes remain marked as unverified.",
     "title": "Theme title",
     "notes": "Your synthesis notes (unverified)",
     "clearExcerpts": "Clear this theme’s excerpt selections",
@@ -53,6 +57,29 @@
     "newTitle": "New theme",
     "unreadHeading": "Included papers without usable retained excerpts",
     "unreadPaper": "{title} — retained excerpt unavailable; not described."
+  },
+  "statement": {
+    "heading": "Statements in this theme",
+    "guidance": "Write one sentence at a time. Choose what it does, the papers it names and the retained excerpt it relies on. Keryx checks that each named paper has a selected excerpt; it does not check that the excerpt supports your wording.",
+    "add": "Add statement",
+    "remove": "Remove this statement",
+    "kind": "What this sentence does",
+    "kinds": {
+      "contribution": "Describes one paper’s contribution",
+      "agreement": "States where papers agree",
+      "disagreement": "States where papers disagree",
+      "gap": "States a gap"
+    },
+    "text": "Your sentence",
+    "papers": "Papers this sentence names",
+    "paperUnread": "{title} — no retained excerpt; cannot be described",
+    "excerpts": "Retained excerpts this sentence relies on",
+    "empty": "Write the sentence to include it in the draft.",
+    "bound": "Will be exported with its citation and excerpt links.",
+    "authorGap": "Will be exported as your own stated gap. It cites no paper and stays marked as unverified.",
+    "needsOnePaper": "Not exported yet: a contribution names exactly one paper.",
+    "needsTwoPapers": "Not exported yet: agreement and disagreement name at least two papers.",
+    "needsExcerpt": "Not exported yet: select a retained excerpt for every paper this sentence names."
   },
   "download": {
     "markdown": "Download Markdown",
