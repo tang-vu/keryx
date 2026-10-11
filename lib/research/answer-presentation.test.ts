@@ -32,6 +32,15 @@ describe("original caller presentation", () => {
     expect(presentationStatementGuidance(presentation)).toContain("takes precedence");
   });
 
+  it("guides finite notes before review without asking to drop qualifications or infer across quotes", () => {
+    const guidance = presentationStatementGuidance(answerPresentation("En español, escriba una nota breve de tres frases: explique el resultado."));
+    expect(guidance).toContain("exactly 3 single-sentence statement/quote pairs ONLY if");
+    expect(guidance).toContain("fully covers every research target and preserves all qualifications");
+    expect(guidance).toContain("never infer across separate quotes");
+    expect(guidance).toContain("retain the useful supported pairs");
+    expect(presentationStatementGuidance({ language: "es", requestedLanguage: "es", requestedSentenceCount: 9 })).not.toContain("short note");
+  });
+
   it.each([
     ["En español, escriba una nota breve de tres frases: explique el resultado.", 3],
     ["En español, escribe una respuesta breve de 2 oraciones.", 2],

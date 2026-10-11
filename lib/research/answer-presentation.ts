@@ -6,7 +6,7 @@ export interface AnswerPresentation {
   language: "en" | "vi" | "pt" | "es";
   requestedLanguage?: "en" | "vi" | "pt" | "es";
   requestedBulletCount?: number;
-  /** Complete-answer limit, including quoted excerpts, confidence and notices. */
+  /** Exact note-prose count; inspectable originals and mandatory notices are separate. */
   requestedSentenceCount?: number;
   requestedMaximumWords?: number;
 }
@@ -100,5 +100,12 @@ export function presentationStatementGuidance(presentation: AnswerPresentation):
   // An English label fallback does not authorize overriding an unsupported language request.
   if (!presentation.requestedLanguage) return "";
   const language = { en: "English", vi: "Vietnamese", pt: "Brazilian Portuguese", es: "Spanish" }[presentation.requestedLanguage];
-  return `For this ordinary research answer, write each statement in ${language}. The original caller's explicit output language takes precedence over the question's language. `;
+  const count = presentation.requestedSentenceCount;
+  const note = presentation.language === "es" && Number.isInteger(count) && count! >= 1 && count! <= 8
+    ? `The caller requests a short note of exactly ${count} sentences, with inspectable originals separately. ` +
+      `Generate the smallest sufficient set of exactly ${count} single-sentence statement/quote pairs ONLY if that set fully covers every research target and preserves all qualifications. ` +
+      "One statement may use one offered contiguous adjacent-sentence quote, but never infer across separate quotes. " +
+      "Keep each original research target's claimIndex. If safe complete coverage cannot fit that count, retain the useful supported pairs and leave missing parts explicit; never omit a fact or qualification, invent padding, or force the format. "
+    : "";
+  return `For this ordinary research answer, write each statement in ${language}. The original caller's explicit output language takes precedence over the question's language. ` + note;
 }
