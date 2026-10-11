@@ -36,8 +36,9 @@ actions, and verifies rich-value escaping and owned copy/data classifications.
 This proves the extraction's English/static-component behavior; it does not claim
 CSS/pixel, full default Next build, browser authentication or deployment acceptance.
 
-Web hosts these policy pages; the extension links to the public privacy policy.
-Desktop, CLI, stdio/remote MCP, API and bots retain their existing contracts and
+Web hosts these policy pages, whose existing wording also covers browser-extension
+use. No direct legal-catalogue import was found in the extension, desktop or MCP
+sources. Desktop, CLI, stdio/remote MCP, API and bots retain their existing contracts and
 can reference the same English hosted policy. No adapter, authentication, receipt,
 settlement, storage, provider, budget, package identity or activation changes.
 Existing shell/render evidence is reused only for exact unchanged inputs. Root
