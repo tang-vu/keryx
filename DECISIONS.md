@@ -7171,3 +7171,18 @@ deployment/readback belongs to the existing serialized runtime batch. Packaging
 refuses invalid descriptions/versions before archive writes. Keep the historical
 legal extraction fixture and require every paragraph outside the reviewed extension
 section and dated update to retain its exact markup.
+
+## 2026-10-11 — Catalogue report, archive and paper-workspace presentation
+
+Keep the rendered English report and archive interface unchanged while moving its
+reading, citation accessibility, export/receipt controls, freshness, metadata and
+paper-workspace notifications to typed English keys. Select whole metadata and
+freshness variants with named values and count arms; preserve original links,
+callbacks, text and recorded financial truth. Reuse existing English catalogues
+for unchanged draft, bibliography, purchase-outcome and acceptance surfaces.
+Retire only the 506 migrated guard occurrences; retain eight scoped brand,
+network, currency and record-limit identities and all other area allowances.
+Excluded research/LLM/export helper copy and native desktop require root
+qualification. Existing narrow archive layout findings are a separate root
+coordination item. Human glossary approvals and locale flags remain held; this
+area does not close original #272. See the [scope, evidence and remaining gates](docs/engineering/reports-catalogue-2026-10-11.md).

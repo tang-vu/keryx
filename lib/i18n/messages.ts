@@ -4,9 +4,11 @@ import { myHistoryMessages } from "@/locales/en/my-history";
 import { claimantHistoryMessages } from "@/locales/en/claimant-history";
 import { shellMessages } from "@/locales/en/shell";
 import { operationsMessages } from "@/locales/en/operations";
+import { reportMessages } from "@/locales/en/reports";
 
 /** English source keys. Payment/legal prose remains in its separate review gate. */
 export const englishMessages = Object.freeze({
+  ...reportMessages,
   ...legalMessages,
   ...operationsMessages,
   ...shellMessages,

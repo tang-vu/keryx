@@ -224,3 +224,27 @@ test("personal dispatch metadata, accessibility, empty states and toast copy are
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("report/archive/export/paper-workspace copy is catalogued; only brand, network, currency and record limits remain data", () => {
+  const files = ["app/answers/page.tsx", "app/answers/page/[n]/page.tsx", "app/answers/topic/[slug]/page.tsx",
+    "app/dispatch/[id]/page.tsx", "app/dispatch/[id]/dispatch-view.tsx", "app/dispatch/[id]/opengraph-image.tsx",
+    "app/history/testnet/page.tsx", "app/literature/page.tsx",
+    ...["report-actions", "research-citation-export", "bibliography-exports", "portable-receipt-panel",
+      "evidence-matrix-export", "answer-delta", "mode-badge", "confidence-badge", "answer-markdown",
+      "historical-dispatch-note", "related-dispatches", "archive-answer-row", "dispatch-history",
+      "research-private-result", "answer-feedback", "scholarly-metadata", "answer-card", "citation-evidence-panel",
+      "paper-card", "paper-save-button", "paper-search-panel", "literature-comparison-preview", "archive-index-view",
+      "archive-search", "archive-topic-chips", "archive-pagination", "dispatch-wire", "freshness-note",
+      "literature-workspace", "source-evidence-lens"].map(name => `components/keryx/${name}.tsx`)];
+  const retained = {
+    "app/dispatch/[id]/opengraph-image.tsx": ["K", "Keryx"],
+    "app/dispatch/[id]/page.tsx": ["KERYX", "Arc testnet", "Arc mainnet"],
+    "components/keryx/dispatch-wire.tsx": ["USDC"],
+    "components/keryx/literature-comparison-preview.tsx": ["arXiv"],
+    "components/keryx/literature-workspace.tsx": ["/50"],
+  };
+  for (const file of files) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"))
+      .map(finding => finding.text), retained[file] ?? [], file);
+  }
+});
