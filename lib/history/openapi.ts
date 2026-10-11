@@ -1,7 +1,7 @@
 import { RUN_SURFACES } from "../research/run-provenance";
 export const personalHistoryOpenApiPaths = { "/api/me/history": { get: {
   operationId: "readPersonalHistory", tags: ["Account"], summary: "Page your attributed current-store dispatch summaries",
-  security: [{ SessionCookie: [] }, { ApiKeyAuth: [] }],
+  security: [{ WebSession: [] }, { ApiKeyAuth: [] }],
   description: "Active SIWE or a verified key with explicit history:read. Bearer presence never falls back to cookies. No owner/network selectors, raw answers, private fulfillment, archived or linked-wallet history. Recorded amounts are not independently verified settlement, service prices or payer attribution. storeNetwork labels the selected deployment only. Cursor binds owner, store network and filters; descending createdAt/id keyset and an upper anchor exclude newer rows, without a transaction snapshot or backdated-insert guarantee. No-store; unsupported/enrolled ports and unapplied ordinary RPC return unavailable. Legacy /api/me/asks and SIWE testnet archive remain unchanged.",
   parameters: [
     { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 50, default: 25 } },

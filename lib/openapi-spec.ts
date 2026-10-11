@@ -21,6 +21,7 @@ import { privateProfileOpenApiPaths } from "./profiles/openapi";
 import { deliverableAcceptanceOpenApiPaths } from "./deliverable-acceptance/openapi";
 import { evidenceDraftOpenApiPath } from "./research/evidence-draft-openapi";
 import { personalHistoryOpenApiPaths } from "./history/openapi";
+import { runClaimOpenApiPaths, runClaimOpenApiSchemas, privateRunClaimOpenAiProperties, privateRunClaimOpenAiDescription, privateRunClaimOpenAiStream } from "./run-claims/openapi";
 import { API_KEY_SCOPES } from "./api-key-scopes";
 import { profileIdentityOpenApiPaths } from "./profiles/identity-openapi";
 import { decisionReviewOpenApiPaths } from "./research/decision-review-openapi";
@@ -96,6 +97,7 @@ export const openapiSpec = {
       ...paidJobEscalationOpenApiSchemas,
       ...paperOpenApiSchemas,
       ...sourceClaimOpenApiSchemas,
+      ...runClaimOpenApiSchemas,
       ReferenceExport: {
         type: "object", required: ["content", "count", "omitted"],
         properties: { content: { type: "string" }, count: { type: "integer", minimum: 0 }, omitted: { type: "integer", minimum: 0 } },
@@ -423,6 +425,7 @@ export const openapiSpec = {
       ChatCompletion: {
         type: "object",
         properties: {
+          ...privateRunClaimOpenAiProperties,
           id: { type: "string", example: "chatcmpl-…" },
           object: { type: "string", example: "chat.completion" },
           model: { type: "string", example: "keryx" },
@@ -630,6 +633,7 @@ export const openapiSpec = {
     ...evidenceDraftOpenApiPath,
     ...privateProfileOpenApiPaths,
     ...personalHistoryOpenApiPaths,
+    ...runClaimOpenApiPaths,
     ...profileIdentityOpenApiPaths,
     ...paperOpenApiPaths,
     ...sourceClaimOpenApiPaths,
@@ -957,7 +961,7 @@ export const openapiSpec = {
           "message over paid sources and pays every cited creator downstream in USDC on Arc. With " +
           "`stream:true`, live reasoning streams as `reasoning_content` deltas. This path is NOT " +
           "x402 — no payment-signature required. New runs record API ingress and API-key ownership when verified; " +
-          "anonymous runs remain ownerless. IPs, user agents and client telemetry never establish ownership.",
+          "anonymous runs remain ownerless. IPs, user agents and client telemetry never establish ownership." + privateRunClaimOpenAiDescription,
         security: [{}, { ApiKeyAuth: [] }],
         requestBody: {
           required: true,
@@ -972,6 +976,7 @@ export const openapiSpec = {
               "A terminal planning refusal in a started stream is emitted as [keryx error] content, without a successful completion or automatic retry.",
             content: {
               "application/json": { schema: { $ref: "#/components/schemas/ChatCompletion" } },
+              "text/event-stream": privateRunClaimOpenAiStream,
             },
           },
           "400": {
@@ -1005,9 +1010,11 @@ export const openapiSpec = {
           },
           "500": { description: "Treasury wallet not configured." },
           "503": {
-            description: "Durable sponsored admission is unavailable; no research was started.",
+            description: "Durable sponsored admission or enabled ordinary claim preparation is unavailable; no research was started. Non-streaming claim refusal uses code claims_unavailable; an already-started stream reports its refusal without a successful completion or automatic retry.",
             headers: { "Retry-After": { description: "Seconds before retrying admission.", schema: { type: "integer" } } },
-            content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+            content: { "application/json": { schema: { oneOf: [
+              { $ref: "#/components/schemas/Error" }, { $ref: "#/components/schemas/PrivateRunClaimOpenAiAdmissionError" },
+            ] } } },
           },
         },
       },
