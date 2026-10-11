@@ -88,7 +88,25 @@ function comparisonResearchPlan(question: string, raw: unknown): string[] {
   // References and caller conditions must survive every constructed need. They
   // are not additional subjects or queries, and format/connective parts stay in
   // the original question instead of acquiring factual target authority.
-  if (parts.some(part => /https?:\/\//iu.test(part.text) && part.role !== "scope")) return invalid();
+  // Scan complete caller URL tokens, including repeated references, with the
+  // requestedSourceUrls matching/prose-closer bounds. The partition bounds the
+  // whole question to 64 parts of 600 characters; do not truncate this scan.
+  // One scope part must contain each whole token so trimming/joining scope
+  // cannot drop a split scheme or insert spaces inside a host/path.
+  let offset = 0;
+  const scopeIntervals = parts.flatMap(part => {
+    const start = offset; offset += part.text.length;
+    return part.role === "scope" ? [{ start, end: offset }] : [];
+  });
+  for (const match of question.matchAll(/\bhttps?:\/\/[^\s<>"'`]+/giu)) {
+    let token = match[0];
+    const before = question[match.index - 1];
+    if (!before || !/[<"'`]/u.test(before)) token = token.replace(/[.,;]+$/u, "");
+    while (token.endsWith(")") && (token.match(/\)/gu)?.length ?? 0) > (token.match(/\(/gu)?.length ?? 0)) token = token.slice(0, -1);
+    while (token.endsWith("]") && !token.includes("[")) token = token.slice(0, -1);
+    if (!before || !/[<"'`]/u.test(before)) token = token.replace(/[.,;]+$/u, "");
+    if (!scopeIntervals.some(part => part.start <= match.index && part.end >= match.index + token.length)) return invalid();
+  }
   if (subjects.length * dimensions.length + shared.length > MAX_RESEARCH_TARGETS) {
     throw new ResearchPlanningError(question, "needs_refinement");
   }

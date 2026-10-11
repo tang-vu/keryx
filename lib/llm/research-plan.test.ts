@@ -199,6 +199,67 @@ describe("caller-bound comparison construction", () => {
   });
 });
 
+describe("comparison reference token boundaries", () => {
+  const sqliteUrls = ["https://sqlite.org/wal.html", "https://sqlite.org/backup.html"];
+  const boundaries = sqliteUrls.flatMap(url => [
+    { boundary: "scheme", at: url.indexOf(":") + 1 },
+    { boundary: "host", at: url.indexOf(".org") },
+    { boundary: "path", at: url.lastIndexOf("/") + 1 },
+  ].flatMap(({ boundary, at }) => ([
+    ["scope", "scope"], ["scope", "framing"], ["scope", "subject"], ["framing", "framing"],
+  ] as const).map(([left, right]) => ({ name: `${url} ${boundary} ${left}/${right}`, url, at, left, right }))));
+
+  it.each(boundaries)("refuses the exact original URL split at $name before discovery with one synthetic response", async ({ url, at, left, right }) => {
+    const proposal = callerProposal(SQLITE_SELECTION_QUESTION, sqliteSubjects, sqliteDimensions, sqliteShared, sqliteScope);
+    proposal.comparison.parts = proposal.comparison.parts.flatMap(part => {
+      const start = part.text.indexOf(url);
+      if (start < 0) return [part];
+      return [{ text: part.text.slice(0, start), role: part.role },
+        { text: url.slice(0, at), role: left }, { text: url.slice(at), role: right },
+        { text: part.text.slice(start + url.length), role: part.role }].filter(part => part.text.length > 0);
+    });
+    expect(proposal.comparison.parts.map(part => part.text).join("")).toBe(SQLITE_SELECTION_QUESTION);
+    const transport = vi.fn<typeof fetch>(async () => response(proposal)); vi.stubGlobal("fetch", transport);
+    const alternate = provider("alternate"), store = new MemoryReasoningCircuitStore();
+    const failed = vi.spyOn(store, "failed"), succeeded = vi.spyOn(store, "succeeded");
+    const engine = new ResilientEngine(provider(), alternate, 0, store);
+    const listSources = vi.fn(), payFetch = vi.fn(), payCitations = vi.fn();
+    const iterator = runAgent({ question: SQLITE_SELECTION_QUESTION, budget: 0, researchMode: "quick" },
+      { engine, db: { listSources }, gateway: { mode: "offline", payFetch, payCitations } } as unknown as AgentDeps);
+    expect((await iterator.next()).value).toMatchObject({ phase: "decompose" });
+    const error = await iterator.next().catch(error => error);
+    expect(error).toBeInstanceOf(ResearchPlanningError);
+    expect(error).toMatchObject({ reason: "invalid_output", maximumTargets: 8 });
+    expect(transport).toHaveBeenCalledOnce(); expect(alternate.calls).toEqual([]);
+    expect(listSources).not.toHaveBeenCalled(); expect(payFetch).not.toHaveBeenCalled(); expect(payCitations).not.toHaveBeenCalled();
+    expect(failed).not.toHaveBeenCalled(); expect(succeeded).not.toHaveBeenCalled();
+    expect(reasoningCalls(engine)).toMatchObject([{ outcome: "returned" }]); expect(reasoningCalls(engine)).toHaveLength(1);
+    expect(reasoningUsage(engine)).toMatchObject([{ inputTokens: 23, outputTokens: 11 }]); expect(reasoningUsage(engine)).toHaveLength(1);
+    expect(reasoningAttempts(engine)).toMatchObject([{ step: "decompose", outcome: "failed", error: "output_validation", status: 422 }]);
+  });
+
+  it("preserves intact mixed-case HTTP(S) tokens, query/fragment bytes and multiple separate scope parts", () => {
+    const scope = ["Use <HtTpS://example.org/A%20B?x=1&y=2#Frag>", "and `http://example.net/guide`. Keep version V."];
+    const question = `Compare Aspen and Birch on latency. ${scope.join(" ")}`;
+    const proposal = callerProposal(question, ["Aspen", "Birch"], ["latency"], [], scope);
+    const targets = parseResearchPlan(question, proposal);
+    expect(targets).toHaveLength(2);
+    for (const target of targets) for (const qualification of scope) expect(target).toContain(qualification);
+  });
+
+  it.each([
+    { name: "a repeated token", prefix: "Use https://example.org/guide " },
+    { name: "a token after sixteen earlier references", prefix: "Use " + "https://example.org/guide ".repeat(16) },
+  ])("checks every original occurrence, including $name, rather than deduplicating or capping the scan", ({ prefix }) => {
+    const question = `Compare Aspen and Birch on latency. ${prefix}then https://example.org/guide`;
+    // The final occurrence is deliberately discarded framing, even though an
+    // identical intact token is already present in scope. No target injection.
+    const proposal = callerProposal(question, ["Aspen", "Birch"], ["latency"], [], [prefix]);
+    expect(proposal.comparison.parts.map(part => part.text).join("")).toBe(question);
+    expect(() => parseResearchPlan(question, proposal)).toThrow(ResearchPlanningError);
+  });
+});
+
 describe("bounded planning contract", () => {
   it("returns targeted refinement for the exact original Systemd scope without bundling dimensions or another provider call", async () => {
     // Exact normalized q2-intent/q2-run question from the genuine 0.26.17 run.

@@ -251,3 +251,12 @@ separate explicitly authorized finite live usefulness/source-limitation gate;
 the exhausted allowance grants no new trial. Shared web/API/CLI/remote-MCP
 planning contracts remain `string[]` or the existing private caller refinement;
 bots and stdio/desktop/Operator/extensions retain their established role bounds.
+
+The URL-boundary correction scans HTTP(S) tokens in the complete caller question
+with the requested-source token grammar. Every occurrence must fit wholly within
+one scope part; splitting a scheme, host or path across scope or other roles
+refuses locally before discovery. This prevents dropped references and spaces
+inserted inside URLs by scope assembly. Intact reference spelling is preserved;
+the existing bounded semantic constructor and model-role qualification remain.
+Focused synthetic original-SQLite boundary controls establish this mechanical
+correction, not source-answer usefulness or an unknown historical live cause.
