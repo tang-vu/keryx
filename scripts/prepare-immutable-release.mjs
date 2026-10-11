@@ -2,7 +2,6 @@
 // migrate storage or clean retained releases. The deployed path remains authoritative.
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -30,7 +29,6 @@ export function preparationEnvironment({ commit, scratch, inherited = process.en
     KERYX_FORCE_OFFLINE: '1', KERYX_COMMIT: commit,
     SUPABASE_URL: '', SUPABASE_ANON_KEY: '', SUPABASE_SERVICE_ROLE_KEY: '',
     NEXT_PUBLIC_SUPABASE_URL: '', NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
-    KERYX_SQLITE_PATH: path.join(scratch, 'preparation.sqlite'),
     HOME: scratch, USERPROFILE: scratch, TMPDIR: scratch, TMP: scratch, TEMP: scratch,
     npm_config_cache: path.join(scratch, 'npm-cache'), npm_config_audit: 'false', npm_config_fund: 'false',
   };
@@ -145,7 +143,8 @@ export function prepareImmutableRelease({ repo, releasesDir, commit, dependencie
   const startedAt = new Date().toISOString(), started = performance.now();
   const staged = stageImmutableSource({ repo, releasesDir, commit });
   // Scratch is deliberately outside source. Keep it on failure; never erase storage evidence.
-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'keryx-release-preparation-'));
+  const scratch = path.join(staged.candidate, 'preparation-scratch');
+  fs.mkdirSync(scratch, { mode: 0o700 });
   const inputs = copyPreparationDependencies({ source: staged.source, dependencies });
   const checks = runPreparationChecks({ staged, scratch, npmCli });
   const artifact = recordImmutableArtifact(staged);

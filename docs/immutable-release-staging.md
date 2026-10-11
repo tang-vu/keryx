@@ -141,8 +141,10 @@ Node24.21.0/npm11.19.0 are required. Fixed, sequential commands run the actual
 TypeScript/MTS checks, Vitest suite and Next production build. A fresh environment
 selects arcTestnet/offline, blanks Supabase and omits runtime credentials, funded
 storage manifests, injected Node options and provider configuration. HOME, cache,
-temporary files and SQLite live in a new isolated scratch directory outside the
-source cohort. Next's automatic ENV loading cannot select `.env.local` because
+temporary files live in a new isolated scratch directory outside the source
+cohort. Testnet's ordinary SQLite fallback uses a fresh working directory; no
+funded storage manifest or unused SQLite-path override is inherited. Next's
+automatic ENV loading cannot select `.env.local` because
 source staging excludes it. The exact browser settings are recorded; **this
 testnet/offline artifact cannot be promoted to mainnet**.
 

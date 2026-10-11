@@ -29,7 +29,7 @@ test('fresh builder environment cannot inherit funded storage, keys, providers o
   assert.equal(env.SUPABASE_URL, ''); assert.equal(env.NEXT_PUBLIC_KERYX_NETWORK, 'arcTestnet');
   for (const name of ['OPENAI_API_KEY', 'FUNDER_PRIVATE_KEY', 'KERYX_STORAGE_MANIFEST', 'NODE_OPTIONS', 'WSLENV'])
     assert.equal(Object.hasOwn(env, name), false);
-  assert.equal(path.dirname(env.KERYX_SQLITE_PATH), path.resolve(os.tmpdir()));
+  assert.equal(Object.hasOwn(env, 'KERYX_SQLITE_PATH'), false);
 });
 
 test('failed typecheck/test/build retains the real failure and cannot reach later checks', t => {
