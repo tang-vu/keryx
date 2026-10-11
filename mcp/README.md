@@ -1,5 +1,11 @@
 # Keryx MCP
 
+App0.27.58's iPhone header repair is scoped to the hosted web UI. It retains
+hosted MCP0.3.15 and stdio/package/Registry0.4.17 tool contracts and identities;
+existing artifacts keep their original source provenance. No new MCP package is
+required by this increment. See the [surface audit and acceptance
+record](../docs/engineering/iphone-header-2026-10-12.md).
+
 The app0.27.57 coordinated candidate selects stdio/package and official Registry
 **0.4.17**, with hosted MCP **0.3.15**. Current main adds local `draft_check` and
 updates `evidence_draft` retained excerpts and author-written statements. Their

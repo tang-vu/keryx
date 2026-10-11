@@ -1,5 +1,16 @@
 # Supported-surface release parity
 
+## App58 iPhone header repair — October 12 source candidate
+
+App/OpenAPI **0.27.58** repairs Safari wallet selection and header navigation.
+The new English status labels are scoped to web components. MCP, desktop helper,
+renderer, bridge, native/Rust and extension behavior retain their App57 contracts
+and package identities; hosted wallet handoffs receive the web correction.
+Executable graph/byte comparison holds release metadata constant, so it does not
+relabel retained packages as App58 builds. Exact-source CI, deployed app commit
+and physical iPhone wallet approval remain separate gates. See the
+[scope and acceptance record](engineering/iphone-header-2026-10-12.md).
+
 ## App57 caller-text tools and source selection - October 11 source candidate
 
 App/OpenAPI **0.27.57**, hosted MCP **0.3.15** and stdio/official Registry

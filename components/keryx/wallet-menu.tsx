@@ -30,6 +30,7 @@ import { WalletPicker } from "./wallet-picker";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { shortAddress } from "@/lib/utils";
 import { createMessages } from "@/lib/i18n/messages";
+import { webHeaderMessages } from "@/locales/en/web-header";
 
 const copy = createMessages("en");
 
@@ -71,9 +72,9 @@ export function WalletMenu() {
       toast(copy("account.signedOut"));
     } catch { toast.error(copy("account.signOutUnconfirmed")); }
   }, [disconnectAsync, signOut]);
-  // Set true only when the user picks a wallet here — gates auto-sign-in so a
-  // rehydrated connection on page load never pops an unsolicited signature.
-  const intentRef = useRef(false);
+  // A selection token gates auto-sign-in: rehydration never prompts, and an
+  // older failed attempt cannot clear a newer choice after the picker remounts.
+  const intentRef = useRef<symbol | null>(null);
   const busy = authState !== "idle";
 
   const doSignIn = useCallback(async () => {
@@ -99,7 +100,7 @@ export function WalletMenu() {
   useEffect(() => {
     if (!intentRef.current || !isConnected || !address || busy) return;
     if (session === undefined) return; // session check still in flight
-    intentRef.current = false;
+    intentRef.current = null;
     if (session === null) void doSignIn(); // null = signed out → sign in
   }, [isConnected, address, session, busy, doSignIn]);
 
@@ -112,8 +113,9 @@ export function WalletMenu() {
   // those few hundred milliseconds would be a lie that then flips — show a neutral chip instead.
   if (!hydrated || ((status === "reconnecting" || status === "connecting") && !session)) {
     return (
-      <span className={`${CHIP} cursor-default opacity-70`} aria-busy>
-        <Wallet className="h-3.5 w-3.5" />{copy("walletMenu.wallet")}</span>
+      <span className={`${CHIP} cursor-default opacity-70`} role="status" aria-busy>
+        {status === "connecting" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wallet className="h-3.5 w-3.5" />}
+        {status === "connecting" ? webHeaderMessages["walletMenu.connecting"] : copy("walletMenu.wallet")}</span>
     );
   }
 
@@ -129,6 +131,7 @@ export function WalletMenu() {
           <ChevronDown className="h-3.5 w-3.5 text-ink-3" />
         </DropdownMenuTrigger>
         <DropdownMenuContent
+          data-site-header-wallet
           align="end"
           className="min-w-[200px] rounded-none border-ink bg-paper p-1 font-mono text-[11px] uppercase tracking-[0.1em]"
         >
@@ -208,6 +211,7 @@ export function WalletMenu() {
           {!busy && !loading && <ChevronDown className="h-3.5 w-3.5 text-ink-3" />}
         </DropdownMenuTrigger>
         <DropdownMenuContent
+          data-site-header-wallet
           align="end"
           className="min-w-[200px] rounded-none border-ink bg-paper p-1 font-mono text-[11px] uppercase tracking-[0.1em]"
         >
@@ -237,6 +241,7 @@ export function WalletMenu() {
         <Wallet className="h-3.5 w-3.5" />{copy("walletMenu.connectWallet")}<ChevronDown className="h-3.5 w-3.5 text-ink-3" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
+        data-site-header-wallet
         align="end"
         className="w-[260px] rounded-none border-ink bg-paper p-3"
       >
@@ -244,13 +249,16 @@ export function WalletMenu() {
         <WalletPicker
           isBusy={busy}
           onConnected={() => {}}
-          onSelect={() => {
+          onSelect={(attempt) => {
             // User chose to (re)connect: lift the signed-out suppression, flag intent
             // for auto-sign-in, and close the picker. The connected render branch
             // replaces the picker once the connection lands.
             setSignedOut(false);
-            intentRef.current = true;
+            intentRef.current = attempt;
             setPickerOpen(false);
+          }}
+          onConnectionFailed={(attempt) => {
+            if (intentRef.current === attempt) intentRef.current = null;
           }}
         />
         <p className="mt-2.5 font-mono text-[9.5px] leading-relaxed text-faint">{copy("walletMenu.connectBoundary")}</p>
