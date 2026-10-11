@@ -8,6 +8,9 @@ import { SessionActiveCard } from "./session-active-card";
 import { UsdcPresetChips } from "./usdc-preset-chips";
 import { ResearchBudgetFields, parseBudgetAmount } from "./research-budget-fields";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 
@@ -58,11 +61,11 @@ export function GrantSpendDialog({ grantState, onActivate, onTopUp, onExtend, on
     {grantState.status === "registering" && grantState.consentReview && <p className="mt-2 text-xs leading-relaxed text-ink-2">
       {grantState.consentReview.durationSeconds !== undefined
         ? grantState.consentReview.questionCapUsdc !== undefined
-          ? copy("budgetGrant.consentCapDuration", { amount: grantState.consentReview.remainingCapacityUsdc.toFixed(6), cap: grantState.consentReview.questionCapUsdc.toFixed(6), duration: copy(grantState.consentReview.durationSeconds / 3600 === 1 ? "budgetGrant.duration.one" : "budgetGrant.duration.other", { count: grantState.consentReview.durationSeconds / 3600 }) })
-          : copy("budgetGrant.consentDuration", { amount: grantState.consentReview.remainingCapacityUsdc.toFixed(6), duration: copy(grantState.consentReview.durationSeconds / 3600 === 1 ? "budgetGrant.duration.one" : "budgetGrant.duration.other", { count: grantState.consentReview.durationSeconds / 3600 }) })
+          ? copy("budgetGrant.consentCapDuration", { amount: uiFormat.usdcVerifiable(grantState.consentReview.remainingCapacityUsdc), cap: uiFormat.usdcVerifiable(grantState.consentReview.questionCapUsdc), duration: copy(grantState.consentReview.durationSeconds / 3600 === 1 ? "budgetGrant.duration.one" : "budgetGrant.duration.other", { count: grantState.consentReview.durationSeconds / 3600 }) })
+          : copy("budgetGrant.consentDuration", { amount: uiFormat.usdcVerifiable(grantState.consentReview.remainingCapacityUsdc), duration: copy(grantState.consentReview.durationSeconds / 3600 === 1 ? "budgetGrant.duration.one" : "budgetGrant.duration.other", { count: grantState.consentReview.durationSeconds / 3600 }) })
         : grantState.consentReview.questionCapUsdc !== undefined
-          ? copy("budgetGrant.consentCap", { amount: grantState.consentReview.remainingCapacityUsdc.toFixed(6), cap: grantState.consentReview.questionCapUsdc.toFixed(6) })
-          : copy("budgetGrant.consent", { amount: grantState.consentReview.remainingCapacityUsdc.toFixed(6) })}
+          ? copy("budgetGrant.consentCap", { amount: uiFormat.usdcVerifiable(grantState.consentReview.remainingCapacityUsdc), cap: uiFormat.usdcVerifiable(grantState.consentReview.questionCapUsdc) })
+          : copy("budgetGrant.consent", { amount: uiFormat.usdcVerifiable(grantState.consentReview.remainingCapacityUsdc) })}
     </p>}
     {grantState.status === "confirming" && <p className="mt-2 text-xs leading-relaxed text-ink-2">
       {copy("budgetGrant.confirmingNotice")}

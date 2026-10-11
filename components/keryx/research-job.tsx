@@ -5,6 +5,9 @@ import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useId, useState } from "react";
 import { ResearchJobDetails } from "./research-job-details";
 import { a2aQueryIdSchema, buyerJobSchema, shouldPollBuyerJob, type BuyerJob } from "@/lib/a2a/buyer-workspace";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const message = createMessages("en");
 
@@ -34,7 +37,7 @@ export function ResearchJob({ initialId }: { initialId?: string } = {}) {
         const parsed = buyerJobSchema.safeParse(await response.json());
         if (!parsed.success || parsed.data.queryId !== lookup.id) throw new Error(message("researchJob.responseUnverified"));
         if (abort.signal.aborted) return;
-        setJob(parsed.data); setUpdated(new Date().toLocaleTimeString()); setLoading(false);
+        setJob(parsed.data); setUpdated(uiFormat.time(new Date())); setLoading(false);
         calls++;
         if (shouldPollBuyerJob(parsed.data.status)) {
           if (calls < 150) timer = setTimeout(poll, 4_000);

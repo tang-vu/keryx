@@ -8,6 +8,9 @@ import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { accountHistorySchema, type AccountHistory } from "@/lib/a2a/account-history-types";
 import { ResearchJob } from "./research-job";
 import { ResearchJobEscalation } from "./research-job-escalation";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const message = createMessages("en");
 
@@ -67,7 +70,7 @@ function WalletHistory({ wallet }: { wallet: string }) {
     <ul className="mt-4 divide-y divide-line">
       {history?.jobs.map(row => <li key={row.id} className="py-4">
         <p className="break-words font-serif text-ink">{row.question ?? message("walletResearch.questionUnavailable")}</p>
-        <p className="mt-1 text-sm text-ink-3">{row.mode} · {row.status.replaceAll("_", " ")} · {new Date(row.createdAt).toLocaleString("en-US")}</p>
+        <p className="mt-1 text-sm text-ink-3">{row.mode} · {row.status.replaceAll("_", " ")} · {uiFormat.dateTime(row.createdAt)}</p>
         <p className="mt-1 text-sm text-ink-2">{message(row.funding ? "walletResearch.monthlyPrice" : "walletResearch.packagePrice", { amount: row.packagePriceUsdc === null ? message("walletResearch.unknown") : `${row.packagePriceUsdc} USDC` })}</p>
         <ResearchJobEscalation escalation={row.escalation} original={row.originalPayment ? { orderId: row.id, payment: row.originalPayment } : undefined} />
         <button className={`${control} mt-2`} onClick={() => setSelected(row.id)}>{message("walletResearch.followJob")}</button>

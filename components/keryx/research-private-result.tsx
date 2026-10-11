@@ -1,5 +1,8 @@
 import { createMessages } from "@/lib/i18n/messages";
 import { privateUsdc, type PrivateWorkspaceResult } from "@/lib/a2a/private-workspace";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 
@@ -33,15 +36,15 @@ export function ResearchPrivateResult({ job }: { job: PrivateWorkspaceResult }) 
         : !job.result.evidence.some(item => item.qualifiesForReward) && <p className="border-l-2 border-seal pl-3 text-sm">{copy("privateReport.noRewardEvidence")}</p>}
       <h4 className="font-display text-2xl">{copy("privateReport.decisions")}</h4>
       <ul className="space-y-3">{job.result.decisions.map((decision, i) => <li key={i} className="border border-line p-4">
-        <p className="font-mono text-xs">{copy("privateReport.decision", { action: decision.action, source: decision.sourceName, price: decision.price.toFixed(6) })}</p>
+        <p className="font-mono text-xs">{copy("privateReport.decision", { action: decision.action, source: decision.sourceName, price: uiFormat.usdc(decision.price) })}</p>
         <p className="mt-2 break-words font-serif">{decision.rationale}</p>
       </li>)}</ul>
       {!!job.result.citations.length && <div><h4 className="font-display text-2xl">{copy("privateReport.attribution")}</h4><ul className="mt-3 space-y-3">{job.result.citations.map((citation, i) => <li key={i} className="border border-line p-3 text-sm">
-        <p>{copy("privateReport.contribution", { marker: citation.marker, source: citation.sourceName, weight: (citation.weight * 100).toFixed(1) })}</p><p>{citation.rationale}</p>
-        <p>{copy("privateReport.reward", { amount: citation.recordedRewardUsdc.toFixed(6) })}</p>
+        <p>{copy("privateReport.contribution", { marker: citation.marker, source: citation.sourceName, weight: uiFormat.decimal(citation.weight * 100, 1) })}</p><p>{citation.rationale}</p>
+        <p>{copy("privateReport.reward", { amount: uiFormat.usdc(citation.recordedRewardUsdc) })}</p>
       </li>)}</ul></div>}
       {!!job.result.claimCoverage?.length && <div><h4 className="font-display text-2xl">{copy("privateReport.claimEvidence")}</h4><ol className="mt-3 space-y-3">{job.result.claimCoverage.map((claim, i) => <li key={i} className="border border-line p-4">
-        <p className="font-serif">{claim.claim}</p><p className="mt-2 text-xs">{copy("privateReport.coverage", { coverage: (claim.coverage * 100).toFixed(1) })}</p>
+        <p className="font-serif">{claim.claim}</p><p className="mt-2 text-xs">{copy("privateReport.coverage", { coverage: uiFormat.decimal(claim.coverage * 100, 1) })}</p>
         {job.result!.evidence?.filter(item => item.claimIndex === claim.claimIndex).map((item, j) => <blockquote key={j} className="mt-3 border-l border-line pl-3 font-serif text-sm"><p className="whitespace-pre-wrap [overflow-wrap:anywhere]">“{item.quote}”</p><cite>{item.sourceName}</cite></blockquote>)}
       </li>)}</ol></div>}
       <p className="text-xs text-ink-3">{copy("privateReport.receiptNotice")}</p>

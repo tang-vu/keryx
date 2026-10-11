@@ -17,6 +17,9 @@ import { useState } from "react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { Copy, Play, Loader2 } from "lucide-react";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
@@ -218,7 +221,7 @@ export default function PlaygroundPage() {
                 <li key={i} className="flex justify-between font-mono text-xs text-ink-2">
                   <span>{c.source}</span>
                   <span className="text-seal">
-                    {uiCopy("integrationPlayground.rewardWeight", { reward: c.reward.toFixed(4), weight: c.weight.toFixed(2) })}
+                    {uiCopy("integrationPlayground.rewardWeight", { reward: uiFormat.usdc(c.reward, 4), weight: uiFormat.decimal(c.weight, 2) })}
                   </span>
                 </li>
               ))}

@@ -30,6 +30,9 @@ import {
 } from "@/components/keryx/pending-reconciliation-section";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
@@ -159,11 +162,11 @@ export default function StatusPage() {
               <>
                 <div className="mt-8 border-t border-line pt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">{message("statusPage.liveTraction")}</div>
                 <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5 font-mono text-[12px]">
-                  <Row k={message("statusPage.totalQueries")} v={health.traction.totalQueries.toLocaleString()} />
-                  <Row k={message("statusPage.settledPayments")} v={health.traction.totalPayments.toLocaleString()} />
-                  <Row k={message("statusPage.creatorRewards")} v={`$${health.traction.creatorPayoutsUsdc.toFixed(4)}`} />
+                  <Row k={message("statusPage.totalQueries")} v={uiFormat.number(health.traction.totalQueries)} />
+                  <Row k={message("statusPage.settledPayments")} v={uiFormat.number(health.traction.totalPayments)} />
+                  <Row k={message("statusPage.creatorRewards")} v={`$${uiFormat.usdc(health.traction.creatorPayoutsUsdc, 4)}`} />
                   <Row k={message("statusPage.creatorsEarning")} v={String(health.traction.creatorsEarning)} />
-                  <Row k={message("statusPage.keryxOperatingFees")} v={health.traction.settledOperatingFeeUsdc != null ? `$${health.traction.settledOperatingFeeUsdc.toFixed(6)}` : message("statusPage.unavailable")} />
+                  <Row k={message("statusPage.keryxOperatingFees")} v={health.traction.settledOperatingFeeUsdc != null ? `$${uiFormat.usdc(health.traction.settledOperatingFeeUsdc)}` : message("statusPage.unavailable")} />
                   <Row k={message("statusPage.operatingFeeTransfers")} v={health.traction.settledOperatingFeePayments != null ? String(health.traction.settledOperatingFeePayments) : message("statusPage.unavailable")} />
                 </dl>
               </>

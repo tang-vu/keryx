@@ -14,6 +14,9 @@
 import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useRef, useState } from "react";
 import type { OnrampKit, OnrampSession, OnrampWidget } from "@circle-fin/onramp-kit";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 
@@ -97,7 +100,7 @@ export function ArcCardOnrampPanel() {
     <h2 className="font-mono text-xs">{copy("cardFunding.title")}</h2>
     <p className="font-serif text-sm">{copy("cardFunding.providerNotice")}</p>
     <p className="font-serif text-sm">{copy("cardFunding.deliveryNotice")}</p>
-    {prepared && <p className="break-all font-mono text-xs">{copy("cardFunding.session", { wallet: String(prepared.session.destinationWallet ?? ""), expiresAt: new Date(prepared.session.expiresAt).toLocaleTimeString() })}</p>}
+    {prepared && <p className="break-all font-mono text-xs">{copy("cardFunding.session", { wallet: String(prepared.session.destinationWallet ?? ""), expiresAt: uiFormat.time(prepared.session.expiresAt) })}</p>}
     <div className="flex flex-wrap gap-2">
       <button type="button" className={control} disabled={busy} onClick={() => void prepare()}>{busy ? copy("cardFunding.preparing") : prepared ? copy("cardFunding.prepareNew") : copy("cardFunding.prepare")}</button>
       {prepared && <button type="button" className={control} disabled={busy} onClick={open}>{copy("cardFunding.open")}</button>}

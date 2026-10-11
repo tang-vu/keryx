@@ -7,6 +7,7 @@ import { JSDOM } from "jsdom";
 import ts from "typescript";
 import { expect, it } from "vitest";
 import { creatorRegistrationCopy as copy } from "../../locales/en/creator-registration";
+import * as displayFormat from "../i18n/format";
 import fixtures from "./fixtures/registration-copy-english.json";
 
 const require = createRequire(import.meta.url);
@@ -32,6 +33,7 @@ function component(source: string, states: unknown[], authenticated = true) {
     "@/lib/sources/registration-sponsor-protocol": { registrationIntentDigest: forbidden, registrationTypedData: forbidden, sponsoredRegistrationSchema: { parse: forbidden } },
     "@/lib/registry/registry-version": { getBrowserRegistryVersion: forbidden },
     "@/locales/en/creator-registration": { creatorRegistrationCopy: copy },
+    "@/lib/i18n/format": displayFormat,
     "@/components/keryx/site-header": { SiteHeader: () => null },
     "@/components/keryx/site-footer": { SiteFooter: () => null },
     "@/components/keryx/sponsored-registration-form": { SponsoredRegistrationForm: () => null },

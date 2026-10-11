@@ -10,6 +10,9 @@ import { privateWorkspaceHistorySchema, privateWorkspaceResultSchema, privateUsd
   type PrivateWorkspaceHistory, type PrivateWorkspaceResult } from "@/lib/a2a/private-workspace";
 import { ResearchPrivateResult } from "./research-private-result";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const message = createMessages("en");
 
@@ -96,7 +99,7 @@ function PrivateJobs({ wallet }: { wallet: string }) {
     {history?.jobs.length === 0 && !busy && <p className="mt-4 text-sm">{message("privateResearchJobs.empty")}</p>}
     <ul className="mt-4 divide-y divide-line">{history?.jobs.map(job => <li key={job.id} className="py-4">
       <p className="break-words font-serif">{job.question}</p>
-      <p className="mt-1 text-sm text-ink-3">{message("privateResearchJobs.jobSummary", { mode: job.researchMode, date: new Date(job.createdAt).toLocaleString("en-US"), amount: privateUsdc(job.priceMicros) })}</p>
+      <p className="mt-1 text-sm text-ink-3">{message("privateResearchJobs.jobSummary", { mode: job.researchMode, date: uiFormat.dateTime(job.createdAt), amount: privateUsdc(job.priceMicros) })}</p>
       <button className={`${control} mt-2`} onClick={() => open(job)}>{message("privateResearchJobs.viewJob")}</button>
     </li>)}</ul>
     {history?.nextCursor && <button className={control} disabled={busy} onClick={() => refresh(history.nextCursor)}>{message("privateResearchJobs.loadOlder")}</button>}

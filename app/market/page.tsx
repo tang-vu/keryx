@@ -9,6 +9,9 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { getDb } from "@/lib/db";
 import { listArticleMarket } from "@/lib/offers/offer-book";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 
@@ -132,7 +135,7 @@ export default async function MarketPage({
                     {entry.offer && (
                       <>
                         <span>·</span>
-                        <Clock3 className="h-3 w-3" /> {copy("sourceMarket.until", { date: new Date(entry.offer.expiresAt * 1_000).toLocaleDateString("en-US", { timeZone: "UTC" }) })}
+                        <Clock3 className="h-3 w-3" /> {copy("sourceMarket.until", { date: uiFormat.date(entry.offer.expiresAt * 1_000, "UTC") })}
                         <span>{copy("sourceMarket.signer", { signer: shortAddr(entry.offer.signer) })}</span>
                       </>
                     )}

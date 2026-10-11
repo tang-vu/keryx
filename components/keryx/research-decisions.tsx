@@ -7,6 +7,9 @@ const message = createMessages("en");
 import { useEffect, useState } from "react";
 import { verifyBrowserDecisions, type BuyerDecisions } from "@/lib/a2a/buyer-decisions";
 import { readBoundedJson } from "@/lib/read-bounded-json";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 export function ResearchDecisions({ queryId, answer, claims }: {
   queryId: string;
@@ -49,7 +52,7 @@ export function ResearchDecisions({ queryId, answer, claims }: {
     </div> : decisions === null ? <p role="status" className="mt-3 font-mono text-xs">{message("researchDecisions.loading")}</p>
       : decisions.length === 0 ? <p className="mt-3 font-serif">{message("researchDecisions.empty")}</p>
       : <ol className="mt-4 space-y-3">{decisions.map((decision, index) => <li key={index} className="border border-line p-4">
-        <p className="font-mono text-xs">{message("researchDecisions.quotedPrice", { action: decision.action, amount: decision.priceUsdc.toFixed(6) })}</p>
+        <p className="font-mono text-xs">{message("researchDecisions.quotedPrice", { action: decision.action, amount: uiFormat.usdc(decision.priceUsdc) })}</p>
         <p className="mt-2 font-serif font-semibold">{decision.sourceName}{decision.itemTitle && decision.sourceName !== decision.itemTitle && !decision.sourceName.endsWith(` — ${decision.itemTitle}`) ? ` — ${decision.itemTitle}` : ""}</p>
         <p className="mt-2 font-serif">{decision.rationale}</p>
         {!!decision.targets.length && <ul className="mt-3 list-inside list-disc font-serif text-sm text-ink-3">{decision.targets.map((target, i) => <li key={i}>{claims.find(claim => claim.claimIndex === target)?.claim ?? message("researchDecisions.unavailableTarget", { number: target + 1 })}</li>)}</ul>}

@@ -22,6 +22,9 @@ import { operatorObligationsCopy } from "@/locales/en/operator-obligations";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { selectPlural } from "@/lib/i18n/format";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 const richCopy = createRichMessages("en");
@@ -43,7 +46,7 @@ function copyToClipboard(text: string) {
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return uiFormat.date(iso);
 }
 
 // ── Mini usage bar chart ──────────────────────────────────────────────────────

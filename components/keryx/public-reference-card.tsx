@@ -3,6 +3,9 @@ import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
 import type { PublicReference } from "@/lib/public-references/catalog";
 import { librarySearchMatches } from "@/lib/sources/library-browse";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 const richCopy = createRichMessages("en");
@@ -16,10 +19,7 @@ const CONTENT_LABELS: Record<PublicReference["items"][number]["deliveryKind"], s
 
 function displayDate(value?: string, includeTime = false): string | null {
   if (!value || !Number.isFinite(Date.parse(value))) return null;
-  return new Intl.DateTimeFormat("en", {
-    month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
-    ...(includeTime ? { hour: "2-digit", minute: "2-digit", timeZoneName: "short" } as const : {}),
-  }).format(new Date(value));
+  return uiFormat.instant(value, includeTime ? "dateTimeZone" : "date", "UTC");
 }
 
 function FeedItem({ item }: { item: PublicReference["items"][number] }) {

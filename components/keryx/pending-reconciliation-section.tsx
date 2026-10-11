@@ -1,5 +1,8 @@
 
 import { createMessages } from "@/lib/i18n/messages";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const message = createMessages("en");
 export interface PendingReconciliationHealth {
@@ -60,34 +63,34 @@ export function PendingReconciliationSection({
         </span>
       </div>
       <dl className="mt-3">
-        <Row k={message("statusReconciliation.acceptedByCircle")} v={reconciliation.promoted.toLocaleString()} />
-        <Row k={message("statusReconciliation.stillAwaitingProof")} v={reconciliation.awaiting.toLocaleString()} />
+        <Row k={message("statusReconciliation.acceptedByCircle")} v={uiFormat.number(reconciliation.promoted)} />
+        <Row k={message("statusReconciliation.stillAwaitingProof")} v={uiFormat.number(reconciliation.awaiting)} />
         <Row
           k={message("statusReconciliation.acknowledgedLegacyTreasury")}
-          v={(reconciliation.acknowledgedAwaiting ?? 0).toLocaleString()}
+          v={uiFormat.number(reconciliation.acknowledgedAwaiting ?? 0)}
         />
         <Row
           k={message("statusReconciliation.unacknowledgedAlerts")}
-          v={(reconciliation.unacknowledgedAwaiting ?? reconciliation.awaiting).toLocaleString()}
+          v={uiFormat.number(reconciliation.unacknowledgedAwaiting ?? reconciliation.awaiting)}
         />
         <Row
           k={message("statusReconciliation.browserReservationsHeld")}
-          v={(reconciliation.browserAwaiting ?? 0).toLocaleString()}
+          v={uiFormat.number(reconciliation.browserAwaiting ?? 0)}
         />
-        <Row k={message("statusReconciliation.exposedPossiblyUnsigned")} v={(reconciliation.exposedAwaiting ?? 0).toLocaleString()} />
-        <Row k={message("statusReconciliation.signedNoRecordedSubmission")} v={(reconciliation.signedAwaiting ?? 0).toLocaleString()} />
-        <Row k={message("statusReconciliation.submissionAttempted")} v={(reconciliation.submittedAwaiting ?? 0).toLocaleString()} />
+        <Row k={message("statusReconciliation.exposedPossiblyUnsigned")} v={uiFormat.number(reconciliation.exposedAwaiting ?? 0)} />
+        <Row k={message("statusReconciliation.signedNoRecordedSubmission")} v={uiFormat.number(reconciliation.signedAwaiting ?? 0)} />
+        <Row k={message("statusReconciliation.submissionAttempted")} v={uiFormat.number(reconciliation.submittedAwaiting ?? 0)} />
         <Row
           k={message("statusReconciliation.treasuryAttemptsPending")}
-          v={(reconciliation.treasuryAwaiting ?? 0).toLocaleString()}
+          v={uiFormat.number(reconciliation.treasuryAwaiting ?? 0)}
         />
         <Row
           k={message("statusReconciliation.expiredStillUnresolved")}
-          v={(reconciliation.expiredAwaiting ?? 0).toLocaleString()}
+          v={uiFormat.number(reconciliation.expiredAwaiting ?? 0)}
         />
         <Row
           k={message("statusReconciliation.exactExpiryUnavailable")}
-          v={(reconciliation.unknownExpiryAwaiting ?? 0).toLocaleString()}
+          v={uiFormat.number(reconciliation.unknownExpiryAwaiting ?? 0)}
         />
         <Row
           k={message("statusReconciliation.earliestSignedExpiry")}
@@ -95,14 +98,14 @@ export function PendingReconciliationSection({
         />
         <Row
           k={message("statusReconciliation.terminalFailures")}
-          v={message((reconciliation.releasedReservations ?? 0) === 1 ? "statusReconciliation.terminalFailures.one" : "statusReconciliation.terminalFailures.other", { failed: reconciliation.failed.toLocaleString(), released: (reconciliation.releasedReservations ?? 0).toLocaleString() })}
+          v={message((reconciliation.releasedReservations ?? 0) === 1 ? "statusReconciliation.terminalFailures.one" : "statusReconciliation.terminalFailures.other", { failed: uiFormat.number(reconciliation.failed), released: uiFormat.number(reconciliation.releasedReservations ?? 0) })}
         />
-        <Row k={message("statusReconciliation.tupleMismatches")} v={reconciliation.mismatched.toLocaleString()} />
+        <Row k={message("statusReconciliation.tupleMismatches")} v={uiFormat.number(reconciliation.mismatched)} />
         <Row
           k={message("statusReconciliation.oldestPendingAge")}
           v={formatAge(reconciliation.oldestPendingAgeSeconds)}
         />
-        <Row k={message("statusReconciliation.lastChecked")} v={new Date(reconciliation.checkedAt).toLocaleString()} />
+        <Row k={message("statusReconciliation.lastChecked")} v={uiFormat.dateTime(reconciliation.checkedAt)} />
       </dl>
       <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">{message("statusReconciliation.acceptedTransfersSettleOnlyOnAnExactTuple")}</p>
     </section>
@@ -112,7 +115,7 @@ export function PendingReconciliationSection({
 function formatDate(value: string | null | undefined): string {
   if (!value) return message("statusReconciliation.none");
   const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? new Date(parsed).toLocaleString() : message("statusReconciliation.unknown");
+  return Number.isFinite(parsed) ? uiFormat.dateTime(parsed) : message("statusReconciliation.unknown");
 }
 
 function formatAge(seconds: number | null): string {

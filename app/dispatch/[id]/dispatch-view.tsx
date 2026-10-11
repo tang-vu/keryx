@@ -11,6 +11,9 @@ import { projectBibliographicTask } from "@/lib/research/bibliographic-task-resu
 import { DecisionReviews } from "@/components/keryx/decision-reviews";
 import { ReadCheckpointVerify } from "@/components/keryx/read-checkpoint-verify";
 import { projectActualReadCheckpoints } from "@/lib/research-audit/actual-read-projection";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 
@@ -43,7 +46,7 @@ export function DispatchView({
         <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
           {bibliography ? <span className="text-xs text-ink-3">{copy("reportDispatchView.bibliography")}</span> : confidence ? <ConfidenceBadge confidence={confidence} showReason /> : null}
           <p className="font-mono text-[10px] text-ink-3">
-            {new Date(run.createdAt).toLocaleString()} · {run.engine}
+            {uiFormat.dateTime(run.createdAt)} · {run.engine}
           </p>
         </div>
       </div>

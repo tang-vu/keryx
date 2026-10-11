@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
@@ -10,7 +13,7 @@ const richMessage = createRichMessages("en");
 interface SessionRow { id: string; issuedAt: number; expiresAt: number; current: boolean }
 interface SessionList { sessions: SessionRow[]; truncated: boolean }
 const button = "border border-line px-3 py-2 text-sm text-ink hover:border-ink disabled:opacity-50 disabled:cursor-wait";
-const date = (ms: number) => new Date(ms).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+const date = (ms: number) => uiFormat.dateTime(ms);
 
 /** Parent keys this view by account so account changes cannot retain another wallet's list. */
 export function AccountSessions() {

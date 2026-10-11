@@ -8,6 +8,9 @@ import { useAccount, useSignTypedData } from "wagmi";
 
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { articleOfferTypedData } from "@/lib/offers/article-offer";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const uiCopy = createMessages("en");
 
@@ -198,7 +201,7 @@ export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
                   {item.itemTitle}
                 </a>
                 <p className="mt-1 font-mono text-[9px] text-ink-3">
-                  {item.offer ? uiCopy("creatorOffers.liveVersion", { version: item.contentVersion.slice(0, 28), price: fmtUsdc(item.offer.priceUsdc), expiresAt: new Date(item.offer.expiresAtIso).toLocaleString() }) : uiCopy("creatorOffers.listVersion", { version: item.contentVersion.slice(0, 28) })}
+                  {item.offer ? uiCopy("creatorOffers.liveVersion", { version: item.contentVersion.slice(0, 28), price: fmtUsdc(item.offer.priceUsdc), expiresAt: uiFormat.dateTime(item.offer.expiresAtIso) }) : uiCopy("creatorOffers.listVersion", { version: item.contentVersion.slice(0, 28) })}
                 </p>
               </div>
               <label className="flex items-center border border-line bg-paper-2 px-2 py-1.5">

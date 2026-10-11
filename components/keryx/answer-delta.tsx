@@ -3,6 +3,9 @@
 import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import type { AnswerDelta } from "@/lib/answers-delta";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 
@@ -12,7 +15,7 @@ function pct(value: number): string {
 
 function signedUsdc(value: number): string {
   if (Math.abs(value) < 0.0000005) return "$0.0000";
-  return `${value > 0 ? "+" : "−"}$${Math.abs(value).toFixed(4)}`;
+  return `${value > 0 ? "+" : "−"}$${uiFormat.usdc(Math.abs(value), 4)}`;
 }
 
 export function AnswerDeltaPanel({ delta }: { delta: AnswerDelta }) {
@@ -56,7 +59,7 @@ export function AnswerDeltaPanel({ delta }: { delta: AnswerDelta }) {
           value={delta.settlement ? signedUsdc(delta.settlement.deltaUsdc) : copy("answerDelta.notProvable")}
           detail={
             delta.settlement
-              ? `$${delta.settlement.previousTotalUsdc.toFixed(4)} → $${delta.settlement.currentTotalUsdc.toFixed(4)}`
+              ? `$${uiFormat.usdc(delta.settlement.previousTotalUsdc, 4)} → $${uiFormat.usdc(delta.settlement.currentTotalUsdc, 4)}`
               : copy("answerDelta.incompleteLedger")
           }
         />

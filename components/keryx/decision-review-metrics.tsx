@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import { readBoundedJson } from "@/lib/read-bounded-json";
 import { decisionReviewMetricsSchema, reviewPeriodSchema, type DecisionReviewMetrics } from "@/lib/research/decision-review-types";
 import { decisionReviewCopy as copy } from "@/lib/research/decision-review-copy";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 export function DecisionReviewMetricsView() {
   const [since, setSince] = useState(""), [until, setUntil] = useState("");
@@ -42,7 +45,7 @@ export function DecisionReviewMetricsView() {
         <thead><tr>{[copy.cohort, copy.decisions, copy.agree, copy.disagree, copy.rate, copy.differences, copy.refusals].map(label => <th key={label} scope="col" className="border-b border-line p-2 font-mono text-xs">{label}</th>)}</tr></thead>
         <tbody>{result.cohorts.map(row => <tr key={row.cohort}><th scope="row" className="border-b border-line p-2 font-normal">{copy.cohorts[row.cohort]}</th>
           <td className="p-2">{row.decisions}</td><td className="p-2">{row.agrees}</td><td className="p-2">{row.disagrees}</td>
-          <td className="p-2">{row.agreementRate === null ? copy.noVerdicts : `${(row.agreementRate * 100).toFixed(1)}%`}</td>
+          <td className="p-2">{row.agreementRate === null ? copy.noVerdicts : uiFormat.percent(row.agreementRate, 1)}</td>
           <td className="p-2">{row.modelCodeDifferences}</td><td className="p-2">{row.codeRefusals}</td></tr>)}</tbody>
       </table></div>
       {result.cohorts.map(row => Object.entries(row.refusalReasons).length > 0 && <p key={row.cohort} className="mt-3 break-words text-xs text-ink-3">{copy.cohorts[row.cohort]}: {Object.entries(row.refusalReasons).map(([rule, n]) => `${rule}: ${n}`).join(" · ")}</p>)}

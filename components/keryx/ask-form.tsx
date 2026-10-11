@@ -15,6 +15,9 @@ import { paperLibraryHref } from "@/lib/papers/handoff";
 import { createMessages } from "@/lib/i18n/messages";
 import { ProductHuntBadge } from "./product-hunt-badge";
 import { decisionReviewCopy as reviewCopy } from "@/lib/research/decision-review-copy";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 // Catalogue adoption only. Interface locale and request data remain unchanged.
 const message = createMessages("en");
@@ -239,7 +242,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
           </fieldset>
           <div className="mt-2 border-t border-line pt-3">
             <p className="mb-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-source-cap">
-              {message("researchEntry.sourceCap", { amount: effectiveBudget.toFixed(6), payer: message(payer === "treasury" ? "researchEntry.treasuryPayer" : payer === "session" ? "researchEntry.sessionPayer" : payer === "expired" ? "researchEntry.expiredPayer" : "researchEntry.pausedPayer") })}
+              {message("researchEntry.sourceCap", { amount: uiFormat.usdcVerifiable(effectiveBudget), payer: message(payer === "treasury" ? "researchEntry.treasuryPayer" : payer === "session" ? "researchEntry.sessionPayer" : payer === "expired" ? "researchEntry.expiredPayer" : "researchEntry.pausedPayer") })}
             </p>
             <button type="button" onClick={submit} disabled={disabled || payer === "paused" || checking || researchPaused || question.trim().length === 0}
               data-tour="dispatch-btn"
@@ -249,7 +252,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
             {showLaunchBadge && <div className="mt-3 flex justify-center sm:justify-start"><ProductHuntBadge /></div>}
             <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
               {payer === "session"
-                ? message("researchEntry.sessionNotice", { network: currentArcLabel, amount: effectiveBudget.toFixed(6) })
+                ? message("researchEntry.sessionNotice", { network: currentArcLabel, amount: uiFormat.usdcVerifiable(effectiveBudget) })
                 : payer === "paused"
                   ? message("researchEntry.unavailableSessionNotice")
                 : payer === "expired"
@@ -270,12 +273,12 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
           <p className="mt-1 text-xs text-ink-3">{reviewCopy.modeNotice}</p>
           <details ref={advancedRef} className="mt-3 border-t border-line pt-2">
             <summary className="flex min-h-11 cursor-pointer items-center font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2 marker:text-seal hover:text-ink">
-              {message("researchEntry.budgetAndModel", { amount: effectiveBudget.toFixed(6) })}
+              {message("researchEntry.budgetAndModel", { amount: uiFormat.usdcVerifiable(effectiveBudget) })}
             </summary>
             <div className="pb-2 pt-1">
               <div className="flex flex-wrap items-center justify-between gap-2" data-tour="budget">
                 <label htmlFor="ask-budget" className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">{message("researchEntry.maximumBudget")}</label>
-                <span className="font-display text-[25px] font-semibold tabular-nums text-seal">${effectiveBudget.toFixed(6)}</span>
+                <span className="font-display text-[25px] font-semibold tabular-nums text-seal">${uiFormat.usdcVerifiable(effectiveBudget)}</span>
               </div>
               <input id="ask-budget" type="range" min={0} max={maximumBudget} step={maximumBudget < 0.01 ? 0.000001 : 0.005} value={effectiveBudget}
                 disabled={disabled} onChange={(e) => setBudget(parseFloat(e.target.value))}

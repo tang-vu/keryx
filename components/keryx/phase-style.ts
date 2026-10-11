@@ -29,6 +29,9 @@ import {
   Search,
   type LucideIcon,
 } from "lucide-react";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 export interface PhaseStyle {
   label: string;
@@ -103,7 +106,6 @@ export function shortHash(hash?: string | null): string {
 /** Format a USDC amount with up to 6 decimals, trimmed. */
 export function fmtUsdc(n: number | undefined | null, opts?: { sign?: boolean }): string {
   const v = typeof n === "number" && isFinite(n) ? n : 0;
-  const s = v.toFixed(6).replace(/\.?0+$/, "");
-  const out = s === "" || s === "-" ? "0" : s;
+  const out = uiFormat.usdcTrimmed(v);
   return opts?.sign ? `$${out}` : out;
 }

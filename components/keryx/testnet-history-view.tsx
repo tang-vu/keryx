@@ -3,6 +3,9 @@ import { createMessages } from "@/lib/i18n/messages";
 import type { TestnetArchiveInfo, TestnetArchiveSummary, TestnetCreatorEntry } from "@/lib/history/testnet-archive";
 import { formatUsdcMicros } from "@/lib/display/recorded-usdc";
 import { shortAddr } from "./phase-style";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const message = createMessages("en");
 
@@ -16,7 +19,7 @@ function CreatorRows({ rows, start = 0 }: { rows: TestnetCreatorEntry[]; start?:
           {/^(?:0x)[a-fA-F0-9]{40}$/.test(row.walletAddress)
             ? <a href={`https://testnet.arcscan.app/address/${row.walletAddress}`} target="_blank" rel="noopener noreferrer" className="underline" aria-label={message("ledgerHistory.inspectWallet", { wallet: row.walletAddress })}>{shortAddr(row.walletAddress)} ↗</a>
             : <span>{shortAddr(row.walletAddress)}</span>}
-          {" · "}{message("ledgerHistory.paymentCounts", { cites: row.citationCount.toLocaleString("en-US"), payments: row.paymentCount.toLocaleString("en-US") })}
+          {" · "}{message("ledgerHistory.paymentCounts", { cites: uiFormat.number(row.citationCount), payments: uiFormat.number(row.paymentCount) })}
         </p>
       </div>
       <span className="col-start-2 font-mono text-xs tabular-nums text-paid sm:col-start-3 sm:row-start-1 sm:mt-1">{formatUsdcMicros(row.totalEarnedMicroUsdc, { denomination: "test USDC" })}</span>
@@ -52,10 +55,10 @@ export function TestnetHistorySummary({ info, summary, creators, expandedCreator
     </div>
     <p className="mt-3 text-sm leading-relaxed text-ink-2">{message("ledgerHistory.period", { from: summary.earliestQueryAt?.slice(0, 10) ?? "", to: summary.latestQueryAt?.slice(0, 10) ?? "" })}</p>
     <dl className="mt-5 grid grid-cols-2 gap-x-5 gap-y-6 lg:grid-cols-4">
-      <div><dt className="text-xs text-ink-3">{message("ledgerHistory.recordedQuestions")}</dt><dd className="mt-1 font-display text-3xl text-ink">{summary.totalQueryRuns.toLocaleString("en-US")}</dd></div>
-      <div><dt className="text-xs text-ink-3">{message("ledgerHistory.settledCreatorPayments")}</dt><dd className="mt-1 font-display text-3xl text-ink">{summary.settledCreatorPaymentCount.toLocaleString("en-US")}</dd></div>
+      <div><dt className="text-xs text-ink-3">{message("ledgerHistory.recordedQuestions")}</dt><dd className="mt-1 font-display text-3xl text-ink">{uiFormat.number(summary.totalQueryRuns)}</dd></div>
+      <div><dt className="text-xs text-ink-3">{message("ledgerHistory.settledCreatorPayments")}</dt><dd className="mt-1 font-display text-3xl text-ink">{uiFormat.number(summary.settledCreatorPaymentCount)}</dd></div>
       <div><dt className="text-xs text-ink-3">{message("ledgerHistory.settledToCreators")}</dt><dd className="mt-1 break-words font-display text-2xl text-paid">{formatUsdcMicros(summary.settledCreatorMicroUsdc, { denomination: "test USDC" })}</dd></div>
-      <div><dt className="text-xs text-ink-3">{message("ledgerHistory.creatorWallets")}</dt><dd className="mt-1 font-display text-3xl text-ink">{summary.settledCreatorCount.toLocaleString("en-US")}</dd></div>
+      <div><dt className="text-xs text-ink-3">{message("ledgerHistory.creatorWallets")}</dt><dd className="mt-1 font-display text-3xl text-ink">{uiFormat.number(summary.settledCreatorCount)}</dd></div>
     </dl>
     <p className="mt-4 text-xs leading-relaxed text-ink-3">{message("ledgerHistory.historicalNotice")}</p>
     {creators !== undefined && (creators === null
@@ -64,10 +67,10 @@ export function TestnetHistorySummary({ info, summary, creators, expandedCreator
     <details className="mt-5 border-t border-line pt-1">
       <summary className="min-h-11 cursor-pointer py-3 text-sm text-ink-2">{message("ledgerHistory.inspectTotals")}</summary>
       <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 text-xs text-ink-2">
-        {(["settled", "pending", "failed", "simulated"] as const).map(status => <div key={status} className="contents"><dt className="capitalize">{status}{message("ledgerHistory.paymentRecordsSuffix")}</dt><dd className="text-right font-mono">{summary.payments[status].count.toLocaleString("en-US")} · {formatUsdcMicros(summary.payments[status].amountMicroUsdc, { denomination: "test USDC" })}</dd></div>)}
-        {inbound && <><dt>{message("ledgerHistory.serviceReceipts")}</dt><dd className="font-mono">{inbound.count.toLocaleString("en-US")}</dd></>}
-        {summary.paymentKinds.map(kind => <div key={kind.kind} className="contents"><dt>{kind.kind}{message("ledgerHistory.settledRecordsSuffix")}</dt><dd className="text-right font-mono">{kind.count.toLocaleString("en-US")} · {formatUsdcMicros(kind.settledMicroUsdc, { denomination: "test USDC" })}</dd></div>)}
-        {summary.origins.map(channel => <div key={channel.origin ?? "unknown"} className="contents"><dt>{channel.origin ?? message("ledgerHistory.unknownChannel")}{message("ledgerHistory.questionsSuffix")}</dt><dd className="font-mono">{channel.count.toLocaleString("en-US")}</dd></div>)}
+        {(["settled", "pending", "failed", "simulated"] as const).map(status => <div key={status} className="contents"><dt className="capitalize">{status}{message("ledgerHistory.paymentRecordsSuffix")}</dt><dd className="text-right font-mono">{uiFormat.number(summary.payments[status].count)} · {formatUsdcMicros(summary.payments[status].amountMicroUsdc, { denomination: "test USDC" })}</dd></div>)}
+        {inbound && <><dt>{message("ledgerHistory.serviceReceipts")}</dt><dd className="font-mono">{uiFormat.number(inbound.count)}</dd></>}
+        {summary.paymentKinds.map(kind => <div key={kind.kind} className="contents"><dt>{kind.kind}{message("ledgerHistory.settledRecordsSuffix")}</dt><dd className="text-right font-mono">{uiFormat.number(kind.count)} · {formatUsdcMicros(kind.settledMicroUsdc, { denomination: "test USDC" })}</dd></div>)}
+        {summary.origins.map(channel => <div key={channel.origin ?? "unknown"} className="contents"><dt>{channel.origin ?? message("ledgerHistory.unknownChannel")}{message("ledgerHistory.questionsSuffix")}</dt><dd className="font-mono">{uiFormat.number(channel.count)}</dd></div>)}
       </dl>
       <p className="mt-4 break-words text-xs leading-relaxed text-ink-3">{message("ledgerHistory.snapshotNotice", { capturedAt: info.capturedAt })}</p>
       <div className="mt-3 flex flex-wrap gap-x-5 text-xs text-seal">

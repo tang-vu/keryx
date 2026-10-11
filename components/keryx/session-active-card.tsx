@@ -8,6 +8,9 @@ import { UsdcPresetChips } from "./usdc-preset-chips";
 import { parseBudgetAmount } from "./research-budget-fields";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 const richCopy = createRichMessages("en");
@@ -50,7 +53,7 @@ export function SessionActiveCard({ grantState, onTopUp, onRevoke, onExtend }: P
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-paid" aria-hidden />
-        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-2">{richCopy("sessionBudget.remaining", { budgetKind: mainnet ? copy("sessionBudget.researchBudget") : copy("sessionBudget.sessionActive"), amount: remaining.toFixed(6) })}</span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-2">{richCopy("sessionBudget.remaining", { budgetKind: mainnet ? copy("sessionBudget.researchBudget") : copy("sessionBudget.sessionActive"), amount: uiFormat.usdcVerifiable(remaining) })}</span>
       </div>
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => setShowTopUp(value => !value)}
@@ -63,10 +66,10 @@ export function SessionActiveCard({ grantState, onTopUp, onRevoke, onExtend }: P
       <div className="h-full rounded-full bg-seal transition-all" style={{ width: spentPct + "%" }} />
     </div>
     <div className="flex flex-wrap justify-between gap-2 font-mono text-[10px] text-ink-3">
-      <span>{richCopy("sessionBudget.used", { amount: grantState.spent.toFixed(6), usageKind: mainnet ? copy("sessionBudget.usedOrHeld") : copy("sessionBudget.spent") })}</span>
-      <span>{richCopy("sessionBudget.ceiling", { amount: grantState.cap.toFixed(6) })}</span>
+      <span>{richCopy("sessionBudget.used", { amount: uiFormat.usdcVerifiable(grantState.spent), usageKind: mainnet ? copy("sessionBudget.usedOrHeld") : copy("sessionBudget.spent") })}</span>
+      <span>{richCopy("sessionBudget.ceiling", { amount: uiFormat.usdcVerifiable(grantState.cap) })}</span>
     </div>
-    {grantState.researchBudget && <p className="text-xs text-ink-2">{richCopy("sessionBudget.questionCap", { amount: grantState.researchBudget.questionCapUsdc.toFixed(6), gap: " " })}</p>}
+    {grantState.researchBudget && <p className="text-xs text-ink-2">{richCopy("sessionBudget.questionCap", { amount: uiFormat.usdcVerifiable(grantState.researchBudget.questionCapUsdc), gap: " " })}</p>}
     {remainingMs !== null && <div className="flex flex-wrap items-center justify-between gap-2">
       <span className="text-xs text-ink-3">{richCopy("sessionBudget.expiry", { state: remainingMs <= 0 ? copy("sessionBudget.expired") : copy("sessionBudget.expiresIn", { duration: formatRemaining(remainingMs) }) })}</span>
       <button type="button" disabled={extending} onClick={async () => {

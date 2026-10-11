@@ -22,6 +22,9 @@ import { erc20Abi, formatUnits } from "viem";
 import { Loader2, Droplets, ExternalLink, PlusCircle } from "lucide-react";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { currentArcLabel } from "@/lib/arc-network-display";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 const richCopy = createRichMessages("en");
@@ -134,7 +137,7 @@ function TestnetFaucetPanel() {
   if (!isConnected) return null;
 
   const usdcBalance = rawBalance !== undefined
-    ? (Number(rawBalance) / 1e6).toFixed(4)
+    ? uiFormat.usdc(Number(rawBalance) / 1e6, 4)
     : null;
 
   return (
@@ -180,7 +183,7 @@ function TestnetFaucetPanel() {
             {result.error}
             {result.claimedAt && (
               <span className="ml-1 text-ink-3">
-                {copy("walletFunding.claimedAt", { time: new Date(result.claimedAt).toLocaleTimeString() })}
+                {copy("walletFunding.claimedAt", { time: uiFormat.time(result.claimedAt) })}
               </span>
             )}
           </p>

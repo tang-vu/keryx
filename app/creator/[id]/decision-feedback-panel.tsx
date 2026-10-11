@@ -23,6 +23,9 @@ import Link from "next/link";
 import { Scale } from "lucide-react";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { SourcePerformance } from "@/lib/creator/source-performance";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
@@ -93,7 +96,7 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
       {/* The bar this source was measured against — same question, same budget, same minute. */}
       {perf.rivalPriceOnSkip !== null && perf.price !== null && (
         <p className="mb-4 border-l-2 border-line pl-3 font-serif text-[13px] text-ink-2">
-          {perf.evChosen !== null && perf.evSkipped !== null ? uiRichCopy("creatorDecisions.ratedComparison", { rivalPrice: <span className="font-mono text-ink">${fmtUsdc(perf.rivalPriceOnSkip)}</span>, price: <span className="font-mono text-ink">${fmtUsdc(perf.price)}</span>, chosenValue: perf.evChosen.toFixed(2), skippedValue: perf.evSkipped.toFixed(2) }) : uiRichCopy("creatorDecisions.priceComparison", { rivalPrice: <span className="font-mono text-ink">${fmtUsdc(perf.rivalPriceOnSkip)}</span>, price: <span className="font-mono text-ink">${fmtUsdc(perf.price)}</span> })}
+          {perf.evChosen !== null && perf.evSkipped !== null ? uiRichCopy("creatorDecisions.ratedComparison", { rivalPrice: <span className="font-mono text-ink">${fmtUsdc(perf.rivalPriceOnSkip)}</span>, price: <span className="font-mono text-ink">${fmtUsdc(perf.price)}</span>, chosenValue: uiFormat.decimal(perf.evChosen, 2), skippedValue: uiFormat.decimal(perf.evSkipped, 2) }) : uiRichCopy("creatorDecisions.priceComparison", { rivalPrice: <span className="font-mono text-ink">${fmtUsdc(perf.rivalPriceOnSkip)}</span>, price: <span className="font-mono text-ink">${fmtUsdc(perf.price)}</span> })}
         </p>
       )}
 
@@ -116,7 +119,7 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
                   “{s.rationale}”
                 </p>
                 <p className="mt-1 font-mono text-[10px] text-ink-3">
-                  {s.rivalPrice !== null ? uiCopy("creatorDecisions.skipWithRival", { value: s.expectedValue.toFixed(2), price: fmtUsdc(s.price), rivalPrice: fmtUsdc(s.rivalPrice), date: new Date(s.createdAt).toLocaleDateString() }) : uiCopy("creatorDecisions.skip", { value: s.expectedValue.toFixed(2), price: fmtUsdc(s.price), date: new Date(s.createdAt).toLocaleDateString() })}
+                  {s.rivalPrice !== null ? uiCopy("creatorDecisions.skipWithRival", { value: uiFormat.decimal(s.expectedValue, 2), price: fmtUsdc(s.price), rivalPrice: fmtUsdc(s.rivalPrice), date: uiFormat.date(s.createdAt) }) : uiCopy("creatorDecisions.skip", { value: uiFormat.decimal(s.expectedValue, 2), price: fmtUsdc(s.price), date: uiFormat.date(s.createdAt) })}
                 </p>
               </div>
             ))}

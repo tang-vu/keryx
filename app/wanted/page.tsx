@@ -21,6 +21,9 @@ import { FeedMatchForm } from "@/components/keryx/feed-match-form";
 import { buildBoard, type DemandGap } from "@/lib/demand-signal";
 import { WANTED_WINDOW_RUNS } from "@/lib/wanted-limits";
 import type { GapIntentStatus } from "@/lib/types";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
@@ -121,7 +124,7 @@ export default async function WantedPage() {
                     {gap.seen > 1 ? uiCopy("wantedBoard.coverageAsked", { coverage: Math.round(gap.coverage * 100), count: gap.seen }) : uiCopy("wantedBoard.coverage", { coverage: Math.round(gap.coverage * 100) })}
                   </span>
                   <span className="shrink-0 font-mono text-[10px] text-ink-3">
-                    {new Date(gap.createdAt).toLocaleDateString()}
+                    {uiFormat.date(gap.createdAt)}
                   </span>
                 </div>
 
@@ -192,7 +195,7 @@ export default async function WantedPage() {
                         {uiCopy(fill.byRetry ? "wantedBoard.transitionRetry" : "wantedBoard.transition", { before: Math.round(gap.coverage * 100), after: Math.round(fill.coverage * 100) })}
                       </span>
                       <span className="shrink-0 font-mono text-[10px] text-ink-3">
-                        {new Date(fill.createdAt).toLocaleDateString()}
+                        {uiFormat.date(fill.createdAt)}
                       </span>
                     </div>
 
@@ -213,7 +216,7 @@ export default async function WantedPage() {
                         key={offer.id}
                         className="mt-1 font-mono text-[10.5px] text-paid"
                       >
-                        {uiCopy("wantedBoard.fulfilled", { source: offer.sourceName, reward: (offer.rewardUsdc ?? 0).toFixed(6) })}
+                        {uiCopy("wantedBoard.fulfilled", { source: offer.sourceName, reward: uiFormat.usdc(offer.rewardUsdc ?? 0) })}
                       </p>
                     ))}
                   </li>
@@ -248,7 +251,7 @@ function offerStatus(offer: PublicOffer): string {
     case "running":
       return uiCopy("wantedBoard.running", { attempt: offer.attempts });
     case "filled":
-      return uiCopy("wantedBoard.settled", { reward: (offer.rewardUsdc ?? 0).toFixed(6) });
+      return uiCopy("wantedBoard.settled", { reward: uiFormat.usdc(offer.rewardUsdc ?? 0) });
     case "unpaid":
       return uiCopy("wantedBoard.unpaid");
     case "missed":

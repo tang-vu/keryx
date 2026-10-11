@@ -7501,3 +7501,19 @@ check back into a Keryx assertion. The ledger step restates receipt figures and
 declines to state a margin. The live sponsored run, replay and limit
 demonstrations stay gated; see the
 [criteria status](docs/engineering/recorded-walkthrough-305.md).
+
+## 2026-10-11 — One display formatting owner for pages and components
+
+Pages and components format numbers, percentages, USDC amounts and dates only
+through `createFormatters(locale)` in `lib/i18n/format.ts`; a source guard
+refuses new `toFixed`, `toLocale*String` and private `Intl` formatters under
+`app/` and `components/`. Amount text is derived from the exact integer
+micro-USDC value. Amounts a user verifies before authorizing use an invariant
+decimal point with no grouping so that locales cannot make `1.000` and `1,000`
+ambiguous. Route handlers and exports stay outside the module because machine
+output must not vary by locale. Dates now follow the interface locale rather
+than the browser locale, and the ledger observation notice names UTC instead of
+using a numeric `en-GB` date. English stays the only shipped locale; viewer
+time zone negotiation, locale plural selection, `lib/` display text and human
+review of translated signing screens remain open. See the [display formatting
+record](docs/engineering/display-formatting-274-2026-10-11.md).

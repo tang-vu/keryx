@@ -15,6 +15,9 @@ import { AskQuestionSchema, MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
 
 import { BUYER_PROFILE } from "@/lib/buyer/protocol";
 import { monthlyStorageKeys } from "@/lib/monthly/local-recovery";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 
@@ -133,7 +136,7 @@ export function ResearchMonthly({ quote }: { quote: MonthlyQuote }) {
     {!address && monthlyId && <p className="font-serif text-sm">{copy("monthlyResearch.savedPlanDisconnected")}</p>}
     {purchaseUncertain && <p className="font-serif text-sm text-seal">{copy("monthlyResearch.unresolvedPurchase")}</p>}
     {record && chainId === BUYER_PROFILE.chainId && record.purchase.payer.toLowerCase() === address?.toLowerCase() && <div className="space-y-3 border-t border-line pt-4">
-      <p className="font-serif">{record.expired ? copy(record.remaining === 1 ? "monthlyResearch.expired.one" : "monthlyResearch.expired.other", { count: record.remaining }) : copy(record.remaining === 1 ? "monthlyResearch.expires.one" : "monthlyResearch.expires.other", { count: record.remaining, expiresAt: new Date(record.purchase.expiresAt).toLocaleString() })}</p>
+      <p className="font-serif">{record.expired ? copy(record.remaining === 1 ? "monthlyResearch.expired.one" : "monthlyResearch.expired.other", { count: record.remaining }) : copy(record.remaining === 1 ? "monthlyResearch.expires.one" : "monthlyResearch.expires.other", { count: record.remaining, expiresAt: uiFormat.dateTime(record.purchase.expiresAt) })}</p>
       {record.redemptions.map(item => <p key={item.requestId} className="font-mono text-xs"><button className="underline" onClick={() => setSelectedJob(item.orderId)}>{copy("monthlyResearch.followJob", { jobId: item.orderId })}</button></p>)}
       <label className="grid gap-2 font-mono text-xs">{copy("monthlyResearch.question")}<textarea value={question} onChange={e => setQuestion(e.target.value)} rows={3} maxLength={MAX_ASK_QUESTION_CHARS} className="border border-line bg-paper-2 p-3 font-serif" /></label>
       <button className={button} disabled={busy || !wallet || !address || chainId !== BUYER_PROFILE.chainId || record.expired || record.remaining === 0 || !AskQuestionSchema.safeParse(question).success || !!request} onClick={() => {

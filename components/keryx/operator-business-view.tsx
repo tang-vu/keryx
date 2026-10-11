@@ -10,6 +10,9 @@ import {
 import { cn } from "@/lib/utils";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
@@ -45,11 +48,11 @@ const WORKFLOW = [
 
 function timestamp(value: string | null | undefined): string {
   if (!value || !Number.isFinite(Date.parse(value))) return message("operatorBusiness.unknown");
-  return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return uiFormat.dateTime(value);
 }
 
 function count(value: number | null | undefined): string {
-  return value == null ? message("operatorBusiness.unknown") : value.toLocaleString();
+  return value == null ? message("operatorBusiness.unknown") : uiFormat.number(value);
 }
 
 function elapsed(seconds: number | null | undefined): string {

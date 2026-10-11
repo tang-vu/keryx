@@ -2,6 +2,9 @@ import { createMessages } from "@/lib/i18n/messages";
 import { ImageResponse } from "next/og";
 import { getDb } from "@/lib/db";
 import { publicPreviewFonts, publicPreviewFontFamily } from "@/lib/og-fonts";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const uiCopy = createMessages("en");
 
@@ -43,7 +46,7 @@ export default async function CreatorOgImage({
 
   const headline = name.length > 64 ? `${name.slice(0, 61)}…` : name;
   const earnedLabel =
-    earned >= 0.1 ? `$${earned.toFixed(2)}` : `$${earned.toFixed(4)}`;
+    earned >= 0.1 ? `$${uiFormat.usdc(earned, 2)}` : `$${uiFormat.usdc(earned, 4)}`;
   // Deterministic banknote serial from the source id.
   let serial = 0;
   for (const ch of id) serial = (serial * 31 + ch.charCodeAt(0)) % 100000;

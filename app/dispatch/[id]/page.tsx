@@ -25,6 +25,9 @@ import { safeInlineJson } from "@/lib/safe-json";
 import { DispatchView } from "./dispatch-view";
 import { publicQueryRun } from "@/lib/research/public-query-run";
 import { DeliverableAcceptance } from "@/components/keryx/deliverable-acceptance";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 
@@ -64,8 +67,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const conf = deriveConfidence(run);
     const descriptions = dispatchMetadataCopy({
       historical: Boolean(archive), bibliographic: Boolean(projectBibliographicTask(run.bibliography)),
-      confidence: conf ? String(conf.level) : undefined, count: cited, spent: run.totalSpent.toFixed(4),
-      creators: run.totalToCreators.toFixed(4), excerpt: snippet,
+      confidence: conf ? String(conf.level) : undefined, count: cited, spent: uiFormat.usdc(run.totalSpent, 4),
+      creators: uiFormat.usdc(run.totalToCreators, 4), excerpt: snippet,
     });
     return {
       title: copy("reportDispatch.title", { question: run.question }),

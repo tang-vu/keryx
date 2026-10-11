@@ -8,6 +8,9 @@ import { RegistryStatusSection, type RegistryHealth } from "./registry-status-se
 import { SettlementProofSection, type SettlementHealth } from "./settlement-proof-section";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
@@ -124,12 +127,12 @@ export function ProofDashboard() {
 
           {t ? (
             <dl className="mt-7 grid grid-cols-2 gap-6 sm:grid-cols-4">
-              <Metric label={message("proofDashboard.totalQueries")} value={t.totalQueries.toLocaleString()} />
-              <Metric label={message("proofDashboard.settledPayments")} value={t.totalPayments.toLocaleString()} />
+              <Metric label={message("proofDashboard.totalQueries")} value={uiFormat.number(t.totalQueries)} />
+              <Metric label={message("proofDashboard.settledPayments")} value={uiFormat.number(t.totalPayments)} />
               <Metric label={message("proofDashboard.creatorRewards")} value={money(t.creatorPayoutsUsdc)} />
-              <Metric label={message("proofDashboard.creatorsEarning")} value={t.creatorsEarning.toLocaleString()} />
+              <Metric label={message("proofDashboard.creatorsEarning")} value={uiFormat.number(t.creatorsEarning)} />
               <Metric label={message("proofDashboard.keryxOperatingFees")} value={t.settledOperatingFeeUsdc != null ? money(t.settledOperatingFeeUsdc) : message("proofDashboard.unavailable")} />
-              <Metric label={message("proofDashboard.operatingFeeTransfers")} value={t.settledOperatingFeePayments?.toLocaleString() ?? message("proofDashboard.unavailable")} />
+              <Metric label={message("proofDashboard.operatingFeeTransfers")} value={(t.settledOperatingFeePayments == null ? message("proofDashboard.unavailable") : uiFormat.number(t.settledOperatingFeePayments))} />
             </dl>
           ) : (
             <p className="mt-6 font-mono text-[11px] text-ink-3">{message("proofDashboard.tractionLedgerUnavailable")}</p>

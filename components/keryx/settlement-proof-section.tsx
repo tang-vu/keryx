@@ -3,6 +3,9 @@
 import { arcProfileLabel, recordedArcProfile } from "@/lib/arc-network-display";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
@@ -48,7 +51,7 @@ function ago(iso: string): string {
   return h < 48 ? message("statusObservation.hoursAgo", { hours: h }) : message("statusObservation.daysAgo", { days: Math.floor(h / 24) });
 }
 
-const usd = (n: number) => `$${n.toFixed(6)}`;
+const usd = (n: number) => `$${uiFormat.usdc(n)}`;
 
 export function SettlementProofSection({ settlement }: { settlement: SettlementHealth }) {
   const { counts, accounts } = settlement;

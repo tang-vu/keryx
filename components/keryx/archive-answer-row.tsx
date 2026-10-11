@@ -9,15 +9,14 @@ import Link from "next/link";
 import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import type { ArchiveEntry } from "@/lib/answers-archive";
 import { ConfidenceBadge } from "./confidence-badge";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return uiFormat.date(iso);
 }
 
 export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {

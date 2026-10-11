@@ -8,6 +8,9 @@ import { useAccount, useSignTypedData } from "wagmi";
 
 import { shortAddr } from "@/components/keryx/phase-style";
 import { articleContentManifestTypedData } from "@/lib/sources/article-content-manifest-schema";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const uiCopy = createMessages("en");
 
@@ -159,7 +162,7 @@ export function ArticleContentPanel({ creatorId }: { creatorId: string }) {
         />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="font-mono text-[10px] text-ink-3">
-            {selected?.contentReceipt?.manifestId ? uiCopy(bytes === 1 ? "creatorContent.publishedBytes.one" : "creatorContent.publishedBytes.other", { count: bytes.toLocaleString() }) : uiCopy(bytes === 1 ? "creatorContent.bytes.one" : "creatorContent.bytes.other", { count: bytes.toLocaleString() })}
+            {selected?.contentReceipt?.manifestId ? uiCopy(bytes === 1 ? "creatorContent.publishedBytes.one" : "creatorContent.publishedBytes.other", { count: uiFormat.number(bytes) }) : uiCopy(bytes === 1 ? "creatorContent.bytes.one" : "creatorContent.bytes.other", { count: uiFormat.number(bytes) })}
           </p>
           <button
             type="button"

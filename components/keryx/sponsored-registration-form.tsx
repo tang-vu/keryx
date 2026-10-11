@@ -10,6 +10,9 @@ import { registrationId, confirmsIndex } from "@/lib/sources/registration-status
 import { registrationIntentDigest, registrationTypedData, sponsoredRegistrationSchema, type SponsoredRegistration } from "@/lib/sources/registration-sponsor-protocol";
 import { getBrowserRegistryVersion } from "@/lib/registry/registry-version";
 import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 interface Availability { available: boolean; sponsorAddress?: string; policyDigest?: string; maxGasWei?: string }
 const labels: Record<SponsoredRegistration["state"], string> = copy.stateLabels;
@@ -146,7 +149,7 @@ export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
       <p className="break-all text-sm">{copy.source({ sourceUrl: row.canonicalUrl })}</p>
       <p className="break-all text-sm">{copy.creatorWallet({ wallet: row.creator })}</p>
       <div className="space-y-1 text-sm"><p>{copy.authorRewardsLabel}</p>{row.params.authors.map((author, index) =>
-        <p className="break-all" key={`${author.wallet}:${index}`}>{author.wallet}: {(author.basisPoints / 100).toFixed(2)}%</p>)}</div>
+        <p className="break-all" key={`${author.wallet}:${index}`}>{author.wallet}: {uiFormat.percent(author.basisPoints / 10_000, 2)}</p>)}</div>
       <p className="text-sm">{copy.readPrice({ priceUsdc: formatUnits(BigInt(row.params.fetchPriceUsdc6), 6) })}</p>
       <p className="break-all text-sm">{copy.contentIdentifier({ contentId: row.params.contentCid || copy.retainedFeedContent })}</p>
       <p className="break-all text-sm">{copy.tags({ tags: row.params.tags || copy.noTags })}</p>

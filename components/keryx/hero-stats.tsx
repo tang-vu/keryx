@@ -8,6 +8,9 @@
 import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useState } from "react";
 import { currentArcLabel } from "@/lib/arc-network-display";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const uiCopy = createMessages("en");
 
@@ -40,13 +43,13 @@ export function HeroStats() {
     <div className="flex w-full border border-ink">
       <Cell
         target={m.paid}
-        fmt={(n) => `$${n.toFixed(2)}`}
+        fmt={(n) => `$${uiFormat.usdc(n, 2)}`}
         label={uiCopy("landingTotals.paid", { network: currentArcLabel })}
         money
       />
       <Cell
         target={m.cites}
-        fmt={(n) => Math.round(n).toLocaleString()}
+        fmt={(n) => uiFormat.number(Math.round(n))}
         label={uiCopy("landingTotals.payments")}
       />
     </div>

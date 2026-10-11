@@ -18,6 +18,9 @@ import {
   WANTED_DETAIL_LIMIT,
   type PublicWantedOffer,
 } from "@/lib/wanted-board";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
@@ -120,10 +123,7 @@ export default async function WantedClaimPage({ params }: PageProps) {
                 />
                 <BriefStat
                   label={uiCopy("wantedClaim.lastMeasured")}
-                  value={new Date(gap.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}
+                  value={uiFormat.instant(gap.createdAt, "monthDay")}
                   detail={uiCopy("wantedClaim.publicReceipt")}
                 />
               </div>

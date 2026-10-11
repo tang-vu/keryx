@@ -8,6 +8,9 @@ import { resumeBrowserResearch } from "@/lib/buyer/browser-client";
 import { downloadBuyerJson } from "@/lib/buyer/download";
 import { useResearchWorkspace } from "./research-workspace";
 import { ResearchJobDetails } from "./research-job-details";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const message = createMessages("en");
 
@@ -82,7 +85,7 @@ export function ResearchSavedJobs() {
     {!rows.length && !storageError && <p className="mt-4 font-serif text-sm">{message("savedResearch.empty")}</p>}
     <ul className="mt-4 grid gap-3 sm:grid-cols-2">{rows.map(row => <li key={row.queryId}><button type="button" onClick={() => open(row.queryId)} aria-pressed={selection?.id === row.queryId} className="h-full w-full border border-line p-4 text-left aria-pressed:border-ink">
       <span className="block break-words font-serif">{row.intent.request.question}</span>
-      <span className="mt-2 block font-mono text-xs text-ink-3">{row.intent.request.researchMode} · {new Date(row.createdAt).toLocaleString()} · {row.origin === "imported" ? message("savedResearch.imported") : row.submission === "prepared" ? message("savedResearch.prepared") : message("savedResearch.submissionRecorded")}</span>
+      <span className="mt-2 block font-mono text-xs text-ink-3">{row.intent.request.researchMode} · {uiFormat.dateTime(row.createdAt)} · {row.origin === "imported" ? message("savedResearch.imported") : row.submission === "prepared" ? message("savedResearch.prepared") : message("savedResearch.submissionRecorded")}</span>
     </button></li>)}</ul>
     {selection && <div className="mt-6 border-t border-line pt-5">
       <div className="flex flex-wrap gap-3">

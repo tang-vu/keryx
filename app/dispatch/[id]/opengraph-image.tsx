@@ -3,6 +3,9 @@ import { ImageResponse } from "next/og";
 import { config } from "@/lib/config";
 import { resolveDispatch } from "@/lib/history/read-dispatch";
 import { publicPreviewFonts, publicPreviewFontFamily } from "@/lib/og-fonts";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const copy = createMessages("en");
 
@@ -99,9 +102,9 @@ export default async function DispatchOgImage({
 
         <div style={{ display: "flex", gap: 56 }}>
           <Denomination value={String(cited)} label={copy(cited === 1 ? "reportSocial.cited.one" : "reportSocial.cited.other")} />
-          <Denomination value={`$${spent.toFixed(4)}`} label={historical ? copy("reportSocial.testnetRecorded") : copy("reportSocial.recorded")} />
+          <Denomination value={`$${uiFormat.usdc(spent, 4)}`} label={historical ? copy("reportSocial.testnetRecorded") : copy("reportSocial.recorded")} />
           <Denomination
-            value={`$${toCreators.toFixed(4)}`}
+            value={`$${uiFormat.usdc(toCreators, 4)}`}
             label={copy("reportSocial.creators")}
             accent
           />

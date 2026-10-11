@@ -19,6 +19,9 @@ import { EmbedBadgePanel } from "./embed-badge-panel";
 import { EmbedWidgetPanel } from "./embed-widget-panel";
 import { DecisionFeedbackPanel } from "./decision-feedback-panel";
 import { GatewayProofPanel, type GatewayProof } from "./gateway-proof-panel";
+import { createFormatters } from "@/lib/i18n/format";
+
+const uiFormat = createFormatters("en");
 
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
@@ -250,7 +253,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
                     >
                       {p.kind === "citation" ? uiCopy("creatorDetail.cited") : uiCopy("creatorDetail.read")}
                     </span>
-                    {new Date(p.createdAt).toLocaleString()}
+                    {uiFormat.dateTime(p.createdAt)}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
