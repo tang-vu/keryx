@@ -1,5 +1,7 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { OwnerFeedVerification } from "@/components/keryx/owner-feed-verification";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -17,6 +19,9 @@ import { EmbedBadgePanel } from "./embed-badge-panel";
 import { EmbedWidgetPanel } from "./embed-widget-panel";
 import { DecisionFeedbackPanel } from "./decision-feedback-panel";
 import { GatewayProofPanel, type GatewayProof } from "./gateway-proof-panel";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 interface CreatorData {
   scholarlyRights?: { status: string; declarationId?: string; approvalId?: string; license?: string; summary?: string; contentVersion?: string; effectiveAt?: string; embargoUntil?: string; expiresAt?: string } | null;
@@ -59,7 +64,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
 
   useEffect(() => {
     fetch(`/api/creator/${creatorId}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject("Failed to load")))
+      .then((r) => (r.ok ? r.json() : Promise.reject(uiCopy("creatorDetail.loadFailed"))))
       .then(setData)
       .catch((e) => setError(String(e)));
   }, [creatorId]);
@@ -88,7 +93,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
             </h1>
           </div>
           <p className="mt-1 max-w-xl font-serif text-[14px] text-ink-2">
-            {source.description || "Registered creator on Keryx."}
+            {source.description || uiCopy("creatorDetail.fallbackDescription")}
           </p>
           <div className="mt-2 flex items-center gap-3 font-mono text-[11px] text-ink-3">
             <span className="flex items-center gap-1">
@@ -97,40 +102,40 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
             </span>
             <span className="flex items-center gap-1">
               <Banknote className="h-3 w-3" />
-              ${fmtUsdc(source.fetchPrice)}/read
+              {uiCopy("creatorDetail.readPrice", { price: fmtUsdc(source.fetchPrice) })}
             </span>
           </div>
         </div>
       </div>
 
-      {source.evidenceProvenance === "synthetic-demo" && <p className="mb-6 border border-seal/40 bg-seal/5 p-3 text-sm">Synthetic demo content. Illustrative; not factual research evidence.</p>}
+      {source.evidenceProvenance === "synthetic-demo" && <p className="mb-6 border border-seal/40 bg-seal/5 p-3 text-sm">{uiCopy("creatorDetail.synthetic")}</p>}
 
       {/* Stat tiles */}
       <section className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile
           icon={Banknote}
-          label="Total earned"
+          label={uiCopy("creatorDetail.totalEarned")}
           value={`$${fmtUsdc(stats.totalEarned)}`}
-          sub={`$${fmtUsdc(stats.settledTotal)} settled`}
+          sub={uiCopy("creatorDetail.settled", { amount: fmtUsdc(stats.settledTotal) })}
           accent="paid"
         />
         <StatTile
           icon={Hash}
-          label="Citations"
+          label={uiCopy("creatorDetail.citations")}
           value={String(stats.citationCount)}
-          sub={`${stats.paymentCount} payments`}
+          sub={uiCopy(stats.paymentCount === 1 ? "creatorDetail.payments.one" : "creatorDetail.payments.other", { count: stats.paymentCount })}
         />
         <StatTile
           icon={Calendar}
-          label="Active days"
+          label={uiCopy("creatorDetail.activeDays")}
           value={String(dailyEarnings.length)}
-          sub="last 14 days"
+          sub={uiCopy("creatorDetail.last14Days")}
         />
         <StatTile
           icon={BadgeCheck}
-          label="Rank"
+          label={uiCopy("creatorDetail.rank")}
           value={`#${stats.rank || "–"}`}
-          sub="creator leaderboard"
+          sub={uiCopy("creatorDetail.leaderboard")}
           accent="seal"
         />
       </section>
@@ -138,13 +143,13 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
       {/* Public: the earnings above, checked against Circle's own books. Sits directly under the
           tiles it corroborates — the proof is worth little a scroll away from the claim. */}
       <GatewayProofPanel proof={gatewayProof} />
-      {data.scholarlyRights && <section className="mb-6 rounded border border-line p-4 text-sm [overflow-wrap:anywhere]" aria-label="Public scholarly rights status">
-        <p>Declared manuscript rights: <strong>{data.scholarlyRights.status}</strong> (Arc testnet pilot). New paid reads independently check effective rights and fresh registry authority.</p>
+      {data.scholarlyRights && <section className="mb-6 rounded border border-line p-4 text-sm [overflow-wrap:anywhere]" aria-label={uiCopy("creatorDetail.rightsAria")}>
+        <p>{uiRichCopy("creatorDetail.declaredRights", { status: <strong>{data.scholarlyRights.status}</strong> })}</p>
         {data.scholarlyRights.summary && <p className="mt-2">{data.scholarlyRights.summary}</p>}
-        {data.scholarlyRights.license && <p className="mt-2">Applicable license: {data.scholarlyRights.license}</p>}
-        {data.scholarlyRights.contentVersion && <p className="mt-2 break-all font-mono text-xs">Declared version: {data.scholarlyRights.contentVersion}</p>}
-        {data.scholarlyRights.expiresAt && <p className="mt-2 text-xs">Declared permission: {data.scholarlyRights.effectiveAt} to {data.scholarlyRights.expiresAt}; embargo ends {data.scholarlyRights.embargoUntil}.</p>}
-        <p className="mt-2 text-xs text-ink-3">This approval record is separate from peer review, current payable status, wallet payment authority and actual settlement. Current permission and terms are checked at purchase.</p>
+        {data.scholarlyRights.license && <p className="mt-2">{uiCopy("creatorDetail.license", { license: data.scholarlyRights.license })}</p>}
+        {data.scholarlyRights.contentVersion && <p className="mt-2 break-all font-mono text-xs">{uiCopy("creatorDetail.version", { version: data.scholarlyRights.contentVersion })}</p>}
+        {data.scholarlyRights.expiresAt && <p className="mt-2 text-xs">{uiRichCopy("creatorDetail.permission", { effectiveAt: data.scholarlyRights.effectiveAt ?? "", expiresAt: data.scholarlyRights.expiresAt, embargoUntil: data.scholarlyRights.embargoUntil ?? "" })}</p>}
+        <p className="mt-2 text-xs text-ink-3">{uiCopy("creatorDetail.rightsBoundary")}</p>
       </section>}
 
       {/* Public: why the agent buys or passes on this source, in its own words. Sits above the
@@ -182,7 +187,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
       {dailyEarnings.length > 0 && (
         <section className="mb-8 border border-line bg-paper p-5">
           <h2 className="mb-4 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-            Earnings · last 14 days
+            {uiCopy("creatorDetail.earnings")}
           </h2>
           <div className="flex items-end gap-1" style={{ height: 100 }}>
             {dailyEarnings.map((d) => (
@@ -205,7 +210,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
       <section className="border border-line bg-paper p-5">
         <div className="mb-4 flex items-baseline justify-between gap-3">
           <h2 className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-            Recent payments ({recentPayments.length})
+            {uiCopy(recentPayments.length === 1 ? "creatorDetail.recentPayments.one" : "creatorDetail.recentPayments.other", { count: recentPayments.length })}
           </h2>
           {/* The panel shows a slice; the export is the whole ledger — what a creator needs
               to reconcile a withdrawal or file the income. */}
@@ -214,12 +219,12 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
             download
             className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3 underline underline-offset-4 transition-colors hover:text-seal"
           >
-            Export ledger (CSV)
+            {uiCopy("creatorDetail.export")}
           </a>
         </div>
         {recentPayments.length === 0 ? (
           <p className="py-6 text-center font-serif text-sm text-ink-3">
-            No payments yet.
+            {uiCopy("creatorDetail.empty")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -234,7 +239,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
                     className="block truncate font-serif text-[13px] leading-snug text-ink transition-colors hover:text-seal"
                     title={p.question ?? p.queryId}
                   >
-                    {p.question ?? `Dispatch ${p.queryId.slice(0, 8)}…`}
+                    {p.question ?? uiCopy("creatorDetail.dispatch", { id: p.queryId.slice(0, 8) })}
                   </Link>
                   <p className="mt-1 flex items-center gap-2 font-mono text-[10px] text-ink-3">
                     <span
@@ -243,7 +248,7 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
                         p.kind === "citation" ? "bg-paid/10 text-paid" : "bg-paper-2 text-ink-3",
                       )}
                     >
-                      {p.kind === "citation" ? "cited" : "read"}
+                      {p.kind === "citation" ? uiCopy("creatorDetail.cited") : uiCopy("creatorDetail.read")}
                     </span>
                     {new Date(p.createdAt).toLocaleString()}
                   </p>
@@ -264,12 +269,12 @@ export function CreatorDetailView({ creatorId }: { creatorId: string }) {
                   )}
                   {p.settlementStatus === "pending" && (
                     <p className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-700">
-                      <Clock3 className="h-2.5 w-2.5" /> pending proof
+                      <Clock3 className="h-2.5 w-2.5" /> {uiCopy("creatorDetail.pendingProof")}
                     </p>
                   )}
                   {p.settlementStatus === "failed" && (
                     <p className="inline-flex items-center gap-1 font-mono text-[10px] text-red-700">
-                      <CircleX className="h-2.5 w-2.5" /> failed · not charged
+                      <CircleX className="h-2.5 w-2.5" /> {uiCopy("creatorDetail.failed")}
                     </p>
                   )}
                 </div>

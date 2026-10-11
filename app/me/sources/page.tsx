@@ -4,14 +4,17 @@
  * per-source surface; this page exists so a bulk-imported portfolio is manageable in one place.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { MySourcesView } from "./my-sources-view";
 
+const uiCopy = createMessages("en");
+
 export const metadata: Metadata = {
-  title: "My sources — Keryx",
-  description: "Manage every source your wallet owns: citation email alerts, webhooks, earnings.",
+  title: uiCopy("creatorPortfolio.metadataTitle"),
+  description: uiCopy("creatorPortfolio.description"),
   robots: { index: false }, // wallet-personal surface — nothing here for a crawler
 };
 
@@ -21,15 +24,13 @@ export default function MySourcesPage() {
       <SiteHeader />
       <main className="mx-auto max-w-[820px] px-4 py-10 sm:px-8">
         <div className="mb-8 border-b border-line pb-6">
-          <h1 className="font-serif text-2xl text-ink">My sources</h1>
+          <h1 className="font-serif text-2xl text-ink">{uiCopy("creatorPortfolio.title")}</h1>
           <p className="mt-1 font-mono text-xs text-ink-3">
-            Review sources where this wallet receives payouts or author shares, and listings it
-            registered on Arc. Citation alerts follow payout or author ownership; listing price
-            and active status follow the registry creator.
+            {uiCopy("creatorPortfolio.ownership")}
           </p>
         </div>
         <MySourcesView />
-        <Link href="/me/withdrawals" className="mt-6 inline-block text-sm underline">Review and recover withdrawals</Link>
+        <Link href="/me/withdrawals" className="mt-6 inline-block text-sm underline">{uiCopy("creatorPortfolio.withdrawals")}</Link>
       </main>
     </>
   );

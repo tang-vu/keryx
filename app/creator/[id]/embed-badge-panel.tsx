@@ -8,9 +8,12 @@
  * back to the creator's live earnings page, turning payouts into proof and reach.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { BadgeCheck, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useBrowserOrigin } from "@/lib/hooks/use-browser-origin";
+
+const uiCopy = createMessages("en");
 
 // SSR + first client render agree on the canonical host; refined to the real origin on mount
 // so localhost/preview embeds copy the right URL too.
@@ -21,33 +24,32 @@ export function EmbedBadgePanel({ creatorId }: { creatorId: string }) {
 
   const badgeUrl = `${origin}/api/creator/${creatorId}/badge.svg`;
   const pageUrl = `${origin}/creator/${creatorId}`;
-  const markdown = `[![Cited by Keryx](${badgeUrl})](${pageUrl})`;
-  const html = `<a href="${pageUrl}"><img src="${badgeUrl}" alt="Cited by Keryx"></a>`;
+  const markdown = `[![${uiCopy("creatorBadge.snippetAlt")}](${badgeUrl})](${pageUrl})`;
+  const html = `<a href="${pageUrl}"><img src="${badgeUrl}" alt="${uiCopy("creatorBadge.snippetAlt")}"></a>`;
 
   const copy = async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success(`${label} copied.`);
+      toast.success(uiCopy("creatorBadge.copied", { label }));
     } catch {
-      toast.error("Couldn't copy — select and copy manually.");
+      toast.error(uiCopy("creatorBadge.copyFailed"));
     }
   };
 
   return (
     <section className="mb-8 border border-line bg-paper p-5">
       <h2 className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        <BadgeCheck className="h-3.5 w-3.5 text-seal" /> Embed your citation badge
+        <BadgeCheck className="h-3.5 w-3.5 text-seal" /> {uiCopy("creatorBadge.title")}
       </h2>
       <p className="mb-4 max-w-xl font-serif text-[13px] text-ink-2">
-        Show — on your own site — that agents pay you per citation. The badge is live: it always
-        reflects your real citation count and USDC earned, and links back to your earnings page.
+        {uiCopy("creatorBadge.description")}
       </p>
 
       {/* Live preview straight from the endpoint */}
       <div className="mb-4 flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={badgeUrl} alt="Cited by Keryx badge preview" className="h-5" />
-        <span className="font-mono text-[10px] text-ink-3">live preview · refreshes every 5 min</span>
+        <img src={badgeUrl} alt={uiCopy("creatorBadge.alt")} className="h-5" />
+        <span className="font-mono text-[10px] text-ink-3">{uiCopy("creatorBadge.preview")}</span>
       </div>
 
       <div className="space-y-2">
@@ -77,7 +79,7 @@ function SnippetRow({
         <button
           type="button"
           onClick={onCopy}
-          title={`Copy ${label}`}
+          title={uiCopy("creatorBadge.copyTitle", { label })}
           className="shrink-0 rounded-md border border-line px-2 py-1.5 text-ink transition-colors hover:bg-paper-2"
         >
           <Copy className="h-3.5 w-3.5" />
