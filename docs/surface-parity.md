@@ -1,5 +1,16 @@
 # Supported-surface release parity
 
+## App58 iPhone header repair — October 12 source candidate
+
+App/OpenAPI **0.27.58** repairs Safari wallet selection and header navigation.
+The new English status labels are scoped to web components. MCP, desktop helper,
+renderer, bridge, native/Rust and extension behavior retain their App57 contracts
+and package identities; hosted wallet handoffs receive the web correction.
+Executable graph/byte comparison holds release metadata constant, so it does not
+relabel retained packages as App58 builds. Exact-source CI, deployed app commit
+and physical iPhone wallet approval remain separate gates. See the
+[scope and acceptance record](engineering/iphone-header-2026-10-12.md).
+
 ## App57 caller-text tools and source selection - October 11 source candidate
 
 App/OpenAPI **0.27.57**, hosted MCP **0.3.15** and stdio/official Registry
@@ -888,3 +899,25 @@ metadata body, citation, signer or scheduler reaches reduced native/Rust roles.
 Current production health, npm/Registry/installer publication and installed-client
 source require separate readback; candidate source and synthetic tests do not
 claim synchronized delivery. See [release boundaries](engineering/free-paper-lookup.md).
+
+## Purchase planning and pooled recorded outcomes — October 11 source candidate
+
+The shared ordinary runner adds the initial `Decision.basis` snapshot to existing
+decision JSON, retained in both database adapters without a schema migration.
+Later SKIPs and reevaluation preserve the original plan. The public report links
+`/purchase-outcomes`; the matching keyless GET `/api/purchase-outcomes` shares a
+bounded exact-version scorer and documented OpenAPI contract. Newest-run sample,
+UTC interval, recorded cohort, excluded/unscorable records and measure rules stay
+visible. Neither citations nor recorded settlements are upgraded to expert value
+or third-party verification.
+
+Ordinary web/API, CLI, remote-MCP and bot execution share the runner change.
+Hosted-report desktop/extension consumers follow the report link. Packaged stdio
+and native payer-bound/private roles retain their existing per-dispatch public-read
+tool and original privacy boundary; no new tool scope, private enumeration or
+evaluation purchase is added. The detached offline regression command has no
+application/payment imports; the evaluation allowance is an unactivated accounting
+scaffold, with its real transport and funding held. Source tests do not assert
+published package/installer versions or deployed commit equality. Required hosted
+acceptance, review, actual built-browser checks and coordinated delivery remain
+gates; see [scope and remaining issue298 criteria](engineering/purchase-outcomes-298.md).

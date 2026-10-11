@@ -6,6 +6,7 @@
   },
   "include": [
     "scripts/inspect-purchase-outcomes.mts",
+    "scripts/check-purchase-regression.mts",
     "scripts/test-purchase-outcomes-transports.mts",
     "scripts/test-purchase-outcomes-built.mts",
     "scripts/eval-paying-source-study.mts",
@@ -44,6 +45,8 @@
     "scripts/test-zotero-ris.mts",
     "scripts/test-browser-paper-library.mts",
     "scripts/operator-business.mts",
+    "scripts/operator-overdue-jobs.mts",
+    "scripts/operator-overdue-jobs.test.mts",
     "scripts/operator-ledger.mts",
     "scripts/test-public-job-ledger-mcp-package.mts",
     "scripts/test-browser-public-job-ledger.mts",

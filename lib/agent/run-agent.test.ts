@@ -40,6 +40,7 @@ import { contentBodyHash } from "../sources/content-receipt";
 import { afterEach, beforeAll, beforeEach, describe, it, expect, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { runAgent, type RunInput } from "./run-agent";
+import { parseDecisionBasis } from "../research/decision-basis";
 import { collectRun } from "./index";
 import { buildFollowUpQuestion } from "./follow-up-question";
 import type { ResearchEffects } from "./research-effects";
@@ -82,6 +83,7 @@ import { exportsFromCheckedReceipt } from "../research/receipt-exports";
 import { surfaceResearch } from "../research/surface-result";
 import { ArticleReadError } from "../web-research/article-reader";
 import * as fetchAuthority from "../registry/source-fetch-payto";
+import * as sourceLearning from "../research/source-learning-observations";
 import * as scholarlyGate from "../scholarly/paid-gate";
 import * as documentSelection from "./document-selection";
 import type { SourceClaim } from "../sources/public-source-claim";
@@ -142,6 +144,14 @@ describe("identity-bound review-first pipeline", () => {
         origin: "web", fundingOwner: "browser", asker: owner, signal: signal.signal, researchMode: "deep", executionLimits: { attentionLimit: 2, reevaluateRounds: reeval ? 1 : 0 } }, d);
       {
         const { run } = await result;
+        const recordedBasis = parseDecisionBasis(run.decisions.find(row => row.sourceId === source.id)?.basis);
+        expect(recordedBasis).toBeDefined();
+        // Reconsidering a skip never rewrites what the initial plan actually proposed.
+        if (reeval) expect(recordedBasis?.plannedAction).toBe("SKIP");
+        else if (cached) expect(recordedBasis?.plannedAction).toBe("CACHE");
+        else expect(recordedBasis?.plannedAction).toBe("BUY");
+        if (fundingFails || changed || decline)
+          expect(recordedBasis?.fetchBudgetMicroUsdc).toBe(String(Math.round(fetchBudget(0.05) * 1_000_000)));
         proof = { economic: { answer: run.answer, decisions: run.decisions, citations: run.citations,
           totalSpent: run.totalSpent, totalToCreators: run.totalToCreators, fundingCalls: funding.mock.calls,
           fetchCalls: gateway.fetchCalls, fetchItems: gateway.fetchItems, fetchPrices: gateway.fetchPrices,
@@ -463,6 +473,16 @@ async function drive(
     steps.push(res.value);
     res = await gen.next();
   }
+  // Qualify the prospective basis across every successful runner fixture: public/free/cache,
+  // private isolation, empty/early returns, gap reevaluation and late payment degradation.
+  for (const decision of res.value.decisions) {
+    expect(parseDecisionBasis(decision.basis)).toBeDefined();
+    const initial = steps.find(step => step.phase === "decide"
+      && (step.detail as Decision | undefined)?.assetId === decision.assetId
+      && (step.detail as Decision | undefined)?.sourceId === decision.sourceId)?.detail as Decision | undefined;
+    expect(initial?.basis).toEqual(decision.basis);
+    expect(initial?.basis?.plannedAction).toBe(initial?.action);
+  }
   return { run: res.value, steps };
 }
 
@@ -477,10 +497,58 @@ it("shared public run completion stamps trusted usage while private originals re
   const privateRun = await drive({ question: "Inspect fixture content", budget: 0.04, usageContext, queryId },
     { ...deps([makeSource({ id: "usage-private" })], fakeEngine(), fakeGateway()), effects: isolatedTestEffects(queryId) });
   expect(privateRun.run).not.toHaveProperty("usage");
+  expect(privateRun.run).not.toHaveProperty("sourceLearning");
 });
 
-describe("recorded citation history in the research trace", () => {
-  it.each(["recorded", "absent", "unavailable"] as const)("reports the actual history basis and preserves execution when history is %s", async history => {
+it("the ordinary run captures owner exclusion even when supplied independent-classification evidence exists", async () => {
+  const owner = `0x${"ab".repeat(20)}`, source = makeSource({ id: "owner-learning", walletAddress: owner,
+    authors: [{ name: "Owner", walletAddress: owner, splitWeight: 1 }], tags: ["x402"] });
+  const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockResolvedValue({ payTo: owner, creator: owner,
+    active: true, stale: false, authority: "onchain", listPriceUsdc: source.fetchPrice });
+  try {
+    const usageContext = createTrustedUsageContext(config.profile.networkId, { actor: "outside", funding: "independent", scripted: false,
+      actorEvidenceSha256: "a".repeat(64), fundingEvidenceSha256: "b".repeat(64) });
+    const { run } = await drive({ question: "How does x402 work?", budget: 0.05, asker: owner, origin: "web", fundingOwner: "browser",
+      provenance: { version: 1, surface: "web", ownershipMethod: "session" }, usageContext }, deps([source], fakeEngine(), fakeGateway()));
+    expect(run.sourceLearning?.sources).toEqual([expect.objectContaining({ sourceId: source.id, topics: ["x402"], eligibility: "owner" })]);
+    expect(run.usage?.cohort).toBe("outside"); // source-specific exclusion still dominates independent-looking cohort data
+  } finally { terms.mockRestore(); }
+});
+
+it("source learning observes a completed answer and cannot change its saved answer or payments when capture fails", async () => {
+  const originalCapture = sourceLearning.captureSourceLearning;
+  const capture = vi.spyOn(sourceLearning, "captureSourceLearning");
+  const cases: Array<{ run: QueryRun; economic: unknown }> = [];
+  try {
+    for (const unavailable of [false, true]) {
+      capture.mockImplementation(input => {
+        expect(input.run.answer).not.toBe("");
+        expect(input.run.trace.at(-1)?.phase).toBe("done");
+        expect(input.payments.length).toBeGreaterThan(0);
+        if (unavailable) throw new Error("Synthetic source observation failure");
+        return originalCapture(input);
+      });
+      const source = makeSource({ id: "completed-learning" }), gateway = fakeGateway();
+      const d = deps([source], fakeEngine(), gateway), save = vi.fn(async (_run: QueryRun) => {});
+      d.db.saveQueryRun = save;
+      const run = await collectRun({ question: "Inspect fixture content", budget: 0.05 }, { deps: d });
+      expect(save).toHaveBeenCalledWith(run);
+      expect(Object.hasOwn(run, "sourceLearning")).toBe(!unavailable);
+      cases.push({ run, economic: { answer: run.answer, decisions: run.decisions, citations: run.citations,
+        totalSpent: run.totalSpent, totalToCreators: run.totalToCreators,
+        paymentAttempts: run.paymentAttempts, settledPayments: run.settledPayments, pendingPayments: run.pendingPayments,
+        fetchCalls: gateway.fetchCalls, citationCalls: gateway.citationCalls,
+        payments: d.db.payments.map(({ sourceId, kind, amountUsdc, payer, payee, settled, settlementStatus }) =>
+          ({ sourceId, kind, amountUsdc, payer, payee, settled, settlementStatus })),
+        trace: run.trace.map(({ phase, message }) => ({ phase, message })) } });
+    }
+    expect(capture).toHaveBeenCalledTimes(2);
+    expect(cases[1].economic).toEqual(cases[0].economic);
+  } finally { capture.mockRestore(); }
+});
+
+describe("unclassified historical memory cannot train live purchases", () => {
+  it.each(["recorded", "absent", "unavailable"] as const)("withholds unsupported learning while preserving execution when history is %s", async history => {
     const source = makeSource({ id: "recorded-history" }), engine = fakeEngine(), gateway = fakeGateway();
     const d = deps([source], engine, gateway);
     const readHistory = vi.spyOn(d.db, "loadQueryMemories");
@@ -493,17 +561,9 @@ describe("recorded citation history in the research trace", () => {
 
     const { run, steps } = await drive({ question: "How does x402 work?", budget: 0.05 }, d);
     const historySteps = steps.filter(step => (step.detail as { reputation?: boolean } | undefined)?.reputation);
-    expect(readHistory).toHaveBeenCalledOnce();
-    if (history === "recorded") {
-      expect(historySteps).toHaveLength(1);
-      expect(historySteps[0]).toMatchObject({ phase: "discover", detail: { reputation: true } });
-      expect(historySteps[0].message).toContain("local scores from recorded citation history");
-      expect(engine.decideInput?.memoryContext).toContain(`${source.name}: reputation 90/100`);
-      expect(run.trace).toContainEqual(historySteps[0]);
-    } else {
-      expect(historySteps).toEqual([]);
-      expect(engine.decideInput?.memoryContext).toBeUndefined();
-    }
+    expect(readHistory).not.toHaveBeenCalled();
+    expect(historySteps).toEqual([]);
+    expect(engine.decideInput?.memoryContext).toBeUndefined();
     expect(steps.some(step => /ERC-8004|on.chain reputation/i.test(step.message))).toBe(false);
     expect(gateway.fetchCalls).toEqual([source.id]);
     expect(gateway.citationCalls).toHaveLength(1);
@@ -1403,6 +1463,13 @@ it("continues past partial or explicitly incomplete answers, then stops before a
     // The unread third selection is recorded as skipped, not as a purchase that never happened.
     expect(run.decisions.filter(decision => decision.action === "BUY")).toHaveLength(2);
     expect(run.decisions.find(decision => decision.action === "SKIP")?.rationale).toContain("stopped early");
+    // Every row keeps its planning basis; an unread selection stays a planned BUY that became a SKIP.
+    const bases = run.decisions.map(decision => parseDecisionBasis(decision.basis));
+    expect(bases.every(basis => basis?.fetchBudgetMicroUsdc === bases[0]?.fetchBudgetMicroUsdc && basis?.rule === "selected" && basis?.plannedAction === "BUY")).toBe(true);
+    expect(bases.map(basis => BigInt(basis!.budgetLeftMicroUsdc!))).toEqual(bases.map((_, index) =>
+      BigInt(bases[0]!.fetchBudgetMicroUsdc) - bases.slice(0, index).reduce((sum, basis) => sum + BigInt(basis!.quotedPriceMicroUsdc!), BigInt(0))));
+    expect(BigInt(bases[0]!.quotedPriceMicroUsdc!)).toBeGreaterThan(BigInt(0));
+    expect(steps.filter(step => step.phase === "decide").every(step => parseDecisionBasis((step.detail as { basis?: unknown }).basis))).toBe(true);
   }
 });
 

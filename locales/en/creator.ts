@@ -1,5 +1,18 @@
 /** English creator management presentation; source data, signatures and payment authority remain unchanged. */
 export const creatorMessages = Object.freeze({
+  "sourceLearning.title": "Recorded source outcomes",
+  "sourceLearning.unavailable": "The source outcome record is unavailable. No empty or zero-value record is inferred.",
+  "sourceLearning.boundary": "This record counts independently classified and funded outside runs. Source owners, known beneficiaries, unknown history and private jobs cannot improve the estimate. Live learned selection is withheld until the policy and authority checks are accepted.",
+  "sourceLearning.window": "Sample: up to {scan} recent public runs and {sample} eligible observations per source/topic; one attested actor per UTC day. Excluded observations: {excluded}. Historical runs without the required record: {historical}.",
+  "sourceLearning.empty": "No eligible source/topic observations are recorded in this window. This does not establish poor source value.",
+  "sourceLearning.topic": "Public topic", "sourceLearning.offered": "Offered", "sourceLearning.read": "Read", "sourceLearning.bought": "Bought", "sourceLearning.cited": "Cited",
+  "sourceLearning.estimate": "Citation estimate", "sourceLearning.contribution": "Mean contribution", "sourceLearning.price": "Access cost / purchases",
+  "sourceLearning.shift": "Abrupt outcome shift flagged",
+  "sourceLearning.period": "Observed {first}–{last} (UTC)",
+  "sourceLearning.meaning": "Bought counts source/run observations, not articles. The estimate uses Beta(1,1) smoothing; ± is a descriptive uncertainty proxy, not a confidence interval or factual accuracy score. Access cost divided by purchases retains an exact rational mean. Settlement is recorded evidence, not a new Circle or chain verification.",
+  "sourceLearning.exploration": "Live exploration allowance: 0% (0 USDC). A tested prospective planner has an explicit bounded partition; it is not active for your budget.",
+  "sourceLearning.change": "A useful record requires independent eligible purchases followed by citations to retained evidence. In the prospective planner, fewer than five purchases leave value unchanged, later adjustments are limited to ±0.1, and abrupt shifts halve that adjustment. Price, payee and budget rules still govern every purchase.",
+  "sourceLearning.api": "View this same record as JSON",
   "creatorPage.missing": "Creator not found — Keryx",
   "creatorPage.fallbackTitle": "Keryx Creator",
   "creatorPage.sources": "Sources",

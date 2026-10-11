@@ -38,5 +38,6 @@
   "testUsdc": "test USDC",
   "viewJson": "View outcome JSON",
   "download": "Download outcomes",
+  "allReports": "Purchase outcomes across recent reports",
   "unavailable": "Recorded purchase outcomes are unavailable for this retained snapshot. No score or zero-cost success is inferred; the original report and receipt remain available."
 }

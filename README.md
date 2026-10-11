@@ -13,9 +13,15 @@ for eligible creator rewards.
 
 **[Guided recorded walkthrough](https://keryx.cc/walkthrough)** ·
 **[Live app](https://keryx.cc)** · **[Public proof](https://keryx.cc/proof)** ·
+**[Dated quality scorecard](https://keryx.cc/quality)** ·
 **[Archived QA walkthrough (2m40s, app 0.27.43, recorded Oct 8)](https://github.com/tang-vu/keryx/releases/download/v0.27.43/keryx-current-release-6e591603-archived-qa-05.mp4)**.
 Reopens an archived first-party report and receipt; no new research was submitted.
 See the [recording scope and public checks](docs/reviewer-start.md#recording-gate).
+
+The [quality scorecard](docs/engineering/public-quality-scorecard-287-2026-10-11.md)
+publishes frozen diagnostics with all eight failures retained. Semantic and language
+judgments are unjudged, useful-answer rates are unavailable and historical allowance
+is unknown. Different archive sizes do not establish a release improvement.
 
 ## Try it in two minutes — no wallet
 
@@ -44,6 +50,18 @@ sign-up; the composer shows the payer and budget. Admission depends on current
 quota, available capacity and spend caps, so a new answer within two minutes is
 not guaranteed. Submitted questions become public reports. See
 [sponsored trial limits](docs/sponsored-research-trial.md).
+
+## Recorded purchase outcomes
+
+The October 11 source candidate adds `/purchase-outcomes` and its read-only
+`/api/purchase-outcomes` view. It compares recorded exact-version purchases with
+citations, showing the newest-run sample, UTC interval and separate recorded
+outside/team/scripted/unknown groups. Uncited spend is descriptive; missed value,
+question-type splits and cost per supported claim remain unmeasured. Initial
+planning decisions retain exact price and planned-budget snapshots, without
+rewriting history or changing payment authority. See the
+[scope, offline comparison command and remaining acceptance gates](docs/engineering/purchase-outcomes-298.md).
+This source entry does not claim deployment or independently verified settlement.
 
 ## Usage so far
 
