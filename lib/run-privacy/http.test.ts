@@ -23,7 +23,7 @@ let connection:DatabaseSync;
 beforeEach(()=>{
   vi.clearAllMocks();connection=new DatabaseSync(":memory:");installSqliteApplicationSchema(connection);connection.exec(RUN_PRIVACY_SQL);
   const date=new Date().toISOString();connection.prepare("INSERT INTO web_sessions VALUES(?,?,?,?)").run(session,wallet,Date.now()-1000,Date.now()+60000);
-  const store=createSqliteRunPrivacy(connection),payments=[{id:"synthetic",kind:"citation",queryId:"owned",sourceId:"s",sourceName:"Public source",payer:wallet,payee:other,amountUsdc:0.000001,network:"eip155:5042002",settled:true,settlementStatus:"settled",createdAt:date,rationale:"SECRET rationale"}];
+  const store=createSqliteRunPrivacy(connection),payments=[{id:"synthetic",kind:"citation",queryId:"owned",sourceId:"s",sourceName:"Public source",payer:wallet,payee:other,amountUsdc:0.000001,network:"eip155:5042002",settled:true,settlementStatus:"settled",createdAt:date,rationale:"SECRET rationale",authorizationId:"CUSTODIAN nonce",grantEpoch:"CUSTODIAN binding",authorizationPhase:"prepared"}];
   const db={runPrivacy:store,listCreatorPaymentAttemptsByQuery:async()=>payments,listPayments:async()=>payments};auth.db.mockResolvedValue(db);
   auth.session.mockResolvedValue({db,wallet,currentId:session});auth.page.mockResolvedValue({address:wallet});auth.key.mockResolvedValue({walletAddress:wallet,scopes:"history:read"});
   for(const id of ["owned","linked","demo"])writeSqliteQueryRun(connection,{id,createdAt:date,asker:wallet,question:`SECRET ${id}`,answer:"SECRET answer",budget:0.1,engine:"fixture",totalSpent:0.01,totalToCreators:0.000001,subClaims:[],decisions:[],citations:[],trace:[]},false);
@@ -58,8 +58,8 @@ describe("#266 public routes and signed owner actions",()=>{
     expect((await privacyRun(new NextRequest(`${origin}/`,{headers:{"X-Keryx-Request-Id":randomUUID()}}),"owned","export")).status).toBe(404);
   });
   it("exports then erases owner text with audit, no-store and question-free public financial proofs",async()=>{
-    const exported=await privacyRun(request("/","GET",undefined,{"X-Keryx-Request-Id":randomUUID()}),"owned","export");expect(exported.status).toBe(200);expect(exported.headers.get("cache-control")).toBe("no-store");expect((await exported.json()).run.question).toBe("SECRET owned");
-    const before=await(await receipt(new Request(`${origin}/api/dispatch/owned/receipt`),params("owned"))).json();expect(before.schema).toBe("urn:keryx:settlement-receipt:1");expect(JSON.stringify(before)).not.toContain("SECRET");
+    const exported=await privacyRun(request("/","GET",undefined,{"X-Keryx-Request-Id":randomUUID()}),"owned","export");expect(exported.status).toBe(200);expect(exported.headers.get("cache-control")).toBe("no-store");const packet=await exported.json();expect(packet.run.question).toBe("SECRET owned");expect(JSON.stringify(packet.payments)).not.toContain("CUSTODIAN");expect(packet.payments[0].amountUsdc).toBe(0.000001);
+    const before=await(await receipt(new Request(`${origin}/api/dispatch/owned/receipt`),params("owned"))).json();expect(before.schema).toBe("urn:keryx:settlement-receipt:1");expect(JSON.stringify(before)).not.toContain("SECRET");expect(JSON.stringify(before)).not.toContain("CUSTODIAN");
     expect((await privacyRun(request("/","DELETE",{revision:0,requestId:randomUUID()}),"owned","erase")).status).toBe(200);
     const after=await(await receipt(new Request(`${origin}/api/dispatch/owned/receipt`),params("owned"))).json();expect(after).toEqual(before);
     const event=await activity();expect(JSON.stringify(await event.json())).not.toContain("SECRET owned");

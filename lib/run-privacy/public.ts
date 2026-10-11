@@ -2,10 +2,11 @@ import { canonicalJson, researchReceiptDigest } from "../research-receipt-integr
 import type { PaymentRecord, QueryRun } from "../types";
 import type { KeryxDB } from "../db/keryx-db";
 import { requirePrivacy } from "./contracts";
-/** Financial records remain canonical in storage. Public projections omit question-derived rationale. */
+/** Preserve financial values/evidence; journal rationale and authorization bindings
+ * remain private to the custodian even when a question owner exports their run. */
 export function publicFinancialPayment(payment:PaymentRecord):PaymentRecord {
   const keys=["id","kind","queryId","sourceId","sourceName","payer","payee","amountUsdc","offerId","listPriceUsdc","weight","txHash","network",
-    "settled","settlementStatus","authorizationId","authorizationPhase","authorizationExpiresAt","grantEpoch","origin","createdAt",
+    "settled","settlementStatus","origin","createdAt",
     "itemId","itemTitle","itemUrl","contentVersion","itemPublishedAt","scholarlyDeclarationId","scholarlyApprovalId"] as const;
   const result:Record<string,unknown>={};for(const key of keys)if(Object.hasOwn(payment,key))result[key]=payment[key];
   return result as unknown as PaymentRecord;

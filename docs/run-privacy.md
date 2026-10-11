@@ -51,8 +51,11 @@ Exports record state/digest in the audit, never another question-text copy.
 Erasure removes `query_runs.question`, `answer`, research text in the JSON,
 ordinary topic memory and terminal demand text. Run ID, indexed exact financial
 counters, funding telemetry, and canonical payment/reward journals stay unchanged.
-Retained payment rationale is a financial journal field; public projections omit
-it. An erased owner export contains the erased run and unchanged financial rows.
+Retained payment rationale and authorization nonce/phase/expiry/grant bindings
+remain private journal fields. Question ownership does not grant the custodian's
+authority. Public/owner financial exports retain exact amounts, states and public
+settlement evidence, omitting those bindings and rationale. Stored journals stay
+unchanged; an erased owner export contains the erased run and this projection.
 A claim is reverified against the unchanged original before a privacy action;
 only erasure retains a verified owner/binding/digest tombstone. It does not assign
 the claimant as asker, payer or funding owner. Source triggers reject replacement

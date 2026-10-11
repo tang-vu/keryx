@@ -8,7 +8,7 @@ import { createSqliteRunClaims, RUN_CLAIMS_SQL } from "../db/run-claims-sqlite";
 import { createSqliteRunOwnershipHistory } from "../db/run-ownership-history-sqlite";
 import { createSqlitePublicUsage } from "../db/public-usage-sqlite";
 import { PrivacyError, type PrivacyActor, type RunVisibility } from "./contracts";
-import { listedQuestion, settlementReceipt } from "./public";
+import { listedQuestion, settlementReceipt,publicFinancialPayment } from "./public";
 import type { QueryRun } from "../types";
 import {withRunReadProjection} from "./projection";
 import {projectRecordedEvidenceProvenance,SYNTHETIC_EVIDENCE_NOTICE} from "../research/evidence-provenance";
@@ -34,6 +34,14 @@ function fixture() {
   return {db,store,save,change,claims,date,historical};
 }
 describe("#266 ordinary privacy and financial retention",()=>{
+  it("exports exact financial amounts/states without journal rationale or custodian authorization bindings",()=>{
+    const payment={id:"fixture",kind:"citation",sourceId:"fixture-source",sourceName:"Fixture",queryId:"owned",amountUsdc:0.000001,payer:alice,payee:bob,network:binding.network,
+      settled:false,settlementStatus:"pending",txHash:null,createdAt:"2026-10-11T00:00:00.000Z",
+      rationale:"PRIVATE question rationale",authorizationId:"PRIVATE nonce",authorizationPhase:"prepared",grantEpoch:"PRIVATE binding",authorizationExpiresAt:"2026-10-12T00:00:00.000Z"} as const;
+    const stored=JSON.stringify(payment),projected=publicFinancialPayment(payment);
+    expect(projected).toMatchObject({id:payment.id,queryId:payment.queryId,amountUsdc:payment.amountUsdc,payer:alice,payee:bob,network:binding.network,settled:false,settlementStatus:"pending",txHash:null});
+    expect(JSON.stringify(projected)).not.toContain("PRIVATE");expect(projected.authorizationPhase).toBeUndefined();expect(projected.authorizationExpiresAt).toBeUndefined();expect(JSON.stringify(payment)).toBe(stored);
+  });
   it("preserves canonical evidence presentation after visibility authorization and keeps owner exports original",async()=>{
     const f=fixture(),original=f.save("demo",alice,{citations:[{sourceId:"fixture-source",marker:"S1",sourceName:"Fixture",weight:1,reward:0.000001,rationale:"Synthetic"}]});
     let lookups=0;const projected=withRunReadProjection(f.store,run=>projectRecordedEvidenceProvenance(async()=>{lookups++;return new Set(["source:fixture-source"]);},run));

@@ -3,6 +3,7 @@ import { getDb } from "../db";
 import { privateRunResponse } from "../run-claims/private-response";
 import { mutationPrivacyContext, requestPrivacyActor } from "./auth";
 import { PrivacyError, privacyId, privacyMutation, requirePrivacy, visibilitySchema } from "./contracts";
+import {publicFinancialPayment} from "./public";
 const json=(value:unknown,status=200)=>privateRunResponse(Response.json(value,{status}));
 export const privacyFailure=(error:unknown)=>json({error:error instanceof PrivacyError ? error.code : "privacy_unavailable"},
   error instanceof PrivacyError ? ({not_found:404,conflict:409,unauthenticated:401,retention_hold:409,privacy_unavailable:503}[error.code]) : 503);
@@ -41,7 +42,7 @@ export async function privacyRun(request:Request,rawId:string,action:"owner"|"vi
       const requestId=z.string().uuid().parse(request.headers.get("x-keryx-request-id"));
       const item=await store.export(id,actor,requestId);
       const payments=await db.listCreatorPaymentAttemptsByQuery(id);
-      const response=json({version:1,wallet:actor.wallet,...item,payments});
+      const response=json({version:1,wallet:actor.wallet,...item,payments:payments.map(publicFinancialPayment)});
       response.headers.set("Content-Disposition",`attachment; filename="keryx-owner-${id}.json"`);return response;
     }
     const item=await store.owner(id,actor);return item?json({wallet:actor.wallet,...item}):json({error:"not_found"},404);

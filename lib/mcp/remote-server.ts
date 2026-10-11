@@ -42,6 +42,7 @@ import { privateRunClaimText } from "../run-claims/delivery";
 import { registerRunPrivacyRead } from "../run-privacy/mcp";
 import { privacyBinding } from "../run-privacy/auth";
 import { privacyWallet, requirePrivacy } from "../run-privacy/contracts";
+import {publicFinancialPayment} from "../run-privacy/public";
 
 export interface RemoteMcpAccess {
   /** Verified key row identifier and explicit deliverable rights; not model input. */
@@ -262,7 +263,7 @@ export function createRemoteMcpServer(
     const db=await getDb(),actor={wallet:privacyWallet.parse(access.actor),binding:privacyBinding()},store=requirePrivacy(db);
     const result=requestId?await store.export(id,actor,requestId):await store.owner(id,actor);
     if(!result)throw new Error("Owner record unavailable");
-    return {wallet:actor.wallet,...result,...(requestId?{version:1,payments:await db.listCreatorPaymentAttemptsByQuery(id)}:{})};
+    return {wallet:actor.wallet,...result,...(requestId?{version:1,payments:(await db.listCreatorPaymentAttemptsByQuery(id)).map(publicFinancialPayment)}:{})};
   });
   registerIdentityReadTool(server, async () => {
     if (!access.actor || !access.profileScopes?.includes("profile:read")) throw new Error("Explicit profile scope required");
