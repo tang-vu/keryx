@@ -1,9 +1,9 @@
 # Anonymous run claims — staged source
 
-Issue #262 is still open. The ordinary claim domain and private HTTP/landing
-boundaries and the first private ingress subset are source preparation, default
-off. They do not activate any current database. Remaining ingress/client delivery,
-fresh combined-source acceptance and separately reviewed deployment/schema admission
+Issue #262 is still open. The ordinary claim domain, HTTP/landing boundaries,
+protected web document, CLI, claimant history and hosted ingress adapters are
+source preparation, default off. They do not activate any current database.
+Fresh combined-source acceptance, client distribution and separately reviewed deployment/schema admission
 remain gates. The four failed PostgreSQL attempts are retained, not passing
 evidence. The third reached the timestamp fixture after migration/catalog setup;
 the timestamp fixture was corrected with parenthesized expressions.
@@ -39,6 +39,12 @@ research. The first hosted ingress subset prepares ordinary admission before
 research and completes its request-local closure only after the existing save
 boundary. A late issuance failure preserves the saved answer and returns a fixed
 unavailable packet without replay or a replacement credential.
+
+Ordinary Supabase readiness, issuance, consume and the two history RPCs each
+attach a fixed 15-second HTTP transport deadline. An issuance timeout leaves the
+saved answer and recorded financial fields intact. A consume timeout is an
+uncertain acknowledgement; neither rollback nor a replacement credential is
+assumed, and no automatic retry or alternate storage is allowed.
 
 Protected web delivery uses a dedicated dynamic `/research/private` initial
 document. Enter through a native full-page link. A proxy matched only to that
@@ -156,13 +162,21 @@ page, narrowly matched nonce proxy and transient SSE/UI delivery are staged here
 actual built-browser HTML/CSP/hard-navigation and fresh hosted default-build
 acceptance remain release gates. Authenticated owned requests retain their existing behavior.
 
-Supported-surface review remains open. Stdio `ask_keryx` uses paying-wallet A2A
+Stdio `ask_keryx` uses paying-wallet A2A
 and exact original recovery; desktop prepares and resumes private native buyer
 tasks. Those paths are already payer-bound and must not acquire ordinary claim
 ports or change native/archive enrollment. Internal verified engine drivers are
 self-volume operational calls, not user-private delivery. The local unowned
-`scripts/ask.mts` console path still needs an explicit CLI delivery/role decision;
-it is not falsely classified as wallet-owned. Existing history/profile clients
-also still need claimant-sidecar integration. Public reports, feeds, OG, metrics,
+`scripts/ask.mts` console path requires an explicitly inherited private pipe/socket
+descriptor when anonymous claims are enabled. It verifies the descriptor before
+providers, saves the original answer first, and writes one bounded private packet
+outside standard output/error. Lost or partial acknowledgement never retries or
+reissues. See [the direct CLI contract](engineering/private-cli-claims-262.md).
+The account history tab reads recorded and claimed runs using the actual
+server-session owner; list/detail validation and request invalidation prevent
+stale account or page responses from appearing under another owner. It offers
+no claim write, payment inference, public-detail fallback or automatic polling.
+See [claimant history](engineering/claimant-history-ui-2026-10-11.md).
+Public reports, feeds, OG, metrics,
 exports and logs never acquire claim fields or claimant financial attribution.
 Full #262 remains open; no operational activation or synchronized release is claimed.

@@ -7086,7 +7086,7 @@ fallback. Local engine CLI and claimant history/profile client integration remai
 explicit outstanding surface decisions. This checkpoint is default-off source
 preparation, not shared DDL, activation, complete issue acceptance or release.
 
-## 2026-10-12 — Web claim handoffs require a protected initial document
+## 2026-10-11 — Web claim handoffs require a protected initial document
 
 Anonymous web claim delivery uses a dedicated dynamic research document with
 native full-page entry, a fresh nonce CSP, no external analytics or wallet/RPC
@@ -7110,3 +7110,20 @@ Trusted first-party scripts remain within the boundary; this is not protection
 from privileged malicious same-origin JavaScript. Exact built-browser evidence
 and fresh combined hosted acceptance govern release; ordinary-schema admission,
 native enrollment and production activation remain separate and default off.
+
+## 2026-10-11 — CLI claims and claimant history preserve separate ownership
+
+An unowned local ask requires an explicitly inherited private FIFO/socket descriptor
+before any enabled research starts. Standard output and error remain public answer
+channels. The private descriptor receives one bounded post-save packet; a failed or
+uncertain write cannot trigger a new credential or research replay. The account UI
+reads recorded and claimed ownership through the owner-private history port, using
+the server-session wallet and original record with separate sidecar metadata. It
+does not infer a payer, receipt, reward or settlement from claimant attribution.
+
+All five ordinary Supabase claim/history RPCs have a fixed 15-second transport
+deadline. Issuance failure preserves the saved answer; an uncertain consume response
+cannot prove rollback or permit a retry. These source boundaries and synthetic
+acceptance do not activate a database, extend native capabilities or authorize
+funding. Final combined CI, distribution and separately admitted deployment remain
+required. See the CLI, claimant-history and RPC-deadline engineering notes.
