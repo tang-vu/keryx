@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
+import { lstatSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -28,14 +29,30 @@ export function hasPublicHttpsMetadata(req) {
     && !/[\\\u0000-\u0020\u007f]/.test(req.url);
 }
 
-export async function startNextPublicServer({ dir = process.cwd(), port = 3939 } = {}) {
+export async function startNextPublicServer({ dir = process.cwd(), port = 3939, useBuildConfig = false } = {}) {
   if (!Number.isInteger(port) || (port !== 0 && port !== 3939 && port !== 3940)) throw new Error('INVALID_LISTEN_PORT');
+  if (typeof useBuildConfig !== 'boolean') throw new Error('INVALID_BUILD_CONFIG_SELECTION');
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 24 || (major === 24 && minor < 16)) throw new Error('NODE_24_16_REQUIRED');
   if (process.env.NODE_ENV !== 'production') throw new Error('PRODUCTION_REQUIRED');
   const appDir = resolve(dir);
   const requireApp = createRequire(resolve(appDir, 'package.json'));
   if (requireApp('next/package.json').version !== NEXT_VERSION) throw new Error('NEXT_VERSION_MISMATCH');
+  let conf;
+  if (useBuildConfig) {
+    // Immutable cohorts use the configuration serialized by their completed
+    // build. Runtime cwd belongs to operational storage, not config resolution.
+    // The release inspector binds these bytes with the rest of the artifact.
+    const file = resolve(appDir, '.next', 'required-server-files.json');
+    const stat = lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 4 * 1024 * 1024)
+      throw new Error('INVALID_PREPARED_BUILD_CONFIG');
+    const manifest = JSON.parse(readFileSync(file, 'utf8'));
+    if (manifest.version !== 1 || !manifest.config || Array.isArray(manifest.config) ||
+        manifest.config.distDir !== '.next' || manifest.config.output === 'export' || manifest.config.output === 'standalone')
+      throw new Error('INVALID_PREPARED_BUILD_CONFIG');
+    conf = manifest.config;
+  }
   const next = requireApp('next');
   let handle;
   let draining = false;
@@ -64,8 +81,21 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939 }
   server.keepAliveTimeoutBuffer = 5000;
   server.maxRequestsPerSocket = 0;
   // Public request metadata is independent of the private physical socket.
-  const app = next({ dev: false, dir: appDir, hostname: 'keryx.cc', port: 443, httpServer: server });
-  await app.prepare();
+  const app = next({ dev: false, dir: appDir, hostname: 'keryx.cc', port: 443, httpServer: server,
+    ...(useBuildConfig ? { conf } : {}) });
+  const priorConfig = process.env.__NEXT_PRIVATE_STANDALONE_CONFIG;
+  try {
+    // Pinned Next 16.3.8's custom-server prepare/router path does not forward
+    // conf. Use the same serialized-config input as its generated launcher,
+    // sourced exclusively from the inspected build, during initialization.
+    if (useBuildConfig) process.env.__NEXT_PRIVATE_STANDALONE_CONFIG = JSON.stringify(conf);
+    await app.prepare();
+  } finally {
+    if (useBuildConfig) {
+      if (priorConfig === undefined) delete process.env.__NEXT_PRIVATE_STANDALONE_CONFIG;
+      else process.env.__NEXT_PRIVATE_STANDALONE_CONFIG = priorConfig;
+    }
+  }
   handle = app.getRequestHandler();
   await new Promise((accept, reject) => {
     const fail = (error) => { server.off('listening', ready); reject(error); };

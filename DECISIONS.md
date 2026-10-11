@@ -7202,6 +7202,26 @@ refuses invalid descriptions/versions before archive writes. Keep the historical
 legal extraction fixture and require every paragraph outside the reviewed extension
 section and dated update to retain its exact markup.
 
+## 2026-10-11 — Prepare exact-source cohorts before requesting writer maintenance
+
+Add an explicit keyless preparation branch to the existing redeploy launcher.
+Materialize the full accepted Git source into an exclusive directory and copy
+independently installed dependencies rather than building against a serving tree
+or its dependency junction. Bind actual pinned-toolchain/typecheck/test/build
+results and the complete artifact/trace inspection in retained receipts. Partial
+inputs and failed checks refuse before successful artifact publication; preparation
+cannot probe SSH, hold writers, mutate runtime ENV or admit a release.
+
+Use an actual prepared Next idle-restart rehearsal with isolated testnet/offline
+storage to measure readiness and the existing positive HTTP/Next/trace shutdown.
+Do not convert a testnet browser artifact, Windows signal-handler invocation or
+same-cohort restart into mainnet, financial drain, rollback or availability acceptance.
+The deployed reviewed path retains its early drain until independently accepted
+runtime/storage/role bindings, unchanged economic originals, compatible rollback,
+off-box retrieval and a measured ordinary production release close issue164's
+remaining gates. No version, custody, storage schema, scheduler or production
+lifecycle change follows from this preparation boundary.
+
 ## 2026-10-11 — Count Spanish note prose separately from required inspection material
 
 The original #231 caller asks for a three-sentence note and inspectable NASA

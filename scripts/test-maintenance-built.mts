@@ -202,6 +202,11 @@ try {
   "Actual external built application CSS must load through TLS ingress and expose its rules");
   assert.equal(styles.bodyMargin, "0px", "Built application reset must apply; inline component styles alone do not qualify");
   const noticeBox = await page.getByRole("status").filter({ hasText: window.message }).boundingBox();
+  const advanceViewport = { format: "keryx-maintenance-advance-viewport-v1", sourceSha: proof.sourceSha,
+    sourceTree: proof.sourceTree, viewport: page.viewportSize(), noticeBox,
+    scrollY: await page.evaluate(() => globalThis.scrollY), styles };
+  proof.advanceViewport = advanceViewport;
+  console.log(JSON.stringify(advanceViewport));
   assert.ok(noticeBox && noticeBox.y >= 0 && noticeBox.y + noticeBox.height <= 720, "Advance banner must be visible in the initial viewport");
   await page.close(); assert.deepEqual(forbidden, []);
   await delay(Math.max(0, Date.parse(window.startsAt) - Date.now() + 20));
