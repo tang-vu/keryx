@@ -6,12 +6,50 @@ const feed = "https://creator.example/releases.atom";
 const source = { id: "creator", name: "Creator releases", rssUrl: feed };
 
 describe("original caller newest-feed safety constraint", () => {
-  it("retains the full archived issue217 command as a hold without inventing an anaphoric feed scope", () => {
+  it("qualifies the exact adjacent registered-creator feed binding in the full archived issue217 command", () => {
     const requirement = recognizeSourceRecency(ISSUE217_ORIGINAL_QUESTION)!;
-    expect(requirement).toMatchObject({ kind: "newest-feed-entry", status: "unsupported", binding: "exact-feeds",
-      feedUrls: ["https://github.com/tang-vu/keryx/releases.atom"], reason: "unsupported-temporal-form" });
+    expect(requirement).toMatchObject({ kind: "newest-feed-entry", status: "explicit-single-feed", binding: "exact-feeds",
+      feedUrls: ["https://github.com/tang-vu/keryx/releases.atom"], reason: "newest-feed-observation-unqualified" });
     expect(ISSUE217_ORIGINAL_QUESTION.slice(requirement.originalSpan.start)).toMatch(/^In English, name the newest release tag/);
+    expect(ISSUE217_ORIGINAL_QUESTION.slice(requirement.originalSpan.start, requirement.originalSpan.end))
+      .toBe("In English, name the newest release tag actually present in the feed");
     expect(sourceRecencyGap(requirement, { ...source, rssUrl: requirement.feedUrls[0] })).not.toBeNull();
+  });
+
+  it("binds the finite role wording without hardcoding a vendor, release tag or analyst context", () => {
+    const requirement = recognizeSourceRecency(`Read the registered, verified creator release source associated with ${feed}. In English, name the newest release tag actually present in the feed.`)!;
+    expect(requirement).toMatchObject({ status: "explicit-single-feed", binding: "exact-feeds", feedUrls: [feed] });
+  });
+
+  it.each([
+    `Do not read the registered, verified creator release source associated with ${feed}.`,
+    `Do not\nread the registered, verified creator release source associated with ${feed}.`,
+    `Example:\nRead the registered, verified creator release source associated with ${feed}.`,
+    `"Read the registered, verified creator release source associated with ${feed}."`,
+    `'Read the registered, verified creator release source associated with ${feed}.'`,
+    `\`Read the registered, verified creator release source associated with ${feed}.\``,
+    `Read the registered, verified creator release source associated with ${feed}. Explain compatibility.`,
+    `Read a public reference associated with ${feed}.`,
+    `Read the registered, verified creator release source associated with ${feed} and https://other.example/feed.`,
+  ])("does not grant the adjacent capability from an unqualified Read binding: %s", binding => {
+    expect(recognizeSourceRecency(`${binding} In English, name the newest release tag actually present in the feed.`)?.status).not.toBe("explicit-single-feed");
+  });
+
+  it.each([
+    "In English, do not name the newest release tag actually present in the feed.",
+    "In English, do not\nname the newest release tag actually present in the feed.",
+    '"In English, name the newest release tag actually present in the feed."',
+    "Example:\nIn English, name the newest release tag actually present in the feed.",
+    "In English, name the newest stable release tag actually present in the feed.",
+    "In English, name the newest prerelease tag actually present in the feed.",
+    "In English, name the newest release tag before a cutoff actually present in the feed.",
+    "In English, name the newest release tag actually present in the retained feed.",
+    "In English, name the newest release tag actually present in another feed.",
+    "In English, name the newest release tag actually present in the feed among cached entries.",
+    "In English, name the newest release tag actually present in the feed. Name the newest release in the feed.",
+    "In English, name the newest release tag actually present in the feed. Do not name the newest release.",
+  ])("does not promote a negated, quoted, ambiguous or unsupported contextual directive: %s", command => {
+    expect(recognizeSourceRecency(`Read the registered, verified creator release source associated with ${feed}. ${command}`)?.status).not.toBe("explicit-single-feed");
   });
 
   it.each([
