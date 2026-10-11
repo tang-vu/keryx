@@ -34,6 +34,7 @@ async function run(file: string) {
 }
 
 try {
+  await run("scripts/test-browser-globe-initial-layout.mts");
   await run("scripts/test-browser-research-form.mts");
   await run("scripts/test-browser-ask-isolation.mts");
   await run("scripts/test-browser-selection-failure.mts");
