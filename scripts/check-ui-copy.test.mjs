@@ -224,3 +224,20 @@ test("personal dispatch metadata, accessibility, empty states and toast copy are
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("registration, bulk import and feed verification copy is catalogued; protocol and source examples stay data", () => {
+  const retained = {
+    "app/register/page.tsx": ["https://your-site.example/feed.xml"],
+    "components/keryx/register-form.tsx": ["register-tx", "register-tx", "https://yourblog.com/feed.xml",
+      "Stablecoin Ledger", "https://yourblog.com", "$0.005", "$0.040", "https://your-agent.com/keryx-hook",
+      "X-Keryx-Signature", "sha256=hex(hmac_sha256(secret, rawBody))"],
+    "components/keryx/bulk-import-form.tsx": [],
+    "components/keryx/bulk-import-results.tsx": [],
+    "components/keryx/feed-verification-panel.tsx": [],
+    "components/keryx/owner-feed-verification.tsx": [],
+    "components/keryx/claim-onchain-panel.tsx": [],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+});

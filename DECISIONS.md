@@ -7171,3 +7171,20 @@ deployment/readback belongs to the existing serialized runtime batch. Packaging
 refuses invalid descriptions/versions before archive writes. Keep the historical
 legal extraction fixture and require every paragraph outside the reviewed extension
 section and dated update to retain its exact markup.
+
+## 2026-10-11 — Catalogue registration presentation while preserving phase authority
+
+Move ordinary creator registration, bulk import, feed proof and pre-registry
+adoption English into a typed catalogue. Whole messages and named interpolation
+preserve links, emphasis and data; one/other count arms retain the original English.
+Project the seven existing phase titles in `lib/i18n/` without changing registry
+preparation, receipt/index evidence, wallet fences, price limits or verification
+callbacks. Keep example URLs/names/prices, toast IDs and webhook identities as data,
+and retire only the 155 actually migrated guard occurrences. Glossary and locale
+activation remain held. Existing unnamed bulk controls and externally supplied
+helper prose are separate root qualification items, not hidden behavior changes.
+
+See [the registration catalogue record](docs/engineering/registration-catalogue-2026-10-11.md)
+for exact render/status, intercepted action and retained-CSS evidence. Original #272
+remains open for remaining areas and root's reviewed combined integration,
+exact-source CI and serialized delivery.
