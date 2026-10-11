@@ -7364,3 +7364,14 @@ callback checks do not claim live payment integration. Record unchanged320px
 overflow for a separate root layout decision. Remaining original272 areas and
 combined review/CI/distribution/delivery stay open; see
 `docs/engineering/withdrawal-catalogue-2026-10-11.md`.
+
+## 2026-10-11 — English landing and fallback catalogue
+
+Extract marketing, metadata/JSON-LD, activity/totals, fallback pages, brand prose,
+launch accessibility and dialog close labels into65 typed English messages. Keep
+the social headline as one message with its explicit presentation line break.
+Retire only44 scoped guard occurrences; preserve protocol, status and brand data.
+Exact render comparisons, practical browser/control checks and existing catalogue
+tests qualify English parity; root qualifies the combined Next layout/build and
+owns review/CI/distribution/delivery. Original272 and glossary/locale gates remain
+open. See `docs/engineering/landing-catalogue-2026-10-11.md`.
