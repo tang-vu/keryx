@@ -137,3 +137,34 @@ Useful supported comparisons/checklists, actual ordinary-client exports,
 independent legitimate Arc settlement and user evidence remain open under
 #172/#169/#128. #158's initial model-call failure also remains unexplained by
 this source-selection repair. Richer synthesis stays disabled under D-300.
+
+## Original-caller recovery guidance — October 11, 2026
+
+The shared selection failure message now explains that a read proposal must name
+an offered source and link to nonempty integer indexes in the existing plan. It
+shows the diagnostic's bounded target range and asks the caller to inspect or
+save the diagnostic while retaining the original question, requested URLs and
+comparison dimensions. The refusal grants neither an automatic retry nor a
+completed report. This is guidance after validation; it does not repair links,
+change planning, add a provider attempt or release consumed allowance holds.
+
+The existing exact frozen Vietnamese SQLite question/hash and representative
+eight-target pipeline now exercise missing, empty, wrong-type, non-integer and
+out-of-range links both beside valid originals and in all-invalid selections.
+Valid proposals still reach the two exact reader adapters; invalid distractors
+never read or pay. Terminal cases retain the two original synthetic call/token
+records and export the existing bounded failure artifact without source URLs,
+provider values or a fabricated report/receipt. Existing systemd planning tests
+retain seven distinct behavior/risk/precheck targets and source qualifications.
+These are synthetic responses, not the missing historical provider payloads or
+a guarantee of SQLite consistency, restoration or useful live synthesis.
+
+Web/SSE, OpenAI JSON/streams, hosted remote MCP and repository CLI share
+`researchFailureMessage`; their diagnostic and error contracts remain unchanged.
+Bots retain their existing generic failure messages and shared strict engine
+behavior. Stdio MCP, native desktop/Operator and extensions retain their hosted
+handoff and custody boundaries. No client package, schema or activation change
+is required for this shared message. Source review, applicable hosted CI
+and root-owned delivery remain separate gates. Original #169 and #172 remain
+open: the separately authorized finite live usefulness retest cannot run under
+the exhausted allowance. Earlier observations and failed holds are unchanged.

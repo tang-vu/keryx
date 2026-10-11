@@ -89,7 +89,12 @@ export function researchFailureMessage(error: unknown): string {
     const limit = failureOutputLimitMessage(error);
     const diagnostic = error.diagnostic;
     const reasons = [...new Set(diagnostic.reasons.map(item => item.code))].join(", ");
-    return `${limit}${error.message}\nDiagnostic: ${diagnostic.id}${reasons ? ` (${reasons})` : ""}`;
+    const targetLinks = diagnostic.counts.targetCount > 0
+      ? `nonempty integer target links from the existing plan (0–${diagnostic.counts.targetCount - 1})`
+      : "a valid target from an existing research plan";
+    return `${limit}${error.message}\nDiagnostic: ${diagnostic.id}${reasons ? ` (${reasons})` : ""}\n` +
+      `Inspect or save this diagnostic: each read proposal must name an offered source and use ${targetLinks}. ` +
+      "Keep the original question, requested source URLs and comparison dimensions. This refusal does not authorize an automatic retry or a completed report.";
   }
   if (!(error instanceof ResearchPlanningError)) return error instanceof Error ? error.message : String(error);
   const limit = failureOutputLimitMessage(error, error.language);
