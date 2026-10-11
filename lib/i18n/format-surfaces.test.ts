@@ -6,6 +6,9 @@ import { DisplayTime } from "../../components/keryx/display-time";
 import { SigningAmount } from "../../components/keryx/signing-amount";
 import { GrantSpendDialog } from "../../components/keryx/grant-spend-dialog";
 import { SessionActiveCard } from "../../components/keryx/session-active-card";
+import { AnswerDeltaPanel } from "../../components/keryx/answer-delta";
+import { PendingReconciliationSection } from "../../components/keryx/pending-reconciliation-section";
+import type { AnswerDelta } from "../answers-delta";
 import type { GrantState } from "../hooks/use-session-grant";
 import { formatAmount, formatNumber, type DisplayLocale } from "./format";
 import { shippedUiLocales } from "./locales";
@@ -18,6 +21,38 @@ import { toCsv } from "../creator/csv";
 import type { QueryRun } from "../types";
 
 describe("locale display consumers preserve verification and machine contracts", () => {
+  it("subtracts known settlement legs in integer micros without repairing unknown legs", () => {
+    const base: AnswerDelta = { previousId: "previous", currentId: "current", addedSources: [],
+      removedSources: [], retainedSources: 0, changedAssets: [], previousCitations: 0,
+      currentCitations: 0, previousEvidenceSpans: null, currentEvidenceSpans: null,
+      coverage: null, previousConfidence: null, currentConfidence: null, settlement: null };
+    for (const [previous, current, expected] of [[0.2, 0.3, "+$0.1000"],
+      [0.3, 0.2, "−$0.1000"], [0.2, 0.2, "$0.0000"],
+      [0, 0.000001, "+$0.000001"]] as const) {
+      const delta = { ...base, settlement: { previousTotalUsdc: previous,
+        currentTotalUsdc: current, deltaUsdc: current - previous } };
+      const before = JSON.stringify(delta);
+      const html = renderToStaticMarkup(createElement(AnswerDeltaPanel, { delta }));
+      expect(html).toContain(expected);
+      expect(html).not.toContain("Amount unavailable");
+      expect(JSON.stringify(delta)).toBe(before);
+    }
+    const html = renderToStaticMarkup(createElement(AnswerDeltaPanel, { delta: { ...base,
+      settlement: { previousTotalUsdc: 0.0000001, currentTotalUsdc: 0, deltaUsdc: -0.0000001 } } }));
+    expect(html).toContain("Amount unavailable");
+    expect(html).not.toContain("−$");
+    expect(html).not.toContain("+$");
+  });
+  it("does not normalize an invalid recorded reconciliation date before validation", () => {
+    const invalid = "2026-02-30T00:00:00Z";
+    const html = renderToStaticMarkup(createElement(PendingReconciliationSection, { reconciliation: {
+      checkedAt: "2026-10-11T00:00:00Z", scanned: 1, promoted: 0, awaiting: 1,
+      failed: 0, mismatched: 0, raced: 0, oldestPendingAt: invalid,
+      oldestPendingAgeSeconds: null, earliestAuthorizationExpiresAt: invalid,
+      status: "awaiting", degraded: false } }));
+    expect(html).toContain("<span>Unavailable</span>");
+    expect(html).not.toContain("2026-03-02");
+  });
   it("keeps every grant consent variant ungrouped, exact and free of callback execution", () => {
     const forbidden = () => { throw new Error("Display review must not call an action"); };
     for (const durationSeconds of [undefined, 3600]) for (const questionCapUsdc of [undefined, 1000.000001]) {

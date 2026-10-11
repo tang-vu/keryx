@@ -1,4 +1,4 @@
-import { formatRecordedAmount, selectPlural } from "@/lib/i18n/format";
+import { formatAmount, formatRecordedAmount, recordedUsdcMicros, selectPlural } from "@/lib/i18n/format";
 /** Public receipt-to-receipt comparison for a same-question re-ask. */
 
 import { createMessages } from "@/lib/i18n/messages";
@@ -11,9 +11,15 @@ function pct(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
 
-function signedUsdc(value: number): string {
-  if (Math.abs(value) < 0.0000005) return "$0.0000";
-  return `${value > 0 ? "+" : "−"}$${formatRecordedAmount(Math.abs(value), { minimumFractionDigits: 4 })}`;
+function signedUsdc(settlement: NonNullable<AnswerDelta["settlement"]>): string {
+  const previous = recordedUsdcMicros(settlement.previousTotalUsdc);
+  const current = recordedUsdcMicros(settlement.currentTotalUsdc);
+  if (previous === null || current === null) return copy("answerDelta.notProvable");
+  const difference = current - previous;
+  const zero = BigInt(0);
+  const amount = formatAmount(difference < zero ? -difference : difference,
+    { denomination: "$", minimumFractionDigits: 4 });
+  return `${difference > zero ? "+" : difference < zero ? "−" : ""}${amount}`;
 }
 
 export function AnswerDeltaPanel({ delta }: { delta: AnswerDelta }) {
@@ -54,7 +60,7 @@ export function AnswerDeltaPanel({ delta }: { delta: AnswerDelta }) {
         />
         <DeltaCell
           label={copy("answerDelta.settled")}
-          value={delta.settlement ? signedUsdc(delta.settlement.deltaUsdc) : copy("answerDelta.notProvable")}
+          value={delta.settlement ? signedUsdc(delta.settlement) : copy("answerDelta.notProvable")}
           detail={
             delta.settlement
               ? `$${formatRecordedAmount(delta.settlement.previousTotalUsdc, { minimumFractionDigits: 4 })} → $${formatRecordedAmount(delta.settlement.currentTotalUsdc, { minimumFractionDigits: 4 })}`

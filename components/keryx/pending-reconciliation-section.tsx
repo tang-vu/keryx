@@ -113,8 +113,7 @@ export function PendingReconciliationSection({
 
 function formatDate(value: string | null | undefined) {
   if (!value) return message("statusReconciliation.none");
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? <DisplayTime value={parsed} /> : message("statusReconciliation.unknown");
+  return <DisplayTime value={value} />;
 }
 
 function formatAge(seconds: number | null): string {
