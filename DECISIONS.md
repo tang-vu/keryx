@@ -202,6 +202,26 @@ Automatic reading/semantic review, expert metrics and coordinated deployment rem
 gated; no receipt, payment, budget or custody authority changes. See
 [scope, surfaces and acceptance](docs/evidence-drafts.md).
 
+**Bind related-work statements to retained excerpts and verify the reference set — 2026-10-11.**
+Issue 283 asks that every sentence about a paper cite it and link the excerpt it
+relies on. Free-form theme notes could not carry that guarantee, so themes gain
+optional author-written statements with a kind, the exact Include papers they
+name and the retained excerpts they rely on. A statement is exported only when
+every named paper has a selected excerpt from that exact record and version;
+otherwise it is withheld with a reason, not exported without evidence and not
+refused, so one unfinished sentence never blocks the rest of a draft. Unknown,
+changed or foreign excerpt selections still refuse the request. The binding is
+structural: no model writes a statement and nothing judges whether an excerpt
+supports the wording. Exports are now re-read and refused unless cited keys and
+BibTeX, RIS and Markdown reference entries correspond one to one, and Markdown
+escapes `@` so author text cannot form a citation key. The contract stays
+version 1 because the field is optional and existing packets build unchanged.
+An offline scorer reports coverage against a supplied reference section and the
+unsupported-statement rate from supplied reviewer judgments; it marks synthetic
+fixtures and partly judged reviews as not measured. Expert review sets, measured
+rates, model-assisted prose and agent-proposed candidates remain open. See
+[statements, correspondence and scorer](docs/evidence-drafts.md).
+
 ## 2026-10-09 — Keep exact native proof for one retained pre-CSL presentation
 
 Derived CSL exports changed the current A2A constructor without changing a

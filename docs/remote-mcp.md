@@ -30,7 +30,8 @@ The [private evidence-draft source candidate](evidence-drafts.md) adds stateless
 `evidence_draft(draft)`, sharing the browser/API version-1 contract. It processes
 caller-supplied retained report rows and Include records without retrieving private
 history or calling research, payments, providers or storage. Imported origin remains
-unverified and support assessments remain explicitly user supplied. Your MCP client
+unverified and support assessments remain explicitly user supplied. Optional
+author-written statements are bound to selected retained excerpts or withheld. Your MCP client
 may retain private tool messages. Existing MCP transport/key/Origin policy still
 applies; source registration is not deployed acceptance or package publication.
 
