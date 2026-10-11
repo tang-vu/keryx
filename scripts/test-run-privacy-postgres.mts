@@ -56,7 +56,10 @@ try {
     amountUsdc:0.030001,creatorBudgetUsdc:0.010001,serviceFeeUsdc:0.02,transaction:`0x${"c".repeat(64)}`};
   sql(`insert into a2a_orders(query_id,status,created_at,amount_usdc,creator_budget_usdc,service_fee_usdc,transaction_id,request_data,response_data,authorization_id)
     values('${pendingId}','running','${date}',0.030001,0.010001,0.02,'${pending.transaction}',${literal({question:"SECRET pending"})},${literal({answer:"SECRET pending"})},'SECRET nonce');`);
-  assert.deepEqual(call("pending",pendingId,{},null),pending);
+  const pendingPacket=call("pending",pendingId,{},null);
+  // PostgreSQL emits timestamptz as an offset string; compare the exact instant.
+  assert.equal(Date.parse(pendingPacket.createdAt),Date.parse(date));
+  assert.deepEqual({...pendingPacket,createdAt:date},pending);
   assert.throws(()=>call("pending",pendingId,{},null,false,"anon"));
   save(pendingId);assert.equal(call("pending",pendingId,{},null),null);
   assert.equal(call("read","owned",{},null).item,null);assert.equal(call("read","owned",{},actor).item.run.answer,"SECRET answer");
