@@ -219,21 +219,22 @@ function readSourceManifest(candidate, expected) {
 function snapshotTree(root) {
   const entries = [], buffer = Buffer.alloc(65536);
   const deadline = performance.now() + 120000;
-  const check = stat => {
+  const check = (stat, file = root) => {
     if (performance.now() > deadline) refuse('snapshot-deadline');
     if (process.platform !== 'win32' && !stat.isSymbolicLink() &&
-        (stat.uid !== BigInt(process.getuid()) || stat.mode & 0o022n)) refuse('artifact-owner-or-mode');
+        (stat.uid !== BigInt(process.getuid()) || stat.mode & 0o022n))
+      refuse(`artifact-owner-or-mode:${path.relative(root, file).split(path.sep).join('/') || '.'}`);
   };
   let total = 0;
   function visit(directory) {
     const before = fs.lstatSync(directory, { bigint: true });
-    check(before);
+    check(before, directory);
     if (!before.isDirectory() || before.isSymbolicLink()) refuse();
     for (const name of fs.readdirSync(directory).sort()) {
       const file = path.join(directory, name), relative = path.relative(root, file).split(path.sep).join('/');
       relativeName(relative);
       const stat = fs.lstatSync(file, { bigint: true });
-      check(stat);
+      check(stat, file);
       if (entries.length >= limits.artifactFiles) refuse('artifact-entry-limit');
       if (stat.isDirectory()) {
         entries.push({ path: relative, type: 'directory' }); visit(file);

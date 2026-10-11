@@ -6,7 +6,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { stageImmutableSource, recordImmutableArtifact } from './immutable-release-staging.mjs';
-import { copyPreparationDependencies } from './prepare-immutable-release.mjs';
+import { copyPreparationDependencies, protectPreparationCopy } from './prepare-immutable-release.mjs';
 import { rehearsePreparedRelease } from './rehearse-prepared-release.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -29,8 +29,13 @@ try {
   fs.cpSync(path.join(repo, '.next'), path.join(staged.source, '.next'), {
     recursive: true, dereference: false, verbatimSymlinks: true, force: false, errorOnExist: true,
   });
+  evidence.protectedBuildEntries = protectPreparationCopy(path.join(staged.source, '.next'));
   for (const file of ['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo'])
-    if (fs.existsSync(path.join(repo, file))) fs.copyFileSync(path.join(repo, file), path.join(staged.source, file), fs.constants.COPYFILE_EXCL);
+    if (fs.existsSync(path.join(repo, file))) {
+      const destination = path.join(staged.source, file);
+      fs.copyFileSync(path.join(repo, file), destination, fs.constants.COPYFILE_EXCL);
+      if (process.platform !== 'win32') fs.chmodSync(destination, 0o600);
+    }
   const traceInventory = { files: 0, references: 0, largestTrace: 0, versions: [] };
   const visit = directory => {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {

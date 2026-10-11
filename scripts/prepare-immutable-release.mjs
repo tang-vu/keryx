@@ -44,6 +44,26 @@ function exclusiveReceipt(file, value) {
   return hash(bytes);
 }
 
+/** Only independently copied build/dependency trees are protected here. Never
+ * chmod their installation/build inputs or relax the artifact inspector. */
+export function protectPreparationCopy(directory) {
+  if (!['node_modules', '.next'].includes(path.basename(directory))) refuse();
+  let protectedEntries = 0;
+  const visit = file => {
+    const stat = fs.lstatSync(file);
+    if (stat.isSymbolicLink()) return; // Inspector still proves link containment.
+    if ((!stat.isDirectory() && !stat.isFile()) || stat.isFile() && stat.nlink !== 1 ||
+        process.platform !== 'win32' && stat.uid !== process.getuid()) refuse();
+    if (process.platform !== 'win32' && stat.mode & 0o022) {
+      fs.chmodSync(file, stat.mode & 0o777 & ~0o022); protectedEntries++;
+    }
+    if (stat.isDirectory()) for (const name of fs.readdirSync(file)) visit(path.join(file, name));
+  };
+  if (!fs.lstatSync(directory).isDirectory() || fs.lstatSync(directory).isSymbolicLink()) refuse();
+  visit(directory);
+  return protectedEntries;
+}
+
 /** Reuse only a *copy* of independently installed dependencies. Source is read-only;
  * fs.cp never hardlinks or leaves a serving-directory junction in the candidate.
  * Byte inspection subsequently rejects external links and missing trace files. */
@@ -86,10 +106,11 @@ export function copyPreparationDependencies({ source, dependencies }) {
   fs.cpSync(dependencies, path.join(source, 'node_modules'), {
     recursive: true, dereference: true, errorOnExist: true, force: false,
   });
+  const protectedEntries = protectPreparationCopy(path.join(source, 'node_modules'));
   if (hash(fs.readFileSync(path.join(source, 'node_modules', '.package-lock.json'))) !== hash(installed) ||
       hash(fs.readFileSync(path.join(dependencies, '.package-lock.json'))) !== hash(installed)) refuse();
   return { lockSha256: hash(lock), installedLockSha256: hash(installed),
-    copiedFiles: files, copiedBytes: bytes, method: 'independent-file-copy' };
+    copiedFiles: files, copiedBytes: bytes, protectedEntries, method: 'independent-file-copy' };
 }
 
 /** Commands are fixed and run sequentially, before artifact recording and any hold.
@@ -147,13 +168,14 @@ export function prepareImmutableRelease({ repo, releasesDir, commit, dependencie
   fs.mkdirSync(scratch, { mode: 0o700 });
   const inputs = copyPreparationDependencies({ source: staged.source, dependencies });
   const checks = runPreparationChecks({ staged, scratch, npmCli });
+  const protectedBuildEntries = protectPreparationCopy(path.join(staged.source, '.next'));
   const artifact = recordImmutableArtifact(staged);
   verifyImmutableArtifact({ ...staged, artifactInspectionSha256: artifact.artifactInspectionSha256 });
   const receipt = { format: 'keryx-immutable-preparation-v1', productionAdmitted: false,
     startedAt, elapsedMs: Math.round(performance.now() - started), commit: staged.commit,
     tree: artifact.tree, sourceManifestSha256: staged.sourceManifestSha256,
     artifactInspectionSha256: artifact.artifactInspectionSha256,
-    artifactDigest: artifact.artifactDigest, buildId: artifact.buildId, inputs, checks,
+    artifactDigest: artifact.artifactDigest, buildId: artifact.buildId, inputs, checks, protectedBuildEntries,
     scratch, writerHoldStarted: false, runtimeEnvironmentLoaded: false };
   const preparationSha256 = exclusiveReceipt(path.join(staged.candidate, 'preparation.json'), receipt);
   return { ...staged, ...receipt, preparationSha256 };

@@ -304,6 +304,7 @@ Run the built-in-only checks:
 ```bash
 node --test scripts/immutable-release-staging.test.mjs
 node --test scripts/prepare-immutable-release.test.mjs scripts/redeploy.test.mjs
+node --test scripts/rehearse-prepared-release.test.mjs
 node scripts/rehearse-immutable-release.mjs
 ```
 
@@ -318,6 +319,12 @@ uses a local filesystem transport witness, with no socket or remote service, to
 prove staging refuses without invoking the fetch transport.
 Device-name regression inputs use raw synthetic Git objects without creating or
 opening any device-named path.
+
+Independent dependency/build copies remove group/world write permission before
+inspection, without changing their input trees or executable bits. The inspector
+continues to refuse writable artifacts. Runtime rehearsal completion waits for
+child close and both stdout/stderr pipes, retaining the full positive drain receipt
+even when buffered output arrives after process exit.
 
 The rehearsal keeps a synthetic reader running against the predecessor while it
 prepares and inspects the candidate, then positively exits that reader, rechecks

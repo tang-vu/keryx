@@ -241,6 +241,13 @@ test('hardlinked dependencies refuse shared mutable storage', t => {
   assert.throws(() => recordImmutableArtifact(staged));
 });
 
+test('group-writable artifact copies refuse rather than weaken the inspection policy', { skip: process.platform === 'win32' }, t => {
+  const staged = fixture(t).stage(); addSyntheticArtifact(staged);
+  fs.chmodSync(path.join(staged.source, 'node_modules', 'fixture', 'index.js'), 0o666);
+  assert.throws(() => recordImmutableArtifact(staged), /artifact-owner-or-mode:node_modules\/fixture\/index.js/);
+  assert.equal(fs.existsSync(path.join(staged.candidate, 'artifact-inspection.json')), false);
+});
+
 test('internal npm executable links are contained; external directory symlinks refuse', t => {
   const staged = fixture(t).stage(); addSyntheticArtifact(staged);
   const dependency = path.join(staged.source, 'node_modules');

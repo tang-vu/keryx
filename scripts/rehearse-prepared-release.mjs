@@ -18,8 +18,8 @@ const program = `
   process.send({ ...running.receipt, source: process.argv[2] });
 `;
 
-async function start(source, env, scratch, label) {
-  const child = spawn(process.execPath, ['--input-type=module', '-e', program,
+export async function startPreparedPublicRole(source, env, scratch, label, spawnRole = spawn) {
+  const child = spawnRole(process.execPath, ['--input-type=module', '-e', program,
     path.join(source, 'scripts/next-public-server.mjs'), source], {
     cwd: scratch, env, stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true,
   });
@@ -30,9 +30,17 @@ async function start(source, env, scratch, label) {
     const remaining = 4 * 1024 * 1024 - output.length;
     if (remaining > 0) { const retained = bytes.subarray(0, remaining); fs.writeSync(log, retained); output += retained; }
   });
+  let processError, exit;
   const exited = new Promise((resolve, reject) => {
-    child.once('error', reject);
-    child.once('exit', (code, signal) => { fs.fsyncSync(log); fs.closeSync(log); resolve({ code, signal }); });
+    child.once('error', error => { processError = error; });
+    child.once('exit', (code, signal) => { exit = { code, signal }; });
+    // Child exit does not establish stdout/stderr EOF. Close follows both pipe
+    // closures, so buffered closed-receipt bytes remain part of the raw log.
+    child.once('close', (code, signal) => {
+      fs.fsyncSync(log); fs.closeSync(log);
+      if (processError) reject(processError);
+      else resolve(exit ?? { code, signal });
+    });
   });
   exited.catch(() => {});
   const ready = await Promise.race([
@@ -78,7 +86,7 @@ export async function rehearsePreparedRelease(options) {
   const initialStarted = performance.now();
   let active;
   try {
-  const predecessor = await start(source, env, scratch, 'predecessor'); active = predecessor;
+  const predecessor = await startPreparedPublicRole(source, env, scratch, 'predecessor'); active = predecessor;
   const initial = await health(before.commit);
   const initialReadyMs = Math.round(performance.now() - initialStarted);
   const startedAt = new Date().toISOString(), maintenanceStarted = performance.now();
@@ -87,7 +95,7 @@ export async function rehearsePreparedRelease(options) {
   const drainedAt = performance.now();
   // Rehash all exact candidate bytes at the actual handover boundary.
   const after = verifyImmutableArtifact(options); assert.deepEqual(after, before);
-  const replacement = await start(source, env, scratch, 'replacement'); active = replacement;
+  const replacement = await startPreparedPublicRole(source, env, scratch, 'replacement'); active = replacement;
   const final = await health(before.commit);
   const handoverMs = Math.round(performance.now() - maintenanceStarted);
   const postDrainReadinessMs = Math.round(performance.now() - drainedAt);

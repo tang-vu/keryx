@@ -68,6 +68,7 @@ test('dependency copy has separate file identity and refuses substituted install
   fs.writeFileSync(path.join(f.source, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages }));
   fs.mkdirSync(path.join(f.dependencies, 'fixture'));
   const original = path.join(f.dependencies, 'fixture', 'index.js'); fs.writeFileSync(original, 'synthetic original');
+  if (process.platform !== 'win32') fs.chmodSync(original, 0o777);
   const installed = path.join(f.dependencies, '.package-lock.json');
   fs.writeFileSync(installed, JSON.stringify({ lockfileVersion: 3, packages: { 'node_modules/fixture': { ...entry, integrity: 'changed' } } }));
   assert.throws(() => copyPreparationDependencies(f));
@@ -76,6 +77,10 @@ test('dependency copy has separate file identity and refuses substituted install
   copyPreparationDependencies(f);
   const copied = path.join(f.source, 'node_modules', 'fixture', 'index.js');
   assert.equal(fs.lstatSync(copied).nlink, 1);
+  if (process.platform !== 'win32') {
+    assert.equal(fs.statSync(copied).mode & 0o777, 0o755);
+    assert.equal(fs.statSync(original).mode & 0o777, 0o777);
+  }
   fs.writeFileSync(copied, 'candidate only');
   assert.equal(fs.readFileSync(original, 'utf8'), 'synthetic original');
   assert.throws(() => copyPreparationDependencies(f));
