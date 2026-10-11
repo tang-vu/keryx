@@ -10,7 +10,9 @@ const MiB = 1024 * 1024;
 const limits = { sourceBytes: 256 * MiB, blobBytes: 32 * MiB, sourceFiles: 10000,
   artifactBytes: 8 * 1024 * MiB, artifactFiles: 250000, manifestBytes: 4 * MiB };
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
-const refuse = () => { throw Error('Immutable staging refused; retain candidate and existing releases for inspection.'); };
+const refuse = (reason = 'input-or-integrity') => {
+  throw Error(`Immutable staging refused (${reason}); retain candidate and existing releases for inspection.`);
+};
 const signature = stat => [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs].join('|');
 const inside = (root, file) => {
   // Windows case aliases must not bypass source/release or trace containment.
@@ -26,7 +28,7 @@ const windowsDeviceName = /^(?:con|prn|aux|nul|com[1-9\u00b9\u00b2\u00b3]|lpt[1-
 function relativeName(name) {
   if (typeof name !== 'string' || name.length < 1 || name.length > 512 ||
       /[\x00-\x1f\x7f\\:*?"<>|\ufffd]/u.test(name) || path.posix.isAbsolute(name) ||
-      name.split('/').some(part => !part || part === '.' || part === '..' || /[. ]$/.test(part) || windowsDeviceName.test(part))) refuse();
+      name.split('/').some(part => !part || part === '.' || part === '..' || /[. ]$/.test(part) || windowsDeviceName.test(part))) refuse('nonportable-path');
   return name;
 }
 
@@ -218,8 +220,9 @@ function snapshotTree(root) {
   const entries = [], buffer = Buffer.alloc(65536);
   const deadline = performance.now() + 120000;
   const check = stat => {
-    if (performance.now() > deadline || process.platform !== 'win32' &&
-        !stat.isSymbolicLink() && (stat.uid !== BigInt(process.getuid()) || stat.mode & 0o022n)) refuse();
+    if (performance.now() > deadline) refuse('snapshot-deadline');
+    if (process.platform !== 'win32' && !stat.isSymbolicLink() &&
+        (stat.uid !== BigInt(process.getuid()) || stat.mode & 0o022n)) refuse('artifact-owner-or-mode');
   };
   let total = 0;
   function visit(directory) {
@@ -231,18 +234,18 @@ function snapshotTree(root) {
       relativeName(relative);
       const stat = fs.lstatSync(file, { bigint: true });
       check(stat);
-      if (entries.length >= limits.artifactFiles) refuse();
+      if (entries.length >= limits.artifactFiles) refuse('artifact-entry-limit');
       if (stat.isDirectory()) {
         entries.push({ path: relative, type: 'directory' }); visit(file);
       } else if (stat.isSymbolicLink()) {
         const link = fs.readlinkSync(file), target = fs.realpathSync(file);
         if (path.isAbsolute(link) || !inside(root, target) || !fs.statSync(target).isFile() ||
-            signature(stat) !== signature(fs.lstatSync(file, { bigint: true }))) refuse();
+            signature(stat) !== signature(fs.lstatSync(file, { bigint: true }))) refuse('artifact-link');
         entries.push({ path: relative, type: 'symlink', link });
       } else {
-        if (!stat.isFile() || stat.nlink !== 1n || stat.size > BigInt(limits.artifactBytes)) refuse();
+        if (!stat.isFile() || stat.nlink !== 1n || stat.size > BigInt(limits.artifactBytes)) refuse('artifact-file-identity');
         total += Number(stat.size);
-        if (total > limits.artifactBytes) refuse();
+        if (total > limits.artifactBytes) refuse('artifact-byte-limit');
         const fd = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0) | fs.constants.O_NONBLOCK);
         const hash = createHash('sha256'); let size = 0;
         try {
@@ -280,28 +283,28 @@ export function inspectImmutableArtifact({ candidate, sourceManifestSha256 }) {
     while (directory !== '.') { directories.add(directory); directory = path.posix.dirname(directory); }
     const actual = byName.get(file.path);
     if (!actual || actual.type !== 'file' || actual.size !== file.size || actual.sha256 !== file.sha256 ||
-        process.platform !== 'win32' && actual.executable !== file.executable) refuse();
+        process.platform !== 'win32' && actual.executable !== file.executable) refuse('source-bytes-or-mode');
   }
   for (const entry of snapshot.entries) {
     if (permitted.has(entry.path) || directories.has(entry.path)) continue;
     const top = entry.path.split('/')[0];
     if (!['.next', 'node_modules'].includes(top) &&
-        !['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo'].includes(entry.path)) refuse();
+        !['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo'].includes(entry.path)) refuse('unexpected-source-entry');
   }
   const buildId = readStable(path.join(source, '.next', 'BUILD_ID'), 1024).toString().trim();
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(buildId) || !byName.has('node_modules') ||
-      !byName.has('.next/next-server.js.nft.json')) refuse();
+      !byName.has('.next/next-server.js.nft.json')) refuse('missing-build-identity-or-server-trace');
   let tracedFiles = 0;
   for (const entry of snapshot.entries.filter(entry => entry.path.startsWith('.next/') && entry.path.endsWith('.nft.json'))) {
     if (entry.type !== 'file') refuse();
     const tracePath = path.join(source, ...entry.path.split('/'));
     const trace = JSON.parse(readStable(tracePath, 4 * MiB));
-    if (trace.version !== 1 || !Array.isArray(trace.files) || trace.files.length > 100000) refuse();
+    if (trace.version !== 1 || !Array.isArray(trace.files) || trace.files.length > 100000) refuse('trace-format-or-limit');
     for (const name of trace.files) {
       if (typeof name !== 'string' || name.length > 1024 || path.isAbsolute(name) || /[\x00-\x1f\\]/.test(name)) refuse();
       const target = path.resolve(path.dirname(tracePath), name);
-      if (!inside(source, target) || !inside(source, fs.realpathSync(target)) || !fs.statSync(target).isFile()) refuse();
-      if (++tracedFiles > 500000) refuse();
+      if (!inside(source, target) || !inside(source, fs.realpathSync(target)) || !fs.statSync(target).isFile()) refuse('trace-containment');
+      if (++tracedFiles > 500000) refuse('trace-reference-limit');
     }
   }
   // Recheck after trace inspection; publication accepts only a stable cohort.

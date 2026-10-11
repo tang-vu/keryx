@@ -15,7 +15,7 @@ const commit = execFileSync('git', ['rev-parse', '--verify', 'HEAD'], { encoding
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'keryx-built-release-'));
 const releasesDir = path.join(root, 'releases'); fs.mkdirSync(releasesDir, { mode: 0o700 });
 const evidence = { format: 'keryx-existing-ci-build-rehearsal-v1', productionAdmitted: false,
-  commit, root, exactBuildSourceCompared: false, artifact: null, runtime: null, error: null };
+  commit, root, exactBuildSourceCompared: false, traceInventory: null, artifact: null, runtime: null, error: null };
 try {
   const staged = stageImmutableSource({ repo, releasesDir, commit });
   const manifest = JSON.parse(fs.readFileSync(path.join(staged.candidate, 'source-manifest.json')));
@@ -31,6 +31,21 @@ try {
   });
   for (const file of ['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo'])
     if (fs.existsSync(path.join(repo, file))) fs.copyFileSync(path.join(repo, file), path.join(staged.source, file), fs.constants.COPYFILE_EXCL);
+  const traceInventory = { files: 0, references: 0, largestTrace: 0, versions: [] };
+  const visit = directory => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const file = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(file);
+      else if (entry.isFile() && entry.name.endsWith('.nft.json')) {
+        const value = JSON.parse(fs.readFileSync(file));
+        traceInventory.files++;
+        traceInventory.references += value.files?.length ?? 0;
+        traceInventory.largestTrace = Math.max(traceInventory.largestTrace, value.files?.length ?? 0);
+        if (!traceInventory.versions.includes(value.version)) traceInventory.versions.push(value.version);
+      }
+    }
+  };
+  visit(path.join(staged.source, '.next')); evidence.traceInventory = traceInventory;
   const artifact = recordImmutableArtifact(staged);
   evidence.artifact = { ...staged, ...artifact };
   evidence.runtime = await rehearsePreparedRelease({ ...staged, artifactInspectionSha256: artifact.artifactInspectionSha256 });
