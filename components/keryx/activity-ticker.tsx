@@ -1,4 +1,6 @@
 "use client";
+import { DisplayTime } from "@/components/keryx/display-time";
+
 
 /**
  * Live citation ticker — a thin marquee of the most recent REAL settled citations
@@ -22,16 +24,8 @@ interface ActivityItem {
   createdAt: string;
 }
 
-function timeAgo(iso: string): string {
-  const d = new Date(iso).getTime();
-  if (isNaN(d)) return "";
-  const s = Math.max(0, Math.round((Date.now() - d) / 1000));
-  if (s < 60) return uiCopy(s === 1 ? "landingActivity.seconds.one" : "landingActivity.seconds.other", { count: s });
-  const m = Math.round(s / 60);
-  if (m < 60) return uiCopy(m === 1 ? "landingActivity.minutes.one" : "landingActivity.minutes.other", { count: m });
-  const h = Math.round(m / 60);
-  if (h < 24) return uiCopy(h === 1 ? "landingActivity.hours.one" : "landingActivity.hours.other", { count: h });
-  return uiCopy(Math.round(h / 24) === 1 ? "landingActivity.days.one" : "landingActivity.days.other", { count: Math.round(h / 24) });
+function timeAgo(iso: string) {
+  return <DisplayTime value={iso} relative />;
 }
 
 export function ActivityTicker() {

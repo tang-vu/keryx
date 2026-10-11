@@ -1,4 +1,7 @@
 "use client";
+import { selectPlural } from "@/lib/i18n/format";
+
+import { DisplayTime } from "@/components/keryx/display-time";
 
 import { createMessages } from "@/lib/i18n/messages";
 import type { QueryRun, PaymentRecord } from "@/lib/types";
@@ -43,7 +46,7 @@ export function DispatchView({
         <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
           {bibliography ? <span className="text-xs text-ink-3">{copy("reportDispatchView.bibliography")}</span> : confidence ? <ConfidenceBadge confidence={confidence} showReason /> : null}
           <p className="font-mono text-[10px] text-ink-3">
-            {new Date(run.createdAt).toLocaleString()} · {run.engine}
+            {<DisplayTime value={run.createdAt} />} · {run.engine}
           </p>
         </div>
       </div>
@@ -57,7 +60,7 @@ export function DispatchView({
 
       <details className="group mt-8 border border-line bg-paper">
         <summary className="cursor-pointer px-5 py-4 font-mono text-xs uppercase tracking-widest text-ink focus-visible:outline-2 focus-visible:outline-seal">
-          {copy(run.trace.length === 1 ? "reportDispatchView.steps.one" : "reportDispatchView.steps.other", { count: run.trace.length })}
+          {copy(selectPlural(run.trace.length) === "one" ? "reportDispatchView.steps.one" : "reportDispatchView.steps.other", { count: run.trace.length })}
         </summary>
         <div className="border-t border-line p-4">
           <ReasoningConsole steps={run.trace} streaming={false} budget={run.budget} />

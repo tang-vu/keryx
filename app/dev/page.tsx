@@ -1,4 +1,5 @@
 "use client";
+import { DisplayTime } from "@/components/keryx/display-time";
 
 /**
  * Developer Portal — wallet-gated API key management.
@@ -41,9 +42,9 @@ function copyToClipboard(text: string) {
   void navigator.clipboard.writeText(text).catch(() => null);
 }
 
-function fmtDate(iso: string | null): string {
+function fmtDate(iso: string | null) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return <DisplayTime value={iso} dateOnly />;
 }
 
 // ── Mini usage bar chart ──────────────────────────────────────────────────────

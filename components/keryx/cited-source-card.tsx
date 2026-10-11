@@ -1,3 +1,5 @@
+import { DisplayTime } from "@/components/keryx/display-time";
+import { formatDate } from "@/lib/i18n/format";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
@@ -14,8 +16,7 @@ const SCOPE_LABELS = {
   metadata_only: [copy("sourceCited.scope.metadata_only"), copy("sourceCited.scopeBounded.metadata_only")],
 };
 function dateLabel(value?: string) {
-  if (!value || !Number.isFinite(Date.parse(value))) return null;
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(value));
+  return value ? formatDate(value) : null;
 }
 
 /** Public citation metadata; never content delivery, ownership or payment authority. */
@@ -31,9 +32,9 @@ export function CitedSourceCard({ entry, compact = false }: { entry: CitedSource
     <p className="mt-4 text-sm leading-relaxed text-ink-2">
       {entry.deliveryKind ? (SCOPE_LABELS[entry.deliveryKind]?.[entry.truncated ? 1 : 0] ?? (entry.truncated ? copy("sourceCited.unclassifiedBounded") : undefined)) : copy(entry.truncated ? "sourceCited.scopeBounded.unrecorded" : "sourceCited.scope.unrecorded")}
     </p>
-    {!compact && <p className="mt-2 font-mono text-[11px] leading-relaxed text-ink-3">{retrieved ? <>{richCopy("sourceCited.observed", { date: <time dateTime={entry.retrievedAt}>{retrieved}</time> })}</> : copy("sourceCited.readUnavailable")}</p>}
+    {!compact && <p className="mt-2 font-mono text-[11px] leading-relaxed text-ink-3">{retrieved ? <>{richCopy("sourceCited.observed", { date: <DisplayTime value={entry.retrievedAt!} dateOnly /> })}</> : copy("sourceCited.readUnavailable")}</p>}
     <div className="mt-auto pt-4">
-      <p className="font-mono text-[11px] leading-relaxed text-ink-3">{cited ? <>{richCopy("sourceCited.lastCited", { date: <time dateTime={entry.citedAt}>{cited}</time> })}</> : copy("sourceCited.citationUnavailable")}</p>
+      <p className="font-mono text-[11px] leading-relaxed text-ink-3">{cited ? <>{richCopy("sourceCited.lastCited", { date: <DisplayTime value={entry.citedAt!} dateOnly /> })}</> : copy("sourceCited.citationUnavailable")}</p>
       <Link href={`/dispatch/${encodeURIComponent(entry.runId)}`} className="mt-1 inline-block min-h-11 py-3 font-mono text-[11px] text-seal underline underline-offset-4">{copy("sourceCited.inspect")}</Link>
     </div>
   </article>;

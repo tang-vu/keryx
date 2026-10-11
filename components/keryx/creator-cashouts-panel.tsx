@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fmtUsdc, shortAddr } from "./phase-style";
+import { DisplayTime } from "./display-time";
 import { recordedArcTransactionUrl,recordedArcLabel } from "@/lib/arc-network-display";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
@@ -26,16 +27,8 @@ import { createRichMessages } from "@/lib/i18n/rich-messages";
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
 
-function timeAgo(iso: string): string {
-  const d = new Date(iso).getTime();
-  if (isNaN(d)) return "—";
-  const s = Math.max(0, Math.round((Date.now() - d) / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.round(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.round(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.round(h / 24)}d`;
+function timeAgo(iso: string) {
+  return <DisplayTime value={iso} relative />;
 }
 
 export function CreatorCashoutsPanel({

@@ -1,3 +1,4 @@
+import { DisplayTime } from "@/components/keryx/display-time";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { claimControlIsFresh, SOURCE_CLAIM_PROOF_MAX_AGE_MS, type SourceClaim } from "@/lib/sources/public-source-claim";
@@ -6,7 +7,7 @@ const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
 
 export function ClaimTime({ value }: { value: string }) {
-  return <time dateTime={value}>{new Date(value).toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZoneName: "short" })}</time>;
+  return <DisplayTime value={value} />;
 }
 
 export function ClaimControlStatus({ claim, now }: { claim: SourceClaim; now: number }) {

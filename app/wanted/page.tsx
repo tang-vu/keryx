@@ -1,3 +1,5 @@
+import { formatRecordedAmount, selectPlural } from "@/lib/i18n/format";
+import { DisplayTime } from "@/components/keryx/display-time";
 /**
  * /wanted — the demand board: questions readers paid for that the corpus could not answer.
  *
@@ -109,7 +111,7 @@ export default async function WantedPage() {
           {uiRichCopy("wantedBoard.title", { emphasis: <em className="italic text-paid">{uiCopy("wantedBoard.titleEmphasis")}</em> })}
         </h1>
         <p className="mt-4 max-w-[62ch] font-serif text-[17px] leading-[1.55] text-ink-2">
-          {gaps.length > 0 ? uiCopy(gaps.length === 1 ? "wantedBoard.introduction.one" : "wantedBoard.introduction.other", { count: gaps.length, window: WANTED_WINDOW_RUNS }) : uiCopy("wantedBoard.empty", { window: WANTED_WINDOW_RUNS })}
+          {gaps.length > 0 ? uiCopy(selectPlural(gaps.length) === "one" ? "wantedBoard.introduction.one" : "wantedBoard.introduction.other", { count: gaps.length, window: WANTED_WINDOW_RUNS }) : uiCopy("wantedBoard.empty", { window: WANTED_WINDOW_RUNS })}
         </p>
 
         {gaps.length > 0 && (
@@ -121,7 +123,7 @@ export default async function WantedPage() {
                     {gap.seen > 1 ? uiCopy("wantedBoard.coverageAsked", { coverage: Math.round(gap.coverage * 100), count: gap.seen }) : uiCopy("wantedBoard.coverage", { coverage: Math.round(gap.coverage * 100) })}
                   </span>
                   <span className="shrink-0 font-mono text-[10px] text-ink-3">
-                    {new Date(gap.createdAt).toLocaleDateString()}
+                    {<DisplayTime value={gap.createdAt} dateOnly />}
                   </span>
                 </div>
 
@@ -192,7 +194,7 @@ export default async function WantedPage() {
                         {uiCopy(fill.byRetry ? "wantedBoard.transitionRetry" : "wantedBoard.transition", { before: Math.round(gap.coverage * 100), after: Math.round(fill.coverage * 100) })}
                       </span>
                       <span className="shrink-0 font-mono text-[10px] text-ink-3">
-                        {new Date(fill.createdAt).toLocaleDateString()}
+                        {<DisplayTime value={fill.createdAt} dateOnly />}
                       </span>
                     </div>
 
@@ -213,7 +215,7 @@ export default async function WantedPage() {
                         key={offer.id}
                         className="mt-1 font-mono text-[10.5px] text-paid"
                       >
-                        {uiCopy("wantedBoard.fulfilled", { source: offer.sourceName, reward: (offer.rewardUsdc ?? 0).toFixed(6) })}
+                        {uiCopy("wantedBoard.fulfilled", { source: offer.sourceName, reward: formatRecordedAmount((offer.rewardUsdc ?? 0), { minimumFractionDigits: 6 }) })}
                       </p>
                     ))}
                   </li>
@@ -248,7 +250,7 @@ function offerStatus(offer: PublicOffer): string {
     case "running":
       return uiCopy("wantedBoard.running", { attempt: offer.attempts });
     case "filled":
-      return uiCopy("wantedBoard.settled", { reward: (offer.rewardUsdc ?? 0).toFixed(6) });
+      return uiCopy("wantedBoard.settled", { reward: formatRecordedAmount((offer.rewardUsdc ?? 0), { minimumFractionDigits: 6 }) });
     case "unpaid":
       return uiCopy("wantedBoard.unpaid");
     case "missed":
