@@ -69,7 +69,8 @@ try {
   await page.getByRole("button", { name: "Load account history", exact: true }).click();
   await page.getByText(`Request ID: ${first.id}`, { exact: true }).waitFor();
   assert.equal(await page.getByRole("listitem").count(), 2);
-  assert.equal(await page.getByText("Requested: 0.05 USDC", { exact: true }).count(), 2);
+  assert.equal(await page.getByText("Requested: 0.050000 USDC", { exact: true }).count(), 2);
+  assert.equal(await page.getByText("Maximum Circle fee: 0.001000 USDC", { exact: true }).count(), 2);
   const item = page.getByRole("listitem").filter({ hasText: first.id });
   await item.getByRole("button", { name: "Check progress" }).click();
   await item.getByText("Transfer evidence is still pending. Do not create a replacement request to retry it.", { exact: true }).waitFor();
