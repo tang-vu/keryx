@@ -7650,3 +7650,14 @@ hold release, production DDL or version/deployment claim is introduced. This
 gives a person a concrete original packet while preserving payment uncertainty
 and the remaining target-window/service gates. See the
 [scope and release boundaries](docs/engineering/paid-job-overdue-queue-257.md).
+
+**Reuse the A2A worker heartbeat for default-OFF deadline alerts — 2026-10-12.**
+Issue257 customer GETs alone cannot produce an alert when nobody checks status.
+Observe scoped unfinished originals on the existing hosted worker heartbeat under
+its single-host lock, and reuse explicitly configured ops transports. Reserve one
+private incident before sending; ambiguous delivery/crash state is held rather
+than automatically replayed. This trades possible lost delivery for bounded
+duplicate prevention; transport acknowledgment is not human/customer receipt.
+Only sync metadata changes, with no financial row, retry, scheduler or customer
+notification authority. Default OFF and actual channel/timeliness qualification
+keep the original issue OPEN. See [contract and activation gates](docs/engineering/paid-job-deadline-alerts-257.md).
