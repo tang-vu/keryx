@@ -23,21 +23,28 @@ import wantedPreview from "@/app/wanted/[id]/opengraph-image";
 
 afterEach(() => vi.unstubAllGlobals());
 
+async function localRendererAsset(input: string | URL | Request) {
+  const url = new URL(input instanceof Request ? input.url : String(input));
+  // Next uses fetch for local/embedded WASM and fonts too. Serve the actual bytes
+  // even when a route test runs alone; every remote fallback stays forbidden.
+  if (String(input).startsWith("data:application/octet-stream;base64,")) {
+    return new Response(Buffer.from(String(input).split(",")[1], "base64"), { headers: { "Content-Type": "application/wasm" } });
+  }
+  if (url.protocol !== "file:") throw new Error("Preview fixture forbids network access");
+  return new Response(await readFile(fileURLToPath(url)), { headers: { "Content-Type": "application/wasm" } });
+}
+
+function remoteProtocols(fetch: ReturnType<typeof vi.fn<typeof localRendererAsset>>) {
+  return fetch.mock.calls.map(([input]) => new URL(String(input)).protocol)
+    .filter(protocol => protocol !== "file:" && protocol !== "data:");
+}
+
 describe("local public preview glyphs", () => {
   it.each([
     ["Vietnamese", "Tiếng Việt: Ă Â Đ Ê Ô Ơ Ư ă â đ ê ô ơ ư Ắ Ằ Ẳ Ẵ Ặ Ấ Ầ Ẩ Ẫ Ậ Ế Ề Ể Ễ Ệ Ố Ồ Ổ Ỗ Ộ Ớ Ờ Ở Ỡ Ợ Ứ Ừ Ử Ữ Ự ạ ả ấ ầ ẩ ẫ ậ ắ ằ ẳ ẵ ặ ẹ ẻ ẽ ế ề ể ễ ệ ỉ ị ọ ỏ ố ồ ổ ỗ ộ ớ ờ ở ỡ ợ ụ ủ ứ ừ ử ữ ự ỳ ỵ ỷ ỹ", 1],
     ["Chinese", "中文：研究问题、引用证据、创作者与支付记录。人工智能为什么需要可靠的来源？", 2],
   ])("renders %s without requesting fallback fonts", async (_language, text, count) => {
-    const fetch = vi.fn(async (input: string | URL | Request) => {
-      const url = new URL(input instanceof Request ? input.url : String(input));
-      // Next's renderer uses fetch for its own local WASM/font assets as well.
-      // Serve those actual installed bytes; every remote fallback stays forbidden.
-      if (String(input).startsWith("data:application/octet-stream;base64,")) {
-        return new Response(Buffer.from(String(input).split(",")[1], "base64"), { headers: { "Content-Type": "application/wasm" } });
-      }
-      if (url.protocol !== "file:") throw new Error("Preview fixture forbids network access");
-      return new Response(await readFile(fileURLToPath(url)), { headers: { "Content-Type": "application/wasm" } });
-    });
+    const fetch = vi.fn(localRendererAsset);
     vi.stubGlobal("fetch", fetch);
     const fonts = await publicPreviewFonts(text as string);
     expect(fonts).toHaveLength(count as number);
@@ -48,8 +55,7 @@ describe("local public preview glyphs", () => {
     const bytes = new Uint8Array(await response.arrayBuffer());
     expect([...bytes.slice(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
     expect(bytes.byteLength).toBeGreaterThan(10_000);
-    expect(fetch.mock.calls.map(([input]) => new URL(String(input)).protocol)
-      .filter(protocol => protocol !== "file:" && protocol !== "data:")).toEqual([]);
+    expect(remoteProtocols(fetch)).toEqual([]);
   }, 30_000);
 
   it.each([
@@ -57,7 +63,7 @@ describe("local public preview glyphs", () => {
     ["zh", "中文：人工智能为什么需要可靠的来源与引用证据？"],
   ])("renders all actual %s public preview routes with the local fonts", async (language, text) => {
     fixture.text = text;
-    const fetch = vi.fn(async () => { throw new Error("No remote asset requests permitted"); });
+    const fetch = vi.fn(localRendererAsset);
     vi.stubGlobal("fetch", fetch);
     for (const [name, render] of [["dispatch", dispatchPreview], ["creator", creatorPreview], ["wanted", wantedPreview]] as const) {
       const response = await render({ params: Promise.resolve({ id: "synthetic-public" }) });
@@ -69,6 +75,6 @@ describe("local public preview glyphs", () => {
         await writeFile(join(process.env.KERYX_PREVIEW_CAPTURE_DIR, `${name}-${language}.png`), bytes);
       }
     }
-    expect(fetch).not.toHaveBeenCalled();
+    expect(remoteProtocols(fetch)).toEqual([]);
   }, 30_000);
 });
