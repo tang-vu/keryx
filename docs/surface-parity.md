@@ -5,8 +5,9 @@
 App/OpenAPI **0.27.57**, hosted MCP **0.3.15** and stdio/official Registry
 **0.4.17** identify this coordinated candidate. Current main adds caller-supplied
 `draft_check` and changes `evidence_draft`; the stdio runtime graph grows from
-106 to 113 inputs, with eleven changed or added inputs. The local tools retain
-their supplied-text, private and unverified-origin boundaries. They perform no
+106 to 113 inputs, with eleven changed or added modules plus package version
+metadata. The local tools retain their supplied-text, private and unverified-origin
+boundaries. They perform no
 research, source retrieval, storage, signing or payment. Shared heading/gloss
 selection retains original quotes and existing review/admission contracts;
 teaching remains default-off and arbitrary translation remains unsupported.
