@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { browserPostgresFixture } from "../test-support/browser-postgres-fixture";
 import { postgresBrowserMigrationProfiles } from "../test-support/postgres-browser-migration-profiles";
+import { observeBrowserPublicUsage } from "../test-support/browser-public-usage-observations";
 
 // Disposable PostgreSQL only: no app environment, published ports, mounts or network.
 const postgres = browserPostgresFixture(process.argv.slice(2));
@@ -178,6 +179,9 @@ try {
     const before = nativeSchema();
     assert.throws(() => sql(readFileSync(`supabase/migrations/${extension.file}`, "utf8")), new RegExp(extension.refusal));
     assert.equal(nativeSchema(), before, "Native refusal must leave relations unchanged");
+    if (extension.file === "0089_public_usage_window.sql")
+      assert.equal(sql("select to_regprocedure('public.public_usage_window_v1(jsonb)') is null;"), "t",
+        "Native installation refusal must not publish an ordinary usage RPC");
   }
   const ordinary = `browser_ordinary_${randomUUID().replaceAll("-", "")}`;
   postgres.createDatabase(ordinary);
@@ -199,6 +203,8 @@ try {
       assert.deepEqual(JSON.parse(postgres.sql("set role service_role;select public.anonymous_run_claims_ready_v1();", ordinary)), { version: 1, ready: true });
       assert.throws(() => postgres.sql("set role anon;select public.anonymous_run_claims_ready_v1();", ordinary), /permission denied/);
       assert.throws(() => postgres.sql("set role authenticated;select * from public.anonymous_run_claims;", ordinary), /permission denied/);
+    } else if (extension.file === "0089_public_usage_window.sql") {
+      observeBrowserPublicUsage(postgres.sql, ordinary);
     } else assert.fail(`Missing ordinary fixture observations for ${extension.file}`);
   }
   console.log(`PASS actual migration profiles: ${migrations.length} accepted native inputs preserved; ${profiles.extensions.map(extension => extension.file).join(', ')} refuse native and install separately on fresh ordinary storage`);
