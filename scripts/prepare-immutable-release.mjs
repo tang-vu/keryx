@@ -120,8 +120,8 @@ export function runPreparationChecks({ staged, scratch, npmCli, run = spawnSync 
       !fs.lstatSync(npmCli).isFile()) refuse();
   const env = preparationEnvironment({ commit: staged.commit, scratch });
   const toolchain = { nodeSha256: hash(fs.readFileSync(process.execPath)), npmCliSha256: hash(fs.readFileSync(npmCli)) };
-  const call = (args, heap, outputFd) => run(process.execPath, [npmCli, ...args], {
-    cwd: staged.source, env: { ...env, NODE_OPTIONS: `--max-old-space-size=${heap}` },
+  const call = (args, heap, outputFd, nodeEnv = 'production') => run(process.execPath, [npmCli, ...args], {
+    cwd: staged.source, env: { ...env, NODE_ENV: nodeEnv, NODE_OPTIONS: `--max-old-space-size=${heap}` },
     encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, timeout: 30 * 60 * 1000, windowsHide: true,
     ...(outputFd !== undefined ? { stdio: ['ignore', outputFd, outputFd] } : {}),
   });
@@ -135,11 +135,14 @@ export function runPreparationChecks({ staged, scratch, npmCli, run = spawnSync 
   if (version.error || version.signal || version.status !== 0 || version.stdout.trim() !== pinnedNpm) refuse();
   const results = [];
   for (const [name, args] of preparationCommands) {
+    // Vitest preserves an existing NODE_ENV; tests need its normal test runtime,
+    // while compilation/runtime retain production. Financial isolation is equal.
+    const nodeEnv = name === 'tests' ? 'test' : 'production';
     const startedAt = new Date().toISOString(), started = performance.now();
     const logFile = path.join(staged.candidate, `${name}.log`), fd = fs.openSync(logFile, 'wx', 0o600);
     let result;
     try {
-      result = call(args, name === 'typecheck' ? 2560 : 1536, fd);
+      result = call(args, name === 'typecheck' ? 2560 : 1536, fd, nodeEnv);
       // Injectable processes may return captured output; native processes write
       // directly to the retained log even if the controller exits mid-check.
       fs.writeSync(fd, (result.stdout ?? '') + (result.stderr ?? ''));
@@ -147,7 +150,7 @@ export function runPreparationChecks({ staged, scratch, npmCli, run = spawnSync 
     } finally { fs.closeSync(fd); }
     if (fs.statSync(logFile).size > 32 * 1024 * 1024) refuse();
     const output = fs.readFileSync(logFile);
-    const receipt = { name, command: [process.execPath, npmCli, ...args], startedAt,
+    const receipt = { name, command: [process.execPath, npmCli, ...args], nodeEnv, startedAt,
       elapsedMs: Math.round(performance.now() - started), exitCode: result.status,
       signal: result.signal ?? null, outputSha256: hash(output), processError: result.error?.code ?? null };
     exclusiveReceipt(path.join(staged.candidate, `${name}.json`), receipt);

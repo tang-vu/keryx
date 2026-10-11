@@ -325,6 +325,9 @@ inspection, without changing their input trees or executable bits. The inspector
 continues to refuse writable artifacts. Runtime rehearsal completion waits for
 child close and both stdout/stderr pipes, retaining the full positive drain receipt
 even when buffered output arrives after process exit.
+Preparation runs Vitest in its normal `NODE_ENV=test` runtime and compilation in
+`production`, recording the setting with each command. Both retain the same fresh
+credential-free testnet/offline storage environment.
 
 The rehearsal keeps a synthetic reader running against the predecessor while it
 prepares and inspects the candidate, then positively exits that reader, rechecks

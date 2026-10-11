@@ -40,6 +40,7 @@ test('failed typecheck/test/build retains the real failure and cannot reach late
     const run = (_command, args, options) => {
       assert.equal(options.env.KERYX_FORCE_OFFLINE, '1'); assert.equal(options.cwd, f.source);
       const name = args.at(-1); commands.push(name);
+      assert.equal(options.env.NODE_ENV, name === 'test' ? 'test' : 'production');
       return { status: name === failed ? 7 : 0, stdout: name === '--version' ? '11.19.0\n' : 'actual synthetic command output', stderr: '' };
     };
     assert.throws(() => runPreparationChecks({ ...f, run }));
