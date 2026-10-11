@@ -53,6 +53,15 @@ The prior build is retained for recovery. Only the legacy non-reviewed path keep
 the old `.next` serving while `.next.tmp` builds; do not promise that availability
 for the reviewed mainnet procedure.
 
+Planned outage admission must stay independent of the application. The
+[maintenance procedure and isolated Linux rehearsal](engineering/planned-maintenance-2026-10-08.md)
+defines the advance announcement, protected window, drain, static browser page,
+API/MCP 503 contract and restoration gates. Its hosted rehearsal uses the built
+application behind a real local TLS ingress with the app positively stopped.
+Passing that rehearsal does not install the front door on the current tunnel or
+authorize production lifecycle changes; root must separately bind the reviewed
+ingress and active roles before claiming production delivery.
+
 The full TypeScript graph and the Next build have separate memory limits. The
 release typecheck uses a 2,560 MiB V8 old-space allowance; Next and its static
 worker keep the 1,536 MiB allowance. These do not cap total process RSS or host

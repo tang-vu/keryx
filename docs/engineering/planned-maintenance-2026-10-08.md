@@ -212,3 +212,103 @@ adapter, client binary, version, storage capability or operational schedule is
 introduced. Actual front-door integration, non-production real-app lifecycle,
 final combined build/CI, deployed banner/client readback and production maintenance
 acceptance remain root-owned gates; these source fixtures do not close issue281.
+
+## Real built Linux rehearsal — 2026-10-11
+
+`Planned maintenance built Linux` is the focused, non-production acceptance gate.
+It builds the actual application on an existing hosted Ubuntu24.04 runner with
+Node24.21/npm11.19, explicit offline arcTestnet and no application credentials.
+The rehearsal executes in a fresh Linux network namespace with only `lo`; the
+build and dependency/browser installation precede that isolated runtime. No
+provider, search, RPC or payment request can leave the rehearsal namespace.
+It creates its own mode0700 control directory and mode0600 atomic markers,
+temporary TLS certificate and ordinary local SQLite store. No production
+control, ENV, custody, schedule, service or deployment helper is changed.
+
+The actual request path is Chromium/HTTPS client → disposable Node TLS ingress
+→ existing maintenance front-door library → unchanged `startNextPublicServer`
+with the actual `.next` build. The TLS ingress supplies the documented trusted
+Host/forwarded HTTPS metadata. A rehearsal-only listener records method/path at
+the built app boundary; no cookies, bodies, signatures or query values are logged.
+Next keeps its original application/build directory so absolute stylesheet
+manifest keys remain valid; only the process cwd and SQLite store are isolated.
+The established built-origin fixture pattern exposes config code via a read-only
+`lib` link and refuses application ENV files. Chromium must load the actual
+stylesheet and show the advance banner inside the initial viewport.
+The browser receives real documents, assets, API and status responses: no canned
+upstream, `route.fulfill`, mocked application handler or synthetic health response.
+This qualifies a real isolated ingress profile, not Cloudflare production ingress.
+
+The reproducible procedure is the workflow's **Rehearse documented drain and
+stopped application through actual TLS ingress** command. On an existing safe
+Linux profile, first install the pinned project dependencies and Chromium and run
+`npm run build` with `KERYX_FORCE_OFFLINE=1`, `KERYX_NETWORK=arcTestnet`,
+`NEXT_PUBLIC_KERYX_NETWORK=arcTestnet`, blank Supabase variables and no credentials.
+Run the same loopback-only namespace command in
+`.github/workflows/planned-maintenance-linux.yml`; the script rejects a profile
+with any interface besides `lo`. Do not install WSL/Docker, use the production
+VPS or provision another host for this check.
+
+The script first observes real health/metrics and demonstrates that the built
+SIWE verify route consumes a deterministic disposable challenge even when the
+signature is invalid. It reinstates that test challenge and retains a synthetic
+unfunded grant and pending-payment sentinel. It publishes one advance window,
+observes the in-app banner and upcoming headers in Chromium, waits for the real
+start, and verifies draining refusals before stopping the app. With no live paid
+work in this profile, the app drains by its unchanged shutdown path; exit143 and
+the positive `httpDrained` receipt are required. A direct `ECONNREFUSED` check
+establishes that the built app listener is gone.
+
+The independent ingress then must serve browser503/static window dates and a
+working status link, API health/metrics503, paid/signed-shaped API and remote-MCP503
+with exact stable JSON and bounded `Retry-After`, read-only status200/HEAD/405,
+expired-window admission hold, invalid-control hold, and a separately labelled
+unplanned upstream failure. Every maintenance refusal must have
+`upstreamOutcome:not-dispatched`, no automatic retry, zero additional requests
+at the built listener, an unconsumed challenge and identical whole SQLite schema
+and rows. Removing the test marker after stopping the app tests failure
+classification only; it is not a production restoration procedure.
+
+Both failed and successful runs retain `proof.json`, application drain logs and
+advance/static/unplanned Chromium screenshots in the hosted artifact named
+`planned-maintenance-built-linux-<source SHA>`. The proof binds Git SHA/tree,
+build ID, front-door/launcher hashes, actual ports, responses, audited requests,
+exit observations and whole-database equality hashes. The workflow explicitly
+checks out the PR head; the receipt therefore binds the actual candidate instead
+of a transient pull-request merge ref. Complete synthetic database snapshots
+before/after the refusal phase are retained for independent equality inspection.
+Owned application,
+front-door, TLS and browser resources are closed; diagnostic profile files stay
+on the disposable runner until its normal teardown. Failure is never promoted
+to rehearsal acceptance. A passing run URL and exact source binding must be
+recorded before the original non-production exercise is claimed complete.
+
+### Surface audit and merge/delivery criteria
+
+| Surface | Current code contract and boundary |
+| --- | --- |
+| Browser and embed | Shared `use-ask-stream` validates the exact nested503 through `ask-error-response`; the browser restores the question draft, uses a fixed status link, and never signs or resubmits. The finite advance banner reads independent public status. Embed keeps its original question and plain error. |
+| Health, metrics and HTTP API | All `/api/*` routes are refused at the front door before application dispatch. Status never fabricates app/database health, commit or payment recovery. |
+| Remote MCP | `/mcp` and descendants receive the same stable503 JSON/Retry-After. It is transport unavailability, not a fabricated JSON-RPC result or successful tool response. |
+| Stdio MCP and paid CLI buyers | `mcp/local-payment.mts` and `lib/buyer/quote.ts` refuse a non402 quote before signing. After a signed request, MCP payment and `lib/buyer/client.ts` preserve the original journal/HTTP status and treat settlement independently of delivery. Recovery polls the original job; no repeat paid POST. The headless web wrapper preserves custody/original attempts on failure. |
+| Bots | Actual `/api/telegram/webhook` and `/api/discord/interactions` admission is refused before handlers run. Already accepted bot execution is not replayed. Provider webhook redelivery is outside the app's retry authority; no bot acknowledgement/success is fabricated. |
+| Extension | `extension/research-client.mjs` displays nested `error.message` as text and has no signer or automatic request retry. |
+| Local CLI and desktop/native | `scripts/ask.mts` runs locally; desktop/native inspection and workspace IPC do not traverse hosted ingress. Existing local error and recovery contracts remain authoritative. No package/installer or role change is required by this rehearsal-only increment. |
+
+Merge readiness requires the exact candidate's actual `build-and-test` aggregate,
+all applicable domain/platform checks, `real-built-linux-ingress` success and
+source review. A skipped/cancelled run, source-only fixture, successful build
+alone or open PR is insufficient. Preserve the prior accepted maintenance and
+recovery review; this increment adds real built ingress evidence and no callback
+exception or payment implementation. Workers do not merge while the root's
+release freeze remains closed.
+
+Delivery remains root-owned: accept the final ingress/control/active-role binding
+with no direct application bypass; retain existing drain/recovery and rollback
+authority; coordinate the accepted main build and applicable distribution; verify
+deployed identities, advance notice, independent status and browser/API/MCP
+readback. Production lifecycle and any existing-intent callback exception require
+their separate accepted binding. This rehearsal authorizes no gated-pilot
+activation. Keep issue281 open until its original criteria and that delivery hold;
+the original acceptance asks for one non-production exercise, not a new funded
+payment trial or a worker-operated production outage.
