@@ -1,0 +1,166 @@
+{
+  "format": "keryx-retained-public-sentence-note-v1",
+  "id": "33760eb8-a5b8-4e39-8eef-e16f08fdc1cf",
+  "question": "Soy verificador de información científica en México. Lea https://science.nasa.gov/moon/facts/, en especial \"Orbit and Rotation\". En español, escriba una nota breve de tres frases: explique si la Luna gira sobre su eje, por qué normalmente vemos el mismo hemisferio desde la Tierra y por qué llamar a la cara lejana \"siempre oscura\" es engañoso. Cite pasajes inspeccionables de esa página de NASA. No presente una lectura de texto como observación o experimento propio.",
+  "questionSha256": "ac2a8909b023a9170cafe622d04539da5557155079d82602708d35cf0e1ccc1f",
+  "answer": "> ⚠ Low confidence — Each summary sentence is tied to a verbatim excerpt and model-checked; completeness and independent factual correctness remain unverified. Evidence assessment: 1 evidence-verified source cover every sub-claim, but corroboration or support strength is limited. Treat this as provisional.\n\nResumo escrito por modelo, com citações por frase. Cada frase aparece junto ao trecho original usado na sua verificação.\n\n### Objetivo de pesquisa 1\n\nTema solicitado (não verificado): “¿La Luna gira sobre su eje, según la página de NASA indicada, en especial la sección \"Orbit and Rotation\"?”\n\nLa Luna rota a la misma velocidad a la que gira alrededor de la Tierra, fenómeno llamado rotación sincrónica. [S1] Texto da fonte: “The Moon is rotating at the same rate that it revolves around Earth (called synchronous rotation), so the same hemisphere faces Earth all the time.”\n\nLa Luna completa una órbita alrededor de la Tierra en 27 días terrestres y rota o gira a ese mismo ritmo. [S1] Texto da fonte: “The Moon makes a complete orbit around Earth in 27 Earth days and rotates or spins at that same rate, or in that same amount of time.”\n\n### Objetivo de pesquisa 2\n\nTema solicitado (não verificado): “¿Por qué normalmente vemos el mismo hemisferio de la Luna desde la Tierra, según esa página de NASA?”\n\nDebido a la rotación sincrónica, el mismo hemisferio lunar mira hacia la Tierra todo el tiempo. [S1] Texto da fonte: “The Moon is rotating at the same rate that it revolves around Earth (called synchronous rotation), so the same hemisphere faces Earth all the time.”\n\n### Objetivo de pesquisa 3\n\nTema solicitado (não verificado): “¿Por qué llamar a la cara lejana de la Luna \"siempre oscura\" es engañoso, según esa página de NASA?”\n\nLlamar \"lado oscuro\" al hemisferio que nunca vemos desde la Tierra es engañoso. [S1] Texto da fonte: “Some people call the far side – the hemisphere we never see from Earth – the \"dark side\", but that's misleading.”\n\nA medida que la Luna orbita la Tierra, distintas partes quedan iluminadas o en oscuridad en momentos diferentes. [S1] Texto da fonte: “As the Moon orbits Earth, different parts are in sunlight or darkness at different times.”\n\nFrases escritas e verificadas por modelos, sem verificação independente. Os trechos estabelecem vínculo com a fonte, mas não comprovam sua exatidão nem uma síntese completa. As fontes podem estar erradas ou em conflito. Os pagamentos são registrados separadamente.\n\n### Next steps to complete this research\n\nThese are suggested follow-up steps; this run has not performed them. They do not change the recorded evidence or payment state.\n\n- “Earth's Moon”: HTML text extraction failed. Look for a publisher-provided text/PDF edition of the same document and version; a preview cannot replace the original content.\n\n### Supplied original source status\n\n- `https://science.nasa.gov/moon/facts/`: Bounded text extracted from `https://science.nasa.gov/moon/facts/`; qualifying excerpts retained.",
+  "answerSha256": "01f930beb5ce0e91061175f2dc94951400c974a62a63b7dc039dbb553acdcf77",
+  "statements": [
+    {
+      "claimIndex": 0,
+      "marker": "S1",
+      "quote": "The Moon is rotating at the same rate that it revolves around Earth (called synchronous rotation), so the same hemisphere faces Earth all the time.",
+      "text": "La Luna rota a la misma velocidad a la que gira alrededor de la Tierra, fenómeno llamado rotación sincrónica."
+    },
+    {
+      "claimIndex": 0,
+      "marker": "S1",
+      "quote": "The Moon makes a complete orbit around Earth in 27 Earth days and rotates or spins at that same rate, or in that same amount of time.",
+      "text": "La Luna completa una órbita alrededor de la Tierra en 27 días terrestres y rota o gira a ese mismo ritmo."
+    },
+    {
+      "claimIndex": 1,
+      "marker": "S1",
+      "quote": "The Moon is rotating at the same rate that it revolves around Earth (called synchronous rotation), so the same hemisphere faces Earth all the time.",
+      "text": "Debido a la rotación sincrónica, el mismo hemisferio lunar mira hacia la Tierra todo el tiempo."
+    },
+    {
+      "claimIndex": 2,
+      "marker": "S1",
+      "quote": "Some people call the far side – the hemisphere we never see from Earth – the \"dark side\", but that's misleading.",
+      "text": "Llamar \"lado oscuro\" al hemisferio que nunca vemos desde la Tierra es engañoso."
+    },
+    {
+      "claimIndex": 2,
+      "marker": "S1",
+      "quote": "As the Moon orbits Earth, different parts are in sunlight or darkness at different times.",
+      "text": "A medida que la Luna orbita la Tierra, distintas partes quedan iluminadas o en oscuridad en momentos diferentes."
+    }
+  ],
+  "evidence": [
+    {
+      "claimIndex": 0,
+      "claim": "¿La Luna gira sobre su eje, según la página de NASA indicada, en especial la sección \"Orbit and Rotation\"?",
+      "marker": "S1",
+      "sourceId": "public:web:a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+      "sourceName": "nasa.gov",
+      "sourceKind": "public-reference",
+      "itemId": "a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+      "itemTitle": "Moon Facts - NASA Science",
+      "itemUrl": "https://science.nasa.gov/moon/facts/",
+      "contentVersion": "003c225b5fb9b295d7dcd0391966667a2553bb3be4d48915ff80e3b6c5fcef09",
+      "quote": "The Moon is rotating at the same rate that it revolves around Earth (called synchronous rotation), so the same hemisphere faces Earth all the time.",
+      "support": 0.95,
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 0,
+      "claim": "¿La Luna gira sobre su eje, según la página de NASA indicada, en especial la sección \"Orbit and Rotation\"?",
+      "marker": "S1",
+      "sourceId": "public:web:a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+      "sourceName": "nasa.gov",
+      "sourceKind": "public-reference",
+      "itemId": "a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+      "itemTitle": "Moon Facts - NASA Science",
+      "itemUrl": "https://science.nasa.gov/moon/facts/",
+      "contentVersion": "003c225b5fb9b295d7dcd0391966667a2553bb3be4d48915ff80e3b6c5fcef09",
+      "quote": "The Moon makes a complete orbit around Earth in 27 Earth days and rotates or spins at that same rate, or in that same amount of time.",
+      "support": 0.9,
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 1,
+      "claim": "¿Por qué normalmente vemos el mismo hemisferio de la Luna desde la Tierra, según esa página de NASA?",
+      "marker": "S1",
+      "sourceId": "public:web:a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+      "sourceName": "nasa.gov",
+      "sourceKind": "public-reference",
+      "itemId": "a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+      "itemTitle": "Moon Facts - NASA Science",
+      "itemUrl": "https://science.nasa.gov/moon/facts/",
+      "contentVersion": "003c225b5fb9b295d7dcd0391966667a2553bb3be4d48915ff80e3b6c5fcef09",
+      "quote": "The Moon is rotating at the same rate that it revolves around Earth (called synchronous rotation), so the same hemisphere faces Earth all the time.",
+      "support": 0.95,
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 2,
+      "claim": "¿Por qué llamar a la cara lejana de la Luna \"siempre oscura\" es engañoso, según esa página de NASA?",
+      "marker": "S1",
+      "sourceId": "public:web:a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+      "sourceName": "nasa.gov",
+      "sourceKind": "public-reference",
+      "itemId": "a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+      "itemTitle": "Moon Facts - NASA Science",
+      "itemUrl": "https://science.nasa.gov/moon/facts/",
+      "contentVersion": "003c225b5fb9b295d7dcd0391966667a2553bb3be4d48915ff80e3b6c5fcef09",
+      "quote": "Some people call the far side – the hemisphere we never see from Earth – the \"dark side\", but that's misleading.",
+      "support": 0.5,
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    },
+    {
+      "claimIndex": 2,
+      "claim": "¿Por qué llamar a la cara lejana de la Luna \"siempre oscura\" es engañoso, según esa página de NASA?",
+      "marker": "S1",
+      "sourceId": "public:web:a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+      "sourceName": "nasa.gov",
+      "sourceKind": "public-reference",
+      "itemId": "a9162fb8ffa4bf5fa69fec182b41ee4fce08a6f9b57f872106eed93d9dbbd3e6",
+      "itemTitle": "Moon Facts - NASA Science",
+      "itemUrl": "https://science.nasa.gov/moon/facts/",
+      "contentVersion": "003c225b5fb9b295d7dcd0391966667a2553bb3be4d48915ff80e3b6c5fcef09",
+      "quote": "As the Moon orbits Earth, different parts are in sunlight or darkness at different times.",
+      "support": 0.7,
+      "qualifiesForAnswer": true,
+      "qualifiesForReward": false
+    }
+  ],
+  "claimCoverage": [
+    {
+      "claimIndex": 0,
+      "claim": "¿La Luna gira sobre su eje, según la página de NASA indicada, en especial la sección \"Orbit and Rotation\"?",
+      "coverage": 0.95,
+      "coveredBy": [
+        "S1"
+      ]
+    },
+    {
+      "claimIndex": 1,
+      "claim": "¿Por qué normalmente vemos el mismo hemisferio de la Luna desde la Tierra, según esa página de NASA?",
+      "coverage": 0.95,
+      "coveredBy": [
+        "S1"
+      ]
+    },
+    {
+      "claimIndex": 2,
+      "claim": "¿Por qué llamar a la cara lejana de la Luna \"siempre oscura\" es engañoso, según esa página de NASA?",
+      "coverage": 0.7,
+      "coveredBy": [
+        "S1"
+      ]
+    }
+  ],
+  "confidence": {
+    "level": "Low",
+    "reason": "Each summary sentence is tied to a verbatim excerpt and model-checked; completeness and independent factual correctness remain unverified. Evidence assessment: 1 evidence-verified source cover every sub-claim, but corroboration or support strength is limited"
+  },
+  "provenance": {
+    "kind": "retained-public-output-projection",
+    "originalCreatedAt": "2026-10-09T08:38:16.688Z",
+    "reportedHistoricalCommit": "f5565998d54e163ba52325637391ed74fbe0862f",
+    "reportUrl": "https://keryx.cc/dispatch/33760eb8-a5b8-4e39-8eef-e16f08fdc1cf",
+    "readbackUrl": "https://keryx.cc/api/dispatch/33760eb8-a5b8-4e39-8eef-e16f08fdc1cf",
+    "readbackAt": "2026-10-11T00:28:01.675Z",
+    "readbackDecodedBodySha256": "a61e7a98a334b2ad8b0031d3623a4c766e3b4c165bfcdea1f8762bc4d967822f",
+    "statementBoundary": "Exact already-delivered statement/quote pairs from saved answer; no replay of missing model review or original source-body admission.",
+    "financialProjection": "Qualified public references only; all5 qualifiesForReward=false. No wallets, payees, payment rows, raw provider bodies or credentials copied.",
+    "actualDistinctDeliveredStatements": 5,
+    "requestedShortNoteSentences": 3,
+    "originalRequestedFormatAccepted": false
+  }
+}

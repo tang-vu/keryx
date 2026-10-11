@@ -31,4 +31,29 @@ describe("original caller presentation", () => {
     expect(presentationStatementGuidance(presentation)).toContain("write each statement in English");
     expect(presentationStatementGuidance(presentation)).toContain("takes precedence");
   });
+
+  it.each([
+    ["En español, escriba una nota breve de tres frases: explique el resultado.", 3],
+    ["En español, escribe una respuesta breve de 2 oraciones.", 2],
+    ["En español, escriba una nota breve de una oración.", 1],
+    ["En español, escriba una nota breve de ocho frases.", 8],
+    ["No escriba una nota breve de tres frases.", undefined],
+    ["Nunca escriba una nota breve de tres frases.", undefined],
+    ["En español, la página dice: «escriba una nota breve de tres frases».", undefined],
+    ['En español, "escriba una nota breve de tres frases."', undefined],
+    ["En español, cite la instrucción escriba una nota breve de tres frases.", undefined],
+    ["En español, escriba una nota breve de tres frases. Escriba una nota breve de cuatro frases.", undefined],
+    ["En español, escriba una nota breve de tres frases. Escriba una nota breve de nueve frases.", undefined],
+    ["En español, escriba una nota breve de tres o cuatro frases.", undefined],
+    ["En español, escriba una nota breve de tres frases o cuatro frases.", undefined],
+    ["En español, escriba una nota breve de 3-4 frases.", undefined],
+    ["En español, escriba una nota breve de nueve frases.", undefined],
+    ["En español, escriba una nota breve de 9 frases.", undefined],
+    ["En español, escriba una nota breve de tres frases. Write three short bullets.", undefined],
+    ["Answer in English. Escriba una nota breve de tres frases.", undefined],
+    ["En français, escriba una nota breve de tres frases.", undefined],
+  ])("admits only finite positive caller-original Spanish note instructions: %s", (question, count) => {
+    expect(answerPresentation(question as string).requestedSentenceCount).toBe(count);
+    expect(answerPresentation(question as string, "retained").requestedSentenceCount).toBeUndefined();
+  });
 });

@@ -140,7 +140,8 @@ function portugueseAnswer(ledger: EvidenceLedger, qualifying: EvidenceLedger["ev
 }
 
 /** Spanish ordinary delivery preserves the same exact statement/excerpt and gap gates. */
-function spanishAnswer(ledger: EvidenceLedger, qualifying: EvidenceLedger["evidence"], summary: CitedStatement[], unavailable?: boolean): string {
+export function spanishAnswer(ledger: EvidenceLedger, qualifying: EvidenceLedger["evidence"], summary: CitedStatement[], unavailable?: boolean,
+  layout: "targets" | "pairs" = "targets"): string {
   const intro = summary.length
     ? "Resumen escrito por un modelo, con citas por frase. Cada frase aparece junto al texto original utilizado para revisarla."
     : qualifying.length ? "Solo fragmentos de las fuentes; el borrador no se presenta como conclusión y la síntesis completa sigue sin verificarse."
@@ -151,7 +152,7 @@ function spanishAnswer(ledger: EvidenceLedger, qualifying: EvidenceLedger["evide
     const sentences = summary.filter(statement => statement.claimIndex === claim.claimIndex);
     const paired = sentences.map(statement => `${literal(statement.text)} [${statement.marker}] Texto de la fuente: “${literal(statement.quote)}”`);
     const rest = quotes.filter(item => !sentences.some(statement => statement.marker === item.marker && statement.quote === item.quote));
-    return [`### Objetivo de investigación ${claim.claimIndex + 1}`, `Tema solicitado (no verificado): “${literal(claim.claim)}”`,
+    return [...(layout === "targets" ? [`### Objetivo de investigación ${claim.claimIndex + 1}`, `Tema solicitado (no verificado): “${literal(claim.claim)}”`] : []),
       ...paired, ...rest.map(item => `- “${literal(item.quote)}” [${item.marker}]`),
       ...(!quotes.length ? [unavailable ? "No fue posible evaluar las evidencias de este objetivo en esta ejecución."
         : "Falta de evidencia: ningún fragmento admitido para este objetivo."] : []),
