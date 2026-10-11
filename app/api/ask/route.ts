@@ -31,6 +31,8 @@ import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { getDb } from "@/lib/db";
 import { resolveDispatch } from "@/lib/history/read-dispatch";
+import { privacyReadsActive } from "@/lib/run-privacy/contracts";
+import { privacyBinding } from "@/lib/run-privacy/auth";
 import { buildFollowUpQuestion } from "@/lib/agent/follow-up-question";
 import { getGrant } from "@/lib/payments/session-grants";
 import { isPaymentRecord } from "@/lib/payments/payment-state";
@@ -110,12 +112,14 @@ export async function POST(req: NextRequest) {
   // Follow-up: anchor the question to its parent so "how does that compare?" is answerable. Only
   // the parent *question* is carried — never its answer, which sources were paid to produce. An
   // unknown parent id degrades to a standalone ask rather than failing the dispatch.
+  const asker = (await getSession())?.address?.toLowerCase();
   let parentId: string | undefined;
   let askQuestion = question;
   const requestedParentId =
     typeof body.parentId === "string" && body.parentId.trim() && body.parentId.trim().length <= 256 ? body.parentId.trim() : undefined;
   if (requestedParentId) {
-    const parent = (await resolveDispatch(requestedParentId))?.run;
+    const parentDb=await getDb();
+    const parent = (await resolveDispatch(requestedParentId,parentDb,asker&&privacyReadsActive(parentDb) ? {wallet:asker,binding:privacyBinding()} : undefined))?.run;
     if (parent) {
       parentId = parent.id;
       // Historical rows predate the input bound. Keep one old dispatch from expanding a new model
@@ -131,7 +135,6 @@ export async function POST(req: NextRequest) {
   // server has actually verified — and read HERE, in request scope: the stream body below runs
   // after the handler returns, where cookies() is no longer available. A signed-out ask stays
   // unattributed rather than borrowing `sessionId`, which is client-supplied.
-  const asker = (await getSession())?.address?.toLowerCase();
 
   // A session id is a public wallet address, not a bearer secret. Bind the browser co-sign path to
   // the SIWE identity that created the grant before exempting it from the treasury rate limit or

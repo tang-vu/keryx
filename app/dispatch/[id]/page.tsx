@@ -26,25 +26,23 @@ import { safeInlineJson } from "@/lib/safe-json";
 import { DispatchView } from "./dispatch-view";
 import { publicQueryRun } from "@/lib/research/public-query-run";
 import { DeliverableAcceptance } from "@/components/keryx/deliverable-acceptance";
+import { pagePrivacyActor } from "@/lib/run-privacy/auth";
+import { runPrivacyCopy } from "@/locales/en/run-privacy";
 
 const copy = createMessages("en");
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 const CURRENT_NETWORK_LABEL = config.profile.testnet ? "Arc testnet" : "Arc mainnet";
 
-// A settled dispatch is a finished record — its answer, citations and payouts never change. Only
-// the things layered on top (follow-ups, related answers) move, and hourly is soon enough for
-// those. Explicit because the root layout no longer forces every page to render per-request:
-// without this, the permalink would be generated once and served from then on, never noticing a
-// follow-up. Refreshed in the background, so a crawler hitting hundreds of these costs one render
-// each per window rather than one per hit.
-export const revalidate = 3600;
+// Owner visibility and erasure are checked on every request. No stale permalink
+// render may survive a privacy change.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 /**
  * Empty on purpose: no permalink is worth prerendering at build (there are hundreds, and the
- * newest ones are minted minutes later anyway). Declaring it at all is what marks the route as
- * cacheable — without it Next renders every dynamic-param request from scratch, and `revalidate`
- * above would be silently ignored. Unknown ids are still served on demand (dynamicParams default).
+ * newest ones are minted minutes later anyway). Dynamic rendering still checks
+ * visibility for every requested ID.
  */
 export function generateStaticParams(): { id: string }[] {
   return [];
@@ -58,7 +56,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   try {
     const dispatch = await resolveDispatch(id);
-    if (!dispatch) return { title: copy("reportDispatch.notFound"), robots: { index: false } };
+    if (!dispatch || dispatch.visibility!=="public") return { title:copy("reportDispatch.fallbackTitle"),robots:{index:false,follow:false},referrer:"no-referrer" };
     const { run, archive } = dispatch;
     const snippet = run.answer.slice(0, 160).replace(/\n/g, " ");
     const cited = run.citations.length;
@@ -85,7 +83,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function DispatchPage({ params }: PageProps) {
   const { id } = await params;
   const db = await getDb();
-  const dispatch = await resolveDispatch(id, db);
+  const actor=await pagePrivacyActor(db);
+  const dispatch = await resolveDispatch(id, db,actor);
   if (!dispatch) notFound();
   const { run, reader, archive } = dispatch;
   // Original outbound rows include creator payments and separate operating fees.
@@ -94,10 +93,9 @@ export default async function DispatchPage({ params }: PageProps) {
 
   // The thread this dispatch sits in: what it followed from, and what followed from it — plus
   // whether the sources it cited have published since it settled (see lib/answers-freshness).
-  // Freshness is only as current as this page's revalidate window, which is the right granularity:
-  // an hour-old count of new posts still tells a reader the same thing.
+  // Freshness enrichment is computed only after this request's visibility check.
   const [thread, freshness] = await Promise.all([
-    loadDispatchThread(dispatch, db),
+    loadDispatchThread(dispatch, db,actor),
     archive ? Promise.resolve(null) : loadFreshness(db, run),
   ]);
   const { parent: parentDispatch, followUps } = thread;
@@ -169,10 +167,10 @@ export default async function DispatchPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-paper-2">
-      <script
+      {dispatch.visibility==="public" && <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeInlineJson(jsonLd) }}
-      />
+      />}
       {/* Minimal header */}
       <header className="border-b border-ink bg-paper">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between px-4 py-3 sm:px-[30px]">
@@ -219,6 +217,7 @@ export default async function DispatchPage({ params }: PageProps) {
         <DispatchView run={publicQueryRun(run)} payments={payments} historical={Boolean(archive)} historicalNetwork={archive?.network} />
 
         <PortableReceiptPanel dispatchId={id} />
+        <Link href={`/me/run-privacy?run=${encodeURIComponent(id)}`} className="text-sm underline">{runPrivacyCopy.manage}</Link>
         {!archive && <DeliverableAcceptance id={id} answer={run.answer} />}
         <PurchaseOutcomesPanel dispatchId={id} report={purchaseOutcomes} />
 

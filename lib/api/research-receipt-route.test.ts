@@ -29,13 +29,17 @@ const run: QueryRun = {
   settledPayments: 0,
   pendingPayments: 0,
 };
+const publicReader=(value:QueryRun|null)=>({
+  read:async()=>({exists:!!value,item:value?{run:value,state:{visibility:"public",revision:0,erased:false}}:null}),
+  settlement:async()=>null,
+});
 
 describe("GET /api/dispatch/[id]/receipt", () => {
   beforeEach(() => mocks.getDb.mockReset());
 
   it("returns a no-store receipt, digest header and safe attachment filename", async () => {
     mocks.getDb.mockResolvedValue({
-      getQueryRun: vi.fn().mockResolvedValue(run),
+      runPrivacy:publicReader(run),
       listCreatorPaymentAttemptsByQuery: vi.fn().mockResolvedValue([]),
     });
     const response = await GET(
@@ -69,7 +73,7 @@ describe("GET /api/dispatch/[id]/receipt", () => {
       settled: !pending, settlementStatus: pending ? "pending" : "settled",
       txHash: pending ? null : "6f297e8c-ae3b-4d05-9fcf-44b84e20bba5" };
     mocks.getDb.mockResolvedValue({
-      getQueryRun: vi.fn().mockResolvedValue({ ...run, settledPayments: pending ? 1 : 2, pendingPayments: pending ? 1 : 0 }),
+      runPrivacy:publicReader({ ...run, settledPayments: pending ? 1 : 2, pendingPayments: pending ? 1 : 0 }),
       // The legacy query intentionally returns only citation rows: using it loses the toll.
       listPaymentsByQuery: vi.fn().mockResolvedValue([payment]),
       listCreatorPaymentAttemptsByQuery: vi.fn().mockResolvedValue([access, payment]),
@@ -88,7 +92,7 @@ describe("GET /api/dispatch/[id]/receipt", () => {
 
   it("returns 404 for an unknown dispatch and a generic 503 on adapter failure", async () => {
     mocks.getDb.mockResolvedValueOnce({
-      getQueryRun: vi.fn().mockResolvedValue(null),
+      runPrivacy:publicReader(null),
     });
     const missing = await GET(
       new Request("https://keryx.test/api/dispatch/missing/receipt"),

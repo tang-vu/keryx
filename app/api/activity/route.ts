@@ -1,3 +1,4 @@
+import { listedQuestion, publicFinancialPayment } from "@/lib/run-privacy/public";
 /**
  * GET /api/activity — the most recent REAL settled citations (source, question, reward, time).
  *
@@ -27,8 +28,8 @@ export async function GET() {
     const questionById = new Map<string, string>();
     await Promise.all(
       queryIds.map(async (qid) => {
-        const run = await db.getQueryRun(qid);
-        if (run?.question) questionById.set(qid, run.question);
+        const question = await listedQuestion(db,qid);
+        if (question) questionById.set(qid, question);
       }),
     );
 
@@ -48,7 +49,7 @@ export async function GET() {
 
     return Response.json(
       { activity },
-      { headers: { "cache-control": "public, max-age=15, s-maxage=15" } },
+      { headers: { "cache-control": "no-store" } },
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

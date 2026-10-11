@@ -135,5 +135,128 @@ remains retained rather than being reclassified as a passing run.
 
 Useful supported comparisons/checklists, actual ordinary-client exports,
 independent legitimate Arc settlement and user evidence remain open under
-#172/#169/#128. #158's initial model-call failure also remains unexplained by
+#172/#128. #158's initial model-call failure also remains unexplained by
 this source-selection repair. Richer synthesis stays disabled under D-300.
+
+## Original-caller recovery guidance — October 11, 2026
+
+The shared selection failure message now explains that a read proposal must name
+an offered source and link to nonempty integer indexes in the existing plan. It
+shows the diagnostic's bounded target range and asks the caller to inspect or
+save the diagnostic while retaining the original question, requested URLs and
+comparison dimensions. The refusal grants neither an automatic retry nor a
+completed report. This is guidance after validation; it does not repair links,
+change planning, add a provider attempt or release consumed allowance holds.
+
+The existing exact frozen Vietnamese SQLite question/hash and representative
+eight-target pipeline now exercise missing, empty, wrong-type, non-integer and
+out-of-range links both beside valid originals and in all-invalid selections.
+Valid proposals still reach the two exact reader adapters; invalid distractors
+never read or pay. Terminal cases retain the two original synthetic call/token
+records and export the existing bounded failure artifact without source URLs,
+provider values or a fabricated report/receipt. Existing systemd planning tests
+retain seven distinct behavior/risk/precheck targets and source qualifications.
+These are synthetic responses, not the missing historical provider payloads or
+a guarantee of SQLite consistency, restoration or useful live synthesis.
+
+Web/SSE, OpenAI JSON/streams, hosted remote MCP and repository CLI share
+`researchFailureMessage`; their diagnostic and error contracts remain unchanged.
+Bots retain their existing generic failure messages and shared strict engine
+behavior. Stdio MCP, native desktop/Operator and extensions retain their hosted
+handoff and custody boundaries. No client package, schema or activation change
+is required for this shared message. Source review, applicable hosted CI
+and root-owned delivery remain separate gates. Original #172 remains open for
+its explicit separately authorized finite live usefulness or actual-source-
+limitation acceptance; the exhausted allowance does not authorize that retest.
+Original #169 requires its exact-case planning/refinement proof and root-owned
+delivery decision, without an additional mandatory live or paid trial. Earlier
+observations and failed holds are unchanged.
+
+### Exact original Systemd refinement control — October 12, 2026
+
+The planning regression now binds the complete historical Systemd question to
+SHA256 `05f8ce09b6cea622818d605f213c298fdab43ce4f6988f47e179150f3d57136d`,
+matching the retained original intent and run. The old genuine eight-target
+plan reached discovery and a low-confidence excerpt-only report; its last
+target bundled `SendSIGKILL=no` behavior, deployment risk and prechecks. That
+historical result and the recorded 0/3 useful observations remain unchanged.
+
+The controlled provider proposes nine distinct setting/dimension pairs from
+the exact question. Local validation retains the eight-target ceiling and
+returns typed `expanded_output` refinement. It does not establish that a
+complete plan with shared checks could never fit, or reproduce an unknown
+historical provider cause. The narrow caller-choice helper now preserves a
+short colon-introduced dimension list as separate focused excerpts with its
+shared comparison context and trailing qualifications; previously the first
+three comma fragments could omit deployment risk and prechecks. For this exact
+question all three settings and the no-completed-worker/no-paid-source
+qualification remain in every choice. The source restriction stays in the
+unaltered original question and the existing instruction to retain its source
+conditions. No targets, answers or retries are inferred from these excerpts.
+
+One synthetic response follows the existing provider/orchestrator abstraction,
+retaining its declared synthetic usage counters and one returned-call record.
+Refinement stops before discovery, source/payment admission or another provider
+attempt. This is bounded offline refinement proof, not a useful source answer,
+an invoice, settlement or issue closure; root owns peer/CI/delivery acceptance.
+
+### Caller-bound comparison construction — October 12, 2026
+
+The same single `JsonChatEngine.decompose` response can now supply a private
+comparison proposal instead of final opaque claims. Its ordered text parts
+must concatenate to the exact complete caller question. Parts distinguish
+named subjects, common per-subject dimensions, explicitly shared needs,
+source/condition scope, and presentation/connective framing. Local construction
+returns the existing `string[]`: one question per subject/dimension and one per
+shared need naming all subjects. Every declared scope fragment qualifies every
+constructed question. Documentation URLs must be source scope, never extra
+subjects or discarded framing. The validated legacy claims path remains for
+other requests; no public protocol, provider, output ceiling or retry changes.
+
+Malformed/foreign/missing spans, absent dimensions, mixed opaque output,
+ambiguous duplicate labels and excessive parts refuse locally. A complete
+caller-bound map exceeding eight needs returns `needs_refinement`; expanded
+opaque model claims remain `expanded_output`. The constructor never slices,
+bundles all declared dimensions per subject, or relabels one as shared to fit
+the ceiling. An
+assembled question that exceeds the existing 600-character bound also refuses.
+There is no second model call or heuristic repair after a completed response.
+
+Exact05f construction controls map behavior and deployment risk separately for
+all three settings, plus one common pre-replacement check naming all three.
+Every question retains their stopping interaction, official-source restriction,
+unfinished-worker condition and no-paid-source restriction. Exact733b controls
+map consistency, operational checklist and concurrent-write/locking conditions
+for both backup methods, plus their common pre-restore verification. WAL/live
+write context, no service stop, both supplied original URLs, supported versus
+unverified steps and no paid sources remain scope. These are semantic maps of
+the original requests; table cells and document count do not determine need
+count. Supplied/unsupplied variants, reordered/renamed subjects and an unrelated
+finite comparison exercise the generic constructor in the existing harness.
+
+All planning responses are injected synthetic caller-span proposals, not final
+good target arrays. The actual parser, constructor, provider abstraction and
+agent reach normal discovery with one declared synthetic planning call. Refusal
+controls retain usage and stop before discovery, source reads or payment. Role
+classification remains the model's semantic proposal: exact text provenance
+alone cannot certify arbitrary classification quality. The original dimension
+maps and negative controls provide bounded source evidence, not a live model
+evaluation, technical source answer, useful report or historical-cause proof.
+
+This increment leaves canonical study bytes untouched; its source pins require
+root's reserved final-source offline convergence. Independent review, actual
+full applicable CI and combined delivery remain gates for root's #169 decision,
+without adding a paid/live or full-report criterion. #172 remains open for its
+separate explicitly authorized finite live usefulness/source-limitation gate;
+the exhausted allowance grants no new trial. Shared web/API/CLI/remote-MCP
+planning contracts remain `string[]` or the existing private caller refinement;
+bots and stdio/desktop/Operator/extensions retain their established role bounds.
+
+The URL-boundary correction scans HTTP(S) tokens in the complete caller question
+with the requested-source token grammar. Every occurrence must fit wholly within
+one scope part; splitting a scheme, host or path across scope or other roles
+refuses locally before discovery. This prevents dropped references and spaces
+inserted inside URLs by scope assembly. Intact reference spelling is preserved;
+the existing bounded semantic constructor and model-role qualification remain.
+Focused synthetic original-SQLite boundary controls establish this mechanical
+correction, not source-answer usefulness or an unknown historical live cause.

@@ -1,5 +1,15 @@
 # Keryx MCP
 
+App0.27.59 is the combined release candidate for bounded caller comparisons,
+whole source URLs, RFC/MDN source-unit retrieval and locale-aware amount display.
+It selects stdio/package/Registry **0.4.18** and hosted MCP **0.3.16**, with
+prepared Desktop **0.4.16** and extension **0.1.4.2**. Zotero and owner run-privacy
+contracts retain their readiness and default-OFF gates; this release grants no
+production schema, backfill or activation authority. Exact combined source/CI,
+artifact, initialized identity, publication and deployed readback remain pending.
+Production remains the accepted app0.27.57 cohort. Version notes below retain
+their original source and delivery evidence.
+
 App0.27.58's iPhone header repair is scoped to the hosted web UI. It retains
 hosted MCP0.3.15 and stdio/package/Registry0.4.17 tool contracts and identities;
 existing artifacts keep their original source provenance. No new MCP package is

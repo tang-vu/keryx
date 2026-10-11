@@ -8,7 +8,8 @@
 import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { buildAnswersFeedXml } from "@/lib/answers-feed";
 
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
@@ -19,7 +20,7 @@ export async function GET(): Promise<Response> {
   return new Response(xml, {
     headers: {
       "Content-Type": "application/atom+xml; charset=utf-8",
-      "Cache-Control": "public, max-age=0, s-maxage=600, stale-while-revalidate=600",
+      "Cache-Control": "no-store",
     },
   });
 }
