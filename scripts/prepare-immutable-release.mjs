@@ -88,7 +88,10 @@ export function copyPreparationDependencies({ source, dependencies }) {
   fs.cpSync(dependencies, path.join(source, 'node_modules'), {
     recursive: true, dereference: true, errorOnExist: true, force: false,
   });
-  return { lockSha256: hash(lock), installedLockSha256: hash(installed), method: 'independent-file-copy' };
+  if (hash(fs.readFileSync(path.join(source, 'node_modules', '.package-lock.json'))) !== hash(installed) ||
+      hash(fs.readFileSync(path.join(dependencies, '.package-lock.json'))) !== hash(installed)) refuse();
+  return { lockSha256: hash(lock), installedLockSha256: hash(installed),
+    copiedFiles: files, copiedBytes: bytes, method: 'independent-file-copy' };
 }
 
 /** Commands are fixed and run sequentially, before artifact recording and any hold.
@@ -97,31 +100,48 @@ export function runPreparationChecks({ staged, scratch, npmCli, run = spawnSync 
   if (process.versions.node !== pinnedNode || !path.isAbsolute(npmCli) ||
       !fs.lstatSync(npmCli).isFile()) refuse();
   const env = preparationEnvironment({ commit: staged.commit, scratch });
-  const call = (args, heap) => run(process.execPath, [npmCli, ...args], {
+  const toolchain = { nodeSha256: hash(fs.readFileSync(process.execPath)), npmCliSha256: hash(fs.readFileSync(npmCli)) };
+  const call = (args, heap, outputFd) => run(process.execPath, [npmCli, ...args], {
     cwd: staged.source, env: { ...env, NODE_OPTIONS: `--max-old-space-size=${heap}` },
     encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, timeout: 30 * 60 * 1000, windowsHide: true,
+    ...(outputFd !== undefined ? { stdio: ['ignore', outputFd, outputFd] } : {}),
   });
   const version = call(['--version'], 1536);
+  const versionOutput = (version.stdout ?? '') + (version.stderr ?? '');
+  fs.writeFileSync(path.join(staged.candidate, 'npm-version.log'), versionOutput, { flag: 'wx', mode: 0o600 });
+  exclusiveReceipt(path.join(staged.candidate, 'npm-version.json'), {
+    expectedNpm: pinnedNpm, exitCode: version.status, signal: version.signal ?? null,
+    processError: version.error?.code ?? null, outputSha256: hash(versionOutput), ...toolchain,
+  });
   if (version.error || version.signal || version.status !== 0 || version.stdout.trim() !== pinnedNpm) refuse();
   const results = [];
   for (const [name, args] of preparationCommands) {
     const startedAt = new Date().toISOString(), started = performance.now();
-    const result = call(args, name === 'typecheck' ? 2560 : 1536);
-    const output = (result.stdout ?? '') + (result.stderr ?? '');
+    const logFile = path.join(staged.candidate, `${name}.log`), fd = fs.openSync(logFile, 'wx', 0o600);
+    let result;
+    try {
+      result = call(args, name === 'typecheck' ? 2560 : 1536, fd);
+      // Injectable processes may return captured output; native processes write
+      // directly to the retained log even if the controller exits mid-check.
+      fs.writeSync(fd, (result.stdout ?? '') + (result.stderr ?? ''));
+      fs.fsyncSync(fd);
+    } finally { fs.closeSync(fd); }
+    if (fs.statSync(logFile).size > 32 * 1024 * 1024) refuse();
+    const output = fs.readFileSync(logFile);
     const receipt = { name, command: [process.execPath, npmCli, ...args], startedAt,
       elapsedMs: Math.round(performance.now() - started), exitCode: result.status,
       signal: result.signal ?? null, outputSha256: hash(output), processError: result.error?.code ?? null };
-    // This builder has no private input; keep actual diagnostic output for failed trials too.
-    fs.writeFileSync(path.join(staged.candidate, `${name}.log`), output, { flag: 'wx', mode: 0o600 });
     exclusiveReceipt(path.join(staged.candidate, `${name}.json`), receipt);
     results.push(receipt);
     if (result.error || result.signal || result.status !== 0) refuse();
   }
-  return { node: process.versions.node, npm: pinnedNpm, platform: process.platform,
+  if (hash(fs.readFileSync(process.execPath)) !== toolchain.nodeSha256 || hash(fs.readFileSync(npmCli)) !== toolchain.npmCliSha256) refuse();
+  return { node: process.versions.node, npm: pinnedNpm, platform: process.platform, ...toolchain,
     arch: process.arch, publicBuildSettings: { network: 'arcTestnet', forceOffline: true }, results };
 }
 
 export function prepareImmutableRelease({ repo, releasesDir, commit, dependencies, npmCli }) {
+  if (process.versions.node !== pinnedNode) refuse();
   const startedAt = new Date().toISOString(), started = performance.now();
   const staged = stageImmutableSource({ repo, releasesDir, commit });
   // Scratch is deliberately outside source. Keep it on failure; never erase storage evidence.

@@ -80,3 +80,14 @@ test('dependency copy has separate file identity and refuses substituted install
   assert.equal(fs.readFileSync(original, 'utf8'), 'synthetic original');
   assert.throws(() => copyPreparationDependencies(f));
 });
+test('dependency directory links cannot copy external storage or ENV bytes', t => {
+  const f = fixture(t), entry = { version: '1.0.0' }, packages = { 'node_modules/fixture': entry };
+  fs.writeFileSync(path.join(f.source, 'package.json'), JSON.stringify({ dependencies: { fixture: '1.0.0' } }));
+  fs.writeFileSync(path.join(f.source, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages }));
+  fs.writeFileSync(path.join(f.dependencies, '.package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages }));
+  const outside = path.join(f.root, 'external-runtime'); fs.mkdirSync(outside);
+  fs.writeFileSync(path.join(outside, '.env.local'), 'SYNTHETIC=must-not-copy');
+  fs.symlinkSync(outside, path.join(f.dependencies, 'fixture'), process.platform === 'win32' ? 'junction' : 'dir');
+  assert.throws(() => copyPreparationDependencies(f));
+  assert.equal(fs.existsSync(path.join(f.source, 'node_modules')), false);
+});

@@ -1,4 +1,4 @@
-# Immutable release preparation candidate
+# Immutable release preparation and actual-runtime rehearsal
 
 Issue [#164](https://github.com/tang-vu/keryx/issues/164), October 5, 2026. This is a
 bounded preparation and inspection boundary. The current [reviewed deployment
@@ -16,9 +16,9 @@ plus several minutes of typechecking; those are historical observations, not a
 general availability guarantee. Removing the early drain while mutating this
 shared source/dependency directory would break the protection it provides.
 
-The existing [reviewed role helper](../scripts/redeploy-reviewed-roles.mjs) accepts
-fixed `/root/keryx` paths, executable arguments and ENV-file custody. It cannot
-be rebased to an immutable candidate by editing JSON alone. The existing DB
+The existing [reviewed role helper](../scripts/redeploy-reviewed-roles.mjs) defaults to
+fixed `/root/keryx` paths, executable arguments and ENV-file custody. A staged
+candidate requires the explicit protected release binding described below. The existing DB
 selector may initialize application storage, and Next loads local ENV files.
 Building in another directory with the real runtime ENV is therefore not a
 safe preparation workflow by default. Successful compilation cannot authorize
@@ -117,12 +117,67 @@ disk/resource and active-process implications first. Do not pass `.env.local` to
 preparation, symlink a funded store into it, or infer a production artifact from a
 secret-free offline build with different embedded public settings.
 
-## Required isolated builder and handover design
+## Exact-source isolated builder
 
-The next implementation needs one reviewed builder that runs the pinned installer,
-TypeScript/MTS checks, applicable tests, lint and production build in the candidate.
-It must retain exact command/result/toolchain evidence and lockfile/installation
-inputs, plus a digest of the non-secret public build settings. Match the mainnet
+`npm run redeploy -- --prepare-release REPO RELEASES FULL_COMMIT DEPENDENCIES NPM_CLI`
+selects [prepare-immutable-release.mjs](../scripts/prepare-immutable-release.mjs) before
+the SSH/WSL transport or deployment path. All paths must be absolute; Windows
+slash spelling is normalized before the staging API's canonical-root checks.
+The production redeploy command without arguments retains its existing behavior.
+An unknown or incomplete preparation command refuses rather than falling through
+to a deployment. Preparation grants no production admission or writer-hold authority.
+
+The builder materializes the exact full Git commit using the existing staging
+boundary, then copies independently installed dependencies into its own candidate.
+It matches every installed-lock entry against the source lockfile, requires direct
+dependencies, refuses external links/special files and checks headroom for the
+copy plus a further 4 GiB. Copies have independent file identities; the shared QA
+dependency junction and its target are read-only inputs. It never runs an installer
+or changes an existing dependency tree. An installation receipt is input evidence,
+not proof of the contents of each package; complete artifact hashes and trace
+closure still bind the actual copied bytes.
+
+Node24.21.0/npm11.19.0 are required. Fixed, sequential commands run the actual
+TypeScript/MTS checks, Vitest suite and Next production build. A fresh environment
+selects arcTestnet/offline, blanks Supabase and omits runtime credentials, funded
+storage manifests, injected Node options and provider configuration. HOME, cache,
+temporary files and SQLite live in a new isolated scratch directory outside the
+source cohort. Next's automatic ENV loading cannot select `.env.local` because
+source staging excludes it. The exact browser settings are recorded; **this
+testnet/offline artifact cannot be promoted to mainnet**.
+
+Each command retains its real exit/signal/error, elapsed time, tool arguments and
+diagnostic-output digest alongside the actual log, including failures. A failed
+check cannot record an artifact or successful preparation receipt. Successful
+preparation hashes the complete source/dependency/build cohort, verifies its
+trace closure, then re-verifies the retained artifact receipt. `preparation.json`
+binds those digests, full commit/tree, build ID, lock inputs, platform/toolchain,
+public settings and measured elapsed time. Every receipt remains
+`productionAdmitted:false`; existing/partial evidence refuses reuse.
+
+For a successfully prepared cohort, run:
+
+```bash
+node scripts/rehearse-prepared-release.mjs CANDIDATE SOURCE_SHA256 ARTIFACT_SHA256
+```
+
+This starts the actual candidate's public-origin Next server on loopback3940,
+checks `/api/health` with the trusted public HTTPS ingress headers and exact full
+commit/testnet/offline identity, positively closes HTTP/Next/tracing through its
+existing shutdown handler, re-verifies the cohort and restarts that same cohort.
+It measures initial readiness, idle drain plus handover, and readiness after drain;
+no request to research, suppliers, signing, settlement or production is made.
+The scratch store and runtime receipt are retained. Linux delivers native SIGTERM;
+Windows IPC invokes the registered application handler because a native Windows
+SIGTERM forcibly terminates the process. This is actual Next idle-restart evidence,
+not an old/new-version financial-worker drain, mainnet schema compatibility,
+rollback acceptance or a production availability promise. A failure retains its
+candidate and scratch evidence; no release cleanup command is provided.
+
+## Required production builder and handover design
+
+The production extension still needs reviewed, independently installed Linux
+dependencies and a secret-free build whose exact browser settings match the mainnet
 browser network/registry/origin bindings without granting the builder real runtime
 custody or payment/storage authority. Prove both explicit offline-fixture preparation
 and any necessary real-identity read-only capability; do not silently initialize,
@@ -158,10 +213,50 @@ from the immutable cohort; their concrete configuration and runtime acceptance
 are still open. Do not introduce a compatibility symlink that lets old scripts
 silently select whichever generation is current.
 
-No handover or rebased PM2/systemd/cron adapter is implemented here. Updating the
-existing role helper to accept arbitrary candidate paths would weaken its current
-contract. Each new adapter needs exact protected-path/config validation, original
-role retention, positive-exit checks and a role-specific startup observation.
+## Reviewed staged role adapter (production acceptance pending)
+
+`KERYX_REDEPLOY_STAGED_RELEASE=1` is an explicit code-only branch of the existing
+reviewed redeploy shell. It requires all four reviewed maintenance controls,
+held schedules and no economic migration. Its protected PM2 config must contain
+`apps` and a `release` object with the exact full expected commit and
+source-manifest, artifact-inspection, preparation and runtime-ENV digests, plus
+the protected compatibility review path/digest. Config and flag must agree;
+ordinary configs cannot select this path, and staged configs cannot silently
+select the ordinary source-mutating path.
+
+Both executable closures use the fixed
+`/root/.local/share/keryx-releases/<full-commit>/source` path. Web uses the
+cohort-local [next-immutable-server.mjs](../scripts/next-immutable-server.mjs);
+A2A imports the cohort's own tsx loader and worker. Only the nonsecret full
+`KERYX_COMMIT` control is added to the existing clean ENV command. Operational
+cwd remains `/root/keryx`, the external ENV file remains unchanged, and all
+previous allowance/feature controls must still match across both roles.
+Before admitting roles, the adapter refuses the observed extraction-worker
+`process.cwd()` source paths. Closing those HTML/PDF/bibliography paths needs
+its narrow source ownership and actual trace/startup acceptance; merely rebasing
+PM2 or adding a source-root ENV assignment cannot waive the gap.
+
+The protected preparation receipt must record actual successful typecheck,
+tests and build, pinned Node/npm, Linux and mainnet public settings. The new
+testnet/offline builder's receipts therefore **refuse** production admission.
+The protected compatibility review format is
+`keryx-reviewed-release-compatibility-v1`; it binds full commit/tree/build ID,
+source/inspection/artifact digests, the unchanged runtime-ENV digest, accepted
+source/artifact evidence digest, sealed storage identity/economic schema and
+retained economic-state digests. It records exactly the previously active web
+and A2A roles, held schedulers and `rollback:"hold-for-review"`. Root must derive
+this review from real accepted CI/build and independent native observations;
+synthetic fixtures and booleans are not operational clearance.
+
+The shell verifies artifact/review before stopped-role validation and again at
+the handover boundary. Only positively exited recognized predecessor definitions
+are retained/replaced. It never fetches/resets the serving checkout, installs into
+its dependencies, rewrites ENV, swaps `.next` or deletes recovery builds. Actual
+post-start PM2 arguments/PID/policy and full-commit health must match. Private,
+withdrawal, scheduled and maintenance roles remain under their existing explicit
+authority; no additional role starts or cron/systemd changes occur. There is no
+automatic rollback, retry of economic work, migration or release cleanup command.
+Failure keeps the cohorts and stopped references for operator review.
 
 ## Compatibility, rollback, retention and surface gates
 
@@ -197,6 +292,7 @@ Run the built-in-only checks:
 
 ```bash
 node --test scripts/immutable-release-staging.test.mjs
+node --test scripts/prepare-immutable-release.test.mjs scripts/redeploy.test.mjs
 node scripts/rehearse-immutable-release.mjs
 ```
 
@@ -222,7 +318,8 @@ the process. Neither is actual PM2/systemd, Keryx worker, SSE, SQLite or mainnet
 acceptance. Generated fixture artifacts are labeled synthetic and never reported
 as production builds or real payments.
 
-The issue remains open until a real isolated Next/toolchain build, application
+The issue remains open until the isolated Next/toolchain and actual-runtime evidence
+has been accepted on the intended Linux resource shape, plus application
 start/worker/maintenance and DB compatibility checks, graceful writer-drain/crash
 recovery, off-box retention/retrieval, and reviewed rollback all pass. Record a
 timed no-spend Linux rehearsal on the intended host/resource shape, then define a

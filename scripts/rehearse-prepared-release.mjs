@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { verifyImmutableArtifact } from './immutable-release-staging.mjs';
 import { preparationEnvironment } from './prepare-immutable-release.mjs';
 
@@ -18,19 +18,21 @@ const program = `
   process.send({ ...running.receipt, source: process.argv[2] });
 `;
 
-async function start(source, env, scratch) {
+async function start(source, env, scratch, label) {
   const child = spawn(process.execPath, ['--input-type=module', '-e', program,
     path.join(source, 'scripts/next-public-server.mjs'), source], {
     cwd: scratch, env, stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true,
   });
   let output = '';
+  const log = fs.openSync(path.join(scratch, `${label}.log`), 'wx', 0o600);
   for (const stream of [child.stdout, child.stderr]) stream.on('data', bytes => {
-    if (output.length + bytes.length > 4 * 1024 * 1024) throw Error('Rehearsal output exceeded its bound; inspect retained process');
-    output += bytes;
+    // Keep diagnostics bounded without terminating a role to truncate a log.
+    const remaining = 4 * 1024 * 1024 - output.length;
+    if (remaining > 0) { const retained = bytes.subarray(0, remaining); fs.writeSync(log, retained); output += retained; }
   });
   const exited = new Promise((resolve, reject) => {
     child.once('error', reject);
-    child.once('exit', (code, signal) => resolve({ code, signal }));
+    child.once('exit', (code, signal) => { fs.fsyncSync(log); fs.closeSync(log); resolve({ code, signal }); });
   });
   exited.catch(() => {});
   const ready = await Promise.race([
@@ -74,19 +76,23 @@ export async function rehearsePreparedRelease(options) {
   const source = path.join(options.candidate, 'source');
   const env = preparationEnvironment({ commit: before.commit, scratch });
   const initialStarted = performance.now();
-  const predecessor = await start(source, env, scratch);
+  let active;
+  try {
+  const predecessor = await start(source, env, scratch, 'predecessor'); active = predecessor;
   const initial = await health(before.commit);
   const initialReadyMs = Math.round(performance.now() - initialStarted);
   const startedAt = new Date().toISOString(), maintenanceStarted = performance.now();
   const previousClosed = await drain(predecessor);
+  active = undefined;
   const drainedAt = performance.now();
   // Rehash all exact candidate bytes at the actual handover boundary.
   const after = verifyImmutableArtifact(options); assert.deepEqual(after, before);
-  const replacement = await start(source, env, scratch);
+  const replacement = await start(source, env, scratch, 'replacement'); active = replacement;
   const final = await health(before.commit);
   const handoverMs = Math.round(performance.now() - maintenanceStarted);
   const postDrainReadinessMs = Math.round(performance.now() - drainedAt);
   const replacementClosed = await drain(replacement);
+  active = undefined;
   const receipt = { format: 'keryx-prepared-next-rehearsal-v1', productionAdmitted: false,
     evidence: 'actual prepared Next public server; same-cohort idle restart; isolated testnet/offline SQLite',
     commit: before.commit, tree: before.tree, buildId: before.buildId,
@@ -99,6 +105,11 @@ export async function rehearsePreparedRelease(options) {
   const file = path.join(options.candidate, 'runtime-rehearsal.json');
   fs.writeFileSync(file, JSON.stringify(receipt) + '\n', { flag: 'wx', mode: 0o600 });
   return receipt;
+  } finally {
+    // Failed health/identity assertions must still positively drain the owned
+    // isolated role. Never force termination or remove its diagnostic/store files.
+    if (active) await drain(active);
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
