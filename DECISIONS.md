@@ -7171,3 +7171,14 @@ deployment/readback belongs to the existing serialized runtime batch. Packaging
 refuses invalid descriptions/versions before archive writes. Keep the historical
 legal extraction fixture and require every paragraph outside the reviewed extension
 section and dated update to retain its exact markup.
+
+## 2026-10-11 — English integration setup and playground catalogue
+
+Extract47 complete typed English presentation messages while keeping setup
+commands, protocol fields, model/client identities, copied snippets and example
+prompts as data. Retire only48 scoped original allowances; preserve fourteen data
+findings and other areas. Exact renders and intercepted frontend callbacks qualify
+English/byte parity without executing research or billing endpoints. Root owns
+availability helpers, combined Next/domain/platform acceptance and delivery; hold
+locale/glossary activation and keep original272 open. See
+`docs/engineering/integrations-catalogue-2026-10-11.md`.

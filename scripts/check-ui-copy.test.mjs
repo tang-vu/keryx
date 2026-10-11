@@ -224,3 +224,14 @@ test("personal dispatch metadata, accessibility, empty states and toast copy are
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("integration setup and playground copy is catalogued; protocols, URLs and example prompts stay data", () => {
+  const retained = {
+    "app/integrations/mcp/page.tsx": [],
+    "app/integrations/mcp/mcp-integration-client.tsx": ["Remote MCP", "io.github.tang-vu/keryx", "MCP Registry", "https://keryx.cc/mcp", "paper_lookup", "searchRepositories: true", "Use Keryx research to explain how micropayments make citation rewards practical for AI agents. Include the paid sources and dispatch receipt."],
+    "app/playground/page.tsx": ["https://keryx.cc/api/v1", "/chat/completions", "keryx", "stream:true", "kx_live_…", "/dev", "/api/docs"],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+});
