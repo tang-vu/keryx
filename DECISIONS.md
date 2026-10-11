@@ -7546,3 +7546,18 @@ check back into a Keryx assertion. The ledger step restates receipt figures and
 declines to state a margin. The live sponsored run, replay and limit
 demonstrations stay gated; see the
 [criteria status](docs/engineering/recorded-walkthrough-305.md).
+
+## 2026-10-11 — Reserve contiguous structural context before distant lexical prose
+
+The exact retained #230 question/targets already select complete RFC rules 6–7,
+but distant registration prose displaces rule 5's condition and example. Give an
+overlapping intact preformatted/enumerated nomination preference while reserving
+the existing full lexical window and one selection slot. Outside that allowance,
+new target terms retain precedence. Keep all caps, original offsets, role admission,
+heading glosses and quote/review/reward authority unchanged. The exact #238 MDN
+type list remains intact; obsolete `submit` tokens cannot replace its genuine fact
+options. Preserve historical bodies and actual targets rather than invented
+replacement evidence. Source continuity and synthetic ledger inputs do not prove
+useful model delivery or authorize paid research, proposals, payments or closure.
+Root owns coordinated CI/review, distribution and deployment; both original live
+acceptance gates remain open. See the [source-unit selection record](docs/engineering/source-unit-selection-2026-10-11.md).

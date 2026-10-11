@@ -175,7 +175,7 @@ export function selectEvidencePassages(text: string, question: string, subClaims
     return low;
   };
   const blockAt = (offset: number) => blocks[blockIndexAt(offset)] ?? { start: offset, end: scanned.length };
-  type Window = { start: number; end: number; text: string; words: Set<string>; questionScore: number };
+  type Window = { start: number; end: number; text: string; words: Set<string>; questionScore: number; structuralContext: boolean };
   const retrievalTargets = [...targets, questionTerms];
   const pools: { window: Window; score: number }[][] = retrievalTargets.map(() => []);
   const seen = new Map<string, Window>();
@@ -183,7 +183,7 @@ export function selectEvidencePassages(text: string, question: string, subClaims
   let nominated = 0;
   // Keep the existing fixed-bucket construction ceiling, including optional hints.
   const nominationLimit = Math.ceil(scanned.length / WINDOW_STRIDE) * (retrievalTargets.length + 1) + 1;
-  const addWindow = (start: number, end: number, exactOffset = false) => {
+  const addWindow = (start: number, end: number, exactOffset = false, structuralContext = false) => {
     if (end <= start || nominated >= nominationLimit) return;
     nominated++;
     const body = scanned.slice(start, end);
@@ -195,7 +195,7 @@ export function selectEvidencePassages(text: string, question: string, subClaims
     if (exact) return exact;
     const words = terms(body);
     const questionScore = questionTerms.size ? [...questionTerms].filter(term => words.has(term)).length / questionTerms.size : 0;
-    const window = { start, end, text: body, words, questionScore };
+    const window = { start, end, text: body, words, questionScore, structuralContext };
     seen.set(key, window);
     opening ??= window;
     retrievalTargets.forEach((target, index) => {
@@ -221,6 +221,7 @@ export function selectEvidencePassages(text: string, question: string, subClaims
     // This is structural context preservation, not detection of semantic caveats.
     if (block.end - block.start <= PASSAGE_CHARACTERS) {
       let start = block.start, end = block.end;
+      let structuralContext = false;
       const pre = layout?.preformatted.find(region => region.start <= block.start && region.end >= block.end);
       if (pre) {
         // Preformatted rules often put their example or the next qualification
@@ -229,6 +230,7 @@ export function selectEvidencePassages(text: string, question: string, subClaims
         const previous = blocks[blockIndex - 1], next = blocks[blockIndex + 1];
         if (previous && previous.start < start && previous.start >= pre.start && end - previous.start <= PASSAGE_CHARACTERS) start = previous.start;
         if (next && next.end > end && next.end <= pre.end && next.end - start <= PASSAGE_CHARACTERS) end = next.end;
+        structuralContext = start !== block.start || end !== block.end;
       } else {
         // Ordinary enumeration cannot cross an observed pre boundary in either
         // direction or displace the pre group's existing neighboring context.
@@ -236,8 +238,9 @@ export function selectEvidencePassages(text: string, question: string, subClaims
           enumeratedContextRange(scanned, blocks, blockIndex, PASSAGE_CHARACTERS, layout?.preformatted);
         start = enumeration?.start ?? start;
         end = enumeration?.end ?? end;
+        structuralContext = !!enumeration;
       }
-      addWindow(start, end);
+      addWindow(start, end, false, structuralContext);
       return;
     }
     if (!compact) {
@@ -367,6 +370,7 @@ export function selectEvidencePassages(text: string, question: string, subClaims
     const selectedCharacters = unionCharacters(selected);
     let best: typeof windows[number] | undefined;
     let bestScore = 0;
+    let bestPriority = -1;
     let bestCharacters = Infinity;
     for (const window of windows) {
       if (selected.includes(window)) continue;
@@ -379,12 +383,24 @@ export function selectEvidencePassages(text: string, question: string, subClaims
       // Once all available target terms are covered, use remaining room for context.
       const score = newTargetTerms > 0 ? 1 + newTargetTerms
         : window.questionScore * 0.1 * Math.max(0, novelFraction);
+      // Extend an already selected structural bundle before distant lexical
+      // matches consume its remaining room, reserving a full lexical window and
+      // selection slot. Outside that allowance, new target terms keep precedence.
+      // Only overlapping intact pre/enumeration nominations qualify. A gap, a
+      // partial large block or a heading hint cannot create this preference.
+      const continuation = combinedCharacters > selectedCharacters && window.structuralContext &&
+        selected.some(previous => previous.structuralContext && window.start < previous.end && window.end > previous.start);
+      const reservedContinuation = continuation && combinedCharacters <= MAX_CONTEXT_CHARACTERS - PASSAGE_CHARACTERS &&
+        selected.length < MAX_WINDOWS - 1;
+      const priority = reservedContinuation ? 3 : newTargetTerms > 0 ? 2 : continuation ? 1 : 0;
       // Equal target novelty prefers the requested question, then a smaller
       // intact context bundle so later targets retain room in the fixed budget.
-      if (score > bestScore || (score > 0 && score === bestScore &&
-        (window.questionScore > (best?.questionScore ?? 0) ||
-          (window.questionScore === best?.questionScore && combinedCharacters < bestCharacters)))) {
-        best = window; bestScore = score; bestCharacters = combinedCharacters;
+      const betterTie = window.questionScore > (best?.questionScore ?? 0) ||
+        window.questionScore === best?.questionScore && combinedCharacters < bestCharacters;
+      const better = priority > bestPriority || priority === bestPriority &&
+        (score > bestScore || score === bestScore && betterTie);
+      if ((score > 0 || continuation) && better) {
+        best = window; bestScore = score; bestPriority = priority; bestCharacters = combinedCharacters;
       }
     }
     if (!best) break;
