@@ -10,6 +10,21 @@ function fixture() {
   return {store:createSupabaseRunPrivacy({rpc,from} as unknown as SupabaseClient),rpc,from,abortSignal,result};
 }
 describe("#266 Supabase bounded service-role privacy boundary",()=>{
+  it.each(["original-circle-reference","circle-transfer","CiRcLe_Transfer:Ref-01",`0x${"c".repeat(64)}`,`0x${"A".repeat(64)}`,"","A".repeat(256)])(
+    "preserves public-safe pending reference: %s through the fixed RPC without normalization or finality",async transaction=>{
+      const f=fixture(),id=`a2a_${"d".repeat(64)}`,metadata={queryId:id,status:"running",createdAt:run.createdAt,startedAt:null,
+        amountUsdc:0.030001,creatorBudgetUsdc:0.010001,serviceFeeUsdc:0.02,transaction};
+      const before=structuredClone(metadata);f.result(metadata);expect(await f.store.pending(id)).toEqual(metadata);expect(metadata).toEqual(before);
+      expect(f.rpc).toHaveBeenLastCalledWith("run_privacy_v1",{p_action:"pending",p_id:id,p_input:{},p_actor:null,p_claims:false});expect(f.from).not.toHaveBeenCalled();
+    });
+  it.each(["https://private.invalid/token","Bearer PRIVATE_NONCE",'{"authorization":"PRIVATE_NONCE"}',"header.payload.signature",
+    "circle-transfer\nPRIVATE_NONCE","circle-transfer\n"," circle-transfer","círcleref","A".repeat(257),null,42])(
+    "refuses unsafe pending reference: %s through the fixed RPC without REST fallback",async transaction=>{
+      const f=fixture(),id=`a2a_${"d".repeat(64)}`,metadata={queryId:id,status:"running",createdAt:run.createdAt,startedAt:null,
+        amountUsdc:0.030001,creatorBudgetUsdc:0.010001,serviceFeeUsdc:0.02,transaction};
+      const before=structuredClone(metadata);f.result(metadata);await expect(f.store.pending(id)).rejects.toThrow();
+      expect(metadata).toEqual(before);expect(f.rpc).toHaveBeenLastCalledWith("run_privacy_v1",{p_action:"pending",p_id:id,p_input:{},p_actor:null,p_claims:false});expect(f.from).not.toHaveBeenCalled();
+    });
   it("reads pending status through the sealed service RPC only, rejecting body/foreign/failed packets",async()=>{
     const f=fixture(),id=`a2a_${"d".repeat(64)}`,metadata={queryId:id,status:"running",createdAt:run.createdAt,startedAt:null,
       amountUsdc:0.030001,creatorBudgetUsdc:0.010001,serviceFeeUsdc:0.02,transaction:`0x${"c".repeat(64)}`};

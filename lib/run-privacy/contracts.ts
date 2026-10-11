@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { QueryRun } from "../types";
 import type { RunClaimBinding } from "../run-claims/contracts";
+import { originalOrderPaymentSchema } from "../a2a/overdue-types";
 
 export const visibilitySchema = z.enum(["private", "unlisted", "public"]);
 export type RunVisibility = z.infer<typeof visibilitySchema>;
@@ -17,7 +18,11 @@ export interface PrivacyList { take: number; before?: { id: string; createdAt: s
 export const pendingPollSchema=z.object({queryId:z.string().regex(/^a2a_[a-f0-9]{64}$/),status:z.literal("running"),
   createdAt:z.string().max(64),startedAt:z.string().max(64).nullable(),amountUsdc:z.number().finite().nonnegative(),
   creatorBudgetUsdc:z.number().finite().nonnegative(),serviceFeeUsdc:z.number().finite().nonnegative(),
-  transaction:z.string().regex(/^(?:0x[a-fA-F0-9]{64})?$/)}).strict();
+  // Reuse the retained-reference 256-character cap and originalOrderPayment's
+  // ASCII allowlist. Transport-safe metadata grants no owner or finality rights.
+  // Reject any forbidden character, including a trailing newline; preserve bytes.
+  transaction:z.literal("").or(originalOrderPaymentSchema.shape.reference.unwrap().min(1)
+    .refine(reference=>!/[^A-Za-z0-9:_-]/.test(reference),"Unsafe public payment reference"))}).strict();
 export type PendingPoll=z.infer<typeof pendingPollSchema>;
 export type PrivacyOffer=Pick<import("../types").GapIntent,"id"|"gapId"|"sourceId"|"sourceItemLink"|"itemId"|"contentVersion"|"articleOfferId"|"ownerWallet"|"status"|"attempts"|"retryRunId"|"coverage"|"rewardUsdc"|"createdAt"|"updatedAt">;
 export interface RunPrivacyStore {

@@ -60,3 +60,31 @@ it.each([null,new Date().toISOString(),"2026-01-01T00:00:00.000Z"])("serves boun
   expect(JSON.stringify(packet)).not.toContain("PRIVATE");expect(order).not.toHaveBeenCalled();
   expect(connection.prepare("SELECT * FROM a2a_orders WHERE id=?").get(pendingId)).toEqual(before);
 });
+
+function pendingReference(transaction:string) {
+  const pendingId=`a2a_${"f".repeat(64)}`,created=new Date().toISOString();
+  connection.prepare(`INSERT INTO a2a_orders(id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,service_fee_usdc,research_mode,
+    status,transaction_id,request_data,response_data,started_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .run(pendingId,pendingId,"PRIVATE nonce","PRIVATE hash",wallet,other,0.030001,0.010001,0.02,"deep","running",transaction,
+      JSON.stringify({question:"PRIVATE request"}),JSON.stringify({answer:"PRIVATE result"}),null,created,created);
+  return {pendingId,created,before:connection.prepare("SELECT * FROM a2a_orders WHERE id=?").get(pendingId)};
+}
+it.each(["original-circle-reference","circle-transfer","CiRcLe_Transfer:Ref-01",`0x${"c".repeat(64)}`,`0x${"A".repeat(64)}`,"","A".repeat(256)])(
+  "preserves public-safe pending reference: %s in SQLite and actual HTTP without finality or worker-body claims",async transaction=>{
+    const {pendingId,created,before}=pendingReference(transaction);
+    expect(await store.pending(pendingId)).toEqual({queryId:pendingId,status:"running",createdAt:created,startedAt:null,
+      amountUsdc:0.030001,creatorBudgetUsdc:0.010001,serviceFeeUsdc:0.02,transaction});
+    const response=await read(pendingId);expect(response.status).toBe(200);const packet=await response.json();
+    expect(packet).toEqual({status:"queued",queryId:pendingId,pollUrl:`/api/agent/ask?queryId=${pendingId}`,createdAt:created,startedAt:null,
+      financial:{totalPricePaid:0.030001,creatorBudgetUsdc:0.010001,serviceFeeUsdc:0.02,transaction},
+      qualification:"Recorded pending status and accepted financial values; no result or completed settlement is asserted."});
+    expect(JSON.stringify(packet)).not.toContain("PRIVATE");expect(order).not.toHaveBeenCalled();
+    expect(connection.prepare("SELECT * FROM a2a_orders WHERE id=?").get(pendingId)).toEqual(before);
+  });
+it.each(["https://private.invalid/token","Bearer PRIVATE_NONCE",'{"authorization":"PRIVATE_NONCE"}',"header.payload.signature",
+  "circle-transfer\nPRIVATE_NONCE","circle-transfer\n"," circle-transfer","círcleref","A".repeat(257)])(
+  "refuses unsafe pending reference: %s in SQLite and actual HTTP without journal rewrite or raw fallback",async transaction=>{
+    const {pendingId,before}=pendingReference(transaction);await expect(store.pending(pendingId)).rejects.toThrow();
+    const response=await read(pendingId);expect(response.status).toBe(503);expect(await response.json()).toEqual({error:"privacy_unavailable"});
+    expect(order).not.toHaveBeenCalled();expect(connection.prepare("SELECT * FROM a2a_orders WHERE id=?").get(pendingId)).toEqual(before);
+  });

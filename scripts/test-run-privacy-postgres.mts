@@ -53,7 +53,7 @@ try {
   assert.equal(call("read","historical",{},null).item.state.visibility,"unlisted");assert.equal(call("read","unowned",{},null).item.state.visibility,"unlisted");
   save("owned");save("anonymous",null);save("foreign",other);
   const pendingId=`a2a_${"d".repeat(64)}`,pending={queryId:pendingId,status:"running",createdAt:date,startedAt:null,
-    amountUsdc:0.030001,creatorBudgetUsdc:0.010001,serviceFeeUsdc:0.02,transaction:`0x${"c".repeat(64)}`};
+    amountUsdc:0.030001,creatorBudgetUsdc:0.010001,serviceFeeUsdc:0.02,transaction:"original-circle-reference"};
   sql(`insert into a2a_orders(query_id,status,created_at,amount_usdc,creator_budget_usdc,service_fee_usdc,transaction_id,request_data,response_data,authorization_id)
     values('${pendingId}','running','${date}',0.030001,0.010001,0.02,'${pending.transaction}',${literal({question:"SECRET pending"})},${literal({answer:"SECRET pending"})},'SECRET nonce');`);
   const pendingPacket=call("pending",pendingId,{},null);
