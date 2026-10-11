@@ -1,5 +1,30 @@
 # Supported-surface release parity
 
+## Private anonymous claim delivery — October 11 combined source candidate
+
+App/OpenAPI **0.27.54**, hosted MCP **0.3.13** and extension **0.1.4** identify
+the changed candidates. Web research uses a protected initial document and
+one-shot private SSE handoff; the account UI reads claimant sidecar history.
+The direct repository ask CLI requires an inherited private descriptor. OpenAI
+and hosted MCP responses carry separate private extras, and chat adapters use
+their private delivery channels. Public reports, exports and financial truth do
+not acquire credentials or claimant-as-payer attribution.
+
+Stdio/official Registry **0.4.15** and desktop **0.4.14** retain their source
+identities: their user research roles are already payer-bound A2A/native tasks.
+They expose no ordinary claim store or historical credential minting. Internal
+engine drivers retain their operational roles. Their source/package graph audit
+and the changed extension package acceptance remain explicit release evidence;
+unchanged versions do not establish installed-client synchronization.
+
+Ordinary migrations0086–0089 remain unapplied to production. Claims stay default
+off, and native/archive adapters have no claim/history fallback. Fresh combined
+CI/default build, the private built-browser lane, applicable database/platform
+checks, distribution readback and one combined deployment are required. Synthetic
+source fixtures are neither funded-private-web nor production-proxy acceptance.
+Full #262 remains open until its admitted rollout and every applicable delivery
+criterion is satisfied. See [the claim contract](anonymous-run-claims.md).
+
 ## Operator and observation catalogue — unreleased October 11 batch
 
 The area-five source increment adds 351 English keys for twelve Operator,
