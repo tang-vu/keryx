@@ -17,15 +17,14 @@ not qualify a temporal requirement that the detector never retained.
 
 ## Deliberate correction
 
-The [original-text detector](../../lib/sources/source-recency.ts) now also finds
-its existing positive command family at an unquoted sentence or line boundary,
-with an optional `In English,` or `In Vietnamese,` prefix. It recognizes the
-full saved question as `unsupported-temporal-form`, retaining the original URL
-binding and command span. The registered feed is withheld before catalog
-selection, funding, CACHE or BUY; the answer retains a newest-release limitation.
-It does not guess what “the feed” means or grant native observation authority
-from surrounding prose. Multiple original URLs remain ambiguous; missing or
-invalid source binding retains its existing unresolved hold.
+The earlier [original-text detector](../../lib/sources/source-recency.ts) correction
+found its existing positive command family at an unquoted sentence or line
+boundary, with an optional `In English,` or `In Vietnamese,` prefix. It retained
+the full saved question as `unsupported-temporal-form` with the original URL
+binding and command span, withholding the registered feed before catalog
+selection, funding, CACHE or BUY. That correction did not guess what “the feed”
+meant or grant native observation authority from surrounding prose. Multiple
+original URLs and unresolved bindings keep their existing refusal.
 
 Existing qualified initial forms, such as `Name the newest release in <exact
 feed URL>`, keep their bounded native observation path. The current-feed resolver
@@ -37,7 +36,7 @@ establish the release's change, compatibility, body integrity or payment authori
 | Original wording | Current boundary |
 | --- | --- |
 | `Name the newest release in <exact feed URL>` | Existing qualified native observation; exact eligible catalog winner or a visible gap |
-| Analyst context followed by `In English, name the newest release tag actually present in the feed` | Original source binding retained; unsupported wording held before the affected article read |
+| Adjacent positive `Read the registered, verified creator release source associated with <exact URL>.` then `In English, name the newest release tag actually present in the feed` | Finite original caller binding; existing native observation and exact catalog-winner checks still required |
 | Context followed by a direct `Name` / `Identify` / `Find` / `Compare` newest/latest command | Conservative unsupported hold; no new native scope inferred |
 | A quoted example or `Do not name the newest release` | Does not manufacture a positive temporal requirement |
 | A line wrap after `Do not` / `Don't` / `Đừng` / `Không`, or an explicit `Example:` / `Ví dụ:` label | Remains a negation or example; optional language/please modifiers across lines do not create a positive command |
@@ -46,13 +45,68 @@ establish the release's change, compatibility, body integrity or payment authori
 This remains a narrow grammar. Inline clauses without a recognized sentence/line
 boundary and conversational questions such as “Which release is most recent?”
 are outside its recognition coverage and can still enter ordinary topical
-selection. This candidate establishes the exact issue217 request's safe refusal,
-not general natural-language temporal understanding. Extending those forms or
+selection. These finite forms do not establish general natural-language temporal
+understanding. Extending those forms or
 introducing a structured caller requirement remains separate work.
+
+## Original-task newest-selection qualification
+
+The earlier refusal was insufficient for acceptance criterion 2: the shortened,
+free public-reference test did not show newest selection for the full original
+registered-creator task. The current correction adds only the adjacent two-sentence
+form in the table. Both commands must be positive and unquoted at a sentence/line
+boundary, the Read sentence must immediately precede the temporal command, and
+there must be exactly one safe original URL. The Read role wording and temporal
+directive are finite; the feed URL, vendor, analyst context and release tag are
+not hardcoded. A second temporal directive, negated/quoted Read binding, ambiguous
+or different feed, stable/prerelease/cutoff/retained form cannot grant this binding.
+The positive `newest prerelease tag` family is retained as an unsupported hold,
+including when it lacks the separate word `release`.
+
+This binds selection, never registration or payout authority. The unchanged
+per-run native observer must still obtain one bounded complete document, mint an
+opaque observation with raw-byte and cohort digests, validate native date roles,
+reject uncertain membership or tied newest entries, and resolve the exact winner
+against its source/link/title/publication/catalog identity. Legacy retained rows
+cannot mint that observation. Wanted/private/brief/unattended and other existing
+held scopes keep their restrictions. Neither model decomposition nor topical
+overlap can erase the retained original requirement.
+
+The expanded [original-task test](../../lib/agent/issue-217-original-request.test.ts)
+uses the byte-identical saved question, a synthetic registered creator source
+with a .005 access price and all ten rows from the existing
+[frozen fixture](../../lib/sources/fixtures/issue-217-retained-releases.json).
+The rows' URLs are mapped to the task's exact GitHub feed and native Atom document;
+these invented bytes are returned by intercepted transport, not a live read or
+reconstruction of the paid original. The fixture clock is separate from the old
+retained-set capture time. No retained snapshot is promoted into an observed
+capability: the real observer parses the controlled full response and the actual
+catalog adapter resolves it normally.
+
+The ordinary relevance selector demonstrably prefers stronger-overlap v10.
+For the original task, only v18 reaches the creator decision before either BUY
+or CACHE. BUY retains the exact source, article and .005 price, then its real-mode
+gateway fixture throws before settlement. The final response truthfully says no
+supported answer/read payment was confirmed and distinguishes the native ordering
+observation from unverified release changes/compatibility. CACHE uses explicit
+synthetic retained bytes; absent qualifying evidence, no reward is forced. Both
+cases report zero settled/pending payments, spending and creator reward. If the
+observed v18 has no exact catalog match, no funding, decision or older BUY follows.
+The same-source nonrecency case still admits v10 through ordinary relevance.
+
+Six focused suites pass 178 tests, including the original-task BUY/CACHE paths,
+unindexed winner, unsupported full-task variants and unchanged observer/adapter
+authority regressions. A positive original-task assertion fails on the base
+before the recognizer correction. Initial capture-helper and fixture-assertion
+failures are retained separately and are not acceptance evidence. Application
+TypeScript and scoped lint pass. Checks use pinned Node 24.21, an OS allowlist
+plus explicit offline/testnet settings, blank Supabase values, denied outbound
+transport and no environment loader. Synthetic fixture evidence establishes
+source behavior only.
 
 ## Authority and supported surfaces
 
-Only the shared detector and focused fixtures change. Existing `runAgent` callers
+Only the shared detector, focused fixtures and this rationale change. Existing `runAgent` callers
 in web/API, CLI, hosted and stdio research adapters retain the same original-text
 guard; model targets and source tags cannot create or erase its requirement.
 Their current native-read role limits remain. Protected private/package/wanted,
@@ -71,9 +125,9 @@ not relabeled as a repaired acceptance run.
 ## Verification and remaining gates
 
 The expected-no-BUY regression failed on main43 with the older item and .005
-amount visible in the intercepted gateway call. After the detector correction,
-that exact shared-agent case has no funding, catalog selection, article BUY,
-payment record, citation reward or native read, and returns the explicit gap.
+amount visible in the intercepted gateway call. After that earlier correction,
+that exact shared-agent case had no funding, catalog selection, article BUY,
+payment record, citation reward or native read, and returned the explicit gap.
 Focused tests retain the existing qualified native winner and membership/date
 failure coverage while adding contextual commands, sentence/line boundaries,
 quotes/code examples, negation and ambiguous binding. All fixtures remain inert.
