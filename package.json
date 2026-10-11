@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.27.57",
+  "version": "0.27.58",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -8,7 +8,9 @@
   },
   "description": "Keryx — a citation-toll reading agent. Pays creators every time their work is cited, in USDC on Arc.",
   "scripts": {
+    "test:browser-mobile-header": "node --import tsx scripts/test-browser-mobile-header.mts",
     "inspect:purchase-outcomes": "node --import tsx scripts/inspect-purchase-outcomes.mts",
+    "check:purchase-regression": "node --import tsx scripts/check-purchase-regression.mts",
     "operator:obligations": "node --import tsx --no-warnings scripts/operator-obligations.mts",
     "test:decision-reviews:postgres": "node --import tsx scripts/test-decision-reviews-postgres.mts",
     "test:decision-reviews:built": "node --import tsx scripts/test-decision-reviews-built.mts",
@@ -76,6 +78,7 @@
     "creator:cashout:sign": "node --import tsx --no-warnings scripts/creator-cashout-batch-sign.mts",
     "creator:cashout:funding": "node --import tsx --no-warnings scripts/creator-cashout-batch-funding.mts",
     "review:a2a": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/review-a2a-order.mts",
+    "operator:overdue": "node --import tsx --no-warnings scripts/operator-overdue-jobs.mts",
     "mcp": "node --import tsx --no-warnings --env-file-if-exists=.env.local mcp/keryx-mcp-server.mts",
     "web": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/web-client.mts",
     "deploy": "bash scripts/deploy-vps.sh",

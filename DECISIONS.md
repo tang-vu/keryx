@@ -7547,6 +7547,79 @@ declines to state a margin. The live sponsored run, replay and limit
 demonstrations stay gated; see the
 [criteria status](docs/engineering/recorded-walkthrough-305.md).
 
+## 2026-10-11 - Expose bounded source outcomes before activating learned spending
+
+Retain independently attested outside actor/funding gates for source learning.
+A verified wallet or historical citation is insufficient. Capture source/run
+outcomes in existing public run JSON, exclude known source owners and beneficiaries
+before cohort checks, and require fresh on-chain ownership plus completed exact
+settled reads for purchased observations. Private jobs and unknown historical
+memory cannot train the public live prompt. Public topic facets come only from
+source-declared tags; aggregate contracts omit questions, actors and receipt IDs.
+
+Share a bounded recent source/topic record between creator SSR, API and remote/
+stdio MCP. Cap sample observations and repeated attested actors per UTC day;
+retain exact rational prices, descriptive uncertainty and reviewable abrupt-shift
+flags without claiming common-control or Sybil resistance. Ship the deterministic
+bounded planner only as a prospective offline policy: no signer, default
+exploration allowance or live selection activation. Controlled purchase replay
+is not causal exploration benefit or production acceptance. See the
+[source, surface and remaining-gate record](docs/engineering/source-learning-299.md).
+
+## 2026-10-11 — Record purchase planning separately from observed outcomes
+
+For issue298, add an immutable initial planning basis to existing decision JSON
+instead of reconstructing historical budgets or alternatives from prose. Preserve
+that basis when a later guard withholds the planned read. Pool the existing exact
+article/version purchase scorer in a bounded newest-run sample per recorded
+cohort, with interval, counts, rules and missing measures explicit. This keeps
+recorded citations and settlement bookkeeping distinct from model reasoning,
+expert usefulness, independent traffic and third-party payment verification.
+
+Keep the separately bounded skip-evaluation helper detached from live research:
+its synthetic reservations are accounting rather than payment authority. Require
+explicit margins and minimum samples for an offline release comparison; invent
+no accepted regression policy. Dynamic reevaluation capture, real independently
+funded evaluation transport, supported-claim review, question taxonomy and the
+actual pre-deployment comparison remain open. See the
+[scope and surface boundaries](docs/engineering/purchase-outcomes-298.md).
+
+**Keep mobile wallet intent across browser portals — 2026-10-12.**
+
+Safari touch events exposed a lifetime bug in the header: a body-portaled wallet
+choice was treated as outside the mobile menu and unmounted before click. Mark
+header wallet portals and retain the mobile wallet control after its first opening,
+using native hidden state for menu visibility. An external SDK modal can dismiss
+that outer menu without destroying the selected wallet's one-time SIWE intent.
+Handle connection outcomes through their promise so picker removal cannot suppress
+errors. Clear failed or cancelled intent only for its selection token, including
+Google connection and OAuth startup failures; a retained hidden control must not
+sign in after a later choice, and an older failure must not clear a newer choice.
+Keep the two new plain English labels in a typed web-only source catalogue,
+outside the shared aggregate embedded by MCP and desktop; no translated locale is
+activated. Add loading shells only to the public data pages that have no nested page
+routes; preserve private document bootstraps and existing not-found boundaries.
+See [iPhone header repair](docs/engineering/iphone-header-2026-10-12.md) for surface
+boundaries and separate browser, deployment and physical-device acceptance gates.
+
+## 2026-10-11 — Inspect overdue originals through selected read-only storage
+
+Continue issue #257 with an explicit private operator command, reusing the
+existing accepted target, original-order payment reference and conservative
+creator-leg projection. Include running and failed undelivered originals;
+failure alone does not close a paid-delivery obligation. Keep observation out of
+public aggregate/MCP packets and leave customer remedies to the confirmed policy.
+
+Use the selected enrolled read-only facade, with disposal and no ordinary
+initialization/schema fallback. Bounded reads report unreadable/truncated data;
+ordinary Supabase requires exact count to expose server row caps. Native
+PostgreSQL explicitly refuses until its own sealed queue domain is accepted.
+No schedule, notification, new signer, retry, purchase, reconciliation, refund,
+hold release, production DDL or version/deployment claim is introduced. This
+gives a person a concrete original packet while preserving payment uncertainty
+and the remaining target-window/service gates. See the
+[scope and release boundaries](docs/engineering/paid-job-overdue-queue-257.md).
+
 ## 2026-10-11 — Reserve contiguous structural context before distant lexical prose
 
 The exact retained #230 question/targets already select complete RFC rules 6–7,

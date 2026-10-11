@@ -70,6 +70,7 @@ export function PurchaseOutcomesPanel({ dispatchId, report }: { dispatchId: stri
       <div className="mt-4 flex flex-wrap gap-3 text-xs underline">
         <a href={path} target="_blank" rel="noreferrer">{copy.viewJson}</a>
         <a href={`${path}?download=1`}>{copy.download}</a>
+        <a href="/purchase-outcomes">{copy.allReports}</a>
       </div>
     </>}
   </section>;

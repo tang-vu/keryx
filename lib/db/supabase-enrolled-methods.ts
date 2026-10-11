@@ -90,6 +90,7 @@ export const SUPABASE_ENROLLED_METHODS = Object.freeze({
   createA2aOrder: "write",
   getA2aOrder: "read",
   listA2aOrdersByPayer: "read",
+  listUnfinishedA2aOrders: "unsupported", // No sealed whole-queue read contract; never a capped REST sample.
   claimNextA2aOrder: "write", // Exact-original bound mode remains explicitly unsupported by the native lane.
   hasA2aOriginalSettlement: "unsupported",
   claimA2aFailedOriginalFulfillment: "unsupported",
