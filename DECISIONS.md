@@ -7154,3 +7154,20 @@ This is a presentation-only source outcome. The retained five-pair NASA answer
 still does not meet three sentences, so #231 stays open. No evidence/reward gate,
 model/search budget, private/native authority or payment decision changes. See
 [the finite presentation contract](docs/engineering/sentence-note-presentation-2026-10-11.md).
+
+## 2026-10-11 — Chrome Store patch and extension privacy disclosures
+
+Use extension 0.1.4.1 for Store preparation on the merged 0.1.4 source, preserving
+its anonymous-original account-claim behavior. The app and agent package versions
+remain unchanged because this patch changes extension presentation/distribution
+and legal copy, without changing request/payment authority or enabling claims.
+
+Publish a dedicated extension policy in the public repository and link it before
+Ask. Disclose public questions/results, explicit page URLs, editable web URL/history,
+availability request metadata, bounded local report history, and the account-claim
+ticket held only in popup memory before deliberate web handoff. Claims do not make
+public research private. Hosted policy source receives the same correction; actual
+deployment/readback belongs to the existing serialized runtime batch. Packaging
+refuses invalid descriptions/versions before archive writes. Keep the historical
+legal extraction fixture and require every paragraph outside the reviewed extension
+section and dated update to retain its exact markup.
