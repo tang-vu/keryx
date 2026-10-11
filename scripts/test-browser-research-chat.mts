@@ -29,7 +29,8 @@ async function checkSigningDisplay() {
     const context = await browser.newContext({ viewport: { width, height: 768 }, locale: "en-US",
       reducedMotion: "reduce", serviceWorkers: "block" });
     try {
-      const apiGets: string[] = [], builtAssets: string[] = [], blocked: string[] = [], workers: string[] = [], errors: string[] = [];
+      const apiGets: string[] = [], blocked: string[] = [], workers: string[] = [], errors: string[] = [];
+      const builtAssets: Array<{ path: string; status: number }> = [], failedBuiltAssets: string[] = [];
       let popups = 0;
       await context.routeWebSocket("**/*", socket => { blocked.push(`WebSocket ${socket.url()}`); socket.close(); });
       await context.route("**/*", async route => {
@@ -38,7 +39,6 @@ async function checkSigningDisplay() {
           blocked.push(`${request.method()} ${url.origin}${url.pathname}`); return route.abort();
         }
         if (!url.pathname.startsWith("/api/")) {
-          if (url.pathname.startsWith("/_next/static/")) builtAssets.push(url.pathname);
           return route.continue();
         }
         // Idle without a connected wallet must not even dispatch a recovery/status request.
@@ -54,6 +54,18 @@ async function checkSigningDisplay() {
         return route.fulfill({ json: { sources: [], payments: [], activity: [], runs: [], jobs: [] } });
       });
       const page = await context.newPage();
+      page.on("response", response => {
+        const url = new URL(response.url());
+        if (url.origin !== target.origin || !url.pathname.startsWith("/_next/static/")) return;
+        const status = response.status();
+        if (status !== 200) failedBuiltAssets.push(`${url.pathname}: HTTP ${status}`);
+        else if (/\.(js|css)$/.test(url.pathname)) builtAssets.push({ path: url.pathname, status });
+      });
+      page.on("requestfailed", request => {
+        const url = new URL(request.url());
+        if (url.origin === target.origin && url.pathname.startsWith("/_next/static/"))
+          failedBuiltAssets.push(`${url.pathname}: ${request.failure()?.errorText ?? "request failed"}`);
+      });
       page.on("pageerror", error => errors.push(error.message));
       page.on("worker", worker => workers.push(worker.url()));
       page.on("popup", () => { popups++; });
@@ -70,8 +82,10 @@ async function checkSigningDisplay() {
       await page.waitForLoadState("networkidle");
       assert.equal(await page.evaluate(() => typeof (window as unknown as { ethereum?: unknown }).ethereum), "undefined");
       assert(apiGets.includes("/api/auth/session"), "Actual hydration must consume the synthetic authenticated GET");
-      assert(builtAssets.some(path => path.endsWith(".js")) && builtAssets.some(path => path.endsWith(".css")),
-        "Observe actual compiled Next assets and CSS; do not substitute an SSR/component fixture");
+      assert.deepEqual(failedBuiltAssets, [], "Every actual Next static load must succeed with HTTP 200");
+      assert(builtAssets.some(asset => asset.status === 200 && asset.path.endsWith(".js"))
+        && builtAssets.some(asset => asset.status === 200 && asset.path.endsWith(".css")),
+        "Observe successful HTTP 200 compiled Next JS and CSS responses; requested paths alone are not acceptance");
       for (const value of cases) {
         await input.fill(value.input);
         assert.equal(await input.inputValue(), value.input, "Display never rewrites the control value");
@@ -92,8 +106,10 @@ async function checkSigningDisplay() {
         assert.deepEqual(blocked, [], "Zero writes, asks, recovery dispatches, external requests or WebSockets");
         assert.deepEqual(workers, [], "Disconnected idle preview never dispatches a signer/recovery worker");
         assert.equal(popups, 0); assert.deepEqual(errors, []);
+        assert.deepEqual(failedBuiltAssets, [], "Reject late failed/non-200 Next static loads before accepting each observation");
         console.log(JSON.stringify({ mode: "built-signing-display-only", width, input: value.input, amount: value.amount,
           exactMicros: value.micros, visibleDetails: await details.textContent(), compiledAssets: builtAssets.length,
+          successfulCompiledAssets: builtAssets,
           authenticatedReadOnlyGet: true, forbiddenCalls: blocked.length, workers: workers.length, popups, overflow: false }));
       }
     } finally { await context.close(); }
