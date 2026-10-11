@@ -7442,3 +7442,22 @@ remain root's shared-helper qualification. The 93-key area has exact render and
 existing dashboard browser evidence; final combined Next.js/CI and serialized
 delivery remain root-owned. See the [ledger presentation catalogue
 record](docs/engineering/ledger-presentation-catalogue-2026-10-11.md).
+
+## 2026-10-11 — Verify the recorded walkthrough payment against Circle and Arc directly
+
+For issue305, the recorded walkthrough's payment step now reads two third-party
+records from the visitor's browser instead of asking Keryx to vouch for itself:
+Circle's public Gateway transfer record and the Arc mainnet SourceRegistry. The
+expected recipient, amount, token, network and source are constants bound by test
+to the retained, digest-checked receipt, so neither a live Keryx response nor the
+third party's own reply can choose what counts as a match. Every read is explicit,
+single, credential-free and bounded; failure is unavailable, never a pass.
+
+Do not present the Circle-reported transaction hash as chain proof: the public
+Arc RPC returned nothing for it when checked, so per-payment finality stays an
+open claim. The registry read shows current payout authority only. Add no server
+route, proxy or content-security-policy origin; a proxy would turn an independent
+check back into a Keryx assertion. The ledger step restates receipt figures and
+declines to state a margin. The live sponsored run, replay and limit
+demonstrations stay gated; see the
+[criteria status](docs/engineering/recorded-walkthrough-305.md).
