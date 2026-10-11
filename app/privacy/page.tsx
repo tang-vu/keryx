@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "October 7, 2026";
+const UPDATED = "October 11, 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
