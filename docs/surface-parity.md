@@ -1,5 +1,34 @@
 # Supported-surface release parity
 
+## App57 caller-text tools and source selection - October 11 source candidate
+
+App/OpenAPI **0.27.57**, hosted MCP **0.3.15** and stdio/official Registry
+**0.4.17** identify this coordinated candidate. Current main adds caller-supplied
+`draft_check` and changes `evidence_draft`; the stdio runtime graph grows from
+106 to 113 inputs, with eleven changed or added inputs. The local tools retain
+their supplied-text, private and unverified-origin boundaries. They perform no
+research, source retrieval, storage, signing or payment. Shared heading/gloss
+selection retains original quotes and existing review/admission contracts;
+teaching remains default-off and arbitrary translation remains unsupported.
+
+Web/API and hosted/stdio MCP expose the existing caller-text tool adapters.
+Repository ask CLI and bots retain their ordinary research roles. Desktop's 94
+helper/renderer/bridge inputs, native/Rust inputs and extension inputs are
+unchanged from delivered56: Desktop **0.4.15** and extension **0.1.4.1** keep
+their genuine source provenance. Desktop can open the hosted pages without
+acquiring a new native tool or storage role. Existing private and payment
+authority remains unchanged on every surface.
+
+Final combined source review, exact-source aggregate/domain/platform CI and the
+new stdio build and publication remain gates. Bind the existing private-tool
+package fixture to the actual release bundle; the clean-consumer buyer fixture
+alone does not exercise these tools. Verify npm/Registry integrity and actual
+hosted identity, along with any fresh final Desktop assets. Candidate metadata
+claims no publication, installation or production delivery. Original teaching,
+researcher usefulness, recorded-walkthrough and staged-release holds remain.
+See [MCP distribution](mcp-distribution.md) and the original
+[draft](evidence-drafts.md) / [check](draft-check.md) contracts.
+
 ## Private anonymous claim delivery — October 11 combined source candidate
 
 App/OpenAPI **0.27.54**, hosted MCP **0.3.13** and extension **0.1.4** identify
