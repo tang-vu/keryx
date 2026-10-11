@@ -1,5 +1,11 @@
 # Hosted research business Operator
 
+Private manual inspection: `npm run operator:overdue` observes running/failed
+originals against their accepted target using the selected enrolled read-only
+store. [Queue scope and limitations](engineering/paid-job-overdue-queue-257.md)
+include incomplete/corrupt data, pending payment, backend refusal and exit statuses.
+The command grants no background schedule, notification or recovery authority.
+
 October 6, 2026 implementation candidate: app 0.27.4, remote MCP 0.3.2 and
 caller-funded MCP 0.4.6. Deployment/publication readbacks are release gates.
 
