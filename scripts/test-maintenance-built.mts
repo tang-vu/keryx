@@ -176,6 +176,11 @@ try {
   await page.screenshot({ path: join(evidence, "advance-announcement.png"), fullPage: true });
   assert.ok(styles.sheets > 0, "Actual built application stylesheet must load through ingress");
   const noticeBox = await page.getByRole("status").filter({ hasText: window.message }).boundingBox();
+  const advanceViewport = { format: "keryx-maintenance-advance-viewport-v1", sourceSha: proof.sourceSha,
+    sourceTree: proof.sourceTree, viewport: page.viewportSize(), noticeBox,
+    scrollY: await page.evaluate(() => window.scrollY), styles };
+  proof.advanceViewport = advanceViewport;
+  console.log(JSON.stringify(advanceViewport));
   assert.ok(noticeBox && noticeBox.y >= 0 && noticeBox.y + noticeBox.height <= 720, "Advance banner must be visible in the initial viewport");
   await page.close(); assert.deepEqual(forbidden, []);
   await delay(Math.max(0, Date.parse(window.startsAt) - Date.now() + 20));
