@@ -12,6 +12,8 @@
  * retained recovery records and an explicitly reviewed owner gas transaction.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWalletClient } from "wagmi";
 import { Loader2, ArrowUpRight, Coins } from "lucide-react";
@@ -22,6 +24,9 @@ import { fmtUsdc } from "./phase-style";
 import { readGatewayCredit } from "@/lib/gateway/read-credit";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { CreatorOwnerWithdrawalPanel } from "./creator-owner-withdrawal-panel";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 export function WithdrawEarningsPanel({ address }: { address: string }) {
   return browserPaymentProfile().testnet ? <TestnetWithdrawEarningsPanel address={address}/> : <CreatorOwnerWithdrawalPanel address={address}/>;
@@ -70,20 +75,20 @@ function TestnetWithdrawEarningsPanel({ address }: { address: string }) {
   const withdraw = async () => {
     if (busy || netAtomic <= BigInt(0)) return;
     if (!walletClient) {
-      toast.error("Connect your wallet to withdraw.");
+      toast.error(uiCopy("withdrawEarnings.connect"));
       return;
     }
     setBusy(true);
     setLastTx(null);
     try {
-      toast.loading("Sign the withdrawal in your wallet…", { id: "withdraw" });
+      toast.loading(uiCopy("withdrawEarnings.signing"), { id: "withdraw" });
       const { burnIntent, signature } = await buildAndSignWithdrawIntent(
         walletClient,
         netAtomic,
         address,
       );
 
-      toast.loading("Settling on-chain…", { id: "withdraw" });
+      toast.loading(uiCopy("withdrawEarnings.settling"), { id: "withdraw" });
       const res = await fetch("/api/withdraw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -96,19 +101,19 @@ function TestnetWithdrawEarningsPanel({ address }: { address: string }) {
         message?: string;
       };
       if (!res.ok || !data.mintTxHash) {
-        throw new Error(data.error ?? data.message ?? "withdraw failed");
+        throw new Error(data.error ?? data.message ?? uiCopy("withdrawEarnings.failed"));
       }
 
       setLastTx(data.mintTxHash);
-      toast.success(`Withdrew $${fmtUsdc(data.amountUsdc ?? net)} to your wallet`, {
+      toast.success(uiCopy("withdrawEarnings.success", { amount: fmtUsdc(data.amountUsdc ?? net) }), {
         id: "withdraw",
-        description: "Minted on-chain — view the tx on ArcScan.",
+        description: uiCopy("withdrawEarnings.minted"),
       });
       // Circle's off-chain balance lags the mint; re-read after a moment.
       setTimeout(loadBalance, 4000);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      toast.error(/reject|denied/i.test(message) ? "Signature rejected." : message, { id: "withdraw" });
+      toast.error(/reject|denied/i.test(message) ? uiCopy("withdrawEarnings.rejected") : message, { id: "withdraw" });
     } finally {
       setBusy(false);
     }
@@ -120,7 +125,7 @@ function TestnetWithdrawEarningsPanel({ address }: { address: string }) {
         <div className="flex items-center gap-2">
           <Coins className="h-4 w-4 text-seal" />
           <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
-            Withdrawable earnings
+            {uiCopy("withdrawEarnings.title")}
           </span>
         </div>
         <span className="font-display text-[26px] font-bold tabular-nums text-paid">
@@ -129,8 +134,7 @@ function TestnetWithdrawEarningsPanel({ address }: { address: string }) {
       </div>
 
       <p className="mt-2 max-w-[46ch] font-serif text-[12.5px] leading-snug text-ink-2">
-        Citation tolls accrue to your wallet&apos;s Circle Gateway balance. Pull them on-chain into
-        your own wallet — one signature, no gas. A small network fee is reserved from the balance.
+        {uiCopy("withdrawEarnings.description")}
       </p>
 
       <button
@@ -141,21 +145,20 @@ function TestnetWithdrawEarningsPanel({ address }: { address: string }) {
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />}
         {busy
-          ? "Withdrawing…"
+          ? uiCopy("withdrawEarnings.withdrawing")
           : balanceError
-          ? "Balance unavailable"
+          ? uiCopy("withdrawEarnings.unavailable")
           : available === null
-          ? "Checking balance…"
+          ? uiCopy("withdrawEarnings.checking")
           : hasFunds
-          ? `Withdraw $${fmtUsdc(net)} to my wallet ▸`
+          ? uiCopy("withdrawEarnings.withdraw", { amount: fmtUsdc(net) })
           : belowFeeFloor
-          ? "Balance below the withdraw fee"
-          : "Nothing to withdraw yet"}
+          ? uiCopy("withdrawEarnings.belowFee")
+          : uiCopy("withdrawEarnings.empty")}
       </button>
 
       {balanceError && <p role="status" className="mt-3 font-serif text-sm text-ink-2">
-        Gateway balance could not be read. This does not mean your earnings are zero.{" "}
-        <button type="button" onClick={() => { void loadBalance(); }} className="underline">Retry balance check</button>
+        {uiRichCopy("withdrawEarnings.balanceFailed", { retryButton: <button type="button" onClick={() => { void loadBalance(); }} className="underline">{uiCopy("withdrawEarnings.retry")}</button> })}
       </p>}
 
       {lastTx && (
@@ -166,7 +169,7 @@ function TestnetWithdrawEarningsPanel({ address }: { address: string }) {
           className="mt-3 inline-flex items-center gap-1.5 font-mono text-[11px] text-seal hover:underline"
         >
           <ArrowUpRight className="h-3.5 w-3.5" />
-          View the on-chain mint on ArcScan
+          {uiCopy("withdrawEarnings.transaction")}
         </a>
       )}
     </div>
