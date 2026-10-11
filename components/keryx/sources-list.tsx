@@ -5,11 +5,14 @@
  * (mono short), and author splits when there is more than one author.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { Wallet, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { fmtUsdc, shortAddr } from "./phase-style";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+
+const copy = createMessages("en");
 
 export interface SourceCardData {
   evidenceProvenance?: "synthetic-demo";
@@ -34,7 +37,7 @@ export function SourcesList({ sources }: { sources: SourceCardData[] }) {
   if (sources.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-line py-10 text-center text-sm text-ink-3">
-        No sources registered yet — be the first.
+        {copy("sourceList.empty")}
       </p>
     );
   }
@@ -52,14 +55,14 @@ export function SourcesList({ sources }: { sources: SourceCardData[] }) {
             </span>
           </div>
 
-          {s.evidenceProvenance === "synthetic-demo" && <p className="mt-2 text-sm text-seal">Synthetic demo source ? illustrative only</p>}
+          {s.evidenceProvenance === "synthetic-demo" && <p className="mt-2 text-sm text-seal">{copy("sourceList.demo")}</p>}
           {s.verified === false && (
             <p
-              title="Feed ownership not yet proven — listed but the agent won't read, cite, or pay it until verified."
+              title={copy("sourceList.unverifiedTitle")}
               className="mt-2 inline-flex items-center gap-1 self-start rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-amber-700"
             >
               <ShieldAlert className="h-3 w-3" />
-              Unverified
+              {copy("sourceList.unverified")}
             </p>
           )}
 
@@ -88,11 +91,11 @@ export function SourcesList({ sources }: { sources: SourceCardData[] }) {
                   href={`${browserPaymentProfile().explorerUrl}/tx/${s.registerTx}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title="Registered on-chain — view the register() transaction on ArcScan"
+                  title={copy("sourceList.registeredTitle")}
                   className="flex items-center gap-1 font-mono text-[10.5px] text-paid hover:underline"
                 >
                   <ShieldCheck className="h-3 w-3" />
-                  On-chain
+                  {copy("sourceList.onchain")}
                 </a>
               )}
             </div>

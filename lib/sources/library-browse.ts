@@ -1,18 +1,22 @@
 import { getDomain } from "tldts";
-import { EXPLORE_SOURCE_TOPICS } from "../public-references/explore-catalog";
+import type { ExploreSourceTopic } from "../public-references/explore-catalog";
+import { englishMessages } from "../i18n/messages";
 import type { PaperRecord } from "../papers/types";
 import { paperMatches } from "../papers/filters";
 
 export const LIBRARY_TOPICS = {
-  ...EXPLORE_SOURCE_TOPICS,
-  other: "Other topics",
-} as const;
+  "ai-agents": englishMessages["sourceBrowse.topic.agents"],
+  "data-infrastructure": englishMessages["sourceBrowse.topic.infrastructure"],
+  payments: englishMessages["sourceBrowse.topic.payments"],
+  "creator-research": englishMessages["sourceBrowse.topic.creators"],
+  other: englishMessages["sourceBrowse.topic.other"],
+} as const satisfies Record<ExploreSourceTopic | "other", string>;
 export const LIBRARY_KINDS = {
-  explore: "Publisher directory",
-  feed: "Retained feeds",
-  cited: "Cited documents",
-  creator: "Creator listings",
-  paper: "Research papers",
+  explore: englishMessages["sourceLibrary.publisherDirectory"],
+  feed: englishMessages["sourceBrowse.kind.feed"],
+  cited: englishMessages["sourceBrowse.kind.cited"],
+  creator: englishMessages["sourceLibrary.creatorListings"],
+  paper: englishMessages["sourceLibrary.papers"],
 } as const;
 export type LibraryTopic = keyof typeof LIBRARY_TOPICS;
 export type LibraryKind = keyof typeof LIBRARY_KINDS;

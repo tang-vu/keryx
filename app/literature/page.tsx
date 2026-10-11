@@ -1,3 +1,4 @@
+import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
@@ -6,9 +7,11 @@ import { LiteratureWorkspace } from "@/components/keryx/literature-workspace";
 import { SponsoredTrialNotice } from "@/components/keryx/sponsored-trial-notice";
 import { evidenceDraftCopy as draftCopy } from "@/lib/research/evidence-draft-copy";
 
+const copy = createMessages("en");
+
 export const metadata: Metadata = {
-  title: "Literature workspace — save, screen and compare research papers",
-  description: "Keep a personal paper shortlist, screening notes and a review question. Export your screening list or prepare a cited comparison from two saved papers.",
+  title: copy("literaturePage.title"),
+  description: copy("literaturePage.description"),
   alternates: { canonical: "/literature" },
 };
 
@@ -16,17 +19,17 @@ export default function LiteraturePage() {
   return <div className="min-h-screen bg-paper-2">
     <SiteHeader />
     <main className="mx-auto max-w-[1040px] px-4 pb-20 pt-12 sm:px-[30px]">
-      <p className="font-mono text-xs uppercase tracking-[0.16em] text-seal">Your literature review</p>
-      <h1 className="mt-3 font-display text-[clamp(30px,5vw,46px)] font-medium leading-tight text-ink">From a paper list to a focused review.</h1>
-      <p className="mt-4 max-w-[65ch] font-serif text-lg leading-relaxed text-ink-2">Save the papers worth checking, record your screening decisions, and return to the question you are trying to answer.</p>
-      <nav aria-label="Literature workflow" className="mt-5 flex flex-wrap gap-3">
-        <Link prefetch={false} href="/sources?kind=paper#research-papers" className="inline-flex min-h-11 items-center border border-ink bg-seal px-4 py-2 font-mono text-xs text-paper">Find papers to save →</Link>
-        <a href="#literature-project" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">Set your review focus</a>
+      <p className="font-mono text-xs uppercase tracking-[0.16em] text-seal">{copy("literaturePage.kicker")}</p>
+      <h1 className="mt-3 font-display text-[clamp(30px,5vw,46px)] font-medium leading-tight text-ink">{copy("literaturePage.heading")}</h1>
+      <p className="mt-4 max-w-[65ch] font-serif text-lg leading-relaxed text-ink-2">{copy("literaturePage.intro")}</p>
+      <nav aria-label={copy("literaturePage.workflowLabel")} className="mt-5 flex flex-wrap gap-3">
+        <Link prefetch={false} href="/sources?kind=paper#research-papers" className="inline-flex min-h-11 items-center border border-ink bg-seal px-4 py-2 font-mono text-xs text-paper">{copy("literaturePage.find")}</Link>
+        <a href="#literature-project" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">{copy("literaturePage.focus")}</a>
         <Link prefetch={false} href="/literature/drafts" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">{draftCopy.page.navigation}</Link>
       </nav>
       <div className="mt-6"><SponsoredTrialNotice prepareQuestion /></div>
       <LiteratureWorkspace />
-      <noscript><p className="mt-5 font-serif text-sm text-ink-2">Enable JavaScript to access papers saved in this browser. The public paper library remains available through Sources.</p></noscript>
+      <noscript><p className="mt-5 font-serif text-sm text-ink-2">{copy("literaturePage.noscript")}</p></noscript>
     </main>
     <SiteFooter />
   </div>;

@@ -5,9 +5,12 @@
  * following these, and a reader landing from search gets a next question to pull.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import type { ArchiveEntry } from "@/lib/answers-archive";
+
+const copy = createMessages("en");
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -20,12 +23,12 @@ function fmtDate(iso: string): string {
 export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
   if (entries.length === 0) return null;
   return (
-    <section aria-label="Related dispatches" className="mt-14 border-t border-ink pt-8">
+    <section aria-label={copy("relatedReports.label")} className="mt-14 border-t border-ink pt-8">
       <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-seal">
-        From the archive
+        {copy("relatedReports.kicker")}
       </div>
       <h2 className="font-display text-[22px] font-medium tracking-tight text-ink">
-        Related dispatches
+        {copy("relatedReports.label")}
       </h2>
       <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {entries.map((e) => (
@@ -36,8 +39,7 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
           >
             <div className="flex items-baseline justify-between gap-3">
               <span className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-seal">
-                Dispatch
-                {e.archivedNetwork && " · Arc testnet history"}
+                {copy(e.archivedNetwork ? "archiveReport.historicalDispatch" : "archiveReport.dispatch")}
               </span>
               <time className="font-mono text-[9.5px] text-ink-3" dateTime={e.createdAt}>
                 {fmtDate(e.createdAt)}
@@ -48,9 +50,9 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
             </div>
             <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.06em] text-ink-3">
               <span>
-                {e.citationCount} source{e.citationCount !== 1 ? "s" : ""} cited
+                {copy(e.citationCount === 1 ? "report.citedSources.one" : "report.citedSources.other", { count: e.citationCount })}
               </span>
-              <span className="text-paid">{formatRecordedUsdc(e.toCreators, { minimumFractionDigits: 4, denomination: e.archivedNetwork ? "test USDC" : "$" })} recorded creator rewards</span>
+              <span className="text-paid">{copy("archiveReport.creatorRewards", { amount: formatRecordedUsdc(e.toCreators, { minimumFractionDigits: 4, denomination: e.archivedNetwork ? "test USDC" : "$" }) })}</span>
             </div>
           </Link>
         ))}
@@ -60,7 +62,7 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
           href="/answers"
           className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3 underline decoration-ink-3 underline-offset-4 transition-colors hover:text-ink"
         >
-          Browse the full archive ▸
+          {copy("relatedReports.browse")}
         </Link>
       </div>
     </section>

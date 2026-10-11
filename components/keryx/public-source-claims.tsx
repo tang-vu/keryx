@@ -1,5 +1,6 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { sourceClaimSchema, type SourceClaim } from "@/lib/sources/public-source-claim";
@@ -7,7 +8,9 @@ import { sourceClaimTarget } from "@/lib/registration-return";
 import { claimRequest } from "./public-source-claim-api";
 import { ClaimControlStatus } from "./public-source-claim-status";
 
-const policyLabels = { free: "Free", "citation-only": "Citation rewards", paid: "Paid reads" };
+const uiCopy = createMessages("en");
+
+const policyLabels = { free: uiCopy("sourceClaims.free"), "citation-only": uiCopy("sourceClaims.citation"), paid: uiCopy("sourceClaims.paid") };
 
 /** Manual authenticated discovery only: opening a saved claim never renews or activates it. */
 export function PublicSourceClaims({ owner, network, enabled, now }: { owner: string; network: string; enabled: boolean; now: number }) {
@@ -26,24 +29,24 @@ export function PublicSourceClaims({ owner, network, enabled, now }: { owner: st
     try {
       const data = await claimRequest("/api/source-claims");
       if (!current()) return;
-      if (!Array.isArray(data.claims)) throw new Error("Your source claims are unavailable. Reload the list before opening a claim.");
+      if (!Array.isArray(data.claims)) throw new Error(uiCopy("sourceClaims.unavailable"));
       const next = data.claims.map(value => sourceClaimSchema.parse(value));
-      if (next.some(claim => claim.ownerWallet !== owner || claim.network !== network || claim.deploymentOrigin !== window.location.origin)) throw new Error("The claim list does not match this wallet, network and deployment. Reconnect before reloading it.");
+      if (next.some(claim => claim.ownerWallet !== owner || claim.network !== network || claim.deploymentOrigin !== window.location.origin)) throw new Error(uiCopy("sourceClaims.scopeMismatch"));
       setClaims(next);
-    } catch (error) { if (current()) { setClaims(null); setMessage(error instanceof Error ? error.message : "Could not load your source claims."); } }
+    } catch (error) { if (current()) { setClaims(null); setMessage(error instanceof Error ? error.message : uiCopy("sourceClaims.loadFailed")); } }
     finally { busy.current = false; if (mounted.current) setWorking(false); }
   };
   return <section className="space-y-3 border border-line bg-paper p-5" aria-labelledby="owned-source-claims-title">
-    <h2 id="owned-source-claims-title" className="font-display text-2xl">Your source claims</h2>
-    <p className="text-sm text-ink-2">Open a saved claim to review its policy or manually renew source control. Loading this list does not publish a proof, activate earnings or make a payment.</p>
-    <button type="button" disabled={!enabled || working} onClick={() => void loadClaims()} className="min-h-11 border border-line px-3 text-sm disabled:opacity-50">{working ? "Loading your claims…" : claims ? "Reload my source claims" : "Load my source claims"}</button>
+    <h2 id="owned-source-claims-title" className="font-display text-2xl">{uiCopy("sourceClaims.title")}</h2>
+    <p className="text-sm text-ink-2">{uiCopy("sourceClaims.introduction")}</p>
+    <button type="button" disabled={!enabled || working} onClick={() => void loadClaims()} className="min-h-11 border border-line px-3 text-sm disabled:opacity-50">{working ? uiCopy("sourceClaims.loading") : claims ? uiCopy("sourceClaims.reload") : uiCopy("sourceClaims.load")}</button>
     {message && <p role="status" className="text-sm text-seal">{message}</p>}
-    {claims?.length === 0 && <p role="status" className="text-sm text-ink-2">No source claims are saved for this wallet on this network.</p>}
+    {claims?.length === 0 && <p role="status" className="text-sm text-ink-2">{uiCopy("sourceClaims.empty")}</p>}
     {enabled && claims && claims.length > 0 && <ul className="space-y-3">{claims.map(claim => <li key={claim.id} className="space-y-2 border border-line p-3">
       <p className="break-all text-sm font-semibold">{claim.canonicalUrl}</p>
-      <p className="text-sm">Saved policy: {policyLabels[claim.mode]}.</p>
+      <p className="text-sm">{uiCopy("sourceClaims.savedPolicy", { policy: policyLabels[claim.mode] })}</p>
       <ClaimControlStatus claim={claim} now={now} />
-      <Link href={sourceClaimTarget({ claimId: claim.id, url: claim.canonicalUrl, owner: claim.ownerWallet, ...(claim.publicReferenceId ? { referenceId: claim.publicReferenceId } : {}) })} className="inline-block min-h-11 py-2 text-sm underline">Review or re-verify this source</Link>
+      <Link href={sourceClaimTarget({ claimId: claim.id, url: claim.canonicalUrl, owner: claim.ownerWallet, ...(claim.publicReferenceId ? { referenceId: claim.publicReferenceId } : {}) })} className="inline-block min-h-11 py-2 text-sm underline">{uiCopy("sourceClaims.review")}</Link>
     </li>)}</ul>}
   </section>;
 }

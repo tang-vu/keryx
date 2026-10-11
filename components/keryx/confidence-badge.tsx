@@ -7,7 +7,10 @@
  * OG metadata path.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import type { Confidence } from "@/lib/types";
+
+const copy = createMessages("en");
 
 const TONE: Record<Confidence["level"], string> = {
   High: "border-paid/50 bg-paid/[0.08] text-paid",
@@ -32,7 +35,7 @@ export function ConfidenceBadge({
       title={confidence.reason}
     >
       <span className="font-semibold">{confidence.level}</span>
-      <span className="opacity-70">{sourceGrounding ? "source grounding" : "confidence"}</span>
+      <span className="opacity-70">{sourceGrounding ? copy("reportConfidence.sourceGrounding") : copy("reportConfidence.confidence")}</span>
       {showReason && confidence.reason ? (
         <span className="ml-1 normal-case tracking-normal opacity-80">— {confidence.reason}</span>
       ) : null}

@@ -16,11 +16,16 @@
  * silence instead of a row of zeros.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Scale } from "lucide-react";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { SourcePerformance } from "@/lib/creator/source-performance";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 interface FeedbackData {
   windowRuns: number;
@@ -47,66 +52,55 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
   return (
     <section className="mb-8 border border-line bg-paper p-5">
       <h2 className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        <Scale className="h-3.5 w-3.5 text-seal" /> How the agent decides on this source
+        <Scale className="h-3.5 w-3.5 text-seal" /> {uiCopy("creatorDecisions.title")}
       </h2>
       <p className="mb-4 max-w-xl font-serif text-[13px] text-ink-2">
-        Every dispatch weighs this source against the others and records its BUY, CACHE or SKIP decisions.
-        Across the last {data?.windowRuns} dispatches, {perf.considered} of them weighed this one.
+        {uiCopy(data?.windowRuns === 1 ? "creatorDecisions.window.one" : "creatorDecisions.window.other", { window: data?.windowRuns ?? "", considered: perf.considered })}
       </p>
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Cell label="Weighed" value={String(perf.considered)} sub="dispatches" />
+        <Cell label={uiCopy("creatorDecisions.weighed")} value={String(perf.considered)} sub={uiCopy("creatorDecisions.dispatches")} />
         {/* Chosen leads, with the toll/cache split underneath: on a mature corpus most reads are
             cache hits, so a bare "Bought 0" would read as rejection when the source was in fact
             picked 39 times out of 47. */}
         <Cell
-          label="Chosen decisions"
+          label={uiCopy("creatorDecisions.chosen")}
           value={String(chosen)}
           sub={
             perf.bought > 0 && perf.reused > 0
               ? `${perf.bought} BUY / ${perf.reused} CACHE`
               : perf.bought > 0
-                ? `${perf.bought} BUY decisions`
-                : `${perf.reused} CACHE decisions`
+                ? uiCopy(perf.bought === 1 ? "creatorDecisions.buy.one" : "creatorDecisions.buy.other", { count: perf.bought })
+                : uiCopy(perf.reused === 1 ? "creatorDecisions.cache.one" : "creatorDecisions.cache.other", { count: perf.reused })
           }
           accent
         />
         <Cell
-          label="Citations in answers"
+          label={uiCopy("creatorDecisions.citations")}
           value={String(perf.cited)}
-          sub={perf.citeThrough !== null ? `${pct(perf.citeThrough)} of ${chosen} chosen decisions` : "—"}
+          sub={perf.citeThrough !== null ? uiCopy(chosen === 1 ? "creatorDecisions.citeThrough.one" : "creatorDecisions.citeThrough.other", { percent: pct(perf.citeThrough), count: chosen }) : "—"}
           accent
         />
         <Cell
-          label="Passed"
+          label={uiCopy("creatorDecisions.passed")}
           value={String(perf.skipped)}
-          sub={`${pct(perf.skipped / perf.considered)} of the time`}
+          sub={uiCopy("creatorDecisions.skipRate", { percent: pct(perf.skipped / perf.considered) })}
         />
       </div>
 
-      <p className="mb-4 text-xs text-ink-2">Decision and answer citation counts do not prove paid reads or settled citation rewards. Check earnings and payment evidence separately.</p>
+      <p className="mb-4 text-xs text-ink-2">{uiCopy("creatorDecisions.paymentBoundary")}</p>
 
       {/* The bar this source was measured against — same question, same budget, same minute. */}
       {perf.rivalPriceOnSkip !== null && perf.price !== null && (
         <p className="mb-4 border-l-2 border-line pl-3 font-serif text-[13px] text-ink-2">
-          In the dispatches that passed on it, the sources the agent did choose were listed at a
-          median <span className="font-mono text-ink">${fmtUsdc(perf.rivalPriceOnSkip)}</span> per
-          read. This one asks{" "}
-          <span className="font-mono text-ink">${fmtUsdc(perf.price)}</span>.
-          {perf.evChosen !== null && perf.evSkipped !== null && (
-            <>
-              {" "}
-              It rated this source {perf.evChosen.toFixed(2)} when it chose to read and{" "}
-              {perf.evSkipped.toFixed(2)} when it passed, on its 0–1 expected-value scale.
-            </>
-          )}
+          {perf.evChosen !== null && perf.evSkipped !== null ? uiRichCopy("creatorDecisions.ratedComparison", { rivalPrice: <span className="font-mono text-ink">${fmtUsdc(perf.rivalPriceOnSkip)}</span>, price: <span className="font-mono text-ink">${fmtUsdc(perf.price)}</span>, chosenValue: perf.evChosen.toFixed(2), skippedValue: perf.evSkipped.toFixed(2) }) : uiRichCopy("creatorDecisions.priceComparison", { rivalPrice: <span className="font-mono text-ink">${fmtUsdc(perf.rivalPriceOnSkip)}</span>, price: <span className="font-mono text-ink">${fmtUsdc(perf.price)}</span> })}
         </p>
       )}
 
       {perf.recentSkips.length > 0 && (
         <>
           <h3 className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
-            Most recent passes, in the agent&apos;s words
+            {uiCopy("creatorDecisions.recent")}
           </h3>
           <div className="space-y-2">
             {perf.recentSkips.map((s) => (
@@ -122,9 +116,7 @@ export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
                   “{s.rationale}”
                 </p>
                 <p className="mt-1 font-mono text-[10px] text-ink-3">
-                  expected value {s.expectedValue.toFixed(2)} · asked ${fmtUsdc(s.price)}
-                  {s.rivalPrice !== null && <> · chose ${fmtUsdc(s.rivalPrice)} instead</>} ·{" "}
-                  {new Date(s.createdAt).toLocaleDateString()}
+                  {s.rivalPrice !== null ? uiCopy("creatorDecisions.skipWithRival", { value: s.expectedValue.toFixed(2), price: fmtUsdc(s.price), rivalPrice: fmtUsdc(s.rivalPrice), date: new Date(s.createdAt).toLocaleDateString() }) : uiCopy("creatorDecisions.skip", { value: s.expectedValue.toFixed(2), price: fmtUsdc(s.price), date: new Date(s.createdAt).toLocaleDateString() })}
                 </p>
               </div>
             ))}

@@ -7,10 +7,15 @@
  * panel still saves the address but says delivery is dark, so nobody is silently promised mail.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useEffect, useState } from "react";
 import { Mail, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 export function NotifyEmailPanel({ creatorId }: { creatorId: string }) {
   const [owner, setOwner] = useState(false); // stays false (renders nothing) until proven owner
@@ -44,12 +49,12 @@ export function NotifyEmailPanel({ creatorId }: { creatorId: string }) {
         body: JSON.stringify({ email: nextEmail }),
       });
       const d = (await res.json()) as { email?: string | null; error?: string };
-      if (!res.ok) throw new Error(d.error ?? "Failed to save email");
+      if (!res.ok) throw new Error(d.error ?? uiCopy("creatorEmail.failed"));
       setConfigured(Boolean(d.email));
       setEmail(d.email ?? "");
-      toast.success(d.email ? "Email alerts on — you'll hear when you're cited." : "Email alerts off.");
+      toast.success(d.email ? uiCopy("creatorEmail.enabled") : uiCopy("creatorEmail.disabled"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save email");
+      toast.error(e instanceof Error ? e.message : uiCopy("creatorEmail.failed"));
     } finally {
       setSaving(false);
     }
@@ -58,11 +63,10 @@ export function NotifyEmailPanel({ creatorId }: { creatorId: string }) {
   return (
     <section className="mb-8 border border-line bg-paper p-5">
       <h2 className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        <Mail className="h-3.5 w-3.5 text-seal" /> Citation email alerts
+        <Mail className="h-3.5 w-3.5 text-seal" /> {uiCopy("creatorEmail.title")}
       </h2>
       <p className="mb-4 max-w-xl font-serif text-[13px] text-ink-2">
-        Get a short email when the agent cites you and the payout settles — no webhook server
-        needed. At most one per hour; every payout still shows here. {configured ? "Active." : "Not set."}
+        {configured ? uiCopy("creatorEmail.activeDescription") : uiCopy("creatorEmail.unsetDescription")}
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -81,7 +85,7 @@ export function NotifyEmailPanel({ creatorId }: { creatorId: string }) {
             className="flex items-center justify-center gap-2 border border-ink bg-seal px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
           >
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-            {configured ? "Update" : "Save"}
+            {configured ? uiCopy("creatorEmail.update") : uiCopy("creatorEmail.save")}
           </button>
           {configured && (
             <button
@@ -91,7 +95,7 @@ export function NotifyEmailPanel({ creatorId }: { creatorId: string }) {
                 save("");
               }}
               disabled={saving}
-              title="Disable email alerts"
+              title={uiCopy("creatorEmail.disableTitle")}
               className="flex items-center justify-center rounded-md border border-line px-3 py-2 text-ink-3 transition-colors hover:bg-paper-2 hover:text-destructive disabled:opacity-60"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -102,16 +106,12 @@ export function NotifyEmailPanel({ creatorId }: { creatorId: string }) {
 
       {!deliveryOn && (
         <p className="mt-3 font-mono text-[10px] text-ink-3">
-          Saved addresses are kept, but this deployment hasn&apos;t enabled an email provider yet —
-          delivery starts the moment it does.
+          {uiCopy("creatorEmail.deliveryHeld")}
         </p>
       )}
 
       <p className="mt-3 font-mono text-[10px] text-ink-3">
-        Own several sources?{" "}
-        <a href="/me/sources" className="text-seal underline underline-offset-2 hover:text-ink">
-          Manage them all in one place →
-        </a>
+        {uiRichCopy("creatorEmail.portfolio", { manageLink: <a href="/me/sources" className="text-seal underline underline-offset-2 hover:text-ink">{uiCopy("creatorEmail.manage")}</a> })}
       </p>
     </section>
   );

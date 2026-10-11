@@ -6,9 +6,14 @@
  * to the payout wallet, not the source), so a single "Verify all" pass covers every row.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { CheckCircle2, Loader2, XCircle, ShieldCheck, Copy, ExternalLink, PenLine } from "lucide-react";
 import { toast } from "sonner";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 export type BulkPhase =
   | "ready"      // ingested, awaiting the creator's on-chain signature
@@ -34,13 +39,13 @@ export interface BulkFeed {
 }
 
 const PHASE_LABEL: Record<BulkPhase, string> = {
-  ready: "Ready to sign",
-  signing: "Awaiting signature…",
-  confirming: "Confirming on-chain…",
-  done: "Registration confirmed",
-  unknown: "Confirmation unknown",
-  failed: "Failed",
-  skipped: "Skipped",
+  ready: uiCopy("bulkRegistration.readyLabel"),
+  signing: uiCopy("bulkRegistration.signingLabel"),
+  confirming: uiCopy("bulkRegistration.confirmingLabel"),
+  done: uiCopy("bulkRegistration.doneLabel"),
+  unknown: uiCopy("bulkRegistration.unknownLabel"),
+  failed: uiCopy("bulkRegistration.failedLabel"),
+  skipped: uiCopy("bulkRegistration.skippedLabel"),
 };
 
 function PhaseIcon({ phase }: { phase: BulkPhase }) {
@@ -82,17 +87,17 @@ export function BulkImportResults({
             <div className={`min-w-0 flex-1 ${dim ? "opacity-55" : ""}`}>
               <p className="truncate font-mono text-[12px] text-ink">{f.rssUrl}</p>
               <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
-                {f.ok ? f.phase === "done" && f.mode === "offline" ? "Saved locally (offline)" : PHASE_LABEL[f.phase] : f.error || "Could not read feed"}
+                {f.ok ? f.phase === "done" && f.mode === "offline" ? uiCopy("bulkRegistration.offlineLabel") : PHASE_LABEL[f.phase] : f.error || uiCopy("bulkRegistration.readFailed")}
               </p>
               {f.ok && f.error && <p role="status" className="mt-1 text-xs text-seal">{f.error}</p>}
               {(f.phase === "unknown" || f.phase === "confirming") && <div className="mt-2 space-y-2">
-                <label className="block text-xs">Original transaction hash
-                  <input aria-label={`Original registration transaction for ${f.rssUrl}`} value={f.txHash ?? ""} disabled={busy}
+                <label className="block text-xs">{uiCopy("bulkRegistration.transactionHashLabel")}
+                  <input aria-label={uiCopy("bulkRegistration.originalTransactionLabel", { url: f.rssUrl })} value={f.txHash ?? ""} disabled={busy}
                     onChange={event => onHashChange(f.rssUrl, event.target.value.trim())} className="mt-1 w-full border border-line p-1 font-mono text-xs" />
                 </label>
                 <button type="button" disabled={busy || !/^0x[0-9a-f]{64}$/i.test(f.txHash ?? "")}
-                  onClick={() => onCheck(f.rssUrl)} className="text-xs underline disabled:opacity-50">Check original registration</button>
-                {f.submittedTxHash && <p className="break-all text-xs">Wallet-submitted original: <a className="underline" href={`${browserPaymentProfile().explorerUrl}/tx/${f.submittedTxHash}`} target="_blank" rel="noopener noreferrer">{f.submittedTxHash}</a></p>}
+                  onClick={() => onCheck(f.rssUrl)} className="text-xs underline disabled:opacity-50">{uiCopy("bulkRegistration.checkOriginal")}</button>
+                {f.submittedTxHash && <p className="break-all text-xs">{uiRichCopy("bulkRegistration.submittedOriginal", { transactionLink: <a className="underline" href={`${browserPaymentProfile().explorerUrl}/tx/${f.submittedTxHash}`} target="_blank" rel="noopener noreferrer">{f.submittedTxHash}</a> })}</p>}
               </div>}
             </div>
             {f.txHash && (
@@ -100,7 +105,7 @@ export function BulkImportResults({
                 href={`${browserPaymentProfile().explorerUrl}/tx/${f.txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                title="View on ArcScan"
+                title={uiCopy("bulkRegistration.explorerTitle")}
                 className="shrink-0 text-seal hover:text-ink"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -136,16 +141,16 @@ export function BulkVerifyPanel({
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(token);
-      toast.success("Token copied — paste it into each feed.");
+      toast.success(uiCopy("bulkVerification.copied"));
     } catch {
-      toast.error("Couldn't copy — select the token manually.");
+      toast.error(uiCopy("bulkVerification.copyFailed"));
     }
   };
   return (
     <div className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/[0.07] p-4">
       <div className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-amber-700">
         <PenLine className="h-3.5 w-3.5" />
-        One token verifies all {registeredCount} sources
+        {uiCopy(registeredCount === 1 ? "bulkVerification.title.one" : "bulkVerification.title.other", { count: registeredCount })}
       </div>
       <p className="text-xs text-ink-2">{instructions}</p>
       <div className="flex items-center gap-2">
@@ -155,7 +160,7 @@ export function BulkVerifyPanel({
         <button
           type="button"
           onClick={copy}
-          title="Copy token"
+          title={uiCopy("bulkVerification.copyTitle")}
           className="shrink-0 rounded-md border border-line px-2 py-1.5 text-ink transition-colors hover:bg-paper"
         >
           <Copy className="h-3.5 w-3.5" />
@@ -169,10 +174,10 @@ export function BulkVerifyPanel({
       >
         {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
         {verifying
-          ? "Checking feeds…"
+          ? uiCopy("bulkVerification.checking")
           : verifiedCount > 0
-          ? `Verified ${verifiedCount}/${registeredCount} — check again ▸`
-          : "Verify all feeds ▸"}
+          ? uiCopy("bulkVerification.checkAgain", { verified: verifiedCount, count: registeredCount })
+          : uiCopy("bulkVerification.verifyAll")}
       </button>
     </div>
   );

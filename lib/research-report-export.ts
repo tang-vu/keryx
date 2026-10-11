@@ -2,6 +2,9 @@ import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import type { PaymentRecord, QueryRun } from "@/lib/types";
 import { reasoningOutputLimitText } from "./llm/reasoning-telemetry";
 import { projectBibliographicTask } from "./research/bibliographic-task-result";
+import { createMessages } from "./i18n/messages";
+
+const copy = createMessages("en");
 
 function safeUrl(value?: string): string | null {
   try {
@@ -20,35 +23,36 @@ function quotedReportLiteral(value: string): string {
 
 /** Export the observed report; a citation or proposed reward never implies settlement. */
 export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, payments: PaymentRecord[]): string {
-  const lines = ["# Keryx research report", "", run.question, "", `Source cap: ${run.budget} USDC. Mode: ${meta?.mode ?? run.paymentMode ?? "unknown"}.`, ""];
+  const lines = [copy("reportExport.title"), "", run.question, "", copy("reportExport.sourceCap", { budget: run.budget, mode: meta?.mode ?? run.paymentMode ?? "unknown" }), ""];
   const limit = reasoningOutputLimitText(run.reasoningAttempts, /[ăâđêôơưĂÂĐÊÔƠƯ\u1ea0-\u1ef9]/u.test(run.question) ? "vi" : "en", run.trace);
   if (limit) lines.push(`> ${limit}`, "");
   lines.push(run.answer, "");
   const bibliography = projectBibliographicTask(run.bibliography);
-  if (bibliography) lines.push("## Bibliography exports (metadata only)", "", "```bibtex", bibliography.bibliographyExports.bibtex.content, "```", "", "```ris", bibliography.bibliographyExports.ris.content, "```", "");
-  lines.push("## Cited sources", "");
+  if (bibliography) lines.push(copy("reportExport.bibliography"), "", "```bibtex", bibliography.bibliographyExports.bibtex.content, "```", "", "```ris", bibliography.bibliographyExports.ris.content, "```", "");
+  lines.push(copy("reportExport.citedSources"), "");
   for (const citation of run.citations) {
     const url = safeUrl(citation.itemUrl);
     lines.push(`${citation.marker}: ${citation.itemTitle ?? citation.sourceName}${url ? ` — ${url}` : ""}`);
-    if (citation.contentVersion) lines.push(`Document version: ${citation.contentVersion}`);
-    if (citation.accessKind === "creator-free") lines.push("Access: creator-authorized free read; no access-settlement receipt.");
-    if (citation.sourceClaim) lines.push(`Captured creator policy: ${JSON.stringify({ id: citation.sourceClaim.id,
+    if (citation.contentVersion) lines.push(copy("reportExport.documentVersion", { version: citation.contentVersion }));
+    if (citation.accessKind === "creator-free") lines.push(copy("reportExport.freeAccess"));
+    if (citation.sourceClaim) lines.push(copy("reportExport.creatorPolicy", { policy: JSON.stringify({ id: citation.sourceClaim.id,
       revision: citation.sourceClaim.revision, mode: citation.sourceClaim.mode, effectiveAt: citation.sourceClaim.effectiveAt,
-      verifiedAt: citation.sourceClaim.verifiedAt })}. This is historical context, not current payout authority.`);
-    if (citation.webProvenance) lines.push(`Observed provenance: ${JSON.stringify(citation.webProvenance)}`);
-    if (citation.requestedSource) lines.push(`Supplied original scope: ${JSON.stringify(citation.requestedSource)}`);
-    if (citation.scholarly) lines.push(`Observed scholarly metadata and read scope (peer review unknown): ${JSON.stringify(citation.scholarly)}`);
+      verifiedAt: citation.sourceClaim.verifiedAt }) }));
+    if (citation.webProvenance) lines.push(copy("reportExport.provenance", { provenance: JSON.stringify(citation.webProvenance) }));
+    if (citation.requestedSource) lines.push(copy("reportExport.originalScope", { scope: JSON.stringify(citation.requestedSource) }));
+    if (citation.scholarly) lines.push(copy("reportExport.scholarly", { metadata: JSON.stringify(citation.scholarly) }));
   }
-  lines.push("", "## Evidence and limitations", "");
-  lines.push("Research targets are unverified topics. Recorded excerpt support and coverage are estimates, not proof of entailment, factual truth or complete synthesis.", "");
-  for (const evidence of run.evidence ?? []) lines.push(`${evidence.marker} · Research target (unverified): ${quotedReportLiteral(evidence.claim)}`, `Quote: ${quotedReportLiteral(evidence.quote)}`, `Source excerpt admitted: ${evidence.qualifiesForAnswer === true}. Reward eligible: ${evidence.qualifiesForReward}.`, "");
-  for (const coverage of run.claimCoverage ?? []) lines.push(`Research target (unverified): ${quotedReportLiteral(coverage.claim)}: ${coverage.coverage} recorded coverage estimate; ${coverage.coveredBy.join(", ") || "no admitted sources"}`);
-  lines.push("", "## Payment evidence", "", "A citation alone does not prove settlement. Keryx operating fees and creator rewards are recorded separately. Search and model operating costs are separate from the source cap.");
-  if (!payments.length) lines.push("No payment records received in this conversation.");
+  lines.push("", copy("reportExport.evidence"), "");
+  lines.push(copy("reportExport.evidenceNotice"), "");
+  for (const evidence of run.evidence ?? []) lines.push(copy("reportExport.target", { marker: evidence.marker, claim: quotedReportLiteral(evidence.claim) }), copy("reportExport.quote", { quote: quotedReportLiteral(evidence.quote) }), copy("reportExport.admission", { admitted: String(evidence.qualifiesForAnswer === true), eligible: String(evidence.qualifiesForReward) }), "");
+  for (const coverage of run.claimCoverage ?? []) lines.push(copy("reportExport.coverage", { claim: quotedReportLiteral(coverage.claim), coverage: coverage.coverage, sources: coverage.coveredBy.join(", ") || copy("reportExport.noAdmittedSources") }));
+  lines.push("", copy("reportExport.payments"), "", copy("reportExport.paymentNotice"));
+  if (!payments.length) lines.push(copy("reportExport.noPayments"));
   for (const payment of payments) {
     const recorded = payment.settlementStatus ?? (payment.settled ? "settled" : "unverified");
     const status = payment.settled === (recorded === "settled") ? recorded : "unverified";
-    lines.push(`${payment.sourceName}: ${payment.amountUsdc} USDC · ${payment.kind} · ${status}${payment.txHash ? ` · reference ${payment.txHash}` : ""}`);
+    const values = { source: payment.sourceName, amount: payment.amountUsdc, kind: payment.kind, status };
+    lines.push(payment.txHash ? copy("reportExport.paymentReference", { ...values, reference: payment.txHash }) : copy("reportExport.payment", values));
   }
   return lines.join("\n");
 }

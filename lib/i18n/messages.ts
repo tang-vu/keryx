@@ -1,12 +1,40 @@
-import { legalMessages } from "@/locales/en/legal";
+import { legalMessages } from "../../locales/en/legal";
 import type { UiLocale } from "./locales";
-import { myHistoryMessages } from "@/locales/en/my-history";
-import { claimantHistoryMessages } from "@/locales/en/claimant-history";
-import { shellMessages } from "@/locales/en/shell";
-import { operationsMessages } from "@/locales/en/operations";
+import { myHistoryMessages } from "../../locales/en/my-history";
+import { claimantHistoryMessages } from "../../locales/en/claimant-history";
+import { shellMessages } from "../../locales/en/shell";
+import { operationsMessages } from "../../locales/en/operations";
+import { ledgerMessages } from "../../locales/en/ledger";
+import { integrationsMessages } from "../../locales/en/integrations";
+import { wantedMessages } from "../../locales/en/wanted";
+import { landingMessages } from "../../locales/en/landing";
+import { withdrawalMessages } from "../../locales/en/withdrawal";
+import { sharedHelperMessages } from "../../locales/en/shared-helpers";
+import { creatorMessages } from "../../locales/en/creator";
+import { registrationMessages } from "../../locales/en/registration";
+import { sourceClaimsMessages } from "../../locales/en/source-claims";
+import { nativeDesktopMessages } from "../../locales/en/native-desktop";
+import { sourceDirectoryMessages } from "../../locales/en/source-directory";
+import { reportMessages } from "../../locales/en/reports";
+import { researchFundingMessages } from "../../locales/en/research-funding";
+import { researchFlowMessages } from "../../locales/en/research-flow";
 
 /** English source keys. Payment/legal prose remains in its separate review gate. */
 export const englishMessages = Object.freeze({
+  ...ledgerMessages,
+  ...integrationsMessages,
+  ...wantedMessages,
+  ...landingMessages,
+  ...withdrawalMessages,
+  ...sharedHelperMessages,
+  ...creatorMessages,
+  ...registrationMessages,
+  ...sourceClaimsMessages,
+  ...nativeDesktopMessages,
+  ...sourceDirectoryMessages,
+  ...reportMessages,
+  ...researchFundingMessages,
+  ...researchFlowMessages,
   ...legalMessages,
   ...operationsMessages,
   ...shellMessages,

@@ -29,10 +29,10 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
   const totals = stepPaymentTotals(state.steps);
   const unsettled = (["pending", "simulated", "unverified", "failed"] as const)
     .filter(status => totals[status] > 0)
-    .map(status => `${fmtUsdc(totals[status])} ${status}`).join(" · ");
-  return <article className="min-w-0 space-y-4" aria-label={`Research: ${turn.question}`} data-testid="research-turn">
+    .map(status => message(({ pending: "researchTurn.paymentPending", simulated: "researchTurn.paymentSimulated", unverified: "researchTurn.paymentUnverified", failed: "researchTurn.paymentFailed" } as const)[status], { amount: fmtUsdc(totals[status]) })).join(" · ");
+  return <article className="min-w-0 space-y-4" aria-label={message("researchTurn.label", { question: turn.question })} data-testid="research-turn">
     <div className="ml-auto max-w-[90%] border border-line bg-paper-2 px-4 py-3 sm:px-6">
-      <p className="font-mono text-[11px] uppercase tracking-wide text-ink-3">You · {turn.payer} · source cap {fmtUsdc(state.budget)} USDC</p>
+      <p className="font-mono text-[11px] uppercase tracking-wide text-ink-3">{message("researchTurn.requestSummary", { payer: turn.payer, amount: fmtUsdc(state.budget) })}</p>
       <p className="mt-1 whitespace-pre-wrap break-words font-serif text-lg text-ink">{turn.question}</p>
     </div>
     <div className="min-w-0">
@@ -41,23 +41,29 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
         <ReportActions run={state.run} meta={state.meta} payments={state.payments} />
       </div>}
       {streaming && !state.run && <div className="border border-line bg-paper px-4 py-4" role="status" aria-live="polite">
-        <p className="font-mono text-xs uppercase tracking-wide text-seal">Keryx · Research in progress</p>
-        <p className="mt-2 break-words font-serif text-lg">{state.steps.at(-1)?.message ?? "Finding sources worth reading…"}</p>
+        <p className="font-mono text-xs uppercase tracking-wide text-seal">{message("researchTurn.inProgress")}</p>
+        <p className="mt-2 break-words font-serif text-lg">{state.steps.at(-1)?.message ?? message("researchTurn.findingSources")}</p>
       </div>}
-      {stopped && <p role="status" className="border border-line bg-paper p-4 text-sm text-ink-2">Stopped waiting for this research. Payments already signed may still settle; stopping does not refund them.</p>}
+      {stopped && <p role="status" className="border border-line bg-paper p-4 text-sm text-ink-2">{message("researchTurn.stoppedNotice")}</p>}
       {!stopped && state.status === "error" && <div role="alert" className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        <p>{state.error ?? "Research could not finish. Try another question."}</p>
+        <p>{state.error ?? message("researchTurn.failed")}</p>
         {state.errorKind === "maintenance" && state.maintenance && <div className="mt-2">
           <a href="/maintenance/status" className="underline underline-offset-4">{message("researchError.serviceStatus")}</a>
           {state.retryAfter !== null && <p>{message("researchError.checkStatusAfter", { seconds: state.retryAfter })}</p>}
         </div>}
         <SelectionFailureDownload diagnostic={state.selectionDiagnostic} />
-        {state.errorKind === "rate-limit" && <p className="mt-2">Try again{state.retryAfter ? ` in ${state.retryAfter}s` : " shortly"}. Your saved reports remain available.</p>}
+        {state.errorKind === "rate-limit" && <p className="mt-2">{state.retryAfter ? message("researchTurn.retryAfter", { seconds: state.retryAfter }) : message("researchTurn.retryShortly")}</p>}
       </div>}
       {state.decisionReviews?.length ? <DecisionReviews records={state.decisionReviews} capturedOwner={state.meta?.reviewOwner} live={streaming} /> : null}
       <details className="mt-3 border border-line bg-paper" onToggle={event => setEvidenceOpen(event.currentTarget.open)}>
         <summary className="min-h-11 cursor-pointer break-words px-4 py-3 font-mono text-xs text-ink-2">
-          Decision log and payments · {state.steps.length} steps · {fmtUsdc(totals.settled)} USDC settled of {fmtUsdc(state.budget)} cap{unsettled && ` · ${unsettled}`}{state.meta?.mode === "offline" && " · offline simulation"}
+          {state.meta?.mode === "offline"
+            ? unsettled
+              ? message(state.steps.length === 1 ? "researchTurn.offlineSummaryWithUnsettled.one" : "researchTurn.offlineSummaryWithUnsettled.other", { count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget), unsettled })
+              : message(state.steps.length === 1 ? "researchTurn.offlineSummary.one" : "researchTurn.offlineSummary.other", { count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget) })
+            : unsettled
+              ? message(state.steps.length === 1 ? "researchTurn.summaryWithUnsettled.one" : "researchTurn.summaryWithUnsettled.other", { count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget), unsettled })
+              : message(state.steps.length === 1 ? "researchTurn.summary.one" : "researchTurn.summary.other", { count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget) })}
         </summary>
         {evidenceOpen && <div className="grid min-w-0 gap-6 border-t border-line p-4 lg:grid-cols-[1.6fr_1fr]">
           <ReasoningConsole steps={state.steps} streaming={streaming} budget={state.budget} />
