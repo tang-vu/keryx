@@ -1,5 +1,6 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useCallback, useEffect, useState } from "react";
 import { BadgeDollarSign, Loader2, ShieldCheck, TimerReset, X } from "lucide-react";
 import { toast } from "sonner";
@@ -7,6 +8,8 @@ import { useAccount, useSignTypedData } from "wagmi";
 
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { articleOfferTypedData } from "@/lib/offers/article-offer";
+
+const uiCopy = createMessages("en");
 
 interface OfferRow {
   id: string;
@@ -82,15 +85,15 @@ export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
   const publish = async (item: OfferItem) => {
     const priceUsdc6 = Math.round(Number(drafts[item.itemId]) * 1_000_000);
     if (!address || wrongWallet) {
-      toast.error(`Connect the creator wallet ${shortAddr(data.creator)}.`);
+      toast.error(uiCopy("creatorOffers.wallet", { wallet: shortAddr(data.creator) }));
       return;
     }
     if (!Number.isSafeInteger(priceUsdc6) || priceUsdc6 < Math.round(data.minPriceUsdc * 1_000_000)) {
-      toast.error(`Minimum offer is $${fmtUsdc(data.minPriceUsdc)}.`);
+      toast.error(uiCopy("creatorOffers.minimum", { price: fmtUsdc(data.minPriceUsdc) }));
       return;
     }
     if (priceUsdc6 > Math.round(data.listPriceUsdc * 1_000_000)) {
-      toast.error("An article offer cannot exceed the registry list price.");
+      toast.error(uiCopy("creatorOffers.ceiling"));
       return;
     }
 
@@ -121,11 +124,11 @@ export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
         }),
       });
       const result = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(result.error ?? "Could not publish offer");
-      toast.success("Signed article offer is live in the market.");
+      if (!response.ok) throw new Error(result.error ?? uiCopy("creatorOffers.publishFailed"));
+      toast.success(uiCopy("creatorOffers.published"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not publish offer");
+      toast.error(error instanceof Error ? error.message : uiCopy("creatorOffers.publishFailed"));
     } finally {
       setWorking(null);
     }
@@ -140,11 +143,11 @@ export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
         body: JSON.stringify({ itemId: item.itemId }),
       });
       const result = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(result.error ?? "Could not revoke offer");
-      toast.success("Article offer revoked; list price applies again.");
+      if (!response.ok) throw new Error(result.error ?? uiCopy("creatorOffers.revokeFailed"));
+      toast.success(uiCopy("creatorOffers.revoked"));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not revoke offer");
+      toast.error(error instanceof Error ? error.message : uiCopy("creatorOffers.revokeFailed"));
     } finally {
       setWorking(null);
     }
@@ -154,30 +157,29 @@ export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
     <section className="mb-8 border border-line bg-paper p-5">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-          <BadgeDollarSign className="h-3.5 w-3.5 text-seal" /> Article offer desk
+          <BadgeDollarSign className="h-3.5 w-3.5 text-seal" /> {uiCopy("creatorOffers.title")}
         </h2>
         <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
-          <TimerReset className="h-3.5 w-3.5" /> expires
+          <TimerReset className="h-3.5 w-3.5" /> {uiCopy("creatorOffers.expires")}
           <select
             value={ttlHours}
             onChange={(event) => setTtlHours(Number(event.target.value))}
             className="border border-line bg-paper-2 px-2 py-1 text-ink"
           >
-            <option value={24}>24 hours</option>
-            <option value={72}>3 days</option>
-            <option value={168}>7 days</option>
-            <option value={720}>30 days</option>
+            <option value={24}>{uiCopy("creatorOffers.dayExpiry")}</option>
+            <option value={72}>{uiCopy("creatorOffers.threeDayExpiry")}</option>
+            <option value={168}>{uiCopy("creatorOffers.weekExpiry")}</option>
+            <option value={720}>{uiCopy("creatorOffers.thirtyDayExpiry")}</option>
           </select>
         </label>
       </div>
       <p className="mb-4 max-w-2xl font-serif text-[13px] text-ink-2">
-        Sign a temporary price for one exact article version. The registry&apos;s ${fmtUsdc(data.listPriceUsdc)}
-        read price remains the ceiling and payout wallet; the agent verifies this signature again before buying.
+        {uiCopy("creatorOffers.description", { price: fmtUsdc(data.listPriceUsdc) })}
       </p>
 
       {(!data.active || !data.verified) && (
         <p className="mb-4 border border-amber-300 bg-amber-50 p-3 font-mono text-[11px] text-amber-800">
-          This source must be active and feed-verified before it can publish offers.
+          {uiCopy("creatorOffers.inactive")}
         </p>
       )}
 
@@ -196,10 +198,7 @@ export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
                   {item.itemTitle}
                 </a>
                 <p className="mt-1 font-mono text-[9px] text-ink-3">
-                  {item.contentVersion.slice(0, 28)}…
-                  {item.offer
-                    ? ` · live at $${fmtUsdc(item.offer.priceUsdc)} until ${new Date(item.offer.expiresAtIso).toLocaleString()}`
-                    : " · list price"}
+                  {item.offer ? uiCopy("creatorOffers.liveVersion", { version: item.contentVersion.slice(0, 28), price: fmtUsdc(item.offer.priceUsdc), expiresAt: new Date(item.offer.expiresAtIso).toLocaleString() }) : uiCopy("creatorOffers.listVersion", { version: item.contentVersion.slice(0, 28) })}
                 </p>
               </div>
               <label className="flex items-center border border-line bg-paper-2 px-2 py-1.5">
@@ -218,7 +217,7 @@ export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
                     onClick={() => void revoke(item)}
                     disabled={busy}
                     className="border border-line px-2.5 py-2 text-ink-3 hover:border-destructive hover:text-destructive disabled:opacity-50"
-                    aria-label={`Revoke offer for ${item.itemTitle}`}
+                    aria-label={uiCopy("creatorOffers.revokeAria", { title: item.itemTitle })}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -230,7 +229,7 @@ export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
                   className="flex min-w-28 items-center justify-center gap-1.5 border border-ink bg-seal px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-cream disabled:opacity-50"
                 >
                   {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-                  Sign offer
+                  {uiCopy("creatorOffers.sign")}
                 </button>
               </div>
             </div>
@@ -239,7 +238,7 @@ export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
       </div>
       {wrongWallet && (
         <p className="mt-3 font-mono text-[10px] text-amber-700">
-          Pricing authority is {shortAddr(data.creator)}. Switch the connected wallet to sign.
+          {uiCopy("creatorOffers.authority", { wallet: shortAddr(data.creator) })}
         </p>
       )}
     </section>

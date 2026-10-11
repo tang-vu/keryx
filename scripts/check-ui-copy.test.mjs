@@ -339,3 +339,31 @@ test("registration, bulk import and feed verification copy is catalogued; protoc
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
   }
 });
+
+test("creator management copy is catalogued; protocol, contact, currency and brand data remain inline", () => {
+  const retained = {
+    "app/creator/[id]/page.tsx": ["KERYX"],
+    "app/creator/[id]/creator-detail-view.tsx": ["tx"],
+    "app/creator/[id]/article-content-panel.tsx": [],
+    "app/creator/[id]/article-offers-panel.tsx": [],
+    "app/creator/[id]/scholarly-rights-panel.tsx": ["submitted", "submitted"],
+    "app/creator/[id]/listing-controls-panel.tsx": ["listing-tx", "listing-tx", "$0.001", "$0.040"],
+    "app/creator/[id]/decision-feedback-panel.tsx": [],
+    "app/creator/[id]/notify-email-panel.tsx": ["you@example.com"],
+    "app/creator/[id]/notify-webhook-panel.tsx": ["https://your-agent.com/keryx-hook", "sha256=hex(hmac_sha256(secret, rawBody))"],
+    "app/creator/[id]/preview-depth-panel.tsx": [],
+    "app/creator/[id]/embed-badge-panel.tsx": ["Markdown", "HTML"],
+    "app/creator/[id]/embed-widget-panel.tsx": ['<script src="${value}/keryx-widget.js" data-keryx-source="${value}" async></script>'],
+    "app/creator/[id]/opengraph-image.tsx": ["K", "Keryx"],
+    "app/me/sources/page.tsx": [],
+    "app/me/sources/my-sources-view.tsx": ["you@example.com"],
+    "components/keryx/creator-leaderboard.tsx": [],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+  const proof = "app/creator/[id]/gateway-proof-panel.tsx";
+  const findings = extractUiCopy(proof, readFileSync(new URL(`../${proof}`, import.meta.url), "utf8"));
+  assert.equal(findings.length, 1);
+  assert.match(findings[0].text, /^curl -s \$\{value\}\/v1\/balances/u);
+});

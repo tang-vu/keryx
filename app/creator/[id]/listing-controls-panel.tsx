@@ -10,6 +10,8 @@
  * cache within seconds. Offline sources: a plain POST writes the DB row directly.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Archive, Banknote, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +26,9 @@ import { listingPriceCall, listingDeactivateCall } from "@/lib/creator/listing-c
 import { REGISTRY_ABI, REVISIONED_REGISTRY_ABI } from "@/lib/registry/registry-abi";
 import { parseListingSnapshot, sameListingSnapshot } from "@/lib/creator/listing-snapshot";
 import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 interface ListingData {
   mode: "onchain" | "offline";
@@ -88,8 +93,8 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
   // Once the tx mines, give the indexer its ≤4s to project the event, then re-read.
   useEffect(() => {
     if (!mined || !receipt) return;
-    if (receipt.status === "success") toast.success("Transaction confirmed. Refreshing registry state.");
-    else toast.error("Transaction reverted. Listing changes were not confirmed.");
+    if (receipt.status === "success") toast.success(uiCopy("creatorListing.confirmed"));
+    else toast.error(uiCopy("creatorListing.reverted"));
     const t = setTimeout(() => {
       void load();
       setPendingTx(undefined);
@@ -114,19 +119,19 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
   const refreshBeforeSigning = async () => {
     const owner = identity.current;
     const res = await fetch(`/api/creator/${creatorId}/listing`, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) throw new Error("Listing authority could not be refreshed. No signature requested.");
+    if (!res.ok) throw new Error(uiCopy("creatorListing.authorityUnavailable"));
     const fresh = parseListingSnapshot(await res.json());
     if (!owner.active || identity.current !== owner || owner.creatorId !== creatorId
       || owner.chainId !== arcChain.id || owner.connected?.toLowerCase() !== fresh.creator ||
       fresh.registryVersion !== getBrowserRegistryVersion() ||
       !browserPaymentProfile().testnet&&fresh.registryAddress.toLowerCase()!==browserRegistryAddress().toLowerCase()) {
-      throw new Error("Wallet or source changed. Refresh before signing.");
+      throw new Error(uiCopy("creatorListing.identityChanged"));
     }
     if (!sameListingSnapshot(data, fresh)) {
       setData(fresh); setPrice(String(fresh.fetchPrice)); setDelistArmed(false); setReviewRequired(true);
-      throw new Error("Listing changed. Review the refreshed details and choose your change again.");
+      throw new Error(uiCopy("creatorListing.changed"));
     }
-    if (!fresh.active) throw new Error("This source is delisted.");
+    if (!fresh.active) throw new Error(uiCopy("creatorListing.inactive"));
     setReviewRequired(false);
     return fresh;
   };
@@ -138,14 +143,14 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
     try {
       if (data.mode === "onchain" && data.current && data.registryAddress && data.onchainId) {
         const fresh = await refreshBeforeSigning();
-        toast.loading("Waiting for wallet signature…", { id: "listing-tx" });
+        toast.loading(uiCopy("creatorListing.waiting"), { id: "listing-tx" });
         const call = listingPriceCall(fresh, parsedPriceMicros!);
         const wallet = { account: connected, chainId: arcChain.id, address: call.address };
         const txHash = call.functionName === "updatePrice"
           ? await writeContractAsync({ ...wallet, abi: call.abi, functionName: call.functionName, args: call.args })
           : await writeContractAsync({ ...wallet, abi: call.abi, functionName: call.functionName, args: call.args });
         setPendingTx(txHash);
-        toast.loading("Price update submitted — confirming…", { id: "listing-tx" });
+        toast.loading(uiCopy("creatorListing.priceSubmitted"), { id: "listing-tx" });
       } else {
         const res = await fetch(`/api/creator/${creatorId}/listing`, {
           method: "POST",
@@ -153,13 +158,13 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
           body: JSON.stringify({ fetchPrice: parsedPrice }),
         });
         const d = (await res.json()) as { fetchPrice?: number; error?: string };
-        if (!res.ok) throw new Error(d.error ?? "Failed to save");
+        if (!res.ok) throw new Error(d.error ?? uiCopy("creatorListing.saveFailed"));
         setData({ ...data, fetchPrice: d.fetchPrice ?? parsedPrice });
-        toast.success(`Price per read is now $${fmtUsdc(d.fetchPrice ?? parsedPrice)}.`);
+        toast.success(uiCopy("creatorListing.updated", { price: fmtUsdc(d.fetchPrice ?? parsedPrice) }));
       }
     } catch (e) {
       toast.dismiss("listing-tx");
-      toast.error(e instanceof Error ? e.message : "Failed to save");
+      toast.error(e instanceof Error ? e.message : uiCopy("creatorListing.saveFailed"));
     } finally {
       actionLock.current = false;
       setBusy(false);
@@ -179,14 +184,14 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
     try {
       if (data.mode === "onchain" && data.registryAddress && data.onchainId) {
         const fresh = await refreshBeforeSigning();
-        toast.loading("Waiting for wallet signature…", { id: "listing-tx" });
+        toast.loading(uiCopy("creatorListing.waiting"), { id: "listing-tx" });
         const call = listingDeactivateCall(fresh);
         const wallet = { account: connected, chainId: arcChain.id, address: call.address };
         const txHash = call.args.length === 2
           ? await writeContractAsync({ ...wallet, abi: REVISIONED_REGISTRY_ABI, functionName: "deactivate", args: call.args })
           : await writeContractAsync({ ...wallet, abi: REGISTRY_ABI, functionName: "deactivate", args: call.args });
         setPendingTx(txHash);
-        toast.loading("Delist submitted — confirming…", { id: "listing-tx" });
+        toast.loading(uiCopy("creatorListing.delistSubmitted"), { id: "listing-tx" });
       } else {
         const res = await fetch(`/api/creator/${creatorId}/listing`, {
           method: "POST",
@@ -194,13 +199,13 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
           body: JSON.stringify({ action: "deactivate" }),
         });
         const d = (await res.json()) as { active?: boolean; error?: string };
-        if (!res.ok) throw new Error(d.error ?? "Failed to delist");
+        if (!res.ok) throw new Error(d.error ?? uiCopy("creatorListing.delistFailed"));
         setData({ ...data, active: false });
-        toast.success("Source delisted — the agent will no longer read or cite it.");
+        toast.success(uiCopy("creatorListing.delisted"));
       }
     } catch (e) {
       toast.dismiss("listing-tx");
-      toast.error(e instanceof Error ? e.message : "Failed to delist");
+      toast.error(e instanceof Error ? e.message : uiCopy("creatorListing.delistFailed"));
     } finally {
       actionLock.current = false;
       setBusy(false);
@@ -210,28 +215,24 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
   return (
     <section className="mb-8 border border-line bg-paper p-5">
       <h2 className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        <Banknote className="h-3.5 w-3.5 text-seal" /> Listing controls
+        <Banknote className="h-3.5 w-3.5 text-seal" /> {uiCopy("creatorListing.title")}
       </h2>
 
       {!data.active ? (
         <p className="max-w-xl font-serif text-[13px] text-ink-2">
-          This source is <span className="text-destructive">delisted</span> — the agent no longer
-          discovers, reads, or cites it. Its earnings history stays on the ledger.
+          {uiRichCopy("creatorListing.inactiveDescription", { delisted: <span className="text-destructive">{uiCopy("creatorListing.delistedLabel")}</span> })}
         </p>
       ) : (
         <>
           <p className="mb-4 max-w-xl font-serif text-[13px] text-ink-2">
-            The toll you charge per read. The agent weighs it against its budget on every dispatch
-            — priced too high, it simply buys elsewhere.
-            {data.mode === "onchain" &&
-              " Changes are signed by your wallet and written to the on-chain registry."}
+            {data.mode === "onchain" ? uiCopy("creatorListing.onchainDescription") : uiCopy("creatorListing.offlineDescription")}
           </p>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-2">
               <div className="flex items-baseline justify-between">
                 <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                  Price per read
+                  {uiCopy("creatorListing.price")}
                 </span>
                 <span className="font-display text-[20px] font-bold tabular-nums text-seal">
                   ${fmtUsdc(parsedPrice)}
@@ -249,7 +250,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
               />
               <div className="flex justify-between font-mono text-[10px] text-ink-3">
                 <span>$0.001</span>
-                <span className="text-ink-2">now ${fmtUsdc(data.fetchPrice)}</span>
+                <span className="text-ink-2">{uiCopy("creatorListing.currentPrice", { price: fmtUsdc(data.fetchPrice) })}</span>
                 <span>$0.040</span>
               </div>
             </div>
@@ -260,44 +261,42 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
               className="flex items-center justify-center gap-2 border border-ink bg-seal px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
             >
               {working ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              {isMining ? "Confirming…" : "Save price"}
+              {isMining ? uiCopy("creatorListing.confirming") : uiCopy("creatorListing.save")}
             </button>
           </div>
 
           {wrongWallet && (
             <p className="mt-3 font-mono text-[10px] text-amber-700">
-              This source was registered by {shortAddr(data.creator!)} — only that wallet&apos;s
-              signature will pass the registry. Switch accounts before signing.
+              {uiCopy("creatorListing.walletInstruction", { wallet: shortAddr(data.creator!) })}
             </p>
           )}
           {wrongNetwork && (
             <p className="mt-3 font-mono text-[10px] text-amber-700">
-              Connect your creator wallet on {currentArcLabel} before changing this listing.
+              {uiCopy("creatorListing.networkInstruction", { network: currentArcLabel })}
             </p>
           )}
 
           {data.mode === "onchain" && data.current && (
             <details className="mt-4 border-t border-line pt-3 text-ink-3" open={reviewRequired}>
-              <summary className="cursor-pointer font-mono text-[11px]">Current registry details</summary>
-              {reviewRequired && <p className="mt-2 text-sm text-amber-700">The listing changed. Review these details before choosing your change again.</p>}
+              <summary className="cursor-pointer font-mono text-[11px]">{uiCopy("creatorListing.details")}</summary>
+              {reviewRequired && <p className="mt-2 text-sm text-amber-700">{uiCopy("creatorListing.reviewChanged")}</p>}
               <p className="mt-2 text-xs">{data.registryVersion === 2 || data.registryVersion === 3
                 ? copy.priceOnlyUpdateExplanation
                 : copy.legacyPriceUpdateExplanation}</p>
               <dl className="mt-3 space-y-2 break-all font-mono text-[11px]">
-                <div><dt>Payout wallet</dt><dd>{data.current.payoutWallet}</dd></div>
-                <div><dt>Author splits</dt><dd>{data.current.authors.length ? data.current.authors.map((a, i) => (
+                <div><dt>{uiCopy("creatorListing.payoutWallet")}</dt><dd>{data.current.payoutWallet}</dd></div>
+                <div><dt>{uiCopy("creatorListing.authorSplits")}</dt><dd>{data.current.authors.length ? data.current.authors.map((a, i) => (
                   <p key={`${a.wallet}-${i}`}>{a.wallet}: {a.basisPoints / 100}%</p>
-                )) : "Payout wallet receives 100%."}</dd></div>
-                <div><dt>Content reference</dt><dd>{data.current.contentCid || "None"}</dd></div>
-                <div><dt>Tags</dt><dd>{data.current.tags || "None"}</dd></div>
+                )) : uiCopy("creatorListing.payoutAll")}</dd></div>
+                <div><dt>{uiCopy("creatorListing.contentReference")}</dt><dd>{data.current.contentCid || uiCopy("creatorListing.none")}</dd></div>
+                <div><dt>{uiCopy("creatorListing.tags")}</dt><dd>{data.current.tags || uiCopy("creatorListing.none")}</dd></div>
               </dl>
             </details>
           )}
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             <p className="max-w-md font-serif text-[12px] text-ink-3">
-              Delisting is permanent: the agent stops reading and citing this source. Earnings
-              already settled stay yours.
+              {uiCopy("creatorListing.delistBoundary")}
             </p>
             <button
               type="button"
@@ -311,7 +310,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
               }
             >
               <Archive className="h-3.5 w-3.5" />
-              {delistArmed ? "Click again to confirm — permanent" : "Delist source"}
+              {delistArmed ? uiCopy("creatorListing.confirmDelist") : uiCopy("creatorListing.delist")}
             </button>
           </div>
         </>

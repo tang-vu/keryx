@@ -6,12 +6,15 @@
  * per-creator earnings detail.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import { Crown, Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { shortAddr } from "./phase-style";
 import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import { cn } from "@/lib/utils";
+
+const uiCopy = createMessages("en");
 
 export interface LeaderboardEntry {
   sourceId: string;
@@ -22,7 +25,7 @@ export interface LeaderboardEntry {
   citationCount: number;
 }
 
-export function CreatorLeaderboard({ rows, title = "Creator leaderboard" }: { rows: LeaderboardEntry[]; title?: string }) {
+export function CreatorLeaderboard({ rows, title = uiCopy("creatorLeaderboard.title") }: { rows: LeaderboardEntry[]; title?: string }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center gap-2 space-y-0 pb-4">
@@ -34,7 +37,7 @@ export function CreatorLeaderboard({ rows, title = "Creator leaderboard" }: { ro
       <CardContent className="space-y-2">
         {rows.length === 0 && (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            No creator earnings yet.
+            {uiCopy("creatorLeaderboard.empty")}
           </p>
         )}
         {rows.map((row, i) => (
@@ -61,8 +64,7 @@ export function CreatorLeaderboard({ rows, title = "Creator leaderboard" }: { ro
                 {row.sourceName}
               </p>
               <p className="font-mono text-[11px] text-ink-3">
-                {shortAddr(row.walletAddress)} · {row.citationCount} cites ·{" "}
-                {row.paymentCount} pmts
+                {uiCopy(row.citationCount === 1 ? "creatorLeaderboard.row.one" : "creatorLeaderboard.row.other", { wallet: shortAddr(row.walletAddress), citations: row.citationCount, payments: row.paymentCount })}
               </p>
             </div>
             <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-paid">

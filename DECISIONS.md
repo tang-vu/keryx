@@ -7325,3 +7325,18 @@ See [the registration catalogue record](docs/engineering/registration-catalogue-
 for exact render/status, intercepted action and retained-CSS evidence. Original #272
 remains open for remaining areas and root's reviewed combined integration,
 exact-source CI and serialized delivery.
+
+## 2026-10-11 — English creator management catalogue area
+
+Catalogue creator management as one coherent original272 area, with 304 messages
+and 263 scoped original guard retirements. Whole sentences and named data/React
+parameters preserve English output, including optional empty dates, legacy count
+wording and signature/snippet bytes. Preview labels get an i18n presentation
+projection; source preview semantics and the old export remain unchanged for
+root qualification. Retain protocol/contact/currency/brand allowances, without
+changing guard detection. Exact render and intercepted action evidence qualify
+changed presentation; existing listing/rights fixtures cover its signing gates.
+Record the pre-existing offer barrel's Node-only import and unnamed controls for
+separate root decisions. Combined review/CI/distribution/delivery and remaining
+original272 areas stay open; see
+`docs/engineering/creator-catalogue-2026-10-11.md`.
