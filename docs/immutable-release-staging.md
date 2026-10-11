@@ -339,6 +339,17 @@ The dependency copy uses a checked per-entry copy filter, since the pinned nativ
 recursive copy retained npm executable links in the actual Linux output. Internal
 file-link bytes count toward headroom, their targets are rechecked at copy, and the
 result must be an independent regular file. Directory/external links still refuse.
+Turbopack NFT references can name the materialized dependency alias directory.
+Only the exact hashed alias shape is accepted, with its entire file/directory/byte
+inventory equal to the candidate's independent package copy. Ordinary directory
+references, missing packages, extra or substituted alias bytes refuse. The accepted
+alias list is part of the inspection receipt. The deployed authoritative inspector
+must include this reviewed format before any future staged admission; a candidate
+cannot supply its own inspector as authority.
+Inspection now uses `keryx-immutable-artifact-inspection-v2`, separates file and
+directory reference counts and bounds its encoded receipt to the verifier's
+16 KiB limit. Retained v1 receipts stay under their original verifier/evidence;
+they cannot be relabeled as current v2 acceptance.
 
 The rehearsal keeps a synthetic reader running against the predecessor while it
 prepares and inspects the candidate, then positively exits that reader, rechecks

@@ -255,7 +255,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     if (mode === 'artifact') {
       if (!config.release) refuse();
       // stdin executes at /root/keryx; the already deployed built-in inspector is
-      // authoritative and unchanged. No serving source/dependencies are mutated.
+      // authoritative; its accepted deployed version must cover this artifact.
+      // No candidate inspector or serving source/dependencies are loaded/mutated.
       const { verifyImmutableArtifact } = await import('file:///root/keryx/scripts/immutable-release-staging.mjs');
       const artifact = verifyImmutableArtifact({ candidate: path.dirname(releaseSource(config.release.commit)), ...config.release });
       verifyReleaseSourcePaths(releaseSource(config.release.commit));

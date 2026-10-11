@@ -295,7 +295,8 @@ export function inspectImmutableArtifact({ candidate, sourceManifestSha256 }) {
   const buildId = readStable(path.join(source, '.next', 'BUILD_ID'), 1024).toString().trim();
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(buildId) || !byName.has('node_modules') ||
       !byName.has('.next/next-server.js.nft.json')) refuse('missing-build-identity-or-server-trace');
-  let tracedFiles = 0;
+  let tracedFiles = 0, tracedDirectories = 0;
+  const acceptedAliases = new Set();
   for (const entry of snapshot.entries.filter(entry => entry.path.startsWith('.next/') && entry.path.endsWith('.nft.json'))) {
     if (entry.type !== 'file') refuse();
     const tracePath = path.join(source, ...entry.path.split('/'));
@@ -304,21 +305,45 @@ export function inspectImmutableArtifact({ candidate, sourceManifestSha256 }) {
     for (const name of trace.files) {
       if (typeof name !== 'string' || name.length > 1024 || path.isAbsolute(name) || /[\x00-\x1f\\]/.test(name)) refuse();
       const target = path.resolve(path.dirname(tracePath), name);
-      if (!inside(source, target) || !inside(source, fs.realpathSync(target)) || !fs.statSync(target).isFile()) refuse('trace-containment');
-      if (++tracedFiles > 500000) refuse('trace-reference-limit');
+      if (!inside(source, target) || !inside(source, fs.realpathSync(target)))
+        refuse(`trace-containment:${entry.path}:${name}`);
+      const stat = fs.statSync(target);
+      if (stat.isFile()) tracedFiles++;
+      if (!stat.isFile()) {
+        // Pinned Turbopack traces the dependency alias directory itself. Accept
+        // only a fully materialized alias whose complete byte inventory equals
+        // the independently copied package. Other directory traces still refuse.
+        const relative = path.relative(source, target).split(path.sep).join('/');
+        const alias = /^\.next\/node_modules\/((?:@[a-z0-9._-]+\/)?[a-z0-9._-]+)-[a-f0-9]{16}$/.exec(relative);
+        if (!stat.isDirectory() || !alias || byName.get(relative)?.type !== 'directory')
+          refuse(`trace-entry-not-file:${entry.path}:${name}`);
+        if (!acceptedAliases.has(relative)) {
+          const original = `node_modules/${alias[1]}`;
+          if (byName.get(original)?.type !== 'directory' || byName.get(`${original}/package.json`)?.type !== 'file') refuse('trace-alias-dependency-missing');
+          const copy = snapshot.entries.filter(value => value.path.startsWith(relative + '/'))
+            .map(value => ({ ...value, path: original + value.path.slice(relative.length) }));
+          const dependency = snapshot.entries.filter(value => value.path.startsWith(original + '/'));
+          if (!copy.length || serial(copy) !== serial(dependency)) refuse('trace-alias-dependency-mismatch');
+          acceptedAliases.add(relative);
+        }
+        tracedDirectories++;
+      }
+      if (tracedFiles + tracedDirectories > 500000) refuse('trace-reference-limit');
     }
   }
   // Recheck after trace inspection; publication accepts only a stable cohort.
   const after = snapshotTree(source);
   if (after.digest !== snapshot.digest || serial(readSourceManifest(candidate, sourceManifestSha256)) !== serial(manifest)) refuse();
-  return { format: 'keryx-immutable-artifact-inspection-v1', productionAdmitted: false,
+  return { format: 'keryx-immutable-artifact-inspection-v2', productionAdmitted: false,
     commit: manifest.commit, tree: manifest.tree, sourceManifestSha256, buildId,
-    artifactDigest: snapshot.digest, artifactBytes: snapshot.bytes, artifactEntries: snapshot.entries.length, tracedFiles };
+    artifactDigest: snapshot.digest, artifactBytes: snapshot.bytes, artifactEntries: snapshot.entries.length, tracedFiles, tracedDirectories,
+    materializedTraceAliases: [...acceptedAliases].sort() };
 }
 
 export function recordImmutableArtifact(options) {
   const inspection = inspectImmutableArtifact(options);
   const bytes = serial(inspection);
+  if (Buffer.byteLength(bytes) > 16384) refuse('inspection-receipt-limit');
   writeExclusive(path.join(options.candidate, 'artifact-inspection.json'), bytes);
   return { ...inspection, artifactInspectionSha256: sha(bytes) };
 }

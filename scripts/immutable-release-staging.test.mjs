@@ -198,6 +198,7 @@ test('binds complete isolated source, dependencies, Next build ID and contained 
   const staged = fixture(t).stage(); addSyntheticArtifact(staged);
   const record = recordImmutableArtifact(staged);
   assert.equal(record.productionAdmitted, false);
+  assert.equal(record.format, 'keryx-immutable-artifact-inspection-v2');
   assert.equal(record.buildId, 'synthetic-no-spend-build');
   assert.equal(record.tracedFiles, 2);
   assert.equal(verifyImmutableArtifact({ ...staged, artifactInspectionSha256: record.artifactInspectionSha256 }).artifactDigest,
@@ -232,6 +233,31 @@ test('missing dependency and outside/dangling trace refuse without recording acc
     assert.throws(() => recordImmutableArtifact(staged));
   }
   fs.unlinkSync(tracePath); assert.throws(() => recordImmutableArtifact(staged));
+  assert.equal(fs.existsSync(path.join(staged.candidate, 'artifact-inspection.json')), false);
+});
+
+test('Turbopack directory traces bind the entire materialized package copy, not arbitrary directories', t => {
+  const staged = fixture(t).stage(); addSyntheticArtifact(staged);
+  const dependency = path.join(staged.source, 'node_modules', 'fixture');
+  fs.writeFileSync(path.join(dependency, 'package.json'), '{"name":"fixture","version":"1.0.0"}\n');
+  const aliasName = 'fixture-0123456789abcdef';
+  const alias = path.join(staged.source, '.next', 'node_modules', aliasName);
+  fs.mkdirSync(path.dirname(alias)); fs.cpSync(dependency, alias, { recursive: true });
+  const trace = path.join(staged.source, '.next', 'next-server.js.nft.json');
+  const writeTrace = name => fs.writeFileSync(trace, JSON.stringify({ version: 1, files: [name, name] }));
+  writeTrace(`./node_modules/${aliasName}`);
+  const inspection = inspectImmutableArtifact(staged);
+  assert.deepEqual(inspection.materializedTraceAliases, [`.next/node_modules/${aliasName}`]);
+  assert.equal(inspection.tracedFiles, 0); assert.equal(inspection.tracedDirectories, 2);
+  for (const name of ['../node_modules/fixture', '../node_modules', './node_modules']) {
+    writeTrace(name); assert.throws(() => inspectImmutableArtifact(staged), /trace-entry-not-file/);
+  }
+  writeTrace(`./node_modules/${aliasName}`);
+  fs.writeFileSync(path.join(alias, 'index.js'), 'substituted alias bytes');
+  assert.throws(() => inspectImmutableArtifact(staged), /trace-alias-dependency-mismatch/);
+  fs.copyFileSync(path.join(dependency, 'index.js'), path.join(alias, 'index.js'));
+  fs.writeFileSync(path.join(alias, 'extra.js'), 'unbound extra alias code');
+  assert.throws(() => inspectImmutableArtifact(staged), /trace-alias-dependency-mismatch/);
   assert.equal(fs.existsSync(path.join(staged.candidate, 'artifact-inspection.json')), false);
 });
 
