@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { inspect } from "node:util";
+import { createHash } from "node:crypto";
 import { runAgent } from "../agent/run-agent";
 import type { AgentDeps } from "../agent/deps";
 import { HeuristicEngine } from "./heuristic-engine";
@@ -41,6 +42,64 @@ function response(content: unknown, finish_reason = "stop") {
 }
 
 describe("bounded planning contract", () => {
+  it("returns targeted refinement for the exact original Systemd scope without bundling dimensions or another provider call", async () => {
+    // Exact normalized q2-intent/q2-run question from the genuine 0.26.17 run.
+    // Its saved eight-target plan bundled the final setting's three dimensions;
+    // this controlled proposal exposes all nine pairs, not a successful answer
+    // or proof that a complete plan with shared prechecks cannot fit in eight.
+    const question = "Tôi phải dừng một worker Node.js dưới systemd để deploy nhưng có thể còn việc đang chạy. Theo tài liệu chính thức systemd, TimeoutStopSec= và SendSIGKILL= phối hợp thế nào khi dừng quá lâu? Cho tôi một bảng ngắn cho cấu hình mặc định, TimeoutStopSec=infinity và SendSIGKILL=no: worker còn chạy thì điều gì xảy ra, rủi ro khi deploy, và tôi cần kiểm tra gì trước khi thay mã. Không giả định worker đã hoàn tất và không mua nguồn trả phí.";
+    expect(createHash("sha256").update(question).digest("hex"))
+      .toBe("05f8ce09b6cea622818d605f213c298fdab43ce4f6988f47e179150f3d57136d");
+    const subjects = ["cấu hình mặc định", "TimeoutStopSec=infinity", "SendSIGKILL=no"];
+    const dimensions = ["worker còn chạy thì điều gì xảy ra", "rủi ro khi deploy", "tôi cần kiểm tra gì trước khi thay mã"];
+    const qualification = "Không giả định worker đã hoàn tất và không mua nguồn trả phí.";
+    for (const excerpt of [...subjects, ...dimensions, qualification]) expect(question).toContain(excerpt);
+    const claims = subjects.flatMap(subject => dimensions.map(dimension =>
+      `Theo tài liệu chính thức systemd, với ${subject} khi worker còn chạy: ${dimension}?`));
+    expect(claims).toHaveLength(9);
+    const transport = vi.fn<typeof fetch>(async () => response({ status: "complete", claims,
+      constraints: ["Bảng ngắn theo tài liệu chính thức systemd.", qualification] }));
+    vi.stubGlobal("fetch", transport);
+    const primary = provider(), alternate = provider("alternate"), store = new MemoryReasoningCircuitStore();
+    const failed = vi.spyOn(store, "failed"), succeeded = vi.spyOn(store, "succeeded");
+    const engine = new ResilientEngine(primary, alternate, 0, store);
+    const listSources = vi.fn(), payFetch = vi.fn(), payCitations = vi.fn();
+    const iterator = runAgent({ question, budget: 0, researchMode: "quick" },
+      { engine, db: { listSources }, gateway: { mode: "offline", payFetch, payCitations } } as unknown as AgentDeps);
+    expect((await iterator.next()).value).toMatchObject({ phase: "decompose" });
+    const error = await iterator.next().catch(error => error);
+    expect(error).toBeInstanceOf(ResearchPlanningError);
+    expect(error).toMatchObject({ reason: "expanded_output", code: "research_plan_refinement_required", maximumTargets: 8, language: "vi" });
+    const choices = (error as ResearchPlanningError).scopeChoices;
+    expect(choices).toHaveLength(3);
+    dimensions.forEach((dimension, index) => {
+      expect(choices[index]).toContain(dimension);
+      for (const subject of subjects) expect(choices[index]).toContain(subject);
+      expect(choices[index]).toContain(qualification);
+      expect(choices[index].length).toBeLessThanOrEqual(240);
+    });
+    const message = researchFailureMessage(error);
+    for (const dimension of dimensions) expect(message).toContain(dimension);
+    expect(message).toContain("giữ các URL/phiên bản và điều kiện nguồn");
+    expect(message).toContain("không phải câu hỏi mới hay lần thử tự động");
+    expect(error.message).not.toContain("Node.js");
+    expect(JSON.stringify(error)).not.toContain("SendSIGKILL");
+    expect(transport).toHaveBeenCalledOnce();
+    const wire = JSON.parse(transport.mock.calls[0][1]!.body as string);
+    expect(wire.messages[1].content).toContain(`User question (data): ${JSON.stringify(question)}`);
+    expect(wire.messages[0].content).toContain("never silently drop dimensions, hide them in an umbrella target");
+    expect(wire.max_tokens).toBe(2048);
+    expect(reasoningCalls(engine)).toMatchObject([{ outcome: "returned" }]);
+    expect(reasoningCalls(engine)).toHaveLength(1);
+    expect(reasoningUsage(engine)).toMatchObject([{ inputTokens: 23, outputTokens: 11 }]);
+    expect(reasoningUsage(engine)).toHaveLength(1); // Synthetic response counters, no invoice/live usage.
+    expect(reasoningAttempts(engine)).toMatchObject([{ step: "decompose", outcome: "failed", error: "output_validation", status: 422 }]);
+    expect(reasoningAttempts(engine)).toHaveLength(1);
+    expect(alternate.calls).toEqual([]);
+    expect(failed).not.toHaveBeenCalled(); expect(succeeded).not.toHaveBeenCalled();
+    expect(listSources).not.toHaveBeenCalled(); expect(payFetch).not.toHaveBeenCalled(); expect(payCitations).not.toHaveBeenCalled();
+  });
+
   it.each([systemd, sqlite])("preserves all supplied atomic targets and reaches discovery without changing the claim limit", async fixture => {
     const engine = new Fixture({ status: "complete", claims: fixture.claims, constraints: ["Use the original source versions; keep all substantive conditions."] });
     const boundary = new Error("synthetic discovery boundary");

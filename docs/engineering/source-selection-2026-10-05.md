@@ -135,7 +135,7 @@ remains retained rather than being reclassified as a passing run.
 
 Useful supported comparisons/checklists, actual ordinary-client exports,
 independent legitimate Arc settlement and user evidence remain open under
-#172/#169/#128. #158's initial model-call failure also remains unexplained by
+#172/#128. #158's initial model-call failure also remains unexplained by
 this source-selection repair. Richer synthesis stays disabled under D-300.
 
 ## Original-caller recovery guidance — October 11, 2026
@@ -165,6 +165,37 @@ Bots retain their existing generic failure messages and shared strict engine
 behavior. Stdio MCP, native desktop/Operator and extensions retain their hosted
 handoff and custody boundaries. No client package, schema or activation change
 is required for this shared message. Source review, applicable hosted CI
-and root-owned delivery remain separate gates. Original #169 and #172 remain
-open: the separately authorized finite live usefulness retest cannot run under
-the exhausted allowance. Earlier observations and failed holds are unchanged.
+and root-owned delivery remain separate gates. Original #172 remains open for
+its explicit separately authorized finite live usefulness or actual-source-
+limitation acceptance; the exhausted allowance does not authorize that retest.
+Original #169 requires its exact-case planning/refinement proof and root-owned
+delivery decision, without an additional mandatory live or paid trial. Earlier
+observations and failed holds are unchanged.
+
+### Exact original Systemd refinement control — October 12, 2026
+
+The planning regression now binds the complete historical Systemd question to
+SHA256 `05f8ce09b6cea622818d605f213c298fdab43ce4f6988f47e179150f3d57136d`,
+matching the retained original intent and run. The old genuine eight-target
+plan reached discovery and a low-confidence excerpt-only report; its last
+target bundled `SendSIGKILL=no` behavior, deployment risk and prechecks. That
+historical result and the recorded 0/3 useful observations remain unchanged.
+
+The controlled provider proposes nine distinct setting/dimension pairs from
+the exact question. Local validation retains the eight-target ceiling and
+returns typed `expanded_output` refinement. It does not establish that a
+complete plan with shared checks could never fit, or reproduce an unknown
+historical provider cause. The narrow caller-choice helper now preserves a
+short colon-introduced dimension list as separate focused excerpts with its
+shared comparison context and trailing qualifications; previously the first
+three comma fragments could omit deployment risk and prechecks. For this exact
+question all three settings and the no-completed-worker/no-paid-source
+qualification remain in every choice. The source restriction stays in the
+unaltered original question and the existing instruction to retain its source
+conditions. No targets, answers or retries are inferred from these excerpts.
+
+One synthetic response follows the existing provider/orchestrator abstraction,
+retaining its declared synthetic usage counters and one returned-call record.
+Refinement stops before discovery, source/payment admission or another provider
+attempt. This is bounded offline refinement proof, not a useful source answer,
+an invoice, settlement or issue closure; root owns peer/CI/delivery acceptance.

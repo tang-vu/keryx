@@ -10,6 +10,20 @@ function refinementChoices(question: string): string[] {
   const safe = question.slice(0, 30_000)
     .replace(/https?:\/\/[^\s<>"'`]+/giu, "[source URL in original request]")
     .replace(/[\u0000-\u0009\u000b-\u001f\u007f\u202a-\u202e\u2066-\u2069]/gu, " ");
+  // A short "subjects: dimension, dimension, dimension" request can offer one
+  // dimension at a time without losing later dimensions or trailing conditions.
+  // These are caller excerpts, not inferred targets or an automatically run plan.
+  const colon = safe.lastIndexOf(":");
+  if (colon >= 0) {
+    const context = safe.slice(0, colon).split(/(?<=[.!?])\s+|\r?\n+/u).at(-1)?.trim();
+    const [list, ...conditions] = safe.slice(colon + 1).trim().split(/(?<=[.!?])\s+/u);
+    const dimensions = list.split(/,\s+(?!\d)|;\s*/u).map(part => part.trim());
+    if (context && dimensions.length >= 2 && dimensions.length <= 3 && dimensions.every(part => part.length >= 12)) {
+      const suffix = conditions.length ? " " + conditions.join(" ") : "";
+      const choices = [...new Set(dimensions.map(part => `${context}: ${part.replace(/[.!?]$/u, "")}.${suffix}`))];
+      if (choices.every(choice => choice.length <= 240)) return choices;
+    }
+  }
   const parts = safe.split(/(?<=[?;])\s*|\r?\n+|,\s+(?!\d)/u)
     .map(part => part.trim()).filter(part => part.length >= 12);
   return [...new Set(parts)].slice(0, 3).map(part => {
