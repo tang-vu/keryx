@@ -71,7 +71,7 @@ export const openapiSpec = {
     securitySchemes: {
       WebSession: {
         type: "apiKey", in: "cookie", name: "keryx_session",
-        description: "Revocable SIWE web session. Creator claim writes also require exact same-origin Origin header; API keys and research payment signatures cannot manage claims.",
+        description: "Revocable durable web session issued by SIWE or verified Circle Google login. Creator claim writes also require exact same-origin Origin header; API keys and research payment signatures cannot manage claims.",
       },
       ApiKeyAuth: {
         type: "http",

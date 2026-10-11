@@ -35,6 +35,9 @@ describe("private claim and ownership-history OpenAPI contracts", () => {
     for (const operation of [post, list, detail]) for (const requirement of operation.security)
       for (const scheme of Object.keys(requirement)) expect(Reflect.get(openapiSpec.components.securitySchemes, scheme)).toBeDefined();
     expect(post.security).toEqual([{ WebSession: [] }]);
+    expect(post.description).toContain("SIWE or verified Circle Google login");
+    expect(list.description).toContain("SIWE or verified Circle Google login");
+    expect(openapiSpec.components.securitySchemes.WebSession.description).toContain("SIWE or verified Circle Google login");
     expect(list.security).toEqual([{ WebSession: [] }, { ApiKeyAuth: [] }]);
     expect(detail.security).toEqual(list.security);
   });
