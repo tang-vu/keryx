@@ -54,6 +54,15 @@ it("uses ordinary requested-language guidance only with explicit server opt-in",
   expect(engine.guidanceFor({ ...input, answerPresentation: { language: "en" } })).toBe(historical);
 });
 
+it("keeps finite note guidance confined to ordinary evidence-only generation", () => {
+  const engine = new StubEngine({});
+  const input: SynthInput = { question: "En español, escriba una nota breve de tres frases.", subClaims: ["Behavior"], gathered: [],
+    answerPresentation: { language: "es", requestedLanguage: "es", requestedSentenceCount: 3 } };
+  expect(engine.guidanceFor({ ...input, generationFormat: "evidence-only" })).toContain("exactly 3 single-sentence statement/quote pairs");
+  expect(engine.guidanceFor(input)).not.toContain("short note");
+  expect(engine.guidanceFor({ ...input, generationFormat: "evidence-only", answerFormat: "decision-brief" })).not.toContain("short note");
+});
+
 it("preserves valid JSON containing embedded fenced examples", () => {
   const value = { answer: "Example: ```sql CREATE INDEX i ON t(c); ```", facts: [{ text: "A literal ``` delimiter" }] };
   expect(extractJson(JSON.stringify(value))).toEqual(value);

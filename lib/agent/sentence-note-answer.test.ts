@@ -4,7 +4,7 @@ import nasa from "./fixtures/nasa-sentence-note-20261009.json";
 import { answerPresentation } from "../research/answer-presentation";
 import { finalizeGroundedAnswer } from "./answer-grounding";
 import type { EvidenceLedger } from "./evidence-ledger";
-import { compactSentenceNoteAnswer, completeAnswerSentenceSegments, finishSentenceNoteAnswer } from "./sentence-note-answer";
+import { compactSentenceNoteAnswer, completeAnswerSentenceSegments, finishSentenceNoteAnswer, withSentenceNoteNotices } from "./sentence-note-answer";
 
 function retainedProjection() {
   const ledger: EvidenceLedger = { evidence: nasa.evidence.map(row => {
@@ -16,7 +16,7 @@ function retainedProjection() {
 }
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 
-describe("complete-answer sentence-note projection", () => {
+describe("note prose and exact inspection appendix", () => {
   it("retains the actual five NASA pairs and original notices, honestly refusing the requested three", () => {
     expect(hash(nasa.question)).toBe("ac2a8909b023a9170cafe622d04539da5557155079d82602708d35cf0e1ccc1f");
     expect(hash(nasa.answer)).toBe("01f930beb5ce0e91061175f2dc94951400c974a62a63b7dc039dbb553acdcf77");
@@ -26,24 +26,27 @@ describe("complete-answer sentence-note projection", () => {
     expect(presentation).toMatchObject({ language: "es", requestedSentenceCount: 3 });
     const suffix = nasa.answer.slice(nasa.answer.indexOf("### Next steps to complete this research"));
     const full = finalizeGroundedAnswer({ question: nasa.question, answer: "Withheld historical draft", ...data, presentation }) + "\n\n" + suffix;
-    const compact = compactSentenceNoteAnswer(data.ledger, data.statements, data.confidence)! + "\n\n" + suffix;
+    const compact = withSentenceNoteNotices(compactSentenceNoteAnswer(data.ledger, data.statements, data.confidence), body => body + "\n\n" + suffix)!;
     const delivered = finishSentenceNoteAnswer(full, compact, 3);
     expect(delivered.outcome).toBe("compact-unmet");
     expect(delivered.sentenceSegments).toBeGreaterThan(3);
     expect(delivered.sentenceSegments).toBe(completeAnswerSentenceSegments(delivered.answer));
-    expect(delivered.answer).toContain("No fue posible presentar la respuesta completa en 3 frases");
+    expect(delivered.answer).toContain("No fue posible presentar la nota en 3 frases");
+    expect(delivered.noteSentenceCount).toBe(5);
     expect(full.match(/### Objetivo de investigación/g)).toHaveLength(3); // Default layout remains intact.
-    expect(compact).not.toContain("### Objetivo de investigación");
-    expect(compact).not.toContain("Tema solicitado (no verificado)");
+    expect(compact.answer).not.toContain("### Objetivo de investigación");
+    expect(compact.answer).not.toContain("Tema solicitado (no verificado)");
+    const noteProse = delivered.answer.split("### Nota — 5 frases\n\n")[1]!.split("### Apéndice de inspección")[0];
     for (const statement of data.statements) {
       const historicalSection = nasa.answer.split(`### Objetivo de pesquisa ${statement.claimIndex + 1}\n\n`)[1]?.split("### Objetivo de pesquisa ")[0];
       expect(historicalSection).toContain(`${statement.text} [S1] Texto da fonte: “${statement.quote}”`);
       expect(data.ledger.evidence.some(row => row.claimIndex === statement.claimIndex && row.marker === statement.marker && row.quote === statement.quote)).toBe(true);
       expect(delivered.answer.split("\n\n").filter(row => row.includes(statement.text))).toHaveLength(1);
-      expect(delivered.answer).toContain(`${statement.text} [S1] Texto de la fuente: “${statement.quote}”`);
+      expect(noteProse).toContain(`${statement.text} [S1]`);
+      expect(delivered.answer).toContain(`Texto de la fuente: “${statement.quote}”`);
     }
     // The repeated synchronous excerpt binds two DIFFERENT claims; retain both occurrences.
-    expect(compact.split(data.statements[0].quote)).toHaveLength(3);
+    expect(compact.answer.split(data.statements[0].quote)).toHaveLength(3);
     expect(delivered.answer).toContain(suffix);
     expect(delivered.answer).toContain(data.confidence.reason); // Historical rationale is not translated or reconstructed.
     expect(delivered.answer).toContain("Frases escritas y revisadas por modelos, sin verificación independiente.");
@@ -53,17 +56,15 @@ describe("complete-answer sentence-note projection", () => {
     expect(JSON.stringify(data, (_key, value) => value instanceof Set ? [...value] : value)).toBe(before);
     expect(data.ledger.evidence.every(row => row.qualifiesForAnswer && !row.qualifiesForReward)).toBe(true);
   });
-  it("does not claim three complete sentences for a synthetic three-statement note either", () => {
-    // Synthetic renderer fixture, NOT replacement acceptance for the five-pair NASA record.
-    const data = retainedProjection();
-    data.statements = [0, 2, 4].map(index => data.statements[index]);
-    data.ledger.evidence = data.ledger.evidence.filter(row => data.statements.some(statement =>
-      row.claimIndex === statement.claimIndex && row.quote === statement.quote));
-    const compact = compactSentenceNoteAnswer(data.ledger, data.statements, data.confidence)!;
-    const counted = finishSentenceNoteAnswer("Una. Dos. Tres. Cuatro.", compact, 3);
-    expect(counted.outcome).toBe("compact-unmet");
-    expect(counted.sentenceSegments).toBeGreaterThan(3);
-    for (const row of data.statements) expect(counted.answer).toContain(row.text);
+  it("refuses multiline, multi-sentence and unsafe Markdown note rows without dropping any content", () => {
+    for (const text of ["Una frase completa. Otra frase añadida.", "Una frase\ncon un salto.", "Una frase con *formato*."]) {
+      const data = retainedProjection();
+      data.statements[0].text = text;
+      expect(compactSentenceNoteAnswer(data.ledger, data.statements, data.confidence)).toBeUndefined();
+      const full = finalizeGroundedAnswer({ question: nasa.question, answer: "Withheld draft", ...data, presentation: { language: "es" } });
+      expect(finishSentenceNoteAnswer(full, undefined, 3)).toMatchObject({ outcome: "unmet" });
+      expect(finishSentenceNoteAnswer(full, undefined, 3).answer).toContain(full);
+    }
   });
   it.each(["gap", "partial", "unpaired", "extra-marker", "unbound-statement", "empty"])("keeps original gaps and scaffolding when compact closure fails: %s", mutation => {
     const data = retainedProjection();
@@ -79,15 +80,20 @@ describe("complete-answer sentence-note projection", () => {
     expect(delivered.outcome).toBe("unmet");
     expect(delivered.answer).toContain(full);
   });
-  it("counts confidence, quoted English sentences, fragment labels and every operational notice", () => {
+  it("keeps whole-output segmentation diagnostic and refuses arbitrary text or forged count certificates", () => {
     const body = 'Una frase. Texto de la fuente: “First sentence. Second sentence.”';
     const notices = "\n\nConfianza baja: sin verificación independiente.\n\nLa recuperación sigue pendiente. No se ha intentado otro pago.";
     const compact = body + notices;
     expect(completeAnswerSentenceSegments(compact)).toBeGreaterThan(completeAnswerSentenceSegments(body));
-    expect(finishSentenceNoteAnswer(compact, compact, completeAnswerSentenceSegments(body))).toMatchObject({ outcome: "compact-unmet" });
-    expect(finishSentenceNoteAnswer("Una frase.", undefined, 1)).toEqual({ answer: "Una frase.", outcome: "unchanged", sentenceSegments: 1 });
+    expect(finishSentenceNoteAnswer(compact, { answer: compact, noteSentenceCount: 3 } as { answer: string }, completeAnswerSentenceSegments(body))).toMatchObject({ outcome: "unmet" });
+    expect(finishSentenceNoteAnswer("Una frase.", undefined, 1).outcome).toBe("unmet");
     expect(finishSentenceNoteAnswer("Una frase.", undefined, 3).outcome).toBe("unmet"); // Never invent two filler sentences.
-    // Pure segmentation fixture only; this does not bypass the admitted-pair/safety-copy renderer.
-    expect(finishSentenceNoteAnswer("Una. Dos. Tres.", undefined, 3).outcome).toBe("unchanged");
+    expect(finishSentenceNoteAnswer("Una. Dos. Tres.", undefined, 3).outcome).toBe("unmet");
+    const data = retainedProjection(), valid = compactSentenceNoteAnswer(data.ledger, data.statements, data.confidence)!;
+    expect(withSentenceNoteNotices({ ...valid }, value => value + notices)).toBeUndefined();
+    expect(withSentenceNoteNotices(valid, value => value.replace(data.statements[0].text, "Deleted."))).toBeUndefined();
+    const preserved = withSentenceNoteNotices(valid, value => notices + value + notices)!;
+    expect(finishSentenceNoteAnswer("Withheld", preserved, 5)).toMatchObject({ outcome: "compact", noteSentenceCount: 5 });
+    expect(preserved.answer).toContain(notices + valid.answer + notices);
   });
 });
