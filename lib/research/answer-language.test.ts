@@ -10,7 +10,7 @@ const spanishQuestion = 'Soy verificador de información científica en México.
 describe("ordinary scaffold language fallback", () => {
   it("selects Spanish scaffolding and generation guidance for the frozen NASA request", () => {
     const presentation = answerPresentation(spanishQuestion);
-    expect(presentation).toEqual({ language: "es", requestedLanguage: "es" });
+    expect(presentation).toEqual({ language: "es", requestedLanguage: "es", requestedSentenceCount: 3 });
     expect(presentationStatementGuidance(presentation)).toContain("Spanish");
   });
   it.each([

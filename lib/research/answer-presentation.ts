@@ -6,6 +6,8 @@ export interface AnswerPresentation {
   language: "en" | "vi" | "pt" | "es";
   requestedLanguage?: "en" | "vi" | "pt" | "es";
   requestedBulletCount?: number;
+  /** Complete-answer limit, including quoted excerpts, confidence and notices. */
+  requestedSentenceCount?: number;
   requestedMaximumWords?: number;
 }
 
@@ -74,8 +76,22 @@ export function answerPresentation(question: string, scope: "ordinary" | "retain
   }
   const maximumWords = scope === "ordinary" && language === "en" && !requested.size
     ? answerWordBudget(question, budgetLanguageDirective) : undefined;
+  const sentenceCounts: Record<string, number> = { una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8 };
+  const sentences = new Set<number>();
+  const sentenceInstruction = /(?<![\p{L}\p{N}_])(?:escriba|escribe)\s+(?:una\s+)?(?:nota|respuesta)\s+breve\s+de\s+([\p{L}\d]+)\s+(?:frases?|oración|oraciones)(?=\s*(?:$|[.!?;:\r\n\u2028\u2029]))/gu;
+  if (scope === "ordinary" && language === "es" && !requested.size) {
+    for (const match of text.matchAll(sentenceInstruction)) {
+      if (negated(text, match.index!) || quotedRanges.some(range => match.index! >= range.start && match.index! < range.end)) continue;
+      // A quoted example or an embedded discussion of instructions is not a command.
+      if (!/(?:^|[.!?;:\r\n\u2028\u2029])\s*(?:en español\s*,\s*)?$/u.test(text.slice(0, match.index!))) continue;
+      // An unsupported second count is ambiguity, not permission to retain the first.
+      sentences.add(sentenceCounts[match[1]] ?? Number(match[1]));
+    }
+  }
   return { language, ...(requestedLanguage ? { requestedLanguage } : {}),
     ...(requested.size === 1 ? { requestedBulletCount: [...requested][0] } : {}),
+    ...(sentences.size === 1 && Number.isInteger([...sentences][0]) && [...sentences][0] >= 1 && [...sentences][0] <= 8
+      ? { requestedSentenceCount: [...sentences][0] } : {}),
     ...(maximumWords ? { requestedMaximumWords: maximumWords } : {}) };
 }
 
