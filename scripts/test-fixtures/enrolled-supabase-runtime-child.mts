@@ -11,7 +11,7 @@ const {
   assertEnrolledSupabaseAuthority, closeEnrolledSupabaseAdapter,
 } = requireFixture("../../lib/db/enrolled-supabase-adapter.ts") as typeof import("../../lib/db/enrolled-supabase-adapter");
 const mode = process.argv[2];
-assert(["refused-startup", "read-write", "auth-user", "query-metrics", "readonly", "drift", "domains", "domain-binding", "domain-capacity", "domain-terminal", "domain-auth", "domain-intent", "domain-treasury", "quota"].includes(mode));
+assert(["refused-startup", "read-write", "auth-user", "query-metrics", "readonly", "drift", "domains", "domain-grant-lock", "domain-binding", "domain-capacity", "domain-terminal", "domain-auth", "domain-intent", "domain-treasury", "quota"].includes(mode));
 const stage = (name: string) => process.stdout.write(`STAGE ${name}\n`);
 stage("startup");
 
@@ -54,7 +54,7 @@ try {
         const { exerciseEnrolledSupabaseNativeAuth, exerciseEnrolledSupabaseNativeTreasury } = await import("./enrolled-supabase-native-domains.mts");
         if (mode === "domain-auth") await exerciseEnrolledSupabaseNativeAuth(db, deployment.identity);
         else await exerciseEnrolledSupabaseNativeTreasury(db, deployment.identity, mode === "domain-intent" ? "intent" : "treasury");
-      } else if (["domains", "domain-binding", "domain-capacity", "domain-terminal"].includes(mode)) {
+      } else if (["domains", "domain-grant-lock", "domain-binding", "domain-capacity", "domain-terminal"].includes(mode)) {
         stage("domains");
         const { exerciseEnrolledSupabaseNativeDomains } = await import("./enrolled-supabase-native-domains.mts");
         const creator = process.env.KERYX_NATIVE_CREATOR;
@@ -64,7 +64,7 @@ try {
         await exerciseEnrolledSupabaseNativeDomains(db, deployment.identity, {
           creator: creator as `0x${string}`, payout: payout as `0x${string}`,
           rpcUrl: process.env.KERYX_RPC_URL,
-        }, mode === "domain-binding" ? "binding" : mode === "domain-capacity" ? "capacity" : mode === "domain-terminal" ? "terminal" : "header");
+        }, mode === "domain-grant-lock" ? "grant-lock" : mode === "domain-binding" ? "binding" : mode === "domain-capacity" ? "capacity" : mode === "domain-terminal" ? "terminal" : "header");
       } else if (mode === "readonly") {
         stage("readonly");
         await db.listSources();

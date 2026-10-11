@@ -103,7 +103,7 @@ export async function exerciseEnrolledSupabaseNativeDomains(
   db: KeryxDB,
   expectedIdentity: Readonly<StorageIdentity>,
   registry: Readonly<NativeDomainRegistryFixture>,
-  scenario: "header" | "binding" | "capacity" | "terminal" = "header",
+  scenario: "header" | "grant-lock" | "binding" | "capacity" | "terminal" = "header",
 ): Promise<readonly string[]> {
   const stage = (name: string) => process.stdout.write(`STAGE browser-${name}\n`);
   stage('provenance');
@@ -237,7 +237,7 @@ export async function exerciseEnrolledSupabaseNativeDomains(
       // Exposure is irreversible: cancellation cannot refund a handed-out nonce.
       assert.equal(await db.cancelPreparedBrowserJournal(sessionId, requestId), false);
       assert.equal((await db.getSessionGrant(sessionId))?.spent, amountMicros / 1000000);
-    } else if (scenario === 'binding') {
+    } else if (scenario === 'grant-lock') {
       stage('grant-lock-expiry');
       process.stdout.write('READY synthetic grant lock\n');
       await new Promise<void>(resolve => process.stdin.once('data', () => resolve()));
@@ -250,6 +250,7 @@ export async function exerciseEnrolledSupabaseNativeDomains(
       await new Promise<void>(resolve => process.stdin.once('data', () => resolve()));
       assert.deepEqual(await db.readBrowserSigningSnapshot(owner.address, sessionId, requestId), snapshot);
       assert.equal(await db.readExposedBrowserSigningSnapshotForSigner(owner.address, sessionId, requestId), null);
+    } else if (scenario === 'binding') {
       const changed = structuredClone(input);
       changed.source.contentVersion = 'changed-version';
       stage('conflict-refusal');
