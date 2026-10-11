@@ -160,11 +160,23 @@ try {
     return route.continue(); // Real API, status and application responses only; no fulfill/mocks.
   });
   const page = await context.newPage();
+  const browserDiagnostics: string[] = [];
+  page.on("console", message => { if (message.type() === "error") browserDiagnostics.push(message.text()); });
+  page.on("pageerror", error => browserDiagnostics.push(error.message));
+  proof.browserDiagnostics = browserDiagnostics;
   const document = await page.goto(origin + "/decision-reviews"); assert.equal(document?.status(), 200);
   assert.equal(document.headers()["x-keryx-maintenance-starts-at"], window.startsAt);
   await page.getByRole("status").filter({ hasText: window.message }).waitFor({ timeout: 10000 });
   assert.ok((await page.getByRole("status").filter({ hasText: window.message }).innerText()).includes(window.endsAt));
+  await writeFile(join(evidence, "advance-document.html"), await page.content());
+  const styles = await page.evaluate(() => ({ sheets: document.styleSheets.length,
+    bodyMargin: getComputedStyle(document.body).margin,
+    links: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(link => link.getAttribute("href")) }));
+  proof.advanceStyles = styles;
   await page.screenshot({ path: join(evidence, "advance-announcement.png"), fullPage: true });
+  assert.ok(styles.sheets > 0, "Actual built application stylesheet must load through ingress");
+  const noticeBox = await page.getByRole("status").filter({ hasText: window.message }).boundingBox();
+  assert.ok(noticeBox && noticeBox.y >= 0 && noticeBox.y + noticeBox.height <= 720, "Advance banner must be visible in the initial viewport");
   await page.close(); assert.deepEqual(forbidden, []);
   await delay(Math.max(0, Date.parse(window.startsAt) - Date.now() + 20));
   const baseline = snapshot(), admittedBefore = audit.length;
