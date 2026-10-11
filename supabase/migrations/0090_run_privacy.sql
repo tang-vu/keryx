@@ -207,7 +207,7 @@ begin
       'startedAt',case when o.started_at is null then null else to_char(o.started_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') end,
       'amountUsdc',o.amount_usdc,'creatorBudgetUsdc',o.creator_budget_usdc,'serviceFeeUsdc',o.service_fee_usdc,'transaction',o.transaction_id)
       into result from public.a2a_orders o where o.query_id=p_id and o.status='running'
-      and not exists(select 1 from public.query_runs q where q.id=o.query_id);
+      and not exists(select 1 from public.query_runs completed_run where completed_run.id=o.query_id);
   elsif p_action='settlement' then
     -- Never reads question/answer/data: private existence and financial proof are deliberately public.
     select jsonb_build_object('id',id,'createdAt',to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
