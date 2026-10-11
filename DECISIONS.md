@@ -7375,3 +7375,15 @@ Exact render comparisons, practical browser/control checks and existing catalogu
 tests qualify English parity; root qualifies the combined Next layout/build and
 owns review/CI/distribution/delivery. Original272 and glossary/locale gates remain
 open. See `docs/engineering/landing-catalogue-2026-10-11.md`.
+
+## 2026-10-11 — English Wanted catalogue area
+
+Extract the demand board and creator-response presentation into140 typed English
+messages, preserving the current English, complete rich-link sentences and
+singular/plural branches. Retire only116 scoped copy occurrences; retain brand,
+address and example data. Preserve coverage arithmetic, retry terms, signed
+discount inputs, registry-price revocation and share fallbacks. Exact render and
+intercepted action checks qualify this source extraction; root owns the shared
+status helper, pre-existing offer-barrel build qualification and combined review,
+CI/distribution/delivery. Original272 and held glossary/locale gates stay open.
+See `docs/engineering/wanted-catalogue-2026-10-11.md`.
