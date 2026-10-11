@@ -7044,3 +7044,22 @@ registry/identity change. Keep unrecorded acceptance/first-answer figures unmeas
 and distinguish source fixture acceptance from production measurements or rollout.
 See [public usage cohorts](docs/engineering/public-usage-cohorts.md) for the counting
 rules, ordinary PostgreSQL qualification and remaining deployed closure gates.
+
+## 2026-10-11 — Explain blocked teaching premises without activating the lesson experiment
+
+An admitted teaching request can preserve useful reviewed facts while withholding
+proposals that lack sufficient final factual dependencies. Identify that boundary
+and give a targeted next step: find directly answering passages for the missing
+topics in the caller's requested original. Invented scenarios cannot replace
+source evidence. Do not diagnose a supplier/review failure as a missing fact,
+discard independently useful siblings, or execute a read/retry from the notice.
+
+The exact Vietnamese issue211 caller now has controlled offline contract coverage,
+including the 99-word/count/duration limits and default-off financial parity. Its retained
+historical refusal has zero qualified bindings; synthetic transport/review cases
+cannot certify NASA facts or actual model usefulness. This source increment
+preserves the earlier disabled teaching rollout and all historical/private,
+provider-call, factual and creator-reward authority. The original issue does not
+automatically require new paid testing, but complete ordinary delivery and the
+existing activation hold remain unresolved. See
+[the teaching preparation record](docs/engineering/teaching-proposals-core-2026-10-08.md).
