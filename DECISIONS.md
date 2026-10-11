@@ -7340,3 +7340,13 @@ Record the pre-existing offer barrel's Node-only import and unnamed controls for
 separate root decisions. Combined review/CI/distribution/delivery and remaining
 original272 areas stay open; see
 `docs/engineering/creator-catalogue-2026-10-11.md`.
+
+## 2026-10-11 — Catalogue fixed English helper output without changing export contracts
+
+Reuse the typed message engine for helper presentation and canonical English
+exports. Keep CSV machine headers/enums, exact status literal types, schema and
+authority conditions, escaping, filenames and actual English/Vietnamese guidance
+selection unchanged. Whole messages use named values; fixed CSV labels read the
+English catalogue directly. Reuse existing area keys, retire no unrelated guard
+allowances, and reuse the creator candidate's six preview keys only after root
+accepts that candidate. See the [scope, byte parity and remaining gates](docs/engineering/shared-helper-catalogue-2026-10-11.md).
