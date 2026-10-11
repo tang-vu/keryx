@@ -10,6 +10,7 @@ import { getDb } from "./db";
 import { buildBoard, findDemandGap, type DemandGap } from "./demand-signal";
 import type { GapIntentStatus } from "./types";
 import { WANTED_WINDOW_RUNS } from "./wanted-limits";
+import { wantedMessages } from "../locales/en/wanted";
 
 export { WANTED_DETAIL_LIMIT } from "./wanted-limits";
 
@@ -80,18 +81,18 @@ export function findWantedBrief(
 export function wantedOfferStatus(offer: PublicWantedOffer): string {
   switch (offer.status) {
     case "pending":
-      return "queued until the source is indexed + verified";
+      return wantedMessages["wantedBoard.pending"];
     case "running":
-      return `targeted retry running · attempt ${offer.attempts}/3`;
+      return wantedMessages["wantedBoard.running"].replace("{attempt}", String(offer.attempts));
     case "filled":
-      return `fulfilled · $${(offer.rewardUsdc ?? 0).toFixed(6)} settled`;
+      return wantedMessages["wantedBoard.settled"].replace("{reward}", (offer.rewardUsdc ?? 0).toFixed(6));
     case "unpaid":
-      return "evidence passed, settlement did not complete";
+      return wantedMessages["wantedBoard.unpaid"];
     case "missed":
-      return "retry completed, evidence still fell short";
+      return wantedMessages["wantedBoard.missed"];
     case "stale":
-      return "closed without retry because the claim was already filled";
+      return wantedMessages["wantedBoard.stale"];
     case "failed":
-      return "retry stopped after bounded failures";
+      return wantedMessages["wantedBoard.failed"];
   }
 }

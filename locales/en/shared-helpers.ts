@@ -1,5 +1,10 @@
 /** Existing English helper presentation. Canonical exports stay English; no locale or authority rollout. */
 export const sharedHelperMessages = Object.freeze({
+  "paymentAuthorization.prepared": "reserved, not exposed",
+  "paymentAuthorization.exposed": "reserved, possibly unsigned",
+  "paymentAuthorization.signed": "signed, pending proof",
+  "paymentAuthorization.submitted": "submitted, pending proof",
+  "paymentAuthorization.pending": "pending proof",
   "reportExport.title": "# Keryx research report",
   "reportExport.sourceCap": "Source cap: {budget} USDC. Mode: {mode}.",
   "reportExport.bibliography": "## Bibliography exports (metadata only)",

@@ -80,3 +80,12 @@ is excluded from the source checkpoint. Independent source review, creator-previ
 reconciliation, exact combined-source production/CI and applicable platform gates,
 versions, deployment/health readback, original issue closure and archive/cleanup
 remain root-owned. Original #272 is not closed by this candidate.
+
+The final root reconciliation also reuses seven existing Wanted catalogue entries
+in `wantedOfferStatus` and adds five English authorization labels to the helper
+catalogue. These shared exports import only immutable English leaf data; they do
+not introduce a React boundary or select a locale. Attempt formatting, six-decimal
+reward formatting and the reserved/exposed/signed/submitted/pending distinctions
+remain byte-compatible. Settlement, authorization, payee and retry decisions are
+unchanged. The final combined study provenance, package graphs and release gates
+must account for these additional source inputs.
