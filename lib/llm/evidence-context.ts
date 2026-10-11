@@ -95,6 +95,40 @@ function namedHeadingKey(value: string): string | undefined {
   return body ? numbered ? `${numbered[1]}:${body}` : body : undefined;
 }
 
+function glossHeadingOffsets(text: string, subClaims: string[], layout?: HtmlTextLayout): number[] {
+  if (!layout || layout.limited) return [];
+  const glosses = new Map<string, { words: Set<string>; targets: Set<number> }>();
+  for (const [index, claim] of subClaims.entries()) {
+    const bounded = claim.slice(0, 8192);
+    // An explicit source-language gloss can bridge a multilingual target without
+    // translating it or guessing its meaning. Ordinary English parentheses are
+    // unchanged; publisher names and URL tokens are not inferred glosses.
+    const outside = bounded.replace(/\([^)]*\)/gu, "");
+    if (![...outside].some(character => /\p{L}/u.test(character) && character.codePointAt(0)! > 127)) continue;
+    for (const match of bounded.matchAll(/\(([A-Za-z]+(?:[ -][A-Za-z]+){0,4})\)/gu)) {
+      const words = terms(match[1]!);
+      if (!words.size || match[1]!.length > MAX_FRAGMENT_CHARACTERS) continue;
+      const key = [...words].sort().join(" ");
+      const gloss = glosses.get(key) ?? { words, targets: new Set<number>() };
+      gloss.targets.add(index);
+      glosses.set(key, gloss);
+      // Optional hints fail closed as a whole instead of silently selecting only
+      // early targets. The original lexical path still examines every target.
+      if (glosses.size > MAX_FRAGMENT_HINTS) return [];
+    }
+  }
+  if (glosses.size < 2) return [];
+  const matches = layout.headings.filter(region => {
+    const headingWords = terms(text.slice(region.start, region.end));
+    const matching = [...glosses.values()].filter(gloss => [...gloss.words].every(word => headingWords.has(word)));
+    return matching.some((left, index) => matching.slice(index + 1).some(right =>
+      [...left.targets].some(leftTarget => [...right.targets].some(rightTarget => leftTarget !== rightTarget))));
+  });
+  // Only a unique observed h1–h6 matching distinct target glosses qualifies.
+  // TOC labels, repeated headings and a single shared publisher cue cannot do so.
+  return matches.length === 1 ? [matches[0]!.start] : [];
+}
+
 /** Only extracts verbatim windows from already-unlocked content; never fetches or summarizes. */
 export function selectEvidencePassages(text: string, question: string, subClaims: string[], requestedUrls: readonly string[] = [], extraction?: SourceExtraction, htmlTextLayout?: HtmlTextLayout) {
   if (subClaims.length > MAX_RESEARCH_TARGETS) throw new Error(`Evidence context exceeded ${MAX_RESEARCH_TARGETS} research targets; requested scope must not be silently discarded`);
@@ -253,6 +287,11 @@ export function selectEvidencePassages(text: string, question: string, subClaims
   // source-aware sentence blocks. They never certify a PDF destination/section.
   const offsets = scanned.length === text.length ? fragmentHeadingOffsets(scanned, physicalLines, requestedUrls) : [];
   const namedOffsets = scanned.length === text.length ? namedHeadingOffsets(scanned, question, layout) : [];
+  // Explicit caller fragment/quoted-heading hints retain precedence. Multilingual
+  // glosses only nominate the same bounded contiguous structural context; they
+  // never establish that any target is supported or that the section was read fully.
+  if (!offsets.length && !namedOffsets.length && scanned.length === text.length)
+    namedOffsets.push(...glossHeadingOffsets(scanned, subClaims, layout));
   const priority: Window[] = [];
   // Reserve the same opening and bounded hint nominations before fixed buckets
   // can exhaust the shared ceiling. Without usable hints the original order remains.

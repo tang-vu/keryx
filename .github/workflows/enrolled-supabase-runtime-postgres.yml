@@ -35,7 +35,7 @@ concurrency:
 jobs:
   enrolled-supabase-postgres:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 29
     permissions:
       contents: read
     steps:
@@ -46,7 +46,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Focused facade inventory and legacy regressions
-        run: npx vitest run lib/db/supabase-adapter.test.ts lib/db/supabase-enrolled-methods.test.ts scripts/helpers/enrolled-postgres-schema-contract.test.ts scripts/test-fixtures/enrolled-supabase-native-https.test.ts
+        run: npx vitest run lib/db/supabase-adapter.test.ts lib/db/supabase-enrolled-methods.test.ts scripts/helpers/enrolled-postgres-schema-contract.test.ts scripts/test-fixtures/enrolled-supabase-native-https.test.ts scripts/test-fixtures/enrolled-supabase-native-domains.test.mts
       - name: Actual PG17 reference, owner cutover and native HTTPS factory acceptance
         if: github.event_name != 'workflow_dispatch' || !inputs.source_reference_only
         run: node --import tsx scripts/test-enrolled-supabase-runtime-postgres.mts --acceptance
