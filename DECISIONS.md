@@ -7502,7 +7502,7 @@ declines to state a margin. The live sponsored run, replay and limit
 demonstrations stay gated; see the
 [criteria status](docs/engineering/recorded-walkthrough-305.md).
 
-## 2026-10-11 — Expose bounded source outcomes before activating learned spending
+## 2026-10-11 - Expose bounded source outcomes before activating learned spending
 
 Retain independently attested outside actor/funding gates for source learning.
 A verified wallet or historical citation is insufficient. Capture source/run
