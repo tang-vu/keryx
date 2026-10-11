@@ -1,4 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
+import { mkdtempSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { installSqliteApplicationSchema } from "../db/sqlite-application-schema";
 import { createSqliteZotero } from "../db/zotero-sqlite";
@@ -11,6 +13,7 @@ import { digest, zoteroPaperReferences, zoteroReportReferences } from "./zotero-
 import type { ZoteroItem } from "./zotero-provider";
 import { createZoteroRoutes } from "./zotero-routes";
 import type { KeryxDB } from "../db/keryx-db";
+import { encryptContent } from "../ipfs/content-crypto";
 const owner = `0x${"a".repeat(40)}`, token = "SYNTHETICKEY000000000001", collection = "ABCD2345";
 const databases: DatabaseSync[] = [];
 afterEach(() => { databases.splice(0).forEach(db => db.close()); vi.unstubAllEnvs(); });
@@ -50,7 +53,110 @@ function fixture() {
   const store = createSqliteZotero(db), provider = syntheticZotero(); return { db, store, provider, service: createZoteroService(store, provider.transport) };
 }
 const refs = () => zoteroPaperReferences([PAPER_CATALOG[0]]);
+function held() {
+  let open!: () => void;
+  const promise = new Promise<void>(resolve => { open = resolve; });
+  return { promise, open };
+}
+function sharedLibrary() {
+  vi.stubEnv("CONTENT_MASTER_KEY", "11".repeat(32));
+  // Two real SQLite connections/stores, one isolated retained file, one provider.
+  const path = join(mkdtempSync(join(process.cwd(), ".artifacts/zotero-reviewfix-db-")), "synthetic.sqlite");
+  const first = new DatabaseSync(path), second = new DatabaseSync(path); databases.push(first, second);
+  installSqliteApplicationSchema(first);
+  return { first: createSqliteZotero(first), second: createSqliteZotero(second), provider: syntheticZotero(), db: first };
+}
 describe("explicit Zotero references", () => {
+  it("admits only one of two wallets connecting concurrently to one library through separate stores", async () => {
+    const f = sharedLibrary(), other = `0x${"b".repeat(40)}`, seen = [held(), held()], response = [held(), held()]; let permission = 0;
+    const transport: typeof fetch = async (input, init) => {
+      const value = await f.provider.transport(input, init);
+      if (String(input).endsWith("/keys/current")) { const index = permission++; seen[index].open(); await response[index].promise; }
+      return value;
+    };
+    const first = createZoteroService(f.first, transport), second = createZoteroService(f.second, transport);
+    const connecting = first.connect(owner, token); await seen[0].promise;
+    const competing = second.connect(other, token); const rejected = expect(competing).rejects.toThrow("zotero_library_bound"); await seen[1].promise;
+    response[0].open(); await connecting; response[1].open(); await rejected;
+    expect(await second.status(other)).toEqual({ connected: false, userId: null });
+    await expect(second.send(other, collection, refs())).rejects.toThrow("zotero_disconnected");
+    expect(f.provider.calls.filter(call => call.method === "POST")).toHaveLength(0);
+    expect(f.db.prepare("SELECT wallet FROM zotero_library_owners WHERE user_id='1234'").get()?.wallet).toBe(owner);
+  });
+  it.each(["accepted", "pending"])("retains the one-wallet binding across held snapshots, %s ambiguous writes and revoke/reconnect", async acceptance => {
+    const f = sharedLibrary(), other = `0x${"b".repeat(40)}`, readSeen = held(), readResponse = held(), writeSeen = held(), writeResponse = held();
+    let holdRead = true, holdWrite = true;
+    const transport: typeof fetch = async (input, init) => {
+      const heldWrite = init?.method === "POST" && holdWrite;
+      if (heldWrite) {
+        holdWrite = false;
+        if (acceptance === "pending") { writeSeen.open(); await writeResponse.promise; }
+      }
+      const response = await f.provider.transport(input, init);
+      if (String(input).includes("/items?") && holdRead) { holdRead = false; readSeen.open(); await readResponse.promise; }
+      if (heldWrite) {
+        if (acceptance === "accepted") { writeSeen.open(); await writeResponse.promise; }
+        throw new Error(`lost synthetic response ${token}`);
+      }
+      return response;
+    };
+    const first = createZoteroService(f.first, transport), second = createZoteroService(f.second, transport);
+    await first.connect(owner, token);
+    const reading = first.send(owner, collection, refs()), revokedRead = expect(reading).rejects.toThrow("zotero_disconnected"); await readSeen.promise;
+    await expect(second.connect(other, token)).rejects.toThrow("zotero_library_bound");
+    await first.revoke(owner); await expect(second.connect(other, token)).rejects.toThrow("zotero_library_bound");
+    await second.connect(owner, token); readResponse.open(); await revokedRead;
+    expect(f.provider.calls.filter(call => call.method === "POST")).toHaveLength(0);
+    const writing = first.send(owner, collection, refs()), ambiguous = expect(writing).rejects.toThrow("zotero_provider"); await writeSeen.promise;
+    expect(f.provider.items.size).toBe(acceptance === "accepted" ? 2 : 0);
+    await first.revoke(owner); await expect(second.connect(other, token)).rejects.toThrow("zotero_library_bound");
+    await second.connect(owner, token); expect(await second.send(owner, collection, refs())).toMatchObject({ writes: acceptance === "accepted" ? 0 : 2 });
+    const accepted = [...f.provider.items.keys()]; expect(accepted).toHaveLength(2);
+    writeResponse.open(); await ambiguous;
+    expect(await second.send(owner, collection, refs())).toMatchObject({ writes: 0 });
+    expect([...f.provider.items.keys()]).toEqual(accepted);
+    const writes = f.provider.calls.filter(call => call.method === "POST");
+    expect(writes).toHaveLength(acceptance === "accepted" ? 1 : 2);
+    if (writes.length === 2) expect(writes[0].body!.map(row => row.key)).toEqual(writes[1].body!.map(row => row.key));
+    expect(await second.status(other)).toEqual({ connected: false, userId: null });
+  });
+  it("refuses a canonical report's distinct source/item identities sharing URL/version before every POST", async () => {
+    const f = fixture(); await f.service.connect(owner, token);
+    const citation: Citation = { marker: "S1", sourceId: "one", sourceName: "Publisher", itemId: "one", itemTitle: "Canonical work", itemUrl: "https://source.example/shared", contentVersion: "sha256:one", weight: 1, reward: 0, rationale: "synthetic" };
+    const citations = [citation, { ...citation, marker: "S2", sourceId: "two", itemId: "two" }];
+    const references = zoteroReportReferences({ id: "alias-report", citations, evidence: [] } as unknown as QueryRun, "https://keryx.example");
+    expect(references).toHaveLength(2); expect(new Set(references.map(row => row.identity)).size).toBe(2);
+    expect(new Set(references.map(row => row.citationKey)).size).toBe(2);
+    expect(JSON.parse(buildCitationExport(citations, "csl-json").content)).toHaveLength(2);
+    for (const rows of [references, references.slice().reverse()]) await expect(f.service.send(owner, collection, rows)).rejects.toThrow("zotero_conflict");
+    expect(f.provider.calls.filter(call => call.method === "POST")).toHaveLength(0); expect(f.provider.items.size).toBe(0);
+    expect(f.db.prepare("SELECT count(*) AS n FROM zotero_reference_keys").get()?.n).toBe(0);
+  });
+  it("keeps distinct canonical report content versions on one URL independently repeat-safe", async () => {
+    const f = fixture(); await f.service.connect(owner, token);
+    const citation: Citation = { marker: "S1", sourceId: "source", sourceName: "Publisher", itemId: "work", itemTitle: "Canonical work", itemUrl: "https://source.example/shared", contentVersion: "sha256:one", weight: 1, reward: 0, rationale: "synthetic" };
+    const references = zoteroReportReferences({ id: "version-report", citations: [citation, { ...citation, marker: "S2", contentVersion: "sha256:two" }], evidence: [] } as unknown as QueryRun, "https://keryx.example");
+    expect(await f.service.send(owner, collection, references)).toMatchObject({ references: 2, writes: 4 });
+    expect(await f.service.send(owner, collection, references.slice().reverse())).toMatchObject({ writes: 0 });
+    const parents = [...f.provider.items.values()].filter(row => row.data.itemType !== "note");
+    expect(parents.map(row => row.data.citationKey).sort()).toEqual(references.map(row => row.citationKey).sort());
+    expect(parents.map(row => row.data.extra)).toEqual(references.map(row => row.fields.extra));
+    expect(f.provider.items.size).toBe(4);
+  });
+  it("preserves exact saved arXiv v1/v2 identities sharing a DOI across initial and separate repeated sends", async () => {
+    const f = fixture(); await f.service.connect(owner, token);
+    const papers = [1, 2].map(version => ({ ...PAPER_CATALOG[0], repository: "arxiv" as const, publicationKind: "preprint" as const, arxivId: `2401.12345v${version}`,
+      url: `https://arxiv.org/abs/2401.12345v${version}`, metadataUrl: `https://arxiv.org/abs/2401.12345v${version}`, doi: "10.1234/shared" }));
+    const references = zoteroPaperReferences(papers);
+    expect(references[0].fields.extra).toContain("Archive location: 2401.12345v1");
+    expect(references[1].fields.extra).toContain("Archive location: 2401.12345v2");
+    expect(await f.service.send(owner, collection, references)).toMatchObject({ writes: 4 });
+    for (const reference of references.slice().reverse()) expect(await f.service.send(owner, collection, [reference])).toMatchObject({ writes: 0 });
+    expect(f.provider.items.size).toBe(4);
+    const parents = [...f.provider.items.values()].filter(row => row.data.itemType !== "note");
+    expect(parents.map(row => row.data.url)).toEqual(papers.map(row => row.url));
+    expect(parents.map(row => row.data.citationKey)).toEqual(references.map(row => row.citationKey));
+  });
   it("uses canonical fields, stable citation keys and a literal metadata provenance note", () => {
     const papers = PAPER_CATALOG.slice(0, 4), rows = JSON.parse(paperReferencesCslJson(papers).content), bib = paperReferencesBibtex(papers).content;
     for (const [index, ref] of zoteroPaperReferences(papers).entries()) {
@@ -171,10 +277,10 @@ describe("explicit Zotero references", () => {
     await expect(createZoteroService(f.store, transport).send(owner, collection, refs())).rejects.toThrow("zotero_backoff");
     await expect(f.service.collections(owner)).rejects.toThrow("zotero_backoff"); expect(transport).toHaveBeenCalledOnce();
   });
-  it("refuses copying an encrypted token to a different owner without sending a credential", async () => {
+  it.each(["owner", "user"])("refuses encrypted-token copies with mismatched %s AAD before sending a credential", async mismatch => {
     const f = fixture(); await f.service.connect(owner, token); const other = `0x${"b".repeat(40)}`, lease = await f.store.acquire(other, false);
-    const encrypted = JSON.parse(String(f.db.prepare("SELECT encrypted FROM zotero_connections WHERE wallet=?").get(owner)!.encrypted));
-    await f.store.connect(lease, "1234", encrypted); await f.store.release(lease); const count = f.provider.calls.length;
+    const encrypted = encryptContent(token, new TextEncoder().encode(`keryx-zotero-token-v1:${mismatch === "owner" ? owner : other}:${mismatch === "user" ? "9998" : "9999"}`));
+    await f.store.connect(lease, "9999", encrypted); await f.store.release(lease); const count = f.provider.calls.length;
     await expect(f.service.collections(other)).rejects.toThrow("zotero_unavailable"); expect(f.provider.calls).toHaveLength(count);
   });
 });
@@ -217,5 +323,12 @@ describe("session-bound reference API", () => {
     const f = routes(); f.provider.state.groups = { all: { write: true } };
     const response = await f.routes.connect(request("PUT", { apiKey: token })); expect(response.status).toBe(403);
     expect(await response.text()).toBe('{"error":"zotero_scopes"}');
+  });
+  it("returns a fixed private conflict without disclosing the wallet already bound to the library", async () => {
+    const f = routes(); await f.service.connect(`0x${"b".repeat(40)}`, token);
+    const response = await f.routes.connect(request("PUT", { apiKey: token }));
+    expect(response.status).toBe(409); expect(await response.text()).toBe('{"error":"zotero_library_bound"}');
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(await f.store.status(owner)).toEqual({ connected: false, userId: null });
   });
 });

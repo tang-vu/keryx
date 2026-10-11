@@ -26,7 +26,7 @@ export function ZoteroEditor({ wallet }: { wallet: string }) {
         ...(body === undefined ? {} : { "Content-Type": "application/json" }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     const value = await response.json();
     if (!response.ok) {
-      const messages: Record<string, string> = { zotero_unavailable: copy.unavailable, zotero_conflict: copy.conflict, zotero_scopes: copy.scopesFailed, zotero_backoff: copy.backoff, zotero_report_not_found: copy.notFound };
+      const messages: Record<string, string> = { zotero_unavailable: copy.unavailable, zotero_conflict: copy.conflict, zotero_library_bound: copy.libraryBound, zotero_scopes: copy.scopesFailed, zotero_backoff: copy.backoff, zotero_report_not_found: copy.notFound };
       throw new Error(messages[value.error] ?? copy.failed);
     }
     return value;

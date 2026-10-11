@@ -7503,3 +7503,15 @@ Synthetic account/transport/browser acceptance is source evidence only. Root
 owns accepted main synchronization, review/CI, source graph, distribution and
 rollout; live provider and prior Overleaf acceptance keep original285 open. See
 [the Zotero source and rollout contract](docs/engineering/zotero-references-2026-10-11.md).
+
+## 2026-10-11 — Bind each Zotero library to one Keryx wallet
+
+Relates to #285. Durably bind an actual personal-library user ID to its first
+Keryx wallet; revocation removes the credential but retains that binding and
+reserved keys. Refuse a second wallet and do not offer automatic transfer: a
+revoked request can still complete, making independently keyed ownership unsafe.
+This restriction is local to the admitted store and remains subject to root's
+independent source/product review. Admit the entire canonical reference plan
+before POST; refuse overlapping source/item identities rather than collapsing
+citation keys, and preserve explicit content/arXiv versions even with one DOI.
+See [the Zotero contract](docs/engineering/zotero-references-2026-10-11.md).

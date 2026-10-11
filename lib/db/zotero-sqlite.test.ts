@@ -42,6 +42,18 @@ it("persists keys across store instances and reserves them before any provider w
   await expect(second.key(next, "1234", "2".repeat(64), key)).rejects.toThrow("zotero_conflict");
   await expect(second.key(next, "9999", "1".repeat(64))).rejects.toThrow("zotero_unavailable");
 });
+it("binds a personal library atomically to one wallet and retains ownership through revocation", async () => {
+  vi.stubEnv("CONTENT_MASTER_KEY", "22".repeat(32)); const f = fixture(), second = createSqliteZotero(f.db);
+  const firstLease = await f.store.acquire(owner, false), otherLease = await second.acquire(other, false);
+  await f.store.connect(firstLease, "1234", encryptContent("synthetic"));
+  await expect(second.connect(otherLease, "1234", encryptContent("synthetic"))).rejects.toThrow("zotero_library_bound");
+  expect(await second.status(other)).toEqual({ connected: false, userId: null });
+  await f.store.revoke(owner); await expect(f.store.check(firstLease)).rejects.toThrow("zotero_disconnected");
+  await expect(second.connect(otherLease, "1234", encryptContent("synthetic"))).rejects.toThrow("zotero_library_bound");
+  const reconnect = await second.acquire(owner, false); await second.connect(reconnect, "1234", encryptContent("synthetic"));
+  await f.store.release(firstLease); await second.check(reconnect);
+  expect(f.db.prepare("SELECT * FROM zotero_library_owners").all()).toEqual([{ user_id: "1234", wallet: owner }]);
+});
 it("limits provider operations across owners and store instances to four durable leases", async () => {
   const f = fixture(), second = createSqliteZotero(f.db), leases = [];
   for (const digit of ["a", "b", "c", "d"]) leases.push(await f.store.acquire(`0x${digit.repeat(40)}`, false));

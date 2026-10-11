@@ -13,6 +13,16 @@ permissions; file access and every group permission must be off. The API checks
 the actual grant and user ID. No application registration or client secret is
 required for this dedicated-key workflow. An OAuth exchange is not implemented.
 
+The first successful connection durably binds that actual Zotero personal-library
+user ID to one normalized Keryx wallet in this store. A different wallet is refused
+without revealing the bound wallet or retaining its submitted key. Disconnect
+removes credentials but retains the binding and reconciliation keys. Account
+transfer is unsupported: releasing the binding while a write may still complete
+would let another wallet create independently keyed duplicate references. Any
+future transfer needs a separately reviewed handoff of durable mappings and
+uncertain writes. This intentionally restricts multi-wallet use of one library;
+it does not establish ownership outside this Keryx store.
+
 Choose **Load collections from Zotero**, select a collection, then explicitly
 send either saved literature metadata or a report ID from owned research history.
 The confirmation explains the external disclosure. Mounting the page reads only
@@ -53,7 +63,11 @@ markers and exact URL/DOI candidates; conflicting metadata, duplicate candidates
 trashed matches, incompatible citation keys or unknown extra-field conflicts
 withhold the send. An identical existing item can be adopted while retaining its
 other fields, notes and collection memberships. Distinct recorded content
-versions and exact arXiv URLs remain distinct. This is conservative identity
+versions and exact arXiv identities (including Archive location) remain distinct,
+even when they share a DOI. The complete planned reference set is also checked
+before reserving keys or posting. Distinct canonical source/item identities with
+overlapping URL/DOI and no distinct explicit version refuse the whole send;
+their citation keys are neither silently merged nor rewritten. This is conservative identity
 reconciliation, not general fuzzy bibliographic deduplication. Large or changing
 libraries require a separately reviewed incremental reconciliation design.
 
@@ -97,7 +111,7 @@ header-only credentials, no redirects/cookies, a 15-second request deadline and
 a 2 MiB response limit. Each operation has a two-minute deadline.
 
 `KeryxDB.zotero` is optional and non-enumerable on ordinary SQLite. Its separate
-connection, key-map and provider-hold tables install only when
+connection, key-map, library-owner and provider-hold tables install only when
 `KERYX_ZOTERO_ENABLED=1`, after ordinary schema admission. Every transaction
 checks enrollment absence and exact domain tables/indexes/triggers. Unknown
 schema disables this capability without repair or changes to unrelated research.
@@ -187,3 +201,11 @@ Next's temporary tsconfig formatting/include changes were restored byte-for-byte
 in Git, without deleting build output or changing either existing route.
 Exact counts, commits, check runs and review corrections are recorded in the
 worker's status/handoff rather than treating synthetic writes as real delivery.
+
+The independent-review correction uses two wallets, two SQLite connections/store
+instances and one synthetic personal library. Held permission/read/write
+responses cover competing connects, revocation generations and reconnection
+before or after an uncertain write is accepted. Canonical report aliases refuse
+before POST; distinct content versions and saved arXiv v1/v2 with a shared DOI
+remain independently repeat-safe. Prior unchanged bibliography/browser evidence
+is retained rather than rerun for this correction.

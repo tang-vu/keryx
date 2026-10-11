@@ -2,6 +2,7 @@ import { decryptContent, encryptContent, hasContentKey } from "../ipfs/content-c
 import { ZoteroError, zoteroTokenSchema, type ZoteroLease, type ZoteroStore } from "./zotero-contract";
 import { digest, type ZoteroReference } from "./zotero-export";
 import { ZoteroProvider, type ZoteroItem } from "./zotero-provider";
+import { arxivDocumentId, normalizeVersionedArxivId } from "../scholarly/arxiv-identity";
 
 const aad = (owner: string, user: string) => new TextEncoder().encode(`keryx-zotero-token-v1:${owner}:${user}`);
 function same(a: unknown, b: unknown): boolean {
@@ -15,13 +16,20 @@ function same(a: unknown, b: unknown): boolean {
 function matches(item: ZoteroItem, reference: ZoteroReference) {
   return Object.entries(reference.fields).every(([key, value]) => key === "extra" || key === "citationKey" || same(item.data[key] ?? (Array.isArray(value) ? [] : ""), value));
 }
-function candidate(item: ZoteroItem, reference: ZoteroReference) {
-  if (item.data.extra?.split("\n").includes(`Keryx identity: ${reference.identity}`)) return true;
+function arxivIdentity(data: Record<string, unknown>) {
+  const extra = String(data.extra ?? "");
+  return /^Archive: arXiv$/mi.test(extra) && normalizeVersionedArxivId(extra.match(/^Archive location: (.*)$/m)?.[1] ?? "") || arxivDocumentId(String(data.url ?? ""));
+}
+function candidate(data: Record<string, unknown>, reference: ZoteroReference) {
+  const extra = String(data.extra ?? "");
+  if (extra.split("\n").includes(`Keryx identity: ${reference.identity}`)) return true;
   const wantedVersion = String(reference.fields.extra).match(/^Content version: (.*)$/m)?.[1];
-  const recordedVersion = item.data.extra?.match(/^Content version: (.*)$/m)?.[1];
+  const recordedVersion = extra.match(/^Content version: (.*)$/m)?.[1];
   if (recordedVersion && wantedVersion && recordedVersion !== wantedVersion) return false;
+  const recordedArxiv = arxivIdentity(data), wantedArxiv = arxivIdentity(reference.fields);
+  if (recordedArxiv && wantedArxiv && recordedArxiv !== wantedArxiv) return false;
   // An unrelated marker on the same landing URL cannot be silently relabeled.
-  return item.data.url === reference.fields.url || !!reference.fields.DOI && item.data.DOI?.toLowerCase() === String(reference.fields.DOI).toLowerCase();
+  return data.url === reference.fields.url || !!reference.fields.DOI && String(data.DOI ?? "").toLowerCase() === String(reference.fields.DOI).toLowerCase();
 }
 /** One bounded, explicit operation. Revocation invalidates the durable lease before each request. */
 export function createZoteroService(store: ZoteroStore, transport: typeof fetch = fetch) {
@@ -53,6 +61,12 @@ export function createZoteroService(store: ZoteroStore, transport: typeof fetch 
     }),
     send: (owner: string, collection: string, references: ZoteroReference[], signal?: AbortSignal) => operation(owner, true, signal, async (lease, provider) => {
       if (!references.length || references.length > 50 || new Set(references.map(row => row.identity)).size !== references.length) throw new ZoteroError("zotero_limit");
+      // Admit the complete canonical set before reserving keys or posting. Distinct
+      // source/item identities can share a URL/version; never collapse their keys
+      // or create parents that the next identical send would reject as duplicates.
+      for (let index = 0; index < references.length; index++) for (const other of references.slice(index + 1)) {
+        if (candidate(references[index].fields, other) || candidate(other.fields, references[index])) throw new ZoteroError("zotero_conflict");
+      }
       const user = await provider.permissions(lease.userId!);
       const collections = await provider.collections(user);
       if (!collections.some(row => row.key === collection)) throw new ZoteroError("zotero_conflict");
@@ -60,7 +74,7 @@ export function createZoteroService(store: ZoteroStore, transport: typeof fetch 
       // changing, duplicate or incompatible library refuses instead of guessing.
       const remote = await provider.items(user), planned: Record<string, unknown>[] = [];
       for (const reference of references) {
-        const found = remote.filter(item => item.data.itemType !== "note" && item.data.itemType !== "attachment" && candidate(item, reference));
+        const found = remote.filter(item => item.data.itemType !== "note" && item.data.itemType !== "attachment" && candidate(item.data, reference));
         if (found.length > 1 || found[0] && (!matches(found[0], reference) || found[0].data.deleted === 1)) throw new ZoteroError("zotero_conflict");
         const item = found[0], key = await store.key(lease, user, reference.identity, item?.key);
         if (!item) {

@@ -12,7 +12,7 @@ export const zoteroSendSchema = z.discriminatedUnion("kind", [
 export const zoteroStatusSchema = z.object({ connected: z.boolean(), userId: z.string().regex(/^[1-9]\d{0,14}$/).nullable() }).strict();
 export const zoteroCollectionsSchema = z.array(z.object({ key: zoteroKeySchema, name: z.string().min(1).max(256) }).strict()).max(1000);
 export type ZoteroSend = z.infer<typeof zoteroSendSchema>;
-export type ZoteroCode = "zotero_unavailable" | "zotero_disconnected" | "zotero_busy" | "zotero_scopes" | "zotero_backoff" | "zotero_conflict" | "zotero_limit" | "zotero_provider" | "zotero_report_not_found";
+export type ZoteroCode = "zotero_unavailable" | "zotero_disconnected" | "zotero_busy" | "zotero_scopes" | "zotero_backoff" | "zotero_conflict" | "zotero_library_bound" | "zotero_limit" | "zotero_provider" | "zotero_report_not_found";
 export class ZoteroError extends Error {
   constructor(readonly code: ZoteroCode) { super(code); }
 }

@@ -58,7 +58,7 @@ export function createZoteroRoutes(session: Session, baseUrl: string, network: s
       return json(await service.send(context.wallet, value.collection, references, req.signal));
     } catch (error) {
       const code = error instanceof ZoteroError ? error.code : "zotero_unavailable";
-      return json({ error: code }, code === "zotero_report_not_found" ? 404 : code === "zotero_limit" ? 422 : ["zotero_conflict", "zotero_busy", "zotero_disconnected"].includes(code) ? 409 : code === "zotero_backoff" ? 429 : code === "zotero_scopes" ? 403 : 503);
+      return json({ error: code }, code === "zotero_report_not_found" ? 404 : code === "zotero_limit" ? 422 : ["zotero_conflict", "zotero_library_bound", "zotero_busy", "zotero_disconnected"].includes(code) ? 409 : code === "zotero_backoff" ? 429 : code === "zotero_scopes" ? 403 : 503);
     }
   }
   return { status: (req: Request) => execute(req, "status"), connect: (req: Request) => execute(req, "connect"), revoke: (req: Request) => execute(req, "revoke"),

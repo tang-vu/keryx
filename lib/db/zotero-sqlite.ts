@@ -12,8 +12,9 @@ CREATE TABLE IF NOT EXISTS zotero_reference_keys (
  wallet TEXT NOT NULL, user_id TEXT NOT NULL, identity TEXT NOT NULL CHECK(length(identity)=64),
  item_key TEXT NOT NULL CHECK(length(item_key)=8), PRIMARY KEY(wallet,user_id,identity), UNIQUE(wallet,user_id,item_key)
 );
+CREATE TABLE IF NOT EXISTS zotero_library_owners (user_id TEXT PRIMARY KEY, wallet TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS zotero_provider_state (id INTEGER PRIMARY KEY CHECK(id=1), blocked_until INTEGER NOT NULL);`;
-const shape = (db: DatabaseSync) => db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE tbl_name IN ('zotero_connections','zotero_reference_keys','zotero_provider_state') ORDER BY type,name LIMIT 12").all();
+const shape = (db: DatabaseSync) => db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE tbl_name IN ('zotero_connections','zotero_reference_keys','zotero_library_owners','zotero_provider_state') ORDER BY type,name LIMIT 12").all();
 let expected: string | undefined;
 function assertShape(db: DatabaseSync) {
   if (!expected) { const reference = new DatabaseSync(":memory:"); try { reference.exec(ZOTERO_SQL); expected = JSON.stringify(shape(reference)); } finally { reference.close(); } }
@@ -35,6 +36,7 @@ export function createSqliteZotero(db: DatabaseSync): ZoteroStore {
   function checked(value: ZoteroLease) {
     const row = db.prepare("SELECT * FROM zotero_connections WHERE wallet=? AND generation=? AND lease=? AND lease_until>?").get(zoteroOwner(value.owner), value.generation, value.lease, Date.now());
     if (!row) throw new ZoteroError("zotero_disconnected");
+    if (row.user_id && db.prepare("SELECT wallet FROM zotero_library_owners WHERE user_id=?").get(row.user_id)?.wallet !== row.wallet) throw new ZoteroError("zotero_unavailable");
     return row;
   }
   function providerReady() {
@@ -58,7 +60,15 @@ export function createSqliteZotero(db: DatabaseSync): ZoteroStore {
       });
     },
     async check(lease) { transaction(() => { const row = checked(lease); providerReady(); if (Number(row.blocked_until) > Date.now()) throw new ZoteroError("zotero_backoff"); }); },
-    async connect(lease, userId, encrypted) { transaction(() => { checked(lease); if (!/^[1-9]\d{0,14}$/.test(userId)) throw new ZoteroError("zotero_unavailable"); db.prepare("UPDATE zotero_connections SET user_id=?,encrypted=? WHERE wallet=?").run(userId, JSON.stringify(encrypted), lease.owner); }); },
+    async connect(lease, userId, encrypted) { transaction(() => {
+      checked(lease); if (!/^[1-9]\d{0,14}$/.test(userId)) throw new ZoteroError("zotero_unavailable");
+      // Library ownership outlives credentials and leases: a lost in-flight write
+      // must never race a second wallet's independently reserved object keys.
+      const binding = db.prepare("SELECT wallet FROM zotero_library_owners WHERE user_id=?").get(userId);
+      if (binding && binding.wallet !== lease.owner) throw new ZoteroError("zotero_library_bound");
+      if (!binding) db.prepare("INSERT INTO zotero_library_owners VALUES(?,?)").run(userId, lease.owner);
+      db.prepare("UPDATE zotero_connections SET user_id=?,encrypted=? WHERE wallet=?").run(userId, JSON.stringify(encrypted), lease.owner);
+    }); },
     async revoke(owner) { transaction(() => { db.prepare("UPDATE zotero_connections SET generation=?,user_id=NULL,encrypted=NULL,lease=NULL,lease_until=0 WHERE wallet=?").run(randomUUID(), zoteroOwner(owner)); }); },
     async release(lease) { transaction(() => { db.prepare("UPDATE zotero_connections SET lease=NULL,lease_until=0 WHERE wallet=? AND generation=? AND lease=?").run(lease.owner, lease.generation, lease.lease); }); },
     async backoff(lease, until) { transaction(() => { checked(lease); if (!Number.isSafeInteger(until)) throw new ZoteroError("zotero_unavailable");
