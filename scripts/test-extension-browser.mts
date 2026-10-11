@@ -12,7 +12,7 @@ const context = await chromium.launchPersistentContext(profile, { headless: true
 try {
   const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
   const id = new URL(worker.url()).hostname;
-  assert.equal(await worker.evaluate("chrome.runtime.getManifest().version"), "0.1.4.1");
+  assert.equal(await worker.evaluate("chrome.runtime.getManifest().version"), "0.1.4.2");
   let failure = false;
   let includePage = false;
   const calls: unknown[] = [];
