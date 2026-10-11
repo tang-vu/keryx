@@ -10,6 +10,10 @@
 - Bound ordinary claim/history RPCs to 15 seconds without automatic retries or
   reissue. Qualify the protected document and handoff after the default production
   build; keep production schema admission and native enrollment separate.
+- Recognize finite Spanish short-note sentence requests and report an unmet
+  exact count when a faithful complete answer cannot fit. Preserve all admitted
+  statement/excerpt pairs, confidence and operational notices; the retained NASA
+  case remains unmet rather than claiming a three-sentence answer.
 - Combine the reviewed usage-cohort accounting, globe initial-layout correction
   and English operations, history and legal catalogues in one deployment batch.
   Full issues #249, #262 and #272 retain their remaining rollout or scope gates.

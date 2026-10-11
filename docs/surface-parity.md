@@ -17,6 +17,15 @@ engine drivers retain their operational roles. Their source/package graph audit
 and the changed extension package acceptance remain explicit release evidence;
 unchanged versions do not establish installed-client synchronization.
 
+The same candidate also adds the ordinary Spanish sentence-note projection after
+attribution and settlement, with explicit unmet-format disclosure. It reaches
+web, hosted API/OpenAI/MCP, the repository CLI and hosted bot research through the
+shared ordinary engine. Private/native/execution-limited roles remain excluded.
+The separate exact-source graph check for #231 confirms unchanged stdio and all
+three desktop executable bundles, as well as the twelve extension inputs; the
+extension version change in this batch is caused by #262 delivery. The NASA
+fixture remains an unmet three-sentence case and full #231 is still open.
+
 Ordinary migrations0086–0089 remain unapplied to production. Claims stay default
 off, and native/archive adapters have no claim/history fallback. Fresh combined
 CI/default build, the private built-browser lane, applicable database/platform

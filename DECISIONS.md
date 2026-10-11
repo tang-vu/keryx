@@ -7127,3 +7127,18 @@ cannot prove rollback or permit a retry. These source boundaries and synthetic
 acceptance do not activate a database, extend native capabilities or authorize
 funding. Final combined CI, distribution and separately admitted deployment remain
 required. See the CLI, claimant-history and RPC-deadline engineering notes.
+
+## 2026-10-11 — Exact Spanish note counts must preserve admitted evidence
+
+Recognize only a finite positive short-note sentence command from the original
+ordinary Spanish request; quoted, negated, ambiguous and unsupported forms gain
+no presentation contract. Apply its projection after attribution, settlement
+and all operational notices. Repeated target scaffolding may be removed only
+when every admitted statement retains its exact source excerpt and binding;
+confidence, gaps, limitations and financial notices remain visible. Measure the
+complete visible answer, including quotes and notices, and report an unmet exact
+count rather than drop facts, merge attributed statements or invent padding.
+This is a presentation-only source outcome. The retained five-pair NASA answer
+still does not meet three sentences, so #231 stays open. No evidence/reward gate,
+model/search budget, private/native authority or payment decision changes. See
+[the finite presentation contract](docs/engineering/sentence-note-presentation-2026-10-11.md).
