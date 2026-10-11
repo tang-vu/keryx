@@ -39,6 +39,9 @@ import { registerAcceptanceTools } from "../deliverable-acceptance/mcp";
 import { requireDeliverableAcceptance } from "../deliverable-acceptance/contracts";
 import { prepareHostedRunClaim } from "../run-claims/hosted-delivery";
 import { privateRunClaimText } from "../run-claims/delivery";
+import { registerRunPrivacyRead } from "../run-privacy/mcp";
+import { privacyBinding } from "../run-privacy/auth";
+import { privacyWallet, requirePrivacy } from "../run-privacy/contracts";
 
 export interface RemoteMcpAccess {
   /** Verified key row identifier and explicit deliverable rights; not model input. */
@@ -253,6 +256,13 @@ export function createRemoteMcpServer(
   registerHistoryTool(server, async input => {
     if (!access.actor || !access.historyScopes?.includes("history:read")) throw new Error("Explicit history scope required");
     return readPersonalHistory(requirePersonalHistory(await getDb()), access.actor, config.networkId, input);
+  });
+  registerRunPrivacyRead(server,async(id,requestId)=>{
+    if(!access.actor||!access.historyScopes?.includes("history:read"))throw new Error("Explicit history scope required");
+    const db=await getDb(),actor={wallet:privacyWallet.parse(access.actor),binding:privacyBinding()},store=requirePrivacy(db);
+    const result=requestId?await store.export(id,actor,requestId):await store.owner(id,actor);
+    if(!result)throw new Error("Owner record unavailable");
+    return {wallet:actor.wallet,...result,...(requestId?{version:1,payments:await db.listCreatorPaymentAttemptsByQuery(id)}:{})};
   });
   registerIdentityReadTool(server, async () => {
     if (!access.actor || !access.profileScopes?.includes("profile:read")) throw new Error("Explicit profile scope required");

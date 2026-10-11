@@ -206,6 +206,8 @@ export interface FeedbackStats {
 }
 
 export interface KeryxDB {
+  /** Explicitly admitted ordinary run text privacy. Public callers must never fall back to raw originals. */
+  readonly runPrivacy?: import("../run-privacy/contracts").RunPrivacyStore;
   /** Optional ordinary-storage classified usage. Enrolled/native profiles expose no fallback. */
   readonly publicUsage?: import("../usage/contracts").PublicUsageStore;
   /** Default-off anonymous ownership-only sidecar; exact pre-existing ordinary schema only.

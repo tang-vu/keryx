@@ -1,5 +1,7 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
+import { createSqliteRunPrivacy } from "./run-privacy-sqlite";
+import { PrivacyError, requirePrivacy, type RunPrivacyStore } from "../run-privacy/contracts";
 import { createSqliteRunClaims } from "./run-claims-sqlite";
 import { RunClaimError, runClaimsEnabled, type RunClaimsStore } from "../run-claims/contracts";
 import { createSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
@@ -146,6 +148,7 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 
 export class SqliteAdapter implements KeryxDB {
+  declare readonly runPrivacy?: RunPrivacyStore;
   declare readonly runClaims?: RunClaimsStore;
   declare readonly runOwnershipHistory?: RunOwnershipHistoryStore;
   declare readonly deliverableAcceptance?: DeliverableAcceptanceStore;
@@ -216,7 +219,7 @@ export class SqliteAdapter implements KeryxDB {
     assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installOrdinarySqliteApplicationSchema(this.db);
-    if (!this.publicUsage) Object.defineProperty(this, "publicUsage", { value: createSqlitePublicUsage(this.db) });
+    if (!this.publicUsage) Object.defineProperty(this, "publicUsage", { value: createSqlitePublicUsage(this.db,() => requirePrivacy(this)) });
     if (runClaimsEnabled(process.env) && !this.runClaims) {
       try {
         const claims = createSqliteRunClaims(this.db), history = createSqliteRunOwnershipHistory(this.db);
@@ -224,6 +227,10 @@ export class SqliteAdapter implements KeryxDB {
         Object.defineProperty(this, "runOwnershipHistory", { value: history });
       }
       catch (error) { if (!(error instanceof RunClaimError && error.code === "claims_unavailable")) throw error; }
+    }
+    if (process.env.KERYX_RUN_PRIVACY_ENABLED === "true" && !this.runPrivacy) {
+      try { Object.defineProperty(this, "runPrivacy", { value:createSqliteRunPrivacy(this.db,this.runOwnershipHistory) }); }
+      catch(error) { if (!(error instanceof PrivacyError && error.code === "privacy_unavailable")) throw error; }
     }
     if (!this.decisionReviews) {
       try { Object.defineProperty(this, "decisionReviews", { value: createSqliteDecisionReviews(this.db) }); }
@@ -1576,10 +1583,10 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listFollowUps(parentId: string): Promise<QueryRun[]> {
-    const rows = this.db
-      .prepare(`SELECT data FROM query_runs WHERE parent_id=? ORDER BY created_at ASC`)
-      .all(parentId);
-    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), rows.map((r) => JSON.parse(r.data as string) as QueryRun));
+    if(!this.runPrivacy)return [];
+    const runs=await requirePrivacy(this).list({take:2500,parentId});
+    runs.sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id));
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup),runs);
   }
 
   async listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]> {
@@ -1595,24 +1602,24 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listRecentQueries(limit: number): Promise<QueryRun[]> {
-    const rows = this.db
-      .prepare(`SELECT data FROM query_runs ORDER BY created_at DESC LIMIT ?`)
-      .all(limit);
-    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), rows.map((r) => JSON.parse(r.data as string) as QueryRun));
+    if(!this.runPrivacy)return [];
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), await requirePrivacy(this).list({take:limit}));
   }
 
   async *iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 2500) throw new Error("Invalid query scan limit");
-    // The live statement holds one SQLite read snapshot; iterator return/throw
-    // closes it. Do not materialize raw JSON strings with .all() here.
-    // Sort only identifiers: without a matching index SQLite would otherwise
-    // materialize every large data value in its temporary sorter before yielding.
-    const rows = this.db.prepare(`SELECT id FROM query_runs ORDER BY created_at DESC, id DESC LIMIT ?`).iterate(limit);
-    const read = this.db.prepare(`SELECT data FROM query_runs WHERE id = ?`);
-    for (const row of rows) {
-      const record = read.get(row.id);
-      if (!record) throw new Error("Query scan row unavailable");
-      yield await projectRecordedEvidenceProvenance(lookup => this.readEvidenceProvenance(lookup), JSON.parse(record.data as string) as QueryRun);
+    if(!this.runPrivacy)return;
+    // Bound each public-only page; recheck visibility before yielding so a queued
+    // body cannot survive revocation while a consumer pauses this iterator.
+    let count=0, before: {id:string;createdAt:string} | undefined;
+    while(count<limit) {
+      const rows=await requirePrivacy(this).list({take:Math.min(32,limit-count),before});
+      if(!rows.length) break;
+      for(const run of rows) {
+        count++;const fresh=await requirePrivacy(this).read(run.id);
+        if(fresh.item?.state.visibility==="public")yield await projectRecordedEvidenceProvenance(lookup => this.readEvidenceProvenance(lookup),fresh.item.run);
+      }
+      before={id:rows.at(-1)!.id,createdAt:rows.at(-1)!.createdAt};
     }
   }
 
@@ -2427,24 +2434,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async loadQueryMemories(limit: number): Promise<QueryMemoryEntry[]> {
-    const rows = this.db
-      .prepare(`SELECT * FROM query_memories ORDER BY created_at DESC LIMIT ?`)
-      .all(limit) as {
-      id: string;
-      source_scores: string;
-      sources_read: string | null;
-      topics: string;
-      created_at: string;
-    }[];
-    return rows.map((r) => ({
-      id: r.id,
-      sourceScores: JSON.parse(r.source_scores),
-      // NULL on entries written before the column existed — left undefined so scoring can tell
-      // "the run read nothing" apart from "we never recorded what it read".
-      sourcesRead: r.sources_read ? JSON.parse(r.sources_read) : undefined,
-      topics: JSON.parse(r.topics),
-      createdAt: r.created_at,
-    }));
+    return this.runPrivacy ? this.runPrivacy.memories(limit) : [];
   }
 
   async recordFeedback(queryId: string, rating: "up" | "down", comment?: string): Promise<void> {

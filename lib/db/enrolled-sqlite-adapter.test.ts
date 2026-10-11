@@ -322,9 +322,9 @@ it("guards early computed results and iterator publication after actual runtime 
     totalSpent: 0, totalToCreators: 0, trace: [], createdAt: new Date().toISOString() };
   await adapter.saveQueryRun(run);
   const iterator = adapter.iterateRecentQueries(2)[Symbol.asyncIterator]();
-  expect((await iterator.next()).value).toEqual(run);
+  expect((await iterator.next()).done).toBe(true); // No privacy domain is admitted on this sealed profile.
   vi.stubEnv("KERYX_FORCE_OFFLINE", "1");
-  await expect(iterator.next()).rejects.toThrow();
+  await expect(adapter.getQueryRun(run.id)).rejects.toThrow();
   expect(() => adapter.newestItemDates([])).toThrow();
   expect(() => f.api.assertEnrolledSqliteAdapter(adapter)).toThrow();
 });

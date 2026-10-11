@@ -313,27 +313,13 @@ class ReadonlyTestnetArchive implements TestnetArchiveStore {
         throw new Error("Invalid archive query cursor");
       }
     }
-    return this.project(this.read(() => this.#db.prepare(`SELECT id, created_at, data FROM query_runs
-      ${before ? "WHERE created_at < ? OR (created_at = ? AND id < ?)" : ""} ORDER BY created_at DESC, id DESC LIMIT ?`)
-      .all(...(before ? [before.createdAt, before.createdAt, before.id, limit] : [limit])).map(row => this.query(row))));
+    // Every retained historical record is UNLISTED; links remain readable, enumeration is empty.
+    return this.read(() => []);
   }
 
   async *iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
-    assertLimit(limit);
-    const rows = this.read(() => this.#db.prepare("SELECT id FROM query_runs ORDER BY created_at DESC, id DESC LIMIT ?").iterate(limit));
-    const lookup = this.read(() => this.#db.prepare("SELECT id, created_at, data FROM query_runs WHERE id=?"));
-    try {
-      for (const row of rows) {
-        const run = this.read(() => {
-          const record = lookup.get(row.id);
-          if (!record) throw unavailable();
-          return this.query(record);
-        });
-        yield (await this.project([run]))[0];
-      }
-    } catch { throw unavailable(); }
+    assertLimit(limit); this.read(() => undefined);
   }
-
   async listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]> {
     assertLimit(limit);
     if (typeof wallet !== "string" || !/^0x[a-fA-F0-9]{40}$/i.test(wallet)) throw new Error("Invalid archive wallet");
@@ -343,10 +329,8 @@ class ReadonlyTestnetArchive implements TestnetArchiveStore {
 
   async listFollowUps(id: string): Promise<QueryRun[]> {
     assertId(id);
-    return this.project(this.read(() => this.#db.prepare("SELECT id, created_at, data FROM query_runs WHERE parent_id=? ORDER BY created_at ASC, id ASC LIMIT ?")
-      .all(id, MAX_QUERIES).map(row => this.query(row))));
+    return this.read(() => []);
   }
-
   private payments(id: string, kinds: string): PaymentRecord[] {
     return this.read(() => this.#db.prepare(`SELECT ${this.#paymentColumns} FROM payment_events WHERE query_id=? AND ${kinds}
       AND ${this.#visiblePayment} ORDER BY created_at ASC, id ASC`).all(id).map(publicPayment));

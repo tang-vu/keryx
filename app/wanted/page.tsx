@@ -25,9 +25,9 @@ import type { GapIntentStatus } from "@/lib/types";
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
 
-// The window moves with the daemon; a few times an hour is fresh enough for a board people act on
-// over days, and keeps the trace parsing off the request path.
-export const revalidate = 600;
+// Visibility changes take effect on the next request, including intent metadata.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 const TITLE = uiCopy("wantedBoard.metadataTitle");
@@ -64,7 +64,7 @@ async function loadBoard(): Promise<{
     const db = await getDb();
     const [runs, intents, sources] = await Promise.all([
       db.listRecentQueries(WANTED_WINDOW_RUNS),
-      db.listGapIntents(200),
+      db.runPrivacy ? db.runPrivacy.offers(200) : Promise.resolve([]),
       db.listAllSources(),
     ]);
     const names = new Map(sources.map((source) => [source.id, source.name]));

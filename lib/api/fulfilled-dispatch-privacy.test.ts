@@ -11,7 +11,7 @@ it("removes forged future checkpoint sidecars before the actual public original 
   const oldTrace = JSON.stringify(run.trace);
   run.trace = [...run.trace, { phase: "done", message: "Retained original", ts: 0,
     readCheckpoints: { status: "available", packet: { schema: 999, question: "private-checkpoint-sentinel" }, retainedDigest: "a".repeat(64) } as never }];
-  mocked.getDb.mockResolvedValue({ getQueryRun: vi.fn(async () => run) });
+  mocked.getDb.mockResolvedValue({ runPrivacy: {read:async()=>({exists:true,item:{run,state:{visibility:"public",revision:0,erased:false}}})} });
   const response = await GET(new NextRequest("https://keryx.test/api/dispatch/synthetic"), { params: Promise.resolve({ id: run.id }) });
   expect(response.status).toBe(200); const projected = await response.json();
   expect(JSON.stringify(projected)).not.toContain("private-checkpoint-sentinel");
@@ -22,12 +22,13 @@ it("removes forged future checkpoint sidecars before the actual public original 
 
 const mocked = vi.hoisted(() => ({ getDb: vi.fn() }));
 vi.mock("@/lib/db", () => ({ getDb: mocked.getDb }));
+vi.mock("@/lib/auth", () => ({getSession:async()=>null}));
 import { GET } from "@/app/api/dispatch/[id]/route";
 
 it("serves the actual public dispatch without private fulfillment authority, preserving the original stored result", async () => {
   const fixture = syntheticFailedOriginal(), claim = { ...fixture.input, failedOrder: fixture.order };
   const completion = syntheticFulfilledRun(claim), run = completion.run;
-  mocked.getDb.mockResolvedValue({ getQueryRun: vi.fn(async () => run) });
+  mocked.getDb.mockResolvedValue({ runPrivacy: {read:async()=>({exists:true,item:{run,state:{visibility:"public",revision:0,erased:false}}})} });
   const response = await GET(new NextRequest("https://keryx.test/api/dispatch/synthetic"), { params: Promise.resolve({ id: run.id }) });
   const projected = await response.json();
   expect(response.status).toBe(200); expect(projected.answer).toBe(run.answer);

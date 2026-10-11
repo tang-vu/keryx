@@ -25,7 +25,8 @@ import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 const copy = createMessages("en");
 
 // Recompute a few times an hour — the corpus grows as new dispatches settle.
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 const TITLE = copy("reportArchiveRoute.title");

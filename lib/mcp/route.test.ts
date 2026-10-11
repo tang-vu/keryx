@@ -119,6 +119,7 @@ describe("/mcp", () => {
       "profile_read",
       "profile_update",
       "history_read",
+      "run_privacy_read", "run_owner_export",
       "profile_identities_read",
     ]);
     expect(body.result.tools.find((tool: { name: string }) => tool.name === "keryx_operator_status").annotations)

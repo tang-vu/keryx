@@ -150,5 +150,6 @@ export async function POST(req: NextRequest) {
   const intent = await queueGapOffer(db, offer, source.id, terms.creator);
   revalidatePath("/wanted");
   revalidatePath(`/wanted/${offer.gapId}`);
-  return Response.json({ intent }, { status: 201 });
+  const {question:_question,claim:_claim,...publicIntent}=intent??{};
+  return Response.json({ intent:publicIntent }, { status: 201,headers:{"Cache-Control":"no-store"} });
 }

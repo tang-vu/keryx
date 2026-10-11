@@ -8,6 +8,8 @@
 import { getDb } from "@/lib/db";
 import { loadFreshness } from "@/lib/answers-freshness";
 import { historicalDispatchHeaders, resolveDispatch } from "@/lib/history/read-dispatch";
+import { requestPrivacyActor } from "@/lib/run-privacy/auth";
+import { privateRunResponse } from "@/lib/run-claims/private-response";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +23,8 @@ export async function GET(
 
   try {
     const db = await getDb();
-    const dispatch = await resolveDispatch(id, db);
+    const actor=await requestPrivacyActor(_request);if(actor instanceof Response)return actor;
+    const dispatch = await resolveDispatch(id, db,actor);
     if (!dispatch) return Response.json({ error: "not found" }, { status: 404 });
     const { run, archive } = dispatch;
 

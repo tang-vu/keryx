@@ -78,9 +78,6 @@ export function buildCitationEmailContent(
     `Your source "${payload.source.name}" was just cited by the Keryx agent and paid ${amount} USDC (${weightPct} contribution weight), settled on ${payload.network}.`,
     ...(payload.article ? [`Article: ${payload.article.itemTitle}`] : []),
     ``,
-    `The question your work helped answer:`,
-    `  ${payload.query.question}`,
-    ``,
     `Full dispatch trace: ${dispatchUrl}`,
     `Your earnings page:  ${creatorUrl}`,
     ``,
@@ -93,8 +90,7 @@ export function buildCitationEmailContent(
   <p style="margin:0 0 4px;font-family:monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#8c2f24;">Keryx &middot; citation settled</p>
   <h1 style="margin:0 0 16px;font-size:20px;font-weight:600;">${escapeHtml(payload.source.name)} was cited &mdash; ${amount} USDC is yours</h1>
   ${payload.article ? `<p style="margin:0 0 12px;font-size:14px;line-height:1.6;"><strong>Article:</strong> ${escapeHtml(payload.article.itemTitle)}</p>` : ""}
-  <p style="margin:0 0 12px;font-size:14px;line-height:1.6;">The Keryx agent relied on your work (${weightPct} contribution weight) and settled ${amount} USDC to your wallet on ${escapeHtml(payload.network)}. The question it answered:</p>
-  <blockquote style="margin:0 0 16px;padding:10px 14px;border-left:3px solid #8c2f24;background:#f3ecdb;font-size:14px;line-height:1.6;">${escapeHtml(payload.query.question)}</blockquote>
+  <p style="margin:0 0 12px;font-size:14px;line-height:1.6;">The Keryx agent relied on your work (${weightPct} contribution weight) and settled ${amount} USDC to your wallet on ${escapeHtml(payload.network)}.</p>
   <p style="margin:0 0 20px;font-size:14px;line-height:1.6;">
     <a href="${dispatchUrl}" style="color:#8c2f24;">See the full dispatch trace</a> &middot;
     <a href="${creatorUrl}" style="color:#8c2f24;">your earnings page</a>

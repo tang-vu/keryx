@@ -31,26 +31,28 @@ describe("incremental archive", () => {
     expect(result[0]).not.toHaveProperty("trace");
   });
 
-  it("shares concurrent rebuilds and keeps the complete cache after a partial failure", async () => {
+  it("rebuilds each request and refuses stale text after revocation or partial read failure", async () => {
     let now = 1_000;
     vi.spyOn(Date, "now").mockImplementation(() => now);
     let release!: () => void;
     const gate = new Promise<void>(resolve => { release = resolve; });
-    scan.mockImplementationOnce(async function* () { await gate; yield fixture("good"); });
+    scan.mockImplementation(async function* () { await gate; yield fixture("good"); });
     const { getArchiveCached } = await import("./answers-archive-cache");
     const first = getArchiveCached(), concurrent = getArchiveCached();
     await Promise.resolve();
-    expect(scan).toHaveBeenCalledTimes(1);
+    expect(scan).toHaveBeenCalledTimes(2);
     expect(scan).toHaveBeenCalledWith(2500);
     release();
     const original = await first;
-    expect(await concurrent).toBe(original);
+    expect(await concurrent).toEqual(original);
+    scan.mockImplementationOnce(() => stream([]));
+    expect(await getArchiveCached()).toEqual([]);
     now += 600_001;
     scan.mockImplementationOnce(async function* () { yield fixture("partial"); throw new Error("Read failed"); });
-    expect(await getArchiveCached()).toBe(original);
+    expect(await getArchiveCached()).toEqual([]);
     scan.mockImplementationOnce(() => stream([fixture("recovered")]));
     expect((await getArchiveCached())[0].id).toBe("recovered");
-    expect(scan).toHaveBeenCalledTimes(3);
+    expect(scan).toHaveBeenCalledTimes(5);
   });
 
   it("does not expose a partial archive on an initial read failure", async () => {

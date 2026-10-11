@@ -1,5 +1,13 @@
 # Per-run privacy: original issue audit
 
+This document retains the **frozen e2b21d1 audit** of accepted main e9. The owner
+subsequently delegated the policy choice, and root selected the historical
+unlisted / new authenticated private policy recorded in [DECISIONS](../../DECISIONS.md).
+The earlier policy-wait below is historical and has been overridden for source
+work. Runtime implementation and its remaining delivery holds are tracked in
+[run privacy](../run-privacy.md) on this same focused branch. Neither this audit nor
+the source implementation claims production migration, activation or issue closure.
+
 Issue [#266](https://github.com/tang-vu/keryx/issues/266) remains open. This is a
 source audit of accepted main
 `e9a97de92f03d5571d0d304927b7691eef26e110` (tree

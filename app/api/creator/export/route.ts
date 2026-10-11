@@ -1,3 +1,4 @@
+import { listedQuestion, publicFinancialPayment } from "@/lib/run-privacy/public";
 /**
  * GET /api/creator/export?format=csv|json&limit=N — one wallet's payouts across every source
  * it owns, as a downloadable ledger. The per-source export (`/api/creator/[id]/export`) is
@@ -78,8 +79,8 @@ export async function GET(req: NextRequest) {
     const questionById = new Map<string, string>();
     await Promise.all(
       uniqueQueryIds.map(async (qid) => {
-        const run = await db.getQueryRun(qid);
-        if (run?.question) questionById.set(qid, run.question);
+        const question = await listedQuestion(db,qid);
+        if (question) questionById.set(qid, question);
       }),
     );
 

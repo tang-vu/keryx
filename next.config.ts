@@ -61,8 +61,11 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
         ],
       },
-      ...["/api/me/run-claims", "/api/me/run-history/:path*"].map(source => ({
+      ...["/api/me/run-claims", "/api/me/run-history/:path*", "/api/me/run-privacy/:path*", "/me/run-privacy", "/dispatch/:path*", "/api/dispatch/:path*"].map(source => ({
         source, headers: [...runClaimPrivateHeaders],
+      })),
+      ...["/answers/:path*", "/answers", "/wanted/:path*", "/wanted", "/sitemap.xml", "/api/runs", "/api/activity", "/api/wanted/:path*", "/api/creator/:path*"].map(source=>({
+        source,headers:[{key:"Cache-Control",value:"no-store"}],
       })),
       { source: "/research/private", headers: [...runClaimPrivateHeaders,
         { key: "Cross-Origin-Opener-Policy", value: "same-origin" }] },

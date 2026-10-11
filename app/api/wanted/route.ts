@@ -16,7 +16,8 @@ import { buildBoard } from "@/lib/demand-signal";
 import { WANTED_WINDOW_RUNS } from "@/lib/wanted-limits";
 
 export const runtime = "nodejs";
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const MAX_LIMIT = 100;
 
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
     const db = await getDb();
     const [runs, intents, sources] = await Promise.all([
       db.listRecentQueries(WANTED_WINDOW_RUNS),
-      db.listGapIntents(200),
+      db.runPrivacy ? db.runPrivacy.offers(200) : Promise.resolve([]),
       db.listAllSources(),
     ]);
     const board = buildBoard(runs, { limit });

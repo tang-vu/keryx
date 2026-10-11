@@ -1,3 +1,4 @@
+import { listedQuestion, publicFinancialPayment } from "@/lib/run-privacy/public";
 /**
  * GET /api/creator/[id]/export?format=csv|json&limit=N — a creator's full payout ledger
  * as a downloadable file. Public, like the rest of /api/creator/[id]: every payout is
@@ -50,8 +51,8 @@ export async function GET(
     const questionById = new Map<string, string>();
     await Promise.all(
       uniqueQueryIds.map(async (qid) => {
-        const run = await db.getQueryRun(qid);
-        if (run?.question) questionById.set(qid, run.question);
+        const question = await listedQuestion(db,qid);
+        if (question) questionById.set(qid, question);
       }),
     );
 

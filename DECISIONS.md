@@ -7501,3 +7501,41 @@ check back into a Keryx assertion. The ledger step restates receipt figures and
 declines to state a margin. The live sponsored run, replay and limit
 demonstrations stay gated; see the
 [criteria status](docs/engineering/recorded-walkthrough-305.md).
+
+## 2026-10-12: owner-delegated per-run question privacy (#266)
+
+The owner answered the policy question with “choose best for hackathon” and
+delegated the choice. Root selected this concrete policy: **all historical runs,
+including unowned runs, are unlisted**, retaining existing links. **New runs with
+an authenticated recorded owner default to private**. That owner may explicitly
+choose public for a demo, change a run's visibility, or set a different default
+for future runs. **New anonymous/unowned runs are unlisted until ownership is
+proven**. Existing SIWE sessions, explicitly scoped owner keys and admitted
+immutable anonymous claim proofs supply ownership. Caller addresses, questions,
+creator payout addresses and payment recipients do not.
+
+Visibility is a separate versioned ordinary-storage sidecar; it does not rewrite
+saved originals, run IDs, payment objects, creator rewards, settlement states or
+exact totals. Historical rows without a sidecar resolve to unlisted, with no
+guessed owner or irreversible text backfill. Erasure keeps a digest-only audit
+and verified owner tombstone, removes ordinary question/answer/derived indexes,
+and preserves financial journals. Protected fulfillment/A2A originals and active
+retry offers have explicit retention holds; immutable archive copies require a
+separate reviewed storage-retention procedure. No ownership is invented to clear
+those holds.
+
+Public financial APIs remain verifiable without question/answer enrichment.
+Nonpublic current dispatch receipts use a separate settlement-only read schema;
+the immutable research-receipt v1 protocol and retained archived receipts remain
+unchanged. Public creator notifications omit research text. Text readers have no
+stale cache fallback, and unsupported/enrolled or unadmitted domains fail closed.
+Previously downloaded copies and externally cached public pages cannot be
+recalled; rollout requires a reviewed cache purge and a quiescent publication
+window.
+
+This decision authorizes design, code, tests and **migration source only**. It does
+not authorize shared production DDL/data application, policy activation, domain
+activation, backfill, deploy, version bump, merge or issue closure. Root's frozen
+independent privacy/auth source review precedes PR publication. Exact-head full
+CI/domain/platform success and separately authorized rollout/delivered acceptance
+remain release gates. See [implementation and holds](docs/run-privacy.md).

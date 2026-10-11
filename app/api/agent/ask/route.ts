@@ -14,6 +14,9 @@ import { makePayment } from "@/lib/payments/payment-gateway";
 import { settleThenServe, challengeResponse } from "@/lib/x402-server";
 import { paidResearchAdmissionResponse } from "@/lib/research/paid-admission";
 import { businessCanaryPaidAdmission } from "@/lib/business-operator/canary-paid-admission";
+import { requestPrivacyActor } from "@/lib/run-privacy/auth";
+import { requirePrivacy } from "@/lib/run-privacy/contracts";
+import { privateRunResponse } from "@/lib/run-claims/private-response";
 import { canaryExecutionPaused } from "@/lib/business-operator/canary-policy";
 import { a2aDiscovery } from "@/lib/x402-discovery";
 import { verifyApiKey } from "@/lib/api-keys";
@@ -183,30 +186,40 @@ export async function GET(req: NextRequest) {
       return Response.json({ error: "invalid A2A query id" }, { status: 400 });
     }
     const db = await getDb();
+    // A link alone cannot authorize an owned private result. Check the original
+    // run before materializing an order's retained request/answer. An unfinished
+    // order has no admitted run visibility contract and therefore fails closed.
+    try {
+      const actor=await requestPrivacyActor(req);if(actor instanceof Response)return actor;
+      const visible=await requirePrivacy(db).read(queryId,actor);
+      if(!visible.item)return privateRunResponse(Response.json({error:"not found"},{status:404}));
+    } catch {
+      return privateRunResponse(Response.json({error:"privacy_unavailable"},{status:503}));
+    }
     const order = await db.getA2aOrder(queryId);
-    if (!order) return Response.json({ error: "A2A order not found" }, { status: 404 });
+    if (!order) return privateRunResponse(Response.json({ error: "not found" }, { status: 404 }));
     if (order.status === "completed" && order.response) {
-      return Response.json(await currentCompletedResponse(db, order));
+      return privateRunResponse(Response.json(await currentCompletedResponse(db, order)));
     }
     if (order.status === "failed") {
-      return Response.json(await currentFailedResponse(db, order));
+      return privateRunResponse(Response.json(await currentFailedResponse(db, order)));
     }
     const saved = await db.getQueryRun(queryId);
     if (saved) {
       try {
         const recovered = await repairA2aOrderFromSavedRun(db, order, saved, "automatic-poll");
-        return Response.json(await currentCompletedResponse(db, recovered));
+        return privateRunResponse(Response.json(await currentCompletedResponse(db, recovered)));
       } catch {
-        return Response.json(
+        return privateRunResponse(Response.json(
           pendingResponse(
             order,
             false,
             "A saved result exists, but its creator-payment ledger requires review before delivery.",
           ),
-        );
+        ));
       }
     }
-    return Response.json(pendingResponse(order));
+    return privateRunResponse(Response.json(pendingResponse(order)));
   }
   const paused = paidResearchAdmissionResponse(); if (paused) return paused;
   if (!config.sellerAddress || (config.networkId !== ARC_MAINNET_PROFILE.networkId && !config.funderKey) || process.env.KERYX_FORCE_OFFLINE === "1") {

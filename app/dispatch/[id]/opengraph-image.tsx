@@ -9,6 +9,8 @@ const copy = createMessages("en");
 export const alt = copy("reportSocial.alt");
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+export const dynamic="force-dynamic";
+export const revalidate=0;
 
 // Banknote-style social card, rendered per dispatch so every shared permalink shows
 // the real question + how much reached creators — not the generic site masthead.
@@ -29,7 +31,7 @@ export default async function DispatchOgImage({
 
   try {
     const dispatch = await resolveDispatch(id);
-    if (dispatch) {
+    if (dispatch?.visibility==="public") {
       const { run, archive } = dispatch;
       historical = Boolean(archive);
       if (archive) networkLabel = copy("reportSocial.historical");
@@ -146,7 +148,7 @@ export default async function DispatchOgImage({
         </div>
       </div>
     ),
-    { ...size, fonts: await publicPreviewFonts(question) },
+    { ...size, fonts: await publicPreviewFonts(question),headers:{"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"} },
   );
 }
 
