@@ -38,6 +38,12 @@ synthetic public text, mock storage reads and refuse remote asset requests; they
 make no database writes or model/search/payment calls. PNG inspection is local
 rendering evidence, not a deployed link preview or remote indexing observation.
 
+Legal copy fixtures remain frozen. Their metadata assertions retain the original
+titles, descriptions and canonicals while checking the exact English alternate
+addition; all policy markup, link and copy-guard assertions remain unchanged.
+Sponsored registration supplies its alternates in a dedicated server layout,
+preserving the page's original metadata export and strict copy fixture.
+
 ## Privacy, supported surfaces and remaining original criteria
 
 The archive, sitemap, feed and wanted paths keep their existing public-data
