@@ -1,5 +1,26 @@
 # Keryx Project Changelog
 
+### Bounded Spanish notes and blocked teaching prerequisites (v0.27.55 candidate)
+
+- Preserve the named NASA section and expose adjacent complete original sentences
+  only within existing quote limits. Count the requested note prose separately
+  from its labeled exact-quote appendix and required qualifications. The retained
+  exact caller has a three-sentence, fully cited synthetic-transport replay;
+  the historical five-pair answer remains explicitly `compact-unmet`.
+- Explain missing final teaching premises with a targeted original-source next
+  step. Preserve independently useful facts and distinguish review failure from
+  absent facts; invented activities never replace evidence. Teaching activation
+  remains default-off, and the original useful-task acceptance remains open.
+- Retain the qualified Linux maintenance ingress source. Actual production
+  front-door service, protected control and tunnel routing remain unbound.
+- App/OpenAPI0.27.55 identifies this completed source batch. Hosted MCP0.3.13,
+  stdio/Registry0.4.15, desktop0.4.14 and extension0.1.4.1 keep their existing
+  forwarding roles; no adapter protocol or installed-client source changed.
+  Required exact-source CI, review, distribution readback and one verified
+  combined production deployment remain release gates. Original issue closure
+  requires its useful-output criteria plus actual delivery; source review alone
+  is insufficient. No new live model/search trial or spending is claimed.
+
 ### Private run claims and combined October 11 batch (v0.27.54 candidate)
 
 - Stage single-use anonymous run claims in a separate ordinary, default-off
