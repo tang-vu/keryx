@@ -164,8 +164,8 @@ try {
   page.on("console", message => { if (message.type() === "error") browserDiagnostics.push(message.text()); });
   page.on("pageerror", error => browserDiagnostics.push(error.message));
   proof.browserDiagnostics = browserDiagnostics;
-  const document = await page.goto(origin + "/decision-reviews"); assert.equal(document?.status(), 200);
-  assert.equal(document.headers()["x-keryx-maintenance-starts-at"], window.startsAt);
+  const navigation = await page.goto(origin + "/decision-reviews"); assert.equal(navigation?.status(), 200);
+  assert.equal(navigation.headers()["x-keryx-maintenance-starts-at"], window.startsAt);
   await page.getByRole("status").filter({ hasText: window.message }).waitFor({ timeout: 10000 });
   assert.ok((await page.getByRole("status").filter({ hasText: window.message }).innerText()).includes(window.endsAt));
   await writeFile(join(evidence, "advance-document.html"), await page.content());
