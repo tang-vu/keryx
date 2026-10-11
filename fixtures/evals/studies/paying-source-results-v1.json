@@ -234,7 +234,7 @@
     "lib/llm/reasoning-circuit-store.ts": "b7d8c0ef34a62b47e58a37e85c7dd38bad7b2d99c1523dd829c1cb064fdd8994",
     "lib/llm/reasoning-engine.ts": "905a91bab0f8742a18e7d60d164e27bb924cd0474abea714d801bc3ac69b2416",
     "lib/llm/reasoning-telemetry.ts": "e53fc6d2fd45e42f183a33310e4fb65bd21a319ade286e30e576e7483f10948f",
-    "lib/llm/research-plan.ts": "31ed9ffdc56793b6471ab586728f6370018580a491e1fc8495c44ea6bb3a13a1",
+    "lib/llm/research-plan.ts": "924837edcaf6466c31badaa02c819216afb08c60db531bee2117c50eaffa45e6",
     "lib/llm/research-selection.ts": "9a7978fb88862023910b8ed3a09b2967a7a90036c10fee763d7b30462317e54f",
     "lib/llm/research-target-limits.ts": "61fdac3d1d9bc9e1210dbeed18da525b9e24becb7f2fc37f3d708c0fe3658b3f",
     "lib/llm/resilient-engine.ts": "897d52db2d51359ed113ba2cfcb43612b1b8e26741c761d56ec9df1d6dc240fd",
