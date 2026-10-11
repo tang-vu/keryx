@@ -7,7 +7,7 @@ import { RunClaimError, runClaimAttemptSchema, runClaimIssueSchema, runClaimIssu
 export function createSupabaseRunClaims(client: SupabaseClient): RunClaimsStore {
   async function call(name: string, args: Record<string, unknown>) {
     try {
-      const { data, error } = await client.rpc(name, args);
+      const { data, error } = await client.rpc(name, args).abortSignal(AbortSignal.timeout(15_000));
       if (error) {
         if (error.code === "P0001" && ["claim_unavailable", "claim_unauthenticated"].includes(error.message))
           throw new RunClaimError(error.message as "claim_unavailable" | "claim_unauthenticated");

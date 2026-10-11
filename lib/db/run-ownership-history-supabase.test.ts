@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { requireRunOwnershipHistory } from "../run-claims/history";
 import { assembleAuthorityBoundSupabaseCore, SupabaseAdapter } from "./supabase-adapter";
@@ -13,20 +13,22 @@ const row = { id: "run", createdAt: date, question: "Fixture", provenance: null,
 const run = { id: "run", createdAt: date, answer: "Private", retainedReceipt: { payer: other, transaction: "synthetic-never-settled" } };
 const packet = (extra: Record<string, unknown> = {}) => ({ version: 1, wallet, binding, ...extra });
 function fixture(data: unknown) {
-  const rpc = vi.fn().mockResolvedValue({ data, error: null }), from = vi.fn(() => { throw new Error("REST forbidden"); });
-  const client = { rpc, from } as unknown as SupabaseClient; return { rpc, from, client, port: createSupabaseRunOwnershipHistory(client) };
+  const response = vi.fn().mockResolvedValue({ data, error: null });
+  const abortSignal = vi.fn(() => response());
+  const rpc = vi.fn(() => ({ abortSignal })), from = vi.fn(() => { throw new Error("REST forbidden"); });
+  const client = { rpc, from } as unknown as SupabaseClient; return { rpc, response, abortSignal, from, client, port: createSupabaseRunOwnershipHistory(client) };
 }
-afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 describe("ordinary private ownership history RPC boundary", () => {
   it("uses fixed bounded RPCs and returns originals unchanged with separate ownership metadata", async () => {
     const f = fixture(packet({ rows: [row] })); expect(await f.port.list(wallet, { binding, filters: {}, take: 2 })).toEqual([row]);
     expect(f.rpc).toHaveBeenLastCalledWith("anonymous_run_claim_history_list_v1", { p_wallet: wallet, p_network: binding.network, p_origin: binding.origin,
       p_filters: {}, p_take: 2, p_upper: null, p_before: null });
-    f.rpc.mockResolvedValue({ data: packet({ item: { run, ownership: row.ownership } }), error: null });
+    f.response.mockResolvedValue({ data: packet({ item: { run, ownership: row.ownership } }), error: null });
     expect((await f.port.read(wallet, binding, "run"))?.run).toBe(run);
     expect(f.rpc).toHaveBeenLastCalledWith("anonymous_run_claim_history_read_v1", { p_wallet: wallet, p_network: binding.network, p_origin: binding.origin, p_run_id: "run" });
     expect(run).not.toHaveProperty("asker"); expect(f.from).not.toHaveBeenCalled();
-    f.rpc.mockResolvedValue({ data: packet({ item: null }), error: null }); expect(await f.port.read(wallet, binding, "missing")).toBeNull();
+    f.response.mockResolvedValue({ data: packet({ item: null }), error: null }); expect(await f.port.read(wallet, binding, "missing")).toBeNull();
   });
   it.each([packet({ wallet: other, rows: [] }), packet({ binding: { ...binding, origin: "https://other.example" }, rows: [] }),
     packet({ rows: [row], tokenHash: "secret" }), packet({ rows: [{ ...row, ownership: { ...row.ownership, tokenHash: "secret" } }] }), packet({ rows: [row, row] }), null])
@@ -40,8 +42,8 @@ describe("ordinary private ownership history RPC boundary", () => {
   it("invalid input precedes RPC and backend errors cannot disclose bodies or cause fallback", async () => {
     const f = fixture(null); await expect(f.port.list(wallet, { binding, filters: {}, take: 52 })).rejects.toThrow(/^history_unavailable$/);
     await expect(f.port.read(wallet, binding, "invalid/path")).rejects.toThrow(/^history_unavailable$/); expect(f.rpc).not.toHaveBeenCalled();
-    f.rpc.mockResolvedValue({ data: null, error: { message: "secret backend body" } }); await expect(f.port.read(wallet, binding, "run")).rejects.toThrow(/^history_unavailable$/);
-    f.rpc.mockRejectedValue(new Error("secret transport body")); await expect(f.port.list(wallet, { binding, filters: {}, take: 1 })).rejects.toThrow(/^history_unavailable$/);
+    f.response.mockResolvedValue({ data: null, error: { message: "secret backend body" } }); await expect(f.port.read(wallet, binding, "run")).rejects.toThrow(/^history_unavailable$/);
+    f.response.mockRejectedValue(new Error("secret transport body")); await expect(f.port.list(wallet, { binding, filters: {}, take: 1 })).rejects.toThrow(/^history_unavailable$/);
     expect(f.rpc).toHaveBeenCalledTimes(2); expect(f.from).not.toHaveBeenCalled();
   });
   it("refuses duplicate/out-of-order or out-of-filter rows even in a bounded backend response", async () => {
@@ -63,5 +65,27 @@ describe("ordinary private ownership history RPC boundary", () => {
     const native = assembleAuthorityBoundSupabaseCore(f.client, deployment, () => deployment);
     expect(Object.hasOwn(native.adapter, "runOwnershipHistory")).toBe(false); expect(() => requireRunOwnershipHistory(native.adapter)).toThrow(/^history_unavailable$/);
     expect(f.rpc).not.toHaveBeenCalled(); expect(http).not.toHaveBeenCalled();
+  });
+});
+
+describe("real PostgREST ownership-history transport deadlines", () => {
+  it.each(["list", "read"] as const)("passes a finite deadline to the actual private %s RPC transport without retry or fallback", async operation => {
+    const controller = new AbortController(), timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+    const fetch = vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.method).toBe("POST"); expect(init?.signal).toBe(controller.signal);
+      return new Promise<Response>((_resolve, reject) => init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason), { once: true }));
+    });
+    const client = createClient("https://synthetic-claims.example", "synthetic-no-authority", {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch },
+    });
+    const port = createSupabaseRunOwnershipHistory(client), from = vi.spyOn(client, "from");
+    const pending = operation === "list" ? port.list(wallet, { binding, filters: {}, take: 2 }) : port.read(wallet, binding, "run");
+    const refused = expect(pending).rejects.toThrow(/^history_unavailable$/);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1)); expect(timeout).toHaveBeenCalledWith(15_000);
+    expect(new URL(String(fetch.mock.calls[0][0])).pathname).toBe("/rest/v1/rpc/anonymous_run_claim_history_"+operation+"_v1");
+    const args = JSON.parse(String(fetch.mock.calls[0][1]!.body));
+    expect(args).toMatchObject({ p_wallet: wallet, p_network: binding.network, p_origin: binding.origin });
+    controller.abort(new DOMException("synthetic-private-transport-details", "TimeoutError"));
+    await refused; expect(fetch).toHaveBeenCalledTimes(1); expect(from).not.toHaveBeenCalled();
   });
 });

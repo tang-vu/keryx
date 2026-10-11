@@ -8,7 +8,7 @@ import { ownershipHistoryOriginal, runOwnershipHistoryQuerySchema, runOwnershipH
 /** Ordinary owner-private RPCs only; no public REST, native/archive or financial fallback. */
 export function createSupabaseRunOwnershipHistory(client: SupabaseClient): RunOwnershipHistoryStore {
   async function call(name: string, args: Record<string, unknown>) {
-    const { data, error } = await client.rpc(name, args);
+    const { data, error } = await client.rpc(name, args).abortSignal(AbortSignal.timeout(15_000));
     if (error) throw new HistoryError("history_unavailable");
     return data;
   }
