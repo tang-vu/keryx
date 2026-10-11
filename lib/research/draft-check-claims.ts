@@ -1,4 +1,4 @@
-import type { DraftReference } from "./draft-check-references";
+import { MAX_DRAFT_REFERENCES, type DraftReference } from "./draft-check-references";
 
 /** Exact claim spans and citation markers in the unchanged passage. Offsets count
  * UTF-16 code units. A sentence is never rewritten, merged with prose or repaired. */
@@ -31,10 +31,10 @@ const GROUP = String.raw`(?:\s+et\s+al\.?|\s+(?:and|&)\s+${NAME})`;
 const YEAR = String.raw`(?:1[5-9]|20)\d{2}`;
 const PAGES = String.raw`(?:,\s*(?:pp?\.)?\s*[\d–-]+)?`;
 const NUMERIC = /\[(\d{1,3}(?:\s*[-–,]\s*\d{1,3})*)\]/g;
-const LATEX = /\\[A-Za-z]*cite[A-Za-z]*\*?(?:\[[^\]]{0,80}\])*\{([^{}]{1,400})\}/g;
+const LATEX = /\\[A-Za-z]*cite[A-Za-z]*\*?(?:\[[^\]]{0,80}\])*\{([^{}]{1,12000})\}/g;
 const PANDOC = /(?<![\p{L}\p{N}.])@([A-Za-z0-9_][A-Za-z0-9_:.-]*[A-Za-z0-9_]|[A-Za-z0-9_])/gu;
 const NARRATIVE = new RegExp(String.raw`(${NAME})(${GROUP})?\s*\((${YEAR})[a-z]?${PAGES}\)`, "gu");
-const PARENTHETICAL = new RegExp(String.raw`\(([^()]{0,300})\)`, "gu");
+const PARENTHETICAL = new RegExp(String.raw`\(([^()]{0,12000})\)`, "gu");
 const UNIT = new RegExp(String.raw`^(?:(?:see|also|cf\.|e\.g\.,?)\s+)*(${NAME})${GROUP}?,?\s+(${YEAR})[a-z]?${PAGES}$`, "u");
 const MENTION = new RegExp(String.raw`(${NAME})${GROUP},?[\s~]*$`, "u");
 const ABBREVIATION = /(?:\bet al|\be\.g|\bi\.e|\bFig|\bFigs|\bEq|\bEqs|\bvs|\bcf|\bapprox|\bDr|\bProf|\bSec|\bRef|\bRefs|\bpp?)\.$/i;
@@ -71,8 +71,8 @@ function numericTargets(body: string, references: readonly DraftReference[]): Dr
     const [first, last] = part.split(/[-–]/).map(value => Number(value.trim()));
     if (!Number.isInteger(first) || first < 1) return undefined;
     if (last === undefined) { numbers.push(first); continue; }
-    // A reversed or implausibly wide range is not read as a citation list.
-    if (!Number.isInteger(last) || last < first || last - first > 20) return undefined;
+    // A range can cover the whole bounded reference list, but never expand unboundedly.
+    if (!Number.isInteger(last) || last < first || last - first >= MAX_DRAFT_REFERENCES) return undefined;
     for (let value = first; value <= last; value++) numbers.push(value);
   }
   return [...new Set(numbers)].map(value => {
@@ -83,6 +83,7 @@ function numericTargets(body: string, references: readonly DraftReference[]): Dr
 
 function keyTarget(token: string, references: readonly DraftReference[]): DraftCitationTarget {
   const reference = references.find(row => row.key === token);
+  if (reference?.problem === "duplicate-key") return { token, problem: "ambiguous" };
   return reference ? { token, reference: reference.key } : { token, problem: "unresolved" };
 }
 
@@ -106,7 +107,7 @@ function markersIn(passage: string, span: { start: number; end: number }, refere
     if (targets) found.push(mention({ kind: "numeric", start: span.start + match.index, end: span.start + match.index + match[0].length, targets }));
   }
   for (const match of text.matchAll(LATEX)) {
-    const keys = [...new Set(match[1].split(",").map(key => key.trim()).filter(Boolean))].slice(0, 16);
+    const keys = [...new Set(match[1].split(",").map(key => key.trim()).filter(Boolean))];
     if (keys.length) found.push(mention({ kind: "latex", start: span.start + match.index, end: span.start + match.index + match[0].length,
       targets: keys.map(key => keyTarget(key, references)) }));
   }
@@ -122,7 +123,7 @@ function markersIn(passage: string, span: { start: number; end: number }, refere
     const units = match[1].split(";").map(part => UNIT.exec(part.trim()));
     if (!units.every(Boolean)) continue;
     found.push({ kind: "author-year", start: span.start + match.index, end: span.start + match.index + match[0].length,
-      targets: units.slice(0, 16).map(unit => authorYearTarget(unit![1], unit![2], references)) });
+      targets: units.map(unit => authorYearTarget(unit![1], unit![2], references)) });
   }
   found.sort((left, right) => left.start - right.start || right.end - left.end);
   const kept: DraftMarker[] = [];

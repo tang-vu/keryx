@@ -146,3 +146,11 @@ signing-screen, independent review, aggregate/domain/platform CI and delivery
 gates remain open. The retained local Turbopack junction, missing
 `@x402/svm/exact/client`, Tauri dependency and stale generated-type errors are
 qualified to their original receipts; no dependency or cleanup workaround is used.
+
+PR406 subsequently merged as `46d265de` at 16:48:37 UTC. The final own-branch
+source syncs actual accepted main `b1b431fd`, including the peer #414 binding
+correction and #411 evidence correction. Its package/native/teaching sources and
+app `0.27.57`, hosted MCP `0.3.15`, stdio `0.4.17` metadata are inherited from
+accepted main, without a worker version or release change. The prior `2b210c42`
+convergence checkpoint remains preserved. Exact-source root review, combined
+hosted CI, full built signing acceptance and delivery still remain gates.

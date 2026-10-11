@@ -65,7 +65,7 @@
     "citationUnbound": "Cited as {token}",
     "unavailable": {
       "source-text-not-supplied": "No text was supplied for this work, so it was not checked.",
-      "reference-unresolved": "This citation matches nothing in the reference list.",
+      "reference-unresolved": "This citation could not be bound to a readable reference in the list.",
       "reference-ambiguous": "This citation matches more than one listed work.",
       "reference-year-differs": "The list has this author with a different year."
     },

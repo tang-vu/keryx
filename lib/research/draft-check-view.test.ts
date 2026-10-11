@@ -31,3 +31,14 @@ it("shows each verdict with its exact excerpt, the unavailable source and the fl
   // Passage text is rendered as text, never as markup.
   expect(html).toContain("&lt;b&gt;strongly&lt;/b&gt;"); expect(html).not.toContain("<b>strongly</b>");
 });
+
+it("shows an unreadable reference as unavailable despite matching caller text", () => {
+  const result = buildDraftCheck({ ...draftCheckFixture(), passage: "Retrieval improves factual accuracy [1].",
+    references: { format: "bibtex", text: "@article{broken, title={Unterminated" },
+    sources: [{ reference: "broken", coverage: "partial", text: "Retrieval improves factual accuracy." }] });
+  const html = renderToStaticMarkup(createElement(DraftCheckResults, { result }));
+  expect(html).toContain("This citation could not be bound to a readable reference in the list.");
+  expect(html).toContain("Source unavailable");
+  expect(html).not.toContain("<blockquote");
+  expect(html).not.toContain("Wording supported by the quoted passage");
+});
