@@ -7350,3 +7350,17 @@ selection unchanged. Whole messages use named values; fixed CSV labels read the
 English catalogue directly. Reuse existing area keys, retire no unrelated guard
 allowances, and reuse the creator candidate's six preview keys only after root
 accepts that candidate. See the [scope, byte parity and remaining gates](docs/engineering/shared-helper-catalogue-2026-10-11.md).
+
+## 2026-10-11 — English withdrawal catalogue area
+
+Keep withdrawal presentation extraction separate from original signing and
+recovery authority. Catalogue 171 messages and retire 143 scoped original copy
+allowances, retaining network/currency identities and data. Resolve complete
+transfer/mint sentences in an i18n helper rather than joining message fragments.
+Preserve finite expiry, original IDs/terms, one-use submission, private recovery
+bytes, owner isolation and finality semantics. Exact render comparisons and
+existing browser journal/history fixtures qualify the change; intercepted owner
+callback checks do not claim live payment integration. Record unchanged320px
+overflow for a separate root layout decision. Remaining original272 areas and
+combined review/CI/distribution/delivery stay open; see
+`docs/engineering/withdrawal-catalogue-2026-10-11.md`.

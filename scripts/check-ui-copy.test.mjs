@@ -367,3 +367,19 @@ test("creator management copy is catalogued; protocol, contact, currency and bra
   assert.equal(findings.length, 1);
   assert.match(findings[0].text, /^curl -s \$\{value\}\/v1\/balances/u);
 });
+
+test("withdrawal instructions, accessibility and recovery states are catalogued; network and currency identities remain data", () => {
+  const retained = {
+    "app/me/withdrawals/page.tsx": [],
+    "components/keryx/withdrawal-workspace.tsx": [],
+    "components/keryx/withdrawal-review-panel.tsx": ["Arc Testnet · USDC", "USDC", "USDC", "USDC"],
+    "components/keryx/withdrawal-recovery-panel.tsx": ["USDC"],
+    "components/keryx/withdrawal-history-panel.tsx": [],
+    "components/keryx/withdrawal-history-progress.tsx": [],
+    "components/keryx/withdraw-earnings-panel.tsx": [],
+    "components/keryx/creator-owner-withdrawal-panel.tsx": [],
+  };
+  for (const [file, data] of Object.entries(retained)) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text), data, file);
+  }
+});
