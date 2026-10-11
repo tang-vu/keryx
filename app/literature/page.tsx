@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { LiteratureWorkspace } from "@/components/keryx/literature-workspace";
 import { SponsoredTrialNotice } from "@/components/keryx/sponsored-trial-notice";
 import { evidenceDraftCopy as draftCopy } from "@/lib/research/evidence-draft-copy";
+import { draftCheckCopy as checkCopy } from "@/lib/research/draft-check-copy";
 
 const copy = createMessages("en");
 
@@ -27,6 +28,7 @@ export default function LiteraturePage() {
         <Link prefetch={false} href="/sources?kind=paper#research-papers" className="inline-flex min-h-11 items-center border border-ink bg-seal px-4 py-2 font-mono text-xs text-paper">{copy("literaturePage.find")}</Link>
         <a href="#literature-project" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">{copy("literaturePage.focus")}</a>
         <Link prefetch={false} href="/literature/drafts" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">{draftCopy.page.navigation}</Link>
+        <Link prefetch={false} href="/literature/check" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">{checkCopy.page.navigation}</Link>
       </nav>
       <div className="mt-6"><SponsoredTrialNotice prepareQuestion /></div>
       <LiteratureWorkspace />
