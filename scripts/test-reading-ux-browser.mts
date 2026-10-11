@@ -58,7 +58,8 @@ try {
   await assertInside(mixed, "#mobile-site-menu");
   assert.equal(await mixed.locator('#mobile-site-menu a[href="/register"]').isVisible(), true);
   await mixed.keyboard.press("Escape");
-  assert.equal(await mixed.locator("#mobile-site-menu").count(), 0);
+  await mixed.locator("#mobile-site-menu").waitFor({ state: "hidden" });
+  assert.equal(await mixed.getByRole("button", { name: "Open menu" }).getAttribute("aria-expanded"), "false");
   assert.equal(await mixed.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Open menu");
   await mixed.close();
 

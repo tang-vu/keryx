@@ -463,6 +463,12 @@ jobs:
       - name: Normal mainnet production worker and CSP (synthetic, no funds)
         run: npm run test:browser-mainnet-normal-built
 
+      - name: Mobile header touch and portaled wallet selection (synthetic, no funds)
+        run: |
+          npx playwright install --with-deps webkit
+          npm run test:browser-mobile-header
+          npm run test:browser-mobile-header -- --webkit
+
       - name: Build (Next.js)
         env:
           KERYX_NETWORK: arcTestnet
@@ -475,6 +481,9 @@ jobs:
         env:
           KERYX_RELEASE_REHEARSAL_RESULT: ${{ runner.temp }}/immutable-release-rehearsal.json
         run: node scripts/rehearse-built-release.mjs
+
+      - name: iPhone route prefetch and delayed navigation (built, offline GET only)
+        run: node --import tsx scripts/test-browser-mobile-navigation-built.mts --webkit
 
       - name: Retain immutable cohort rehearsal result
         if: always()
