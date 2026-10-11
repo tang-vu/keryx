@@ -9,6 +9,8 @@
 # The legacy unreviewed path below can keep the old build serving while it builds
 # and has automatic rollback. It is not the current mainnet operating procedure.
 # See docs/mainnet-update-flow.md and docs/deployment-guide.md for reviewed inputs.
+# Keyless --prepare-release belongs to redeploy.mjs and never enters this shell.
+# Its testnet/offline cohort is not production admission; retain the early drain.
 #
 # Use this for code-only changes. Changes to successful-install inputs trigger an
 # `npm ci`; for first-time provisioning (Node, pm2, swap, cloudflared) use deploy-vps.sh.
@@ -29,6 +31,12 @@ REVIEWED_SHA=${KERYX_REDEPLOY_REVIEWED_PM2_SHA256:-}
 EXPECTED_COMMIT=${KERYX_REDEPLOY_EXPECTED_COMMIT:-}
 ECONOMIC_CONFIG=${KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG:-}
 ECONOMIC_SHA=${KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256:-}
+STAGED_RELEASE=${KERYX_REDEPLOY_STAGED_RELEASE:-0}
+case "$STAGED_RELEASE" in 0|1) ;; *) echo "Invalid staged release input" >&2; exit 1 ;; esac
+if [[ "$STAGED_RELEASE" == 1 ]]; then
+  [[ "$PRESERVE_HELD" == 1 && -n "$REVIEWED_CONFIG" && -z "$ECONOMIC_CONFIG$ECONOMIC_SHA" ]] \
+    || { echo "Staged release requires reviewed roles, held schedulers and no migration" >&2; exit 1; }
+fi
 case "$PRESERVE_HELD" in 0|1) ;; *) echo "Invalid scheduler preservation input" >&2; exit 1 ;; esac
 if [[ -n "$REVIEWED_CONFIG" || -n "$REVIEWED_SHA" ]]; then
   [[ "$REVIEWED_CONFIG" =~ ^/root/\.local/share/[a-zA-Z0-9_./-]+\.json$ &&
@@ -77,6 +85,7 @@ fi
 run_ssh() { "$SSH_BIN" "${SSH_ARGS[@]}" "$@"; }
 reviewed_role() {
   run_ssh "$SSH" /usr/bin/node --input-type=module - "$REVIEWED_CONFIG" "$REVIEWED_SHA" "$1" \
+    "$STAGED_RELEASE" "$EXPECTED_COMMIT" \
     < "$SCRIPT_DIR/redeploy-reviewed-roles.mjs"
 }
 economic_migration() {
@@ -118,9 +127,12 @@ run_ssh -o BatchMode=yes -o ConnectTimeout=10 "$SSH" true 2>/dev/null \
 # Validate protected bytes and positively exited definitions before any source or
 # scheduler mutation. The operator must drain all owned writers beforehand.
 if [[ -n "$REVIEWED_CONFIG" ]]; then
+  if [[ "$STAGED_RELEASE" == 1 ]]; then reviewed_role artifact; fi
   reviewed_role validate
   # Retained output is recovery evidence in every reviewed deployment, not just migration.
-  run_ssh "$SSH" "cd $APP_DIR && test ! -e .next.tmp && test ! -L .next.tmp && test ! -e .next.bak && test ! -L .next.bak"
+  if [[ "$STAGED_RELEASE" == 0 ]]; then
+    run_ssh "$SSH" "cd $APP_DIR && test ! -e .next.tmp && test ! -L .next.tmp && test ! -e .next.bak && test ! -L .next.bak"
+  fi
 fi
 if [[ -n "$ECONOMIC_CONFIG" ]]; then
   economic_migration validate
@@ -140,6 +152,7 @@ case "$PRIVATE_WORKER_STATE" in absent|inactive|active) ;; *) echo "Invalid priv
 fi
 
 # 1. sync source — the OLD .next keeps serving (git touches source only, not .next)
+if [[ "$STAGED_RELEASE" == 0 ]]; then
 if [[ -n "$ECONOMIC_CONFIG" ]]; then
   say "1/5 syncing source at $APP_DIR (economic migration maintenance; writers stopped)"
 elif [[ -n "$REVIEWED_CONFIG" ]]; then
@@ -214,10 +227,21 @@ else
   run_ssh "$SSH" "cd $APP_DIR && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=2560 npm run typecheck && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
 fi
 
+else
+  COMMIT=$EXPECTED_COMMIT
+  say "1-3/5 using the exact prebuilt cohort; serving source, dependencies and ENV retained"
+fi
+
 # 4. Start/restart the new durable worker before exposing the async route, then swap the web build.
 # PM2 gives an in-flight worker up to 330s to finish after SIGINT; started jobs are never requeued.
 say "4/5 starting A2A worker + swapping in the new build + reload"
-if [[ -n "$REVIEWED_CONFIG" ]]; then
+if [[ "$STAGED_RELEASE" == 1 ]]; then
+  reviewed_role artifact
+  reviewed_role validate
+  reviewed_role a2a
+  reviewed_role web
+  run_ssh "$SSH" "pm2 save >/dev/null"
+elif [[ -n "$REVIEWED_CONFIG" ]]; then
   reviewed_role validate
   # Retained builds are recovery evidence, never disposable rollback scratch.
   run_ssh "$SSH" "cd $APP_DIR && test ! -e .next.bak && test ! -L .next.bak && test -d .next.tmp"

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { deployReviewedRole, validateReviewedRoles, readReviewedRoles } from './redeploy-reviewed-roles.mjs';
+import { deployReviewedRole, validateReviewedRoles, readReviewedRoles, releaseSource, verifyReleaseReview } from './redeploy-reviewed-roles.mjs';
 
 const config = () => ({ apps: ['keryx', 'keryx-a2a-worker'].map(name => ({
   name, script: '/usr/bin/env', interpreter: 'none', cwd: '/root/keryx',
@@ -10,6 +10,20 @@ const config = () => ({ apps: ['keryx', 'keryx-a2a-worker'].map(name => ({
       ? ['/root/keryx/scripts/next-public-server.mjs', '--port', '3939']
       : ['--import', '/root/keryx/node_modules/tsx/dist/loader.mjs', '/root/keryx/scripts/a2a-research-worker.mts'])],
 })) });
+const stagedConfig = () => {
+  const c = config(), commit = 'c'.repeat(40), source = releaseSource(commit);
+  c.release = { commit, sourceManifestSha256: '1'.repeat(64), artifactInspectionSha256: '2'.repeat(64),
+    preparationSha256: '0'.repeat(64),
+    runtimeEnvironmentSha256: '3'.repeat(64), compatibilityReviewFile: '/root/.local/share/release/compatibility.json',
+    compatibilityReviewSha256: '4'.repeat(64) };
+  for (const app of c.apps) {
+    app.args.splice(3, 0, `KERYX_COMMIT=${commit}`);
+    app.args.splice(6, app.args.length - 6, ...(app.name === 'keryx'
+      ? [`${source}/scripts/next-immutable-server.mjs`, '--port', '3939']
+      : ['--import', `${source}/node_modules/tsx/dist/loader.mjs`, `${source}/scripts/a2a-research-worker.mts`]));
+  }
+  return c;
+};
 const old = name => ({ name, pid: 0, pm2_env: { status: 'stopped', pm_exec_path: '/usr/bin/npm',
   pm_cwd: '/root/keryx', exec_interpreter: 'none', args: ['run', name === 'keryx' ? 'start' : 'a2a-worker'],
   autorestart: true, kill_timeout: 330000, env: { PRIVATE_KEY: 'not-for-export' } } });
@@ -44,6 +58,77 @@ test('exact clean roles: arbitrary ENV, arguments, paths and duplicates refuse',
     c => c.apps[0].cwd = '/tmp', c => c.apps[0].kill_timeout = 1000]) {
     const c = config(); mutate(c); assert.throws(() => validateReviewedRoles(c));
   }
+});
+test('staged roles preserve operational cwd/ENV and bind both executable closures to one full commit', () => {
+  assert.equal(validateReviewedRoles(stagedConfig()).apps.length, 2);
+  for (const mutate of [c => c.apps[0].cwd = releaseSource(c.release.commit),
+    c => c.apps[1].args[3] = `KERYX_COMMIT=${'d'.repeat(40)}`,
+    c => c.apps[1].args[7] = '/root/keryx/node_modules/tsx/dist/loader.mjs',
+    c => c.apps[0].args[6] = '/root/keryx/scripts/next-public-server.mjs',
+    c => c.release.commit = 'main', c => c.release = null,
+    c => c.release.compatibilityReviewFile = '/tmp/compatibility.json',
+    c => c.release.extra = 'arbitrary']) {
+    const c = stagedConfig(); mutate(c); assert.throws(() => validateReviewedRoles(c));
+  }
+  const c = config(); c.apps[0].args.splice(3, 0, `KERYX_COMMIT=${'c'.repeat(40)}`);
+  assert.throws(() => validateReviewedRoles(c));
+});
+test('staged native compatibility review must bind exact artifact, existing ENV and authorized held roles', () => {
+  const c = stagedConfig(), binding = c.release;
+  const artifact = { commit: binding.commit, tree: 'b'.repeat(40), buildId: 'accepted-build',
+    artifactDigest: '5'.repeat(64), sourceManifestSha256: binding.sourceManifestSha256 };
+  const review = { format: 'keryx-reviewed-release-compatibility-v1', ...artifact,
+    artifactInspectionSha256: binding.artifactInspectionSha256, runtimeEnvironmentSha256: binding.runtimeEnvironmentSha256,
+    acceptanceEvidenceSha256: '6'.repeat(64), storageIdentityDigest: '7'.repeat(64),
+    economicSchemaDigest: '8'.repeat(64), retainedEconomicStateSha256: '9'.repeat(64),
+    sourceAndArtifactAccepted: true, mainnetPublicSettingsAccepted: true,
+    previouslyActiveRoles: ['keryx', 'keryx-a2a-worker'], heldSchedulers: true, rollback: 'hold-for-review' };
+  const preparation = { format: 'keryx-immutable-preparation-v1', productionAdmitted: false, ...artifact,
+    artifactInspectionSha256: binding.artifactInspectionSha256, writerHoldStarted: false, runtimeEnvironmentLoaded: false,
+    checks: { publicBuildSettings: { network: 'arc' }, platform: 'linux', node: '24.21.0', npm: '11.19.0',
+      results: ['typecheck', 'tests', 'build'].map(name => ({ name, exitCode: 0, signal: null, processError: null, outputSha256: 'a'.repeat(64) })) } };
+  const reader = value => (file, expected, environment) => {
+    if (file.endsWith('/preparation.json')) { assert.equal(expected, binding.preparationSha256); return preparation; }
+    if (environment) { assert.equal(file, '/root/keryx/.env.local'); assert.equal(expected, binding.runtimeEnvironmentSha256); return; }
+    assert.equal(file, binding.compatibilityReviewFile); assert.equal(expected, binding.compatibilityReviewSha256);
+    return value;
+  };
+  assert.equal(verifyReleaseReview(binding, reader(review), artifact), review);
+  const reordered = { ...review, previouslyActiveRoles: [...review.previouslyActiveRoles].reverse() };
+  assert.equal(verifyReleaseReview(binding, reader(reordered), artifact), reordered);
+  preparation.checks.publicBuildSettings.network = 'arcTestnet';
+  assert.throws(() => verifyReleaseReview(binding, reader(review), artifact));
+  preparation.checks.publicBuildSettings.network = 'arc';
+  preparation.checks.results[0].exitCode = 7;
+  assert.throws(() => verifyReleaseReview(binding, reader(review), artifact));
+  preparation.checks.results[0].exitCode = 0;
+  for (const mutate of [r => r.mainnetPublicSettingsAccepted = false, r => r.heldSchedulers = false,
+    r => r.previouslyActiveRoles.push('keryx-private-worker'), r => r.rollback = 'automatic',
+    r => r.retainedEconomicStateSha256 = '', r => r.buildId = 'different',
+    r => r.artifactInspectionSha256 = 'a'.repeat(64), r => r.tree = 'a'.repeat(40),
+    r => r.runtimeEnvironmentSha256 = 'a'.repeat(64), r => r.storageIdentityDigest = null]) {
+    const r = structuredClone(review); mutate(r);
+    assert.throws(() => verifyReleaseReview(binding, reader(r), artifact));
+  }
+  assert.throws(() => verifyReleaseReview(binding, () => { throw Error('changed ENV'); }, artifact));
+});
+test('positively exited prior immutable definitions are retained before replacement', () => {
+  const c = stagedConfig(), app = c.apps[0];
+  let rows = [{ name: app.name, pid: 0, pm2_env: { status: 'stopped', pm_exec_path: app.script,
+    pm_cwd: app.cwd, exec_interpreter: app.interpreter, args: app.args,
+    autorestart: app.autorestart, kill_timeout: app.kill_timeout, env: { PRIVATE_KEY: 'synthetic' } } }];
+  const events = [], retained = [];
+  const manager = { list: () => structuredClone(rows), run: args => {
+    events.push(args[0]);
+    rows = args[0] === 'delete' ? [] : [{ name: app.name, pid: 123, pm2_env: { status: 'online',
+      pm_exec_path: app.script, pm_cwd: app.cwd, exec_interpreter: app.interpreter, args: app.args,
+      autorestart: app.autorestart, kill_timeout: app.kill_timeout } }];
+  } };
+  deployReviewedRole('web', '/root/.local/share/release/roles.json', c, manager, () => {},
+    (_name, previous) => { events.push('retain'); retained.push(previous); });
+  assert.deepEqual(events, ['retain', 'delete', 'start']);
+  assert.equal(retained[0].environmentFile, '/root/keryx/.env.local');
+  assert.equal(JSON.stringify(retained).includes('PRIVATE_KEY'), false);
 });
 
 const modelFile = 'KERYX_MODEL_ALLOWANCE_FILE=/root/.local/share/release/model-allowance.json';

@@ -60,13 +60,16 @@ case "$args" in
     bash -c "${input//cd \/root\/keryx/cd .}" ;;
   *'/usr/bin/node --input-type=module - '*)
     [[ "$input" == *'export function deployReviewedRole'* ]] || exit 1
+    if [[ "$args" == *' artifact '* && "${DEPLOY_TEST_BAD_ARTIFACT:-0}" == 1 ]]; then exit 1; fi
     [[ "${DEPLOY_TEST_BAD_CONFIG:-0}" != 1 ]] || exit 1 ;;
   *'bash -s -- stop'*)
     if [[ "$input" == *'keryx-private-worker.service'* ]]; then echo inactive; else echo inactive; fi ;;
   *'git rev-parse --short HEAD'*) echo abc1234 ;;
   *'curl -fsS '*)
     [[ "${DEPLOY_TEST_BAD_HEALTH:-0}" != 1 ]] || exit 1
-    echo '{"commit":"abc1234"}' ;;
+    if [[ "${KERYX_REDEPLOY_STAGED_RELEASE:-0}" == 1 ]]; then
+      printf '{"commit":"%s"}\n' "$DEPLOY_TEST_REMOTE_SHA"
+    else echo '{"commit":"abc1234"}'; fi ;;
 esac
 FAKE
 cat > "$fixture/git" <<'FAKE'
@@ -96,6 +99,20 @@ managed() {
   KERYX_REDEPLOY_EXPECTED_COMMIT="${DEPLOY_TEST_EXPECTED_SHA-$expected}" run
 }
 clear_trace() { : > "$DEPLOY_TEST_TRACE"; }
+# Staged transitions must not reset serving source, install dependencies, rewrite
+# ENV, swap/delete builds, resume held writers or add schedules.
+clear_trace
+KERYX_REDEPLOY_STAGED_RELEASE=1 managed
+[[ $(grep -c 'roles.json .* artifact ' "$DEPLOY_TEST_TRACE") == 2 ]]
+grep -q 'roles.json .* a2a ' "$DEPLOY_TEST_TRACE"
+grep -q 'roles.json .* web ' "$DEPLOY_TEST_TRACE"
+! grep -Eq 'git fetch|GIT reset|KERYX_COMMIT=|npm run|bash -se|mv .next|rm -rf|bash -s -- (stop|resume)|crontab' "$DEPLOY_TEST_TRACE"
+first_artifact=$(grep -n 'roles.json .* artifact ' "$DEPLOY_TEST_TRACE" | head -1 | cut -d: -f1)
+first_validate=$(grep -n 'roles.json .* validate ' "$DEPLOY_TEST_TRACE" | head -1 | cut -d: -f1)
+(( first_artifact < first_validate ))
+clear_trace
+if DEPLOY_TEST_BAD_ARTIFACT=1 KERYX_REDEPLOY_STAGED_RELEASE=1 managed; then exit 1; fi
+! grep -Eq 'roles.json .* (validate|a2a|web) |pm2|git fetch|npm run' "$DEPLOY_TEST_TRACE"
 clear_trace
 managed
 ! grep -Eq 'bash -s -- (stop|resume)|crontab|pm2 (restart|reload)|rm -rf .next.bak' "$DEPLOY_TEST_TRACE"

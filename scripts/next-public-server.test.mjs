@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile, symlink, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, copyFile, symlink, rm } from 'node:fs/promises';
 import { request } from 'node:http';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -8,6 +8,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { startNextPublicServer, NEXT_VERSION } from './next-public-server.mjs';
+import { startPreparedPublicRole, readPreparedPublicHealth, drainPreparedPublicRole } from './rehearse-prepared-release.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const modules = resolve(process.env.KERYX_NEXT_FIXTURE_NODE_MODULES || join(root, 'node_modules'));
@@ -18,7 +19,7 @@ function get(port, { path = '/api/origin', headers = { Host: 'keryx.cc', 'X-Forw
       let body = '';
       res.setEncoding('utf8');
       res.on('data', (chunk) => { body += chunk; });
-      res.on('end', () => accept({ status: res.statusCode, body }));
+      res.on('end', () => accept({ status: res.statusCode, body, headers: res.headers }));
     });
     req.on('error', reject);
     req.end();
@@ -34,12 +35,17 @@ test('pinned production Next sees public HTTPS origin on a private ephemeral soc
   const priorMode = process.env.NODE_ENV;
   const priorDist = process.env.NEXT_DIST_DIR;
   process.env.NODE_ENV = 'production';
-  process.env.NEXT_DIST_DIR = '.next.tmp';
+  process.env.NEXT_DIST_DIR = '.next';
   try {
     await symlink(modules, join(dir, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
     await writeFile(join(dir, 'package.json'), JSON.stringify({ name: 'keryx-public-origin-fixture', private: true }));
     await mkdir(join(dir, 'app', 'api', 'origin'), { recursive: true });
-    await writeFile(join(dir, 'next.config.mjs'), "export default {distDir:process.env.NEXT_DIST_DIR || '.next',experimental:{cpus:1}};\n");
+    await mkdir(join(dir, 'app', 'api', 'health'), { recursive: true });
+    await writeFile(join(dir, 'app', 'api', 'health', 'route.js'), `export const dynamic='force-dynamic';
+export async function GET(){return Response.json({commit:process.env.KERYX_COMMIT,network:'arcTestnet',settles:'offline',db:'ok'})}\n`);
+    await writeFile(join(dir, 'fixture-headers.cjs'), "exports.marker='prepared-config-header';\n");
+    await writeFile(join(dir, 'next.config.ts'), `import {marker} from './fixture-headers.cjs';
+export default {distDir:'.next',experimental:{cpus:1},async headers(){return [{source:'/api/origin',headers:[{key:'x-cohort-fixture',value:marker}]}]}};\n`);
     await writeFile(join(dir, 'app', 'layout.js'), "export default function Layout({children}){return <html><body>{children}</body></html>}\n");
     await writeFile(join(dir, 'app', 'api', 'origin', 'route.js'), `export const dynamic='force-dynamic';
 export async function GET(request){
@@ -58,13 +64,16 @@ export async function GET(request){
       child.on('error', reject);
       child.on('exit', (code) => code === 0 ? accept() : reject(new Error(`Fixture build exit ${code}: ${output}`)));
     });
-    running = await startNextPublicServer({ dir, port: 0 });
+    const originalCwd = process.cwd();
+    try { process.chdir(dir); running = await startNextPublicServer({ dir, port: 0 }); }
+    finally { process.chdir(originalCwd); }
     const { physicalPort } = running.receipt;
     assert.equal(running.server.keepAliveTimeout, 100000);
     assert.equal(running.server.keepAliveTimeoutBuffer, 5000);
     assert.equal(running.server.maxRequestsPerSocket, 0);
     const positive = await get(physicalPort);
     assert.equal(positive.status, 200);
+    assert.equal(positive.headers['x-cohort-fixture'], 'prepared-config-header');
     assert.deepEqual(JSON.parse(positive.body), {
       origin: 'https://keryx.cc', url: 'https://keryx.cc/api/origin', host: 'keryx.cc', proto: 'https',
     });
@@ -92,18 +101,47 @@ export async function GET(request){
     await closing;
     assert.equal(running.server.listening, false);
     running = null;
+    // The immutable launcher must use its completed build from an operational
+    // storage cwd, while ordinary startup above keeps loading source config.
+    const storage = join(dir, 'isolated-runtime-storage');
+    await mkdir(storage);
+    const priorCwd = process.cwd();
+    const priorSerialized = process.env.__NEXT_PRIVATE_STANDALONE_CONFIG;
+    try {
+      process.chdir(storage);
+      running = await startNextPublicServer({ dir, port: 0, useBuildConfig: true });
+    } finally { process.chdir(priorCwd); }
+    assert.equal(process.env.__NEXT_PRIVATE_STANDALONE_CONFIG, priorSerialized);
+    assert.equal((await get(running.receipt.physicalPort)).status, 200);
+    await running.close(); running = null;
+    // Exercise the actual eval entry and a fresh config cache. Using the module
+    // path as argv[1] used to activate its CLI guard and start a second server.
+    await mkdir(join(dir, 'scripts'));
+    await copyFile(join(root, 'scripts', 'next-public-server.mjs'), join(dir, 'scripts', 'next-public-server.mjs'));
+    const fixtureCommit = 'ab'.repeat(20);
+    const role = await startPreparedPublicRole(dir, { ...process.env, KERYX_COMMIT: fixtureCommit }, storage, 'actual-prepared-entry');
+    try {
+      const response = await get(3940);
+      assert.equal(response.status, 200);
+      assert.equal(response.headers['x-cohort-fixture'], 'prepared-config-header');
+      assert.equal((await readPreparedPublicHealth(fixtureCommit)).commit, fixtureCommit);
+    } finally {
+      assert.equal((await drainPreparedPublicRole(role)).httpDrained, true);
+    }
+    assert.match(role.output(), /"httpDrained":true/);
+    assert.doesNotMatch(role.output(), /NEXT_PUBLIC_SERVER_START_FAILED/);
     if (process.platform !== 'win32') {
       // POSIX SIGTERM exercises the actual supported shutdown in a separate process.
       // Use an ephemeral socket; a live QA instance may already own port 3940.
       // Windows child.kill is
       // forceful, so it must never stand in for this graceful-exit evidence.
       const entry = `import {startNextPublicServer,installNextPublicShutdown} from ${JSON.stringify(new URL('./next-public-server.mjs', import.meta.url).href)};
-const running=await startNextPublicServer({port:0});
+const running=await startNextPublicServer({dir:${JSON.stringify(dir)},port:0,useBuildConfig:true});
 installNextPublicShutdown(running);
 console.log(JSON.stringify(running.receipt));
 setInterval(()=>{},60000);`;
       const child = spawn(process.execPath, ['--input-type=module', '-e', entry], {
-        cwd: dir, env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' }, stdio: ['ignore', 'pipe', 'pipe'],
+        cwd: storage, env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' }, stdio: ['ignore', 'pipe', 'pipe'],
       });
       const exited = new Promise((accept, reject) => {
         child.once('error', reject);

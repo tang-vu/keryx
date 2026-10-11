@@ -144,7 +144,7 @@ if [[ "$input" == *'export function runEconomicDeployMigration'* ]]; then
   if [[ "$args" == *' - migrate '* && "$ECONOMIC_TEST_FAILURE" == migration ]]; then exit 1; fi
 elif [[ "$input" == *'export function deployReviewedRole'* ]]; then
   if [[ "$ECONOMIC_TEST_FAILURE" == config && -e "$ECONOMIC_TEST_TRACE.migrated" ]]; then exit 1; fi
-  if [[ "$args" == *" $ECONOMIC_TEST_FAILURE" ]]; then exit 1; fi
+  if [[ -n "$ECONOMIC_TEST_FAILURE" && "$args" == *" $ECONOMIC_TEST_FAILURE "* ]]; then exit 1; fi
 fi
 case "$args" in
   *'npm run typecheck'*) [[ "$ECONOMIC_TEST_FAILURE" != build ]] || exit 1 ;;

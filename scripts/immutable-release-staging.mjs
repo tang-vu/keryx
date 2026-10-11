@@ -10,7 +10,9 @@ const MiB = 1024 * 1024;
 const limits = { sourceBytes: 256 * MiB, blobBytes: 32 * MiB, sourceFiles: 10000,
   artifactBytes: 8 * 1024 * MiB, artifactFiles: 250000, manifestBytes: 4 * MiB };
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
-const refuse = () => { throw Error('Immutable staging refused; retain candidate and existing releases for inspection.'); };
+const refuse = (reason = 'input-or-integrity') => {
+  throw Error(`Immutable staging refused (${reason}); retain candidate and existing releases for inspection.`);
+};
 const signature = stat => [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs].join('|');
 const inside = (root, file) => {
   // Windows case aliases must not bypass source/release or trace containment.
@@ -26,7 +28,7 @@ const windowsDeviceName = /^(?:con|prn|aux|nul|com[1-9\u00b9\u00b2\u00b3]|lpt[1-
 function relativeName(name) {
   if (typeof name !== 'string' || name.length < 1 || name.length > 512 ||
       /[\x00-\x1f\x7f\\:*?"<>|\ufffd]/u.test(name) || path.posix.isAbsolute(name) ||
-      name.split('/').some(part => !part || part === '.' || part === '..' || /[. ]$/.test(part) || windowsDeviceName.test(part))) refuse();
+      name.split('/').some(part => !part || part === '.' || part === '..' || /[. ]$/.test(part) || windowsDeviceName.test(part))) refuse('nonportable-path');
   return name;
 }
 
@@ -217,32 +219,34 @@ function readSourceManifest(candidate, expected) {
 function snapshotTree(root) {
   const entries = [], buffer = Buffer.alloc(65536);
   const deadline = performance.now() + 120000;
-  const check = stat => {
-    if (performance.now() > deadline || process.platform !== 'win32' &&
-        !stat.isSymbolicLink() && (stat.uid !== BigInt(process.getuid()) || stat.mode & 0o022n)) refuse();
+  const check = (stat, file = root) => {
+    if (performance.now() > deadline) refuse('snapshot-deadline');
+    if (process.platform !== 'win32' && !stat.isSymbolicLink() &&
+        (stat.uid !== BigInt(process.getuid()) || stat.mode & 0o022n))
+      refuse(`artifact-owner-or-mode:${path.relative(root, file).split(path.sep).join('/') || '.'}`);
   };
   let total = 0;
   function visit(directory) {
     const before = fs.lstatSync(directory, { bigint: true });
-    check(before);
+    check(before, directory);
     if (!before.isDirectory() || before.isSymbolicLink()) refuse();
     for (const name of fs.readdirSync(directory).sort()) {
       const file = path.join(directory, name), relative = path.relative(root, file).split(path.sep).join('/');
       relativeName(relative);
       const stat = fs.lstatSync(file, { bigint: true });
-      check(stat);
-      if (entries.length >= limits.artifactFiles) refuse();
+      check(stat, file);
+      if (entries.length >= limits.artifactFiles) refuse('artifact-entry-limit');
       if (stat.isDirectory()) {
         entries.push({ path: relative, type: 'directory' }); visit(file);
       } else if (stat.isSymbolicLink()) {
         const link = fs.readlinkSync(file), target = fs.realpathSync(file);
         if (path.isAbsolute(link) || !inside(root, target) || !fs.statSync(target).isFile() ||
-            signature(stat) !== signature(fs.lstatSync(file, { bigint: true }))) refuse();
+            signature(stat) !== signature(fs.lstatSync(file, { bigint: true }))) refuse(`artifact-link:${relative}`);
         entries.push({ path: relative, type: 'symlink', link });
       } else {
-        if (!stat.isFile() || stat.nlink !== 1n || stat.size > BigInt(limits.artifactBytes)) refuse();
+        if (!stat.isFile() || stat.nlink !== 1n || stat.size > BigInt(limits.artifactBytes)) refuse('artifact-file-identity');
         total += Number(stat.size);
-        if (total > limits.artifactBytes) refuse();
+        if (total > limits.artifactBytes) refuse('artifact-byte-limit');
         const fd = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0) | fs.constants.O_NONBLOCK);
         const hash = createHash('sha256'); let size = 0;
         try {
@@ -280,41 +284,66 @@ export function inspectImmutableArtifact({ candidate, sourceManifestSha256 }) {
     while (directory !== '.') { directories.add(directory); directory = path.posix.dirname(directory); }
     const actual = byName.get(file.path);
     if (!actual || actual.type !== 'file' || actual.size !== file.size || actual.sha256 !== file.sha256 ||
-        process.platform !== 'win32' && actual.executable !== file.executable) refuse();
+        process.platform !== 'win32' && actual.executable !== file.executable) refuse('source-bytes-or-mode');
   }
   for (const entry of snapshot.entries) {
     if (permitted.has(entry.path) || directories.has(entry.path)) continue;
     const top = entry.path.split('/')[0];
     if (!['.next', 'node_modules'].includes(top) &&
-        !['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo'].includes(entry.path)) refuse();
+        !['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo'].includes(entry.path)) refuse('unexpected-source-entry');
   }
   const buildId = readStable(path.join(source, '.next', 'BUILD_ID'), 1024).toString().trim();
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(buildId) || !byName.has('node_modules') ||
-      !byName.has('.next/next-server.js.nft.json')) refuse();
-  let tracedFiles = 0;
+      !byName.has('.next/next-server.js.nft.json')) refuse('missing-build-identity-or-server-trace');
+  let tracedFiles = 0, tracedDirectories = 0;
+  const acceptedAliases = new Set();
   for (const entry of snapshot.entries.filter(entry => entry.path.startsWith('.next/') && entry.path.endsWith('.nft.json'))) {
     if (entry.type !== 'file') refuse();
     const tracePath = path.join(source, ...entry.path.split('/'));
     const trace = JSON.parse(readStable(tracePath, 4 * MiB));
-    if (trace.version !== 1 || !Array.isArray(trace.files) || trace.files.length > 100000) refuse();
+    if (trace.version !== 1 || !Array.isArray(trace.files) || trace.files.length > 100000) refuse('trace-format-or-limit');
     for (const name of trace.files) {
       if (typeof name !== 'string' || name.length > 1024 || path.isAbsolute(name) || /[\x00-\x1f\\]/.test(name)) refuse();
       const target = path.resolve(path.dirname(tracePath), name);
-      if (!inside(source, target) || !inside(source, fs.realpathSync(target)) || !fs.statSync(target).isFile()) refuse();
-      if (++tracedFiles > 500000) refuse();
+      if (!inside(source, target) || !inside(source, fs.realpathSync(target)))
+        refuse(`trace-containment:${entry.path}:${name}`);
+      const stat = fs.statSync(target);
+      if (stat.isFile()) tracedFiles++;
+      if (!stat.isFile()) {
+        // Pinned Turbopack traces the dependency alias directory itself. Accept
+        // only a fully materialized alias whose complete byte inventory equals
+        // the independently copied package. Other directory traces still refuse.
+        const relative = path.relative(source, target).split(path.sep).join('/');
+        const alias = /^\.next\/node_modules\/((?:@[a-z0-9._-]+\/)?[a-z0-9._-]+)-[a-f0-9]{16}$/.exec(relative);
+        if (!stat.isDirectory() || !alias || byName.get(relative)?.type !== 'directory')
+          refuse(`trace-entry-not-file:${entry.path}:${name}`);
+        if (!acceptedAliases.has(relative)) {
+          const original = `node_modules/${alias[1]}`;
+          if (byName.get(original)?.type !== 'directory' || byName.get(`${original}/package.json`)?.type !== 'file') refuse('trace-alias-dependency-missing');
+          const copy = snapshot.entries.filter(value => value.path.startsWith(relative + '/'))
+            .map(value => ({ ...value, path: original + value.path.slice(relative.length) }));
+          const dependency = snapshot.entries.filter(value => value.path.startsWith(original + '/'));
+          if (!copy.length || serial(copy) !== serial(dependency)) refuse('trace-alias-dependency-mismatch');
+          acceptedAliases.add(relative);
+        }
+        tracedDirectories++;
+      }
+      if (tracedFiles + tracedDirectories > 500000) refuse('trace-reference-limit');
     }
   }
   // Recheck after trace inspection; publication accepts only a stable cohort.
   const after = snapshotTree(source);
   if (after.digest !== snapshot.digest || serial(readSourceManifest(candidate, sourceManifestSha256)) !== serial(manifest)) refuse();
-  return { format: 'keryx-immutable-artifact-inspection-v1', productionAdmitted: false,
+  return { format: 'keryx-immutable-artifact-inspection-v2', productionAdmitted: false,
     commit: manifest.commit, tree: manifest.tree, sourceManifestSha256, buildId,
-    artifactDigest: snapshot.digest, artifactBytes: snapshot.bytes, artifactEntries: snapshot.entries.length, tracedFiles };
+    artifactDigest: snapshot.digest, artifactBytes: snapshot.bytes, artifactEntries: snapshot.entries.length, tracedFiles, tracedDirectories,
+    materializedTraceAliases: [...acceptedAliases].sort() };
 }
 
 export function recordImmutableArtifact(options) {
   const inspection = inspectImmutableArtifact(options);
   const bytes = serial(inspection);
+  if (Buffer.byteLength(bytes) > 16384) refuse('inspection-receipt-limit');
   writeExclusive(path.join(options.candidate, 'artifact-inspection.json'), bytes);
   return { ...inspection, artifactInspectionSha256: sha(bytes) };
 }
