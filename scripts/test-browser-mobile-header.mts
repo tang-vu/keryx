@@ -1,0 +1,87 @@
+/** Real header, Radix portals and wallet picker; synthetic connectors, no auth or spending. */
+import assert from "node:assert/strict";
+import { build } from "esbuild";
+import { chromium, webkit } from "playwright";
+import { readFile } from "node:fs/promises";
+import postcss from "postcss";
+import tailwind from "@tailwindcss/postcss";
+
+const css = (await postcss([tailwind()]).process(await readFile("app/globals.css", "utf8"), { from: "app/globals.css" })).css;
+const mocks: Record<string, string> = {
+  "next/link": `import React from 'react';export default function Link({href,onNavigate,children,...props}){return <a {...props} href={href} onClick={e=>{if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;e.preventDefault();onNavigate?.({preventDefault(){}});window.pendingNavigation=href;}}>{children}</a>}`,
+  "next/navigation": `export const usePathname=()=>'/';`,
+  "next/image": `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`,
+  "wagmi": `import{useSyncExternalStore}from'react';let account={status:'disconnected'},listeners=new Set();const update=value=>{account=value;for(const listener of listeners)listener();};export const useAccount=()=>useSyncExternalStore(listener=>{listeners.add(listener);return()=>listeners.delete(listener)},()=>account);export const useDisconnect=()=>({disconnectAsync:async()=>{}});export const useConnect=()=>({isPending:false,connectors:[{id:'metaMaskSDK',type:'metaMask',name:'MetaMask'},{id:'walletConnect',type:'walletConnect',name:'WalletConnect'}],connectAsync:async({connector})=>{window.walletSelections.push(connector.id);if(window.successfulConnection){update({status:'connecting'});await new Promise(resolve=>{const modal=document.createElement('div');modal.style='position:fixed;inset:100px 20px auto;z-index:1000;background:white;padding:24px';const button=document.createElement('button');button.textContent='Finish wallet connection';button.onclick=()=>{modal.remove();setTimeout(()=>{update({status:'connected',address:'0x1111111111111111111111111111111111111111',isConnected:true});resolve();},50)};modal.append(button);document.body.append(modal);});return{accounts:['0x1111111111111111111111111111111111111111']};}await new Promise(resolve=>setTimeout(resolve,50));throw new Error('Synthetic wallet transport unavailable');}});`,
+  "@/lib/hooks/use-siwe-auth": `import{useAccount}from'wagmi';const signIn=async()=>{window.signIns++;return{ok:true}};export const useSiweAuth=()=>({...useAccount(),session:null,authState:'idle',signIn,signOut:async()=>{}});`,
+  "./circle-google-wallet": `export const CircleGoogleWalletButton=()=>null;`,
+  "./dispatch-wire": `export const DispatchWire=()=>null;`,
+};
+const bundle = await build({ stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import{SiteHeader}from'./components/keryx/site-header';import{Toaster}from'sonner';window.walletSelections=[];window.signIns=0;createRoot(document.getElementById('root')).render(<><SiteHeader/><main><button id="outside" style={{position:'fixed',bottom:0}}>Outside the header</button></main><Toaster/></>);`, loader: "tsx", resolveDir: process.cwd() },
+  bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
+  define: { "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "synthetic-boundaries", setup(builder) {
+    builder.onResolve({ filter: /.*/ }, args => args.path in mocks ? { path: args.path, namespace: "mock" } : undefined);
+    builder.onLoad({ filter: /.*/, namespace: "mock" }, args => ({ contents: mocks[args.path], loader: "tsx", resolveDir: process.cwd() }));
+  } }] });
+
+const engine = process.argv.includes("--webkit") ? webkit : chromium;
+const browser = await engine.launch({ headless: true });
+try {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: "reduce" });
+  await context.route("**/*", route => new URL(route.request().url()).origin === "https://header.test"
+    ? route.fulfill({ contentType: "text/html", body: `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body><div id="root"></div></body></html>` })
+    : route.abort());
+  const page = await context.newPage();
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  async function ready() {
+    await page.goto("https://header.test");
+    await page.addScriptTag({ content: bundle.outputFiles[0].text });
+    await page.getByRole("button", { name: "Open menu" }).tap();
+  }
+  async function chooseWallet(name: string, id: string) {
+    await ready();
+    await page.locator("#mobile-site-menu").getByRole("button", { name: "Connect Wallet" }).tap();
+    // Real touch sequence emits mousedown before click. The portal must survive both.
+    await page.getByRole("button", { name: new RegExp(name) }).tap();
+    assert.deepEqual(await page.evaluate(() => (window as unknown as { walletSelections: string[] }).walletSelections), [id], `${name} selection must reach the connector exactly once`);
+    await page.getByText("Synthetic wallet transport unavailable", { exact: true }).waitFor();
+    assert(await page.locator("#mobile-site-menu").isVisible(), "A wallet portal interaction must not dismiss its mobile parent");
+  }
+  await chooseWallet("MetaMask", "metaMaskSDK");
+  await chooseWallet("WalletConnect", "walletConnect");
+  await ready();
+  await page.evaluate(() => { (window as unknown as { successfulConnection: boolean }).successfulConnection = true; });
+  await page.locator("#mobile-site-menu").getByRole("button", { name: "Connect Wallet" }).tap();
+  await page.getByRole("button", { name: /WalletConnect/ }).tap();
+  await page.locator("#mobile-site-menu").getByRole("status").filter({ hasText: "Connecting" }).waitFor();
+  // The vendor's modal has its own body portal. Its touch may close the outer
+  // menu, but must not destroy the selected wallet's one-time sign-in intent.
+  await page.getByRole("button", { name: "Finish wallet connection" }).tap();
+  await page.waitForFunction(() => (window as unknown as { signIns: number }).signIns === 1);
+  assert.equal(await page.locator("#mobile-site-menu").isVisible(), false);
+  await page.getByRole("button", { name: "Open menu" }).tap();
+  await page.locator("#mobile-site-menu").getByRole("button", { name: /^Sign in/ }).waitFor();
+  assert.equal(await page.evaluate(() => (window as unknown as { signIns: number }).signIns), 1);
+  await ready();
+  await page.locator("#mobile-site-menu").getByRole("link", { name: "Activity & proof" }).tap();
+  assert.equal(await page.evaluate(() => (window as unknown as { pendingNavigation: string }).pendingNavigation), "/dashboard");
+  assert.equal(await page.locator("#mobile-site-menu").isVisible(), false, "Close the menu when navigation starts, before the delayed route completes");
+  await ready();
+  await page.locator("#mobile-site-menu").getByText("More tools", { exact: true }).tap();
+  await page.locator("#mobile-site-menu").getByRole("link", { name: "Paid research", exact: true }).tap();
+  assert.equal(await page.locator("#mobile-site-menu").isVisible(), false);
+  await ready();
+  await page.locator("#outside").tap();
+  assert.equal(await page.locator("#mobile-site-menu").isVisible(), false, "Outside touch still dismisses the menu");
+  await ready();
+  await page.locator("#mobile-site-menu").getByRole("button", { name: "Connect Wallet" }).tap();
+  await page.getByRole("button", { name: /MetaMask/ }).waitFor();
+  await page.keyboard.press("Escape");
+  assert.equal(await page.locator("#mobile-site-menu").isVisible(), false);
+  await page.getByRole("button", { name: /MetaMask/ }).waitFor({ state: "detached" });
+  await page.waitForFunction(() => document.body.style.pointerEvents !== "none");
+  assert(await page.getByRole("button", { name: "Open menu" }).evaluate(button => button === document.activeElement));
+  assert.deepEqual(errors, []);
+  console.log(`PASS (${engine.name()}): both wallet choices receive mobile taps through real Radix portals; errors survive picker unmount; external wallet modal preserves exactly one sign-in; navigation closes immediately; outside touch and Escape still dismiss. No real wallet, authentication or funds.`);
+  await context.close();
+} finally { await browser.close(); }
