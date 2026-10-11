@@ -64,6 +64,8 @@ const nextConfig: NextConfig = {
       ...["/api/me/run-claims", "/api/me/run-history/:path*"].map(source => ({
         source, headers: [...runClaimPrivateHeaders],
       })),
+      { source: "/research/private", headers: [...runClaimPrivateHeaders,
+        { key: "Cross-Origin-Opener-Policy", value: "same-origin" }] },
       // Matching rules are applied in order, so this CSP replaces the global CSP only for the
       // standalone Scalar document. Other pages still cannot execute scripts from jsDelivr.
       {

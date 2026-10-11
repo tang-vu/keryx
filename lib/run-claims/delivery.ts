@@ -1,15 +1,11 @@
-import { z } from "zod";
 import type { QueryRun } from "../types";
-import { runClaimDeliverySchema, runClaimIdSchema, type RunClaimBinding, type RunClaimsStore } from "./contracts";
+import { type RunClaimBinding, type RunClaimsStore } from "./contracts";
 import { prepareRunClaimDelivery } from "./service";
+import { privateRunClaimPacketSchema, type PrivateRunClaimPacket } from "./private-packet";
+export { privateRunClaimPacketSchema, type PrivateRunClaimPacket } from "./private-packet";
 
 /** Caller-private one-shot transport packet. Never a field of QueryRun, public
  * RemoteResearchResult/keryxMeta, a receipt, report, trace, export or analytics. */
-export const privateRunClaimPacketSchema = z.discriminatedUnion("status", [
-  z.object({ version: z.literal(1), runId: runClaimIdSchema, status: z.literal("available"), delivery: runClaimDeliverySchema }).strict(),
-  z.object({ version: z.literal(1), runId: runClaimIdSchema, status: z.literal("unavailable") }).strict(),
-]);
-export type PrivateRunClaimPacket = z.infer<typeof privateRunClaimPacketSchema>;
 interface Options {
   enabled: boolean; runId: string; owner?: string; binding: RunClaimBinding;
   db(): Promise<{ readonly runClaims?: RunClaimsStore }>;

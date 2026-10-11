@@ -2,16 +2,19 @@
 
 Issue #262 is still open. The ordinary claim domain and private HTTP/landing
 boundaries and the first private ingress subset are source preparation, default
-off. They do not activate any current database. Hosted ordinary PostgreSQL acceptance, remaining ingress/client delivery,
-combined release acceptance and separately reviewed deployment/schema admission
+off. They do not activate any current database. Remaining ingress/client delivery,
+fresh combined-source acceptance and separately reviewed deployment/schema admission
 remain gates. The four failed PostgreSQL attempts are retained, not passing
 evidence. The third reached the timestamp fixture after migration/catalog setup;
-parenthesized timestamp expressions await fresh actual PostgreSQL acceptance.
+the timestamp fixture was corrected with parenthesized expressions.
 The fourth exercised more domain cases but its deliberate added-column fixture
 changed JSON row shape; no-write comparison now snapshots every claim field after
 that intentional DDL, before refused calls. Original/financial comparison still
 precedes the mutation. The closed browser fixture explicitly registers only 0088
-as ordinary-only and retains exact native refusal; fresh hosted acceptance is pending.
+as ordinary-only and retains exact native refusal. The dedicated ordinary-domain
+PostgreSQL lane subsequently passed on source `7c08de848a157047478ed7f228e82f901779b210`
+([run 38094718412](https://github.com/tang-vu/keryx/actions/runs/38094718412)).
+That source acceptance does not admit a production database or activate the feature.
 
 Enablement requires the exact pre-existing ordinary schema and
 `KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED=true`. Runtime admission never creates or repairs
@@ -19,6 +22,13 @@ SQLite schema. Native/enrolled and archive adapters expose no claim/history port
 there is no fallback or enrollment change. Migration 0088 refuses native identity
 markers. Its narrow immutable catalog seal guards claim metadata, private ACLs,
 functions, triggers and the original/session shapes needed by this domain.
+The ordinary deployment must already grant its service role the original-table
+read/lock authority needed by the invoker guard, including `query_runs` and
+`a2a_orders`; otherwise admission refuses. The isolated browser fixture grants
+only the missing original-table SELECT before creating the immutable seal.
+Runtime does not widen grants or bypass the guard. Isolated built-server fixtures
+copy one shared, exact config dependency graph, including the literal CSP assets,
+and qualify it with Next's actual configuration resolver.
 
 A trusted new-request completion closure can create one 256-bit claim credential
 for a newly completed unowned run. Only its network/origin-bound SHA-256 is stored,
@@ -29,6 +39,48 @@ research. The first hosted ingress subset prepares ordinary admission before
 research and completes its request-local closure only after the existing save
 boundary. A late issuance failure preserves the saved answer and returns a fixed
 unavailable packet without replay or a replacement credential.
+
+Protected web delivery uses a dedicated dynamic `/research/private` initial
+document. Enter through a native full-page link. A proxy matched only to that
+path refuses browser RSC, prefetch and non-document requests; it overwrites internal
+request headers, sets a fresh nonce CSP on request and response, and admits a
+bootstrap only for an actual navigate/document request. No-store, no-referrer,
+noindex, frame denial and same-origin COOP apply. Other routes retain their public
+archive and analytics policies. The dedicated CSP refuses external scripts,
+analytics, frames and wallet/RPC connections. Funded browser controls remain on
+ordinary research; this is not funded private-web acceptance.
+Question and report visibility follows ordinary research. This surface protects
+the account claim handoff, not the visibility of the research itself.
+
+Installed Next reconstructs proxy URLs from its listen address and normalizes
+loopback hosts to `localhost`. Entry therefore checks the exact configured Host
+and protocol, rejecting alternate hosts and ambiguous forwarded protocols.
+The ticket still binds the configured external origin. API admission reuses the
+existing configured-Origin CSRF check, strict same-origin Fetch Metadata and the
+signed ticket; request Host/forwarded headers confer no API authority. Next strips
+Flight headers before Proxy, so the browser's required navigate/document metadata
+is the primary initial-navigation check. Flight-header tests alone are insufficient.
+
+The bootstrap installs a nonenumerable initial-document closure. A pathname,
+React prop or in-app transition cannot supply admission. Its fixed 24-hour ticket
+uses a fixed domain-separated HMAC derived from the existing strong `JWT_SECRET`,
+without fallback; it grants document admission only, never account or payment
+authority. The document ticket is not the run-claim credential. Trusted first-party
+bundles are within the boundary; this does not protect against malicious
+privileged same-origin JavaScript. Leaving the document forgets its ticket and
+any pending account handoff.
+
+When enabled, an anonymous web ask prepares ordinary claim admission before
+providers and completes delivery after trusted run persistence. The private SSE
+packet follows the unchanged `done` run and is parsed separately into a one-shot
+closure, outside React run/turn state, DOM, storage, clipboard and public exports.
+Only a matching completed run and clean stream EOF enable the explicit handoff.
+Abort, a new request, malformed delivery, expiry or lost final acknowledgement
+discard it without replay; completed answers and payment records are preserved.
+Reload/close cannot recover it. Built-browser initial-document, header/CSP,
+hydration, injection refusal, hard-navigation and handoff acceptance are required
+before web delivery is qualified; local fixture evidence is distinct from fresh
+hosted default-build acceptance and production/schema admission.
 
 `/claim-run#<credential>` is a dedicated HTML route with no application layout,
 providers, analytics or third-party scripts. Its first synchronous allowed script
@@ -99,10 +151,10 @@ extension APIs; it is not real MV3 installation/publication acceptance.
 
 Anonymous web admission is fail-closed when the flag is enabled until a protected
 initial research document and hard-navigation boundary are accepted. The current
-analytics-allowed research document receives no credential. The proposed dedicated
-dynamic `/research/private` page, narrowly matched nonce proxy, actual built-browser
-HTML/CSP/hard-navigation checks and transient web SSE/UI delivery remain a separate
-implementation gate. Authenticated owned requests retain their existing behavior.
+analytics-allowed research document receives no credential. The dedicated dynamic
+page, narrowly matched nonce proxy and transient SSE/UI delivery are staged here;
+actual built-browser HTML/CSP/hard-navigation and fresh hosted default-build
+acceptance remain release gates. Authenticated owned requests retain their existing behavior.
 
 Supported-surface review remains open. Stdio `ask_keryx` uses paying-wallet A2A
 and exact original recovery; desktop prepares and resumes private native buyer

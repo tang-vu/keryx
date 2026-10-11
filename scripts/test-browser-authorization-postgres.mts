@@ -181,8 +181,12 @@ try {
   }
   const ordinary = `browser_ordinary_${randomUUID().replaceAll("-", "")}`;
   postgres.createDatabase(ordinary);
-  postgres.sql("create publication supabase_realtime;\n" + profiles.ordinary.concat(profiles.extensions.map(extension => extension.file))
+  postgres.sql("create publication supabase_realtime;\n" + profiles.ordinary
     .map(file => readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n"), ordinary);
+  // Explicit synthetic service read/lock authority must precede the immutable
+  // claim-domain catalog seal. No original-table writes or native-chain change.
+  postgres.sql("grant select on public.query_runs,public.a2a_orders to service_role;", ordinary);
+  postgres.sql(profiles.extensions.map(extension => readFileSync(`supabase/migrations/${extension.file}`, "utf8")).join("\n"), ordinary);
   assert.equal(postgres.sql("select to_regclass('keryx_storage.identity') is null;", ordinary), "t");
   for (const extension of profiles.extensions) {
     if (extension.file === "0086_decision_reviews.sql") {

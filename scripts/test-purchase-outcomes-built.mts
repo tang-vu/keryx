@@ -1,4 +1,5 @@
 /** Actual built public API/report/CSS in a fresh ordinary SQLite fixture. No provider/funds. */
+import { copyNextConfigFixture } from "../test-support/next-config-fixture";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -19,8 +20,7 @@ const source = resolve(import.meta.dirname, ".."), dist = resolve(source, proces
 await readFile(join(dist, "BUILD_ID"), "utf8");
 const fixture = join(source, ".artifacts", `purchase-outcomes-built-${randomUUID()}`);
 await mkdir(join(fixture, "lib"), { recursive: true }); await mkdir(join(fixture, "data"));
-for (const file of ["package.json", "next.config.ts", "lib/security-headers.ts", "lib/arc-network-profile.ts", "lib/circle-wallet-config.ts"])
-  await writeFile(join(fixture, file), await readFile(join(source, file)));
+await copyNextConfigFixture(source, fixture);
 await symlink(join(source, "node_modules"), join(fixture, "node_modules"), process.platform === "win32" ? "junction" : "dir");
 await symlink(dist, join(fixture, ".next"), process.platform === "win32" ? "junction" : "dir");
 const retained = JSON.parse(await readFile(join(source, "fixtures/purchase-outcomes/retained-testnet.json"), "utf8"));

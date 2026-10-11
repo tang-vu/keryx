@@ -7085,3 +7085,28 @@ Owned/payer-bound and native original paths remain unchanged, with no claim-doma
 fallback. Local engine CLI and claimant history/profile client integration remain
 explicit outstanding surface decisions. This checkpoint is default-off source
 preparation, not shared DDL, activation, complete issue acceptance or release.
+
+## 2026-10-12 — Web claim handoffs require a protected initial document
+
+Anonymous web claim delivery uses a dedicated dynamic research document with
+native full-page entry, a fresh nonce CSP, no external analytics or wallet/RPC
+connections, no referrer or storage caching, framing denial and same-origin COOP.
+Its visible copy distinguishes ordinary question/report visibility from protection
+of the account claim link. Funded browser controls remain on ordinary research.
+
+A parser-executed initial script installs only a nonenumerable document closure.
+The fixed 24-hour admission ticket uses a domain-separated HMAC from the existing
+strong session secret and grants neither account ownership nor payment authority.
+Next's listener-origin reconstruction requires an exact configured Host/protocol
+entry check; API authority retains the configured-Origin CSRF check and signed
+ticket. Required browser Fetch Metadata refuses SPA/fetch admission even though
+Next strips internal Flight headers before user Proxy code.
+
+The separate post-save private SSE packet stays in a one-shot closure, with an
+explicit handoff only after clean EOF. No credential enters a saved run, public
+projector, React report state, DOM, storage, clipboard, logs or exports. Abort,
+expiry, reload or lost acknowledgement forgets it without paid-research replay.
+Trusted first-party scripts remain within the boundary; this is not protection
+from privileged malicious same-origin JavaScript. Exact built-browser evidence
+and fresh combined hosted acceptance govern release; ordinary-schema admission,
+native enrollment and production activation remain separate and default off.

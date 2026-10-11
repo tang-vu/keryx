@@ -1,5 +1,6 @@
 /** Actual built API with a disposable sealed offline store; production CSS UI with intercepted positive unit evidence.
  * No existing environment, provider, wallet, settlement or shared storage is admitted. */
+import { copyNextConfigFixture } from "../test-support/next-config-fixture";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
@@ -27,8 +28,7 @@ let browser: Browser | undefined, child: ReturnType<typeof spawn> | undefined, s
 let output = "", didExit = false, startError: Error | undefined, listener: ReturnType<typeof createServer> | undefined;
 try {
   await mkdir(join(temporary, "lib"));
-  for (const file of ["package.json", "next.config.ts", "lib/security-headers.ts", "lib/arc-network-profile.ts", "lib/circle-wallet-config.ts"])
-    await writeFile(join(temporary, file), await readFile(join(source, file)));
+  await copyNextConfigFixture(source, temporary);
   await symlink(join(source, "node_modules"), join(temporary, "node_modules"), process.platform === "win32" ? "junction" : "dir");
   await symlink(dist, join(temporary, ".next"), process.platform === "win32" ? "junction" : "dir");
   const now = Date.now(), createdAt = new Date(now - 60_000).toISOString();
