@@ -12,15 +12,18 @@ import { preparationEnvironment } from './prepare-immutable-release.mjs';
 
 const program = `
   const { pathToFileURL } = await import('node:url');
-  const { startNextPublicServer, installNextPublicShutdown } = await import(pathToFileURL(process.argv[1]));
-  const running = await startNextPublicServer({ dir: process.argv[2], port: 3940, useBuildConfig: true });
+  const { startNextPublicServer, installNextPublicShutdown } = await import(pathToFileURL(process.argv[2]));
+  const running = await startNextPublicServer({ dir: process.argv[3], port: 3940, useBuildConfig: true });
   installNextPublicShutdown(running);
   process.on('message', message => { if (message === 'drain') process.emit('SIGTERM'); });
-  process.send({ ...running.receipt, source: process.argv[2] });
+  process.send({ ...running.receipt, source: process.argv[3] });
 `;
 
 export async function startPreparedPublicRole(source, env, scratch, label, spawnRole = spawn) {
   const child = spawnRole(process.execPath, ['--input-type=module', '-e', program,
+    // argv[1] must identify this eval entry, not the imported module. Otherwise
+    // its direct-invocation guard also starts an unconfigured second server.
+    'keryx-prepared-role-rehearsal',
     path.join(source, 'scripts/next-public-server.mjs'), source], {
     cwd: scratch, env, stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true,
   });

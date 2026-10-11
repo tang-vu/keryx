@@ -356,7 +356,15 @@ build configuration from `.next/required-server-files.json`, which is included i
 artifact inspection. Next's documented custom-server `conf` input keeps startup
 independent of TypeScript config import resolution from the operational storage
 cwd. Missing, linked, oversized or incompatible build configuration refuses;
-ordinary public-server startup keeps its existing config-loading behavior.
+ordinary public-server startup keeps its existing config-loading behavior. Pinned
+Next 16.3.8's custom-server router initialization does not forward `conf`; during
+that initialization the launcher supplies the same serialized-config process input
+as Next's generated launcher, then restores its prior value. It derives this
+input only from the inspected artifact and changes no financial/runtime ENV file.
+The rehearsal eval entry has its own argv identity, so importing the public-server
+module cannot also trigger that module's ordinary CLI startup. A fresh-process
+fixture checks TS config with a CJS import, built security headers and positive
+drain from separate storage.
 
 The rehearsal keeps a synthetic reader running against the predecessor while it
 prepares and inspects the candidate, then positively exits that reader, rechecks

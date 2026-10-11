@@ -25,7 +25,7 @@ try {
       throw Error(`Build source differs from accepted Git object: ${file.path}`);
   }
   evidence.exactBuildSourceCompared = true;
-  copyPreparationDependencies({ source: staged.source, dependencies: path.join(repo, 'node_modules') });
+  evidence.dependencyInputs = copyPreparationDependencies({ source: staged.source, dependencies: path.join(repo, 'node_modules') });
   fs.cpSync(path.join(repo, '.next'), path.join(staged.source, '.next'), {
     recursive: true, dereference: false, verbatimSymlinks: true, force: false, errorOnExist: true,
   });

@@ -83,7 +83,19 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939, 
   // Public request metadata is independent of the private physical socket.
   const app = next({ dev: false, dir: appDir, hostname: 'keryx.cc', port: 443, httpServer: server,
     ...(useBuildConfig ? { conf } : {}) });
-  await app.prepare();
+  const priorConfig = process.env.__NEXT_PRIVATE_STANDALONE_CONFIG;
+  try {
+    // Pinned Next 16.3.8's custom-server prepare/router path does not forward
+    // conf. Use the same serialized-config input as its generated launcher,
+    // sourced exclusively from the inspected build, during initialization.
+    if (useBuildConfig) process.env.__NEXT_PRIVATE_STANDALONE_CONFIG = JSON.stringify(conf);
+    await app.prepare();
+  } finally {
+    if (useBuildConfig) {
+      if (priorConfig === undefined) delete process.env.__NEXT_PRIVATE_STANDALONE_CONFIG;
+      else process.env.__NEXT_PRIVATE_STANDALONE_CONFIG = priorConfig;
+    }
+  }
   handle = app.getRequestHandler();
   await new Promise((accept, reject) => {
     const fail = (error) => { server.off('listening', ready); reject(error); };
