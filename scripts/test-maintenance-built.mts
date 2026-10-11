@@ -204,7 +204,7 @@ try {
   const noticeBox = await page.getByRole("status").filter({ hasText: window.message }).boundingBox();
   const advanceViewport = { format: "keryx-maintenance-advance-viewport-v1", sourceSha: proof.sourceSha,
     sourceTree: proof.sourceTree, viewport: page.viewportSize(), noticeBox,
-    scrollY: await page.evaluate(() => window.scrollY), styles };
+    scrollY: await page.evaluate(() => globalThis.scrollY), styles };
   proof.advanceViewport = advanceViewport;
   console.log(JSON.stringify(advanceViewport));
   assert.ok(noticeBox && noticeBox.y >= 0 && noticeBox.y + noticeBox.height <= 720, "Advance banner must be visible in the initial viewport");
