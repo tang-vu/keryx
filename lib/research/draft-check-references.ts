@@ -50,16 +50,26 @@ interface RawReference { key?: string; title?: string; authors: string[]; year?:
 
 function finish(rows: RawReference[]): DraftReference[] {
   if (rows.length > MAX_DRAFT_REFERENCES) throw new Error("Too many references");
+  const keys = rows.map((row, index) => row.key && /^[^\s,{}]{1,120}$/u.test(row.key) ? row.key : `ref${index + 1}`);
+  const counts = new Map<string, number>();
+  for (const key of keys) counts.set(key, (counts.get(key) ?? 0) + 1);
+  // Reserve every written key before assigning display labels to duplicates.
+  // A generated label must never displace a different work's canonical key.
+  const reserved = new Set(keys);
   const seen = new Set<string>();
   return rows.map((row, index) => {
-    const number = index + 1, key = row.key && /^[^\s,{}]{1,120}$/u.test(row.key) ? row.key : `ref${number}`;
-    const duplicate = seen.has(key);
+    const number = index + 1, originalKey = keys[index], duplicate = counts.get(originalKey)! > 1;
+    let key = originalKey;
+    if (seen.has(key)) {
+      let suffix = number;
+      do { key = `${originalKey}#${suffix++}`; } while (reserved.has(key) || seen.has(key));
+    }
     seen.add(key);
     const title = row.title ? clean(row.title) || undefined : undefined;
     const authorFamilies = row.authors.map(familyName).filter((name): name is string => !!name).slice(0, 32);
     const year = row.year?.match(/\b(1[5-9]\d{2}|20\d{2})\b/)?.[1];
     const doi = doiOf(row.doi), url = httpsUrl(row.url);
-    const base = { key: duplicate ? `${key}#${number}` : key, number, authorFamilies,
+    const base = { key, number, authorFamilies,
       ...(title ? { title } : {}), ...(year ? { year } : {}), ...(doi ? { doi } : {}), ...(url ? { url } : {}) };
     if (duplicate) return { ...base, status: "unresolved" as const, problem: "duplicate-key" as const };
     if (row.unreadable) return { ...base, status: "unresolved" as const, problem: "unreadable-entry" as const };

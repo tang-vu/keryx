@@ -81,6 +81,7 @@ import { exportsFromCheckedReceipt } from "../research/receipt-exports";
 import { surfaceResearch } from "../research/surface-result";
 import { ArticleReadError } from "../web-research/article-reader";
 import * as fetchAuthority from "../registry/source-fetch-payto";
+import * as sourceLearning from "../research/source-learning-observations";
 import * as scholarlyGate from "../scholarly/paid-gate";
 import * as documentSelection from "./document-selection";
 import type { SourceClaim } from "../sources/public-source-claim";
@@ -492,6 +493,38 @@ it("the ordinary run captures owner exclusion even when supplied independent-cla
     expect(run.sourceLearning?.sources).toEqual([expect.objectContaining({ sourceId: source.id, topics: ["x402"], eligibility: "owner" })]);
     expect(run.usage?.cohort).toBe("outside"); // source-specific exclusion still dominates independent-looking cohort data
   } finally { terms.mockRestore(); }
+});
+
+it("source learning observes a completed answer and cannot change its saved answer or payments when capture fails", async () => {
+  const originalCapture = sourceLearning.captureSourceLearning;
+  const capture = vi.spyOn(sourceLearning, "captureSourceLearning");
+  const cases: Array<{ run: QueryRun; economic: unknown }> = [];
+  try {
+    for (const unavailable of [false, true]) {
+      capture.mockImplementation(input => {
+        expect(input.run.answer).not.toBe("");
+        expect(input.run.trace.at(-1)?.phase).toBe("done");
+        expect(input.payments.length).toBeGreaterThan(0);
+        if (unavailable) throw new Error("Synthetic source observation failure");
+        return originalCapture(input);
+      });
+      const source = makeSource({ id: "completed-learning" }), gateway = fakeGateway();
+      const d = deps([source], fakeEngine(), gateway), save = vi.fn(async (_run: QueryRun) => {});
+      d.db.saveQueryRun = save;
+      const run = await collectRun({ question: "Inspect fixture content", budget: 0.05 }, { deps: d });
+      expect(save).toHaveBeenCalledWith(run);
+      expect(Object.hasOwn(run, "sourceLearning")).toBe(!unavailable);
+      cases.push({ run, economic: { answer: run.answer, decisions: run.decisions, citations: run.citations,
+        totalSpent: run.totalSpent, totalToCreators: run.totalToCreators,
+        paymentAttempts: run.paymentAttempts, settledPayments: run.settledPayments, pendingPayments: run.pendingPayments,
+        fetchCalls: gateway.fetchCalls, citationCalls: gateway.citationCalls,
+        payments: d.db.payments.map(({ sourceId, kind, amountUsdc, payer, payee, settled, settlementStatus }) =>
+          ({ sourceId, kind, amountUsdc, payer, payee, settled, settlementStatus })),
+        trace: run.trace.map(({ phase, message }) => ({ phase, message })) } });
+    }
+    expect(capture).toHaveBeenCalledTimes(2);
+    expect(cases[1].economic).toEqual(cases[0].economic);
+  } finally { capture.mockRestore(); }
 });
 
 describe("unclassified historical memory cannot train live purchases", () => {

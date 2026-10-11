@@ -1,5 +1,23 @@
 # Keryx MCP
 
+The app0.27.57 coordinated candidate selects stdio/package and official Registry
+**0.4.17**, with hosted MCP **0.3.15**. Current main adds local `draft_check` and
+updates `evidence_draft` retained excerpts and author-written statements. Their
+actual runtime inputs changed, so published0.4.16 retains its earlier delivered
+source rather than representing this candidate. Both tools process caller text;
+they fetch no source, call no research/provider/storage/payment path, and confer
+no signing or private-history authority. Imported origin remains unverified.
+
+Exact combined source/CI/build, the actual release bundle bound to the existing
+private-tool package fixture, initialized identity, clean-consumer buyer/recovery
+checks, npm/Registry integrity and actual hosted/published readback remain gates.
+Desktop0.4.15 and extension0.1.4.1 retain unchanged source inputs and identities;
+any fresh Desktop assets require separate readback. Candidate versions claim no
+publication, installation or rollout. See the current
+[surface parity](../docs/surface-parity.md) and
+[distribution record](../docs/mcp-distribution.md); dated blocks below remain
+historical and teaching/researcher/walkthrough holds remain explicit.
+
 The app0.27.56 English catalogue candidate selects stdio/package and official
 Registry **0.4.16**, with hosted MCP **0.3.14**. The shared reasoning, evidence
 matrix and literature-workspace runtime inputs changed, requiring coordinated
