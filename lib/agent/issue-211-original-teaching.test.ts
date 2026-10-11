@@ -1,12 +1,16 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { AnswerMarkdown } from "../../components/keryx/answer-markdown";
 import retained from "../../scripts/fixtures/deliverable-teacher-public-c700-e719b085.json";
 import { runAgent } from "./run-agent";
 import type { AgentDeps } from "./deps";
 import type { ResearchEffects } from "./research-effects";
 import type { KeryxDB } from "../db/keryx-db";
 import type { PaymentGateway } from "../payments/payment-gateway";
-import type { ProposedEvidence, ReasoningEngine, SynthInput } from "../llm/reasoning-engine";
-import { prepareTeachingProposals, reviewTeachingProposals } from "../research/teaching-proposals";
+import type { ReasoningEngine, SynthInput } from "../llm/reasoning-engine";
+import { JsonChatEngine } from "../llm/json-chat-engine";
+import type { TeachingProposalPacket } from "../research/teaching-proposals";
 import { parseTeachingProposalRequest } from "../research/teaching-proposals-request";
 import { surfaceResearch } from "../research/surface-result";
 import { buildResearchReceipt, verifyResearchReceipt } from "../research-receipt";
@@ -16,13 +20,50 @@ import { researchReportMarkdown } from "../research-report-export";
 // sentences and transport/review judgments are controlled SYNTHETIC contract
 // inputs; they are not an archived NASA body, model review or live useful lesson.
 const source = ["Weather describes atmospheric conditions over a short period.",
-  "Climate describes average weather over a long period."];
+  "Climate describes average weather over a long period.",
+  "A single day's weather does not establish a long-term climate trend."];
 const statements = ["Thời tiết mô tả điều kiện khí quyển trong thời gian ngắn.",
-  "Khí hậu mô tả thời tiết trung bình trong thời gian dài."];
+  "Khí hậu mô tả thời tiết trung bình trong thời gian dài.",
+  "Không thể suy ra xu hướng khí hậu dài hạn từ thời tiết một ngày."];
 const subClaims = ["Theo nguồn gốc, thời tiết được định nghĩa như thế nào?",
-  "Theo nguồn gốc, khí hậu được định nghĩa như thế nào và khác thời tiết ra sao?"];
+  "Theo nguồn gốc, khí hậu được định nghĩa như thế nào và khác thời tiết ra sao?",
+  "Theo nguồn gốc, vì sao không thể suy xu hướng khí hậu từ thời tiết một ngày?"];
 const originalUrl = "https://www.nasa.gov/learning-resources/for-kids-and-students/what-are-climate-and-climate-change-grades-5-8/";
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
+
+class OriginalTeachingEngine extends JsonChatEngine {
+  readonly name = "controlled-original-teaching-synthesis";
+  packets: { system: string; packet: Record<string, unknown>; cap?: number }[] = [];
+  constructor(private readonly missing?: "climate" | "all") { super(); }
+  protected async chatJson(_model: string, system: string, user: string, cap?: number) {
+    const packet = JSON.parse(user);
+    this.packets.push({ system, packet, cap });
+    if (this.packets.length === 1) {
+      const quotes = packet.quoteOptions as { quoteId: string; marker: string; text: string }[];
+      const evidence = this.missing === "all" ? [] : source.map((quote, claimIndex) => {
+        const option = quotes.find(row => row.text === quote);
+        if (!option) throw new Error("Synthetic factual passage was not selected for generation");
+        return { claimIndex, marker: option.marker, quoteId: option.quoteId, statement: statements[claimIndex], support: 0.9 };
+      });
+      const teachingProposals = [
+        { id: "t1", kind: "activity", text: "Đề xuất: đọc các kiến thức đã dẫn nguồn trong 2 phút, phân loại thẻ giả định trong 5 phút, giải thích lựa chọn trong 3 phút.", durationMinutes: 10,
+          premiseIds: ["e1", "e2", "e3"], conditions: ["Không suy xu hướng khí hậu từ tình huống thời tiết một ngày."] },
+        { id: "t2", kind: "classification-example", text: "Tình huống giả định: hôm nay có mưa.", answer: "Thời tiết.", premiseIds: ["e1"], conditions: [] },
+        { id: "t3", kind: "classification-example", text: "Tình huống giả định: lượng mưa trung bình qua nhiều thập kỷ.", answer: "Khí hậu.", premiseIds: ["e2"], conditions: [] },
+        { id: "t4", kind: "exit-question", text: "Theo hai định nghĩa đã đọc, mô tả thời tiết trung bình trong thời gian dài thuộc khái niệm nào?",
+          answer: "Khí hậu; không dùng một ngày mưa để suy xu hướng khí hậu.", premiseIds: ["e1", "e2", "e3"], conditions: [] },
+      ];
+      return { evidence, teachingProposals, conflicts: [] };
+    }
+    const rows = packet.evidence as { index: number }[];
+    const candidate = packet.teachingProposals as TeachingProposalPacket | undefined;
+    return { reviews: rows.map(row => ({ index: row.index, supportedFact: source[row.index], support: 0.9, statementSupport: 0.9 })),
+      ...(candidate ? { teachingProposalReview: { digest: candidate.digest, proposals: candidate.proposals.map(row => ({
+        id: row.id, premiseIds: row.premiseIds, premiseConsistency: "supported", conditions: "supported",
+        instructionalConsistency: "supported", sourceAttribution: "supported", requestedScope: "supported", language: "supported",
+      })) } } : {}) };
+  }
+}
 
 async function drive(options: { enabled?: boolean; missing?: "climate" | "all" } = {}) {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -32,35 +73,14 @@ async function drive(options: { enabled?: boolean; missing?: "climate" | "all" }
   const attribute = vi.fn(async (input: { used: { sourceId: string }[] }) => input.used.map(row =>
     ({ sourceId: row.sourceId, weight: 1, rationale: "Controlled factual excerpt contribution" })));
   const decompose = vi.fn(async () => subClaims);
-  const synthesize = vi.fn(async (input: SynthInput) => {
-    const evidence: ProposedEvidence[] = options.missing === "all" ? [] : source.map((quote, claimIndex) => ({
-      claimIndex, marker: input.gathered[0].marker, quote, statement: statements[claimIndex],
-      support: 0.9, statementSupport: 0.9,
-      quoteSpan: { start: source.join(" ").indexOf(quote), end: source.join(" ").indexOf(quote) + quote.length },
-    }));
-    const proposals = [
-      { id: "t1", kind: "activity", text: "Đề xuất: đọc hai định nghĩa trong 2 phút, phân loại thẻ giả định trong 5 phút, giải thích lựa chọn trong 3 phút.", durationMinutes: 10,
-        premiseIds: ["e1", "e2"], conditions: ["Không suy xu hướng khí hậu từ tình huống thời tiết một ngày."] },
-      { id: "t2", kind: "classification-example", text: "Tình huống giả định: hôm nay có mưa.", answer: "Thời tiết.", premiseIds: ["e1"], conditions: [] },
-      { id: "t3", kind: "classification-example", text: "Tình huống giả định: lượng mưa trung bình qua nhiều thập kỷ.", answer: "Khí hậu.", premiseIds: ["e2"], conditions: [] },
-      { id: "t4", kind: "exit-question", text: "Theo hai định nghĩa đã đọc, mô tả thời tiết trung bình trong thời gian dài thuộc khái niệm nào?",
-        answer: "Khí hậu; không dùng một ngày mưa để suy xu hướng khí hậu.", premiseIds: ["e1", "e2"], conditions: [] },
-    ];
-    const prepared = input.teachingRequest ? prepareTeachingProposals(input.teachingRequest, input.question, evidence, proposals) : undefined;
-    const packet = prepared?.packet;
-    const reviewed = packet ? reviewTeachingProposals(packet, { digest: packet.digest, proposals: packet.proposals.map(row => ({
-      id: row.id, premiseIds: row.premiseIds, premiseConsistency: "supported", conditions: "supported",
-      instructionalConsistency: "supported", sourceAttribution: "supported", requestedScope: "supported", language: "supported",
-    })) }) : undefined;
-    return { answer: "[S1]", citedMarkers: ["S1"], evidence, evidenceReview: "reviewed" as const,
-      ...(prepared ? { teachingProposals: { reviewed, preparationGaps: prepared.gaps } } : {}) };
-  });
+  const synthesis = new OriginalTeachingEngine(options.missing);
+  const synthesize = vi.fn((input: SynthInput) => synthesis.synthesize(input));
   const coverage = () => subClaims.map((claim, index) => ({ claim,
     coverage: options.missing === "all" || options.missing === "climate" && index === 1 ? 0 : 0.9, coveredBy: ["S1"] }));
   const engine = { name: "controlled-original-teaching-fixture", decompose,
     decide: async (input: { candidates: { id: string; name: string }[] }) => input.candidates.map(row => ({ sourceId: row.id,
       sourceName: row.name, action: "BUY", expectedValue: 0.9, price: 0, confidence: 0.9,
-      rationale: "Controlled read of the exact caller URL", targets: [0, 1] })),
+      rationale: "Controlled read of the exact caller URL", targets: [0, 1, 2] })),
     sufficiency: async () => ({ sufficient: true, rationale: "Controlled assessment, not NASA semantic verification", perClaim: coverage() }),
     reevaluate: async () => ({ shouldBuyMore: false, recommendedIds: [], rationale: "No extra fixture reads" }), synthesize, attribute,
   } as unknown as ReasoningEngine;
@@ -75,7 +95,7 @@ async function drive(options: { enabled?: boolean; missing?: "climate" | "all" }
       ensureFunded: deniedPayment, payFetch: deniedPayment, payCitation: deniedPayment } as unknown as PaymentGateway };
   const iterator = runAgent({ queryId: "original-teacher-controlled", question: retained.question, origin: "web", budget: 0, researchMode: "quick" }, deps);
   let step = await iterator.next(); while (!step.done) step = await iterator.next();
-  return { run: step.value, attribute, decompose, synthesize, read, deniedPayment, effects };
+  return { run: step.value, attribute, decompose, synthesize, synthesis, read, deniedPayment, effects };
 }
 
 it("binds the exact retained Vietnamese caller and delivers its opt-in contract with explicitly synthetic premises", async () => {
@@ -87,10 +107,18 @@ it("binds the exact retained Vietnamese caller and delivers its opt-in contract 
   expect(f.read.mock.calls[0][0]).toBe(originalUrl);
   expect(f.synthesize).toHaveBeenCalledOnce();
   expect(f.synthesize.mock.calls[0][0].teachingRequest).toEqual(parseTeachingProposalRequest(retained.question));
+  expect(f.synthesis.packets).toHaveLength(2);
+  expect(f.synthesis.packets.map(row => row.cap)).toEqual([2304, 1792]);
+  expect(f.synthesis.packets[0].packet.question).toBe(retained.question);
+  expect(f.synthesis.packets[0].system).toContain("Write factual statements in Vietnamese");
+  const packet = f.synthesis.packets[1].packet.teachingProposals as TeachingProposalPacket;
+  expect(packet.originalQuestion).toBe(retained.question);
+  expect(packet.premises.map(row => row.statement.quote)).toEqual(source);
   expect(delivery).toMatchObject({ complete: true, request: { language: "vi", durationMinutes: 10, exampleCount: 2, explanationMaximumWords: 99 } });
   expect(delivery.explanationWords).toBeLessThanOrEqual(99);
   expect(delivery.proposals.map(row => row.proposal.kind)).toEqual(["activity", "classification-example", "classification-example", "exit-question"]);
   expect(delivery.admittedStatements.map(row => row.text)).toEqual(statements);
+  for (const quote of source) expect(f.run.answer).toContain(quote);
   expect(f.run.answer).toContain("Hoạt động do Keryx đề xuất (10 phút)");
   expect(f.run.answer).toContain("Tình huống giả định: hôm nay có mưa.");
   expect(f.run.answer).toContain("Không suy xu hướng khí hậu từ tình huống thời tiết một ngày.");
@@ -101,6 +129,12 @@ it("binds the exact retained Vietnamese caller and delivers its opt-in contract 
   expect(receipt.payload.teachingProposals).toEqual(delivery);
   expect(surfaceResearch(f.run).teachingProposals).toEqual(delivery);
   expect(researchReportMarkdown(f.run, null, [])).toContain("Hoạt động do Keryx đề xuất (10 phút)");
+  const html = renderToStaticMarkup(createElement(AnswerMarkdown, { text: f.run.answer, citations: f.run.citations }));
+  for (const statement of statements) expect(html).toContain(statement);
+  expect(html).toContain("Hoạt động do Keryx đề xuất (10 phút)");
+  expect(html.match(/Ví dụ phân loại do Keryx đề xuất/gu)).toHaveLength(2);
+  expect(html).toContain("Câu hỏi cuối giờ do Keryx đề xuất");
+  expect(html.match(/Đáp án:/gu)).toHaveLength(3);
 });
 
 it("identifies missing final factual support and gives an original-source next step while keeping an independent useful sibling", async () => {

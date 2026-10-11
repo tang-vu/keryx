@@ -9,6 +9,13 @@ fixture has no qualified bindings and cannot supply positive NASA evidence. The
 positive case uses explicitly synthetic classroom source sentences, transport
 and review judgments, with Vietnamese explanatory/proposal text; it qualifies
 request threading and delivery safety, not NASA correctness or live usefulness.
+It runs the actual bounded passage/quote selection, generation, independent-review
+packet handling and final factual admission with controlled supplier responses.
+Three synthetic quoted premises separately cover weather, climate and the
+single-day limitation; the activity and exit answer depend on all three. No
+source body or judgment is represented as retrieved NASA evidence. The planning
+regression also binds the exact saved caller, keeping proposed lesson parts in
+constraints and factual definitions/limitations in research targets.
 It checks the exclusive 99-word explanatory ceiling, one 10-minute activity, two
 invented classification examples, an exit question/answer, distinct proposal
 labels and the caller's prohibition on inferring climate from one day's weather.
@@ -141,15 +148,15 @@ dependencies, dependency withdrawal after review, count/word overflow, partial
 delivery, and unchanged ledger/reward state. This verifies the contract, not
 NASA correctness or successful live lesson delivery.
 
-Root integration must thread the ordinary opt-in through planning, generation,
-existing independent review and final result/export adapters across applicable
-web, desktop, CLI, API and MCP research surfaces. Protected private originals
-and no-opt-in runs need historical contract regressions. Rendered Vietnamese
-fixtures must demonstrate all requested lesson parts and their gaps, correct
-labels, exact preserved factual excerpts and bounded mobile/desktop layout.
-Shared type checking, scoped lint, focused regressions and production build
-remain integration checks. A separately authorized bounded real lesson trial
-with inspected output is still needed before closing the issue as complete.
+The ordinary opt-in is threaded through generation, existing independent review
+and shared result/export adapters. Protected private originals and no-opt-in runs
+retain historical contract regressions. The exact Vietnamese controlled fixtures
+cover all requested lesson parts and factual gaps, correct labels and preserved
+excerpts. Actual useful ordinary delivery and the existing activation hold remain
+unresolved. Shared type checking, scoped lint, focused regressions and applicable
+production CI remain source/release gates. The original offline criteria do not
+create a new paid trial allowance or require spending merely to qualify frozen
+behavior; any later live activation evidence needs its own surviving authority.
 
 ## Engine checkpoint
 
