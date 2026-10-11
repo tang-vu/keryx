@@ -27,6 +27,10 @@ An unavailable creator-evidence read degrades its description conservatively; it
 
 ## Validation and remaining gates
 
+The follow-up [private operator queue](paid-job-overdue-queue-257.md) adds an explicit
+read-only command to list running/failed originals requiring attention. It creates
+no automatic alert, schedule, notification or customer remedy action.
+
 Focused tests cover an overdue original with an expired-but-pending creator leg, exact target boundary, queue/recovery clock retention, unsupported provenance, storage timestamp forms, malformed/foreign/duplicate evidence, strict old/new packets, authorized real SQLite history reads, public omission, read-only API behavior, presentational alert semantics and GET-only MCP journal preservation. Final exact-source checks, both TypeScript graphs, lint, default physical production build, independent review and hosted aggregate are acceptance gates, recorded with their actual results in the PR/evidence rather than inferred here.
 
 The [owner-confirmed remedy policy](../research-delivery-remedy-policy.md) offers overdue customers wait, partial delivery or a refund request. A terminal undelivered job refunds the prepaid charge less only pre-disclosed, actually finalized irreversible third-party source costs with exact receipts; service fees and unused/unsettled reserves are refundable. Pending/unknown movements remain protected and require reconciliation first. Requests initially require manual owner review until a verified refund mechanism exists. This alert-only increment does not submit those choices/requests or implement the refund mechanism, and it grants no spending/refund authority. Prospective terms/package fingerprint activation remains coordinated; old fixed-price originals are not rewritten. The immutable accepted package remains a provisional target with `remedy:none`, rather than a hard automatic refund SLA.

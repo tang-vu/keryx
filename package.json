@@ -76,6 +76,7 @@
     "creator:cashout:sign": "node --import tsx --no-warnings scripts/creator-cashout-batch-sign.mts",
     "creator:cashout:funding": "node --import tsx --no-warnings scripts/creator-cashout-batch-funding.mts",
     "review:a2a": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/review-a2a-order.mts",
+    "operator:overdue": "node --import tsx --no-warnings scripts/operator-overdue-jobs.mts",
     "mcp": "node --import tsx --no-warnings --env-file-if-exists=.env.local mcp/keryx-mcp-server.mts",
     "web": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/web-client.mts",
     "deploy": "bash scripts/deploy-vps.sh",
