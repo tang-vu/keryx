@@ -111,8 +111,11 @@ header-only credentials, no redirects/cookies, a 15-second request deadline and
 a 2 MiB response limit. Each operation has a two-minute deadline.
 
 `KeryxDB.zotero` is optional and non-enumerable on ordinary SQLite. Its separate
-connection, key-map, library-owner and provider-hold tables install only when
-`KERYX_ZOTERO_ENABLED=1`, after ordinary schema admission. Every transaction
+connection, key-map, library-owner and provider-hold tables must already have
+their exact admitted schema. `KERYX_ZOTERO_ENABLED=1` only checks readiness after
+ordinary schema admission; it never installs tables or starts a transaction.
+The expected schema profile is derived from the fixed existing declarations,
+without creating an internal reference database. Every user-triggered transaction
 checks enrollment absence and exact domain tables/indexes/triggers. Unknown
 schema disables this capability without repair or changes to unrelated research.
 Supabase, enrolled/native adapters and reduced private roles expose no port.
@@ -161,22 +164,21 @@ success. The admitted revision/export is checked again after held provider reads
 and before each write batch. A later revocation cannot recall an in-flight write;
 no automatic retry or new private-report sharing authority is added.
 
-Bootstrap review is source-only. The new four Zotero tables are reached only
-through the ordinary adapter's exact `KERYX_ZOTERO_ENABLED=1` branch; this opt-in
-currently executes `CREATE TABLE IF NOT EXISTS` before the service master-key
-check. Enabling it is therefore also a schema-admission decision, not authority
-granted by this source merge. Existing private-bibliography initialization is
-unchanged from accepted b1. No ENV value, shared schema or data was inspected or
-changed here. An absent Zotero schema is currently created, while an unknown
-existing schema refuses. The constructor's `BEGIN IMMEDIATE` is outside its
-error-conversion block: a failure there can escape the optional-port catch and
-abort ordinary initialization when the flag is enabled. This conditional legacy
-regression is a frozen source blocker. The smallest proposed correction is a
-readiness-only factory that checks the existing exact schema and converts all
-initialization failures to `zotero_unavailable`, leaving explicit installation
-and target migration admission to root. No bootstrap/SQL correction is performed
-without root's scope confirmation. External provider operations independently
-refuse a missing master key; status and revocation do not require decryption.
+Root authorized the narrow source correction for optional initialization. The
+factory now only reads ordinary authority and the exact installed Zotero schema,
+with every admission failure converted to `zotero_unavailable`. Missing, partial,
+unknown, enrolled or unreadable storage disables the optional port through the
+existing catch; no target SQL writes, transaction, table creation, migration or
+repair are reached from the capability factory, including when the flag is ON
+and the master key is absent. Existing private-bibliography and ordinary base
+initialization remain unchanged from accepted b1/ACA. No ENV value, shared schema
+or data was inspected or changed here. There is no production installer or new
+feature admission; target installation/migration remains separately root-owned.
+Only isolated tests install the existing schema into memory; the retained two
+connection fixture receives a native backup of that synthetic memory database.
+Already admitted user-triggered lease/key/revocation transaction bodies, bounds
+and generations are unchanged. External provider operations independently refuse
+a missing master key; status and revocation do not require decryption.
 
 | Surface | Source behavior / boundary |
 | --- | --- |

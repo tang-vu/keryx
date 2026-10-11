@@ -1,5 +1,5 @@
 import { randomInt, randomUUID } from "node:crypto";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import { assertOrdinarySqliteResearchAuthority } from "./research-monthly";
 import { ZoteroError, zoteroKeySchema, zoteroOwner, type ZoteroLease, type ZoteroStore } from "../references/zotero-contract";
 
@@ -15,17 +15,22 @@ CREATE TABLE IF NOT EXISTS zotero_reference_keys (
 CREATE TABLE IF NOT EXISTS zotero_library_owners (user_id TEXT PRIMARY KEY, wallet TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS zotero_provider_state (id INTEGER PRIMARY KEY CHECK(id=1), blocked_until INTEGER NOT NULL);`;
 const shape = (db: DatabaseSync) => db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE tbl_name IN ('zotero_connections','zotero_reference_keys','zotero_library_owners','zotero_provider_state') ORDER BY type,name LIMIT 12").all();
-let expected: string | undefined;
+// SQLite retains CREATE text without IF NOT EXISTS. Pin the existing four-table
+// and automatic-index profile without constructing or installing a reference DB.
+const declarations = ZOTERO_SQL.split(";").map(sql => sql.trim().replace(/^CREATE TABLE IF NOT EXISTS /, "CREATE TABLE "));
+const expected = JSON.stringify([
+  ...["zotero_connections", "zotero_reference_keys", "zotero_library_owners", "zotero_provider_state"].map((name, index) =>
+    ({ type: "table", name, tbl_name: name, sql: declarations[index] })),
+  ...["zotero_connections", "zotero_reference_keys", "zotero_reference_keys", "zotero_library_owners"].map((name, index) =>
+    ({ type: "index", name: `sqlite_autoindex_${name}_${index === 2 ? 2 : 1}`, tbl_name: name, sql: null })),
+].sort((left, right) => left.type < right.type ? -1 : left.type > right.type ? 1 : left.name < right.name ? -1 : left.name > right.name ? 1 : 0));
 function assertShape(db: DatabaseSync) {
-  if (!expected) { const reference = new DatabaseSync(":memory:"); try { reference.exec(ZOTERO_SQL); expected = JSON.stringify(shape(reference)); } finally { reference.close(); } }
   if (JSON.stringify(shape(db)) !== expected) throw new ZoteroError("zotero_unavailable");
 }
-/** Installed only by an explicitly enabled ordinary adapter; never shared production DDL. */
+/** Read-only admission of already-installed ordinary storage; never installs or repairs. */
 export function createSqliteZotero(db: DatabaseSync): ZoteroStore {
-  assertOrdinarySqliteResearchAuthority(db);
-  db.exec("BEGIN IMMEDIATE");
-  try { assertOrdinarySqliteResearchAuthority(db); if (shape(db).length) assertShape(db); db.exec(ZOTERO_SQL); assertShape(db); db.exec("COMMIT"); }
-  catch { db.exec("ROLLBACK"); throw new ZoteroError("zotero_unavailable"); }
+  try { assertOrdinarySqliteResearchAuthority(db); assertShape(db); }
+  catch { throw new ZoteroError("zotero_unavailable"); }
   function transaction<T>(action: () => T): T {
     try {
       assertOrdinarySqliteResearchAuthority(db); db.exec("BEGIN IMMEDIATE");

@@ -1,9 +1,9 @@
-import { DatabaseSync } from "node:sqlite";
+import { backup, DatabaseSync } from "node:sqlite";
 import { mkdirSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { installSqliteApplicationSchema } from "../db/sqlite-application-schema";
-import { createSqliteZotero } from "../db/zotero-sqlite";
+import { createSqliteZotero, ZOTERO_SQL } from "../db/zotero-sqlite";
 import { PAPER_CATALOG } from "../papers/catalog";
 import { paperReferencesBibtex, paperReferencesCslJson } from "../papers/reference-export";
 import { buildCitationExport } from "../research-citation-export";
@@ -49,7 +49,7 @@ function syntheticZotero() {
 }
 function fixture() {
   vi.stubEnv("CONTENT_MASTER_KEY", "11".repeat(32));
-  const db = new DatabaseSync(":memory:"); databases.push(db); installSqliteApplicationSchema(db);
+  const db = new DatabaseSync(":memory:"); databases.push(db); installSqliteApplicationSchema(db); db.exec(ZOTERO_SQL);
   const store = createSqliteZotero(db), provider = syntheticZotero(); return { db, store, provider, service: createZoteroService(store, provider.transport) };
 }
 const refs = () => zoteroPaperReferences([PAPER_CATALOG[0]]);
@@ -58,19 +58,21 @@ function held() {
   const promise = new Promise<void>(resolve => { open = resolve; });
   return { promise, open };
 }
-function sharedLibrary() {
+async function sharedLibrary() {
   vi.stubEnv("CONTENT_MASTER_KEY", "11".repeat(32));
   // Two real SQLite connections/stores, one isolated retained file, one provider.
   const artifacts = join(process.cwd(), ".artifacts");
   mkdirSync(artifacts, { recursive: true });
   const path = join(mkdtempSync(join(artifacts, "zotero-reviewfix-db-")), "synthetic.sqlite");
+  // Schema installation stays in the isolated memory test fixture. Its snapshot
+  // preserves the existing two real connection/store concurrency boundary.
+  const seed = fixture(); await backup(seed.db, path);
   const first = new DatabaseSync(path), second = new DatabaseSync(path); databases.push(first, second);
-  installSqliteApplicationSchema(first);
   return { first: createSqliteZotero(first), second: createSqliteZotero(second), provider: syntheticZotero(), db: first };
 }
 describe("explicit Zotero references", () => {
   it("admits only one of two wallets connecting concurrently to one library through separate stores", async () => {
-    const f = sharedLibrary(), other = `0x${"b".repeat(40)}`, seen = [held(), held()], response = [held(), held()]; let permission = 0;
+    const f = await sharedLibrary(), other = `0x${"b".repeat(40)}`, seen = [held(), held()], response = [held(), held()]; let permission = 0;
     const transport: typeof fetch = async (input, init) => {
       const value = await f.provider.transport(input, init);
       if (String(input).endsWith("/keys/current")) { const index = permission++; seen[index].open(); await response[index].promise; }
@@ -86,7 +88,7 @@ describe("explicit Zotero references", () => {
     expect(f.db.prepare("SELECT wallet FROM zotero_library_owners WHERE user_id='1234'").get()?.wallet).toBe(owner);
   });
   it.each(["accepted", "pending"])("retains the one-wallet binding across held snapshots, %s ambiguous writes and revoke/reconnect", async acceptance => {
-    const f = sharedLibrary(), other = `0x${"b".repeat(40)}`, readSeen = held(), readResponse = held(), writeSeen = held(), writeResponse = held();
+    const f = await sharedLibrary(), other = `0x${"b".repeat(40)}`, readSeen = held(), readResponse = held(), writeSeen = held(), writeResponse = held();
     let holdRead = true, holdWrite = true;
     const transport: typeof fetch = async (input, init) => {
       const heldWrite = init?.method === "POST" && holdWrite;
