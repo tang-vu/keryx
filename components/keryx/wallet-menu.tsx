@@ -72,9 +72,9 @@ export function WalletMenu() {
       toast(copy("account.signedOut"));
     } catch { toast.error(copy("account.signOutUnconfirmed")); }
   }, [disconnectAsync, signOut]);
-  // Set true only when the user picks a wallet here — gates auto-sign-in so a
-  // rehydrated connection on page load never pops an unsolicited signature.
-  const intentRef = useRef(false);
+  // A selection token gates auto-sign-in: rehydration never prompts, and an
+  // older failed attempt cannot clear a newer choice after the picker remounts.
+  const intentRef = useRef<symbol | null>(null);
   const busy = authState !== "idle";
 
   const doSignIn = useCallback(async () => {
@@ -100,7 +100,7 @@ export function WalletMenu() {
   useEffect(() => {
     if (!intentRef.current || !isConnected || !address || busy) return;
     if (session === undefined) return; // session check still in flight
-    intentRef.current = false;
+    intentRef.current = null;
     if (session === null) void doSignIn(); // null = signed out → sign in
   }, [isConnected, address, session, busy, doSignIn]);
 
@@ -249,13 +249,16 @@ export function WalletMenu() {
         <WalletPicker
           isBusy={busy}
           onConnected={() => {}}
-          onSelect={() => {
+          onSelect={(attempt) => {
             // User chose to (re)connect: lift the signed-out suppression, flag intent
             // for auto-sign-in, and close the picker. The connected render branch
             // replaces the picker once the connection lands.
             setSignedOut(false);
-            intentRef.current = true;
+            intentRef.current = attempt;
             setPickerOpen(false);
+          }}
+          onConnectionFailed={(attempt) => {
+            if (intentRef.current === attempt) intentRef.current = null;
           }}
         />
         <p className="mt-2.5 font-mono text-[9.5px] leading-relaxed text-faint">{copy("walletMenu.connectBoundary")}</p>

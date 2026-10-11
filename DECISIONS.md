@@ -7555,7 +7555,10 @@ header wallet portals and retain the mobile wallet control after its first openi
 using native hidden state for menu visibility. An external SDK modal can dismiss
 that outer menu without destroying the selected wallet's one-time SIWE intent.
 Handle connection outcomes through their promise so picker removal cannot suppress
-errors. Keep the two new plain English labels in a typed web-only source catalogue,
+errors. Clear failed or cancelled intent only for its selection token, including
+Google connection and OAuth startup failures; a retained hidden control must not
+sign in after a later choice, and an older failure must not clear a newer choice.
+Keep the two new plain English labels in a typed web-only source catalogue,
 outside the shared aggregate embedded by MCP and desktop; no translated locale is
 activated. Add loading shells only to the public data pages that have no nested page
 routes; preserve private document bootstraps and existing not-found boundaries.

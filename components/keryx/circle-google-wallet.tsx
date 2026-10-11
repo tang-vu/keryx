@@ -13,12 +13,13 @@ const copy = createMessages("en");
 
 /** Absent configuration is an honest unavailable option, never a simulated wallet. */
 type GoogleWalletButtonProps = {
-  disabled?: boolean; onSelect?: () => void; onConnected?: () => void; reconnectOnly?: boolean;
+  disabled?: boolean; onSelect?: (attempt: symbol) => void; onConnected?: () => void;
+  onConnectionFailed?: (attempt: symbol) => void; reconnectOnly?: boolean;
 };
 export function CircleGoogleWalletButton(props: GoogleWalletButtonProps) {
   return circleWalletPublicConfigured() ? <ConfiguredGoogleWalletButton {...props}/> : null;
 }
-function ConfiguredGoogleWalletButton({ disabled = false, onSelect, onConnected, reconnectOnly = false }: GoogleWalletButtonProps) {
+function ConfiguredGoogleWalletButton({ disabled = false, onSelect, onConnected, onConnectionFailed, reconnectOnly = false }: GoogleWalletButtonProps) {
   const { connectors, connectAsync, isPending } = useConnect();
   const { connector: currentConnector } = useAccount();
   const [available, setAvailable] = useState(false);
@@ -40,12 +41,17 @@ function ConfiguredGoogleWalletButton({ disabled = false, onSelect, onConnected,
   if (!available || !connector) return null;
   if (reconnectOnly && (currentConnector?.id !== CIRCLE_GOOGLE_CONNECTOR_ID || circleWalletCanSign())) return null;
   return <button type="button" disabled={disabled || isPending} onClick={() => {
-    onSelect?.();
+    const attempt = Symbol();
+    onSelect?.(attempt);
+    const failed = () => {
+      onConnectionFailed?.(attempt);
+      toast.error(copy("googleWallet.startFailed"));
+    };
     if (circleWalletIdentity() && !circleWalletCanSign()) {
-      void startGoogleWalletLogin().catch(() => toast.error(copy("googleWallet.startFailed")));
+      void startGoogleWalletLogin().catch(failed);
       return;
     }
-    void connectAsync({ connector }).then(() => onConnected?.()).catch(() => toast.error(copy("googleWallet.startFailed")));
+    void connectAsync({ connector }).then(() => onConnected?.()).catch(failed);
   }} className="flex w-full items-center gap-3 border border-ink bg-paper px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-ink transition-colors hover:bg-seal hover:text-cream disabled:cursor-not-allowed disabled:opacity-60">
     {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <span aria-hidden="true" className="w-4 text-center font-sans text-base font-semibold">G</span>}
     <span>{reconnectOnly ? copy("googleWallet.reconnect") : copy("googleWallet.continue")}</span>
