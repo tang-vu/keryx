@@ -62,7 +62,14 @@ it("keeps mixed wallet funding totals without inferring service price or a payer
 
   const bundle = (await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents:
     "import React from 'react';import{createRoot}from'react-dom/client';import{MyAsksView}from'./app/me/asks/my-asks-view';createRoot(document.getElementById('root')).render(<MyAsksView/>);" },
-    bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' },
+    bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: {
+      "process.env.NODE_ENV": '"production"',
+      // Mirror Next's public compile-time replacement for the imported optional pane.
+      // This isolated ledger fixture never admits a wallet or registry authority.
+      "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
+      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined",
+      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
+    },
     plugins: [{ name: "isolated-next-link", setup(builder) {
       // This ledger fixture does not enter the optional browse pane or connect a wallet.
       builder.onResolve({ filter: /use-siwe-auth$/ }, () => ({ path: "auth", namespace: "history-auth-fixture" }));
@@ -72,7 +79,8 @@ it("keeps mixed wallet funding totals without inferring service price or a payer
         contents: "import React from 'react';export default function Link({children,...props}){return React.createElement('a',props,children)}" }));
     } }],
   })).outputFiles[0].text;
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, ...(process.env.KERYX_CLAIMS_BROWSER_EXECUTABLE
+    ? { executablePath: process.env.KERYX_CLAIMS_BROWSER_EXECUTABLE } : {}) });
   const context = await browser.newContext();
   try {
     const requests: string[] = [];
@@ -82,9 +90,17 @@ it("keeps mixed wallet funding totals without inferring service price or a payer
       if (route.request().url() === "https://history.test/api/me/asks") return route.fulfill({ json: body });
       return route.abort();
     });
-    const page = await context.newPage(); await page.goto("https://history.test/");
+    const page = await context.newPage(), pageErrors: string[] = [], consoleErrors: string[] = [];
+    page.on("pageerror", error => { if (pageErrors.length < 5) pageErrors.push(error.message.slice(0, 1000)); });
+    page.on("console", entry => { if (entry.type() === "error" && consoleErrors.length < 5) consoleErrors.push(entry.text().slice(0, 1000)); });
+    await page.goto("https://history.test/");
     await page.addScriptTag({ content: bundle });
-    await page.getByRole("link", { name: "Prepaid A2A result", exact: true }).waitFor();
+    try {
+      await page.getByRole("link", { name: "Prepaid A2A result", exact: true }).waitFor({ timeout: 5000 });
+    } catch (error) {
+      throw new Error(`History ledger render failed: ${JSON.stringify({ stage: "history-ledger-render", pageErrors, consoleErrors, requests })}`, { cause: error });
+    }
+    expect(pageErrors).toEqual([]);
     const text = await page.locator("body").textContent();
     expect(text).not.toMatch(/free trial|free service|Keryx funding|funded by Keryx/i);
     expect(text).toContain("3 of these have no recorded browser-wallet creator funding");

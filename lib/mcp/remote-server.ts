@@ -36,6 +36,8 @@ import type { ApiKeyScope } from "../api-key-scopes";
 import { registerEvidenceDraftTool } from "../research/evidence-draft-tool";
 import { registerAcceptanceTools } from "../deliverable-acceptance/mcp";
 import { requireDeliverableAcceptance } from "../deliverable-acceptance/contracts";
+import { prepareHostedRunClaim } from "../run-claims/hosted-delivery";
+import { privateRunClaimText } from "../run-claims/delivery";
 
 export interface RemoteMcpAccess {
   /** Verified key row identifier and explicit deliverable rights; not model input. */
@@ -113,7 +115,7 @@ export function createRemoteMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: "keryx",
-    version: "0.3.12",
+    version: "0.3.13",
     description:
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
@@ -175,10 +177,12 @@ export function createRemoteMcpServer(
             ? budget
             : config.defaultBudget;
         const modelChoice = resolveModelChoice(model);
+        const queryId = crypto.randomUUID();
+        const privateClaim = await prepareHostedRunClaim(queryId, access.actor);
         const run = await runResearch({
           question,
           budget: Math.min(requested, access.budgetCap),
-          queryId: crypto.randomUUID(),
+          queryId,
           origin: "mcp",
           scholarly: scholarly === true, researchMode: mode ?? "deep",
           mcpClient: access.clientChannel,
@@ -187,8 +191,13 @@ export function createRemoteMcpServer(
           ...(modelChoice ? { model: modelChoice.id } : {}),
         });
         const result = remoteResearchResult(run);
+        const packet = await privateClaim?.complete(run);
         return {
-          content: [{ type: "text" as const, text: researchText(result) }],
+          // Direct caller's private tool response only. The structured public
+          // projection remains unchanged and never acquires claim credentials.
+          content: [{ type: "text" as const, text: researchText(result) },
+            ...(packet ? [{ type: "text" as const, text: privateRunClaimText(packet) }] : [])],
+          ...(packet ? { _meta: { "keryx/privateRunClaim": packet } } : {}),
           structuredContent: result,
         };
       } catch (error) {

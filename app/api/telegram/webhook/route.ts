@@ -20,7 +20,11 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, after } from "next/server";
 import { collectRun } from "@/lib/agent";
+import { hostedRunClaimsEnabled, prepareHostedRunClaim } from "@/lib/run-claims/hosted-delivery";
+import { privateRunClaimText, type PrivateRunClaimPacket } from "@/lib/run-claims/delivery";
+import { prepareTelegramPrivateReply, type TelegramPrivatePlaceholder } from "@/lib/run-claims/telegram-private";
 import { config } from "@/lib/config";
+import { botResearchMessages } from "@/lib/bots/research-messages";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import {
   type AskMessage,
@@ -73,7 +77,7 @@ export async function POST(req: NextRequest) {
     return Response.json({
       method: "sendMessage",
       chat_id: cmd.chatId,
-      text: "Keryx's treasury wallet is not configured on this deployment.",
+      text: botResearchMessages(cmd.question)("treasuryUnavailable"),
     });
   }
 
@@ -84,7 +88,7 @@ export async function POST(req: NextRequest) {
     return Response.json({
       method: "sendMessage",
       chat_id: cmd.chatId,
-      text: "Sponsored dispatches are temporarily limited or unavailable — try again in a minute.",
+      text: botResearchMessages(cmd.question)("sponsoredLimited"),
     });
   }
 
@@ -102,43 +106,60 @@ function secretMatches(presented: string, expected: string): boolean {
 
 /** Posts a placeholder, runs the agent, then edits the placeholder into the answer. */
 async function runAndReply(cmd: AskMessage, budget: number) {
-  const placeholderId = await callTelegram<{ message_id?: number }>("sendMessage", {
+  const queryId = crypto.randomUUID();
+  let privateClaim;
+  try { privateClaim = await prepareHostedRunClaim(queryId); }
+  catch { return; } // Gated ordinary admission must fail before research/providers.
+  const privateReply = hostedRunClaimsEnabled()
+    ? await prepareTelegramPrivateReply(cmd, body => callTelegram<TelegramPrivatePlaceholder>("sendMessage", body)) : null;
+  if (hostedRunClaimsEnabled() && !privateReply) return;
+  const replyChatId = privateReply?.chatId ?? cmd.chatId;
+  const placeholderId = privateReply?.placeholderId ?? await callTelegram<{ message_id?: number }>("sendMessage", {
     chat_id: cmd.chatId,
-    text: "⏳ Keryx is dispatching — buying sources and settling citations…",
+    text: botResearchMessages(cmd.question)("dispatching"),
     reply_to_message_id: cmd.messageId,
     allow_sending_without_reply: true,
   }).then((r) => r?.message_id);
 
-  let text: string;
+  let text: string, packet: PrivateRunClaimPacket | null | undefined;
   try {
     const run = await collectRun({
       question: cmd.question,
       budget,
-      queryId: crypto.randomUUID(),
+      queryId,
       origin: "web",
       provenance: { version: 1, surface: "telegram", ownershipMethod: "unknown" },
     });
+    packet = await privateClaim?.complete(run);
     text = buildAnswerText(run);
   } catch (err) {
     console.error("[telegram] /ask run failed:", err);
-    text = buildErrorText(err);
+    text = buildErrorText(err, cmd.question);
   }
 
+  let edited: unknown = null;
   if (typeof placeholderId === "number") {
-    const edited = await callTelegram("editMessageText", {
-      chat_id: cmd.chatId,
+    edited = await callTelegram("editMessageText", {
+      chat_id: replyChatId,
       message_id: placeholderId,
       text,
       parse_mode: "HTML",
       link_preview_options: { is_disabled: true },
     });
-    if (edited !== null) return;
   }
   // Placeholder never landed (or the edit failed) — send the answer as a fresh message instead.
-  await callTelegram("sendMessage", {
-    chat_id: cmd.chatId,
+  if (edited === null) await callTelegram("sendMessage", {
+    chat_id: replyChatId,
     text,
     parse_mode: "HTML",
+    link_preview_options: { is_disabled: true },
+    ...(privateReply ? { protect_content: true } : {}),
+  });
+  // The answer builder already uses Telegram's full 4096-character allowance.
+  // Keep this credential separate, plain-text and sender-private; never truncate
+  // it into an answer or fall back to the original group on delivery failure.
+  if (packet && privateReply) await callTelegram("sendMessage", {
+    chat_id: privateReply.chatId, text: privateRunClaimText(packet), protect_content: true,
     link_preview_options: { is_disabled: true },
   });
 }
@@ -156,12 +177,12 @@ async function callTelegram<T = unknown>(
     });
     const data = (await res.json()) as { ok?: boolean; result?: T; description?: string };
     if (!res.ok || !data.ok) {
-      console.error(`[telegram] ${method} failed: ${res.status} ${data.description ?? ""}`);
+      console.error(`[telegram] ${method} failed: ${res.status}`);
       return null;
     }
     return data.result ?? null;
   } catch (err) {
-    console.error(`[telegram] ${method} failed:`, err);
+    console.error(`[telegram] ${method} failed`, err instanceof Error ? err.name : "DeliveryError");
     return null;
   }
 }

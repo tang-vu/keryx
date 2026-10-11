@@ -50,6 +50,8 @@ import { researchAdmissionError } from "@/lib/research/availability-contract";
 import { isConfiguredSameOrigin } from "@/lib/auth-origin";
 import { createLiveDecisionReviews } from "@/lib/research/decision-review-live";
 import { unsupportedDecisionReviewIntent, type DecisionReviewsStore } from "@/lib/research/decision-review-types";
+import { hostedRunClaimsEnabled, prepareHostedRunClaim } from "@/lib/run-claims/hosted-delivery";
+import { admitsPrivateAsk } from "@/lib/run-claims/web-document";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -233,12 +235,19 @@ export async function POST(req: NextRequest) {
     : Math.min(coercedBudget, config.anonMaxBudget);
 
   const isBot = !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
+  const queryId = crypto.randomUUID();
+  let privateClaim: Awaited<ReturnType<typeof prepareHostedRunClaim>> | undefined;
+  if (hostedRunClaimsEnabled() && !asker && !isBot) {
+    if (!admitsPrivateAsk(req, { origin: config.baseUrl, network: config.networkId }, config.jwtSecret))
+      return Response.json({ error: "private_research_document_required" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    try { privateClaim = await prepareHostedRunClaim(queryId); }
+    catch { return Response.json({ error: "claims_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } }); }
+  }
   if (!isBot) {
     await recordActivationEvent(await getDb(), "reader_ask_started");
   }
 
   const encoder = new TextEncoder();
-  const queryId = crypto.randomUUID();
 
   // AbortController tied to the client connection so sign-request promises are
   // cancelled when the browser disconnects mid-run.
@@ -378,6 +387,9 @@ export async function POST(req: NextRequest) {
             run.askerFunded = useBrowserCoSign;
           }
           await deps.db.saveQueryRun(run);
+          // Saved original and payment state remain separate from the one-shot
+          // caller-private transport. A late claim failure preserves the answer.
+          const claimPacket = await privateClaim?.complete(run);
           if (!isBot) {
             await recordActivationEvent(deps.db, "reader_answer_completed");
             if (isReturning) {
@@ -385,6 +397,7 @@ export async function POST(req: NextRequest) {
             }
           }
           send("done", run);
+          if (claimPacket) send("private-run-claim", claimPacket);
         }
       } catch (err) {
         send("error", { message: researchFailureMessage(err),
@@ -401,8 +414,8 @@ export async function POST(req: NextRequest) {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": reviewStore ? "private, no-store, no-transform" : "no-cache, no-transform",
-      ...(reviewStore ? { "Vary": "Cookie", "Referrer-Policy": "no-referrer" } : {}),
+      "Cache-Control": reviewStore || privateClaim ? "private, no-store, no-transform" : "no-cache, no-transform",
+      ...(reviewStore || privateClaim ? { "Vary": "Cookie", "Referrer-Policy": "no-referrer" } : {}),
       Connection: "keep-alive",
       // Disable proxy response buffering so the live reasoning trace streams token-by-token
       // instead of arriving in one batch at the end. Honored by nginx and by the Cloudflare

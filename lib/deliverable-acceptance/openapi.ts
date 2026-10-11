@@ -8,9 +8,9 @@ const responses = { "200": { description: "Exact-version current readback; histo
   "503": { description: "Unsupported original/store/migration; no fallback or mutation." } };
 export const deliverableAcceptanceOpenApiPaths = {
   [ownerPath]: {
-    get: { operationId: "readDeliverableAcceptance", tags: ["Account"], security: [{ SessionCookie: [] }, { ApiKeyAuth: [] }], parameters, responses,
+    get: { operationId: "readDeliverableAcceptance", tags: ["Account"], security: [{ WebSession: [] }, { ApiKeyAuth: [] }], parameters, responses,
       description: "Original verified payer of a settled ordinary prepaid A2A original only. Explicit deliverable:read for keys. No wallet/network/store selector. Body/delivery digests derive from trusted retained original; native/enrolled, Monthly, private v2 and browser-only originals unavailable. Private,no-store; Vary Authorization/Cookie." },
-    post: { operationId: "submitDeliverableAcceptance", tags: ["Account"], security: [{ SessionCookie: [] }, { ApiKeyAuth: [] }], parameters, responses,
+    post: { operationId: "submitDeliverableAcceptance", tags: ["Account"], security: [{ WebSession: [] }, { ApiKeyAuth: [] }], parameters, responses,
       description: "Append Accept/Request revision/Reject; active session or explicit deliverable:write rechecked under store transaction. Later choices supersede current state, retaining history; sharing consent can be withdrawn by a new choice. Exact replay returns current readback, not another append. Pending creator legs remain unchanged. No execution, payment, reservation renewal or refund; original remedy:none remains authoritative.",
       requestBody: { required: true, content: { "application/json": { schema: { type: "object", additionalProperties: false,
         required: ["originalFingerprint", "deliveredDigest", "expectedRevision", "idempotencyKey", "choice"], properties: {

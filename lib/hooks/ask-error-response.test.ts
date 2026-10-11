@@ -121,7 +121,7 @@ it("renders a maintenance refusal in the real conversation, restores its draft a
       contents: circleBrowserLoader.call({ resourcePath: args.path }, readFileSync(args.path, "utf8")), loader: "js" }));
   } }], define: { "process.env": "{}", "process.browser": "true", "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" } });
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(process.env.KERYX_CLAIMS_BROWSER_EXECUTABLE ? { executablePath: process.env.KERYX_CLAIMS_BROWSER_EXECUTABLE } : {}) });
   try {
     const page = await browser.newPage(); page.setDefaultTimeout(5000);
     const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));

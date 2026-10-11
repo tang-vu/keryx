@@ -1,5 +1,27 @@
 # Keryx Project Changelog
 
+### Private run claims and combined October 11 batch (v0.27.54 candidate)
+
+- Stage single-use anonymous run claims in a separate ordinary, default-off
+  ownership domain. Keep credentials in private responses or transient closures;
+  preserve original answers, payer/receipt evidence and creator rewards. Add
+  protected web entry, explicit private CLI delivery and owner-private claimant
+  history alongside OpenAI, remote MCP, bot and extension adapters.
+- Bound ordinary claim/history RPCs to 15 seconds without automatic retries or
+  reissue. Qualify the protected document and handoff after the default production
+  build; keep production schema admission and native enrollment separate.
+- Recognize finite Spanish short-note sentence requests and report an unmet
+  exact count when a faithful complete answer cannot fit. Preserve all admitted
+  statement/excerpt pairs, confidence and operational notices; the retained NASA
+  case remains unmet rather than claiming a three-sentence answer.
+- Combine the reviewed usage-cohort accounting, globe initial-layout correction
+  and English operations, history and legal catalogues in one deployment batch.
+  Full issues #249, #262 and #272 retain their remaining rollout or scope gates.
+- App/OpenAPI0.27.54, hosted MCP0.3.13 and extension0.1.4 identify changed
+  candidates. Stdio/Registry0.4.15 and desktop0.4.14 retain their payer-bound
+  roles and artifacts. Exact-source CI, package acceptance and deployed version
+  readback are required before claiming synchronized delivery.
+
 ### Operator and observation English catalogue (2026-10-11, unreleased batch)
 
 - Move Operator, economics, public proof and status presentation in twelve UI

@@ -24,6 +24,8 @@
         placeholder="Highlight text on a page, or type a question…"
       ></textarea>
 
+      <p class="help" id="public-disclosure">Questions, selected text and research results are public. Submit only information you want published. <a href="https://github.com/tang-vu/keryx/blob/main/docs/extension-privacy.md" target="_blank" rel="noopener noreferrer">Extension privacy policy</a></p>
+
       <div class="controls">
         <div class="budget">
           <label class="field-label" for="budget">Budget</label>
@@ -70,6 +72,10 @@
           <p class="help panel-help">Planned rewards and recorded totals are separate from confirmed settlement. Public references may earn no creator reward.</p>
         </div>
         <a id="dispatch-link" hidden target="_blank" rel="noopener noreferrer" class="link-btn">Open full report and receipt ▸</a>
+        <div id="claim-panel" hidden>
+          <button id="claim-run" class="link-btn" type="button">Save this research to your account ▸</button>
+          <p id="claim-expiry" class="help"></p>
+        </div>
         <div id="exports" class="exports" hidden>
           <span>Recorded references:</span>
           <button class="link-btn" data-export="bibtex">BibTeX</button>

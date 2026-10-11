@@ -11,7 +11,8 @@
 import { config } from "../config";
 import { unsupportedDecisionReviewFlag } from "../research/decision-review-types";
 import { formatRecordedUsdc } from "../display/recorded-usdc";
-import { researchAdmissionError } from "../research/availability-contract";
+import { botResearchFailure, botResearchMessages } from "../bots/research-messages";
+import { botHelpEnglish } from "../../locales/en/bot-research";
 import type { QueryRun } from "../types";
 
 /** Telegram caps any message text at 4096 chars; leave room for the citations block + link. */
@@ -33,6 +34,7 @@ export interface AskMessage {
   chatId: number;
   userId: number;
   messageId?: number;
+  chatType?: string;
 }
 
 /**
@@ -58,7 +60,7 @@ export function parseAskMessage(update: TelegramUpdate): AskMessage | null {
   }
   if (!question || unsupportedDecisionReviewFlag(question)) return null;
 
-  return { question, chatId, userId, messageId: msg?.message_id };
+  return { question, chatId, userId, messageId: msg?.message_id, chatType: msg?.chat?.type };
 }
 
 /** True for /start and /help — the two commands that should get the usage text. */
@@ -69,16 +71,15 @@ export function isHelpCommand(update: TelegramUpdate): boolean {
 
 export function helpText(): string {
   return [
-    "<b>Keryx</b> — the citation-toll research herald.",
+    `<b>${botHelpEnglish.herald}</b> — ${botHelpEnglish.tagline}`,
     "",
-    "Ask a question and Keryx reads selected sources, returns cited evidence, and records " +
-      "planned USDC creator rewards. Open the full trace to check payment mode and settlement receipts.",
+    botHelpEnglish.telegramExplanation,
     "",
-    "Usage: <code>/ask what is x402?</code>",
-    "Review-first is available only in the authenticated live browser; review mode flags are refused here.",
-    "In this private chat you can also just type the question.",
+    botHelpEnglish.telegramUsage,
+    botHelpEnglish.reviewBoundary,
+    botHelpEnglish.privateQuestion,
     "",
-    `Creators keep 100%. Live traction: ${config.baseUrl}/status`,
+    `${botHelpEnglish.telegramStatus} ${config.baseUrl}/status`,
   ].join("\n");
 }
 
@@ -92,32 +93,31 @@ export function apiUrl(botToken: string, method: string): string {
  * actually paid, and a link to the full dispatch trace (which carries any truncated text).
  */
 export function buildAnswerText(run: QueryRun): string {
+  const message = botResearchMessages(run.question);
   const parts = [`<b>${escapeHtml(truncate(run.question, 256))}</b>`, ""];
   parts.push(escapeHtml(truncate(run.answer, ANSWER_MAX)), "");
 
   if (run.citations.length > 0) {
-    parts.push("<b>Citations and planned rewards (USDC)</b>");
+    parts.push(`<b>${message("citationHeading")}</b>`);
     for (const c of run.citations) {
       parts.push(
-        escapeHtml(`${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (weight ${c.weight.toFixed(2)})`),
+        escapeHtml(`${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (${message("weight", { weight: c.weight.toFixed(2) })})`),
       );
     }
     parts.push("");
   }
 
-  const plural = run.citations.length === 1 ? "" : "s";
   parts.push(
-    `${run.citations.length} source${plural} cited · ${formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 })} recorded to creators / ${run.paymentMode ?? "legacy"}`,
-    "Recorded amounts are not settlement proof; check the full trace receipts.",
-    `Full trace: ${config.baseUrl}/dispatch/${run.id}`,
+    `${message(run.citations.length === 1 ? "sourcesOne" : "sourcesOther", { count: run.citations.length })} · ${message("recordedCreators", { amount: formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 }) })} / ${run.paymentMode ?? "legacy"}`,
+    message("settlementNotice"),
+    message("fullTrace", { url: `${config.baseUrl}/dispatch/${run.id}` }),
   );
   return truncate(parts.join("\n"), MESSAGE_MAX);
 }
 
 /** Failure text for the placeholder — the run died, say so instead of hanging forever. */
-export function buildErrorText(err: unknown): string {
-  const detail = researchAdmissionError(err)?.message ?? (err instanceof Error ? err.message : String(err));
-  return truncate(`⚠️ Keryx could not finish this dispatch: ${escapeHtml(detail)}`, MESSAGE_MAX);
+export function buildErrorText(err: unknown, originalQuestion = ""): string {
+  return truncate(escapeHtml(botResearchFailure(err, originalQuestion)), MESSAGE_MAX);
 }
 
 function escapeHtml(text: string): string {
