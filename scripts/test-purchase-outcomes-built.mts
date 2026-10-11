@@ -1,5 +1,6 @@
 /** Actual built public API/report/CSS in a fresh ordinary SQLite fixture. No provider/funds. */
 import { copyNextConfigFixture } from "../test-support/next-config-fixture";
+import { assertPurchaseOutcomePrivacy } from "../test-support/purchase-outcome-privacy";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -47,6 +48,8 @@ await sqlite.decisionReviews.capture(`0x${"a".repeat(40)}`, { policyVersion: "ca
   terms: { assetId: "private-asset", sourceId: "private-source", owned: true, network: "eip155:5042002", payTo: `0x${"b".repeat(40)}`,
     priceMicroUsdc: "1000", listPriceMicroUsdc: "1000", citationBudgetMicroUsdc: "5000" } });
 const original = JSON.stringify(await sqlite.getQueryRun(run.id));
+const privateFixtureValues = [run.question, ...run.decisions.map(decision => decision.rationale),
+  "PRIVATE SIDECAR SOURCE", "private-asset", "private-source", `0x${"a".repeat(40)}`, `0x${"b".repeat(40)}`];
 const listener = createServer(); await new Promise<void>(resolve => listener.listen(0, "127.0.0.1", resolve));
 const address = listener.address(); assert(address && typeof address !== "string"); const port = address.port;
 await new Promise<void>((resolve, reject) => listener.close(error => error ? reject(error) : resolve()));
@@ -74,7 +77,7 @@ try {
   assert(ready, "Actual built public outcome route required");
   const response = await request(path), result = validatePurchaseOutcomes(await response.json(), run.id);
   assert.equal(response.headers.get("cache-control"), "no-store"); assert.deepEqual(result, projectPurchaseOutcomes(run, "eip155:5042002"));
-  assert.doesNotMatch(JSON.stringify(result), /PRIVATE|question|payer|payee|wallet|nonce|authorization|rationale/);
+  assertPurchaseOutcomePrivacy(result, privateFixtureValues);
   assert.equal(result.uncitedAccessMicros, "2000"); assert.equal(result.counts.scoredPurchases, 1); assert.equal(result.cohort, "unknown");
   assert.match((await request(path + "?download=1")).headers.get("content-disposition") ?? "", /attachment/);
   assert.equal((await request(path + "?network=eip155:5042")).status, 400);
@@ -87,7 +90,7 @@ try {
   assert.deepEqual(aggregate.columns.map(row => [row.cohort, row.sampledRuns, row.scoredPurchases, row.unscorableRuns]),
     [["outside", 0, 0, 0], ["team", 0, 0, 0], ["scripted", 3, 1, 1], ["unknown", 0, 0, 0]]);
   assert.equal(aggregate.columns[2].uncitedAccessMicros, "2000");
-  assert.doesNotMatch(JSON.stringify(aggregate), /PRIVATE|question|payer|payee|wallet|nonce|authorization|rationale|sourceId|itemId/);
+  assertPurchaseOutcomePrivacy(aggregate, privateFixtureValues, true);
   for (const query of ["period=1y", "period=7d&period=30d", "cohort=outside", "network=eip155:1"])
     assert.equal((await request(`/api/purchase-outcomes?${query}`)).status, 400);
   const remote = await request("/mcp", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },

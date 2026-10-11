@@ -183,3 +183,10 @@ build is blocked before compilation by the existing external dependency junction
 required hosted default production build, independent review, actual built-browser
 qualification and coordinated distribution/delivery stay release gates. No source
 test establishes production acceptance or synchronized installed versions.
+
+The first hosted pooled fixture rejected the static counting rule's words
+"recorded question type" as though they were a leaked question. The correction
+checks recursive private field names and actual fixture question/reason/sidecar
+values instead. Pooled identities remain forbidden, while legitimate public
+rule prose and the per-report identity role remain allowed. Focused regressions
+exercise each boundary; rerun hosted production acceptance on the corrected head.
