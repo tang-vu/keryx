@@ -2,6 +2,7 @@ import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { cache } from "react";
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FeedMatchForm } from "@/components/keryx/feed-match-form";
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title: uiCopy("wantedClaim.metadataTitle", { claim: gap.claim }),
       description,
-      alternates: { canonical: `/wanted/${gap.id}` },
+      alternates: englishPublicAlternates(`/wanted/${gap.id}`),
       openGraph: {
         title: uiCopy("wantedClaim.socialTitle", { stateLabel }),
         description,

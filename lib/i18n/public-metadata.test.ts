@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { publicLocaleAlternates, publicReportLanguage } from "./public-metadata";
+import { englishPublicAlternates, englishSitemapAlternates, publicLocaleAlternates, publicReportLanguage } from "./public-metadata";
 import { preparedLocales } from "./locales";
 
 describe("public locale and report language admission", () => {
+  it.each(["/", "/answers", "/answers/page/2", "/answers/topic/usdc", "/creator/source-123"])(
+    "keeps the shipped English head and absolute sitemap alternates consistent at %s", path => {
+      expect(englishPublicAlternates(path)).toEqual({ canonical: path, languages: { "x-default": path, en: path } });
+      expect(englishSitemapAlternates(path, "https://keryx.cc")).toEqual({ languages: {
+        "x-default": `https://keryx.cc${path}`, en: `https://keryx.cc${path}`,
+      } });
+    });
   it("preserves an existing canonical and advertises only supplied published variants", () => {
     expect(publicLocaleAlternates("/answers", { en: "/answers" })).toEqual({ canonical: "/answers", languages: {
       "x-default": "/answers", en: "/answers" } });

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { ProofDashboard } from "@/components/keryx/proof-dashboard";
@@ -21,7 +22,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: "/proof" },
+  alternates: englishPublicAlternates("/proof"),
   openGraph: { title: TITLE, description: DESCRIPTION, url: `${BASE}/proof`, type: "website" },
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };

@@ -7,6 +7,7 @@
  */
 
 import type { ArchiveEntry } from "./answers-archive";
+import { englishPublicAlternates } from "./i18n/public-metadata";
 
 /** Entries per feed — enough for any reader's backfill without shipping the whole corpus. */
 export const FEED_ENTRY_LIMIT = 60;
@@ -36,7 +37,8 @@ function entryXml(e: ArchiveEntry, base: string): string {
     (e.archivedNetwork ? `${e.toCreators.toFixed(4)} test USDC in recorded creator rewards (Arc testnet history)` : `$${e.toCreators.toFixed(4)} in recorded creator rewards`) +
     `; inspect dispatch for settlement state.${sources}`;
   return [
-    "  <entry>",
+    // Unknown recorded answer/question language must not inherit the feed's English.
+    '  <entry xml:lang="">',
     `    <title>${xmlEscape(e.question)}</title>`,
     `    <id>${xmlEscape(url)}</id>`,
     `    <link rel="alternate" type="text/html" href="${xmlEscape(url)}"/>`,
@@ -53,14 +55,16 @@ function entryXml(e: ArchiveEntry, base: string): string {
  */
 export function buildAnswersFeedXml(entries: ArchiveEntry[], base: string): string {
   const top = entries.slice(0, FEED_ENTRY_LIMIT);
+  const { languages } = englishPublicAlternates("/answers");
   const updated = top.length > 0 ? rfc3339(top[0].createdAt) : new Date(0).toISOString();
   return [
     '<?xml version="1.0" encoding="utf-8"?>',
-    '<feed xmlns="http://www.w3.org/2005/Atom">',
+    '<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">',
     "  <title>Keryx Answer Archive</title>",
     "  <subtitle>Cited answers from Keryx research history. Each dispatch shows its payment state.</subtitle>",
     `  <id>${xmlEscape(`${base}/answers`)}</id>`,
-    `  <link rel="alternate" type="text/html" href="${xmlEscape(`${base}/answers`)}"/>`,
+    ...Object.entries(languages).filter(([language]) => language !== "x-default").map(([language, path]) =>
+      `  <link rel="alternate" type="text/html" hreflang="${language}" href="${xmlEscape(`${base}${path}`)}"/>`),
     `  <link rel="self" type="application/atom+xml" href="${xmlEscape(`${base}/answers/feed.xml`)}"/>`,
     `  <updated>${updated}</updated>`,
     "  <author>",

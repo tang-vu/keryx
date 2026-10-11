@@ -1,5 +1,6 @@
 import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
@@ -12,7 +13,7 @@ const copy = createMessages("en");
 export const metadata: Metadata = {
   title: copy("literaturePage.title"),
   description: copy("literaturePage.description"),
-  alternates: { canonical: "/literature" },
+  alternates: englishPublicAlternates("/literature"),
 };
 
 export default function LiteraturePage() {

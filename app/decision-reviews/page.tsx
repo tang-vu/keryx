@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { DecisionReviewMetricsView } from "@/components/keryx/decision-review-metrics";
 import { decisionReviewCopy as copy } from "@/lib/research/decision-review-copy";
-export const metadata: Metadata = { title: copy.metrics, description: copy.metricsNotice };
+export const metadata: Metadata = { title: copy.metrics, description: copy.metricsNotice, alternates: englishPublicAlternates("/decision-reviews") };
 export default function DecisionReviewsPage() {
   return <main className="mx-auto max-w-5xl px-4 py-10 sm:px-8">
     <Link href="/" className="font-mono text-xs text-ink-3">{copy.home}</Link>

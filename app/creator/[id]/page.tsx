@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { safeInlineJson } from "@/lib/safe-json";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { CreatorDetailView } from "./creator-detail-view";
 
 const uiCopy = createMessages("en");
@@ -34,7 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       // The registry links here, so this is a page search engines will reach — give it one address
       // of its own rather than letting it inherit the site canonical.
-      alternates: { canonical: `/creator/${id}` },
+      alternates: englishPublicAlternates(`/creator/${id}`),
       openGraph: { title, description, url: `${BASE}/creator/${id}`, type: "profile" },
       twitter: { card: "summary_large_image", title, description },
     };
@@ -55,6 +56,7 @@ export default async function CreatorPage({ params }: PageProps) {
     {
       "@context": "https://schema.org",
       "@type": "ProfilePage",
+      inLanguage: "en",
       url: `${BASE}/creator/${id}`,
       mainEntity: {
         "@type": "Organization",

@@ -54,12 +54,14 @@ if (process.argv[2] === "--internal-worker") {
   };
   let current: SqliteAdapter | undefined;
   try {
-    const first = worker(), second = worker(); await Promise.all([first.ready, second.ready]);
+    const first = worker(); await first.ready;
+    const second = worker(); await second.ready;
     first.child.send!(fixture.input); second.child.send!({ ...fixture.input, idempotencyKey: "synthetic-request-0002", choice: "reject" });
     await Promise.all([first.exited, second.exited]); assert.equal([first.result(), second.result()].filter(result => result.success).length, 1);
     current = new SqliteAdapter(file); await current.init(); assert.equal((await current.deliverableAcceptance!.read(owner, network, id)).revision, 1); current.close(); current = undefined;
     const duplicate = { ...fixture.input, expectedRevision: 1, idempotencyKey: "synthetic-request-0003", choice: "revise" };
-    const third = worker(), fourth = worker(); await Promise.all([third.ready, fourth.ready]); third.child.send!(duplicate); fourth.child.send!(duplicate);
+    const third = worker(); await third.ready;
+    const fourth = worker(); await fourth.ready; third.child.send!(duplicate); fourth.child.send!(duplicate);
     await Promise.all([third.exited, fourth.exited]); assert.equal(third.result().success, true); assert.equal(fourth.result().success, true); assert.equal(third.result().revision, 2); assert.equal(fourth.result().revision, 2);
     current = new SqliteAdapter(file); await current.init(); assert.equal((await current.deliverableAcceptance!.read(owner, network, id)).revision, 2);
     const payments = await current.listCreatorPaymentAttemptsByQuery(id); assert.equal(payments.length, 0);

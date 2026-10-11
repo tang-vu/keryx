@@ -2,6 +2,7 @@ import { createMessages } from "@/lib/i18n/messages";
 import { ImageResponse } from "next/og";
 import { config } from "@/lib/config";
 import { resolveDispatch } from "@/lib/history/read-dispatch";
+import { publicPreviewFonts, publicPreviewFontFamily } from "@/lib/og-fonts";
 
 const copy = createMessages("en");
 
@@ -61,7 +62,7 @@ export default async function DispatchOgImage({
           background: "#F1E9D7",
           color: "#1B1712",
           padding: 56,
-          fontFamily: "Georgia, 'Times New Roman', serif",
+          fontFamily: publicPreviewFontFamily,
           border: "14px solid #1B1712",
         }}
       >
@@ -145,7 +146,7 @@ export default async function DispatchOgImage({
         </div>
       </div>
     ),
-    { ...size },
+    { ...size, fonts: await publicPreviewFonts(question) },
   );
 }
 

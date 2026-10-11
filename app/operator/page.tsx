@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
 import { createMessages } from "@/lib/i18n/messages";
 import { SiteHeader } from "@/components/keryx/site-header";
@@ -8,6 +9,7 @@ import { OperatorBusinessView } from "@/components/keryx/operator-business-view"
 const message = createMessages("en");
 
 export const metadata: Metadata = {
+  alternates: englishPublicAlternates("/operator"),
   title: message("operatorPage.metadataTitle"),
   description: message("operatorPage.metadataDescription"),
 };

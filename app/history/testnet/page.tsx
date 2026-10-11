@@ -1,6 +1,7 @@
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
 import { getTestnetArchive, type TestnetArchiveInfo, type TestnetArchiveSummary, type TestnetCreatorEntry } from "@/lib/history/testnet-archive";
 import type { QueryRun } from "@/lib/types";
@@ -13,7 +14,7 @@ const copy = createMessages("en");
 const richCopy = createRichMessages("en");
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: copy("reportTestnetHistory.title"), description: copy("reportTestnetHistory.description") };
+export const metadata: Metadata = { title: copy("reportTestnetHistory.title"), description: copy("reportTestnetHistory.description"), alternates: englishPublicAlternates("/history/testnet") };
 
 export default async function TestnetHistoryPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = new URLSearchParams();

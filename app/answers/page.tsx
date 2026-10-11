@@ -20,6 +20,7 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { ArchiveIndexView } from "@/components/keryx/archive-index-view";
 import { archiveIndexJsonLd } from "./archive-index-json-ld";
 import { safeInlineJson } from "@/lib/safe-json";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 
 const copy = createMessages("en");
 
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: {
-    canonical: "/answers",
+    ...englishPublicAlternates("/answers"),
     types: {
       "application/atom+xml": [{ url: "/answers/feed.xml", title: copy("reportArchiveRoute.name") }],
     },

@@ -23,6 +23,7 @@ import { ArchiveAnswerRow } from "@/components/keryx/archive-answer-row";
 import { ArchiveSearch } from "@/components/keryx/archive-search";
 import { ArchiveTopicChips } from "@/components/keryx/archive-topic-chips";
 import { safeInlineJson } from "@/lib/safe-json";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 
 const copy = createMessages("en");
 const richCopy = createRichMessages("en");
@@ -84,7 +85,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `/answers/topic/${topic.slug}` },
+    alternates: englishPublicAlternates(`/answers/topic/${topic.slug}`),
     openGraph: {
       title,
       description,
@@ -110,6 +111,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
     {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
+      inLanguage: "en",
       name: copy("reportTopic.collectionName", { topic: topic.label }),
       url: `${BASE}/answers/topic/${topic.slug}`,
       isPartOf: { "@type": "CollectionPage", name: copy("reportTopic.archiveName"), url: `${BASE}/answers` },
