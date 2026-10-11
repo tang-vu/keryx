@@ -386,10 +386,11 @@ export function selectEvidencePassages(text: string, question: string, subClaims
       // Extend an already selected structural bundle before distant lexical
       // matches consume its remaining room, reserving a full lexical window and
       // selection slot. Outside that allowance, new target terms keep precedence.
-      // Only overlapping intact pre/enumeration nominations qualify. A gap, a
-      // partial large block or a heading hint cannot create this preference.
+      // Only overlapping intact pre/enumeration nominations selected after the
+      // generic opening qualify. A gap, partial block or heading hint cannot do so.
       const continuation = combinedCharacters > selectedCharacters && window.structuralContext &&
-        selected.some(previous => previous.structuralContext && window.start < previous.end && window.end > previous.start);
+        selected.some(previous => previous !== opening && previous.structuralContext &&
+          window.start < previous.end && window.end > previous.start);
       const reservedContinuation = continuation && combinedCharacters <= MAX_CONTEXT_CHARACTERS - PASSAGE_CHARACTERS &&
         selected.length < MAX_WINDOWS - 1;
       const priority = reservedContinuation ? 3 : newTargetTerms > 0 ? 2 : continuation ? 1 : 0;

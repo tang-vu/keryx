@@ -17,7 +17,9 @@ context loss, not evidence that the earlier rules 6–7 repair failed.
 An intact preformatted or visible-enumeration nomination can now extend an
 overlapping selected structural bundle before distant lexical matches take its
 room. This preference applies only while a full 600-character lexical window and
-one selection slot remain available. Outside that allowance, new target terms
+one selection slot remain available. The generic opening cannot initiate it:
+review reproduced loss of separately requested facts when opening-only structural
+extensions consumed target slots. Outside that allowance, new target terms
 retain precedence; overlapping structural context then precedes residual generic
 question matches. No gap is joined, oversized partial blocks and heading hints
 gain no structural preference, and unobserved/copied HTML roles remain inert.
@@ -63,12 +65,13 @@ MDN fact options. Ledger scores in tests are explicitly synthetic: public
 reference quotes remain ineligible for creator rewards. The tests do not claim
 independent semantic review or that a model delivered a useful answer.
 
-Local validation passed 193 focused context, HTML/PDF, strict-quote, ledger and
-original NASA factual/proposal controls, full application TypeScript checking
-without emission, scoped ESLint and diff checks. A local cache-isolation config
-initially omitted the repository alias and prevented two NASA suites from loading;
-restoring the project config let those 12 tests execute successfully. Their earlier
-setup failure is retained separately; the other 181 passing tests were not repeated.
+Final local validation passed 194 tests in 16 focused context, HTML/PDF,
+strict-quote, ledger and original NASA factual/proposal suites, full application
+TypeScript checking without emission, scoped ESLint and diff checks. The
+eight-target regression reproduces opening-only slot loss before the correction
+and passes afterward. Test runs use isolated storage, closed offline/testnet
+environment, blank Supabase and worktree-local caches. Earlier setup failures
+remain in the local worker log and do not supply acceptance.
 The runtime source graph changes, so the canonical 48-case study needs one refresh
 on final combined inputs coordinated with root. No broad study is claimed here.
 

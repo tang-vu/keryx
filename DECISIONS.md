@@ -7553,7 +7553,9 @@ The exact retained #230 question/targets already select complete RFC rules 6–7
 but distant registration prose displaces rule 5's condition and example. Give an
 overlapping intact preformatted/enumerated nomination preference while reserving
 the existing full lexical window and one selection slot. Outside that allowance,
-new target terms retain precedence. Keep all caps, original offsets, role admission,
+new target terms retain precedence. The generic opening cannot initiate expansion:
+an eight-target control reproduced slot loss and established this narrower boundary.
+Keep all caps, original offsets, role admission,
 heading glosses and quote/review/reward authority unchanged. The exact #238 MDN
 type list remains intact; obsolete `submit` tokens cannot replace its genuine fact
 options. Preserve historical bodies and actual targets rather than invented

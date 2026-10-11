@@ -84,6 +84,18 @@ describe("retained original source units within the evidence budget", () => {
     expect(context.passages.some(passage => passage.text.includes(rfc.text.slice(3988, 4732)))).toBe(true);
   });
 
+  it("does not spend lexical target slots extending only generic opening context", async () => {
+    const intro = Array.from({ length: 9 }, (_, index) =>
+      (`Research background item${index}. ` + "General context and acknowledgements. ".repeat(10)).slice(0, 290) + "\n\n").join("");
+    const facts = Array.from({ length: 8 }, (_, index) => `Dimension${index} has its separate supported observation.`);
+    const source = { ...gatheredArticle("public:web:synthetic-opening", await extractHtml(
+      `<main><pre>${intro}</pre>${facts.map(fact => `<p>${fact}</p>`).join("")}</main>`, "https://example.com/structural-opening")), marker: "S1" };
+    const targets = facts.map((_, index) => `Research Dimension${index}`);
+    const context = evidenceContext("Research eight distinct dimensions.", targets, [source])[0];
+    bounded(source, context, targets.length);
+    for (const fact of facts) expect(context.passages.some(passage => passage.text.includes(fact))).toBe(true);
+  });
+
   it("keeps the genuine MDN type/default/sibling unit; obsolete submit tokens cannot replace its quote options", () => {
     const source: GatheredContent = { sourceId: "mdn-pt-button", sourceName: "MDN", marker: "S1", sourceKind: "public-reference",
       itemUrl: mdn.sourceUrl, text: mdn.text, contentVersion: mdn.contentVersion,
