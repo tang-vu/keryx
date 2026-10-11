@@ -199,3 +199,55 @@ retaining its declared synthetic usage counters and one returned-call record.
 Refinement stops before discovery, source/payment admission or another provider
 attempt. This is bounded offline refinement proof, not a useful source answer,
 an invoice, settlement or issue closure; root owns peer/CI/delivery acceptance.
+
+### Caller-bound comparison construction — October 12, 2026
+
+The same single `JsonChatEngine.decompose` response can now supply a private
+comparison proposal instead of final opaque claims. Its ordered text parts
+must concatenate to the exact complete caller question. Parts distinguish
+named subjects, common per-subject dimensions, explicitly shared needs,
+source/condition scope, and presentation/connective framing. Local construction
+returns the existing `string[]`: one question per subject/dimension and one per
+shared need naming all subjects. Every declared scope fragment qualifies every
+constructed question. Documentation URLs must be source scope, never extra
+subjects or discarded framing. The validated legacy claims path remains for
+other requests; no public protocol, provider, output ceiling or retry changes.
+
+Malformed/foreign/missing spans, absent dimensions, mixed opaque output,
+ambiguous duplicate labels and excessive parts refuse locally. A complete
+caller-bound map exceeding eight needs returns `needs_refinement`; expanded
+opaque model claims remain `expanded_output`. The constructor never slices,
+bundles all declared dimensions per subject, or relabels one as shared to fit
+the ceiling. An
+assembled question that exceeds the existing 600-character bound also refuses.
+There is no second model call or heuristic repair after a completed response.
+
+Exact05f construction controls map behavior and deployment risk separately for
+all three settings, plus one common pre-replacement check naming all three.
+Every question retains their stopping interaction, official-source restriction,
+unfinished-worker condition and no-paid-source restriction. Exact733b controls
+map consistency, operational checklist and concurrent-write/locking conditions
+for both backup methods, plus their common pre-restore verification. WAL/live
+write context, no service stop, both supplied original URLs, supported versus
+unverified steps and no paid sources remain scope. These are semantic maps of
+the original requests; table cells and document count do not determine need
+count. Supplied/unsupplied variants, reordered/renamed subjects and an unrelated
+finite comparison exercise the generic constructor in the existing harness.
+
+All planning responses are injected synthetic caller-span proposals, not final
+good target arrays. The actual parser, constructor, provider abstraction and
+agent reach normal discovery with one declared synthetic planning call. Refusal
+controls retain usage and stop before discovery, source reads or payment. Role
+classification remains the model's semantic proposal: exact text provenance
+alone cannot certify arbitrary classification quality. The original dimension
+maps and negative controls provide bounded source evidence, not a live model
+evaluation, technical source answer, useful report or historical-cause proof.
+
+This increment leaves canonical study bytes untouched; its source pins require
+root's reserved final-source offline convergence. Independent review, actual
+full applicable CI and combined delivery remain gates for root's #169 decision,
+without adding a paid/live or full-report criterion. #172 remains open for its
+separate explicitly authorized finite live usefulness/source-limitation gate;
+the exhausted allowance grants no new trial. Shared web/API/CLI/remote-MCP
+planning contracts remain `string[]` or the existing private caller refinement;
+bots and stdio/desktop/Operator/extensions retain their established role bounds.

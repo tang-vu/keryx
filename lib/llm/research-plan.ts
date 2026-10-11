@@ -60,6 +60,48 @@ export class ResearchPlanningError extends ReasoningOutputValidationError {
   }
 }
 
+type ComparisonRole = "subject" | "dimension" | "shared" | "scope" | "framing";
+interface ComparisonPart { text: string; role: ComparisonRole }
+
+/** Private proposal from the same planning response, never an answer or a repair call.
+ * Exact, ordered caller parts prevent foreign wording or an omitted span from being
+ * silently accepted. Role classification is still the model's semantic proposal;
+ * provenance alone cannot establish that it classified every requested need correctly.
+ */
+function comparisonResearchPlan(question: string, raw: unknown): string[] {
+  const invalid = (): never => { throw new ResearchPlanningError(question, "invalid_output"); };
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return invalid();
+  const proposal = raw as Record<string, unknown>;
+  const roles: readonly string[] = ["subject", "dimension", "shared", "scope", "framing"];
+  if (Object.keys(proposal).some(key => key !== "parts") || !Array.isArray(proposal.parts) ||
+    proposal.parts.length === 0 || proposal.parts.length > 64 || !proposal.parts.every(part =>
+      part && typeof part === "object" && !Array.isArray(part) && Object.keys(part).length === 2 &&
+      typeof part.text === "string" && part.text.length > 0 && part.text.length <= 600 && part.text.isWellFormed() &&
+      typeof part.role === "string" && roles.includes(part.role))) return invalid();
+  const parts = proposal.parts as ComparisonPart[];
+  if (parts.map(part => part.text).join("") !== question) return invalid();
+  const texts = (role: ComparisonRole) => parts.filter(part => part.role === role).map(part => part.text.trim());
+  const subjects = texts("subject"), dimensions = texts("dimension"), shared = texts("shared");
+  const needs = [...subjects, ...dimensions, ...shared];
+  if (subjects.length < 2 || !dimensions.length || needs.some(text => !text) ||
+    new Set(needs).size !== needs.length || subjects.some(text => /https?:\/\//iu.test(text))) return invalid();
+  // References and caller conditions must survive every constructed need. They
+  // are not additional subjects or queries, and format/connective parts stay in
+  // the original question instead of acquiring factual target authority.
+  if (parts.some(part => /https?:\/\//iu.test(part.text) && part.role !== "scope")) return invalid();
+  if (subjects.length * dimensions.length + shared.length > MAX_RESEARCH_TARGETS) {
+    throw new ResearchPlanningError(question, "needs_refinement");
+  }
+  const scope = texts("scope");
+  if (scope.some(text => !text)) return invalid();
+  const target = (subject: string, need: string) => `${subject}: ${need.replace(/[.!?]+$/u, "")}?` +
+    (scope.length ? `\n${scope.join(" ")}` : "");
+  const claims = subjects.flatMap(subject => dimensions.map(dimension => target(subject, dimension)))
+    .concat(shared.map(need => target(subjects.join(" / "), need)));
+  if (claims.some(claim => claim.length > 600) || new Set(claims).size !== claims.length) return invalid();
+  return claims;
+}
+
 /** All entries must be usable. Filtering bad entries would silently lose requested scope. */
 export function parseResearchPlan(question: string, output: Record<string, unknown>): string[] {
   if (output.status === "needs_refinement") throw new ResearchPlanningError(question, "needs_refinement");
@@ -67,6 +109,15 @@ export function parseResearchPlan(question: string, output: Record<string, unkno
   if (output.constraints !== undefined && (!Array.isArray(output.constraints) || output.constraints.length > 16 ||
     !output.constraints.every(value => typeof value === "string" && value.trim().length > 0 && value.length <= 600))) {
     throw new ResearchPlanningError(question, "invalid_output");
+  }
+  if (output.comparison !== undefined) {
+    // Mixed opaque claims cannot be discarded in favor of a plausible structure.
+    if (output.status !== "complete" || (Array.isArray(output.constraints) && output.constraints.length !== 0) ||
+      (output.claims !== undefined && (!Array.isArray(output.claims) || output.claims.length !== 0))) {
+      throw new ResearchPlanningError(question, Array.isArray(output.claims) && output.claims.length > MAX_RESEARCH_TARGETS
+        ? "expanded_output" : "invalid_output");
+    }
+    return comparisonResearchPlan(question, output.comparison);
   }
   if (!Array.isArray(output.claims) || output.claims.length === 0 || output.claims.length > 64 ||
     !output.claims.every(value => typeof value === "string" && value.trim().length > 0 && value.length <= 600)) {
