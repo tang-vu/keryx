@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { preparationEnvironment, runPreparationChecks, copyPreparationDependencies } from './prepare-immutable-release.mjs';
+import { preparationEnvironment, runPreparationChecks, copyPreparationDependencies, materializePreparationBuildAliases } from './prepare-immutable-release.mjs';
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'keryx-preparation-test-'));
@@ -96,4 +96,44 @@ test('dependency directory links cannot copy external storage or ENV bytes', t =
   fs.symlinkSync(outside, path.join(f.dependencies, 'fixture'), process.platform === 'win32' ? 'junction' : 'dir');
   assert.throws(() => copyPreparationDependencies(f));
   assert.equal(fs.existsSync(path.join(f.source, 'node_modules')), false);
+});
+
+test('Turbopack aliases copy only independent candidate dependency bytes and retain build inputs', t => {
+  const f = fixture(t);
+  const original = path.join(f.dependencies, 'fixture'); fs.mkdirSync(original);
+  const copied = path.join(f.source, 'node_modules', 'fixture'); fs.mkdirSync(copied, { recursive: true });
+  fs.writeFileSync(path.join(original, 'index.js'), 'mutable build input');
+  fs.writeFileSync(path.join(copied, 'index.js'), 'independent accepted bytes');
+  const aliases = path.join(f.source, '.next', 'node_modules'); fs.mkdirSync(aliases, { recursive: true });
+  const alias = path.join(aliases, 'fixture-hash');
+  fs.symlinkSync(original, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const result = materializePreparationBuildAliases(f);
+  assert.deepEqual(result.aliases, [{ path: 'node_modules/fixture-hash', dependency: 'fixture' }]);
+  assert.equal(fs.lstatSync(alias).isSymbolicLink(), false);
+  assert.equal(fs.readFileSync(path.join(alias, 'index.js'), 'utf8'), 'independent accepted bytes');
+  assert.equal(fs.lstatSync(path.join(alias, 'index.js')).nlink, 1);
+  fs.writeFileSync(path.join(alias, 'index.js'), 'alias only');
+  assert.equal(fs.readFileSync(path.join(copied, 'index.js'), 'utf8'), 'independent accepted bytes');
+  assert.equal(fs.readFileSync(path.join(original, 'index.js'), 'utf8'), 'mutable build input');
+});
+
+test('build aliases cannot import external runtime paths and headroom failure preserves links', t => {
+  const f = fixture(t), dependencies = path.join(f.source, 'node_modules'); fs.mkdirSync(dependencies);
+  const aliases = path.join(f.source, '.next', 'node_modules'); fs.mkdirSync(aliases, { recursive: true });
+  const outside = path.join(f.root, 'runtime'); fs.mkdirSync(outside);
+  fs.writeFileSync(path.join(outside, '.env.local'), 'synthetic forbidden input');
+  const alias = path.join(aliases, 'fixture-hash');
+  fs.symlinkSync(outside, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  assert.throws(() => materializePreparationBuildAliases(f));
+  assert.equal(fs.lstatSync(alias).isSymbolicLink(), true);
+  fs.unlinkSync(alias);
+  const copied = path.join(dependencies, 'fixture'); fs.mkdirSync(copied);
+  fs.writeFileSync(path.join(copied, 'index.js'), 'independent accepted bytes');
+  fs.symlinkSync(copied, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const original = fs.statfsSync;
+  try {
+    fs.statfsSync = () => ({ bavail: 0n, bsize: 4096n });
+    assert.throws(() => materializePreparationBuildAliases(f));
+  } finally { fs.statfsSync = original; }
+  assert.equal(fs.lstatSync(alias).isSymbolicLink(), true);
 });

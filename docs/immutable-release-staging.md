@@ -328,6 +328,13 @@ even when buffered output arrives after process exit.
 Preparation runs Vitest in its normal `NODE_ENV=test` runtime and compilation in
 `production`, recording the setting with each command. Both retain the same fresh
 credential-free testnet/offline storage environment.
+Turbopack's `.next/node_modules` aliases are materialized from the candidate's
+independent dependency copy. Alias targets must map inside that copy or the known
+dependency input root; outside paths refuse before mutation. Bounded byte/entry
+and disk-headroom checks precede materialization. The build/input dependency trees
+remain untouched, and the complete artifact/trace inspector retains its link
+containment rules. This does not close the separate cwd extraction or runtime cache
+admission gates.
 
 The rehearsal keeps a synthetic reader running against the predecessor while it
 prepares and inspects the candidate, then positively exits that reader, rechecks

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { stageImmutableSource, recordImmutableArtifact } from './immutable-release-staging.mjs';
-import { copyPreparationDependencies, protectPreparationCopy } from './prepare-immutable-release.mjs';
+import { copyPreparationDependencies, protectPreparationCopy, materializePreparationBuildAliases } from './prepare-immutable-release.mjs';
 import { rehearsePreparedRelease } from './rehearse-prepared-release.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -29,7 +29,6 @@ try {
   fs.cpSync(path.join(repo, '.next'), path.join(staged.source, '.next'), {
     recursive: true, dereference: false, verbatimSymlinks: true, force: false, errorOnExist: true,
   });
-  evidence.protectedBuildEntries = protectPreparationCopy(path.join(staged.source, '.next'));
   for (const file of ['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo'])
     if (fs.existsSync(path.join(repo, file))) {
       const destination = path.join(staged.source, file);
@@ -55,6 +54,8 @@ try {
     }
   };
   visit(path.join(staged.source, '.next')); evidence.traceInventory = traceInventory;
+  evidence.buildAliases = materializePreparationBuildAliases({ source: staged.source, dependencies: path.join(repo, 'node_modules') });
+  evidence.protectedBuildEntries = protectPreparationCopy(path.join(staged.source, '.next'));
   const artifact = recordImmutableArtifact(staged);
   evidence.artifact = { ...staged, ...artifact };
   evidence.runtime = await rehearsePreparedRelease({ ...staged, artifactInspectionSha256: artifact.artifactInspectionSha256 });

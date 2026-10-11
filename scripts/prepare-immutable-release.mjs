@@ -64,6 +64,57 @@ export function protectPreparationCopy(directory) {
   return protectedEntries;
 }
 
+/** Turbopack emits dependency aliases under .next/node_modules. Materialize
+ * those aliases only from the candidate's independently copied dependencies,
+ * never from the build checkout, runtime data or another serving cohort. */
+export function materializePreparationBuildAliases({ source, dependencies }) {
+  const copied = fs.realpathSync.native(path.join(source, 'node_modules'));
+  const inputs = fs.realpathSync.native(dependencies);
+  const aliases = [], next = path.join(source, '.next');
+  const within = (root, file) => {
+    const relative = path.relative(root, file);
+    return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+  };
+  let bytes = 0, entries = 0;
+  const measure = file => {
+    const stat = fs.lstatSync(file);
+    if (++entries > 250000 || stat.isSymbolicLink()) refuse();
+    if (stat.isDirectory()) for (const name of fs.readdirSync(file)) measure(path.join(file, name));
+    else {
+      if (!stat.isFile() || stat.nlink !== 1) refuse();
+      bytes += stat.size; if (bytes > 8 * 1024 ** 3) refuse();
+    }
+  };
+  const visit = directory => {
+    for (const name of fs.readdirSync(directory)) {
+      const file = path.join(directory, name), stat = fs.lstatSync(file);
+      if (stat.isDirectory()) visit(file);
+      else if (stat.isSymbolicLink()) {
+        const relative = path.relative(next, file);
+        // Other links remain subject to the unchanged artifact inspector.
+        if (!relative.startsWith(`node_modules${path.sep}`)) continue;
+        const target = fs.realpathSync.native(file);
+        const root = within(copied, target) ? copied : within(inputs, target) ? inputs : null;
+        if (!root || aliases.length >= 128) refuse();
+        const dependency = path.relative(root, target);
+        const independent = path.join(copied, dependency);
+        if (!within(copied, fs.realpathSync.native(independent))) refuse();
+        measure(independent);
+        aliases.push({ file, independent, path: relative.split(path.sep).join('/'), dependency });
+      }
+    }
+  };
+  visit(next);
+  const available = fs.statfsSync(source, { bigint: true });
+  if (available.bavail * available.bsize < BigInt(bytes + 4 * 1024 ** 3)) refuse();
+  for (const alias of aliases) {
+    if (!fs.lstatSync(alias.file).isSymbolicLink()) refuse();
+    fs.unlinkSync(alias.file); // Only the candidate's verified dependency alias.
+    fs.cpSync(alias.independent, alias.file, { recursive: true, dereference: false, force: false, errorOnExist: true });
+  }
+  return { aliases: aliases.map(({ path, dependency }) => ({ path, dependency })), copiedEntries: entries, copiedBytes: bytes };
+}
+
 /** Reuse only a *copy* of independently installed dependencies. Source is read-only;
  * fs.cp never hardlinks or leaves a serving-directory junction in the candidate.
  * Byte inspection subsequently rejects external links and missing trace files. */
@@ -171,14 +222,23 @@ export function prepareImmutableRelease({ repo, releasesDir, commit, dependencie
   fs.mkdirSync(scratch, { mode: 0o700 });
   const inputs = copyPreparationDependencies({ source: staged.source, dependencies });
   const checks = runPreparationChecks({ staged, scratch, npmCli });
+  const buildAliases = materializePreparationBuildAliases({ source: staged.source, dependencies: path.join(staged.source, 'node_modules') });
   const protectedBuildEntries = protectPreparationCopy(path.join(staged.source, '.next'));
+  if (process.platform !== 'win32') for (const file of ['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo']) {
+    const generated = path.join(staged.source, file);
+    if (fs.existsSync(generated)) {
+      const stat = fs.lstatSync(generated);
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid()) refuse();
+      fs.chmodSync(generated, 0o600);
+    }
+  }
   const artifact = recordImmutableArtifact(staged);
   verifyImmutableArtifact({ ...staged, artifactInspectionSha256: artifact.artifactInspectionSha256 });
   const receipt = { format: 'keryx-immutable-preparation-v1', productionAdmitted: false,
     startedAt, elapsedMs: Math.round(performance.now() - started), commit: staged.commit,
     tree: artifact.tree, sourceManifestSha256: staged.sourceManifestSha256,
     artifactInspectionSha256: artifact.artifactInspectionSha256,
-    artifactDigest: artifact.artifactDigest, buildId: artifact.buildId, inputs, checks, protectedBuildEntries,
+    artifactDigest: artifact.artifactDigest, buildId: artifact.buildId, inputs, checks, buildAliases, protectedBuildEntries,
     scratch, writerHoldStarted: false, runtimeEnvironmentLoaded: false };
   const preparationSha256 = exclusiveReceipt(path.join(staged.candidate, 'preparation.json'), receipt);
   return { ...staged, ...receipt, preparationSha256 };
