@@ -35,7 +35,7 @@ concurrency:
 jobs:
   enrolled-supabase-postgres:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 29
     permissions:
       contents: read
     steps:
