@@ -7291,3 +7291,20 @@ Keep the executable buyer handoff as invariant protocol data with its one explic
 guard allowance; locale copy cannot change purchasing or original-job recovery.
 Native host/package acceptance and coordinated delivery remain distinct from
 hermetic rendering. See [scope and gates](docs/engineering/native-desktop-catalogue-2026-10-11.md).
+
+## 2026-10-11 — Catalogue public-source claim presentation without changing authority
+
+Keep source-control proof and earning-policy activation separate while moving their
+existing English notices into a typed catalogue. File/token instructions and
+freshness, price and policy notices use whole variants with named interpolation;
+dates, links, source data and exact proof bytes retain their existing render/action
+contracts. Metadata, accessibility labels and the request helper's fallback belong
+to this presentation area. Retire only its 103 actually migrated guard occurrences,
+leaving other areas and protocol/data identities intact. No payment, proof, wallet,
+permission or database condition changes, and glossary/locale gates remain held.
+
+Exact render parity and the existing synthetic claim browser fixture qualify source
+behavior; retained CSS and intercepted wallets do not certify a production release.
+See [the claim catalogue record](docs/engineering/source-claims-catalogue-2026-10-11.md).
+Original #272 remains open for remaining areas and root's reviewed combined
+integration, exact-source CI and serialized delivery.
