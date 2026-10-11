@@ -4,7 +4,10 @@
  * variant drops the reeding for clarity at small sizes. `currentColor`-driven.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { cn } from "@/lib/utils";
+
+const uiCopy = createMessages("en");
 
 const BODONI = "var(--font-bodoni), 'Bodoni Moda', Georgia, serif";
 
@@ -67,7 +70,7 @@ export function KeryxWordmark({
         </span>
         {tagline && (
           <span className="mt-1 font-mono text-[8.5px] uppercase tracking-[0.36em] text-ink-3">
-            The citation toll
+            {uiCopy("brandPresentation.tagline")}
           </span>
         )}
       </span>

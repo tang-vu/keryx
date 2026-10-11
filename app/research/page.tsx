@@ -1,3 +1,5 @@
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
@@ -20,10 +22,13 @@ import { ResearchMonthly } from "@/components/keryx/research-monthly";
 import { getDb } from "@/lib/db";
 import { assertMainnetHostedResearchReady } from "@/lib/payments/mainnet-hosted-gateway";
 
+const copy = createMessages("en");
+const richCopy = createRichMessages("en");
+
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Research — Keryx",
-  description: "Ask a research question, read a cited report, or prepare a paid agent research package.",
+  title: copy("paidResearch.pageTitle"),
+  description: copy("paidResearch.pageDescription"),
   robots: { index: false, follow: true },
 };
 
@@ -54,39 +59,39 @@ export default async function ResearchPage({ searchParams }: {
       <ResearchChat paidHref="#paid-research" />
       <div className="mx-auto max-w-[1080px] space-y-10 px-4 py-12 sm:px-[30px]">
         <header id="paid-research" className="scroll-mt-24 border-b border-line pb-8">
-          <p className="font-mono text-xs uppercase tracking-widest text-seal">Paid research · {config.profile.label}</p>
-          <h2 className="mt-3 font-display text-4xl">Give your agent a research budget.</h2>
-          <p className="mt-5 max-w-2xl font-serif text-lg text-ink-2">Know the price before your agent pays. Follow the job, read its evidence, and see what reached creators.</p>
-          <p className="mt-3 font-serif text-sm text-ink-3">Buy with a funded Gateway wallet, or prepare a request for your own agent. Keep a private recovery file to follow your job after a disconnect.</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-seal">{copy("paidResearch.kicker", { network: config.profile.label })}</p>
+          <h2 className="mt-3 font-display text-4xl">{copy("paidResearch.title")}</h2>
+          <p className="mt-5 max-w-2xl font-serif text-lg text-ink-2">{copy("paidResearch.introduction")}</p>
+          <p className="mt-3 font-serif text-sm text-ink-3">{copy("paidResearch.recoveryNotice")}</p>
         </header>
         <ResearchEvidenceBrowser />
         <ResearchWorkspace>
         <section aria-labelledby="package-heading" className="border border-line bg-paper p-6">
-          <h2 id="package-heading" className="font-display text-3xl">1. Price your research</h2>
+          <h2 id="package-heading" className="font-display text-3xl">{copy("paidResearch.priceTitle")}</h2>
           <form action="/research#paid-research" className="mt-5 flex flex-wrap items-end gap-4">
-            <label className="grid gap-2 font-mono text-xs">Package
+            <label className="grid gap-2 font-mono text-xs">{copy("paidResearch.package")}
               <select name="mode" defaultValue={mode} className="border border-line bg-paper-2 p-3 text-sm">
-                <option value="quick">Quick</option><option value="deep">Deep</option>
+                <option value="quick">{copy("paidResearch.quick")}</option><option value="deep">{copy("paidResearch.deep")}</option>
               </select>
             </label>
-            <label className="grid gap-2 font-mono text-xs">Creator cap (USDC)
+            <label className="grid gap-2 font-mono text-xs">{copy("paidResearch.cap")}
               <input name="budget" defaultValue={rawBudget} type="number" min="0.000001" max={config.a2aMaxBudget} step="0.000001" required className="w-44 border border-line bg-paper-2 p-3 text-sm" />
             </label>
-            <button className="bg-ink px-5 py-3 font-mono text-sm text-paper">Update price</button>
+            <button className="bg-ink px-5 py-3 font-mono text-sm text-paper">{copy("paidResearch.updatePrice")}</button>
           </form>
-          {!quote && <p role="alert" className="mt-4 text-seal">Choose Quick or Deep and a cap between 0.000001 and {config.a2aMaxBudget} USDC, with at most six decimal places.</p>}
+          {!quote && <p role="alert" className="mt-4 text-seal">{copy("paidResearch.invalidPrice", { maximum: config.a2aMaxBudget })}</p>}
           {quote?.researchPackage && <>
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              {[['Service fee', quote.serviceFeeUsdc], ['Creator cap', quote.creatorBudgetUsdc], ['Total package price', quote.totalPriceUsdc]].map(([label, value]) => (
+              {[[copy("paidResearch.serviceFee"), quote.serviceFeeUsdc], [copy("paidResearch.creatorCap"), quote.creatorBudgetUsdc], [copy("paidResearch.totalPrice"), quote.totalPriceUsdc]].map(([label, value]) => (
                 <div key={label} className="border border-line p-4"><p className="font-mono text-xs text-ink-3">{label}</p><p className="mt-2 font-display text-3xl">{value} <span className="text-sm">USDC</span></p></div>
               ))}
             </div>
-            <p className="mt-4 font-serif text-ink-2">Up to {quote.researchPackage.execution.attentionLimit} sources considered for synthesis · {quote.researchPackage.execution.reevaluateRounds} re-evaluation rounds · {quote.researchPackage.serviceLevel.targetCompletionMs / 1000}s provisional completion target.</p>
-            <p className="mt-2 font-serif text-sm text-ink-3">Fixed-price and non-refundable. Unused creator reserve stays in the package. Quality is best effort; the provisional target has no refund or service-credit remedy. The payment challenge at purchase is authoritative.</p>
+            <p className="mt-4 font-serif text-ink-2">{[copy(quote.researchPackage.execution.attentionLimit === 1 ? "paidResearch.sources.one" : "paidResearch.sources.other", { count: quote.researchPackage.execution.attentionLimit }), copy(quote.researchPackage.execution.reevaluateRounds === 1 ? "paidResearch.rounds.one" : "paidResearch.rounds.other", { count: quote.researchPackage.execution.reevaluateRounds }), copy("paidResearch.target", { seconds: quote.researchPackage.serviceLevel.targetCompletionMs / 1000 })].join(" · ")}</p>
+            <p className="mt-2 font-serif text-sm text-ink-3">{copy("paidResearch.terms")}</p>
             {available ? <>
-              <p className="mt-4 break-all font-mono text-xs">Payment network: {config.networkId}<br />Keryx payee: {config.sellerAddress}</p>
+              <p className="mt-4 break-all font-mono text-xs">{richCopy("paidResearch.paymentIdentity", { network: config.networkId, payee: config.sellerAddress, lineBreak: <br /> })}</p>
               <ResearchRequest key={`${mode}:${quote.creatorBudgetUsdc}`} mode={mode} budget={quote.creatorBudgetUsdc} version={quote.researchPackage.version} total={quote.totalPriceUsdc} payee={config.sellerAddress} />
-            </> : <p role="status" className="mt-4 text-seal">Paid research on {config.profile.label} is currently unavailable. Job lookup remains available below.</p>}
+            </> : <p role="status" className="mt-4 text-seal">{copy("paidResearch.unavailable", { network: config.profile.label })}</p>}
           </>}
         </section>
         <ResearchSavedJobs />
@@ -97,7 +102,7 @@ export default async function ResearchPage({ searchParams }: {
           && <ResearchPrivateCheckout merchants={privatePolicy.data} />}
         <ResearchPrivateJobs />
         <ResearchJob />
-        <p className="font-serif text-ink-3">New to the API? <Link href="/api/docs" className="underline">Read the API reference</Link>. To try a sponsored question, <Link href="/playground" className="underline">open the playground</Link>.</p>
+        <p className="font-serif text-ink-3">{richCopy("paidResearch.apiHelp", { referenceLink: <Link href="/api/docs" className="underline">{copy("paidResearch.apiReference")}</Link>, playgroundLink: <Link href="/playground" className="underline">{copy("paidResearch.playground")}</Link> })}</p>
       </div>
       </main>
       <SiteFooter />

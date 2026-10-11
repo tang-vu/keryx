@@ -6,9 +6,12 @@
  * Confirmed empty activity is hidden. Loading and unavailable activity stay distinct.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fmtUsdc } from "./phase-style";
+
+const uiCopy = createMessages("en");
 
 interface ActivityItem {
   sourceId: string;
@@ -23,12 +26,12 @@ function timeAgo(iso: string): string {
   const d = new Date(iso).getTime();
   if (isNaN(d)) return "";
   const s = Math.max(0, Math.round((Date.now() - d) / 1000));
-  if (s < 60) return `${s}s ago`;
+  if (s < 60) return uiCopy(s === 1 ? "landingActivity.seconds.one" : "landingActivity.seconds.other", { count: s });
   const m = Math.round(s / 60);
-  if (m < 60) return `${m}m ago`;
+  if (m < 60) return uiCopy(m === 1 ? "landingActivity.minutes.one" : "landingActivity.minutes.other", { count: m });
   const h = Math.round(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.round(h / 24)}d ago`;
+  if (h < 24) return uiCopy(h === 1 ? "landingActivity.hours.one" : "landingActivity.hours.other", { count: h });
+  return uiCopy(Math.round(h / 24) === 1 ? "landingActivity.days.one" : "landingActivity.days.other", { count: Math.round(h / 24) });
 }
 
 export function ActivityTicker() {
@@ -59,7 +62,7 @@ export function ActivityTicker() {
   }, []);
 
   if (state === "empty") return null;
-  if (state !== "ready") return <div className="border-y border-line bg-paper/60 px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? "Loading recent settled citations…" : "Recent citation activity unavailable."}</div>;
+  if (state !== "ready") return <div className="border-y border-line bg-paper/60 px-4 py-3 font-mono text-xs text-ink-3" role="status">{state === "loading" ? uiCopy("landingActivity.loading") : uiCopy("landingActivity.unavailable")}</div>;
 
   // Duplicate the row so the marquee loops seamlessly (translateX -50% lands on the copy).
   const row = [...items, ...items];
@@ -79,17 +82,17 @@ export function ActivityTicker() {
             key={`${it.createdAt}-${i}`}
             href={`/creator/${it.sourceId}`}
             className="flex shrink-0 items-center gap-2 font-mono text-[11px] text-ink-3 transition-colors hover:text-ink"
-            title={it.question ? `cited for: ${it.question}` : undefined}
+            title={it.question ? uiCopy("landingActivity.questionTitle", { question: it.question }) : undefined}
           >
             <span className="text-seal">◆</span>
             <span className="font-semibold text-ink-2">{it.sourceName}</span>
-            <span>cited</span>
+            <span>{uiCopy("landingActivity.cited")}</span>
             <span className="text-seal">{fmtUsdc(it.rewardUsdc, { sign: true })}</span>
             <span className="text-ink-3/70">· {timeAgo(it.createdAt)}</span>
           </Link>
         ))}
       </div>
-      <button type="button" onClick={() => setPaused(!paused)} className="ml-auto min-h-11 shrink-0 bg-paper px-3 font-mono text-[10px] uppercase text-ink underline">{paused ? "Play" : "Pause"}</button>
+      <button type="button" onClick={() => setPaused(!paused)} className="ml-auto min-h-11 shrink-0 bg-paper px-3 font-mono text-[10px] uppercase text-ink underline">{paused ? uiCopy("landingActivity.play") : uiCopy("landingActivity.pause")}</button>
     </div>
   );
 }

@@ -6,6 +6,8 @@
  * chips and the same filter as someone landing on the index, and the two can't drift apart.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
 import type { ArchiveEntry } from "@/lib/answers-archive";
 import { searchTerm } from "@/lib/answers-archive";
@@ -15,6 +17,9 @@ import { ArchiveAnswerRow } from "./archive-answer-row";
 import { ArchiveSearch } from "./archive-search";
 import { ArchivePagination } from "./archive-pagination";
 import { ArchiveTopicChips } from "./archive-topic-chips";
+
+const copy = createMessages("en");
+const richCopy = createRichMessages("en");
 
 export function ArchiveIndexView({
   slice,
@@ -30,30 +35,28 @@ export function ArchiveIndexView({
     <main className="mx-auto max-w-[860px] px-4 pb-20 pt-12 sm:px-[30px]">
       <div className="mb-2 flex items-baseline justify-between gap-4">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-          The archive
-          {slice.page > 1 ? ` · page ${slice.page} of ${slice.totalPages}` : ""}
+          {slice.page > 1 ? copy("archiveIndex.page", { page: slice.page, pages: slice.totalPages }) : copy("archiveIndex.kicker")}
         </span>
         <a
           href="/answers/feed.xml"
           className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3 underline decoration-dotted underline-offset-4 transition-colors hover:text-seal"
         >
-          Atom feed ↗
+          {copy("archiveIndex.feed")}
         </a>
       </div>
       <h1 className="font-display text-[clamp(30px,5vw,46px)] font-medium leading-[1.05] tracking-tight text-ink">
-        Past answers, <em className="italic text-paid">with sources.</em>
+        {richCopy("archiveIndex.title", { emphasis: <em className="italic text-paid">{copy("archiveIndex.emphasis")}</em> })}
       </h1>
       <p className="mt-4 max-w-[62ch] font-serif text-[17px] leading-[1.55] text-ink-2">
         {totalEntries > 0 ? (
           <>
-            {totalEntries} cited answer{totalEntries !== 1 ? "s" : ""} from Keryx research history.{" "}
-            Historical testnet entries retain their original network. Individual dispatches show whether payments settled, remain pending, or were simulated.
+            {copy(totalEntries === 1 ? "archiveIndex.summary.one" : "archiveIndex.summary.other", { count: totalEntries })}
           </>
         ) : (
-          <>No cited answers are available in the archive yet.</>
+          <>{copy("archiveIndex.empty")}</>
         )}
       </p>
-      <Link href="/history/testnet" className="mt-3 inline-block text-sm text-seal underline underline-offset-4">Browse all testnet questions, including uncited answers →</Link>
+      <Link href="/history/testnet" className="mt-3 inline-block text-sm text-seal underline underline-offset-4">{copy("archiveIndex.testnet")}</Link>
 
       {slice.items.length > 0 && (
         <ArchiveSearch
@@ -74,7 +77,7 @@ export function ArchiveIndexView({
           href="/"
           className="inline-block border border-ink bg-seal px-[18px] py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
         >
-          Ask your own question ▸
+          {copy("archiveIndex.ask")}
         </Link>
       </div>
     </main>

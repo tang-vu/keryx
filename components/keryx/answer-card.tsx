@@ -1,5 +1,6 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
 import { demoteSyntheticEvidence } from "@/lib/research/evidence-provenance";
 
 /**
@@ -30,6 +31,8 @@ import { reasoningOutputLimitText } from "@/lib/llm/reasoning-telemetry";
 import { projectBibliographicTask } from "@/lib/research/bibliographic-task-result";
 import { BibliographyExports } from "./bibliography-exports";
 
+const copy = createMessages("en");
+
 export function AnswerCard({ run, meta, permalink, payments = [], showFeedback = true, historicalNetwork }: { run: QueryRun; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[]; showFeedback?: boolean; historicalNetwork?: string }) {
   run = demoteSyntheticEvidence(run);
   const bibliography = projectBibliographicTask(run.bibliography);
@@ -52,29 +55,24 @@ export function AnswerCard({ run, meta, permalink, payments = [], showFeedback =
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500">
-      <SectionHeading numeral="II" label="The reading" right={bibliography ? "Metadata only" : `${run.citations.length} cited`} />
-      {bibliography ? <p className="mb-4 text-sm text-ink-3">Original bibliographic metadata · no scientific claim assessment</p> : confidence ? (
+      <SectionHeading numeral="II" label={copy("reportReading.title")} right={bibliography ? copy("reportReading.metadataOnly") : copy(run.citations.length === 1 ? "reportReading.cited.one" : "reportReading.cited.other", { count: run.citations.length })} />
+      {bibliography ? <p className="mb-4 text-sm text-ink-3">{copy("reportReading.bibliographyNotice")}</p> : confidence ? (
         <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <ConfidenceBadge confidence={confidence} showReason sourceGrounding={run.citations.some(citation => Boolean(citation.webProvenance))} />
           <span className="border border-line bg-paper-2 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
-            {(run.researchMode ?? meta?.researchMode ?? "deep")} research
+            {copy("reportReading.mode", { mode: run.researchMode ?? meta?.researchMode ?? "deep" })}
           </span>
           {run.previewCoverage ? (
             <span className="font-mono text-[10px] text-ink-3">
-              preview plan {run.previewCoverage.coveredClaims}/{run.previewCoverage.totalClaims} claims
+              {copy(run.previewCoverage.totalClaims === 1 ? "reportReading.preview.one" : "reportReading.preview.other", { covered: run.previewCoverage.coveredClaims, count: run.previewCoverage.totalClaims })}
             </span>
           ) : null}
           {run.evidencePortfolio ? (
             <span
               className="font-mono text-[10px] text-ink-3"
-              title="CACHE costs one attention slot but zero fetch USDC; evidence yield counts selected reads that produced reward-qualifying evidence."
+              title={copy("reportReading.portfolioTitle")}
             >
-              portfolio {run.evidencePortfolio.selectedAssetIds.length}/
-              {run.evidencePortfolio.eligibleCandidates}
-              {run.evidencePortfolio.outcome?.evidenceYield !== null &&
-              run.evidencePortfolio.outcome?.evidenceYield !== undefined
-                ? ` · evidence ${Math.round(run.evidencePortfolio.outcome.evidenceYield * 100)}%`
-                : ""}
+              {run.evidencePortfolio.outcome?.evidenceYield !== null && run.evidencePortfolio.outcome?.evidenceYield !== undefined ? copy("reportReading.portfolioYield", { selected: run.evidencePortfolio.selectedAssetIds.length, eligible: run.evidencePortfolio.eligibleCandidates, yield: Math.round(run.evidencePortfolio.outcome.evidenceYield * 100) }) : copy("reportReading.portfolio", { selected: run.evidencePortfolio.selectedAssetIds.length, eligible: run.evidencePortfolio.eligibleCandidates })}
             </span>
           ) : null}
         </div>
@@ -104,7 +102,7 @@ export function AnswerCard({ run, meta, permalink, payments = [], showFeedback =
           {run.citations.length > 0 && (
             <div className="mt-7 border-t border-ink pt-5">
               <p className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
-                Cited sources and references
+                {copy("reportReading.sources")}
               </p>
               <ul>
                 {run.citations.map((c) => {
@@ -142,21 +140,20 @@ export function AnswerCard({ run, meta, permalink, payments = [], showFeedback =
                             {c.itemPublishedAt ? ` · ${c.itemPublishedAt.slice(0, 10)}` : ""}
                           </span>
                         ) : null}
-                        {c.evidenceProvenance === "synthetic-demo" && <span className="block text-sm text-seal">Synthetic demo content ? illustrative only</span>}
+                        {c.evidenceProvenance === "synthetic-demo" && <span className="block text-sm text-seal">{copy("reportReading.synthetic")}</span>}
                         {isPublicReference && (
                           <span className="mt-1 block font-mono text-[10px] text-ink-3">
-                            Free public reference · no creator payment
-                            {c.webProvenance ? ` · extracted ${c.webProvenance.extraction} text${c.webProvenance.truncated ? " (bounded excerpt)" : ""}` : c.publicDeliveryKind ? ` · RSS ${c.publicDeliveryKind === "full_text" ? "feed full text" : c.publicDeliveryKind.replaceAll("_", " ")}` : " · RSS feed body"}
+                            {c.webProvenance ? copy(c.webProvenance.truncated ? "reportReading.webBounded" : "reportReading.webText", { extraction: c.webProvenance.extraction }) : c.publicDeliveryKind ? c.publicDeliveryKind === "full_text" ? copy("reportReading.rssFullText") : copy("reportReading.rssDelivery", { delivery: c.publicDeliveryKind.replaceAll("_", " ") }) : copy("reportReading.rssFeedBody")}
                           </span>
                         )}
                         {c.scholarly && <ScholarlyMetadataDetails metadata={c.scholarly} />}
                       </span>
-                      <button type="button" aria-label={`Inspect evidence for citation ${c.marker}`} aria-haspopup="dialog" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center px-2 font-mono text-xs text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">Evidence</button>
+                      <button type="button" aria-label={copy("reportReading.inspectCitation", { marker: c.marker })} aria-haspopup="dialog" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center px-2 font-mono text-xs text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">{copy("reportReading.evidence")}</button>
                       <span className="shrink-0 font-mono text-[11px] text-ink-3">
                         {Math.round(c.weight * 100)}%
                       </span>
                       {!isPublicReference && <span className="shrink-0 font-mono text-sm tabular-nums text-paid">
-                        {formatRecordedUsdc(c.reward)} planned
+                        {copy("reportReading.planned", { amount: formatRecordedUsdc(c.reward) })}
                       </span>}
                     </li>
                   );
@@ -202,9 +199,9 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
   return (
     <div className="mt-7 border-t border-ink pt-5">
       <p className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
-        Evidence ledger — recorded source excerpts
+        {copy("reportReading.evidenceLedger")}
       </p>
-      <p className="mb-3 text-sm text-ink-3">Research targets are unverified topics. Coverage is an estimate of excerpt support, not proof of entailment, factual truth or a complete answer.</p>
+      <p className="mb-3 text-sm text-ink-3">{copy("reportReading.coverageNotice")}</p>
       <ol className="space-y-3">
         {run.claimCoverage?.map((claim) => {
           const spans = evidence.filter(
@@ -219,7 +216,7 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
             >
               <div className="flex items-start justify-between gap-4">
                 <p className="font-serif text-[14px] leading-snug text-ink">
-                  Requested topic (unverified): “{claim.claim}”
+                  {copy("reportReading.requestedTopic", { claim: claim.claim })}
                 </p>
                 <span
                   className={cn(
@@ -227,7 +224,7 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
                     claim.coverage >= 0.4 ? "text-paid" : "text-seal",
                   )}
                 >
-                  {Math.round(claim.coverage * 100)}% estimated
+                  {copy("reportReading.estimated", { coverage: Math.round(claim.coverage * 100) })}
                 </span>
               </div>
               {spans.length > 0 ? (
@@ -246,7 +243,7 @@ function EvidenceLedger({ run }: { run: QueryRun }) {
                 </div>
               ) : (
                 <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-seal">
-                  No qualifying excerpt recorded
+                  {copy("reportReading.noExcerpt")}
                 </p>
               )}
             </li>
@@ -295,12 +292,12 @@ function SummaryStrip({
 
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-ink bg-paper-2 px-6 py-3.5 text-sm sm:px-9">
-      <Stat label={mode === "offline" ? "Simulated spend" : mode === "real" ? "Spent" : "Recorded spend"} value={formatRecordedUsdc(spent)} mono />
-      <Stat label={mode === "offline" ? "Simulated creator share" : mode === "real" ? "To creators" : "Recorded creator share"} value={creatorShare} accent={spent > 0 && mode === "real"} />
-      {pending > 0 && <Stat label="Pending proof" value={`${pending}`} />}
+      <Stat label={mode === "offline" ? copy("reportReading.simulatedSpend") : mode === "real" ? copy("reportReading.spent") : copy("reportReading.recordedSpend")} value={formatRecordedUsdc(spent)} mono />
+      <Stat label={mode === "offline" ? copy("reportReading.simulatedShare") : mode === "real" ? copy("reportReading.toCreators") : copy("reportReading.recordedShare")} value={creatorShare} accent={spent > 0 && mode === "real"} />
+      {pending > 0 && <Stat label={copy("reportReading.pendingProof")} value={`${pending}`} />}
       <Stat
-        label="Decisions"
-        value={`${bought} bought · ${cached} cached · ${skipped} skipped`}
+        label={copy("reportReading.decisions")}
+        value={[copy(bought === 1 ? "reportReading.bought.one" : "reportReading.bought.other", { count: bought }), copy(cached === 1 ? "reportReading.cached.one" : "reportReading.cached.other", { count: cached }), copy(skipped === 1 ? "reportReading.skipped.one" : "reportReading.skipped.other", { count: skipped })].join(" · ")}
       />
       <div className="ml-auto flex items-center gap-2">
         {permalink && (
@@ -309,7 +306,7 @@ function SummaryStrip({
             onClick={copyPermalink}
             className="border border-line bg-card px-2 py-0.5 font-mono text-[11px] text-ink-3 transition-colors hover:border-ink hover:text-ink"
           >
-            {copied ? "✓ Copied" : "Share"}
+            {copied ? copy("reportReading.copied") : copy("reportReading.share")}
           </button>
         )}
         <span className="border border-line bg-card px-2 py-0.5 font-mono text-[11px] text-ink-3">
@@ -317,7 +314,7 @@ function SummaryStrip({
         </span>
         {historicalNetwork ? (
           <span className="border border-line bg-card px-2 py-0.5 font-mono text-[11px] text-ink-3">
-            {recordedArcLabel(historicalNetwork)} · historical
+            {copy("reportReading.historical", { network: recordedArcLabel(historicalNetwork) })}
           </span>
         ) : <ModeBadge mode={mode} />}
       </div>

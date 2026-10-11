@@ -1,5 +1,9 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
+
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { buildSourceIndex, type SourceIndex } from "@/lib/payments/client-payto-allowlist";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
@@ -66,7 +70,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
     if (streaming) return;
     if (request) setHistory(previous => [...previous, { ...request, state }]);
     setAnchor(rootRequest ? undefined : parentId ?? undefined);
-    setRequest({ id: ++sequence.current, question, payer: payer === "session" ? "your funded session" : payer === "expired" ? "your expired funded session (recovery required)" : "Keryx treasury" });
+    setRequest({ id: ++sequence.current, question, payer: payer === "session" ? message("researchChat.sessionPayer") : payer === "expired" ? message("researchChat.expiredPayer") : message("researchChat.treasuryPayer") });
     setRootRequest(false);
     void ask(question, budget, rootRequest ? undefined : parentId ?? sharedParent, model, mode, scholarly, paidScholarly, reviewFirst);
   };
@@ -77,27 +81,27 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
     reset();
   };
   const hasTurns = history.length > 0 || request !== null;
-  return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-tour="hero" aria-label="Research conversation">
+  return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-tour="hero" aria-label={message("researchChat.label")}>
     <header className="relative mb-2 min-h-[100px] sm:mb-4 sm:min-h-[140px]">
       <div aria-hidden="true" data-testid="chat-globe" className="pointer-events-none absolute right-0 top-[44px] h-[56px] w-[56px] opacity-60 sm:top-0 sm:h-[140px] sm:w-[140px]">
         <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-[0.4] sm:scale-100" />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p data-testid="hero-kicker" className="font-mono text-[11px] uppercase tracking-wide text-seal">Research with Keryx</p>
+        <p data-testid="hero-kicker" className="font-mono text-[11px] uppercase tracking-wide text-seal">{message("researchChat.kicker")}</p>
         <div data-testid="hero-guide" className="absolute right-0 top-0 sm:static sm:mr-[156px]"><OnboardingTour /></div>
       </div>
-      <h1 className="mt-1 font-display text-[clamp(32px,5vw,46px)] leading-none sm:mt-2 sm:leading-tight">Ask Keryx</h1>
-      <p className="mt-1 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:mt-2 sm:max-w-[64ch] sm:text-base sm:leading-normal">Get a cited answer. Inspect source decisions.</p>
+      <h1 className="mt-1 font-display text-[clamp(32px,5vw,46px)] leading-none sm:mt-2 sm:leading-tight">{message("researchChat.title")}</h1>
+      <p className="mt-1 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:mt-2 sm:max-w-[64ch] sm:text-base sm:leading-normal">{message("researchChat.introduction")}</p>
     </header>
-    {hasTurns && <div className="space-y-8 py-4" aria-label="Conversation turns">
+    {hasTurns && <div className="space-y-8 py-4" aria-label={message("researchChat.turnsLabel")}>
       {history.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
       {request && <div ref={activeTurnRef} className="scroll-mt-24"><ResearchTurn key={request.id} turn={{ ...request, state }} /></div>}
     </div>}
     <div id="dispatch" className="scroll-mt-24">
       {hasTurns && <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="max-w-[64ch] text-xs text-ink-3">{parentId ? "Follow-ups use the previous question only, not its answer or the full chat. Include the details you want researched." : "Start a new research question. Each request has its own source cap."}</p>
-        {!streaming && parentId && <button type="button" onClick={() => { setRootRequest(true); setAnchor(undefined); }} className="min-h-11 px-2 font-mono text-xs underline underline-offset-4">New research</button>}
-        {streaming && <button type="button" onClick={stop} className="min-h-11 border border-seal px-3 py-2 font-mono text-xs text-seal">Stop research</button>}
+        <p className="max-w-[64ch] text-xs text-ink-3">{parentId ? message("researchChat.followUpContext") : message("researchChat.newQuestionContext")}</p>
+        {!streaming && parentId && <button type="button" onClick={() => { setRootRequest(true); setAnchor(undefined); }} className="min-h-11 px-2 font-mono text-xs underline underline-offset-4">{message("researchChat.newResearch")}</button>}
+        {streaming && <button type="button" onClick={stop} className="min-h-11 border border-seal px-3 py-2 font-mono text-xs text-seal">{message("researchChat.stopResearch")}</button>}
       </div>}
       {privateClaims && !protectedDocument && <p role="status" className="mt-3 text-seal">{privateResearchCopy.fullNavigation}</p>}
       <AskForm disabled={streaming || privateClaims && !protectedDocument} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit
@@ -110,12 +114,12 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
         <p>{claimStatus === "available" ? privateResearchCopy.available : claimStatus === "opened" ? privateResearchCopy.opened : claimStatus === "lost" ? privateResearchCopy.lost : privateResearchCopy.failed}</p>
         {claimStatus === "available" && <button className="mt-2 min-h-11 underline" type="button" onClick={() => privateHandoff.open()}>{privateResearchCopy.open}</button>}
       </div>}
-      <p className="mt-3 text-xs text-ink-3">Conversation stays in this tab while the page is open. Completed reports have a saved link; signed-in reports appear in My saved reports. Download a report to keep a local copy.</p>
-      <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs text-ink-2" aria-label="Research tools">
+      <p className="mt-3 text-xs text-ink-3">{message("researchChat.historyNotice")}</p>
+      <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs text-ink-2" aria-label={message("researchChat.toolsLabel")}>
         {!privateClaims && <a href="/research/private" className="underline underline-offset-4">{privateResearchCopy.entry}</a>}
-        <a href="/me/asks" className="underline underline-offset-4">My saved reports</a>
-        <a href={paidHref} className="underline underline-offset-4">Paid agent research & recovery</a>
-        <a href="/register" className="underline underline-offset-4">Publish a paid source</a>
+        <a href="/me/asks" className="underline underline-offset-4">{message("researchChat.savedReports")}</a>
+        <a href={paidHref} className="underline underline-offset-4">{message("researchChat.paidResearch")}</a>
+        <a href="/register" className="underline underline-offset-4">{message("researchChat.publishSource")}</a>
       </nav>
     </div>
   </section>;

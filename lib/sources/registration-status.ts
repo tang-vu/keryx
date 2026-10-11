@@ -1,4 +1,7 @@
 import { decodeEventLog, encodeAbiParameters, keccak256, type Address, type Hex, type TransactionReceipt } from "viem";
+import { createMessages } from "../i18n/messages";
+
+const copy = createMessages("en");
 
 const registrationEvent = [{ type: "event", name: "SourceRegistered", inputs: [
   { name: "id", type: "bytes32", indexed: true },
@@ -15,13 +18,13 @@ export interface RegistrationIdentity {
 export type RegistrationPhase = "offline" | "signing" | "mining" | "indexing" | "indexed" | "failed" | "unknown";
 
 export const registrationTitles: Record<RegistrationPhase, string> = {
-  offline: "Source saved locally (offline)",
-  signing: "Waiting for wallet signature",
-  mining: "Transaction submitted: confirmation pending",
-  indexing: "Registration confirmed: indexing pending",
-  indexed: "Registration confirmed and indexed",
-  failed: "Registration not confirmed",
-  unknown: "Confirmation unknown",
+  offline: copy("registrationStatus.offline"),
+  signing: copy("registrationStatus.signing"),
+  mining: copy("registrationStatus.mining"),
+  indexing: copy("registrationStatus.indexing"),
+  indexed: copy("registrationStatus.indexed"),
+  failed: copy("registrationStatus.failed"),
+  unknown: copy("registrationStatus.unknown"),
 };
 
 export function registrationId(creator: Address, urlHash: Hex): Hex {

@@ -1,7 +1,12 @@
 "use client";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useEffect, useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { FeedVerificationPanel, type VerificationSource } from "./feed-verification-panel";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 export function OwnerFeedVerification({ sourceId, onVerified }: { sourceId: string; onVerified?: () => void }) {
   const { session } = useSiweAuth();
@@ -23,7 +28,7 @@ export function OwnerFeedVerification({ sourceId, onVerified }: { sourceId: stri
     return () => { active = false; };
   }, [sourceId, sessionAddress, retry]);
   if (!session) return null;
-  if (unavailable) return <p role="status" className="mb-6 text-sm">Feed verification is unavailable or this source is not indexed yet. <button className="underline" onClick={() => setRetry(value => value + 1)}>Retry</button>. Do not register it again.</p>;
+  if (unavailable) return <p role="status" className="mb-6 text-sm">{uiRichCopy("feedVerification.unavailable", { retryButton: <button className="underline" onClick={() => setRetry(value => value + 1)}>{uiCopy("feedVerification.retry")}</button> })}</p>;
   if (!source || source.id !== sourceId || source.walletAddress.toLowerCase() !== session.address.toLowerCase() || !source.rssUrl || source.verified) return null;
   return <div className="mb-6"><FeedVerificationPanel key={`${source.id}:${source.walletAddress}`} source={source} onVerified={onVerified} /></div>;
 }

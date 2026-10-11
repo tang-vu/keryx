@@ -7,6 +7,7 @@
  * settings stay on each source's own creator page; every row links there.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BellRing, Loader2, Mail, RefreshCw, Webhook } from "lucide-react";
@@ -14,6 +15,8 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { FeedVerificationPanel, type VerificationSource } from "@/components/keryx/feed-verification-panel";
 import { fmtUsdc } from "@/components/keryx/phase-style";
+
+const uiCopy = createMessages("en");
 
 interface OwnedSource {
   id: string;
@@ -66,7 +69,7 @@ export function MySourcesView() {
       const emails = [...new Set(d.sources.map((s) => s.email).filter(Boolean))];
       if (emails.length === 1) setBulkEmail(emails[0] as string);
     } catch {
-      toast.error("Couldn't load your sources — try again.");
+      toast.error(uiCopy("creatorPortfolio.loadFailed"));
     } finally {
       try {
         const res = await fetch("/api/me/listings", { cache: "no-store" });
@@ -123,15 +126,15 @@ export function MySourcesView() {
         body: JSON.stringify({ email }),
       });
       const d = (await res.json()) as { sourceCount?: number; error?: string };
-      if (!res.ok) throw new Error(d.error ?? "Failed to apply");
+      if (!res.ok) throw new Error(d.error ?? uiCopy("creatorPortfolio.applyFailed"));
       toast.success(
         email
-          ? `Email alerts on for all ${d.sourceCount} source(s).`
-          : `Email alerts off for all ${d.sourceCount} source(s).`,
+          ? uiCopy(d.sourceCount === 1 ? "creatorPortfolio.emailEnabled.one" : "creatorPortfolio.emailEnabled.other", { count: String(d.sourceCount) })
+          : uiCopy(d.sourceCount === 1 ? "creatorPortfolio.emailDisabled.one" : "creatorPortfolio.emailDisabled.other", { count: String(d.sourceCount) }),
       );
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to apply");
+      toast.error(e instanceof Error ? e.message : uiCopy("creatorPortfolio.applyFailed"));
     } finally {
       setApplying(false);
     }
@@ -146,30 +149,30 @@ export function MySourcesView() {
         method: "POST",
       });
       const d = (await res.json()) as { added?: number; error?: string; message?: string };
-      if (!res.ok) throw new Error(d.message ?? d.error ?? "Refresh failed");
+      if (!res.ok) throw new Error(d.message ?? d.error ?? uiCopy("creatorPortfolio.refreshFailed"));
       toast.success(
         d.added
-          ? `${s.name}: ${d.added} new post(s) now purchasable.`
-          : `${s.name}: feed checked — already up to date.`,
+          ? uiCopy(d.added === 1 ? "creatorPortfolio.newPosts.one" : "creatorPortfolio.newPosts.other", { name: s.name, count: d.added })
+          : uiCopy("creatorPortfolio.upToDate", { name: s.name }),
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Refresh failed");
+      toast.error(e instanceof Error ? e.message : uiCopy("creatorPortfolio.refreshFailed"));
     } finally {
       setRefreshingId(null);
     }
   };
 
   if (loading)
-    return <p className="font-mono text-xs text-ink-3">Loading your sources…</p>;
+    return <p className="font-mono text-xs text-ink-3">{uiCopy("creatorPortfolio.loading")}</p>;
 
   if (signedOut)
     return (
       <div className="rounded border border-dashed border-line p-8 text-center">
         <p className="mb-2 font-serif text-sm text-ink-2">
-          Sign in with the wallet that owns your sources to manage them.
+          {uiCopy("creatorPortfolio.signIn")}
         </p>
         <Link href="/connect" className="font-mono text-xs text-seal underline underline-offset-2">
-          Connect wallet →
+          {uiCopy("creatorPortfolio.connect")}
         </Link>
       </div>
     );
@@ -178,10 +181,10 @@ export function MySourcesView() {
     return (
       <div className="rounded border border-dashed border-line p-8 text-center">
         <p className="mb-2 font-serif text-sm text-ink-2">
-          This wallet doesn&apos;t own any sources yet.
+          {uiCopy("creatorPortfolio.empty")}
         </p>
         <Link href="/register" className="font-mono text-xs text-seal underline underline-offset-2">
-          List your feed — issue a toll →
+          {uiCopy("creatorPortfolio.register")}
         </Link>
       </div>
     );
@@ -192,19 +195,19 @@ export function MySourcesView() {
     <div className="flex flex-col gap-6">
       {(listingOnly.length > 0 || listingError || listingCursor || listingUncertain > 0) && (
         <section className="border border-line bg-paper p-5">
-          <h2 className="mb-2 font-serif text-lg text-ink">Listings registered by this wallet</h2>
+          <h2 className="mb-2 font-serif text-lg text-ink">{uiCopy("creatorPortfolio.listings")}</h2>
           <p className="mb-4 font-serif text-[13px] text-ink-2">
-            Manage price and active status here. Citation alerts belong to the payout or author wallet.
+            {uiCopy("creatorPortfolio.listingOwnership")}
           </p>
           {listingOnly.length > 0 && (
             <div className="divide-y divide-line border border-line">
               {listingOnly.map((listing) => (
                 <div key={listing.id} className="flex items-center justify-between gap-4 px-4 py-3">
                   <span className="font-serif text-sm text-ink">
-                    {listing.name}{!listing.active && <span className="ml-2 font-mono text-[10px] text-destructive">deactivated</span>}
+                    {listing.name}{!listing.active && <span className="ml-2 font-mono text-[10px] text-destructive">{uiCopy("creatorPortfolio.deactivated")}</span>}
                   </span>
                   <Link href={`/creator/${listing.id}`} className="font-mono text-[11px] text-seal underline underline-offset-2">
-                    Manage listing →
+                    {uiCopy("creatorPortfolio.manageListing")}
                   </Link>
                 </div>
               ))}
@@ -212,16 +215,16 @@ export function MySourcesView() {
           )}
           {listingUncertain > 0 && (
             <p className="mt-3 font-mono text-xs text-ink-3">
-              {listingUncertain} listing(s) could not be verified. Refresh to retry those registry reads.
+              {uiCopy(listingUncertain === 1 ? "creatorPortfolio.uncertain.one" : "creatorPortfolio.uncertain.other", { count: listingUncertain })}
             </p>
           )}
           {listingError && (
-            <p className="mt-3 font-mono text-xs text-destructive">Couldn&apos;t verify this page of registry listings. Try again.</p>
+            <p className="mt-3 font-mono text-xs text-destructive">{uiCopy("creatorPortfolio.listingFailed")}</p>
           )}
           {listingCursor && (
             <button type="button" onClick={() => void loadMoreListings()} disabled={loadingMoreListings}
               className="mt-4 border border-line px-3 py-2 font-mono text-[11px] text-seal disabled:opacity-60">
-              {loadingMoreListings ? "Checking registry…" : "Check more listings"}
+              {loadingMoreListings ? uiCopy("creatorPortfolio.checking") : uiCopy("creatorPortfolio.more")}
             </button>
           )}
         </section>
@@ -230,12 +233,10 @@ export function MySourcesView() {
       {sources.length > 0 && (
       <section className="border border-line bg-paper p-5">
         <h2 className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-          <BellRing className="h-3.5 w-3.5 text-seal" /> Citation email alerts — whole portfolio
+          <BellRing className="h-3.5 w-3.5 text-seal" /> {uiCopy("creatorPortfolio.emailTitle")}
         </h2>
         <p className="mb-4 max-w-2xl font-serif text-[13px] text-ink-2">
-          One address, every source: get a short email whenever any of your sources is cited and
-          paid. At most one mail per source per hour. Per-source tweaks live on each source&apos;s
-          page below.
+          {uiCopy("creatorPortfolio.emailDescription")}
         </p>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input
@@ -253,7 +254,7 @@ export function MySourcesView() {
               className="flex items-center justify-center gap-2 border border-ink bg-seal px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
             >
               {applying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-              Apply to all {sources.length}
+              {uiCopy(sources.length === 1 ? "creatorPortfolio.applyAll.one" : "creatorPortfolio.applyAll.other", { count: sources.length })}
             </button>
             {sources.some((s) => s.email) && (
               <button
@@ -262,15 +263,14 @@ export function MySourcesView() {
                 disabled={applying}
                 className="border border-line px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3 transition-colors hover:bg-paper-2 hover:text-destructive disabled:opacity-60"
               >
-                Disable all
+                {uiCopy("creatorPortfolio.disableAll")}
               </button>
             )}
           </div>
         </div>
         {!deliveryOn && (
           <p className="mt-3 font-mono text-[10px] text-ink-3">
-            Addresses are saved, but this deployment hasn&apos;t enabled an email provider yet —
-            delivery starts the moment it does.
+            {uiCopy("creatorPortfolio.deliveryHeld")}
           </p>
         )}
       </section>
@@ -289,43 +289,43 @@ export function MySourcesView() {
                 {s.name}
               </Link>
               <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] text-ink-3">
-                <span>{fmtUsdc(s.earnedUsdc)} earned</span>
-                <span>{s.citationCount} citation(s)</span>
-                {!s.active && <span className="text-destructive">deactivated</span>}
-                {!s.verified && <span>unverified — off the money path</span>}
+                <span>{uiCopy("creatorPortfolio.earned", { amount: fmtUsdc(s.earnedUsdc) })}</span>
+                <span>{uiCopy(s.citationCount === 1 ? "creatorPortfolio.citations.one" : "creatorPortfolio.citations.other", { count: s.citationCount })}</span>
+                {!s.active && <span className="text-destructive">{uiCopy("creatorPortfolio.deactivated")}</span>}
+                {!s.verified && <span>{uiCopy("creatorPortfolio.unverified")}</span>}
               </div>
             </div>
             <span
-              title={s.email ? `Email alerts → ${s.email}` : "No email alert"}
+              title={s.email ? uiCopy("creatorPortfolio.emailTitleWithAddress", { email: s.email }) : uiCopy("creatorPortfolio.noEmail")}
               className={`flex items-center gap-1 font-mono text-[10px] ${s.email ? "text-seal" : "text-ink-3"}`}
             >
               <Mail className="h-3 w-3" /> {s.email ?? "—"}
             </span>
             <span
-              title={s.webhookConfigured ? "Webhook active" : "No webhook"}
+              title={s.webhookConfigured ? uiCopy("creatorPortfolio.webhookActive") : uiCopy("creatorPortfolio.noWebhook")}
               className={`flex items-center gap-1 font-mono text-[10px] ${s.webhookConfigured ? "text-seal" : "text-ink-3"}`}
             >
-              <Webhook className="h-3 w-3" /> {s.webhookConfigured ? "on" : "—"}
+              <Webhook className="h-3 w-3" /> {s.webhookConfigured ? uiCopy("creatorPortfolio.webhookOn") : "—"}
             </span>
             {s.hasFeed && s.active && (
               <button
                 type="button"
                 onClick={() => void refreshFeed(s)}
                 disabled={refreshingId !== null}
-                title="Re-read the feed and pull in new posts"
+                title={uiCopy("creatorPortfolio.refreshTitle")}
                 className="flex items-center gap-1 border border-line px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 transition-colors hover:bg-paper-2 hover:text-seal disabled:opacity-60"
               >
                 <RefreshCw
                   className={`h-3 w-3 ${refreshingId === s.id ? "animate-spin" : ""}`}
                 />
-                Refresh feed
+                {uiCopy("creatorPortfolio.refresh")}
               </button>
             )}
             <Link
               href={`/creator/${s.id}`}
               className="font-mono text-[11px] text-seal underline underline-offset-2 hover:text-ink"
             >
-              Manage →
+              {uiCopy("creatorPortfolio.manage")}
             </Link>
             {!s.verified && s.verificationSource && <div className="w-full pt-3"><FeedVerificationPanel key={`${s.id}:${s.verificationSource.walletAddress}`} source={s.verificationSource} onVerified={() => { setSources((previous) => previous.map((row) => row.id === s.id ? { ...row, verified: true } : row)); }} /></div>}
           </div>

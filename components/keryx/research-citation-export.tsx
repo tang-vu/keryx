@@ -1,8 +1,11 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useState } from "react";
 import type { Citation } from "@/lib/types";
 import { buildCitationExport, type CitationExportFormat } from "@/lib/research-citation-export";
+
+const copy = createMessages("en");
 
 export function ResearchCitationExport({ citations }: { citations: Citation[] }) {
   const [error, setError] = useState("");
@@ -21,7 +24,7 @@ export function ResearchCitationExport({ citations }: { citations: Citation[] })
       link.download = `keryx-references.${format === "bibtex" ? "bib" : format === "csl-json" ? "json" : "ris"}`;
       document.body.appendChild(link);
       link.click();
-    } catch { setError("Reference download failed. Try again in this browser."); }
+    } catch { setError(copy("citationExport.failed")); }
     finally {
       link?.remove();
       // Leave the URL alive while the browser starts its download.
@@ -33,16 +36,16 @@ export function ResearchCitationExport({ citations }: { citations: Citation[] })
   }
 
   return <div className="mt-5 border-t border-line pt-4">
-    <p className="font-mono text-xs uppercase tracking-[0.1em] text-ink-3">Reference export</p>
+    <p className="font-mono text-xs uppercase tracking-[0.1em] text-ink-3">{copy("citationExport.title")}</p>
     <div className="mt-2 flex flex-wrap gap-3">
       {(["bibtex", "ris", "csl-json"] as const).map(format => <button key={format} type="button" disabled={!count}
         onClick={() => download(format)}
         className="min-h-11 border border-line px-3 font-mono text-xs text-seal hover:border-seal focus-visible:outline-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
-        {format === "bibtex" ? "Download BibTeX" : format === "csl-json" ? "Download CSL-JSON" : "Download RIS (Zotero)"}
+        {format === "bibtex" ? copy("citationExport.bibtex") : format === "csl-json" ? copy("citationExport.cslJson") : copy("citationExport.ris")}
       </button>)}
     </div>
-    <p className="mt-2 font-serif text-sm text-ink-3">{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.</p>
-    {omitted > 0 && <p className="mt-1 font-serif text-sm text-ink-3">{omitted} citations omitted because an article title or usable article link is unavailable.</p>}
+    <p className="mt-2 font-serif text-sm text-ink-3">{copy(count === 1 ? "citationExport.references.one" : "citationExport.references.other", { count })}</p>
+    {omitted > 0 && <p className="mt-1 font-serif text-sm text-ink-3">{copy(omitted === 1 ? "citationExport.omitted.one" : "citationExport.omitted.other", { count: omitted })}</p>}
     {error && <p role="alert" className="mt-2 text-sm text-seal">{error}</p>}
   </div>;
 }

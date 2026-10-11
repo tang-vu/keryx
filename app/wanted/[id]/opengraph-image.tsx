@@ -1,3 +1,4 @@
+import { createMessages } from "@/lib/i18n/messages";
 import { ImageResponse } from "next/og";
 import {
   findWantedBrief,
@@ -5,7 +6,9 @@ import {
   WANTED_DETAIL_LIMIT,
 } from "@/lib/wanted-board";
 
-export const alt = "Keryx wanted claim — paid demand, missing evidence";
+const uiCopy = createMessages("en");
+
+export const alt = uiCopy("wantedCard.alt");
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -15,7 +18,7 @@ export default async function WantedClaimOgImage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  let claim = "A claim Keryx was paid to answer — and its corpus left short.";
+  let claim = uiCopy("wantedCard.fallbackClaim");
   let coverage = 0;
   let seen = 0;
   let state: "open" | "filled" = "open";
@@ -62,8 +65,8 @@ export default async function WantedClaimOgImage({
             textTransform: "uppercase",
           }}
         >
-          <span>Keryx Wanted · demand with a receipt</span>
-          <span>{state === "open" ? "Open creator brief" : "Claim filled"}</span>
+          <span>{uiCopy("wantedCard.receipt")}</span>
+          <span>{state === "open" ? uiCopy("wantedCard.open") : uiCopy("wantedCard.filled")}</span>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -76,17 +79,17 @@ export default async function WantedClaimOgImage({
               fontWeight: 700,
             }}
           >
-            A claim the paid corpus could not support
+            {uiCopy("wantedCard.paidClaim")}
           </div>
           <div style={{ fontSize: 50, lineHeight: 1.08, fontWeight: 700 }}>{headline}</div>
         </div>
 
         <div style={{ display: "flex", gap: 72 }}>
-          <Figure value={`${Math.round(coverage * 100)}%`} label="coverage" accent />
-          <Figure value={`${seen}×`} label="paid demand" />
+          <Figure value={`${Math.round(coverage * 100)}%`} label={uiCopy("wantedCard.coverage")} accent />
+          <Figure value={`${seen}×`} label={uiCopy("wantedCard.demand")} />
           <Figure
             value={state === "open" ? "≤ $0.05" : `${Math.round(filledCoverage * 100)}%`}
-            label={state === "open" ? "bounded retry" : "coverage now"}
+            label={state === "open" ? uiCopy("wantedCard.retry") : uiCopy("wantedCard.coverageNow")}
           />
         </div>
 
@@ -117,7 +120,7 @@ export default async function WantedClaimOgImage({
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div style={{ fontSize: 28, fontWeight: 700 }}>Keryx</div>
               <div style={{ fontSize: 17, color: "#7A6F58", letterSpacing: 1 }}>
-                Payout only after verified evidence and real citation settlement
+                {uiCopy("wantedCard.settlementBoundary")}
               </div>
             </div>
           </div>

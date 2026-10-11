@@ -1,32 +1,37 @@
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import type { readWithdrawalHistoryStatus } from "@/lib/gateway/withdrawal-history-status";
 import { recordedArcLabel,recordedArcTransactionUrl } from "@/lib/arc-network-display";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 export type HistoryProgress = Awaited<ReturnType<typeof readWithdrawalHistoryStatus>> | { state: "read-failed" };
 
 export function WithdrawalHistoryProgress({ result }: { result?: HistoryProgress }) {
-  if (!result) return <p>Server record · Settlement not checked</p>;
-  if (result.state === "read-failed") return <p role="status">Progress could not be read. This does not mean the withdrawal failed.</p>;
-  if (result.state === "unavailable") return <p role="status">The server could not find this request. Keep its ID and any recovery file; do not treat it as cancelled.</p>;
-  if (result.state === "authentication-required") return <p role="status">Sign in again to check progress.</p>;
+  if (!result) return <p>{uiCopy("withdrawalProgress.unchecked")}</p>;
+  if (result.state === "read-failed") return <p role="status">{uiCopy("withdrawalProgress.readFailed")}</p>;
+  if (result.state === "unavailable") return <p role="status">{uiCopy("withdrawalProgress.unavailable")}</p>;
+  if (result.state === "authentication-required") return <p role="status">{uiCopy("withdrawalProgress.signIn")}</p>;
   const progress = result.progress;
   const network="network" in progress&&typeof progress.network==="string"?progress.network:undefined;
   if (progress.chainFinalityVerified) return <div className="space-y-1" role="status">
-    <p>Server reports an observed mint on {recordedArcLabel(network)}.</p>
-    <p>Observation uses the operator&apos;s RPC; this browser has not independently verified settlement.</p>
-    <p>Observed: <time dateTime={progress.observedAt}>{progress.observedAt}</time></p>
+    <p>{uiCopy("withdrawalProgress.observedMint", { network: recordedArcLabel(network) })}</p>
+    <p>{uiCopy("withdrawalProgress.rpcBoundary")}</p>
+    <p>{uiRichCopy("withdrawalProgress.observedAt", { time: <time dateTime={progress.observedAt}>{progress.observedAt}</time> })}</p>
     <a className="break-all underline" href={recordedArcTransactionUrl(network,progress.transactionHash)}
-      target="_blank" rel="noopener noreferrer">View reported mint transaction</a>
+      target="_blank" rel="noopener noreferrer">{uiCopy("withdrawalProgress.transaction")}</a>
   </div>;
   const transfer = {
-    "request-stored": "Request saved. No transfer attempt is recorded.",
-    "awaiting-transfer-evidence": "Transfer evidence is still pending. Do not create a replacement request to retry it.",
-    "attestation-stored": "Transfer attestation saved. This alone does not confirm receipt in your wallet.",
+    "request-stored": uiCopy("withdrawalProgress.requestSaved"),
+    "awaiting-transfer-evidence": uiCopy("withdrawalProgress.transferPending"),
+    "attestation-stored": uiCopy("withdrawalProgress.attestationSaved"),
   }[progress.status];
   const mint = {
-    "not-checked": "Mint settlement has not been checked.",
-    "not-queued": "No mint queue entry is reported.",
-    "queued": "Mint is queued; settlement is not confirmed.",
-    "prepared": "Mint transaction is prepared; settlement is not confirmed.",
+    "not-checked": uiCopy("withdrawalProgress.mintUnchecked"),
+    "not-queued": uiCopy("withdrawalProgress.notQueued"),
+    "queued": uiCopy("withdrawalProgress.queued"),
+    "prepared": uiCopy("withdrawalProgress.prepared"),
   }[progress.mintStatus];
-  return <div className="space-y-1" role="status"><p>Server-reported progress</p><p>{transfer}</p><p>{mint}</p></div>;
+  return <div className="space-y-1" role="status"><p>{uiCopy("withdrawalProgress.title")}</p><p>{transfer}</p><p>{mint}</p></div>;
 }

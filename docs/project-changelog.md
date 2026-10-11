@@ -1,5 +1,22 @@
 # Keryx Project Changelog
 
+### English catalogue across product and distribution surfaces (v0.27.56 candidate)
+
+- Coordinate reviewed English copy across landing, research, source discovery
+  and claims, registration, creator, wanted, withdrawal, integration and ledger
+  surfaces. Preserve whole messages, named values, fallback and existing source,
+  payment, authentication and recovery meaning; no locale or gated pilot activation.
+- Prepare app/OpenAPI **0.27.56**, hosted MCP **0.3.14**, stdio/official Registry
+  **0.4.16** and Desktop **0.4.15** because their actual runtime inputs changed.
+  Extension **0.1.4.1** remains unchanged. Prior published version provenance
+  remains historical; these versions are candidates until verified delivery.
+- Refresh the existing public offline study provenance once without changing its
+  retained 48 trial outputs. Offline simulation establishes neither real
+  settlement nor a live model evaluation.
+- Combined source review, required build/CI and platform checks, publication
+  integrity/readback and one production delivery remain gates. This packaging
+  checkpoint does not establish full issue272 or issue273 completion.
+
 ### Bounded Spanish notes and blocked teaching prerequisites (v0.27.55 candidate)
 
 - Preserve the named NASA section and expose adjacent complete original sentences

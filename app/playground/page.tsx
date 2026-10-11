@@ -11,10 +11,15 @@
  * by the same IP rate-limit as the site's anonymous asker).
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useState } from "react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { Copy, Play, Loader2 } from "lucide-react";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 const BASE = "https://keryx.cc/api/v1";
 const PRESETS = [
@@ -88,7 +93,7 @@ export default function PlaygroundPage() {
       if (!res.ok || !res.body || !res.headers.get("content-type")?.includes("event-stream")) {
         const j = (await res.json().catch(() => null)) as { error?: { message?: string } | string } | null;
         const msg =
-          typeof j?.error === "string" ? j.error : j?.error?.message ?? `Request failed (${res.status})`;
+          typeof j?.error === "string" ? j.error : j?.error?.message ?? uiCopy("integrationPlayground.requestFailed", { status: res.status });
         setError(msg);
         return;
       }
@@ -141,11 +146,9 @@ export default function PlaygroundPage() {
       <SiteHeader />
       <main className="mx-auto max-w-[900px] px-4 py-10 sm:px-8">
         <div className="mb-8 border-b border-line pb-6">
-          <h1 className="font-serif text-2xl text-ink">OpenAI-compatible playground</h1>
+          <h1 className="font-serif text-2xl text-ink">{uiCopy("integrationPlayground.title")}</h1>
           <p className="mt-1 font-mono text-xs text-ink-3">
-            The Run button calls <code className="text-seal">{BASE}/chat/completions</code> exactly as
-            any OpenAI SDK would (model <code className="text-seal">keryx</code>, <code className="text-seal">stream:true</code>).
-            Free — no key. Watch the agent decide, then pay the creators it cites.
+            {uiRichCopy("integrationPlayground.introduction", { endpoint: <code className="text-seal">{BASE}/chat/completions</code>, model: <code className="text-seal">keryx</code>, stream: <code className="text-seal">stream:true</code> })}
           </p>
         </div>
 
@@ -168,7 +171,7 @@ export default function PlaygroundPage() {
               onChange={(e) => setQ(e.target.value)}
               rows={2}
               className="flex-1 resize-none rounded border border-line bg-paper px-3 py-2 font-mono text-xs text-ink placeholder-ink-3 focus:border-seal focus:outline-none"
-              placeholder="Ask anything…"
+              placeholder={uiCopy("integrationPlayground.questionPlaceholder")}
             />
             <button
               onClick={() => void run()}
@@ -176,7 +179,7 @@ export default function PlaygroundPage() {
               className="flex items-center gap-2 rounded border border-seal bg-seal/10 px-5 font-mono text-sm text-seal hover:bg-seal/20 disabled:opacity-50 transition-colors"
             >
               {running ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-              {running ? "Running…" : "Run"}
+              {running ? uiCopy("integrationPlayground.running") : uiCopy("integrationPlayground.run")}
             </button>
           </div>
         </div>
@@ -192,14 +195,14 @@ export default function PlaygroundPage() {
           <div className="mb-8 grid gap-4 md:grid-cols-[1fr_1fr]">
             <div>
               <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-3">
-                reasoning_content (live)
+                {uiCopy("integrationPlayground.reasoning", { field: "reasoning_content" })}
               </p>
               <pre className="h-64 overflow-y-auto whitespace-pre-wrap rounded border border-line bg-paper-2 p-3 font-mono text-[11px] leading-relaxed text-ink-2">
                 {thinking || "…"}
               </pre>
             </div>
             <div>
-              <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-3">answer</p>
+              <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-3">{uiCopy("integrationPlayground.answer")}</p>
               <div className="h-64 overflow-y-auto whitespace-pre-wrap rounded border border-line bg-paper p-3 font-serif text-sm leading-relaxed text-ink">
                 {answer || "…"}
               </div>
@@ -209,13 +212,13 @@ export default function PlaygroundPage() {
 
         {paid.length > 0 && (
           <div className="mb-8 rounded border border-seal/30 bg-paper p-4">
-            <p className="mb-2 font-serif text-sm text-ink">Citations and planned rewards (USDC on Arc, {paymentMode})</p>
+            <p className="mb-2 font-serif text-sm text-ink">{uiCopy("integrationPlayground.citations", { mode: paymentMode })}</p>
             <ul className="space-y-1">
               {paid.map((c, i) => (
                 <li key={i} className="flex justify-between font-mono text-xs text-ink-2">
                   <span>{c.source}</span>
                   <span className="text-seal">
-                    ${c.reward.toFixed(4)} · w {c.weight.toFixed(2)}
+                    {uiCopy("integrationPlayground.rewardWeight", { reward: c.reward.toFixed(4), weight: c.weight.toFixed(2) })}
                   </span>
                 </li>
               ))}
@@ -243,22 +246,14 @@ export default function PlaygroundPage() {
               onClick={() => void navigator.clipboard.writeText(code[tab]!).catch(() => null)}
               className="flex items-center gap-1 font-mono text-[11px] text-ink-3 hover:text-seal transition-colors"
             >
-              <Copy size={12} /> copy
+              <Copy size={12} /> {uiCopy("integrationPlayground.copy")}
             </button>
           </div>
           <pre className="overflow-x-auto rounded border border-line bg-paper-2 p-4 font-mono text-[11px] leading-relaxed text-ink-2">
             {code[tab]}
           </pre>
           <p className="mt-2 font-mono text-[11px] text-ink-3">
-            Pass a <code className="text-seal">kx_live_…</code> key (mint at{" "}
-            <a href="/dev" className="underline underline-offset-2 hover:text-seal">
-              /dev
-            </a>
-            ) as the Bearer token for higher limits. Full schema at{" "}
-            <a href="/api/docs" className="underline underline-offset-2 hover:text-seal">
-              /api/docs
-            </a>
-            .
+            {uiRichCopy("integrationPlayground.keyInstruction", { key: <code className="text-seal">kx_live_…</code>, portal: <a href="/dev" className="underline underline-offset-2 hover:text-seal">/dev</a>, schema: <a href="/api/docs" className="underline underline-offset-2 hover:text-seal">/api/docs</a> })}
           </p>
         </div>
       </main>

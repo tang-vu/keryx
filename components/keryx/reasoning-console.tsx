@@ -7,6 +7,10 @@
  * fills as tolls/rewards settle so the hard spend cap is visible, not implied.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TraceStep } from "@/lib/types";
 import { TraceRow } from "./trace-row";
@@ -58,41 +62,41 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
       <span className="inline-flex items-center gap-2">
         {streaming && <ThinkingDots />}
         <span className="tabular-nums tracking-normal">
-          <span className="text-paid">${fmtUsdc(spent)} settled</span>
+          <span className="text-paid">{message("decisionLog.settledAmount", { amount: fmtUsdc(spent) })}</span>
           <span className="text-ink-3"> / ${fmtUsdc(budget)}</span>
         </span>
       </span>
     ) : streaming ? (
       <span className="inline-flex items-center gap-2 text-seal">
         <ThinkingDots />
-        deciding
+        {message("decisionLog.deciding")}
       </span>
     ) : steps.length > 0 ? (
-      `${steps.length} steps`
+      message(steps.length === 1 ? "decisionLog.steps.one" : "decisionLog.steps.other", { count: steps.length })
     ) : undefined;
 
   return (
     <div className="flex h-full flex-col">
-      <SectionHeading numeral="I" label="The decision" right={right} />
+      <SectionHeading numeral="I" label={message("decisionLog.title")} right={right} />
       <BudgetMeter spent={spent} budget={budget} streaming={streaming} pending={paymentTotals.pending + paymentTotals.unverified} />
       {(paymentTotals.pending > 0 || paymentTotals.simulated > 0 || paymentTotals.unverified > 0) && (
         <p className="mb-3 font-mono text-xs text-ink-2">
-          {paymentTotals.pending > 0 && `$${fmtUsdc(paymentTotals.pending)} confirmation pending`}
+          {paymentTotals.pending > 0 && message("decisionLog.pendingAmount", { amount: fmtUsdc(paymentTotals.pending) })}
           {paymentTotals.pending > 0 && (paymentTotals.simulated > 0 || paymentTotals.unverified > 0) && " · "}
-          {paymentTotals.simulated > 0 && `$${fmtUsdc(paymentTotals.simulated)} offline simulated`}
+          {paymentTotals.simulated > 0 && message("decisionLog.simulatedAmount", { amount: fmtUsdc(paymentTotals.simulated) })}
           {paymentTotals.simulated > 0 && paymentTotals.unverified > 0 && " · "}
-          {paymentTotals.unverified > 0 && `$${fmtUsdc(paymentTotals.unverified)} conflicting payment state`}
+          {paymentTotals.unverified > 0 && message("decisionLog.unverifiedAmount", { amount: fmtUsdc(paymentTotals.unverified) })}
         </p>
       )}
       <div className="flex flex-1 flex-col overflow-hidden border border-ink bg-paper">
-        <div ref={scrollRef} onScroll={onScroll} aria-label="Decision log" className="max-h-[60vh] min-h-[320px] flex-1 overflow-y-auto overscroll-contain px-5 py-2 sm:max-h-[68vh]">
+        <div ref={scrollRef} onScroll={onScroll} aria-label={message("decisionLog.label")} className="max-h-[60vh] min-h-[320px] flex-1 overflow-y-auto overscroll-contain px-5 py-2 sm:max-h-[68vh]">
           <div className="relative">
             {steps.map((step, i) => (
               <TraceRow key={`${step.phase}-${step.ts}-${i}`} step={step} />
             ))}
             {streaming && steps.length === 0 && (
               <p className="py-8 text-center font-mono text-[12px] uppercase tracking-[0.1em] text-ink-3">
-                Contacting the herald…
+                {message("decisionLog.connecting")}
               </p>
             )}
           </div>
@@ -100,7 +104,7 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
       </div>
       {!following && (
         <button type="button" onClick={jumpToLatest} className="self-end border border-ink bg-paper px-3 py-1.5 font-mono text-xs text-ink underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">
-          Jump to latest
+          {message("decisionLog.jumpToLatest")}
         </button>
       )}
     </div>

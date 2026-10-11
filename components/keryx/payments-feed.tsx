@@ -7,6 +7,7 @@
  * per-tx explorer page; on-chain proof is the batched settlement wallet, linked in the header.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { Check, CircleX, Clock3 } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
 import { paymentSettlementStatus, pendingAuthorizationStatusLabel } from "@/lib/payments/payment-state";
@@ -25,16 +26,18 @@ import { cn } from "@/lib/utils";
 import { GatewayContractReferences } from "./gateway-contract-references";
 import { recordedArcLabel } from "@/lib/arc-network-display";
 
+const uiCopy = createMessages("en");
+
 function timeAgo(iso: string): string {
   const d = new Date(iso).getTime();
   if (isNaN(d)) return "—";
   const s = Math.max(0, Math.round((Date.now() - d) / 1000));
-  if (s < 60) return `${s}s`;
+  if (s < 60) return uiCopy(s === 1 ? "paymentRecords.seconds.one" : "paymentRecords.seconds.other", { count: s });
   const m = Math.round(s / 60);
-  if (m < 60) return `${m}m`;
+  if (m < 60) return uiCopy(m === 1 ? "paymentRecords.minutes.one" : "paymentRecords.minutes.other", { count: m });
   const h = Math.round(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.round(h / 24)}d`;
+  if (h < 24) return uiCopy(h === 1 ? "paymentRecords.hours.one" : "paymentRecords.hours.other", { count: h });
+  return uiCopy(Math.round(h / 24) === 1 ? "paymentRecords.days.one" : "paymentRecords.days.other", { count: Math.round(h / 24) });
 }
 
 export function PaymentsFeed({
@@ -48,12 +51,12 @@ export function PaymentsFeed({
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="font-serif text-lg font-normal">
-          Payment records
+          {uiCopy("paymentRecords.title")}
         </CardTitle>
         <div className="flex items-center gap-3">
           <GatewayContractReferences records={payments} className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground hover:text-paid hover:underline"/>
           <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-paid">
-            recorded
+            {uiCopy("paymentRecords.recorded")}
           </span>
         </div>
       </CardHeader>
@@ -61,7 +64,7 @@ export function PaymentsFeed({
         <CardContent className="space-y-2">
           {payments.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No payments yet.
+              {uiCopy("paymentRecords.emptyCompact")}
             </p>
           )}
           {payments.map((p, i) => {
@@ -79,14 +82,7 @@ export function PaymentsFeed({
                     {p.sourceName}
                   </p>
                   <p className="mt-0.5 font-mono text-[10px] text-ink-3">
-                    {timeAgo(p.createdAt)} · {recordedArcLabel(p.network)} · {p.kind === "operating-fee" ? "Keryx operating fee" : p.kind} ·{" "}
-                    {status === "settled"
-                      ? "settled in batch"
-                      : status === "failed"
-                      ? "failed, not charged"
-                      : status === "pending"
-                      ? pendingAuthorizationStatusLabel(p)
-                      : "simulated"}
+                    {uiCopy("paymentRecords.compact", { age: timeAgo(p.createdAt), network: recordedArcLabel(p.network), kind: p.kind === "operating-fee" ? uiCopy("paymentRecords.operatingKind") : p.kind, status: status === "settled" ? uiCopy("paymentRecords.settledCompact") : status === "failed" ? uiCopy("paymentRecords.failedCompact") : status === "pending" ? pendingAuthorizationStatusLabel(p) : uiCopy("paymentRecords.simulated") })}
                   </p>
                 </div>
                 <span
@@ -108,20 +104,18 @@ export function PaymentsFeed({
       ) : (
         <CardContent className="px-0">
           <p className="px-6 pb-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
-            Settlement IDs are Circle Gateway references (batched on-chain on
-            Arc), not per-tx EVM hashes — verify via the settlement wallet
-            linked above.
+            {uiCopy("paymentRecords.batchBoundary")}
           </p>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-6">Time</TableHead>
-                  <TableHead>Kind</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Flow</TableHead>
-                  <TableHead className="pr-6">Settled</TableHead>
+                  <TableHead className="pl-6">{uiCopy("paymentRecords.time")}</TableHead>
+                  <TableHead>{uiCopy("paymentRecords.kind")}</TableHead>
+                  <TableHead>{uiCopy("paymentRecords.source")}</TableHead>
+                  <TableHead className="text-right">{uiCopy("paymentRecords.amount")}</TableHead>
+                  <TableHead>{uiCopy("paymentRecords.flow")}</TableHead>
+                  <TableHead className="pr-6">{uiCopy("paymentRecords.settled")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -131,7 +125,7 @@ export function PaymentsFeed({
                       colSpan={6}
                       className="py-10 text-center text-sm text-muted-foreground"
                     >
-                      No payments yet — run a query on the Ask page.
+                      {uiCopy("paymentRecords.empty")}
                     </TableCell>
                   </TableRow>
                 )}
@@ -146,7 +140,7 @@ export function PaymentsFeed({
                     <TableCell className="max-w-[180px] truncate text-sm font-medium">
                       {p.sourceName}
                       <span className="mt-1 block font-mono text-[11px] font-normal text-muted-foreground">{recordedArcLabel(p.network)}</span>
-                      {p.kind === "operating-fee" && <span className="mt-1 block whitespace-normal text-[11px] font-normal text-muted-foreground">Operating fee for research; recorded separately from creator rewards.</span>}
+                      {p.kind === "operating-fee" && <span className="mt-1 block whitespace-normal text-[11px] font-normal text-muted-foreground">{uiCopy("paymentRecords.operatingBoundary")}</span>}
                     </TableCell>
                     <TableCell
                       className={cn(
@@ -165,27 +159,27 @@ export function PaymentsFeed({
                       {paymentSettlementStatus(p) === "settled" && p.txHash ? (
                         <span
                           className="inline-flex items-center gap-1.5 font-mono text-[11px] text-paid"
-                          title={`Circle Gateway settlement ID ${p.txHash} — batched on-chain on Arc (not a per-tx EVM hash)`}
+                          title={uiCopy("paymentRecords.settlementTitle", { reference: p.txHash })}
                         >
                           <Check className="h-3 w-3" />
-                          batched
+                          {uiCopy("paymentRecords.batched")}
                         </span>
                       ) : paymentSettlementStatus(p) === "failed" ? (
                         <span
                           className="inline-flex items-center gap-1.5 font-mono text-[11px] text-red-700"
                           title={
-                            p.txHash ? `Circle transfer ${p.txHash}` : undefined
+                            p.txHash ? uiCopy("paymentRecords.transferTitle", { reference: p.txHash }) : undefined
                           }
                         >
                           <CircleX className="h-3 w-3" />
-                          failed · not charged
+                          {uiCopy("paymentRecords.failed")}
                         </span>
                       ) : paymentSettlementStatus(p) === "pending" ? (
                         <span
                           className="inline-flex items-center gap-1.5 font-mono text-[11px] text-amber-700"
                           title={
                             p.authorizationId
-                              ? `Authorization ${p.authorizationId}`
+                              ? uiCopy("paymentRecords.authorizationTitle", { reference: p.authorizationId })
                               : undefined
                           }
                         >
@@ -194,10 +188,10 @@ export function PaymentsFeed({
                         </span>
                       ) : (
                         <span className="text-[11px] text-muted-foreground">
-                          simulated
+                          {uiCopy("paymentRecords.simulated")}
                         </span>
                       )}
-                      {(p.txHash || p.authorizationId) && <span className="mt-2 block max-w-60 break-all font-mono text-[11px] text-muted-foreground">{p.txHash ? "Recorded reference: " : "Authorization: "}{p.txHash ?? p.authorizationId}</span>}
+                      {(p.txHash || p.authorizationId) && <span className="mt-2 block max-w-60 break-all font-mono text-[11px] text-muted-foreground">{uiCopy(p.txHash ? "paymentRecords.recordedReference" : "paymentRecords.authorizationReference", { reference: p.txHash ?? p.authorizationId ?? "" })}</span>}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -221,7 +215,7 @@ function KindBadge({ kind }: { kind: PaymentRecord["kind"] }) {
           : "border-ink-3/40 bg-paper-2 text-ink-2"
       )}
     >
-      {kind === "operating-fee" ? "operating fee" : kind}
+      {kind === "operating-fee" ? uiCopy("paymentRecords.operatingBadge") : kind}
     </span>
   );
 }

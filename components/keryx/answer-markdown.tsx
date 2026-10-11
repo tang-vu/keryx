@@ -7,9 +7,12 @@
  * source. Intentionally small — not a general markdown engine.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { Fragment, type ReactNode } from "react";
 import type { Citation } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+const copy = createMessages("en");
 
 interface AnswerMarkdownProps {
   text: string;
@@ -77,10 +80,10 @@ function renderWithCitations(
         onClick={(event) => onCitationClick?.(marker, event.currentTarget)}
         title={
           cite
-            ? `${cite.itemTitle ? `${cite.itemTitle} · ${cite.sourceName}` : cite.sourceName} — ${Math.round(cite.weight * 100)}% weight`
+            ? cite.itemTitle ? copy("reportCitation.articleTitle", { article: cite.itemTitle, publication: cite.sourceName, weight: Math.round(cite.weight * 100) }) : copy("reportCitation.title", { source: cite.sourceName, weight: Math.round(cite.weight * 100) })
             : marker
         }
-        aria-label={cite ? `Open evidence for ${cite.itemTitle ?? cite.sourceName}` : `Citation ${marker}`}
+        aria-label={cite ? copy("reportCitation.openEvidence", { source: cite.itemTitle ?? cite.sourceName }) : copy("reportCitation.label", { marker })}
         className="mx-0.5 inline-flex min-h-7 items-center rounded-sm px-1 align-baseline font-mono text-[0.72em] font-semibold text-seal underline decoration-seal/40 underline-offset-2 transition-colors hover:bg-seal/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal"
       >
         [{marker.replace(/\D/g, "") || marker}]

@@ -4,7 +4,10 @@
  * "K" holds the centre. States the thesis: the messenger is paid.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { cn } from "@/lib/utils";
+
+const uiCopy = createMessages("en");
 
 export function HeraldSeal({ className }: { className?: string }) {
   return (
@@ -20,7 +23,7 @@ export function HeraldSeal({ className }: { className?: string }) {
           style={{ fontSize: 13, letterSpacing: "0.32em" }}
         >
           <textPath href="#eng-sealring" startOffset="0">
-            ★ KERYX ★ THE HERALD IS PAID ★ ΚΗΡΥΞ&nbsp;
+            {uiCopy("brandPresentation.sealLegend", { brand: "KERYX", greekBrand: "ΚΗΡΥΞ" })}
           </textPath>
         </text>
       </g>

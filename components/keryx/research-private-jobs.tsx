@@ -1,5 +1,7 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
@@ -9,16 +11,18 @@ import { privateWorkspaceHistorySchema, privateWorkspaceResultSchema, privateUsd
 import { ResearchPrivateResult } from "./research-private-result";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
+const message = createMessages("en");
+
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 export function ResearchPrivateJobs() {
   const { session } = useSiweAuth();
   return <section aria-labelledby="private-jobs-heading" className="border border-line bg-paper p-6">
-    <h2 id="private-jobs-heading" className="font-display text-3xl">Private research for your wallet</h2>
-    <p className="mt-3 font-serif text-sm text-ink-2">Find existing private jobs from your account, even on a new device. Opening a job never submits another payment.</p>
-    <p className="mt-2 font-serif text-sm text-ink-3">{browserPaymentProfile().testnet ? "Private purchasing is limited to configured pilot accounts. " : "Private purchasing is available when the service has capacity. "}This view does not change access to past public research. Results are restricted to the paying account; this is not end-to-end encryption.</p>
-    {session === undefined ? <p role="status" className="mt-4">Checking sign-in…</p> : session
+    <h2 id="private-jobs-heading" className="font-display text-3xl">{message("privateResearchJobs.title")}</h2>
+    <p className="mt-3 font-serif text-sm text-ink-2">{message("privateResearchJobs.introduction")}</p>
+    <p className="mt-2 font-serif text-sm text-ink-3">{message(browserPaymentProfile().testnet ? "privateResearchJobs.pilotNotice" : "privateResearchJobs.capacityNotice")}</p>
+    {session === undefined ? <p role="status" className="mt-4">{message("privateResearchJobs.checkingSignIn")}</p> : session
       ? <PrivateJobs key={session.address.toLowerCase()} wallet={session.address.toLowerCase()} />
-      : <Link href="/connect" className="mt-4 inline-block underline">Sign in to view private jobs</Link>}
+      : <Link href="/connect" className="mt-4 inline-block underline">{message("privateResearchJobs.signIn")}</Link>}
   </section>;
 }
 
@@ -47,7 +51,7 @@ function PrivateJobs({ wallet }: { wallet: string }) {
         setHistory(previous => ({ ...parsed, jobs: request.cursor
           ? [...(previous?.jobs ?? []), ...parsed.jobs].filter((job, index, jobs) => jobs.findIndex(other => other.id === job.id) === index)
           : parsed.jobs }));
-      } catch { if (active) setError("Private history is unavailable. Check sign-in and refresh to retry."); }
+      } catch { if (active) setError(message("privateResearchJobs.historyUnavailable")); }
       finally { clearTimeout(timer); if (active) setBusy(false); }
     })();
     return () => { active = false; clearTimeout(timer); abort.abort(); };
@@ -70,7 +74,7 @@ function PrivateJobs({ wallet }: { wallet: string }) {
           || parsed.request.researchMode !== selection.job.researchMode || parsed.request.model !== selection.job.model
           || parsed.request.packageVersion !== selection.job.packageVersion || parsed.spend.incoming.priceMicros !== selection.job.priceMicros) throw new Error("Private result mismatch");
         if (active) setResult(parsed);
-      } catch { if (active) setError("Private result is unavailable. Check sign-in and refresh this job to retry."); }
+      } catch { if (active) setError(message("privateResearchJobs.resultUnavailable")); }
       finally { clearTimeout(timer); if (active) setReading(false); }
     })();
     return () => { active = false; clearTimeout(timer); abort.abort(); };
@@ -85,21 +89,21 @@ function PrivateJobs({ wallet }: { wallet: string }) {
     setSelection(previous => ({ job, revision: (previous?.revision ?? 0) + 1 }));
   }
   return <div className="mt-4">
-    <p className="break-all font-mono text-xs text-ink-3">Account: {wallet}</p>
-    <button className={`${control} mt-3`} disabled={busy} onClick={() => refresh()}>Refresh private jobs</button>
-    {busy && <p role="status" className="mt-3">Loading private jobs…</p>}
+    <p className="break-all font-mono text-xs text-ink-3">{message("privateResearchJobs.account", { wallet })}</p>
+    <button className={`${control} mt-3`} disabled={busy} onClick={() => refresh()}>{message("privateResearchJobs.refresh")}</button>
+    {busy && <p role="status" className="mt-3">{message("privateResearchJobs.loading")}</p>}
     {error && <p role="alert" className="mt-3 text-seal">{error}</p>}
-    {history?.jobs.length === 0 && !busy && <p className="mt-4 text-sm">No private jobs found for this wallet. Jobs paid by a separate agent wallet belong to that account.</p>}
+    {history?.jobs.length === 0 && !busy && <p className="mt-4 text-sm">{message("privateResearchJobs.empty")}</p>}
     <ul className="mt-4 divide-y divide-line">{history?.jobs.map(job => <li key={job.id} className="py-4">
       <p className="break-words font-serif">{job.question}</p>
-      <p className="mt-1 text-sm text-ink-3">{job.researchMode} · {new Date(job.createdAt).toLocaleString("en-US")} · Package price {privateUsdc(job.priceMicros)}</p>
-      <button className={`${control} mt-2`} onClick={() => open(job)}>View private job</button>
+      <p className="mt-1 text-sm text-ink-3">{message("privateResearchJobs.jobSummary", { mode: job.researchMode, date: new Date(job.createdAt).toLocaleString("en-US"), amount: privateUsdc(job.priceMicros) })}</p>
+      <button className={`${control} mt-2`} onClick={() => open(job)}>{message("privateResearchJobs.viewJob")}</button>
     </li>)}</ul>
-    {history?.nextCursor && <button className={control} disabled={busy} onClick={() => refresh(history.nextCursor)}>Load older private jobs</button>}
+    {history?.nextCursor && <button className={control} disabled={busy} onClick={() => refresh(history.nextCursor)}>{message("privateResearchJobs.loadOlder")}</button>}
     {selection && <div className="mt-6 border-t border-line pt-5">
-      <div className="flex flex-wrap gap-3"><button className={control} disabled={reading} onClick={() => open(selection.job)}>Refresh this job</button>
-        <button className={control} onClick={() => { setSelection(null); setResult(null); setReading(false); }}>Close private job</button></div>
-      {reading && <p role="status" className="mt-3">Loading private result…</p>}
+      <div className="flex flex-wrap gap-3"><button className={control} disabled={reading} onClick={() => open(selection.job)}>{message("privateResearchJobs.refreshJob")}</button>
+        <button className={control} onClick={() => { setSelection(null); setResult(null); setReading(false); }}>{message("privateResearchJobs.close")}</button></div>
+      {reading && <p role="status" className="mt-3">{message("privateResearchJobs.loadingResult")}</p>}
       {result && <ResearchPrivateResult job={result} />}
     </div>}
   </div>;

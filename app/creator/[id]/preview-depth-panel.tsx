@@ -9,14 +9,17 @@
  * item the free preview reveals to the agent before it decides to pay the toll.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useState } from "react";
 import { Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { previewDepthLabels } from "@/lib/i18n/creator-preview";
 import {
   PREVIEW_DEPTHS,
-  PREVIEW_DEPTH_LABELS,
   type PreviewDepth,
 } from "@/lib/sources/preview-depth";
+
+const uiCopy = createMessages("en");
 
 export function PreviewDepthPanel({ creatorId }: { creatorId: string }) {
   const [owner, setOwner] = useState(false); // stays false (renders nothing) until proven owner
@@ -48,11 +51,11 @@ export function PreviewDepthPanel({ creatorId }: { creatorId: string }) {
         body: JSON.stringify({ depth: next }),
       });
       const d = (await res.json()) as { depth?: PreviewDepth; error?: string };
-      if (!res.ok) throw new Error(d.error ?? "Failed to save");
-      toast.success(`Preview set to “${PREVIEW_DEPTH_LABELS[next].label}”.`);
+      if (!res.ok) throw new Error(d.error ?? uiCopy("creatorPreview.failed"));
+      toast.success(uiCopy("creatorPreview.saved", { label: previewDepthLabels[next].label }));
     } catch (e) {
       setDepth(prev);
-      toast.error(e instanceof Error ? e.message : "Failed to save");
+      toast.error(e instanceof Error ? e.message : uiCopy("creatorPreview.failed"));
     } finally {
       setSaving(null);
     }
@@ -61,11 +64,10 @@ export function PreviewDepthPanel({ creatorId }: { creatorId: string }) {
   return (
     <section className="mb-8 border border-line bg-paper p-5">
       <h2 className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        <Eye className="h-3.5 w-3.5 text-seal" /> Free preview depth
+        <Eye className="h-3.5 w-3.5 text-seal" /> {uiCopy("creatorPreview.title")}
       </h2>
       <p className="mb-4 max-w-xl font-serif text-[13px] text-ink-2">
-        How much of each item the agent reads for free before it decides to pay. Reveal more to be
-        found; reveal less to keep the value behind the toll.
+        {uiCopy("creatorPreview.description")}
       </p>
 
       <div className="grid gap-2 sm:grid-cols-3">
@@ -87,11 +89,11 @@ export function PreviewDepthPanel({ creatorId }: { creatorId: string }) {
             >
               <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink">
                 {saving === d ? <Loader2 className="h-3 w-3 animate-spin text-seal" /> : null}
-                {PREVIEW_DEPTH_LABELS[d].label}
+                {previewDepthLabels[d].label}
                 {selected && saving === null ? <span className="text-seal">✓</span> : null}
               </span>
               <span className="font-serif text-[12px] leading-snug text-ink-3">
-                {PREVIEW_DEPTH_LABELS[d].hint}
+                {previewDepthLabels[d].hint}
               </span>
             </button>
           );
