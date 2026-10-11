@@ -7172,6 +7172,34 @@ refuses invalid descriptions/versions before archive writes. Keep the historical
 legal extraction fixture and require every paragraph outside the reviewed extension
 section and dated update to retain its exact markup.
 
+## 2026-10-11 — Count Spanish note prose separately from required inspection material
+
+The original #231 caller asks for a three-sentence note and inspectable NASA
+passages. Count the note's factual prose separately from a distinctly labeled
+exact-original appendix and mandatory confidence/operational qualifications.
+Whole-output segmentation remains diagnostic; it is not an additional acceptance
+gate. Every admitted factual statement stays in the note itself, so the retained
+five-pair answer remains useful but `compact-unmet` for three sentences. This
+clarifies the earlier complete-answer count interpretation without changing history.
+
+Generate the complete count before unchanged independent review. Only for finite
+ordinary notes, append spare-capacity options containing two adjacent complete
+source sentences, separated solely by original whitespace, inside one selected
+passage and accepted by the existing strict span gate/caps. This exposes NASA's
+203-unit misleading-label/illumination span without joining disjoint quotes or
+loosening whole-statement support. Preserve original IDs first and all exact bytes.
+Final presentation cannot rewrite, truncate, merge or drop reviewed statements;
+private renderer-enrolled counts survive mandatory notices. Missing review,
+qualification or coverage retains the complete useful fallback and explicit gaps.
+
+The acceptance replay uses byte-identical retained public HTML and the real parser
+worker's observed layout with synthetic provider transport, labeled accordingly.
+It does not establish a fresh live-model success, observation or experiment.
+Attribution, evidence and financial projections retain their authority, with no
+new call/retry/cap, payment or private/package authority. Required source CI/review
+and root's verified combined delivery remain closure gates; original frozen
+criteria imply no new paid-live gate. See the updated finite presentation contract.
+
 ## Keep research catalogue extraction independent of research and payment authority — 2026-10-11
 
 Use the existing typed English catalogue and named React-node interpolation for

@@ -1,5 +1,16 @@
 import { referenceSnapshot, type PublicReference } from "../public-references/catalog";
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { gunzipSync } from "node:zlib";
+import nasaNote from "./fixtures/nasa-sentence-note-20261009.json";
+import { extractHtml } from "../web-research/html-reader";
+import { gatheredArticle, type ArticleRead } from "../web-research/article-reader";
+import { sourceHtmlLayout } from "../llm/source-text-blocks";
+import { buildQuoteOptions } from "../llm/quote-options";
+import { EVIDENCE_REVIEW_GUIDANCE } from "../llm/evidence-review";
+import { completeAnswerSentenceSegments } from "./sentence-note-answer";
+import { buildAnswerText as telegramAnswerText } from "../telegram/ask-message";
+import { buildAnswerMessage as discordAnswerMessage } from "../discord/ask-interaction";
 import { ResearchSelectionError } from "../llm/research-selection";
 import { SQLITE_SELECTION_QUESTION, SQLITE_SELECTION_QUESTION_SHA256, SQLITE_SELECTION_TARGETS } from "../../test-support/sqlite-selection-fixture";
 import { scholarlyCandidate } from "../scholarly/discovery";
@@ -25,7 +36,7 @@ import { contentBodyHash } from "../sources/content-receipt";
  * deterministic control flow only — no LLM, no network, no chain.
  */
 
-import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, it, expect, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { runAgent, type RunInput } from "./run-agent";
 import { collectRun } from "./index";
@@ -76,7 +87,7 @@ import type { SourceClaim } from "../sources/public-source-claim";
 import { publicSourceClaimId } from "../db/public-source-claims";
 import { sourceClaimReceipt } from "../sources/source-claim-access";
 import { fixtureEvidenceSpans } from "../../test-support/evidence-fixtures";
-import { completeEvidenceSpans } from "../llm/evidence-span";
+import { completeEvidenceSpans, isCompleteEvidenceSpan } from "../llm/evidence-span";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteDecisionReviews } from "../db/decision-reviews-sqlite";
 import { createLiveDecisionReviews, recordLiveReviewVerdict } from "../research/decision-review-live";
@@ -609,7 +620,7 @@ describe("ordinary complete-answer word budget", () => {
   });
 });
 
-describe("ordinary complete-answer sentence note", () => {
+describe("ordinary sentence note and mandatory notices", () => {
   const question = "Explique la identidad de aprobación.";
   const quote = "The protocol binds approval to canonical action identity.";
   const statement = "La aprobación se vincula a la identidad canónica de la acción.";
@@ -639,8 +650,9 @@ describe("ordinary complete-answer sentence note", () => {
     expect(note.attribute.mock.calls[0][0]).toEqual(canonical.attribute.mock.calls[0][0]);
     expect((note.attribute.mock.calls[0][0] as { answer: string }).answer).toContain("### Objetivo de investigación 1");
     expect(note.run.answer).not.toContain("### Objetivo de investigación 1");
-    expect(note.run.answer).toContain(`${statement} [S1] Texto de la fuente: “${quote}”`);
-    expect(note.run.answer).toContain("No fue posible presentar la respuesta completa en 3 frases");
+    expect(note.run.answer).toContain(`${statement} [S1] (pasaje 1)`);
+    expect(note.run.answer).toContain(`Texto de la fuente: “${quote}”`);
+    expect(note.run.answer).toContain("No fue posible presentar la nota en 3 frases");
     expect(note.run.evidence).toEqual(canonical.run.evidence);
     expect(note.run.claimCoverage).toEqual(canonical.run.claimCoverage);
     expect(note.run.citations).toEqual(canonical.run.citations);
@@ -654,7 +666,7 @@ describe("ordinary complete-answer sentence note", () => {
     expect(researchReportMarkdown(note.run, null, payments)).toContain(note.run.answer);
     expect(remoteResearchResult(note.run).answer).toBe(note.run.answer);
     expect(note.run.trace.find(step => step.message.includes("sentence-note projection"))?.detail)
-      .toMatchObject({ answer: note.run.answer, requestedSentenceCount: 3, outcome: "compact-unmet" });
+      .toMatchObject({ answer: note.run.answer, requestedSentenceCount: 3, noteSentenceCount: 1, outcome: "compact-unmet" });
   });
   it("retains the same post-settlement recovery guidance without a paid retry", async () => {
     const canonical = await sentenceRun({ count: false, pending: true }), note = await sentenceRun({ pending: true });
@@ -676,10 +688,172 @@ describe("ordinary complete-answer sentence note", () => {
   it("discloses an early unavailable answer without touching late synthesis bindings or attempting another run", async () => {
     const { run } = await drive({ question: "En español, escriba una nota breve de tres frases: explique el resultado.", budget: 0 },
       deps([], fakeEngine(), fakeGateway()));
-    expect(run.answer).toContain("No fue posible presentar la respuesta completa en 3 frases");
+    expect(run.answer).toContain("No fue posible presentar la nota en 3 frases");
     expect(run.evidence).toEqual([]);
     expect(run.totalSpent).toBe(0);
   });
+});
+
+describe("exact original NASA Spanish note — real frozen HTML, synthetic provider transport", () => {
+  const url = "https://science.nasa.gov/moon/facts/", question = nasaNote.question;
+  const targets = nasaNote.claimCoverage.map(row => row.claim);
+  const synchronous = nasaNote.statements[0].quote;
+  const illumination = 'Some people call the far side – the hemisphere we never see from Earth – the "dark side", but that\'s misleading. \nAs the Moon orbits Earth, different parts are in sunlight or darkness at different times.';
+  const statements = [
+    "La Luna gira sobre su eje al mismo ritmo al que orbita la Tierra, lo que NASA denomina rotación sincrónica.",
+    "La rotación sincrónica hace que el mismo hemisferio lunar mire hacia la Tierra todo el tiempo.",
+    "Llamar «siempre oscura» a la cara lejana, el hemisferio que nunca vemos desde la Tierra, es engañoso porque, al orbitar la Luna la Tierra, distintas partes reciben luz solar o quedan en oscuridad en momentos diferentes.",
+  ];
+  type Failure = "none" | "generation-unavailable" | "review-unavailable" | "missing-statement-review" | "missing-illumination" | "partial-target" | "dropped-qualification" | "count-mismatch";
+  let article: ArticleRead;
+  beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-10-11T00:00:00Z")); });
+  afterEach(() => { vi.useRealTimers(); });
+  beforeAll(async () => {
+    // Lossless binary envelope avoids Git's Windows text newline conversion.
+    const html = gunzipSync(await readFile("lib/agent/fixtures/nasa-moon-facts-original-20261008.html.gz"));
+    expect(html.length).toBe(312685);
+    expect(createHash("sha256").update(html).digest("hex")).toBe("1b833a00d9bfa96cc794070bc25388e16a3b05ecbb3d9c164df2d1024e5c3c1e");
+    // The real inert worker enrolls layout authority; no JSON-restored layout.
+    article = await extractHtml(html.toString("utf8"), url);
+  });
+  class SyntheticNasaTransport extends JsonChatEngine {
+    readonly name = "llm:synthetic-nasa-fixture";
+    requests: { system: string; packet: Record<string, any>; maxTokens?: number }[] = [];
+    constructor(private failure: Failure) { super(); }
+    protected async chatJson(_model: string, system: string, user: string, maxTokens?: number) {
+      const packet = JSON.parse(user); this.requests.push({ system, packet, maxTokens });
+      if (this.requests.length === 1) {
+        if (this.failure === "generation-unavailable") throw new Error("Synthetic generation unavailable");
+        expect(system).toContain("exactly 3 single-sentence statement/quote pairs ONLY if");
+        expect(packet.researchTargets).toEqual(targets.map((question, claimIndex) => ({ question, claimIndex })));
+        const options = packet.quoteOptions as { quoteId: string; marker: string; text: string }[];
+        expect(options.some(row => row.text === illumination)).toBe(true);
+        const evidence = statements.map((statement, claimIndex) => {
+          const text = claimIndex === 2 ? this.failure === "missing-illumination" ? nasaNote.statements[3].quote : illumination : synchronous;
+          const option = options.find(row => row.text === text)!;
+          return { claimIndex, marker: option.marker, quoteId: option.quoteId, support: 0.9,
+            statement: claimIndex === 2 && this.failure === "dropped-qualification" ? "La cara lejana de la Luna está siempre oscura." : statement };
+        });
+        if (this.failure === "count-mismatch") {
+          const option = options.find(row => row.text === nasaNote.statements[1].quote)!;
+          evidence.push({ claimIndex: 0, marker: option.marker, quoteId: option.quoteId, support: 0.9, statement: nasaNote.statements[1].text });
+        }
+        return { evidence, conflicts: [] };
+      }
+      expect(this.requests).toHaveLength(2);
+      expect(system).toBe(EVIDENCE_REVIEW_GUIDANCE); // Count guidance cannot influence independent review.
+      if (this.failure === "review-unavailable") throw new Error("Synthetic review unavailable");
+      expect(packet.evidence[2].quote).toBe(this.failure === "missing-illumination" ? nasaNote.statements[3].quote : illumination);
+      expect(packet.evidence[2].source.webProvenance.normalizedBodyHash).toBe("3f30825c089efa4b443e401ac781c4c99105d94a72d077f5c344ea028f3930fb");
+      return { reviews: packet.evidence.map((row: { index: number }) => ({ index: row.index, supportedFact: "Controlled fixture assessment, not a live semantic review", support: 0.9,
+        ...(row.index === 2 && this.failure === "missing-statement-review" ? {} : {
+          statementSupport: row.index === 2 && ["missing-illumination", "dropped-qualification"].includes(this.failure) ? 0.2 : 0.9 }),
+      })) };
+    }
+  }
+  async function replay(failure: Failure = "none", retained?: SynthResult) {
+    const transport = new SyntheticNasaTransport(failure), engine = fakeEngine({ sufficiency: input => ({ sufficient: failure !== "partial-target",
+      rationale: "Synthetic finite fixture assessment", perClaim: input.subClaims.map((claim, index) => ({ claim,
+        coverage: index === 2 && failure === "partial-target" ? 0.2 : 0.9, coveredBy: input.gathered.map(row => row.marker) })) }) });
+    engine.decompose = async () => targets;
+    let synthesized: SynthResult | undefined, synthesisInput: SynthInput | undefined;
+    engine.synthesize = vi.fn(async input => { synthesisInput = input; synthesized = retained ?? await transport.synthesize(input); return synthesized; });
+    const attribute = vi.spyOn(engine, "attribute"), gateway = fakeGateway(), effects = isolatedTestEffects();
+    const read = vi.fn(async () => article);
+    const run = await collectRun({ question, originalQuestion: retained ? question.replace("escriba una nota breve de tres frases:", "explique lo siguiente:") : question,
+      origin: "web", budget: 0, researchMode: "quick" }, { deps: { ...deps([], engine, gateway), effects, readWebArticle: read,
+        webSearch: { search: async () => [] } } });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(gateway.fetchCalls).toEqual([]); expect(gateway.citationCalls).toEqual([]);
+    return { run, transport, synthesized, synthesisInput: synthesisInput!, attribute, effects };
+  }
+  it("replays the exact original through observed duplicated headings, generation, unchanged review and final shared delivery", async () => {
+    const original = { ...gatheredArticle("public:web:nasa", article), marker: "S1" };
+    expect(original.text.length).toBe(9448);
+    expect(original.contentVersion).toBe("003c225b5fb9b295d7dcd0391966667a2553bb3be4d48915ff80e3b6c5fcef09");
+    expect(original.text.slice(1426, 1446).trim()).toBe("Orbit and Rotation");
+    expect(original.text.slice(2809, 2828).trim()).toBe("Orbit and Rotation");
+    const layout = sourceHtmlLayout(original)!;
+    expect(layout).toBeDefined();
+    expect(layout.headings.some(row => row.start === 2809 && original.text.slice(row.start, row.end).trim() === "Orbit and Rotation")).toBe(true);
+    expect(layout.headings.some(row => row.start === 1426)).toBe(false);
+    expect(sourceHtmlLayout({ ...original, htmlTextLayout: JSON.parse(JSON.stringify(layout)) })).toBeUndefined();
+    const selected = evidenceContext(question, targets, [original]);
+    expect(selected[0].passages).toHaveLength(8);
+    expect(selected[0].passages.reduce((sum, row) => sum + row.text.length, 0)).toBe(1722);
+    expect(selected[0].passages.some(row => row.start <= 2976 && row.end >= 3179)).toBe(true);
+    const ordinary = buildQuoteOptions(selected, [original]), note = buildQuoteOptions(selected, [original], { includeAdjacentSentences: true });
+    expect(note.slice(0, ordinary.length)).toEqual(ordinary);
+    expect(ordinary.some(row => row.text === illumination)).toBe(false);
+    const option = note.find(row => row.text === illumination)!;
+    expect(option).toMatchObject({ start: 2976, end: 3179 });
+    expect(option.text.length).toBe(203);
+    expect(option.text).toBe(original.text.slice(option.start, option.end));
+    expect(isCompleteEvidenceSpan(original, option.text, option)).toBe(true);
+    const data = await replay(), { run } = data;
+    expect(data.transport.requests).toHaveLength(2);
+    expect(data.transport.requests.map(row => row.maxTokens)).toEqual([2304, 1792]);
+    expect(data.synthesized!.evidence).toHaveLength(3);
+    expect(data.synthesized!.evidence![2]).toMatchObject({ quote: illumination, quoteSpan: { start: 2976, end: 3179 }, statement: statements[2], statementSupport: 0.9 });
+    const prose = run.answer.split("### Nota — 3 frases\n\n")[1]!.split("### Apéndice de inspección")[0];
+    expect(prose.split("\n\n").filter(row => row.trim())).toHaveLength(3);
+    for (const statement of statements) { expect(prose).toContain(statement); expect(completeAnswerSentenceSegments(statement)).toBe(1); }
+    expect(run.answer).toContain(`Texto de la fuente: “${illumination}”`);
+    expect(run.answer).toContain("Calificaciones y avisos obligatorios");
+    expect(run.answer).toContain("sin verificación independiente");
+    expect(run.answer).toContain("### Supplied original source status");
+    expect(run.answer).not.toContain("No fue posible presentar");
+    expect(run.answer).not.toMatch(/(?:observé|observamos|experimenté|nuestro experimento)/u);
+    expect(run.trace.find(row => row.message.includes("sentence-note projection"))?.detail).toMatchObject({ outcome: "compact", noteSentenceCount: 3 });
+    expect(completeAnswerSentenceSegments(run.answer)).toBeGreaterThan(3);
+    expect(run.claimCoverage).toHaveLength(3);
+    expect(run.evidence!.every(row => row.qualifiesForAnswer && !row.qualifiesForReward)).toBe(true);
+    expect(run.totalSpent).toBe(0); expect(run.totalToCreators).toBe(0);
+    const receipt = buildResearchReceipt(run, []);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.dispatch.answer).toBe(run.answer);
+    expect(remoteResearchResult(run).answer).toBe(run.answer);
+    expect(buildAnswerContent(run)).toContain(run.answer);
+    expect(researchReportMarkdown(run, null, [])).toContain(run.answer);
+    expect(telegramAnswerText(run)).toContain("https://"); // Bounded previews link to the complete report.
+    expect(JSON.stringify(discordAnswerMessage(run))).toContain(run.id);
+    expect(data.effects.saveQueryRun).toHaveBeenCalledWith(run);
+    const canonical = await replay("none", data.synthesized);
+    expect(data.attribute.mock.calls[0][0]).toEqual(canonical.attribute.mock.calls[0][0]);
+    expect(run.evidence!.map(({ webProvenance, ...row }) => ({ ...row, bodyHash: webProvenance?.normalizedBodyHash })))
+      .toEqual(canonical.run.evidence!.map(({ webProvenance, ...row }) => ({ ...row, bodyHash: webProvenance?.normalizedBodyHash })));
+    expect(run.citations).toEqual(canonical.run.citations);
+    expect(run.claimCoverage).toEqual(canonical.run.claimCoverage);
+    expect(run.confidence).toEqual(canonical.run.confidence);
+  });
+  it.each(["generation-unavailable", "review-unavailable", "missing-statement-review", "missing-illumination", "partial-target", "dropped-qualification", "count-mismatch"] as const)(
+    "preserves completed source reads and useful supported parts without forcing three sentences: %s", async failure => {
+      const data = await replay(failure), { run } = data;
+      expect(data.transport.requests).toHaveLength(failure === "generation-unavailable" ? 1 : 2);
+      expect(run.answer).toContain("No fue posible presentar la nota en 3 frases");
+      expect(run.answer).toContain("### Supplied original source status");
+      expect(run.answer).toContain("Los pagos se registran por separado");
+      expect(run.totalSpent).toBe(0);
+      expect(run.answer).not.toContain("La cara lejana de la Luna está siempre oscura.");
+      const result = run.trace.find(row => row.message.includes("sentence-note projection"))?.detail as { outcome: string; noteSentenceCount?: number };
+      expect(result.outcome).toBe(failure === "count-mismatch" ? "compact-unmet" : "unmet");
+      if (failure === "count-mismatch") {
+        expect(result.noteSentenceCount).toBe(4);
+        expect(run.answer.split("### Apéndice de inspección")[0]).toContain(nasaNote.statements[1].text);
+      } else expect(run.answer).toContain("### Objetivo de investigación");
+      if (!["generation-unavailable", "review-unavailable"].includes(failure)) {
+        expect(run.answer).toContain(statements[0]); expect(run.answer).toContain(statements[1]);
+      }
+      if (failure === "partial-target") expect(run.answer).toContain("sigue por debajo del umbral de respaldo");
+      if (["missing-statement-review", "missing-illumination", "dropped-qualification"].includes(failure)) expect(run.answer).not.toContain(statements[2]);
+      if (failure === "generation-unavailable") expect(run.answer).toContain("No fue posible evaluar las evidencias");
+      if (failure === "review-unavailable") {
+        expect(run.answer).toContain("Falta de evidencia: ningún fragmento admitido");
+        expect(run.trace.some(row => row.message.includes("Evidence relevance review unavailable"))).toBe(true);
+      }
+      expect(verifyResearchReceipt(buildResearchReceipt(run, [])).valid).toBe(true);
+      expect(remoteResearchResult(run).answer).toBe(run.answer);
+    });
 });
 
 it("records trusted ingress without deriving an owner or method from origin/client telemetry", async () => {
