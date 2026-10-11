@@ -1,4 +1,5 @@
 import { listedQuestion, publicFinancialPayment } from "@/lib/run-privacy/public";
+import { privacyReadsActive, requirePrivacy } from "@/lib/run-privacy/contracts";
 /**
  * GET /api/creator/[id]/export?format=csv|json&limit=N — a creator's full payout ledger
  * as a downloadable file. Public, like the rest of /api/creator/[id]: every payout is
@@ -38,6 +39,9 @@ export async function GET(
 
   try {
     const db = await getDb();
+    const privacyActive = privacyReadsActive(db);
+    // Check admission even for an empty ledger; this selects no question bodies.
+    if (privacyActive) await requirePrivacy(db).list({ take: 1, ids: [] });
     const source = await db.getSource(id);
     if (!source) {
       return NextResponse.json({ error: "creator not found" }, { status: 404 });
@@ -59,7 +63,7 @@ export async function GET(
     // Behind the Cloudflare Tunnel the request origin is the internal localhost:3939, which
     // would put dead links in a file the creator keeps. Same canonical base as the sitemap.
     const baseUrl = process.env.BASE_URL || "https://keryx.cc";
-    const rows = buildEarningsRows(payments, questionById, baseUrl);
+    const rows = buildEarningsRows(privacyActive ? payments.map(publicFinancialPayment) : payments, questionById, baseUrl);
     const filename = exportFilename(id, format);
     const headers = {
       "Content-Disposition": `attachment; filename="${filename}"`,

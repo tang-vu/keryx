@@ -1,4 +1,5 @@
 import { listedQuestion, publicFinancialPayment } from "@/lib/run-privacy/public";
+import { privacyReadsActive, requirePrivacy } from "@/lib/run-privacy/contracts";
 /**
  * GET /api/creator/export?format=csv|json&limit=N — one wallet's payouts across every source
  * it owns, as a downloadable ledger. The per-source export (`/api/creator/[id]/export`) is
@@ -55,6 +56,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = await getDb();
+    const privacyActive = privacyReadsActive(db);
+    // Source ownership grants earnings access, not custody authorization bindings.
+    if (privacyActive) await requirePrivacy(db).list({ take: 1, ids: [] });
     // listAllSources, not listSources: a source the creator has since deactivated on-chain
     // still earned real money, and an audit file that silently drops it is wrong.
     // Ownership decides first, the key's pin only ever narrows what is left — so a key can
@@ -87,7 +91,7 @@ export async function GET(req: NextRequest) {
     // Behind the Cloudflare Tunnel the request origin is the internal localhost:3939, which
     // would put dead links in a file the creator keeps. Same canonical base as the sitemap.
     const baseUrl = process.env.BASE_URL || "https://keryx.cc";
-    const rows = buildPortfolioRows(payments, questionById, baseUrl);
+    const rows = buildPortfolioRows(privacyActive ? payments.map(publicFinancialPayment) : payments, questionById, baseUrl);
     const filename = exportFilename(`portfolio-${wallet.slice(0, 10)}`, format);
     const headers = {
       "Content-Disposition": `attachment; filename="${filename}"`,
