@@ -3,7 +3,7 @@ import { projectActualReadCheckpoints } from "../research-audit/actual-read-proj
 
 /** Permalink/client projection. Supplier holds and recovery authority are private
  * operational records, even when the original answer and its citations are public. */
-export function publicQueryRun(run: QueryRun): Omit<QueryRun, "originalFulfillment"> {
+export function publicQueryRun(run: QueryRun): Omit<QueryRun, "originalFulfillment" | "sourceLearning"> {
   const projected = { ...run };
   if (run.trace.some(step => Object.hasOwn(step, "readCheckpoints"))) {
     // Validate while the original/private marker still exists. Unknown/future packets
@@ -18,5 +18,6 @@ export function publicQueryRun(run: QueryRun): Omit<QueryRun, "originalFulfillme
     });
   }
   delete projected.originalFulfillment;
+  delete projected.sourceLearning;
   return projected;
 }

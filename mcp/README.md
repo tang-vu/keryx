@@ -62,12 +62,25 @@ Existing buyer, original recovery and account-tool gates remain unchanged.
 Publication, installed-client acceptance and hosted availability are separate;
 see the [distribution record](https://github.com/tang-vu/keryx/blob/main/docs/mcp-distribution.md).
 
+The issue 299 source candidate adds keyless `keryx_source_learning` with only a
+registered source ID. It returns the same bounded observational source/topic
+sample as the creator page and `/api/source/{id}/learning`, excluding unknown,
+owner and private traffic from estimates. It does not activate live learned
+selection or exploration and cannot read, sign or pay. Public tags, counts,
+recorded contribution, exact rational price, descriptive uncertainty and shift
+flags are explained in [the source and release gates](../docs/engineering/source-learning-299.md).
+
 The issue 298 source candidate adds keyless `keryx_purchase_outcomes` with only
 `dispatchId`. It reads a public retained report's exact-version BUY/citation/trace
 payment sample; no paid read, private review, current-source backfill or learning
 is executed. Recorded settlement is not revalidated. Sample/exclusion counts stay
 visible; cohort, missed value and cost per supported claim remain unknown or
 unmeasured. See [the source and release gates](../docs/engineering/purchase-outcomes-298.md).
+
+The October 11 pooled purchase-outcome candidate uses the public page and GET
+`/api/purchase-outcomes`; this MCP tool keeps its original per-dispatch contract.
+Pooled cohorts come only from write-time records, never from the client channel.
+No evaluation reader, user-budget debit or creator reward is added by that view.
 
 The issue 286 source candidate adds keyless `keryx_public_job_ledger` (`days: 1..31`, default
 7). It reads a bounded public web-dispatch transfer ledger with separate browser/treasury/

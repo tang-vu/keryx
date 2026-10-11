@@ -4,7 +4,7 @@ import type { RunPrivacyStore } from "../run-privacy/contracts";
 import { parseRunUsage } from "../research/usage-provenance";
 import { assertOrdinarySqliteResearchAuthority } from "./research-monthly";
 import { publicHistoryIncludes } from "../research-audit/usage-cohort";
-import { MAX_USAGE_RUNS, MAX_USAGE_PAYMENTS, projectUsageCorpus, usageWindowSchema, UsageUnavailable,
+import { MAX_USAGE_RUNS, MAX_USAGE_PAYMENTS, projectUsageCorpus, publishedUsageHistory, usageWindowSchema, UsageUnavailable,
   type PublicUsageStore, type UsageCorpus, type UsageWindow } from "../usage/contracts";
 
 /** No schema installation, ledger writes, or enrolled adapter fallback. */
@@ -39,6 +39,11 @@ export function createSqlitePublicUsage(db: DatabaseSync, privacy?: () => RunPri
   }
   return Object.freeze({
     async summary(window) { return transaction(() => projectUsageCorpus(corpus(window), window).summary); },
+    async publishedHistory(window, cohort, limit) {
+      if (!active || !privacy) throw new UsageUnavailable();
+      const view = transaction(() => projectUsageCorpus(corpus(window), window));
+      return publishedUsageHistory(view, privacy(), cohort, limit);
+    },
     async history(window, cohort, limit) {
       if (!active) { if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new UsageUnavailable();
       return transaction(() => {

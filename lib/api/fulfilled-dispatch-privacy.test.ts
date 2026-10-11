@@ -28,11 +28,15 @@ import { GET } from "@/app/api/dispatch/[id]/route";
 it("serves the actual public dispatch without private fulfillment authority, preserving the original stored result", async () => {
   const fixture = syntheticFailedOriginal(), claim = { ...fixture.input, failedOrder: fixture.order };
   const completion = syntheticFulfilledRun(claim), run = completion.run;
+  run.sourceLearning={version:1,network:"eip155:5042002",sources:[{sourceId:"private-learning-source",topics:["general"],eligibility:"unknown",
+    read:false,cached:false,bought:false,cited:false,accessMicros:"0",contribution:0}]};
   mocked.getDb.mockResolvedValue({ runPrivacy: {read:async()=>({exists:true,item:{run,state:{visibility:"public",revision:0,erased:false}}})} });
   const response = await GET(new NextRequest("https://keryx.test/api/dispatch/synthetic"), { params: Promise.resolve({ id: run.id }) });
   const projected = await response.json();
   expect(response.status).toBe(200); expect(projected.answer).toBe(run.answer);
   expect(projected.originalFulfillment).toBeUndefined(); expect(projected).toEqual(publicQueryRun(run));
+  expect(projected).not.toHaveProperty("sourceLearning");expect(JSON.stringify(projected)).not.toContain("private-learning-source");
+  expect(run.sourceLearning.sources[0].sourceId).toBe("private-learning-source");
   expect(run.originalFulfillment).toBeDefined();
   const originals = [run.originalFulfillment!.claimId, run.originalFulfillment!.authoritySha256,
     run.originalFulfillment!.originalFailureSha256, run.originalFulfillment!.providerLedgerSha256];

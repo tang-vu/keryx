@@ -644,6 +644,11 @@ export interface KeryxDB {
   getA2aOrder(id: string): Promise<A2aOrder | null>;
   /** Payer-authorized inventory, newest first; 26 rows allow a 25-row page plus sentinel. */
   listA2aOrdersByPayer(wallet: string, before?: { createdAt: string; id: string }): Promise<A2aOrder[]>;
+  /** Private operator observation of running/failed originals, oldest accepted first. Read-only: it
+   * claims, requeues, signs and settles nothing. A row that cannot be decoded is counted, never
+   * dropped. Optional: storage without a reviewed bounded queue read refuses. Incomplete reads
+   * explicitly report truncation; they never assert an exhaustive queue. */
+  listUnfinishedA2aOrders?(limit: number): Promise<import("../a2a/overdue-escalation-queue").UnfinishedA2aOrders>;
   /** Atomically claims the oldest never-started job, or only the supplied bound original.
    * A mismatch never claims another job; started jobs are never auto-requeued. */
   claimNextA2aOrder(workerId: string, startedAt: string, expectedOriginal?: A2aOriginalClaim): Promise<A2aOrder | null>;

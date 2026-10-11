@@ -3,7 +3,7 @@ import type { QueryRun } from "../types";
 import type { RunPrivacyStore } from "../run-privacy/contracts";
 import { parseRunUsage } from "../research/usage-provenance";
 import { publicHistoryIncludes } from "../research-audit/usage-cohort";
-import { projectUsageCorpus, UsageUnavailable, usageWindowSchema, type PublicUsageStore, type UsageWindow } from "../usage/contracts";
+import { projectUsageCorpus, publishedUsageHistory, UsageUnavailable, usageWindowSchema, type PublicUsageStore, type UsageWindow } from "../usage/contracts";
 
 /** Ordinary service-role RPC only. Missing migration/errors never select a REST/native fallback. */
 export function createSupabasePublicUsage(client: SupabaseClient, privacy?: () => RunPrivacyStore): PublicUsageStore {
@@ -19,6 +19,10 @@ export function createSupabasePublicUsage(client: SupabaseClient, privacy?: () =
   }
   return Object.freeze({
     async summary(window) { return (await view(window)).summary; },
+    async publishedHistory(window, cohort, limit) {
+      if (!active || !privacy) throw new UsageUnavailable();
+      return publishedUsageHistory(await view(window), privacy(), cohort, limit);
+    },
     async history(window, cohort, limit) {
       if (!active) { if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new UsageUnavailable();
       const snapshot = await view(window);

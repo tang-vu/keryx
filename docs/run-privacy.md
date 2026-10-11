@@ -31,6 +31,10 @@ Internal canonical `getQueryRun` remains an original/financial reader, never a
 public authorization check. Public HTTP, discovery and enrichment use the port.
 Authorized permalink reads retain the existing recorded-evidence presentation;
 owner export/claim digests retain the exact stored original.
+The public `QueryRun` projection and its return type omit internal `sourceLearning`
+as well as fulfillment authority. Publication does not authorize exposing that
+per-run snapshot. Stored originals and authorized exports/digests remain exact;
+ordinary erasure removes the snapshot with the other question-derived JSON.
 
 When activated, public lists select only `public` and unerased rows **before body retrieval and
 paging**. PublicUsage keeps its complete bounded financial metadata corpus and
@@ -41,6 +45,26 @@ archive duplicate. Follow-up enumeration and shared agent memory use public rows
 stream publication rechecks visibility. Metadata/OG/structured data omit nonpublic
 text. Feeds, topics, related search, sitemap, creator feedback and affected HTTP
 pages have no stale text cache/fallback. Static curated demos remain unchanged.
+
+The #298 pooled question population is separate from canonical financial
+`summary.researchRuns`. ON uses `PublicUsage.publishedHistory`: exhaust the existing
+complete bounded classified candidate IDs in batches of at most100, select public
+rows through the privacy port, then recheck `read().item.state` before counting and
+keeping the newest100 sample. Private/unlisted/erased rows do not enter window
+counts, basis/unscorable coverage or the score. Canonical money/cohorts stay exact.
+These are fresh per-row publication observations over the bounded metadata window,
+not an atomic cross-RPC snapshot; revocation can underfill, with no unbounded refill.
+Active reads bypass the old five-minute process map entirely, including entries
+warmed in OFF mode. HTTP `no-store` alone does not revoke a process-map entry.
+OFF retains the existing admitted aggregate/count/cache lane.
+
+The #299 learning reader checks active admission even for empty scans and absent
+sources. It consumes the public-only iterator's existing300-candidate work bound
+and freshly rechecks publication before projecting internal observations. A queued
+revocation consumes work without contributing; hidden legacy rows do not influence
+unknown/excluded counts or actor/day deduplication. Unknown/missing/drifted active
+ports are unavailable: API503, withheld SSR figures and remote/stdio MCP errors,
+never a successful empty aggregate. OFF preserves the admitted learning lane.
 
 `/me/run-privacy` controls defaults and a selected run. Owner reads and exports
 accept an active SIWE session or a verified key with explicit `history:read`.
@@ -117,3 +141,12 @@ unlisted archive receipt links retain their original v1 proof/network.
 - Exact-head full CI, APP TypeScript, production Next build and applicable domain /
   platform SUCCESS remain merge gates. Source fixtures alone are not production
   acceptance. Root owns PR review gate, release, deployment and closure; #266 stays OPEN.
+- The source-accepted core `aca230f` is integrated on this same focused branch by
+  normal merge, preserving its modes/payloads. Its actual CI/ordered main merges
+  and this combined head's acceptance are separate pending gates. Canonical offline48
+  is not replayed or written here; root reserves the final combined selector epoch.
+  Prior canonical metadata/report bodies remain inherited evidence, not new-head
+  acceptance. Real PG17 is unexecuted locally; the known Next dependency-junction
+  failure is retained without retry/install/cache repair. Root whole-source peer
+  review is required before ONE266PR. No migration/bootstrap/flag/data operation
+  is performed or newly authorized by this integration.

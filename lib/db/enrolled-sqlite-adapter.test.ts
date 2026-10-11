@@ -148,6 +148,8 @@ it("refuses every explicitly reviewed readonly mutator before invocation, includ
     if (access.startsWith("mainnet-")) expect(() => Reflect.apply(Reflect.get(adapter, name), adapter, [])).toThrow("unavailable in enrolled storage");
   }
   expect(await adapter.listSources()).toEqual([]);
+  expect(f.api.ENROLLED_SQLITE_METHOD_ACCESS.listUnfinishedA2aOrders).toBe("read");
+  expect(await adapter.listUnfinishedA2aOrders!(5)).toEqual({ orders: [], unreadable: 0, truncated: false });
   expect(readFileSync(f.file)).toEqual(before);
 });
 

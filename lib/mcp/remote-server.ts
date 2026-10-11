@@ -16,6 +16,8 @@ import { registerOperatorDiscovery } from "../business-operator/mcp";
 import { readOperatorStatus } from "../business-operator/status";
 import { registerPublicJobLedger } from "../operator-ledger/mcp";
 import { registerPurchaseOutcomes } from "../research/purchase-outcomes-mcp";
+import { registerSourceLearning } from "../research/source-learning-mcp";
+import { readSourceLearning } from "../research/source-learning-server";
 import { readPublicPurchaseOutcomes } from "../research/purchase-outcomes-server";
 import { readSelectedOperatorLedger } from "../operator-ledger/server";
 import { getDb } from "../db";
@@ -250,6 +252,7 @@ export function createRemoteMcpServer(
   registerOperatorDiscovery(server, async () => readOperatorStatus(await getDb(), config.networkId));
   registerPublicJobLedger(server, readSelectedOperatorLedger);
   registerPurchaseOutcomes(server, readPublicPurchaseOutcomes);
+  registerSourceLearning(server, async id => readSourceLearning(await getDb(), id, config.networkId));
   registerProfileTools(server, {
     read: async () => (await profileStore("profile:read")).get(access.actor!, config.networkId),
     update: async input => ({ profile: await (await profileStore("profile:write")).update(access.actor!, input) }),

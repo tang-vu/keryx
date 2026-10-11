@@ -7,6 +7,9 @@ import { breadcrumbJsonLd } from "@/lib/seo-structured-data";
 import { safeInlineJson } from "@/lib/safe-json";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { CreatorDetailView } from "./creator-detail-view";
+import { SourceLearningPanel } from "@/components/keryx/source-learning-panel";
+import { readSourceLearning } from "@/lib/research/source-learning-server";
+import { config } from "@/lib/config";
 
 const uiCopy = createMessages("en");
 
@@ -49,6 +52,7 @@ export default async function CreatorPage({ params }: PageProps) {
   const db = await getDb();
   const source = await db.getSource(id);
   if (!source) notFound();
+  const learning = await readSourceLearning(db, id, config.networkId).catch(() => null);
 
   // A creator page is a profile: who they are, what they publish, and the trail back to the
   // registry that lists them.
@@ -97,6 +101,7 @@ export default async function CreatorPage({ params }: PageProps) {
 
       <main className="mx-auto max-w-[1180px] px-4 pb-20 pt-10 sm:px-[30px]">
         <CreatorDetailView creatorId={id} />
+        <SourceLearningPanel report={learning} sourceId={id} />
       </main>
     </div>
   );
