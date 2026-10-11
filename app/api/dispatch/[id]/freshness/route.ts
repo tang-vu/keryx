@@ -23,7 +23,7 @@ export async function GET(
 
   try {
     const db = await getDb();
-    const actor=await requestPrivacyActor(_request);if(actor instanceof Response)return actor;
+    const actor=await requestPrivacyActor(_request,db);if(actor instanceof Response)return actor;
     const dispatch = await resolveDispatch(id, db,actor);
     if (!dispatch) return Response.json({ error: "not found" }, { status: 404 });
     const { run, archive } = dispatch;

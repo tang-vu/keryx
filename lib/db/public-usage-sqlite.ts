@@ -9,6 +9,7 @@ import { MAX_USAGE_RUNS, MAX_USAGE_PAYMENTS, projectUsageCorpus, usageWindowSche
 
 /** No schema installation, ledger writes, or enrolled adapter fallback. */
 export function createSqlitePublicUsage(db: DatabaseSync, privacy?: () => RunPrivacyStore): PublicUsageStore {
+  const active=!!privacy || process.env.KERYX_RUN_PRIVACY_ENABLED==="true";
   assertOrdinarySqliteResearchAuthority(db);
   function transaction<T>(action: () => T): T {
     assertOrdinarySqliteResearchAuthority(db); db.exec("BEGIN");
@@ -39,6 +40,20 @@ export function createSqlitePublicUsage(db: DatabaseSync, privacy?: () => RunPri
   return Object.freeze({
     async summary(window) { return transaction(() => projectUsageCorpus(corpus(window), window).summary); },
     async history(window, cohort, limit) {
+      if (!active) { if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new UsageUnavailable();
+      return transaction(() => {
+        const view = projectUsageCorpus(corpus(window), window);
+        // Classify/filter the complete bounded window BEFORE selecting a history page.
+        const selected = view.runs.filter(run => cohort === "default" ? publicHistoryIncludes(run.classification.cohort)
+          : run.classification.cohort === cohort)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)).slice(0, limit);
+        const read = db.prepare("SELECT data FROM query_runs WHERE id=?");
+        return selected.map(row => {
+          const value = JSON.parse(String(read.get(row.id)?.data)) as QueryRun;
+          if (value.id !== row.id || value.createdAt !== row.createdAt) throw new UsageUnavailable();
+          return value;
+        });
+      }); }
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new UsageUnavailable();
       const selected = transaction(() => {
         const view = projectUsageCorpus(corpus(window), window);

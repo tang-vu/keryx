@@ -15,6 +15,7 @@ import type { Metadata } from "next";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
 import { getDb } from "@/lib/db";
+import {publicWantedOffers} from "@/lib/run-privacy/public";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { FeedMatchForm } from "@/components/keryx/feed-match-form";
@@ -64,7 +65,7 @@ async function loadBoard(): Promise<{
     const db = await getDb();
     const [runs, intents, sources] = await Promise.all([
       db.listRecentQueries(WANTED_WINDOW_RUNS),
-      db.runPrivacy ? db.runPrivacy.offers(200) : Promise.resolve([]),
+      publicWantedOffers(db,200),
       db.listAllSources(),
     ]);
     const names = new Map(sources.map((source) => [source.id, source.name]));

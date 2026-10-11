@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import {publicWantedOffers} from "@/lib/run-privacy/public";
 import { buildBoard } from "@/lib/demand-signal";
 import { WANTED_WINDOW_RUNS } from "@/lib/wanted-limits";
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
     const db = await getDb();
     const [runs, intents, sources] = await Promise.all([
       db.listRecentQueries(WANTED_WINDOW_RUNS),
-      db.runPrivacy ? db.runPrivacy.offers(200) : Promise.resolve([]),
+      publicWantedOffers(db,200),
       db.listAllSources(),
     ]);
     const board = buildBoard(runs, { limit });

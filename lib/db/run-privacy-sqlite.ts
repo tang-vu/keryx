@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { assertOrdinarySqliteResearchAuthority, initializeSqliteResearchMonthly } from "./research-monthly";
 import { sqliteSchemaMatches, type SqliteSchemaExpectation } from "./sqlite-schema-match";
-import { erasedRun, PrivacyError, privacyId, privacyMutation, privacySession, privacyWallet, validatePrivacyRun, visibilitySchema,
+import { erasedRun, pendingPollSchema, PrivacyError, privacyId, privacyMutation, privacySession, privacyWallet, validatePrivacyRun, visibilitySchema,
   type PrivacyActor, type PrivacyState, type RunPrivacyStore } from "../run-privacy/contracts";
 import type { RunOwnershipHistoryStore } from "../run-claims/history";
 import { runClaimBindingSchema } from "../run-claims/contracts";
@@ -182,6 +182,14 @@ export function createSqliteRunPrivacy(db: DatabaseSync, claims?: RunOwnershipHi
       guard(); const value = db.prepare("SELECT id,created_at,budget,engine,total_spent,total_to_creators FROM query_runs WHERE id=?").get(privacyId.parse(id));
       return value ? { id: String(value.id), createdAt:String(value.created_at), budget:Number(value.budget),engine:String(value.engine),
         totalSpent:Number(value.total_spent),totalToCreators:Number(value.total_to_creators),question:"",answer:"",subClaims:[],decisions:[],citations:[],trace:[] } : null;
+    },
+    async pending(rawId) {
+      guard();const id=privacyId.parse(rawId);
+      const value=db.prepare(`SELECT o.query_id queryId,o.status,o.created_at createdAt,o.started_at startedAt,
+        o.amount_usdc amountUsdc,o.creator_budget_usdc creatorBudgetUsdc,o.service_fee_usdc serviceFeeUsdc,o.transaction_id AS 'transaction'
+        FROM a2a_orders o WHERE o.query_id=? AND o.status='running'
+        AND NOT EXISTS(SELECT 1 FROM query_runs q WHERE q.id=o.query_id)`).get(id);
+      return value ? pendingPollSchema.parse(value) : null;
     },
     async owner(id,input) { const verified=await proof(privacyId.parse(id),input); if (!verified) return null; const item=owned(id,verified); return {run:item.run,state:item.state}; },
     async memories(take) {

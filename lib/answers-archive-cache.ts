@@ -1,8 +1,75 @@
-﻿import { getDb } from "@/lib/db";
+import {privacyReadsActive} from "./run-privacy/contracts";
+/**
+ * The one place the public answer archive is built.
+ *
+ * Every crawlable surface reads the same corpus — the archive index, the topic hubs, the Atom
+ * feed, the sitemap, and the related-links mesh on each permalink. Each used to load and parse its
+ * own window of runs, so a single revalidation round parsed the run log four times over and, worse,
+ * nothing tied the four windows together: a sitemap that advertised a page the index no longer
+ * linked to would have gone unnoticed. Building once here and sharing the result makes the four
+ * surfaces agree by construction, and costs less than what one of them used to spend.
+ *
+ * The window is what decides how far back the public corpus reaches. It has to stay comfortably
+ * ahead of the run log or the oldest answers silently fall out of the index and the sitemap — the
+ * pages keep resolving, but nothing links to them any more and search engines drop them. The
+ * run rate determines the history covered by the window. Read incrementally: raw traces can be much larger than
+ * archive cards. Retain only slim winners, never all raw strings and parsed run graphs.
+ */
+
+import { getDb } from "@/lib/db";
 import { buildArchiveStream, type ArchiveEntry } from "@/lib/answers-archive";
-export const ARCHIVE_WINDOW_RUNS=2500;
-/** Fresh public-only reads. No process text cache, stale copy or archive enumeration after revocation. */
+import { getTestnetArchive } from "./history/testnet-archive";
+
+/** How many raw runs the archive is built from. See the note above before changing. */
+export const ARCHIVE_WINDOW_RUNS = 2500;
+
+const TTL_MS = 10 * 60 * 1000;
+
+let cached: { at: number; entries: ArchiveEntry[] } | null = null;
+/** In-flight rebuild, so a burst of concurrent renders parses the run log once, not once each. */
+let building: Promise<ArchiveEntry[]> | null = null;
+
+async function rebuild(): Promise<ArchiveEntry[]> {
+  const db = await getDb();
+  const entries = await buildArchiveStream(db.iterateRecentQueries(ARCHIVE_WINDOW_RUNS));
+  let historical: ArchiveEntry[] = [];
+  let historicalUnavailable = false;
+  try {
+    const archive = await getTestnetArchive();
+    if (archive) historical = (await buildArchiveStream(archive.iterateRecentQueries(ARCHIVE_WINDOW_RUNS)))
+      .map(entry => ({ ...entry, archivedNetwork: archive.info.network }));
+  } catch { historicalUnavailable = true; /* Current answers stay available; retry the archive soon. */ }
+  const merged = new Map<string, ArchiveEntry>(historical.map(entry => [entry.id, entry]));
+  for (const entry of entries) merged.set(entry.id, entry);
+  const combined = [...merged.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+  cached = { at: historicalUnavailable ? Date.now() - TTL_MS + 15_000 : Date.now(), entries: combined };
+  return combined;
+}
+
+/**
+ * The public archive, newest first. Never throws: a database hiccup serves the previous copy
+ * (without refreshing its timestamp, so the next caller retries) rather than blanking a page.
+ */
+async function legacyArchiveCached(): Promise<ArchiveEntry[]> {
+  if (cached && Date.now() - cached.at < TTL_MS) return cached.entries;
+  if (!building) {
+    building = rebuild().finally(() => {
+      building = null;
+    });
+  }
+  try {
+    return await building;
+  } catch {
+    return cached?.entries ?? [];
+  }
+}
+
+/** Active privacy never serves a retained legacy cache or enumerates immutable archive originals. */
 export async function getArchiveCached():Promise<ArchiveEntry[]> {
-  try {return await buildArchiveStream((await getDb()).iterateRecentQueries(ARCHIVE_WINDOW_RUNS));}
-  catch {return [];}
+  let active=privacyReadsActive({});
+  try {
+    const db=await getDb();active=privacyReadsActive(db);
+    if(active)return await buildArchiveStream(db.iterateRecentQueries(ARCHIVE_WINDOW_RUNS));
+  } catch {if(active)return [];}
+  return legacyArchiveCached();
 }

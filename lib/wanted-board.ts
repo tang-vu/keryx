@@ -7,6 +7,7 @@
  */
 
 import { getDb } from "./db";
+import {publicWantedOffers} from "./run-privacy/public";
 import { buildBoard, findDemandGap, type DemandGap } from "./demand-signal";
 import type { GapIntentStatus } from "./types";
 import { WANTED_WINDOW_RUNS } from "./wanted-limits";
@@ -40,7 +41,7 @@ export async function loadWantedBoard(limit = 20): Promise<PublicWantedBoard> {
   const db = await getDb();
   const [runs, intents, sources] = await Promise.all([
     db.listRecentQueries(WANTED_WINDOW_RUNS),
-    db.runPrivacy ? db.runPrivacy.offers(200) : Promise.resolve([]),
+    publicWantedOffers(db,200),
     db.listAllSources(),
   ]);
   const board = buildBoard(runs, { limit });

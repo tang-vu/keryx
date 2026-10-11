@@ -145,6 +145,19 @@ describe("read-only historical testnet archive", () => {
     expect(existsSync(join(f.directory, "missing.sqlite"))).toBe(false);
   });
 
+  it("preserves inactive historical enumeration, then hides it under active privacy without rewriting originals", async () => {
+    const f=fixture(),before=readFileSync(f.database);
+    vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "");const archive=await open();
+    expect(await archive.listRecentQueries(10)).toHaveLength(4);
+    expect(await archive.listFollowUps(IDS[0])).toEqual([f.queries[3]]);
+    vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");
+    expect(await archive.listRecentQueries(10)).toEqual([]);
+    expect(await Array.fromAsync(archive.iterateRecentQueries(10))).toEqual([]);
+    expect(await archive.listFollowUps(IDS[0])).toEqual([]);
+    expect(await archive.getQueryRun(IDS[0])).toEqual(f.queries[0]);
+    expect(readFileSync(f.database)).toEqual(before);
+  });
+
   it("recovers all three original dispatch IDs, answers and timestamps without changing archive bytes", async () => {
     const f = fixture();
     const before = readFileSync(f.database);
@@ -155,7 +168,7 @@ describe("read-only historical testnet archive", () => {
       capturedAt: f.manifest.capturedAt, sourceCommit: f.manifest.sourceCommit, databaseSha256: f.manifest.databaseSha256 });
     for (let index = 0; index < IDS.length; index++) expect(await archive.getQueryRun(IDS[index])).toEqual(f.queries[index]);
     expect(await archive.getQueryRun("missing")).toBeNull();
-    expect(await archive.listFollowUps(IDS[0])).toEqual([]);
+    expect(await archive.listFollowUps(IDS[0])).toEqual([f.queries[3]]);
     expect(await archive.listFollowUps(IDS[1])).toEqual([]);
     expect(await getTestnetArchive()).toBe(archive);
     expect(readFileSync(f.database)).toEqual(before);
@@ -179,7 +192,7 @@ describe("read-only historical testnet archive", () => {
     expect(await archive.listQueryRunsByAsker("0xcccccccccccccccccccccccccccccccccccccccc", 10)).toEqual([]);
     await expect(archive.listQueryRunsByAsker("unverified-input", 10)).rejects.toThrow("Invalid archive wallet");
     expect(await archive.getQueryRun("x'; DELETE FROM query_runs; --")).toBeNull();
-    expect(await archive.listRecentQueries(10)).toEqual([]);
+    expect(await archive.listRecentQueries(10)).toHaveLength(4);
   });
 
   it("preserves settlement states, excludes unexposed attempts and projects no nonce, grant or secrets", async () => {
@@ -350,13 +363,11 @@ describe("read-only historical testnet archive", () => {
     expect(run).toMatchObject({ id: IDS[0], createdAt: f.queries[0].createdAt, totalSpent: f.queries[0].totalSpent,
       totalToCreators: f.queries[0].totalToCreators });
     const recent = await archive.listRecentQueries(4);
-    expect(recent).toEqual([]);
-    expect((await archive.getQueryRun(IDS[1]))?.citations[0].evidenceProvenance).toBe("synthetic-demo");
-    expect((await archive.getQueryRun(IDS[2]))?.answer).toBe(f.queries[2].answer);
-    expect((await archive.getQueryRun(IDS[2]))?.citations[0].evidenceProvenance).toBeUndefined();
+    expect(recent.find(item => item.id === IDS[1])?.citations[0].evidenceProvenance).toBe("synthetic-demo");
+    expect(recent.find(item => item.id === IDS[2])?.answer).toBe(f.queries[2].answer);
+    expect(recent.find(item => item.id === IDS[2])?.citations[0].evidenceProvenance).toBeUndefined();
     expect((await archive.listQueryRunsByAsker(ALICE, 4)).every(item => item.answer.startsWith(SYNTHETIC_EVIDENCE_NOTICE))).toBe(true);
-    expect(await archive.listFollowUps(IDS[0])).toEqual([]);
-    expect((await archive.getQueryRun(f.queries[3].id))?.answer).toBe(`${SYNTHETIC_EVIDENCE_NOTICE}\n\n${f.queries[3].answer}`);
+    expect((await archive.listFollowUps(IDS[0]))[0].answer).toBe(`${SYNTHETIC_EVIDENCE_NOTICE}\n\n${f.queries[3].answer}`);
     const iterated: QueryRun[] = [];
     for await (const item of archive.iterateRecentQueries(4)) iterated.push(item);
     expect(iterated).toEqual(recent);
@@ -374,7 +385,7 @@ describe("read-only historical testnet archive", () => {
     const f = fixture({ synthetic: true, metadata: "legacy" });
     const archive = await open();
     expect((await archive.getQueryRun(IDS[0]))?.citations[0].evidenceProvenance).toBe("synthetic-demo");
-    expect((await archive.getQueryRun(IDS[0]))?.answer)
+    expect((await archive.listRecentQueries(4)).find(run => run.id === IDS[0])?.answer)
       .toBe(`${SYNTHETIC_EVIDENCE_NOTICE}\n\n${f.queries[0].answer}`);
     expect(hash(f.database)).toBe(f.manifest.databaseSha256);
   });
@@ -419,18 +430,18 @@ describe("read-only historical testnet archive", () => {
     const archive = await open();
     await expect(archive.getQueryRun(IDS[0])).rejects.toThrow(/^Historical testnet archive unavailable$/);
     expect(await archive.getQueryRun("missing")).toBeNull();
-    expect(await archive.listRecentQueries(4)).toEqual([]); // Hidden bodies are never parsed for a public list.
+    await expect((async () => { for await (const run of archive.iterateRecentQueries(4)) void run; })()).rejects.toThrow(/^Historical testnet archive unavailable$/);
   });
 
   it("refuses a manifest replaced with identical bytes, including between iterator yields", async () => {
     const f = fixture();
     const archive = await open();
     const iterator = archive.iterateRecentQueries(4)[Symbol.asyncIterator]();
-    expect((await iterator.next()).done).toBe(true);
+    expect((await iterator.next()).value?.id).toBe("child");
     const bytes = readFileSync(f.manifestPath);
     renameSync(f.manifestPath, f.manifestPath + ".original");
     writeFileSync(f.manifestPath, bytes);
-    await expect((async()=>{for await(const run of archive.iterateRecentQueries(4))void run;})()).rejects.toThrow(/^Historical testnet archive unavailable$/);
+    await expect(iterator.next()).rejects.toThrow(/^Historical testnet archive unavailable$/);
     await expect(archive.getQueryRun(IDS[0])).rejects.toThrow(/^Historical testnet archive unavailable$/);
     await expect(getTestnetArchive()).rejects.toThrow(/^Historical testnet archive unavailable$/);
   });
@@ -494,11 +505,12 @@ describe("read-only historical testnet archive", () => {
     f.writeManifest({ databaseSha256: hash(f.database) });
     const archive = await open();
     const first = await archive.listRecentQueries(2);
-    expect(first).toEqual([]);
-    expect(await archive.listRecentQueries(2, { createdAt: f.queries[0].createdAt, id: IDS[1] })).toEqual([]);
+    const second = await archive.listRecentQueries(2, { createdAt: first[1].createdAt, id: first[1].id });
+    expect([...first, ...second].map(run => run.id)).toEqual(["child", ...[...IDS].sort().reverse()]);
+    expect(await archive.listRecentQueries(2, { createdAt: second[1].createdAt, id: second[1].id })).toEqual([]);
     const iterated: string[] = [];
     for await (const run of archive.iterateRecentQueries(4)) iterated.push(run.id);
-    expect(iterated).toEqual([]);
+    expect(iterated).toEqual([...first, ...second].map(run => run.id));
   });
 
   it.each([0, -1, 2501, 1.5, NaN])("bounds native archive scans at limit %s", async limit => {

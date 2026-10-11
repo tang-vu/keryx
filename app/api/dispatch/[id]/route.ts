@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { historicalDispatchHeaders, resolveDispatch } from "@/lib/history/read-dispatch";
 import { publicQueryRun } from "@/lib/research/public-query-run";
 import { requestPrivacyActor } from "@/lib/run-privacy/auth";
+import { getDb } from "@/lib/db";
 import { privateRunResponse } from "@/lib/run-claims/private-response";
 export const dynamic="force-dynamic";
 
@@ -22,8 +23,8 @@ export async function GET(
     return NextResponse.json({ error: "missing id" }, { status: 400 });
   }
   try {
-    const actor=await requestPrivacyActor(_req);if(actor instanceof Response)return actor;
-    const dispatch = await resolveDispatch(id,undefined,actor);
+    const db=await getDb(),actor=await requestPrivacyActor(_req,db);if(actor instanceof Response)return actor;
+    const dispatch = await resolveDispatch(id,db,actor);
     if (!dispatch) {
       return privateRunResponse(NextResponse.json({ error: "not found" }, { status: 404 }));
     }

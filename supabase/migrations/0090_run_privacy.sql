@@ -126,7 +126,7 @@ declare q record; s record; prior record; result jsonb; who text; binding jsonb;
   request_id uuid; requested text; stamp bigint; kept jsonb; original_digest text; take integer; claim jsonb;
 begin
   perform public.run_privacy_guard_v1();
-  if p_action not in ('read','list','memories','offers','settlement','owner','defaults','default','visibility','erase','export') or jsonb_typeof(p_input)<>'object'
+  if p_action not in ('read','list','memories','offers','settlement','pending','owner','defaults','default','visibility','erase','export') or jsonb_typeof(p_input)<>'object'
     or p_id is not null and p_id !~ '^[A-Za-z0-9_-]{1,128}$' then raise exception 'privacy_unavailable'; end if;
   if p_actor is not null then
     who:=p_actor->>'wallet'; binding:=p_actor->'binding';
@@ -200,6 +200,14 @@ begin
         insert into public.run_privacy_audit(request_id,wallet,action,input,result) values(request_id,who,p_action,p_input,result);
       end if;
     else select to_jsonb(coalesce((select visibility from public.run_privacy_defaults where wallet=who),'private')) into result; end if;
+  elsif p_action='pending' then
+    -- A pending poll cannot materialize private worker input/result or authority bindings.
+    select jsonb_build_object('queryId',o.query_id,'status',o.status,
+      'createdAt',to_char(o.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+      'startedAt',case when o.started_at is null then null else to_char(o.started_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') end,
+      'amountUsdc',o.amount_usdc,'creatorBudgetUsdc',o.creator_budget_usdc,'serviceFeeUsdc',o.service_fee_usdc,'transaction',o.transaction_id)
+      into result from public.a2a_orders o where o.query_id=p_id and o.status='running'
+      and not exists(select 1 from public.query_runs q where q.id=o.query_id);
   elsif p_action='settlement' then
     -- Never reads question/answer/data: private existence and financial proof are deliberately public.
     select jsonb_build_object('id',id,'createdAt',to_char(created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),

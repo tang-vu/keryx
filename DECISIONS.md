@@ -7584,3 +7584,21 @@ activation, backfill, deploy, version bump, merge or issue closure. Root's froze
 independent privacy/auth source review precedes PR publication. Exact-head full
 CI/domain/platform success and separately authorized rollout/delivered acceptance
 remain release gates. See [implementation and holds](docs/run-privacy.md).
+
+Root's independent review identified a staged-activation regression. Preserve the
+existing admitted ordinary production lane while `KERYX_RUN_PRIVACY_ENABLED` is
+OFF, including archives, memory, follow-ups, history, dispatch/receipt and paid GET
+polls. New privacy owner/default/export/erase controls are unavailable while OFF;
+the policy above remains selected source policy, not delivered protection. Each
+ordinary adapter captures immutable activation at construction. When ON, missing
+schema/ownership admission refuses text and cannot select legacy/native readers
+or retained caches. Rollout needs the reviewed schema, quiescence/cache purge and
+process/build restart; this source correction applies none of them.
+
+Active unfinished paid orders use an admitted metadata-only reader for bounded
+status, timestamps, exact accepted amounts and transaction ID. Worker request /
+response, authorization nonce and payer/payee are never read for this packet and
+do not establish ownership or completed settlement. Active completed/failed orphan
+orders remain refused without an admitted result. Financial journals and the
+existing POST/payment/queue/runner contracts stay unchanged. Real PG17, hosted
+Next/full CI, independent root review and delivered acceptance remain open gates.

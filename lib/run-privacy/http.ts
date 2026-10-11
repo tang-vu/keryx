@@ -19,6 +19,7 @@ async function body(request:Request) {
 }
 export async function privacyDefaults(request:Request,write=false) {
   try {
+    requirePrivacy(await getDb());
     if(write) {
       const context=await mutationPrivacyContext(request);if(context instanceof Response) return context;
       const input=z.object({visibility:visibilitySchema,requestId:z.string().uuid()}).strict().parse(await body(request));
@@ -30,6 +31,7 @@ export async function privacyDefaults(request:Request,write=false) {
 }
 export async function privacyRun(request:Request,rawId:string,action:"owner"|"visibility"|"erase"|"export") {
   try {
+    requirePrivacy(await getDb());
     const id=privacyId.parse(rawId);
     if(action==="visibility"||action==="erase") {
       const context=await mutationPrivacyContext(request);if(context instanceof Response) return context;

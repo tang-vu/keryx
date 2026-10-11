@@ -38,6 +38,25 @@ it("allows the authenticated run owner and denies a different authenticated owne
   mocks.actor.mockResolvedValue(actor);expect((await read()).status).toBe(200);expect(order).toHaveBeenCalledTimes(1);
 });
 it("refuses inadmitted or revoked-key paths before reading any order body",async()=>{
-  mocks.db.mockResolvedValue({getA2aOrder:order});expect((await read()).status).toBe(503);expect(order).not.toHaveBeenCalled();
+  mocks.db.mockResolvedValue({runPrivacyActive:true,getA2aOrder:order});expect((await read()).status).toBe(503);expect(order).not.toHaveBeenCalled();
   mocks.actor.mockResolvedValue(Response.json({error:"unauthenticated"},{status:401}));expect((await read()).status).toBe(401);expect(order).not.toHaveBeenCalled();
+});
+it("preserves the default-OFF admitted completed poll and exact financial response without privacy authentication",async()=>{
+  mocks.db.mockResolvedValue({runPrivacyActive:false,getA2aOrder:order,listCreatorPaymentAttemptsByQuery:async()=>[]});
+  mocks.actor.mockRejectedValue(new Error("Privacy authentication must not run while inactive"));
+  const response=await read();expect(response.status).toBe(200);expect(await response.json()).toMatchObject({answer:"SECRET answer",pricing:{serviceFeeUsdc:0.02}});
+  expect(mocks.actor).not.toHaveBeenCalled();expect(order).toHaveBeenCalledExactlyOnceWith(id);
+});
+it.each([null,new Date().toISOString(),"2026-01-01T00:00:00.000Z"])("serves bounded active pending status (%s) without worker/question/answer reads",async started=>{
+  const pendingId=`a2a_${"f".repeat(64)}`,created=new Date().toISOString(),transaction=`0x${"c".repeat(64)}`;
+  connection.prepare(`INSERT INTO a2a_orders(id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,service_fee_usdc,research_mode,
+    status,transaction_id,request_data,response_data,started_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .run(pendingId,pendingId,"PRIVATE nonce","PRIVATE hash",wallet,other,0.030001,0.010001,0.02,"deep","running",transaction,
+      JSON.stringify({question:"PRIVATE request"}),JSON.stringify({answer:"PRIVATE result"}),started,created,created);
+  const before=connection.prepare("SELECT * FROM a2a_orders WHERE id=?").get(pendingId);
+  const response=await read(pendingId),packet=await response.json();expect(response.status).toBe(200);
+  expect(packet).toMatchObject({queryId:pendingId,status:started===null?"queued":started.startsWith("2026-01")?"review_required":"processing",
+    financial:{totalPricePaid:0.030001,creatorBudgetUsdc:0.010001,serviceFeeUsdc:0.02,transaction}});
+  expect(JSON.stringify(packet)).not.toContain("PRIVATE");expect(order).not.toHaveBeenCalled();
+  expect(connection.prepare("SELECT * FROM a2a_orders WHERE id=?").get(pendingId)).toEqual(before);
 });

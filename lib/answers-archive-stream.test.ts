@@ -3,7 +3,8 @@ import { buildArchive, buildArchiveStream } from "./answers-archive";
 import type { QueryRun } from "./types";
 
 const scan = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/db", () => ({ getDb: async () => ({ iterateRecentQueries: scan }) }));
+const stage=vi.hoisted(()=>({active:true}));
+vi.mock("@/lib/db", () => ({ getDb: async () => ({ runPrivacyActive:stage.active,iterateRecentQueries: scan }) }));
 
 function fixture(id: string, extra: Partial<QueryRun> = {}): QueryRun {
   return { id, question: "What is Arc?", budget: 1, engine: "heuristic", subClaims: [],
@@ -12,7 +13,7 @@ function fixture(id: string, extra: Partial<QueryRun> = {}): QueryRun {
     createdAt: "2026-09-01T00:00:00.000Z", ...extra };
 }
 async function* stream(runs: QueryRun[]) { yield* runs; }
-afterEach(() => { vi.restoreAllMocks(); vi.resetModules(); scan.mockReset(); });
+afterEach(() => { vi.restoreAllMocks(); vi.resetModules(); scan.mockReset();stage.active=true; });
 
 describe("incremental archive", () => {
   it("preserves ranking, first complete tie, snippets and confidence", async () => {
@@ -39,8 +40,7 @@ describe("incremental archive", () => {
     scan.mockImplementation(async function* () { await gate; yield fixture("good"); });
     const { getArchiveCached } = await import("./answers-archive-cache");
     const first = getArchiveCached(), concurrent = getArchiveCached();
-    await Promise.resolve();
-    expect(scan).toHaveBeenCalledTimes(2);
+    await vi.waitFor(()=>expect(scan).toHaveBeenCalledTimes(2));
     expect(scan).toHaveBeenCalledWith(2500);
     release();
     const original = await first;
@@ -53,6 +53,16 @@ describe("incremental archive", () => {
     scan.mockImplementationOnce(() => stream([fixture("recovered")]));
     expect((await getArchiveCached())[0].id).toBe("recovered");
     expect(scan).toHaveBeenCalledTimes(5);
+  });
+  it("preserves inactive cache coalescing/stale recovery but never serves that copy after activation",async()=>{
+    stage.active=false;let now=1000;vi.spyOn(Date,"now").mockImplementation(()=>now);
+    let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});
+    scan.mockImplementationOnce(async function*(){await gate;yield fixture("legacy");});
+    const {getArchiveCached}=await import("./answers-archive-cache");
+    const first=getArchiveCached(),second=getArchiveCached();await vi.waitFor(()=>expect(scan).toHaveBeenCalledTimes(1));
+    release();const cached=await first;expect(await second).toBe(cached);
+    now+=600001;scan.mockImplementationOnce(async function*(){throw new Error("Unavailable");});expect(await getArchiveCached()).toBe(cached);
+    stage.active=true;scan.mockImplementationOnce(async function*(){throw new Error("Active unavailable");});expect(await getArchiveCached()).toEqual([]);
   });
 
   it("does not expose a partial archive on an initial read failure", async () => {

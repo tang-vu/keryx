@@ -82,7 +82,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function DispatchPage({ params }: PageProps) {
   const { id } = await params;
   const db = await getDb();
-  const actor=await pagePrivacyActor();
+  const actor=await pagePrivacyActor(db);
   const dispatch = await resolveDispatch(id, db,actor);
   if (!dispatch) notFound();
   const { run, reader, archive } = dispatch;

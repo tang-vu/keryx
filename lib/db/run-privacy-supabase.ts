@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { runClaimBindingSchema } from "../run-claims/contracts";
-import { PrivacyError, privacyId, privacyMutation, privacySession, privacyWallet, validatePrivacyRun, visibilitySchema,
+import { pendingPollSchema, PrivacyError, privacyId, privacyMutation, privacySession, privacyWallet, validatePrivacyRun, visibilitySchema,
   type PrivacyActor, type RunPrivacyStore } from "../run-privacy/contracts";
 
 const state = z.object({ visibility: visibilitySchema, revision: z.number().int().min(0), erased: z.boolean() }).strict();
@@ -38,6 +38,7 @@ export function createSupabaseRunPrivacy(client: SupabaseClient, claimsEnabled =
       const result=z.array(z.unknown()).max(input.take).parse(await call("list",null,input,null));
       return result.map(value => { const parsed=item.parse(value); if(parsed.state.visibility!=="public" || parsed.state.erased) throw new PrivacyError("privacy_unavailable"); return validatePrivacyRun(parsed.run); }); },
     async settlement(rawId) { const id=privacyId.parse(rawId),result=await call("settlement",id,{},null); return result===null ? null : validatePrivacyRun(result,id); },
+    async pending(rawId) { const id=privacyId.parse(rawId),result=await call("pending",id,{},null);return result===null ? null : pendingPollSchema.extend({queryId:z.literal(id)}).parse(result); },
     async memories(take) { z.number().int().min(1).max(2500).parse(take);
       return z.array(z.object({id:privacyId,createdAt:z.string(),sourceScores:z.record(z.string(),z.object({name:z.string(),weight:z.number(),reward:z.number()})),
         topics:z.array(z.string()),sourcesRead:z.array(z.string()).optional()}).strict()).max(take).parse(await call("memories",null,{take},null)); },

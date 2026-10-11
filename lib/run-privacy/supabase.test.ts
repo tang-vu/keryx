@@ -10,6 +10,16 @@ function fixture() {
   return {store:createSupabaseRunPrivacy({rpc,from} as unknown as SupabaseClient),rpc,from,abortSignal,result};
 }
 describe("#266 Supabase bounded service-role privacy boundary",()=>{
+  it("reads pending status through the sealed service RPC only, rejecting body/foreign/failed packets",async()=>{
+    const f=fixture(),id=`a2a_${"d".repeat(64)}`,metadata={queryId:id,status:"running",createdAt:run.createdAt,startedAt:null,
+      amountUsdc:0.030001,creatorBudgetUsdc:0.010001,serviceFeeUsdc:0.02,transaction:`0x${"c".repeat(64)}`};
+    f.result(metadata);expect(await f.store.pending(id)).toEqual(metadata);
+    expect(f.rpc).toHaveBeenLastCalledWith("run_privacy_v1",{p_action:"pending",p_id:id,p_input:{},p_actor:null,p_claims:false});
+    for(const packet of [{...metadata,request:{question:"SECRET"}},{...metadata,queryId:`a2a_${"e".repeat(64)}`},{...metadata,status:"completed"}]){
+      f.result(packet);await expect(f.store.pending(id)).rejects.toThrow();
+    }
+    f.result(null);expect(await f.store.pending(id)).toBeNull();expect(f.from).not.toHaveBeenCalled();
+  });
   it.each(["private","unlisted","public"] as const)("binds %s reads and owner exports to the fixed admitted RPC",async visibility=>{
     const f=fixture(),state={visibility,revision:0,erased:false};f.result({exists:true,item:visibility==="private"?null:{run,state}});
     expect((await f.store.read(run.id)).item?.state.visibility??"hidden").toBe(visibility==="private"?"hidden":visibility);

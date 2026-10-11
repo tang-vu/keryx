@@ -1,3 +1,4 @@
+import {privacyReadsActive} from "../run-privacy/contracts";
 import { createHash } from "node:crypto";
 import { closeSync, createReadStream, existsSync, lstatSync, openSync, readFileSync, readSync, type BigIntStats } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
@@ -306,7 +307,7 @@ class ReadonlyTestnetArchive implements TestnetArchiveStore {
   }
 
   async listRecentQueries(limit: number, before?: { createdAt: string; id: string }): Promise<QueryRun[]> {
-    assertLimit(limit);
+    if(privacyReadsActive({})) { assertLimit(limit);
     if (before) {
       assertId(before.id);
       if (typeof before.createdAt !== "string" || !Number.isFinite(Date.parse(before.createdAt)) || before.createdAt.length > 64) {
@@ -314,11 +315,34 @@ class ReadonlyTestnetArchive implements TestnetArchiveStore {
       }
     }
     // Every retained historical record is UNLISTED; links remain readable, enumeration is empty.
-    return this.read(() => []);
+    return this.read(() => []);  }
+    assertLimit(limit);
+    if (before) {
+      assertId(before.id);
+      if (typeof before.createdAt !== "string" || !Number.isFinite(Date.parse(before.createdAt)) || before.createdAt.length > 64) {
+        throw new Error("Invalid archive query cursor");
+      }
+    }
+    return this.project(this.read(() => this.#db.prepare(`SELECT id, created_at, data FROM query_runs
+      ${before ? "WHERE created_at < ? OR (created_at = ? AND id < ?)" : ""} ORDER BY created_at DESC, id DESC LIMIT ?`)
+      .all(...(before ? [before.createdAt, before.createdAt, before.id, limit] : [limit])).map(row => this.query(row))));
   }
 
   async *iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
-    assertLimit(limit); this.read(() => undefined);
+    if(privacyReadsActive({})) { assertLimit(limit); this.read(() => undefined); return; }
+    assertLimit(limit);
+    const rows = this.read(() => this.#db.prepare("SELECT id FROM query_runs ORDER BY created_at DESC, id DESC LIMIT ?").iterate(limit));
+    const lookup = this.read(() => this.#db.prepare("SELECT id, created_at, data FROM query_runs WHERE id=?"));
+    try {
+      for (const row of rows) {
+        const run = this.read(() => {
+          const record = lookup.get(row.id);
+          if (!record) throw unavailable();
+          return this.query(record);
+        });
+        yield (await this.project([run]))[0];
+      }
+    } catch { throw unavailable(); }
   }
   async listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]> {
     assertLimit(limit);
@@ -328,8 +352,11 @@ class ReadonlyTestnetArchive implements TestnetArchiveStore {
   }
 
   async listFollowUps(id: string): Promise<QueryRun[]> {
+    if(privacyReadsActive({})) { assertId(id);
+    return this.read(() => []);  }
     assertId(id);
-    return this.read(() => []);
+    return this.project(this.read(() => this.#db.prepare("SELECT id, created_at, data FROM query_runs WHERE parent_id=? ORDER BY created_at ASC, id ASC LIMIT ?")
+      .all(id, MAX_QUERIES).map(row => this.query(row))));
   }
   private payments(id: string, kinds: string): PaymentRecord[] {
     return this.read(() => this.#db.prepare(`SELECT ${this.#paymentColumns} FROM payment_events WHERE query_id=? AND ${kinds}

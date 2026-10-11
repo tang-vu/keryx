@@ -10,7 +10,7 @@ vi.mock("../account-sessions",()=>({accountSessionContext:auth.session}));
 vi.mock("../api-keys",()=>({verifyApiKey:auth.key}));
 vi.mock("../db",()=>({getDb:auth.db}));
 vi.mock("../auth",()=>({getSession:auth.page}));
-vi.mock("../config",()=>({config:{networkId:"eip155:5042002",baseUrl:"https://synthetic-privacy.example"}}));
+vi.mock("../config",()=>({config:{networkId:"eip155:5042002",baseUrl:"https://synthetic-privacy.example",profile:{networkId:"eip155:5042002"}}}));
 vi.mock("../history/testnet-archive",()=>({getTestnetArchive:async()=>null}));
 import {privacyDefaults,privacyRun} from "./http";
 import {GET as dispatch} from "@/app/api/dispatch/[id]/route";
@@ -18,6 +18,8 @@ import {GET as receipt} from "@/app/api/dispatch/[id]/receipt/route";
 import {GET as activity} from "@/app/api/activity/route";
 import {settlementReceipt} from "./public";
 import {createRunPrivacyClient} from "./client";
+import {buildResearchReceipt} from "../research-receipt";
+import {GET as runs} from "@/app/api/runs/route";
 const wallet=`0x${"a".repeat(40)}`,other=`0x${"b".repeat(40)}`,session=createHash("sha256").update(wallet).digest("hex"),origin="https://synthetic-privacy.example";
 let connection:DatabaseSync;
 beforeEach(()=>{
@@ -33,6 +35,18 @@ afterEach(()=>connection.close());
 const request=(path:string,method="GET",body?:unknown,headers:Record<string,string>={})=>new NextRequest(`${origin}${path}`,{method,headers:{Origin:origin,"X-Keryx-Expected-Wallet":wallet,...(body?{"Content-Type":"application/json"}:{}),...headers},...(body?{body:JSON.stringify(body)}:{})});
 const params=(id:string)=>({params:Promise.resolve({id})});
 describe("#266 public routes and signed owner actions",()=>{
+  it("preserves inactive ordinary dispatch/list/v1 receipt and gates every new owner control before authentication",async()=>{
+    const legacy=JSON.parse(String(connection.prepare("SELECT data FROM query_runs WHERE id='owned'").get()?.data));
+    const db={runPrivacyActive:false,getQueryRun:async(id:string)=>id===legacy.id?legacy:null,listRecentQueries:async()=>[legacy],
+      listCreatorPaymentAttemptsByQuery:async()=>[],runPrivacy:undefined};auth.db.mockResolvedValue(db);
+    const result=await dispatch(new NextRequest(`${origin}/api/dispatch/owned`,{headers:{Authorization:"Bearer invalid"}}),params("owned"));
+    expect(result.status).toBe(200);expect((await result.json()).question).toBe(legacy.question);expect(auth.key).not.toHaveBeenCalled();
+    const packet=await(await receipt(new Request(`${origin}/api/dispatch/owned/receipt`),params("owned"))).json();expect(packet).toEqual(buildResearchReceipt(legacy,[]));
+    expect((await(await runs(new Request(`${origin}/api/runs`))).json())[0].id).toBe(legacy.id);
+    for(const action of ["owner","export","visibility","erase"] as const)expect((await privacyRun(request("/"),legacy.id,action)).status).toBe(503);
+    expect((await privacyDefaults(request("/"))).status).toBe(503);expect((await privacyDefaults(request("/"),true)).status).toBe(503);
+    expect(auth.session).not.toHaveBeenCalled();expect(connection.prepare("SELECT count(*) n FROM run_privacy_audit").get()?.n).toBe(0);
+  });
   it("makes private nonowner and unknown reads byte-equal while valid unlisted links and public reads work",async()=>{
     auth.page.mockResolvedValue(null);
     const privateResponse=await dispatch(request("/api/dispatch/owned","GET",undefined,{"X-Keryx-Expected-Wallet":""}),params("owned"));

@@ -14,6 +14,11 @@ export interface PrivacyActor { wallet: string; sessionHash?: string; binding: R
 export interface PrivacyState { visibility: RunVisibility; revision: number; erased: boolean }
 export interface PrivacyRead { exists: boolean; item: { run: QueryRun; state: PrivacyState } | null }
 export interface PrivacyList { take: number; before?: { id: string; createdAt: string }; parentId?: string; ids?: string[] }
+export const pendingPollSchema=z.object({queryId:z.string().regex(/^a2a_[a-f0-9]{64}$/),status:z.literal("running"),
+  createdAt:z.string().max(64),startedAt:z.string().max(64).nullable(),amountUsdc:z.number().finite().nonnegative(),
+  creatorBudgetUsdc:z.number().finite().nonnegative(),serviceFeeUsdc:z.number().finite().nonnegative(),
+  transaction:z.string().regex(/^(?:0x[a-fA-F0-9]{64})?$/)}).strict();
+export type PendingPoll=z.infer<typeof pendingPollSchema>;
 export type PrivacyOffer=Pick<import("../types").GapIntent,"id"|"gapId"|"sourceId"|"sourceItemLink"|"itemId"|"contentVersion"|"articleOfferId"|"ownerWallet"|"status"|"attempts"|"retryRunId"|"coverage"|"rewardUsdc"|"createdAt"|"updatedAt">;
 export interface RunPrivacyStore {
   /** Filters in storage before retrieving any text; hidden and erased originals never leave this port. */
@@ -24,6 +29,8 @@ export interface RunPrivacyStore {
   offers(take:number):Promise<PrivacyOffer[]>;
   /** Financial allowlist only, available independently of text visibility. */
   settlement(id: string): Promise<QueryRun | null>;
+  /** Running orders without a saved run: bounded status/financial columns only, never worker input/result. */
+  pending(id:string):Promise<PendingPoll|null>;
   owner(id: string, actor: PrivacyActor): Promise<{ run: QueryRun; state: PrivacyState } | null>;
   defaults(actor: PrivacyActor): Promise<RunVisibility>;
   setDefault(actor: PrivacyActor, visibility: RunVisibility, requestId: string): Promise<RunVisibility>;
@@ -34,8 +41,14 @@ export interface RunPrivacyStore {
 export class PrivacyError extends Error {
   constructor(public readonly code: "privacy_unavailable" | "not_found" | "conflict" | "unauthenticated" | "retention_hold") { super(code); }
 }
-export function requirePrivacy(db: { readonly runPrivacy?: RunPrivacyStore }): RunPrivacyStore {
-  if (!db.runPrivacy) throw new PrivacyError("privacy_unavailable");
+export interface PrivacyStage { readonly runPrivacy?: RunPrivacyStore; readonly runPrivacyActive?: boolean }
+/** Ordinary adapters capture the flag at construction. Existing admitted facades
+ * retain their own authority checks; an active flag never selects their legacy reader. */
+export function privacyReadsActive(db:PrivacyStage):boolean {
+  return db.runPrivacyActive ?? (!!db.runPrivacy || process.env.KERYX_RUN_PRIVACY_ENABLED==="true");
+}
+export function requirePrivacy(db: PrivacyStage): RunPrivacyStore {
+  if (!privacyReadsActive(db) || !db.runPrivacy) throw new PrivacyError("privacy_unavailable");
   return db.runPrivacy;
 }
 /** Exact financial counters and funding telemetry, without question-derived fields. */

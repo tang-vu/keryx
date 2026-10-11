@@ -4,7 +4,7 @@
  * back into an orphan.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach,vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import os from "node:os";
@@ -41,6 +41,7 @@ let db: SqliteAdapter;
 let privacyConnection:DatabaseSync|undefined;
 
 beforeEach(async () => {
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED","true");
   privacyConnection=undefined;
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-followup-"));
   db = new SqliteAdapter(path.join(dir, "keryx.sqlite"));
@@ -49,6 +50,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   db.close();
   privacyConnection?.close();
   fs.rmSync(dir, { recursive: true, force: true });
@@ -93,6 +95,7 @@ describe("follow-up threading", () => {
     );
     legacy.close();
 
+    vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", ""); // Existing ordinary lane stays admitted before privacy activation.
     const upgraded = new SqliteAdapter(legacyFile);
     await expect(upgraded.init()).resolves.not.toThrow();
     try {
@@ -101,7 +104,7 @@ describe("follow-up threading", () => {
       await upgraded.saveQueryRun(
         run("77777777-7777-4777-8777-777777777777", "And now?", "old"),
       );
-      expect(await upgraded.listFollowUps("old")).toEqual([]); // Historical/unadmitted text is never public by default.
+      expect((await upgraded.listFollowUps("old")).map(child => child.question)).toEqual(["And now?"]);
       expect((await upgraded.getQueryRun("77777777-7777-4777-8777-777777777777"))?.parentId).toBe("old");
     } finally {
       upgraded.close();

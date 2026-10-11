@@ -1,7 +1,7 @@
 import { canonicalJson, researchReceiptDigest } from "../research-receipt-integrity";
 import type { PaymentRecord, QueryRun } from "../types";
 import type { KeryxDB } from "../db/keryx-db";
-import { requirePrivacy } from "./contracts";
+import { privacyReadsActive, requirePrivacy } from "./contracts";
 /** Preserve financial values/evidence; journal rationale and authorization bindings
  * remain private to the custodian even when a question owner exports their run. */
 export function publicFinancialPayment(payment:PaymentRecord):PaymentRecord {
@@ -12,10 +12,13 @@ export function publicFinancialPayment(payment:PaymentRecord):PaymentRecord {
   return result as unknown as PaymentRecord;
 }
 /** Creator/payment ownership is never research ownership. Only PUBLIC questions may enrich public earnings. */
-export async function listedQuestion(db:Pick<KeryxDB,"runPrivacy">,id:string):Promise<string | undefined> {
-  if(!db.runPrivacy) return undefined;
+export async function listedQuestion(db:Pick<KeryxDB,"runPrivacy"|"runPrivacyActive"> & Partial<Pick<KeryxDB,"getQueryRun">>,id:string):Promise<string | undefined> {
+  if(!privacyReadsActive(db))return (await db.getQueryRun?.(id))?.question;
   const rows=await requirePrivacy(db).list({take:1,ids:[id]});
   return rows[0]?.question;
+}
+export async function publicWantedOffers(db:Pick<KeryxDB,"runPrivacy"|"runPrivacyActive"|"listGapIntents">,take:number) {
+  return privacyReadsActive(db) ? requirePrivacy(db).offers(take) : db.listGapIntents(take);
 }
 /** Separate read-model schema: the immutable research-receipt v1 protocol is unchanged. */
 export function settlementReceipt(run:QueryRun,payments:PaymentRecord[]) {

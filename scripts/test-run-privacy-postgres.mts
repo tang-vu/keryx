@@ -20,7 +20,9 @@ try {
   sql(`create role anon;create role authenticated;create role service_role bypassrls;
     create table query_runs(id text primary key,created_at timestamptz not null,asker text,question text,answer text,budget numeric,engine text,total_spent numeric,total_to_creators numeric,parent_id text,data jsonb not null);
     create table web_sessions(hash text primary key check(hash ~ '^[a-f0-9]{64}$'),wallet text not null check(wallet ~ '^0x[a-f0-9]{40}$'),issued_at bigint not null check(issued_at>=0),expires_at bigint not null check(expires_at>issued_at and expires_at<=issued_at+604800000));
-    create table a2a_orders(query_id text not null unique);
+    create table a2a_orders(query_id text not null unique,status text not null,created_at timestamptz not null,started_at timestamptz,
+      amount_usdc double precision not null,creator_budget_usdc double precision not null,service_fee_usdc double precision not null,transaction_id text not null,
+      request_data jsonb,response_data jsonb,authorization_id text);
     create table query_memories(id text primary key,created_at timestamptz,source_scores jsonb,topics jsonb,sources_read jsonb);
     create table gap_intents(id text primary key,gap_id text,source_id text,source_item_link text,item_id text,content_version text,article_offer_id text,owner_wallet text,status text,attempts integer,retry_run_id text,coverage numeric,reward_usdc numeric,created_at timestamptz,updated_at timestamptz,failed_query_id text,question text,claim text,last_error text);
     create table payment_events(id text primary key,query_id text,amount_usdc numeric,rationale text,payer text,payee text,settled boolean,network text);
@@ -50,6 +52,13 @@ try {
   assert.equal(sql("select md5(string_agg(row_to_json(c)::text,'' order by run_id)) from anonymous_run_claims c;"),originalClaim);
   assert.equal(call("read","historical",{},null).item.state.visibility,"unlisted");assert.equal(call("read","unowned",{},null).item.state.visibility,"unlisted");
   save("owned");save("anonymous",null);save("foreign",other);
+  const pendingId=`a2a_${"d".repeat(64)}`,pending={queryId:pendingId,status:"running",createdAt:date,startedAt:null,
+    amountUsdc:0.030001,creatorBudgetUsdc:0.010001,serviceFeeUsdc:0.02,transaction:`0x${"c".repeat(64)}`};
+  sql(`insert into a2a_orders(query_id,status,created_at,amount_usdc,creator_budget_usdc,service_fee_usdc,transaction_id,request_data,response_data,authorization_id)
+    values('${pendingId}','running','${date}',0.030001,0.010001,0.02,'${pending.transaction}',${literal({question:"SECRET pending"})},${literal({answer:"SECRET pending"})},'SECRET nonce');`);
+  assert.deepEqual(call("pending",pendingId,{},null),pending);
+  assert.throws(()=>call("pending",pendingId,{},null,false,"anon"));
+  save(pendingId);assert.equal(call("pending",pendingId,{},null),null);
   assert.equal(call("read","owned",{},null).item,null);assert.equal(call("read","owned",{},actor).item.run.answer,"SECRET answer");
   assert.equal(call("read","owned",{},{...actor,wallet:other}).item,null);assert.equal(call("owner","owned",{},{...actor,wallet:other}),null);
   assert.throws(()=>call("erase","owned",{revision:0,requestId:randomUUID()},{...actor,wallet:other}));

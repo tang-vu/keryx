@@ -4,15 +4,17 @@ import { parseScopes } from "../api-key-scopes";
 import { config } from "../config";
 import { getSession } from "../auth";
 import { runClaimBindingSchema } from "../run-claims/contracts";
-import { privacyWallet, type PrivacyActor } from "./contracts";
+import { privacyReadsActive, privacyWallet, type PrivacyActor, type PrivacyStage } from "./contracts";
 import { privateRunResponse } from "../run-claims/private-response";
 export const privacyBinding = () => runClaimBindingSchema.parse({network:config.networkId,origin:config.baseUrl});
-export async function pagePrivacyActor(): Promise<PrivacyActor | undefined> {
+export async function pagePrivacyActor(stage?:PrivacyStage): Promise<PrivacyActor | undefined> {
+  if(stage&&!privacyReadsActive(stage))return undefined;
   const session=await getSession();
   return session ? {wallet:privacyWallet.parse(session.address),binding:privacyBinding()} : undefined;
 }
 /** Invalid/revoked/insufficient keys never fall back to a cookie; body addresses grant no authority. */
-export async function requestPrivacyActor(request: Request): Promise<PrivacyActor | undefined | Response> {
+export async function requestPrivacyActor(request: Request,stage?:PrivacyStage): Promise<PrivacyActor | undefined | Response> {
+  if(stage&&!privacyReadsActive(stage))return undefined;
   const expected=request.headers.get("x-keryx-expected-wallet");
   const check=(actor:PrivacyActor | undefined) => expected!==null && (!privacyWallet.safeParse(expected).success || actor?.wallet!==expected.toLowerCase())
     ? privateRunResponse(Response.json({error:"owner_changed"},{status:409})) : actor;

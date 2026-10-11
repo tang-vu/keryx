@@ -9,7 +9,7 @@ import { getDb } from "@/lib/db";
 import { buildResearchReceipt } from "@/lib/research-receipt";
 import { quoteFromA2aOrder } from "@/lib/a2a/result";
 import { historicalDispatchHeaders, resolveDispatch } from "@/lib/history/read-dispatch";
-import { requirePrivacy } from "@/lib/run-privacy/contracts";
+import { privacyReadsActive, requirePrivacy } from "@/lib/run-privacy/contracts";
 import { settlementReceipt } from "@/lib/run-privacy/public";
 import { privateRunResponse } from "@/lib/run-claims/private-response";
 
@@ -26,12 +26,14 @@ export async function GET(
   try {
     const db = await getDb();
     const dispatch = await resolveDispatch(id, db);
-    if (!dispatch || dispatch.visibility!=="public" && !dispatch.archive) {
+    if(!privacyReadsActive(db)&&!dispatch)return privateRunResponse(Response.json({error:"not found"},{status:404}));
+    if (privacyReadsActive(db)&&(!dispatch || dispatch.visibility!=="public" && !dispatch.archive)) {
       const run=await requirePrivacy(db).settlement(id);
       if(!run) return privateRunResponse(Response.json({error:"not found"},{status:404}));
       const receipt=settlementReceipt(run,await db.listCreatorPaymentAttemptsByQuery(id));
       return privateRunResponse(Response.json(receipt,{headers:{"X-Keryx-Receipt-Digest":receipt.integrity.digest}}));
     }
+    if(!dispatch)return privateRunResponse(Response.json({error:"not found"},{status:404}));
     const { run, reader, archive } = dispatch;
 
     const payments = await reader.listCreatorPaymentAttemptsByQuery(id);
