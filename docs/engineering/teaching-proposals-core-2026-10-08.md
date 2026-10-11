@@ -1,5 +1,55 @@
 # Reviewed teaching proposal core - October 8, 2026
 
+## Exact original caller and factual-gap preparation — October 11, 2026
+
+The source candidate now exercises issue211's complete Vietnamese caller through
+the ordinary opt-in agent, rather than only the shortened English contract. It
+imports the unchanged public `e719b085` question/refusal fixture. That historical
+fixture has no qualified bindings and cannot supply positive NASA evidence. The
+positive case uses explicitly synthetic classroom source sentences, transport
+and review judgments, with Vietnamese explanatory/proposal text; it qualifies
+request threading and delivery safety, not NASA correctness or live usefulness.
+It runs the actual bounded passage/quote selection, generation, independent-review
+packet handling and final factual admission with controlled supplier responses.
+Three synthetic quoted premises separately cover weather, climate and the
+single-day limitation; the activity and exit answer depend on all three. No
+source body or judgment is represented as retrieved NASA evidence. The planning
+regression also binds the exact saved caller, keeping proposed lesson parts in
+constraints and factual definitions/limitations in research targets.
+It checks the exclusive 99-word explanatory ceiling, one 10-minute activity, two
+invented classification examples, an exit question/answer, distinct proposal
+labels and the caller's prohibition on inferring climate from one day's weather.
+
+When a proposal is blocked by `final-premise-withheld`, its
+presentation identifies inadequate final factual support and directs the reader
+to locate directly answering passages for the missing topics in the requested
+original. An unresolved `missing-premise` reference receives a different next
+step: match proposal references against cited statements, and only seek a source
+passage if the factual topic itself lacks evidence. A draft's invalid reference
+does not establish missing knowledge in the original source. A separately
+admitted factual statement can remain useful beside a
+partial-coverage gap even when it cannot support the proposal. Accepted independent
+proposal siblings remain visible. An unavailable/rejected review, malformed packet
+or count/word mismatch does not acquire a false missing-fact diagnosis. The notice
+is guidance only: it performs no source read, provider request, retry or payment.
+
+The exact original default-off path remains unchanged. Tests compare attribution,
+evidence, coverage, citations and monetary output with the opt-in case and check
+the existing result/receipt/report projections. Web, API, desktop, repository CLI,
+remote/stdio MCP and bot report consumers inherit the shared answer only when the
+existing teaching opt-in is admitted; no adapter, schema, package or installer
+identity changes in this candidate. Private originals and historical records do
+not receive new proposal or factual authority.
+
+Issue211's original criteria do not demand a fresh paid-live question merely to
+validate frozen behavior. These source checks nevertheless do not satisfy the
+recorded ordinary usefulness/activation hold: production remains default-off,
+no retained NASA-positive original-body replay is claimed, and this candidate is
+not deployed. Keep the issue open for accepted useful ordinary delivery and its
+recorded rollout decision. No ENV, custody, model/search allowance or feature
+activation is changed. Independent review and final applicable source/release
+acceptance remain required before delivery.
+
 ## Integrated ordinary candidate
 
 App0.27.42 threads the trusted original caller through the existing generation
@@ -102,15 +152,15 @@ dependencies, dependency withdrawal after review, count/word overflow, partial
 delivery, and unchanged ledger/reward state. This verifies the contract, not
 NASA correctness or successful live lesson delivery.
 
-Root integration must thread the ordinary opt-in through planning, generation,
-existing independent review and final result/export adapters across applicable
-web, desktop, CLI, API and MCP research surfaces. Protected private originals
-and no-opt-in runs need historical contract regressions. Rendered Vietnamese
-fixtures must demonstrate all requested lesson parts and their gaps, correct
-labels, exact preserved factual excerpts and bounded mobile/desktop layout.
-Shared type checking, scoped lint, focused regressions and production build
-remain integration checks. A separately authorized bounded real lesson trial
-with inspected output is still needed before closing the issue as complete.
+The ordinary opt-in is threaded through generation, existing independent review
+and shared result/export adapters. Protected private originals and no-opt-in runs
+retain historical contract regressions. The exact Vietnamese controlled fixtures
+cover all requested lesson parts and factual gaps, correct labels and preserved
+excerpts. Actual useful ordinary delivery and the existing activation hold remain
+unresolved. Shared type checking, scoped lint, focused regressions and applicable
+production CI remain source/release gates. The original offline criteria do not
+create a new paid trial allowance or require spending merely to qualify frozen
+behavior; any later live activation evidence needs its own surviving authority.
 
 ## Engine checkpoint
 
