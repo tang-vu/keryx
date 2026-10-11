@@ -176,6 +176,15 @@ not an old/new-version financial-worker drain, mainnet schema compatibility,
 rollback acceptance or a production availability promise. A failure retains its
 candidate and scratch evidence; no release cleanup command is provided.
 
+The production CI lane also runs `rehearse-built-release.mjs` against its existing
+completed build, without repeating the build or broad tests. It stages the exact
+Git source, compares every actual build-source file with that inventory, copies
+the independently installed dependencies/build into a separate cohort, then runs
+the same actual Next idle-restart rehearsal under testnet/offline settings. It
+retains source/artifact/runtime pins and real failures in an uploaded result. It
+does not manufacture a preparation/check receipt or bypass aggregate CI acceptance.
+Hosted Linux timing measures the runner/resource shape, not the production VPS.
+
 ## Required production builder and handover design
 
 The production extension still needs reviewed, independently installed Linux

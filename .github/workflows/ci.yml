@@ -460,7 +460,25 @@ jobs:
         run: npm run test:browser-mainnet-normal-built
 
       - name: Build (Next.js)
+        env:
+          KERYX_NETWORK: arcTestnet
+          NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
+          KERYX_FORCE_OFFLINE: "1"
+          KERYX_COMMIT: ${{ github.sha }}
         run: npm run build
+
+      - name: Immutable cohort actual Next restart (reuse build, offline testnet)
+        env:
+          KERYX_RELEASE_REHEARSAL_RESULT: ${{ runner.temp }}/immutable-release-rehearsal.json
+        run: node scripts/rehearse-built-release.mjs
+
+      - name: Retain immutable cohort rehearsal result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: immutable-release-rehearsal-${{ github.sha }}
+          path: ${{ runner.temp }}/immutable-release-rehearsal.json
+          if-no-files-found: ignore
 
       - name: Private claim initial document and one-shot web handoff (built, synthetic)
         env:
