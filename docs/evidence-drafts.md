@@ -174,6 +174,11 @@ repository tests use synthetic fixtures only.
 
 ## Remaining issue and release gates
 
+The separate [private draft check](draft-check.md) now covers automatic sentence
+spans, reference-list reading, citation-marker binding and a deterministic wording
+comparison against caller-supplied source text for issue 282. It does not change
+this manual contract and does not read cited works.
+
 Automatic claim extraction/reference resolution, exact-original read integration
 under existing budgets/BUY/SKIP/CACHE/reward rules, automated support review with
 retained quote neighborhoods, mismatch explanations and separate suggested sources
