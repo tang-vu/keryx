@@ -30,7 +30,10 @@ export function publicResearchEffects(db: KeryxDB, discovery = discoverExternalC
     setCached: (key, content) => db.setCached(key, content),
     saveQueryRun: run => db.saveQueryRun(run),
     discoverExternal: discovery,
-    decisionContext: (question, candidates) => buildDecisionContext(db, question, candidates),
+    // Legacy query_memories have no trusted actor/funding/owner exclusion packet. They cannot
+    // safely train a live purchase prompt. Observational source records ship separately; learned
+    // selection remains withheld until the classifier and policy acceptance gates pass.
+    decisionContext: async () => ({ sample: 0 }),
     saveMemory: (id, question, citations, sourcesRead) => saveMemory(db, id, question, citations, sourcesRead),
     notifyCitation: input => { void dispatchCitationNotify(db, input); void dispatchCitationEmail(db, input); },
     alert: (title, message) => { void sendAlert(title, message); },

@@ -7547,6 +7547,25 @@ declines to state a margin. The live sponsored run, replay and limit
 demonstrations stay gated; see the
 [criteria status](docs/engineering/recorded-walkthrough-305.md).
 
+## 2026-10-11 - Expose bounded source outcomes before activating learned spending
+
+Retain independently attested outside actor/funding gates for source learning.
+A verified wallet or historical citation is insufficient. Capture source/run
+outcomes in existing public run JSON, exclude known source owners and beneficiaries
+before cohort checks, and require fresh on-chain ownership plus completed exact
+settled reads for purchased observations. Private jobs and unknown historical
+memory cannot train the public live prompt. Public topic facets come only from
+source-declared tags; aggregate contracts omit questions, actors and receipt IDs.
+
+Share a bounded recent source/topic record between creator SSR, API and remote/
+stdio MCP. Cap sample observations and repeated attested actors per UTC day;
+retain exact rational prices, descriptive uncertainty and reviewable abrupt-shift
+flags without claiming common-control or Sybil resistance. Ship the deterministic
+bounded planner only as a prospective offline policy: no signer, default
+exploration allowance or live selection activation. Controlled purchase replay
+is not causal exploration benefit or production acceptance. See the
+[source, surface and remaining-gate record](docs/engineering/source-learning-299.md).
+
 ## 2026-10-11 — Record purchase planning separately from observed outcomes
 
 For issue298, add an immutable initial planning basis to existing decision JSON

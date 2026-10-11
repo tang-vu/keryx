@@ -481,6 +481,8 @@ export interface OperatingFeeSnapshot {
 }
 
 export interface QueryRun {
+  /** Public write-time source outcomes; observational only, with no live learned spending authority. */
+  sourceLearning?: import("./research/source-learning-contract").SourceLearningSnapshot;
   /** Write-time server classification. Missing historical observations remain unknown. */
   usage?: import("./research/usage-provenance").RunUsage;
   /** Trusted ingress and owner-proof method. Absent historical metadata is unknown, not inferred. */

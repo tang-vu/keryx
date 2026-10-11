@@ -1,5 +1,16 @@
 # Keryx Project Changelog
 
+### Bounded source outcomes (source candidate)
+
+- Share one bounded source/topic outcome record across the creator page, public
+  read API and remote/stdio MCP, with sample limits and observation periods visible.
+- Exclude known owners, private jobs and unclassified history from eligible
+  learning. Purchased outcomes require exact recorded settlement and a completed
+  read; public records omit questions, actors and receipt identifiers.
+- Keep live learned selection and exploration withheld. The bounded planner is
+  offline only; issue #299's classifier, usefulness and coordinated delivery
+  gates remain open in the [scope record](engineering/source-learning-299.md).
+
 ### Purchase planning and pooled recorded outcomes (source candidate)
 
 - Retain each initial BUY/SKIP/CACHE planning basis, including the quoted price,
