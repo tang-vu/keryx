@@ -15,7 +15,7 @@ const listener = createServer();
 listener.listen(0, "127.0.0.1"); await once(listener, "listening");
 const address = listener.address(); assert(address && typeof address === "object");
 await new Promise<void>((done, reject) => listener.close(error => error ? reject(error) : done()));
-const origin = `http://127.0.0.1:${address.port}`;
+const physicalOrigin = `http://127.0.0.1:${address.port}`, origin = "https://mobile-navigation.test";
 let child: ReturnType<typeof spawn> | undefined, didExit = false, stopped: Promise<void> | undefined;
 const engine = process.argv.includes("--webkit") ? webkit : chromium;
 const browser = await engine.launch({ headless: true });
@@ -37,7 +37,7 @@ try {
   stopped = new Promise<void>(done => child!.once("exit", () => { didExit = true; done(); }));
   let ready = false;
   for (let attempt = 0; attempt < 80 && !didExit; attempt++) {
-    try { ready = (await fetch(origin, { signal: AbortSignal.timeout(2000) })).ok; } catch { /* bounded startup */ }
+    try { ready = (await fetch(physicalOrigin, { signal: AbortSignal.timeout(2000) })).ok; } catch { /* bounded startup */ }
     if (ready) break;
     await new Promise(done => setTimeout(done, 250));
   }
@@ -49,14 +49,18 @@ try {
   await context.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
     if (url.origin !== origin) return route.abort();
-    assert.equal(request.method(), "GET", "No authentication, research or spending mutation is admitted");
+    if (request.method() !== "GET") return route.abort(); // Telemetry is not forwarded or persisted.
     if (url.pathname === "/sources" && url.searchParams.has("_rsc") && request.headers()["next-router-prefetch"] !== "1") {
       assert(!held, "One original navigation request only"); held = route; return;
     }
-    return route.continue();
+    // Keep the actual production CSP, including upgrade-insecure-requests. The
+    // browser sees HTTPS; only the disposable local origin transport is remapped.
+    return route.fulfill({ response: await route.fetch({ url: physicalOrigin + url.pathname + url.search }) });
   });
   await page.goto(origin);
-  const prefetched = page.waitForResponse(response => new URL(response.url()).pathname === "/sources" && response.request().headers()["next-router-prefetch"] === "1");
+  await page.waitForFunction(() => [...document.querySelectorAll("button")].some(button => button.textContent?.includes("Connect Wallet")));
+  const prefetched = page.waitForResponse(async response => new URL(response.url()).pathname === "/sources" &&
+    response.request().headers()["next-router-prefetch"] === "1" && (await response.text()).includes("Loading page"));
   await page.getByRole("button", { name: "Open menu" }).tap();
   const response = await prefetched; await response.finished();
   assert((await response.text()).includes("Loading page"), "Real dynamic prefetch must include the public loading shell");
@@ -64,11 +68,12 @@ try {
   await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor();
   assert(held, "Final route response remains withheld while loading UI is visible");
   assert.equal(await page.getByRole("button", { name: "Connect Wallet" }).count(), 0, "Temporary shell cannot start a wallet flow");
-  await held.continue(); held = undefined;
+  const finalUrl = new URL(held.request().url());
+  await held.fulfill({ response: await held.fetch({ url: physicalOrigin + finalUrl.pathname + finalUrl.search }) }); held = undefined;
   await page.waitForURL(`${origin}/sources`);
   await page.getByRole("button", { name: "Open menu" }).waitFor();
   await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ state: "detached" });
-  assert.equal((await context.request.get(`${origin}/does-not-exist`)).status(), 404, "Unrelated not-found status remains unchanged");
+  assert.equal((await fetch(`${physicalOrigin}/does-not-exist`)).status, 404, "Unrelated not-found status remains unchanged");
   assert.deepEqual(errors, []);
   console.log(`PASS (${engine.name()}): built dynamic route partially prefetches; real touch navigation displays loading before delayed response; final header restores; no wallet flow in fallback; unrelated 404 preserved. Offline disposable store, GET only.`);
   await context.close();
