@@ -1,10 +1,9 @@
 import { SiteHeader } from "@/components/keryx/site-header";
-import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SponsoredRegistrationForm } from "@/components/keryx/sponsored-registration-form";
 import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
 
-export const metadata = { title: copy.pageTitle, alternates: englishPublicAlternates("/register/sponsored") };
+export const metadata = { title: copy.pageTitle };
 export default async function SponsoredRegistrationPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
   const claimId = typeof params.claimId === "string" && /^[a-f0-9]{64}$/.test(params.claimId) ? params.claimId : undefined;
