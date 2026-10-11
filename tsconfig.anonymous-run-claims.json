@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "incremental": false,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["scripts/test-anonymous-run-claims-postgres.mts"],
+  "exclude": ["node_modules"]
+}

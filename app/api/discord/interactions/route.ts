@@ -17,7 +17,10 @@
 
 import { NextRequest, after } from "next/server";
 import { collectRun } from "@/lib/agent";
+import { prepareHostedRunClaim } from "@/lib/run-claims/hosted-delivery";
+import { privateRunClaimText } from "@/lib/run-claims/delivery";
 import { config } from "@/lib/config";
+import { botResearchMessages } from "@/lib/bots/research-messages";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { verifyInteractionSignature } from "@/lib/discord/verify-interaction-signature";
 import {
@@ -61,11 +64,11 @@ export async function POST(req: NextRequest) {
 
   const cmd = parseAskCommand(interaction);
   if (!cmd) {
-    return Response.json(ephemeralReply("Only `/ask question:<text>` is wired up here."));
+    return Response.json(ephemeralReply(botResearchMessages()("discordUsage")));
   }
   if (!config.sellerAddress) {
     return Response.json(
-      ephemeralReply("Keryx's treasury wallet is not configured on this deployment."),
+      ephemeralReply(botResearchMessages(cmd.question)("treasuryUnavailable")),
     );
   }
 
@@ -74,7 +77,7 @@ export async function POST(req: NextRequest) {
   const limited = await checkSponsoredResearchAdmission({ kind: "bot", platform: "discord", userId: cmd.userId });
   if (limited) {
     return Response.json(
-      ephemeralReply("Sponsored dispatches are temporarily limited or unavailable — try again in a minute."),
+      ephemeralReply(botResearchMessages(cmd.question)("sponsoredLimited")),
     );
   }
 
@@ -87,17 +90,20 @@ export async function POST(req: NextRequest) {
 async function runAndReply(cmd: AskCommand, budget: number) {
   let message: unknown;
   try {
+    const queryId = crypto.randomUUID();
+    const privateClaim = await prepareHostedRunClaim(queryId);
     const run = await collectRun({
       question: cmd.question,
       budget,
-      queryId: crypto.randomUUID(),
+      queryId,
       origin: "web",
       provenance: { version: 1, surface: "discord", ownershipMethod: "unknown" },
     });
-    message = buildAnswerMessage(run);
+    const packet = await privateClaim?.complete(run);
+    message = { ...buildAnswerMessage(run), ...(packet ? { content: privateRunClaimText(packet), allowed_mentions: { parse: [] } } : {}) };
   } catch (err) {
     console.error("[discord] /ask run failed:", err);
-    message = buildErrorMessage(err);
+    message = buildErrorMessage(err, cmd.question);
   }
   try {
     const res = await fetch(followupUrl(cmd.applicationId, cmd.token), {
@@ -107,10 +113,10 @@ async function runAndReply(cmd: AskCommand, budget: number) {
     });
     if (!res.ok) {
       console.error(
-        `[discord] follow-up edit failed: ${res.status} ${await res.text().catch(() => "")}`,
+        `[discord] follow-up edit failed: ${res.status}`,
       );
     }
   } catch (err) {
-    console.error("[discord] follow-up edit failed:", err);
+    console.error("[discord] follow-up edit failed", err instanceof Error ? err.name : "DeliveryError");
   }
 }

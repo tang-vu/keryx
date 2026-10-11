@@ -1,4 +1,5 @@
 /** Built private/public routes + actual Next report UI; synthetic durable sessions and bookkeeping only. */
+import { copyNextConfigFixture } from "../test-support/next-config-fixture";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
@@ -14,7 +15,7 @@ import { issueWebSession } from "../lib/auth-session.ts";
 import { acceptanceInputSchema, acceptanceSnapshotSchema } from "../lib/deliverable-acceptance/contracts.ts";
 const source = resolve(import.meta.dirname, ".."), dist = join(source, ".next"); await readFile(join(dist, "BUILD_ID"));
 const fixture = join(source, ".artifacts", `acceptance-built-${randomUUID()}`); await mkdir(join(fixture, "lib"), { recursive: true }); await mkdir(join(fixture, "data"));
-for (const file of ["package.json", "next.config.ts", "lib/security-headers.ts", "lib/arc-network-profile.ts", "lib/circle-wallet-config.ts"]) await writeFile(join(fixture, file), await readFile(join(source, file)));
+await copyNextConfigFixture(source, fixture);
 await symlink(join(source, "node_modules"), join(fixture, "node_modules"), process.platform === "win32" ? "junction" : "dir");
 await symlink(dist, join(fixture, ".next"), process.platform === "win32" ? "junction" : "dir");
 const sqlite = new SqliteAdapter(join(fixture, "data", "keryx.sqlite")); await sqlite.init();

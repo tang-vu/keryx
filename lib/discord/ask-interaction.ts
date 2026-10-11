@@ -11,7 +11,7 @@
 import { config } from "../config";
 import { unsupportedDecisionReviewFlag } from "../research/decision-review-types";
 import { formatRecordedUsdc } from "../display/recorded-usdc";
-import { researchAdmissionError } from "../research/availability-contract";
+import { botResearchFailure, botResearchMessages } from "../bots/research-messages";
 import type { QueryRun } from "../types";
 
 // Discord wire constants — the two interaction types and three callback types this flow uses.
@@ -92,7 +92,7 @@ export function pong() {
 
 /** "Keryx is thinking…" placeholder — buys the run time beyond Discord's 3s response window. */
 export function deferredResponse() {
-  return { type: CallbackType.DeferredChannelMessage };
+  return { type: CallbackType.DeferredChannelMessage, data: { flags: EPHEMERAL } };
 }
 
 /** Only-you-can-see-this reply, for errors and throttles that shouldn't clutter the channel. */
@@ -114,13 +114,14 @@ export function followupUrl(applicationId: string, token: string): string {
  * so both are truncated with the dispatch page carrying the full text.
  */
 export function buildAnswerMessage(run: QueryRun) {
+  const message = botResearchMessages(run.question);
   const fields = [];
   if (run.citations.length > 0) {
     const lines = run.citations.map(
-      (c) => `${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (weight ${c.weight.toFixed(2)})`,
+      (c) => `${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (${message("weight", { weight: c.weight.toFixed(2) })})`,
     );
     fields.push({
-      name: "Citations and planned rewards (USDC)",
+      name: message("citationHeading"),
       value: truncate(lines.join("\n"), 1024),
     });
   }
@@ -134,8 +135,8 @@ export function buildAnswerMessage(run: QueryRun) {
         fields,
         footer: {
           text:
-            `Keryx · ${run.citations.length} source${run.citations.length === 1 ? "" : "s"} cited` +
-            ` · ${formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 })} recorded to creators (${run.paymentMode ?? "legacy"}) · Recorded amounts are not settlement proof; check full trace receipts at the title link`,
+            `Keryx · ${message(run.citations.length === 1 ? "sourcesOne" : "sourcesOther", { count: run.citations.length })}` +
+            ` · ${message("recordedCreators", { amount: formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 }) })} (${run.paymentMode ?? "legacy"}) · ${message("discordSettlementNotice")}`,
         },
       },
     ],
@@ -143,9 +144,8 @@ export function buildAnswerMessage(run: QueryRun) {
 }
 
 /** Failure text for the deferred placeholder — the run died, say so instead of hanging forever. */
-export function buildErrorMessage(err: unknown) {
-  const detail = researchAdmissionError(err)?.message ?? (err instanceof Error ? err.message : String(err));
-  return { content: truncate(`⚠️ Keryx could not finish this dispatch: ${detail}`, 2000) };
+export function buildErrorMessage(err: unknown, originalQuestion = "") {
+  return { content: truncate(botResearchFailure(err, originalQuestion), 2000) };
 }
 
 function truncate(text: string, max: number): string {

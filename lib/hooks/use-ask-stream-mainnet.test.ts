@@ -23,7 +23,7 @@ it("keeps originating mainnet question scopes and suppresses obsolete header cal
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": '"0x3333333333333333333333333333333333333333"',
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
   } });
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(process.env.KERYX_CLAIMS_BROWSER_EXECUTABLE ? { executablePath: process.env.KERYX_CLAIMS_BROWSER_EXECUTABLE } : {}) });
   try {
     const page = await browser.newPage();
     await page.route("**/*", route => route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' }));

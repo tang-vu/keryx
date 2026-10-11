@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { buildSourceIndex, type SourceIndex } from "@/lib/payments/client-payto-allowlist";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
 import { AskForm } from "./ask-form";
@@ -9,8 +9,26 @@ import { SessionGrantPanel, type SessionGrantBinding } from "./session-grant-pan
 import { ResearchTurn, type ResearchTurnData } from "./research-turn";
 import { GlobeWatermark } from "./globe-watermark";
 import { SponsoredTrialNotice } from "./sponsored-trial-notice";
+import { createPrivateClaimHandoff, type PrivateClaimStatus } from "@/lib/run-claims/web-handoff";
+import { readPrivateDocument } from "@/lib/run-claims/web-bootstrap";
+import { privateResearchCopy } from "@/locales/en/run-claim-research";
 
-export function ResearchChat({ paidHref = "/research#paid-research", showLaunchBadge = false }: { paidHref?: string; showLaunchBadge?: boolean }) {
+export function ResearchChat({ paidHref = "/research#paid-research", showLaunchBadge = false, privateClaims = false }: { paidHref?: string; showLaunchBadge?: boolean; privateClaims?: boolean }) {
+  const [privateHandoff] = useState(() => createPrivateClaimHandoff({ origin: () => window.location.origin,
+    documentProof: readPrivateDocument, open: url => { window.open(url, "_blank", "noopener,noreferrer"); } }));
+  const [claimStatus, setClaimStatus] = useState<PrivateClaimStatus>("none");
+  const protectedDocument = useSyncExternalStore(useCallback(listener => {
+    if (!privateClaims) return () => {};
+    window.addEventListener("pagehide", listener);
+    return () => window.removeEventListener("pagehide", listener);
+  }, [privateClaims]), () => privateClaims && !!readPrivateDocument(), () => false);
+  useEffect(() => {
+    if (!privateClaims) return;
+    const unsubscribe = privateHandoff.subscribe(setClaimStatus);
+    const forget = () => privateHandoff.clear();
+    window.addEventListener("pagehide", forget);
+    return () => { unsubscribe(); window.removeEventListener("pagehide", forget); forget(); };
+  }, [privateClaims, privateHandoff]);
   const [grantBinding, setGrantBinding] = useState<SessionGrantBinding>({ sessionId: null, getSessionWalletClient: () => null });
   const [sourceIndex, setSourceIndex] = useState<SourceIndex>(new Map());
   const [history, setHistory] = useState<ResearchTurnData[]>([]);
@@ -39,6 +57,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
     questionCapUsdc: grantBinding.questionCapUsdc,
     sourceIndex,
     onSessionExpired: grantBinding.markExpired,
+    ...(privateClaims ? { privateClaimHandoff: privateHandoff } : {}),
   });
   const streaming = state.status === "streaming";
   const payer = grantBinding.paused ? "paused" : grantBinding.expired ? "expired" : grantBinding.sessionId ? "session" : "treasury";
@@ -80,14 +99,20 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
         {!streaming && parentId && <button type="button" onClick={() => { setRootRequest(true); setAnchor(undefined); }} className="min-h-11 px-2 font-mono text-xs underline underline-offset-4">New research</button>}
         {streaming && <button type="button" onClick={stop} className="min-h-11 border border-seal px-3 py-2 font-mono text-xs text-seal">Stop research</button>}
       </div>}
-      <AskForm disabled={streaming} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit
+      {privateClaims && !protectedDocument && <p role="status" className="mt-3 text-seal">{privateResearchCopy.fullNavigation}</p>}
+      <AskForm disabled={streaming || privateClaims && !protectedDocument} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit
         showLaunchBadge={showLaunchBadge && !hasTurns}
         restoreQuestion={request && (state.errorKind === "research-paused" || state.errorKind === "rate-limit" || state.errorKind === "maintenance")
           ? { ...request, researchPaused: state.errorKind === "research-paused" } : undefined} />
       {payer === "treasury" && !hasTurns && <div className="mt-3"><SponsoredTrialNotice /></div>}
-      <div className="mt-3"><SessionGrantPanel onBindingChange={handleBindingChange} /></div>
+      {!privateClaims && <div className="mt-3"><SessionGrantPanel onBindingChange={handleBindingChange} /></div>}
+      {privateClaims && claimStatus !== "none" && claimStatus !== "waiting" && <div className="mt-3 border border-line p-4" role="status">
+        <p>{claimStatus === "available" ? privateResearchCopy.available : claimStatus === "opened" ? privateResearchCopy.opened : claimStatus === "lost" ? privateResearchCopy.lost : privateResearchCopy.failed}</p>
+        {claimStatus === "available" && <button className="mt-2 min-h-11 underline" type="button" onClick={() => privateHandoff.open()}>{privateResearchCopy.open}</button>}
+      </div>}
       <p className="mt-3 text-xs text-ink-3">Conversation stays in this tab while the page is open. Completed reports have a saved link; signed-in reports appear in My saved reports. Download a report to keep a local copy.</p>
       <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs text-ink-2" aria-label="Research tools">
+        {!privateClaims && <a href="/research/private" className="underline underline-offset-4">{privateResearchCopy.entry}</a>}
         <a href="/me/asks" className="underline underline-offset-4">My saved reports</a>
         <a href={paidHref} className="underline underline-offset-4">Paid agent research & recovery</a>
         <a href="/register" className="underline underline-offset-4">Publish a paid source</a>
