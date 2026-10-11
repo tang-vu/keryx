@@ -6,15 +6,20 @@
  */
 
 import type { Metadata } from "next";
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
-const TITLE = "Privacy — Keryx";
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
+
+const TITLE = message("legal.privacy.metadataTitle");
 const DESCRIPTION =
-  "What Keryx and its browser extension do — and don't do — with your questions, wallet address, and page data.";
+  message("legal.privacy.metadataDescription");
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -40,231 +45,69 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-paper-2">
       <SiteHeader />
       <main className="mx-auto max-w-[760px] px-4 pb-20 pt-12 sm:px-[30px]">
-        <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-          The fine print
-        </div>
-        <h1 className="font-display text-[clamp(30px,5vw,44px)] font-medium leading-[1.05] tracking-tight text-ink">
-          Privacy policy
-        </h1>
-        <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">
-          Last updated {UPDATED} · covers keryx.cc and the Keryx browser extension
-        </p>
+        <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-seal">{message("legal.finePrint")}</div>
+        <h1 className="font-display text-[clamp(30px,5vw,44px)] font-medium leading-[1.05] tracking-tight text-ink">{message("legal.privacy.title")}</h1>
+        <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">{message("legal.privacy.updated", { date: UPDATED })}</p>
 
-        <Section title="The short version">
-          <p>
-            Keryx is a reading agent that answers questions and pays the writers it cites, in USDC
-            on {currentArcLabel}. <strong className="text-ink">Public research is published.</strong>{" "}
-            The separately labeled private research pilot restricts result access to the paying
-            account, while Keryx and the disclosed AI provider still process the question.
-            Choose the appropriate mode before submitting. We do not sell question or wallet
-            data to data brokers. Hosting and wallet services process operational data as
-            described below.
-          </p>
+        <Section title={message("legal.privacy.shortVersion.heading")}>
+          <p>{richMessage("legal.privacy.shortVersion.summary", { network: currentArcLabel, publishedNotice: <strong className="text-ink">{message("legal.privacy.shortVersion.publicNotice")}</strong> })}</p>
         </Section>
 
-        <Section title="When you ask a public question">
-          <p>
-            Your question is sent to our server, which sends it to a configured large-language-model
-            provider to plan the research and write the grounded answer. The question, the
-            answer, the agent&apos;s reasoning trace, and the payments it triggered are stored and
-            published at a permalink (<span className="font-mono text-[13.5px]">/dispatch/…</span>),
-            and canonical questions appear in the public <Link href="/answers" className="text-seal underline underline-offset-2">archive</Link>.
-            Don&apos;t put anything in a question you wouldn&apos;t put on a public page.
-          </p>
-          <p>
-            The free, no-wallet tier is rate-limited by a one-way bucket derived from the IP address.
-            The raw IP is not written to the database or joined to your questions; expired limiter
-            buckets are deleted automatically.
-          </p>
+        <Section title={message("legal.privacy.publicQuestions.heading")}>
+          <p>{richMessage("legal.privacy.publicQuestions.processing", { dispatchPath: <span className="font-mono text-[13.5px]">/dispatch/…</span>, archiveLink: <Link href="/answers" className="text-seal underline underline-offset-2">{message("legal.privacy.archive")}</Link> })}</p>
+          <p>{message("legal.privacy.publicQuestions.rateLimits")}</p>
         </Section>
 
-        <Section title="Personal literature workspace">
-          <p>
-            The <Link href="/literature" className="text-seal underline">literature workspace</Link> stores
-            saved paper metadata, your review question and screening notes on this browser.
-            It requires no account and has no cloud sync. Keryx does not upload these records
-            when you save, screen, export or restore them. Anyone controlling this browser
-            profile or scripts running on this site can access its local data.
-          </p>
-          <p>
-            Preparing a comparison puts the saved review question and two paper links in an
-            editable question URL; browser history can retain that URL. Notes and screening
-            decisions are omitted. Submitting the question uses the ordinary research policy
-            described above. Downloaded CSV/JSON files contain your personal notes; keep them
-            in appropriate storage. Clearing the workspace removes its browser record but
-            does not delete exports, browser history or disk remnants.
-          </p>
+        <Section title={message("legal.privacy.literatureWorkspace.heading")}>
+          <p>{richMessage("legal.privacy.literatureWorkspace.localData", { literatureLink: <Link href="/literature" className="text-seal underline">{message("legal.privacy.literatureWorkspace.link")}</Link> })}</p>
+          <p>{message("legal.privacy.literatureWorkspace.comparisonAndDeletion")}</p>
         </Section>
 
-        <Section title="Private research pilot">
-          <p>
-            Private purchasing requires an authenticated paying wallet and an enabled deployment. The private
-            checkout shows the AI provider, model and endpoint before you buy. Keryx and that
-            provider process your question; this is not end-to-end encryption. The private
-            result and history routes require sign-in as the paying account. Private jobs use
-            separate storage and are excluded from the public research archive and public
-            payment activity. Payment records on the underlying network may still be public.
-          </p>
-          <p>
-            The browser asks you to accept saving the private question and payment signature
-            locally before purchase. Recovery files also contain the question and signature in
-            plaintext. Keep exports in private storage. Importing a file saves a local recovery
-            copy; it does not send a new payment. Anyone controlling your browser profile or
-            scripts running on this site could access local data.
-          </p>
-          <p>
-            In <Link href="/research" className="text-seal underline underline-offset-2">Research</Link>,
-            choose Delete local private data and confirm to remove a saved question and signature
-            from the browser journal. A minimal account/job marker remains to prevent another
-            submission. An exported file can restore recovery access later. Deletion does not
-            cancel a signed or in-flight payment, refund funds, delete the server result, or
-            remove exports, backups, disk remnants or copies in other open tabs. Close other
-            tabs to clear their displayed copies. This is not secure disk erasure.
-          </p>
+        <Section title={message("legal.privacy.privatePilot.heading")}>
+          <p>{message("legal.privacy.privatePilot.processing")}</p>
+          <p>{message("legal.privacy.privatePilot.localRecovery")}</p>
+          <p>{richMessage("legal.privacy.privatePilot.localDeletion", { researchLink: <Link href="/research" className="text-seal underline underline-offset-2">{message("legal.privacy.privatePilot.researchLink")}</Link> })}</p>
         </Section>
 
-        <Section title="Aggregate product counters">
-          <p>
-            Keryx keeps first-party daily counters so we can see where the product is slow or
-            confusing: for example, how many landing views became accepted asks and completed
-            answers, or how many creator registrations reached verification, a settled citation,
-            and a cash-out. Each row contains only a UTC date, an allowlisted event name, and a
-            count. It contains no wallet, IP, cookie, fingerprint, user agent, referrer, question,
-            source, or payment identifier. Landing counting uses tab-local session storage only to
-            avoid counting the same tab repeatedly that day; it creates no stable user id and sends
-            requests without credentials. These are event totals, never claimed as unique people.
-          </p>
+        <Section title={message("legal.privacy.aggregateCounters.heading")}>
+          <p>{message("legal.privacy.aggregateCounters.collection")}</p>
         </Section>
 
-        <Section title="Wallets and accounts">
-          <p>
-            External wallets use Sign-In-With-Ethereum. Keryx stores your wallet address,
-            your role (asker/creator), and a last-seen timestamp. Keryx does not store your
-            email address, Google password, or phone number in its account records.
-            Everything you do on-chain — registrations, payments, withdrawals — is public on Arc by
-            the nature of a blockchain, and Keryx links to it rather than hiding it. Session keys
-            for browser co-signing are generated in your browser and never sent to us.
-          </p>
-          {!browserPaymentProfile().testnet&&<p>
-            Mainnet sessions retain an encrypted signing key on this browser. Logout locks it
-            but does not erase funded recovery or refund a Gateway balance. Clearing browser
-            storage or losing this device can lose access; repeating a wallet signature is not
-            a guaranteed backup. This assumes a trusted application origin and browser:
-            compromised same-origin script can use the stored wrapping key to decrypt custody
-            despite its nonexportability, putting deposited funds at risk.
-          </p>}
+        <Section title={message("legal.privacy.walletAccounts.heading")}>
+          <p>{message("legal.privacy.walletAccounts.accountData")}</p>
+          {!browserPaymentProfile().testnet&&<p>{message("legal.privacy.walletAccounts.mainnetRecovery")}</p>}
         </Section>
 
-        <Section title="Optional Google wallet sign-in">
-          <p>
-            When Google sign-in is enabled, Google authenticates your account and Circle
-            User-Controlled Wallets handles the linked wallet. Google and Circle process the
-            identity information you consent to share, such as your email and basic profile,
-            under their own privacy policies. Keryx uses the authenticated Circle wallet to
-            sign you in; it does not request access to your Gmail messages, Drive files, or
-            Google password. Google sign-in alone does not authorize spending.
-          </p>
-          <p>
-            The browser sends the Circle user-session token to Keryx to verify wallet ownership
-            and request wallet actions. Keryx forwards it to Circle for those operations and
-            does not persist it in account records. After sign-in, the browser keeps the user
-            token and signing encryption key in memory. During the redirect, short-lived
-            device credentials and login state are saved in this tab&apos;s session storage.
-            The Circle SDK also saves OAuth state, nonce and provider entries in local storage.
-            The Keryx continuation is valid for five minutes; returning to complete the flow removes
-            its continuation and matching SDK entries. Abandoning the redirect can leave
-            expired login data in browser storage. The Google callback token is removed from
-            the page URL after the return flow. A public wallet identity is remembered locally and checked against a current
-            Keryx session before reconnecting.
-          </p>
-          <p>
-            Reloading requires reconnecting Google for new owner-wallet signatures. Google
-            account recovery does not automatically restore the separate encrypted research
-            signing key retained on this browser. Signing out clears Google wallet signing
-            credentials but retains funded research-key recovery as described above.
-          </p>
-          <p>
-            See <a href="https://policies.google.com/privacy" className="text-seal underline underline-offset-2">Google&apos;s privacy policy</a>{" "}
-            and <a href="https://www.circle.com/legal/privacy-policy" className="text-seal underline underline-offset-2">Circle&apos;s privacy policy</a>.
-          </p>
+        <Section title={message("legal.privacy.googleSignIn.heading")}>
+          <p>{message("legal.privacy.googleSignIn.processing")}</p>
+          <p>{message("legal.privacy.googleSignIn.credentials")}</p>
+          <p>{message("legal.privacy.googleSignIn.recovery")}</p>
+          <p>{richMessage("legal.privacy.googleSignIn.privacyPolicies", { googlePolicyLink: <a href="https://policies.google.com/privacy" className="text-seal underline underline-offset-2">{message("legal.privacy.googleSignIn.googlePolicy")}</a>, circlePolicyLink: <a href="https://www.circle.com/legal/privacy-policy" className="text-seal underline underline-offset-2">{message("legal.privacy.googleSignIn.circlePolicy")}</a> })}</p>
         </Section>
 
-        <Section title="If you list a source">
-          <p>
-            A source&apos;s name, URL, description, prices, and payout wallet are public — that is
-            the product. Two things stay private: the webhook URL + signing secret you may register
-            for citation notifications, and your content itself, which is stored encrypted on IPFS
-            and only decrypted after a payment. API keys are shown to you once and stored only as a
-            salted hash; we cannot recover them.
-          </p>
+        <Section title={message("legal.privacy.sourceListings.heading")}>
+          <p>{message("legal.privacy.sourceListings.publicAndPrivateFields")}</p>
         </Section>
 
-        <Section title="The browser extension">
-          <p>
-            The extension is a thin client. Its only network destination is{" "}
-            <span className="font-mono text-[13.5px]">https://keryx.cc</span>. Specifically:
-          </p>
+        <Section title={message("legal.privacy.extension.heading")}>
+          <p>{richMessage("legal.privacy.extension.destinations", { serviceOrigin: <span className="font-mono text-[13.5px]">https://keryx.cc</span> })}</p>
           <ul className="ml-5 flex list-disc flex-col gap-2">
-            <li>
-              When you ask, it sends your question (including text you highlighted, if you used the
-              right-click menu or had a selection) and your chosen budget to the Keryx API. Nothing
-              is sent until you press Ask.
-            </li>
-            <li>
-              When you pick <em>&ldquo;List this page as a paid source&rdquo;</em>, it opens the
-              Keryx register page with that page&apos;s URL and title pre-filled. This is the only
-              time a page URL leaves your browser, and it happens because you asked for it.
-            </li>
-            <li>
-              It reads your current text selection only when you open it, to pre-fill the question
-              box. It does not read pages in the background, collect browsing history, or inject
-              anything into pages.
-            </li>
-            <li>
-              <span className="font-mono text-[13.5px]">chrome.storage.local</span> holds only the
-              hand-off between the right-click menu and the popup, on your device. There are no
-              analytics or telemetry of any kind in the extension.
-            </li>
+            <li>{message("legal.privacy.extension.asking")}</li>
+            <li>{richMessage("legal.privacy.extension.listPage", { listAction: <em>{message("legal.privacy.extension.listAction")}</em> })}</li>
+            <li>{message("legal.privacy.extension.selection")}</li>
+            <li>{richMessage("legal.privacy.extension.localStorage", { storageApi: <span className="font-mono text-[13.5px]">chrome.storage.local</span> })}</li>
           </ul>
         </Section>
 
-        <Section title="Third parties we rely on">
-          <p>
-            The configured reasoning provider processes question text to produce answers under its
-            API terms. When enabled, the experimental Cloudflare Workers AI fallback can process
-            public research questions and source excerpts after other providers fail, or when you
-            select its model. Cloudflare states that Workers AI customer content is not used to train
-            models without consent; see its{" "}
-            <a href="https://developers.cloudflare.com/workers-ai/platform/data-usage/" className="text-seal underline underline-offset-2">Workers AI data usage policy</a>.
-            Private research continues to use only the provider disclosed at checkout. Circle and
-            the Arc network process the on-chain payments. Pinata pins the encrypted IPFS content
-            creators upload. Their processing is governed by their respective service terms.
-          </p>
-          <p>
-            The website is served through Cloudflare. Its performance beacon can send page-load
-            metrics to Cloudflare; see its{" "}
-            <a href="https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/" className="text-seal underline underline-offset-2">data collection documentation</a>.
-            Wallet connection tools, including MetaMask and WalletConnect when available, also
-            communicate with their service providers. WalletConnect operational telemetry has
-            been observed on the website. These web services are separate from the extension
-            and from Keryx&apos;s aggregate product counters.
-          </p>
+        <Section title={message("legal.privacy.thirdParties.heading")}>
+          <p>{richMessage("legal.privacy.thirdParties.reasoningAndPayments", { workersPolicyLink: <a href="https://developers.cloudflare.com/workers-ai/platform/data-usage/" className="text-seal underline underline-offset-2">{message("legal.privacy.thirdParties.workersPolicy")}</a> })}</p>
+          <p>{richMessage("legal.privacy.thirdParties.webServices", { collectionLink: <a href="https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/" className="text-seal underline underline-offset-2">{message("legal.privacy.thirdParties.collectionLink")}</a> })}</p>
         </Section>
 
-        <Section title="Retention, changes, contact">
-          <p>
-            Published dispatches and on-chain records are retained indefinitely — they are the
-            public ledger the product is built on. Expired rate-limit buckets are deleted; aggregate
-            product counters retain only daily totals. Private pilot records are retained for
-            operation and recovery; no automatic server deletion schedule currently applies.
-            Local deletion does not remove server records or operational backups. If this policy changes, the date above changes
-            with it. Questions, corrections,
-            or deletion requests for off-chain data:{" "}
-            <a href="mailto:vutang2212@gmail.com" className="text-seal underline underline-offset-2">
+        <Section title={message("legal.privacy.retentionAndContact.heading")}>
+          <p>{richMessage("legal.privacy.retentionAndContact.records", { contactAddress: <a href="mailto:vutang2212@gmail.com" className="text-seal underline underline-offset-2">
               vutang2212@gmail.com
-            </a>
-            . On-chain data cannot be deleted by anyone, including us.
-          </p>
+            </a> })}</p>
         </Section>
       </main>
       <SiteFooter />
