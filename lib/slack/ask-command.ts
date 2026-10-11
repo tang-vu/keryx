@@ -12,7 +12,8 @@
 import { config } from "../config";
 import { unsupportedDecisionReviewFlag, unsupportedDecisionReviewIntent } from "../research/decision-review-types";
 import { formatRecordedUsdc } from "../display/recorded-usdc";
-import { researchAdmissionError } from "../research/availability-contract";
+import { botResearchFailure, botResearchMessages } from "../bots/research-messages";
+import { botHelpEnglish } from "../../locales/en/bot-research";
 import type { QueryRun } from "../types";
 
 /** Slack renders a message's `text` up to 40k chars; keep the whole payload well under that and the
@@ -48,15 +49,14 @@ export function parseSlashCommand(params: URLSearchParams): SlashCommand | null 
 
 export function helpText(): string {
   return [
-    "*Keryx* — the citation-toll research herald.",
+    `*${botHelpEnglish.herald}* — ${botHelpEnglish.tagline}`,
     "",
-    "Ask a question and Keryx selects sources within a budget, answers with citations, and " +
-      "attempts weighted USDC rewards for eligible cited creators. The dispatch trace shows payment outcomes.",
+    botHelpEnglish.slackExplanation,
     "",
-    "Usage: `/keryx what is x402?`",
-    "Review-first is available only in the authenticated live browser; review mode flags are refused here.",
+    botHelpEnglish.slackUsage,
+    botHelpEnglish.reviewBoundary,
     "",
-    `Creator payments and service charges are recorded separately. Live status: ${config.baseUrl}/status`,
+    `${botHelpEnglish.slackStatus} ${config.baseUrl}/status`,
   ].join("\n");
 }
 
@@ -66,32 +66,31 @@ export function helpText(): string {
  * settlement evidence and any truncated text). QueryRun alone does not contain per-payment evidence.
  */
 export function buildAnswerText(run: QueryRun): string {
+  const message = botResearchMessages(run.question);
   const parts = [`*${escapeSlack(truncate(run.question, 256))}*`, ""];
   parts.push(escapeSlack(truncate(run.answer, ANSWER_MAX)), "");
 
   if (run.citations.length > 0) {
-    parts.push("*Citations and planned rewards — weighted USDC citation rewards*");
+    parts.push(`*${message("slackCitationHeading")}*`);
     for (const c of run.citations) {
       parts.push(
-        escapeSlack(`${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (weight ${c.weight.toFixed(2)})`),
+        escapeSlack(`${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (${message("weight", { weight: c.weight.toFixed(2) })})`),
       );
     }
     parts.push("");
   }
 
-  const plural = run.citations.length === 1 ? "" : "s";
   parts.push(
-    `${run.citations.length} source${plural} cited · ${formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 })} recorded creator-payment total / ${run.paymentMode ?? "legacy"}`,
-    "Planned rewards are not settlement evidence. See the trace for settled, pending, failed or simulated payments.",
-    `Full trace: ${config.baseUrl}/dispatch/${run.id}`,
+    `${message(run.citations.length === 1 ? "sourcesOne" : "sourcesOther", { count: run.citations.length })} · ${message("recordedCreatorTotal", { amount: formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 }) })} / ${run.paymentMode ?? "legacy"}`,
+    message("slackSettlementNotice"),
+    message("fullTrace", { url: `${config.baseUrl}/dispatch/${run.id}` }),
   );
   return truncate(parts.join("\n"), MESSAGE_MAX);
 }
 
 /** Failure text for the response_url post — the run died, say so instead of leaving it silent. */
-export function buildErrorText(err: unknown): string {
-  const detail = researchAdmissionError(err)?.message ?? (err instanceof Error ? err.message : String(err));
-  return truncate(`⚠️ Keryx could not finish this dispatch: ${escapeSlack(detail)}`, MESSAGE_MAX);
+export function buildErrorText(err: unknown, originalQuestion = ""): string {
+  return truncate(escapeSlack(botResearchFailure(err, originalQuestion)), MESSAGE_MAX);
 }
 
 /**

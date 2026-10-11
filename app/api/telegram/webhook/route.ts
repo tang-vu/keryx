@@ -24,6 +24,7 @@ import { hostedRunClaimsEnabled, prepareHostedRunClaim } from "@/lib/run-claims/
 import { privateRunClaimText, type PrivateRunClaimPacket } from "@/lib/run-claims/delivery";
 import { prepareTelegramPrivateReply, type TelegramPrivatePlaceholder } from "@/lib/run-claims/telegram-private";
 import { config } from "@/lib/config";
+import { botResearchMessages } from "@/lib/bots/research-messages";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import {
   type AskMessage,
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
     return Response.json({
       method: "sendMessage",
       chat_id: cmd.chatId,
-      text: "Keryx's treasury wallet is not configured on this deployment.",
+      text: botResearchMessages(cmd.question)("treasuryUnavailable"),
     });
   }
 
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
     return Response.json({
       method: "sendMessage",
       chat_id: cmd.chatId,
-      text: "Sponsored dispatches are temporarily limited or unavailable — try again in a minute.",
+      text: botResearchMessages(cmd.question)("sponsoredLimited"),
     });
   }
 
@@ -115,7 +116,7 @@ async function runAndReply(cmd: AskMessage, budget: number) {
   const replyChatId = privateReply?.chatId ?? cmd.chatId;
   const placeholderId = privateReply?.placeholderId ?? await callTelegram<{ message_id?: number }>("sendMessage", {
     chat_id: cmd.chatId,
-    text: "⏳ Keryx is dispatching — buying sources and settling citations…",
+    text: botResearchMessages(cmd.question)("dispatching"),
     reply_to_message_id: cmd.messageId,
     allow_sending_without_reply: true,
   }).then((r) => r?.message_id);
@@ -133,7 +134,7 @@ async function runAndReply(cmd: AskMessage, budget: number) {
     text = buildAnswerText(run);
   } catch (err) {
     console.error("[telegram] /ask run failed:", err);
-    text = buildErrorText(err);
+    text = buildErrorText(err, cmd.question);
   }
 
   let edited: unknown = null;

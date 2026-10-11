@@ -22,6 +22,7 @@ import { hostedRunClaimsEnabled, prepareHostedRunClaim } from "@/lib/run-claims/
 import { privateRunClaimText } from "@/lib/run-claims/delivery";
 import { privateSlackResponseUrl } from "@/lib/run-claims/slack-private";
 import { config } from "@/lib/config";
+import { botResearchMessages } from "@/lib/bots/research-messages";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { verifyRequestSignature } from "@/lib/slack/verify-request-signature";
 import {
@@ -53,19 +54,19 @@ export async function POST(req: NextRequest) {
   const cmd = parseSlashCommand(new URLSearchParams(rawBody));
   if (!cmd) return Response.json(ephemeral(helpText())); // bare /keryx → usage help
   if (!config.sellerAddress) {
-    return Response.json(ephemeral("Keryx's treasury wallet is not configured on this deployment."));
+    return Response.json(ephemeral(botResearchMessages(cmd.question)("treasuryUnavailable")));
   }
 
   // Treasury-funded like the site's free trial — throttle per Slack user, not per IP (every request
   // arrives from Slack's servers, so IPs are useless as a key here).
   const limited = await checkSponsoredResearchAdmission({ kind: "bot", platform: "slack", userId: cmd.userId });
   if (limited) {
-    return Response.json(ephemeral("Sponsored dispatches are temporarily limited or unavailable — try again in a minute."));
+    return Response.json(ephemeral(botResearchMessages(cmd.question)("sponsoredLimited")));
   }
 
   const budget = Math.min(config.defaultBudget, config.anonMaxBudget);
   after(() => runAndReply(cmd, budget));
-  return Response.json(ephemeral("⏳ Keryx is dispatching — buying sources and settling citations…"));
+  return Response.json(ephemeral(botResearchMessages(cmd.question)("dispatching")));
 }
 
 /** Only-the-asker-sees-this reply, for the ack, help, throttles, and config notices. */
@@ -91,7 +92,7 @@ async function runAndReply(cmd: SlashCommand, budget: number) {
     text = buildAnswerText(run) + (packet ? `\n\n${privateRunClaimText(packet)}` : "");
   } catch (err) {
     console.error("[slack] /keryx run failed:", err);
-    text = buildErrorText(err);
+    text = buildErrorText(err, cmd.question);
   }
   await postToResponseUrl(cmd.responseUrl, text);
 }

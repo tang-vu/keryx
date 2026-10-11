@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+## Localize ordinary bot wrappers from the original question — 2026-10-11
+
+Use the existing finite ordinary-answer selector for Telegram, Discord and Slack
+product notices, with typed English source copy and en/vi/pt/es catalogues (`pt`
+maps explicitly to Brazilian Portuguese). Keep selection request-local and leave
+reviewed answers, excerpts, diagnostics, amounts, raw payment modes and private
+claim delivery unchanged. Recorded rewards remain distinct from settlement.
+Bare help remains English until an admitted preference exists. No UI locale or
+human translation approval is implied; preferences, recipient notifications,
+other-surface scaffolding and exact-source delivery remain issue276 gates. See
+[the source scope](docs/engineering/bot-wrapper-language-276-2026-10-11.md).
+
 ## Retain actual post-portfolio READ checkpoints without new authority — 2026-10-10
 
 Use the same pure, versioned evaluator for ordinary READ admission and bounded
