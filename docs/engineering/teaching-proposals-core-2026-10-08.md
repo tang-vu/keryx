@@ -1,5 +1,50 @@
 # Reviewed teaching proposal core - October 8, 2026
 
+## Explicit multilingual target glosses select observed source headings — October 11, 2026
+
+The PR406 frozen candidate `04301c98` established a real retrieval gap: its
+Vietnamese factual targets already contained `(weather)` and `(climate)`, but
+publisher/URL matches displaced the available NASA definition section. That
+source, failed-run evidence, historical original refusal and independent review
+remain immutable. The following source correction supersedes that specific gap;
+it does not relabel the prior run as a success.
+
+The existing passage selector now uses a bounded structural fallback when a
+multilingual target contains an explicit ASCII source-language gloss. It only
+reserves context after a unique, actually observed HTML h1–h6 containing at least
+two distinct glosses from different targets. It uses the existing heading-hint
+allowance, retains contiguous original text and keeps the 2,000-character source
+budget, lexical slot, quote boundaries and omission metadata. Explicit caller
+fragment/quoted-heading hints retain precedence. Ordinary English targets, plain
+text/PDF sources, restored layout JSON, ambiguous/limited role maps and more than
+four distinct gloss hints retain the prior lexical path. No source translation,
+topic dictionary, NASA answer or new supplier protocol is introduced. Glosses
+remain untrusted retrieval cues; the factual target strings and their indices
+are not rewritten, and a matching heading establishes no semantic support.
+
+The exact retained Vietnamese caller and the same three controlled Vietnamese
+targets now select all three genuine NASA quotations through the real inert HTML
+parser. Explicitly synthetic planning, generation, coverage and independent
+review responses exercise final admission of the 57-word explanation, labeled
+10-minute proposed activity, two hypothetical classification examples and exit
+question/answer. No one-day climate inference or NASA-performed classroom claim
+is admitted. Final climate-support loss preserves the useful weather example and
+targeted original-source step; review failure and false attribution still refuse
+dependent proposals without a retry. Rendering, shared result, report and receipt
+use the same admitted bundle, and paired flag-on/off cases retain identical
+factual/citation/attribution/financial projections and zero source/reward spend.
+Sufficiency, re-evaluation and synthesis consume identical source neighborhoods.
+
+Unglossed cross-language targets can still miss available facts. This correction
+does not implement arbitrary translation or establish ordinary live planning or
+semantic usefulness. The default-off teaching flag and recorded rollout hold
+remain unchanged. No live model/search/payment allowance, ENV, custody, private
+authority, storage schema or schedule changes. Shared web/API, desktop, CLI,
+remote/stdio MCP and bot reasoning consumers inherit only this retrieval behavior;
+the root-owned coordinated distribution/version, combined CI/review and actual
+delivery gates remain before release or any issue211 completion claim. No fresh
+paid-live gate is added to the original frozen acceptance criteria.
+
 ## Fresh NASA source qualification and retrieval gap — October 11, 2026
 
 The exact retained issue211 Vietnamese caller now has an additional positive

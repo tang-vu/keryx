@@ -7235,3 +7235,31 @@ Attribution, evidence and financial projections retain their authority, with no
 new call/retry/cap, payment or private/package authority. Required source CI/review
 and root's verified combined delivery remain closure gates; original frozen
 criteria imply no new paid-live gate. See the updated finite presentation contract.
+
+## 2026-10-11 — Retrieve explicit multilingual target glosses through observed headings
+
+Issue211's actual retained NASA body contains weather/climate definitions and
+day-scale qualifications. The frozen PR406 controlled Vietnamese targets contain
+the source-language glosses `(weather)` and `(climate)`, yet their common publisher
+and question URL terms select unrelated NASA-study/climate-change context. Fix
+that narrow retrieval failure with the passage selector's existing structural
+heading allowance, rather than translating a target, embedding an answer or
+changing supplier/quote/admission contracts.
+
+Only a unique parser-observed h1–h6 matching at least two distinct, explicit ASCII
+glosses from different multilingual targets can reserve contiguous context.
+Require a complete observed role map, at most four distinct gloss hints, and no
+usable caller fragment/quoted-heading hint. Otherwise preserve ordinary lexical
+selection for every target. Keep the unchanged 2,000-character source budget,
+lexical room, strict original spans, independent factual/proposal review and final
+coverage. Heading/gloss relevance is never entailment or completeness evidence.
+Historical JSON layouts cannot enroll themselves or acquire new source authority.
+
+The positive original Vietnamese replay reparses the same genuine NASA HTML,
+while planning, statements, coverage and semantic review remain explicitly
+synthetic. Preserve all previous failed/refusal receipts; source-positive coverage
+does not activate the default-off teaching pilot or establish live usefulness.
+Unglossed arbitrary translation remains unsupported. Shared reasoning surfaces
+need root-owned coordinated source/distribution/release acceptance; no payment,
+custody, ENV, call/cap/retry or original-private authority changes are authorized.
+See the [teaching contract](docs/engineering/teaching-proposals-core-2026-10-08.md).

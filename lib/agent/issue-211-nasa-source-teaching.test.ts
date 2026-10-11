@@ -99,7 +99,7 @@ class SyntheticNasaTeachingTransport extends JsonChatEngine {
   }
 }
 
-async function drive(options: { enabled?: boolean; failure?: Failure } = {}) {
+async function drive(options: { enabled?: boolean; failure?: Failure; untranslated?: boolean } = {}) {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(snapshot.capturedAtUtc));
   if (options.enabled === false) vi.stubEnv("KERYX_TEACHING_PROPOSALS", undefined);
@@ -109,7 +109,8 @@ async function drive(options: { enabled?: boolean; failure?: Failure } = {}) {
   const transport = new SyntheticNasaTeachingTransport(failure);
   const synthesize = vi.fn((input: SynthInput) => transport.synthesize(input));
   const attribute = vi.fn(async (input: { used: { sourceId: string }[] }) => input.used.map(row => ({ sourceId: row.sourceId, weight: 1, rationale: "Synthetic factual contribution assessment" })));
-  const activeTargets = failure === "unselected-facts" ? untranslatedTargets : targets;
+  const activeTargets = failure === "unselected-facts" ? untranslatedTargets.map(target => target.replace(/\s*\([^)]*\)/gu, ""))
+    : options.untranslated ? untranslatedTargets : targets;
   const engine = { name: "synthetic-nasa-teaching-engine", decompose: async () => activeTargets,
     decide: async (input: { candidates: { id: string; name: string }[] }) => input.candidates.map(row => ({ sourceId: row.id, sourceName: row.name,
       action: "BUY", expectedValue: 0.9, price: 0, confidence: 0.9, rationale: "Controlled selection of the exact free NASA original", targets: [0, 1, 2] })),
@@ -158,7 +159,7 @@ it("delivers the exact original Vietnamese lesson contract from actual fresh NAS
 });
 
 it("withholds climate-dependent lesson parts after final support fails and gives a targeted original-source next step", async () => {
-  const f = await drive({ failure: "climate-withheld" });
+  const f = await drive({ failure: "climate-withheld", untranslated: true });
   expect(f.run.teachingProposals!.complete).toBe(false);
   expect(f.run.teachingProposals!.proposals.map(row => row.proposal.id)).toEqual(["t2"]);
   expect(f.run.answer).toContain("Thiếu kiến thức làm cơ sở:");
@@ -168,7 +169,36 @@ it("withholds climate-dependent lesson parts after final support fails and gives
   expect(f.read).toHaveBeenCalledOnce(); expect(f.synthesize).toHaveBeenCalledOnce(); expect(f.deniedPayment).not.toHaveBeenCalled();
 });
 
-it("records the untranslated-target retrieval gap without pretending the available NASA facts or invented lesson were admitted", async () => {
+it("admits the original Vietnamese targets through their explicit glosses and actual NASA heading without changing factual or financial gates", async () => {
+  const off = await drive({ enabled: false, untranslated: true }), on = await drive({ untranslated: true });
+  const packet = on.transport.packets[0].packet;
+  expect(packet.question).toBe(retained.question);
+  expect(packet.researchTargets).toEqual(untranslatedTargets.map((question, claimIndex) => ({ question, claimIndex })));
+  const options = packet.quoteOptions as { text: string }[];
+  for (const quote of quotes) expect(options.map(row => row.text)).toContain(quote);
+  expect(on.run.teachingProposals!.complete).toBe(true);
+  expect(on.run.teachingProposals!.admittedStatements.map(row => row.text)).toEqual(statements);
+  expect(on.run.teachingProposals!.explanationWords).toBe(57);
+  expect(on.run.teachingProposals!.proposals.map(row => row.proposal.kind)).toEqual(["activity", "classification-example", "classification-example", "exit-question"]);
+  expect(on.transport.packets.map(row => row.cap)).toEqual([2304, 1792]);
+  expect(on.read).toHaveBeenCalledOnce(); expect(on.search).toHaveBeenCalledTimes(2);
+  expect(off.run).not.toHaveProperty("teachingProposals");
+  expect(off.run.evidence).toEqual(on.run.evidence); expect(off.run.claimCoverage).toEqual(on.run.claimCoverage);
+  expect(off.run.citations).toEqual(on.run.citations); expect(off.attribute.mock.calls[0][0]).toEqual(on.attribute.mock.calls[0][0]);
+  expect(off.run.totalSpent).toBe(0); expect(on.run.totalSpent).toBe(0);
+  expect(off.deniedPayment).not.toHaveBeenCalled(); expect(on.deniedPayment).not.toHaveBeenCalled();
+  const html = renderToStaticMarkup(createElement(AnswerMarkdown, { text: on.run.answer, citations: on.run.citations }));
+  expect(html.match(/Ví dụ phân loại do Keryx đề xuất/gu)).toHaveLength(2);
+  expect(html).toContain("Câu hỏi cuối giờ do Keryx đề xuất");
+  expect(on.run.answer).toContain("Không dùng thời tiết một ngày để suy ra xu hướng khí hậu.");
+  expect(on.run.answer).not.toContain("NASA đã thực nghiệm");
+  expect(surfaceResearch(on.run).teachingProposals).toEqual(on.run.teachingProposals);
+  const receipt = buildResearchReceipt(on.run, []); expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  expect(receipt.payload.teachingProposals).toEqual(on.run.teachingProposals);
+  expect(researchReportMarkdown(on.run, null, [])).toContain("Hoạt động do Keryx đề xuất (10 phút)");
+});
+
+it("records an unglossed-target retrieval limitation without pretending the available NASA facts or invented lesson were admitted", async () => {
   const f = await drive({ failure: "unselected-facts" });
   const options = f.transport.packets[0].packet.quoteOptions as { text: string }[];
   for (const quote of quotes) {
@@ -184,14 +214,14 @@ it("records the untranslated-target retrieval gap without pretending the availab
 });
 
 it("withholds false NASA-performed attribution while preserving separately reviewed examples", async () => {
-  const f = await drive({ failure: "false-source-attribution" });
+  const f = await drive({ failure: "false-source-attribution", untranslated: true });
   expect(f.run.teachingProposals!.complete).toBe(false);
   expect(f.run.teachingProposals!.proposals.map(row => row.proposal.id)).toEqual(["t2", "t3", "t4"]);
   expect(f.run.answer).not.toContain("NASA đã thực nghiệm"); expect(f.deniedPayment).not.toHaveBeenCalled();
 });
 
 it("does not manufacture a NASA lesson or make another call when independent review is unavailable", async () => {
-  const f = await drive({ failure: "review-unavailable" });
+  const f = await drive({ failure: "review-unavailable", untranslated: true });
   expect(f.run.teachingProposals!.complete).toBe(false); expect(f.run.teachingProposals!.proposals).toEqual([]);
   expect(f.run.answer).not.toContain("hôm nay thành phố có mưa"); expect(f.transport.packets).toHaveLength(2);
   expect(f.read).toHaveBeenCalledOnce(); expect(f.deniedPayment).not.toHaveBeenCalled();
