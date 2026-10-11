@@ -1,4 +1,5 @@
 "use client";
+import { DisplayTime } from "@/components/keryx/display-time";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createMessages } from "@/lib/i18n/messages";
@@ -10,7 +11,7 @@ const richMessage = createRichMessages("en");
 interface SessionRow { id: string; issuedAt: number; expiresAt: number; current: boolean }
 interface SessionList { sessions: SessionRow[]; truncated: boolean }
 const button = "border border-line px-3 py-2 text-sm text-ink hover:border-ink disabled:opacity-50 disabled:cursor-wait";
-const date = (ms: number) => new Date(ms).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+const date = (ms: number) => <DisplayTime value={ms} />;
 
 /** Parent keys this view by account so account changes cannot retain another wallet's list. */
 export function AccountSessions() {

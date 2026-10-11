@@ -1,4 +1,8 @@
 "use client";
+import { formatRecordedAmount, formatNumber, selectPlural } from "@/lib/i18n/format";
+import { DisplayTime } from "./display-time";
+import type { ReactNode } from "react";
+
 
 import { arcProfileLabel, recordedArcProfile } from "@/lib/arc-network-display";
 import { createMessages } from "@/lib/i18n/messages";
@@ -40,15 +44,11 @@ export interface SettlementHealth {
   }[];
 }
 
-function ago(iso: string): string {
-  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (mins < 1) return message("statusSettlement.justNow");
-  if (mins < 60) return message("statusObservation.minutesAgo", { minutes: mins });
-  const h = Math.floor(mins / 60);
-  return h < 48 ? message("statusObservation.hoursAgo", { hours: h }) : message("statusObservation.daysAgo", { days: Math.floor(h / 24) });
+function ago(iso: string) {
+  return <DisplayTime value={iso} relative />;
 }
 
-const usd = (n: number) => `$${n.toFixed(6)}`;
+const usd = (n: number) => `$${formatRecordedAmount(n, { minimumFractionDigits: 6 })}`;
 
 export function SettlementProofSection({ settlement }: { settlement: SettlementHealth }) {
   const { counts, accounts } = settlement;
@@ -78,7 +78,7 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
           v={
             answered === 0
               ? "—"
-              : `${backed}/${answered} · ${ago(settlement.checkedAt)}`
+              : <>{formatNumber(backed)}/{formatNumber(answered)} · {ago(settlement.checkedAt)}</>
           }
           alert={counts.short > 0}
         />
@@ -95,8 +95,8 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
           v={
             // An unverified wallet is not a clean row: Circle or the Arc RPC did not complete the
             // evidence chain, so "Circle confirms" above understates what is really backed.
-            (counts.short === 0 ? message("statusSettlement.none") : message(counts.short === 1 ? "statusSettlement.shortWallets.one" : "statusSettlement.shortWallets.other", { count: counts.short })) +
-            (counts.unknown > 0 ? message(counts.unknown === 1 ? "statusSettlement.unverified.one" : "statusSettlement.unverified.other", { count: counts.unknown }) : "")
+            (counts.short === 0 ? message("statusSettlement.none") : message(selectPlural(counts.short) === "one" ? "statusSettlement.shortWallets.one" : "statusSettlement.shortWallets.other", { count: counts.short })) +
+            (counts.unknown > 0 ? message(selectPlural(counts.unknown) === "one" ? "statusSettlement.unverified.one" : "statusSettlement.unverified.other", { count: counts.unknown }) : "")
           }
           alert={counts.short > 0}
         />
@@ -153,7 +153,7 @@ export function SettlementProofSection({ settlement }: { settlement: SettlementH
   );
 }
 
-function Row({ k, v, alert = false }: { k: string; v: string; alert?: boolean }) {
+function Row({ k, v, alert = false }: { k: string; v: ReactNode; alert?: boolean }) {
   return (
     <div className="flex flex-col gap-1">
       <dt className="text-ink-3">{k}</dt>

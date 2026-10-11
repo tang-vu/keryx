@@ -1,10 +1,11 @@
 "use client";
+import { formatAmount, selectPlural } from "@/lib/i18n/format";
+
 
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { withdrawalRecoveryStatusCopy } from "@/lib/i18n/withdrawal-recovery-status";
-import { formatUnits } from "viem";
 import { withdrawalOwnerSchema } from "@/lib/gateway/withdrawal-request";
 import { listWithdrawalBrowserJournals } from "@/lib/gateway/withdrawal-browser-journal";
 import { recoverWithdrawalBrowserStatus } from "@/lib/gateway/withdrawal-browser-flow";
@@ -75,10 +76,10 @@ function OwnerRecovery({ owner, onReview }: { owner: string; onReview?: (id: str
         disabled={busy} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void importFile(file); }} /></label>
     </div>
     <p role="status" aria-live="polite" className="text-sm">{message || (busy ? uiCopy("withdrawalRecovery.checking") : "")}</p>
-    {unavailableCount > 0 && <p role="alert">{uiCopy(unavailableCount === 1 ? "withdrawalRecovery.unreadable.one" : "withdrawalRecovery.unreadable.other", { count: unavailableCount })}</p>}
+    {unavailableCount > 0 && <p role="alert">{uiCopy(selectPlural(unavailableCount) === "one" ? "withdrawalRecovery.unreadable.one" : "withdrawalRecovery.unreadable.other", { count: unavailableCount })}</p>}
     {loaded && rows.length === 0 && unavailableCount === 0 && <p>{uiCopy("withdrawalRecovery.empty")}</p>}
     <ul className="space-y-3">{rows.map(row => <li key={row.id} className="space-y-2 rounded border p-3">
-      <p className="font-medium">{formatUnits(BigInt(row.draft.burnIntent.spec.value), 6)} USDC</p>
+      <p className="font-medium">{formatAmount(BigInt(row.draft.burnIntent.spec.value), { minimumFractionDigits: 6, useGrouping: false })} USDC</p>
       <p className="break-all text-xs">{uiCopy("withdrawalRecovery.request", { id: row.id })}</p>
       <p className="text-sm">{row.state === "reserved" ? uiCopy("withdrawalRecovery.draft") : row.origin === "imported" ? uiCopy("withdrawalRecovery.recoveryOnly") : uiCopy("withdrawalRecovery.signed")}</p>
       <div className="flex flex-wrap gap-2">

@@ -1,3 +1,4 @@
+import { formatAmount, formatNumber, formatDate, selectPlural, resolveViewerTimeZone } from "../../lib/i18n/format";
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { CreateInput, DesktopAPI, SavedResult, WorkspaceView } from "./contracts";
@@ -9,8 +10,10 @@ declare global { interface Window { keryxDesktop: DesktopAPI } }
 const message = createMessages("en");
 
 const initialForm: CreateInput = { question: "", mode: "quick", creatorBudget: "0.01", payee: "", totalCap: "0.10", network: "arc" };
-const money = (micros: number | string) => `${(Number(micros) / 1e6).toFixed(6)} USDC`;
-const clock = (value: string) => new Date(value).toLocaleString();
+const money = (micros: number | string) => formatAmount(micros, { denomination: "USDC", minimumFractionDigits: 6 });
+// Fixed machine argument retains the shipped buyer-command contract; never parse display money.
+const buyerCommandAmount = (micros: number | string) => (Number(micros) / 1e6).toFixed(6);
+const clock = (value: string) => { const date = formatDate(value, "en", resolveViewerTimeZone()); return date ? `${date.text} (${date.utc})` : "Unavailable"; };
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
 const psQuote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 const stageLabel: Record<string, string> = { ready: message("nativeDesktop.stage.ready"), buyer_journaled: message("nativeDesktop.stage.buyerJournaled"), journal_incomplete: message("nativeDesktop.stage.incomplete") };
@@ -99,13 +102,13 @@ function App() {
   const taskLabel = task?.status.network === "eip155:5042" ? message("nativeDesktop.network.mainnet") : message("nativeDesktop.network.testnet");
   const preparedLabel = form.network === "arc" ? message("nativeDesktop.network.mainnet") : message("nativeDesktop.network.testnet");
   const buyerRail = task?.status.network === "eip155:5042" ? "arc" : "arcTestnet";
-  const buyerCommand = task && view ? `$env:KERYX_NETWORK=${psQuote(buyerRail)}; $env:NEXT_PUBLIC_KERYX_NETWORK=${psQuote(buyerRail)}; npm run buyer -- buy --request ${psQuote(`${view.path}\\${task.directoryName}\\request.json`)} --payee ${task.payee} --max-total ${money(task.status.maxTotalMicros).split(" ")[0]} --state ${psQuote(`${view.path}\\${task.directoryName}\\buyer`)}` : "";
+  const buyerCommand = task && view ? `$env:KERYX_NETWORK=${psQuote(buyerRail)}; $env:NEXT_PUBLIC_KERYX_NETWORK=${psQuote(buyerRail)}; npm run buyer -- buy --request ${psQuote(`${view.path}\\${task.directoryName}\\request.json`)} --payee ${task.payee} --max-total ${buyerCommandAmount(task.status.maxTotalMicros)} --state ${psQuote(`${view.path}\\${task.directoryName}\\buyer`)}` : "";
 
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand"><MintMark/><div><strong>{message("nativeDesktop.brand.name")}</strong><span>{message("nativeDesktop.brand.tagline")}</span></div></div>
       <div className="sidebar-section-label">{message("nativeDesktop.workspace.section")}</div>
-      <div className="workspace-card"><div className="workspace-icon">⌂</div><div className="workspace-copy"><strong>{view?.name ?? message("nativeDesktop.workspace.none")}</strong><small>{view ? message(view.tasks.length === 1 ? "nativeDesktop.workspace.taskCount.one" : "nativeDesktop.workspace.taskCount.other", { count: view.tasks.length }) : message("nativeDesktop.workspace.chooseFolder")}</small></div></div>
+    <div className="workspace-card"><div className="workspace-icon">⌂</div><div className="workspace-copy"><strong>{view?.name ?? message("nativeDesktop.workspace.none")}</strong><small>{view ? message(selectPlural(view.tasks.length) === "one" ? "nativeDesktop.workspace.taskCount.one" : "nativeDesktop.workspace.taskCount.other", { count: view.tasks.length }) : message("nativeDesktop.workspace.chooseFolder")}</small></div></div>
       <div className="sidebar-actions">
         <button disabled={!ready || controlsBusy} onClick={() => run("opening", async () => { const next = await window.keryxDesktop.chooseWorkspace(); if (next) { setView(next); setSelected(next.tasks[0]?.handle ?? null); } })}>{message("nativeDesktop.workspace.open")}</button>
         <button disabled={!ready || controlsBusy} onClick={() => run("creating", async () => { const next = await window.keryxDesktop.createWorkspace(); if (next) { setView(next); setSelected(null); setNotice(next.creationState === "windows_visible_entry_unproven" ? message("nativeDesktop.workspace.createdVisible") : message("nativeDesktop.workspace.created")); } })}>{message("nativeDesktop.workspace.new")}</button>
@@ -150,9 +153,9 @@ function App() {
           </section>}
           <div className="summary-grid"><div className="summary-card"><span>{message("nativeDesktop.summary.tasks")}</span><strong>{view.tasks.length}</strong><small>{message("nativeDesktop.summary.tasksHint")}</small></div><div className="summary-card"><span>{message("nativeDesktop.summary.references")}</span><strong>{view.references.length}</strong><small>{message("nativeDesktop.summary.referencesHint")}</small></div><div className="summary-card"><span>{message("nativeDesktop.summary.network")}</span><strong className="summary-network">{message("nativeDesktop.summary.networkValue")}</strong><small>{message("nativeDesktop.summary.networkHint")}</small></div></div>
           <section className="panel library"><div className="panel-heading"><div><span className="eyebrow">{message("nativeDesktop.reference.eyebrow")}</span><h2>{message("nativeDesktop.reference.title")}</h2><p>{message("nativeDesktop.reference.boundary")}</p></div><button className="secondary" disabled={controlsBusy} onClick={() => run("importing", async () => { if (await window.keryxDesktop.importReference()) { await refresh(); setNotice(message("nativeDesktop.reference.importedNotice")); } })}>{message("nativeDesktop.reference.import")}</button></div>
-            {view.references.length ? <div className="reference-list">{view.references.map(ref => <div key={ref.handle} className="reference-row"><span className="file-icon">▤</span><div><strong>{ref.name}</strong><small>{message("nativeDesktop.reference.imported", { date: clock(ref.importedAt), bytes: ref.bytes.toLocaleString() })}</small><code>{message("nativeDesktop.reference.checksum", { sha256: ref.sha256 })}</code></div></div>)}</div> : <div className="library-empty">{message("nativeDesktop.reference.empty")}</div>}
+            {view.references.length ? <div className="reference-list">{view.references.map(ref => <div key={ref.handle} className="reference-row"><span className="file-icon">▤</span><div><strong>{ref.name}</strong><small>{message("nativeDesktop.reference.imported", { date: clock(ref.importedAt), bytes: formatNumber(ref.bytes) })}</small><code>{message("nativeDesktop.reference.checksum", { sha256: ref.sha256 })}</code></div></div>)}</div> : <div className="library-empty">{message("nativeDesktop.reference.empty")}</div>}
           </section>
-          {view.invalidDirectories > 0 && <p className="unrecognized">{message(view.invalidDirectories === 1 ? "nativeDesktop.workspace.unrecognized.one" : "nativeDesktop.workspace.unrecognized.other", { count: view.invalidDirectories })}</p>}
+    {view.invalidDirectories > 0 && <p className="unrecognized">{message(selectPlural(view.invalidDirectories) === "one" ? "nativeDesktop.workspace.unrecognized.one" : "nativeDesktop.workspace.unrecognized.other", { count: view.invalidDirectories })}</p>}
         </>}
       </div>
     </main>

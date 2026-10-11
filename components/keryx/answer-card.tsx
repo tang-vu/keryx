@@ -1,4 +1,6 @@
 "use client";
+import { formatRecordedUsdc, selectPlural } from "@/lib/i18n/format";
+
 
 import { createMessages } from "@/lib/i18n/messages";
 import { demoteSyntheticEvidence } from "@/lib/research/evidence-provenance";
@@ -20,7 +22,6 @@ import { ModeBadge } from "./mode-badge";
 import { recordedArcLabel } from "@/lib/arc-network-display";
 import { SectionHeading } from "./banknote";
 import { ConfidenceBadge } from "./confidence-badge";
-import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import { deriveConfidence } from "@/lib/agent/confidence";
 import { cn } from "@/lib/utils";
 import { CitationEvidencePanel } from "./citation-evidence-panel";
@@ -55,7 +56,7 @@ export function AnswerCard({ run, meta, permalink, payments = [], showFeedback =
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:duration-500">
-      <SectionHeading numeral="II" label={copy("reportReading.title")} right={bibliography ? copy("reportReading.metadataOnly") : copy(run.citations.length === 1 ? "reportReading.cited.one" : "reportReading.cited.other", { count: run.citations.length })} />
+      <SectionHeading numeral="II" label={copy("reportReading.title")} right={bibliography ? copy("reportReading.metadataOnly") : copy(selectPlural(run.citations.length) === "one" ? "reportReading.cited.one" : "reportReading.cited.other", { count: run.citations.length })} />
       {bibliography ? <p className="mb-4 text-sm text-ink-3">{copy("reportReading.bibliographyNotice")}</p> : confidence ? (
         <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <ConfidenceBadge confidence={confidence} showReason sourceGrounding={run.citations.some(citation => Boolean(citation.webProvenance))} />
@@ -64,7 +65,7 @@ export function AnswerCard({ run, meta, permalink, payments = [], showFeedback =
           </span>
           {run.previewCoverage ? (
             <span className="font-mono text-[10px] text-ink-3">
-              {copy(run.previewCoverage.totalClaims === 1 ? "reportReading.preview.one" : "reportReading.preview.other", { covered: run.previewCoverage.coveredClaims, count: run.previewCoverage.totalClaims })}
+              {copy(selectPlural(run.previewCoverage.totalClaims) === "one" ? "reportReading.preview.one" : "reportReading.preview.other", { covered: run.previewCoverage.coveredClaims, count: run.previewCoverage.totalClaims })}
             </span>
           ) : null}
           {run.evidencePortfolio ? (
@@ -297,7 +298,7 @@ function SummaryStrip({
       {pending > 0 && <Stat label={copy("reportReading.pendingProof")} value={`${pending}`} />}
       <Stat
         label={copy("reportReading.decisions")}
-        value={[copy(bought === 1 ? "reportReading.bought.one" : "reportReading.bought.other", { count: bought }), copy(cached === 1 ? "reportReading.cached.one" : "reportReading.cached.other", { count: cached }), copy(skipped === 1 ? "reportReading.skipped.one" : "reportReading.skipped.other", { count: skipped })].join(" · ")}
+        value={[copy(selectPlural(bought) === "one" ? "reportReading.bought.one" : "reportReading.bought.other", { count: bought }), copy(selectPlural(cached) === "one" ? "reportReading.cached.one" : "reportReading.cached.other", { count: cached }), copy(selectPlural(skipped) === "one" ? "reportReading.skipped.one" : "reportReading.skipped.other", { count: skipped })].join(" · ")}
       />
       <div className="ml-auto flex items-center gap-2">
         {permalink && (

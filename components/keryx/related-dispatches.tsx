@@ -1,3 +1,5 @@
+import { formatRecordedUsdc, selectPlural } from "@/lib/i18n/format";
+import { DisplayTime } from "@/components/keryx/display-time";
 /**
  * "From the archive" — the related-answers block at the foot of a dispatch
  * permalink. Server-rendered links between answer pages turn the archive from
@@ -7,17 +9,12 @@
 
 import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
-import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import type { ArchiveEntry } from "@/lib/answers-archive";
 
 const copy = createMessages("en");
 
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+function fmtDate(iso: string) {
+  return <DisplayTime value={iso} dateOnly />;
 }
 
 export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
@@ -41,16 +38,16 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
               <span className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-seal">
                 {copy(e.archivedNetwork ? "archiveReport.historicalDispatch" : "archiveReport.dispatch")}
               </span>
-              <time className="font-mono text-[9.5px] text-ink-3" dateTime={e.createdAt}>
+              <span className="font-mono text-[9.5px] text-ink-3">
                 {fmtDate(e.createdAt)}
-              </time>
+              </span>
             </div>
             <div className="mt-1.5 font-display text-[16px] font-medium leading-snug text-ink transition-colors group-hover:text-seal">
               {e.question}
             </div>
             <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.06em] text-ink-3">
               <span>
-                {copy(e.citationCount === 1 ? "report.citedSources.one" : "report.citedSources.other", { count: e.citationCount })}
+                {copy(selectPlural(e.citationCount) === "one" ? "report.citedSources.one" : "report.citedSources.other", { count: e.citationCount })}
               </span>
               <span className="text-paid">{copy("archiveReport.creatorRewards", { amount: formatRecordedUsdc(e.toCreators, { minimumFractionDigits: 4, denomination: e.archivedNetwork ? "test USDC" : "$" }) })}</span>
             </div>

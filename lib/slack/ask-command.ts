@@ -11,7 +11,8 @@
 
 import { config } from "../config";
 import { unsupportedDecisionReviewFlag, unsupportedDecisionReviewIntent } from "../research/decision-review-types";
-import { formatRecordedUsdc } from "../display/recorded-usdc";
+import { formatRecordedUsdc, formatNumber, selectPlural } from "../i18n/format";
+import { answerPresentation } from "../research/answer-presentation";
 import { botResearchFailure, botResearchMessages } from "../bots/research-messages";
 import { botHelpEnglish } from "../../locales/en/bot-research";
 import type { QueryRun } from "../types";
@@ -67,6 +68,7 @@ export function helpText(): string {
  */
 export function buildAnswerText(run: QueryRun): string {
   const message = botResearchMessages(run.question);
+  const locale = answerPresentation(run.question, "ordinary").language;
   const parts = [`*${escapeSlack(truncate(run.question, 256))}*`, ""];
   parts.push(escapeSlack(truncate(run.answer, ANSWER_MAX)), "");
 
@@ -74,14 +76,14 @@ export function buildAnswerText(run: QueryRun): string {
     parts.push(`*${message("slackCitationHeading")}*`);
     for (const c of run.citations) {
       parts.push(
-        escapeSlack(`${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (${message("weight", { weight: c.weight.toFixed(2) })})`),
+        escapeSlack(`${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 }, locale)} (${message("weight", { weight: formatNumber(c.weight, { minimumFractionDigits: 2, maximumFractionDigits: 2 }, locale) })})`),
       );
     }
     parts.push("");
   }
 
   parts.push(
-    `${message(run.citations.length === 1 ? "sourcesOne" : "sourcesOther", { count: run.citations.length })} · ${message("recordedCreatorTotal", { amount: formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 }) })} / ${run.paymentMode ?? "legacy"}`,
+    `${message(run.citations.length > 0 && selectPlural(run.citations.length, locale) === "one" ? "sourcesOne" : "sourcesOther", { count: run.citations.length })} · ${message("recordedCreatorTotal", { amount: formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 }, locale) })} / ${run.paymentMode ?? "legacy"}`,
     message("slackSettlementNotice"),
     message("fullTrace", { url: `${config.baseUrl}/dispatch/${run.id}` }),
   );

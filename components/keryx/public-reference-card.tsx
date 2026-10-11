@@ -1,3 +1,5 @@
+import { formatDate, formatCalendarDate, selectPlural } from "@/lib/i18n/format";
+import { DisplayTime } from "@/components/keryx/display-time";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
@@ -14,12 +16,8 @@ const CONTENT_LABELS: Record<PublicReference["items"][number]["deliveryKind"], s
   metadata_only: copy("sourceFeed.metadata"),
 };
 
-function displayDate(value?: string, includeTime = false): string | null {
-  if (!value || !Number.isFinite(Date.parse(value))) return null;
-  return new Intl.DateTimeFormat("en", {
-    month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
-    ...(includeTime ? { hour: "2-digit", minute: "2-digit", timeZoneName: "short" } as const : {}),
-  }).format(new Date(value));
+function displayDate(value?: string, includeTime = false) {
+  return value ? (!includeTime ? formatCalendarDate(value) : null) ?? formatDate(value, "en", "UTC", includeTime ? {} : { timeStyle: undefined }) : null;
 }
 
 function FeedItem({ item }: { item: PublicReference["items"][number] }) {
@@ -30,7 +28,7 @@ function FeedItem({ item }: { item: PublicReference["items"][number] }) {
         {item.title || copy("sourceFeed.untitled")} ↗
       </a>
       <p className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1 font-mono text-[11px] leading-relaxed text-ink-3">
-        {published ? <time dateTime={item.publishedAt}>{copy("sourceFeed.published", { date: published })}</time> : <span>{copy("sourceFeed.dateUnavailable")}</span>}
+        {published ? <span>{richCopy("sourceFeed.published", { date: <DisplayTime value={item.publishedAt!} dateOnly /> })}</span> : <span>{copy("sourceFeed.dateUnavailable")}</span>}
         <span>· {CONTENT_LABELS[item.deliveryKind]}</span>
       </p>
     </li>
@@ -69,14 +67,14 @@ export function PublicReferenceCard({ reference, compact = false, matchingQuery 
 
       <div className="mt-4 border-t border-line pt-3">
         <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">
-          {compact ? copy("sourceFeed.compactItems") : matchingItems.length ? copy(items.length === 1 ? "sourceFeed.matching.one" : "sourceFeed.matching.other", { count: items.length, total: recentItems.length }) : copy(items.length === 1 ? "sourceFeed.latest.one" : "sourceFeed.latest.other", { count: items.length })}
+          {compact ? copy("sourceFeed.compactItems") : matchingItems.length ? copy(selectPlural(items.length) === "one" ? "sourceFeed.matching.one" : "sourceFeed.matching.other", { count: items.length, total: recentItems.length }) : copy(selectPlural(items.length) === "one" ? "sourceFeed.latest.one" : "sourceFeed.latest.other", { count: items.length })}
         </p>
         {items.length > 0 ? (
           <>
             <ul className="mt-1">{items.slice(0, shownCount).map((item) => <FeedItem key={item.id} item={item} />)}</ul>
             {!compact && remaining.length > 0 && (
               <details className="mt-1">
-                <summary className="min-h-11 cursor-pointer py-3 font-mono text-[11px] text-seal underline underline-offset-4">{copy(remaining.length === 1 ? "sourceFeed.more.one" : "sourceFeed.more.other", { count: remaining.length })}</summary>
+                <summary className="min-h-11 cursor-pointer py-3 font-mono text-[11px] text-seal underline underline-offset-4">{copy(selectPlural(remaining.length) === "one" ? "sourceFeed.more.one" : "sourceFeed.more.other", { count: remaining.length })}</summary>
                 <ul>{remaining.map((item) => <FeedItem key={item.id} item={item} />)}</ul>
               </details>
             )}
@@ -86,7 +84,7 @@ export function PublicReferenceCard({ reference, compact = false, matchingQuery 
 
       <div className="mt-auto border-t border-line pt-3">
         <p className="font-mono text-[11px] leading-relaxed text-ink-3">
-          {refreshed ? <>{richCopy("sourceFeed.collected", { date: <time dateTime={reference.refreshedAt}>{refreshed}</time> })}</> : copy("sourceFeed.collectedUnavailable")}
+          {refreshed ? <>{richCopy("sourceFeed.collected", { date: <DisplayTime value={reference.refreshedAt!} /> })}</> : copy("sourceFeed.collectedUnavailable")}
         </p>
         <p className="mt-1 font-serif text-xs leading-relaxed text-ink-3">{copy("sourceFeed.paymentNotice")}</p>
         {supportsClaim && !compact && (

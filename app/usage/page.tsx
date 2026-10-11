@@ -1,3 +1,4 @@
+import { formatAmount } from "@/lib/i18n/format";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { SiteFooter } from "@/components/keryx/site-footer";
@@ -7,7 +8,7 @@ import { usageWindow, type PublicUsageSummary } from "@/lib/usage/contracts";
 import { usageMessages as copy } from "@/locales/en/usage";
 export const dynamic = "force-dynamic";
 export const metadata = { title: copy.metadataTitle, alternates: englishPublicAlternates("/usage") };
-function usdc(micros: string) { const value = BigInt(micros), unit = BigInt(1000000); return `${value / unit}.${(value % unit).toString().padStart(6, "0")} USDC`; }
+function usdc(micros: string) { return formatAmount(micros, { denomination: "USDC", minimumFractionDigits: 6 }); }
 export default async function UsagePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const input = await searchParams, params = new URLSearchParams();
   for (const [key, value] of Object.entries(input)) for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) params.append(key, item);

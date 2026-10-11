@@ -1,4 +1,5 @@
 "use client";
+import { SigningAmount } from "./signing-amount";
 
 /**
  * WithdrawEarningsPanel — lets a connected creator pull their accrued Circle Gateway balance
@@ -156,6 +157,8 @@ function TestnetWithdrawEarningsPanel({ address }: { address: string }) {
           ? uiCopy("withdrawEarnings.belowFee")
           : uiCopy("withdrawEarnings.empty")}
       </button>
+
+      {hasFunds && <p className="mt-2 text-xs"><SigningAmount micros={netAtomic} /></p>}
 
       {balanceError && <p role="status" className="mt-3 font-serif text-sm text-ink-2">
         {uiRichCopy("withdrawEarnings.balanceFailed", { retryButton: <button type="button" onClick={() => { void loadBalance(); }} className="underline">{uiCopy("withdrawEarnings.retry")}</button> })}

@@ -1,4 +1,5 @@
 "use client";
+import { formatNumber, formatRecordedAmount } from "@/lib/i18n/format";
 
 /**
  * OpenAI-compatible playground — a zero-install showcase for /api/v1/chat/completions.
@@ -218,7 +219,7 @@ export default function PlaygroundPage() {
                 <li key={i} className="flex justify-between font-mono text-xs text-ink-2">
                   <span>{c.source}</span>
                   <span className="text-seal">
-                    {uiCopy("integrationPlayground.rewardWeight", { reward: c.reward.toFixed(4), weight: c.weight.toFixed(2) })}
+                    {uiCopy("integrationPlayground.rewardWeight", { reward: formatRecordedAmount(c.reward, { minimumFractionDigits: 4 }), weight: formatNumber(c.weight, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })}
                   </span>
                 </li>
               ))}

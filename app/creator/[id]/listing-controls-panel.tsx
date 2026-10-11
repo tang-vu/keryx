@@ -1,4 +1,5 @@
 "use client";
+import { SigningAmount } from "@/components/keryx/signing-amount";
 
 /**
  * Owner-only listing controls: the price-per-read dial and the permanent delist switch. Self-
@@ -238,6 +239,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
                   ${fmtUsdc(parsedPrice)}
                 </span>
               </div>
+              {priceValid && <p className="text-xs"><SigningAmount micros={parsedPriceMicros} /></p>}
               <input
                 type="range"
                 min={0.001}

@@ -1,8 +1,10 @@
 "use client";
+import { SigningAmount } from "./signing-amount";
+import { formatAmount } from "@/lib/i18n/format";
 import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePublicClient, useWalletClient } from "wagmi";
-import { formatUnits,parseUnits,type Hex,type PublicClient } from "viem";
+import { parseUnits,type Hex,type PublicClient } from "viem";
 import { ARC_MAINNET_PROFILE as profile } from "@/lib/arc-network-profile";
 import { listWithdrawalBrowserJournals,readWithdrawalBrowserJournal } from "@/lib/gateway/withdrawal-browser-journal";
 import { prepareCreatorOwnerBrowserWithdrawal,signCreatorOwnerBrowserWithdrawal,submitCreatorOwnerBrowserWithdrawal,
@@ -75,7 +77,8 @@ function CreatorOwner({owner}:{owner:string}){
     {references.length>0&&<label className="block">{uiCopy("creatorWithdrawal.originals")} <select aria-label={uiCopy("creatorWithdrawal.originalsAria")} disabled={busy} value={references.some(r=>r.id===id)?id:""} onChange={e=>{setId(e.target.value);setRow(null);setHash(references.find(r=>r.id===e.target.value)?.mintHash??"")}} className="max-w-full border p-1">
       <option value="">{uiCopy("creatorWithdrawal.choose")}</option>{references.map(r=><option key={r.id} value={r.id}>{r.id} - {r.state}</option>)}</select></label>}
     <label className="block">{uiCopy("creatorWithdrawal.request")} <input aria-label={uiCopy("creatorWithdrawal.requestAria")} value={id} disabled={busy} onChange={e=>{setId(e.target.value);setRow(null);setHash("")}} className="w-full border p-1 font-mono text-xs"/></label>
-    {row&&<p className="text-sm">{uiCopy("creatorWithdrawal.terms", { amount: formatUnits(BigInt(row.draft.burnIntent.spec.value),6), fee: formatUnits(BigInt(row.draft.burnIntent.maxFee),6), recipient: row.owner })}</p>}
+    {row&&<p className="text-xs"><SigningAmount micros={row.draft.burnIntent.spec.value} /> · <SigningAmount micros={row.draft.burnIntent.maxFee} /></p>}
+    {row&&<p className="text-sm">{uiCopy("creatorWithdrawal.terms", { amount: formatAmount(BigInt(row.draft.burnIntent.spec.value), { minimumFractionDigits: 6, useGrouping: false }), fee: formatAmount(BigInt(row.draft.burnIntent.maxFee), { minimumFractionDigits: 6, useGrouping: false }), recipient: row.owner })}</p>}
     <div className="flex flex-wrap gap-3"><button className={button} disabled={busy||row?.state!=="reserved"} onClick={sign}>{uiCopy("creatorWithdrawal.sign")}</button>
       <button className={button} disabled={busy||row?.state!=="signed"} onClick={submit}>{uiCopy("creatorWithdrawal.send")}</button>
       <button className={button} disabled={busy||!id} onClick={recover}>{uiCopy("creatorWithdrawal.recover")}</button>

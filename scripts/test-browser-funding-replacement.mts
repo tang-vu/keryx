@@ -86,7 +86,7 @@ try {
   await recoveryPage.locator("summary").click();
   await recoveryPage.getByLabel("Previous deposit transaction hash", { exact: true }).fill(replacementHash);
   await recoveryPage.getByRole("button", { name: "Check previous deposit", exact: true }).click();
-  await recoveryPage.getByText("Successful deposit call for 0.05 USDC", { exact: false }).waitFor();
+  await recoveryPage.getByText("Successful deposit call for 0.050000 USDC", { exact: false }).waitFor();
   await recoveryPage.getByText("This is a past deposit, not your current available balance.", { exact: false }).waitFor();
   if (process.env.BUYER_UI_CSS) assert(await recoveryPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Mobile funding layout must not overflow");
   if (process.env.BUYER_UI_SCREENSHOT) await recoveryPage.screenshot({ path: process.env.BUYER_UI_SCREENSHOT, fullPage: true });

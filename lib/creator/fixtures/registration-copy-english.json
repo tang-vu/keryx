@@ -409,7 +409,7 @@
       "visible": [
         {
           "tag": "section",
-          "text": "Review the prepared registrationSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestSign reviewed registrationInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "text": "Review the prepared registrationSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%0.016000 USDC(16000 micro-USDC; decimal point, no grouping)Price per read: 0.016000 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: May 18, 2033, 3:33 AMKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestSign reviewed registrationInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
           "attributes": {
             "aria-label": "Sponsored source registration"
           }
@@ -446,7 +446,12 @@
         },
         {
           "tag": "p",
-          "text": "Price per read: 0.016 USDC",
+          "text": "0.016000 USDC(16000 micro-USDC; decimal point, no grouping)",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016000 USDC",
           "attributes": {}
         },
         {
@@ -471,7 +476,7 @@
         },
         {
           "tag": "p",
-          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "text": "Authorization expires: May 18, 2033, 3:33 AM",
           "attributes": {}
         },
         {
@@ -553,7 +558,7 @@
       "visible": [
         {
           "tag": "section",
-          "text": "Sponsor submission outcome unknownSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "text": "Sponsor submission outcome unknownSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%0.016000 USDC(16000 micro-USDC; decimal point, no grouping)Price per read: 0.016000 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: May 18, 2033, 3:33 AMKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
           "attributes": {
             "aria-label": "Sponsored source registration"
           }
@@ -590,7 +595,12 @@
         },
         {
           "tag": "p",
-          "text": "Price per read: 0.016 USDC",
+          "text": "0.016000 USDC(16000 micro-USDC; decimal point, no grouping)",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016000 USDC",
           "attributes": {}
         },
         {
@@ -615,7 +625,7 @@
         },
         {
           "tag": "p",
-          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "text": "Authorization expires: May 18, 2033, 3:33 AM",
           "attributes": {}
         },
         {
@@ -692,7 +702,7 @@
       "visible": [
         {
           "tag": "section",
-          "text": "Original transaction submitted: confirmation pendingSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "text": "Original transaction submitted: confirmation pendingSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%0.016000 USDC(16000 micro-USDC; decimal point, no grouping)Price per read: 0.016000 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: May 18, 2033, 3:33 AMKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
           "attributes": {
             "aria-label": "Sponsored source registration"
           }
@@ -729,7 +739,12 @@
         },
         {
           "tag": "p",
-          "text": "Price per read: 0.016 USDC",
+          "text": "0.016000 USDC(16000 micro-USDC; decimal point, no grouping)",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016000 USDC",
           "attributes": {}
         },
         {
@@ -754,7 +769,7 @@
         },
         {
           "tag": "p",
-          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "text": "Authorization expires: May 18, 2033, 3:33 AM",
           "attributes": {}
         },
         {
@@ -831,7 +846,7 @@
       "visible": [
         {
           "tag": "section",
-          "text": "Registration confirmed: indexing pendingSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "text": "Registration confirmed: indexing pendingSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%0.016000 USDC(16000 micro-USDC; decimal point, no grouping)Price per read: 0.016000 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: May 18, 2033, 3:33 AMKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
           "attributes": {
             "aria-label": "Sponsored source registration"
           }
@@ -868,7 +883,12 @@
         },
         {
           "tag": "p",
-          "text": "Price per read: 0.016 USDC",
+          "text": "0.016000 USDC(16000 micro-USDC; decimal point, no grouping)",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016000 USDC",
           "attributes": {}
         },
         {
@@ -893,7 +913,7 @@
         },
         {
           "tag": "p",
-          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "text": "Authorization expires: May 18, 2033, 3:33 AM",
           "attributes": {}
         },
         {
@@ -970,7 +990,7 @@
       "visible": [
         {
           "tag": "section",
-          "text": "Registration revertedSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "text": "Registration revertedSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%0.016000 USDC(16000 micro-USDC; decimal point, no grouping)Price per read: 0.016000 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: May 18, 2033, 3:33 AMKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
           "attributes": {
             "aria-label": "Sponsored source registration"
           }
@@ -1007,7 +1027,12 @@
         },
         {
           "tag": "p",
-          "text": "Price per read: 0.016 USDC",
+          "text": "0.016000 USDC(16000 micro-USDC; decimal point, no grouping)",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016000 USDC",
           "attributes": {}
         },
         {
@@ -1032,7 +1057,7 @@
         },
         {
           "tag": "p",
-          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "text": "Authorization expires: May 18, 2033, 3:33 AM",
           "attributes": {}
         },
         {
@@ -1109,7 +1134,7 @@
       "visible": [
         {
           "tag": "section",
-          "text": "Unsigned registration expiredSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestThis original expired before sponsor signing. A new reviewed request uses another sponsorship attempt and retains the original history.Prepare new unsigned requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "text": "Unsigned registration expiredSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%0.016000 USDC(16000 micro-USDC; decimal point, no grouping)Price per read: 0.016000 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: May 18, 2033, 3:33 AMKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestThis original expired before sponsor signing. A new reviewed request uses another sponsorship attempt and retains the original history.Prepare new unsigned requestInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
           "attributes": {
             "aria-label": "Sponsored source registration"
           }
@@ -1146,7 +1171,12 @@
         },
         {
           "tag": "p",
-          "text": "Price per read: 0.016 USDC",
+          "text": "0.016000 USDC(16000 micro-USDC; decimal point, no grouping)",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016000 USDC",
           "attributes": {}
         },
         {
@@ -1171,7 +1201,7 @@
         },
         {
           "tag": "p",
-          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "text": "Authorization expires: May 18, 2033, 3:33 AM",
           "attributes": {}
         },
         {
@@ -1260,7 +1290,7 @@
       "visible": [
         {
           "tag": "section",
-          "text": "Review the prepared registrationSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestSign reviewed registrationInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "text": "Review the prepared registrationSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%0.016000 USDC(16000 micro-USDC; decimal point, no grouping)Price per read: 0.016000 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: May 18, 2033, 3:33 AMKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestSign reviewed registrationInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
           "attributes": {
             "aria-label": "Sponsored source registration"
           }
@@ -1297,7 +1327,12 @@
         },
         {
           "tag": "p",
-          "text": "Price per read: 0.016 USDC",
+          "text": "0.016000 USDC(16000 micro-USDC; decimal point, no grouping)",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016000 USDC",
           "attributes": {}
         },
         {
@@ -1322,7 +1357,7 @@
         },
         {
           "tag": "p",
-          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "text": "Authorization expires: May 18, 2033, 3:33 AM",
           "attributes": {}
         },
         {
@@ -1410,7 +1445,7 @@
       "visible": [
         {
           "tag": "section",
-          "text": "Registration confirmed and indexedSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: bafy-fixtureTags: scienceNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestOriginal registration transaction: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffConfirmed sponsor gas cost: 0.003 USDCInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.Review this source's earnings policy ▸",
+          "text": "Registration confirmed and indexedSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%0.016000 USDC(16000 micro-USDC; decimal point, no grouping)Price per read: 0.016000 USDCContent identifier: bafy-fixtureTags: scienceNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: May 18, 2033, 3:33 AMKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestOriginal registration transaction: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffConfirmed sponsor gas cost: 0.003 USDCInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.Review this source's earnings policy ▸",
           "attributes": {
             "aria-label": "Sponsored source registration"
           }
@@ -1447,7 +1482,12 @@
         },
         {
           "tag": "p",
-          "text": "Price per read: 0.016 USDC",
+          "text": "0.016000 USDC(16000 micro-USDC; decimal point, no grouping)",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016000 USDC",
           "attributes": {}
         },
         {
@@ -1472,7 +1512,7 @@
         },
         {
           "tag": "p",
-          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "text": "Authorization expires: May 18, 2033, 3:33 AM",
           "attributes": {}
         },
         {
@@ -1571,7 +1611,7 @@
       "visible": [
         {
           "tag": "section",
-          "text": "Registration gas sponsorship is currently unavailable for this wallet. Existing requests can still be inspected.Original transaction submitted: confirmation pendingSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%Price per read: 0.016 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: 2033-05-18T03:33:20.000ZKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestOriginal registration transaction: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+          "text": "Registration gas sponsorship is currently unavailable for this wallet. Existing requests can still be inspected.Original transaction submitted: confirmation pendingSource: https://feed.invalid/science?view=<summary>Creator and payout wallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAuthor rewards:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: 60.00%0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: 40.00%0.016000 USDC(16000 micro-USDC; decimal point, no grouping)Price per read: 0.016000 USDCContent identifier: Feed content retained by KeryxTags: NoneNetwork and registry: Arc mainnet, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbGas sponsor: 0xccccccccccccccccccccccccccccccccccccccccAuthorization expires: May 18, 2033, 3:33 AMKeryx gas reservation: up to 0.02 USDC. This is separate from creator earnings.Original requestOriginal registration transaction: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffInspect original registrationA lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
           "attributes": {
             "aria-label": "Sponsored source registration"
           }
@@ -1613,7 +1653,12 @@
         },
         {
           "tag": "p",
-          "text": "Price per read: 0.016 USDC",
+          "text": "0.016000 USDC(16000 micro-USDC; decimal point, no grouping)",
+          "attributes": {}
+        },
+        {
+          "tag": "p",
+          "text": "Price per read: 0.016000 USDC",
           "attributes": {}
         },
         {
@@ -1638,7 +1683,7 @@
         },
         {
           "tag": "p",
-          "text": "Authorization expires: 2033-05-18T03:33:20.000Z",
+          "text": "Authorization expires: May 18, 2033, 3:33 AM",
           "attributes": {}
         },
         {
@@ -1886,5 +1931,10 @@
     "submissionUnknown": "Submission unknown. Inspect the original request.",
     "requestRecoveryUnavailable": "Original recovery unavailable; retain this request.",
     "idRecoveryUnavailable": "Original recovery unavailable; retain its ID."
+  },
+  "displayRevision": {
+    "ownInput": "43745785",
+    "authorInput": "61c592a9",
+    "changes": "Only exact price verification paragraph, six-place price text, and UTC-first localized deadline text; all original control/accessibility attributes, payloads and other copy retained."
   }
 }

@@ -1,4 +1,6 @@
 "use client";
+import { DisplayTime } from "@/components/keryx/display-time";
+
 
 /**
  * "Circle confirms it" — the creator's earnings, checked against Circle's own books.
@@ -16,6 +18,7 @@
  * deposits, or payouts from any other x402 service) and is shown as such, never as a discrepancy.
  */
 
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { createMessages } from "@/lib/i18n/messages";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
@@ -35,12 +38,8 @@ export interface GatewayProof {
   }[];
 }
 
-function ago(iso: string): string {
-  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (mins < 1) return uiCopy("creatorGateway.justNow");
-  if (mins < 60) return uiCopy(mins === 1 ? "creatorGateway.minutesAgo.one" : "creatorGateway.minutesAgo.other", { count: mins });
-  const h = Math.floor(mins / 60);
-  return h < 48 ? uiCopy(h === 1 ? "creatorGateway.hoursAgo.one" : "creatorGateway.hoursAgo.other", { count: h }) : uiCopy(Math.floor(h / 24) === 1 ? "creatorGateway.daysAgo.one" : "creatorGateway.daysAgo.other", { count: Math.floor(h / 24) });
+function ago(iso: string) {
+  return <DisplayTime value={iso} relative />;
 }
 
 export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
@@ -62,7 +61,7 @@ export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
           {uiCopy("creatorGateway.title")}
         </h2>
         <span className="ml-auto font-mono text-[10px] text-faint">
-          {uiCopy("creatorGateway.checked", { ago: ago(proof.checkedAt) })}
+          {createRichMessages("en")("creatorGateway.checked", { ago: ago(proof.checkedAt) })}
         </span>
       </div>
 
