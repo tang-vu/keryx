@@ -32,6 +32,7 @@ describe("related-work statements", () => {
   it("leaves an existing draft without statements unchanged apart from an empty list", () => {
     const draft = buildEvidenceDraft(evidenceDraftFixture());
     expect(draft.themes[0].statements).toEqual([]); expect(draft.references).toEqual([]);
+    expect(exportEvidenceDraft(evidenceDraftFixture()).markdown).toContain("\n## Methods\n\n");
   });
 
   it("exports a sentence about a paper only with a citation and a link to its retained excerpt", () => {
@@ -46,6 +47,12 @@ describe("related-work statements", () => {
     expect(exports.latex).toContain(`\\paragraph{Contribution}\\label{${anchor}} The first paper reports an improved outcome. \\autocite{${key}} (retained excerpts: p.~\\pageref{${excerpt.id}})`);
     expect(exports.latex).toContain(`\\label{${excerpt.id}}\n\\begin{quote}`);
     expect(exports.markdown).toContain("whether an excerpt supports the wording is not verified");
+    expect(exports.markdown).toContain("\n## Methods\n\n");
+  });
+
+  it("keeps an escaped theme title in a valid Markdown heading", () => {
+    const input = evidenceDraftFixture(); input.themes[0].title = "Methods [comparison] #1";
+    expect(exportEvidenceDraft(input).markdown).toContain("\n## Methods \\[comparison\\] \\#1\n\n");
   });
 
   it("withholds a statement about an unread paper and never describes or cites that paper", () => {
@@ -174,6 +181,28 @@ describe("draft citation and reference parity", () => {
     expect(exports.ris.match(/^TY {2}- /gm)).toHaveLength(2);
   });
 
+  it("preserves exact canonical URLs through BibTeX escaping without changing retained source identities", () => {
+    // Synthetic import: exercises the actual validated exporter, not a live read.
+    const input = evidenceDraftFixture();
+    const exactUrl = "https://proceedings.mlr.press/v0/fixture_1&value=50%25#part${x}^~\\path";
+    const paper = input.workspace.entries[0].paper;
+    Object.assign(paper, { repository: "pmlr", url: exactUrl, metadataUrl: "https://proceedings.mlr.press/v0/fixture_1" });
+    delete paper.arxivId;
+    for (const row of [...input.reports[0].citations, ...input.reports[0].evidence!]) row.itemUrl = exactUrl;
+    input.claims[0].paperUrls = [exactUrl];
+    const excerpt = buildEvidenceDraft(input).excerpts[0]; input.themes[0].excerptIds = [excerpt.id];
+    const draft = buildEvidenceDraft(input), exports = exportEvidenceDraft(input);
+    const references = draft.references.map(row => ({ key: row.key, url: row.paper.url }));
+    expect(() => assertDraftCitationParity(exports, references)).not.toThrow();
+    expect(references).toEqual([{ key: draft.references[0].key, url: exactUrl }]);
+    expect(exports.bibtex).toContain("fixture\\_1\\&value=50\\%25\\#part\\$\\{x\\}\\textasciicircum{}\\textasciitilde{}\\textbackslash{}path");
+    expect(exports.markdown).toContain(`<${exactUrl}>`); expect(exports.ris).toContain(`UR  - ${exactUrl}\r\n`);
+    expect(draft.excerpts[0]).toMatchObject({ contentVersion: "sha256:version-one",
+      quote: "The evaluated method improved the measured outcome." });
+    expect(input.reports[0].evidence![0]).toMatchObject({ sourceId: "original-paper", itemId: "paper-v1", contentVersion: "sha256:version-one" });
+    expect(input.reports[0].evidence![0].quote).toBe(excerpt.quote);
+  });
+
   it("refuses a missing, extra or duplicated entry in any export", () => {
     const { exports, references } = exported(), [one, two] = references;
     const entry = exports.bibtex.slice(0, exports.bibtex.indexOf("\n}\n") + 3);
@@ -195,6 +224,47 @@ describe("draft citation and reference parity", () => {
       expect(() => assertDraftCitationParity({ ...exports, ...change }, references), name).toThrow("do not correspond");
     expect(() => assertDraftCitationParity(exports, [one]), "uncited reference").toThrow("do not correspond");
     expect(() => assertDraftCitationParity(exports, [one, two, two]), "duplicate reference key").toThrow("do not correspond");
+  });
+
+  it("refuses same-key URL substitutions and swaps even when both URL sets still match", () => {
+    const { exports, references } = exported(), [one, two] = references;
+    const line = exports.markdown.split("\n").find(row => row.startsWith(`- [@${one.key}] `))!;
+    const swap = (content: string) => content.replaceAll(one.url, "URL_SWAP_PLACEHOLDER")
+      .replaceAll(two.url, one.url).replaceAll("URL_SWAP_PLACEHOLDER", two.url);
+    const drifted: Array<[string, Partial<typeof exports>]> = [
+      ["markdown same key, wrong URL", { markdown: exports.markdown.replace(line, line.replace(one.url, two.url)) }],
+      ["bibtex same key, wrong URL", { bibtex: exports.bibtex.replace(`  url = {${one.url}}`, `  url = {${two.url}}`) }],
+      ["markdown swapped reference URLs", { markdown: exports.markdown.slice(0, exports.markdown.lastIndexOf("\n## References\n"))
+        + swap(exports.markdown.slice(exports.markdown.lastIndexOf("\n## References\n"))) }],
+      ["bibtex swapped URLs", { bibtex: swap(exports.bibtex) }],
+    ];
+    for (const [name, change] of drifted)
+      expect(() => assertDraftCitationParity({ ...exports, ...change }, references), name).toThrow("do not correspond");
+    expect(() => assertDraftCitationParity(exports, [{ ...one, url: two.url }, { ...two, url: one.url }]),
+      "canonical key-to-URL swap").toThrow("do not correspond");
+  });
+
+  it("refuses missing, duplicate and unexpected reference identities inside records", () => {
+    const { exports, references } = exported(), [one] = references;
+    const urlField = `  url = {${one.url}},\n`;
+    const risUrl = `UR  - ${one.url}\r\n`;
+    const drifted: Array<[string, Partial<typeof exports>]> = [
+      ["bibtex URL missing", { bibtex: exports.bibtex.replace(urlField, "") }],
+      ["bibtex URL duplicated", { bibtex: exports.bibtex.replace(urlField, urlField + urlField) }],
+      ["bibtex unexpected record", { bibtex: exports.bibtex + "\n@book{keryxDraftdeadbeef,\n  url = {https://arxiv.org/abs/0000.00000v9}\n}\n" }],
+      ["markdown unexpected identity", { markdown: exports.markdown + "- [@unknown] Other — <https://arxiv.org/abs/0000.00000v9>\n" }],
+      ["markdown unexpected citation", { markdown: "[@unknown]\n" + exports.markdown }],
+      ["markdown unexpected punctuated citation", { markdown: "[@unknown-key]\n" + exports.markdown }],
+      ["ris URL missing", { ris: exports.ris.replace(risUrl, "") }],
+      ["ris URL duplicated in one record", { ris: exports.ris.replace(risUrl, risUrl + risUrl) }],
+      ["ris two URLs in one record and none in another", { ris: exports.ris.replace(risUrl, "")
+        .replace(`UR  - ${references[1].url}\r\n`, `UR  - ${references[1].url}\r\n${risUrl}`) }],
+      ["ris record end missing", { ris: exports.ris.replace("ER  - \r\n", "") }],
+    ];
+    for (const [name, change] of drifted)
+      expect(() => assertDraftCitationParity({ ...exports, ...change }, references), name).toThrow("do not correspond");
+    expect(() => assertDraftCitationParity(exports, [one, { ...references[1], url: one.url }]),
+      "duplicated canonical URL").toThrow("do not correspond");
   });
 });
 
