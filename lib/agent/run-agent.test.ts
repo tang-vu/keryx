@@ -476,10 +476,26 @@ it("shared public run completion stamps trusted usage while private originals re
   const privateRun = await drive({ question: "Inspect fixture content", budget: 0.04, usageContext, queryId },
     { ...deps([makeSource({ id: "usage-private" })], fakeEngine(), fakeGateway()), effects: isolatedTestEffects(queryId) });
   expect(privateRun.run).not.toHaveProperty("usage");
+  expect(privateRun.run).not.toHaveProperty("sourceLearning");
 });
 
-describe("recorded citation history in the research trace", () => {
-  it.each(["recorded", "absent", "unavailable"] as const)("reports the actual history basis and preserves execution when history is %s", async history => {
+it("the ordinary run captures owner exclusion even when supplied independent-classification evidence exists", async () => {
+  const owner = `0x${"ab".repeat(20)}`, source = makeSource({ id: "owner-learning", walletAddress: owner,
+    authors: [{ name: "Owner", walletAddress: owner, splitWeight: 1 }], tags: ["x402"] });
+  const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockResolvedValue({ payTo: owner, creator: owner,
+    active: true, stale: false, authority: "onchain", listPriceUsdc: source.fetchPrice });
+  try {
+    const usageContext = createTrustedUsageContext(config.profile.networkId, { actor: "outside", funding: "independent", scripted: false,
+      actorEvidenceSha256: "a".repeat(64), fundingEvidenceSha256: "b".repeat(64) });
+    const { run } = await drive({ question: "How does x402 work?", budget: 0.05, asker: owner, origin: "web", fundingOwner: "browser",
+      provenance: { version: 1, surface: "web", ownershipMethod: "session" }, usageContext }, deps([source], fakeEngine(), fakeGateway()));
+    expect(run.sourceLearning?.sources).toEqual([expect.objectContaining({ sourceId: source.id, topics: ["x402"], eligibility: "owner" })]);
+    expect(run.usage?.cohort).toBe("outside"); // source-specific exclusion still dominates independent-looking cohort data
+  } finally { terms.mockRestore(); }
+});
+
+describe("unclassified historical memory cannot train live purchases", () => {
+  it.each(["recorded", "absent", "unavailable"] as const)("withholds unsupported learning while preserving execution when history is %s", async history => {
     const source = makeSource({ id: "recorded-history" }), engine = fakeEngine(), gateway = fakeGateway();
     const d = deps([source], engine, gateway);
     const readHistory = vi.spyOn(d.db, "loadQueryMemories");
@@ -492,17 +508,9 @@ describe("recorded citation history in the research trace", () => {
 
     const { run, steps } = await drive({ question: "How does x402 work?", budget: 0.05 }, d);
     const historySteps = steps.filter(step => (step.detail as { reputation?: boolean } | undefined)?.reputation);
-    expect(readHistory).toHaveBeenCalledOnce();
-    if (history === "recorded") {
-      expect(historySteps).toHaveLength(1);
-      expect(historySteps[0]).toMatchObject({ phase: "discover", detail: { reputation: true } });
-      expect(historySteps[0].message).toContain("local scores from recorded citation history");
-      expect(engine.decideInput?.memoryContext).toContain(`${source.name}: reputation 90/100`);
-      expect(run.trace).toContainEqual(historySteps[0]);
-    } else {
-      expect(historySteps).toEqual([]);
-      expect(engine.decideInput?.memoryContext).toBeUndefined();
-    }
+    expect(readHistory).not.toHaveBeenCalled();
+    expect(historySteps).toEqual([]);
+    expect(engine.decideInput?.memoryContext).toBeUndefined();
     expect(steps.some(step => /ERC-8004|on.chain reputation/i.test(step.message))).toBe(false);
     expect(gateway.fetchCalls).toEqual([source.id]);
     expect(gateway.citationCalls).toHaveLength(1);
