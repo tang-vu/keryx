@@ -14,6 +14,69 @@ function menu(text: string) {
 }
 
 describe("quote selection", () => {
+  it("appends strict adjacent sentence spans only on opt-in, preserving exact whitespace and existing IDs", () => {
+    const first = "The hemisphere is not always dark.", second = "Different parts receive sunlight at different times.";
+    const text = first + " \n\t" + second;
+    const gathered = [{ sourceId: "source", sourceName: "Synthetic prose", marker: "S1", text, itemUrl: "https://example.com/original", contentVersion: "unchanged" }];
+    const selected = evidenceContext("hemisphere", ["hemisphere"], gathered);
+    const ordinary = buildQuoteOptions(selected, gathered);
+    expect(ordinary.map(row => row.text)).toEqual([first, second]);
+    const note = buildQuoteOptions(selected, gathered, { includeAdjacentSentences: true });
+    expect(note.slice(0, ordinary.length)).toEqual(ordinary);
+    expect(note.at(-1)).toMatchObject({ quoteId: "q0_2", text, start: 0, end: text.length, itemUrl: gathered[0].itemUrl, contentVersion: "unchanged" });
+    expect(isCompleteEvidenceSpan(gathered[0], text, note.at(-1))).toBe(true);
+    const resolved = resolveQuoteEvidence([{ claimIndex: 0, marker: "S1", quoteId: "q0_2", support: 0.9 }], note);
+    expect(resolved[0]).toMatchObject({ quote: text, quoteSpan: { start: 0, end: text.length } });
+    expect(buildContextualQuoteOptions(selected, gathered, { includeAdjacentSentences: true }))
+      .toEqual(buildContextualQuoteOptions(selected, gathered));
+  });
+
+  it("withholds adjacent alternatives across selected gaps, incomplete sentences and non-whitespace intervening text", () => {
+    const first = "The first complete operation applies.", second = "The second complete operation applies.";
+    for (const separator of ["\nHeading without a terminator\n", "\n" + "word ".repeat(70) + ".\n", "\n#\n"]) {
+      const text = first + separator + second;
+      const gathered = [{ sourceId: "source", sourceName: "Synthetic", marker: "S1", text }];
+      const context = evidenceContext("", [], gathered);
+      expect(buildQuoteOptions(context, gathered, { includeAdjacentSentences: true })).toEqual(buildQuoteOptions(context, gathered));
+    }
+    const text = first + " \n" + second, gathered = [{ sourceId: "source", sourceName: "Synthetic", marker: "S1", text }];
+    const selected = evidenceContext("", [], gathered)[0];
+    for (const passages of [
+      [{ start: 0, end: first.length, text: first }, { start: first.length + 2, end: text.length, text: second }],
+      [{ start: 1, end: text.length, text: text.slice(1) }],
+      [{ start: 0, end: text.length - 1, text: text.slice(0, -1) }],
+    ]) {
+      const context = [{ ...selected, passages }];
+      expect(buildQuoteOptions(context, gathered, { includeAdjacentSentences: true })).toEqual(buildQuoteOptions(context, gathered));
+    }
+    expect(() => buildQuoteOptions([{ ...selected, passages: [{ start: 1, end: text.length, text }] }], gathered,
+      { includeAdjacentSentences: true })).toThrow("passage text mismatch");
+    expect(isCompleteEvidenceSpan(gathered[0], text, { start: 1, end: text.length })).toBe(false);
+  });
+
+  it("preserves the strict quote, scan, truncation, Unicode and64-choice caps for adjacent alternatives", () => {
+    const first = "The first complete operation applies.", second = "The second complete operation applies.";
+    const text = first + " " + second;
+    const provenance = { retrievedAt: "2026-10-08T00:00:00Z", publisherGroup: "example.com", normalizedBodyHash: "body", extraction: "html" as const, truncated: true };
+    const sources: GatheredContent[] = [
+      { sourceId: "source", sourceName: "Synthetic", marker: "S1", text, webProvenance: provenance },
+      { sourceId: "source", sourceName: "Synthetic", marker: "S1", text, webProvenance: { ...provenance, extraction: "pdf", truncated: false } },
+      { sourceId: "source", sourceName: "Synthetic", marker: "S1", text: first + " ".repeat(241) + second },
+      { sourceId: "source", sourceName: "Synthetic", marker: "S1", text: text + "\n" + "background ".repeat(20000) },
+    ];
+    for (const source of sources) {
+      const context = evidenceContext("", [], [source]);
+      expect(buildQuoteOptions(context, [source], { includeAdjacentSentences: true })).toEqual(buildQuoteOptions(context, [source]));
+    }
+    const dense = [{ sourceId: "source", sourceName: "Synthetic", marker: "S1", text: Array.from({ length: 64 }, (_, index) => `Operation ${index} applies completely.`).join(" ") }];
+    const selected = { ...evidenceContext("", [], dense)[0], passages: [{ start: 0, end: dense[0].text.length, text: dense[0].text }] };
+    const ordinary = buildQuoteOptions([selected], dense);
+    expect(ordinary).toHaveLength(64);
+    expect(buildQuoteOptions([selected], dense, { includeAdjacentSentences: true })).toEqual(ordinary);
+    const malformed = [{ ...dense[0], text: text + "\uD800" }];
+    expect(() => buildQuoteOptions(evidenceContext("", [], malformed), malformed, { includeAdjacentSentences: true })).toThrow("malformed source Unicode");
+  });
+
   it("offers complete short visible enumerated items only under explicit strict opt-in", () => {
     const item = "alpha: The initial operation runs. An absent setting selects this operation.";
     const gathered = [{ sourceId: "source", sourceName: "Test", marker: "S1", text: item }];
