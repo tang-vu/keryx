@@ -98,6 +98,29 @@ test('dependency directory links cannot copy external storage or ENV bytes', t =
   assert.equal(fs.existsSync(path.join(f.source, 'node_modules')), false);
 });
 
+test('npm executable file links become independent regular candidate files', t => {
+  const f = fixture(t), packages = { 'node_modules/fixture': { version: '1.0.0' } };
+  fs.writeFileSync(path.join(f.source, 'package.json'), JSON.stringify({ dependencies: { fixture: '1.0.0' } }));
+  fs.writeFileSync(path.join(f.source, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages }));
+  fs.writeFileSync(path.join(f.dependencies, '.package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages }));
+  fs.mkdirSync(path.join(f.dependencies, '.bin')); fs.mkdirSync(path.join(f.dependencies, 'fixture'));
+  const original = path.join(f.dependencies, 'fixture', 'cli.js'); fs.writeFileSync(original, 'synthetic executable');
+  const link = path.join(f.dependencies, '.bin', 'fixture');
+  try { fs.symlinkSync('../fixture/cli.js', link, 'file'); }
+  catch (error) {
+    if (process.platform === 'win32' && error.code === 'EPERM') { t.skip('Unprivileged Windows file links unavailable; Linux CI verifies the actual copy.'); return; }
+    throw error;
+  }
+  const receipt = copyPreparationDependencies(f);
+  assert.equal(receipt.materializedFileLinks, 1);
+  const copied = path.join(f.source, 'node_modules', '.bin', 'fixture');
+  assert.equal(fs.lstatSync(copied).isSymbolicLink(), false); assert.equal(fs.lstatSync(copied).nlink, 1);
+  fs.writeFileSync(copied, 'candidate only');
+  assert.equal(fs.readFileSync(original, 'utf8'), 'synthetic executable');
+  assert.equal(fs.readFileSync(path.join(f.source, 'node_modules', 'fixture', 'cli.js'), 'utf8'), 'synthetic executable');
+  assert.equal(fs.lstatSync(link).isSymbolicLink(), true);
+});
+
 test('Turbopack aliases copy only independent candidate dependency bytes and retain build inputs', t => {
   const f = fixture(t);
   const original = path.join(f.dependencies, 'fixture'); fs.mkdirSync(original);

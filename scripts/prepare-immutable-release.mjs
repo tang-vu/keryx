@@ -138,17 +138,24 @@ export function copyPreparationDependencies({ source, dependencies }) {
   // Refuse external dependency links before dereferencing; a serving/root ENV or
   // data directory must never be imported as a candidate dependency.
   let files = 0, bytes = 0;
+  const links = [];
+  const checkedLink = file => {
+    const target = fs.realpathSync.native(file), relative = path.relative(dependencies, target);
+    const stat = fs.statSync(target);
+    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative) || !stat.isFile()) refuse();
+    return stat;
+  };
   const check = directory => {
     for (const name of fs.readdirSync(directory)) {
       const file = path.join(directory, name), stat = fs.lstatSync(file);
       if (++files > 250000) refuse();
       if (stat.isSymbolicLink()) {
-        const target = fs.realpathSync.native(file), relative = path.relative(dependencies, target);
-        if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative) ||
-            !fs.statSync(target).isFile()) refuse();
+        bytes += checkedLink(file).size;
+        links.push(path.relative(dependencies, file));
       } else if (stat.isDirectory()) check(file);
       else if (!stat.isFile()) refuse();
-      else { bytes += stat.size; if (bytes > 8 * 1024 ** 3) refuse(); }
+      else bytes += stat.size;
+      if (bytes > 8 * 1024 ** 3) refuse();
     }
   };
   check(dependencies);
@@ -156,12 +163,19 @@ export function copyPreparationDependencies({ source, dependencies }) {
   if (available.bavail * available.bsize < BigInt(bytes + 4 * 1024 ** 3)) refuse();
   fs.cpSync(dependencies, path.join(source, 'node_modules'), {
     recursive: true, dereference: true, errorOnExist: true, force: false,
+    // A filter selects Node's checked per-entry JS copy path. The pinned native
+    // recursive path retained npm executable links in the actual Linux cohort.
+    filter: file => { if (fs.lstatSync(file).isSymbolicLink()) checkedLink(file); return true; },
   });
+  for (const relative of links) {
+    const copied = fs.lstatSync(path.join(source, 'node_modules', relative));
+    if (!copied.isFile() || copied.isSymbolicLink() || copied.nlink !== 1) refuse();
+  }
   const protectedEntries = protectPreparationCopy(path.join(source, 'node_modules'));
   if (hash(fs.readFileSync(path.join(source, 'node_modules', '.package-lock.json'))) !== hash(installed) ||
       hash(fs.readFileSync(path.join(dependencies, '.package-lock.json'))) !== hash(installed)) refuse();
   return { lockSha256: hash(lock), installedLockSha256: hash(installed),
-    copiedFiles: files, copiedBytes: bytes, protectedEntries, method: 'independent-file-copy' };
+    copiedFiles: files, copiedBytes: bytes, materializedFileLinks: links.length, protectedEntries, method: 'independent-file-copy' };
 }
 
 /** Commands are fixed and run sequentially, before artifact recording and any hold.

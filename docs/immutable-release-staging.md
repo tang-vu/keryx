@@ -335,6 +335,10 @@ and disk-headroom checks precede materialization. The build/input dependency tre
 remain untouched, and the complete artifact/trace inspector retains its link
 containment rules. This does not close the separate cwd extraction or runtime cache
 admission gates.
+The dependency copy uses a checked per-entry copy filter, since the pinned native
+recursive copy retained npm executable links in the actual Linux output. Internal
+file-link bytes count toward headroom, their targets are rechecked at copy, and the
+result must be an independent regular file. Directory/external links still refuse.
 
 The rehearsal keeps a synthetic reader running against the predecessor while it
 prepares and inspects the candidate, then positively exits that reader, rechecks
