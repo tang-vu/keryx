@@ -1,0 +1,76 @@
+name: Planned maintenance built Linux
+on:
+  pull_request:
+    paths:
+      - "lib/maintenance/**"
+      - "components/keryx/maintenance-banner.tsx"
+      - "lib/hooks/use-ask-stream*"
+      - "lib/hooks/ask-error-response*"
+      - "app/layout.tsx"
+      - "scripts/maintenance-front-door.mts"
+      - "scripts/next-public-server.mjs"
+      - "scripts/test-maintenance-built.mts"
+      - "scripts/test-fixtures/maintenance-built-app.mjs"
+      - "test-support/next-config-fixture.ts"
+      - "deploy/maintenance/**"
+      - "docs/engineering/planned-maintenance-2026-10-08.md"
+      - "next.config.ts"
+      - "package*.json"
+      - ".github/workflows/planned-maintenance-linux.yml"
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
+jobs:
+  real-built-linux-ingress:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      KERYX_FORCE_OFFLINE: "1"
+      KERYX_NETWORK: arcTestnet
+      NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
+      KERYX_EXTERNAL_DISCOVERY: "0"
+      NEXT_TELEMETRY_DISABLED: "1"
+      SUPABASE_URL: ""
+      NEXT_PUBLIC_SUPABASE_URL: ""
+      SUPABASE_SERVICE_ROLE_KEY: ""
+      SUPABASE_ANON_KEY: ""
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm install --global npm@11.19.0 --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
+      - run: node scripts/ci-browser-apt.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Protected native controls, refusal and recovery boundaries
+        run: npx vitest run lib/maintenance lib/hooks/ask-error-response.test.ts
+      - name: TypeScript and scoped lint
+        run: |
+          npx tsc --noEmit --project tsconfig.maintenance.json
+          npx eslint scripts/test-maintenance-built.mts scripts/test-fixtures/maintenance-built-app.mjs
+      - name: Build actual offline testnet application
+        run: npm run build
+      - name: Rehearse documented drain and stopped application through actual TLS ingress
+        shell: bash
+        run: |
+          # No external interface, routes, credentials or provider/payment access in this namespace.
+          sudo --preserve-env=HOME,PATH unshare --net -- bash -eu -c '
+            ip link set lo up
+            exec setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups env -i \
+              HOME="$HOME" PATH="$PATH" KERYX_FORCE_OFFLINE=1 KERYX_NETWORK=arcTestnet \
+              NEXT_PUBLIC_KERYX_NETWORK=arcTestnet KERYX_MAINTENANCE_REHEARSAL=isolated-network \
+              NEXT_TELEMETRY_DISABLED=1 "$1" --import tsx scripts/test-maintenance-built.mts
+          ' -- "$(command -v node)"
+      - name: Retain successful and failed ingress evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: planned-maintenance-built-linux-${{ github.sha }}
+          path: .artifacts/maintenance-built/
+          if-no-files-found: warn
