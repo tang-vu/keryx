@@ -1,4 +1,5 @@
 import type { EvidenceRecord, QueryRun } from "../types";
+import { englishMessages } from "../i18n/messages";
 
 export type EvidenceMatrixInput = Pick<QueryRun, "subClaims" | "citations" | "evidence" | "claimCoverage">;
 export interface EvidenceMatrixRow {
@@ -32,8 +33,10 @@ export function buildEvidenceMatrix(run: EvidenceMatrixInput): EvidenceMatrixRow
       run.citations.some((citation) => citation.marker === item.marker && citation.sourceId === item.sourceId &&
         citation.itemId === item.itemId && citation.contentVersion === item.contentVersion),
     );
-    return { claimIndex, claim, evidence, status: evidence.length ? evidence.every(item => item.evidenceProvenance === "synthetic-demo") ? "Illustrative demo excerpt" : "Recorded excerpt" :
-      run.evidence === undefined ? "Evidence ledger unavailable" : "No inspectable excerpt recorded" };
+    // These historical status values also appear in CSV. Use fixed English source
+    // literals, never a selected translation or a changed machine status union.
+    return { claimIndex, claim, evidence, status: evidence.length ? evidence.every(item => item.evidenceProvenance === "synthetic-demo") ? englishMessages["evidenceMatrix.statusIllustrative"] : englishMessages["evidenceMatrix.statusRecorded"] :
+      run.evidence === undefined ? englishMessages["evidenceMatrix.statusUnavailable"] : englishMessages["evidenceMatrix.statusMissing"] };
   });
 }
 
@@ -50,8 +53,8 @@ export function evidenceMatrixCsv(run: EvidenceMatrixInput): string {
   for (const row of buildEvidenceMatrix(run)) {
     if (!row.evidence.length) rows.push([row.claimIndex, row.claim, row.status, "", "", "", "", "", "", "", "", "", ""]);
     for (const item of row.evidence) rows.push([row.claimIndex, row.claim, row.status, item.marker, item.sourceId,
-      item.sourceName, item.itemTitle ?? "Not recorded", item.itemUrl ?? "Not recorded",
-      item.itemPublishedAt ?? "Not recorded", item.itemId ?? "Not recorded", item.contentVersion ?? "Not recorded", item.quote, item.evidenceProvenance === "synthetic-demo" ? "Synthetic demo; illustrative only, not factual evidence" : "Not classified as synthetic"]);
+      item.sourceName, item.itemTitle ?? englishMessages["evidenceMatrix.notRecorded"], item.itemUrl ?? englishMessages["evidenceMatrix.notRecorded"],
+      item.itemPublishedAt ?? englishMessages["evidenceMatrix.notRecorded"], item.itemId ?? englishMessages["evidenceMatrix.notRecorded"], item.contentVersion ?? englishMessages["evidenceMatrix.notRecorded"], item.quote, item.evidenceProvenance === "synthetic-demo" ? englishMessages["evidenceMatrix.syntheticExport"] : englishMessages["evidenceMatrix.unclassifiedExport"]]);
   }
   return rows.map((row) => row.map(evidenceCsvCell).join(",")).join("\r\n") + "\r\n";
 }
