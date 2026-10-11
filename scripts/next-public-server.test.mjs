@@ -8,7 +8,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { startNextPublicServer, NEXT_VERSION } from './next-public-server.mjs';
-import { startPreparedPublicRole } from './rehearse-prepared-release.mjs';
+import { startPreparedPublicRole, readPreparedPublicHealth } from './rehearse-prepared-release.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const modules = resolve(process.env.KERYX_NEXT_FIXTURE_NODE_MODULES || join(root, 'node_modules'));
@@ -40,6 +40,9 @@ test('pinned production Next sees public HTTPS origin on a private ephemeral soc
     await symlink(modules, join(dir, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
     await writeFile(join(dir, 'package.json'), JSON.stringify({ name: 'keryx-public-origin-fixture', private: true }));
     await mkdir(join(dir, 'app', 'api', 'origin'), { recursive: true });
+    await mkdir(join(dir, 'app', 'api', 'health'), { recursive: true });
+    await writeFile(join(dir, 'app', 'api', 'health', 'route.js'), `export const dynamic='force-dynamic';
+export async function GET(){return Response.json({commit:process.env.KERYX_COMMIT,network:'arcTestnet',settles:'offline',db:'ok'})}\n`);
     await writeFile(join(dir, 'fixture-headers.cjs'), "exports.marker='prepared-config-header';\n");
     await writeFile(join(dir, 'next.config.ts'), `import {marker} from './fixture-headers.cjs';
 export default {distDir:'.next',experimental:{cpus:1},async headers(){return [{source:'/api/origin',headers:[{key:'x-cohort-fixture',value:marker}]}]}};\n`);
@@ -115,11 +118,13 @@ export async function GET(request){
     // path as argv[1] used to activate its CLI guard and start a second server.
     await mkdir(join(dir, 'scripts'));
     await copyFile(join(root, 'scripts', 'next-public-server.mjs'), join(dir, 'scripts', 'next-public-server.mjs'));
-    const role = await startPreparedPublicRole(dir, { ...process.env }, storage, 'actual-prepared-entry');
+    const fixtureCommit = 'ab'.repeat(20);
+    const role = await startPreparedPublicRole(dir, { ...process.env, KERYX_COMMIT: fixtureCommit }, storage, 'actual-prepared-entry');
     try {
       const response = await get(3940);
       assert.equal(response.status, 200);
       assert.equal(response.headers['x-cohort-fixture'], 'prepared-config-header');
+      assert.equal((await readPreparedPublicHealth(fixtureCommit)).commit, fixtureCommit);
     } finally {
       if (process.platform === 'win32') role.child.send('drain'); else role.child.kill('SIGTERM');
       assert.deepEqual(await role.exited, { code: 143, signal: null });

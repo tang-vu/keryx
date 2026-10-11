@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { request } from 'node:http';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { verifyImmutableArtifact } from './immutable-release-staging.mjs';
@@ -64,12 +65,26 @@ export async function startPreparedPublicRole(source, env, scratch, label, spawn
   return { child, exited, output: () => output };
 }
 
-async function health(commit) {
-  const response = await fetch('http://127.0.0.1:3940/api/health', {
-    headers: { Host: 'keryx.cc', 'X-Forwarded-Proto': 'https' }, signal: AbortSignal.timeout(30000),
+export async function readPreparedPublicHealth(commit) {
+  // Pinned Node fetch drops Host overrides. Preserve the exact trusted ingress
+  // metadata with the same Node HTTP client used by the public-origin fixture.
+  const response = await new Promise((resolve, reject) => {
+    const req = request({ hostname: '127.0.0.1', port: 3940, path: '/api/health', agent: false,
+      headers: { Host: 'keryx.cc', 'X-Forwarded-Proto': 'https' } }, res => {
+      const chunks = []; let bytes = 0;
+      res.on('data', chunk => {
+        bytes += chunk.length;
+        if (bytes > 64 * 1024) res.destroy(Error('Prepared health response exceeded bound'));
+        else chunks.push(chunk);
+      });
+      res.once('error', reject);
+      res.once('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+    });
+    req.setTimeout(30000, () => req.destroy(Error('Prepared health request timed out')));
+    req.once('error', reject); req.end();
   });
   assert.equal(response.status, 200);
-  const body = await response.json();
+  const body = JSON.parse(response.body);
   assert.equal(body.commit, commit); assert.equal(body.network, 'arcTestnet'); assert.equal(body.settles, 'offline');
   assert.equal(body.db, 'ok');
   return { commit: body.commit, network: body.network, settles: body.settles,
@@ -99,7 +114,7 @@ export async function rehearsePreparedRelease(options) {
   let active;
   try {
   const predecessor = await startPreparedPublicRole(source, env, scratch, 'predecessor'); active = predecessor;
-  const initial = await health(before.commit);
+  const initial = await readPreparedPublicHealth(before.commit);
   const initialReadyMs = Math.round(performance.now() - initialStarted);
   const startedAt = new Date().toISOString(), maintenanceStarted = performance.now();
   const previousClosed = await drain(predecessor);
@@ -108,7 +123,7 @@ export async function rehearsePreparedRelease(options) {
   // Rehash all exact candidate bytes at the actual handover boundary.
   const after = verifyImmutableArtifact(options); assert.deepEqual(after, before);
   const replacement = await startPreparedPublicRole(source, env, scratch, 'replacement'); active = replacement;
-  const final = await health(before.commit);
+  const final = await readPreparedPublicHealth(before.commit);
   const handoverMs = Math.round(performance.now() - maintenanceStarted);
   const postDrainReadinessMs = Math.round(performance.now() - drainedAt);
   const replacementClosed = await drain(replacement);
