@@ -89,5 +89,5 @@ try {
   sql("alter table run_privacy add column unexpected text;");assert.throws(()=>call("read","historical",{},null));
   console.log("#266 PostgreSQL: defaults, all visibility levels, owner/export/erase/retry/revocation, legacy ACL closure, existing claim admission and exact financial equality passed. Synthetic only.");
 } finally {
-  if(created){const observed=docker(["inspect","--format",`{{ index .Config.Labels "${label}" }}`,name]);assert.equal(observed,name,"Refuse non-owned fixture cleanup");docker(["rm","-f",name]);}
+  if(created){const observed=docker(["inspect","--format",`{{ index .Config.Labels "${label}" }}`,name]).replace(/\r?\n$/,"");assert.equal(observed,name,"Refuse non-owned fixture cleanup");docker(["rm","-f",name]);}
 }

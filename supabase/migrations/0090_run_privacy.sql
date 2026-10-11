@@ -123,7 +123,7 @@ from jsonb_each(value) as entry(key,val) where key=any(array['id','createdAt','b
 create function public.run_privacy_v1(p_action text,p_id text,p_input jsonb,p_actor jsonb,p_claims boolean default false)
 returns jsonb language plpgsql security invoker set search_path=pg_catalog,public as $$
 declare q record; s record; prior record; result jsonb; who text; binding jsonb; owned boolean:=false;
-  request_id uuid; requested text; stamp bigint; kept jsonb; original_digest text; take integer; claim jsonb;
+  v_request_id uuid; requested text; stamp bigint; kept jsonb; original_digest text; take integer; claim jsonb;
 begin
   perform public.run_privacy_guard_v1();
   if p_action not in ('read','list','memories','offers','settlement','pending','owner','defaults','default','visibility','erase','export') or jsonb_typeof(p_input)<>'object'
@@ -145,10 +145,10 @@ begin
   end if;
   if p_action in ('default','visibility','erase','export') then
     if who is null then raise exception 'unauthenticated'; end if;
-    request_id:=(p_input->>'requestId')::uuid;
-    if request_id is null then raise exception 'conflict'; end if;
+    v_request_id:=(p_input->>'requestId')::uuid;
+    if v_request_id is null then raise exception 'conflict'; end if;
     -- Serialize retries across different runs and defaults as well as per-run row locks.
-    perform pg_advisory_xact_lock(hashtextextended(request_id::text,266));
+    perform pg_advisory_xact_lock(hashtextextended(v_request_id::text,266));
     if p_action<>'export' then
       stamp:=floor(extract(epoch from clock_timestamp())*1000)::bigint;
       perform 1 from public.web_sessions where hash=p_actor->>'sessionHash' and wallet=who and issued_at<=stamp and expires_at>stamp;
@@ -188,7 +188,7 @@ begin
   elsif p_action in ('defaults','default') then
     if who is null then raise exception 'unauthenticated'; end if;
     if p_action='default' then
-      select * into prior from public.run_privacy_audit a where a.request_id=run_privacy_v1.request_id;
+      select * into prior from public.run_privacy_audit a where a.request_id=v_request_id;
       if found then
         if prior.wallet<>who or prior.run_id is not null or prior.action<>p_action or prior.input<>p_input then raise exception 'conflict'; end if;
         result:=prior.result;
@@ -197,7 +197,7 @@ begin
         if requested is null or requested not in ('private','unlisted','public') then raise exception 'conflict'; end if;
         insert into public.run_privacy_defaults values(who,requested) on conflict(wallet) do update set visibility=excluded.visibility;
         result:=to_jsonb(requested);
-        insert into public.run_privacy_audit(request_id,wallet,action,input,result) values(request_id,who,p_action,p_input,result);
+        insert into public.run_privacy_audit(request_id,wallet,action,input,result) values(v_request_id,who,p_action,p_input,result);
       end if;
     else select to_jsonb(coalesce((select visibility from public.run_privacy_defaults where wallet=who),'private')) into result; end if;
   elsif p_action='pending' then
@@ -250,7 +250,7 @@ begin
         result:=jsonb_build_object('run',kept,'state',jsonb_build_object('visibility',s.visibility,'revision',s.revision,'erased',s.erased));
         if p_action='read' then result:=jsonb_build_object('exists',true,'item',result);
         elsif p_action in ('visibility','erase','export') then
-          select * into prior from public.run_privacy_audit a where a.request_id=run_privacy_v1.request_id;
+          select * into prior from public.run_privacy_audit a where a.request_id=v_request_id;
           if found then
             if prior.wallet<>who or prior.run_id<>p_id or prior.action<>p_action or prior.input<>p_input then raise exception 'conflict'; end if;
             if p_action<>'export' then result:=prior.result; end if;
@@ -282,7 +282,7 @@ begin
             end if;
             -- An export audit stores state and original digest only, never another text copy.
             insert into public.run_privacy_audit(request_id,wallet,run_id,action,input,result,original_digest)
-              values(request_id,who,p_id,p_action,p_input,case when p_action='export' then result->'state' else result end,original_digest);
+              values(v_request_id,who,p_id,p_action,p_input,case when p_action='export' then result->'state' else result end,original_digest);
           end if;
         end if;
       end if;

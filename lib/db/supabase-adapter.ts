@@ -163,7 +163,8 @@ export function assembleAuthorityBoundSupabaseCore(
 
 export class SupabaseAdapter implements KeryxDB {
   declare readonly runPrivacy?: RunPrivacyStore;
-  declare readonly runPrivacyActive: boolean;
+  readonly #runPrivacyActive: boolean;
+  get runPrivacyActive(): boolean { return this.#runPrivacyActive; }
   declare readonly runClaims?: RunClaimsStore;
   declare readonly runOwnershipHistory?: RunOwnershipHistoryStore;
   declare readonly deliverableAcceptance?: DeliverableAcceptanceStore;
@@ -177,9 +178,12 @@ export class SupabaseAdapter implements KeryxDB {
     readDeployment: () => Readonly<StorageDeploymentManifest>; ready: boolean };
 
   constructor(capability?: object) {
-    Object.defineProperty(this,"runPrivacyActive",{value:process.env.KERYX_RUN_PRIVACY_ENABLED==="true"});
+    this.#runPrivacyActive = process.env.KERYX_RUN_PRIVACY_ENABLED === "true";
     const construction = capability === undefined ? undefined : enrolledConstructions.get(capability);
     const deployment = construction?.deployment;
+    // Ordinary readers retain an immutable public accessor. Enrolled facades
+    // have no own key: their reflection refusals must satisfy Proxy invariants.
+    if (!deployment) Object.defineProperty(this,"runPrivacyActive",{get:()=>this.#runPrivacyActive});
     if (capability !== undefined && !construction) refuseStorage("invalid_operation");
     if (deployment && deployment.backend.kind !== "supabase") refuseStorage("identity_mismatch");
     this.#sb = construction?.client ?? createClient(

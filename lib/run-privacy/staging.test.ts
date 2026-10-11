@@ -7,10 +7,15 @@ import {privacyReadsActive,requirePrivacy} from "./contracts";
 import {resolveDispatch} from "../history/read-dispatch";
 import {listedQuestion,publicWantedOffers} from "./public";
 import {newRunUsage,createTrustedUsageContext} from "../research/usage-provenance";
-const stub=vi.hoisted(()=>({client:vi.fn()}));
+import {readFileSync,readdirSync} from "node:fs";
+import {STORAGE_TESTNET_PROFILE_DIGEST} from "../db/storage-identity";
+import {SUPABASE_RUNTIME_CONTRACT} from "../db/supabase-runtime-contract";
+import {postgresBrowserMigrationProfiles} from "../../test-support/postgres-browser-migration-profiles";
+const stub=vi.hoisted(()=>({client:vi.fn(),deployment:vi.fn()}));
 vi.mock("@supabase/supabase-js",()=>({createClient:stub.client}));
+vi.mock("../db/runtime-storage-config",()=>({readRuntimeStorageDeployment:stub.deployment}));
 vi.mock("../history/testnet-archive",()=>({getTestnetArchive:async()=>null}));
-afterEach(()=>vi.unstubAllEnvs());
+afterEach(()=>{vi.unstubAllEnvs();stub.deployment.mockReset();});
 const run={id:"existing",createdAt:"2026-10-11T00:00:00.000Z",question:"Existing question",answer:"Existing answer",budget:0.030001,
   engine:"fixture",totalSpent:0.012345,totalToCreators:0.000001,subClaims:[],decisions:[],citations:[],trace:[],
   usage:newRunUsage({usageContext:createTrustedUsageContext("eip155:5042002",{actor:"unknown",funding:"unknown",scripted:false})},"eip155:5042002",[])};
@@ -72,4 +77,47 @@ it("preserves ordinary Supabase OFF table reads and uses only the sealed privacy
   packet=[];expect(await on.listRecentQueries(1)).toEqual([]);expect(await on.loadQueryMemories(1)).toEqual([]);
   expect(from).not.toHaveBeenCalled();expect(rpc.mock.calls.every(([name])=>name==="run_privacy_v1")).toBe(true);
   vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED","");expect(privacyReadsActive(on)).toBe(true);
+});
+it("keeps actual enrolled Supabase factory reflection sealed and binds private capture to the core in OFF/ON",async()=>{
+  const {createEnrolledSupabaseAdapter,closeEnrolledSupabaseAdapter}=await import("../db/enrolled-supabase-adapter");
+  for(const active of ["","true"]) {
+    const identity={format:"keryx-storage-identity-v1",network:"eip155:5042002",authorityMode:"testnet-offline",
+      deploymentId:crypto.randomUUID(),storageId:crypto.randomUUID(),enrollmentId:crypto.randomUUID(),
+      enrolledAt:"2026-01-01T00:00:00.000Z",profileDigest:STORAGE_TESTNET_PROFILE_DIGEST,provenanceDigest:"0".repeat(64)};
+    stub.deployment.mockReturnValue({format:"keryx-storage-deployment-v1",identity,backend:{kind:"supabase",url:"https://synthetic.invalid"}});
+    const from=vi.fn(()=>{throw new Error("No ordinary table access on the enrolled facade");});
+    const rpc=vi.fn((name:string)=>{
+      const data=name==="read_storage_identity"?identity:name==="storage_inspect_runtime_readiness"?
+        {format:"keryx-enrolled-runtime-readiness-v1",ready:true,sourceContractDigest:SUPABASE_RUNTIME_CONTRACT.afterDigest,cacheRows:[],cacheRowCount:0,cacheWireBytes:0}:
+        name==="storage_verify_runtime_authority"?{format:"keryx-enrolled-runtime-authority-v1",ready:true,sourceContractDigest:SUPABASE_RUNTIME_CONTRACT.afterDigest}:[];
+      const result=Promise.resolve({data,error:null});return Object.assign(result,{throwOnError:()=>result});
+    });
+    stub.client.mockReturnValue({rpc,from});vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED",active);
+    const facade=await createEnrolledSupabaseAdapter();
+    try {
+      expect(Object.keys(facade)).toEqual([]);expect(Reflect.ownKeys(facade)).toEqual([]);
+      expect(Object.getPrototypeOf(facade)).toBeNull();
+      for(const key of ["runPrivacyActive","runPrivacy","constructor","#sb"]) {
+        expect(Object.getOwnPropertyDescriptor(facade,key)).toBeUndefined();
+        expect(()=>Reflect.get(facade,key)).toThrow();
+        expect(Reflect.defineProperty(facade,key,{value:false})).toBe(false);
+        expect(Reflect.deleteProperty(facade,key)).toBe(false);expect(Reflect.set(facade,key,false)).toBe(false);
+      }
+      expect(Reflect.setPrototypeOf(facade,{})).toBe(false);expect(Reflect.preventExtensions(facade)).toBe(false);
+      vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED",active?"":"true");
+      // The facade invokes the real method on the branded core, not on the Proxy.
+      if(active)await expect(facade.listRecentQueries(1)).rejects.toThrow("privacy_unavailable");
+      else expect(await facade.listRecentQueries(1)).toEqual([]);
+      expect(from).not.toHaveBeenCalled();expect(rpc.mock.calls.every(([name])=>name==="read_storage_identity"||name.startsWith("storage_"))).toBe(true);
+    } finally {closeEnrolledSupabaseAdapter(facade);}
+  }
+});
+it("admits exactly ordinary privacy0090 while retaining the native chain and refusing future/duplicate migrations",()=>{
+  const files=readdirSync("supabase/migrations"),profiles=postgresBrowserMigrationProfiles(files);
+  expect(profiles.native).toEqual(files.filter(file=>/^\d{4}.*\.sql$/.test(file)&&Number(file.slice(0,4))<=85).sort());
+  expect(profiles.extensions.find(item=>item.file==="0090_run_privacy.sql")).toEqual({file:"0090_run_privacy.sql",refusal:"privacy_unavailable"});
+  expect(profiles.ordinary).not.toContain("0090_run_privacy.sql");
+  expect(()=>postgresBrowserMigrationProfiles([...files,"0091_unreviewed.sql"])).toThrow("Unreviewed migration profile");
+  expect(()=>postgresBrowserMigrationProfiles([...files,"0090_run_privacy.sql"])).toThrow("Duplicate migration identity");
+  expect(readFileSync("supabase/migrations/0090_run_privacy.sql","utf8")).toContain("if to_regclass('keryx_storage.identity') is not null");
 });
