@@ -71,6 +71,13 @@ locally bundled country outlines and existing reduced-motion behavior, with a
 bounded desktop placement and smaller mobile presentation. It is decorative and
 must not intercept clicks, obscure the guide or text, or displace the composer.
 
+The canvas also keeps its square 78% CSS footprint while its bundled geography
+loads. `scripts/test-browser-globe-initial-layout.mts` holds the real split atlas
+chunk, checks the uninitialized canvas against canonical header placement and
+authored Tailwind CSS, then releases it and verifies land/ocean rendering without
+layout growth at narrow/wide viewports and DPR1/2. It runs in the research UX lane;
+the normal production build and built-page responsive assertions remain required.
+
 Follow-ups use the existing prior-run anchor. The server carries only the previous
 question, not the paid answer or the complete conversation. State that limit and
 provide a deliberate new-topic action. Client stream cancellation does not prove a
