@@ -15,6 +15,8 @@
  * no creator precondition — that would be an impossible bootstrap.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useCallback, useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import Link from "next/link";
@@ -36,6 +38,9 @@ import {
 } from "@/components/keryx/sources-list";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { registrationConnectHref, registrationDraft, registrationTarget, type RegistrationDraft } from "@/lib/registration-return";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 export default function RegisterPage() {
   const { address, isConnected } = useAccount();
@@ -75,7 +80,7 @@ export default function RegisterPage() {
       saveDraft({ rssUrl, ...(rssUrl === prefill?.rssUrl ? { gapId: prefill.gapId, matchedItemLink: prefill.matchedItemLink } : {}), ...(address ? { owner: address.toLowerCase() } : {}) });
       setFeedError("");
     } catch {
-      setFeedError("Enter a full http or https RSS feed URL.");
+      setFeedError(uiCopy("registrationPage.feedUrlInvalid"));
     }
   };
 
@@ -95,7 +100,7 @@ export default function RegisterPage() {
         setFormKey((k) => k + 1);
         setMode("single");
       } catch (error) {
-        setDraftContextError(error instanceof Error ? error.message : "This registration draft cannot be restored.");
+        setDraftContextError(error instanceof Error ? error.message : uiCopy("registrationPage.restoreFailed"));
       }
     }, 0);
     return () => window.clearTimeout(timer);
@@ -134,65 +139,63 @@ export default function RegisterPage() {
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-8">
         <header className="mb-9 max-w-2xl">
           <div className="font-mono text-[12px] uppercase tracking-[0.2em] text-seal">
-            Become a source
+            {uiCopy("registrationPage.eyebrow")}
           </div>
           <h1 className="letterpress mt-2.5 max-w-[16ch] font-display text-[clamp(34px,6vw,68px)] font-medium leading-[0.96] tracking-[-0.01em] text-ink">
-            {prefill?.sourceClaimId ? <>Register your <em className="italic text-paid">source.</em></> : <>Set your <em className="italic text-paid">toll.</em></>}
+            {prefill?.sourceClaimId ? <>{uiRichCopy("registrationPage.claimHeading", { source: <em className="italic text-paid">{uiCopy("registrationPage.sourceEmphasis")}</em> })}</> : <>{uiRichCopy("registrationPage.heading", { toll: <em className="italic text-paid">{uiCopy("registrationPage.tollEmphasis")}</em> })}</>}
           </h1>
           <p className="mt-3 max-w-[54ch] text-[18px] leading-relaxed text-ink-2">
-            List an RSS feed you control to offer articles to Keryx. Set a price per read,
-            prove feed ownership, and receive {currentArcLabel} USDC when a paid read or citation settles.
+            {uiCopy("registrationPage.introduction", { network: currentArcLabel })}
           </p>
           <p className="mt-3 max-w-[65ch] text-sm leading-relaxed text-ink-2">
-            An agent may skip a source after reading its public preview. A paid read and a cited answer
-            are separate payment events. Track sources and earnings in <Link href="/me/sources" className="underline">My sources</Link> or inspect public settlements in <Link href="/dashboard" className="underline">Payments & proof</Link>.
+            {uiRichCopy("registrationPage.paymentEvents", { sourcesLink: <Link href="/me/sources" className="underline">{uiCopy("registrationPage.mySources")}</Link>, paymentsLink: <Link href="/dashboard" className="underline">{uiCopy("registrationPage.paymentsProof")}</Link> })}
           </p>
-          <p className="mt-3 text-sm text-ink-2">Own a website or document already read as a free public source? <Link href="/claim-source" className="underline">Claim your source</Link>, then separately choose free reads, citation rewards or paid access.</p>
+          <p className="mt-3 text-sm text-ink-2">{uiRichCopy("registrationPage.claimInvitation", { claimLink: <Link href="/claim-source" className="underline">{uiCopy("registrationPage.claimSource")}</Link> })}</p>
         </header>
 
-        {prefill?.sourceClaimId ? <section className="mb-8 max-w-2xl border border-ink bg-paper-2 p-5"><h2 className="font-display text-xl">Register this claimed source</h2><p className="mt-2 text-sm text-ink-2">The source URL and wallet are bound to your verified claim. Review the read price below. After confirmation and indexing, <Link href={`/claim-source?claimId=${encodeURIComponent(prefill.sourceClaimId)}`} className="underline">return to the claim</Link> to connect this listing and explicitly activate its policy. Registration alone does not enable earnings.</p></section> : <section className="mb-8 max-w-2xl border border-ink bg-paper-2 p-5" aria-labelledby="feed-first-title">
-          <h2 id="feed-first-title" className="font-display text-xl text-ink">Start with your feed URL</h2>
-          <p className="mt-1 text-sm text-ink-2">Check the URL format and carry it into registration. Keryx reads the feed after you sign in; this step does not fetch or verify its contents.</p>
+        {prefill?.sourceClaimId ? <section className="mb-8 max-w-2xl border border-ink bg-paper-2 p-5"><h2 className="font-display text-xl">{uiCopy("registrationPage.claimTitle")}</h2><p className="mt-2 text-sm text-ink-2">{uiRichCopy("registrationPage.claimReview", { claimLink: <Link href={`/claim-source?claimId=${encodeURIComponent(prefill.sourceClaimId)}`} className="underline">{uiCopy("registrationPage.returnClaim")}</Link> })}</p></section> : <section className="mb-8 max-w-2xl border border-ink bg-paper-2 p-5" aria-labelledby="feed-first-title">
+          <h2 id="feed-first-title" className="font-display text-xl text-ink">{uiCopy("registrationPage.feedTitle")}</h2>
+          <p className="mt-1 text-sm text-ink-2">{uiCopy("registrationPage.feedPreparation")}</p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <input type="url" value={draftFeed} onChange={(event) => setDraftFeed(event.target.value)} placeholder="https://your-site.example/feed.xml" aria-label="Your RSS feed URL" className="min-h-11 min-w-0 flex-1 border border-line bg-paper px-3 font-mono text-sm text-ink" />
-            <button type="button" onClick={prepareFeed} className="min-h-11 border border-ink bg-ink px-4 font-mono text-xs text-paper">Prepare feed</button>
+            <input type="url" value={draftFeed} onChange={(event) => setDraftFeed(event.target.value)} placeholder="https://your-site.example/feed.xml" aria-label={uiCopy("registrationPage.feedLabel")} className="min-h-11 min-w-0 flex-1 border border-line bg-paper px-3 font-mono text-sm text-ink" />
+            <button type="button" onClick={prepareFeed} className="min-h-11 border border-ink bg-ink px-4 font-mono text-xs text-paper">{uiCopy("registrationPage.prepareFeed")}</button>
           </div>
           {feedError && <p role="alert" className="mt-2 text-sm text-seal">{feedError}</p>}
-          {prefill?.rssUrl && !feedError && <p className="mt-2 break-all text-sm text-ink-2">Ready to register: {prefill.rssUrl}. Connect your wallet below to continue.</p>}
+          {prefill?.rssUrl && !feedError && <p className="mt-2 break-all text-sm text-ink-2">{uiCopy("registrationPage.feedReady", { url: prefill.rssUrl })}</p>}
         </section>}
 
         <div className="grid gap-10 lg:grid-cols-[minmax(0,440px)_1fr]">
           <div className="lg:sticky lg:top-24 lg:self-start">
             {/* Auth gate — show form only when signed in with appropriate role */}
             {session === undefined && (
-              <AuthPlaceholder message="Checking session…" />
+              <AuthPlaceholder message={uiCopy("registrationPage.checkingSession")} />
             )}
 
             {session === null && !isConnected && connectHref && (
               <AuthGate
-                heading="Connect your wallet first"
-                body="You need to connect and sign in with your creator wallet before registering a source."
-                cta="Connect wallet ▸"
+                heading={uiCopy("registrationPage.connectTitle")}
+                body={uiCopy("registrationPage.connectBody")}
+                cta={uiCopy("registrationPage.connect")}
                 href={connectHref}
               />
             )}
 
             {session === null && isConnected && connectHref && (
               <AuthGate
-                heading="Sign in to continue"
-                body="Connect your wallet to Keryx to register a source. Your wallet address becomes your payout address."
-                cta="Sign in ▸"
+                heading={uiCopy("registrationPage.signInTitle")}
+                body={uiCopy("registrationPage.signInBody")}
+                cta={uiCopy("registrationPage.signIn")}
                 href={connectHref}
               />
             )}
 
             {!canRegister && !connectHref && <div role="alert" className="space-y-3 border border-seal p-5 text-sm">
-              <p>{draftContextError || "This draft is too large to carry through sign-in safely. Shorten optional prefilled fields or URLs, or explicitly start a new draft. No draft fields were truncated or submitted."}</p>
-              {!draftContextError && prefill?.rssUrl && registrationConnectHref(feedOnlyDraft) && <button type="button" onClick={() => saveDraft(feedOnlyDraft)} className="underline">Keep feed and Wanted match; remove optional prefill</button>}
-              <p><a href="/register" className="underline">Start a new draft</a></p>
+              <p>{draftContextError || uiCopy("registrationPage.draftTooLarge")}</p>
+              {!draftContextError && prefill?.rssUrl && registrationConnectHref(feedOnlyDraft) && <button type="button" onClick={() => saveDraft(feedOnlyDraft)} className="underline">{uiCopy("registrationPage.keepFeed")}</button>}
+              <p><a href="/register" className="underline">{uiCopy("registrationPage.newDraft")}</a></p>
             </div>}
-            {session && !accountMatches && connectHref && <AuthGate heading="Confirm your payout wallet" body="Connect the wallet matching your signed-in account, or sign in with the connected wallet before continuing." cta="Review sign-in" href={connectHref} />}
-            {session && accountMatches && !ownerMatches && <div role="alert" className="border border-line p-5 text-sm">This draft was prepared for {draftOwner}. Switch back to that wallet, or <a className="underline" href="/register">start a new registration draft</a>.</div>}
+            {session && !accountMatches && connectHref && <AuthGate heading={uiCopy("registrationPage.payoutTitle")} body={uiCopy("registrationPage.payoutBody")} cta={uiCopy("registrationPage.reviewSignIn")} href={connectHref} />}
+            {session && accountMatches && !ownerMatches && <div role="alert" className="border border-line p-5 text-sm">{uiRichCopy("registrationPage.draftWallet", { owner: draftOwner ?? "", restartLink: <a className="underline" href="/register">{uiCopy("registrationPage.restartRegistration")}</a> })}</div>}
             {canRegister && (
               <>
                 {/* Show which wallet will be used as the payout address */}
@@ -200,7 +203,7 @@ export default function RegisterPage() {
                   <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-paid" />
                   <div className="min-w-0">
                     <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                      Payout wallet (your connected address)
+                      {uiCopy("registrationPage.payoutLabel")}
                     </p>
                     <p className="truncate font-mono text-[11px] text-ink">
                       {address}
@@ -247,7 +250,7 @@ export default function RegisterPage() {
                           : "text-ink-3 hover:text-ink"
                       }`}
                     >
-                      {m === "single" ? "One source" : "Bulk import"}
+                      {m === "single" ? uiCopy("registrationPage.single") : uiCopy("registrationPage.bulk")}
                     </button>
                   ))}
                 </div>}
@@ -266,9 +269,9 @@ export default function RegisterPage() {
           </div>
 
           <section>
-            <h2 className="mb-4 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-3">Registered sources</h2>
-            {sourcesState === "loading" && <p role="status" className="text-sm text-ink-3">Loading registered sources…</p>}
-            {sourcesState === "error" && <p role="status" className="text-sm text-ink-3">Registered sources are unavailable right now. <button type="button" onClick={() => { setSourcesState("loading"); void loadSources(); }} className="underline">Retry</button></p>}
+            <h2 className="mb-4 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-3">{uiCopy("registrationPage.sourcesTitle")}</h2>
+            {sourcesState === "loading" && <p role="status" className="text-sm text-ink-3">{uiCopy("registrationPage.sourcesLoading")}</p>}
+            {sourcesState === "error" && <p role="status" className="text-sm text-ink-3">{uiRichCopy("registrationPage.sourcesUnavailable", { retryButton: <button type="button" onClick={() => { setSourcesState("loading"); void loadSources(); }} className="underline">{uiCopy("registrationPage.retry")}</button> })}</p>}
             {sourcesState === "ready" && <SourcesList sources={sources} />}
           </section>
         </div>
