@@ -1,9 +1,7 @@
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { KeryxWordmark } from "@/components/keryx/keryx-mark";
-import { createMessages } from "@/lib/i18n/messages";
-
-const message = createMessages("en");
+import { webHeaderMessages } from "@/locales/en/web-header";
 
 /** Prefetchable shell for public data pages; private document bootstraps keep their own boundary. */
 export function PageLoading() {
@@ -19,7 +17,7 @@ export function PageLoading() {
       <main className="mx-auto max-w-[1180px] px-4 py-12 sm:px-[30px]" aria-busy="true">
         <p role="status" className="flex items-center gap-3 font-mono text-sm text-ink-3">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          {message("shellHeader.loadingPage")}
+          {webHeaderMessages["shellHeader.loadingPage"]}
         </p>
       </main>
     </>

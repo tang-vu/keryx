@@ -30,6 +30,7 @@ import { WalletPicker } from "./wallet-picker";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { shortAddress } from "@/lib/utils";
 import { createMessages } from "@/lib/i18n/messages";
+import { webHeaderMessages } from "@/locales/en/web-header";
 
 const copy = createMessages("en");
 
@@ -114,7 +115,7 @@ export function WalletMenu() {
     return (
       <span className={`${CHIP} cursor-default opacity-70`} role="status" aria-busy>
         {status === "connecting" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wallet className="h-3.5 w-3.5" />}
-        {copy(status === "connecting" ? "walletMenu.connecting" : "walletMenu.wallet")}</span>
+        {status === "connecting" ? webHeaderMessages["walletMenu.connecting"] : copy("walletMenu.wallet")}</span>
     );
   }
 

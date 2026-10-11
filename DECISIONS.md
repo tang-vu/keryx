@@ -7555,7 +7555,9 @@ header wallet portals and retain the mobile wallet control after its first openi
 using native hidden state for menu visibility. An external SDK modal can dismiss
 that outer menu without destroying the selected wallet's one-time SIWE intent.
 Handle connection outcomes through their promise so picker removal cannot suppress
-errors. Add loading shells only to the public data pages that have no nested page
+errors. Keep the two new plain English labels in a typed web-only source catalogue,
+outside the shared aggregate embedded by MCP and desktop; no translated locale is
+activated. Add loading shells only to the public data pages that have no nested page
 routes; preserve private document bootstraps and existing not-found boundaries.
 See [iPhone header repair](docs/engineering/iphone-header-2026-10-12.md) for surface
 boundaries and separate browser, deployment and physical-device acceptance gates.

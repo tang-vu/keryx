@@ -35,7 +35,18 @@ intent could be lost when it is replaced.
 Surface audit: web and browser wallet handoffs from desktop/extension benefit from
 the hosted UI repair. Desktop/CLI, remote and stdio MCP, public/private APIs,
 extension packaging and bots retain their contracts and signing roles. No shared
-payment, storage, custody, network or session-cap behavior changes; their package
-versions do not need new bytes for this web-only correction. App candidate is
-0.27.58. Hosted CI, deployed health and physical-device acceptance are independent
+payment, storage, custody, network or session-cap behavior changes. The two new
+unparameterized English labels live in the typed `locales/en/web-header.ts`
+catalogue, imported only by web components. They are deliberately excluded from
+the shared catalogue: bundling that aggregate into MCP and desktop would change
+their executable bytes for a web-only label. English remains the sole shipped
+interface locale; this source catalogue activates no translation. App and its
+OpenAPI version mirror are 0.27.58; package metadata and deployed provenance
+remain surface-specific. Against App57 source `b1b431fd`, esbuild comparisons
+with release metadata held constant confirmed identical executable hashes for
+stdio MCP (113 project inputs), hosted MCP (437), desktop helper (92), renderer
+(22), and renderer CSS (2). Neither new label appears in these graphs. Extension's
+12 allowlisted inputs, desktop bridge and native/Rust inputs are unchanged.
+This increment needs no new client package or installer; retained artifacts keep
+their original provenance. Hosted CI, deployed health and physical-device acceptance are independent
 gates; local fixtures alone do not establish delivery.
