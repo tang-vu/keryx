@@ -14,6 +14,9 @@ import { makePayment } from "@/lib/payments/payment-gateway";
 import { settleThenServe, challengeResponse } from "@/lib/x402-server";
 import { paidResearchAdmissionResponse } from "@/lib/research/paid-admission";
 import { businessCanaryPaidAdmission } from "@/lib/business-operator/canary-paid-admission";
+import { requestPrivacyActor } from "@/lib/run-privacy/auth";
+import { privacyReadsActive, requirePrivacy, type PendingPoll } from "@/lib/run-privacy/contracts";
+import { privateRunResponse } from "@/lib/run-claims/private-response";
 import { canaryExecutionPaused } from "@/lib/business-operator/canary-policy";
 import { a2aDiscovery } from "@/lib/x402-discovery";
 import { verifyApiKey } from "@/lib/api-keys";
@@ -175,6 +178,14 @@ function pendingResponse(order: A2aOrder, replayed = false, message?: string) {
   };
 }
 
+function pendingPollResponse(order:PendingPoll) {
+  const started=order.startedAt===null ? null : Date.parse(order.startedAt);
+  const status=started===null ? "queued" : !Number.isFinite(started)||Date.now()-started>=A2A_REVIEW_AFTER_MS ? "review_required" : "processing";
+  return {status,queryId:order.queryId,pollUrl:`/api/agent/ask?queryId=${encodeURIComponent(order.queryId)}`,
+    createdAt:order.createdAt,startedAt:order.startedAt,
+    financial:{totalPricePaid:order.amountUsdc,creatorBudgetUsdc:order.creatorBudgetUsdc,serviceFeeUsdc:order.serviceFeeUsdc,transaction:order.transaction},
+    qualification:"Recorded pending status and accepted financial values; no result or completed settlement is asserted."};
+}
 /** Side-effect-free discovery probe. POST recomputes the exact price from its JSON body. */
 export async function GET(req: NextRequest) {
   const queryId = req.nextUrl.searchParams.get("queryId");
@@ -183,30 +194,45 @@ export async function GET(req: NextRequest) {
       return Response.json({ error: "invalid A2A query id" }, { status: 400 });
     }
     const db = await getDb();
+    // Inactive retains the original admitted polling lane. Active checks run
+    // ownership before any retained worker body; unfinished orders use only the
+    // sealed, bounded metadata reader and never infer ownership from the payer.
+    if(privacyReadsActive(db)) {
+      try {
+        const actor=await requestPrivacyActor(req);if(actor instanceof Response)return actor;
+        const store=requirePrivacy(db),visible=await store.read(queryId,actor);
+        if(!visible.item) {
+          const pending=visible.exists ? null : await store.pending(queryId);
+          return privateRunResponse(pending ? Response.json(pendingPollResponse(pending)) : Response.json({error:"not found"},{status:404}));
+        }
+      } catch {
+        return privateRunResponse(Response.json({error:"privacy_unavailable"},{status:503}));
+      }
+    }
     const order = await db.getA2aOrder(queryId);
-    if (!order) return Response.json({ error: "A2A order not found" }, { status: 404 });
+    if (!order) return privateRunResponse(Response.json({ error: "not found" }, { status: 404 }));
     if (order.status === "completed" && order.response) {
-      return Response.json(await currentCompletedResponse(db, order));
+      return privateRunResponse(Response.json(await currentCompletedResponse(db, order)));
     }
     if (order.status === "failed") {
-      return Response.json(await currentFailedResponse(db, order));
+      return privateRunResponse(Response.json(await currentFailedResponse(db, order)));
     }
     const saved = await db.getQueryRun(queryId);
     if (saved) {
       try {
         const recovered = await repairA2aOrderFromSavedRun(db, order, saved, "automatic-poll");
-        return Response.json(await currentCompletedResponse(db, recovered));
+        return privateRunResponse(Response.json(await currentCompletedResponse(db, recovered)));
       } catch {
-        return Response.json(
+        return privateRunResponse(Response.json(
           pendingResponse(
             order,
             false,
             "A saved result exists, but its creator-payment ledger requires review before delivery.",
           ),
-        );
+        ));
       }
     }
-    return Response.json(pendingResponse(order));
+    return privateRunResponse(Response.json(pendingResponse(order)));
   }
   const paused = paidResearchAdmissionResponse(); if (paused) return paused;
   if (!config.sellerAddress || (config.networkId !== ARC_MAINNET_PROFILE.networkId && !config.funderKey) || process.env.KERYX_FORCE_OFFLINE === "1") {

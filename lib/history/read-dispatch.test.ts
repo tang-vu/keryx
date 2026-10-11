@@ -16,6 +16,7 @@ vi.mock("@/lib/arc-network-display", async importOriginal => ({
   ...await importOriginal<typeof import("../arc-network-display")>(), currentArcLabel: "Arc mainnet",
 }));
 vi.mock("@/lib/answers-archive-cache", () => ({ getArchiveCached: async () => [] }));
+vi.mock("@/lib/run-privacy/auth",()=>({requestPrivacyActor:async()=>undefined,pagePrivacyActor:async()=>undefined}));
 vi.mock("@/components/keryx/follow-up-form", () => ({ FollowUpForm: () => null }));
 // These server-render/archive tests do not perform wallet authentication. Keep DecisionReviews real.
 vi.mock("@/lib/hooks/use-siwe-auth", () => ({ useSiweAuth: mocks.auth }));
@@ -40,6 +41,7 @@ function run(id = "old-dispatch"): QueryRun {
 }
 function reader(runs: QueryRun[] = [], payments: PaymentRecord[] = []) {
   return {
+    runPrivacy:{read:vi.fn(async(id:string)=>{const run=runs.find(value=>value.id===id);return {exists:!!run,item:run?{run,state:{visibility:"public" as const,revision:0,erased:false}}:null};})} as unknown as import("../run-privacy/contracts").RunPrivacyStore,
     getQueryRun: vi.fn(async (id: string) => runs.find(run => run.id === id) ?? null),
     listFollowUps: vi.fn(async (id: string) => runs.filter(run => run.parentId === id)),
     listPaymentsByQuery: vi.fn(async (id: string) => payments.filter(row => row.queryId === id && row.kind === "citation")),
@@ -49,7 +51,7 @@ function reader(runs: QueryRun[] = [], payments: PaymentRecord[] = []) {
 const params = (id = "old-dispatch") => ({ params: Promise.resolve({ id }) });
 const request = (id = "old-dispatch", suffix = "") => new NextRequest(`https://keryx.test/api/dispatch/${id}${suffix}`);
 function installArchive(runs = [run()], payments: PaymentRecord[] = []) {
-  const store = { ...reader(runs, payments), info };
+  const store = { ...reader(runs, payments),listFollowUps:vi.fn(async()=>[] as QueryRun[]), info };
   mocks.archive.mockResolvedValue(store);
   return store;
 }
@@ -70,7 +72,7 @@ describe("original-network dispatch resolution", () => {
   });
 
   it("does not turn unavailable live storage into historical success", async () => {
-    const current = reader(); current.getQueryRun.mockRejectedValue(new Error("current read unavailable"));
+    const current = reader(); vi.mocked(current.runPrivacy!.read).mockRejectedValue(new Error("current read unavailable"));
     installArchive();
     await expect(resolveDispatch("old-dispatch", current)).rejects.toThrow("current read unavailable");
     expect(mocks.archive).not.toHaveBeenCalled();
@@ -98,9 +100,9 @@ describe("original-network dispatch resolution", () => {
     expect(thread.parent?.run.answer).toBe(parent.answer);
     expect(thread.parent?.reader).toBe(historical);
     expect(thread.followUps.map(row => [row.run.id, row.archive?.network ?? "current"])).toEqual([
-      ["child", info.network], ["duplicate", "current"],
+      ["duplicate", "current"],
     ]);
-    expect(thread.followUps[1].run.answer).toBe("Current duplicate wins");
+    expect(thread.followUps[0].run.answer).toBe("Current duplicate wins");
   });
 
   it("resolves an intentional current follow-up's historical question without borrowing its payment reader", async () => {
@@ -129,7 +131,7 @@ describe("original-network dispatch resolution", () => {
     const current = reader(); current.listFollowUps.mockRejectedValue(new Error("current enrichment unavailable"));
     const resolved = (await resolveDispatch(original.id, current))!;
     const thread = await loadDispatchThread(resolved, current);
-    expect(thread.followUps.map(row => row.run.id)).toEqual([child.id]);
+    expect(thread.followUps.map(row => row.run.id)).toEqual([]);
     expect(thread.followUpsUnavailable).toBe(true);
     mocks.current.mockResolvedValue(current);
     const html = renderToStaticMarkup(await DispatchPage(params()));
@@ -150,12 +152,11 @@ describe("original-network dispatch resolution", () => {
 });
 
 describe("historical public read contracts", () => {
-  it("keeps the existing canonical permalink and labels its search/share metadata", async () => {
+  it("keeps historical links unlisted and omits question/answer search and share metadata", async () => {
     installArchive();
     const metadata = await generateMetadata(params());
-    expect(metadata.alternates?.canonical).toBe("/dispatch/old-dispatch");
-    expect(metadata.description).toContain("Arc testnet historical");
-    expect(metadata.openGraph?.description).toContain("Arc testnet historical");
+    expect(metadata.robots).toMatchObject({index:false,follow:false});
+    expect(metadata.description).toBeUndefined();expect(metadata.openGraph).toBeUndefined();
   });
 
   it("renders the original answer with a clear frozen testnet notice and no live feedback controls", () => {

@@ -89,6 +89,9 @@ jobs:
       - name: Personal history PostgreSQL ownership, filters, keyset and refusal
         if: needs.scope.outputs.scope == 'full'
         run: node --import tsx scripts/test-personal-history-postgres.mts
+      - name: Run privacy PostgreSQL visibility, erasure and financial retention (synthetic)
+        if: needs.scope.outputs.scope == 'full'
+        run: node --import tsx scripts/test-run-privacy-postgres.mts --acceptance
       - name: Prepaid A2A acceptance PostgreSQL atomic choices and active authority (synthetic)
         if: needs.scope.outputs.scope == 'full'
         run: node --import tsx scripts/test-deliverable-acceptance-postgres.mts

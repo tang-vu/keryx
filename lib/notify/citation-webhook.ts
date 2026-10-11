@@ -94,7 +94,8 @@ export function buildCitationPayload(input: {
           },
         }
       : {}),
-    query: { id: input.queryId, question: input.question },
+    // Recipient owns the source payout, not the reader's question. Never send research text.
+    query: { id: input.queryId, question: "" },
     weight: input.citation.weight,
     amountUsdc,
     network: input.network,

@@ -7633,6 +7633,62 @@ routes; preserve private document bootstraps and existing not-found boundaries.
 See [iPhone header repair](docs/engineering/iphone-header-2026-10-12.md) for surface
 boundaries and separate browser, deployment and physical-device acceptance gates.
 
+## 2026-10-12: owner-delegated per-run question privacy (#266)
+
+The owner answered the policy question with “choose best for hackathon” and
+delegated the choice. Root selected this concrete policy: **all historical runs,
+including unowned runs, are unlisted**, retaining existing links. **New runs with
+an authenticated recorded owner default to private**. That owner may explicitly
+choose public for a demo, change a run's visibility, or set a different default
+for future runs. **New anonymous/unowned runs are unlisted until ownership is
+proven**. Existing SIWE sessions, explicitly scoped owner keys and admitted
+immutable anonymous claim proofs supply ownership. Caller addresses, questions,
+creator payout addresses and payment recipients do not.
+
+Visibility is a separate versioned ordinary-storage sidecar; it does not rewrite
+saved originals, run IDs, payment objects, creator rewards, settlement states or
+exact totals. Historical rows without a sidecar resolve to unlisted, with no
+guessed owner or irreversible text backfill. Erasure keeps a digest-only audit
+and verified owner tombstone, removes ordinary question/answer/derived indexes,
+and preserves financial journals. Protected fulfillment/A2A originals and active
+retry offers have explicit retention holds; immutable archive copies require a
+separate reviewed storage-retention procedure. No ownership is invented to clear
+those holds.
+
+Public financial APIs remain verifiable without question/answer enrichment.
+Nonpublic current dispatch receipts use a separate settlement-only read schema;
+the immutable research-receipt v1 protocol and retained archived receipts remain
+unchanged. Public creator notifications omit research text. Text readers have no
+stale cache fallback, and unsupported/enrolled or unadmitted domains fail closed.
+Previously downloaded copies and externally cached public pages cannot be
+recalled; rollout requires a reviewed cache purge and a quiescent publication
+window.
+
+This decision authorizes design, code, tests and **migration source only**. It does
+not authorize shared production DDL/data application, policy activation, domain
+activation, backfill, deploy, version bump, merge or issue closure. Root's frozen
+independent privacy/auth source review precedes PR publication. Exact-head full
+CI/domain/platform success and separately authorized rollout/delivered acceptance
+remain release gates. See [implementation and holds](docs/run-privacy.md).
+
+Root's independent review identified a staged-activation regression. Preserve the
+existing admitted ordinary production lane while `KERYX_RUN_PRIVACY_ENABLED` is
+OFF, including archives, memory, follow-ups, history, dispatch/receipt and paid GET
+polls. New privacy owner/default/export/erase controls are unavailable while OFF;
+the policy above remains selected source policy, not delivered protection. Each
+ordinary adapter captures immutable activation at construction. When ON, missing
+schema/ownership admission refuses text and cannot select legacy/native readers
+or retained caches. Rollout needs the reviewed schema, quiescence/cache purge and
+process/build restart; this source correction applies none of them.
+
+Active unfinished paid orders use an admitted metadata-only reader for bounded
+status, timestamps, exact accepted amounts and transaction ID. Worker request /
+response, authorization nonce and payer/payee are never read for this packet and
+do not establish ownership or completed settlement. Active completed/failed orphan
+orders remain refused without an admitted result. Financial journals and the
+existing POST/payment/queue/runner contracts stay unchanged. Real PG17, hosted
+Next/full CI, independent root review and delivered acceptance remain open gates.
+
 ## 2026-10-11 — Inspect overdue originals through selected read-only storage
 
 Continue issue #257 with an explicit private operator command, reusing the
@@ -7695,3 +7751,31 @@ independent source/product review. Admit the entire canonical reference plan
 before POST; refuse overlapping source/item identities rather than collapsing
 citation keys, and preserve explicit content/arXiv versions even with one DOI.
 See [the Zotero contract](docs/engineering/zotero-references-2026-10-11.md).
+
+## 2026-10-12: privacy publication gates for accepted #298/#299 core source
+
+Integrate the source-accepted final core aca230f5302603b2ee5e41f1770606225e2f16be
+on the existing #266 branch by normal merge, preserving each author's payloads,
+modes and source authority. Core actual CI/ordered main merges remain separate
+pending gates; this does not transfer acceptance from an older or projected head.
+
+When privacy is active/admitted, public question population comes from the complete
+bounded classified candidate window, public-filtered in storage and freshly checked
+against read().item.state before counting or scoring. Canonical financial summary,
+settlement totals and journals remain unchanged; newest100 samples are not population.
+Active aggregate reads bypass the five-minute process cache so old publication
+cannot survive revocation there. OFF preserves the existing admitted aggregate lane.
+The learning reader requires active admission before source lookup/scanning and
+checks current public/unerased state before using internal observations. Revoked
+candidates consume bounded work and may underfill, never unbounded refill. Missing
+or drifted active ports yield unavailable API/SSR/MCP, not false-success empty data.
+Public QueryRun JSON/type omit per-run sourceLearning; originals, owner exports and
+claim digests remain exact, and ordinary erasure removes this question-derived field.
+
+The owner-delegated policy remains historical/unowned UNLISTED, new authenticated
+owned PRIVATE by default with explicit owner PUBLIC choice, and anonymous UNLISTED
+until proven owner. All implementation/migration evidence is SOURCE ONLY/default OFF.
+No production DDL/backfill/data/ENV/activation is authorized or performed. Root peer
+review precedes ONE266PR; actual exact combined CI/PG17/build/distribution and delivery
+remain gates, original266OPEN. Root reserves final actual offline48 --write; this phase
+neither runs it nor claims inherited/projected canonical metadata as new-head success.

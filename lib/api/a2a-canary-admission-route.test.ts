@@ -17,6 +17,7 @@ vi.mock("@/lib/config", async () => ({ config: {
 } }));
 vi.mock("@/lib/agent", () => ({ getAgentDeps: mocks.getAgentDeps, collectRun: mocks.collectRun }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.getDb }));
+vi.mock("@/lib/run-privacy/auth", () => ({requestPrivacyActor:async()=>undefined}));
 vi.mock("@/lib/payments/mainnet-hosted-gateway", () => ({ assertMainnetHostedResearchReady: mocks.mainnetReady }));
 vi.mock("@/lib/api-keys", () => ({ verifyApiKey: vi.fn(() => { throw Error("No API key belongs in this fixture"); }) }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: mocks.checkRateLimit, clientIp: () => "127.0.0.1" }));
@@ -117,6 +118,9 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(() => { throw Error("Network is forbidden in A2A admission fixtures"); }));
   db = { assertResearchPurchaseAuthority: vi.fn().mockResolvedValue(undefined), getA2aOrder: vi.fn().mockResolvedValue(null),
     getQueryRun: vi.fn().mockResolvedValue(null), listCreatorPaymentAttemptsByQuery: vi.fn().mockResolvedValue([]) };
+  // Preserve the existing admission cases as explicit public-original polls;
+  // privacy denials never reach this order/canary surface (poll.test.ts).
+  Object.assign(db,{runPrivacy:{read:async()=>({exists:true,item:{state:{visibility:"public",revision:0,erased:false}}})}});
   mocks.checkRateLimit.mockResolvedValue(null); mocks.getDb.mockResolvedValue(db);
   mocks.mainnetReady.mockResolvedValue(undefined); mocks.getAgentDeps.mockResolvedValue({});
   mocks.challengeResponse.mockImplementation((requirements) => Response.json({ testOnlyQuote: requirements }, { status: 402 }));

@@ -190,3 +190,21 @@ checks recursive private field names and actual fixture question/reason/sidecar
 values instead. Pooled identities remain forbidden, while legitimate public
 rule prose and the per-report identity role remain allowed. Focused regressions
 exercise each boundary; rerun hosted production acceptance on the corrected head.
+
+## #266 source-only publication integration
+
+The admitted active privacy lane uses a separate complete bounded public question
+population, not the canonical financial summary's run count or the newest100 page.
+Each classified candidate batch is public-filtered in storage and freshly checked
+against `read().item.state.visibility/erased` before counts and sample projection.
+Revocation consumes bounded work and can underfill; no refill or atomic database
+snapshot is claimed. Active reads bypass the five-minute in-process cache, including
+old OFF entries. Missing/drifted privacy admission withholds figures with API503 /
+SSR unavailable. OFF retains its existing aggregate and cache behavior; unlisted
+direct report links keep their existing role. Exact financial summaries are unchanged.
+
+This is source integration on the same #266 branch. No production DDL/backfill /
+activation or combined delivery is claimed. Core CI/ordered merges and whole-source
+root privacy review before ONE266PR remain separate gates. Root reserves final
+actual canonical offline48; this phase neither writes nor relabels inherited metadata
+as combined-head acceptance. See [run privacy](../run-privacy.md) for rollout holds.

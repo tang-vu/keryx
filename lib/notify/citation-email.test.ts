@@ -60,11 +60,11 @@ describe("buildCitationEmailContent", () => {
     unsubToken: "tok123",
   });
 
-  it("carries the question, amount, and source in subject + bodies", () => {
+  it("retains creator financial facts without delivering a reader's question", () => {
     expect(content.subject).toContain("Agent Economy Weekly");
     expect(content.subject).toContain("$0.015");
     for (const body of [content.html, content.text]) {
-      expect(body).toContain("How do x402 tolls work?");
+      expect(body).not.toContain("How do x402 tolls work?");
       expect(body).toContain("$0.015");
       expect(body).toContain("60%");
     }
@@ -88,6 +88,6 @@ describe("buildCitationEmailContent", () => {
     );
     expect(hostile.html).not.toContain("<img");
     expect(hostile.html).not.toContain("<script>");
-    expect(hostile.html).toContain("&lt;script&gt;");
+    expect(hostile.html).not.toContain("&lt;script&gt;");
   });
 });

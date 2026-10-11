@@ -1,12 +1,13 @@
 /**
  * Server-side projection for the public wanted surfaces.
  *
- * The demand board is rebuilt from completed query receipts every time this cache window refreshes;
+ * The demand board is rebuilt from public query receipts on each request;
  * `gap_intents` only adds coordination status. Neither a shared URL nor an intent row can choose a
  * payee or authorize spend.
  */
 
 import { getDb } from "./db";
+import {publicWantedOffers} from "./run-privacy/public";
 import { buildBoard, findDemandGap, type DemandGap } from "./demand-signal";
 import type { GapIntentStatus } from "./types";
 import { WANTED_WINDOW_RUNS } from "./wanted-limits";
@@ -40,7 +41,7 @@ export async function loadWantedBoard(limit = 20): Promise<PublicWantedBoard> {
   const db = await getDb();
   const [runs, intents, sources] = await Promise.all([
     db.listRecentQueries(WANTED_WINDOW_RUNS),
-    db.listGapIntents(200),
+    publicWantedOffers(db,200),
     db.listAllSources(),
   ]);
   const board = buildBoard(runs, { limit });

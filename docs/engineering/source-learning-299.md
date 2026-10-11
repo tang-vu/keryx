@@ -127,3 +127,21 @@ resistance. Exact-source hosted CI, source review, combined deployment readback
 and matching package/installer versions precede synchronized delivery claims.
 No funding, spending, custody, production DDL, schedules or gated pilot activation
 is authorized by this candidate.
+
+## #266 source-only publication integration
+
+Ordinary public scope is not publication authority. Under active admitted privacy,
+the shared reader requires the privacy port/schema before source lookup or scanning,
+then counts only freshly public/unerased `read().item.state` observations. Both
+existing adapters filter the300-candidate iterator before body enumeration; queued
+revocation consumes that bound and may underfill, without unbounded refill. Hidden
+legacy rows cannot affect historical/excluded counts or actor/day deduplication.
+Missing/drifted admission produces API503, SSR unavailable and the shared remote /
+stdio MCP error, never a successful empty report. Explicit OFF keeps the admitted
+legacy reader. Public per-run JSON and its return type omit internal sourceLearning;
+stored originals/authorized exports/digests remain exact until ordinary erasure.
+
+This introduces no learned selection, exploration, capture mode, new allowance or
+production DDL/activation. Source-accepted core payloads/modes are inherited unchanged.
+Root whole-source privacy review, combined actual CI/canonical selector epoch,
+realPG17 and coordinated distribution/delivery remain open. See [run privacy](../run-privacy.md).
