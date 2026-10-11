@@ -21,6 +21,21 @@ export function teachingProposalAnswer(delivery: TeachingProposalDelivery): stri
   }
   if (delivery.gaps.length) {
     if (!delivery.proposals.length) lines.push(vi ? "Chưa cung cấp được đề xuất đủ căn cứ và kiểm tra." : "No proposal passed the required premise and review checks.");
+    if (delivery.gaps.some(gap => gap.reason === "final-premise-withheld")) {
+      lines.push(vi
+        ? "Thiếu kiến thức làm cơ sở: bằng chứng cuối cùng chưa đủ để dùng ít nhất một kiến thức làm cơ sở cho đề xuất; các phần phụ thuộc chưa được cung cấp."
+        : "A factual prerequisite is missing: the final evidence does not establish at least one premise strongly enough for a proposal; dependent parts are withheld.");
+      lines.push(vi
+        ? "Bước tiếp theo: đối chiếu các mục kiến thức còn thiếu ở phần trả lời trên với nguồn gốc bạn đã yêu cầu, tìm đoạn trực tiếp trả lời từng mục, rồi kiểm tra lại trước khi dùng đề xuất; tình huống giả định không thay thế bằng chứng."
+        : "Next step: compare the missing factual topics above with the original source you requested, locate a passage directly answering each topic, and check it before using the proposal; invented scenarios cannot replace evidence.");
+    } else if (delivery.gaps.some(gap => gap.reason === "missing-premise")) {
+      lines.push(vi
+        ? "Liên kết kiến thức của đề xuất còn thiếu: ít nhất một tham chiếu kiến thức không khớp với câu đã dẫn nguồn; điều này chưa xác định rằng nguồn gốc thiếu kiến thức."
+        : "A proposal premise reference is missing: at least one reference does not match a cited statement; this does not establish that the original source lacks the fact.");
+      lines.push(vi
+        ? "Bước tiếp theo: đối chiếu tham chiếu kiến thức của đề xuất với các câu đã dẫn nguồn ở trên. Nếu một mục kiến thức chưa có bằng chứng, tìm đoạn trực tiếp trả lời mục đó trong nguồn gốc bạn đã yêu cầu và kiểm tra lại; tình huống giả định không thay thế bằng chứng."
+        : "Next step: check the proposal's premise references against the cited statements above. If a factual topic has no evidence, locate a passage directly answering it in the original source you requested and check it; invented scenarios cannot replace evidence.");
+    }
     for (const kind of ["activity", "classification-example", "exit-question"] as const) {
       if (!delivery.gaps.some(gap => gap.reason === "requested-count" && gap.kind === kind)) continue;
       const names = vi ? { activity: "hoạt động", "classification-example": "ví dụ phân loại", "exit-question": "câu hỏi cuối giờ" }
