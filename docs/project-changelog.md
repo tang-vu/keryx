@@ -5,6 +5,8 @@
 - Fix Safari touch selection of MetaMask and WalletConnect in the mobile header.
   Preserve the chosen wallet's sign-in intent through external SDK modals and
   retain error reporting after the picker closes.
+- Clear failed or cancelled wallet selections before a later connection can
+  trigger their sign-in. Preserve a newer selection when an older failure arrives.
 - Close the mobile menu when navigation begins and stream loading shells for
   the public Activity, Sources and Market data pages. Private research and
   existing not-found boundaries retain their behavior.

@@ -13,6 +13,13 @@ requires explicit selection or the existing verified restoration flow. Connect
 errors are handled through the promise, so closing the picker cannot remove its
 error callback; pending connection has a visible status.
 
+A failed or cancelled selection clears its own sign-in intent, so a hidden mobile
+control cannot sign in again when a later desktop selection succeeds. Each choice
+has a distinct token: an older Google OAuth startup rejection cannot clear a newer
+choice after the picker remounts. Both Google button placements and both connection
+and OAuth startup failure paths report that token. Menu hiding and viewport changes
+preserve a still-pending choice.
+
 Internal navigation hides the mobile menu as soon as navigation starts. The
 public data pages `/dashboard`, `/sources` and `/market` have prefetchable loading
 shells, enabling partial prefetch and streaming while data loads. Static pages
@@ -23,6 +30,9 @@ not a measured reduction in database or network latency.
 `npm run test:browser-mobile-header` tests actual header/picker/Radix components
 with touch events, delayed synthetic connector outcomes, an external body modal,
 exactly one subsequent sign-in, navigation start, outside dismissal and Escape.
+It also checks failed/cancelled mobile selection followed by desktop success,
+both Google failure paths in both picker placements, and an older OAuth failure
+arriving while a newer selection is pending.
 Use `-- --webkit` for the WebKit engine. All auth/connector transport is synthetic;
 these checks do not prove a physical iPhone can open an installed wallet app.
 The built-navigation check runs actual Next against a disposable offline store,
