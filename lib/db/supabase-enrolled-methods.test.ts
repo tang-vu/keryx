@@ -35,6 +35,7 @@ describe("enrolled Supabase reviewed surface", () => {
   it("refuses business aggregates until their separate sealed-domain enrollment", () => {
     expect(SUPABASE_ENROLLED_METHODS.operatorInventory).toBe("unsupported");
     expect(SUPABASE_ENROLLED_METHODS.operatorPublicSnapshot).toBe("unsupported");
+    expect(SUPABASE_ENROLLED_METHODS.listUnfinishedA2aOrders).toBe("unsupported");
   });
 
   it("registers every installation-generated domain wrapper with its exact read/write mode", () => {

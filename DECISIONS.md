@@ -7564,3 +7564,21 @@ no accepted regression policy. Dynamic reevaluation capture, real independently
 funded evaluation transport, supported-claim review, question taxonomy and the
 actual pre-deployment comparison remain open. See the
 [scope and surface boundaries](docs/engineering/purchase-outcomes-298.md).
+
+## 2026-10-11 — Inspect overdue originals through selected read-only storage
+
+Continue issue #257 with an explicit private operator command, reusing the
+existing accepted target, original-order payment reference and conservative
+creator-leg projection. Include running and failed undelivered originals;
+failure alone does not close a paid-delivery obligation. Keep observation out of
+public aggregate/MCP packets and leave customer remedies to the confirmed policy.
+
+Use the selected enrolled read-only facade, with disposal and no ordinary
+initialization/schema fallback. Bounded reads report unreadable/truncated data;
+ordinary Supabase requires exact count to expose server row caps. Native
+PostgreSQL explicitly refuses until its own sealed queue domain is accepted.
+No schedule, notification, new signer, retry, purchase, reconciliation, refund,
+hold release, production DDL or version/deployment claim is introduced. This
+gives a person a concrete original packet while preserving payment uncertainty
+and the remaining target-window/service gates. See the
+[scope and release boundaries](docs/engineering/paid-job-overdue-queue-257.md).

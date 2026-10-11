@@ -98,6 +98,7 @@ describe("ordinary Supabase exact original RPC", () => {
       { from, rpc } as unknown as ReturnType<typeof createClient>, deployment, () => deployment);
     await expect(adapter.claimNextA2aOrder("worker", "2026-10-06T03:24:02.000Z", fixture.binding)).rejects.toThrow(/not admitted/);
     await expect(adapter.hasA2aOriginalSettlement(fixture.binding)).rejects.toThrow(/not admitted/);
+    await expect(adapter.listUnfinishedA2aOrders(5)).rejects.toThrow(/not admitted/);
     expect(rpc).not.toHaveBeenCalled(); expect(from).not.toHaveBeenCalled();
   });
 });

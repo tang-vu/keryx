@@ -53,6 +53,7 @@ import { prepareBrowserAuthorizationIntent, type BrowserAuthorizationIntent, typ
 import { prepareBrowserJournal, type BrowserJournalAdmission, type BrowserJournalAdmissionResult, type BrowserAuthorizationJournal, type BrowserSignedMetadata } from "./browser-authorization-journal";
 import { recordSupabaseWithdrawal } from "./withdrawal-records";
 import crypto from "node:crypto";
+import { decodeUnfinishedA2aOrders, unfinishedA2aOrderLimit, type UnfinishedA2aOrders } from "../a2a/overdue-escalation-queue";
 import type {
   ActivationEvent,
   ActivationFunnel,
@@ -1120,6 +1121,21 @@ export class SupabaseAdapter implements KeryxDB {
     });
     if (error) throw error;
     return (data ?? []).map(rowToA2aOrder);
+  }
+
+  async listUnfinishedA2aOrders(limit: number): Promise<UnfinishedA2aOrders> {
+    // No sealed whole-queue read contract exists for the enrolled PostgreSQL domain.
+    if (this.#enrolled) throw new Error("Native PostgreSQL unfinished-order observation is not admitted");
+    const bound = unfinishedA2aOrderLimit(limit);
+    const { data, error, count } = await this.#sb.from("a2a_orders").select("*", { count: "exact" }).in("status", ["running", "failed"])
+      .order("created_at", { ascending: true }).order("id", { ascending: true }).limit(bound + 1);
+    if (error) throw error;
+    if (!Array.isArray(data) || !Number.isSafeInteger(count) || count === null || count < data.length)
+      throw new Error("Unfinished A2A order observation unavailable");
+    const read = decodeUnfinishedA2aOrders(data, bound, rowToA2aOrder);
+    // PostgREST can apply a server row cap below our requested limit. An exact count
+    // makes that incomplete read visible instead of declaring the sample exhaustive.
+    return { ...read, truncated: read.truncated || count > data.length };
   }
 
   async hasA2aOriginalSettlement(expected: A2aOriginalClaim): Promise<boolean> {
