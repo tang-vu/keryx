@@ -91,6 +91,9 @@ The local Next build is unavailable because the protected shared dependency
 junction points outside the Turbopack root. Full Desktop TypeScript is unavailable
 because the read-only local dependency set lacks `@tauri-apps/api/core`. Neither
 dependency set is changed to work around these limits.
+The documented `next build --webpack` alternative also fails on the local
+dependency set's missing `@x402/svm/exact/client` import through the wallet SDK.
+Both actual build failures remain recorded; hosted build acceptance is required.
 
 Applicable hosted aggregate, production and Desktop/platform checks must actually
 pass on the final PR source. Root review, full built signing/confirmation acceptance
