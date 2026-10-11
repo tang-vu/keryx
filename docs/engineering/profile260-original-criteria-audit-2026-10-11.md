@@ -11,10 +11,22 @@ This audit changes documentation only and grants no storage or rollout authority
 
 [PR324](https://github.com/tang-vu/keryx/pull/324) merged the profile source on
 October 9 as `e53a64843a9982bf3349420c765e23d4fd304a18`; its tested head was
-`c28a4247332362f14a45156562bffee8b7112425`. The audited October 11 candidate is
+`c28a4247332362f14a45156562bffee8b7112425`. The initial October 11 audit examined
 `343d10d0db74cfc5be43dc30f8240206b185dac5`, tree
 `f67dde609484b7ef473a88463fc176374276943a`. That starting candidate is not a
-claim of an accepted main merge or deployment.
+claim of an accepted main merge or deployment at that capture.
+
+The resumed audit is synchronized to accepted main
+`b1b431fd3ed7c8af88682fd5355bd6996a763271`, tree
+`8f220af31d309609922f42daa3dcc1956c22c43c`, after PR406/411/414 merged.
+All 21 audited profile domain/UI/fixture paths retain their original audited
+blobs at this base, so the 93 hosted historical cases below are reused with
+their original qualifications. This does not claim a new runtime test or live
+profile acceptance. The independent source review accepted the original audit
+checkpoint `effd463069c9e69c74333a1779130c5a8722224c` as source only.
+Root has frozen b1 for one app0.27.57 delivery; recorded production remains
+app0.27.56. This next-batch documentation PR remains subject to root's merge hold
+until the app0.27.57 delivery receipt.
 
 The domain schema, owner API handler, SQLite/Supabase profile helpers and original
 CRUD/collision tests retain PR324's blobs. Later verified-identity integration
@@ -24,18 +36,21 @@ audited here also retain the source blobs at recorded production app0.27.56,
 commit `437764bf5e47ef342697c04aa16087ae58b700e6`. Source presence there does
 not imply that the enrolled backend admits the capability.
 
-The current candidate's hosted jobs provide more recent applicable evidence:
+The initial candidate's hosted jobs provide applicable historical evidence:
 
 - [Checks, job114496221384](https://github.com/tang-vu/keryx/actions/runs/38148293510/job/114496221384): full app/ops TypeScript and the actual PostgreSQL17 profile migration fixture passed. The fixture records CRUD, 1201-row owner activity, concurrent unique-handle collision, reserved/URL/field refusal, private ACLs, unchanged-history deletion and enrolled refusal.
 - [Production, job114496221565](https://github.com/tang-vu/keryx/actions/runs/38148293510/job/114496221565): production builds and the current profile components with built CSS passed; the profile browser fixture covers 320/390/1366 widths, CRUD, plain text, external-link fencing, owner changes, sign-out, unavailable-store privacy and zero outbound requests.
 - [Integration, job114496221481](https://github.com/tang-vu/keryx/actions/runs/38148293510/job/114496221481): built stdio MCP profile read/update with a synthetic HTTPS bearer transport passed. It does not establish live backend or fresh installed-service acceptance.
-- The three current [unit shards](https://github.com/tang-vu/keryx/actions/runs/38148293510) passed 93 relevant cases: schema30, route20, client15, MCP6, remote-route5, SQLite7 and Supabase10. The client count includes existing verified-identity read cases; this audit claims no new identity work.
+- The three historical [unit shards](https://github.com/tang-vu/keryx/actions/runs/38148293510) passed 93 relevant cases: schema30, route20, client15, MCP6, remote-route5, SQLite7 and Supabase10. The client count includes existing verified-identity read cases; this audit claims no new identity work.
 
-These are successful individual job/step observations at the audited source.
-They do not establish all-domain acceptance for PR406: its enrolled-Supabase
-check was observed cancelled while the PR was still open. Root must establish
-the final accepted source and merge separately. No build, PostgreSQL fixture,
-provider trial or global study was replayed for this documentation audit.
+These are successful individual job/step observations at the initial audited
+source. At that capture, PR406 was open and its enrolled-Supabase check was
+cancelled; that historical run remains cancelled. PR406 subsequently merged on
+October 11 at 16:48:37 UTC as `46d265deb520476730d2cdcc4da51bf94cc8781b`,
+from final head `efdf7b3ab8af660f017e387334ad02b935b9b27e`. Its later acceptance
+does not relabel the earlier run or establish production profile admission.
+No build, PostgreSQL fixture, provider trial or global study was replayed for
+this documentation audit.
 
 ## Original criteria mapped to current code
 
@@ -64,15 +79,22 @@ funding identity. Recorded payment evidence is not independent reconciliation.
 | Extensions, bots, OpenAI/A2A research, exports and receipts | Intentional research roles carry no profile fields or implicit profile scopes. They neither publish private fields nor infer source/payout authority. No new identity connection or user-facing action was performed. |
 
 Verified identity #265, public publication #264 and ownership/history #261/#262
-remain separate outcomes. This audit preserves their source and existing holds.
+remain separate outcomes. The owner-selected #266 policy makes all historical
+runs unlisted, new authenticated owned runs private by default with explicit
+owner publication, and new anonymous/unowned runs unlisted until proven ownership.
+That policy is source only; shared production DDL/backfill and live activation
+remain held. It does not publish profile assertions or infer ownership of old
+runs. This audit preserves those separate source and delivery boundaries.
 Profile deletion can remove profile-linked identity metadata through existing
 domain foreign keys; it cannot rewrite original payment or settlement records.
 
 ## Concrete remaining delivery gates
 
-1. Root establishes accepted main and the exact source/CI provenance before
-   integrating this audit. The worker must sync actual main after PR406's merge;
-   its starting candidate is insufficient.
+1. Main synchronization is satisfied at b1. This focused documentation PR still
+   requires its own actual prose-lane aggregate and applicable checks; the
+   historical runtime evidence above is not this PR's CI acceptance. Root owns
+   review and merge, and holds next-batch merges until the app0.27.57 delivery
+   receipt. Documentation/source acceptance cannot activate the profile domain.
 2. A separately reviewed profile-domain admission must cover the actual enrolled
    SQLite/native or Supabase backend: schema/identity/provenance, bounded method
    authority, private ACLs, atomic collisions, ownership and history-preserving
