@@ -13,7 +13,7 @@ import { preparationEnvironment } from './prepare-immutable-release.mjs';
 const program = `
   const { pathToFileURL } = await import('node:url');
   const { startNextPublicServer, installNextPublicShutdown } = await import(pathToFileURL(process.argv[1]));
-  const running = await startNextPublicServer({ dir: process.argv[2], port: 3940 });
+  const running = await startNextPublicServer({ dir: process.argv[2], port: 3940, useBuildConfig: true });
   installNextPublicShutdown(running);
   process.on('message', message => { if (message === 'drain') process.emit('SIGTERM'); });
   process.send({ ...running.receipt, source: process.argv[2] });

@@ -34,7 +34,7 @@ test('pinned production Next sees public HTTPS origin on a private ephemeral soc
   const priorMode = process.env.NODE_ENV;
   const priorDist = process.env.NEXT_DIST_DIR;
   process.env.NODE_ENV = 'production';
-  process.env.NEXT_DIST_DIR = '.next.tmp';
+  process.env.NEXT_DIST_DIR = '.next';
   try {
     await symlink(modules, join(dir, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
     await writeFile(join(dir, 'package.json'), JSON.stringify({ name: 'keryx-public-origin-fixture', private: true }));
@@ -92,18 +92,29 @@ export async function GET(request){
     await closing;
     assert.equal(running.server.listening, false);
     running = null;
+    // The immutable launcher must use its completed build from an operational
+    // storage cwd, while ordinary startup above keeps loading source config.
+    const storage = join(dir, 'isolated-runtime-storage');
+    await mkdir(storage);
+    const priorCwd = process.cwd();
+    try {
+      process.chdir(storage);
+      running = await startNextPublicServer({ dir, port: 0, useBuildConfig: true });
+    } finally { process.chdir(priorCwd); }
+    assert.equal((await get(running.receipt.physicalPort)).status, 200);
+    await running.close(); running = null;
     if (process.platform !== 'win32') {
       // POSIX SIGTERM exercises the actual supported shutdown in a separate process.
       // Use an ephemeral socket; a live QA instance may already own port 3940.
       // Windows child.kill is
       // forceful, so it must never stand in for this graceful-exit evidence.
       const entry = `import {startNextPublicServer,installNextPublicShutdown} from ${JSON.stringify(new URL('./next-public-server.mjs', import.meta.url).href)};
-const running=await startNextPublicServer({port:0});
+const running=await startNextPublicServer({dir:${JSON.stringify(dir)},port:0,useBuildConfig:true});
 installNextPublicShutdown(running);
 console.log(JSON.stringify(running.receipt));
 setInterval(()=>{},60000);`;
       const child = spawn(process.execPath, ['--input-type=module', '-e', entry], {
-        cwd: dir, env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' }, stdio: ['ignore', 'pipe', 'pipe'],
+        cwd: storage, env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' }, stdio: ['ignore', 'pipe', 'pipe'],
       });
       const exited = new Promise((accept, reject) => {
         child.once('error', reject);

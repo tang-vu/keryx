@@ -11,7 +11,7 @@ if (process.argv.length !== 4 || process.argv[2] !== '--port' || process.argv[3]
     process.cwd() !== '/root/keryx' || process.env.KERYX_COMMIT !== source.split('/').at(-2)) {
   console.error('IMMUTABLE_PUBLIC_SERVER_BINDING_REFUSED'); process.exitCode = 1;
 } else {
-  startNextPublicServer({ dir: source, port: 3939 }).then(running => {
+  startNextPublicServer({ dir: source, port: 3939, useBuildConfig: true }).then(running => {
     installNextPublicShutdown(running);
     console.log(JSON.stringify({ ...running.receipt, commit: process.env.KERYX_COMMIT,
       buildId: readFileSync(path.join(source, '.next', 'BUILD_ID'), 'utf8').trim() }));

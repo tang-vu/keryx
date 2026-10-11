@@ -351,6 +351,13 @@ directory reference counts and bounds its encoded receipt to the verifier's
 16 KiB limit. Retained v1 receipts stay under their original verifier/evidence;
 they cannot be relabeled as current v2 acceptance.
 
+The immutable web launcher and actual rehearsal load Next's serialized completed
+build configuration from `.next/required-server-files.json`, which is included in
+artifact inspection. Next's documented custom-server `conf` input keeps startup
+independent of TypeScript config import resolution from the operational storage
+cwd. Missing, linked, oversized or incompatible build configuration refuses;
+ordinary public-server startup keeps its existing config-loading behavior.
+
 The rehearsal keeps a synthetic reader running against the predecessor while it
 prepares and inspects the candidate, then positively exits that reader, rechecks
 the candidate, starts a replacement and reverses the switch. It checks unchanged
