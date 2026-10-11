@@ -112,8 +112,9 @@ export function WalletMenu() {
   // those few hundred milliseconds would be a lie that then flips — show a neutral chip instead.
   if (!hydrated || ((status === "reconnecting" || status === "connecting") && !session)) {
     return (
-      <span className={`${CHIP} cursor-default opacity-70`} aria-busy>
-        <Wallet className="h-3.5 w-3.5" />{copy("walletMenu.wallet")}</span>
+      <span className={`${CHIP} cursor-default opacity-70`} role="status" aria-busy>
+        {status === "connecting" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wallet className="h-3.5 w-3.5" />}
+        {copy(status === "connecting" ? "walletMenu.connecting" : "walletMenu.wallet")}</span>
     );
   }
 
@@ -129,6 +130,7 @@ export function WalletMenu() {
           <ChevronDown className="h-3.5 w-3.5 text-ink-3" />
         </DropdownMenuTrigger>
         <DropdownMenuContent
+          data-site-header-wallet
           align="end"
           className="min-w-[200px] rounded-none border-ink bg-paper p-1 font-mono text-[11px] uppercase tracking-[0.1em]"
         >
@@ -208,6 +210,7 @@ export function WalletMenu() {
           {!busy && !loading && <ChevronDown className="h-3.5 w-3.5 text-ink-3" />}
         </DropdownMenuTrigger>
         <DropdownMenuContent
+          data-site-header-wallet
           align="end"
           className="min-w-[200px] rounded-none border-ink bg-paper p-1 font-mono text-[11px] uppercase tracking-[0.1em]"
         >
@@ -237,6 +240,7 @@ export function WalletMenu() {
         <Wallet className="h-3.5 w-3.5" />{copy("walletMenu.connectWallet")}<ChevronDown className="h-3.5 w-3.5 text-ink-3" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
+        data-site-header-wallet
         align="end"
         className="w-[260px] rounded-none border-ink bg-paper p-3"
       >

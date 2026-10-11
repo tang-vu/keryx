@@ -20,6 +20,7 @@ export const shellMessages = Object.freeze({
   "shellHeader.mobileNavigation": "Mobile navigation",
   "shellHeader.explore": "Explore",
   "shellHeader.moreTools": "More tools",
+  "shellHeader.loadingPage": "Loading page…",
   "shellFooter.publicProof": "Public proof",
   "shellFooter.businessCalculator": "Business calculator",
   "shellFooter.remoteMcp": "Remote MCP",

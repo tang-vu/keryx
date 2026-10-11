@@ -7546,3 +7546,16 @@ check back into a Keryx assertion. The ledger step restates receipt figures and
 declines to state a margin. The live sponsored run, replay and limit
 demonstrations stay gated; see the
 [criteria status](docs/engineering/recorded-walkthrough-305.md).
+
+**Keep mobile wallet intent across browser portals — 2026-10-12.**
+
+Safari touch events exposed a lifetime bug in the header: a body-portaled wallet
+choice was treated as outside the mobile menu and unmounted before click. Mark
+header wallet portals and retain the mobile wallet control after its first opening,
+using native hidden state for menu visibility. An external SDK modal can dismiss
+that outer menu without destroying the selected wallet's one-time SIWE intent.
+Handle connection outcomes through their promise so picker removal cannot suppress
+errors. Add loading shells only to the public data pages that have no nested page
+routes; preserve private document bootstraps and existing not-found boundaries.
+See [iPhone header repair](docs/engineering/iphone-header-2026-10-12.md) for surface
+boundaries and separate browser, deployment and physical-device acceptance gates.

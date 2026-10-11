@@ -281,6 +281,7 @@ export const englishMessages = Object.freeze({
   "privateProfile.activityBoundary": "Derived from dispatches attributed to this wallet in this store, including recorded simulations in dispatch counts. Attribution does not establish who funded a run. Anonymous and historical archive activity are excluded. Up to 12 recorded topics are shown. Creator counts require recorded settlement evidence; they do not independently reconcile Circle.",
   "walletMenu.welcomeBack": "Welcome back",
   "walletMenu.wallet": "Wallet",
+  "walletMenu.connecting": "Connecting…",
   "walletMenu.addressCopied": "Address copied",
   "walletMenu.copyAddress": " Copy address",
   "walletMenu.ledger": " Ledger",

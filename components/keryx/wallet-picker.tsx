@@ -49,8 +49,8 @@ interface Props {
 const ROW =
   "flex w-full items-center gap-3 border border-ink bg-paper px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-ink transition-all hover:-translate-y-0.5 hover:bg-seal hover:text-cream hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none";
 
-export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Props) {
-  const { connect, connectors, isPending } = useConnect();
+export function WalletPicker({ isBusy, onConnected, onSelect }: Props) {
+  const { connectAsync, connectors, isPending } = useConnect();
   const hydrated = useSyncExternalStore(subscribeHydration, clientSnapshot, serverSnapshot);
   const busy = isBusy || isPending;
 
@@ -81,15 +81,12 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
     onSelect?.();
     // Surface connect failures — a missing provider / closed modal would otherwise
     // fail silently and look like "nothing happens". User-cancelled is not an error.
-    connect(
-      { connector },
-      {
-        onError: (err) => {
-          const msg = err instanceof Error ? err.message : copy("walletPicker.connectFailed");
-          if (!/reject|denied|cancel|closed/i.test(msg)) toast.error(msg);
-        },
-      },
-    );
+    // The header closes (and unmounts) this picker on selection. Mutation callback
+    // options stop receiving results after unmount; handle the promise directly.
+    void connectAsync({ connector }).then(onConnected).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : copy("walletPicker.connectFailed");
+      if (!/reject|denied|cancel|closed/i.test(msg)) toast.error(msg);
+    });
   };
 
   // Browser-only WalletConnect and injected discovery can differ from SSR.
@@ -101,7 +98,7 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
   if (injectedWallets.length === 0 && !showMetaMask && !walletConnectConn) {
     return (
       <div className="space-y-3">
-        <CircleGoogleWalletButton disabled={busy} onSelect={onSelect} onConnected={_onConnected} />
+        <CircleGoogleWalletButton disabled={busy} onSelect={onSelect} onConnected={onConnected} />
         <div className="flex items-start gap-3 border border-ink/40 bg-paper-2 px-4 py-3.5">
           <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" />
           <p className="font-mono text-[11px] leading-relaxed text-ink-2">{copy("walletPicker.notDetected")}</p>
@@ -113,7 +110,7 @@ export function WalletPicker({ isBusy, onConnected: _onConnected, onSelect }: Pr
 
   return (
     <div className="space-y-2">
-      <CircleGoogleWalletButton disabled={busy} onSelect={onSelect} onConnected={_onConnected} />
+      <CircleGoogleWalletButton disabled={busy} onSelect={onSelect} onConnected={onConnected} />
       {injectedWallets.map((connector) => (
         <button
           key={connector.id}
