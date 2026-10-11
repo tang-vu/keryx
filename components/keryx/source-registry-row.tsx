@@ -5,6 +5,8 @@
  * the earnings figure is the lifetime total of real settled payments.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
 import { Link2, ShieldAlert, ShieldCheck } from "lucide-react";
 import { fmtUsdc } from "./phase-style";
@@ -13,12 +15,15 @@ import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import type { SourceClaim } from "@/lib/sources/public-source-claim";
 import { publisherControlLabel, safePublisherUrl } from "@/lib/sources/source-display";
 
+const copy = createMessages("en");
+const richCopy = createRichMessages("en");
+
 const EXPLORER = browserPaymentProfile().explorerUrl;
 
 /** Preview-depth footnote — only levels that differ from the default earn a mention. */
 const PREVIEW_NOTE: Record<string, string> = {
-  excerpt: "excerpt preview",
-  locked: "titles-only preview",
+  excerpt: copy("sourceRegistry.excerpt"),
+  locked: copy("sourceRegistry.locked"),
 };
 
 function domainOf(url: string): string {
@@ -65,7 +70,7 @@ export function SourceRegistryRow({ source: s, totalEarnedUsdc, citationCount, c
           )}
         </div>
         <span className="shrink-0 rounded-md bg-seal/10 px-2 py-0.5 font-mono text-xs font-semibold text-seal">
-          {claim ? "Registry toll: " : ""}${fmtUsdc(s.fetchPrice)} / read
+          {copy(claim ? "sourceRegistry.claimToll" : "sourceRegistry.toll", { amount: fmtUsdc(s.fetchPrice) })}
         </span>
       </div>
 
@@ -74,9 +79,8 @@ export function SourceRegistryRow({ source: s, totalEarnedUsdc, citationCount, c
           {s.description}
         </p>
       )}
-      {claimPolicyUnavailable ? <p className="mt-3 text-sm text-seal">Claim policy unavailable. New claimed-source payments are withheld.</p> : claim && <p className="mt-3 text-sm text-ink-2">
-        {claim.mode === "free" ? "Free policy · no creator rewards." : !controlFresh ? "Claim control expired · earning eligibility paused." : !claim.distributionPermission ? "Distribution consent unavailable · earnings disabled." : claim.mode === "citation-only" ? "Citation-only policy · zero-price reads and qualified citation rewards." : "Paid policy · selected paid reads and qualified citation rewards."}{" "}
-        <Link href={`/claim-source?claimId=${encodeURIComponent(claim.id)}`} className="underline">Inspect source claim</Link>
+      {claimPolicyUnavailable ? <p className="mt-3 text-sm text-seal">{copy("sourceRegistry.policyUnavailable")}</p> : claim && <p className="mt-3 text-sm text-ink-2">
+        {richCopy(claim.mode === "free" ? "sourceRegistry.policy.free" : !controlFresh ? "sourceRegistry.policy.expired" : !claim.distributionPermission ? "sourceRegistry.policy.noConsent" : claim.mode === "citation-only" ? "sourceRegistry.policy.citation" : "sourceRegistry.policy.paid", { inspect: <Link href={`/claim-source?claimId=${encodeURIComponent(claim.id)}`} className="underline">{copy("sourceRegistry.inspectClaim")}</Link> })}
       </p>}
 
       <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-ink-3">
@@ -86,45 +90,45 @@ export function SourceRegistryRow({ source: s, totalEarnedUsdc, citationCount, c
               href={`${EXPLORER}/tx/${s.registerTx}`}
               target="_blank"
               rel="noopener noreferrer"
-              title="On-chain listing and payout terms; registration does not prove publisher control — opens the register() transaction"
+              title={copy("sourceRegistry.registerTransactionTitle")}
               className="inline-flex items-center gap-1 transition-colors hover:underline"
             >
               <Link2 className="h-3 w-3" />
-              Registered on-chain ↗
+              {copy("sourceRegistry.registeredLink")}
             </a>
           ) : (
             <span
-              title="On-chain listing and payout terms; registration does not prove publisher control"
+              title={copy("sourceRegistry.registeredTitle")}
               className="inline-flex items-center gap-1"
             >
               <Link2 className="h-3 w-3" />
-              Registered on-chain
+              {copy("sourceRegistry.registered")}
             </span>
           ))}
         {claimPolicyUnavailable ? (
-          <span className="inline-flex items-center gap-1 text-ink-3"><ShieldAlert className="h-3 w-3" />Publisher control unavailable</span>
+          <span className="inline-flex items-center gap-1 text-ink-3"><ShieldAlert className="h-3 w-3" />{copy("sourceRegistry.controlUnavailable")}</span>
         ) : claim ? (
-          <span className={`inline-flex items-center gap-1 ${controlFresh ? "text-paid" : "text-amber-700"}`} title="Source control does not establish authorship, content accuracy or distribution rights">
+          <span className={`inline-flex items-center gap-1 ${controlFresh ? "text-paid" : "text-amber-700"}`} title={copy("sourceRegistry.controlTitle")}>
             {controlFresh ? <ShieldCheck className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
             {controlLabel}
           </span>
         ) : s.verified === false ? (
           <span
-            title="This listing has not passed its publisher-control check. It remains visible; creator reading and payment eligibility are withheld."
+            title={copy("sourceRegistry.unverifiedTitle")}
             className="inline-flex items-center gap-1 text-amber-700"
           >
             <ShieldAlert className="h-3 w-3" />
-            Publisher control unverified
+            {copy("sourceRegistry.unverified")}
           </span>
         ) : (
           <span>{controlLabel}</span>
         )}
         {totalEarnedUsdc !== null && totalEarnedUsdc > 0 && (
           <span className="text-paid">
-            ${fmtUsdc(totalEarnedUsdc)} settled earnings{citationCount !== null ? ` · ${citationCount} cite${citationCount !== 1 ? "s" : ""}` : " · citation count unavailable"}
+            {citationCount !== null ? copy(citationCount === 1 ? "sourceRegistry.earnings.one" : "sourceRegistry.earnings.other", { amount: fmtUsdc(totalEarnedUsdc), count: citationCount }) : copy("sourceRegistry.earningsUnknown", { amount: fmtUsdc(totalEarnedUsdc) })}
           </span>
         )}
-        {totalEarnedUsdc === null && <span>Settled earnings unavailable</span>}
+        {totalEarnedUsdc === null && <span>{copy("sourceRegistry.earningsUnavailable")}</span>}
         {previewNote && <span>{previewNote}</span>}
         {s.tags.slice(0, 3).map((t) => (
           <span key={t} className="rounded border border-line bg-paper-2 px-1.5 py-0.5 normal-case tracking-normal">

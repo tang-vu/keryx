@@ -1,3 +1,4 @@
+import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BadgeDollarSign, Clock3, ExternalLink, FileCheck2, ShieldCheck } from "lucide-react";
@@ -8,11 +9,13 @@ import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { getDb } from "@/lib/db";
 import { listArticleMarket } from "@/lib/offers/offer-book";
 
+const copy = createMessages("en");
+
 export const dynamic = "force-dynamic";
 
-const TITLE = "Article market — exact work, visible price";
+const TITLE = copy("sourceMarket.title");
 const DESCRIPTION =
-  "Browse exact article versions Keryx can buy through x402, including publisher-signed temporary offers.";
+  copy("sourceMarket.description");
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -34,47 +37,46 @@ export default async function MarketPage({
       <SiteHeader />
       <main className="mx-auto max-w-[1080px] px-4 pb-20 pt-12 sm:px-[30px]">
         <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-          Open article market
+          {copy("sourceMarket.kicker")}
         </div>
         <div className="grid gap-6 border-b border-line pb-8 md:grid-cols-[1fr_320px] md:items-end">
           <div>
             <h1 className="max-w-3xl font-display text-[clamp(34px,6vw,66px)] font-semibold leading-[0.96] tracking-[-0.04em] text-ink">
-              Exact work. Visible price. No mystery bundle.
+              {copy("sourceMarket.heading")}
             </h1>
             <p className="mt-5 max-w-2xl font-serif text-[16px] leading-relaxed text-ink-2">
-              Every row names the article version the agent can inspect, its registry ceiling, and
-              any temporary discount the publisher signed. Payment still settles to the registry payee.
+              {copy("sourceMarket.intro")}
             </p>
           </div>
           <form action="/market" className="border border-line bg-paper p-3">
             <label htmlFor="market-query" className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-              Search free metadata
+              {copy("sourceMarket.search")}
             </label>
             <div className="mt-2 flex gap-2">
               <input
                 id="market-query"
                 name="q"
                 defaultValue={query}
-                placeholder="stablecoins, agents, x402…"
+                placeholder={copy("sourceMarket.placeholder", { protocol: "x402" })}
                 className="min-w-0 flex-1 border border-line bg-paper-2 px-3 py-2 font-serif text-sm outline-none focus:border-seal"
               />
               <button className="border border-ink bg-ink px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-cream">
-                Find
+                {copy("sourceMarket.find")}
               </button>
             </div>
           </form>
         </div>
 
         <div className="my-5 flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-          <span>{entries.length} payable article versions</span>
+          <span>{copy(entries.length === 1 ? "sourceMarket.versions.one" : "sourceMarket.versions.other", { count: entries.length })}</span>
           <span>·</span>
-          <span className="text-paid">{signed} signed offers</span>
-          {query && <span>· matching “{query}”</span>}
+          <span className="text-paid">{copy(signed === 1 ? "sourceMarket.offers.one" : "sourceMarket.offers.other", { count: signed })}</span>
+          {query && <span>{copy("sourceMarket.matching", { query })}</span>}
         </div>
 
         {entries.length === 0 ? (
           <div className="border border-line bg-paper p-10 text-center font-serif text-ink-2">
-            No payable article metadata matched this search.
+            {copy("sourceMarket.empty")}
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
@@ -87,15 +89,15 @@ export default async function MarketPage({
                   <div className="flex flex-wrap justify-end gap-1.5">
                     {entry.contentReceipt?.manifestId && entry.contentReceipt.deliveryKind === "full_text" && (
                       <span className="inline-flex items-center gap-1 border border-seal/30 bg-seal/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em] text-seal">
-                        <FileCheck2 className="h-3 w-3" /> signed full text
+                        <FileCheck2 className="h-3 w-3" /> {copy("sourceMarket.fullText")}
                       </span>
                     )}
                     {entry.offer ? (
                       <span className="inline-flex items-center gap-1 border border-paid/30 bg-paid/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em] text-paid">
-                        <ShieldCheck className="h-3 w-3" /> signed −{entry.savingsPercent}%
+                        <ShieldCheck className="h-3 w-3" /> {copy("sourceMarket.discount", { percent: entry.savingsPercent })}
                       </span>
                     ) : (
-                      <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-ink-3">registry price</span>
+                      <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-ink-3">{copy("sourceMarket.registryPrice")}</span>
                     )}
                   </div>
                 </div>
@@ -112,7 +114,7 @@ export default async function MarketPage({
                     <div>
                       <p className="font-display text-2xl font-semibold text-ink">${fmtUsdc(entry.priceUsdc)}</p>
                       {entry.offer && (
-                        <p className="font-mono text-[9px] text-ink-3 line-through">list ${fmtUsdc(entry.listPriceUsdc)}</p>
+                        <p className="font-mono text-[9px] text-ink-3 line-through">{copy("sourceMarket.listPrice", { price: fmtUsdc(entry.listPriceUsdc) })}</p>
                       )}
                     </div>
                     <a
@@ -121,7 +123,7 @@ export default async function MarketPage({
                       rel="noreferrer"
                       className="inline-flex items-center gap-1.5 border border-ink px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-ink hover:bg-ink hover:text-cream"
                     >
-                      Inspect x402 <ExternalLink className="h-3 w-3" />
+                      {copy("sourceMarket.inspect", { protocol: "x402" })} <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2 font-mono text-[9px] text-ink-3">
@@ -129,8 +131,8 @@ export default async function MarketPage({
                     {entry.offer && (
                       <>
                         <span>·</span>
-                        <Clock3 className="h-3 w-3" /> until {new Date(entry.offer.expiresAt * 1_000).toLocaleDateString("en-US", { timeZone: "UTC" })}
-                        <span>· signer {shortAddr(entry.offer.signer)}</span>
+                        <Clock3 className="h-3 w-3" /> {copy("sourceMarket.until", { date: new Date(entry.offer.expiresAt * 1_000).toLocaleDateString("en-US", { timeZone: "UTC" }) })}
+                        <span>{copy("sourceMarket.signer", { signer: shortAddr(entry.offer.signer) })}</span>
                       </>
                     )}
                   </div>
