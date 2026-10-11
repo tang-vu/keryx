@@ -60,7 +60,11 @@ try {
   evidence.artifact = { ...staged, ...artifact };
   evidence.runtime = await rehearsePreparedRelease({ ...staged, artifactInspectionSha256: artifact.artifactInspectionSha256 });
   console.log(JSON.stringify(evidence));
-} catch (error) { evidence.error = error.message; console.error(JSON.stringify(evidence)); process.exitCode = 1; }
+} catch (error) {
+  evidence.error = error.message;
+  evidence.runtimeFailure = error.rehearsal ?? null;
+  console.error(JSON.stringify(evidence)); process.exitCode = 1;
+}
 finally {
   const file = process.env.KERYX_RELEASE_REHEARSAL_RESULT || path.join(root, 'result.json');
   fs.writeFileSync(file, JSON.stringify(evidence) + '\n', { flag: 'wx', mode: 0o600 });

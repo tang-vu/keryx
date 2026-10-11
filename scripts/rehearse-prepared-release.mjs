@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { verifyImmutableArtifact } from './immutable-release-staging.mjs';
 import { preparationEnvironment } from './prepare-immutable-release.mjs';
@@ -24,7 +25,8 @@ export async function startPreparedPublicRole(source, env, scratch, label, spawn
     cwd: scratch, env, stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true,
   });
   let output = '';
-  const log = fs.openSync(path.join(scratch, `${label}.log`), 'wx', 0o600);
+  const logFile = path.join(scratch, `${label}.log`);
+  const log = fs.openSync(logFile, 'wx', 0o600);
   for (const stream of [child.stdout, child.stderr]) stream.on('data', bytes => {
     // Keep diagnostics bounded without terminating a role to truncate a log.
     const remaining = 4 * 1024 * 1024 - output.length;
@@ -45,7 +47,14 @@ export async function startPreparedPublicRole(source, env, scratch, label, spawn
   exited.catch(() => {});
   const ready = await Promise.race([
     new Promise(resolve => child.once('message', resolve)),
-    exited.then(() => { throw Error('Prepared public server exited before readiness; inspect its output'); }),
+    exited.then(exit => {
+      const bytes = fs.readFileSync(logFile); // close/pipe EOF already established.
+      const error = Error('Prepared public server exited before readiness; inspect its retained output');
+      error.rehearsal = { phase: 'before-readiness', exit, source, logFile,
+        outputBytes: bytes.length, outputSha256: createHash('sha256').update(bytes).digest('hex'),
+        outputTail: bytes.subarray(-8192).toString('utf8') };
+      throw error;
+    }),
   ]);
   assert.equal(ready.ready, true); assert.equal(ready.source, source);
   assert.equal(ready.physicalHost, '127.0.0.1'); assert.equal(ready.physicalPort, 3940);

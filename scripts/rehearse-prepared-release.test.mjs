@@ -5,6 +5,7 @@ import path from 'node:path';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
+import { createHash } from 'node:crypto';
 import { startPreparedPublicRole } from './rehearse-prepared-release.mjs';
 
 test('rehearsal retains final drain output after exit and completes only after pipe close', async t => {
@@ -30,4 +31,17 @@ test('rehearsal retains final drain output after exit and completes only after p
   const expected = 'before exit\n' + closed + '\nlate stderr\n';
   assert.equal(role.output(), expected);
   assert.equal(fs.readFileSync(path.join(scratch, 'late-pipes.log'), 'utf8'), expected);
+
+  const failing = new EventEmitter(); failing.stdout = new PassThrough(); failing.stderr = new PassThrough();
+  const refused = startPreparedPublicRole(source, {}, scratch, 'before-ready', () => failing);
+  const verifiedFailure = assert.rejects(refused, error => {
+    const output = 'synthetic startup failure\nlate diagnostic\n';
+    assert.deepEqual(error.rehearsal.exit, { code: 7, signal: null });
+    assert.equal(error.rehearsal.outputTail, output);
+    assert.equal(error.rehearsal.outputSha256, createHash('sha256').update(output).digest('hex'));
+    return true;
+  });
+  failing.stderr.write('synthetic startup failure\n'); failing.emit('exit', 7, null);
+  failing.stderr.write('late diagnostic\n'); failing.stdout.end(); failing.stderr.end(); failing.emit('close', 7, null);
+  await verifiedFailure;
 });
