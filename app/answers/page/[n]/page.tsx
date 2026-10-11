@@ -18,6 +18,7 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { ArchiveIndexView } from "@/components/keryx/archive-index-view";
 import { archiveIndexJsonLd } from "../../archive-index-json-ld";
 import { safeInlineJson } from "@/lib/safe-json";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 
 const copy = createMessages("en");
 
@@ -58,7 +59,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: answersPagePath(slice.page) },
+    alternates: englishPublicAlternates(answersPagePath(slice.page)),
     openGraph: {
       title,
       description,

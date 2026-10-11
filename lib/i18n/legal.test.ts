@@ -48,7 +48,7 @@ describe("exact English legal page catalogue", () => {
     expect(createMessages("en")("legal.terms.metadataTitle")).toBe("Terms of service — Keryx");
   });
   for (const network of ["arc", "arcTestnet"] as const) for (const area of ["privacy", "terms"] as const) {
-    it(`${area} on ${network} retains complete markup, metadata, headings and link actions`, async () => {
+    it(`${area} on ${network} retains complete markup, headings, link actions and metadata with English alternates`, async () => {
       const [base, candidate] = await Promise.all([compiledPage(area, "base", network), compiledPage(area, "candidate", network)]);
       const before = renderToStaticMarkup(createElement(base.default)), after = renderToStaticMarkup(createElement(candidate.default));
       // Keep the original extraction fixture frozen. Only the reviewed extension
@@ -68,7 +68,10 @@ describe("exact English legal page catalogue", () => {
         expect(extension).not.toContain("only time a page URL leaves");
         expect(extension).not.toContain("holds only the hand-off");
       } else expect(after).toBe(before);
-      expect(candidate.metadata).toEqual(base.metadata);
+      const originalMetadata = base.metadata as { alternates: { canonical: string } };
+      expect(candidate.metadata).toEqual({ ...originalMetadata,
+        alternates: { ...originalMetadata.alternates, languages: { "x-default": `/${area}`, en: `/${area}` } },
+      });
       expect((after.match(/<main\b/g) ?? []).length).toBe(1); expect((after.match(/<h1\b/g) ?? []).length).toBe(1);
       expect((after.match(/<h2\b/g) ?? []).length).toBe(area === "privacy" ? 11 : 6);
       const links = (html: string) => [...html.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>/g)].map(match => match[0]);
@@ -81,7 +84,8 @@ describe("exact English legal page catalogue", () => {
         const label = `${area}-${network}`;
         writeFileSync(path.join(evidenceDirectory, `${label}-base.html`), before, { flag: "wx" });
         writeFileSync(path.join(evidenceDirectory, `${label}-candidate.html`), after, { flag: "wx" });
-        writeFileSync(path.join(evidenceDirectory, `${label}.json`), JSON.stringify({ area, network, exactHtml: area === "terms", reviewedExtensionPolicyDelta: area === "privacy", exactMetadata: true,
+        writeFileSync(path.join(evidenceDirectory, `${label}.json`), JSON.stringify({ area, network, exactHtml: area === "terms", reviewedExtensionPolicyDelta: area === "privacy", exactMetadata: false,
+          metadataDelta: "English canonical preserved; en/x-default alternates added",
           baseSourceSha256: hash(base.source), candidateSourceSha256: hash(candidate.source), htmlSha256: hash(after),
           baseCompiledSha256: hash(base.compiled), candidateCompiledSha256: hash(candidate.compiled), metadata: candidate.metadata,
           links: links(after), boundary: "Actual legal page, real React/Next Link, unchanged shell fixtures, actual pinned network helper. No CSS/pixel/Next boot acceptance." }, null, 2) + "\n", { flag: "wx" });

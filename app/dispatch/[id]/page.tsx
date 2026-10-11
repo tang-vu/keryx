@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   try {
     const dispatch = await resolveDispatch(id);
-    if (!dispatch) return { title: copy("reportDispatch.notFound") };
+    if (!dispatch) return { title: copy("reportDispatch.notFound"), robots: { index: false } };
     const { run, archive } = dispatch;
     const snippet = run.answer.slice(0, 160).replace(/\n/g, " ");
     const cited = run.citations.length;
@@ -77,7 +77,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       },
     };
   } catch {
-    return { title: copy("reportDispatch.fallbackTitle") };
+    return { title: copy("reportDispatch.fallbackTitle"), robots: { index: false } };
   }
 }
 

@@ -24,6 +24,18 @@ export function publicLocaleAlternates(canonical: string, published: Partial<Rec
   return { canonical: path, languages };
 }
 
+/** Existing interface pages ship English only. Preferences cannot create public variants. */
+export function englishPublicAlternates(path: string) {
+  return publicLocaleAlternates(path, { en: path });
+}
+
+/** Sitemap links must be absolute; share the same admitted variants as the page head. */
+export function englishSitemapAlternates(path: string, base: string) {
+  const { languages } = englishPublicAlternates(path);
+  return { languages: Object.fromEntries(Object.entries(languages)
+    .map(([language, url]) => [language, new URL(url, base).href])) };
+}
+
 export interface ReportLanguageInput {
   id: string;
   visibility: "public" | "unlisted" | "private" | "unknown";

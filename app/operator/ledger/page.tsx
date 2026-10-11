@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { OperatorLedgerView } from "@/components/keryx/operator-ledger-view";
 import { createMessages } from "@/lib/i18n/messages";
 
 const message = createMessages("en");
-export const metadata: Metadata = { title: message("jobLedger.title"), description: message("jobLedger.description") };
+export const metadata: Metadata = { title: message("jobLedger.title"), description: message("jobLedger.description"), alternates: englishPublicAlternates("/operator/ledger") };
 
 export default function PublicJobLedgerPage() {
   return <div className="min-h-screen bg-paper-2 text-ink">

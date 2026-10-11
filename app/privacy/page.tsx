@@ -6,6 +6,7 @@
  */
 
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
@@ -24,7 +25,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: "/privacy" },
+  alternates: englishPublicAlternates("/privacy"),
 };
 
 const UPDATED = "October 11, 2026";

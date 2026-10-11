@@ -1,5 +1,7 @@
 import { createMessages } from "@/lib/i18n/messages";
 import { getDb } from "@/lib/db";
+import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { loadSourceDirectory, unavailableSourceDirectory } from "@/lib/sources/source-directory";
 import { DashboardView } from "@/components/keryx/dashboard-view";
 import { SourceDirectoryPreview } from "@/components/keryx/source-directory-preview";
@@ -9,6 +11,7 @@ import { HistoricalHistorySection } from "@/components/keryx/testnet-history-sum
 const uiCopy = createMessages("en");
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { alternates: englishPublicAlternates("/dashboard") };
 
 async function SourceDirectorySection() {
   const directory = await getDb().then(loadSourceDirectory).catch(unavailableSourceDirectory);

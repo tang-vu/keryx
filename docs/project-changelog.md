@@ -8,10 +8,10 @@
   supported siblings and targeted factual gaps. The retained original NASA lesson
   replay uses genuine source bytes with explicitly synthetic planning and review;
   arbitrary unglossed translation and ordinary live usefulness remain unproven.
-- Coordinate reviewed English SEO/JSON-LD metadata and locally bundled licensed
-  fonts for multilingual and math Open Graph previews in the final same-PR batch.
-  Include the metadata test initialization correction before final hosted
-  validation. These pending integration items enable no locale or glossary.
+- Integrate accepted English SEO/JSON-LD metadata and locally bundled licensed
+  fonts for multilingual and math Open Graph previews, including the reviewed
+  SQLite fixture initialization-order correction. This source integration enables no
+  locale or glossary; final combined hosted validation and delivery remain gates.
 - Prepare app/OpenAPI **0.27.57** and hosted MCP **0.3.15**. Stdio/official Registry
   **0.4.16**, Desktop **0.4.15** and extension **0.1.4.1** retain their genuine
   published source provenance because their client inputs are unchanged. Fresh

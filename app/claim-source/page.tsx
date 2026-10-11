@@ -1,6 +1,7 @@
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { getDb } from "@/lib/db";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
@@ -11,7 +12,7 @@ const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: uiCopy("sourceClaimPage.title"), description: uiCopy("sourceClaimPage.description") };
+export const metadata: Metadata = { title: uiCopy("sourceClaimPage.title"), description: uiCopy("sourceClaimPage.description"), alternates: englishPublicAlternates("/claim-source") };
 
 export default async function ClaimSourcePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;

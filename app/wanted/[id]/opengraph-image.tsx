@@ -1,5 +1,6 @@
 import { createMessages } from "@/lib/i18n/messages";
 import { ImageResponse } from "next/og";
+import { publicPreviewFonts, publicPreviewFontFamily } from "@/lib/og-fonts";
 import {
   findWantedBrief,
   loadWantedBoard,
@@ -51,7 +52,7 @@ export default async function WantedClaimOgImage({
           background: "#F1E9D7",
           color: "#1B1712",
           padding: 56,
-          fontFamily: "Georgia, 'Times New Roman', serif",
+          fontFamily: publicPreviewFontFamily,
           border: "14px solid #1B1712",
         }}
       >
@@ -130,7 +131,7 @@ export default async function WantedClaimOgImage({
         </div>
       </div>
     ),
-    { ...size },
+    { ...size, fonts: await publicPreviewFonts(state === "open" ? `${claim} ≤` : claim) },
   );
 }
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
@@ -11,7 +12,7 @@ const richMessage = createRichMessages("en");
 export const metadata: Metadata = {
   title: message("legal.terms.metadataTitle"),
   description: message("legal.terms.metadataDescription"),
-  alternates: { canonical: "/terms" },
+  alternates: englishPublicAlternates("/terms"),
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
