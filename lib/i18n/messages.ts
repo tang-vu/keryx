@@ -1,3 +1,4 @@
+import { legalMessages } from "@/locales/en/legal";
 import type { UiLocale } from "./locales";
 import { myHistoryMessages } from "@/locales/en/my-history";
 import { shellMessages } from "@/locales/en/shell";
@@ -5,6 +6,7 @@ import { operationsMessages } from "@/locales/en/operations";
 
 /** English source keys. Payment/legal prose remains in its separate review gate. */
 export const englishMessages = Object.freeze({
+  ...legalMessages,
   ...operationsMessages,
   ...shellMessages,
   ...myHistoryMessages,
