@@ -37,6 +37,23 @@ export function hostedReportUrl(value, origin) {
   } catch { return null; }
 }
 
+/** Caller-private packet only, never accepted as a report/recent/export URL. */
+export function privateClaimDelivery(packet, origin, runId) {
+  if (!packet || Object.keys(packet).sort().join(",") !== "delivery,runId,status,version" || packet.version !== 1
+    || packet.status !== "available" || packet.runId !== runId || typeof runId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(runId)
+    || runId.startsWith("prv_") || runId.startsWith("a2a_")) return null;
+  const delivery = packet.delivery;
+  if (!delivery || Object.keys(delivery).sort().join(",") !== "claimUrl,expiresAt,version" || delivery.version !== 1
+    || typeof delivery.expiresAt !== "string" || !Number.isFinite(Date.parse(delivery.expiresAt))
+    || new Date(delivery.expiresAt).toISOString() !== delivery.expiresAt || Date.parse(delivery.expiresAt) <= Date.now()) return null;
+  try {
+    const url = new URL(delivery.claimUrl);
+    if (url.href !== delivery.claimUrl || url.origin !== new URL(origin).origin || url.pathname !== "/claim-run" || url.search
+      || url.username || url.password || !/^#[a-f0-9]{64}$/.test(url.hash)) return null;
+    return { claimUrl: url.href, expiresAt: delivery.expiresAt };
+  } catch { return null; }
+}
+
 export function webDraftUrl(origin, question, budget, mode) {
   const url = new URL(origin);
   url.searchParams.set("q", question);

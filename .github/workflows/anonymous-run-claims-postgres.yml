@@ -1,0 +1,78 @@
+name: Ordinary anonymous run claims PostgreSQL
+on:
+  pull_request:
+    paths:
+      - "lib/run-claims/**"
+      - "lib/db/run-claims-*"
+      - "lib/db/run-ownership-history-*"
+      - "lib/history/personal-history.ts"
+      - "lib/research/run-provenance.ts"
+      - "lib/db/keryx-db.ts"
+      - "lib/db/sqlite-adapter.ts"
+      - "lib/db/supabase-adapter.ts"
+      - "supabase/migrations/**"
+      - "lib/types.ts"
+      - "scripts/test-anonymous-run-claims-postgres.mts"
+      - "tsconfig.anonymous-run-claims.json"
+      - "tsconfig.json"
+      - "eslint.config.*"
+      - "package*.json"
+      - ".github/workflows/anonymous-run-claims-postgres.yml"
+  push:
+    branches: [main]
+    paths:
+      - "lib/run-claims/**"
+      - "lib/db/run-claims-*"
+      - "lib/db/run-ownership-history-*"
+      - "lib/history/personal-history.ts"
+      - "lib/research/run-provenance.ts"
+      - "lib/db/keryx-db.ts"
+      - "lib/db/sqlite-adapter.ts"
+      - "lib/db/supabase-adapter.ts"
+      - "supabase/migrations/**"
+      - "lib/types.ts"
+      - "scripts/test-anonymous-run-claims-postgres.mts"
+      - "tsconfig.anonymous-run-claims.json"
+      - "tsconfig.json"
+      - "eslint.config.*"
+      - "package*.json"
+      - ".github/workflows/anonymous-run-claims-postgres.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  anonymous-run-claims-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm ci
+      - name: Claim core and ordinary storage tests
+        run: npx vitest run lib/run-claims/service.test.ts lib/db/run-claims-sqlite.test.ts lib/db/run-claims-supabase.test.ts lib/db/run-ownership-history-sqlite.test.ts lib/db/run-ownership-history-supabase.test.ts
+      - name: Provision official PG17 fixture image
+        run: docker pull postgres:17-alpine
+      - name: Actual isolated ordinary SQL, catalog, ACL and concurrency acceptance
+        run: node --import tsx --no-warnings scripts/test-anonymous-run-claims-postgres.mts --acceptance
+      - name: Retain actual SQL acceptance and bounded raw receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anonymous-run-claims-postgres-${{ github.sha }}
+          path: artifacts/anonymous-run-claims-postgres/
+          if-no-files-found: error
+          retention-days: 7
+      - name: App and isolated evaluator TypeScript
+        run: |
+          npx tsc --noEmit
+          npx tsc --noEmit --project tsconfig.anonymous-run-claims.json
+      - name: Scoped lint
+        run: npx eslint lib/run-claims/*.ts lib/db/run-claims-*.ts lib/db/run-ownership-history-*.ts scripts/test-anonymous-run-claims-postgres.mts

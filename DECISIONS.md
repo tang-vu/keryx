@@ -7044,3 +7044,44 @@ registry/identity change. Keep unrecorded acceptance/first-answer figures unmeas
 and distinguish source fixture acceptance from production measurements or rollout.
 See [public usage cohorts](docs/engineering/public-usage-cohorts.md) for the counting
 rules, ordinary PostgreSQL qualification and remaining deployed closure gates.
+
+## 2026-10-11 — Private run claims use existing interactive wallet authority
+
+Anonymous-run claims attach ownership in a separate ordinary, default-off domain;
+they do not rewrite the saved run or establish payment/settlement authority. The
+fragment landing is a dedicated HTML route so its synchronous credential removal
+and hash-only CSP precede application layouts and analytics. Credentials stay only
+in a closure; separate-window sign-in carries no credential or return selector.
+Consumption requires explicit owner confirmation, durable wallet/hashed-IP limits
+before token lookup, and atomic session/original rechecks. No GET or history read
+can mint or consume a credential.
+
+The existing durable web session is minted by both SIWE and the reviewed Circle
+Google wallet flow; its schema does not distinguish issuance methods. The claim
+write uses this verified interactive wallet authority and denies bearer keys. The
+earlier “SIWE-only” design shorthand must not be read as proof of an absent login
+discriminator. This is a description of existing authentication, not an inferred
+owner policy change. Ordinary PostgreSQL acceptance, every applicable ingress and
+client, combined release and deployment/schema admission remain open. See
+`docs/anonymous-run-claims.md`; no native/archive enrollment is changed.
+
+## 2026-10-11 — Anonymous claim delivery stays in private request responses
+
+The ordinary claim domain is admitted before providers and completed after the
+existing saved-run boundary. A request-local one-shot packet travels separately
+from public answers, reports and accounting projections; late issuance failure
+preserves the saved answer and cannot regenerate a lost credential. Direct
+OpenAI-compatible and remote MCP callers receive a private response extra or
+separate caller-conversation item. Bot delivery requires initial Discord ephemeral
+visibility, explicit Slack ephemeral responses, or a freshly confirmed Telegram
+sender-private placeholder before research. A Telegram failure cannot fall back
+to its group. The extension retains only closure memory and an explicit one-shot
+tab handoff, with no recent storage, export, clipboard or DOM token.
+
+The analytics-allowed web research document cannot receive these credentials.
+Enabled anonymous web admission remains closed until its dedicated protected
+initial document, hard navigation, nonce CSP and built-browser evidence pass.
+Owned/payer-bound and native original paths remain unchanged, with no claim-domain
+fallback. Local engine CLI and claimant history/profile client integration remain
+explicit outstanding surface decisions. This checkpoint is default-off source
+preparation, not shared DDL, activation, complete issue acceptance or release.

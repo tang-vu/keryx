@@ -15,6 +15,7 @@ interface ReplayOptions {
   savedReports?: unknown;
   onRequest?: (body: Record<string, unknown>) => void;
   onStored?: (value: unknown) => void;
+  onOpenTab?: (value: { url: string }) => void;
 }
 
 export async function replayExtensionPopup<T>(chunks: readonly unknown[], inspect: (
@@ -26,8 +27,9 @@ export async function replayExtensionPopup<T>(chunks: readonly unknown[], inspec
   const question = "Synthetic popup replay";
   const requests: { url: string; method: string; question: string }[] = [];
   const bindings = {
-    document: dom.window.document, location: dom.window.location,
-    chrome: { tabs: { query: async () => options.pageUrl ? [{ id: 1, url: options.pageUrl }] : [] },
+    document: dom.window.document, location: dom.window.location, window: dom.window,
+    chrome: { tabs: { query: async () => options.pageUrl ? [{ id: 1, url: options.pageUrl }] : [],
+      create: async (value: { url: string }) => { options.onOpenTab?.(value); } },
       scripting: { executeScript: async () => [{ result: "" }] }, storage: { local: {
       get: async () => ({ keryx_recent_reports_v1: options.savedReports }),
       set: async (value: unknown) => { options.onStored?.(value); }, remove: async () => {},

@@ -188,10 +188,14 @@ try {
     if (extension.file === "0086_decision_reviews.sql") {
       assert.deepEqual(JSON.parse(postgres.sql("set role service_role;select public.decision_reviews_v1('ready',null,'{}'::jsonb);", ordinary)), { ready: true });
       assert.throws(() => postgres.sql("set role anon;select public.decision_reviews_v1('ready',null,'{}'::jsonb);", ordinary), /permission denied/);
-    } else {
+    } else if (extension.file === "0087_deliverable_acceptance.sql") {
       assert.equal(postgres.sql("select to_regclass('public.deliverable_acceptance_entries') is not null;", ordinary), "t");
       assert.throws(() => postgres.sql("set role anon;select * from public.deliverable_acceptance_entries;", ordinary), /permission denied/);
-    }
+    } else if (extension.file === "0088_anonymous_run_claims.sql") {
+      assert.deepEqual(JSON.parse(postgres.sql("set role service_role;select public.anonymous_run_claims_ready_v1();", ordinary)), { version: 1, ready: true });
+      assert.throws(() => postgres.sql("set role anon;select public.anonymous_run_claims_ready_v1();", ordinary), /permission denied/);
+      assert.throws(() => postgres.sql("set role authenticated;select * from public.anonymous_run_claims;", ordinary), /permission denied/);
+    } else assert.fail(`Missing ordinary fixture observations for ${extension.file}`);
   }
   console.log(`PASS actual migration profiles: ${migrations.length} accepted native inputs preserved; ${profiles.extensions.map(extension => extension.file).join(', ')} refuse native and install separately on fresh ordinary storage`);
   assert.equal(sql("select active from public.browser_journal_control"), "f", "schema must not activate signing");

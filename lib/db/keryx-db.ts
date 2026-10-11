@@ -208,6 +208,11 @@ export interface FeedbackStats {
 export interface KeryxDB {
   /** Optional ordinary-storage classified usage. Enrolled/native profiles expose no fallback. */
   readonly publicUsage?: import("../usage/contracts").PublicUsageStore;
+  /** Default-off anonymous ownership-only sidecar; exact pre-existing ordinary schema only.
+   * Absent on enrolled/native/archive/private facades; grants no payment or original authority. */
+  readonly runClaims?: import("../run-claims/contracts").RunClaimsStore;
+  /** Gated ordinary ownership-only history; saved originals and financial attribution stay unchanged. */
+  readonly runOwnershipHistory?: import("../run-claims/history").RunOwnershipHistoryStore;
   /** Additive ordinary customer-request journal; no native/enrolled, execution or financial capability. */
   readonly deliverableAcceptance?: import("../deliverable-acceptance/contracts").DeliverableAcceptanceStore;
   /** Additive ordinary-storage domain. Absent on sealed/native adapters; never restore by fallback. */

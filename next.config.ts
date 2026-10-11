@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+import { runClaimLandingCsp } from "./lib/run-claims/landing-assets.cjs";
+import { runClaimPrivateHeaders } from "./lib/run-claims/private-headers.cjs";
 import {
   appSecurityHeaders,
   contentSecurityPolicy,
@@ -49,6 +51,19 @@ const nextConfig: NextConfig = {
       { source: "/api/me/profile/identities/:path*", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       { source: "/api/me/decision-reviews", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       { source: "/api/ask", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      // Keep the standalone claim shell outside the global analytics policy.
+      // Next applies matching rules in order and can override handler headers.
+      {
+        source: "/claim-run",
+        headers: [
+          ...runClaimPrivateHeaders,
+          { key: "Content-Security-Policy", value: runClaimLandingCsp },
+          { key: "X-Frame-Options", value: "DENY" },
+        ],
+      },
+      ...["/api/me/run-claims", "/api/me/run-history/:path*"].map(source => ({
+        source, headers: [...runClaimPrivateHeaders],
+      })),
       // Matching rules are applied in order, so this CSP replaces the global CSP only for the
       // standalone Scalar document. Other pages still cannot execute scripts from jsDelivr.
       {

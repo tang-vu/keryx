@@ -1,6 +1,6 @@
 // Thin hosted research client. The server owns admission, payment and stored report authority.
 import { formatRecordedUsdc } from "./recorded-usdc.mjs";
-import { hostedReportUrl, publicPageUrl, readResearchStream, researchQuestion,
+import { hostedReportUrl, privateClaimDelivery, publicPageUrl, readResearchStream, researchQuestion,
   responseError, sourceBudget, webDraftUrl } from "./research-client.mjs";
 
 const els = Object.fromEntries([
@@ -8,6 +8,7 @@ const els = Object.fromEntries([
   "web-draft", "availability", "output", "status", "trace", "answer-panel", "answer",
   "paid-panel", "paid-list", "paid-total-usd", "pending-total", "dispatch-link",
   "exports", "error-panel", "error", "list-page", "recent-panel", "recent-list", "clear-recent",
+  "claim-panel", "claim-run", "claim-expiry",
 ].map(id => [id, document.getElementById(id)]));
 const origin = new URL(KERYX_API).origin;
 const RECENT_KEY = "keryx_recent_reports_v1";
@@ -15,6 +16,8 @@ let pageCtx = { url: "", title: "" };
 let activeRequest = null;
 let recordedExports = null;
 let recent = [];
+// Popup-local closure only. Never storage.local, clipboard, report href or exports.
+let privateClaim = null;
 
 async function readActiveTabSelection() {
   try {
@@ -148,6 +151,8 @@ async function ask() {
   els.answer.textContent = "";
   els.status.textContent = "working…";
   recordedExports = null;
+  privateClaim = null;
+  els["claim-panel"].hidden = true;
   for (const id of ["answer-panel", "paid-panel", "error-panel", "exports", "dispatch-link"]) els[id].hidden = true;
   els["dispatch-link"].removeAttribute("href");
   let timedOut = false;
@@ -161,8 +166,10 @@ async function ask() {
       const body = await res.json().catch(() => null);
       throw new Error(responseError(body, res.status));
     }
+    let completedRunId = null;
     await readResearchStream(res, chunk => {
       if (typeof chunk?.id === "string" && chunk.id.startsWith("chatcmpl-")) reportLink(`${origin}/dispatch/${chunk.id.slice(9)}`);
+      if (typeof chunk?.id === "string" && chunk.id.startsWith("chatcmpl-")) completedRunId = chunk.id.slice(9);
       const delta = chunk?.choices?.[0]?.delta || {};
       if (typeof delta.reasoning_content === "string") {
         els.trace.textContent += delta.reasoning_content;
@@ -173,11 +180,14 @@ async function ask() {
         els.answer.textContent += delta.content;
       }
       if (chunk?.keryx) renderSummary(chunk.keryx);
+      if (chunk?.keryx_private && chunk?.choices?.[0]?.finish_reason === "stop") privateClaim = privateClaimDelivery(chunk.keryx_private, origin, completedRunId);
     });
     if (controller.signal.aborted) throw new DOMException("Stopped", "AbortError");
     els.status.textContent = `done / ${els.status.dataset.paymentMode || "legacy"} / planned rewards are not settlement proof`;
     await saveReport();
+    if (privateClaim) { els["claim-expiry"].textContent = `Private, single-use account claim. Expires ${privateClaim.expiresAt}. Closing this popup loses this link.`; els["claim-panel"].hidden = false; }
   } catch (err) {
+    privateClaim = null; els["claim-panel"].hidden = true;
     if (controller.signal.aborted) {
       showError(`${timedOut ? "Watching timed out." : "Stopped watching."} The server may still finish research or payments. Inspect the report before starting another request.`);
       els.status.textContent = timedOut ? "timed out" : "stopped";
@@ -209,6 +219,12 @@ function downloadExport(key) {
 }
 
 els.ask.addEventListener("click", ask);
+els["claim-run"].addEventListener("click", () => {
+  if (!privateClaim || Date.parse(privateClaim.expiresAt) <= Date.now()) { privateClaim = null; els["claim-panel"].hidden = true; return; }
+  const url = privateClaim.claimUrl; privateClaim = null; els["claim-panel"].hidden = true;
+  void chrome.tabs.create({ url }).catch(() => { /* Lost handoff cannot reissue this private ticket. */ });
+});
+window.addEventListener("pagehide", () => { privateClaim = null; els["claim-panel"].hidden = true; });
 els.stop.addEventListener("click", () => activeRequest?.abort());
 els.question.addEventListener("keydown", event => {
   if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); void ask(); }
