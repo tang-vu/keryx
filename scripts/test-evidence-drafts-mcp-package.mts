@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { evidenceDraftFixture } from "../lib/research/fixtures/evidence-draft";
+import { draftCheckFixture } from "../lib/research/fixtures/draft-check";
 
 const directory = await mkdtemp(join(tmpdir(), "keryx-evidence-draft-mcp-"));
 assert(resolve(directory).startsWith(resolve(tmpdir()) + sep));
@@ -37,6 +38,14 @@ try {
     const scalar = await client.callTool({ name: "evidence_draft", arguments: { draft: scalarInput } });
     assert(!scalar.isError);
     assert.equal((scalar.structuredContent as { draft: { claims: Array<{ text: string }> } }).draft.claims[0].text, "\u{1F600}");
+    assert(tools.tools.some(tool => tool.name === "draft_check"));
+    const checked = await client.callTool({ name: "draft_check", arguments: { check: draftCheckFixture() } });
+    assert(!checked.isError);
+    const check = (checked.structuredContent as { check: { scope: string; claims: Array<{ verdict: string }> } }).check;
+    assert.equal(check.scope, "private-draft-check");
+    assert.deepEqual(check.claims.map(claim => claim.verdict), ["supported", "source-unavailable", "not-checked"]);
+    const refusedCheck = await client.callTool({ name: "draft_check", arguments: { check: { passage: "PRIVATE_SECRET_FIXTURE" } } });
+    assert(refusedCheck.isError); assert(!JSON.stringify(refusedCheck).includes("PRIVATE_SECRET_FIXTURE"));
   } finally { await client.close(); }
   assert(!(await readdir(directory)).some(name => name.startsWith("forbidden-")));
   console.log("Built stdio private draft tool passed: retained fixture matching, pending semantics, UTF-16 span validation, fixed invalid-input errors and no network/custody writes. Not publication or a fresh-consumer install claim.");

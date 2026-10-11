@@ -1,5 +1,25 @@
 # Keryx — Decision Log
 
+## Check cited draft sentences against supplied text, by wording only — 2026-10-11
+
+Advance issue282 with a second zero-I/O private contract, `private-draft-check`
+version 1, shared by `/literature/check`, the authenticated API and remote/stdio
+`draft_check`. It reads BibTeX, RIS or DOI/link lists without resolving them, keeps
+exact sentence spans, binds numeric, LaTeX, Pandoc and author-year markers, and
+compares each cited sentence with caller-supplied source text. A deterministic
+wording comparison was chosen over a model reviewer because no paid model or source
+read is authorized for this stage and its errors can be measured and reproduced.
+It is named as a method (`lexical-overlap-v1`) so a reviewed semantic assessor can
+replace it under the same verdict contract. Every supported or partly-supported
+verdict carries an exact slice of the supplied text; a source without supplied text
+is always unavailable and outranks not-found for a sentence with several citations.
+Negation, listed opposite terms, differing figures and tentative wording withhold
+"supported". The fixed synthetic set reports 3 false "supported" in 32 (role
+reversals) and stays in the test suite with its known failures. Nothing is stored,
+fetched, bought or rewarded. Reading cited works under budget and BUY/SKIP/CACHE
+rules, reference resolution, semantic and expert evaluation, suggested sources and
+release identities remain open. See [scope and measurements](docs/draft-check.md).
+
 ## Advertise published public interfaces and render preview glyphs locally — 2026-10-11
 
 Keep existing indexed URLs and publish reciprocal English/x-default metadata only

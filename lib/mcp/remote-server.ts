@@ -34,6 +34,7 @@ import { identitySnapshotSchema, requireProfileIdentities } from "../profiles/ve
 import { profileWallet, requirePrivateProfiles } from "../profiles/private-profile";
 import type { ApiKeyScope } from "../api-key-scopes";
 import { registerEvidenceDraftTool } from "../research/evidence-draft-tool";
+import { registerDraftCheckTool } from "../research/draft-check-tool";
 import { registerAcceptanceTools } from "../deliverable-acceptance/mcp";
 import { requireDeliverableAcceptance } from "../deliverable-acceptance/contracts";
 import { prepareHostedRunClaim } from "../run-claims/hosted-delivery";
@@ -120,6 +121,7 @@ export function createRemoteMcpServer(
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
   registerEvidenceDraftTool(server);
+  registerDraftCheckTool(server);
   const acceptanceStore = async (scope: "deliverable:read" | "deliverable:write") => {
     if (!access.actor || !access.keyId || !access.deliverableScopes?.includes(scope)) throw new Error("Explicit deliverable scope required");
     return requireDeliverableAcceptance(await getDb());

@@ -34,6 +34,15 @@ unverified and support assessments remain explicitly user supplied. Your MCP cli
 may retain private tool messages. Existing MCP transport/key/Origin policy still
 applies; source registration is not deployed acceptance or package publication.
 
+The [private draft-check source candidate](draft-check.md) adds stateless
+`draft_check(check)`, sharing the browser/API version-1 contract. It compares each
+cited sentence of a caller-supplied passage with caller-supplied source text by
+wording and returns a verbatim excerpt or an explicit absence per citation. It
+resolves no reference and calls no research, payment, provider or storage path.
+A source without supplied text is always reported unavailable. Your MCP client may
+retain private tool messages; source registration is not deployed acceptance or
+package publication.
+
 The [personal history source candidate](engineering/personal-history-read-2026-10-09.md)
 adds `history_read` with explicit `history:read` and bounded current-store attribution.
 It performs no research/payment and grants legacy keys no new rights. Ordinary RPC
