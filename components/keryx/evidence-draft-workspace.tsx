@@ -7,22 +7,36 @@ import { buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace, 
   type EvidenceDraftRequest } from "@/lib/research/evidence-draft";
 import { exportEvidenceDraft } from "@/lib/research/evidence-draft-export";
 import { evidenceDraftCopy as copy, evidenceDraftCopyText as copyText } from "@/lib/research/evidence-draft-copy";
+import { RELATED_WORK_STATEMENT_KINDS } from "@/lib/research/related-work-statements";
 
 const field = "mt-2 block w-full min-w-0 rounded-none border border-line bg-paper px-3 py-2 font-serif text-sm text-ink";
 const button = "inline-flex min-h-11 items-center border border-ink px-3 py-2 font-mono text-xs text-ink disabled:opacity-50";
 const assessmentLabels = copy.claim.verdicts;
 type Editors = Pick<EvidenceDraftRequest, "reports" | "passage" | "claims" | "themes">;
+type Statement = NonNullable<EvidenceDraftRequest["themes"][number]["statements"]>[number];
+const choice = "mt-2 flex gap-3 font-serif text-sm text-ink-2";
 const empty = (): Editors => ({ reports: [], passage: "", claims: [], themes: [{ id: "theme1", title: copy.theme.initialTitle, authorNote: "", excerptIds: [] }] });
 
 export function EvidenceDraftWorkspace() {
   const store = useLiteratureWorkspace(), [editors, setEditors] = useState(empty), [reportJson, setReportJson] = useState("");
   const [message, setMessage] = useState(""), [reviewer, setReviewer] = useState(""), passageRef = useRef<HTMLTextAreaElement>(null);
-  const request: EvidenceDraftRequest = { version: 1, scope: "private-evidence-draft", workspace: evidenceDraftWorkspace(store.workspace), ...editors };
+  // A sentence still being written stays in this tab and out of the draft contract.
+  const themes = editors.themes.map(({ statements, ...theme }) => {
+    const written = (statements ?? []).filter(row => row.text.trim());
+    return written.length ? { ...theme, statements: written } : theme;
+  });
+  const request: EvidenceDraftRequest = { version: 1, scope: "private-evidence-draft", workspace: evidenceDraftWorkspace(store.workspace), ...editors, themes };
   let draft: ReturnType<typeof buildEvidenceDraft> | undefined, error = "";
   try { draft = buildEvidenceDraft(request); } catch { error = copy.workspace.changed; }
   const included = store.workspace.entries.filter(row => row.screening === "include");
   const update = (changes: Partial<Editors>) => { setEditors(current => ({ ...current, ...changes })); setMessage(""); };
   const toggle = (ids: string[], id: string) => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id];
+  const excerpts = draft?.excerpts ?? [];
+  const nextStatementId = () => {
+    const used = new Set(editors.themes.flatMap(theme => (theme.statements ?? []).map(row => row.id)));
+    let next = used.size + 1; while (used.has(`statement${next}`)) next++;
+    return `statement${next}`;
+  };
   const exportFile = (format: "markdown" | "latex" | "bibtex" | "ris") => {
     try {
       const exports = exportEvidenceDraft(request), extension = { markdown: "md", latex: "tex", bibtex: "bib", ris: "ris" }[format];
@@ -106,6 +120,51 @@ export function EvidenceDraftWorkspace() {
             <span>{row.quote}<span className="block break-all font-mono text-xs text-ink-3">{row.paperUrl} · {row.contentVersion}</span></span>
           </label>)}
           <button type="button" className={`${button} mt-3`} onClick={() => replace({ excerptIds: [] })}>{copy.theme.clearExcerpts}</button>
+          <h3 className="mt-5 font-mono text-xs text-ink-2">{copy.statement.heading}</h3>
+          <p className="mt-2 font-serif text-xs text-ink-3">{copy.statement.guidance}</p>
+          {(theme.statements ?? []).map(statement => {
+            const result = draft?.themes.find(row => row.id === theme.id)?.statements.find(row => row.id === statement.id);
+            const change = (changes: Partial<Statement>) => replace({ statements: (theme.statements ?? []).map(row => row.id === statement.id ? { ...row, ...changes } : row) });
+            const status = !statement.text.trim() ? copy.statement.empty : !result ? "" : result.status === "excerpt-bound" ? copy.statement.bound
+              : result.status === "author-gap" ? copy.statement.authorGap : result.withheldReason !== "paper-count" ? copy.statement.needsExcerpt
+              : statement.kind === "contribution" ? copy.statement.needsOnePaper : copy.statement.needsTwoPapers;
+            return <div key={statement.id} className="mt-4 min-w-0 border-l border-line pl-4">
+              <label className="block font-mono text-xs text-ink-2">{copy.statement.kind}
+                <select className={field} value={statement.kind} onChange={event => change({ kind: event.target.value as Statement["kind"] })}>
+                  {RELATED_WORK_STATEMENT_KINDS.map(kind => <option key={kind} value={kind}>{copy.statement.kinds[kind]}</option>)}
+                </select>
+              </label>
+              <label className="mt-3 block font-mono text-xs text-ink-2">{copy.statement.text}
+                <textarea className={field} rows={3} maxLength={600} value={statement.text} onChange={event => change({ text: event.target.value })} />
+              </label>
+              <fieldset className="mt-3 min-w-0"><legend className="font-mono text-xs text-ink-2">{copy.statement.papers}</legend>
+                {included.map(row => {
+                  const url = row.paper.url, named = statement.paperUrls.includes(url), read = excerpts.some(excerpt => excerpt.paperUrl === url);
+                  return <label key={url} className={choice}>
+                    <input type="checkbox" className="mt-1" checked={named} disabled={!named && (!read || statement.paperUrls.length >= 8)} onChange={() => {
+                      // A sentence never keeps an excerpt from a paper it no longer names.
+                      const paperUrls = toggle(statement.paperUrls, url);
+                      change({ paperUrls, excerptIds: statement.excerptIds.filter(id => excerpts.some(excerpt => excerpt.id === id && paperUrls.includes(excerpt.paperUrl))) });
+                    }} />
+                    <span>{read ? row.paper.title : copyText(copy.statement.paperUnread, { title: row.paper.title })}</span>
+                  </label>;
+                })}
+              </fieldset>
+              {statement.paperUrls.length > 0 && <fieldset className="mt-3 min-w-0"><legend className="font-mono text-xs text-ink-2">{copy.statement.excerpts}</legend>
+                {excerpts.filter(row => statement.paperUrls.includes(row.paperUrl)).map(row => {
+                  const chosen = statement.excerptIds.includes(row.id);
+                  return <label key={row.id} className={choice}>
+                    <input type="checkbox" className="mt-1" checked={chosen} disabled={!chosen && statement.excerptIds.length >= 16} onChange={() => change({ excerptIds: toggle(statement.excerptIds, row.id) })} />
+                    <span>{row.quote}<span className="block break-all font-mono text-xs text-ink-3">{row.paperUrl} · {row.contentVersion}</span></span>
+                  </label>;
+                })}
+              </fieldset>}
+              <p className="mt-3 font-mono text-xs text-seal">{status}</p>
+              <button type="button" className={`${button} mt-3`} onClick={() => replace({ statements: (theme.statements ?? []).filter(row => row.id !== statement.id) })}>{copy.statement.remove}</button>
+            </div>;
+          })}
+          <button type="button" className={`${button} mt-4`} disabled={(theme.statements ?? []).length >= 24} onClick={() => replace({
+            statements: [...(theme.statements ?? []), { id: nextStatementId(), kind: "contribution", text: "", paperUrls: [], excerptIds: [] }] })}>{copy.statement.add}</button>
         </article>;
       })}
       <button type="button" className={`${button} mt-4`} disabled={editors.themes.length >= 16} onClick={() => update({ themes: [...editors.themes, { id: `theme${editors.themes.length + 1}`, title: copy.theme.newTitle, authorNote: "", excerptIds: [] }] })}>{copy.theme.add}</button>
