@@ -6,6 +6,10 @@
  * source name + rationale. Fades/slides in on mount.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
+
 import { Globe } from "lucide-react";
 import type { Decision, TraceStep } from "@/lib/types";
 import { isDecisionRecord } from "@/lib/research/decision-record";
@@ -61,16 +65,25 @@ export function TraceRow({ step }: { step: TraceStep }) {
   );
 }
 
-function SelectionDiagnosticBody({ message, diagnostic }: { message: string; diagnostic: SelectionDiagnostic }) {
+function SelectionDiagnosticBody({ message: diagnosticMessage, diagnostic }: { message: string; diagnostic: SelectionDiagnostic }) {
   const counts = diagnostic.counts;
   return <div className="mt-1 space-y-2 text-sm leading-snug text-ink-2" data-testid="selection-diagnostic-row">
-    <p className="font-semibold">{diagnostic.outcome === "refused" ? "Source selection refused" : "Source selection partially withheld"}</p>
-    <p>{message}</p>
+    <p className="font-semibold">{diagnostic.outcome === "refused" ? message("sourceDecision.refused") : message("sourceDecision.partiallyWithheld")}</p>
+    <p>{diagnosticMessage}</p>
     <p className="break-words font-mono text-[11px]">
-      {counts.candidateCount} candidates · {counts.targetCount} targets · {counts.decisionCount} proposal rows<br />
-      {counts.matchedCandidateCount} matched · {counts.validActionableCount} actionable · {counts.withheldCandidateCount} withheld · {counts.invalidRowCount} invalid rows
+      {[
+        message(counts.candidateCount === 1 ? "sourceDecision.candidateCount.one" : "sourceDecision.candidateCount.other", { count: counts.candidateCount }),
+        message(counts.targetCount === 1 ? "sourceDecision.targetCount.one" : "sourceDecision.targetCount.other", { count: counts.targetCount }),
+        message(counts.decisionCount === 1 ? "sourceDecision.proposalCount.one" : "sourceDecision.proposalCount.other", { count: counts.decisionCount }),
+      ].join(" · ")}<br />
+      {[
+        message(counts.matchedCandidateCount === 1 ? "sourceDecision.matchedCount.one" : "sourceDecision.matchedCount.other", { count: counts.matchedCandidateCount }),
+        message(counts.validActionableCount === 1 ? "sourceDecision.actionableCount.one" : "sourceDecision.actionableCount.other", { count: counts.validActionableCount }),
+        message(counts.withheldCandidateCount === 1 ? "sourceDecision.withheldCount.one" : "sourceDecision.withheldCount.other", { count: counts.withheldCandidateCount }),
+        message(counts.invalidRowCount === 1 ? "sourceDecision.invalidCount.one" : "sourceDecision.invalidCount.other", { count: counts.invalidRowCount }),
+      ].join(" · ")}
     </p>
-    <p className="break-words text-xs">Reasons: {Array.from(new Set(diagnostic.reasons.map(reason => reason.code))).join(", ")}{diagnostic.truncated ? " (additional reasons omitted)" : ""}</p>
+    <p className="break-words text-xs">{message(diagnostic.truncated ? "sourceDecision.truncatedReasons" : "sourceDecision.reasons", { reasons: Array.from(new Set(diagnostic.reasons.map(reason => reason.code))).join(", ") })}</p>
   </div>;
 }
 
@@ -99,11 +112,11 @@ function DecisionBody({ decision }: { decision: Decision }) {
         </span>
         {decision.external && (
           <span className="inline-flex items-center gap-1 rounded border border-line bg-paper-2 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-            <Globe className="h-3 w-3" /> x402 market
+            <Globe className="h-3 w-3" /> {message("sourceDecision.marketplace")}
           </span>
         )}
         <span className="font-mono text-[11px] text-ink-3">
-          ${fmtUsdc(decision.price)} · EV {Math.round(decision.expectedValue * 100)}%
+          {message("sourceDecision.priceAndValue", { price: fmtUsdc(decision.price), value: Math.round(decision.expectedValue * 100) })}
         </span>
       </div>
       <p className="mt-0.5 text-[13px] leading-snug text-ink-2">

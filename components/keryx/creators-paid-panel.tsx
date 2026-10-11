@@ -8,6 +8,10 @@
  * not per-tx EVM hashes — the verifiable on-chain link is the settlement wallet, in the footer.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
+
 import { Check, CircleX, Clock3 } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
 import { isCreatorPayment } from "@/lib/payments/payment-kind";
@@ -61,12 +65,12 @@ export function CreatorsPaidPanel({
 
   return (
     <div className="relative flex h-full min-w-0 flex-col">
-      <SectionHeading numeral="III" label="The settlement" right={historicalNetwork ? `${recordedArcLabel(historicalNetwork)} · recorded USDC` : "weighted · USDC on Arc"} />
-      {operatingPayments.length > 0 && <aside aria-label="Keryx operating fees" className="mb-3 border border-line bg-paper-2 px-4 py-3">
-        <p className="font-mono text-xs text-ink">Keryx operating fees</p>
-        <p className="mt-1 text-xs leading-relaxed text-ink-2">Research operating fees are recorded separately from creator rewards.</p>
+      <SectionHeading numeral="III" label={message("creatorPayments.title")} right={historicalNetwork ? message("creatorPayments.recordedNetwork", { network: recordedArcLabel(historicalNetwork) }) : message("creatorPayments.currentNetwork")} />
+      {operatingPayments.length > 0 && <aside aria-label={message("creatorPayments.operatingFees")} className="mb-3 border border-line bg-paper-2 px-4 py-3">
+        <p className="font-mono text-xs text-ink">{message("creatorPayments.operatingFees")}</p>
+        <p className="mt-1 text-xs leading-relaxed text-ink-2">{message("creatorPayments.operatingFeeNotice")}</p>
         {operatingPayments.map((payment, index) => <p key={payment.id ?? index} className="mt-2 break-all font-mono text-xs text-ink-2">
-          ${fmtUsdc(payment.amountUsdc)} USDC · {paymentSettlementStatus(payment)}{payment.txHash ? ` · Circle reference ${payment.txHash}` : ""}
+          {payment.txHash ? message("creatorPayments.operatingPaymentWithReference", { amount: fmtUsdc(payment.amountUsdc), state: paymentSettlementStatus(payment), reference: payment.txHash }) : message("creatorPayments.operatingPayment", { amount: fmtUsdc(payment.amountUsdc), state: paymentSettlementStatus(payment) })}
         </p>)}
       </aside>}
       <div className="relative flex flex-1 flex-col overflow-hidden border border-ink bg-paper">
@@ -98,8 +102,8 @@ export function CreatorsPaidPanel({
           {!hasPayments && (
             <p className="px-2 py-10 text-center font-mono text-[12px] uppercase tracking-[0.08em] text-ink-3">
               {streaming
-                ? "Waiting on the herald to pay…"
-                : "Payouts to cited creators appear here."}
+                ? message("creatorPayments.waiting")
+                : message("creatorPayments.empty")}
             </p>
           )}
           {payments.map((p, i) => (
@@ -118,25 +122,25 @@ export function CreatorsPaidPanel({
                   {paymentSettlementStatus(p) === "settled" && p.txHash ? (
                     <span
                       className="inline-flex items-center gap-1 text-paid"
-                      title={`Circle Gateway settlement ID ${p.txHash} — batched on-chain on Arc (not a per-tx EVM hash)`}
+                      title={message("creatorPayments.settlementTitle", { reference: p.txHash })}
                     >
                       <Check className="h-2.5 w-2.5" />
-                      batched
+                      {message("creatorPayments.batched")}
                     </span>
                   ) : paymentSettlementStatus(p) === "settled" ? (
-                    <span>{shortAddr(p.payee)} · recorded settled · transfer ID unavailable</span>
+                    <span>{message("creatorPayments.settledWithoutReference", { payee: shortAddr(p.payee) })}</span>
                   ) : paymentSettlementStatus(p) === "failed" ? (
                     <span className="inline-flex items-center gap-1 text-red-700">
                       <CircleX className="h-2.5 w-2.5" />
-                      failed · not charged
+                      {message("creatorPayments.failed")}
                     </span>
                   ) : paymentSettlementStatus(p) === "pending" ? (
                     <span className="inline-flex items-center gap-1 text-amber-700">
                       <Clock3 className="h-2.5 w-2.5" />
-                      confirmation pending
+                      {message("creatorPayments.pending")}
                     </span>
                   ) : (
-                    <span>{shortAddr(p.payee)} · simulated</span>
+                    <span>{message("creatorPayments.simulated", { payee: shortAddr(p.payee) })}</span>
                   )}
                 </p>
               </div>
@@ -159,15 +163,15 @@ export function CreatorsPaidPanel({
           <div className="flex items-center justify-between gap-4 border-t border-ink px-5 py-3.5">
             <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-ink-3">
               {pendingCount > 0 ? (
-                `${pendingCount} pending · confirmed total`
+                message(pendingCount === 1 ? "creatorPayments.pendingTotal.one" : "creatorPayments.pendingTotal.other", { count: pendingCount })
               ) : failedCount > 0 ? (
-                `${failedCount} failed · not charged`
+                message(failedCount === 1 ? "creatorPayments.failedTotal.one" : "creatorPayments.failedTotal.other", { count: failedCount })
               ) : settledPayments.length > 0 ? (
                 <GatewayContractReferences records={settledPayments} className="mr-3 hover:text-paid hover:underline"/>
               ) : mode === "offline" ? (
-                "Offline — simulated"
+                message("creatorPayments.offline")
               ) : (
-                "Recorded payment states"
+                message("creatorPayments.recordedStates")
               )}
             </span>
             <span className="letterpress font-display text-[30px] font-bold leading-none tracking-tight tabular-nums text-paid">

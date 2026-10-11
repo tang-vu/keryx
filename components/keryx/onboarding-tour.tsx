@@ -1,14 +1,18 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { currentArcLabel } from "@/lib/arc-network-display";
 
 const steps = [
-  { target: "hero", title: "Research with a budget", body: "Keryx finds sources, explains what it buys or skips, and cites evidence in its answer." },
-  { target: "ask-form", title: "Ask a question", body: "Enter the research question you want answered. You can inspect decisions as the answer streams." },
-  { target: "budget", title: "Choose a spending cap", body: "Set the most this request may spend. A cap is permission, not a promise to spend it all." },
-  { target: "dispatch-btn", title: "Start research", body: `Submit to see source decisions, payment state, citations, and creator rewards on ${currentArcLabel}.` },
+  { target: "hero", title: message("researchTour.budgetTitle"), body: message("researchTour.budgetBody") },
+  { target: "ask-form", title: message("researchTour.questionTitle"), body: message("researchTour.questionBody") },
+  { target: "budget", title: message("researchTour.capTitle"), body: message("researchTour.capBody") },
+  { target: "dispatch-btn", title: message("researchTour.startTitle"), body: message("researchTour.startBody", { network: currentArcLabel }) },
 ] as const;
 
 export function OnboardingTour() {
@@ -113,14 +117,14 @@ export function OnboardingTour() {
 
   return (
     <>
-      <button ref={trigger} type="button" onClick={() => { setStep(0); setActive(true); }} className="inline-flex min-h-11 items-center border border-ink bg-paper px-4 font-mono text-xs text-ink hover:bg-paper-2 focus-visible:outline-2 focus-visible:outline-seal">How it works</button>
+      <button ref={trigger} type="button" onClick={() => { setStep(0); setActive(true); }} className="inline-flex min-h-11 items-center border border-ink bg-paper px-4 font-mono text-xs text-ink hover:bg-paper-2 focus-visible:outline-2 focus-visible:outline-seal">{message("researchTour.open")}</button>
       {active && portalRoot && createPortal(
         <>
           <div className="fixed inset-0 z-[9998] bg-ink/60" aria-hidden="true" onClick={close} />
-          <div ref={panel} role="dialog" aria-modal="true" aria-label="How Keryx works" className="fixed z-[9999] flex max-h-[calc(100dvh-16px)] flex-col overflow-hidden border border-ink bg-paper shadow-xl" style={narrow ? { left: 0, right: 0, bottom: 0, maxHeight: "min(50dvh, 320px)" } : { width, top, left }}>
-            <div className="flex shrink-0 items-center justify-between border-b border-line px-4 py-2"><span className="font-mono text-xs uppercase tracking-wider text-seal">Step {step + 1} of {steps.length}</span><button type="button" onClick={close} aria-label="Close tour" className="min-h-11 min-w-11 text-ink">Close</button></div>
+          <div ref={panel} role="dialog" aria-modal="true" aria-label={message("researchTour.label")} className="fixed z-[9999] flex max-h-[calc(100dvh-16px)] flex-col overflow-hidden border border-ink bg-paper shadow-xl" style={narrow ? { left: 0, right: 0, bottom: 0, maxHeight: "min(50dvh, 320px)" } : { width, top, left }}>
+            <div className="flex shrink-0 items-center justify-between border-b border-line px-4 py-2"><span className="font-mono text-xs uppercase tracking-wider text-seal">{message("researchTour.step", { number: step + 1, total: steps.length })}</span><button type="button" onClick={close} aria-label={message("researchTour.closeLabel")} className="min-h-11 min-w-11 text-ink">{message("researchTour.close")}</button></div>
             <div className="min-h-0 overflow-y-auto px-4 py-4"><h2 className="font-display text-lg text-ink">{steps[step].title}</h2><p className="mt-2 font-serif text-sm leading-relaxed text-ink-2">{steps[step].body}</p></div>
-            <div className="flex shrink-0 justify-between border-t border-line px-4 py-2"><button type="button" disabled={step === 0} onClick={() => setStep(step - 1)} className="min-h-11 px-3 font-mono text-xs disabled:opacity-40">Back</button><button type="button" onClick={() => step === steps.length - 1 ? close() : setStep(step + 1)} className="min-h-11 border border-ink bg-ink px-4 font-mono text-xs text-paper">{step === steps.length - 1 ? "Done" : "Next"}</button></div>
+            <div className="flex shrink-0 justify-between border-t border-line px-4 py-2"><button type="button" disabled={step === 0} onClick={() => setStep(step - 1)} className="min-h-11 px-3 font-mono text-xs disabled:opacity-40">{message("researchTour.back")}</button><button type="button" onClick={() => step === steps.length - 1 ? close() : setStep(step + 1)} className="min-h-11 border border-ink bg-ink px-4 font-mono text-xs text-paper">{step === steps.length - 1 ? message("researchTour.done") : message("researchTour.next")}</button></div>
           </div>
         </>
       , portalRoot)}

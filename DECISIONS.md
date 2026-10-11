@@ -7171,3 +7171,20 @@ deployment/readback belongs to the existing serialized runtime batch. Packaging
 refuses invalid descriptions/versions before archive writes. Keep the historical
 legal extraction fixture and require every paragraph outside the reviewed extension
 section and dated update to retain its exact markup.
+
+## Keep research catalogue extraction independent of research and payment authority — 2026-10-11
+
+Use the existing typed English catalogue and named React-node interpolation for
+research conversation, decision logs, creator-payment presentation and paid-job
+recovery. Preserve exact English, count arms, data identities and callbacks;
+parallel diagnostic statistics are complete count labels rather than assembled
+sentences. Payment uncertainty, receipt integrity and public/private access
+notices keep their original distinctions. Retire only migrated guard allowances
+and explicitly retain executable protocol examples as data.
+
+Catalogue extraction does not activate a locale or approve financial, privacy or
+consent translation. Qualify changed presentation with exact before/after render
+states and practical browser actions/accessibility, reusing unchanged CSS and
+unaffected evidence. Keep the remaining original issue272 areas and root-owned
+combined-source CI, review and delivery gates explicit in the
+[area record](docs/engineering/research-flow-catalogue-2026-10-11.md).

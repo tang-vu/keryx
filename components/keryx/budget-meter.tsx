@@ -8,6 +8,10 @@
  * marks the hard cap the orchestrator (not the model) enforces.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
+
+const message = createMessages("en");
+
 import type { TraceStep } from "@/lib/types";
 import { isPaymentRecord, paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { fmtUsdc } from "./phase-style";
@@ -76,7 +80,7 @@ export function BudgetMeter({
         )}
         {Math.round(pct)}%
         {!streaming && pending <= 0 && spent > 0 && saved > 0 && (
-          <span className="ml-2 text-paid">${fmtUsdc(saved)} under cap</span>
+          <span className="ml-2 text-paid">{message("decisionBudget.underCap", { amount: fmtUsdc(saved) })}</span>
         )}
       </span>
     </div>

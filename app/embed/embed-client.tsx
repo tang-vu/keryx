@@ -12,6 +12,9 @@
  * only on merit, same as every other dispatch.
  */
 
+import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ExternalLink } from "lucide-react";
@@ -24,6 +27,9 @@ import { useResearchAvailability } from "@/lib/hooks/use-research-availability";
 import { RESEARCH_AVAILABILITY_UNKNOWN, RESEARCH_PAUSED_MESSAGE } from "@/lib/research/availability-contract";
 import { SelectionFailureDownload } from "@/components/keryx/selection-failure-download";
 import { useBrowserOrigin } from "@/lib/hooks/use-browser-origin";
+
+const message = createMessages("en");
+const richMessage = createRichMessages("en");
 
 const CANONICAL = "https://keryx.cc";
 
@@ -88,12 +94,12 @@ export function EmbedClient() {
             Keryx
           </span>
           <span className="hidden font-mono text-[9px] uppercase tracking-[0.16em] text-ink-3 sm:inline">
-            citations are currency
+            {message("embedResearch.tagline")}
           </span>
         </a>
         <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-ink-3">
           <span className="h-[5px] w-[5px] rounded-full bg-paid" />
-          Free · no wallet
+          {message("embedResearch.trial")}
         </span>
       </header>
 
@@ -101,21 +107,20 @@ export function EmbedClient() {
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3.5">
         {sourceName && (
           <p className="font-serif text-[12.5px] leading-snug text-ink-2">
-            You&rsquo;re asking from <span className="font-semibold text-ink">{sourceName}</span>
-            &rsquo;s desk — if the herald cites them, they&rsquo;re paid for it, instantly.
+            {richMessage("embedResearch.sourceDesk", { source: <span className="font-semibold text-ink">{sourceName}</span> })}
           </p>
         )}
 
         <div role="status" className="text-sm text-ink-2">
-          <p>{checking ? "Checking research availability…" : researchPaused ? RESEARCH_PAUSED_MESSAGE : availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}</p>
-          <a href={`${origin}/me/asks`} target="_blank" rel="noopener noreferrer" className="mr-3 underline">Saved reports</a>
-          <button type="button" onClick={() => void checkAvailability()} disabled={checking} className="min-h-11 underline">Check availability</button>
+          <p>{checking ? message("embedResearch.checking") : researchPaused ? RESEARCH_PAUSED_MESSAGE : availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}</p>
+          <a href={`${origin}/me/asks`} target="_blank" rel="noopener noreferrer" className="mr-3 underline">{message("embedResearch.savedReports")}</a>
+          <button type="button" onClick={() => void checkAvailability()} disabled={checking} className="min-h-11 underline">{message("embedResearch.checkAvailability")}</button>
         </div>
         <form onSubmit={submit} className="flex gap-2">
           <input
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask a question…"
+            placeholder={message("embedResearch.placeholder")}
             disabled={streaming}
             className="min-w-0 flex-1 border border-ink bg-paper px-3 py-2 font-serif text-[14px] text-ink placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-seal disabled:opacity-60"
           />
@@ -124,7 +129,7 @@ export function EmbedClient() {
             disabled={streaming || checking || researchPaused || !question.trim()}
             className="shrink-0 border border-ink bg-ink px-3.5 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-paper transition-opacity disabled:opacity-50"
           >
-            {streaming ? "…" : "Ask ▸"}
+            {streaming ? "…" : message("embedResearch.submit")}
           </button>
         </form>
 
@@ -132,26 +137,24 @@ export function EmbedClient() {
           (state.errorKind === "rate-limit" ? (
             <div className="border border-ink bg-paper px-3 py-2.5">
               <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-seal">
-                Free trial · limit reached
+                {message("embedResearch.limitReached")}
               </div>
               <p className="mt-1 font-serif text-[12.5px] leading-snug text-ink-2">
                 {state.retryAfter && state.retryAfter > 0
-                  ? `Try again in ${state.retryAfter}s — or `
-                  : "Try again shortly — or "}
-                <a
+                  ? richMessage("embedResearch.retryAfter", { seconds: state.retryAfter, continueLink: <a
                   href={`${origin}/`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline decoration-seal underline-offset-2"
                 >
-                  keep going on keryx.cc with your own wallet
-                </a>
-                .
+                  {message("embedResearch.continueWithWallet")}
+                </a> })
+                  : richMessage("embedResearch.retryShortly", { continueLink: <a href={`${origin}/`} target="_blank" rel="noopener noreferrer" className="underline decoration-seal underline-offset-2">{message("embedResearch.continueWithWallet")}</a> })}
               </p>
             </div>
           ) : (
             <div className="border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12.5px] text-destructive">
-              {state.error ?? "Something went wrong — please try again."}
+              {state.error ?? message("embedResearch.failed")}
               <SelectionFailureDownload diagnostic={state.selectionDiagnostic} />
             </div>
           ))}
@@ -180,7 +183,7 @@ export function EmbedClient() {
               {state.run.citations.length > 0 && (
                 <div className="mt-3 border-t border-line pt-2">
                   <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-ink-3">
-                    Citations and planned rewards · ${fmtUsdc(state.run.totalToCreators)} USDC recorded ({state.run.paymentMode ?? "legacy"})
+                    {message("embedResearch.recordedRewards", { amount: fmtUsdc(state.run.totalToCreators), mode: state.run.paymentMode ?? "legacy" })}
                   </div>
                   <ul className="mt-1 space-y-0.5">
                     {state.run.citations.map((c) => (
@@ -203,7 +206,7 @@ export function EmbedClient() {
                 rel="noopener noreferrer"
                 className="mt-2.5 inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-seal hover:underline"
               >
-                Full dispatch <ExternalLink className="h-3 w-3" />
+                {message("embedResearch.fullDispatch")} <ExternalLink className="h-3 w-3" />
               </a>
             </div>
           </div>
@@ -218,7 +221,7 @@ export function EmbedClient() {
           rel="noopener noreferrer"
           className="font-mono text-[9px] uppercase tracking-[0.14em] text-ink-3 hover:text-ink"
         >
-          Powered by Keryx — paid citations reward verified creators ↗
+          {message("embedResearch.footer")}
         </a>
       </footer>
     </div>

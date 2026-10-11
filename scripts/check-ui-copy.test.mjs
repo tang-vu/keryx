@@ -224,3 +224,25 @@ test("personal dispatch metadata, accessibility, empty states and toast copy are
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("research conversation, decision, payment and job recovery copy is catalogued; protocol samples remain data", () => {
+  const files = ["app/embed/page.tsx", "app/embed/embed-client.tsx", "components/keryx/a2a-call-card.tsx",
+    "components/keryx/budget-meter.tsx", "components/keryx/creators-paid-panel.tsx", "components/keryx/follow-up-form.tsx",
+    "components/keryx/gateway-contract-references.tsx", "components/keryx/onboarding-tour.tsx", "components/keryx/paid-stamp.tsx",
+    "components/keryx/phase-style.ts", "components/keryx/reasoning-console.tsx", "components/keryx/research-account-jobs.tsx",
+    "components/keryx/research-chat.tsx", "components/keryx/research-decisions.tsx", "components/keryx/research-job-details.tsx",
+    "components/keryx/research-job.tsx", "components/keryx/research-private-jobs.tsx", "components/keryx/research-saved-jobs.tsx",
+    "components/keryx/research-turn.tsx", "components/keryx/selection-failure-download.tsx", "components/keryx/sponsored-trial-notice.tsx",
+    "components/keryx/trace-row.tsx"];
+  const retained = new Map([
+    ["app/embed/embed-client.tsx", ["Keryx"]],
+    ["components/keryx/a2a-call-card.tsx", ["https://keryx.cc", 'claude mcp add --transport http keryx &quot;https://keryx.cc/mcp?client=claude&quot;', "/api/docs ↗"]],
+    ["components/keryx/research-job.tsx", ["a2a_…"]],
+  ]);
+  for (const file of files) {
+    const findings = extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
+    const samples = findings.filter(finding => finding.text.startsWith("# 1 · inspect the default package"));
+    assert.equal(samples.length, file.endsWith("a2a-call-card.tsx") ? 1 : 0, file);
+    assert.deepEqual(findings.filter(finding => !samples.includes(finding)).map(finding => finding.text), retained.get(file) ?? [], file);
+  }
+});
