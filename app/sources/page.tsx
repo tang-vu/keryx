@@ -1,6 +1,7 @@
 /** The retained source directory: public reading material and creator listings. */
 
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { SiteHeader } from "@/components/keryx/site-header";
@@ -32,7 +33,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: "/sources" },
+  alternates: englishPublicAlternates("/sources"),
   openGraph: { title: TITLE, description: DESCRIPTION, url: `${BASE}/sources`, type: "website" },
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };

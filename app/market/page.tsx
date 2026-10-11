@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
 import { BadgeDollarSign, Clock3, ExternalLink, FileCheck2, ShieldCheck } from "lucide-react";
 
@@ -17,7 +18,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: "/market" },
+  alternates: englishPublicAlternates("/market"),
 };
 
 export default async function MarketPage({

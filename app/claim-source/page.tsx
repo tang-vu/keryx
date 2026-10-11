@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { getDb } from "@/lib/db";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
@@ -6,7 +7,7 @@ import { PublicSourceClaimForm } from "@/components/keryx/public-source-claim-fo
 import { sourceClaimDraft } from "@/lib/registration-return";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Claim your public source", description: "Prove control of your website, then separately choose free reads, citation rewards or paid access." };
+export const metadata: Metadata = { title: "Claim your public source", description: "Prove control of your website, then separately choose free reads, citation rewards or paid access.", alternates: englishPublicAlternates("/claim-source") };
 
 export default async function ClaimSourcePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;

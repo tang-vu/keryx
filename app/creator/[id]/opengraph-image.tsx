@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getDb } from "@/lib/db";
+import { publicPreviewFonts, publicPreviewFontFamily } from "@/lib/og-fonts";
 
 export const alt = "Keryx creator — paid in USDC every time an AI cites them";
 export const size = { width: 1200, height: 630 };
@@ -57,7 +58,7 @@ export default async function CreatorOgImage({
           background: "#F1E9D7",
           color: "#1B1712",
           padding: 56,
-          fontFamily: "Georgia, 'Times New Roman', serif",
+          fontFamily: publicPreviewFontFamily,
           border: "14px solid #1B1712",
         }}
       >
@@ -126,7 +127,7 @@ export default async function CreatorOgImage({
         </div>
       </div>
     ),
-    { ...size },
+    { ...size, fonts: await publicPreviewFonts(name) },
   );
 }
 

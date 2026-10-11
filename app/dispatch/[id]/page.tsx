@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   try {
     const dispatch = await resolveDispatch(id);
-    if (!dispatch) return { title: "Dispatch not found — Keryx" };
+    if (!dispatch) return { title: "Dispatch not found — Keryx", robots: { index: false } };
     const { run, archive } = dispatch;
     const snippet = run.answer.slice(0, 160).replace(/\n/g, " ");
     const cited = run.citations.length;
@@ -70,7 +70,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       },
     };
   } catch {
-    return { title: "Keryx Dispatch" };
+    return { title: "Keryx Dispatch", robots: { index: false } };
   }
 }
 

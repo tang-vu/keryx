@@ -21,6 +21,7 @@ import { ArchiveAnswerRow } from "@/components/keryx/archive-answer-row";
 import { ArchiveSearch } from "@/components/keryx/archive-search";
 import { ArchiveTopicChips } from "@/components/keryx/archive-topic-chips";
 import { safeInlineJson } from "@/lib/safe-json";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 
 // Same cadence as the archive it slices — new dispatches join a topic without a redeploy.
 export const revalidate = 600;
@@ -81,7 +82,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `/answers/topic/${topic.slug}` },
+    alternates: englishPublicAlternates(`/answers/topic/${topic.slug}`),
     openGraph: {
       title,
       description,
@@ -107,6 +108,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
     {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
+      inLanguage: "en",
       name: `${topic.label} — Keryx answers`,
       url: `${BASE}/answers/topic/${topic.slug}`,
       isPartOf: { "@type": "CollectionPage", name: "Keryx Answer Archive", url: `${BASE}/answers` },

@@ -31,6 +31,7 @@ export function archiveIndexJsonLd({
   return {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
+    inLanguage: "en",
     name,
     url,
     ...(description ? { description } : {}),

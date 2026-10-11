@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
@@ -9,7 +10,7 @@ import { evidenceDraftCopy as draftCopy } from "@/lib/research/evidence-draft-co
 export const metadata: Metadata = {
   title: "Literature workspace — save, screen and compare research papers",
   description: "Keep a personal paper shortlist, screening notes and a review question. Export your screening list or prepare a cited comparison from two saved papers.",
-  alternates: { canonical: "/literature" },
+  alternates: englishPublicAlternates("/literature"),
 };
 
 export default function LiteraturePage() {

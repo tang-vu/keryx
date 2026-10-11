@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
@@ -9,7 +10,7 @@ import { createRichMessages } from "@/lib/i18n/rich-messages";
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
 
-export const metadata: Metadata = { title: message("economicsPage.metadataTitle"), description: message("economicsPage.metadataDescription") };
+export const metadata: Metadata = { title: message("economicsPage.metadataTitle"), description: message("economicsPage.metadataDescription"), alternates: englishPublicAlternates("/economics") };
 
 export default function EconomicsPage() {
   return <div className="min-h-screen bg-paper-2 text-ink"><SiteHeader />

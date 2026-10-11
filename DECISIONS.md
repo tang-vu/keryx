@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+## Advertise published public interfaces and render preview glyphs locally — 2026-10-11
+
+Keep existing indexed URLs and publish reciprocal English/x-default metadata only
+for the actual shipped English interfaces. Share that contract with the sitemap;
+Atom identifies its English wrapper while resetting language on unknown report
+entries. Reports retain one permalink without inferred language. Load licensed
+local Vietnamese/Chinese/math preview fonts by required glyph coverage, which
+does not certify answer language or activate a locale. Recorded answer-language
+and visibility adapters plus human-reviewed translated interfaces remain original
+issue277 gates. See [scope and acceptance](docs/engineering/public-metadata-277-2026-10-11.md).
+
 ## Localize ordinary bot wrappers from the original question — 2026-10-11
 
 Use the existing finite ordinary-answer selector for Telegram, Discord and Slack

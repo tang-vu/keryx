@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
 import { getTestnetArchive, type TestnetArchiveInfo, type TestnetArchiveSummary, type TestnetCreatorEntry } from "@/lib/history/testnet-archive";
 import type { QueryRun } from "@/lib/types";
@@ -8,7 +9,7 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { TestnetHistorySummary } from "@/components/keryx/testnet-history-summary";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Arc testnet history — Keryx", description: "Original Keryx testnet dispatches, decisions and settlement evidence, retained at their existing URLs." };
+export const metadata: Metadata = { title: "Arc testnet history — Keryx", description: "Original Keryx testnet dispatches, decisions and settlement evidence, retained at their existing URLs.", alternates: englishPublicAlternates("/history/testnet") };
 
 export default async function TestnetHistoryPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = new URLSearchParams();

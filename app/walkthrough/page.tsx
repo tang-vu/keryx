@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { RecordedWalkthrough } from "@/components/keryx/recorded-walkthrough";
 import { walkthroughMessages as messages } from "@/locales/en/walkthrough";
 
 export const metadata: Metadata = {
-  title: messages.title, description: messages.description, alternates: { canonical: "/walkthrough" },
+  title: messages.title, description: messages.description, alternates: englishPublicAlternates("/walkthrough"),
 };
 
 export default function WalkthroughPage() {

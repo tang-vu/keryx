@@ -19,6 +19,7 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { ArchiveIndexView } from "@/components/keryx/archive-index-view";
 import { archiveIndexJsonLd } from "./archive-index-json-ld";
 import { safeInlineJson } from "@/lib/safe-json";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 
 // Recompute a few times an hour — the corpus grows as new dispatches settle.
 export const revalidate = 600;
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: {
-    canonical: "/answers",
+    ...englishPublicAlternates("/answers"),
     types: {
       "application/atom+xml": [{ url: "/answers/feed.xml", title: "Keryx Answer Archive" }],
     },

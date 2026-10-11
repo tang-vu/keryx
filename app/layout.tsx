@@ -6,6 +6,7 @@ import { PaperGrain } from "@/components/keryx/paper-grain";
 import { InkBleedCursor } from "@/components/keryx/ink-bleed-cursor";
 import { MintEngravings } from "@/components/keryx/mint-engravings";
 import { safeInlineJson } from "@/lib/safe-json";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { Providers } from "./providers";
 import { MaintenanceBanner } from "@/components/keryx/maintenance-banner";
@@ -45,7 +46,7 @@ export const metadata: Metadata = {
   creator: "Keryx",
   category: "technology",
   alternates: {
-    canonical: "/",
+    ...englishPublicAlternates("/"),
     types: {
       "application/atom+xml": [{ url: "/answers/feed.xml", title: "Keryx Answer Archive" }],
     },
@@ -120,6 +121,7 @@ const JSON_LD = {
     },
     {
       "@type": "WebSite",
+      inLanguage: "en",
       "@id": `${defaultUrl}/#site`,
       name: "Keryx",
       url: defaultUrl,

@@ -1,11 +1,12 @@
 import { SiteHeader } from "@/components/keryx/site-header";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { usageWindow, type PublicUsageSummary } from "@/lib/usage/contracts";
 import { usageMessages as copy } from "@/locales/en/usage";
 export const dynamic = "force-dynamic";
-export const metadata = { title: copy.metadataTitle };
+export const metadata = { title: copy.metadataTitle, alternates: englishPublicAlternates("/usage") };
 function usdc(micros: string) { const value = BigInt(micros), unit = BigInt(1000000); return `${value / unit}.${(value % unit).toString().padStart(6, "0")} USDC`; }
 export default async function UsagePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const input = await searchParams, params = new URLSearchParams();

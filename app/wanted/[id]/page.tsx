@@ -1,5 +1,6 @@
 import { cache } from "react";
 import type { Metadata } from "next";
+import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FeedMatchForm } from "@/components/keryx/feed-match-form";
@@ -44,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title: `${gap.claim} — Keryx Wanted`,
       description,
-      alternates: { canonical: `/wanted/${gap.id}` },
+      alternates: englishPublicAlternates(`/wanted/${gap.id}`),
       openGraph: {
         title: `${stateLabel} — Keryx`,
         description,

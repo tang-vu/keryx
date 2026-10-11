@@ -1,5 +1,12 @@
 # Locale source foundation
 
+Historical source-only foundation. The subsequent
+[October 11 public metadata delivery](public-metadata-277-2026-10-11.md)
+connects shipped-English interface alternates, sitemap/feed language handling
+and local preview fonts. Recorded report language/visibility and translated
+interface approval remain separate gates. The operational release45 freeze
+described below is historical; current release coordination belongs to root.
+
 This source increment addresses independent preparation for issues
 [271](https://github.com/tang-vu/keryx/issues/271),
 [274](https://github.com/tang-vu/keryx/issues/274) and

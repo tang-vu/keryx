@@ -3,6 +3,7 @@ import { getArchiveCached } from "@/lib/answers-archive-cache";
 import { buildTopics } from "@/lib/answers-topics";
 import { answersPagePath, paginateArchive } from "@/lib/answers-pagination";
 import { loadWantedBoard, WANTED_DETAIL_LIMIT } from "@/lib/wanted-board";
+import { englishSitemapAlternates } from "@/lib/i18n/public-metadata";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
@@ -76,5 +77,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // The static sitemap remains valid if the live demand projection is briefly unavailable.
   }
 
-  return [...staticRoutes, ...pageRoutes, ...topicRoutes, ...wantedRoutes, ...answerRoutes];
+  // Interface language is known. The stored answer language is not, so a report
+  // must not inherit an English hreflang from the surrounding archive interface.
+  const interfaces = [...staticRoutes, ...pageRoutes, ...topicRoutes, ...wantedRoutes]
+    .map(route => ({ ...route, alternates: englishSitemapAlternates(new URL(route.url).pathname, BASE) }));
+  return [...interfaces, ...answerRoutes];
 }

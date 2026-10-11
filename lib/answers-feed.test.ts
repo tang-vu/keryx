@@ -33,10 +33,14 @@ describe("buildAnswersFeedXml", () => {
   });
   it("renders a valid Atom skeleton with self + alternate links", () => {
     const xml = buildAnswersFeedXml([entry({})], BASE);
-    expect(xml).toContain('<feed xmlns="http://www.w3.org/2005/Atom">');
+    expect(xml).toContain('<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">');
     expect(xml).toContain(`<id>${BASE}/answers</id>`);
     expect(xml).toContain(`href="${BASE}/answers/feed.xml"`);
     expect(xml).toContain(`<link rel="alternate" type="text/html" href="${BASE}/dispatch/abc123"/>`);
+    expect(xml).toContain(`<link rel="alternate" type="text/html" hreflang="en" href="${BASE}/answers"/>`);
+    expect(xml).toContain('<entry xml:lang="">');
+    expect(xml).not.toContain('hreflang="vi"');
+    expect(xml).not.toContain('hreflang="x-default"');
     expect(xml).toContain("<title>What is x402?</title>");
     expect(xml).toContain("$0.0053 in recorded creator rewards; inspect dispatch for settlement state");
   });
@@ -59,7 +63,7 @@ describe("buildAnswersFeedXml", () => {
       ],
       BASE,
     );
-    const feedUpdated = xml.slice(0, xml.indexOf("<entry>"));
+    const feedUpdated = xml.slice(0, xml.indexOf("<entry "));
     expect(feedUpdated).toContain("<updated>2026-07-20T12:00:00.000Z</updated>");
   });
 
@@ -68,11 +72,11 @@ describe("buildAnswersFeedXml", () => {
       entry({ id: `e${i}`, question: `Q${i}?` }),
     );
     const xml = buildAnswersFeedXml(many, BASE);
-    expect(xml.match(/<entry>/g)?.length).toBe(FEED_ENTRY_LIMIT);
+    expect(xml.match(/<entry /g)?.length).toBe(FEED_ENTRY_LIMIT);
 
     const empty = buildAnswersFeedXml([], BASE);
     expect(empty).toContain("</feed>");
-    expect(empty).not.toContain("<entry>");
+    expect(empty).not.toContain("<entry ");
   });
 
   it("normalizes a bad stored timestamp instead of emitting Invalid Date", () => {
