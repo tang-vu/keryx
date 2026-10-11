@@ -71,7 +71,6 @@ export const sourceClaimsMessages = Object.freeze({
   "sourceClaimForm.tokenInstructions": "Place this exact token as a separate word in the feed's publisher-controlled channel title or description, or Atom subtitle. Tokens inside posts, comments and item text do not prove ownership. The feed must be served without redirects. It binds this source, wallet, deployment and network to a single-use challenge.",
   "sourceClaimForm.fileInstructions": "Serve this exact JSON at the address below, directly without redirects. It binds this source, wallet, deployment and network to a single-use challenge.",
   "sourceClaimForm.expires": "Proof expires: {time}",
-  "sourceClaimForm.urlExample": "{url}",
   "sourceClaimForm.proofMismatch": "The proof did not match the reviewed wallet, network and source.",
   "sourceClaimForm.tokenUnavailable": "The RSS proof token is unavailable. Create a fresh challenge.",
   "sourceClaimForm.savedMismatch": "The saved claim does not match this ownership challenge. Reload with the original wallet.",

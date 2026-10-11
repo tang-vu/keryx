@@ -1,6 +1,6 @@
 # Public source claims English catalogue — 2026-10-11
 
-This focused original #272 area moves 120 inspected English messages from the
+This focused original #272 area moves 119 inspected English messages from the
 claim page, ownership form, policy panel, freshness status, saved-claim list and
 request helper into `locales/en/source-claims.ts`. Metadata, accessible labels,
 proof instructions, clipboard notices, fallback errors and complete policy
@@ -15,8 +15,8 @@ generation fences, current-wallet checks, expiry rules, request methods/bodies,
 registration hrefs, saved permissions and separate activation conditions retain
 their existing behavior. No ownership, payment or database semantics change.
 
-Exactly 104 migrated guard occurrences are retired from the five JSX files.
-Those scoped files have no remaining guard findings; the non-JSX request helper's
+Exactly 103 migrated guard occurrences are retired from the five JSX files.
+The original URL example retains its data allowance; the non-JSX request helper's
 fallback is also catalogued. A scoped guard regression protects the retirement
 without weakening detection or changing other area allowances.
 
@@ -43,10 +43,10 @@ the assigned worker output `issue272/source-claims/` contains no secrets or priv
 financial originals. No real model, source, wallet, payment, shared database or
 production request occurs; dependencies, ENV, custody and lifecycle are untouched.
 
-Together with the four preserved area candidates, this adds 1,525 keys and retires
-1,364 allowances. The combined inventory remains **1,081 allowances in 83 files**
-(1,078 current findings; three untouched old allowances elsewhere). Source/creator/
-registration/withdrawal still accounts for 728 allowances in 41 files. Remaining
+Together with the four preserved area candidates, this adds 1,524 keys and retires
+1,363 allowances. The combined inventory remains **1,082 allowances in 84 files**
+(1,079 current findings; three untouched old allowances elsewhere). Source/creator/
+registration/withdrawal still accounts for 729 allowances in 42 files. Remaining
 landing/integrations, retained data and root-owned helper/native qualification mean
 original #272 remains open.
 

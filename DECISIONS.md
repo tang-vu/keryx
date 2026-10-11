@@ -7179,7 +7179,7 @@ existing English notices into a typed catalogue. File/token instructions and
 freshness, price and policy notices use whole variants with named interpolation;
 dates, links, source data and exact proof bytes retain their existing render/action
 contracts. Metadata, accessibility labels and the request helper's fallback belong
-to this presentation area. Retire only its 104 actually migrated guard occurrences,
+to this presentation area. Retire only its 103 actually migrated guard occurrences,
 leaving other areas and protocol/data identities intact. No payment, proof, wallet,
 permission or database condition changes, and glossary/locale gates remain held.
 

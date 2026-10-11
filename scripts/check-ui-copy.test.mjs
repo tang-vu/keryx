@@ -229,6 +229,7 @@ test("public source claim proof, policy, status and accessible controls are cata
   for (const file of ["app/claim-source/page.tsx", "components/keryx/public-source-claim-form.tsx",
     "components/keryx/public-source-claim-policy.tsx", "components/keryx/public-source-claim-status.tsx",
     "components/keryx/public-source-claims.tsx"]) {
-    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")).map(finding => finding.text),
+      file.endsWith("public-source-claim-form.tsx") ? ["https://your-site.example/article"] : [], file);
   }
 });
