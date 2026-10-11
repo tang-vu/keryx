@@ -4,6 +4,7 @@ import { myHistoryMessages } from "../../locales/en/my-history";
 import { claimantHistoryMessages } from "../../locales/en/claimant-history";
 import { shellMessages } from "../../locales/en/shell";
 import { operationsMessages } from "../../locales/en/operations";
+import { integrationsMessages } from "../../locales/en/integrations";
 import { wantedMessages } from "../../locales/en/wanted";
 import { landingMessages } from "../../locales/en/landing";
 import { withdrawalMessages } from "../../locales/en/withdrawal";
@@ -19,6 +20,7 @@ import { researchFlowMessages } from "../../locales/en/research-flow";
 
 /** English source keys. Payment/legal prose remains in its separate review gate. */
 export const englishMessages = Object.freeze({
+  ...integrationsMessages,
   ...wantedMessages,
   ...landingMessages,
   ...withdrawalMessages,

@@ -7387,3 +7387,14 @@ intercepted action checks qualify this source extraction; root owns the shared
 status helper, pre-existing offer-barrel build qualification and combined review,
 CI/distribution/delivery. Original272 and held glossary/locale gates stay open.
 See `docs/engineering/wanted-catalogue-2026-10-11.md`.
+
+## 2026-10-11 — English integration setup and playground catalogue
+
+Extract47 complete typed English presentation messages while keeping setup
+commands, protocol fields, model/client identities, copied snippets and example
+prompts as data. Retire only48 scoped original allowances; preserve fourteen data
+findings and other areas. Exact renders and intercepted frontend callbacks qualify
+English/byte parity without executing research or billing endpoints. Root owns
+availability helpers, combined Next/domain/platform acceptance and delivery; hold
+locale/glossary activation and keep original272 open. See
+`docs/engineering/integrations-catalogue-2026-10-11.md`.

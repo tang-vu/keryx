@@ -1,5 +1,7 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -17,6 +19,9 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { cn } from "@/lib/utils";
 import { useResearchAvailability } from "@/lib/hooks/use-research-availability";
 import { RESEARCH_AVAILABILITY_UNKNOWN } from "@/lib/research/availability-contract";
+
+const uiCopy = createMessages("en");
+const uiRichCopy = createRichMessages("en");
 
 type ClientId = "codex" | "claude" | "cursor";
 type Health = "checking" | "ready" | "unavailable";
@@ -47,7 +52,7 @@ const CLIENTS: ClientSetup[] = [
   {
     id: "codex",
     name: "Codex",
-    detail: "Add once from your terminal. Discover free paper metadata, research and service-status tools.",
+    detail: uiCopy("mcpSetup.codexDetail"),
     command: `codex mcp add keryx --url "${ENDPOINT}?client=codex"`,
     keyed:
       `codex mcp add keryx --url "${ENDPOINT}?client=codex" ` +
@@ -56,13 +61,13 @@ const CLIENTS: ClientSetup[] = [
   {
     id: "claude",
     name: "Claude Code",
-    detail: "Register Keryx as a remote HTTP server in your current Claude scope.",
+    detail: uiCopy("mcpSetup.claudeDetail"),
     command: `claude mcp add --transport http keryx "${ENDPOINT}?client=claude"`,
   },
   {
     id: "cursor",
     name: "Cursor",
-    detail: "Paste this server entry into your Cursor MCP configuration.",
+    detail: uiCopy("mcpSetup.cursorDetail"),
     command: `{
   "mcpServers": {
     "keryx": {
@@ -105,7 +110,7 @@ async function probeConnection() {
   return { version: mcp.result.serverInfo.version, metrics };
 }
 
-function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
+function CopyButton({ value, label = uiCopy("mcpSetup.copy") }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -121,7 +126,7 @@ function CopyButton({ value, label = "Copy" }: { value: string; label?: string }
       className="inline-flex items-center gap-1.5 border border-line bg-paper px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-2 transition-colors hover:border-seal hover:text-seal"
     >
       {copied ? <Check size={13} /> : <Clipboard size={13} />}
-      {copied ? "Copied" : label}
+      {copied ? uiCopy("mcpSetup.copied") : label}
     </button>
   );
 }
@@ -174,18 +179,17 @@ export function McpIntegrationClient() {
                 <span>io.github.tang-vu/keryx</span>
               </div>
               <h1 className="max-w-[760px] font-display text-[42px] font-semibold leading-[0.98] tracking-[-0.035em] text-ink sm:text-[64px]">
-                One URL. Every agent. Creators get paid.
+                {uiCopy("mcpSetup.title")}
               </h1>
               <p className="mt-7 max-w-[680px] font-serif text-[19px] leading-[1.6] text-ink-2">
-                Give your MCP client a budgeted research tool. Keryx finds relevant writing,
-                settles citation rewards in Arc USDC, and returns the answer with a public receipt.
+                {uiCopy("mcpSetup.introduction")}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a
                   href="#setup"
                   className="border border-ink bg-seal px-5 py-3 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
                 >
-                  Connect an agent
+                  {uiCopy("mcpSetup.connect")}
                 </a>
                 <a
                   href="https://registry.modelcontextprotocol.io/v0/servers?search=keryx"
@@ -201,12 +205,12 @@ export function McpIntegrationClient() {
             <div className="self-end border border-ink bg-panel p-6 shadow-[5px_5px_0_var(--ink)]">
               <div className="flex items-center justify-between border-b border-line pb-4">
                 <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
-                  Live endpoint
+                  {uiCopy("mcpSetup.liveEndpoint")}
                 </span>
                 <button
                   type="button"
                   onClick={() => void checkConnection()}
-                  aria-label="Check connection again"
+                  aria-label={uiCopy("mcpSetup.checkAgain")}
                   className="text-ink-3 transition-colors hover:text-seal"
                 >
                   <RefreshCw size={14} className={health === "checking" ? "animate-spin" : ""} />
@@ -224,37 +228,35 @@ export function McpIntegrationClient() {
                 <div>
                   <div className="font-serif text-[20px] text-ink">
                     {health === "checking"
-                      ? "Checking connection..."
+                      ? uiCopy("mcpSetup.checking")
                       : health === "ready"
-                        ? "MCP endpoint connected"
-                        : "Connection unavailable"}
+                        ? uiCopy("mcpSetup.connected")
+                        : uiCopy("mcpSetup.unavailable")}
                   </div>
                   <div className="mt-1 font-mono text-[10px] text-ink-3">
-                    {ENDPOINT}
-                    {serverVersion ? ` · server ${serverVersion}` : ""}
+                    {serverVersion ? uiCopy("mcpSetup.versionedEndpoint", { endpoint: ENDPOINT, version: serverVersion }) : ENDPOINT}
                   </div>
                 </div>
               </div>
               <p role="status" className="mt-4 text-sm text-ink-2">
-                {checking ? "Checking research availability…" : availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}
+                {checking ? uiCopy("mcpSetup.availabilityChecking") : availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}
               </p>
-              <Link href="/me/asks" className="mt-2 inline-block min-h-11 py-3 text-sm underline">Saved reports</Link>
+              <Link href="/me/asks" className="mt-2 inline-block min-h-11 py-3 text-sm underline">{uiCopy("mcpSetup.savedReports")}</Link>
               <p className="mt-2 font-serif text-sm leading-relaxed text-ink-2">
-                Need a paper’s title, authors or DOI? Use <code>paper_lookup</code> with its exact identifier.
-                Catalog metadata is free; repository search requires <code>searchRepositories: true</code>.
+                {uiRichCopy("mcpSetup.paperLookup", { lookup: <code>paper_lookup</code>, repositorySearch: <code>searchRepositories: true</code> })}
               </p>
-              <Link prefetch={false} href="/sources?kind=paper#research-papers" className="inline-block min-h-11 py-3 text-sm underline">Browse free paper metadata</Link>
+              <Link prefetch={false} href="/sources?kind=paper#research-papers" className="inline-block min-h-11 py-3 text-sm underline">{uiCopy("mcpSetup.browsePapers")}</Link>
               <div className="mt-6 grid grid-cols-2 border-t border-line pt-5">
                 <div>
                   <div className="font-display text-[28px] text-ink">{totalMcpQueries}</div>
                   <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-ink-3">
-                    MCP dispatches
+                    {uiCopy("mcpSetup.dispatches")}
                   </div>
                 </div>
                 <div className="border-l border-line pl-5">
                   <div className="font-display text-[28px] text-ink">{totalPaying}</div>
                   <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-ink-3">
-                    Paying dispatches
+                    {uiCopy("mcpSetup.payingDispatches")}
                   </div>
                 </div>
               </div>
@@ -265,12 +267,11 @@ export function McpIntegrationClient() {
         <section id="setup" className="mx-auto max-w-[980px] scroll-mt-24 px-4 py-16 sm:px-[30px]">
           <div className="mb-8">
             <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal">
-              01 / Setup
+              {uiCopy("mcpSetup.setupEyebrow", { step: "01" })}
             </div>
-            <h2 className="mt-2 font-serif text-[32px] text-ink">Choose your MCP client</h2>
+            <h2 className="mt-2 font-serif text-[32px] text-ink">{uiCopy("mcpSetup.chooseClient")}</h2>
             <p className="mt-2 font-serif text-[16px] text-ink-3">
-              The client tag measures which setup path works. It does not identify or authorize
-              you.
+              {uiCopy("mcpSetup.tagBoundary")}
             </p>
           </div>
 
@@ -302,12 +303,12 @@ export function McpIntegrationClient() {
                 </pre>
               </div>
               <div className="mt-3 flex justify-end">
-                <CopyButton value={active.command} label="Copy setup" />
+                <CopyButton value={active.command} label={uiCopy("mcpSetup.copySetup")} />
               </div>
               {active.keyed && (
                 <details className="mt-5 border-t border-line pt-5">
                   <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.12em] text-seal">
-                    Setup with an API key
+                    {uiCopy("mcpSetup.keySetup")}
                   </summary>
                   <div className="mt-4 overflow-x-auto border border-line bg-ink p-4 text-paper">
                     <pre className="font-mono text-[12px] leading-[1.7]">
@@ -324,12 +325,11 @@ export function McpIntegrationClient() {
           <div className="mx-auto grid max-w-[980px] gap-10 px-4 py-16 sm:px-[30px] md:grid-cols-2">
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal">
-                02 / First dispatch
+                {uiCopy("mcpSetup.dispatchEyebrow", { step: "02" })}
               </div>
-              <h2 className="mt-2 font-serif text-[30px] text-ink">Ask for research, not a search</h2>
+              <h2 className="mt-2 font-serif text-[30px] text-ink">{uiCopy("mcpSetup.researchTitle")}</h2>
               <p className="mt-3 font-serif text-[16px] leading-[1.6] text-ink-3">
-                Tell your agent to use Keryx. The response includes cited creators, reward amounts,
-                confidence, settlement status, and a dispatch URL.
+                {uiCopy("mcpSetup.researchIntroduction")}
               </p>
             </div>
             <div>
@@ -337,7 +337,7 @@ export function McpIntegrationClient() {
                 “{SAMPLE_PROMPT}”
               </blockquote>
               <div className="mt-3 flex justify-end">
-                <CopyButton value={SAMPLE_PROMPT} label="Copy prompt" />
+                <CopyButton value={SAMPLE_PROMPT} label={uiCopy("mcpSetup.copyPrompt")} />
               </div>
             </div>
           </div>
@@ -349,14 +349,11 @@ export function McpIntegrationClient() {
               <KeyRound className="mt-1 shrink-0 text-seal" size={24} />
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal">
-                  Anonymous first, verified when ready
+                  {uiCopy("mcpSetup.identityEyebrow")}
                 </div>
-                <h2 className="mt-2 font-serif text-[27px] text-ink">Raise the research limit</h2>
+                <h2 className="mt-2 font-serif text-[27px] text-ink">{uiCopy("mcpSetup.limitTitle")}</h2>
                 <p className="mt-2 max-w-[620px] font-serif text-[15px] leading-[1.6] text-ink-3">
-                  Try Remote MCP without a key. For higher limits and wallet-level attribution,
-                  create an ask-scoped API key in the developer portal. Keryx still funds creator
-                  rewards; your key controls identity and rate limits only. All keys for one
-                  wallet share the same sponsored allowance across chat and Remote MCP.
+                  {uiCopy("mcpSetup.limitBoundary")}
                 </p>
               </div>
             </div>
@@ -364,7 +361,7 @@ export function McpIntegrationClient() {
               href="/dev"
               className="inline-flex items-center justify-center gap-2 border border-ink bg-ink px-5 py-3 font-mono text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-seal"
             >
-              Developer portal <ArrowUpRight size={14} />
+              {uiCopy("mcpSetup.developerPortal")} <ArrowUpRight size={14} />
             </Link>
           </div>
         </section>
