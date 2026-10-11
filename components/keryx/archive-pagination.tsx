@@ -7,8 +7,11 @@
  * reachable, so the markup stays flat however long the archive gets.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import { answersPagePath } from "@/lib/answers-pagination";
+
+const copy = createMessages("en");
 
 const WINDOW = 2;
 
@@ -30,12 +33,12 @@ export function ArchivePagination({ page, totalPages }: { page: number; totalPag
 
   return (
     <nav
-      aria-label="Archive pages"
+      aria-label={copy("archivePages.label")}
       className="mt-10 flex flex-wrap items-center gap-2 border-t border-line pt-6"
     >
       {page > 1 && (
         <Link href={answersPagePath(page - 1)} rel="prev" className={linkClass}>
-          ← Newer
+          {copy("archivePages.newer")}
         </Link>
       )}
 
@@ -63,7 +66,7 @@ export function ArchivePagination({ page, totalPages }: { page: number; totalPag
 
       {page < totalPages && (
         <Link href={answersPagePath(page + 1)} rel="next" className={linkClass}>
-          Older →
+          {copy("archivePages.older")}
         </Link>
       )}
     </nav>

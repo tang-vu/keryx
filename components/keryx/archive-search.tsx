@@ -17,9 +17,12 @@
  * exactly as it did before this existed.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import { Children, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
+
+const copy = createMessages("en");
 
 /** One entry that exists in the archive but isn't rendered as a card on this page. */
 export interface ArchiveSearchEntry {
@@ -36,7 +39,7 @@ export function ArchiveSearch({
   children,
   filters,
   others = [],
-  placeholder = "Filter these answers…",
+  placeholder = copy("archiveFilter.placeholder"),
 }: {
   /** Lowercase searchable text per card, in the same order as `children`. */
   terms: string[];
@@ -71,12 +74,12 @@ export function ArchiveSearch({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
-          aria-label="Filter answers"
+          aria-label={copy("archiveFilter.label")}
           className="w-full bg-transparent font-mono text-[13px] text-ink outline-none placeholder:text-ink-3"
         />
         {q !== "" && (
           <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-            {total} found
+            {copy(total === 1 ? "archiveFilter.found.one" : "archiveFilter.found.other", { count: total })}
           </span>
         )}
       </label>
@@ -94,7 +97,7 @@ export function ArchiveSearch({
       {otherMatches.length > 0 && (
         <section className="mt-8">
           <h2 className="mb-3 border-b border-line pb-2 font-mono text-[10.5px] uppercase tracking-[0.18em] text-ink-3">
-            Elsewhere in the archive · {otherMatches.length}
+            {copy(otherMatches.length === 1 ? "archiveFilter.elsewhere.one" : "archiveFilter.elsewhere.other", { count: otherMatches.length })}
           </h2>
           <ul className="space-y-2.5">
             {otherMatches.slice(0, OTHERS_SHOWN).map((o) => (
@@ -110,7 +113,7 @@ export function ArchiveSearch({
           </ul>
           {otherMatches.length > OTHERS_SHOWN && (
             <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
-              + {otherMatches.length - OTHERS_SHOWN} more — narrow the filter
+              {copy(otherMatches.length - OTHERS_SHOWN === 1 ? "archiveFilter.more.one" : "archiveFilter.more.other", { count: otherMatches.length - OTHERS_SHOWN })}
             </p>
           )}
         </section>
@@ -118,8 +121,7 @@ export function ArchiveSearch({
 
       {q !== "" && total === 0 && (
         <p className="mt-6 border border-dashed border-line p-6 text-center font-serif text-[15px] text-ink-2">
-          No answer in the archive matches “{query.trim()}” yet — ask it, and Keryx will pay the
-          sources that answer it.
+          {copy("archiveFilter.empty", { query: query.trim() })}
         </p>
       )}
     </div>

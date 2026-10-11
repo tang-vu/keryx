@@ -1,5 +1,6 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { Citation, EvidenceRecord, PaymentRecord } from "@/lib/types";
@@ -8,6 +9,8 @@ import { formatRecordedUsdc, formatUsdcMicros, sumRecordedUsdc } from "@/lib/dis
 import { ScholarlyMetadataDetails } from "./scholarly-metadata";
 import { recordedArcLabel,recordedArcTransactionUrl } from "@/lib/arc-network-display";
 import { GatewayContractReferences } from "./gateway-contract-references";
+
+const copy = createMessages("en");
 
 interface Props {
   queryId: string;
@@ -33,8 +36,8 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
   const articleUrl = safeArticleUrl(citation.itemUrl);
   const isPublicReference = citation.sourceKind === "public-reference";
   const publicDelivery = citation.publicDeliveryKind
-    ? ({ full_text: "full text supplied by the feed", excerpt: "excerpt", abstract: "abstract", metadata_only: "metadata only" }[citation.publicDeliveryKind])
-    : "body supplied by the feed";
+    ? ({ full_text: copy("citationEvidence.rssFullText"), excerpt: copy("citationEvidence.rssExcerpt"), abstract: copy("citationEvidence.rssAbstract"), metadata_only: copy("citationEvidence.rssMetadata") }[citation.publicDeliveryKind])
+    : copy("citationEvidence.rssBody");
   const quotes = evidence.filter((item) =>
     item.marker === citation.marker && item.sourceId === citation.sourceId && (item.qualifiesForAnswer ?? item.qualifiesForReward) && item.quote.trim().length > 0,
   );
@@ -100,68 +103,68 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
         className="fixed inset-x-0 bottom-0 top-auto m-0 h-auto max-h-[88dvh] w-full max-w-none overflow-y-auto border-t border-ink bg-paper p-6 text-ink shadow-2xl backdrop:bg-ink/60 sm:inset-y-0 sm:left-auto sm:right-0 sm:h-screen sm:max-h-none sm:w-[min(460px,100vw)] sm:border-l sm:border-t-0 sm:p-8"
       >
         <div className="sticky -top-6 z-10 -mx-6 -mt-6 flex items-center justify-between gap-4 border-b border-line bg-paper px-6 py-3 sm:-top-8 sm:-mx-8 sm:-mt-8 sm:px-8">
-          <p className="font-mono text-xs uppercase tracking-widest text-seal">Citation {citation.marker}</p>
-          <button ref={closeRef} type="button" onClick={onClose} aria-label="Close citation evidence" className="flex h-11 w-11 items-center justify-center rounded font-mono text-xl text-ink focus-visible:outline-2 focus-visible:outline-seal">×</button>
+          <p className="font-mono text-xs uppercase tracking-widest text-seal">{copy("citationEvidence.citation", { marker: citation.marker })}</p>
+          <button ref={closeRef} type="button" onClick={onClose} aria-label={copy("citationEvidence.close")} className="flex h-11 w-11 items-center justify-center rounded font-mono text-xl text-ink focus-visible:outline-2 focus-visible:outline-seal">×</button>
         </div>
         <h2 id="citation-evidence-title" className="mt-4 font-serif text-2xl leading-tight text-ink [overflow-wrap:anywhere]">
           {citation.itemTitle ?? citation.sourceName}
         </h2>
-        <p className="mt-2 font-mono text-xs text-ink-3">Publication: {citation.sourceName}</p>
-        {citation.scholarly ? <ScholarlyMetadataDetails metadata={citation.scholarly} /> : <p className="mt-1 font-mono text-xs text-ink-3">Author name: not stored in this dispatch</p>}
-        {citation.evidenceProvenance === "synthetic-demo" && <p className="mt-4 border-l-2 border-seal pl-4 text-sm text-seal">Synthetic demo content. Measurements and excerpts are illustrative, not factual evidence. Any real settled payments remain recorded below.</p>}
+        <p className="mt-2 font-mono text-xs text-ink-3">{copy("citationEvidence.publication", { publication: citation.sourceName })}</p>
+        {citation.scholarly ? <ScholarlyMetadataDetails metadata={citation.scholarly} /> : <p className="mt-1 font-mono text-xs text-ink-3">{copy("citationEvidence.authorNotStored")}</p>}
+        {citation.evidenceProvenance === "synthetic-demo" && <p className="mt-4 border-l-2 border-seal pl-4 text-sm text-seal">{copy("citationEvidence.synthetic")}</p>}
         {isPublicReference && (
           <div className="mt-4 border-l-2 border-line pl-4">
-            <p className="font-mono text-xs text-ink-3">Free public reference · no creator payment</p>
-            <p className="mt-2 font-mono text-xs text-ink-3">{citation.webProvenance ? `Original page: extracted ${citation.webProvenance.extraction} text${citation.webProvenance.truncated ? " (bounded excerpt)" : ""}; retrieved ${citation.webProvenance.retrievedAt}` : `RSS delivery: ${publicDelivery}`}</p>
-            <p className="mt-2 text-sm text-ink-2">{citation.webProvenance ? `Quotes match text extracted from the original public document. This establishes source grounding, not factual verification or guaranteed complete content. Publisher group ${citation.webProvenance.publisherGroup} uses a registrable-domain proxy; it does not prove ownership or independent corroboration.` : "Evidence comes from the public RSS feed body. Keryx has not fetched the full article or verified publisher ownership."}</p>
+            <p className="font-mono text-xs text-ink-3">{copy("citationEvidence.publicReference")}</p>
+            <p className="mt-2 font-mono text-xs text-ink-3">{citation.webProvenance ? copy(citation.webProvenance.truncated ? "citationEvidence.webBounded" : "citationEvidence.webText", { extraction: citation.webProvenance.extraction, retrievedAt: citation.webProvenance.retrievedAt }) : publicDelivery}</p>
+            <p className="mt-2 text-sm text-ink-2">{citation.webProvenance ? copy("citationEvidence.groundingNotice", { publisherGroup: citation.webProvenance.publisherGroup }) : copy("citationEvidence.rssNotice")}</p>
           </div>
         )}
         {quotes.length ? (
           <div className="mt-7">
-            <h3 className="font-mono text-xs uppercase tracking-widest text-ink-3">Supporting evidence</h3>
+            <h3 className="font-mono text-xs uppercase tracking-widest text-ink-3">{copy("citationEvidence.supporting")}</h3>
             <ul className="mt-3 space-y-4">
               {quotes.map((item, index) => (
                 <li key={`${item.claimIndex}-${index}`} className="border-l-2 border-paid pl-4">
                   <blockquote className="whitespace-pre-wrap font-serif text-[17px] leading-relaxed text-ink [overflow-wrap:anywhere]">“{item.quote}”</blockquote>
-                  <p className="mt-2 text-xs text-ink-3">Research target (unverified): “{item.claim}”</p>
+                  <p className="mt-2 text-xs text-ink-3">{copy("citationEvidence.target", { claim: item.claim })}</p>
                 </li>
               ))}
             </ul>
           </div>
         ) : (
-          <p className="mt-7 border-l-2 border-line pl-4 text-sm text-ink-3">No supporting excerpt is stored for this citation.</p>
+          <p className="mt-7 border-l-2 border-line pl-4 text-sm text-ink-3">{copy("citationEvidence.noExcerpt")}</p>
         )}
         {!isPublicReference && <div className="mt-7 border-t border-line pt-5">
-          <h3 className="font-mono text-xs uppercase tracking-widest text-ink-3">Creator reward</h3>
-          <p className="mt-2 font-serif text-lg text-ink">{Math.round(citation.weight * 100)}% contribution weight</p>
+          <h3 className="font-mono text-xs uppercase tracking-widest text-ink-3">{copy("citationEvidence.reward")}</h3>
+          <p className="mt-2 font-serif text-lg text-ink">{copy("citationEvidence.contribution", { weight: Math.round(citation.weight * 100) })}</p>
           <p className="mt-2 text-sm text-ink-2">
-            {settled.length ? settledAmount === null ? `Settled amount unavailable across ${settled.length} author ${settled.length === 1 ? "payment" : "payments"}.` : `${formatUsdcMicros(settledAmount)} settled across ${settled.length} author ${settled.length === 1 ? "payment" : "payments"}.` : "No settled citation payment is recorded."}
+            {settled.length ? settledAmount === null ? copy(settled.length === 1 ? "citationEvidence.settledUnknown.one" : "citationEvidence.settledUnknown.other", { count: settled.length }) : copy(settled.length === 1 ? "citationEvidence.settled.one" : "citationEvidence.settled.other", { amount: formatUsdcMicros(settledAmount), count: settled.length }) : copy("citationEvidence.noSettledPayment")}
           </p>
-          {pending.length > 0 && <p className="mt-1 text-sm text-amber-700">{pending.length} payment {pending.length === 1 ? "is" : "are"} pending confirmation.</p>}
-          {failed.length > 0 && <p className="mt-1 text-sm text-red-700">{failed.length} payment {failed.length === 1 ? "failed" : "legs failed"}.</p>}
-          {simulated.length > 0 && <p className="mt-1 text-sm text-ink-3">{simulated.length} offline simulated {simulated.length === 1 ? "payment" : "payments"}.</p>}
-          {inconsistent.length > 0 && <p className="mt-1 text-sm text-amber-700">{inconsistent.length} payment record has conflicting settlement fields; confirmation is unavailable.</p>}
-          {legs.length === 0 && <p className="mt-1 text-sm text-ink-3">Payment detail is unavailable for this citation.</p>}
+          {pending.length > 0 && <p className="mt-1 text-sm text-amber-700">{copy(pending.length === 1 ? "citationEvidence.pending.one" : "citationEvidence.pending.other", { count: pending.length })}</p>}
+          {failed.length > 0 && <p className="mt-1 text-sm text-red-700">{copy(failed.length === 1 ? "citationEvidence.failed.one" : "citationEvidence.failed.other", { count: failed.length })}</p>}
+          {simulated.length > 0 && <p className="mt-1 text-sm text-ink-3">{copy(simulated.length === 1 ? "citationEvidence.simulated.one" : "citationEvidence.simulated.other", { count: simulated.length })}</p>}
+          {inconsistent.length > 0 && <p className="mt-1 text-sm text-amber-700">{copy(inconsistent.length === 1 ? "citationEvidence.conflicting.one" : "citationEvidence.conflicting.other", { count: inconsistent.length })}</p>}
+          {legs.length === 0 && <p className="mt-1 text-sm text-ink-3">{copy("citationEvidence.paymentUnavailable")}</p>}
           {legs.length > 0 && (
             <ul className="mt-3 space-y-1 font-mono text-xs text-ink-3">
               {legs.map((payment, index) => (
                 <li key={payment.id ?? `${payment.payee}-${index}`} className="break-all">
-                  {payment.settled !== (paymentSettlementStatus(payment) === "settled") ? "unverified" : paymentSettlementStatus(payment)} · {formatRecordedUsdc(payment.amountUsdc)} USDC on {recordedArcLabel(payment.network)} · recipient {payment.payee}
+                  {copy("citationEvidence.payment", { status: payment.settled !== (paymentSettlementStatus(payment) === "settled") ? copy("citationEvidence.unverified") : paymentSettlementStatus(payment), amount: formatRecordedUsdc(payment.amountUsdc), network: recordedArcLabel(payment.network), payee: payment.payee })}
                   {payment.txHash && settled.includes(payment) && (
                     /^0x[0-9a-fA-F]{64}$/.test(payment.txHash) ? (
-                      <a href={recordedArcTransactionUrl(payment.network,payment.txHash)} target="_blank" rel="noopener noreferrer" className="ml-1 underline">View transaction ↗</a>
-                    ) : <span className="ml-1">· Circle settlement ID {payment.txHash}</span>
+                      <a href={recordedArcTransactionUrl(payment.network,payment.txHash)} target="_blank" rel="noopener noreferrer" className="ml-1 underline">{copy("citationEvidence.viewTransaction")}</a>
+                    ) : <span className="ml-1">{copy("citationEvidence.settlementId", { reference: payment.txHash })}</span>
                   )}
                 </li>
               ))}
             </ul>
           )}
-          <p className="mt-2 font-mono text-xs text-ink-3">Planned citation reward: {formatRecordedUsdc(citation.reward)}</p>
+          <p className="mt-2 font-mono text-xs text-ink-3">{copy("citationEvidence.planned", { amount: formatRecordedUsdc(citation.reward) })}</p>
           <GatewayContractReferences records={settled} className="mt-2 mr-3 inline-block text-xs text-paid underline"/>
         </div>}
         {articleUrl && (
           <a href={articleUrl} target="_blank" rel="noopener noreferrer" className="mt-7 inline-block max-w-full break-all font-mono text-sm text-paid underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-seal">
-            Open source article ↗
+            {copy("citationEvidence.openArticle")}
           </a>
         )}
       </dialog>,

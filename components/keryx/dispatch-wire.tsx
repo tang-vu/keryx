@@ -1,11 +1,14 @@
 "use client";
 
+import { createMessages } from "@/lib/i18n/messages";
 import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PaymentRecord } from "@/lib/types";
 import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { recordedArcLabel } from "@/lib/arc-network-display";
+
+const copy = createMessages("en");
 
 type State = "loading" | "ready" | "empty" | "error";
 
@@ -45,17 +48,17 @@ export function DispatchWire() {
 
   return (
     <div className="flex h-10 items-center border-b border-ink bg-panel">
-      <div className="flex h-10 shrink-0 items-center bg-ink px-2 font-mono text-[10px] uppercase tracking-wider text-paper sm:px-4"><span className="sm:hidden">Settled</span><span className="hidden sm:inline">Settled citations</span></div>
+      <div className="flex h-10 shrink-0 items-center bg-ink px-2 font-mono text-[10px] uppercase tracking-wider text-paper sm:px-4"><span className="sm:hidden">{copy("dispatchWire.settled")}</span><span className="hidden sm:inline">{copy("dispatchWire.citations")}</span></div>
       <div className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap px-2 font-mono text-[11px] text-ink-2 sm:px-3" aria-live="polite">
-        {state === "loading" && "Loading settlements…"}
-        {state === "error" && "Payment feed unavailable."}
+        {state === "loading" && copy("dispatchWire.loading")}
+        {state === "error" && copy("dispatchWire.unavailable")}
         {state === "ready" && (
           <div className="flex w-max gap-6 whitespace-nowrap">
-            {payments.map((p) => <span key={p.id ?? `${p.queryId}-${p.sourceId}-${p.createdAt}`} className="flex items-center gap-2"><span className="text-seal">PAID</span><span>{p.sourceName}</span><span className="text-paid">{formatRecordedUsdc(p.amountUsdc, { minimumFractionDigits: 6 })} USDC</span><span>{recordedArcLabel(p.network)}</span></span>)}
+            {payments.map((p) => <span key={p.id ?? `${p.queryId}-${p.sourceId}-${p.createdAt}`} className="flex items-center gap-2"><span className="text-seal">{copy("dispatchWire.paid")}</span><span>{p.sourceName}</span><span className="text-paid">{formatRecordedUsdc(p.amountUsdc, { minimumFractionDigits: 6 })} USDC</span><span>{recordedArcLabel(p.network)}</span></span>)}
           </div>
         )}
       </div>
-      {state === "error" && <button type="button" onClick={() => { setState("loading"); void load(); }} className="min-h-11 shrink-0 px-3 font-mono text-[10px] uppercase text-ink underline">Retry</button>}
+      {state === "error" && <button type="button" onClick={() => { setState("loading"); void load(); }} className="min-h-11 shrink-0 px-3 font-mono text-[10px] uppercase text-ink underline">{copy("dispatchWire.retry")}</button>}
     </div>
   );
 }

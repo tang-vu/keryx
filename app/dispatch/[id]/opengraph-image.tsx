@@ -1,8 +1,11 @@
+import { createMessages } from "@/lib/i18n/messages";
 import { ImageResponse } from "next/og";
 import { config } from "@/lib/config";
 import { resolveDispatch } from "@/lib/history/read-dispatch";
 
-export const alt = "Keryx dispatch — question and original payment evidence";
+const copy = createMessages("en");
+
+export const alt = copy("reportSocial.alt");
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -15,7 +18,7 @@ export default async function DispatchOgImage({
 }) {
   const { id } = await params;
 
-  let question = "An autonomous Keryx dispatch";
+  let question = copy("reportSocial.fallback");
   let cited = 0;
   let spent = 0;
   let toCreators = 0;
@@ -28,7 +31,7 @@ export default async function DispatchOgImage({
     if (dispatch) {
       const { run, archive } = dispatch;
       historical = Boolean(archive);
-      if (archive) networkLabel = "Arc testnet archive";
+      if (archive) networkLabel = copy("reportSocial.historical");
       question = run.question;
       cited = run.citations.length;
       spent = run.totalSpent;
@@ -72,8 +75,8 @@ export default async function DispatchOgImage({
             textTransform: "uppercase",
           }}
         >
-          <span>Keryx · {networkLabel}</span>
-          <span>Series 2026 — No. {serialLabel}</span>
+          <span>{copy("reportSocial.network", { network: networkLabel })}</span>
+          <span>{copy("reportSocial.serial", { serial: serialLabel })}</span>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -86,7 +89,7 @@ export default async function DispatchOgImage({
               fontWeight: 700,
             }}
           >
-            The question it was paid to answer
+            {copy("reportSocial.questionLabel")}
           </div>
           <div style={{ fontSize: 52, lineHeight: 1.08, fontWeight: 700 }}>
             {headline}
@@ -94,11 +97,11 @@ export default async function DispatchOgImage({
         </div>
 
         <div style={{ display: "flex", gap: 56 }}>
-          <Denomination value={String(cited)} label="sources cited" />
-          <Denomination value={`$${spent.toFixed(4)}`} label={historical ? "testnet USDC recorded" : "USDC recorded"} />
+          <Denomination value={String(cited)} label={copy(cited === 1 ? "reportSocial.cited.one" : "reportSocial.cited.other")} />
+          <Denomination value={`$${spent.toFixed(4)}`} label={historical ? copy("reportSocial.testnetRecorded") : copy("reportSocial.recorded")} />
           <Denomination
             value={`$${toCreators.toFixed(4)}`}
-            label="creator rewards recorded"
+            label={copy("reportSocial.creators")}
             accent
           />
         </div>
@@ -130,7 +133,7 @@ export default async function DispatchOgImage({
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div style={{ fontSize: 28, fontWeight: 700 }}>Keryx</div>
               <div style={{ fontSize: 17, color: "#7A6F58", letterSpacing: 1 }}>
-                The citation toll — creators paid every time an AI cites them
+                {copy("reportSocial.tagline")}
               </div>
             </div>
           </div>

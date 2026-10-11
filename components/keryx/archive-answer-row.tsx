@@ -4,10 +4,13 @@
  * and the client-side filter matches against exactly this rendered text.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import { formatRecordedUsdc } from "@/lib/display/recorded-usdc";
 import type { ArchiveEntry } from "@/lib/answers-archive";
 import { ConfidenceBadge } from "./confidence-badge";
+
+const copy = createMessages("en");
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -27,8 +30,7 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
         <div className="flex items-baseline justify-between gap-4">
           <span className="flex items-baseline gap-2.5">
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-seal">
-              Dispatch
-              {entry.archivedNetwork && " · Arc testnet history"}
+              {copy(entry.archivedNetwork ? "archiveReport.historicalDispatch" : "archiveReport.dispatch")}
             </span>
             {entry.confidence ? <ConfidenceBadge confidence={entry.confidence} /> : null}
           </span>
@@ -46,9 +48,9 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
         )}
         <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.06em] text-ink-3">
           <span>
-            {entry.citationCount} source{entry.citationCount !== 1 ? "s" : ""} cited
+            {copy(entry.citationCount === 1 ? "report.citedSources.one" : "report.citedSources.other", { count: entry.citationCount })}
           </span>
-          <span className="text-paid">{formatRecordedUsdc(entry.toCreators, { minimumFractionDigits: 4, denomination: entry.archivedNetwork ? "test USDC" : "$" })} recorded creator rewards</span>
+          <span className="text-paid">{copy("archiveReport.creatorRewards", { amount: formatRecordedUsdc(entry.toCreators, { minimumFractionDigits: 4, denomination: entry.archivedNetwork ? "test USDC" : "$" }) })}</span>
           {entry.sourceNames.length > 0 && (
             <span className="normal-case tracking-normal text-ink-3">
               {entry.sourceNames.slice(0, 4).join(" · ")}

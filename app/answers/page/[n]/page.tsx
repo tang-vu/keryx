@@ -6,6 +6,7 @@
  * the index, they are the only place a crawler can reach the older half of the corpus.
  */
 
+import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getArchiveCached } from "@/lib/answers-archive-cache";
@@ -17,6 +18,8 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { ArchiveIndexView } from "@/components/keryx/archive-index-view";
 import { archiveIndexJsonLd } from "../../archive-index-json-ld";
 import { safeInlineJson } from "@/lib/safe-json";
+
+const copy = createMessages("en");
 
 export const revalidate = 600;
 
@@ -47,11 +50,11 @@ export async function generateMetadata({
   const { n } = await params;
   const loaded = await loadPage(n);
   if (!loaded || loaded.slice.items.length === 0) {
-    return { title: "Archive page not found — Keryx", robots: { index: false } };
+    return { title: copy("reportArchiveRoute.notFound"), robots: { index: false } };
   }
   const { slice } = loaded;
-  const title = `The Archive — page ${slice.page} of ${slice.totalPages}`;
-  const description = `Older cited answers from Keryx research history (page ${slice.page}). Open a dispatch to inspect its sources, decisions, and payment states.`;
+  const title = copy("reportArchiveRoute.pageTitle", { page: slice.page, pages: slice.totalPages });
+  const description = copy("reportArchiveRoute.pageDescription", { page: slice.page });
   return {
     title,
     description,
@@ -80,15 +83,15 @@ export default async function AnswersPageN({ params }: { params: Promise<{ n: st
     archiveIndexJsonLd({
       base: BASE,
       url: `${BASE}${answersPagePath(slice.page)}`,
-      name: `Keryx Answer Archive — page ${slice.page}`,
+      name: copy("reportArchiveRoute.pageName", { page: slice.page }),
       slice,
       totalEntries: entries.length,
-      partOf: { name: "Keryx Answer Archive", url: `${BASE}/answers` },
+      partOf: { name: copy("reportArchiveRoute.name"), url: `${BASE}/answers` },
     }),
     breadcrumbJsonLd(BASE, [
       { name: "Keryx", path: "/" },
-      { name: "The Archive", path: "/answers" },
-      { name: `Page ${slice.page}` },
+      { name: copy("reportArchiveRoute.crumb"), path: "/answers" },
+      { name: copy("reportArchiveRoute.pageCrumb", { page: slice.page }) },
     ]),
   ];
 
