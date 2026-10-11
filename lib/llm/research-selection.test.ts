@@ -7,6 +7,7 @@ import { ReasoningOutputValidationError, ReasoningTransportError, type DecideInp
 import { MemoryReasoningCircuitStore } from "./reasoning-circuit-store";
 import { ResilientEngine, reasoningAttempts, reasoningUsage } from "./resilient-engine";
 import { MAX_SELECTION_DIAGNOSTIC_HISTORY, ResearchSelectionError, parseResearchSelection, readSelectionDiagnostics } from "./research-selection";
+import { researchFailureMessage } from "./research-plan";
 
 /** Representative eight-target offline case, not the missing original live model payload. */
 function sqliteInput(): DecideInput {
@@ -192,6 +193,30 @@ describe("safe diagnostic contract", () => {
     const value = Object.defineProperty(safe(), "prompt", { get: getter, enumerable: true });
     expect(parseSelectionDiagnostic(value)).toBeUndefined();
     expect(getter).not.toHaveBeenCalled();
+  });
+});
+
+describe("original-caller selection recovery guidance", () => {
+  it.each([undefined, [], "private-provider-target", ["private-provider-target"], [0, 8]].map(targets => ({ targets })))(
+    "explains the unchanged eight-target authority for invalid links %j without exposing provider values", ({ targets }) => {
+      const error = refusal(sqliteInput(), { decisions: [{ ...row(), targets }] });
+      const message = researchFailureMessage(error);
+      expect(message).toContain(error.diagnostic.id);
+      expect(message).toContain("Inspect or save this diagnostic");
+      expect(message).toContain("offered source");
+      expect(message).toContain("nonempty integer target links from the existing plan (0–7)");
+      expect(message).toContain("Keep the original question, requested source URLs and comparison dimensions");
+      expect(message).toContain("does not authorize an automatic retry or a completed report");
+      expect(message).not.toMatch(/private-provider-target|sqlite\.org|public:wal/);
+      // Caller guidance neither changes the retained diagnostic nor makes it a provider payload.
+      expect(parseSelectionDiagnostic(error.diagnostic)).toEqual(error.diagnostic);
+    });
+
+  it("does not invent a target range when no target exists", () => {
+    const input = sqliteInput(); input.subClaims = [];
+    const message = researchFailureMessage(refusal(input, { decisions: [row()] }));
+    expect(message).toContain("a valid target from an existing research plan");
+    expect(message).not.toContain("0–-1");
   });
 });
 

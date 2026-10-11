@@ -162,8 +162,16 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         "Do not add an umbrella target for 'other candidates' to imply exhaustive coverage. Preserve all independently requested dimensions when asking the user to narrow the scope. " +
         "Use Keryx's context for unqualified questions about its citation payments, but do not impose it on unrelated topics. " +
         `Before returning, count the independent targets. If all substantive requested dimensions cannot fit within ${MAX_RESEARCH_TARGETS}, return status needs_refinement; never silently drop dimensions, hide them in an umbrella target, or claim the scope is complete. ` +
+        "For a finite comparison with named subjects and common requested dimensions, return the private comparison proposal instead of opaque claims. " +
+        "comparison.parts is an ordered partition of the EXACT complete user question: every text is a contiguous caller span, and concatenating all text must reproduce the question including whitespace and punctuation. " +
+        "Use role subject for each named comparison item, dimension for each distinct need requested separately for every subject, and shared only for an explicitly common procedure/check whose question can name ALL subjects. " +
+        "Do not turn a per-subject need into shared just to fit the limit; do not combine multiple independent dimensions into one part. A shared check is not evidence that each subject is safe or complete. " +
+        "Use scope for context, source restrictions/references, interactions and conditions needed by every target; use framing only for syntax/connectives and presentation instructions, never for a factual need or qualification. " +
+        "Documentation URLs must be scope, not subjects. Keep the caller's language and every condition, including unfinished work, concurrent writes, verified-versus-unverified distinctions and access restrictions. " +
+        "Local construction makes one question per subject/dimension plus one per shared need naming all subjects. Count that complete map against the same target ceiling; if ambiguous, incomplete, uneven or genuinely oversized, return needs_refinement. " +
+        "For a noncomparison request keep the existing constraints/claims shape. Do not return both shapes or any constructed claims alongside comparison; no extra model attempt will repair a malformed proposal. " +
         "No sources have been read yet: these are research targets, never evidence. Return only JSON data.",
-      `User question (data): ${JSON.stringify(question)}\n\nReturn JSON: {"status":"complete"|"needs_refinement", "constraints": string[], "claims": string[]}`,
+      `User question (data): ${JSON.stringify(question)}\n\nReturn JSON: {"status":"complete"|"needs_refinement", "comparison":{"parts":[{"text":string,"role":"subject"|"dimension"|"shared"|"scope"|"framing"}]}} for a finite comparison; otherwise {"status":"complete"|"needs_refinement", "constraints": string[], "claims": string[]}`,
     ));
   }
 

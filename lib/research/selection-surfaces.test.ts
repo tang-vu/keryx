@@ -65,6 +65,8 @@ describe("terminal source-selection failure on hosted callers", () => {
     expect(packets.map(packet => packet.event)).toEqual(["meta", "step", "error"]);
     expect(packets[2].data).toEqual({ message: expect.any(String), code: "research_source_selection_invalid", selectionDiagnostic: diagnostic });
     expect(packets[2].data.message).toContain("2,048-token output limit");
+    expect(packets[2].data.message).toContain("Inspect or save this diagnostic");
+    expect(packets[2].data.message).toContain("existing plan (0–7)");
     expect(packets[2].data.message).not.toMatch(/503|saved evidence/);
     expect(mocks.runAgent).toHaveBeenCalledOnce();
     expect(mocks.runAgent.mock.calls[0][0].question).toBe(SQLITE_SELECTION_QUESTION);
@@ -76,8 +78,10 @@ describe("terminal source-selection failure on hosted callers", () => {
   it("OpenAI JSON returns 422 and a machine-readable diagnostic while preserving the original request", async () => {
     const response = await completion(completionRequest(false));
     expect(response.status).toBe(422);
-    expect(await response.json()).toEqual({ error: { message: expect.stringContaining("2,048-token output limit"), type: "invalid_request_error",
+    const body = await response.json();
+    expect(body).toEqual({ error: { message: expect.stringContaining("2,048-token output limit"), type: "invalid_request_error",
       code: "research_source_selection_invalid", selectionDiagnostic: diagnostic } });
+    expect(body.error.message).toContain("Keep the original question, requested source URLs and comparison dimensions");
     expect(mocks.collectRun).toHaveBeenCalledOnce();
     expect(mocks.collectRun.mock.calls[0][0].question).toBe(SQLITE_SELECTION_QUESTION);
     expect(mocks.saveQueryRun).not.toHaveBeenCalled();
@@ -97,6 +101,7 @@ describe("terminal source-selection failure on hosted callers", () => {
       expect(wire).not.toContain("data: [DONE]");
       const content = packets.map(packet => packet.choices[0].delta.content ?? "").join("");
       expect(content).toContain("2,048-token output limit");
+      expect(content).toContain("does not authorize an automatic retry or a completed report");
       expect(content).not.toMatch(/503|saved evidence/);
       expect(mocks.collectRun).toHaveBeenCalledOnce();
     } finally { uuid.mockRestore(); }
@@ -114,6 +119,7 @@ describe("terminal source-selection failure on hosted callers", () => {
       expect(content).toHaveLength(2);
       expect(content[0].text).toContain("Keryx research failed:");
       expect(content[0].text).toContain("2,048-token output limit");
+      expect(content[0].text).toContain("Inspect or save this diagnostic");
       expect(content[0].text).not.toMatch(/503|saved evidence/);
       expect(JSON.parse(content[1].text.split("\n")[1])).toEqual(diagnostic);
       expect(mocks.collectRun).toHaveBeenCalledOnce();
