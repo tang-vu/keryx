@@ -1,3 +1,5 @@
+import { selectPlural } from "@/lib/i18n/format";
+import { DisplayTime } from "@/components/keryx/display-time";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { cache } from "react";
@@ -45,7 +47,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const stateLabel = state === "open" ? uiCopy("wantedClaim.openLabel") : uiCopy("wantedClaim.filledLabel");
     const description =
       state === "open"
-        ? uiCopy(gap.seen === 1 ? "wantedClaim.openDescription.one" : "wantedClaim.openDescription.other", { count: gap.seen, coverage: Math.round(gap.coverage * 100) })
+        ? uiCopy(selectPlural(gap.seen) === "one" ? "wantedClaim.openDescription.one" : "wantedClaim.openDescription.other", { count: gap.seen, coverage: Math.round(gap.coverage * 100) })
         : uiCopy("wantedClaim.filledDescription", { before: Math.round(gap.coverage * 100), after: Math.round(gap.filledBy?.coverage ?? 0) });
     return {
       title: uiCopy("wantedClaim.metadataTitle", { claim: gap.claim }),
@@ -120,10 +122,7 @@ export default async function WantedClaimPage({ params }: PageProps) {
                 />
                 <BriefStat
                   label={uiCopy("wantedClaim.lastMeasured")}
-                  value={new Date(gap.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}
+                  value={<DisplayTime value={gap.createdAt} dateOnly />}
                   detail={uiCopy("wantedClaim.publicReceipt")}
                 />
               </div>
@@ -230,7 +229,7 @@ function BriefStat({
   accent,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   detail: string;
   accent?: boolean;
 }) {

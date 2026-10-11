@@ -1,4 +1,6 @@
 "use client";
+import { SigningAmount } from "./signing-amount";
+import { formatAmount } from "@/lib/i18n/format";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useWalletClient, usePublicClient } from "wagmi";
 import type { PublicClient } from "viem";
@@ -103,7 +105,8 @@ export function SessionCashoutPanel({sessAddr}:{sessAddr:string|null}){
         onChange={e=>{setId(e.target.value);setPreparation(null);setHash(references.find(row=>row.requestId===e.target.value)?.mintHash??"")}} className="ml-2 max-w-full border border-rule p-1">
         <option value="">{copy("sessionCashout.chooseOriginal")}</option>{references.map(row=><option key={row.requestId} value={row.requestId}>{row.requestId} — {row.publicationAbort?.pending?copy("sessionCashout.signingCancellationPending"):row.publicationAbort?copy("sessionCashout.signingCancelled"):row.completed?copy("sessionCashout.completed"):row.cancelled?copy("sessionCashout.cancelled"):copy("sessionCashout.recovery")}</option>)}
       </select></label>}
-      {preparation&&<p>{richCopy("sessionCashout.preparation", { amount: Number(preparation.burnIntent.spec.value)/1e6, fee: Number(preparation.burnIntent.maxFee)/1e6, recipient: preparation.ownerAddr, height: preparation.burnIntent.maxBlockHeight })}</p>}
+      {preparation&&<p className="text-xs"><SigningAmount micros={preparation.burnIntent.spec.value} /> · <SigningAmount micros={preparation.burnIntent.maxFee} /></p>}
+      {preparation&&<p>{richCopy("sessionCashout.preparation", { amount: formatAmount(preparation.burnIntent.spec.value, { minimumFractionDigits: 6, useGrouping: false }), fee: formatAmount(preparation.burnIntent.maxFee, { minimumFractionDigits: 6, useGrouping: false }), recipient: preparation.ownerAddr, height: preparation.burnIntent.maxBlockHeight })}</p>}
       <label className="block">{copy("sessionCashout.requestIdLabel")}<input aria-label={copy("sessionCashout.requestIdAria")} value={id} onChange={e=>{setId(e.target.value);setPreparation(null)}} className="mt-1 w-full border border-rule p-1 font-mono"/></label>
       <div className="flex flex-wrap gap-3"><button disabled={busy||!preparation} onClick={sign} className="underline">{copy("sessionCashout.signBurn")}</button>
         <button disabled={busy||!id} onClick={recover} className="underline">{copy("sessionCashout.readRecovery")}</button><button disabled={busy||!id} onClick={cancel} className="underline">{copy("sessionCashout.cancelUnexposed")}</button>

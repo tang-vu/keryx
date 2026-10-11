@@ -1,4 +1,7 @@
 "use client";
+import { SigningAmount } from "@/components/keryx/signing-amount";
+import { DisplayTime } from "@/components/keryx/display-time";
+import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messages";
 
 import { createMessages } from "@/lib/i18n/messages";
 import { useCallback, useEffect, useState } from "react";
@@ -198,8 +201,9 @@ export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
                   {item.itemTitle}
                 </a>
                 <p className="mt-1 font-mono text-[9px] text-ink-3">
-                  {item.offer ? uiCopy("creatorOffers.liveVersion", { version: item.contentVersion.slice(0, 28), price: fmtUsdc(item.offer.priceUsdc), expiresAt: new Date(item.offer.expiresAtIso).toLocaleString() }) : uiCopy("creatorOffers.listVersion", { version: item.contentVersion.slice(0, 28) })}
+                  {item.offer ? dateCopy("creatorOffers.liveVersion", { version: item.contentVersion.slice(0, 28), price: fmtUsdc(item.offer.priceUsdc), expiresAt: <DisplayTime value={item.offer.expiresAtIso} /> }) : uiCopy("creatorOffers.listVersion", { version: item.contentVersion.slice(0, 28) })}
                 </p>
+                <p className="mt-1 text-xs"><SigningAmount micros={drafts[item.itemId]?.trim() ? Math.round(Number(drafts[item.itemId]) * 1_000_000) : undefined} /></p>
               </div>
               <label className="flex items-center border border-line bg-paper-2 px-2 py-1.5">
                 <span className="mr-1 font-mono text-xs text-ink-3">$</span>
@@ -244,3 +248,5 @@ export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
     </section>
   );
 }
+
+const dateCopy = createDateMessages("en");

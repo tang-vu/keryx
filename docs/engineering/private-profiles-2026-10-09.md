@@ -6,6 +6,11 @@ stores. The current enrolled/native production store intentionally has no profil
 capability. No production DDL, enrollment, identity/provenance refresh, funding,
 custody, auth grant or original payment-history change is authorized by this source.
 
+The [October 11 original-criteria audit](profile260-original-criteria-audit-2026-10-11.md)
+maps the existing implementation to all five written criteria, identifies actual
+hosted fixture evidence, and separates source acceptance from the remaining
+production domain-admission and deployed SIWE/scoped-key delivery gates.
+
 The signed wallet remains authentication authority. Display names, handles, text
 and links are owner assertions, not independent identity, verified affiliation,
 creator/source ownership or payout authority. There is no public profile mode or

@@ -1,8 +1,12 @@
 "use client";
+import { formatAmount, selectPlural } from "@/lib/i18n/format";
+
+import { SigningAmount } from "./signing-amount";
+import { DisplayTime } from "@/components/keryx/display-time";
+import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messages";
 
 import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useRef, useState } from "react";
-import { formatUnits } from "viem";
 import { useAccount, useWalletClient } from "wagmi";
 import { WalletPicker } from "./wallet-picker";
 import { ResearchFunding } from "./research-funding";
@@ -91,12 +95,13 @@ export function ResearchMonthly({ quote }: { quote: MonthlyQuote }) {
     catch (error) { if (scope.current === storageScope) setMessage(error instanceof Error ? error.message : copy("monthlyResearch.operationUncertain")); }
     finally { operation.current = false; setBusy(false); }
   }
-  const format = (micros: number) => formatUnits(BigInt(micros), 6);
+  const format = (micros: number) => formatAmount(micros, { minimumFractionDigits: 6, useGrouping: false });
   return <section id="monthly" aria-labelledby="monthly-heading" className="space-y-4 border border-line bg-paper p-6">
     <p className="font-mono text-xs text-seal">{copy("monthlyResearch.renewal", { network: BUYER_PROFILE.label })}</p>
     <h2 id="monthly-heading" className="font-display text-3xl">{copy("monthlyResearch.title")}</h2>
     <p className="font-serif text-ink-2">{copy("monthlyResearch.introduction", { total: format(quote.totalMicros), separateTotal: format(quote.separateTotalMicros), cap: format(quote.creatorBudgetMicros) })}</p>
     <p className="font-serif text-sm text-ink-3">{quote.roundingMicros ? copy("monthlyResearch.roundedTerms", { rounding: quote.roundingMicros }) : copy("monthlyResearch.terms")}</p>
+    <p className="text-xs"><SigningAmount micros={quote.totalMicros} /></p>
     <p className="break-all font-mono text-xs">{copy("monthlyResearch.payee", { payee: quote.payee })}</p>
     {!address ? <WalletPicker isBusy={busy} onConnected={() => {}} /> : <>
       {chainId !== BUYER_PROFILE.chainId ? <p>{copy("monthlyResearch.chooseNetwork", { network: BUYER_PROFILE.label })}</p> : <ResearchFunding payer={address} initialAmount={quote.totalMicros / 1e6} requiredMicros={String(quote.totalMicros)} creditRevision={0} disabled={busy} onBusy={setFunding} onChanged={() => {}} />}
@@ -133,7 +138,7 @@ export function ResearchMonthly({ quote }: { quote: MonthlyQuote }) {
     {!address && monthlyId && <p className="font-serif text-sm">{copy("monthlyResearch.savedPlanDisconnected")}</p>}
     {purchaseUncertain && <p className="font-serif text-sm text-seal">{copy("monthlyResearch.unresolvedPurchase")}</p>}
     {record && chainId === BUYER_PROFILE.chainId && record.purchase.payer.toLowerCase() === address?.toLowerCase() && <div className="space-y-3 border-t border-line pt-4">
-      <p className="font-serif">{record.expired ? copy(record.remaining === 1 ? "monthlyResearch.expired.one" : "monthlyResearch.expired.other", { count: record.remaining }) : copy(record.remaining === 1 ? "monthlyResearch.expires.one" : "monthlyResearch.expires.other", { count: record.remaining, expiresAt: new Date(record.purchase.expiresAt).toLocaleString() })}</p>
+      <p className="font-serif">{record.expired ? copy(selectPlural(record.remaining) === "one" ? "monthlyResearch.expired.one" : "monthlyResearch.expired.other", { count: record.remaining }) : dateCopy(selectPlural(record.remaining) === "one" ? "monthlyResearch.expires.one" : "monthlyResearch.expires.other", { count: record.remaining, expiresAt: <DisplayTime value={record.purchase.expiresAt} /> })}</p>
       {record.redemptions.map(item => <p key={item.requestId} className="font-mono text-xs"><button className="underline" onClick={() => setSelectedJob(item.orderId)}>{copy("monthlyResearch.followJob", { jobId: item.orderId })}</button></p>)}
       <label className="grid gap-2 font-mono text-xs">{copy("monthlyResearch.question")}<textarea value={question} onChange={e => setQuestion(e.target.value)} rows={3} maxLength={MAX_ASK_QUESTION_CHARS} className="border border-line bg-paper-2 p-3 font-serif" /></label>
       <button className={button} disabled={busy || !wallet || !address || chainId !== BUYER_PROFILE.chainId || record.expired || record.remaining === 0 || !AskQuestionSchema.safeParse(question).success || !!request} onClick={() => {
@@ -156,3 +161,5 @@ export function ResearchMonthly({ quote }: { quote: MonthlyQuote }) {
     {selectedJob && <ResearchJob key={selectedJob} initialId={selectedJob} />}
   </section>;
 }
+
+const dateCopy = createDateMessages("en");

@@ -1,4 +1,6 @@
 "use client";
+import { DisplayTime } from "@/components/keryx/display-time";
+import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messages";
 
 /**
  * ArcCardOnrampPanel — optional "buy USDC with a card" step for a signed-in mainnet wallet.
@@ -97,7 +99,7 @@ export function ArcCardOnrampPanel() {
     <h2 className="font-mono text-xs">{copy("cardFunding.title")}</h2>
     <p className="font-serif text-sm">{copy("cardFunding.providerNotice")}</p>
     <p className="font-serif text-sm">{copy("cardFunding.deliveryNotice")}</p>
-    {prepared && <p className="break-all font-mono text-xs">{copy("cardFunding.session", { wallet: String(prepared.session.destinationWallet ?? ""), expiresAt: new Date(prepared.session.expiresAt).toLocaleTimeString() })}</p>}
+    {prepared && <p className="break-all font-mono text-xs">{dateCopy("cardFunding.session", { wallet: String(prepared.session.destinationWallet ?? ""), expiresAt: <DisplayTime value={prepared.session.expiresAt} /> })}</p>}
     <div className="flex flex-wrap gap-2">
       <button type="button" className={control} disabled={busy} onClick={() => void prepare()}>{busy ? copy("cardFunding.preparing") : prepared ? copy("cardFunding.prepareNew") : copy("cardFunding.prepare")}</button>
       {prepared && <button type="button" className={control} disabled={busy} onClick={open}>{copy("cardFunding.open")}</button>}
@@ -105,3 +107,5 @@ export function ArcCardOnrampPanel() {
     <p role="status" className="font-serif text-sm">{message}</p>
   </section>;
 }
+
+const dateCopy = createDateMessages("en");

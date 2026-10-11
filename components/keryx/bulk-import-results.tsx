@@ -1,4 +1,5 @@
 "use client";
+import { SigningAmount } from "./signing-amount";
 
 /**
  * Presentational results for a bulk feed import: one row per pasted feed with its live phase, plus
@@ -7,6 +8,7 @@
  */
 
 import { createMessages } from "@/lib/i18n/messages";
+import { selectPlural } from "@/lib/i18n/format";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { CheckCircle2, Loader2, XCircle, ShieldCheck, Copy, ExternalLink, PenLine } from "lucide-react";
 import { toast } from "sonner";
@@ -58,12 +60,14 @@ function PhaseIcon({ phase }: { phase: BulkPhase }) {
 
 export function BulkImportResults({
   feeds,
+  prices,
   onToggle,
   busy,
   onCheck,
   onHashChange,
 }: {
   feeds: BulkFeed[];
+  prices?: Record<string, string | undefined>;
   onToggle: (rssUrl: string) => void;
   busy: boolean;
   onCheck: (rssUrl: string) => void;
@@ -89,6 +93,7 @@ export function BulkImportResults({
               <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
                 {f.ok ? f.phase === "done" && f.mode === "offline" ? uiCopy("bulkRegistration.offlineLabel") : PHASE_LABEL[f.phase] : f.error || uiCopy("bulkRegistration.readFailed")}
               </p>
+              {prices?.[f.rssUrl] !== undefined && <p className="text-xs"><SigningAmount micros={prices[f.rssUrl]} /></p>}
               {f.ok && f.error && <p role="status" className="mt-1 text-xs text-seal">{f.error}</p>}
               {(f.phase === "unknown" || f.phase === "confirming") && <div className="mt-2 space-y-2">
                 <label className="block text-xs">{uiCopy("bulkRegistration.transactionHashLabel")}
@@ -150,7 +155,7 @@ export function BulkVerifyPanel({
     <div className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/[0.07] p-4">
       <div className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-amber-700">
         <PenLine className="h-3.5 w-3.5" />
-        {uiCopy(registeredCount === 1 ? "bulkVerification.title.one" : "bulkVerification.title.other", { count: registeredCount })}
+        {uiCopy(selectPlural(registeredCount) === "one" ? "bulkVerification.title.one" : "bulkVerification.title.other", { count: registeredCount })}
       </div>
       <p className="text-xs text-ink-2">{instructions}</p>
       <div className="flex items-center gap-2">

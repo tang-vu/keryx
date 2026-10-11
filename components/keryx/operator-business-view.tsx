@@ -1,4 +1,6 @@
 "use client";
+import { DisplayTime } from "@/components/keryx/display-time";
+import { formatNumber } from "@/lib/i18n/format";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -43,13 +45,13 @@ const WORKFLOW = [
   { title: message("operatorBusiness.reconcileOrEscalate"), text: message("operatorBusiness.receiptsPreservePaymentStateUncertainOriginalJobsAre") },
 ];
 
-function timestamp(value: string | null | undefined): string {
+function timestamp(value: string | null | undefined) {
   if (!value || !Number.isFinite(Date.parse(value))) return message("operatorBusiness.unknown");
-  return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return <DisplayTime value={value} />;
 }
 
 function count(value: number | null | undefined): string {
-  return value == null ? message("operatorBusiness.unknown") : value.toLocaleString();
+  return value == null ? message("operatorBusiness.unknown") : formatNumber(value);
 }
 
 function elapsed(seconds: number | null | undefined): string {

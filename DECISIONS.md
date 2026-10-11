@@ -7547,6 +7547,37 @@ declines to state a margin. The live sponsored run, replay and limit
 demonstrations stay gated; see the
 [criteria status](docs/engineering/recorded-walkthrough-305.md).
 
+## 2026-10-11 — One display formatting owner for pages and components
+
+Pages and components format numbers, percentages, USDC amounts and dates only
+through `createFormatters(locale)` in `lib/i18n/format.ts`; a source guard
+refuses new `toFixed`, `toLocale*String` and private `Intl` formatters under
+`app/` and `components/`. Amount text is derived from the exact integer
+micro-USDC value. Amounts a user verifies before authorizing use an invariant
+decimal point with no grouping so that locales cannot make `1.000` and `1,000`
+ambiguous. Route handlers and exports stay outside the module because machine
+output must not vary by locale. Dates now follow the interface locale rather
+than the browser locale, and the ledger observation notice names UTC instead of
+using a numeric `en-GB` date. English stays the only shipped locale; viewer
+time zone negotiation, locale plural selection, `lib/` display text and human
+review of translated signing screens remain open. See the [display formatting
+record](docs/engineering/display-formatting-274-2026-10-11.md).
+
+### Same-outcome source convergence for #274
+
+Preserve the PR410 locale-bound API and its original receipt as provenance, and
+delegate all formatting to the existing browser-safe exact implementation.
+Recorded legacy values must describe whole safe micro-USDC; display never repairs
+fractional micros, negative records or unknown amounts. Money precision requests
+are minimums so that a known sub-cent amount remains visible. Verification keeps
+ungrouped decimal text, explicit USDC and authoritative integer details. Hydrated
+date surfaces retain UTC details and resolve the viewer zone through that same
+implementation; the explicitly UTC-labelled ledger observation stays UTC with
+seconds. Desktop, extension, CLI and the already-shipped bot copy locales retain
+their applicable parity. English remains the sole activated UI locale. Source
+tests and synthetic fixtures do not establish built signing-screen acceptance,
+hosted CI, delivery or issue closure; root owns those remaining gates.
+
 ## 2026-10-11 - Expose bounded source outcomes before activating learned spending
 
 Retain independently attested outside actor/funding gates for source learning.
