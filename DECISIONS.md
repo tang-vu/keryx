@@ -7171,3 +7171,16 @@ deployment/readback belongs to the existing serialized runtime batch. Packaging
 refuses invalid descriptions/versions before archive writes. Keep the historical
 legal extraction fixture and require every paragraph outside the reviewed extension
 section and dated update to retain its exact markup.
+
+## 2026-10-11 — Preserve ledger proof meaning during English extraction
+
+Catalogue dashboard loading/error/stale notices, recorded counts and compact/full
+payment copy as complete named messages with explicit one/other variants. Keep
+the original English, including historical count grammar, UTC formatting and
+empty transaction-reference behavior. Retire only the 83 migrated presentation
+allowances; do not change payment status interpretation, financial totals, network
+identity, data validation or retry authority. Imported authorization-phase labels
+remain root's shared-helper qualification. The 93-key area has exact render and
+existing dashboard browser evidence; final combined Next.js/CI and serialized
+delivery remain root-owned. See the [ledger presentation catalogue
+record](docs/engineering/ledger-presentation-catalogue-2026-10-11.md).

@@ -224,3 +224,9 @@ test("personal dispatch metadata, accessibility, empty states and toast copy are
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("dashboard notices, counts, payment labels and accessibility copy are catalogued", () => {
+  for (const file of ["app/dashboard/page.tsx", "components/keryx/dashboard-view.tsx", "components/keryx/payments-feed.tsx"]) {
+    assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
+  }
+});
