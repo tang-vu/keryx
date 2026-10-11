@@ -36,11 +36,15 @@ try {
       fs.copyFileSync(path.join(repo, file), destination, fs.constants.COPYFILE_EXCL);
       if (process.platform !== 'win32') fs.chmodSync(destination, 0o600);
     }
-  const traceInventory = { files: 0, references: 0, largestTrace: 0, versions: [] };
+  const traceInventory = { files: 0, references: 0, largestTrace: 0, versions: [], links: [] };
   const visit = directory => {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       const file = path.join(directory, entry.name);
       if (entry.isDirectory()) visit(file);
+      else if (entry.isSymbolicLink()) {
+        if (traceInventory.links.length >= 128) throw Error('Build link diagnostic limit exceeded');
+        traceInventory.links.push({ path: path.relative(staged.source, file), target: fs.readlinkSync(file) });
+      }
       else if (entry.isFile() && entry.name.endsWith('.nft.json')) {
         const value = JSON.parse(fs.readFileSync(file));
         traceInventory.files++;

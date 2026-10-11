@@ -241,7 +241,7 @@ function snapshotTree(root) {
       } else if (stat.isSymbolicLink()) {
         const link = fs.readlinkSync(file), target = fs.realpathSync(file);
         if (path.isAbsolute(link) || !inside(root, target) || !fs.statSync(target).isFile() ||
-            signature(stat) !== signature(fs.lstatSync(file, { bigint: true }))) refuse('artifact-link');
+            signature(stat) !== signature(fs.lstatSync(file, { bigint: true }))) refuse(`artifact-link:${relative}`);
         entries.push({ path: relative, type: 'symlink', link });
       } else {
         if (!stat.isFile() || stat.nlink !== 1n || stat.size > BigInt(limits.artifactBytes)) refuse('artifact-file-identity');
