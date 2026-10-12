@@ -29,3 +29,34 @@ files from the hidden artifact folder, excluding SQLite and the build link.
 Fresh actual PostgreSQL17, stock-built routes/phone and full aggregate CI remain
 merge gates. No production DDL, privacy/publication activation, historical owner
 promotion, deployment or original issue264 closure follows from this source delta.
+
+## Original acceptance and supported surfaces
+
+| Original #264 criterion | Source contract and required evidence |
+| --- | --- |
+| Invisible until explicit publication; immediate unpublish | Owner session, expected-wallet, Origin and revision checks control publication. Uncached HTML, JSON, image and sitemap recheck it. Actual PostgreSQL races and built subsequent-read refusals remain required; saved external copies cannot be retracted. |
+| Selected authoritative fields and PUBLIC research only | Existing private profile and verified identity records supply selected fields. Both adapters require current ownership, explicit PUBLIC visibility and unerased text before projection. Historical missing-sidecar, PRIVATE and UNLISTED research is excluded. |
+| Question, date, surface, network, citations, report and receipts | The closed projection retains stored evidence and original report/receipt paths. Missing or conflicting network/funding evidence stays unknown; neither current configuration nor a profile claim supplies a payer. |
+| Reader-paid and creator-earned figures | Explicit ledger opt-in exposes wallet-wide recorded settled creator-event aggregates, with exact integer micro-USDC, separate networks and separate treasury sponsorship. Pending, simulated and unsupported financial events do not become settled figures. |
+| Ownership, Open Graph and structured data | Signed-wallet publication and recorded/receipt-claimed run proofs are labelled honestly. Only selected text and existing verified links enter metadata. This does not establish a legal identity, linked-wallet membership or assignment authority. |
+| Phone/accessibility and visibility/unknown-handle tests | Retained focused and SSR evidence is limited to its exact inputs. The existing built gate must prove the real routes, PNG, JSON-LD, sitemap, responsive CSS and bounded keyboard predicates; full current-source CI and delivery are separate. |
+
+The confirmed #266 source policy remains historical/unowned UNLISTED, new
+authenticated-owned PRIVATE by default with explicit owner PUBLIC choice, and
+anonymous UNLISTED until ownership is proved. Publication never promotes a run
+or supplies missing ownership. Both production capabilities remain default OFF;
+source migrations and isolated fixture installation are not production rollout.
+
+Web owners alone receive the signed-wallet publication editor. Public web/API
+readers share the closed page/JSON contract. Desktop, repository and published
+CLI, hosted/stdio MCP, extensions, A2A and chat bots may follow that public
+handoff; they gain no publication tool, private enumeration, linked-wallet
+aggregation or signing/payment authority. Existing native/private recovery and
+financial roles remain unchanged.
+
+Before final acceptance, normally compose the reviewed dependency with the
+feature, preserve both complete source histories, and retain the incoming
+canonical study pair whole. That inherited study is not evidence for the new
+profile source. The release owner must normalize the actual accepted main and
+produce the final changed-source epoch, required CI and delivery evidence.
+Original #264 stays open until its remaining criteria are actually accepted.
