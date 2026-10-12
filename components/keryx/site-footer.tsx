@@ -48,7 +48,7 @@ const DOCS: FooterLink[] = [
   { label: message("shellFooter.terms"), href: "/terms" },
 ];
 
-function FooterCol({ title, links, prefetch }: { title: string; links: FooterLink[]; prefetch?: false }) {
+function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
   return (
     <div>
       <div className="mb-3.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
@@ -67,7 +67,7 @@ function FooterCol({ title, links, prefetch }: { title: string; links: FooterLin
               {l.label}
             </a>
           ) : (
-            <Link key={l.label} href={l.href} prefetch={prefetch} className="transition-colors hover:text-seal">
+            <Link key={l.label} href={l.href} className="transition-colors hover:text-seal">
               {l.label}
             </Link>
           ),
@@ -77,7 +77,7 @@ function FooterCol({ title, links, prefetch }: { title: string; links: FooterLin
   );
 }
 
-export function SiteFooter({ prefetch }: { prefetch?: false } = {}) {
+export function SiteFooter() {
   return (
     <footer className="border-t border-ink bg-panel">
       <div className="mx-auto max-w-[1180px] px-4 pb-10 pt-[54px] sm:px-[30px]">
@@ -94,8 +94,8 @@ export function SiteFooter({ prefetch }: { prefetch?: false } = {}) {
             </p>
           </div>
 
-          <FooterCol title={message("shellFooter.house")} links={HOUSE} prefetch={prefetch} />
-          <FooterCol title={message("shellFooter.docsAndProof")} links={DOCS} prefetch={prefetch} />
+          <FooterCol title={message("shellFooter.house")} links={HOUSE} />
+          <FooterCol title={message("shellFooter.docsAndProof")} links={DOCS} />
         </div>
 
         <div className="mt-10 flex flex-wrap justify-between gap-3 border-t border-ink pt-5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-3">

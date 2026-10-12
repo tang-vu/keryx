@@ -46,6 +46,7 @@ export const landingMessages = Object.freeze({
   "brandPresentation.tagline": "The citation toll",
   "brandPresentation.sealLegend": "★ {brand} ★ THE HERALD IS PAID ★ {greekBrand} ",
   "launchBadge.aria": "Keryx on Product Hunt (opens in a new tab)",
+  "launchBadge.brand": "Product Hunt",
   "launchBadge.alt": "Keryx — AI research with verifiable sources and creator rewards | Product Hunt",
   "dialog.close": "Close",
   "landingMetadata.title": "Keryx — citations are currency",

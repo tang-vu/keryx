@@ -206,3 +206,28 @@ Offline SSR/link-contract checks are not compiled browser acceptance. Applicable
 CI, review, release/delivery and all four built English signing observations
 remain required; original #274 stays open. No extra language or payment gate is
 introduced.
+
+## Navigation and catalogue correction — October 12, PR429
+
+Actual CI rejected the inline badge text outside the English catalogue and the
+root navigation opt-out broke the existing WebKit dynamic-prefetch/loading-shell
+acceptance. Root/header/footer/creator navigation now retains its original Next
+prefetch behavior; the mobile-navigation fixture and its assertions are unchanged.
+The inline badge retains its link, accessible names and dimensions while its
+neutral Product Hunt brand label uses the existing English catalogue.
+
+Only the idle signing-display mode isolates unrelated speculative route reads.
+Before dispatch it aborts same-origin fetch GETs on the fixed root navigation and
+footer paths only when Next16 supplies RSC=1, a finite next-router-prefetch value
+1/2/3, no navigation flag and one bounded _rsc query. Actual root HTML, JS/CSS,
+icons, explicit navigation, API, wallet/signing/recovery, external and non-GET
+requests are not classified as those prefetches. Original forbidden-call guards
+and every amount/micro/readiness/viewport assertion remain intact.
+
+Isolation is capped at64 requests per context with at most32 fixed-path log
+entries, without query/header values; an exceeded bound is a failed observation.
+No synthetic positive HTML/RSC/asset response is produced, and the origin relay
+still admits only root/static/icon reads. The default chat fixture is unchanged.
+These are source/fixture corrections, not compiled or deployed acceptance.
+Actual required CI, corrected-source delivery, separately reviewed transport
+binding and all four guarded English observations still govern original274.

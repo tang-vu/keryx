@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { chromium } from "playwright";
 import { parseResearchAvailability } from "../lib/research/availability-contract";
+import { signingDisplayPrefetchPath, SIGNING_DISPLAY_PREFETCH_LIMIT } from "../test-support/signing-display-prefetch";
 
 const base = process.env.KERYX_UX_BASE_URL ?? "http://127.0.0.1:3957";
 const args = process.argv.slice(2);
@@ -39,11 +40,24 @@ async function checkSigningDisplay() {
       const apiGets: string[] = [], blocked: string[] = [], workers: string[] = [], errors: string[] = [];
       const builtAssets: Array<{ path: string; status: number }> = [], failedBuiltAssets: string[] = [];
       let popups = 0;
+      let isolatedPrefetchCount = 0;
+      const isolatedPrefetchPaths: string[] = [];
       await context.routeWebSocket("**/*", socket => { blocked.push(`WebSocket ${socket.url()}`); socket.close(); });
       await context.route("**/*", async route => {
         const request = route.request(), url = new URL(request.url());
         if (url.origin !== target.origin || request.method() !== "GET") {
           blocked.push(`${request.method()} ${url.origin}${url.pathname}`); return route.abort();
+        }
+        // Preserve real navigation prefetch. Only this idle observation aborts
+        // recognisable unrelated root-link RSC prefetch GETs before dispatch.
+        const prefetchPath = signingDisplayPrefetchPath({ url: request.url(), method: request.method(),
+          resourceType: request.resourceType(), navigation: request.isNavigationRequest(), headers: await request.allHeaders() }, target.origin);
+        if (prefetchPath) {
+          if (isolatedPrefetchCount >= SIGNING_DISPLAY_PREFETCH_LIMIT) {
+            if (!blocked.includes("Idle prefetch isolation bound exceeded")) blocked.push("Idle prefetch isolation bound exceeded");
+          } else isolatedPrefetchCount++;
+          if (isolatedPrefetchPaths.length < 32) isolatedPrefetchPaths.push(prefetchPath);
+          return route.abort();
         }
         if (!url.pathname.startsWith("/api/")) {
           return route.continue();
@@ -117,6 +131,7 @@ async function checkSigningDisplay() {
         console.log(JSON.stringify({ mode: "built-signing-display-only", width, input: value.input, amount: value.amount,
           exactMicros: value.micros, visibleDetails: await details.textContent(), compiledAssets: builtAssets.length,
           successfulCompiledAssets: builtAssets,
+          isolatedPrefetchCount, isolatedPrefetchPaths,
           authenticatedReadOnlyGet: true, forbiddenCalls: blocked.length, workers: workers.length, popups, overflow: false }));
       }
     } finally { await context.close(); }
