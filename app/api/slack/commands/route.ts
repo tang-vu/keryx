@@ -24,6 +24,7 @@ import { privateSlackResponseUrl } from "@/lib/run-claims/slack-private";
 import { config } from "@/lib/config";
 import { botResearchMessages } from "@/lib/bots/research-messages";
 import { botControlResponse, parseBotControl } from "@/lib/bots/language";
+import { botAnswerPresentation } from "@/lib/bots/answer-preference";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { verifyRequestSignature } from "@/lib/slack/verify-request-signature";
 import {
@@ -63,20 +64,21 @@ export async function POST(req: NextRequest) {
   }
   const cmd = parseSlashCommand(params);
   if (!cmd) return Response.json(ephemeral(helpText()));
+  cmd.presentationLanguage = (await botAnswerPresentation(cmd.question, { platform: "slack", scope: params.get("team_id") ?? "", userId: cmd.userId })).language;
   if (!config.sellerAddress) {
-    return Response.json(ephemeral(botResearchMessages(cmd.question)("treasuryUnavailable")));
+    return Response.json(ephemeral(botResearchMessages(cmd.question, cmd.presentationLanguage)("treasuryUnavailable")));
   }
 
   // Treasury-funded like the site's free trial — throttle per Slack user, not per IP (every request
   // arrives from Slack's servers, so IPs are useless as a key here).
   const limited = await checkSponsoredResearchAdmission({ kind: "bot", platform: "slack", userId: cmd.userId });
   if (limited) {
-    return Response.json(ephemeral(botResearchMessages(cmd.question)("sponsoredLimited")));
+    return Response.json(ephemeral(botResearchMessages(cmd.question, cmd.presentationLanguage)("sponsoredLimited")));
   }
 
   const budget = Math.min(config.defaultBudget, config.anonMaxBudget);
   after(() => runAndReply(cmd, budget));
-  return Response.json(ephemeral(botResearchMessages(cmd.question)("dispatching")));
+  return Response.json(ephemeral(botResearchMessages(cmd.question, cmd.presentationLanguage)("dispatching")));
 }
 
 /** Only-the-asker-sees-this reply, for the ack, help, throttles, and config notices. */
@@ -93,16 +95,17 @@ async function runAndReply(cmd: SlashCommand, budget: number) {
     const privateClaim = await prepareHostedRunClaim(queryId);
     const run = await collectRun({
       question: cmd.question,
+      ...(cmd.presentationLanguage ? { presentationLanguage: cmd.presentationLanguage } : {}),
       budget,
       queryId,
       origin: "web",
       provenance: { version: 1, surface: "slack", ownershipMethod: "unknown" },
     });
     const packet = await privateClaim?.complete(run);
-    text = buildAnswerText(run) + (packet ? `\n\n${privateRunClaimText(packet)}` : "");
+    text = buildAnswerText(run, cmd.presentationLanguage) + (packet ? `\n\n${privateRunClaimText(packet)}` : "");
   } catch (err) {
     console.error("[slack] /keryx run failed:", err);
-    text = buildErrorText(err, cmd.question);
+    text = buildErrorText(err, cmd.question, cmd.presentationLanguage);
   }
   await postToResponseUrl(cmd.responseUrl, text);
 }

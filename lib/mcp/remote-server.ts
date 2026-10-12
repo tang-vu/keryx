@@ -9,6 +9,7 @@ import type { McpClientChannel, QueryRun } from "../types";
 import { registerMonthlyDiscovery } from "../monthly/mcp-discovery";
 import { quoteResearchMonthly } from "../monthly/quote";
 import { livePresentationLocale, presentationLanguages } from "../research/presentation-language";
+import { recordedAnswerLanguage } from "../research/answer-language-provenance";
 import { researchPresentationMessages } from "../research/presentation-messages";
 import { remoteResearchText } from "../research/result-presentation";
 import { botResearchCatalogues } from "../bots/research-messages";
@@ -177,7 +178,8 @@ export function createRemoteMcpServer(
         return {
           // Direct caller's private tool response only. The structured public
           // projection remains unchanged and never acquires claim credentials.
-          content: [{ type: "text" as const, text: remoteResearchText(result, locale) },
+          content: [{ type: "text" as const, text: remoteResearchText(result, livePresentationLocale({
+            requestedLanguage: language, originalQuestion: question, recordedAnswerLanguage: recordedAnswerLanguage(run) })) },
             ...(packet ? [{ type: "text" as const, text: privateRunClaimText(packet) }] : [])],
           ...(packet ? { _meta: { "keryx/privateRunClaim": packet } } : {}),
           structuredContent: result,

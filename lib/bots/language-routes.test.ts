@@ -68,7 +68,7 @@ it.each(platforms.flatMap(platform => (["en", "vi", "pt", "es"] as const).map(la
     expect(text(saved, platform)).toContain(botControlsCatalogues[language].languageSaved.replace("{preference}", language));
     const help = await (await handlers[platform](request(platform, "help"))).json();
     assertPrivate(help, platform); expect(text(help, platform)).toContain(botControlsCatalogues[language].languageHelp);
-    expect([...state.values()]).toEqual([language]);
+    expect([...state.values()]).toEqual([language, language]);
     expect(mocks.admission).not.toHaveBeenCalled(); expect(mocks.collect).not.toHaveBeenCalled();
     expect(mocks.after).toEqual([]); expect(fetchMock).not.toHaveBeenCalled();
   });

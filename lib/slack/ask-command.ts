@@ -10,6 +10,7 @@
  */
 
 import { config } from "../config";
+import { recordedAnswerLanguage } from "../research/answer-language-provenance";
 import { unsupportedDecisionReviewFlag, unsupportedDecisionReviewIntent } from "../research/decision-review-types";
 import { formatRecordedUsdc, formatNumber, selectPlural } from "../i18n/format";
 import { answerPresentation } from "../research/answer-presentation";
@@ -25,6 +26,8 @@ const MESSAGE_MAX = 12000;
 
 /** The fields the /keryx flow reads from Slack's urlencoded slash-command payload. */
 export interface SlashCommand {
+  /** Authenticated route preference only; never parsed from slash-command fields. */
+  presentationLanguage?: BotLanguage;
   question: string;
   userId: string;
   channelId: string;
@@ -70,9 +73,9 @@ export function helpText(language: BotLanguage = "en"): string {
  * planned rewards, recorded payment mode, and a link to the full dispatch trace (which carries
  * settlement evidence and any truncated text). QueryRun alone does not contain per-payment evidence.
  */
-export function buildAnswerText(run: QueryRun): string {
-  const message = botResearchMessages(run.question);
-  const locale = answerPresentation(run.question, "ordinary").language;
+export function buildAnswerText(run: QueryRun, requestedLanguage?: BotLanguage): string {
+  const locale = recordedAnswerLanguage(run) ?? requestedLanguage ?? answerPresentation(run.question, "ordinary").language;
+  const message = botResearchMessages(run.question, locale);
   const parts = [`*${escapeSlack(truncate(run.question, 256))}*`, ""];
   parts.push(escapeSlack(truncate(run.answer, ANSWER_MAX)), "");
 
@@ -95,8 +98,8 @@ export function buildAnswerText(run: QueryRun): string {
 }
 
 /** Failure text for the response_url post — the run died, say so instead of leaving it silent. */
-export function buildErrorText(err: unknown, originalQuestion = ""): string {
-  return truncate(escapeSlack(botResearchFailure(err, originalQuestion)), MESSAGE_MAX);
+export function buildErrorText(err: unknown, originalQuestion = "", requestedLanguage?: BotLanguage): string {
+  return truncate(escapeSlack(botResearchFailure(err, originalQuestion, requestedLanguage)), MESSAGE_MAX);
 }
 
 /**

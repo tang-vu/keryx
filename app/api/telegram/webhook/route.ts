@@ -26,6 +26,7 @@ import { prepareTelegramPrivateReply, type TelegramPrivatePlaceholder } from "@/
 import { config } from "@/lib/config";
 import { botResearchMessages } from "@/lib/bots/research-messages";
 import { botControlResponse, parseBotControl } from "@/lib/bots/language";
+import { botAnswerPresentation } from "@/lib/bots/answer-preference";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import {
   type AskMessage,
@@ -81,11 +82,12 @@ export async function POST(req: NextRequest) {
 
   const cmd = parseAskMessage(update);
   if (!cmd) return Response.json({ ok: true }); // not an /ask — acknowledge and move on
+  cmd.presentationLanguage = (await botAnswerPresentation(cmd.question, { platform: "telegram", scope: "telegram", userId: String(cmd.userId) })).language;
   if (!config.sellerAddress) {
     return Response.json({
       method: "sendMessage",
       chat_id: cmd.chatId,
-      text: botResearchMessages(cmd.question)("treasuryUnavailable"),
+      text: botResearchMessages(cmd.question, cmd.presentationLanguage)("treasuryUnavailable"),
     });
   }
 
@@ -96,7 +98,7 @@ export async function POST(req: NextRequest) {
     return Response.json({
       method: "sendMessage",
       chat_id: cmd.chatId,
-      text: botResearchMessages(cmd.question)("sponsoredLimited"),
+      text: botResearchMessages(cmd.question, cmd.presentationLanguage)("sponsoredLimited"),
     });
   }
 
@@ -124,7 +126,7 @@ async function runAndReply(cmd: AskMessage, budget: number) {
   const replyChatId = privateReply?.chatId ?? cmd.chatId;
   const placeholderId = privateReply?.placeholderId ?? await callTelegram<{ message_id?: number }>("sendMessage", {
     chat_id: cmd.chatId,
-    text: botResearchMessages(cmd.question)("dispatching"),
+    text: botResearchMessages(cmd.question, cmd.presentationLanguage)("dispatching"),
     reply_to_message_id: cmd.messageId,
     allow_sending_without_reply: true,
   }).then((r) => r?.message_id);
@@ -133,16 +135,17 @@ async function runAndReply(cmd: AskMessage, budget: number) {
   try {
     const run = await collectRun({
       question: cmd.question,
+      ...(cmd.presentationLanguage ? { presentationLanguage: cmd.presentationLanguage } : {}),
       budget,
       queryId,
       origin: "web",
       provenance: { version: 1, surface: "telegram", ownershipMethod: "unknown" },
     });
     packet = await privateClaim?.complete(run);
-    text = buildAnswerText(run);
+    text = buildAnswerText(run, cmd.presentationLanguage);
   } catch (err) {
     console.error("[telegram] /ask run failed:", err);
-    text = buildErrorText(err, cmd.question);
+    text = buildErrorText(err, cmd.question, cmd.presentationLanguage);
   }
 
   let edited: unknown = null;
