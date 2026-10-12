@@ -169,7 +169,7 @@ export const EXPLORE_SOURCES: readonly ExploreSource[] = [
     description: "Brian Krebs's independent reporting on cybercrime and information security.", topic: "data-infrastructure", tags: ["security", "cybercrime", "fraud", "research"] },
   { id: "explore:ipfs", name: "IPFS", url: "https://blog.ipfs.tech/",
     description: "IPFS project publications on content addressing, distributed storage and the decentralized web.", topic: "data-infrastructure", tags: ["IPFS", "storage", "content addressing", "decentralization"] },
-  { id: "explore:protocol-labs", name: "Protocol Labs", url: "https://www.protocol.ai/blog/",
+  { id: "explore:protocol-labs", name: "Protocol Labs", url: "https://pl.xyz/",
     description: "Protocol Labs publications on decentralized infrastructure, research and ecosystem development.", topic: "data-infrastructure", tags: ["Protocol Labs", "IPFS", "Filecoin", "research"] },
   { id: "explore:stellar-blog", name: "Stellar Blog", url: "https://stellar.org/blog",
     description: "Stellar publications on payment infrastructure, tokenization and network development.", topic: "payments", tags: ["Stellar", "payments", "tokenization", "network"] },

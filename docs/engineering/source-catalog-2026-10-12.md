@@ -36,7 +36,9 @@ delivery label does not certify a complete article or scientific accuracy.
 | PLOS | https://theplosblog.plos.org/feed/ | 10 |
 | Martin Fowler | https://martinfowler.com/feed.atom | 10 |
 
-Protocol Labs' existing publisher site links to its `pl.xyz` feed. Our World in
+Protocol Labs' existing publisher site links to its `pl.xyz` feed; the new entry
+uses the directly checked `pl.xyz` homepage and feed origin so future website-file
+ownership proof does not depend on the former cross-origin publisher URL. Our World in
 Data's general Atom feed admitted no usable items; its separately publisher-linked
 Data Insights feed passed. Distill includes foundational older work; collection
 dates do not make publication dates recent. Python, Distill, IPFS, Protocol Labs
