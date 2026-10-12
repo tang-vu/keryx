@@ -10,6 +10,7 @@ import { canonicalJson } from "../canonical-json";
 import { validateArticleOfferProofMicros } from "../offers/article-offer-proof";
 import type { BrowserSigningOriginal } from "./browser-signing-original";
 import type { BrowserAuthorizationJournal } from "../db/browser-authorization-journal";
+import { sourceRegistryAuthoritySchema } from "../registry/source-registry-authority-schema";
 
 const id = z.string().regex(/^[A-Za-z0-9:_-]{1,128}$/);
 const version = z.string().regex(/^[\x21-\x7e]{1,128}$/);
@@ -59,6 +60,7 @@ export const browserOriginalSourceContextSchema = z
       .object({
         network: z.literal("eip155:5042002"),
         contract: address,
+        origin: sourceRegistryAuthoritySchema.optional(),
         blockNumber: decimal,
         blockHash: digest,
         blockTimestamp: decimal,
@@ -133,6 +135,9 @@ export async function verifyRetainedBrowserOriginalSourceContext(
   const originalSeconds = Math.floor(Date.parse(original.admittedAt) / 1000);
   if (
     !Number.isSafeInteger(originalSeconds) ||
+    (context.registry.origin && (context.registry.origin.network !== context.registry.network ||
+      context.registry.origin.address !== context.registry.contract ||
+      BigInt(context.registry.origin.deployBlock) > BigInt(context.registry.blockNumber))) ||
     !["http:", "https:"].includes(url.protocol) ||
     url.username ||
     url.password ||

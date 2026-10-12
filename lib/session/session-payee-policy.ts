@@ -18,10 +18,12 @@
 
 import { config } from "../config";
 import { allowedPayTo } from "../registry/payto-guard";
+import { sourceRegistryAuthorityForSource, type SourceRegistryAuthority } from "../registry/source-registry-authority";
 
 const TTL_MS = 10 * 60_000;
 
 interface PublicSource {
+  registryAuthority?: SourceRegistryAuthority;
   walletAddress?: string;
   onchainId?: string;
 }
@@ -49,10 +51,14 @@ export async function authorisedPayees(): Promise<ReadonlySet<string>> {
         payees.add(source.walletAddress.toLowerCase());
         return;
       }
-      const allowlist = await allowedPayTo(source.onchainId);
+      let authority;
+      try { authority = sourceRegistryAuthorityForSource(source); } catch { return; }
+      const allowlist = authority ? await allowedPayTo(source.onchainId, { authority }) : await allowedPayTo(source.onchainId);
       if (allowlist.status === "onchain") {
+        if (authority && (!allowlist.active || allowlist.stale)) return;
         for (const wallet of allowlist.wallets) payees.add(wallet);
       } else {
+        if (authority) return; // A bound origin has no database-authority fallback.
         // Registry unreadable for this source — fall back to the wallet the server lists. The
         // main thread's per-source check refuses outright in this case; here, refusing would
         // take down every payment for every source at once.

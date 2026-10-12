@@ -34,8 +34,16 @@ export const sourceClaimOpenApiSchemas = {
     type: "object", additionalProperties: true, properties: {
       id: { type: "string" }, name: { type: "string" }, url: { type: "string", format: "uri" },
       fetchPrice: { type: "number", minimum: 0 },
+      registryAuthority: { $ref: "#/components/schemas/SourceRegistryAuthority" },
       sourceClaimId: { ...claimId, description: "Sticky managed-source marker, including when policy history cannot be read. Marker is not payout authority. Catalog import must retain the original atomic claim history or fail closed." },
     },
+  },
+  SourceRegistryAuthority: {
+    type: "object", additionalProperties: false, required: ["network", "address", "version", "codeHash", "deployBlock"],
+    description: "Immutable source origin. A new global registration registry never rewrites old listing/edit/payout authority. Browser and server must independently allowlist this exact origin; unbound on-chain sources refuse in origin-profile mode.",
+    properties: { network: { type: "string", enum: ["eip155:5042", "eip155:5042002"] }, address,
+      version: { type: "integer", enum: [1, 2, 3] }, codeHash: { type: "string", pattern: "^0x[0-9a-f]{64}$" },
+      deployBlock: { type: "string", pattern: "^(0|[1-9][0-9]{0,19})$" } },
   },
   SourceClaimReceipt: {
     type: "object", additionalProperties: false, required: ["id", "revision", "mode", "effectiveAt", "verifiedAt"],

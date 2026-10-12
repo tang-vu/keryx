@@ -1,9 +1,12 @@
 # Creator registration gas sponsorship
 
-October 9, 2026 source candidate: registration sponsorship is **disabled by
-default**. Production retains its V1 SourceRegistry authority. V2 and V3 are
-separate contract candidates; including their source or selecting a version does
-not deploy a contract, migrate existing listings or authorize a mainnet cutover.
+October 12, 2026 activation candidate: registration sponsorship is **disabled by
+default**. The owner selected the existing funded public-fee wallet for a bounded
+Conzit rollout. Production activation remains pending the funded acceptance and
+release readbacks recorded below. V1 listings retain their original authority;
+new V3 registrations use explicit immutable registry origins rather than moving
+legacy listings. Including source or selecting a version does not deploy a
+contract or prove a completed cutover.
 See [current deployment records](mainnet-status.md) and
 [the complete-product release gates](mainnet-delivery-plan.md).
 
@@ -49,6 +52,12 @@ The service reads the retained claim history before preparing or submitting.
 Proof of publishing control does not establish content redistribution rights;
 the existing source-policy and distribution-permission gates remain separate.
 
+The claim page accepts an optional exact same-origin HTTPS RSS URL with the
+website-file proof and preserves it through wallet sign-in and proof reload.
+After verification it offers a direct sponsored-registration handoff for an
+eligible publisher. Conzit's draft pairs `https://conzit.com/` with
+`https://conzit.com/rss.xml`; this draft establishes no ownership or registration.
+
 EIP-712 supplies typed hashing and domain separation, while application and
 contract nonces supply replay protection. The standard does not provide replay
 protection by itself. See [EIP-712](https://eips.ethereum.org/EIPS/eip-712) and the
@@ -64,9 +73,15 @@ write addresses, the selected network and deployment origin, and an unexpired
 policy. Explicit offline mode refuses the real relay. Secrets belong only in
 protected environment files.
 
-The policy allowlists creator wallets and bounds transaction gas, fee per gas,
+The policy allowlists named creator wallets or exact HTTPS publisher origins and bounds transaction gas, fee per gas,
 per-transaction maximum liability, daily/lifetime wei liability, registrations
-per wallet, daily attempts and total attempts. Gas and fee maxima must fit the
+per wallet, daily attempts and total attempts. Publisher-origin admission requires
+a fresh ownership proof and a finite per-origin attempt cap shared across wallets
+and URLs. It does not require pre-enrolling the publisher's wallet. The intended
+mainnet scope is only `https://conzit.com`, up to two attempts per wallet/origin,
+five total, 0.04 native USDC per transaction, 0.08 daily and 0.20 lifetime over a
+single 24-hour policy. Deployment is separately bounded to 0.088 native USDC.
+These are ceilings, not observed spending or an automatic renewal. Gas and fee maxima must fit the
 transaction reservation. These are native gas amounts in wei, separate from
 the six-decimal ERC-20 USDC units used by source prices and rewards. Network
 configuration follows [Keryx's canonical profile](../lib/arc-network-profile.ts)
@@ -105,7 +120,7 @@ pending sponsor transaction.
 | `signing` | Original sponsor transaction nonce is retained; signing or submission outcome may be unknown. Full liability remains reserved. |
 | `submitted` | Exact signed transaction hash is retained before broadcast. Full liability remains until a matching receipt is found. |
 | `confirmed` | Matching successful receipt and source-registration event; charge actual `gasUsed * effectiveGasPrice`. Indexing remains a separate check. |
-| `reverted` | Matching reverted receipt; charge its actual gas. It does not authorize another registration attempt. |
+| `reverted` | Matching reverted receipt; charge actual gas. A separate reviewed replacement consumes another capped attempt and retains this predecessor. |
 | `expired` | Only a prepared original with no sponsor nonce/hash/gas evidence can expire and release its monetary hold. Attempt counts remain consumed. |
 
 Daily gas attribution remains on each original's admission day, even when its
@@ -113,14 +128,15 @@ receipt is reconciled later. Actual receipt gas, including reverted gas, cannot
 exceed the reserved maximum. It is never counted as a creator payout. Terminal
 records are immutable; signing/submission uncertainty never expires the hold.
 
-An expired unsigned original may be explicitly renewed only after its contract
-deadline is conclusively past: `now >= (deadline + 1) * 1000`. The new request
+An expired unsigned original or a conclusively receipt-reverted original may be
+explicitly renewed. Unsigned expiry requires its contract deadline to be
+conclusively past: `now >= (deadline + 1) * 1000`. The new request
 must name the latest original through `replacesRequestId`, preserve the same
 creator, canonical source, claim/source identity and pinned policy, and have a
 later admission time. It consumes another attempt under the same caps. The
 journal retains and validates the entire predecessor chain. Reloading or
 preparing without that explicit pointer returns the retained original; it does
-not renew it. A request in `signing`, `submitted`, `confirmed` or `reverted`
+not renew it. A request in `signing`, `submitted` or `confirmed`
 cannot be renewed.
 
 Owner-scoped lookup by request ID retains every original. Lookup by canonical
@@ -132,20 +148,45 @@ journal in this candidate and cannot enable the relay.
 
 ## Recovery limits and activation gates
 
-Two operational recovery gaps remain open. A crash or signing failure can leave
-`signing` with a reserved nonce and no retained transaction hash. A crash after
-hash retention but before broadcast can leave `submitted` with no transaction
-on-chain. The implementation retains those originals and their full liability;
-it provides receipt inspection but no retry, replacement, rebroadcast or
-operator reset feature. Such uncertainty also blocks later sponsor signing.
-Removing browser data or changing configuration does not grant another attempt.
-Operational resolution needs a reviewed design and acceptance before activation.
+The October 12 candidate retains the creator signature atomically with signing
+admission and the exact signed transaction atomically with its hash before
+broadcast. These bearer values live only in the private journal envelope;
+creator lookups, API responses and browser storage receive only the existing
+public original. The native reader uses one consistent snapshot. Legacy
+originals without retained execution remain inspectable but cannot be resumed.
+
+An explicit owner action, POST `operation: "resume"` or the browser's
+"Resume original sponsored transaction" button, first inspects any original
+receipt. If execution is still unresolved and authority remains live, it may
+finish signing the same original transaction nonce or send its retained signed
+bytes unchanged. It creates no new registration attempt, nonce, fee ceiling or
+gas reservation. Fresh registry observations precede native publishing-proof
+checks immediately before signing and broadcast. Reload and GET inspection
+never execute a transaction. Proof/policy/deadline changes refuse execution;
+unknown outcomes retain the complete hold.
+
+After authorization expires, explicit POST `operation: "resolveExpired"` or the
+browser resolution button can finish only that retained original, within its
+existing reservation and still-live policy. Fresh canonical chain observations
+must establish the expired deadline before signing and broadcast. The exact
+expired calldata cannot register a source in a later block. A submitted original
+may have succeeded before expiry while its receipt was unavailable; matching
+successful registration evidence remains recoverable in that race. This action
+requires no fresh publisher proof because it can create no source, but retains
+the authenticated owner, original signature, nonce, fees and gas. Its matching
+reverted receipt charges actual gas and closes uncertainty before a separately
+reviewed replacement. Policy expiry refuses further execution; keyless original
+receipt recovery remains available. There is no cancellation, changed transaction,
+fee bump, autonomous retry or hold reset. Missing outcome continues to block
+later sponsor signing. Removing browser data or changing configuration does not
+grant another attempt.
 
 Local SQLite/service tests and in-process contract tests exercise synthetic
 transport, signatures, concurrency, caps, proof changes and failure retention.
 They do not establish funded Arc testnet behavior, a mainnet sponsored
-registration, actual gas cost or production availability. No funded testnet or
-mainnet sponsorship proof is claimed by this candidate. Exact-source CI/review,
+registration, actual gas cost or production availability. Funded evidence is
+recorded separately in [the acceptance record](engineering/registration-sponsor-funded-acceptance-20261012.md),
+including its source pins and any remaining gates. Exact-source CI/review,
 production commit verification and applicable browser acceptance remain release
 evidence, separate from financial activation.
 
@@ -162,7 +203,7 @@ receipts cannot be repurposed as V3 activation consent or proof. See
 | Surface | Registration role |
 | --- | --- |
 | Web | `/register/sponsored` is an explicit pilot for one verified feed, with creator review/signing and retained request inspection. Bulk import does not automatically receive sponsorship. |
-| Hosted API | `/api/sources/sponsor` uses the same SIWE, same-origin, proof, allowlist and atomic caps. Its owner lookup and receipt reader retain original identity. |
+| Hosted API | `/api/sources/sponsor` uses the same SIWE, same-origin, proof, allowlist and atomic caps. Its owner lookup and receipt reader retain original identity; explicit resume preserves the original private execution authority. |
 | CLI and remote/stdio MCP | Existing research, payment and inspection roles remain. No new publisher private key, creator transaction signing or sponsor executor is distributed. |
 | Desktop Operator | Existing desktop/local roles remain; this candidate grants no publisher custody or sponsored registration signing. |
 | Browser extension and bots | Existing hosted links and research adapters remain. A browser handoff still requires the creator's own session, proof and signature. |

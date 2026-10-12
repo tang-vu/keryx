@@ -1,11 +1,12 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { createServer, type Server } from "node:http";
 import { once } from "node:events";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { encodeFunctionResult } from "viem";
+import { encodeFunctionResult, keccak256 } from "viem";
+import { config } from "../config";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { SqliteAdapter } from "./sqlite-adapter";
 import { REGISTRY_ABI } from "../registry/registry-client";
@@ -33,6 +34,7 @@ import {
   admitSqliteBrowserJournalInTransaction,
   sqliteJournalTransaction,
 } from "./sqlite-browser-journal";
+import { admitSqliteBrowserSourceOriginal } from "./sqlite-browser-signing-originals";
 import { prepareBrowserJournal } from "./browser-authorization-journal";
 import {
   articleOfferId,
@@ -44,6 +46,7 @@ const signer = privateKeyToAccount(generatePrivateKey());
 const creator = privateKeyToAccount(generatePrivateKey());
 const payout = "0x2222222222222222222222222222222222222222";
 const contract = "0x3333333333333333333333333333333333333333";
+const priorOrigins = { registryOrigins: config.registryOrigins, registryReadAddress: config.registryReadAddress };
 const pendingFixtureCleanup: (() => Promise<void>)[] = [];
 async function fixtureDeadline<T>(
   pending: Promise<T>,
@@ -102,6 +105,7 @@ async function closeFixture(f: FixtureResources) {
   if (failed) throw new Error("Fixture cleanup refused");
 }
 afterEach(async () => {
+  Object.assign(config, priorOrigins); vi.unstubAllEnvs();
   let failed = false;
   try {
     for (const cleanup of pendingFixtureCleanup.splice(0)) {
@@ -270,6 +274,8 @@ async function setup(failStage?: "grant") {
     const result =
       payload.method === "eth_chainId"
         ? rpc.chain
+        : payload.method === "eth_getCode"
+        ? "0x6000"
         : payload.method === "eth_call"
         ? encodeFunctionResult({
             abi: REGISTRY_ABI,
@@ -524,6 +530,35 @@ it("installs floor2, refuses premature v3, then atomically retains original/cont
   );
   expect(historical?.original).toEqual(admitted.original);
   expect(f.snapshot()).toBe(retained);
+});
+it("retains exact V1 origin evidence and refuses a changed stored origin inside new-original admission", async () => {
+  const f = await setup();
+  const legacy = { network: "eip155:5042002" as const, address: contract as `0x${string}`, version: 1 as const,
+    codeHash: keccak256("0x6000"), deployBlock: "1" };
+  const current = { ...legacy, address: `0x${"77".repeat(20)}` as `0x${string}`, version: 3 as const, codeHash: keccak256("0x6001") };
+  const origins = JSON.stringify([legacy, current]);
+  Object.assign(config, { registryOrigins: origins, registryReadAddress: current.address });
+  vi.stubEnv("KERYX_REGISTRY_ORIGINS", origins); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS", origins);
+  const source = (await f.db.getSource(f.input.source.sourceId))!;
+  await f.db.setSourceMeta(source.onchainId!, { name: source.name, description: source.description, url: source.url, registryAuthority: legacy });
+  f.native.exec("UPDATE browser_signing_v2_control SET min_original_version=3 WHERE id=1");
+  const token = await f.authority.resolve(f.input);
+  expect(prepareBrowserSourceSigningAdmission(f.input, token).original.sourceContext.registry).toMatchObject({ contract, origin: legacy });
+  const before = f.snapshot(), key = `keryx:source-registry-origin:v1:${source.onchainId}`;
+  const retained = String(f.native.prepare("SELECT value FROM sync_state WHERE key=?").get(key)!.value);
+  f.native.prepare("UPDATE sync_state SET value=? WHERE key=?").run(JSON.stringify({ ...JSON.parse(retained), authority: current }), key);
+  expect(admitSqliteBrowserSourceOriginal(f.native, f.input, token).status).toBe("refused");
+  expect(f.snapshot()).toBe(before);
+  f.native.prepare("UPDATE sync_state SET value=? WHERE key=?").run(retained, key);
+  const admitted = admitSqliteBrowserSourceOriginal(f.native, f.input, token);
+  expect(admitted.status).toBe("admitted");
+  if (admitted.status !== "admitted") throw new Error("Fixture refused");
+  const narrowed = JSON.stringify([current]);
+  Object.assign(config, { registryOrigins: narrowed });
+  vi.stubEnv("KERYX_REGISTRY_ORIGINS", narrowed); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS", narrowed);
+  const calls = f.rpcCalls();
+  expect((await admitSqliteBrowserSourceSigningOriginal(f.native, f.input, f.authority))).toMatchObject({ status: "admitted", original: admitted.original });
+  expect(f.rpcCalls()).toBe(calls);
 });
 it("freezes private authority evidence against nested prepared-output mutation and detects changed input", async () => {
   const f = await setup();

@@ -16,6 +16,7 @@ import { getDb } from "@/lib/db";
 import { config } from "@/lib/config";
 import { settleThenServe } from "@/lib/x402-server";
 import { allowedPayTo, isAllowed } from "@/lib/registry/payto-guard";
+import { sourceRegistryAuthorityForSource } from "@/lib/registry/source-registry-authority";
 import { sourceFetchTerms } from "@/lib/registry/source-fetch-payto";
 import { sourceClaimAccess } from "@/lib/sources/source-claim-access";
 import { assertSourceClaimRequest, sourceClaimPath } from "@/lib/sources/source-claim-request";
@@ -69,7 +70,10 @@ export async function POST(
   // Second, independent check against the chain. The DB agreed that `payTo` belongs to
   // this source; the registry decides whether the DB is telling the truth.
   if (source.onchainId && config.profile.name !== "arc") {
-    const allowlist = await allowedPayTo(source.onchainId);
+    let authority;
+    try { authority = sourceRegistryAuthorityForSource(source); }
+    catch { return Response.json({ error: "Original source registry authority is unavailable" }, { status: 503 }); }
+    const allowlist = authority ? await allowedPayTo(source.onchainId, { authority }) : await allowedPayTo(source.onchainId);
     if (allowlist.status === "onchain") {
       if (!isAllowed(allowlist.wallets, payTo)) {
         console.error(

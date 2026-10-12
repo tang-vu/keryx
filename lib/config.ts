@@ -287,6 +287,8 @@ export const config = {
   // The block number at which SourceRegistry was deployed. The indexer uses this
   // as the cold-start backfill origin so it doesn't scan blocks before the contract exists.
   registryDeployBlock: process.env.KERYX_REGISTRY_DEPLOY_BLOCK ?? "0",
+  // Exact public origin profiles for retaining old registries alongside new registration.
+  registryOrigins: process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS ?? process.env.KERYX_REGISTRY_ORIGINS ?? "",
   // One-time deployer key — used ONLY for `npx hardhat run scripts/deploy-source-registry.ts`.
   // Never used for per-source writes (those are creator-signed from the browser).
   deployerKey: (process.env.DEPLOYER_PRIVATE_KEY ?? "") as `0x${string}` | "",
