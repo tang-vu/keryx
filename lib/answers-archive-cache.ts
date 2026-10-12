@@ -63,6 +63,7 @@ async function publicArchive(db: Awaited<ReturnType<typeof getDb>>): Promise<Arc
 
 async function rebuild(): Promise<ArchiveEntry[]> {
   const db = await getDb();
+  if (privacyReadsActive(db)) { privacyObserved = true; return publicArchive(db); }
   const entries = await buildArchiveStream(db.iterateRecentQueries(ARCHIVE_WINDOW_RUNS));
   let historical: ArchiveEntry[] = [];
   let historicalUnavailable = false;
@@ -74,6 +75,9 @@ async function rebuild(): Promise<ArchiveEntry[]> {
   const merged = new Map<string, ArchiveEntry>(historical.map(entry => [entry.id, entry]));
   for (const entry of entries) merged.set(entry.id, entry);
   const combined = [...merged.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+  // Another concurrent reader may have admitted privacy while this legacy
+  // rebuild awaited storage. Its earlier visibility decision cannot publish now.
+  if (privacyObserved || privacyReadsActive({})) { privacyObserved = true; throw new Error("Legacy archive admission superseded"); }
   cached = { at: historicalUnavailable ? Date.now() - TTL_MS + 15_000 : Date.now(), entries: combined };
   return combined;
 }
@@ -92,7 +96,7 @@ async function legacyArchiveCached(): Promise<ArchiveEntry[]> {
   try {
     return await building;
   } catch {
-    return cached?.entries ?? [];
+    return privacyObserved || privacyReadsActive({}) ? [] : cached?.entries ?? [];
   }
 }
 

@@ -86,6 +86,15 @@ and the write-time provenance consumer require issue 276's checkpointed shared
 reader; that integration is still pending at this checkpoint. No producer or
 duplicate provenance parser is introduced by the public archive worker.
 
+The answer renderer accepts a trusted recorded generated-prose language while
+defaulting to `und`. Curly-quoted originals emitted by the ordinary finalizer
+reset to `und` in the answer and archive snippets, including nested/truncated
+quotations. Atom uses escaped HTML content for a known generated-prose language
+so those original spans can remain undetermined; unknown historical content
+stays plain text with `xml:lang="und"`. Exact quote text is preserved and source
+markup is escaped. Passing the shared provenance result into the answer-card
+caller remains part of issue 276/277 combined-source integration.
+
 With privacy admitted, archive selection uses the existing public-only privacy
 port in bounded 32-row pages before deduplication. Selected IDs are freshly
 projected through that same port in 32-row batches before publication, so a
@@ -96,6 +105,8 @@ After this process has observed admitted privacy, a database outage cannot
 revive its retained legacy cache. Immutable historical archives remain excluded
 from active privacy enumeration. This does not activate privacy or authorize
 ordinary Supabase DDL; its reviewed storage/API rollout remains a separate gate.
+An already-running legacy rebuild is also discarded if a concurrent reader
+admits privacy before it completes.
 
 Synthetic tests cover actual page/feed/metadata/pagination and rendered snippet
 language contracts. A real in-memory SQLite privacy fixture checks rich hidden

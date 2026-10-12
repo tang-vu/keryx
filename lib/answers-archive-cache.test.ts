@@ -67,6 +67,21 @@ describe("archive publication admission", () => {
     expect(await getArchiveCached()).toEqual([]);
   });
 
+  it("does not publish an in-flight legacy rebuild after a concurrent reader admits privacy", async () => {
+    const legacy = run("legacy"), historical = run("historical", "Historical question?");
+    let announce!: () => void, release!: (value: unknown) => void;
+    const started = new Promise<void>(resolve => { announce = resolve; });
+    fixtures.archive.mockImplementation(() => { announce(); return new Promise(resolve => { release = resolve; }); });
+    fixtures.db.mockResolvedValue({ runPrivacyActive: false, async *iterateRecentQueries() { yield legacy; } });
+    const { getArchiveCached } = await import("./answers-archive-cache");
+    const pending = getArchiveCached();
+    await started;
+    admit(() => []);
+    expect(await getArchiveCached()).toEqual([]);
+    release({ info: { network: "eip155:5042002" }, async *iterateRecentQueries() { yield historical; } });
+    expect(await pending).toEqual([]);
+  });
+
   it.each(["scan", "publication", "missing port", "unexpected identity", "duplicate identity"])("fails closed on %s failure without a partial result", async failure => {
     const value = run("candidate");
     admit(query => {
