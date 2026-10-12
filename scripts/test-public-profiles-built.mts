@@ -147,10 +147,14 @@ try {
         const main = document.querySelector("main"), heading = main?.querySelector("h1");
         if (!main || !heading || heading.textContent !== "Fixture researcher") return false;
         const rect = heading.getBoundingClientRect(), style = getComputedStyle(heading);
+        const primaryFamily = style.fontFamily.split(",")[0].trim(); // Preserve the CSS-serialized quoted name for check().
+        const primaryName = primaryFamily.replace(/^["']|["']$/g, "");
+        const primaryFaceLoaded = Array.from(document.fonts).some(face =>
+          face.family.replace(/^["']|["']$/g, "") === primaryName && face.status === "loaded");
         return rect.width > 0 && rect.height > 0 && style.visibility === "visible" && style.display !== "none" &&
           parseFloat(style.opacity) > 0 && parseFloat(getComputedStyle(main).paddingLeft) >= 15 &&
           parseFloat(style.fontSize) >= 28 && document.fonts.status === "loaded" &&
-          document.fonts.check(`${style.fontSize} ${style.fontFamily}`);
+          primaryFaceLoaded && document.fonts.check(`${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${primaryFamily}`, heading.textContent ?? "");
       }).catch(async error => {
         const diagnostic: Record<string, unknown> = { width, staticAssets, pageErrors: errors.slice(0, 20) };
         readinessFailures.push(diagnostic);
@@ -160,7 +164,10 @@ try {
             const style = heading ? getComputedStyle(heading) : null, mainStyle = main ? getComputedStyle(main) : null;
             const rect = heading?.getBoundingClientRect(), mainRect = main?.getBoundingClientRect();
             const font = style ? `${style.fontSize} ${style.fontFamily}` : null;
-            const primaryFont = style ? `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily.split(",")[0].trim()}` : null;
+            const primaryFamily = style?.fontFamily.split(",")[0].trim() ?? null;
+            const primaryFont = style && primaryFamily ? `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${primaryFamily}` : null;
+            const primaryFaceLoaded = !!primaryFamily && Array.from(document.fonts).some(face =>
+              face.family.replace(/^["']|["']$/g, "") === primaryFamily.replace(/^["']|["']$/g, "") && face.status === "loaded");
             return { mainFound: !!main, headingFound: !!heading, headingExact: heading?.textContent === "Fixture researcher",
               headingRect: rect ? { width: rect.width, height: rect.height, left: rect.left, right: rect.right } : null,
               mainRect: mainRect ? { width: mainRect.width, height: mainRect.height, left: mainRect.left, right: mainRect.right } : null,
@@ -169,7 +176,9 @@ try {
               predicates: { headingSized: !!rect && rect.width > 0 && rect.height > 0, visibility: style?.visibility === "visible",
                 display: !!style && style.display !== "none", opacity: !!style && parseFloat(style.opacity) > 0,
                 mainPadding: !!mainStyle && parseFloat(mainStyle.paddingLeft) >= 15, fontSize: !!style && parseFloat(style.fontSize) >= 28,
-                fontsLoaded: document.fonts.status === "loaded", fullFamilyCheck: font ? document.fonts.check(font) : null },
+                fontsLoaded: document.fonts.status === "loaded", registeredPrimaryFaceLoaded: primaryFaceLoaded,
+                primaryFamilyCheck: primaryFont ? document.fonts.check(primaryFont, heading?.textContent ?? "") : null },
+              fullFallbackFamilyCheck: font ? document.fonts.check(font) : null,
               fontsStatus: document.fonts.status, primaryFamilyCheck: primaryFont ? document.fonts.check(primaryFont, heading?.textContent ?? "") : null,
               fontFaces: Array.from(document.fonts).slice(0, 64).map(face => ({ family: face.family.slice(0, 160),
                 status: face.status, style: face.style, weight: face.weight })) };
