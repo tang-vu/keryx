@@ -75,56 +75,62 @@ try {
   const forbidden: string[] = [];
   for (const width of [320, 390, 1024, 1366]) {
     const context = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: "reduce" });
-    await context.route("**/*", async route => {
-      const request = route.request(), url = new URL(request.url());
-      if (url.origin !== origin) return route.abort();
-      if (url.pathname.startsWith("/api/")) {
-        if (/\/api\/(?:ask(?:\/|$)|agent\/ask|research\/.*checkout|source\/|cite\/)/u.test(url.pathname)) forbidden.push(url.pathname);
-        return route.fulfill({ status: 503, json: { error: "Read-only product fixture" } });
-      }
-      assert.equal(request.method(), "GET", "Informational pages make no product writes");
-      return route.fulfill({ response: await route.fetch({ url: transport + url.pathname + url.search }) });
-    });
-    const page = await context.newPage();
-    const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
-    for (const path of ["/", "/pricing", "/about"]) {
-      await page.goto(origin + path); await page.locator("h1").waitFor();
-      await page.evaluate(() => document.fonts.ready);
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `${path} fits ${width}px`);
-      assert.equal(await page.locator("h1").count(), 1);
-      if (path === "/pricing") {
-        const rows = page.locator("tbody tr"); assert.equal(await rows.count(), 2);
-        for (const [index, mode] of (["quick", "deep"] as const).entries()) {
-          const quote = quoteA2aResearch(config.defaultBudget, mode);
-          const expected = [quote.serviceFeeUsdc, quote.creatorBudgetUsdc, quote.totalPriceUsdc]
-            .map(value => formatRecordedAmount(value, { minimumFractionDigits: 6 }));
-          assert.deepEqual(await rows.nth(index).locator("td").allTextContents(), expected);
+    try {
+      await context.route("**/*", async route => {
+        const request = route.request(), url = new URL(request.url());
+        if (url.origin !== origin) return route.abort();
+        if (url.pathname.startsWith("/api/")) {
+          if (/\/api\/(?:ask(?:\/|$)|agent\/ask|research\/.*checkout|source\/|cite\/)/u.test(url.pathname)) forbidden.push(url.pathname);
+          return route.fulfill({ status: 503, json: { error: "Read-only product fixture" } });
         }
-        assert.equal(await page.getByRole("link", { name: copy("pricing.checkout") }).first().getAttribute("href"), "/research#paid-research");
+        assert.equal(request.method(), "GET", "Informational pages make no product writes");
+        return route.fulfill({ response: await route.fetch({ url: transport + url.pathname + url.search }) });
+      });
+      const page = await context.newPage();
+      const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
+      for (const path of ["/", "/pricing", "/about"]) {
+        await page.goto(origin + path); await page.locator("h1").waitFor();
+        await page.evaluate(() => document.fonts.ready);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `${path} fits ${width}px`);
+        assert.equal(await page.locator("h1").count(), 1);
+        if (path === "/pricing") {
+          const rows = page.locator("tbody tr"); assert.equal(await rows.count(), 2);
+          for (const [index, mode] of (["quick", "deep"] as const).entries()) {
+            const quote = quoteA2aResearch(config.defaultBudget, mode);
+            const expected = [quote.serviceFeeUsdc, quote.creatorBudgetUsdc, quote.totalPriceUsdc]
+              .map(value => formatRecordedAmount(value, { minimumFractionDigits: 6 }));
+            assert.deepEqual(await rows.nth(index).locator("td").allTextContents(), expected);
+          }
+          assert.equal(await page.getByRole("link", { name: copy("pricing.checkout") }).first().getAttribute("href"), "/research#paid-research");
+        }
+        if (path === "/about") assert.equal(await page.getByRole("link", { name: SUPPORT_EMAIL, exact: true }).getAttribute("href"), SUPPORT_MAILTO);
+        if (path === "/") {
+          const kicker = await page.getByTestId("hero-kicker").boundingBox();
+          const guide = await page.getByTestId("hero-guide").boundingBox();
+          assert(kicker && guide && kicker.x + kicker.width <= guide.x, "Hero label leaves space for the guide");
+          if (screenshots) await page.screenshot({ path: join(screenshots, `home-viewport-${width}.png`) });
+          const faq = page.getByText(copy("product.faqWallet"), { exact: true });
+          await faq.focus(); await page.keyboard.press("Enter");
+          assert.equal(await faq.evaluate(node => node.parentElement?.hasAttribute("open")), true, "FAQ works by keyboard");
+        }
+        if (screenshots) {
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.screenshot({ path: join(screenshots, `${path === "/" ? "home" : path.slice(1)}-${width}.png`), fullPage: true });
+        }
       }
-      if (path === "/about") assert.equal(await page.getByRole("link", { name: SUPPORT_EMAIL, exact: true }).getAttribute("href"), SUPPORT_MAILTO);
-      if (path === "/") {
-        const kicker = await page.getByTestId("hero-kicker").boundingBox();
-        const guide = await page.getByTestId("hero-guide").boundingBox();
-        assert(kicker && guide && kicker.x + kicker.width <= guide.x, "Hero label leaves space for the guide");
-        if (screenshots) await page.screenshot({ path: join(screenshots, `home-viewport-${width}.png`) });
-        const faq = page.getByText(copy("product.faqWallet"), { exact: true });
-        await faq.focus(); await page.keyboard.press("Enter");
-        assert.equal(await faq.evaluate(node => node.parentElement?.hasAttribute("open")), true, "FAQ works by keyboard");
+      if (width < 1024) {
+        await page.getByRole("button", { name: "Open menu" }).click();
+        await page.locator("#mobile-site-menu").getByRole("link", { name: copy("product.navigationPricing"), exact: true }).click();
+        await page.waitForURL(origin + "/pricing");
+        assert.equal(await page.locator("#mobile-site-menu").isVisible(), false, "New route hides the menu");
       }
-      if (screenshots) {
-        await page.evaluate(() => window.scrollTo(0, 0));
-        await page.screenshot({ path: join(screenshots, `${path === "/" ? "home" : path.slice(1)}-${width}.png`), fullPage: true });
-      }
+      assert.deepEqual(errors, [], `No page errors at ${width}px`);
+    } finally {
+      // Next may still be prefetching when the visible assertions finish. Wait
+      // for those handlers before close disposes their fetched responses.
+      await context.unrouteAll({ behavior: "wait" });
+      await context.close();
     }
-    if (width < 1024) {
-      await page.getByRole("button", { name: "Open menu" }).click();
-      await page.locator("#mobile-site-menu").getByRole("link", { name: copy("product.navigationPricing"), exact: true }).click();
-      await page.waitForURL(origin + "/pricing");
-      assert.equal(await page.locator("#mobile-site-menu").isVisible(), false, "New route hides the menu");
-    }
-    assert.deepEqual(errors, [], `No page errors at ${width}px`);
-    await context.close();
   }
   assert.deepEqual(forbidden, [], "Product discovery never submits research or payment requests");
   console.log("PASS: built crawlable product/pricing/about/support, checkout-derived amounts, keyboard FAQ and navigation at 320/390/1024/1366px; no research, signing or payment.");

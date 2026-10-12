@@ -69,6 +69,13 @@ results, 393 runtime source hashes and zero outbound attempts remained unchanged
 the drift gate was retained. This is synthetic reproducibility, not new real
 research, settlement or customer evidence.
 
+CI also caught stale legal-render expectations for the old contact and a Linux
+prefetch teardown race in the new browser fixture. Legal comparisons permit only
+the confirmed contact, administrative date and previously reviewed extension
+section; the original fixture remains frozen. Retire the two obsolete literal
+contact allowances. Browser teardown waits for route handlers before disposing
+their fetched responses, without suppressing errors or relaxing assertions.
+
 TypeScript, scoped lint, UI-copy/payment-glossary checks, production build, visual
 inspection and independent source review apply. Actual hosted aggregate/domain/
 platform success remains a merge gate. After merge, perform one reviewed serialized

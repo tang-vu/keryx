@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   alternates: englishPublicAlternates("/privacy"),
 };
 
-const UPDATED = "October 11, 2026";
+const UPDATED = "October 12, 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
