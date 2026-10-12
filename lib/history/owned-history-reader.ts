@@ -18,6 +18,35 @@ async function authority(db: OwnedHistoryDB, wallet: string) {
   if (!wallets.includes(wallet) || new Set(wallets).size !== wallets.length) throw new HistoryError("history_unavailable");
   return { wallets, membership: { accountId: membership.accountId, revision: membership.revision } };
 }
+function currentRowsFence(db: OwnedHistoryDB, wallet: string, binding: RunClaimBinding,
+  owners: Awaited<ReturnType<typeof authority>>, check: () => void) {
+  return async (rows: readonly OwnedHistoryRow[]) => {
+    check();
+    if (hash(await authority(db, wallet)) !== hash(owners)) throw new HistoryError("history_unavailable");
+    const privacy = requirePrivacy(db);
+    for (const row of rows) {
+      check();
+      if (!owners.wallets.includes(row.ownerWallet)) throw new HistoryError("history_unavailable");
+      const current = await privacy.owner(row.id, { wallet: row.ownerWallet, binding });
+      check();
+      if (!current || current.state.erased || current.state.revision !== row.revision || current.state.visibility !== row.visibility
+        || current.run.id !== row.id || current.run.createdAt !== row.createdAt || current.run.question !== row.question) {
+        throw new HistoryError("history_unavailable");
+      }
+    }
+    if (hash(await authority(db, wallet)) !== hash(owners)) throw new HistoryError("history_unavailable");
+    check();
+  };
+}
+/** Private request-local fence for accumulated export rows; no metadata/credentials on the wire. */
+export async function createOwnedHistoryFence(db: OwnedHistoryDB, owner: string, rawBinding: RunClaimBinding,
+  signal?: AbortSignal, deadline = Date.now() + 25_000) {
+  const check = () => { if (signal?.aborted || Date.now() > deadline) throw new HistoryError("history_unavailable"); };
+  check(); requirePrivacy(db);
+  const wallet = historyWallet(owner), binding = runClaimBindingSchema.parse(rawBinding), owners = await authority(db, wallet);
+  check();
+  return currentRowsFence(db, wallet, binding, owners, check);
+}
 /** Shared web/API/MCP reader. Bounded candidate scan, owner-private proof before receipts.
  * Empty filtered pages can have a continuation; neither pagination nor exports promise a snapshot. */
 export async function readOwnedHistory(db: OwnedHistoryDB, owner: string, rawBinding: RunClaimBinding, raw: OwnedHistoryInput, signal?: AbortSignal) {
@@ -97,9 +126,8 @@ export async function readOwnedHistory(db: OwnedHistoryDB, owner: string, rawBin
     rowBytes += bytes; rows.push(projected);
     if (rows.length === limit) break;
   }
-  // Unlink/revision change during a read must discard all accumulated private output.
-  if (hash(await authority(db, wallet)) !== hash(owners)) throw new HistoryError("history_unavailable");
-  check();
+  // Receipt IO or a later candidate can race with erasure/revision/ownership changes.
+  await currentRowsFence(db, wallet, binding, owners, check)(rows);
   const more = scanned < candidates.length || lists.some(list => list.length === 51);
   const nextCursor = more && upper && last ? Buffer.from(JSON.stringify({ version: 2, authority: authorityHash, filter, upper, before: last })).toString("base64url") : null;
   return ownedPageSchema.parse({ version: 2, wallet, scope: owners.membership ? "account-owned-current-store" : "wallet-owned-current-store",

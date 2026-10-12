@@ -33,10 +33,15 @@ const alice = `0x${"a".repeat(40)}`, member = `0x${"b".repeat(40)}`, foreign = `
 const binding = { network: "eip155:5042002" as const, origin: "https://synthetic-history.example" };
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const connections: DatabaseSync[] = [];
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>(done => { resolve = done; });
+  return { promise, resolve };
+}
 afterEach(() => { connections.splice(0).forEach(db => db.close()); vi.restoreAllMocks(); });
 function fixture() {
   const sql = new DatabaseSync(":memory:"); connections.push(sql); installSqliteApplicationSchema(sql);
-  sql.exec(`${RUN_CLAIMS_SQL};${RUN_PRIVACY_SQL};ALTER TABLE payment_events ADD COLUMN authorization_phase TEXT;`);
+  sql.exec(`${RUN_CLAIMS_SQL};${RUN_PRIVACY_SQL};`);
   const now = Date.now(), date = new Date(now - 1000).toISOString();
   for (const wallet of [alice, member]) sql.prepare("INSERT INTO web_sessions VALUES(?,?,?,?)").run(sha(wallet), wallet, now - 2000, now + 60000);
   const claims = createSqliteRunClaims(sql), ownership = createSqliteRunOwnershipHistory(sql), privacy = createSqliteRunPrivacy(sql, ownership), personal = createSqlitePersonalHistory(sql);
@@ -128,6 +133,51 @@ describe.each(["SQLite", "mocked Supabase"])("owned history %s", backend => {
     expect((await readOwnedHistory(port(f), alice, binding, {})).rows.map(r => r.id)).toEqual(["keep"]);
     const list = vi.fn(); await expect(readOwnedHistory({ ...port(f), runPrivacyActive: false, personalHistory: { list } }, alice, binding, {})).rejects.toThrow("privacy_unavailable"); expect(list).not.toHaveBeenCalled();
   });
+  it.each(["erase", "revision", "ownership"] as const)("refuses %s changes while receipt IO is pending", async change => {
+    const f = fixture(); f.save("owned", alice, { paymentMode: "real" }); f.payment("retained", "owned");
+    const base = port(f), entered = deferred(), release = deferred(); let allowed = true;
+    const db: OwnedHistoryDB = { ...base,
+      runPrivacy: { ...base.runPrivacy!, owner: async (id, actor) => allowed ? base.runPrivacy!.owner(id, actor) : null },
+      personalHistory: { ...base.personalHistory!, receipts: async (id, take) => {
+        const receipts = await base.personalHistory!.receipts!(id, take);
+        entered.resolve(); await release.promise; return receipts;
+      } },
+    };
+    const pending = readOwnedHistory(db, alice, binding, {});
+    await entered.promise;
+    try {
+      if (change === "erase") await f.privacy.erase("owned", { wallet: alice, binding, sessionHash: sha(alice) }, { revision: 0, requestId: randomUUID() });
+      else if (change === "revision") await f.privacy.change("owned", { wallet: alice, binding, sessionHash: sha(alice) }, { visibility: "public", revision: 0, requestId: randomUUID() });
+      else allowed = false; // Simulate current proof refusal, never an ownership grant.
+    } finally { release.resolve(); }
+    await expect(pending).rejects.toMatchObject({ code: "history_unavailable" });
+    expect(f.sql.prepare("SELECT amount_usdc FROM payment_events WHERE id='retained'").get()?.amount_usdc).toBe(.02);
+  });
+  it("fences an earlier row changed during a later candidate's receipt IO", async () => {
+    const f = fixture(); f.save("a"); f.save("b"); const base = port(f), entered = deferred(), release = deferred();
+    const db: OwnedHistoryDB = { ...base, personalHistory: { ...base.personalHistory!, receipts: async (id, take) => {
+      const receipts = await base.personalHistory!.receipts!(id, take);
+      if (id === "a") { entered.resolve(); await release.promise; }
+      return receipts;
+    } } };
+    const pending = readOwnedHistory(db, alice, binding, {}); await entered.promise;
+    try { await f.privacy.erase("b", { wallet: alice, binding, sessionHash: sha(alice) }, { revision: 0, requestId: randomUUID() }); }
+    finally { release.resolve(); }
+    await expect(pending).rejects.toMatchObject({ code: "history_unavailable" });
+  });
+  it("fences rows accumulated on a previous export page", async () => {
+    const f = fixture(); for (let i = 0; i < 51; i++) f.save(`run_${String(i).padStart(3, "0")}`);
+    const base = port(f), entered = deferred(), release = deferred();
+    const db: OwnedHistoryDB = { ...base, personalHistory: { ...base.personalHistory!, receipts: async (id, take) => {
+      const receipts = await base.personalHistory!.receipts!(id, take);
+      if (id === "run_000") { entered.resolve(); await release.promise; }
+      return receipts;
+    } } };
+    const pending = exportOwnedHistory(db, alice, binding, {}); await entered.promise;
+    try { await f.privacy.erase("run_050", { wallet: alice, binding, sessionHash: sha(alice) }, { revision: 0, requestId: randomUUID() }); }
+    finally { release.resolve(); }
+    await expect(pending).rejects.toMatchObject({ code: "history_unavailable" });
+  });
 });
 it("filtered scan continuations allow whole bounded exports; CSV protects formulas and reports truncation even empty", async () => {
   const f = fixture(); for (let i = 0; i < 55; i++) f.save(`run_${String(i).padStart(3,"0")}`);
@@ -210,6 +260,34 @@ it("remote MCP returns the web/API contract with explicit scope, and mixed resea
   expect((await response.json()).result.structuredContent).toEqual(expected);expect(usage).not.toHaveBeenCalled();
   db.mockClear(); expect((await mcpPost(req([body,{...body,id:2,params:{name:"research",arguments:{question:"never run"}}}]))).status).toBe(403);expect(db).not.toHaveBeenCalled();
   verify.mockResolvedValue(null); expect((await mcpPost(req(body))).status).toBe(401);expect(db).not.toHaveBeenCalled();
+});
+it.each([
+  ["history_owned_read", "revoked"], ["history_owned_read", "narrowed"], ["history_owned_read", "wallet-changed"],
+  ["history_export", "revoked"], ["history_export", "narrowed"], ["history_export", "wallet-changed"],
+] as const)("%s withholds private output when key rights are %s during IO", async (name, change) => {
+    const f = fixture(); f.save("owned"); const entered = deferred(), release = deferred(), usage = vi.fn();
+    const raw = `kx_live_${"1".repeat(96)}`;
+    let current: Awaited<ReturnType<typeof apiKeys.verifyApiKey>> = { walletAddress: alice, keyId: "isolated-key", scopes: "history:read", sourceIds: null };
+    const verify = vi.spyOn(apiKeys, "verifyApiKey").mockImplementation(async () => current);
+    vi.spyOn(database, "getDb").mockResolvedValue({ ...f.db, incrementUsage: usage,
+      personalHistory: { ...f.personal, receipts: async (id: string, take: number) => {
+        const receipts = await f.personal.receipts!(id, take); entered.resolve(); await release.promise; return receipts;
+      } },
+    } as unknown as KeryxDB);
+    const request = new NextRequest("http://localhost:3000/mcp", { method: "POST", headers: {
+      Authorization: `Bearer ${raw}`, "Content-Type": "application/json", Accept: "application/json, text/event-stream", "MCP-Protocol-Version": "2025-06-18",
+    }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: {} } }) });
+    const pending = mcpPost(request);
+    await Promise.race([entered.promise, pending.then(() => { throw new Error("MCP returned before the blocked receipt read"); })]);
+    current = change === "revoked" ? null : { walletAddress: change === "wallet-changed" ? foreign : alice,
+      keyId: "isolated-key", scopes: change === "narrowed" ? "ask,export" : "history:read", sourceIds: null };
+    release.resolve();
+    const response = await pending; expect(response.status).toBe(200);
+    const result = (await response.json()).result;
+    expect(result.isError).toBe(true); expect(result.structuredContent).toBeUndefined();
+    const wire = JSON.stringify(result);
+    for (const privateValue of ["Question %_ owned", "PRIVATE original", raw, alice, "ownerWallet", "rows"]) expect(wire).not.toContain(privateValue);
+    expect(verify).toHaveBeenCalledTimes(2); expect(usage).not.toHaveBeenCalled();
 });
 it("bounded receipt overflow and fractional micro-USDC never become complete spend or fake paid evidence",async()=>{
   const f=fixture();f.save("overflow",alice,{paymentMode:"real"});for(let i=0;i<201;i++)f.payment(`p${i}`,"overflow");

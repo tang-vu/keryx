@@ -1,6 +1,6 @@
 # Owned personal history (#268)
 
-The default `/me/asks` pane, `GET /api/me/asks?contract=owned`, remote MCP `history_owned_read` and the packaged stdio tool use the same v2 owner-private reader. When privacy is OFF the prior default session ledger is preserved; explicit v2 still refuses absent privacy admission. When privacy is active, the API defaults to v2. `history_export` and `/api/me/asks/export?format=json|csv` attempt a bounded whole-history metadata export. The previous attributed reader `/api/me/history`/`history_read`, explicit SIWE `view=recent` ledger, claimant pane and explicit testnet archive remain distinct qualified views.
+The explicitly selected owned-history `/me/asks` pane, `GET /api/me/asks?contract=owned`, remote MCP `history_owned_read` and the packaged stdio tool use the same v2 owner-private reader. The web starts on the prior session ledger; explicit v2 still refuses absent privacy admission. When privacy is active, the API defaults to v2. `history_export` and `/api/me/asks/export?format=json|csv` attempt a bounded whole-history metadata export. The previous attributed reader `/api/me/history`/`history_read`, explicit SIWE `view=recent` ledger, claimant pane and explicit testnet archive remain distinct qualified views.
 
 Authentication uses an active stored session or an explicitly `history:read` scoped key. Bearer presence excludes cookie fallback; existing/default keys retain ask/export only. Owner addresses are never query selectors. HTTP rechecks bearer validity before releasing a long response. Private headers are retained at both handler and Next routing layers. Read keys cannot mutate privacy. Row visibility/delete use existing revision, idempotent request ID, same-origin, owner-precondition and active interactive-session checks. A member-wallet row requires that wallet's session to mutate; the consumer does not invent delegated write authority.
 
@@ -19,3 +19,18 @@ Source admission still requires ordinary privacy/claim schemas, enabled and admi
 Focused tests cover real isolated SQLite ownership/claim/privacy/key revocation and mocked Supabase RPC/financial projections, multiwallet consumer semantics, exclusion, stable pagination, filters, empty scan continuations, CSV and exact original preservation. Mocked Supabase is not live PostgreSQL evidence. Native test-worker/build constraints and exact actual check results belong in the delivery receipt; source acceptance alone is not production completion.
 
 Merge coordination: additive `KeryxDB.historyMembership`, optional `PersonalHistoryStore.receipts`, small MCP registration changes and private Next header patterns need to compose with other workers. New English copy is in the independent `ownedHistory` namespace (`locales/en/owned-history.ts`); it activates no new locale. Public `/u` profile publishing and replay/run-agent/report decision code are untouched.
+
+## Read-race corrections
+
+Remote owned-history handlers require a request-local current key/wallet/history-scope verifier
+after their awaited read/export. The credential remains in the authenticated HTTP closure;
+missing or changed authority refuses private output without cookie fallback or extra usage.
+Pages recheck retained rows' current owner, erased state, privacy revision, visibility and
+original question after receipt IO. Bounded exports also fence all accumulated rows and the
+initial membership revision before returning. Observed changes refuse the cached output;
+this does not turn the current-store export into a transaction snapshot.
+
+The web starts on the existing ledger. Owned history is an explicit opt-in, so privacy OFF
+keeps its old default while explicit v2 still fails closed without admitted capability.
+The optional membership consumer remains unbacked by a real #267 producer; these corrections
+add no activation, schema, financial mutation or account-wide ownership claim.

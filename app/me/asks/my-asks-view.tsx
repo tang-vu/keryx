@@ -64,7 +64,7 @@ export function MyAsksView() {
   const [historical, setHistorical] = useState(false);
   const [browse, setBrowse] = useState(false);
   const [claimantHistory, setClaimantHistory] = useState(false);
-  const [owned, setOwned] = useState(true);
+  const [owned, setOwned] = useState(false);
   return <div>
     <nav className="mb-6 flex flex-wrap gap-3" aria-label={message("myHistory.networkLabel")}>
       <button type="button" aria-pressed={!historical} onClick={() => setHistorical(false)} className="min-h-11 border border-line px-4 text-sm">{message("myHistory.currentNetwork")}</button>

@@ -1,10 +1,11 @@
-import { readOwnedHistory, type OwnedHistoryDB } from "./owned-history-reader";
+import { createOwnedHistoryFence, readOwnedHistory, type OwnedHistoryDB } from "./owned-history-reader";
 import type { OwnedHistoryInput, OwnedHistoryRow } from "./owned-history";
 import type { RunClaimBinding } from "../run-claims/contracts";
 
 /** Bounded whole-history attempt. Continuation is explicit, including empty filtered scan pages. */
 export async function exportOwnedHistory(db: OwnedHistoryDB, wallet: string, binding: RunClaimBinding, input: OwnedHistoryInput, signal?: AbortSignal) {
   const deadline = Date.now() + 25_000;
+  const fence = await createOwnedHistoryFence(db, wallet, binding, signal, deadline);
   const rows: OwnedHistoryRow[] = [], { cursor: initial, ...filters } = input;
   let cursor = initial, nextCursor: string | null = initial ?? null, complete = false, pages = 0, size = 0;
   let scope: string | null = null, claimsAvailable = false, membershipAvailable = false;
@@ -18,6 +19,7 @@ export async function exportOwnedHistory(db: OwnedHistoryDB, wallet: string, bin
     if (!nextCursor) { complete = true; pages++; break; }
     cursor = nextCursor;
   }
+  await fence(rows);
   return { version: 2 as const, wallet: wallet.toLowerCase(), scope, rows, complete, truncated: !complete, nextCursor,
     bounds: { maxPages: 20, maxRows: 1000, maxBytes: 2 * 1024 * 1024 }, pages,
     claimsAvailable, membershipAvailable, qualification: "Current-store owned metadata only; not a transaction snapshot, all archives, missing claims/membership, full report bodies or an unbounded receipt export." };

@@ -86,6 +86,14 @@ async function resolveAccess(
       actor: key.walletAddress.toLowerCase(),
       profileScopes: scopes,
       historyScopes: scopes,
+      revalidateHistoryAccess: async () => {
+        if (req.signal.aborted) throw new Error("History access unavailable");
+        const current = await verifyApiKey(rawKey);
+        if (!current || current.keyId !== key.keyId || current.walletAddress.toLowerCase() !== key.walletAddress.toLowerCase()
+          || !parseScopes(current.scopes).includes("history:read") || req.signal.aborted) {
+          throw new Error("History access unavailable");
+        }
+      },
       operatorScopes: scopes,
       keyId: key.keyId,
       deliverableScopes: scopes,

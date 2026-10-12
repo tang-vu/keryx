@@ -59,6 +59,8 @@ export interface RemoteMcpAccess {
   /** Explicit verified-key scopes only; actor alone never authorizes profile access. */
   profileScopes?: ApiKeyScope[];
   historyScopes?: ApiKeyScope[];
+  /** HTTP request-local current key/wallet/scope fence; credentials stay in its closure. */
+  revalidateHistoryAccess?: () => Promise<void>;
   /** Explicit verified-key delegation scope, narrowed again by protected reader config. */
   operatorScopes?: ApiKeyScope[];
   /** Self-declared setup URL channel. Telemetry only; never identity or payment authority. */
@@ -264,12 +266,14 @@ export function createRemoteMcpServer(
     if (!access.actor || !access.historyScopes?.includes("history:read")) throw new Error("Explicit history scope required");
     return readPersonalHistory(requirePersonalHistory(await getDb()), access.actor, config.networkId, input);
   });
-  const ownedHistoryDb = async () => {
-    if (!access.actor || !access.historyScopes?.includes("history:read")) throw new Error("Explicit history scope required");
-    return getDb();
+  const ownedHistoryRead = async <T>(read: (db: Awaited<ReturnType<typeof getDb>>) => Promise<T>) => {
+    if (!access.actor || !access.historyScopes?.includes("history:read") || !access.revalidateHistoryAccess) throw new Error("Explicit current history scope required");
+    const value = await read(await getDb());
+    await access.revalidateHistoryAccess();
+    return value;
   };
-  registerOwnedHistoryTools(server, async input => readOwnedHistory(await ownedHistoryDb(), access.actor!, privacyBinding(), input, access.signal),
-    async input => exportOwnedHistory(await ownedHistoryDb(), access.actor!, privacyBinding(), input, access.signal));
+  registerOwnedHistoryTools(server, input => ownedHistoryRead(db => readOwnedHistory(db, access.actor!, privacyBinding(), input, access.signal)),
+    input => ownedHistoryRead(db => exportOwnedHistory(db, access.actor!, privacyBinding(), input, access.signal)));
   registerRunPrivacyRead(server,async(id,requestId)=>{
     if(!access.actor||!access.historyScopes?.includes("history:read"))throw new Error("Explicit history scope required");
     const db=await getDb(),actor={wallet:privacyWallet.parse(access.actor),binding:privacyBinding()},store=requirePrivacy(db);
