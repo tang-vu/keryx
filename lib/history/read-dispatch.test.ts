@@ -152,11 +152,20 @@ describe("original-network dispatch resolution", () => {
 });
 
 describe("historical public read contracts", () => {
-  it("keeps historical links unlisted and omits question/answer search and share metadata", async () => {
-    installArchive();
+  it("keeps historical links unlisted and explicitly clears inherited search and share metadata", async () => {
+    const original = run(), before = JSON.stringify(original);
+    installArchive([original]);
     const metadata = await generateMetadata(params());
-    expect(metadata.robots).toMatchObject({index:false,follow:false});
-    expect(metadata.description).toBeUndefined();expect(metadata.openGraph).toBeUndefined();
+    expect(metadata).toEqual({
+      title: "Keryx Dispatch", description: null,
+      robots: { index: false, follow: false }, referrer: "no-referrer",
+      alternates: { canonical: null, languages: {}, types: {} },
+      openGraph: null, twitter: null, other: {},
+    });
+    for (const hidden of [original.question, original.answer, original.id]) {
+      expect(JSON.stringify(metadata)).not.toContain(hidden);
+    }
+    expect(JSON.stringify(original)).toBe(before);
   });
 
   it("renders the original answer with a clear frozen testnet notice and no live feedback controls", () => {
