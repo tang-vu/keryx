@@ -106,8 +106,8 @@ at most two feeds and twenty candidates per hour, with the existing 45-second jo
 and eligibility/URL recheck before writes. The Worker is unchanged. With thirteen
 verified feeds and five public references, the historical stable combined pool required nine hourly
 batches to visit each source. The combined bounds remain 48 feed fetches and at most
-480 candidates per day. A failed or interrupted slot stays consumed. With all 31 public
-feeds eligible and no creator feeds, a pass requires at least 16 hourly slots. More
+480 candidates per day. A failed or interrupted slot stays consumed. With all 50 public
+feeds eligible and no creator feeds, a pass requires at least 25 hourly slots. More
 creator feeds lengthen that pass. This does not establish active scheduling or successful
 collection; the catalog expansion raises no hourly allowance.
 

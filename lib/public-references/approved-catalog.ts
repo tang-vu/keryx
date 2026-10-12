@@ -55,6 +55,7 @@ export const APPROVED_PUBLIC_REFERENCES: PublicReference[] = [
   approvedFeed("explore:doaj", "https://blog.doaj.org/feed/"),
   approvedFeed("explore:openalex", "https://blog.openalex.org/feed/"),
   approvedFeed("explore:wikimedia", "https://diff.wikimedia.org/feed/"),
+  // Additional publisher-linked endpoints observed with the unchanged parser on 2026-10-12.
   approvedFeed("explore:mozilla-ai", "https://blog.mozilla.ai/rss/"),
   approvedFeed("explore:distill", "https://distill.pub/rss.xml"),
   approvedFeed("explore:django", "https://www.djangoproject.com/rss/weblog/"),
