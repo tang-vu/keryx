@@ -33,14 +33,19 @@ The setup guide separates hosted trial research from caller-funded buyers and
 retains public-report, payment-state and interrupted-job recovery disclosures.
 Copy buttons do not execute commands and report clipboard failure accurately.
 
-Installer links pin published v0.27.61 / source
-`b60095280d60f2fe1991b4ae37f14ae8e0a8d5c3`. The GitHub release manifest identifies
-Operator 0.4.16 and its installer SHA256
-`318b6c416f9bd25f1b2b46a60e2fdc03980bc3b910db07de40749165761d23fd`.
+Installer links pin published v0.27.63 / source
+`ec5f39c9750dfc9e80e66edd41348ca6034c01c3`. Physical release readback matches
+the accepted Desktop CI run 38263715521 / artifact 11754521388: Operator 0.4.17
+and installer SHA256
+`c4b42a16f8989fbc178cc1824d0f7ae3d9f4ece5e3d91526b2b8cc1d48cc4388`.
+All 22 portable members and the installer match the accepted CI artifact;
+the source manifest and release checksums bind this exact commit.
 The same source's extension is 0.1.4.2, offered as a project source ZIP with
 explicit instructions to select its `extension/` directory. No unverified Chrome
 Web Store install link is invented. npm readback established keryx-mcp 0.4.18;
-the example pins that version. These observations establish published artifacts,
+the example retains that published version until npm 0.4.19 delivery is verified.
+The release's 0.4.19 tarball does not establish npm Registry publication.
+These observations establish published artifacts,
 not an installed client or a future release.
 
 Acceptance requires type checking, scoped lint/copy guard, production build,

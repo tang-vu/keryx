@@ -1,9 +1,9 @@
 /** Verified public artifacts, pinned independently from the web application's version. */
-const commit = "b60095280d60f2fe1991b4ae37f14ae8e0a8d5c3";
+const commit = "ec5f39c9750dfc9e80e66edd41348ca6034c01c3";
 const release = "https://github.com/tang-vu/keryx/releases";
-const artifact = `${release}/download/v0.27.61/KeryxOperator-${commit}`;
+const artifact = `${release}/download/v0.27.63/KeryxOperator-${commit}`;
 export const installationLinks = Object.freeze({
-  release: `${release}/tag/v0.27.61`,
+  release: `${release}/tag/v0.27.63`,
   installer: `${artifact}-setup.exe`,
   portable: `${artifact}-win32-x64.zip`,
   checksums: `${artifact}-SHA256SUMS.txt`,
