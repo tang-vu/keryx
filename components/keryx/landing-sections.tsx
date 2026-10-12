@@ -107,12 +107,14 @@ export function ForCreators() {
           <div className="relative mt-8 flex flex-wrap gap-3">
             <Link
               href="/register"
+              prefetch={false}
               className="border border-paper bg-paper px-6 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_rgba(15,42,30,0.6)] active:translate-y-0 active:shadow-none"
             >
               {uiCopy("landingSteps.listFeed")}
             </Link>
             <Link
               href="/dashboard"
+              prefetch={false}
               className="border border-paper/55 px-6 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-paper transition-colors hover:bg-paper hover:text-paid"
             >
               {uiCopy("landingSteps.ledger")}

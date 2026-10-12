@@ -173,3 +173,36 @@ This avoids edge-injected analytics that otherwise violates the fixture's
 read-only guard. The transport and synthetic tab setup require source review
 before the actual four-case observation. This setup correction alone is not a
 passed compiled observation or issue closure.
+
+## Idle root asset correction — October 12
+
+The actual origin observation against app `0.27.59` / main `513c6fa6` failed
+before accepting its first case. Its browser guard blocked the Product Hunt
+embedded image GET; the relay also refused two local requests before dispatch.
+Those failures, the earlier `/research` private-history POST refusal and the
+natural tunnel closure remain evidence. They are not successful signing reviews.
+
+The launch link now renders its branding as inline SVG, retaining its accessible
+name, destination, dimensions and keyboard focus. Viewing it needs no external
+image or image preload. Root navigation opts out of Next's speculative route
+prefetching, including the landing creator links; explicit navigation remains
+available. Other pages retain the shared header/footer's default behavior.
+The existing synthetic tab/day initializer and every compiled fixture guard stay
+unchanged. No amount formatter, stored value, signing payload or locale changes.
+
+The retained root HTML references `/icon.svg?icon.0py8vkqw_ibso.svg`, generated
+from the existing `app/icon.svg`. Visible Next links can also request linked
+routes in production. These are source-backed refusal causes; the old generic
+relay log cannot establish the exact identity of either refused request.
+A separately prepared transport revision admits only that static icon pathname
+and its bounded Next-generated icon query, alongside the existing root/static
+allowlist. It records bounded, redacted refusal diagnostics and leaves all
+API, non-GET, client credential and other route restrictions intact.
+
+The transport revision is unexecuted source and still pins the existing app59
+deployment receipts. Root must independently review it and bind it to actual
+accepted compiled source containing this correction before another observation.
+Offline SSR/link-contract checks are not compiled browser acceptance. Applicable
+CI, review, release/delivery and all four built English signing observations
+remain required; original #274 stays open. No extra language or payment gate is
+introduced.

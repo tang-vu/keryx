@@ -36,7 +36,7 @@ const NAV = [
   { href: "/dev", label: message("shellNavigation.developer") },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({ prefetch }: { prefetch?: false } = {}) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuMounted, setMenuMounted] = useState(false);
@@ -86,7 +86,7 @@ export function SiteHeader() {
     <>
       <header className="sticky top-0 z-50 border-b border-ink bg-paper/90 backdrop-blur-md">
         <div className="mx-auto flex h-[66px] max-w-[1180px] items-center justify-between gap-6 px-4 sm:px-[30px]">
-          <Link href="/" className="transition-opacity hover:opacity-80">
+          <Link href="/" prefetch={prefetch} className="transition-opacity hover:opacity-80">
             <KeryxWordmark />
           </Link>
 
@@ -101,6 +101,7 @@ export function SiteHeader() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={prefetch}
                   className={cn(
                     "border-b-[1.5px] px-2 py-2 font-mono text-[10.5px] uppercase tracking-[0.08em] transition-colors",
                     active
@@ -114,6 +115,7 @@ export function SiteHeader() {
             })}
             <Link
               href="/register"
+              prefetch={prefetch}
               className="ml-2 border border-ink bg-seal px-3 py-2.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none"
             >
               {message("shellHeader.creatorAction")}
@@ -175,6 +177,7 @@ export function SiteHeader() {
                       <Link
                         key={link.href}
                         href={link.href}
+                        prefetch={prefetch}
                         onNavigate={closeMenu}
                         className={cn(
                           "flex min-h-11 items-center border-l-2 px-4 py-2 font-mono text-[12px] uppercase tracking-[0.08em] transition-colors",
@@ -187,10 +190,10 @@ export function SiteHeader() {
                       </Link>
                     );
                   })}
-                  <Link href="/register" onNavigate={closeMenu} className={cn("flex min-h-11 items-center border-l-2 px-4 py-2 font-mono text-[12px] uppercase tracking-[0.08em]", pathname.startsWith("/register") ? "border-seal text-ink" : "border-transparent text-seal")}>{message("shellNavigation.creators")}</Link>
+                  <Link href="/register" prefetch={prefetch} onNavigate={closeMenu} className={cn("flex min-h-11 items-center border-l-2 px-4 py-2 font-mono text-[12px] uppercase tracking-[0.08em]", pathname.startsWith("/register") ? "border-seal text-ink" : "border-transparent text-seal")}>{message("shellNavigation.creators")}</Link>
                   <details className="mt-2 border-t border-line pt-2">
                     <summary className="flex min-h-11 cursor-pointer items-center px-4 font-mono text-[11px] uppercase tracking-wider text-ink">{message("shellHeader.moreTools")}</summary>
-                    {NAV.slice(5).filter((link) => link.href !== "/register").map((link) => <Link key={link.href} href={link.href} onNavigate={closeMenu} className="flex min-h-11 items-center px-4 font-mono text-[11px] uppercase text-ink-2">{link.label}</Link>)}
+                    {NAV.slice(5).filter((link) => link.href !== "/register").map((link) => <Link key={link.href} href={link.href} prefetch={prefetch} onNavigate={closeMenu} className="flex min-h-11 items-center px-4 font-mono text-[11px] uppercase text-ink-2">{link.label}</Link>)}
                   </details>
                   <div className="mt-3 border-t border-line px-4 pt-3">
                     <WalletMenu />
