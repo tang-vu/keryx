@@ -277,7 +277,16 @@ describe("read-only historical testnet archive", () => {
     revise(f, writer => {
       const insert = writer.prepare(`INSERT INTO payment_events(id,created_at,kind,source_id,source_name,payee,amount_usdc,network,settled,settlement_status,tx_hash)
         VALUES(?,'2026-09-01T12:00:00.000Z','fetch',?,'Historical source',?,0.000001,'eip155:5042002',1,'settled','original-evidence')`);
-      for (let index = 0; index < 2601; index++) insert.run(`old-${index}`, `old-source-${index}`, BOB);
+      // Build the frozen bulk fixture atomically; per-row fsync can exceed the
+      // test deadline on a shared runner before any archive read is exercised.
+      writer.exec("BEGIN");
+      try {
+        for (let index = 0; index < 2601; index++) insert.run(`old-${index}`, `old-source-${index}`, BOB);
+        writer.exec("COMMIT");
+      } catch (error) {
+        writer.exec("ROLLBACK");
+        throw error;
+      }
     });
     const archive = await open();
     const creators = await archive.creatorLeaderboard();

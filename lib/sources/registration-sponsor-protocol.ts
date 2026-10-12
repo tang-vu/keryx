@@ -18,11 +18,23 @@ export const registrationSponsorPolicySchema = z.object({
   maxRegistrationsPerWallet: z.number().int().min(1).max(100),
   maxRegistrationsPerDay: z.number().int().min(1).max(1000),
   maxRegistrationsTotal: z.number().int().min(1).max(1000),
-  allowlistedCreators: z.array(address).min(1).max(1000),
-}).strict().refine(p => BigInt(p.maxTransactionWei) <= BigInt(p.maxDailyWei) &&
+  allowlistedCreators: z.array(address).max(1000),
+  allowlistedPublisherOrigins: z.array(z.string().url().refine(value => new URL(value).origin === value && new URL(value).protocol === "https:")).max(100).optional(),
+  maxRegistrationsPerOrigin: z.number().int().min(1).max(100).optional(),
+}).strict().refine(p => (p.allowlistedCreators.length > 0 || (p.allowlistedPublisherOrigins?.length ?? 0) > 0) &&
+  (!p.allowlistedPublisherOrigins?.length || p.maxRegistrationsPerOrigin !== undefined) &&
+  BigInt(p.maxTransactionWei) <= BigInt(p.maxDailyWei) &&
   BigInt(p.maxDailyWei) <= BigInt(p.maxLifetimeWei) &&
   BigInt(p.maxGas) * BigInt(p.maxFeePerGasWei) <= BigInt(p.maxTransactionWei), "Gas liability exceeds policy");
 export type RegistrationSponsorPolicy = z.infer<typeof registrationSponsorPolicySchema>;
+export function registrationCreatorEligible(policy: RegistrationSponsorPolicy, creator: string, canonicalUrl: string): boolean {
+  return policy.allowlistedCreators.includes(creator.toLowerCase() as Address) ||
+    Boolean(policy.allowlistedPublisherOrigins?.includes(new URL(canonicalUrl).origin));
+}
+/** Discovery only. Actual admission still requires the exact authenticated owner's fresh publishing proof. */
+export function registrationWalletMayPrepare(policy: RegistrationSponsorPolicy, creator: string): boolean {
+  return policy.allowlistedCreators.includes(creator.toLowerCase() as Address) || Boolean(policy.allowlistedPublisherOrigins?.length);
+}
 export const registrationParamsSchema = z.object({
   urlHash: hash, payoutWallet: address,
   authors: z.array(z.object({ wallet: address, basisPoints: z.number().int().min(1).max(10000) }).strict()).min(1).max(20),
@@ -43,6 +55,8 @@ export const sponsoredRegistrationSchema = z.object({
   state: z.enum(["prepared", "signing", "submitted", "confirmed", "reverted", "expired"]),
   transactionHash: hash.optional(), transactionNonce: z.number().int().nonnegative().optional(),
   actualGasWei: uint.optional(),
+  /** Explicit completion of an expired authorization; the exact registration must revert. */
+  expiredResolution: z.literal(true).optional(),
 }).strict();
 export type SponsoredRegistration = z.infer<typeof sponsoredRegistrationSchema>;
 export const REGISTRATION_TYPES = { Registration: [

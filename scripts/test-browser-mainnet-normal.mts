@@ -30,6 +30,7 @@ const bundled = nextDist ? null : await build({ entryPoints: ["lib/session/mainn
   platform: "browser", format: "iife", define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify("arc"),
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry),
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
+    "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS": "undefined",
     "process.env.NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS":'"300"' } });
 let workerUrl = "/normal-worker.js", csp = contentSecurityPolicy(true);
 const packagedFiles = new Map<string,string>();

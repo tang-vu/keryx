@@ -2,6 +2,7 @@ import type { Address, Hex } from "viem";
 import { config } from "@/lib/config";
 import { getRegistrySource, sourceId } from "@/lib/registry/registry-client";
 import type { Source } from "@/lib/types";
+import { configuredRegistryAuthorities, sourceRegistryAuthorityForSource } from "../registry/source-registry-authority";
 
 const PAGE_SIZE = 12;
 const MAX_CONCURRENT_READS = 4;
@@ -39,8 +40,8 @@ export async function discoverCreatorListings(
   const page = remaining.slice(0, PAGE_SIZE);
   if (page.length === 0) return { listings: [], nextCursor: null, uncertain: 0 };
 
-  if (!config.registryAddress ||
-    config.registryAddress.toLowerCase() !== config.registryReadAddress.toLowerCase()) {
+  if (!configuredRegistryAuthorities().length && (!config.registryAddress ||
+    config.registryAddress.toLowerCase() !== config.registryReadAddress.toLowerCase())) {
     throw new ListingDiscoveryError("Creator discovery requires matching registry read and write addresses.");
   }
 
@@ -52,7 +53,8 @@ export async function discoverCreatorListings(
       const index = nextIndex++;
       const source = page[index];
       try {
-        const record = await getRegistrySource(source.onchainId as Hex, { timeoutMs: REGISTRY_TIMEOUT_MS });
+        const authority = sourceRegistryAuthorityForSource(source);
+        const record = await getRegistrySource(source.onchainId as Hex, { timeoutMs: REGISTRY_TIMEOUT_MS, ...(authority ? { authority } : {}) });
         if (record?.creator.toLowerCase() === address) {
           results[index] = { ...source, active: record.active };
         } else if (record && (source.url || source.rssUrl)) {

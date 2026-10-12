@@ -8,6 +8,7 @@ import { getDb } from "../db";
 import { REGISTRATION_SPONSOR_ABI, registrationSponsorPolicySchema, type SponsoredRegistration } from "./registration-sponsor-protocol";
 import type { RegistrationSponsorChain, RegistrationSponsorContext } from "./registration-sponsor-service";
 import { getServerRegistryVersion } from "../registry/registry-version";
+import { configuredRegistrationRegistryAuthority } from "../registry/source-registry-authority";
 
 /** No key generation, treasury fallback, wallet enrollment or implicit funding. */
 export async function registrationSponsorRuntime(): Promise<RegistrationSponsorContext | null> {
@@ -18,6 +19,9 @@ export async function registrationSponsorRuntime(): Promise<RegistrationSponsorC
     const policy = registrationSponsorPolicySchema.parse(JSON.parse(text));
     if (policy.network !== config.networkId || policy.deploymentOrigin !== new URL(config.baseUrl).origin ||
       policy.registryAddress !== config.registryAddress?.toLowerCase() || policy.registryAddress !== config.registryReadAddress?.toLowerCase()) throw new Error();
+    const origin = configuredRegistrationRegistryAuthority();
+    if (origin && (origin.network !== policy.network || origin.address !== policy.registryAddress ||
+      origin.version !== 3 || origin.codeHash !== policy.registryCodeHash)) throw new Error();
     const key = process.env.KERYX_REGISTRATION_SPONSOR_PRIVATE_KEY;
     if (!key || !/^0x[0-9a-fA-F]{64}$/.test(key)) throw new Error();
     const account = privateKeyToAccount(key as Hex);
@@ -30,7 +34,7 @@ export async function registrationSponsorRuntime(): Promise<RegistrationSponsorC
       registryAddress: policy.registryAddress, registryCodeHash: policy.registryCodeHash, relayer: policy.sponsorAddress });
     const client = sponsorClient(policy.network === "eip155:5042" ? 5042 : 5042002);
     const db = await getDb();
-    if (!db.admitRegistrationSponsor || !db.getRegistrationSponsor || !db.transitionRegistrationSponsor) throw new Error();
+    if (!db.admitRegistrationSponsor || !db.getRegistrationSponsor || !db.transitionRegistrationSponsor || !db.getRegistrationSponsorExecution) throw new Error();
     return { db, policy, assertPolicy, chain: { ...chain,
       async sign(transaction) {
         assertPolicy();
@@ -48,6 +52,13 @@ export async function registrationSponsorRuntime(): Promise<RegistrationSponsorC
 export function registrationSponsorReadChain(row: Pick<SponsoredRegistration, "chainId" | "registryAddress" | "registryCodeHash" | "relayer">): RegistrationSponsorChain {
   const client = sponsorClient(row.chainId);
   return {
+    async hasExpiredDeadline(deadline) {
+      const block = await client.getBlock({ blockTag: "latest" });
+      const now = BigInt(Math.floor(Date.now() / 1000));
+      if (!Number.isSafeInteger(deadline) || !block.hash || block.number === null || block.timestamp > now + BigInt(5) || block.timestamp < now - BigInt(60))
+        throw new Error("Fresh original expiry observation is unavailable");
+      return block.timestamp > BigInt(deadline);
+    },
     async assertRegistry() {
       const code = await client.getCode({ address: row.registryAddress });
       if (!code || code === "0x" || keccak256(code) !== row.registryCodeHash ||

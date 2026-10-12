@@ -47,13 +47,13 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
       let proofResult = "missing", held: Route | undefined, heldList: Route | undefined, indexed = false, fetchPrice = 0, policyConflict = false, holdList = false, wrongListScope = false;
       const policies: Record<string, unknown>[] = [], registrations: Record<string, unknown>[] = [], links: Record<string, unknown>[] = [], errors: string[] = [];
       let challengeCalls = 0, verifyCalls = 0;
-      let expectedCanonical = canonicalUrl;
+      let expectedCanonical = canonicalUrl, expectedRss: string | undefined, sponsorAvailable = false;
       const feedHomepage = "https://publisher.example/";
       const challengeResponse = () => ({ challenge, proof: sourceClaimProof(challenge!), proofToken: `keryx-source-claim-v1:${challenge!.nonce}:${"c".repeat(64)}`, proofUrl: challenge!.proofMethod === "rss-channel" ? challenge!.rssUrl : "https://publisher.example/.well-known/keryx-source-claim.json", claim: stored });
       await context.route("**/*", async route => {
         const req = route.request(), url = new URL(req.url()), pathname = url.pathname;
         assert.equal(url.origin, "https://claim.test", `Unexpected external HTTP: ${req.url()}`);
-        if (pathname === "/api/sources/sponsor") { assert.equal(req.method(), "GET"); return route.fulfill({ json: { available: false } }); }
+        if (pathname === "/api/sources/sponsor") { assert.equal(req.method(), "GET"); return route.fulfill({ json: { available: sponsorAvailable, publisherOrigins: ["https://publisher.example"] } }); }
         if (pathname === "/api/auth/session") return route.fulfill({ status: authenticated ? 200 : 401, json: { session: authenticated ? { address: sessionOwner, role: "asker" } : null } });
         if (pathname === "/api/auth/nonce") { const now = Date.now(); return route.fulfill({ json: { nonce: "ClaimFixtureNonce123", issuedAt: new Date(now).toISOString(), challengeExpiresAt: new Date(now + 300000).toISOString(), sessionExpiresAt: new Date(now + 7 * 86400000).toISOString() } }); }
         if (pathname === "/api/auth/verify") { authenticated = true; return route.fulfill({ json: { ok: true, address: owner, role: "asker" } }); }
@@ -66,7 +66,8 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
           return route.fulfill({ json: { claim: !url.searchParams.has("canonicalUrl") || url.searchParams.get("canonicalUrl") === stored?.canonicalUrl ? stored : null } });
         }
         if (pathname === "/api/source-claims/challenge") {
-          challengeCalls++; assert.equal(req.method(), "POST"); const body = req.postDataJSON(); assert.deepEqual(body, { canonicalUrl: expectedCanonical, ...(expectedCanonical !== canonicalUrl ? { rssUrl: expectedCanonical, proofMethod: "rss-channel" } : {}) });
+          challengeCalls++; assert.equal(req.method(), "POST"); const body = req.postDataJSON(); assert.deepEqual(body, { canonicalUrl: expectedCanonical,
+            ...(expectedRss ? { rssUrl: expectedRss } : expectedCanonical !== canonicalUrl ? { rssUrl: expectedCanonical, proofMethod: "rss-channel" } : {}) });
           const now = Date.now(); challenge = { id: String(challengeCalls).padStart(64, "0"), claimId, wallet: owner, canonicalUrl: expectedCanonical, ...(body.rssUrl ? { rssUrl: body.rssUrl, proofMethod: body.proofMethod } : {}), deploymentOrigin: "https://claim.test", network: profile.networkId, nonce: "b".repeat(64), createdAt: new Date(now).toISOString(), expiresAt: new Date(now + 900000).toISOString() };
           return route.fulfill({ json: challengeResponse() });
         }
@@ -232,6 +233,22 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
       assert.equal(registrations.length, 2); assert.equal(registrations[1].rssUrl, expectedCanonical);
       assert.equal(registrations[1].url, expectedCanonical); assert.notEqual(registrations[1].url, feedHomepage);
       assert.equal(registrations[1].sourceClaimId, claimId); assert.equal(registrations[1].fetchPrice, 0); assert.equal(policies.length, count);
+      // Website-file publishers retain their exact paired RSS through sign-in and
+      // proof verification, then get a direct sponsor handoff without spending.
+      expectedCanonical = feedHomepage; expectedRss = "https://publisher.example/feed.xml";
+      stored = null; indexed = false; sponsorAvailable = true;
+      await page.goto(`https://claim.test/claim-source?url=${encodeURIComponent(expectedCanonical)}&rss=${encodeURIComponent(expectedRss)}`);
+      assert.equal(await page.getByLabel("RSS feed URL (optional)").inputValue(), expectedRss);
+      await page.getByRole("button", { name: "Create ownership proof", exact: true }).click();
+      await page.getByRole("heading", { name: "2. Publish your proof file" }).waitFor();
+      assert.equal(challenge!.canonicalUrl, feedHomepage); assert.equal(challenge!.rssUrl, expectedRss);
+      assert.equal(challenge!.proofMethod, undefined);
+      await page.reload(); assert.equal(await page.getByLabel("RSS feed URL (optional)").inputValue(), expectedRss);
+      await page.getByRole("button", { name: "Check ownership", exact: true }).click();
+      await page.getByRole("heading", { name: "Source control verified" }).waitFor();
+      const sponsorLink = page.getByRole("link", { name: "Use sponsored registration ▸" });
+      await sponsorLink.waitFor(); assert.equal(await sponsorLink.getAttribute("href"), `/register/sponsored?claimId=${claimId}`);
+      assert.equal(stored!.rssUrl, expectedRss); assert.equal(registrations.length, 2); assert.equal(policies.length, count);
       assert.deepEqual(errors, []); await context.close();
       console.log(`PASS ${profile.name}/${viewport.width}px: signed-in resume, proof expiry/conflict/failure, owner-list renewal with preserved policy, exact deadlines, stale owner-list/wallet/network refusal, zero-price registration, explicit rights/policy activation. All transport and wallet synthetic.`);
     }

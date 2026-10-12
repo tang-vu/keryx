@@ -4,17 +4,27 @@ import { getRegistrySource, sourceId as registrySourceId } from "../registry/reg
 import { publicSourceClaimId, SourceClaimError } from "../db/public-source-claims";
 import { canonicalSourceUrl, claimControlIsFresh, type SourceClaim, type SourceClaimMode } from "./public-source-claim";
 import type { Source } from "../types";
+import { configuredRegistryAuthorities, sourceRegistryAuthorityForSource } from "../registry/source-registry-authority";
 
 export function assertSourceClaimScope(claim: Pick<SourceClaim, "network" | "deploymentOrigin"> & { registryAddress?: string }): void {
   if (claim.network !== config.networkId || claim.deploymentOrigin !== new URL(config.baseUrl).origin)
     throw new SourceClaimError("Source claim belongs to another network or deployment", 409, "claim_scope_mismatch");
-  if (claim.registryAddress && claim.registryAddress !== config.registryReadAddress?.toLowerCase())
+  if (claim.registryAddress && claim.registryAddress !== config.registryReadAddress?.toLowerCase() &&
+      !configuredRegistryAuthorities().some(origin => origin.address === claim.registryAddress))
     throw new SourceClaimError("Source claim belongs to another registry; explicit migration is required", 409, "claim_registry_mismatch");
 }
 export async function sourceClaimPolicyForSource(db: KeryxDB, sourceId: string): Promise<SourceClaim | null> {
   if (!db.getSourceClaimForSource) return null;
   const claim = await db.getSourceClaimForSource(sourceId);
-  if (claim) { assertSourceClaimScope(claim); if (claim.linkedSourceId !== sourceId) throw new SourceClaimError("Claim source binding differs"); }
+  if (claim) {
+    assertSourceClaimScope(claim);
+    if (claim.linkedSourceId !== sourceId) throw new SourceClaimError("Claim source binding differs");
+    const source = await db.getSource(sourceId);
+    if (source) {
+      const authority = sourceRegistryAuthorityForSource(source);
+      if (authority && claim.registryAddress !== authority.address) throw new SourceClaimError("Claim registry differs from the original source authority");
+    }
+  }
   return claim;
 }
 export async function sourceClaimForUrl(db: KeryxDB, canonicalUrl: string): Promise<SourceClaim | null> {
@@ -51,10 +61,13 @@ async function liveClaimSource(db: KeryxDB, claim: SourceClaim, wallet: string, 
     throw new SourceClaimError("Scholarly manuscript rights remain a separate gated enrollment", 409, "scholarly_boundary");
   if (canonicalSourceUrl(source.url) !== claim.canonicalUrl || claim.rssUrl && source.rssUrl !== claim.rssUrl)
     throw new SourceClaimError("Registry listing URL/feed differs from the verified source", 409);
-  if (!config.registryReadAddress || !config.registryAddress || config.registryReadAddress.toLowerCase() !== config.registryAddress.toLowerCase())
+  const authority = sourceRegistryAuthorityForSource(source);
+  if (authority && claim.registryAddress && claim.registryAddress !== authority.address)
+    throw new SourceClaimError("Claim registry differs from the original source authority", 409, "claim_registry_mismatch");
+  if (!authority && (!config.registryReadAddress || !config.registryAddress || config.registryReadAddress.toLowerCase() !== config.registryAddress.toLowerCase()))
     throw new SourceClaimError("Matching reviewed registry authority is unavailable", 503);
   let record;
-  try { record = await getRegistrySource(source.onchainId as `0x${string}`, { timeoutMs: 4000 }); }
+  try { record = await getRegistrySource(source.onchainId as `0x${string}`, { timeoutMs: 4000, ...(authority ? { authority } : {}) }); }
   catch { throw new SourceClaimError("Fresh registry authority could not be read; no earnings policy changed", 503, "registry_unavailable"); }
   if (!record?.active || record.creator.toLowerCase() !== wallet.toLowerCase() ||
     registrySourceId(record.creator, source.url).toLowerCase() !== source.onchainId.toLowerCase())
@@ -67,7 +80,7 @@ export async function linkPublicSourceClaim(db: KeryxDB, input: { claimId: strin
   if (!claim) throw new SourceClaimError("Source claim not found", 404);
   const { source } = await liveClaimSource(db, claim, input.wallet, input.sourceId);
   if (!claimControlIsFresh(claim)) throw new SourceClaimError("Refresh source-control proof before linking", 409, "proof_refresh_required");
-  const linked = await db.bindSourceClaim({ ...input, onchainId: source.onchainId!, registryAddress: config.registryReadAddress! });
+  const linked = await db.bindSourceClaim({ ...input, onchainId: source.onchainId!, registryAddress: sourceRegistryAuthorityForSource(source)?.address ?? config.registryReadAddress! });
   if (source.verified !== true && !await db.verifySourceIfUnchanged({ sourceId: source.id, walletAddress: source.walletAddress, feedUrl: source.rssUrl || source.url }))
     throw new SourceClaimError("Source changed before strong claim verification could be inherited; the claim stays free", 409);
   return linked;

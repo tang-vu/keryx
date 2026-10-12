@@ -29,6 +29,7 @@ import type { SourceItem } from "@/lib/types";
 import { storeSourceItems } from "@/lib/sources/store-source-item";
 import { canonicalSourceUrl } from "./public-source-claim";
 import { reserveSourceClaimRegistration } from "./public-source-claim-service";
+import { configuredRegistrationRegistryAuthority, sameRegistryAuthority, sourceRegistryAuthorityForSource } from "../registry/source-registry-authority";
 
 type KeryxDB = Awaited<ReturnType<typeof getDb>>;
 
@@ -163,6 +164,13 @@ export async function prepareSourceRegistration(
     const uh = urlHash(canonicalUrl);
     // Pre-compute the full id so we can key source_meta and RSS items now.
     const sid = sourceId(sessionWallet as `0x${string}`, canonicalUrl);
+    const registryAuthority = configuredRegistrationRegistryAuthority();
+    if (registryAuthority) {
+      const prior = await db.getSourceByOnchainId(sid), priorMeta = await db.getSourceMeta(sid);
+      const priorAuthority = prior ? sourceRegistryAuthorityForSource(prior) : priorMeta?.registryAuthority;
+      if (priorAuthority && !sameRegistryAuthority(priorAuthority, registryAuthority))
+        return { status: 409, payload: { error: "This source retains its original registry; manage its existing listing instead" } };
+    }
 
     // If this creator listed this source before the registry was switched on, its row carries no
     // registry id and the indexer would mint a second one beside it. Claim the id on that row now,
@@ -203,6 +211,7 @@ export async function prepareSourceRegistration(
       description: input.description,
       url: canonicalUrl,
       rssUrl: input.rssUrl,
+      ...(registryAuthority ? { registryAuthority } : {}),
     });
 
     // fetchPriceUsdc6: convert USDC float → 6-decimal integer (e.g. 0.002 → 2000).
@@ -229,6 +238,7 @@ export async function prepareSourceRegistration(
         sourceId: rowId,
         ...(sourceClaimId ? { sourceClaimId } : {}),
         registryAddress: config.registryAddress,
+        ...(registryAuthority ? { registryAuthority } : {}),
         notify: await applyNotify(rowId),
         gapIntent: await queueGapOffer(db, gapOffer, rowId, sessionWallet),
         // The indexer writes a NEW row UNVERIFIED — earning needs feed-ownership proof first. A row

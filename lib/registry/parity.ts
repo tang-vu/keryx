@@ -19,7 +19,9 @@ import { createPublicClient, type Address, type Hex } from "viem";
 import { arcTestnet } from "@/lib/chains";
 import { config } from "@/lib/config";
 import { attestedArcAuthorityHttp } from "@/lib/arc-rpc-attestation";
-import { REGISTRY_ABI, type OnChainRecord } from "./registry-client";
+import { REGISTRY_ABI, getRegistrySource, type OnChainRecord } from "./registry-client";
+import { registryCheckpointKey, sameRegistryAuthority, type SourceRegistryAuthority } from "./source-registry-authority";
+import { readRegistryCollision } from "./registry-collisions";
 import type { KeryxDB } from "@/lib/db/keryx-db";
 import type { Source } from "@/lib/types";
 
@@ -31,7 +33,7 @@ export interface ParityIssue {
   onchainId: string;
   /** Cache row id when a row exists (pre-registry rows use a slug, not the hash). */
   rowId?: string;
-  field: "row" | "payoutWallet" | "fetchPrice" | "active" | "authors";
+  field: "row" | "payoutWallet" | "fetchPrice" | "active" | "authors" | "registryAuthority" | "withheldCollision";
   chain: string;
   cache: string;
 }
@@ -60,6 +62,7 @@ export interface ParitySummary {
 
 /** Chain reads the audit needs — injectable so tests never touch an RPC. */
 export interface RegistryReader {
+  authority?: SourceRegistryAuthority;
   headBlock(): Promise<bigint>;
   sourceCount(): Promise<bigint>;
   sourceIdAt(index: bigint): Promise<Hex>;
@@ -69,19 +72,23 @@ export interface RegistryReader {
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 /** Default reader against the real registry. Bounded RPC so a hung node fails the cron fast. */
-export function chainRegistryReader(): RegistryReader {
-  const address = config.registryReadAddress as Address;
+export function chainRegistryReader(authority?: SourceRegistryAuthority): RegistryReader {
+  const address = (authority?.address ?? config.registryReadAddress) as Address;
   const client = createPublicClient({
     chain: arcTestnet,
     transport: attestedArcAuthorityHttp(config.rpcUrl, { timeout: 15_000, retryCount: 1 }),
   });
   return {
+    authority,
     headBlock: () => client.getBlockNumber(),
-    sourceCount: () =>
-      client.readContract({ address, abi: REGISTRY_ABI, functionName: "sourceCount" }),
+    sourceCount: async () => {
+      if (authority) await getRegistrySource(`0x${"00".repeat(32)}`, { authority, timeoutMs: 15_000 });
+      return client.readContract({ address, abi: REGISTRY_ABI, functionName: "sourceCount" });
+    },
     sourceIdAt: (index) =>
       client.readContract({ address, abi: REGISTRY_ABI, functionName: "sourceIds", args: [index] }),
     get: async (id) => {
+      if (authority) return getRegistrySource(id, { authority, timeoutMs: 15_000 });
       const record = await client.readContract({
         address, abi: REGISTRY_ABI, functionName: "get", args: [id],
       });
@@ -140,6 +147,7 @@ type ParityDb = Pick<KeryxDB, "getSourceByOnchainId" | "getSyncState">;
  */
 export async function auditRegistryParity(db: ParityDb, reader: RegistryReader): Promise<ParityReport> {
   const [head, count] = await Promise.all([reader.headBlock(), reader.sourceCount()]);
+  if (count < BigInt(0) || count > BigInt(1000)) throw new Error("Registry parity enumeration exceeds its bounded scope");
 
   const indices = Array.from({ length: Number(count) }, (_, i) => BigInt(i));
   const ids = await Promise.all(indices.map((i) => reader.sourceIdAt(i)));
@@ -160,6 +168,14 @@ export async function auditRegistryParity(db: ParityDb, reader: RegistryReader):
       }
       continue;
     }
+    if (reader.authority && (!row.registryAuthority || !sameRegistryAuthority(row.registryAuthority, reader.authority))) {
+      const withheld = await readRegistryCollision(db, reader.authority, ids[i]);
+      if (withheld && (withheld.sourceId !== row.id || !row.registryAuthority || !sameRegistryAuthority(withheld.retainedOrigin, row.registryAuthority)))
+        throw new Error("Withheld registry collision differs from the retained source authority");
+      issues.push({ onchainId: ids[i], rowId: row.id, field: withheld ? "withheldCollision" : "registryAuthority", chain: reader.authority.address,
+        cache: row.registryAuthority?.address ?? "unbound" });
+      continue;
+    }
     issues.push(...compareRecord(row, record));
   }
 
@@ -169,7 +185,7 @@ export async function auditRegistryParity(db: ParityDb, reader: RegistryReader):
     comparedCount: compared,
     issues,
     headBlock: head.toString(),
-    lastSyncedBlock: await db.getSyncState("lastSyncedBlock"),
+    lastSyncedBlock: await db.getSyncState(reader.authority ? registryCheckpointKey(reader.authority) : "lastSyncedBlock"),
   };
 }
 

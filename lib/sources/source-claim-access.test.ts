@@ -22,7 +22,10 @@ const base: SourceClaim = { id: "a".repeat(64), canonicalUrl: source.url, ownerW
   deploymentOrigin: new URL(config.baseUrl).origin, network: config.networkId,
   linkedSourceId: source.id, onchainId: registryId, mode: "free", distributionPermission: false,
   revision: 2, effectiveAt: new Date(now - 1000).toISOString(), verifiedAt: new Date(now - 1000).toISOString() };
-const db = (claim: SourceClaim | null) => ({ getSourceClaimForSource: async () => claim }) as unknown as KeryxDB;
+const db = (claim: SourceClaim | null) => ({
+  getSourceClaimForSource: async () => claim,
+  getSource: async (id: string) => id === source.id ? source : null,
+}) as unknown as KeryxDB;
 
 describe("read-time source claim authority", () => {
   it("keeps verification free and withholds citation earnings", async () => {
