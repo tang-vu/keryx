@@ -154,3 +154,22 @@ app `0.27.57`, hosted MCP `0.3.15`, stdio `0.4.17` metadata are inherited from
 accepted main, without a worker version or release change. The prior `2b210c42`
 convergence checkpoint remains preserved. Exact-source root review, combined
 hosted CI, full built signing acceptance and delivery still remain gates.
+
+## Read-only compiled fixture setup — October 12
+
+The signing-only fixture uses the ordinary root chat. `/research` also mounts
+private-history components and is outside this idle-preview scope. A fresh root
+tab normally posts an anonymous daily landing counter; the fixture seeds only
+that existing tab/day counter key before hydration so the review performs no
+telemetry write. It creates no wallet, authentication, grant or recovery state.
+All existing assertions against POSTs, external requests, signing/recovery
+workers, popups, failed assets and overflow remain enforced.
+
+For the production compiled artifact, a temporary loopback GET relay can read
+the original root and static responses directly through an SSH tunnel, using the
+reviewed origin Host and protocol headers. It preserves status, response headers
+and body bytes; it does not render substitutes or change production configuration.
+This avoids edge-injected analytics that otherwise violates the fixture's
+read-only guard. The transport and synthetic tab setup require source review
+before the actual four-case observation. This setup correction alone is not a
+passed compiled observation or issue closure.

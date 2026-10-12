@@ -29,6 +29,13 @@ async function checkSigningDisplay() {
     const context = await browser.newContext({ viewport: { width, height: 768 }, locale: "en-US",
       reducedMotion: "reduce", serviceWorkers: "block" });
     try {
+      // Model an already-observed landing in this synthetic tab. The ordinary root's
+      // daily telemetry must not dispatch a POST during a read-only signing review.
+      // This stores no wallet, authentication, grant, payment or recovery state.
+      await context.addInitScript(() => {
+        const day = new Date().toISOString().slice(0, 10);
+        sessionStorage.setItem(`keryx:activation:landing:${day}`, "1");
+      });
       const apiGets: string[] = [], blocked: string[] = [], workers: string[] = [], errors: string[] = [];
       const builtAssets: Array<{ path: string; status: number }> = [], failedBuiltAssets: string[] = [];
       let popups = 0;
