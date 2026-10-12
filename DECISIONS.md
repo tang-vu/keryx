@@ -1,5 +1,37 @@
 # Keryx — Decision Log
 
+## Replay ordinary query allocation and reservation evidence without authority - 2026-10-12
+
+Add an incompatible ordinary-public v4 capture envelope for bounded query-local
+reserve, release, hold, remaining-budget and reevaluation debit observations, and
+citation/author largest-remainder allocations. Observe actual inputs and outputs
+at the existing runner seams after the live operation. A frozen browser-safe pure
+policy checks them; its output never authorizes or replaces execution. Capture
+model attribution proposals separately from deterministic normalization and reward
+eligibility. Numeric run-local groups/candidates and author-leg ordinals replace
+private identifiers. No questions, rationales, URLs, accounts, wallets, payTo,
+grants/nonces, Circle metadata or original receipt payload enter these records.
+
+Only genuine exactly representable safe integer micro operands qualify. Fractional
+micro, unsafe, missing or contradictory operands/outcomes record unavailable;
+rounding a Number cannot create exact monetary authority. Preserve the live Number
+operations, rounding, tie order, source recipients and every funding/payment call.
+Query-local capacity is distinct from atomic signer exposure: pending, settled but
+undelivered and unknown funding retain their existing capacity, never release it.
+The diagnostic record asserts the observed classification, not settlement proof.
+Payment/reward authority gates and unsupported native/private/pre-enrollment runs
+remain explicitly outside replay. No new storage, backfill, activation or signer.
+
+Keep v1-v3 closed codecs and digests intact. Bound economics to 256 records/legs
+and the existing 256KiB packet limit; unknown fields, accessors, sparse arrays,
+future versions and altered outcomes refuse. Reuse the shared report/browser,
+offline CLI and public API/MCP projection; browser verification uses local JSON
+and Web Crypto only. Qualify current offline runner corpus records and differential
+controls, including unavailable evidence, without rewriting release study artifacts.
+Root independently reviews exact source, binds the next corpus epoch, checks full
+applicable CI/compiled distributions and delivery. #301 remains open; this does
+not supply independent input authenticity or issue291 payment anchoring.
+
 ## Check cited draft sentences against supplied text, by wording only — 2026-10-11
 
 Advance issue282 with a second zero-I/O private contract, `private-draft-check`

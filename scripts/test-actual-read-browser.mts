@@ -10,6 +10,7 @@ import { actualReadCopy as copy } from "../lib/research-audit/actual-read-copy.t
 import type * as Audit from "../lib/research-audit/actual-read-record.ts";
 import type { ReadCheckpointCapture } from "../lib/agent/read-checkpoint-capture.ts";
 import { optimizerPacketFixture } from "../lib/research-audit/optimizer-checkpoint.test-fixture.ts";
+import { economicPacketFixture } from "../lib/research-audit/economic-checkpoint.test-fixture.ts";
 
 async function bounded<T>(promise: Promise<T>, milliseconds = 10_000): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -53,7 +54,8 @@ assert(inputs.every(input => input.includes("node_modules/react/") || input.incl
   input.includes("node_modules/scheduler/") || ["actual-read-browser-fixture.tsx", "components/keryx/read-checkpoint-verify.tsx",
     "lib/research-audit/actual-read-record.ts", "lib/research-audit/actual-read-policy.ts", "lib/research-audit/actual-read-copy.ts",
     "lib/research-audit/actual-read-v2.ts", "lib/research-audit/exact-units.ts", "lib/agent/coverage-precheck.ts",
-    "lib/research-audit/actual-read-v3.ts", "lib/research-audit/optimizer-checkpoint.ts", "lib/research-audit/optimizer-policy-v1.ts"].includes(input)), "Closed browser import graph");
+    "lib/research-audit/actual-read-v3.ts", "lib/research-audit/optimizer-checkpoint.ts", "lib/research-audit/optimizer-policy-v1.ts",
+    "lib/research-audit/actual-read-v4.ts", "lib/research-audit/economic-checkpoint.ts"].includes(input)), "Closed browser import graph");
 assert(bundled.outputFiles[0].contents.byteLength < 1_500_000);
 const collector = createReadCheckpointCapture(true), check = { kind: "channel", creatorFree: false, cache: false } as const;
 collector.append(check, actualReadCheckpoint(check), { candidate: 1, round: 0, proposal: "BUY", plan: "BUY", price: 0.002 });
@@ -90,6 +92,23 @@ try {
   type Fixture = { audit: typeof Audit; mount(capture: ReadCheckpointCapture | null): void;
     counters: { digests: number; completedDigests: number }; defer(stage: "file" | "digest"): void;
     release(): void; restore(): void; observed(): { started: number; read: number; completed: number } };
+  // Existing default CI gate includes v4; focused flags retain their bounded scopes.
+  if (!process.argv.includes("--optimizer-only") || process.argv.includes("--economics-only")) {
+    const capture = economicPacketFixture();
+    await page.evaluate(capture => (window as unknown as { fixture: Fixture }).fixture.mount(capture), capture);
+    await page.getByText(copy.economicBoundary, { exact: true }).waitFor(); await page.getByText(copy.economicUnavailable, { exact: true }).waitFor();
+    const upload = async (value: unknown) => page.getByLabel(copy.choose).setInputFiles({ name: "synthetic-economics.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+    await upload(capture.packet); await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.passed, { exact: true }).waitFor();
+    const altered = structuredClone(capture.packet); assert(altered.economics.status === "available");
+    const leg = altered.economics.records[1]; assert(leg.status === "available" && leg.kind === "author-split"); leg.outcome.legMicros.reverse();
+    await upload(altered); await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.refused, { exact: true }).waitFor();
+    await upload({ ...capture.packet, question: "PRIVATE" }); await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.refused, { exact: true }).waitFor();
+    assert.deepEqual(errors, []); assert.deepEqual(refused, []); assert.deepEqual(requests.sort(), ["GET /", "GET /fixture.js"]);
+    console.log(JSON.stringify({ gate: "v4-economics-report-offline-browser", actualReactReport: true, localWebCrypto: true,
+      integerLegTamperingRefused: true, privatePacketRefused: true, incompleteAuthorityDisclosed: true, externalRequests: 0,
+      closedBrowserInputs: inputs, paymentAuthority: false, compiledNextAcceptance: false }));
+  }
+  if (!process.argv.includes("--economics-only")) {
   if (process.argv.includes("--optimizer-only")) {
     const capture = optimizerPacketFixture();
     await page.evaluate(capture => (window as unknown as { fixture: Fixture }).fixture.mount(capture), capture);
@@ -215,6 +234,7 @@ try {
     v2EmptyStopVerifiedOffline: true, v2TamperingRefused: true,
     mutationRefused: true, unavailableReset: true, sameMountedPropResets: propChecks.length, deferredOldResultsDiscarded: 4,
     externalRequests: 0, paymentAuthority: false }));
+  }
   }
 } finally {
   try { if (browser) await bounded(browser.close(), 5000); }

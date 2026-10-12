@@ -1,5 +1,6 @@
 import { referenceSnapshot, type PublicReference } from "../public-references/catalog";
 import { createHash } from "node:crypto";
+import * as economicCaptureSource from "./economic-checkpoint-capture";
 import { readFile } from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
 import nasaNote from "./fixtures/nasa-sentence-note-20261009.json";
@@ -2906,6 +2907,8 @@ describe("actual READ checkpoint capture differentials", () => {
     ["reeval-stop", "recommendation", "STOP"], ["reeval-error", "sufficiency", "STOP"],
     ["public", "public-route", "FREE"], ["reeval-public", "public-route", "FREE"],
     ["external", "selection", "SKIP"], ["reeval-discussion", "discussion", "SKIP"],
+    ["pre-submit-failure", "channel", "BUY"], ["pending-fetch", "channel", "BUY"], ["settled-fetch", "channel", "BUY"],
+    ["reeval-pending-fetch", "channel", "BUY"], ["reeval-settled-fetch", "channel", "BUY"],
   ] as const;
   async function fixture(scenario: typeof cases[number][0], capture: "missing" | "available" | "throwing" | "rejecting", stamp: string, budget?: number) {
     const expansion = scenario.startsWith("reeval-"), order: string[] = [];
@@ -2956,6 +2959,15 @@ describe("actual READ checkpoint capture differentials", () => {
       const original = observedGateway[name].bind(gateway);
       spies.push(vi.spyOn(observedGateway, name).mockImplementation(async (...args: unknown[]) => {
         order.push(name); if (name === "ensureFunded" && scenario === "funding-refusal") throw Error("Synthetic unknown funding");
+        if (name === "payFetch" && scenario === "pre-submit-failure") throw Error("Synthetic definite pre-submission failure");
+        if (name === "payFetch" && (scenario.endsWith("pending-fetch") || scenario.endsWith("settled-fetch"))) {
+          const request = args[0] as Parameters<PaymentGateway["payFetch"]>[0], source = request.source, pending = scenario.endsWith("pending-fetch");
+          const payment = makePayment({ kind: "fetch", queryId: request.queryId, sourceId: source.id, sourceName: source.name,
+            payer: AGENT, payee: source.walletAddress, amountUsdc: request.priceUsdc ?? source.fetchPrice, settled: !pending,
+            settlementStatus: pending ? "pending" : "settled", authorizationId: "PRIVATE_SYNTHETIC_AUTHORITY",
+            ...(!pending ? { txHash: "synthetic-offline-settlement" } : {}) });
+          throw pending ? new PaymentPendingError("Synthetic retained pending", payment) : new PaymentSettledError("Synthetic settled without content", payment);
+        }
         return original(...args);
       }));
     }
@@ -2971,6 +2983,45 @@ describe("actual READ checkpoint capture differentials", () => {
           trace: steps.map(({ phase, message }) => ({ phase, message })) } };
     } finally { terms.mockRestore(); rights.mockRestore(); duplicate.mockRestore(); for (const spy of spies) spy.mockRestore(); }
   }
+  it("v4 economic release corpus replays every produced record, refuses missing integer authority and preserves actual effects", async () => {
+    const kinds = new Set<string>(), events = new Set<string>(); let verified = 0, refused = 0;
+    const stamp = new Date().toISOString();
+    for (const [scenario] of cases) {
+      const absent = await fixture(scenario, "missing", stamp, 0.2), actual = await fixture(scenario, "available", stamp, 0.2);
+      expect(actual.economic).toEqual(absent.economic);
+      const capture = actual.packet; expect(capture?.packet.schema).toBe(4);
+      if (!capture || capture.packet.schema !== 4 || capture.packet.economics.status !== "available") throw Error("Corpus capture missing");
+      expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
+      if (["paid", "cache", "reeval-paid"].includes(scenario)) {
+        for (const kind of ["query-budget", "citation-allocation", "author-split"]) {
+          expect(capture.packet.economics.records.some(record => record.kind === kind && record.status === "available")).toBe(true);
+        }
+      }
+      for (const record of capture.packet.economics.records) {
+        kinds.add(record.kind); events.add(record.event);
+        if (record.status === "available") verified++; else { refused++; expect(["nonmicro-input", "authority-not-captured"]).toContain(record.reason); }
+      }
+      const text = JSON.stringify(capture.packet);
+      for (const privateValue of ["PRIVATE_SYNTHETIC_AUTHORITY", "Synthetic checkpoint comparison", "checkpoint-a", "https:", AGENT]) expect(text).not.toContain(privateValue);
+    }
+    expect(kinds).toEqual(new Set(["query-budget", "citation-allocation", "author-split"]));
+    expect(verified).toBeGreaterThan(0);
+    for (const event of ["portfolio", "sufficient", "pre-submission", "funding", "pending", "settled-undelivered", "delivered", "debit-remaining", "attribution", "authors"]) expect(events.has(event)).toBe(true);
+    const fractional = (await fixture("paid", "available", stamp, 0.1 + 0.2)).packet!;
+    if (fractional.packet.schema !== 4 || fractional.packet.economics.status !== "available") throw Error("Unavailable vector missing");
+    expect(fractional.packet.economics.records.some(record => record.status === "unavailable" && record.reason === "nonmicro-input")).toBe(true);
+    expect(await verifyActualReadPacket(fractional.packet, fractional.retainedDigest)).toBe(true);
+    const baseline = await fixture("paid", "available", stamp, 0.2);
+    const observer = vi.spyOn(economicCaptureSource, "captureBudget").mockImplementation(() => { throw Error("PRIVATE observer failure"); });
+    try {
+      const failed = await fixture("paid", "available", stamp, 0.2);
+      expect(failed.economic).toEqual(baseline.economic);
+      expect(failed.packet?.packet.schema === 4 && failed.packet.packet.economics.status === "available" &&
+        failed.packet.packet.economics.records.some(record => record.status === "unavailable" && record.reason === "capture-failed")).toBe(true);
+    } finally { observer.mockRestore(); }
+    console.log(JSON.stringify({ gate: "301-v4-actual-offline-runner-corpus", cases: cases.length, verifiedEconomicRecords: verified,
+      explicitlyUnavailableEconomicRecords: refused, genuineProducer: "collectRun", injectedOfflineEngineAndGateway: true, realProviderSearchPaymentCalls: 0 }));
+  });
   it.each(cases)("keeps actual %s actions, payment arguments, call counts and order independent of capture", async (scenario, kind, action) => {
     const stamp = new Date().toISOString(), absent = await fixture(scenario, "missing", stamp),
       available = await fixture(scenario, "available", stamp), throwing = await fixture(scenario, "throwing", stamp),
@@ -2980,8 +3031,8 @@ describe("actual READ checkpoint capture differentials", () => {
     expect(absent.packet).toBeNull(); expect(throwing.status).toBe(scenario === "empty" ? "available" : "unavailable");
     expect(available.packet).not.toBeNull();
     if (scenario === "empty") {
-      expect(available.packet!.packet.schema).toBe(2);
-      if (available.packet!.packet.schema === 2) expect(available.packet!.packet.stops).toContainEqual({ afterCheckpoint: 0, stage: "discovery", count: 0, action: "STOP" });
+      expect(available.packet!.packet.schema).toBe(4);
+      if (available.packet!.packet.schema === 4) expect(available.packet!.packet.stops).toContainEqual({ afterCheckpoint: 0, stage: "discovery", count: 0, action: "STOP" });
     } else expect(available.packet!.packet.records.map(record => ({ kind: record.check.kind, action: record.outcome.action }))).toContainEqual({ kind, action });
     if (available.packet!.packet.schema !== 1) {
       const v2 = available.packet!.packet;
@@ -2996,8 +3047,8 @@ describe("actual READ checkpoint capture differentials", () => {
       const rule = rules[scenario];
       if (rule) expect(v2.normalizations.some(row => row.outcome.rule === rule)).toBe(true);
       if (scenario !== "empty") {
-        expect(v2.schema).toBe(3);
-        if (v2.schema === 3) {
+        expect(v2.schema).toBe(4);
+        if (v2.schema === 4) {
           expect(v2.optimizer.status).toBe("available");
           if (v2.optimizer.status === "available") expect(v2.optimizer.outcome.reserved).toBe(String(available.economic.plannedFetchUsdc));
         }

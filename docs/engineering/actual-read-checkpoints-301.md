@@ -1,5 +1,81 @@
 # Actual READ checkpoints — issue301, bounded milestone
 
+## Query-local integer economics v4 - next-batch source candidate
+
+`ordinary-query-economics-v4` adds a separate `query-economics-replay-v1` family
+for the existing runner's actual portfolio reservation, definite pre-submission,
+duplicate/review and unread-sufficiency releases, conservative holds, remaining
+budget and reevaluation debit seams. Citation records retain distinct numeric model
+weight proposals, fixed normalization, eligibility, gross shares and actual reward
+shares. Author records retain weights and actual leg amounts, never recipients.
+The frozen pure policy reproduces the unchanged largest-remainder algorithm,
+including stable index ties. No diagnostic outcome is substituted for a live one.
+
+Exact safe micro-USDC inputs and outputs qualify; fractional-micro, unsafe,
+missing, contradictory or failed evidence remains explicitly unavailable. A pool
+rounding operation does not repair its nonmicro source operand into authority.
+The current Number ledger can also become unavailable after binary arithmetic;
+we preserve that behavior rather than changing economics to obtain a replay pass.
+Pending, settled-but-undelivered, unknown funding and conservative admission
+holds retain actual query capacity. This is not the atomic browser signer ledger,
+funding, a new authorization, or independent settlement evidence. Reward/payment
+and operating-allocation authority outside the captured deterministic arithmetic
+is explicitly unavailable. Source/eligibility/classification inputs remain assertions.
+
+The v4 envelope is closed and separately versioned; v1-v3 canonical bytes and
+hashes remain readable. At most 256 economic records/legs and 256KiB total are
+accepted. Unknown fields, versions, sparse arrays, accessors, monetary mismatches,
+private data and changed amounts refuse. Only numeric candidate/source groups and
+leg ordinals leave the server. No question, rationale, URL, wallet, account,
+credential, grant/nonce, Circle or original receipt payload is public. Private,
+original, native, missing-capability and pre-enrollment capture stays unavailable.
+
+Existing browser Verify still performs File/JSON/Web Crypto locally, without a
+Keryx call. It discloses unavailable/uncaptured families and independent authority
+limits. Offline CLI reports the same family statuses; web/API/OpenAI-compatible,
+A2A and remote/stdio MCP use the retained shared closed projection. Existing bots
+(en/vi/pt/es wrappers), extension and Desktop retain report/result/checked-original
+roles; no new verifier UI, payment role, installed parity or locale activation is
+claimed. Native/private stores do not gain an ordinary capture fallback.
+
+The focused release-corpus control executes the actual injected offline collectRun
+producer across supported admission/read and pending/settled/failure vectors,
+verifies every resulting packet and compares actions, amounts, payees, payment
+arguments/call order, answers and effect output with capture absent. It counts
+available and unavailable economic records explicitly. Pure vectors cover micro
+ties, normalized/all-zero/negative weights, partial eligibility, clamp/release,
+retained uncertainty, unsafe/fractional inputs, tampering and private/accessor
+refusal. These synthetic observations do not prove an actual source fact, payment
+or completed release. The existing React/Web Crypto and fresh CLI controls remain
+separate from stock compiled, packaged and deployed acceptance.
+
+The bounded local control observed 35 synthetic runner vectors and 132 replayable
+integer economic records at the controlled 0.2 USDC budget, with zero unavailable
+economic records in that set. A separate fractional-budget vector refuses exact
+micro claims. All real provider/search/payment calls are zero. App and ops
+TypeScript and scoped lint passed. Fresh-process CLI validation failed on native
+spawn; the browser control failed before entry in the tsx/esbuild loader with
+spawn EPERM. Neither failure is acceptance or a waiver, and neither was bypassed.
+Final compiled/package/runtime verification remains open.
+The existing default browser CI command includes the v4 controls before its
+retained v1/v2 checks; focused --economics-only and --optimizer-only scopes do
+not replace that complete gate or add a separate harness.
+
+| Original #301 criterion | Current source scope and actual remaining gate |
+| --- | --- |
+| Every BUY/SKIP/CACHE/stop/escalation has a canonical record | Accepted v1-v3 ordinary capture is retained; v4 adds actual query-local allocation/reservation observations. Unsupported authority/private/native families remain explicit. Complete domain enrollment is still absent. |
+| Every release-corpus record replays actions and exact integer amounts | Current focused corpus can qualify captured integer arithmetic and disclose unavailable records. Nonmicro Number state cannot become integer authority; full final release corpus and next combined source binding remain root gates. |
+| Altered records fail | Closed codec/pure outcomes and separately retained packet hash reject altered integer outcomes/private fields. These do not attest source facts or implement separate #291 anchoring. |
+| Report Verify is client-side without Keryx | Existing local control consumes v4 and shows family limitations. Actual final compiled/distribution acceptance remains independent. |
+| Private question text excluded publicly | Numeric references and closed inputs exclude all private text/authority identifiers. Existing auth/visibility/default-OFF gates and original payloads remain intact. |
+
+No versions, locks, canonical study/report/corpus artifacts or production inputs
+change here. Instrumenting run-agent invalidates its old study source pin. Root
+owns one NEXT source binding, independent review, full applicable aggregate/domain
+CI, compiled/client distributions, admitted delivery and original closure. Current
+release 60 is separate. Original #301 remains OPEN; local source checks never supply
+missing signer authority, exact historical operands, enrollment or delivery.
+
 ## Optimizer replay v3 — October 12 next-batch source candidate
 
 Supported ordinary captures now add a distinct `ordinary-read-optimizer-v3`
@@ -55,7 +131,7 @@ API/MCP human-locale helper ownership remains separate and untouched.
 | Report verification runs in the browser without Keryx | The existing File/JSON/Web Crypto control handles the new pure client graph. Focused actual React/Web Crypto source proof is separate from final compiled delivery acceptance. |
 | Private question text is excluded/redacted publicly | Numeric identities/groups/ranks/tie witnesses and closed operands exclude question/claim/model text, URLs/tokens, source/account/wallet/payment/grant/Circle identities. Existing reader/auth/visibility/OFF boundaries stay unchanged. |
 
-### Staged design for the remaining exact-integer boundary (not implemented)
+### Historical v3 plan for the remaining integer-authority boundary (v4 diagnostics above)
 
 1. Root first binds genuine integer quote/intent inputs at existing authority
    seams. `sourceFetchTerms` currently turns allowlisted `fetchPriceUsdc6` into a

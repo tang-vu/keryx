@@ -85,6 +85,8 @@ import { parseTeachingProposalRequest } from "../research/teaching-proposals-req
 import { deliverTeachingProposals, type TeachingProposalDelivery } from "../research/teaching-proposals";
 import { teachingProposalAnswer } from "../research/teaching-proposals-presentation";
 import { allocateSplit } from "../payments/split-allocation";
+import { captureBudget, captureAllocation, captureAuthorSplit } from "./economic-checkpoint-capture";
+import type { BudgetOperation, EconomicEvent } from "../research-audit/economic-checkpoint";
 import {
   PaymentPendingError,
   paymentCountsAsSpent,
@@ -276,7 +278,7 @@ async function* runAdmittedAgent(
   const checkpointPlans = new Map<string, PlannedReadAction>();
   const checkpointProposals = new Map<string, PlannedReadAction | "UNKNOWN">();
   const checkpointCapture = createReadCheckpointCapture(effects.scope.kind === "public" && !queryId.startsWith("prv_") &&
-    ordinaryCheckpointCapability(db), deps.readCheckpointSink, true);
+    ordinaryCheckpointCapability(db), deps.readCheckpointSink, true, true);
   let citations: Citation[] = [];
   let teachingProposals: TeachingProposalDelivery | undefined;
   let operatingFee: QueryRun["operatingFee"];
@@ -322,6 +324,14 @@ async function* runAdmittedAgent(
   function checkpointCandidate(assetId: string): number {
     if (!checkpointCandidates.has(assetId)) checkpointCandidates.set(assetId, checkpointCandidates.size + 1);
     return checkpointCandidates.get(assetId)!;
+  }
+  function captureQueryBudget(operation: BudgetOperation, event: EconomicEvent, before: number, amounts: number[], after: number, assetId?: string, round = 0) {
+    checkpointCapture.economic("query-budget", event, assetId ? checkpointCandidate(assetId) : 0, round,
+      () => captureBudget(operation, event, before, amounts, after));
+  }
+  function captureDebit(beforeSpent: number, beforeRemaining: number, price: number, assetId: string, round: number, event: EconomicEvent) {
+    captureQueryBudget("add", event, beforeSpent, [price], spentTolls, assetId, round);
+    captureQueryBudget("remaining", "debit-remaining", beforeRemaining, [price], remainingBudget, assetId, round);
   }
   function captureMapping(d: Decision, id: string | null, matched: boolean, duplicate: boolean, external: boolean, publicRead: boolean) {
     checkpointCapture.mapping(() => {
@@ -1054,6 +1064,8 @@ async function* runAdmittedAgent(
   // This is a query-local reservation only. The browser grant remains independently and atomically
   // reserved per actual sign request inside BrowserCosignGateway.
   spentTolls = evidencePortfolio.selectedBuyUsdc;
+  checkpointCapture.economic("query-budget", "portfolio", 0, 0, () => captureBudget("reserve", "portfolio", 0,
+    evidencePortfolio!.selectedAssetIds.map(id => preparedByAsset.get(id)!).filter(d => d.action === "BUY").map(d => d.price), spentTolls));
   let attentionUsed = evidencePortfolio.selectedAssetIds.length;
 
   // record external evaluations — always SKIP (discovery only), keeping the engine's value reasoning
@@ -1142,7 +1154,11 @@ async function* runAdmittedAgent(
     if (checkpoint({ kind: "duplicate", found: documentAlreadyRead(d, gathered) }, d.assetId ?? d.sourceId).action === "SKIP") {
       await observeReview(d.assetId ?? d.sourceId, "duplicate");
       const was = markUnread(d, "this canonical document was already read through another delivery channel; no second attention slot, access toll or independent contribution.");
-      if (was === "BUY" && assetById.has(d.assetId ?? d.sourceId)) spentTolls = Math.max(0, round(spentTolls - d.price));
+      if (was === "BUY" && assetById.has(d.assetId ?? d.sourceId)) {
+        const beforeRelease = spentTolls;
+        spentTolls = Math.max(0, round(spentTolls - d.price));
+        captureQueryBudget("release", "duplicate", beforeRelease, [d.price], spentTolls, d.assetId ?? d.sourceId);
+      }
       yield emit("fetch", `SKIP ${d.sourceName}: this canonical document already contributes once; no redundant read or toll.`);
       continue;
     }
@@ -1181,21 +1197,25 @@ async function* runAdmittedAgent(
       checkpoint({ kind: "terms", allowed: false }, d.assetId ?? d.sourceId);
       await observeReview(d.assetId ?? d.sourceId, "terms-changed");
       yield emit("fetch", `SKIP ${source.name}: source claim or registry terms changed after discovery; no new payment.`);
+      captureQueryBudget("hold", "admission-withheld", spentTolls, [], spentTolls, d.assetId ?? d.sourceId);
       continue;
     }
     if (checkpoint({ kind: "duplicate", found: !!(item && asset.claimPolicy && gathered.some(read => publicDuplicateOfOwnedItem(item, read, contentBodyHash))) }, d.assetId ?? d.sourceId).action === "SKIP") {
       await observeReview(d.assetId ?? d.sourceId, "duplicate");
       yield emit("fetch", `SKIP ${source.name}: this exact article was already read; no duplicate contribution or reward.`);
+      captureQueryBudget("hold", "admission-withheld", spentTolls, [], spentTolls, d.assetId ?? d.sourceId);
       continue;
     }
     if (checkpoint({ kind: "duplicate", found: await paperDuplicatesPublicBody(db, source, gathered.filter(read => read.sourceKind === "public-reference").map(read => read.text)) }, d.assetId ?? d.sourceId).action === "SKIP") {
       await observeReview(d.assetId ?? d.sourceId, "duplicate");
       yield emit("fetch", `SKIP paid manuscript ${source.name}: identical body was already read publicly, no duplicate access or reward.`);
+      captureQueryBudget("hold", "admission-withheld", spentTolls, [], spentTolls, d.assetId ?? d.sourceId);
       continue;
     }
     if (checkpoint({ kind: "rights", allowed: await paperCanResearch(db, source, input.paidScholarly === true && origin === "web") }, d.assetId ?? d.sourceId).action === "SKIP") {
       await observeReview(d.assetId ?? d.sourceId, "rights");
       yield emit("fetch", `SKIP ${source.name}: manuscript rights or registry terms changed before this read.`);
+      captureQueryBudget("hold", "admission-withheld", spentTolls, [], spentTolls, d.assetId ?? d.sourceId);
       continue;
     }
     const admission = await admitReview(asset, reviewRecords.get(d.assetId ?? d.sourceId));
@@ -1204,7 +1224,11 @@ async function* runAdmittedAgent(
         : "human review did not admit this read; waiting, decline and expiry are not code refusals";
       yield emit("fetch", `SKIP ${source.name}: ${reason}.`);
       const unread = markUnread(d, reason);
-      if (unread === "BUY") spentTolls = Math.max(0, round(spentTolls - asset.priceUsdc));
+      if (unread === "BUY") {
+        const beforeRelease = spentTolls;
+        spentTolls = Math.max(0, round(spentTolls - asset.priceUsdc));
+        captureQueryBudget("release", "review-withheld", beforeRelease, [asset.priceUsdc], spentTolls, d.assetId ?? d.sourceId);
+      }
       continue;
     }
     const itemIdentity = { ...asset.candidate.item, evidenceProvenance: asset.candidate.item?.evidenceProvenance ?? source.evidenceProvenance };
@@ -1300,6 +1324,7 @@ async function* runAdmittedAgent(
           settledPayments++;
           payments.push(settled);
           const ledgerError = await persistPaymentRecord(settled);
+          captureQueryBudget("hold", "settled-undelivered", spentTolls, [], spentTolls, d.assetId ?? d.sourceId);
           yield emit(
             "fetch",
             `Paid $${settled.amountUsdc} to ${assetLabel}, but its content response failed after settlement; receipt retained and the run continues without that article.`,
@@ -1316,6 +1341,7 @@ async function* runAdmittedAgent(
           pendingPayments++;
           payments.push(pending);
           const ledgerError = await persistPaymentRecord(pending);
+          captureQueryBudget("hold", "pending", spentTolls, [], spentTolls, d.assetId ?? d.sourceId);
           yield emit(
             "fetch",
             `${pendingAuthorizationLabel(pending)} $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The amount is reserved, not counted as settled spend; skipping this article and continuing.`,
@@ -1329,7 +1355,9 @@ async function* runAdmittedAgent(
         // This is a definite pre-submission failure: typed pending/settled errors above are the
         // only post-authorization exits. Release the query-local reservation so another source can
         // fill the evidence gap without weakening the browser grant's independent atomic cap.
+        const beforeRelease = spentTolls;
         spentTolls = Math.max(0, round(spentTolls - asset.priceUsdc));
+        captureQueryBudget("release", "pre-submission", beforeRelease, [asset.priceUsdc], spentTolls, d.assetId ?? d.sourceId);
         markUnread(d, "the purchase failed before any authorization was submitted, so nothing was bought.");
         yield emit("fetch", `Couldn't buy ${assetLabel} (${reason}) — skipping it, continuing with what's read.`);
         continue;
@@ -1368,7 +1396,9 @@ async function* runAdmittedAgent(
           const was = markUnread(x, "not read: the sources already read covered every research target, so the agent stopped early.");
           if (was === "BUY" && assetById.has(x.assetId ?? x.sourceId)) { unreadBuys++; released += x.price; }
         }
+        const beforeRelease = spentTolls;
         spentTolls = Math.max(0, round(spentTolls - released));
+        captureQueryBudget("release", "sufficient", beforeRelease, [released], spentTolls, d.assetId ?? d.sourceId);
         if (unreadBuys) {
           yield emit("sufficiency", `Stopping early — skipping ${unreadBuys} further paid fetch(es) to save budget.`);
         }
@@ -1386,6 +1416,7 @@ async function* runAdmittedAgent(
   attentionUsed = gathered.length;
   const gatheredIds = new Set(gathered.map((g) => g.assetId ?? g.sourceId));
   let remainingBudget = fetchBudget - spentTolls;
+  captureQueryBudget("remaining", "initial-remaining", fetchBudget, [spentTolls], remainingBudget);
 
   const expansion = checkpoint({ kind: "expansion", unavailable: readingAssessmentUnavailable,
     sufficient: lastSufficient, gaps: lastGaps, rounds: reevaluateRounds, reads: gathered.length }).action;
@@ -1629,8 +1660,10 @@ async function* runAdmittedAgent(
           });
           attentionUsed++;
           gatheredIds.add(asset.candidate.id);
+          const beforeRemaining = remainingBudget, beforeSpent = spentTolls;
           remainingBudget -= asset.priceUsdc;
           spentTolls += asset.priceUsdc;
+          captureDebit(beforeSpent, beforeRemaining, asset.priceUsdc, asset.candidate.id, round + 1, "delivered");
 
           yield emit(
             "reevaluate",
@@ -1649,8 +1682,10 @@ async function* runAdmittedAgent(
             payments.push(settled);
             const ledgerError = await persistPaymentRecord(settled);
             // This source was selected only during re-evaluation, so consume its query slice here.
+            const beforeRemaining = remainingBudget, beforeSpent = spentTolls;
             remainingBudget -= asset.priceUsdc;
             spentTolls += asset.priceUsdc;
+            captureDebit(beforeSpent, beforeRemaining, asset.priceUsdc, asset.candidate.id, round + 1, "settled-undelivered");
             yield emit(
               "reevaluate",
               `Paid $${settled.amountUsdc} to ${assetLabel}, but its content response failed after settlement; receipt retained and the gap remains open.`,
@@ -1668,8 +1703,10 @@ async function* runAdmittedAgent(
             payments.push(pending);
             const ledgerError = await persistPaymentRecord(pending);
             // It may already have settled, so this reservation still consumes the per-query slice.
+            const beforeRemaining = remainingBudget, beforeSpent = spentTolls;
             remainingBudget -= asset.priceUsdc;
             spentTolls += asset.priceUsdc;
+            captureDebit(beforeSpent, beforeRemaining, asset.priceUsdc, asset.candidate.id, round + 1, "pending");
             yield emit(
               "reevaluate",
               `${pendingAuthorizationLabel(pending)} $${pending.amountUsdc} authorization for ${assetLabel}; ${pendingConfirmationMessage(err)}. The reserved budget stays consumed.`,
@@ -1975,6 +2012,9 @@ async function* runAdmittedAgent(
           : "Contribution from evidence retained in the brief; weight is an allocation, not certification of factual correctness.") : attribution.rationale,
       };
     });
+    checkpointCapture.economic("citation-allocation", "attribution", 0, 0, () => captureAllocation(citationPool, round(citationPool),
+      used.map(g => g.sourceId), proposedAttributions, used.map(g => g.sourceKind !== "public-reference" && g.creatorRewardEligible !== false),
+      attributions.map(item => item.weight), rewards, citations.map(c => c.reward)));
   }
   for (const c of citations) {
     yield emit("attribute", c.sourceKind === "public-reference"
@@ -1989,6 +2029,7 @@ async function* runAdmittedAgent(
       const plan = await prepareOperatingFee({ queryId, poolUsdc: Math.min(round(citationPool), Math.floor(budget * 1e6 / 2) / 1e6),
         citations, policy: gateway.operatingFeePolicy(), readClaim: url => sourceClaimForUrl(db, url), itemClaimUrls });
       if (plan) {
+        checkpointCapture.economicUnavailable("reward-authority", "operating-allocation", 0);
         operatingFee = plan.snapshot;
         yield emit("settle", `Keryx operating allocation $${plan.snapshot.amountUsdc.toFixed(6)} for unclaimed public citations; sponsored by Keryx, separate from creator rewards.`, plan.snapshot);
         if (fundingUnavailable) throw new Error("Funding readiness is unknown");
@@ -2021,6 +2062,7 @@ async function* runAdmittedAgent(
   for (const c of citations) {
     if (publicReads.has(c.sourceId) || isPublicReferenceId(c.sourceId)) continue;
     if (input.reviewFirst && !reviewedAssets.has(c.itemId ? sourceItemAssetId(c.itemId) : c.sourceId)) {
+      checkpointCapture.economicUnavailable("reward-authority", "reward-withheld", checkpointCandidate(c.itemId ? sourceItemAssetId(c.itemId) : c.sourceId));
       c.reward = 0;
       yield emit("settle", `Creator reward withheld for ${c.sourceName}: no human-approved read admits this source.`);
       continue;
@@ -2035,16 +2077,21 @@ async function* runAdmittedAgent(
       if (!access.rewardAllowed) throw new Error("Creator rewards are disabled");
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") throw error;
+      checkpointCapture.economicUnavailable("reward-authority", "reward-withheld", checkpointCandidate(c.itemId ? sourceItemAssetId(c.itemId) : c.sourceId));
       c.reward = 0;
       yield emit("settle", `Citation reward withheld for ${source.name}: current policy does not authorize a new payment. The cited answer remains available.`);
       continue;
     }
-    if (fundingUnavailable) { c.reward = 0; continue; }
+    if (fundingUnavailable) {
+      checkpointCapture.economicUnavailable("reward-authority", "reward-withheld", checkpointCandidate(c.itemId ? sourceItemAssetId(c.itemId) : c.sourceId));
+      c.reward = 0; continue;
+    }
     if (!spendWalletReady) {
       try { if (input.reviewFirst) await input.onCreatorPaymentBoundary?.(); await gateway.ensureFunded(budget); spendWalletReady = true; }
       catch (error) {
         if (error instanceof Error && error.name === "AbortError") throw error;
         yield* await withholdOwnedReads("settle");
+        checkpointCapture.economicUnavailable("reward-authority", "reward-withheld", checkpointCandidate(c.itemId ? sourceItemAssetId(c.itemId) : c.sourceId));
         c.reward = 0;
         continue;
       }
@@ -2054,6 +2101,8 @@ async function* runAdmittedAgent(
     // c.reward — independent rounding per author (round(reward * weight)) would let the legs drift
     // a micro-USDC off the reward, and that drift accumulates across every settlement.
     const legAmounts = allocateSplit(c.reward, authors.map((a) => a.splitWeight));
+    checkpointCapture.economic("author-split", "authors", checkpointCandidate(c.itemId ? sourceItemAssetId(c.itemId) : c.sourceId), 0,
+      () => captureAuthorSplit(c.reward, authors.map(a => a.splitWeight), legAmounts));
     // Author legs settled for THIS citation — used to ping the source's notify webhook once per
     // citation (not once per author leg), carrying every leg's real on-chain settlement state.
     const citationPayments: PaymentRecord[] = [];
@@ -2280,6 +2329,7 @@ async function* runAdmittedAgent(
   }
   async function withholdOwnedReads(phase: "fetch" | "reevaluate" | "settle", selectedAssetId?: string): Promise<TraceStep[]> {
     const steps: TraceStep[] = [];
+    captureQueryBudget("hold", "funding", spentTolls, [], spentTolls, selectedAssetId);
     if (!fundingUnavailable) {
       fundingUnavailable = true;
       steps.push(emit(phase, fundingNotice, {

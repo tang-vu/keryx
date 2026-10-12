@@ -1,4 +1,5 @@
 "use client";
+import { economicReplaySummary } from "@/lib/research-audit/economic-checkpoint";
 import { useEffect, useRef, useState } from "react";
 import { MAX_READ_PACKET_BYTES, verifyActualReadPacket } from "@/lib/research-audit/actual-read-record";
 import { actualReadCopy as copy } from "@/lib/research-audit/actual-read-copy";
@@ -6,6 +7,7 @@ import type { projectActualReadCheckpoints } from "@/lib/research-audit/actual-r
 
 export function ReadCheckpointVerify({ capture }: { capture: ReturnType<typeof projectActualReadCheckpoints> }) {
   const expectedDigest = capture?.retainedDigest ?? null;
+  const economicSummary = capture?.packet.schema === 4 ? economicReplaySummary(capture.packet.economics) : null;
   const [session, setSession] = useState({ capture, expectedDigest, generation: 0, file: null as File | null,
     state: "idle" as "idle" | "busy" | "passed" | "refused" });
   const attempt = useRef(0);
@@ -37,8 +39,11 @@ export function ReadCheckpointVerify({ capture }: { capture: ReturnType<typeof p
   };
   return <section className="mt-4 min-w-0 border border-line bg-paper p-4" aria-label={copy.title}>
     <h2 className="font-mono text-sm text-ink">{copy.title}</h2>
-    <p className="mt-2 text-xs text-ink-3">{capture ? capture.packet.schema === 3 ? copy.optimizerBoundary : capture.packet.schema === 2 ? copy.runtimeBoundary : copy.boundary : copy.unavailable}</p>
-    {capture?.packet.schema === 3 && capture.packet.optimizer.status === "unavailable" && <p className="mt-2 text-xs text-ink-3">{copy.optimizerUnavailable}</p>}
+    <p className="mt-2 text-xs text-ink-3">{capture ? capture.packet.schema === 4 ? copy.economicBoundary : capture.packet.schema === 3 ? copy.optimizerBoundary : capture.packet.schema === 2 ? copy.runtimeBoundary : copy.boundary : copy.unavailable}</p>
+    {capture && (capture.packet.schema === 3 || capture.packet.schema === 4) && capture.packet.optimizer.status === "unavailable" && <p className="mt-2 text-xs text-ink-3">{copy.optimizerUnavailable}</p>}
+    {capture?.packet.schema === 4 && <p className="mt-2 text-xs text-ink-3">{copy.economicUnavailable}</p>}
+    {economicSummary && <dl className="mt-2 text-xs text-ink-3">{(["queryBudget", "citationAllocation", "authorSplit"] as const).map(family =>
+      <div key={family}><dt>{copy.economicFamilies[family]}</dt><dd>{copy.economicStatus[economicSummary[family]]}</dd></div>)}</dl>}
     {capture && <>
       <p className="mt-2 text-xs text-ink-3">{copy.modelBoundary}</p>
       <p className="mt-2 text-xs text-ink-3">{copy.amounts}</p>
