@@ -1,5 +1,38 @@
 # MCP package distribution
 
+## App60 audit and presentation cohort — October12 candidate
+
+App/OpenAPI0.27.60 selects hosted MCP0.3.17, stdio/npm/official Registry0.4.19
+and Desktop0.4.17. Changed shared executable inputs require new package artifacts;
+extension0.1.4.2 keeps its exact unchanged payload and prior provenance. These
+candidate identities do not claim publication, owner installation or deployment.
+The actually delivered59 cohort remains app513c6fa6, hosted0.3.16 and published
+npm/Registry0.4.18 until this release's actual acceptance/readbacks complete.
+
+The existing installed-package test gains actual compiled stdio vectors for
+finite presentation labels, an honest UNKNOWN answer-language notice and v3
+available/capture-bound/private-field refusal. It asserts the unchanged paid
+question/budget/deep/async body, evidence/machine fields, micro amounts,
+settlement references and the receipt/checkpoint/result hashes actually exported
+by the contract. Language is not sent in the stdio paid body. Syntax/source
+checks do not substitute for running this final installed bundle.
+
+Freeze the accepted cohort and versioned locks before its one final canonical
+offline reproduction; obtain required current-source aggregate/platform/domain
+success, including exact main acceptance for publication. Build/read back the
+final bundle/tarball and Desktop helper/native manifests, checksums and source
+commit. Publish once through the existing npm/Registry/release mechanisms, verify
+exact/latest identities and actual artifacts, then deploy combined main once and
+verify public health/commit/OpenAPI/initialized MCP. Restore only authorized
+roles/held policies and publish one factual product update after successful delivery.
+
+No new provider/model/search/payment allowance, private disclosure, signing,
+schema/backfill, custody or scheduler authority is granted. Original301/257/276
+completion and profile/privacy/financial-language activation remain separate
+held gates. The corrected idle signing source must pass its four actual compiled
+observations before original274 completion; earlier guarded refusals are retained.
+See [supported-surface roles](surface-parity.md).
+
 ## App58 web repair — October 12 source candidate
 
 App/OpenAPI0.27.58 changes web header interaction and loading shells. Web-only

@@ -1,5 +1,30 @@
 # Supported-surface release parity
 
+## App60 audit and presentation cohort — October12 candidate
+
+Candidate identities: app/OpenAPI **0.27.60**, hosted MCP **0.3.17**,
+stdio/npm/official Registry **0.4.19**, Desktop **0.4.17**. The unchanged
+extension payload retains **0.1.4.2**; publication is separate from installation.
+Production **0.27.59 /513c6fa6** is delivered; this candidate is not yet deployed.
+
+| Surface | Coordinated behavior and boundary | Acceptance |
+| --- | --- | --- |
+| Web/report | Bounded ordinary v3 optimizer replay; unavailable/private captures remain explicit. Idle signing fixes retain every monetary/viewport guard. | Final stock Next/browser CI, corrected four-case compiled observation and exact deployed commit. |
+| API/OpenAI/A2A | Closed v3 projections and presentation-only finite labels. Machine codes, raw answer/evidence, paid body, amounts and receipts retain authority. | Exact combined aggregate/domain checks and deployed OpenAPI. |
+| Remote MCP | Shared research labels and v3 projection; no language directive or new payment/incident tool. | Initialized0.3.17 and actual deployed contract. |
+| Stdio/npm/Registry | Language controls affect local presentation after the buyer returns. Answer language stays UNKNOWN without recorded authority. | Final installed bundle vectors, isolated consumer/integrity/provenance, npm and Registry exact/latest readbacks. |
+| CLI | Existing local audit/result/export roles; Operator queue is read-only. | Exact source and applicable controls; no general CLI locale claim. |
+| Desktop | Changed shared executable inputs require a fresh0.4.17 helper/native package; existing renderer and custody roles remain. | Final-source packaged smoke/fresh-runner acceptance, source/checksum asset readback. |
+| Extension | All shipped inputs remain byte-identical; hosted page updates arrive through existing links. | Confirm final12-input equality; retain prior0.1.4.2 artifact provenance, no new zip/store claim. |
+| Bots | Help/private-placeholder labels and scoped help-only preferences. | Hosted source; Telegram/Discord command-definition readback before discoverability claims. No live message trial is inferred. |
+| A2A worker/private ops/email | Deadline observer stays OFF on the existing locked cadence. No new recipient, timer, email preference or customer delivery. | Preserve ENV/holds; real activation/customer/human/timeliness gates remain open. |
+
+Original #301 integer allocation/reservation-release/every-record qualification,
+#257 real service delivery and #276 trusted producer/report/email/client language
+agreement remain open. Privacy/profile, schema/backfill, Zotero, financial-copy,
+scheduler and funding holds are unchanged. A source fixture is not actual delivery.
+See the [cohort distribution gates](mcp-distribution.md).
+
 ## App58 iPhone header repair — October 12 source candidate
 
 App/OpenAPI **0.27.58** repairs Safari wallet selection and header navigation.
