@@ -52,7 +52,8 @@ the reviewed public server wrapper separately validates ingress metadata. API ke
 not acquire this publishing role. SIWE establishes wallet authentication; it does
 not replace the separate registration authorization. See the authoritative
 [SIWE specification](https://eips.ethereum.org/EIPS/eip-4361).
-Google/Circle EOAs use the same wallet session, publishing proof and typed authorization gates; live Google end-to-end acceptance remains open.
+Google/Circle EOAs use the same wallet session, publishing proof and typed
+authorization gates; live Google end-to-end acceptance remains open.
 
 Before opening the wallet prompt and again after it resolves, the browser reads
 the live Wagmi connection store. An account, chain or connection-state change

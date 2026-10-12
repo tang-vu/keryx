@@ -34,15 +34,15 @@ Retained receipt SHA-256: postflight `c40f55fea824eb9fa792ceb380a215b1e6f8594bcd
 front-door clear `b5488e1dda6c9dacaa8294c4a733d0ad8cff56126b57bf21f20ebcd77932f183`;
 public readback `24f45bf693646d372612242a0b2b1882562bf5d0b3c26eb98ce29476c2c9d64c`;
 authenticated availability `3f3834a1504f5a2db7411796de9f0d52c911b9fc288b1e3b71bf8696fdd62c63`.
-The Arc Canteen product announcement was acknowledged at `12:47:35Z` (HTTP 200,
-delivery known); receipt `0db56487b7c7ca11eea7240177ad20fe55b1da9b66a1d6bcb09f18bf8ebf143f`.
+The Arc Canteen product event created at `12:47:35Z` was acknowledged HTTP 200
+(delivery known); event SHA `0db56487b7c7ca11eea7240177ad20fe55b1da9b66a1d6bcb09f18bf8ebf143f`.
 It names Arc mainnet and makes no traction claim; historical event/profile settings were retained.
 
 Earlier accepted `b6009528` and `2f47a2d4` / 0.27.61 evidence retains its original source/profile.
 The [v0.27.62](https://github.com/tang-vu/keryx/releases/tag/v0.27.62) small source/checksum manifests
 name `d7f79046`, MCP **0.4.18** and Operator installer **0.4.16**. The MCP manifest records
 `npmRegistryPublished: false`; this limited readback does not verify npm or binary byte equality.
-The one-shot mainnet source backup's read-only full typed-pair proof is
+The reviewed read-only typed backup succeeded; retained SQLite backup SHA
 `d099899511523050385a562faa22d4f2487b0a819f79d6254c967d22a060423d`.
 The ordinary storage-identity snapshot's mainnet network-classification refusal remains open;
 its scanner/runtime was not weakened. See [pilot authority and channel boundaries](creator-registration-sponsorship.md).
