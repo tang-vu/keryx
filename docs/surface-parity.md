@@ -25,6 +25,17 @@ agreement remain open. Privacy/profile, schema/backfill, Zotero, financial-copy,
 scheduler and funding holds are unchanged. A source fixture is not actual delivery.
 See the [cohort distribution gates](mcp-distribution.md).
 
+## App60 product clarity — October 12 source candidate
+
+App/OpenAPI **0.27.60** explains the research product, publishes indexed pricing/
+about pages and unifies official support. New English copy is web-only; native,
+CLI, API, remote/stdio MCP, extension and bot payment/tool roles retain their
+contracts. Informational package examples share checkout pricing without making
+readiness, purchase or settlement claims. Original evidence and private visibility
+remain authoritative. Compiled graph qualification, exact CI, deployed identity
+and public package readbacks are separate gates. See
+[scope and validation](engineering/product-clarity-2026-10-12.md).
+
 ## App58 iPhone header repair — October 12 source candidate
 
 App/OpenAPI **0.27.58** repairs Safari wallet selection and header navigation.

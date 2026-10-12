@@ -33,6 +33,15 @@ held gates. The corrected idle signing source must pass its four actual compiled
 observations before original274 completion; earlier guarded refusals are retained.
 See [supported-surface roles](surface-parity.md).
 
+## App60 product discovery — October 12 source candidate
+
+App/OpenAPI **0.27.60** changes web discovery/support and the public machine-readable
+product description. Web-only copy is excluded from packaged catalogues; existing
+remote/stdio MCP and desktop roles retain their contracts. Confirm unchanged
+compiled inputs before retaining original client artifacts, and read actual
+published versions independently. No synchronized installer or package delivery
+follows a marketing change alone. See [surface parity](surface-parity.md).
+
 ## App58 web repair — October 12 source candidate
 
 App/OpenAPI0.27.58 changes web header interaction and loading shells. Web-only

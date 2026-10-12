@@ -12,6 +12,7 @@ import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/public-support";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
   alternates: englishPublicAlternates("/privacy"),
 };
 
-const UPDATED = "October 11, 2026";
+const UPDATED = "October 12, 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -106,8 +107,8 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title={message("legal.privacy.retentionAndContact.heading")}>
-          <p>{richMessage("legal.privacy.retentionAndContact.records", { contactAddress: <a href="mailto:vutang2212@gmail.com" className="text-seal underline underline-offset-2">
-              vutang2212@gmail.com
+          <p>{richMessage("legal.privacy.retentionAndContact.records", { contactAddress: <a href={SUPPORT_MAILTO} className="text-seal underline underline-offset-2">
+              {SUPPORT_EMAIL}
             </a> })}</p>
         </Section>
       </main>

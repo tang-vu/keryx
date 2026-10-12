@@ -22,6 +22,7 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { ArchiveAnswerRow } from "@/components/keryx/archive-answer-row";
 import { ArchiveSearch } from "@/components/keryx/archive-search";
 import { ArchiveTopicChips } from "@/components/keryx/archive-topic-chips";
+import { ProductEntryNote } from "@/components/keryx/product-guide";
 import { safeInlineJson } from "@/lib/safe-json";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 
@@ -152,6 +153,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
           {copy(entries.length === 1 ? "reportTopic.summary.one" : "reportTopic.summary.other", { count: entries.length })}
         </p>
 
+        <div className="mt-6"><ProductEntryNote /></div>
         <ArchiveSearch
           terms={shown.map(searchTerm)}
           others={rest.map((e) => ({
