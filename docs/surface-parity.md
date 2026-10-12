@@ -1004,3 +1004,29 @@ scaffold, with its real transport and funding held. Source tests do not assert
 published package/installer versions or deployed commit equality. Required hosted
 acceptance, review, actual built-browser checks and coordinated delivery remain
 gates; see [scope and remaining issue298 criteria](engineering/purchase-outcomes-298.md).
+
+
+## App63 combined cohort after main436 convergence - October12 candidate
+
+The release candidate now uses app/OpenAPI **0.27.63**. The whole incoming
+OpenAPI obtains its identity from package.json; no hardcoded OpenAPI version
+is added. Main436/d7f79046 advanced the separate app62 source, so prior App62
+and App61 sections retain historical candidate provenance rather than acceptance
+of this combined source. Existing stdio/npm/official Registry **0.4.19**, hosted
+MCP **0.3.17** and Desktop **0.4.17** remain candidates. Retain extension
+**0.1.4.2** only with final twelve-input equality and original artifact provenance.
+
+The normal merge preserves main436, PR430 product discovery, PR428 registration
+and all prior cohort source/documents. The whole incoming startup/privacy/signature
+authority requires its independent review. No version scalar or graph inventory
+proves runtime compatibility, publication, installation or delivery. Freeze the
+final source and versioned lock before one canonical offline reproduction; require
+fresh exact-source aggregate/domain/platform CI and main publication acceptance,
+then final shared-client/native artifacts and readbacks before one combined deploy.
+
+Accepted59/513c6fa6 remains historical delivery evidence. Public c49f4b3e/0.27.60
+health establishes availability only; physical baseline, ENV/custody/Operator/holds,
+backup/dependency preservation and two full trusted originals remain separate gates.
+Original301/257/276/274, privacy/profile and financial-language criteria stay open.
+No new spending/funding, sponsor or registry-origin activation, production DDL/
+backfill, custody or schedule authority is granted. See [distribution gates](mcp-distribution.md).

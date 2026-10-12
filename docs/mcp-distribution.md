@@ -324,3 +324,30 @@ attempts; never repeat a payment to make a new package look healthy.
 Do not substitute an unpublished npm version in a registry install configuration.
 After npm publication, verify the public package bytes and update the registry
 manifest separately. The hosted `/mcp` endpoint updates with the web deployment.
+
+
+## App63 final combined distribution candidate - October12
+
+App/OpenAPI **0.27.63** follows the normal main436/d7f79046 convergence. OpenAPI
+keeps the complete incoming dynamic package.json version authority. Prior App62/
+App61 sections preserve their historical candidate evidence; no app62 identity,
+tag or other-source publication is reused for this final combined source. Hosted
+MCP **0.3.17**, stdio/npm/official Registry **0.4.19** and Desktop **0.4.17**
+remain candidate versions. Extension **0.1.4.2** retains accepted payload
+provenance only after final twelve-input equality; no new extension artifact is claimed.
+
+The final normalized app lock and current executable inputs need a fresh stock
+canonical offline reproduction after different-peer combined-source acceptance.
+Require exact-source aggregate/domain/platform CI and main publication acceptance;
+build and verify final installed stdio/Registry vectors, source/integrity manifests,
+Desktop helper/native artifacts and exact/latest publication readbacks. One accepted
+combined deployment must verify public commit/health/OpenAPI/initialized MCP and
+the four original compiled signing observations before completion and one factual
+product update. No artifact, installation, deployment or settled traction is claimed here.
+
+Retain accepted59 and the qualified c49/app60 public observations. Fresh physical
+ENV/custody/Operator/holds, backups/dependency state and two complete originals
+remain mandatory. All existing surface roles and held policies remain: no new
+model/search/payment spending, sponsor/registry activation, production DDL/backfill,
+custody or scheduler authority. Original301/257/276/274 and profile/privacy/
+financial-language gates remain open. See [supported-surface roles](surface-parity.md).
