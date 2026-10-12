@@ -56,4 +56,14 @@ it("roundtrips only bounded claim context and retains the original initiating wa
   expect(registrationOwnerMatches(target, `0x${"c".repeat(40)}`)).toBe(false);
   expect(sourceClaimConnectHref(draft)).not.toBeNull();
 });
+it("retains the exact Conzit feed through claim sign-in without granting publishing authority", () => {
+  const draft = { url: "https://conzit.com/", rssUrl: "https://conzit.com/rss.xml", owner };
+  const target = sourceClaimTarget(draft);
+  expect(sourceClaimDraft(new URL(target, "https://test.example").searchParams)).toEqual(draft);
+  expect(safeRegistrationReturn(target)).toBe(target);
+  expect(new URL(sourceClaimConnectHref(draft)!, "https://test.example").searchParams.get("returnTo")).toBe(target);
+});
+it.each(["http://conzit.com/rss.xml", "https://other.example/rss.xml", "https://user:pass@conzit.com/rss.xml", "javascript:alert(1)"])("refuses an unsafe or foreign claim feed %s", rss => {
+  expect(safeRegistrationReturn(`/claim-source?url=https://conzit.com/&rss=${encodeURIComponent(rss)}`)).toBeNull();
+});
 it.each(["/claim-source#x", "/claim-source/../connect", "/claim-source?url=http://publisher.example", "/claim-source?url=https://user:pass@publisher.example", "/claim-source?referenceId=../wrong", "/claim-source?challengeId=wrong", "/claim-source\\@evil.example", "/claim-source?url=javascript:alert(1)"])("rejects unsafe source claim return %s", value => expect(safeRegistrationReturn(value)).toBeNull());

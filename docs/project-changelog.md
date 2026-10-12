@@ -1,5 +1,26 @@
 # Keryx Project Changelog
 
+### Conzit creator registration gas sponsorship (0.27.61 candidate)
+
+- Retain private creator authorization and exact sponsor transaction bytes before
+  exposure; add explicit owner resume on the website and same-origin SIWE API.
+  Resume preserves the original nonce, fee limits, attempts and gas reservation.
+  Inspection and reload do not execute transactions or expose bearer values.
+- Admit freshly verified publisher origins under per-domain and wallet caps, so
+  Conzit can use its own creator wallet. Explicit expired-original resolution
+  preserves the exact transaction and charges its matching reverted receipt;
+  any reviewed replacement consumes another attempt within the same allowance.
+- Keep the two live V1 listings bound to V1 while new registrations select V3.
+  Index each configured registry independently and quarantine cross-origin ID
+  collisions without replacing legacy payout authority or blocking valid events.
+- Prepare an unsigned V3 deployment packet with pinned runtime and explicit
+  maximum liability. Sponsorship remains disabled without its finite protected
+  policy; funded and live activation evidence stays separate from source tests.
+- Web/API and SQLite share the recovery contract. CLI, remote/stdio MCP,
+  desktop, extension and bots retain their research/inspection or browser-handoff
+  roles; no publisher key or sponsor executor is distributed to those surfaces.
+  This candidate does not claim package/installer synchronization or creator
+  earnings. See the funded acceptance and mainnet status for actual rollout evidence.
 ### Research product clarity and official support (source candidate)
 
 - Lead with cited AI research, visible source decisions and practical researcher,

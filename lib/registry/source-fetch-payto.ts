@@ -2,6 +2,7 @@ import type { Source } from "../types";
 import { allowedPayTo } from "./payto-guard";
 import { config } from "../config";
 import { sourceId } from "./registry-client";
+import { sourceRegistryAuthorityForSource } from "./source-registry-authority";
 
 export interface SourceFetchTerms {
   payTo: string;
@@ -35,7 +36,8 @@ export async function sourceFetchTerms(
     return fallback();
   }
 
-  const allowlist = await allowedPayTo(source.onchainId, options);
+  const authority = sourceRegistryAuthorityForSource(source);
+  const allowlist = await allowedPayTo(source.onchainId, { ...options, ...(authority ? { authority } : {}) });
   if (allowlist.status === "onchain") {
     if (config.profile.name === "arc" && (allowlist.stale || !allowlist.active ||
       sourceId(allowlist.creator as `0x${string}`, source.url).toLowerCase() !== source.onchainId.toLowerCase()))

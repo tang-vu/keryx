@@ -22,6 +22,7 @@ import {
   summarize,
   PARITY_STATE_KEY,
 } from "../lib/registry/parity.ts";
+import { configuredRegistryAuthorities } from "../lib/registry/source-registry-authority.ts";
 
 async function main(): Promise<void> {
   if (!config.registryReadAddress) {
@@ -30,7 +31,13 @@ async function main(): Promise<void> {
   }
 
   const db = await getDb();
-  const report = await auditRegistryParity(db, chainRegistryReader());
+  const authorities = configuredRegistryAuthorities();
+  const reports = await Promise.all((authorities.length ? authorities : [undefined]).map(authority => auditRegistryParity(db, chainRegistryReader(authority))));
+  const checkpoints = reports.map(value => value.lastSyncedBlock);
+  const report = { checkedAt: new Date().toISOString(), chainCount: reports.reduce((sum, value) => sum + value.chainCount, 0),
+    comparedCount: reports.reduce((sum, value) => sum + value.comparedCount, 0), issues: reports.flatMap(value => value.issues),
+    headBlock: reports.reduce((head, value) => BigInt(value.headBlock) > BigInt(head) ? value.headBlock : head, "0"),
+    lastSyncedBlock: checkpoints.some(value => value === null) ? null : checkpoints.reduce<string>((low, value) => BigInt(value!) < BigInt(low) ? value! : low, checkpoints[0]!) };
 
   const lag =
     report.lastSyncedBlock !== null

@@ -187,6 +187,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
   const worker = await fixtureBundle("worker", { entryPoints: ["lib/session/mainnet-session-signer.worker.ts"], platform: "browser", bundle: true, write: false,
     banner: { js: transportProbe },
     define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
+      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS": "undefined",
       "process.env.NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS":'"300"' } });
   const hook = await fixtureBundle(failCitation === "creator" ? "creator" : "session", { stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
     import React from 'react'; import {createRoot} from 'react-dom/client';

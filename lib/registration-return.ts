@@ -4,7 +4,7 @@ export interface RegistrationDraft {
   gapId?: string; matchedItemLink?: string; owner?: string;
   sourceClaimId?: string; fetchPrice?: number;
 }
-export interface SourceClaimDraft { url?: string; referenceId?: string; claimId?: string; challengeId?: string; owner?: string }
+export interface SourceClaimDraft { url?: string; rssUrl?: string; referenceId?: string; claimId?: string; challengeId?: string; owner?: string }
 const MAX_CONNECT_HREF = 6_000;
 const MAX_TARGET = MAX_CONNECT_HREF;
 const RESERVED_OWNER = "0x" + "0".repeat(40);
@@ -56,15 +56,18 @@ export function registrationConnectHref(draft: RegistrationDraft): string | null
 export function sourceClaimDraft(params: URLSearchParams): SourceClaimDraft {
   const url = webUrl(params.get('url'));
   if (params.get('url') && (!url || new URL(url).protocol !== 'https:')) throw new Error('Use a full, credential-free HTTPS source URL.');
+  const rssUrl = webUrl(params.get('rss'));
+  if (params.get('rss') && (!url || !rssUrl || new URL(rssUrl).protocol !== 'https:' || new URL(rssUrl).origin !== new URL(url).origin))
+    throw new Error('Use a full HTTPS feed URL on the same publisher origin.');
   const referenceId = params.get('referenceId'), claimId = params.get('claimId'), challengeId = params.get('challengeId'), owner = params.get('owner');
   if (referenceId && !/^public:[a-z0-9-]{1,80}$/.test(referenceId)) throw new Error('Invalid public reference.');
   if (claimId && !/^[a-zA-Z0-9_-]{1,128}$/.test(claimId)) throw new Error('Invalid source claim.');
   if (challengeId && !/^[a-f0-9]{64}$/.test(challengeId)) throw new Error('Invalid source challenge.');
-  return { ...(url ? { url } : {}), ...(referenceId ? { referenceId } : {}), ...(claimId ? { claimId } : {}), ...(challengeId ? { challengeId } : {}), ...(owner && /^0x[0-9a-fA-F]{40}$/.test(owner) ? { owner: owner.toLowerCase() } : {}) };
+  return { ...(url ? { url } : {}), ...(rssUrl ? { rssUrl } : {}), ...(referenceId ? { referenceId } : {}), ...(claimId ? { claimId } : {}), ...(challengeId ? { challengeId } : {}), ...(owner && /^0x[0-9a-fA-F]{40}$/.test(owner) ? { owner: owner.toLowerCase() } : {}) };
 }
 export function sourceClaimTarget(draft: SourceClaimDraft): string {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries({ url: draft.url, referenceId: draft.referenceId, claimId: draft.claimId, challengeId: draft.challengeId, owner: draft.owner })) if (value) params.set(key, value);
+  for (const [key, value] of Object.entries({ url: draft.url, rss: draft.rssUrl, referenceId: draft.referenceId, claimId: draft.claimId, challengeId: draft.challengeId, owner: draft.owner })) if (value) params.set(key, value);
   return `/claim-source${params.size ? `?${params}` : ''}`;
 }
 export function sourceClaimConnectHref(draft: SourceClaimDraft): string | null {

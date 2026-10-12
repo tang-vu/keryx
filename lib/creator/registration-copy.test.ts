@@ -77,7 +77,25 @@ for (const fixture of fixtures.forms) {
     const source = readFileSync(new URL("../../components/keryx/sponsored-registration-form.tsx", import.meta.url), "utf8");
     const form = component(source, states, fixture.authenticated).SponsoredRegistrationForm;
     const element = await form({ claimId: fixture.claim?.id });
-    expect(visible(renderToStaticMarkup(element))).toEqual(fixture.visible);
+    const rendered = visible(renderToStaticMarkup(element));
+    if (row && ["signing", "submitted"].includes(row.state)) {
+      expect(rendered).toContainEqual({ tag: "p", attributes: {}, text: copy.resumeOriginalExplanation });
+      expect(rendered).toContainEqual({ tag: "button", attributes: fixture.busy || !fixture.available ? { disabled: "" } : {}, text: copy.resumeOriginalButton });
+      expect(rendered).toContainEqual({ tag: "p", attributes: {}, text: copy.resolveExpiredExplanation });
+      expect(rendered).toContainEqual({ tag: "button", attributes: fixture.busy || !fixture.available ? { disabled: "" } : {}, text: copy.resolveExpiredButton });
+      // Preserve the historical copy baseline separately from the intentional new execution control.
+      const additions: readonly string[] = [copy.resumeOriginalExplanation, copy.resumeOriginalButton, copy.resolveExpiredExplanation, copy.resolveExpiredButton];
+      const original = rendered.filter(item => !additions.includes(item.text))
+        .map(item => ({ ...item, text: item.text.replace(copy.resumeOriginalExplanation + copy.resumeOriginalButton, "").replace(copy.resolveExpiredExplanation + copy.resolveExpiredButton, "") }));
+      expect(original).toEqual(fixture.visible);
+    } else if (row?.state === "reverted" && fixture.claim && fixture.available) {
+      expect(rendered).toContainEqual({ tag: "p", attributes: {}, text: copy.revertedRequestExplanation });
+      expect(rendered).toContainEqual({ tag: "button", attributes: fixture.busy ? { disabled: "" } : {}, text: copy.prepareReplacementButton });
+      const revertedAdditions: readonly string[] = [copy.revertedRequestExplanation, copy.prepareReplacementButton];
+      const original = rendered.filter(item => !revertedAdditions.includes(item.text))
+        .map(item => ({ ...item, text: item.text.replace(copy.revertedRequestExplanation + copy.prepareReplacementButton, "") }));
+      expect(original).toEqual(fixture.visible);
+    } else expect(rendered).toEqual(fixture.visible);
   });
 }
 

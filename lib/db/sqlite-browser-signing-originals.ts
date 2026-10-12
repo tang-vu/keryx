@@ -30,6 +30,8 @@ import {
   type BrowserSigningSnapshot,
 } from "./browser-signing-originals";
 import type { SessionGrantRecord } from "./keryx-db";
+import { readSqliteSourceRegistryOrigin } from "./source-registry-origin";
+import { sameRegistryAuthority, sourceRegistryAuthorityForSource } from "../registry/source-registry-authority";
 
 /** Additive installation only. No activation function or production flag is supplied. */
 export function initializeSqliteBrowserSigningOriginals(db: DatabaseSync) {
@@ -281,6 +283,17 @@ function admitOriginal(
         : floor?.min_original_version === 3
     )
       return { status: "refused" };
+    if (sourceInput) {
+      const context = sourceInput.sourceContext;
+      const source = db.prepare("SELECT onchain_id,url,active,verified FROM sources WHERE id=?").get(context.source.sourceId);
+      if (!source || source.active === 0 || source.verified !== 1 || source.url !== context.source.canonicalUrl ||
+          String(source.onchain_id).toLowerCase() !== context.source.registryId) return { status: "refused" };
+      const origin = sourceRegistryAuthorityForSource({ onchainId: String(source.onchain_id),
+        registryAuthority: readSqliteSourceRegistryOrigin(db, String(source.onchain_id)) });
+      // A sidecar admitted while RPC resolution was in flight cannot inherit the previous global selection.
+      if (origin ? !context.registry.origin || !sameRegistryAuthority(origin, context.registry.origin)
+        : Boolean(context.registry.origin)) return { status: "refused" };
+    }
     const q = db
       .prepare(
         "SELECT * FROM browser_signing_queries WHERE query_id=? AND namespace=?"

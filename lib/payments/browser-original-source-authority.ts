@@ -1,4 +1,4 @@
-import { createPublicClient, type Address, type Hex } from "viem";
+import { createPublicClient, keccak256, type Address, type Hex } from "viem";
 import type { KeryxDB } from "../db/keryx-db";
 import type { BrowserSourceOriginalAdmission } from "../db/browser-signing-originals";
 import { prepareBrowserJournal } from "../db/browser-authorization-journal";
@@ -6,7 +6,8 @@ import { canonicalJson } from "../canonical-json";
 import { arcTestnet } from "../chains";
 import { config } from "../config";
 import { attestedArcAuthorityHttp } from "../arc-rpc-attestation";
-import { REGISTRY_ABI } from "../registry/registry-abi";
+import { REGISTRY_ABI, REVISIONED_REGISTRY_ABI } from "../registry/registry-abi";
+import { sourceRegistryAuthorityForSource } from "../registry/source-registry-authority";
 import { sourceItemContentVersion } from "../sources/source-item-asset";
 import {
   ObservationElapsedGuard,
@@ -78,7 +79,6 @@ function create(
   rpcUrl: string,
   registry: string
 ): BrowserOriginalSourceAuthority {
-  if (!/^0x[0-9a-fA-F]{40}$/.test(registry)) return refused();
   const client = createPublicClient({
     chain: arcTestnet,
     transport: attestedArcAuthorityHttp(rpcUrl, {
@@ -131,11 +131,26 @@ function create(
             sourceItemContentVersion(item) !== input.source.contentVersion
           )
             return refused();
+          const origin = sourceRegistryAuthorityForSource(source);
+          const sourceRegistry = origin?.address ?? registry;
+          if (!/^0x[0-9a-fA-F]{40}$/.test(sourceRegistry) || origin && origin.network !== "eip155:5042002") return refused();
           const block = await client.getBlock({ blockTag: "latest" });
           life.live();
           if (block.number === null || block.hash === null) return refused();
+          if (origin) {
+            if (block.number < BigInt(origin.deployBlock)) return refused();
+            const code = await client.getCode({ address: origin.address, blockNumber: block.number });
+            life.live();
+            if (!code || code === "0x" || keccak256(code) !== origin.codeHash) return refused();
+            if (origin.version !== 1) {
+              const declared = await client.readContract({ address: origin.address, abi: REVISIONED_REGISTRY_ABI,
+                functionName: "registryVersion", blockNumber: block.number });
+              life.live();
+              if (declared !== origin.version) return refused();
+            }
+          }
           const record = await client.readContract({
-            address: registry as Address,
+            address: sourceRegistry as Address,
             abi: REGISTRY_ABI,
             functionName: "get",
             args: [source.onchainId as Hex],
@@ -193,7 +208,8 @@ function create(
             endpoint: { method: "GET", path: "/" },
             registry: {
               network: "eip155:5042002",
-              contract: registry.toLowerCase(),
+              contract: sourceRegistry.toLowerCase(),
+              ...(origin ? { origin } : {}),
               blockNumber: block.number.toString(),
               blockHash: block.hash.toLowerCase(),
               blockTimestamp: block.timestamp.toString(),

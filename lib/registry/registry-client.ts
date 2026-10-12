@@ -36,6 +36,7 @@ import { config } from "../config";
 
 import { REGISTRY_ABI, REVISIONED_REGISTRY_ABI } from "./registry-abi";
 import { getServerRegistryVersion, type RegistryVersion } from "./registry-version";
+import { assertConfiguredRegistryAuthority, configuredRegistryAuthorities, configuredRegistrationRegistryAuthority, type SourceRegistryAuthority } from "./source-registry-authority";
 export { REGISTRY_ABI } from "./registry-abi";
 
 // ── Source ID helpers ─────────────────────────────────────────────────────────
@@ -94,25 +95,33 @@ export type OnChainRecord = {
  */
 export async function getRegistrySource(
   id: Hex,
-  options: { timeoutMs?: number } = {},
+  options: { timeoutMs?: number; authority?: SourceRegistryAuthority } = {},
 ): Promise<OnChainRecord | null> {
-  const version = getServerRegistryVersion();
-  if (!config.registryReadAddress) return null;
+  const authority = options.authority ? assertConfiguredRegistryAuthority(options.authority) : undefined;
+  const version = authority?.version ?? getServerRegistryVersion();
+  const address = authority?.address ?? config.registryReadAddress;
+  if (!address) return null;
 
   const client = getPublicClient(options.timeoutMs);
+  if (authority) {
+    const code = await client.getCode({ address: authority.address });
+    if (!code || code === "0x" || keccak256(code) !== authority.codeHash ||
+        authority.version !== 1 && await client.readContract({ address: authority.address, abi: REVISIONED_REGISTRY_ABI, functionName: "registryVersion" }) !== authority.version)
+      throw new Error("Bound registry code or version differs from its original authority");
+  }
   // Do NOT catch here — let RPC errors propagate so the indexer knows this chunk
   // failed and does not advance the checkpoint past unprocessed logs.
   let record: OnChainRecord;
   if (version === 1) {
     record = await client.readContract({
-      address: config.registryReadAddress as Address,
+      address: address as Address,
       abi: REGISTRY_ABI,
       functionName: "get",
       args: [id],
     });
   } else {
     const [source, revision] = await client.readContract({
-      address: config.registryReadAddress as Address,
+      address: address as Address,
       abi: REVISIONED_REGISTRY_ABI,
       functionName: "getWithRevision",
       args: [id],
@@ -147,6 +156,7 @@ export interface RegistryCallParams {
  */
 export function buildRegisterArgs(p: RegistryCallParams) {
   getServerRegistryVersion();
+  configuredRegistrationRegistryAuthority();
   return {
     address: config.registryAddress as Address,
     abi: REGISTRY_ABI,
@@ -167,6 +177,7 @@ export function buildRegisterArgs(p: RegistryCallParams) {
  * update() takes the full sourceId (already derived and stored).
  */
 export interface UpdateCallParams {
+  registryAuthority?: SourceRegistryAuthority;
   id: Hex;
   payoutWallet: Address;
   authors: AuthorSplitInput[];
@@ -177,19 +188,20 @@ export interface UpdateCallParams {
 }
 
 export function buildUpdateArgs(p: UpdateCallParams) {
-  if (getServerRegistryVersion() !== 1) {
+  const authority = editRegistryAuthority(p.registryAuthority);
+  if ((authority?.version ?? getServerRegistryVersion()) !== 1) {
     if (p.expectedRevision === undefined || p.expectedRevision < BigInt(1) || p.expectedRevision > BigInt("18446744073709551615")) {
       throw new Error("Refresh the registry revision before building an update.");
     }
     return {
-      address: config.registryAddress as Address,
+      address: (authority?.address ?? config.registryAddress) as Address,
       abi: REVISIONED_REGISTRY_ABI,
       functionName: "update" as const,
       args: [p.id, p.expectedRevision, p.payoutWallet, p.authors, p.fetchPriceUsdc6, p.contentCid, p.tags] as const,
     };
   }
   return {
-    address: config.registryAddress as Address,
+    address: (authority?.address ?? config.registryAddress) as Address,
     abi: REGISTRY_ABI,
     functionName: "update" as const,
     args: [
@@ -206,22 +218,29 @@ export function buildUpdateArgs(p: UpdateCallParams) {
 /**
  * Returns the args for wagmi's useWriteContract to call registry.deactivate().
  */
-export function buildDeactivateArgs(id: Hex, expectedRevision?: bigint) {
-  if (getServerRegistryVersion() !== 1) {
+export function buildDeactivateArgs(id: Hex, expectedRevision?: bigint, registryAuthority?: SourceRegistryAuthority) {
+  const authority = editRegistryAuthority(registryAuthority);
+  if ((authority?.version ?? getServerRegistryVersion()) !== 1) {
     if (expectedRevision === undefined || expectedRevision < BigInt(1) || expectedRevision > BigInt("18446744073709551615")) {
       throw new Error("Refresh the registry revision before building a delist.");
     }
     return {
-      address: config.registryAddress as Address,
+      address: (authority?.address ?? config.registryAddress) as Address,
       abi: REVISIONED_REGISTRY_ABI,
       functionName: "deactivate" as const,
       args: [id, expectedRevision] as const,
     };
   }
   return {
-    address: config.registryAddress as Address,
+    address: (authority?.address ?? config.registryAddress) as Address,
     abi: REGISTRY_ABI,
     functionName: "deactivate" as const,
     args: [id] as const,
   };
+}
+
+function editRegistryAuthority(authority?: SourceRegistryAuthority): SourceRegistryAuthority | undefined {
+  if (authority) return assertConfiguredRegistryAuthority(authority);
+  if (configuredRegistryAuthorities().length) throw new Error("Creator edit requires the original source registry origin");
+  return undefined;
 }
