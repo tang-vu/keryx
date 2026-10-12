@@ -1,3 +1,4 @@
+import {privacyReadsActive} from "./run-privacy/contracts";
 /**
  * The one place the public answer archive is built.
  *
@@ -49,7 +50,7 @@ async function rebuild(): Promise<ArchiveEntry[]> {
  * The public archive, newest first. Never throws: a database hiccup serves the previous copy
  * (without refreshing its timestamp, so the next caller retries) rather than blanking a page.
  */
-export async function getArchiveCached(): Promise<ArchiveEntry[]> {
+async function legacyArchiveCached(): Promise<ArchiveEntry[]> {
   if (cached && Date.now() - cached.at < TTL_MS) return cached.entries;
   if (!building) {
     building = rebuild().finally(() => {
@@ -61,4 +62,14 @@ export async function getArchiveCached(): Promise<ArchiveEntry[]> {
   } catch {
     return cached?.entries ?? [];
   }
+}
+
+/** Active privacy never serves a retained legacy cache or enumerates immutable archive originals. */
+export async function getArchiveCached():Promise<ArchiveEntry[]> {
+  let active=privacyReadsActive({});
+  try {
+    const db=await getDb();active=privacyReadsActive(db);
+    if(active)return await buildArchiveStream(db.iterateRecentQueries(ARCHIVE_WINDOW_RUNS));
+  } catch {if(active)return [];}
+  return legacyArchiveCached();
 }

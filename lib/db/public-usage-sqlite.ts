@@ -1,12 +1,15 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { QueryRun } from "../types";
+import type { RunPrivacyStore } from "../run-privacy/contracts";
+import { parseRunUsage } from "../research/usage-provenance";
 import { assertOrdinarySqliteResearchAuthority } from "./research-monthly";
 import { publicHistoryIncludes } from "../research-audit/usage-cohort";
-import { MAX_USAGE_RUNS, MAX_USAGE_PAYMENTS, projectUsageCorpus, usageWindowSchema, UsageUnavailable,
+import { MAX_USAGE_RUNS, MAX_USAGE_PAYMENTS, projectUsageCorpus, publishedUsageHistory, usageWindowSchema, UsageUnavailable,
   type PublicUsageStore, type UsageCorpus, type UsageWindow } from "../usage/contracts";
 
 /** No schema installation, ledger writes, or enrolled adapter fallback. */
-export function createSqlitePublicUsage(db: DatabaseSync): PublicUsageStore {
+export function createSqlitePublicUsage(db: DatabaseSync, privacy?: () => RunPrivacyStore): PublicUsageStore {
+  const active=!!privacy || process.env.KERYX_RUN_PRIVACY_ENABLED==="true";
   assertOrdinarySqliteResearchAuthority(db);
   function transaction<T>(action: () => T): T {
     assertOrdinarySqliteResearchAuthority(db); db.exec("BEGIN");
@@ -36,8 +39,13 @@ export function createSqlitePublicUsage(db: DatabaseSync): PublicUsageStore {
   }
   return Object.freeze({
     async summary(window) { return transaction(() => projectUsageCorpus(corpus(window), window).summary); },
+    async publishedHistory(window, cohort, limit) {
+      if (!active || !privacy) throw new UsageUnavailable();
+      const view = transaction(() => projectUsageCorpus(corpus(window), window));
+      return publishedUsageHistory(view, privacy(), cohort, limit);
+    },
     async history(window, cohort, limit) {
-      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new UsageUnavailable();
+      if (!active) { if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new UsageUnavailable();
       return transaction(() => {
         const view = projectUsageCorpus(corpus(window), window);
         // Classify/filter the complete bounded window BEFORE selecting a history page.
@@ -50,7 +58,23 @@ export function createSqlitePublicUsage(db: DatabaseSync): PublicUsageStore {
           if (value.id !== row.id || value.createdAt !== row.createdAt) throw new UsageUnavailable();
           return value;
         });
+      }); }
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new UsageUnavailable();
+      const selected = transaction(() => {
+        const view = projectUsageCorpus(corpus(window), window);
+        // Classify/filter the complete bounded window BEFORE selecting a history page.
+        const rows=view.runs.filter(run => cohort === "default" ? publicHistoryIncludes(run.classification.cohort)
+          : run.classification.cohort === cohort)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+        return {rows,classifications:view.classifications};
       });
+      if (!privacy) throw new UsageUnavailable();
+      const rows=await privacy().list({take:limit,ids:selected.rows.map(row => row.id)});
+      for(const run of rows) {
+        if(!selected.rows.some(value=>value.id===run.id&&value.createdAt===run.createdAt)
+          || JSON.stringify(parseRunUsage(run.usage))!==JSON.stringify(selected.classifications.get(run.id)))throw new UsageUnavailable();
+      }
+      return rows;
     },
   } satisfies PublicUsageStore);
 }

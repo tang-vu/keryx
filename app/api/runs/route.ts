@@ -11,6 +11,7 @@ import { config } from "@/lib/config";
 import { historyCohort, usageWindow } from "@/lib/usage/contracts";
 import { parseRunUsage } from "@/lib/research/usage-provenance";
 import { publicHistoryIncludes } from "@/lib/research-audit/usage-cohort";
+import { privacyReadsActive, requirePrivacy } from "@/lib/run-privacy/contracts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +44,7 @@ export async function GET(request: Request = new Request("https://keryx.invalid/
       } });
     }
     const db = await getDb();
+    if(privacyReadsActive(db))requirePrivacy(db);
     const classified = params.has("network") || params.has("period") || params.has("since") || cohort !== "default";
     if (classified && db.publicUsage) {
       const runs = await db.publicUsage.history(window, cohort, 50);

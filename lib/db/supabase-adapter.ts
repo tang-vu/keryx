@@ -12,6 +12,9 @@ import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolle
 import { createSupabasePrivateProfiles } from "./private-profiles-supabase";
 import { createSupabaseRunClaims } from "./run-claims-supabase";
 import { runClaimsEnabled, type RunClaimsStore } from "../run-claims/contracts";
+import { createSupabaseRunPrivacy } from "./run-privacy-supabase";
+import { withRunReadProjection } from "../run-privacy/projection";
+import { privacyReadsActive, requirePrivacy, type RunPrivacyStore } from "../run-privacy/contracts";
 import { createSupabaseRunOwnershipHistory } from "./run-ownership-history-supabase";
 import type { RunOwnershipHistoryStore } from "../run-claims/history";
 import { createSupabaseDeliverableAcceptance } from "./deliverable-acceptance-supabase";
@@ -159,6 +162,9 @@ export function assembleAuthorityBoundSupabaseCore(
 }
 
 export class SupabaseAdapter implements KeryxDB {
+  declare readonly runPrivacy?: RunPrivacyStore;
+  readonly #runPrivacyActive: boolean;
+  get runPrivacyActive(): boolean { return this.#runPrivacyActive; }
   declare readonly runClaims?: RunClaimsStore;
   declare readonly runOwnershipHistory?: RunOwnershipHistoryStore;
   declare readonly deliverableAcceptance?: DeliverableAcceptanceStore;
@@ -172,8 +178,12 @@ export class SupabaseAdapter implements KeryxDB {
     readDeployment: () => Readonly<StorageDeploymentManifest>; ready: boolean };
 
   constructor(capability?: object) {
+    this.#runPrivacyActive = process.env.KERYX_RUN_PRIVACY_ENABLED === "true";
     const construction = capability === undefined ? undefined : enrolledConstructions.get(capability);
     const deployment = construction?.deployment;
+    // Ordinary readers retain an immutable public accessor. Enrolled facades
+    // have no own key: their reflection refusals must satisfy Proxy invariants.
+    if (!deployment) Object.defineProperty(this,"runPrivacyActive",{get:()=>this.#runPrivacyActive});
     if (capability !== undefined && !construction) refuseStorage("invalid_operation");
     if (deployment && deployment.backend.kind !== "supabase") refuseStorage("identity_mismatch");
     this.#sb = construction?.client ?? createClient(
@@ -188,11 +198,13 @@ export class SupabaseAdapter implements KeryxDB {
       Object.defineProperty(this, "runClaims", { value: createSupabaseRunClaims(this.#sb) });
       Object.defineProperty(this, "runOwnershipHistory", { value: createSupabaseRunOwnershipHistory(this.#sb) });
     }
+    if (!deployment && this.runPrivacyActive) Object.defineProperty(this,"runPrivacy",{value:withRunReadProjection(
+      createSupabaseRunPrivacy(this.#sb,runClaimsEnabled(process.env)),run=>projectRecordedEvidenceProvenance(lookup=>this.readEvidenceProvenance(lookup),run))});
     if (!deployment) Object.defineProperty(this, "privateProfiles", { value: createSupabasePrivateProfiles(this.#sb) });
     if (!deployment) Object.defineProperty(this, "deliverableAcceptance", { value: createSupabaseDeliverableAcceptance(this.#sb) });
     if (!deployment) Object.defineProperty(this, "personalHistory", { value: createSupabasePersonalHistory(this.#sb) });
     if (!deployment) Object.defineProperty(this, "decisionReviews", { value: createSupabaseDecisionReviews(this.#sb) });
-    if (!deployment) Object.defineProperty(this, "publicUsage", { value: createSupabasePublicUsage(this.#sb) });
+    if (!deployment) Object.defineProperty(this, "publicUsage", { value: createSupabasePublicUsage(this.#sb,this.runPrivacyActive ? () => requirePrivacy(this) : undefined) });
     if (!deployment && this.privateProfiles) Object.defineProperty(this, "profileIdentities", { value: createSupabaseProfileIdentities(this.#sb, this.privateProfiles) });
     if (deployment) this.#enrolled = { deployment, ready: false, readDeployment: construction!.readDeployment,
       authority: new SupabaseAuthority(this.#sb, deployment.identity, () => { this.assertEntry(); return this.#enrolled?.ready === true; }) };
@@ -974,12 +986,18 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async listFollowUps(parentId: string): Promise<QueryRun[]> {
-    const { data } = await this.domainCall("list_follow_ups", { p_parent_id: parentId }, (_args) => this.#sb
+    if(!privacyReadsActive(this)) {
+      const { data } = await this.domainCall("list_follow_ups", { p_parent_id: parentId }, (_args) => this.#sb
       .from("query_runs")
       .select("data")
       .eq("parent_id", _args.p_parent_id)
       .order("created_at", { ascending: true }));
     return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), (data ?? []).map((r) => r.data as QueryRun));
+
+    }
+    const runs=await requirePrivacy(this).list({take:2500,parentId});
+    runs.sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id));
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup),runs);
   }
 
   async listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]> {
@@ -998,16 +1016,33 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async listRecentQueries(limit: number): Promise<QueryRun[]> {
-    const { data } = await this.domainCall("list_recent_queries", { p_limit: limit }, (_args) => this.#sb
+    if(!privacyReadsActive(this)) {
+      const { data } = await this.domainCall("list_recent_queries", { p_limit: limit }, (_args) => this.#sb
       .from("query_runs")
       .select("data")
       .order("created_at", { ascending: false })
       .limit(_args.p_limit));
     return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), (data ?? []).map((r) => r.data as QueryRun));
+
+    }
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup),await requirePrivacy(this).list({take:limit}));
   }
 
   async *iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
-    for await (const run of iterateSupabaseRecentQueries(this.helperRpcClient(), limit)) yield await projectRecordedEvidenceProvenance(lookup => this.readEvidenceProvenance(lookup), run);
+    if (!Number.isSafeInteger(limit) || limit<1 || limit>2500) throw new Error("Invalid query scan limit");
+    if(!privacyReadsActive(this)) {
+      for await (const run of iterateSupabaseRecentQueries(this.helperRpcClient(), limit)) yield await projectRecordedEvidenceProvenance(lookup => this.readEvidenceProvenance(lookup), run);
+      return;
+    }
+    let count=0, before: {id:string;createdAt:string} | undefined;
+    while(count<limit) {
+      const rows=await requirePrivacy(this).list({take:Math.min(32,limit-count),before}); if(!rows.length) break;
+      for(const run of rows) {
+        count++;const fresh=await requirePrivacy(this).read(run.id);
+        if(fresh.item?.state.visibility==="public")yield await projectRecordedEvidenceProvenance(lookup => this.readEvidenceProvenance(lookup),fresh.item.run);
+      }
+      before={id:rows.at(-1)!.id,createdAt:rows.at(-1)!.createdAt};
+    }
   }
 
   async recordPayment(p: PaymentRecord): Promise<void> {
@@ -2197,6 +2232,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async loadQueryMemories(limit: number): Promise<QueryMemoryEntry[]> {
+    if(privacyReadsActive(this)) return requirePrivacy(this).memories(limit);
     const { data } = await this.domainCall("load_query_memories", { p_limit: limit }, (_args) => this.#sb
       .from("query_memories")
       .select("*")

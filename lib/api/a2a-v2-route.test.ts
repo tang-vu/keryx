@@ -24,6 +24,7 @@ vi.mock("@/lib/config", async () => ({
 }));
 vi.mock("@/lib/agent", () => ({ collectRun: mocks.collectRun, getAgentDeps: mocks.getAgentDeps }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.getDb }));
+vi.mock("@/lib/run-privacy/auth", () => ({requestPrivacyActor:async()=>undefined}));
 vi.mock("@/lib/payments/mainnet-hosted-gateway", () => ({ assertMainnetHostedResearchReady: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/api-keys", () => ({ verifyApiKey: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({
@@ -112,6 +113,9 @@ describe("A2A v2 route", () => {
     });
     mocks.getDb.mockResolvedValue(db);
     Object.assign(db, { assertResearchPurchaseAuthority: vi.fn().mockResolvedValue(undefined) });
+    // These retained transport/economics cases use explicitly public admitted
+    // originals. Hidden/unknown/owner authorization is covered by poll.test.ts.
+    Object.assign(db,{runPrivacy:{read:async()=>({exists:true,item:{run,state:{visibility:"public",revision:0,erased:false}}})}});
     mocks.getAgentDeps.mockResolvedValue({ db, gateway: {}, engine: {} });
     mocks.collectRun.mockImplementation(async (input) => ({ ...run, id: input.queryId }));
     mocks.settleThenServe.mockImplementation(async (_req, opts, produce) => {

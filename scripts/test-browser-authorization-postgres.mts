@@ -182,6 +182,9 @@ try {
     if (extension.file === "0089_public_usage_window.sql")
       assert.equal(sql("select to_regprocedure('public.public_usage_window_v1(jsonb)') is null;"), "t",
         "Native installation refusal must not publish an ordinary usage RPC");
+    if (extension.file === "0090_run_privacy.sql")
+      assert.equal(sql("select to_regprocedure('public.run_privacy_v1(text,text,jsonb,jsonb,boolean)') is null;"), "t",
+        "Native installation refusal must not publish an ordinary privacy RPC");
   }
   const ordinary = `browser_ordinary_${randomUUID().replaceAll("-", "")}`;
   postgres.createDatabase(ordinary);
@@ -205,6 +208,14 @@ try {
       assert.throws(() => postgres.sql("set role authenticated;select * from public.anonymous_run_claims;", ordinary), /permission denied/);
     } else if (extension.file === "0089_public_usage_window.sql") {
       observeBrowserPublicUsage(postgres.sql, ordinary);
+    } else if (extension.file === "0090_run_privacy.sql") {
+      assert.deepEqual(JSON.parse(postgres.sql("set role service_role;select public.run_privacy_v1('list',null,'{\"take\":1,\"ids\":[]}'::jsonb,null);", ordinary)),
+        { version: 1, action: "list", id: null, result: [] });
+      for (const role of ["anon", "authenticated"]) {
+        assert.throws(() => postgres.sql(`set role ${role};select public.run_privacy_v1('list',null,'{"take":1,"ids":[]}'::jsonb,null);`, ordinary), /permission denied/);
+        assert.throws(() => postgres.sql(`set role ${role};select * from public.query_runs;`, ordinary), /permission denied/);
+      }
+      assert.equal(postgres.sql("select to_regprocedure('public.anonymous_run_claims_guard_v1()') is not null;", ordinary), "t");
     } else assert.fail(`Missing ordinary fixture observations for ${extension.file}`);
   }
   console.log(`PASS actual migration profiles: ${migrations.length} accepted native inputs preserved; ${profiles.extensions.map(extension => extension.file).join(', ')} refuse native and install separately on fresh ordinary storage`);

@@ -9,6 +9,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { historicalDispatchHeaders, resolveDispatch } from "@/lib/history/read-dispatch";
 import { publicQueryRun } from "@/lib/research/public-query-run";
+import { requestPrivacyActor } from "@/lib/run-privacy/auth";
+import { getDb } from "@/lib/db";
+import { privateRunResponse } from "@/lib/run-claims/private-response";
+export const dynamic="force-dynamic";
 
 export async function GET(
   _req: NextRequest,
@@ -19,16 +23,17 @@ export async function GET(
     return NextResponse.json({ error: "missing id" }, { status: 400 });
   }
   try {
-    const dispatch = await resolveDispatch(id);
+    const db=await getDb(),actor=await requestPrivacyActor(_req,db);if(actor instanceof Response)return actor;
+    const dispatch = await resolveDispatch(id,db,actor);
     if (!dispatch) {
-      return NextResponse.json({ error: "not found" }, { status: 404 });
+      return privateRunResponse(NextResponse.json({ error: "not found" }, { status: 404 }));
     }
-    return NextResponse.json({
+    return privateRunResponse(NextResponse.json({
       ...publicQueryRun(dispatch.run),
       ...(dispatch.archive ? { archive: dispatch.archive } : {}),
-    }, { headers: historicalDispatchHeaders(dispatch.archive) });
+    }, { headers: historicalDispatchHeaders(dispatch.archive) }));
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    void err;
+    return privateRunResponse(NextResponse.json({ error:"dispatch unavailable" }, { status: 503 }));
   }
 }

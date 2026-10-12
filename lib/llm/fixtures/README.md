@@ -1,5 +1,15 @@
 # Third-party evidence fixtures
 
+`issue-230-rfc4180.json` retains the exact original RFC 4180 HTML and extracted
+body from the October 8, 2026 diagnostic, the frozen engineer question and its
+actual three targets. It is the RFC Editor's
+[`Common Format and MIME Type for Comma-Separated Values (CSV) Files`](https://www.rfc-editor.org/rfc/rfc4180.html)
+by Y. Shafranovich, October 2005. Original copyright and rights notices remain
+in both retained source fields. HTML, extracted-body and normalized-body hashes
+bind this historical capture; offline parser replay does not claim a fresh read,
+current standards guidance or successful model delivery.
+See [the source-unit record](../../../docs/engineering/source-unit-selection-2026-10-11.md).
+
 The `text` and `missingOriginalSpan.text` fields in
 `issue-238-mdn-button.json` reproduce an extracted Portuguese
 [`<button>` page](https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/button)

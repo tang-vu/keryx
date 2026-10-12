@@ -4,13 +4,19 @@
  * back into an orphan.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach,vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { SqliteAdapter } from "./sqlite-adapter";
 import type { QueryRun } from "../types";
+import {createSqliteRunPrivacy,RUN_PRIVACY_SQL} from "./run-privacy-sqlite";
+const admitPublicFixture=(adapter:SqliteAdapter,file:string)=>{
+  const connection=new DatabaseSync(file);connection.exec(RUN_PRIVACY_SQL);
+  try {Object.defineProperty(adapter,"runPrivacy",{value:createSqliteRunPrivacy(connection)});return connection;}
+  catch(error){connection.close();throw error;}
+};
 
 function run(id: string, question: string, parentId?: string): QueryRun {
   return {
@@ -32,15 +38,21 @@ function run(id: string, question: string, parentId?: string): QueryRun {
 
 let dir: string;
 let db: SqliteAdapter;
+let privacyConnection:DatabaseSync|undefined;
 
 beforeEach(async () => {
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED","true");
+  privacyConnection=undefined;
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-followup-"));
   db = new SqliteAdapter(path.join(dir, "keryx.sqlite"));
   await db.init();
+  privacyConnection=admitPublicFixture(db,path.join(dir,"keryx.sqlite"));
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   db.close();
+  privacyConnection?.close();
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
@@ -54,6 +66,7 @@ describe("follow-up threading", () => {
       run("33333333-3333-4333-8333-333333333333", "And the fees?", "11111111-1111-4111-8111-111111111111"),
     );
 
+    privacyConnection!.exec("UPDATE run_privacy SET visibility='public'"); // Fixture explicitly opts in to a public thread.
     const kids = await db.listFollowUps("11111111-1111-4111-8111-111111111111");
     expect(kids.map((k) => k.question)).toEqual(["How does that settle?", "And the fees?"]);
     expect(kids[0]!.parentId).toBe("11111111-1111-4111-8111-111111111111");
@@ -82,6 +95,7 @@ describe("follow-up threading", () => {
     );
     legacy.close();
 
+    vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", ""); // Existing ordinary lane stays admitted before privacy activation.
     const upgraded = new SqliteAdapter(legacyFile);
     await expect(upgraded.init()).resolves.not.toThrow();
     try {
@@ -90,7 +104,8 @@ describe("follow-up threading", () => {
       await upgraded.saveQueryRun(
         run("77777777-7777-4777-8777-777777777777", "And now?", "old"),
       );
-      expect((await upgraded.listFollowUps("old")).map((r) => r.question)).toEqual(["And now?"]);
+      expect((await upgraded.listFollowUps("old")).map(child => child.question)).toEqual(["And now?"]);
+      expect((await upgraded.getQueryRun("77777777-7777-4777-8777-777777777777"))?.parentId).toBe("old");
     } finally {
       upgraded.close();
     }

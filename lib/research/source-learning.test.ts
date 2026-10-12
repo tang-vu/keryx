@@ -1,4 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DatabaseSync } from "node:sqlite";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { SqliteAdapter } from "../db/sqlite-adapter";
+import { SupabaseAdapter } from "../db/supabase-adapter";
+import { installSqliteApplicationSchema } from "../db/sqlite-application-schema";
+import { createSqliteRunPrivacy, RUN_PRIVACY_SQL } from "../db/run-privacy-sqlite";
+import { createSupabaseRunPrivacy } from "../db/run-privacy-supabase";
+import { writeSqliteQueryRun } from "../db/query-run-record";
+import { publicQueryRun } from "./public-query-run";
+import { randomUUID } from "node:crypto";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
 import { captureSourceLearning, sourceLearningTopics } from "./source-learning-observations";
@@ -15,6 +25,7 @@ const network = "eip155:5042", actor = `0x${"ab".repeat(20)}`, owner = `0x${"cd"
 const source: Source = { id: "source-a", name: "Source A", url: "https://source.example", description: "Example", walletAddress: owner,
   fetchPrice: 0.001, tags: ["x402", "security"], authors: [{ name: "Author", walletAddress: author, splitWeight: 1 }], createdAt: "2026-10-01T00:00:00.000Z" };
 const terms: SourceFetchTerms = { payTo: owner, creator: owner, active: true, stale: false, authority: "onchain", listPriceUsdc: source.fetchPrice };
+afterEach(()=>vi.unstubAllEnvs());
 function fixture(index = 0, cited = true, wallet = actor): { run: QueryRun; payments: PaymentRecord[] } {
   const at = new Date(Date.UTC(2026, 9, 1 + index)).toISOString(), id = `run-${index}`;
   const usage = newRunUsage({ usageContext: createTrustedUsageContext(network, { actor: "outside", funding: "independent", scripted: false,
@@ -30,6 +41,77 @@ function fixture(index = 0, cited = true, wallet = actor): { run: QueryRun; paym
   return { run, payments };
 }
 describe("write-time bounded source records", () => {
+  it.each(["sqlite","supabase"] as const)("requires current public publication before learning counts with >300 hidden rows on %s",async adapter=>{
+    const connection=new DatabaseSync(":memory:");installSqliteApplicationSchema(connection);connection.exec(RUN_PRIVACY_SQL);
+    try {
+      const raw=createSqliteRunPrivacy(connection),save=(run:QueryRun,visibility="private",erased=0)=>{
+        writeSqliteQueryRun(connection,Object.assign({budget:0,engine:"fixture",totalSpent:0,totalToCreators:0,subClaims:[],trace:[]},run),true);
+        connection.prepare("UPDATE run_privacy SET visibility=?,erased=? WHERE run_id=?").run(visibility,erased,run.id);
+      };
+      for(let i=0;i<320;i++)save({...fixture(0).run,id:`hidden-${i}`,createdAt:"2026-10-10T00:00:00.000Z",sourceLearning:undefined},i%2?"unlisted":"private");
+      save({...fixture(0).run,id:"erased",createdAt:"2026-10-10T00:00:00.000Z"},"public",1);
+      const published=[fixture(0).run,fixture(1).run];published.forEach(run=>save(run,"public"));
+      save({...fixture(3).run,sourceLearning:undefined},"public");
+      const original=JSON.stringify(connection.prepare("SELECT * FROM query_runs ORDER BY id").all());
+      const from=vi.fn(),rpc=vi.fn((_name:string,args:Record<string,unknown>)=>({abortSignal:async()=>{
+        const result=args.p_action==="list"?await raw.list(args.p_input as Parameters<typeof raw.list>[0]).then(async runs=>Promise.all(runs.map(async run=>(await raw.read(run.id)).item)))
+          :await raw.read(String(args.p_id));
+        return {data:{version:1,action:args.p_action,id:args.p_id,result},error:null};
+      }}));
+      const privacy=adapter==="sqlite"?raw:createSupabaseRunPrivacy({rpc,from} as unknown as SupabaseClient);
+      const store={runPrivacyActive:true,runPrivacy:privacy,getSource:vi.fn(async()=>source),readEvidenceProvenance:vi.fn(async()=>new Set<string>()),
+        iterateRecentQueries:adapter==="sqlite"?SqliteAdapter.prototype.iterateRecentQueries:SupabaseAdapter.prototype.iterateRecentQueries};
+      const report=await readSourceLearning(store,source.id,network);
+      expect(report).toMatchObject({excludedObservations:0,historicalUnclassifiedRuns:1,records:[{offered:2,bought:2,cited:2}]});
+      expect(JSON.stringify(report)).not.toContain("hidden");expect(from).not.toHaveBeenCalled();
+      expect(JSON.stringify(connection.prepare("SELECT * FROM query_runs ORDER BY id").all())).toBe(original);
+      connection.prepare("UPDATE run_privacy SET visibility='unlisted',revision=revision+1 WHERE run_id=?").run(published[1].id);
+      expect((await privacy.read(published[1].id)).item?.state.visibility).toBe("unlisted");
+      expect((await readSourceLearning(store,source.id,network))!.records[0].offered).toBe(1);
+      // A queued row revoked while the public iterator is paused consumes work and never refills.
+      const iterator=store.iterateRecentQueries(3)[Symbol.asyncIterator]();expect((await iterator.next()).value?.id).toBe("run-3");
+      connection.prepare("UPDATE run_privacy SET visibility='private' WHERE run_id=?").run(published[0].id);
+      expect((await iterator.next()).done).toBe(true);
+    } finally {connection.close();}
+  });
+  it("withholds missing/drifted active learning through API/page/MCP and preserves explicit OFF behavior",async()=>{
+    const sourceRead=vi.fn(async()=>source),scan=vi.fn(async function*(){yield fixture().run;});
+    for(const runPrivacy of [undefined,{list:vi.fn(async()=>{throw new Error("PRIVATE wrong schema");})} as unknown as ReturnType<typeof createSqliteRunPrivacy>]) {
+      const store={runPrivacyActive:true,runPrivacy,getSource:sourceRead,iterateRecentQueries:scan},read=()=>readSourceLearning(store,source.id,network);
+      await expect(read()).rejects.toThrow();expect(scan).not.toHaveBeenCalled();expect(sourceRead).not.toHaveBeenCalled();
+      const response=await sourceLearningResponse(new Request("https://synthetic.example"),source.id,read);
+      expect(response.status).toBe(503);expect(await response.text()).not.toContain("PRIVATE");
+      const unavailable=await read().catch(()=>null),html=renderToStaticMarkup(createElement(SourceLearningPanel,{report:unavailable,sourceId:source.id}));
+      expect(html).toContain("unavailable");expect(html).not.toContain("PRIVATE");
+      let handler:()=>Promise<unknown>=async()=>undefined;
+      registerSourceLearning({registerTool(_name,_options,callback){handler=()=>callback({sourceId:source.id});}},read);
+      expect(await handler()).toMatchObject({isError:true});
+    }
+    vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED","true");
+    expect((await readSourceLearning({runPrivacyActive:false,getSource:sourceRead,iterateRecentQueries:scan},source.id,network))!.records[0].offered).toBe(1);
+  });
+  it("bounds rejected learning work at300 and omits internal snapshots from public JSON/type while exact owner export survives until erasure",async()=>{
+    let scanned=0;const run=fixture().run;
+    const privacy={list:vi.fn(async()=>[]),read:vi.fn(async()=>({exists:true,item:{run,state:{visibility:"unlisted",revision:1,erased:false}}}))} as unknown as ReturnType<typeof createSqliteRunPrivacy>;
+    const report=await readSourceLearning({runPrivacyActive:true,runPrivacy:privacy,getSource:async()=>source,async *iterateRecentQueries(){for(let i=0;i<400;i++){scanned++;yield {...run,id:`candidate-${i}`};}}},source.id,network);
+    expect(report).toMatchObject({records:[],excludedObservations:0,historicalUnclassifiedRuns:0});expect(privacy.read).toHaveBeenCalledTimes(300);expect(scanned).toBe(300);
+    const connection=new DatabaseSync(":memory:");installSqliteApplicationSchema(connection);connection.exec(RUN_PRIVACY_SQL);
+    try {
+      const original=Object.assign({budget:0,engine:"fixture",totalSpent:0,totalToCreators:0,subClaims:[],trace:[]},run);
+      writeSqliteQueryRun(connection,original,true);const store=createSqliteRunPrivacy(connection),sessionHash="c".repeat(64),now=Date.now();
+      connection.prepare("INSERT INTO web_sessions VALUES(?,?,?,?)").run(sessionHash,actor,now-1000,now+60000);
+      const who={wallet:actor,sessionHash,binding:{network:"eip155:5042" as const,origin:"https://synthetic.example"}};
+      await store.change(run.id,who,{visibility:"public",revision:0,requestId:randomUUID()});
+      const stored=String(connection.prepare("SELECT data FROM query_runs WHERE id=?").get(run.id)!.data),projected=publicQueryRun((await store.read(run.id)).item!.run);
+      expect(projected).not.toHaveProperty("sourceLearning");expect(JSON.stringify(projected)).not.toContain("accessMicros");
+      // @ts-expect-error Public projection has no sourceLearning exposure authority.
+      expect(projected.sourceLearning).toBeUndefined();
+      expect((await store.export(run.id,who,randomUUID())).run.sourceLearning).toEqual(run.sourceLearning);
+      expect(String(connection.prepare("SELECT data FROM query_runs WHERE id=?").get(run.id)!.data)).toBe(stored);
+      await store.erase(run.id,who,{revision:1,requestId:randomUUID()});
+      expect((await store.export(run.id,who,randomUUID())).run).not.toHaveProperty("sourceLearning");
+    } finally {connection.close();}
+  });
   it("counts retained exact settled outcomes and reveals only source-declared topics", () => {
     const { run } = fixture();
     expect(run.sourceLearning?.sources).toEqual([{ sourceId: source.id, topics: ["x402"], eligibility: "eligible", read: true, cached: false,
@@ -111,7 +193,8 @@ describe("write-time bounded source records", () => {
       expect(() => validateSourceLearningReport({ ...report, records: [{ ...report.records[0], ...patch }] })).toThrow();
   });
   it("preserves API/page/MCP equivalence and uniform storage failure without a private selector", async () => {
-    const runs = [fixture().run], store = { getSource: vi.fn(async () => source), async *iterateRecentQueries(limit: number) { expect(limit).toBe(300); yield* runs; } };
+    const runs = [fixture().run], privacy={list:vi.fn(async()=>[]),read:vi.fn(async()=>({exists:true,item:{run:runs[0],state:{visibility:"public",revision:0,erased:false}}}))} as unknown as ReturnType<typeof createSqliteRunPrivacy>;
+    const store = {runPrivacyActive:true,runPrivacy:privacy, getSource: vi.fn(async () => source), async *iterateRecentQueries(limit: number) { expect(limit).toBe(300); yield* runs; } };
     const report = await readSourceLearning(store, source.id, network);
     const read = vi.fn(async () => report);
     const response = await sourceLearningResponse(new Request("https://keryx.cc"), source.id, read);
