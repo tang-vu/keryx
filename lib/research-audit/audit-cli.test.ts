@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { isAbsolute, join, relative } from "node:path";
 import { createReadCheckpointCapture } from "../agent/read-checkpoint-capture";
 import { actualReadCheckpoint } from "./actual-read-policy";
+import { optimizerPacketFixture } from "./optimizer-checkpoint.test-fixture";
 
 let directory: string;
 beforeAll(async () => { directory = await mkdtemp(join(tmpdir(), "keryx-offline-audit-")); });
@@ -29,7 +30,27 @@ it("verifies actual checkpoints offline only against a separately retained diges
   await writeFile(file, JSON.stringify(capture.packet).padEnd(256 * 1024 + 1, " "));
   expect(command(["verify-actual", file, capture.retainedDigest]).status).toBe(1);
 });
+it("verifies v2 empty-stop capture offline and labels optimizer observations unavailable", async () => {
+  const collector = createReadCheckpointCapture(true, undefined, true); collector.stop("discovery", 0);
+  const capture = collector.finish(); if (!capture || capture.status !== "available") throw Error("Fixture unavailable");
+  const file = join(directory, "actual-v2.json"); await writeFile(file, JSON.stringify(capture.packet));
+  const verified = command(["verify-actual", file, capture.retainedDigest]); expect(verified.status).toBe(0);
+  expect(JSON.parse(verified.stdout)).toMatchObject({ verified: true, scope: "normalization-and-read-checkpoints", optimizerReplay: "unavailable",
+    sourceAuthenticity: "unproven", paymentAnchoring: "unproven" });
+  if (capture.packet.schema !== 2) throw Error("Wrong version");
+  capture.packet.stops[0].count = 1; await writeFile(file, JSON.stringify(capture.packet));
+  expect(command(["verify-actual", file, capture.retainedDigest]).status).toBe(1);
+});
 
+it("verifies v3 optimizer replay offline against the report digest and refuses selected-output tampering", async () => {
+  const capture = optimizerPacketFixture(), file = join(directory, "actual-v3.json"); await writeFile(file, JSON.stringify(capture.packet));
+  const verified = command(["verify-actual", file, capture.retainedDigest]); expect(verified.status).toBe(0);
+  expect(JSON.parse(verified.stdout)).toMatchObject({ verified: true, scope: "normalization-optimizer-read-checkpoints", optimizerReplay: "verified",
+    facts: "assertions", sourceAuthenticity: "unproven", paymentAnchoring: "unproven" });
+  if (capture.packet.optimizer.status !== "available") throw Error("Unavailable fixture");
+  capture.packet.optimizer.outcome.selected.reverse(); await writeFile(file, JSON.stringify(capture.packet));
+  expect(command(["verify-actual", file, capture.retainedDigest]).status).toBe(1);
+});
 it("creates and verifies a record in a fresh process using a retained digest", async () => {
   const input = await readFile("examples/research-audit/read-input.json", "utf8"), file = join(directory, "input.json");
   await writeFile(file, input);
