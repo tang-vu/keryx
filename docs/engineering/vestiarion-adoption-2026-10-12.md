@@ -144,6 +144,12 @@ same server/client snapshot pattern as the existing wallet UI. Compiled acceptan
 requires disabled SSR budget markup and preservation of the typed value after
 interaction; this does not add payment or persistence authority.
 
+The corrected Decision Lab passed hosted compiled acceptance. A later existing
+Operator acceptance step found the stale OpenAPI app-version literal. OpenAPI
+now reads its application version from the package manifest; request/response
+grammars and package/installer identities are unchanged. This metadata module is
+not part of the study runner or published desktop/stdio import graph.
+
 ## Demo and remaining work
 
 In a short reviewer journey: open Decision Lab, show model BUY blocked by the
