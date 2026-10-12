@@ -9,6 +9,9 @@
   "description": "Keryx — a citation-toll reading agent. Pays creators every time their work is cited, in USDC on Arc.",
   "scripts": {
     "verify:live": "node scripts/verify-public-deployment.mjs",
+    "audit:decisions": "node --import tsx scripts/decision-bundle.mts",
+    "test:decision-lab-browser": "node --import tsx scripts/test-decision-lab-browser.mts",
+    "test:decision-lab-built": "node --import tsx scripts/test-decision-lab-built.mts",
     "test:browser-product-guide": "node --import tsx scripts/test-browser-product-guide.mts",
     "test:browser-mobile-header": "node --import tsx scripts/test-browser-mobile-header.mts",
     "inspect:purchase-outcomes": "node --import tsx scripts/inspect-purchase-outcomes.mts",
