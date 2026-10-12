@@ -17,8 +17,9 @@ Template and instructions: docs/research-evidence-audit.md and docs/research-evi
 async function readBounded(path: string, maximum: number) {
   // Refuse SMB and Win32/NT device namespaces before open can use ambient authentication.
   // DOS aliases may open a console/device even when followed by an extension.
-  if (/^[a-z]+:\/\//i.test(path) || path === "-" || /^[\\/]{2}|^[\\/]\?\?[\\/]/u.test(path) ||
-      path.split(/[\\/]/u).some(part => /^(?:con|prn|aux|nul|conin\$|conout\$|com[1-9]|lpt[1-9])(?:[ .:]|$)/iu.test(part))) throw Error();
+  if (/^[a-z]+:\/\//i.test(path) || path === "-" || /^[a-z]:(?![\\/])/iu.test(path) ||
+      /^[\\/]{2}|^[\\/]\?\?[\\/]/u.test(path) ||
+      path.split(/[\\/]/u).some(part => /^(?:con|prn|aux|nul|conin\$|conout\$|com[1-9¹²³]|lpt[1-9¹²³])(?:[ .:]|$)/iu.test(part))) throw Error();
   const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
   try {
     const info = await handle.stat();

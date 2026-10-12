@@ -17,7 +17,8 @@ beforeAll(async () => {
   await writeFile(join(directory, "no-fetch.mjs"), `import fs from 'node:fs/promises';
 import {syncBuiltinESMExports} from 'node:module';
 const original=fs.open;
-fs.open=(path,...args)=>{if(String(path).includes('network-path-sentinel')||String(path)==='CON.txt'){process.stderr.write('FORBIDDEN_PATH_OPENED');throw Error('Forbidden path');}return original(path,...args)};
+const aliases=new Set(['CON.txt','nul','LPT1.json','C:NUL','C:CON.txt','COM¹','LPT².json']);
+fs.open=(path,...args)=>{if(String(path).includes('network-path-sentinel')||aliases.has(String(path))){process.stderr.write('FORBIDDEN_PATH_OPENED');throw Error('Forbidden path');}return original(path,...args)};
 syncBuiltinESMExports();
 globalThis.fetch=()=>{throw Error('Network forbidden by offline CLI fixture')};\n`);
 });
@@ -52,8 +53,13 @@ it("refuses bad arguments, URLs, directories, large/invalid UTF-8 and private ma
 });
 
 it("refuses UNC, device namespaces and DOS device aliases before attempting filesystem I/O", () => {
+  const control = spawnSync(process.execPath, ["--import", pathToFileURL(join(directory, "no-fetch.mjs")).href,
+    "--input-type", "module", "--eval", "import {open} from 'node:fs/promises'; try { await open('CON.txt'); } catch {}"],
+    { encoding: "utf8", timeout: 10_000, windowsHide: true });
+  expect(control.stderr).toContain("FORBIDDEN_PATH_OPENED"); // The probe really sees named fs.open, without opening a device.
   for (const path of ["\\\\network-path-sentinel\\share\\input.json", "//network-path-sentinel/share/input.json",
-    "\\\\?\\C:\\network-path-sentinel.json", "\\\\.\\pipe\\network-path-sentinel", "\\??\\network-path-sentinel", "CON.txt", "nul", "LPT1.json"]) {
+    "\\\\?\\C:\\network-path-sentinel.json", "\\\\.\\pipe\\network-path-sentinel", "\\??\\network-path-sentinel", "CON.txt", "nul", "LPT1.json",
+    "C:NUL", "C:CON.txt", "COM¹", "LPT².json"]) {
     const result = command([path]); expect(result.status).toBe(1); expect(result.stdout).toBe("");
     expect(result.stderr).not.toContain("FORBIDDEN_PATH_OPENED");
   }

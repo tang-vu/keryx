@@ -67,7 +67,7 @@ try {
   await page.getByRole("button", { name: "Check locally", exact: true }).click();
   await page.getByText("Receipt: retained-digest-match", { exact: false }).waitFor();
   await page.getByLabel("Separately retained digests JSON (optional)").fill(JSON.stringify({ expectedReceiptDigest: "sha256:" + "f".repeat(64) }));
-  await page.getByRole("button", { name: "Check locally", exact: true }).click(); await page.getByRole("alert").waitFor();
+  await page.getByRole("button", { name: "Check locally", exact: true }).click(); await page.locator('p[role="alert"]').waitFor();
   assert.equal(await page.getByRole("button", { name: "Download local result", exact: true }).count(), 0);
   await page.getByRole("button", { name: "Load illustrative example", exact: true }).click();
   await page.evaluate(() => {
