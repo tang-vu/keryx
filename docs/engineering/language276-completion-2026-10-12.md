@@ -44,38 +44,72 @@ publish, deploy, send a notification, or authorize financial effects.
   uses the catalogue for ordinary result/selection labels; saved answer text,
   native financial controls, commands, private artifacts and IPC remain unchanged.
 
-## Admission dependency: root-owned producer composition
+## Admitted producer partition and remaining composition
 
-This branch is **not merge-ready**. The root coordinator must review and coordinate
-the narrow `lib/agent/run-agent.ts` delta with the active301 owner before applying
-it. That delta must honor the trusted bot presentation option, opt ordinary
-synthesis into the existing language review, select only language-admitted model
-sentences, and stamp provenance after every final answer projection. Never stamp a
-special/private, unobserved, mixed-language or subsequently changed answer as known.
-Early returns and additional generated follow-up/recency/teaching prose require
-their own observed renderer coverage or remain unknown. The concrete helper APIs
-are implemented; this worker did not overwrite the301 producer file/test.
+Root explicitly admitted the narrow producer partition at
+`2026-10-12T16:51:10.6199911Z` on shared task
+`language276-completion-resume-20261012`. This worker implements it only in its own
+worktree. The301 dirty worktree remains untouched. Root must compose the resulting
+delta with301 replay/authority semantics and the source-library owner's later
+producer/read-boundary delta, then independently review the exact combined source.
 
-Until that composition is accepted, the new structured preference is not honored
-by the unchanged producer and the new provenance is not emitted in real runs.
-The command copy and consumers therefore belong to the same unshipped candidate,
-not an independently deployable preference feature.
+The producer now honors finite structured bot preferences after authenticated
+ingress, preserving an explicit directive in the unchanged original question.
+Ordinary synthesis opts into language observation in the same existing reviewer
+call. Only independently observed matching statements enter sentence delivery;
+rejected sentences retain their independently qualified excerpt and payment gates.
+Packages, private runs and teaching/decision-brief contracts keep their previous
+sentence behavior and receive no language provenance from this partition.
 
-Metadata277 retains public page/archive/feed/OG/sitemap ownership. Root should give
-that owner `recordedAnswerLanguage(run)` after producer composition. Stdio MCP's
-current paid response has no trusted trace-language projection; it remains unknown
-rather than inventing a field or altering a paid body/hash/receipt. Extensions keep
-their established hosted/browser handoff. These gates remain explicit, not omitted.
+Finalization runs after compact word/sentence projections and synthetic demotion.
+The producer adds `done.detail.answerLanguage` only if every delivered sentence
+matches the deterministic renderer and no additional unobserved operational prose
+was appended. It preserves other done-detail fields for root composition. Early
+returns, follow-up guidance, requested-original status, recency, funding notices,
+teaching/brief prose and altered synthetic answers remain **unknown**. No intent
+or historical prompt is promoted to language authority. These uncovered paths
+still prevent full C1/C5 acceptance; unknown is an honest record, not completion.
+
+Metadata277 retains public page/archive/feed/OG/sitemap ownership. Its sole reader
+is `recordedAnswerLanguage(run: Pick<QueryRun, "answer" | "trace">)` from
+`lib/research/answer-language-provenance.ts`, returning `en | vi | pt | es | undefined`.
+The packet has exactly `format: "keryx-answer-language-v1"`, `scope: "generated-prose"`,
+`language`, `method: "deterministic-renderer" | "reviewed-statements-and-renderer"`,
+and `answerSha256` (0x-prefixed SHA-256 of exact final UTF-8 answer bytes). Unknown,
+malformed, future, duplicate or byte-mismatched packets fail closed. Root's handoff
+includes the exact file pins; consumers must import this reader, not duplicate it.
+
+## Stdio paid projection: concrete remaining source gate
+
+`lib/a2a/result.ts:a2aResponseFromRun` projects a paid package's final `answer` and
+public research roles, without its stored trace or a trusted language packet.
+`mcp/keryx-buyer.mts:KeryxAnswer` consequently has no such authority. Local payment
+code verifies the original paid query identity and settlement before returning a
+completed response; a stdio label preference never enters the signed paid body.
+This producer partition deliberately does not qualify execution-limited packages.
+Adding a request-derived language field in the client would therefore be false.
+
+The remaining source plan is: admit an observed package renderer/reviewer contract
+without changing its purchased attention/budget or receipt roles; project only its
+verified final-byte packet from the completed server response; bind the client
+projection to that same final answer and paid query through the existing settlement
+and recovery path; then let the stdio handler use the shared strict reader. Keep
+unknown/future/mutated payloads unknown, retain exact structured evidence/receipts,
+and test response loss, GET-only recovery and every locale without new paid calls.
+These A2A/client role-boundary edits require a separate exact claim/admission and
+independent combined-source review, required PR CI and exact-main packed consumer
+acceptance before publication. Root owns them; this worker leaves stdio unknown.
+Extensions keep their established hosted/browser handoff.
 
 ## Original acceptance criteria
 
 | Criterion | Current qualification |
 | --- | --- |
-| C1: no English scaffolding for a shipped-language question | Partial source candidate. Ordinary owned labels implemented; root producer/web/stdio integration and273 financial/trust terminology acceptance remain. |
+| C1: no English scaffolding for a shipped-language question | Ordinary producer/owned labels integrated locally. Early/special/operational prose, metadata277 web and paid stdio integration, and273 financial/trust terminology acceptance remain. |
 | C2: cited excerpts byte-identical to retrieved source | Fixed synthetic exact-span matrix checks raw UTF-8 evidence preservation. Markdown/HTML escaping is presentation encoding, not retrieval authenticity proof. |
 | C3: stable machine contracts in every locale | Focused API/MCP machine-envelope tests retained/refreshed; field names, enums, codes, receipts and numeric authority remain English/stable. New owner preference endpoint is additive and documented. Full combined/package acceptance remains. |
 | C4: every surface in one coordinated release | Root owns review, authorized push, same focused PR CI, merge, version/publication/distribution/deploy/Canteen. No delivery is claimed by this worker. |
-| C5: answer/scaffolding agreement in evaluation set | Fixed deterministic-renderer and reviewer-observation fixtures cover en/vi/pt/es, mismatches and historical unknown. Final composed producer/surface matrix is still required. |
+| C5: answer/scaffolding agreement in evaluation set | Fixed ordinary producer/renderer/reviewer/receipt/consumer fixtures cover en/vi/pt/es, mismatches, compact final bytes and honest unknown. Original uncovered paths and final composed surface matrix remain. |
 
 Human approval under273 is an existing financial/trust terminology gate. Ordinary
 generated labels in this candidate do not introduce another human-review gate.
@@ -89,6 +123,9 @@ Node24.21.0, isolated caches/compiler outputs and mocked channels/providers. Tes
 receipts capture exit code, signal, stdout/stderr EOF and raw stream hashes. Failures
 and corrections are retained under `output/language276` rather than discarded.
 Application/ops type checks and scoped lint are recorded separately.
+The producer successor evidence is retained separately under
+`output/language276-producer`; previous checkpoint and native lifetime evidence
+remain historical and are not relabeled as acceptance of this changed source.
 
 Desktop type checking could not resolve its existing `@tauri-apps/api/core`
 dependency. An isolated pinned install was reserved and attempted with scripts,

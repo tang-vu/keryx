@@ -35,7 +35,7 @@ export function finalizeAnswerLanguage(input: { answer: string; rendererLanguage
  * A digest binds bytes, not source authenticity or human approval. */
 export function recordedAnswerLanguage(run: Pick<QueryRun, "answer" | "trace">): PresentationLanguage | undefined {
   if (typeof run.answer !== "string") return undefined;
-  const packets = (Array.isArray(run.trace) ? run.trace : []).filter(step => step.phase === "done" &&
+  const packets = (Array.isArray(run.trace) ? run.trace : []).filter(step => step && typeof step === "object" && step.phase === "done" &&
     step.detail && typeof step.detail === "object" && Object.hasOwn(step.detail, "answerLanguage"))
     .map(step => (step.detail as { answerLanguage: unknown }).answerLanguage);
   if (packets.length !== 1) return undefined;
@@ -44,8 +44,8 @@ export function recordedAnswerLanguage(run: Pick<QueryRun, "answer" | "trace">):
   const p = packet as Record<string, unknown>;
   if (Object.keys(p).sort().join(",") !== "answerSha256,format,language,method,scope" ||
     p.format !== "keryx-answer-language-v1" || p.scope !== "generated-prose" ||
-    !["en", "vi", "pt", "es"].includes(String(p.language)) ||
-    !["deterministic-renderer", "reviewed-statements-and-renderer"].includes(String(p.method)) ||
+    typeof p.language !== "string" || !["en", "vi", "pt", "es"].includes(p.language) ||
+    (p.method !== "deterministic-renderer" && p.method !== "reviewed-statements-and-renderer") ||
     p.answerSha256 !== digest(run.answer)) return undefined;
   return p.language as PresentationLanguage;
 }

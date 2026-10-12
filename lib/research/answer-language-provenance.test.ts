@@ -50,4 +50,7 @@ it("keeps historical/changed/future/conflicting records unknown without question
   expect(recordedAnswerLanguage(run({ ...packet, format: "future" }))).toBeUndefined();
   expect(recordedAnswerLanguage({ ...run(packet), trace: [...run(packet).trace, ...run(packet).trace] })).toBeUndefined();
   expect(recordedAnswerLanguage(run({ language: "vi" }))).toBeUndefined();
+  expect(recordedAnswerLanguage(run({ ...packet, language: { toString: () => "vi" } }))).toBeUndefined();
+  expect(recordedAnswerLanguage(run({ ...packet, method: { toString: () => "deterministic-renderer" } }))).toBeUndefined();
+  expect(recordedAnswerLanguage({ ...run(), trace: [null, {}, { phase: "done", detail: [] }] } as unknown as QueryRun)).toBeUndefined();
 });

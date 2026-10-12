@@ -7,7 +7,8 @@ import { extractHtml } from "../web-research/html-reader";
 import { gatheredArticle, type ArticleRead } from "../web-research/article-reader";
 import { sourceHtmlLayout } from "../llm/source-text-blocks";
 import { buildQuoteOptions } from "../llm/quote-options";
-import { EVIDENCE_REVIEW_GUIDANCE } from "../llm/evidence-review";
+import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, STATEMENT_LANGUAGE_REVIEW_GUIDANCE } from "../llm/evidence-review";
+import { recordedAnswerLanguage } from "../research/answer-language-provenance";
 import { completeAnswerSentenceSegments } from "./sentence-note-answer";
 import { buildAnswerText as telegramAnswerText } from "../telegram/ask-message";
 import { buildAnswerMessage as discordAnswerMessage } from "../discord/ask-interaction";
@@ -239,6 +240,8 @@ function buy(c: { id: string; name: string; price: number }, ev = 0.8): Decision
 // ── injectable fakes ────────────────────────────────────────────────────────
 
 interface EngineOverrides {
+  /** Explicit synthetic independent observation; never inferred from a question. */
+  reviewedStatementLanguage?: "en" | "vi" | "pt" | "es" | "UNKNOWN";
   decide?: (input: DecideInput) => Decision[];
   sufficiency?: (input: SufficiencyInput) => SufficiencyResult;
   reevaluate?: (input: ReevaluateInput) => {
@@ -295,10 +298,14 @@ function fakeEngine(over: EngineOverrides = {}): ReasoningEngine & { decideInput
     async synthesize(input: SynthInput) {
       if (over.synthesize) {
         const r = over.synthesize(input);
+        const evidence = fixtureEvidenceSpans(input.gathered, r.evidence ?? []);
         return {
           ...r,
           conflicts: r.conflicts ?? [],
-          evidence: fixtureEvidenceSpans(input.gathered, r.evidence ?? []),
+          evidence: over.reviewedStatementLanguage ? applyEvidenceReview(evidence, { reviews: evidence.map((row, index) => ({
+            index, support: row.support, statementSupport: row.statementSupport,
+            statementLanguage: over.reviewedStatementLanguage,
+          })) }, undefined, true) : evidence,
         };
       }
       return {
@@ -493,6 +500,94 @@ async function drive(
 const fetchBudget = (budget: number) => budget * (1 - config.citationPoolRatio);
 const citationPool = (budget: number) => budget * config.citationPoolRatio;
 
+describe("ordinary recorded answer language", () => {
+  const quote = "Original café evidence preserves its qualification.";
+  const sentences = { en: "The evidence retains a qualification.", vi: "Bằng chứng giữ lại một điều kiện.",
+    pt: "A evidência conserva uma qualificação.", es: "La evidencia conserva una salvedad." } as const;
+  async function languageRun(options: { language?: "en" | "vi" | "pt" | "es";
+    observation?: "en" | "vi" | "pt" | "es" | "UNKNOWN"; originalQuestion?: string;
+    private?: boolean; package?: boolean; pending?: boolean; fundingFails?: boolean } = {}) {
+    const statement = sentences[options.observation === "UNKNOWN" ? "en" : options.observation ?? options.language ?? "vi"];
+    const item: SourceItem = { id: "language-item", sourceId: "language-source", title: "Synthetic original",
+      link: "https://owned.example/language", summary: "Synthetic evidence", content: quote };
+    const source = makeSource({ id: item.sourceId, fetchPrice: 0.004 });
+    const engine = fakeEngine({ reviewedStatementLanguage: options.observation, synthesize: input => {
+      expect(input.question).toBe("Explain the evidence qualification.");
+      expect(input.observeAnswerLanguage).toBe(options.private || options.package ? undefined : true);
+      return { answer: "Discard this unreviewed draft [S1]", citedMarkers: ["S1"], evidence: [
+        { claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport: 0.9 },
+      ] };
+    } });
+    const gateway = fakeGateway();
+    if (options.fundingFails) gateway.ensureFunded = async () => { throw Error("Synthetic funding unknown"); };
+    if (options.pending) gateway.payCitation = async args => {
+      gateway.citationCalls.push({ sourceId: args.source.id, payee: args.author.walletAddress, amount: args.amount });
+      throw new PaymentPendingError("Synthetic original pending", makePayment({ kind: "citation", queryId: args.queryId,
+        sourceId: args.source.id, sourceName: args.source.name, payer: AGENT, payee: args.author.walletAddress,
+        amountUsdc: args.amount, weight: args.weight, rationale: args.rationale, settled: false, settlementStatus: "pending" }));
+    };
+    const queryId = options.private ? `prv_${"e".repeat(64)}` : undefined, effects = isolatedTestEffects(queryId);
+    const run = await collectRun({ question: "Explain the evidence qualification.", origin: "web", budget: 0.03,
+      ...(options.language ? { presentationLanguage: options.language } : {}),
+      ...(options.originalQuestion ? { originalQuestion: options.originalQuestion } : {}), ...(queryId ? { queryId } : {}),
+      ...(options.package ? { executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } } : {}) },
+    { deps: { ...deps([source], engine, gateway, { items: { [source.id]: [item] } }), effects } });
+    return { run, gateway, statement, effects };
+  }
+  it.each(["en", "vi", "pt", "es"] as const)("records %s only from reviewed delivered statements and renderer, across final consumers", async language => {
+    const { run, gateway, statement, effects } = await languageRun({ language, observation: language });
+    expect(recordedAnswerLanguage(run)).toBe(language);
+    expect(run.answer).toContain(statement);
+    expect(run.answer).not.toContain("Discard this unreviewed draft");
+    expect(run.evidence?.map(row => row.quote)).toEqual([quote]);
+    expect(run.trace.at(-1)?.detail).toMatchObject({ answerLanguage: { format: "keryx-answer-language-v1", scope: "generated-prose",
+      method: "reviewed-statements-and-renderer", answerSha256: "0x" + createHash("sha256").update(run.answer, "utf8").digest("hex") } });
+    const payments = vi.mocked(effects.recordPayment).mock.calls.map(([payment]) => payment);
+    const receipt = buildResearchReceipt(run, payments);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.dispatch.answer).toBe(run.answer);
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick"))]) {
+      expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
+      expect(result.evidence.map(row => row.quote)).toEqual([quote]);
+      expect(result).not.toHaveProperty("answerLanguage");
+    }
+    expect(researchReportMarkdown(run, null, payments)).toContain(run.answer);
+    expect(buildAnswerContent(run)).toContain(run.answer);
+    expect(gateway.citationCalls).toHaveLength(1);
+    expect(effects.saveQueryRun).toHaveBeenCalledWith(run);
+  });
+  it.each([undefined, "en", "UNKNOWN"] as const)("withholds unobserved or mismatched %s prose without promoting or discarding its evidence/payment", async observation => {
+    const observed = await languageRun({ language: "vi", observation: "vi" });
+    const rejected = await languageRun({ language: "vi", observation });
+    expect(rejected.run.answer).not.toContain(rejected.statement);
+    expect(recordedAnswerLanguage(rejected.run)).toBe("vi"); // Only deterministic Vietnamese renderer prose is delivered.
+    expect(rejected.run.trace.at(-1)?.detail).toMatchObject({ answerLanguage: { method: "deterministic-renderer" } });
+    expect(rejected.run.evidence).toEqual(observed.run.evidence);
+    expect(rejected.run.citations).toEqual(observed.run.citations);
+    expect(rejected.gateway.citationCalls).toEqual(observed.gateway.citationCalls);
+    expect(rejected.run.totalSpent).toBe(observed.run.totalSpent);
+  });
+  it("honors an explicit original-question directive before a trusted bot preference", async () => {
+    const { run } = await languageRun({ language: "pt", observation: "es", originalQuestion: "Answer in Spanish about the qualification." });
+    expect(recordedAnswerLanguage(run)).toBe("es");
+    expect(run.answer).toContain(sentences.es);
+  });
+  it.each([{ private: true }, { package: true }, { pending: true }, { fundingFails: true }])(
+    "leaves unqualified special or operational-prose paths unknown %j", async options => {
+      const { run } = await languageRun({ language: "vi", observation: "vi", ...options });
+      expect(recordedAnswerLanguage(run)).toBeUndefined();
+      expect(run.trace.at(-1)?.detail ?? {}).not.toHaveProperty("answerLanguage");
+      if (options.pending) expect(run.answer).toContain("Before any new paid attempt");
+      if (options.fundingFails) expect(run.answer).toContain("Funding readiness is unknown");
+    });
+  it("does not turn early-return intent into actual language authority", async () => {
+    const { run } = await drive({ question: "Explain the qualification.", presentationLanguage: "pt", budget: 0 },
+      deps([], fakeEngine(), fakeGateway()));
+    expect(recordedAnswerLanguage(run)).toBeUndefined();
+    expect(run.totalSpent).toBe(0);
+  });
+});
+
 it("shared public run completion stamps trusted usage while private originals retain their unchanged shape", async () => {
   const usageContext = createTrustedUsageContext(config.profile.networkId, { actor: "unknown", funding: "unknown", scripted: true });
   const publicRun = await drive({ question: "Inspect fixture content", budget: 0.04, usageContext }, deps([makeSource({ id: "usage" })], fakeEngine(), fakeGateway()));
@@ -585,7 +680,7 @@ describe("ordinary complete-answer word budget", () => {
     const item: SourceItem = { id: "word-budget-item", sourceId: "word-budget-source", title: "Article",
       link: "https://owned.example/word-budget", summary: "Approval protocol", content: quote };
     const source = makeSource({ id: item.sourceId, fetchPrice: 0.004 });
-    const engine = fakeEngine({ synthesize: () => ({ answer: "Unsupported raw draft [S1]", citedMarkers: ["S1"],
+    const engine = fakeEngine({ reviewedStatementLanguage: "en", synthesize: () => ({ answer: "Unsupported raw draft [S1]", citedMarkers: ["S1"],
       evidence: [{ claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport: 0.9 }] }) });
     engine.decompose = async () => ["Approval identity"];
     const attribute = vi.spyOn(engine, "attribute");
@@ -612,6 +707,7 @@ describe("ordinary complete-answer word budget", () => {
     expect(input.answer).toContain("Summary sentences are model-written and model-checked");
     expect(data.run.trace.find(step => step.message.includes("word-budget projection"))?.detail)
       .toMatchObject({ answer: data.run.answer, maximumWords: 120, outcome: "compact" });
+    expect(recordedAnswerLanguage(data.run)).toBe("en");
     expect(data.effects.saveQueryRun).toHaveBeenCalledWith(data.run);
     const payments = vi.mocked(data.effects.recordPayment).mock.calls.map(([payment]) => payment);
     const receipt = buildResearchReceipt(data.run, payments);
@@ -656,6 +752,7 @@ describe("ordinary complete-answer word budget", () => {
   });
   it("keeps exact post-settlement pending-original guidance in the counted compact answer", async () => {
     const data = await wordBudgetRun({ limit: 180, pending: true });
+    expect(recordedAnswerLanguage(data.run)).toBeUndefined(); // Additional payment guidance is not language-observed.
     expect(data.run.answer).toContain("Before any new paid attempt, inspect this job's original payment receipts and records");
     expect(data.run.answer).toContain("Read failures and follow-up steps do not erase recorded charges or reservations.");
     expect(data.run.answer).toContain("These are suggested follow-up steps; this run has not performed them.");
@@ -667,7 +764,7 @@ describe("ordinary complete-answer word budget", () => {
     expect(canonical.answer).not.toContain("Next steps to complete");
   });
   it("keeps truncated-original recovery and read-status notices in complete-answer counting", async () => {
-    const engine = fakeEngine({ synthesize: () => ({ answer: "Withheld draft [S1]", citedMarkers: ["S1"],
+    const engine = fakeEngine({ reviewedStatementLanguage: "en", synthesize: () => ({ answer: "Withheld draft [S1]", citedMarkers: ["S1"],
       evidence: [{ claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport: 0.9 }] }) });
     const gateway = fakeGateway(), d = deps([], engine, gateway);
     d.readWebArticle = vi.fn(async url => ({ text: quote + "\nUnfinished extraction tail", title: "Original", finalUrl: url,
@@ -694,7 +791,7 @@ describe("ordinary sentence note and mandatory notices", () => {
     const item: SourceItem = { id: "sentence-note-item", sourceId: "sentence-note-source", title: "Synthetic approval protocol",
       link: "https://owned.example/sentence-note", summary: "Synthetic protocol", content: quote };
     const source = makeSource({ id: item.sourceId, fetchPrice: 0.004 });
-    const engine = fakeEngine({ synthesize: () => ({ answer: "Unsupported raw draft [S1]", citedMarkers: ["S1"],
+    const engine = fakeEngine({ reviewedStatementLanguage: "es", synthesize: () => ({ answer: "Unsupported raw draft [S1]", citedMarkers: ["S1"],
       evidence: [{ claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport: 0.9 }] }) });
     engine.decompose = async () => ["Identidad de aprobación"];
     const attribute = vi.spyOn(engine, "attribute"), gateway = fakeGateway();
@@ -806,13 +903,14 @@ describe("exact original NASA Spanish note — real frozen HTML, synthetic provi
         return { evidence, conflicts: [] };
       }
       expect(this.requests).toHaveLength(2);
-      expect(system).toBe(EVIDENCE_REVIEW_GUIDANCE); // Count guidance cannot influence independent review.
+      expect(system).toBe(EVIDENCE_REVIEW_GUIDANCE + STATEMENT_LANGUAGE_REVIEW_GUIDANCE); // Count/language intent cannot influence independent review.
       if (this.failure === "review-unavailable") throw new Error("Synthetic review unavailable");
       expect(packet.evidence[2].quote).toBe(this.failure === "missing-illumination" ? nasaNote.statements[3].quote : illumination);
       expect(packet.evidence[2].source.webProvenance.normalizedBodyHash).toBe("3f30825c089efa4b443e401ac781c4c99105d94a72d077f5c344ea028f3930fb");
       return { reviews: packet.evidence.map((row: { index: number }) => ({ index: row.index, supportedFact: "Controlled fixture assessment, not a live semantic review", support: 0.9,
         ...(row.index === 2 && this.failure === "missing-statement-review" ? {} : {
-          statementSupport: row.index === 2 && ["missing-illumination", "dropped-qualification"].includes(this.failure) ? 0.2 : 0.9 }),
+          statementSupport: row.index === 2 && ["missing-illumination", "dropped-qualification"].includes(this.failure) ? 0.2 : 0.9,
+          statementLanguage: "es" }),
       })) };
     }
   }
@@ -856,6 +954,7 @@ describe("exact original NASA Spanish note — real frozen HTML, synthetic provi
     expect(option.text).toBe(original.text.slice(option.start, option.end));
     expect(isCompleteEvidenceSpan(original, option.text, option)).toBe(true);
     const data = await replay(), { run } = data;
+    expect(recordedAnswerLanguage(run)).toBeUndefined(); // Requested-original status is outside the observed renderer.
     expect(data.transport.requests).toHaveLength(2);
     expect(data.transport.requests.map(row => row.maxTokens)).toEqual([2304, 1792]);
     expect(data.synthesized!.evidence).toHaveLength(3);

@@ -130,7 +130,7 @@ export function createRemoteMcpServer(
         reviewFirst: z.literal(false).optional().describe("Review-first requires the authenticated live browser; this adapter refuses true."),
         researchMode: z.never().optional(), responseMode: z.never().optional(),
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
-        language: z.enum(presentationLanguages).optional().describe("Language of generated labels only; the original question and answer are unchanged. Answer language is not recorded by this producer."),
+        language: z.enum(presentationLanguages).optional().describe("Language of generated labels only; the original question and answer are unchanged. Omitted labels follow qualified recorded answer language when available; historical and unqualified answer language remains unknown."),
         budget: z
           .number()
           .nonnegative()
