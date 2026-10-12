@@ -99,9 +99,12 @@ try {
   // same network-none fixture. The bridge has fixed SQL operations, no HTTP/provider.
   sql(`insert into web_sessions values('${session}','${wallet}',${now-2000},${now+600000});`);
   const textLiteral=(value:unknown)=>{assert.equal(typeof value,"string");return `'${String(value).replaceAll("'","''")}'`;};
+  // Match PostgREST's SQL NULL for absent nullable jsonb RPC arguments.
+  // JSON 'null' is a supplied scalar and correctly fails the position validator.
+  const positionLiteral=(value:unknown)=>value==null?"null":literal(value);
   const rpc=(method:string,args:Record<string,unknown>)=>{
     const query=method==="anonymous_run_claim_history_list_v1"
-      ? `anonymous_run_claim_history_list_v1(${textLiteral(args.p_wallet)},${textLiteral(args.p_network)},${textLiteral(args.p_origin)},${literal(args.p_filters)},${Number(args.p_take)},${literal(args.p_upper)},${literal(args.p_before)})`
+      ? `anonymous_run_claim_history_list_v1(${textLiteral(args.p_wallet)},${textLiteral(args.p_network)},${textLiteral(args.p_origin)},${literal(args.p_filters)},${Number(args.p_take)},${positionLiteral(args.p_upper)},${positionLiteral(args.p_before)})`
       : method==="run_privacy_v1" ? `run_privacy_v1(${textLiteral(args.p_action)},${textLiteral(args.p_id)},${literal(args.p_input)},${literal(args.p_actor)},${args.p_claims===true})` : null;
     assert(query,"No additional RPC authority in fixture");
     try{return{data:JSON.parse(sql(`set role service_role;select public.${query};`).split("\n").at(-1)!),error:null};}
