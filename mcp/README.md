@@ -1,5 +1,14 @@
 # Keryx MCP
 
+`evidence_procurement` prepares private missing-evidence requests, compares signed
+provider quotations within an integer quote budget, checks separately signed
+delivered bytes and retains explicit supporting/refuting reviews. Exported packets
+can be restored and reassessed on web, API and CLI using the same contract.
+This proposal tool does not contact providers, fetch sources, execute benchmarks,
+purchase or reward anyone. Signed quotations confer no payout or source ownership
+authority; coverage/reviews remain declarations and payment is unobserved. See
+[the workflow and remaining hosted/funded gates](../docs/evidence-procurement.md).
+
 The #276 source candidate adds optional `language: en|vi|pt|pt-BR|es` to `ask_keryx` for
 human-readable presentation only. It is consumed locally after the buyer returns: it is not
 added to the paid request/body/hash or forwarded as a model-language directive. Omission uses

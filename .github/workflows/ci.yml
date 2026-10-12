@@ -596,6 +596,9 @@ jobs:
       - name: Private evidence drafts built interactions (offline, no research)
         run: node --import tsx scripts/test-browser-evidence-drafts.mts
 
+      - name: Evidence procurement request, signatures and restored reviews (offline, synthetic providers)
+        run: node --import tsx scripts/test-browser-evidence-procurement.mts
+
       - name: Stored excerpt readability (built CSS, hermetic Chromium)
         env:
           KERYX_EVIDENCE_SCREENSHOT_DIR: ${{ runner.temp }}/evidence-readability
