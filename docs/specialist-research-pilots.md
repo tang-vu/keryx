@@ -72,6 +72,10 @@ illustrative empty [input template](research-pilot-template.json):
 npm run research:pilot -- --input private-cohort.json
 ```
 
+Both source CLIs reject direct URL, UNC and device-alias paths before opening
+input. Use regular files in an owner-controlled local directory; mounted-drive
+and filesystem redirection provenance remains managed by the operating system.
+
 [A fictitious pending row](research-pilot-example.json) shows the complete job
 shape; it has no payment, customer acceptance or known costs. Copy it into a
 private file and replace its placeholders with audited observations. Set `basis`
@@ -148,7 +152,9 @@ authorization at the point of execution.
 | Extension and bots | Existing question/hosted handoffs; no new permissions, commands, customer contact or distributed payment authority |
 | Storage, settlement, contracts | No DDL, migration, registry, merchant, nonce, reserve, signer, payout or schedule change |
 
-App/OpenAPI candidate 0.27.62. Source CLI is delivered with this repository; a new
+App/OpenAPI inherit current main 0.27.63 in this composed candidate; the next
+release version and delivery remain the coordinator's work. Source CLI is
+delivered with this repository; a new
 npm/installer version is not inferred from these web or source-CLI changes.
 Verify compiled-client graph boundaries, actual required CI/review, coordinated
 production deployment and deployed commit before claiming release. Synthetic

@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Three specialist research pilots (0.27.62 candidate)
+### Three specialist research pilots (unreleased)
 
 - Prepare API/platform, SaaS competitor/niche and literature requests with bounded
   scope and separate buyer review checklists at `/briefs` and in the source CLI.
@@ -13,6 +13,48 @@
 - Keep existing checkout, shared research, payment, native/package and hosted
   adapter roles. [Pilot and release gates](specialist-research-pilots.md) remain
   explicit; real customers, new-price checkout and profitable repeat use are open.
+- Both local source CLIs refuse direct remote and device-alias input paths before
+  access, with no-network controls preserving ordinary bounded file behavior.
+
+### Demand-driven evidence procurement (source candidate, October 12)
+
+- Prepare a private request for missing evidence; compare provider-signed
+  quotations by proposed requirement priority per integer micro-USDC.
+- Bind separately signed delivery bytes and exact excerpts to their quotation;
+  retain caller reviews of both supporting and refuting material.
+- Restore the original portable packet and recompute its budget account,
+  recommendation, signatures and decision receipt on web, API, CLI and MCP.
+- Add no provider contact, arbitrary code execution, hosted order book, new
+  financial authority, payout or settlement. Signatures and reviews do not certify
+  factual truth or independent business adoption. Existing buyer/registry gates
+  remain authoritative. See [workflow and remaining gates](evidence-procurement.md).
+- Release versions, exact-source CI, deployment and package publication are
+  coordinated delivery gates, not established by this source entry.
+
+### Broader reading library (0.27.62 candidate)
+
+- Expand the approved catalog from 31 to 50 feeds and the publisher directory
+  from 60 to 79 links with audited engineering, AI, security, payments and open
+  research publications. Production retained counts require the explicit import.
+- Preserve public free reads, verified creator payout authority and separate
+  Keryx operating-fee accounting. A creator leaderboard counts settled source
+  recipients; it does not count all available research sources.
+- Hosted web/API/MCP/bots share imported sources. Existing CLI, desktop and
+  extension handoffs retain their package and custody contracts; no new schedule
+  or spend allowance. See the October 12 source catalog audit.
+
+### Inspectable research decisions (0.27.62 candidate)
+
+- Add `/operator/decisions` with a synthetic no-spend example, recorded model/plan/
+  rule inspection, and isolated budget/attention comparisons using the existing
+  checkpoint evaluator. Supported reports expose the same inspection.
+- Inspect local recordings against a separately retained digest. Verify signed
+  Ed25519 export snapshots against a separately trusted public audit key; add the
+  bounded offline `audit:decisions` CLI. No production key is provisioned.
+- Preserve original v1/v2/v3, source/evidence/payment authority, private/native
+  capture boundaries and all existing adapter roles. Replay and signatures do
+  not certify answer quality, complete history or settlement. See
+  [scope and acceptance](engineering/vestiarion-adoption-2026-10-12.md).
 
 ### Conzit creator registration gas sponsorship (0.27.61 candidate)
 

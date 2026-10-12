@@ -10,6 +10,13 @@ if (args.length === 1 && args[0] === "--help") {
   let file: Awaited<ReturnType<typeof open>> | undefined;
   try {
     if (args.length !== 2 || args[0] !== "--input") throw new Error("Invalid arguments");
+    const inputPath = args[1];
+    // Refuse direct remote/device paths before open can use ambient authentication.
+    if (/^[a-z]+:\/\//i.test(inputPath) || inputPath === "-" || /^[a-z]:(?![\\/])/iu.test(inputPath)
+        || /^[\\/]{2}|^[\\/]\?\?[\\/]/u.test(inputPath)
+        || inputPath.split(/[\\/]/u).some(part => /^(?:con|prn|aux|nul|conin\$|conout\$|com[1-9¹²³]|lpt[1-9¹²³])(?:[ .:]|$)/iu.test(part))) {
+      throw new Error("Local input path required");
+    }
     file = await open(args[1], constants.O_RDONLY | constants.O_NONBLOCK);
     if (!(await file.stat()).isFile()) throw new Error("Regular input file required");
     const buffer = Buffer.alloc(8193);

@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const script = join(process.cwd(), "scripts", "research-pilot.mts");
@@ -70,4 +71,48 @@ describe("read-only local pilot CLI", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   }, 20_000);
+
+  it("refuses UNC, device namespaces and DOS aliases before either local CLI opens input", () => {
+    const directory = mkdtempSync(join(tmpdir(), "keryx-specialist-input-alias-"));
+    const forbidden = ["\\\\network-path-sentinel\\share\\input.json", "//network-path-sentinel/share/input.json",
+      "\\\\?\\C:\\network-path-sentinel.json", "\\\\.\\pipe\\network-path-sentinel", "\\??\\network-path-sentinel",
+      "CON.txt", "nul", "LPT1.json", "C:NUL", "C:CON.txt", "COM¹", "LPT².json", "folder/CONIN$",
+      "folder/CONOUT$.txt", "https://network-path-sentinel/input.json", "-"];
+    try {
+      const preload = join(directory, "no-remote-open.mjs");
+      writeFileSync(preload, `import fs from 'node:fs/promises';
+import {syncBuiltinESMExports} from 'node:module';
+const original=fs.open,forbidden=new Set(${JSON.stringify(forbidden)});
+fs.open=(path,...args)=>{if(forbidden.has(String(path))){process.stderr.write('FORBIDDEN_PATH_OPENED');throw Error('Forbidden input');}return original(path,...args)};
+syncBuiltinESMExports();
+globalThis.fetch=()=>{throw Error('Network forbidden by local CLI control')};\n`);
+      const preloadUrl = pathToFileURL(preload).href;
+      const control = spawnSync(process.execPath, ["--import", preloadUrl, "--input-type", "module", "--eval",
+        "import {open} from 'node:fs/promises';try{await open('CON.txt')}catch{}"],
+      { encoding: "utf8", timeout: 10_000, windowsHide: true });
+      expect(control.error).toBeUndefined();
+      expect(control.stderr).toContain("FORBIDDEN_PATH_OPENED");
+      const brief = join(directory, "brief.json");
+      writeFileSync(brief, JSON.stringify({ track: "api-platform", decision: "Compare two named APIs", context: "", sourceLeads: [] }));
+      for (const [name, input] of [["research-pilot.mts", "docs/research-pilot-template.json"],
+        ["prepare-specialist-brief.mts", brief]]) {
+        const target = join(process.cwd(), "scripts", name);
+        const run = (path: string) => spawnSync(process.execPath,
+          ["--import", "tsx", "--import", preloadUrl, target, "--input", path],
+          { encoding: "utf8", timeout: 10_000, windowsHide: true });
+        expect(run(input).status).toBe(0);
+        for (const path of forbidden) {
+          const result = run(path);
+          expect(result.error, `${name}: child completes`).toBeUndefined();
+          expect(result.status, `${name}: unsafe path refuses`).toBe(1);
+          expect(result.stdout).toBe("");
+          expect(result.stderr).not.toContain("FORBIDDEN_PATH_OPENED");
+          expect(result.stderr).not.toContain("network-path-sentinel");
+        }
+      }
+    } finally {
+      expect(directory.startsWith(join(tmpdir(), "keryx-specialist-input-alias-"))).toBe(true);
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }, 60_000);
 });
