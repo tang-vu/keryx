@@ -25,17 +25,4 @@ export async function exportOwnedHistory(db: OwnedHistoryDB, wallet: string, bin
     claimsAvailable, membershipAvailable, qualification: "Current-store owned metadata only; not a transaction snapshot, all archives, missing claims/membership, full report bodies or an unbounded receipt export." };
 }
 export type OwnedHistoryExport = Awaited<ReturnType<typeof exportOwnedHistory>>;
-const cell = (v: unknown) => {
-  let text = v === null || v === undefined ? "" : String(v);
-  if (/^\s*[=+@-]/.test(text)) text = "'" + text;
-  return `"${text.replaceAll('"', '""')}"`;
-};
-/** Metadata row exists even with zero runs. CSV formula neutralization changes presentation only. */
-export function historyCsv(value: OwnedHistoryExport) {
-  const headers = ["recordType", "id", "createdAt", "question", "ownerWallet", "surface", "visibility", "funding", "networks",
-    "ownSettledSpendMicros", "sponsoredSettledSpendMicros", "receiptsTruncated", "paidCreators", "complete", "truncated", "nextCursor"];
-  const records = [headers, ["metadata", "", "", value.qualification, value.wallet, "", "", "", "", "", "", "", "", value.complete, value.truncated, value.nextCursor],
-    ...value.rows.map(r => ["run", r.id, r.createdAt, r.question, r.ownerWallet, r.provenance?.surface ?? "unknown", r.visibility, r.funding,
-      r.networks.join(";"), r.ownSettledSpendMicros, r.sponsoredSettledSpendMicros, r.receiptsTruncated, JSON.stringify(r.paidCreators), "", "", ""])];
-  return records.map(row => row.map(cell).join(",")).join("\r\n") + "\r\n";
-}
+export { historyCsv } from "./owned-history-csv";

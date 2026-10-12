@@ -1,5 +1,43 @@
 # Owned personal history (#268)
 
+## Exact-session reads and repository CLI
+
+The v2 HTTP handler retains the current account-session hash and checks that same
+session again after every list, export, report, receipt or reference read. Revocation,
+expiry and session-storage failure discard private output. Another session for the
+same wallet is not a renewal of the pending request. Bearer requests still revalidate
+only their exact key, owner and explicit history scope, with no cookie fallback.
+Session hashes stay private and never become owner selectors or output fields.
+
+The repository CLI now exposes the existing v2 API contract directly:
+
+    node --import tsx scripts/history.mts list --surface api --limit 25
+    node --import tsx scripts/history.mts export --format json
+    node --import tsx scripts/history.mts export --format csv
+
+It reads only the explicit history-scoped KERYX_API_KEY and HTTPS KERYX_BASE_URL
+(default https://keryx.cc), with no environment-file loading, wallet selector,
+database fallback, signer, research, payment or retry. Filters and cursor semantics
+are identical to web/API/MCP. JSON preserves machine fields and original text;
+CSV uses the same pure serializer as HTTP. A successful command can still return
+truncated metadata, an empty continuing scan or wallet-only coverage. Inspect the
+completion, truncation, continuation and capability fields.
+
+Commands and the existing ownedHistory namespace retain their English baseline.
+No interface label, question heuristic or requested language establishes recorded
+answer language; original questions, answers, references and receipts are unchanged.
+The strict history input still rejects research presentation-language parameters.
+No preference is saved or reported as saved by this history adapter.
+
+Desktop's admitted native workspace/task history remains distinct from authenticated
+account history. The authenticated browser route is the account-history consumer;
+this delta adds no native account-history pane, automatic web handoff or account
+cookie/key storage. Dedicated native account-history integration is not proved.
+Extension and bot readers likewise retain their existing verified attribution and
+claim requirements. Account-wide coverage still needs the held #267 stored membership
+producer. Actual packaged stdio/Desktop/Windows, PostgreSQL, stock routing/browser and
+aggregate CI plus coordinated delivery remain required before original #268 closure.
+
 The explicitly selected owned-history `/me/asks` pane, `GET /api/me/asks?contract=owned`, remote MCP `history_owned_read` and the packaged stdio tool use the same v2 owner-private reader. The web starts on the prior session ledger; explicit v2 still refuses absent privacy admission. When privacy is active, the API defaults to v2. `history_export` and `/api/me/asks/export?format=json|csv` attempt a bounded whole-history metadata export. The previous attributed reader `/api/me/history`/`history_read`, explicit SIWE `view=recent` ledger, claimant pane and explicit testnet archive remain distinct qualified views.
 
 Authentication uses an active stored session or an explicitly `history:read` scoped key. Bearer presence excludes cookie fallback; existing/default keys retain ask/export only. Owner addresses are never query selectors. HTTP rechecks bearer validity before releasing a long response. Private headers are retained at both handler and Next routing layers. Read keys cannot mutate privacy. Row visibility/delete use existing revision, idempotent request ID, same-origin, owner-precondition and active interactive-session checks. A member-wallet row requires that wallet's session to mutate; the consumer does not invent delegated write authority.

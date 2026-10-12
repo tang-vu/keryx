@@ -9,7 +9,7 @@ import { exportOwnedHistory, historyCsv } from "./owned-history-export";
 import { buildCitationExport, type CitationExportFormat } from "../research-citation-export";
 
 interface Dependencies {
-  session(): Promise<{ db: KeryxDB; wallet: string } | Response>;
+  session(): Promise<{ db: KeryxDB; wallet: string; currentId: string } | Response>;
   key(raw: string): Promise<{ walletAddress: string; scopes: string | null } | null>;
   db(): Promise<KeryxDB>; binding: RunClaimBinding;
 }
@@ -29,24 +29,37 @@ export function createOwnedHistoryRoute(deps: Dependencies, action: "list" | "ex
       if (action === "detail" && params.size) return json({ error: "invalid_history_query" }, 400);
       const expected = req.headers.get("x-keryx-expected-wallet");
       if (expected !== null && !/^0x[0-9a-fA-F]{40}$/.test(expected)) return json({ error: "invalid_owner_precondition" }, 400);
-      const header = req.headers.get("authorization"); let context;
+      const header = req.headers.get("authorization"); let context, sessionId: string | undefined;
       if (header !== null) {
         if (!/^Bearer kx_live_[0-9a-f]{96}$/.test(header)) return json({ error: "unauthenticated" }, 401);
         const key = await deps.key(header.slice(7));
         if (!key) return json({ error: "unauthenticated" }, 401);
         if (!parseScopes(key.scopes).includes("history:read")) return json({ error: "insufficient_scope" }, 403);
         context = { wallet: key.walletAddress, db: await deps.db() };
-      } else context = await deps.session();
+      } else {
+        context = await deps.session();
+        if (!(context instanceof Response)) {
+          if (!/^[a-f0-9]{64}$/.test(context.currentId)) throw new HistoryError("history_unavailable");
+          sessionId = context.currentId;
+        }
+      }
       if (context instanceof Response) return privateRunResponse(context);
       const wallet = historyWallet(context.wallet);
       if (expected !== null && expected.toLowerCase() !== wallet) return json({ error: "history_owner_changed" }, 409);
       const finish = async (response: Response) => {
-        // Long bounded exports/reads must discard output if their bearer was revoked meanwhile.
+        // Fence the exact credential after private IO; another session for this wallet is not a renewal.
+        if (req.signal.aborted) throw new HistoryError("history_unavailable");
         if (header !== null) {
           const current = await deps.key(header.slice(7));
           if (!current) return json({ error: "unauthenticated" }, 401);
           if (!parseScopes(current.scopes).includes("history:read")) return json({ error: "insufficient_scope" }, 403);
           if (historyWallet(current.walletAddress) !== wallet) return json({ error: "history_owner_changed" }, 409);
+        } else {
+          const current = await deps.session();
+          if (current instanceof Response) return privateRunResponse(current);
+          if (current.currentId !== sessionId || historyWallet(current.wallet) !== wallet) {
+            return json({ error: "history_owner_changed" }, 409);
+          }
         }
         return response;
       };

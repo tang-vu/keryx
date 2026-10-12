@@ -21,6 +21,7 @@ import { SqliteAdapter } from "../db/sqlite-adapter";
 import { createOwnedHistoryRoute } from "./owned-history-route";
 import { createOwnedHistoryClient } from "./owned-history-client";
 import { registerOwnedHistoryTools } from "./owned-history-mcp";
+import { runOwnedHistoryCli } from "./owned-history-cli";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -222,9 +223,73 @@ it("actual isolated key revocation, scope and owner fences protect the API/expor
     expect((await legacy(new Request("https://synthetic-history.example/api/me/asks", { headers: { Authorization: "Basic refused" } }))).status).toBe(401);
   } finally { auth.close(); }
 });
+const sessionFormats = [
+  ["list", "json"], ["export", "json"], ["export", "csv"],
+  ["detail", "report"], ["detail", "receipts"], ["detail", "bibtex"],
+] as const;
+const sessionChanges = ["revoked", "expired", "replaced", "wallet-changed", "storage-error"] as const;
+it.each(sessionFormats.flatMap(([action, format]) => sessionChanges.map(change => ({ action, format, change }))))(
+  "discards $action/$format private output after pending IO when the session is $change", async ({ action, format, change }) => {
+    const f = fixture(); f.save("owned"); f.payment("retained", "owned");
+    const entered = deferred(), release = deferred(), original = f.db;
+    const block = async <T,>(value: T) => { entered.resolve(); await release.promise; return value; };
+    const db = {
+      ...original,
+      personalHistory: { ...original.personalHistory!, receipts: async (id: string, take: number) =>
+        block(await original.personalHistory!.receipts!(id, take)) },
+      runPrivacy: { ...original.runPrivacy!, owner: async (...args: Parameters<NonNullable<OwnedHistoryDB["runPrivacy"]>["owner"]>) => {
+        const value = await original.runPrivacy!.owner(...args);
+        return action === "detail" && format !== "receipts" ? block(value) : value;
+      } },
+    } as KeryxDB;
+    let currentId = sha(alice), unavailable = false;
+    const session = vi.fn(async () => {
+      if (unavailable) throw new Error("Synthetic session storage unavailable");
+      const row = f.sql.prepare("SELECT hash,wallet,expires_at FROM web_sessions WHERE hash=?").get(currentId);
+      if (!row || Number(row.expires_at) <= Date.now()) return Response.json({ error: "unauthenticated" }, { status: 401 });
+      return { db, wallet: String(row.wallet), currentId: String(row.hash) };
+    });
+    const key = vi.fn(), getDb = vi.fn();
+    const route = createOwnedHistoryRoute({ session, key, db: getDb, binding }, action);
+    const path = action === "detail" ? "/api/me/asks/owned" : action === "export" ? "/api/me/asks/export" : "/api/me/asks";
+    const pending = route(new Request(binding.origin + path + "?format=" + format), action === "detail" ? "owned" : undefined);
+    await Promise.race([entered.promise, pending.then(() => { throw new Error("Returned before pending private IO"); })]);
+    try {
+      if (change === "revoked") f.sql.prepare("DELETE FROM web_sessions WHERE hash=?").run(currentId);
+      else if (change === "expired") f.sql.prepare("UPDATE web_sessions SET expires_at=issued_at+1 WHERE hash=?").run(currentId);
+      else if (change === "wallet-changed") f.sql.prepare("UPDATE web_sessions SET wallet=? WHERE hash=?").run(foreign, currentId);
+      else if (change === "replaced") {
+        currentId = sha("replacement-session");
+        f.sql.prepare("INSERT INTO web_sessions VALUES(?,?,?,?)").run(currentId, alice, Date.now() - 1, Date.now() + 60000);
+      } else unavailable = true;
+    } finally { release.resolve(); }
+    const response = await pending;
+    expect(response.status).toBe(change === "storage-error" ? 503 : change === "replaced" || change === "wallet-changed" ? 409 : 401);
+    const body = await response.text();
+    expect(body).not.toContain("Question %_ owned"); expect(body).not.toContain("PRIVATE original");
+    expect(body).not.toContain(alice); expect(body).not.toContain(currentId);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(session).toHaveBeenCalledTimes(2); expect(key).not.toHaveBeenCalled(); expect(getDb).not.toHaveBeenCalled();
+    expect(f.sql.prepare("SELECT amount_usdc FROM payment_events WHERE id='retained'").get()?.amount_usdc).toBe(.02);
+  });
+it.each(sessionFormats)("keeps exact active session output for %s/%s", async (action, format) => {
+  const f = fixture(); f.save("owned"); const db = f.db as KeryxDB;
+  const session = vi.fn(async () => ({ db, wallet: alice, currentId: sha(alice) }));
+  const response = await createOwnedHistoryRoute({ session, key: vi.fn(), db: vi.fn(), binding }, action)(
+    new Request(binding.origin + "/api/me/asks?format=" + format), action === "detail" ? "owned" : undefined);
+  expect(response.status).toBe(200); expect(session).toHaveBeenCalledTimes(2);
+  expect(response.headers.get("cache-control")).toContain("no-store");
+});
+it("refuses a session context without a stable current session identifier before reading private rows", async () => {
+  const f = fixture(), list = vi.fn(), db = { ...f.db, personalHistory: { list } } as unknown as KeryxDB;
+  const session = async () => ({ db, wallet: alice, currentId: "" });
+  const response = await createOwnedHistoryRoute({ session, key: vi.fn(), db: vi.fn(), binding })(new Request(binding.origin + "/api/me/asks"));
+  expect(response.status).toBe(503); expect(list).not.toHaveBeenCalled();
+});
 it("source mutation stays on the existing interactive-session privacy contract; keys only get read capabilities", async () => {
   const f = fixture(); f.save("owned"); const db = f.db as KeryxDB;
-  const deps = { binding, db: async () => db, key: async () => null, session: async () => ({ db, wallet: alice }) };
+  const deps = { binding, db: async () => db, key: async () => null, session: async () => ({ db, wallet: alice, currentId: sha(alice) }) };
   const route = createOwnedHistoryRoute(deps, "detail");
   expect((await route(new Request("https://synthetic-history.example/api/me/asks/owned?format=visibility"), "owned")).status).toBe(400);
   await expect(f.privacy.change("owned", { wallet: alice, binding }, { visibility: "public", revision: 0, requestId: randomUUID() })).rejects.toThrow();
@@ -245,6 +310,11 @@ it("packaged client and real MCP SDK tool contracts use the same authenticated A
     const exported = await client.callTool({name:"history_export",arguments:{}});
     expect(exported.structuredContent).toMatchObject({complete:true,truncated:false,rows:[{id:"owned"}]});
     expect(requests.map(r=>new URL(r.url).pathname)).toEqual(["/api/me/asks","/api/me/asks/export"]);
+    const output: string[] = [];
+    expect(await runOwnedHistoryCli(["list", "--search", "%_", "--limit", "2"], {
+      key: raw, baseUrl: binding.origin, fetcher, write: text => output.push(text), error: text => { throw new Error(text); },
+    })).toBe(0);
+    expect(JSON.parse(output.join(""))).toEqual(result.structuredContent);
     expect(requests.every(r=>r.method==="GET" && r.headers.get("authorization")===`Bearer ${raw}` && r.credentials==="omit" && r.redirect==="error")).toBe(true);
     const denied = await client.callTool({name:"history_owned_read",arguments:{wallet:foreign}}); expect(denied.isError).toBe(true);
   } finally {await client.close();await server.close();}
