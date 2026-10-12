@@ -77,7 +77,7 @@ try {
         await link.scrollIntoViewIfNeeded();
         const prefetched = await prefetch; await prefetched.finished();
         assert.equal(prefetched.status(), 200, `${destination} route tree is prefetched`);
-        // Measure from the actual input event to the next painted fallback.
+        // Measure from the actual input event to the fallback's next animation frame.
         // Playwright's scroll/actionability waits precede the user's click.
         await link.evaluate(anchor => {
           anchor.addEventListener("click", () => performance.mark("navigation-click"), { once: true });
@@ -110,6 +110,7 @@ try {
           held.delete(finalRoute);
           await page.waitForURL(origin + destination);
           await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ state: "detached" });
+          await page.getByRole("heading", { level: 1 }).waitFor();
           await page.locator('header button[aria-label="Open menu"]').waitFor({ state: "attached" });
           await page.goBack(); await page.waitForURL(origin + entryPath);
         }
@@ -124,7 +125,7 @@ try {
   for (const path of ["/does-not-exist", "/dispatch/00000000-0000-0000-0000-000000000000", "/creator/does-not-exist", "/wanted/does-not-exist", "/answers/topic/does-not-exist", "/answers/page/999999"])
     assert.equal((await fetch(physicalOrigin + path)).status, 404, `${path} keeps its HTTP status`);
   assert.equal((await fetch(physicalOrigin + "/purchase-outcomes")).status, 200, "Purchase outcomes remains available");
-  console.log("PASS: mobile header and desktop footer switch before delayed data; cancellation, final content, history and 404 preserved.");
+  console.log("PASS: mobile header and internal links switch before delayed data; cancellation, destination headings, history and 404 preserved.");
 } finally {
   for (const route of held) await route.abort().catch(() => undefined);
   await browser.close();

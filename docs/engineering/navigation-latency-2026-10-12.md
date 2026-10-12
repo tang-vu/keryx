@@ -21,7 +21,7 @@ that could start a connection whose intent would be lost when the shell disappea
 
 `scripts/test-browser-navigation-latency.mts` runs the actual production router in
 Chromium and WebKit on mobile and desktop. It withholds final route responses,
-requires the painted loading shell within one second of the input event, then
+requires the loading shell's next animation frame within one second of input, then
 checks interruption, completed content, browser history and missing-route status.
 The disposable offline fixture forwards only GETs and blocks API and vendor calls.
 The production CI lane runs both engines. A prefetched shell improves time to
@@ -29,7 +29,7 @@ visible navigation; it does not establish faster database queries, completed pag
 data, or responsiveness before hydration/prefetch has finished.
 
 Local acceptance on October 13: production build and TypeScript passed. Across
-the 16 delayed-response cases, the shell painted 29–264 ms after the input event.
+the 16 delayed-response cases, fallback frame timing was 36–509 ms after input.
 Six absent-route checks retained HTTP 404. The existing built private-web test
 also passed its initial-document nonce, RSC/prefetch refusal, one-shot handoff,
 hydration, opener and unavailable-completion assertions. Those use synthetic
