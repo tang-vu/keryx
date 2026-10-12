@@ -7889,3 +7889,17 @@ signer does. Their bundled dependency graph excludes the server configuration
 and server authority module. Manual browser fixtures supply the same explicit
 public build pins, including an absent origin list for legacy-only cases; a
 generic environment shim must not hide a new server dependency in this path.
+## Observe public deployment contracts separately from liveness — 2026-10-12
+
+The owner requested adopting useful patterns from other Tameion repositories.
+ACR's deployed-pillar and drift checks show why a healthy process is insufficient
+evidence that the public product's intended contracts are available. Add a native,
+GET-only `verify:live` operations command that requires an expected commit and
+network, checks the public metrics scope and complete usage projection, and
+records page reachability and monitoring limitations. Unknown availability
+fails the feature observation; it is not labeled source drift. A shortened
+health commit proves only its reported prefix. Native code avoids an upstream
+Python/chain dependency and retains existing financial and distribution roles.
+This is verification maintenance, without runtime version, custody, schema,
+spending or scheduling changes. Source pins, acceptance and remaining gates are
+in [the adoption record](docs/engineering/acr-deployment-adoption-2026-10-12.md).
