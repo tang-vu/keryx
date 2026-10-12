@@ -250,7 +250,7 @@
     "lib/llm/supplemental-span-capability.ts": "eaf1a33f5b6809f7aa18a590bf52899d4841126a587f7e807d1cb85f6d5b3f77",
     "lib/llm/well-formed-utf16.ts": "fb8deb1ffd5a2087159f1ba6016190cb3484820af0b6b2c8faa3341a0dadc320",
     "lib/net/public-fetch.ts": "67d1402b1339a97a2019b87eba8696e908b8882e2fd07ff4af8086e39c9aa81a",
-    "lib/notify/alert.ts": "4484bf2817497a4931bcbee2604d43ec3d47315ed1c76124bac8648d713bd099",
+    "lib/notify/alert.ts": "2c621a74b912601a950bd526f56efd8b6431294d54596ce53b4460769a670bfb",
     "lib/notify/citation-email.ts": "92a31b84e6a8bd71641a4351047cfc2d1322afc66c3f6be23617b87a61946c86",
     "lib/notify/citation-webhook.ts": "0a808425d3bcf1207197beffb49d7b71f60aaaeeac209f1eccab038a36c61df0",
     "lib/offers/article-offer-proof.ts": "fb34561aeb312f189653434ca14587a825268cbfd08533eb859cee6c026bfb73",
