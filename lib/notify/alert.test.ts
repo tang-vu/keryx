@@ -134,3 +134,15 @@ it("redacts configured credentials and Telegram endpoints from logs and delivere
   expect(output).not.toContain(webhook);
   expect(output).toContain("[redacted]");
 });
+
+it("requires complete configured channels and can omit private event details from process logs", async () => {
+  const unbound = await load();
+  expect(unbound.operationalAlertChannelsReady()).toBe(false);
+  configureTelegram(); vi.resetModules();
+  const http = vi.fn().mockResolvedValue(Response.json({ ok: true })); vi.stubGlobal("fetch", http);
+  const configured = await load();
+  expect(configured.operationalAlertChannelsReady()).toBe(true);
+  expect(await configured.sendAlert("Synthetic private job alert", "synthetic-original-payment-reference", { logDetail: false })).toBe(true);
+  expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toContain("synthetic-original-payment-reference");
+  expect(JSON.parse(http.mock.calls[0][1].body).text).toContain("synthetic-original-payment-reference");
+});

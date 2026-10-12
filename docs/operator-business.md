@@ -6,6 +6,11 @@ store. [Queue scope and limitations](engineering/paid-job-overdue-queue-257.md)
 include incomplete/corrupt data, pending payment, backend refusal and exit statuses.
 The command grants no background schedule, notification or recovery authority.
 
+[Paid-job deadline observation](engineering/paid-job-deadline-alerts-257.md) is a
+default-OFF source adapter on the existing worker heartbeat. It reserves a bounded
+private alert before transport, holds ambiguous sends instead of replaying, and
+requires separate channel/human/customer delivery qualification before activation.
+
 October 6, 2026 implementation candidate: app 0.27.4, remote MCP 0.3.2 and
 caller-funded MCP 0.4.6. Deployment/publication readbacks are release gates.
 

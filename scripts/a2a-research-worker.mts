@@ -24,6 +24,8 @@ import { recoverOperatorOriginal } from "../lib/business-operator/recovery.ts";
 import { canaryExecutionPaused, canaryOriginalClaim } from "../lib/business-operator/canary-policy.ts";
 import { matchesA2aOriginalClaim } from "../lib/a2a/original-claim.ts";
 import { a2aFailureDiagnostic, formatA2aFailureDiagnostic } from "../lib/a2a/failure-diagnostic.ts";
+import { createPaidJobAlertObserver } from "../lib/a2a/paid-job-alert-observer.ts";
+import { paidJobAlertChannel } from "../lib/notify/paid-job-alert.ts";
 
 const workerId = `${os.hostname()}:${process.pid}:${crypto.randomUUID()}`;
 let stopping = false;
@@ -162,13 +164,29 @@ async function loop() {
 // Cooperative single-host exclusion. A crash keeps its lock for explicit
 // inspection; neither age nor a recycled PID permits replaying a started job.
 if (auditDirectory) await withPrivateWorkerLock(auditDirectory, async () => {
+  const paidJobAlerts = createPaidJobAlertObserver({ db, network: config.networkId, payee: config.sellerAddress,
+    enabled: process.env.KERYX_PAID_JOB_ALERTS_ENABLED === "1", channel: paidJobAlertChannel() });
+  let lastAlertObservation = "";
+  const observePaidJobs = async () => {
+    const result = await paidJobAlerts.observe();
+    if (result.status === "disabled") return;
+    const summary = JSON.stringify(result); // Closed counts/status only, never original references.
+    if (summary === lastAlertObservation) return;
+    lastAlertObservation = summary;
+    try { console.warn(`[a2a-worker] deadline alert observation ${summary}; transport acknowledgment is not human/customer receipt`); }
+    catch { /* A failed observation log must not change paid execution or recovery. */ }
+  };
   let pendingHeartbeat: Promise<void> | null = null;
   const timer = setInterval(() => {
+    // Reuse this already-owned cadence even while research awaits I/O or a hold has no
+    // heartbeat. The observer owns no timer and never authorizes another paid execution.
+    if (!stopping) void observePaidJobs();
     if (!heartbeat || pendingHeartbeat) return;
     pendingHeartbeat = publishOperatorHeartbeat(db, config.networkId, heartbeat.decision, heartbeat.phase, heartbeat.outcome)
       .catch(() => undefined).finally(() => { pendingHeartbeat = null; });
   }, 30_000);
-  try { await loop(); } finally { clearInterval(timer); await pendingHeartbeat; }
+  try { await observePaidJobs(); await loop(); }
+  finally { clearInterval(timer); await pendingHeartbeat; await paidJobAlerts.drain(); }
 });
 else await loop();
 
