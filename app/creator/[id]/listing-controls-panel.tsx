@@ -23,7 +23,7 @@ import { currentArcLabel } from "@/lib/arc-network-display";
 import { parseUnits } from "viem";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { type RegistryVersion } from "@/lib/registry/registry-version";
-import { assertListingRegistryOrigin } from "@/lib/registry/source-registry-authority";
+import { assertBrowserListingRegistryOrigin } from "@/lib/registry/browser-source-registry-authority";
 import { listingPriceCall, listingDeactivateCall } from "@/lib/creator/listing-call";
 import { REGISTRY_ABI, REVISIONED_REGISTRY_ABI } from "@/lib/registry/registry-abi";
 import { parseListingSnapshot, sameListingSnapshot } from "@/lib/creator/listing-snapshot";
@@ -79,7 +79,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
       const d = value.mode === "onchain" ? parseListingSnapshot(value) : value;
       if (d.mode === "onchain") {
         if (!d.registryAddress || d.registryVersion === undefined) throw new Error(uiCopy("creatorListing.authorityUnavailable"));
-        assertListingRegistryOrigin(d.registryAddress, d.registryVersion);
+        assertBrowserListingRegistryOrigin(d.registryAddress, d.registryVersion);
       }
       if (!browserPaymentProfile().testnet && d.mode !== "onchain") throw new Error(uiCopy("creatorListing.authorityUnavailable"));
       setData(d);
@@ -130,7 +130,7 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
       || owner.chainId !== arcChain.id || owner.connected?.toLowerCase() !== fresh.creator) {
       throw new Error(uiCopy("creatorListing.identityChanged"));
     }
-    assertListingRegistryOrigin(fresh.registryAddress, fresh.registryVersion);
+    assertBrowserListingRegistryOrigin(fresh.registryAddress, fresh.registryVersion);
     if (!sameListingSnapshot(data, fresh)) {
       setData(fresh); setPrice(String(fresh.fetchPrice)); setDelistArmed(false); setReviewRequired(true);
       throw new Error(uiCopy("creatorListing.changed"));

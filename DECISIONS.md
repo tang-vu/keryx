@@ -7844,3 +7844,9 @@ restart/expiry acceptance, exact-source CI/review, stopped-writer production
 binding and live commit/configuration readbacks are explicit release gates. See
 [the sponsor contract](docs/creator-registration-sponsorship.md) and
 [registry origin continuity](docs/source-registry-origins.md).
+
+Creator listing controls use the public browser origin parser, as the isolated
+signer does. Their bundled dependency graph excludes the server configuration
+and server authority module. Manual browser fixtures supply the same explicit
+public build pins, including an absent origin list for legacy-only cases; a
+generic environment shim must not hide a new server dependency in this path.

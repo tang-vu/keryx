@@ -12,7 +12,9 @@ const current = { ...legacy, address: `0x${"33".repeat(20)}`, version: 3, codeHa
 const id = `0x${"44".repeat(32)}`, payout = `0x${"55".repeat(20)}` as Hex, origin = "https://keryx.cc";
 const origins = JSON.stringify([legacy, current]);
 const bundle = await build({ stdin: { contents: `import {readBrowserMainnetSource} from './lib/session/browser-session-source-authority';
-  self.onmessage=async()=>{try{const authority=await readBrowserMainnetSource('${id}');self.postMessage({ok:true,worker:typeof window==='undefined'&&self instanceof DedicatedWorkerGlobalScope,authority:{...authority,wallets:[...authority.wallets]}})}catch{self.postMessage({ok:false})}};`,
+  import {assertBrowserListingRegistryOrigin} from './lib/registry/browser-source-registry-authority';
+  self.onmessage=async({data})=>{try{if(data.operation==='listing'){assertBrowserListingRegistryOrigin(data.address,data.version);self.postMessage({ok:true});return;}
+    const authority=await readBrowserMainnetSource('${id}');self.postMessage({ok:true,worker:typeof window==='undefined'&&self instanceof DedicatedWorkerGlobalScope,authority:{...authority,wallets:[...authority.wallets]}})}catch{self.postMessage({ok:false})}};`,
   resolveDir: process.cwd(), loader: "ts" }, bundle: true, write: false, platform: "browser", format: "iife", define: {
     "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify("arc"),
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(current.address),
@@ -53,17 +55,25 @@ try {
     return route.fulfill({ json: { jsonrpc: "2.0", id: body.id, result } });
   });
   const page = await context.newPage(); await page.goto(origin);
-  async function observe() {
+  async function observe(operation: { operation: "listing"; address: string; version: number } | Record<string, never> = {}) {
     rpc.length = 0; blockReads = 0;
-    return page.evaluate(async () => {
+    return page.evaluate(async operation => {
       const worker = new Worker("/worker.js");
       try { return await new Promise<{ ok: boolean; worker?: boolean; authority?: { fetchPayTo: string; listPriceUsdc: number; registryAuthority: unknown } }>((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error("Synthetic worker deadline")), 12000);
         worker.onmessage = event => { clearTimeout(timeout); resolve(event.data); };
         worker.onerror = () => { clearTimeout(timeout); reject(new Error("Synthetic worker startup failed")); };
-        worker.postMessage({});
+        worker.postMessage(operation);
       }); } finally { worker.terminate(); }
-    });
+    }, operation);
+  }
+  for (const allowed of [legacy, current]) {
+    assert.equal((await observe({ operation: "listing", address: allowed.address, version: allowed.version })).ok, true);
+    assert.equal(rpc.length, 0, "Listing membership uses compiled public pins only");
+  }
+  for (const refused of [{ ...legacy, version: 3 }, { ...current, version: 1 }, { ...current, address: payout }]) {
+    assert.equal((await observe({ operation: "listing", address: refused.address, version: refused.version })).ok, false);
+    assert.equal(rpc.length, 0);
   }
   const old = await observe(); assert.equal(old.ok, true); assert.equal(old.worker, true);
   assert.deepEqual(old.authority?.registryAuthority, legacy); assert.equal(old.authority?.fetchPayTo, payout); assert.equal(old.authority?.listPriceUsdc, 0.005);

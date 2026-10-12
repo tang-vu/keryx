@@ -49,6 +49,12 @@ Existing installations must update that configuration before using the mixed
 registry catalog; no new key, funding, creator registration or custody migration
 is required. Single-registry unbound catalogs keep their previous configuration.
 
+Creator listing controls also use the lightweight public browser parser. They
+accept the configured original V1/V3 address and version, refusing foreign or
+mismatched origins before wallet writes. Their compiled graph excludes server
+configuration; the legacy-only fallback uses explicit public address/version
+pins. Browser fixtures verify that boundary without a generic environment shim.
+
 New native claim payments compare the claim to the stored immutable source
 origin inside the financial writer transaction. The testnet-only durable-v3
 original lane additionally retains the exact origin in its context and checks
