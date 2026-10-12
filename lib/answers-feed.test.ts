@@ -26,6 +26,22 @@ describe("xmlEscape", () => {
 });
 
 describe("buildAnswersFeedXml", () => {
+  it("declares recorded answer language on answer content independently of the English wrapper", () => {
+    const xml = buildAnswersFeedXml([entry({ id: "vi", answerLanguage: "vi", answerSnippet: "Tiếng Việt" }),
+      entry({ id: "zh", answerLanguage: "zh-Hans", answerSnippet: "中文" }), entry({ id: "unknown" })], BASE);
+    expect(xml).toContain('<content type="text" xml:lang="vi">Tiếng Việt</content>');
+    expect(xml).toContain('<content type="text" xml:lang="zh-Hans">中文</content>');
+    expect(xml).toContain('<content type="text" xml:lang="und">');
+    expect(xml).toContain('hreflang="vi" href="https://keryx.cc/dispatch/vi"');
+    expect(xml).toContain('<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">');
+    expect(xml).not.toContain('hreflang="und"');
+  });
+
+  it("binds a language subscription self link to the same filtered feed", () => {
+    const xml = buildAnswersFeedXml([], BASE, "vi");
+    expect(xml).toContain('<id>https://keryx.cc/answers?language=vi</id>');
+    expect(xml).toContain('rel="self" type="application/atom+xml" href="https://keryx.cc/answers/feed.xml?language=vi"');
+  });
   it("labels historical testnet amounts without attributing them to mainnet", () => {
     const xml = buildAnswersFeedXml([entry({ archivedNetwork: "eip155:5042002" })], BASE);
     expect(xml).toContain("0.0053 test USDC in recorded creator rewards (Arc testnet history)");

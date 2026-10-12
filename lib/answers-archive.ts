@@ -22,6 +22,8 @@ export interface ArchiveEntry {
   createdAt: string;
   /** The agent's own trust level for this answer, when it recorded one. */
   confidence: Confidence | null;
+  /** Validated recorded output language; missing historical evidence stays undetermined. */
+  answerLanguage?: string;
   /** Original rail for a retained historical record; never current payout authority. */
   archivedNetwork?: "eip155:5042002";
 }

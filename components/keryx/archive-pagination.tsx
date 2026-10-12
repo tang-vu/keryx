@@ -9,7 +9,7 @@
 
 import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
-import { answersPagePath } from "@/lib/answers-pagination";
+import { archiveLanguagePath } from "@/lib/answers-language";
 
 const copy = createMessages("en");
 
@@ -27,7 +27,7 @@ function pageNumbers(page: number, totalPages: number): number[] {
 const linkClass =
   "border border-ink bg-paper px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_3px_0_var(--ink)]";
 
-export function ArchivePagination({ page, totalPages }: { page: number; totalPages: number }) {
+export function ArchivePagination({ page, totalPages, language = null }: { page: number; totalPages: number; language?: string | null }) {
   if (totalPages <= 1) return null;
   const numbers = pageNumbers(page, totalPages);
 
@@ -37,7 +37,7 @@ export function ArchivePagination({ page, totalPages }: { page: number; totalPag
       className="mt-10 flex flex-wrap items-center gap-2 border-t border-line pt-6"
     >
       {page > 1 && (
-        <Link href={answersPagePath(page - 1)} rel="prev" className={linkClass}>
+        <Link href={archiveLanguagePath(page - 1, language)} rel="prev" className={linkClass}>
           {copy("archivePages.newer")}
         </Link>
       )}
@@ -56,7 +56,7 @@ export function ArchivePagination({ page, totalPages }: { page: number; totalPag
                 {n}
               </span>
             ) : (
-              <Link href={answersPagePath(n)} className={linkClass}>
+              <Link href={archiveLanguagePath(n, language)} className={linkClass}>
                 {n}
               </Link>
             )}
@@ -65,7 +65,7 @@ export function ArchivePagination({ page, totalPages }: { page: number; totalPag
       })}
 
       {page < totalPages && (
-        <Link href={answersPagePath(page + 1)} rel="next" className={linkClass}>
+        <Link href={archiveLanguagePath(page + 1, language)} rel="next" className={linkClass}>
           {copy("archivePages.older")}
         </Link>
       )}

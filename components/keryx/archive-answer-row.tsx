@@ -10,6 +10,7 @@ import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import type { ArchiveEntry } from "@/lib/answers-archive";
 import { ConfidenceBadge } from "./confidence-badge";
+import { archiveAnswerLanguage } from "@/lib/answers-language";
 
 const copy = createMessages("en");
 
@@ -35,11 +36,11 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
             {fmtDate(entry.createdAt)}
           </span>
         </div>
-        <h2 className="mt-2 font-display text-[19px] font-medium leading-snug text-ink transition-colors group-hover:text-seal">
+        <h2 lang="und" className="mt-2 font-display text-[19px] font-medium leading-snug text-ink transition-colors group-hover:text-seal">
           {entry.question}
         </h2>
         {entry.answerSnippet && (
-          <p className="mt-2 font-serif text-[15px] leading-[1.5] text-ink-2">
+          <p lang={archiveAnswerLanguage(entry)} className="mt-2 font-serif text-[15px] leading-[1.5] text-ink-2">
             {entry.answerSnippet}
           </p>
         )}

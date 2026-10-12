@@ -68,32 +68,65 @@ addition; all policy markup, link and copy-guard assertions remain unchanged.
 Sponsored registration supplies its alternates in a dedicated server layout,
 preserving the page's original metadata export and strict copy fixture.
 
+## October 12 consumer completion checkpoint
+
+The public archive now supplies answer-language browsing at
+`/answers?language=<recorded-tag>` and preserves the selection across existing
+pagination and Atom subscription URLs. These are English interface filters,
+not activated translated pages. Filtered index views remain nonindexed and
+keep their existing unfiltered canonical/English alternates. Ambiguous repeated
+query preferences select the unfiltered archive consistently. Unknown answers
+are browsable as undetermined; question text and script never select a language.
+
+Slim archive entries have a recorded answer-language slot. Answer snippets and
+Atom answer content carry that tag; original questions remain undetermined.
+Known answer works in collection structured data declare their language without
+changing the collection's English interface language. A language-aware dedup
+and the write-time provenance consumer require issue 276's checkpointed shared
+reader; that integration is still pending at this checkpoint. No producer or
+duplicate provenance parser is introduced by the public archive worker.
+
+With privacy admitted, archive selection uses the existing public-only privacy
+port in bounded 32-row pages before deduplication. Selected IDs are freshly
+projected through that same port in 32-row batches before publication, so a
+revocation or tombstone created during scanning cannot reuse the old text.
+Scan/publication failures, missing ports and unexpected/duplicate publication
+identities return an empty result, never a partial or historical fallback.
+After this process has observed admitted privacy, a database outage cannot
+revive its retained legacy cache. Immutable historical archives remain excluded
+from active privacy enumeration. This does not activate privacy or authorize
+ordinary Supabase DDL; its reviewed storage/API rollout remains a separate gate.
+
+Synthetic tests cover actual page/feed/metadata/pagination and rendered snippet
+language contracts. A real in-memory SQLite privacy fixture checks rich hidden
+duplicates and an erasure between selection and publication. All use zero model,
+search and payment calls. Their source evidence is not production readback.
+
 ## Privacy, supported surfaces and remaining original criteria
 
-The archive, sitemap, feed and wanted paths keep their existing public-data
-readers; no private storage, private report adapter, new enumeration or visibility
-authority is introduced. The existing `publicReportLanguage` contract still
-refuses private, unlisted and unknown records. Public `QueryRun` currently has
-neither persisted answer language nor an unlisted-visibility contract. Private
-research uses separate protected storage; this change does not make it public.
-Original private/unlisted acceptance still needs integrated tests once a reviewed
-visibility adapter exists, rather than synthetic flags being treated as authority.
+The archive, sitemap and feed share the same public corpus. The existing
+`publicReportLanguage` contract refuses private, unlisted and unknown records.
+Public enumeration uses the existing admitted visibility port where enabled;
+source-only privacy staging does not establish production activation. Separate
+protected private-research storage is unchanged. Existing integrated SQLite
+public-surface tests and the new tombstone fixture verify admitted local behavior.
 
 The full original issue remains open. Recorded answer-language production and
-storage, the answer's correct known DOM language attribute, language-aware archive browsing,
-and actual report language in metadata/structured data/feed remain gates. Do not
+consumer integration, the answer's correct known DOM language attribute,
+language-aware dedup and actual report language in head/structured data remain
+gates. The archive filter/feed/snippet contracts are implemented independently. Do not
 guess historical language from the question, viewer preference or script. Public
 Vietnamese/Chinese interface titles, descriptions, captions and structured data
 also need human locale/glossary review and actual published variants. Prepared
 locale URLs must not be advertised before that release. No new paid live trial
 is required for the frozen synthetic glyph tests.
 
-The necessary upstream input is a reviewed write-time record of actual output
-language with validated storage/public projection, separate from requested
-language or provider/prompt settings. This phase supplies no such record and
-does not invent a property, backfill, classifier or authority. Until that input
-exists, metadata and answer DOM stay UNKNOWN and no language-filtered archive
-or additional locale URL is advertised. #273's existing financial-copy gate is
+The necessary upstream input is issue 276's reviewed write-time record of actual
+generated-prose language and its shared reader, bound to final answer bytes,
+separate from requested language or provider/prompt settings. Until its exact
+checkpoint is integrated, raw historical runs project undetermined language.
+No historical backfill, classifier or new locale URL is supplied. Original
+quotes/questions remain outside that provenance scope. #273's existing financial-copy gate is
 retained; this phase adds no translated financial text or new human/model trial.
 
 Web pages, sitemap, feed and social images are the applicable runtime surfaces.
