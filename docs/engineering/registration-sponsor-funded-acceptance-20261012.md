@@ -237,11 +237,74 @@ is `24540160001227008 + 40000000000000000 = 64540160001227008` wei, or
 This supplemental cohort must be named separately in source/execution reports;
 its receipt must not be relabelled as the original fifth attempt.
 
-At this update, the original report above is captured and supplemental source/
-policy review and a new exact-source freeze precede its execution. Funded expired
-resolution remains open until its real reverted receipt, exact original identity,
-actual gas, absent source event/index and released execution barrier are recorded.
-Mainnet sponsored availability, new live creator eligibility and legacy V1
-continuity still require their reviewed production configuration, real mainnet
-receipt and applicable release acceptance. No testnet evidence changes its network
-or authority, establishes external publisher control or becomes creator revenue.
+### Real supplemental expired-original result
+
+Independent review accepted the bounded supplemental policy, source pin and native
+baseline checks before execution. The final supplemental report was captured on
+clean HEAD `61d2264873b5c479d4290704fada8b27a7a1a59b`, tracked tree
+`385992c0f9590ce7a94b823c6f7b509b804a2214`, Node `v24.21.0`, 309 actual
+source/dependency-declaration inputs and exact-source digest
+`45a84b7061dee30d5be37c8f2a115c08c723b494c0d056b446e5a9a538438c62`.
+The driver still makes no hosted-CI claim. Coordinated local checks on this source
+passed 17 focused files/230 tests, application and operational TypeScript,
+production build, the dedicated-worker/mainnet-profile browser checks and 48
+executed offline write/check cases. Those runtime checks do not supply financial evidence.
+
+The distinct supplemental run ID was `8c33f237-ab7d-4558-aaba-99d12a8d5bce`;
+its policy digest was
+`0x633a6906416d3880b3f65623c6828a48e2108e84bc86765ce1d9775310e3b771`,
+wrapper SHA256
+`bd455d7cb95516c5feab146d834e45148e6cff1097a8e13143ba5521ca00c4b3`.
+The new original retained deadline `1791782706` (05:25:06 UTC), creator nonce 4,
+sponsor nonce 136 and its 0.04 reservation. The actual process exited 77 after
+durable creator authorization/nonce retention, with no signed sponsor bytes,
+transaction hash or broadcast. Its deadline was never rewritten. After expiry,
+the fresh chain timestamp was `1791782758` at block `66768419`, latest/pending
+sponsor nonces were both 136 and existing balance was sufficient. The exact
+original was declared before one explicit gas-paying resolution, using one million
+gas, maximum fee `40000000000` wei, priority `1` wei and zero value. The service
+checked actual chain expiry twice and retained the exact signed bytes before its
+sole broadcast. Keyless receipt reconciliation followed without rebroadcast.
+
+| Supplemental real observation | Value |
+| --- | --- |
+| Original request | `0xfe9bc9028313cb070a6ca9b5a2485dc617e025cb943fd1abfe955df59179eafa` |
+| Source ID | `0xaa245153f426078d3c3f1cc155810463ef0e62c06a9ea17781b755af797ae595` |
+| Transaction | `0x46ddb743ada77ffa1c02b2e17f5cf99d050cdbb3b46b63ab3ab01d429719d0f7` |
+| Real receipt | reverted, block `66768495` |
+| Gas used / effective fee | `35720` / `20000000001` wei |
+| Actual supplemental charge | `714400000035720` wei, or **0.000714400000035720 native test USDC** |
+| Registration charge across both cohorts | `25254560001262728` wei, or **0.025254560001262728 native test USDC**, below 0.16 |
+| Final sponsor latest/pending nonce | `137` / `137` |
+| Final creator registration nonce | `4`, unchanged by the revert |
+
+Independent readbacks verified the exact transaction roles/bytes/nonce/fees and
+the real reverted receipt. No event logs, on-chain source record, native source
+projection or registry-origin sidecar existed for this source ID. The execution
+barrier was closed with zero uncertain originals. The supplemental attempt remains
+consumed, its original authorization/raw/history remain retained, and the original
+five-attempt policy/books still match their hard-pinned native fingerprint.
+There were four successful registrations, one original unsigned expiry and one
+separate funded expiry resolution; this is not five successful registrations or
+five funded outcomes in the original cohort. No further attempt was made.
+
+The protected supplemental directory retains
+`frozen-supplement-expiry-report-61d226.json`, SHA256
+`74f1e0f69cc8f728a12fd1d8be5edc38c2aecb567d99685963d85e5ca7d9bcd1`,
+and `final-independent-readback-61d226.json`, SHA256
+`4d09d39e67a76c8fdab2217c10a0e91aae939b44c5ceea8dcaf9c068ff77e11a`.
+The before-expiry report SHA256 is
+`4f7f72a34f2baf1e3d19548aca1e57faff82aeb3a9cf008bef9e347dab93c41e`;
+the fresh prebroadcast observation SHA256 is
+`d603a56340793543dd2178f9be68637276aec0abccb975a29cd2a2286792667d`.
+Keep these reports, both native journals and the protected existing-custody subset
+when archiving release evidence. They are separate from tracked source artifacts.
+
+Mainnet sponsored availability, live creator eligibility and legacy V1 continuity
+still require their reviewed production configuration, real mainnet receipt and
+applicable release acceptance. The two retained V1 sources must keep their original
+authority through source-specific registry origins/cursors; a singleton replacement
+is not justified by this testnet V3 evidence. Real Conzit publisher control and
+browser/API admission must be demonstrated on their intended production path.
+No testnet evidence changes its network or authority, establishes external
+publisher control or becomes creator revenue.
