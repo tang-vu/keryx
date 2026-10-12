@@ -3,6 +3,8 @@ import { USAGE_NETWORKS, parseRunUsage, type RunUsage } from "../research/usage-
 import { parseRunProvenance } from "../research/run-provenance";
 import { summarizeUsage, PUBLIC_USAGE_SUMMARY_LIMITS, type AuditUsageRun } from "../research-audit/usage-summary";
 import type { QueryRun } from "../types";
+import type { RunPrivacyStore } from "../run-privacy/contracts";
+import { publicHistoryIncludes } from "../research-audit/usage-cohort";
 
 export const MAX_USAGE_RUNS = PUBLIC_USAGE_SUMMARY_LIMITS.runs, MAX_USAGE_PAYMENTS = PUBLIC_USAGE_SUMMARY_LIMITS.payments,
   MAX_USAGE_BYTES = 8 * 1024 * 1024;
@@ -26,6 +28,8 @@ export class UsageUnavailable extends Error { constructor() { super("usage_unava
 export interface PublicUsageStore {
   summary(window: UsageWindow): Promise<PublicUsageSummary>;
   history(window: UsageWindow, cohort: "default" | RunUsage["cohort"], limit: number): Promise<QueryRun[]>;
+  /** Separate question population; canonical financial summary includes every visibility. */
+  publishedHistory?(window: UsageWindow, cohort: "default" | RunUsage["cohort"], limit: number): Promise<{ windowRuns: number; runs: QueryRun[] }>;
 }
 
 export function usageWindow(params: URLSearchParams, network: UsageWindow["network"], now = new Date()): UsageWindow {
@@ -87,3 +91,32 @@ export function projectUsageCorpus(raw: unknown, requested: UsageWindow) {
   } catch { throw new UsageUnavailable(); }
 }
 export type PublicUsageSummary = ReturnType<typeof projectUsageCorpus>["summary"];
+
+/** Exhaust the existing bounded classified IDs, never a newest-page proxy for population.
+ * Each public-only batch is rechecked before counting. Revocation consumes bounded work;
+ * counts/sample may underfill during mutation, with no refill or atomic-snapshot claim. */
+export async function publishedUsageHistory(view: Pick<ReturnType<typeof projectUsageCorpus>, "runs" | "classifications">,
+  privacy: RunPrivacyStore, cohort: "default" | RunUsage["cohort"], limit: number) {
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new UsageUnavailable();
+  await privacy.list({ take: 1, ids: [] }); // Admission is required even for an empty classified window.
+  const selected = view.runs.filter(row => cohort === "default" ? publicHistoryIncludes(row.classification.cohort)
+    : row.classification.cohort === cohort).sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+  const sample: QueryRun[] = [];
+  let windowRuns = 0;
+  for (let start = 0; start < selected.length; start += 100) {
+    const batch = selected.slice(start, start + 100), candidates = new Map(batch.map(row => [row.id, row]));
+    const rows = await privacy.list({ take: batch.length, ids: batch.map(row => row.id) });
+    if (rows.length > batch.length || new Set(rows.map(row => row.id)).size !== rows.length) throw new UsageUnavailable();
+    for (const row of rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))) {
+      if (!candidates.has(row.id)) throw new UsageUnavailable();
+      const fresh = await privacy.read(row.id);
+      if (!fresh.item || fresh.item.state.visibility !== "public" || fresh.item.state.erased) continue;
+      const run = fresh.item.run, classified = candidates.get(row.id)!;
+      if (run.id !== row.id || run.createdAt !== classified.createdAt
+        || JSON.stringify(parseRunUsage(run.usage)) !== JSON.stringify(view.classifications.get(row.id))) throw new UsageUnavailable();
+      windowRuns++;
+      if (sample.length < limit) sample.push(run);
+    }
+  }
+  return { windowRuns, runs: sample };
+}

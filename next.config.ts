@@ -42,6 +42,9 @@ const nextConfig: NextConfig = {
       ...["/api/me/bibliographies/:path*", "/api/bibliographies/:path*", "/me/bibliographies"].map(source => ({
         source, headers: [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
       })),
+      ...["/api/me/references/:path*", "/me/references"].map(source => ({
+        source, headers: [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      })),
       ...["/api/me/deliverables/:id/acceptance", "/api/deliverables/:id/acceptance", "/api/deliverables/acceptance/metrics"].map(source => ({
         source, headers: [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
       })),
@@ -61,8 +64,12 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
         ],
       },
-      ...["/api/me/run-claims", "/api/me/run-history/:path*"].map(source => ({
+      ...["/api/me/run-claims", "/api/me/run-history/:path*", "/api/me/run-privacy/:path*", "/me/run-privacy",
+        ...(process.env.KERYX_RUN_PRIVACY_ENABLED==="true"?["/dispatch/:path*", "/api/dispatch/:path*"]:[])].map(source => ({
         source, headers: [...runClaimPrivateHeaders],
+      })),
+      ...["/answers/:path*", "/answers", "/wanted/:path*", "/wanted", "/sitemap.xml", "/api/runs", "/api/activity", "/api/wanted/:path*", "/api/creator/:path*"].map(source=>({
+        source,headers:[{key:"Cache-Control",value:"no-store"}],
       })),
       { source: "/research/private", headers: [...runClaimPrivateHeaders,
         { key: "Cross-Origin-Opener-Policy", value: "same-origin" }] },

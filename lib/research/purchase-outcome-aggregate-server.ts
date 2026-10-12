@@ -1,6 +1,7 @@
 import { config } from "../config";
 import { getDb } from "../db";
 import type { QueryRun } from "../types";
+import { privacyReadsActive, requirePrivacy } from "../run-privacy/contracts";
 import { usageWindow, type PublicUsageStore, type UsageWindow } from "../usage/contracts";
 import { parseDecisionBasis } from "./decision-basis";
 import { publicQueryRun } from "./public-query-run";
@@ -29,29 +30,37 @@ function sampled(run: QueryRun, network: UsageWindow["network"]): AggregateRun {
 }
 
 /** One bounded pass over the existing classified public-usage window. No source, provider or payment I/O. */
-export async function buildPurchaseOutcomeAggregate(window: UsageWindow, store: PublicUsageStore): Promise<PurchaseOutcomeAggregate> {
-  const summary = await store.summary(window);
+export async function buildPurchaseOutcomeAggregate(window: UsageWindow, store: PublicUsageStore, privacyActive = false): Promise<PurchaseOutcomeAggregate> {
+  if (privacyActive && !store.publishedHistory) throw new Error("usage_unavailable");
+  const summary = privacyActive ? null : await store.summary(window);
   const cohorts = [];
   for (const cohort of PURCHASE_AGGREGATE_COHORTS) {
-    const runs = await store.history(window, cohort, PURCHASE_AGGREGATE_SAMPLE_LIMIT);
-    cohorts.push({ cohort, windowRuns: summary.columns.find(column => column.cohort === cohort)?.researchRuns ?? 0,
+    const { windowRuns, runs } = privacyActive ? await store.publishedHistory!(window, cohort, PURCHASE_AGGREGATE_SAMPLE_LIMIT)
+      : { windowRuns: summary!.columns.find(column => column.cohort === cohort)?.researchRuns ?? 0,
+        runs: await store.history(window, cohort, PURCHASE_AGGREGATE_SAMPLE_LIMIT) };
+    cohorts.push({ cohort, windowRuns,
       runs: runs.map(run => sampled(run, window.network)) });
   }
   return aggregatePurchaseOutcomes({ window, cohorts });
 }
 
 /**
- * Public read with a short in-process cache: the pass re-reads the classified window once per
- * cohort, so a burst of viewers shares one build. A failed build is never cached or replaced
- * by an older copy; the stated `until` tells the reader how fresh the figures are.
+ * OFF retains the short in-process cache. ON requires fresh admitted publication on each
+ * read; a process-map entry (including an old OFF entry) supplies no revocation authority.
  */
 export async function readPublicPurchaseAggregate(params: URLSearchParams, now = new Date()): Promise<PurchaseOutcomeAggregate> {
   const window = purchaseAggregateWindow(params, now);
+  const db = await getDb();
+  if (privacyReadsActive(db)) {
+    // A process-local map cannot revoke old observations. Active reads never use or warm it.
+    await requirePrivacy(db).list({ take: 1, ids: [] });
+    if (!db.publicUsage) throw new Error("usage_unavailable");
+    return buildPurchaseOutcomeAggregate(window, db.publicUsage, true);
+  }
   const key = JSON.stringify([window.network, window.period, window.period === "custom" ? window.since : null]);
   const hit = cache.get(key);
   if (hit && now.getTime() - hit.at >= 0 && now.getTime() - hit.at < TTL_MS) return hit.value;
   const value = (async () => {
-    const db = await getDb();
     if (!db.publicUsage) throw new Error("usage_unavailable");
     return buildPurchaseOutcomeAggregate(window, db.publicUsage);
   })();

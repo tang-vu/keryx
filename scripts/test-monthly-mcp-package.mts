@@ -21,7 +21,16 @@ try {
     const refused = await client.callTool({ name: "ask_keryx", arguments: input });
     assert.equal(refused.isError, true); // Input validation before buyer signing/payment/provider.
   }
-  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["evidence_draft", "draft_check", "deliverable_acceptance_read", "deliverable_acceptance_submit", "operator_obligations_read", "paper_lookup", "ask_keryx", "keryx_wallet_status", "keryx_recover", "research_monthly", "keryx_operator_status", "keryx_public_job_ledger", "keryx_purchase_outcomes", "keryx_source_learning", "profile_read", "profile_update", "history_read", "profile_identities_read"].sort());
+  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["evidence_draft", "draft_check", "deliverable_acceptance_read", "deliverable_acceptance_submit", "operator_obligations_read", "paper_lookup", "ask_keryx", "keryx_wallet_status", "keryx_recover", "research_monthly", "keryx_operator_status", "keryx_public_job_ledger", "keryx_purchase_outcomes", "keryx_source_learning", "profile_read", "profile_update", "history_read", "profile_identities_read", "run_privacy_read", "run_owner_export"].sort());
+  for (const name of ["run_privacy_read", "run_owner_export"]) {
+    const reader = tools.tools.find(item => item.name === name)!;
+    assert.equal(reader.annotations?.readOnlyHint, true);assert.equal(reader.annotations?.destructiveHint, false);
+    assert.deepEqual(Object.keys(reader.inputSchema.properties ?? {}).sort(), (name === "run_owner_export" ? ["id", "requestId"] : ["id"]).sort());
+    assert(!("wallet" in (reader.inputSchema.properties ?? {})));
+    const refused = await client.callTool({ name, arguments: { id: "synthetic-run", ...(name === "run_owner_export" ? { requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" } : {}) } });
+    assert.equal(refused.isError, true); // A buyer wallet grants no history:read key or owner authority.
+    assert.match(JSON.stringify(refused), /No research or payment was performed/);
+  }
   const bibliography = tools.tools.find(tool => tool.name === "paper_lookup")!;
   assert.equal(bibliography.annotations?.readOnlyHint, true);
   assert.equal(bibliography.annotations?.destructiveHint, false);

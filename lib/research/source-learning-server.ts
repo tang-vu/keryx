@@ -1,5 +1,6 @@
 import type { KeryxDB } from "../db/keryx-db";
 import type { QueryRun } from "../types";
+import { privacyReadsActive, requirePrivacy } from "../run-privacy/contracts";
 import { parseRunUsage } from "./usage-provenance";
 import { parseRunProvenance } from "./run-provenance";
 import { sourceLearningId, parseSourceLearningSnapshot, validateSourceLearningReport,
@@ -10,17 +11,27 @@ type LearningRun = Pick<QueryRun, "id" | "createdAt" | "usage" | "sourceLearning
   decisions: Array<Pick<QueryRun["decisions"][number], "sourceId">>;
 };
 /** Bounded public-store aggregate. Private job stores and legacy query_memories are never read. */
-export async function readSourceLearning(db: Pick<KeryxDB, "getSource" | "iterateRecentQueries">,
+export async function readSourceLearning(db: Pick<KeryxDB, "getSource" | "iterateRecentQueries" | "runPrivacy" | "runPrivacyActive">,
   sourceId: string, network: Network): Promise<SourceLearningReport | null> {
   sourceLearningId.parse(sourceId);
+  const privacy = privacyReadsActive(db) ? requirePrivacy(db) : undefined;
+  if (privacy) await privacy.list({ take: 1, ids: [] });
   if (!await db.getSource(sourceId)) return null;
   const rows: LearningRun[] = [];
-  for await (const run of db.iterateRecentQueries(SOURCE_LEARNING_SCAN)) {
-    // Release the large answer, trace and question before advancing the storage iterator.
-    rows.push({ id: run.id, createdAt: run.createdAt, usage: run.usage, sourceLearning: run.sourceLearning,
-      paymentMode: run.paymentMode, originalFulfillment: run.originalFulfillment, asker: run.asker, provenance: run.provenance,
-      decisions: run.decisions.filter(d => d.sourceId === sourceId).map(d => ({ sourceId: d.sourceId })) });
-    if (rows.length >= SOURCE_LEARNING_SCAN) break;
+  let scanned = 0;
+  for await (const candidate of db.iterateRecentQueries(SOURCE_LEARNING_SCAN)) {
+    // Iterator revocation consumes its bound; do not refill rejected/hidden candidates.
+    scanned++;
+    const fresh = privacy ? await privacy.read(candidate.id) : undefined;
+    if (!privacy || fresh?.item?.state.visibility === "public" && !fresh.item.state.erased) {
+      const run = fresh?.item?.run ?? candidate;
+      if (run.id !== candidate.id) throw new Error("privacy_unavailable");
+      // Release the large answer, trace and question before advancing the storage iterator.
+      rows.push({ id: run.id, createdAt: run.createdAt, usage: run.usage, sourceLearning: run.sourceLearning,
+        paymentMode: run.paymentMode, originalFulfillment: run.originalFulfillment, asker: run.asker, provenance: run.provenance,
+        decisions: run.decisions.filter(d => d.sourceId === sourceId).map(d => ({ sourceId: d.sourceId })) });
+    }
+    if (scanned >= SOURCE_LEARNING_SCAN) break;
   }
   return aggregateSourceLearning(sourceId, network, rows);
 }

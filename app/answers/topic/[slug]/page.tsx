@@ -29,7 +29,8 @@ const copy = createMessages("en");
 const richCopy = createRichMessages("en");
 
 // Same cadence as the archive it slices — new dispatches join a topic without a redeploy.
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
@@ -62,14 +63,8 @@ async function loadTopic(slug: string): Promise<TopicData> {
  * on demand and is then cached like any other.
  */
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  try {
-    return buildTopics(await getArchiveCached()).map((t) => ({ slug: t.slug }));
-  } catch {
-    // No database at build time — every hub is then rendered on demand.
-    return [];
-  }
+  return [];
 }
-
 export async function generateMetadata({
   params,
 }: {

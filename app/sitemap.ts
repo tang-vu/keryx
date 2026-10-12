@@ -7,8 +7,9 @@ import { englishSitemapAlternates } from "@/lib/i18n/public-metadata";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
-// Regenerate hourly so newly-settled dispatches enter the sitemap without a redeploy.
-export const revalidate = 3600;
+// Recheck public visibility on each request, including after owner revocation.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -28,10 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/terms`, changeFrequency: "monthly", priority: 0.3 },
   ];
 
-  // The archive, built once and shared with the pages it describes (lib/answers-archive-cache) —
-  // so the sitemap can never advertise a dispatch the index has already dropped, or miss one it
-  // still links to. Entries are already deduped to one canonical dispatch per question, so this
-  // never offers a crawler two URLs for the same answer.
+  // Build from fresh public-only entries, deduped to one canonical dispatch per question.
   let answerRoutes: MetadataRoute.Sitemap = [];
   // Topic hubs: the corpus's own structure, derived from the questions, so they enter the sitemap
   // as the archive grows a new beat — no hand-maintained category list to fall behind.

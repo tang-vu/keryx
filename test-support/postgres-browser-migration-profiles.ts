@@ -6,6 +6,7 @@ export const ORDINARY_BROWSER_FIXTURE_EXTENSIONS = Object.freeze({
   "0087_deliverable_acceptance.sql": "acceptance_unavailable",
   "0088_anonymous_run_claims.sql": "claims_unavailable",
   "0089_public_usage_window.sql": "usage_unavailable",
+  "0090_run_privacy.sql": "privacy_unavailable",
 });
 export function postgresBrowserMigrationProfiles(files: readonly string[]) {
   const migrations = files.filter(file => /^\d{4}.*\.sql$/.test(file)).sort();

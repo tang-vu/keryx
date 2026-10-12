@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import zoteroCopy from "@/locales/en/zotero.json";
 import { SiteHeader } from "@/components/keryx/site-header";
 import copy from "@/locales/en/bibliographies.json";
 import { BibliographiesView } from "./bibliographies-view";
@@ -8,5 +10,6 @@ export default function BibliographiesPage() {
     <h1 className="font-serif text-2xl text-ink">{copy.heading}</h1>
     <p className="mt-2 mb-6 font-serif text-sm text-ink-3">{copy.intro}</p>
     <BibliographiesView />
+    <Link href="/me/references" prefetch={false} className="mt-6 block underline">{zoteroCopy.title}</Link>
   </main></>;
 }

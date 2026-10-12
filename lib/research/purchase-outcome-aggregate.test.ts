@@ -1,15 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { SqliteAdapter } from "../db/sqlite-adapter";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DatabaseSync } from "node:sqlite";
+import { installSqliteApplicationSchema } from "../db/sqlite-application-schema";
+import { createSqliteRunPrivacy, RUN_PRIVACY_SQL } from "../db/run-privacy-sqlite";
+import { createSqlitePublicUsage } from "../db/public-usage-sqlite";
+import { writeSqliteQueryRun } from "../db/query-run-record";
 import { createTrustedUsageContext, newRunUsage } from "./usage-provenance";
 import type { QueryRun } from "../types";
 import type { PublicUsageStore, UsageWindow } from "../usage/contracts";
 import { withDecisionBasis } from "./decision-basis";
 import { cohortPurchaseScore, PURCHASE_AGGREGATE_RULES, validatePurchaseAggregate,
   type PurchaseAggregateCohort } from "./purchase-outcome-aggregate";
-import { buildPurchaseOutcomeAggregate, purchaseAggregateResponse, purchaseAggregateWindow } from "./purchase-outcome-aggregate-server";
+import { buildPurchaseOutcomeAggregate, readPublicPurchaseAggregate, purchaseAggregateResponse, purchaseAggregateWindow } from "./purchase-outcome-aggregate-server";
+const boundary=vi.hoisted(()=>({db:vi.fn()}));
+vi.mock("../db",()=>({getDb:boundary.db}));
+afterEach(()=>vi.unstubAllEnvs());
 
 const network = "eip155:5042002" as const;
 const window: UsageWindow = { network, since: "2026-10-01T00:00:00.000Z", until: "2026-10-11T00:00:00.000Z", period: "custom" };
@@ -43,6 +47,38 @@ const column = (report: ReturnType<typeof validatePurchaseAggregate>, cohort: Pu
   report.columns.find(row => row.cohort === cohort)!;
 
 describe("pooled public purchase outcomes", () => {
+  it("never falls back to financial totals or legacy history when active population is absent or malformed",async()=>{
+    const summary=vi.fn(),history=vi.fn();
+    for(const publishedHistory of [undefined,vi.fn(async()=>undefined)]) {
+      await expect(buildPurchaseOutcomeAggregate(window,{summary,history,publishedHistory} as unknown as PublicUsageStore,true)).rejects.toThrow();
+      expect(summary).not.toHaveBeenCalled();expect(history).not.toHaveBeenCalled();
+    }
+  });
+  it("bypasses warmed legacy and active caches after publication revocation and refuses active missing/schema ports",async()=>{
+    const connection=new DatabaseSync(":memory:");installSqliteApplicationSchema(connection);connection.exec(RUN_PRIVACY_SQL);
+    try {
+      const usage=newRunUsage({usageContext:createTrustedUsageContext(network,{actor:"unknown",funding:"unknown",scripted:true})},network,[]);
+      const saved=run("public-revocable",3,[{id:"exact",expectedValue:0.6,cited:false}],{usage,asker:undefined});
+      writeSqliteQueryRun(connection,saved,true);connection.prepare("UPDATE run_privacy SET visibility='public' WHERE run_id=?").run(saved.id);
+      const privacy=createSqliteRunPrivacy(connection),publicUsage=createSqlitePublicUsage(connection,()=>privacy),params=new URLSearchParams("network=eip155:5042002&since=2026-10-01"),now=new Date(window.until);
+      boundary.db.mockResolvedValue({runPrivacyActive:false,publicUsage:createSqlitePublicUsage(connection)});
+      const legacy=await readPublicPurchaseAggregate(params,now);expect(column(legacy,"scripted").sampledRuns).toBe(1);
+      boundary.db.mockResolvedValue({runPrivacyActive:true,runPrivacy:privacy,publicUsage});
+      expect(column(await readPublicPurchaseAggregate(params,now),"scripted").sampledRuns).toBe(1);
+      connection.prepare("UPDATE run_privacy SET visibility='unlisted',revision=1 WHERE run_id=?").run(saved.id);
+      const next=await readPublicPurchaseAggregate(params,new Date(now.getTime()+1));expect(column(next,"scripted")).toMatchObject({windowRuns:0,sampledRuns:0});
+      const financial=await publicUsage.summary(window);expect(financial.columns[2].researchRuns).toBe(1);
+      boundary.db.mockResolvedValue({runPrivacyActive:true,publicUsage});
+      await expect(readPublicPurchaseAggregate(params,now)).rejects.toThrow("privacy_unavailable");
+      const refused=await purchaseAggregateResponse(new Request(`https://synthetic.example/api/purchase-outcomes?${params}`));
+      expect(refused.status).toBe(503);expect(await refused.json()).toEqual({error:"purchase_outcomes_unavailable",complete:false,figures:null});
+      boundary.db.mockResolvedValue({runPrivacyActive:true,runPrivacy:privacy,publicUsage});connection.exec("ALTER TABLE run_privacy ADD COLUMN unknown TEXT");
+      await expect(readPublicPurchaseAggregate(params,now)).rejects.toThrow("privacy_unavailable");
+      // OFF remains an explicit admitted lane even with the ambient flag ON.
+      vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED","true");boundary.db.mockResolvedValue({runPrivacyActive:false,publicUsage:createSqlitePublicUsage(connection)});
+      expect(await readPublicPurchaseAggregate(params,now)).toEqual(legacy);
+    } finally {connection.close();}
+  });
   const outside = [run("out-1", 2, [{ id: "a", expectedValue: 0.9, cited: true }, { id: "b", expectedValue: 0.3, cited: false }]),
     run("out-2", 4, [{ id: "a", expectedValue: 0.7, cited: true }])];
   const withBasis = run("team-1", 5, [{ id: "c", expectedValue: 0.5, cited: false }]);
@@ -120,22 +156,30 @@ describe("pooled public purchase outcomes", () => {
   });
 
   it("uses actual isolated SQLite classification/history without treating trace money as ledger volume", async () => {
-    const folder = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-pooled-outcomes-"));
-    const db = new SqliteAdapter(path.join(folder, "fixture.sqlite")); await db.init();
+    const db = new DatabaseSync(":memory:"); installSqliteApplicationSchema(db); db.exec(RUN_PRIVACY_SQL);
+    const privacy=createSqliteRunPrivacy(db),publicUsage=createSqlitePublicUsage(db,()=>privacy);
     try {
       const usage = newRunUsage({ usageContext: createTrustedUsageContext(network,
         { actor: "unknown", funding: "unknown", scripted: true }) }, network, []);
       const scripted = run("scripted-real-adapter", 3, [{ id: "exact", expectedValue: 0.6, cited: false }], { usage, asker: undefined });
-      await db.saveQueryRun(scripted);
-      await db.saveQueryRun({ ...scripted, id: "scripted-empty", answer: "", decisions: [], citations: [], trace: [] });
-      const report = await buildPurchaseOutcomeAggregate(window, db.publicUsage!);
+      writeSqliteQueryRun(db,scripted,true);
+      writeSqliteQueryRun(db,{ ...scripted, id: "scripted-empty", answer: "", decisions: [], citations: [], trace: [] },true);
+      db.exec("UPDATE run_privacy SET visibility='public'");
+      for(const [id,visibility,erased] of [["hidden","private",0],["link","unlisted",0],["erased","public",1]] as const) {
+        writeSqliteQueryRun(db,{...scripted,id},true);db.prepare("UPDATE run_privacy SET visibility=?,erased=? WHERE run_id=?").run(visibility,erased,id);
+      }
+      const rows=JSON.stringify(db.prepare("SELECT * FROM query_runs ORDER BY id").all()),summary=await publicUsage.summary(window);
+      const report = await buildPurchaseOutcomeAggregate(window, publicUsage,true);
       expect(column(report, "scripted")).toMatchObject({ sampledRuns: 2, windowRuns: 2, unscorableRuns: 1,
         scoredPurchases: 1, citedPurchases: 0, settledAccessMicros: "2000" });
       expect(column(report, "outside")).toMatchObject({ sampledRuns: 0, scoredPurchases: 0, hitRate: null });
       // The score explicitly observes retained trace bookkeeping. A separate financial
       // ledger has no settlement rows and must never acquire volume from these fixtures.
-      expect((await db.publicUsage!.summary(window)).columns.every(row => row.settledMicros === "0")).toBe(true);
+      expect(summary.columns[2].researchRuns).toBe(5);
+      expect((await publicUsage.summary(window))).toEqual(summary);
+      expect(summary.columns.every(row => row.settledMicros === "0")).toBe(true);
+      expect(JSON.stringify(db.prepare("SELECT * FROM query_runs ORDER BY id").all())).toBe(rows);
       expect(JSON.stringify(report)).not.toContain("PRIVATE");
-    } finally { db.close(); fs.rmSync(folder, { recursive: true, force: true }); }
+    } finally { db.close(); }
   });
 });

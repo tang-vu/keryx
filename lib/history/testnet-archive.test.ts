@@ -145,6 +145,19 @@ describe("read-only historical testnet archive", () => {
     expect(existsSync(join(f.directory, "missing.sqlite"))).toBe(false);
   });
 
+  it("preserves inactive historical enumeration, then hides it under active privacy without rewriting originals", async () => {
+    const f=fixture(),before=readFileSync(f.database);
+    vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "");const archive=await open();
+    expect(await archive.listRecentQueries(10)).toHaveLength(4);
+    expect(await archive.listFollowUps(IDS[0])).toEqual([f.queries[3]]);
+    vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");
+    expect(await archive.listRecentQueries(10)).toEqual([]);
+    expect(await Array.fromAsync(archive.iterateRecentQueries(10))).toEqual([]);
+    expect(await archive.listFollowUps(IDS[0])).toEqual([]);
+    expect(await archive.getQueryRun(IDS[0])).toEqual(f.queries[0]);
+    expect(readFileSync(f.database)).toEqual(before);
+  });
+
   it("recovers all three original dispatch IDs, answers and timestamps without changing archive bytes", async () => {
     const f = fixture();
     const before = readFileSync(f.database);

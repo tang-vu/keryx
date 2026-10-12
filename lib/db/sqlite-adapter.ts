@@ -1,5 +1,8 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
+import { createSqliteRunPrivacy } from "./run-privacy-sqlite";
+import { withRunReadProjection } from "../run-privacy/projection";
+import { PrivacyError, privacyReadsActive, requirePrivacy, type RunPrivacyStore } from "../run-privacy/contracts";
 import { createSqliteRunClaims } from "./run-claims-sqlite";
 import { RunClaimError, runClaimsEnabled, type RunClaimsStore } from "../run-claims/contracts";
 import { createSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
@@ -7,6 +10,8 @@ import type { RunOwnershipHistoryStore } from "../run-claims/history";
 import { createSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
 import { AcceptanceError, type DeliverableAcceptanceStore } from "../deliverable-acceptance/contracts";
 import { createSqlitePrivateBibliographies } from "./private-bibliographies-sqlite";
+import { createSqliteZotero } from "./zotero-sqlite";
+import { ZoteroError, type ZoteroStore } from "../references/zotero-contract";
 import { createSqliteDecisionReviews } from "./decision-reviews-sqlite";
 import { DecisionReviewError, type DecisionReviewsStore } from "../research/decision-review-types";
 import { PrivateBibliographyError, type PrivateBibliographiesStore } from "../bibliographies/private-bibliography";
@@ -147,11 +152,14 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 
 export class SqliteAdapter implements KeryxDB {
+  declare readonly runPrivacy?: RunPrivacyStore;
+  declare readonly runPrivacyActive: boolean;
   declare readonly runClaims?: RunClaimsStore;
   declare readonly runOwnershipHistory?: RunOwnershipHistoryStore;
   declare readonly deliverableAcceptance?: DeliverableAcceptanceStore;
   declare readonly privateProfiles?: PrivateProfilesStore;
   declare readonly privateBibliographies?: PrivateBibliographiesStore;
+  declare readonly zotero?: ZoteroStore;
   declare readonly personalHistory?: PersonalHistoryStore;
   declare readonly decisionReviews?: DecisionReviewsStore;
   declare readonly publicUsage?: import("../usage/contracts").PublicUsageStore;
@@ -175,6 +183,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   constructor(file?: string, options: { readOnly?: boolean } = {}) {
+    Object.defineProperty(this,"runPrivacyActive",{value:process.env.KERYX_RUN_PRIVACY_ENABLED==="true"});
     const dbPath = file ?? path.resolve(process.cwd(), "data", "keryx.sqlite");
     if (!options.readOnly) fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     this.db = new DatabaseSync(dbPath, { readOnly: options.readOnly ?? false });
@@ -217,7 +226,7 @@ export class SqliteAdapter implements KeryxDB {
     assertOrdinarySqliteResearchAuthority(this.db);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;");
     installOrdinarySqliteApplicationSchema(this.db);
-    if (!this.publicUsage) Object.defineProperty(this, "publicUsage", { value: createSqlitePublicUsage(this.db) });
+    if (!this.publicUsage) Object.defineProperty(this, "publicUsage", { value: createSqlitePublicUsage(this.db,this.runPrivacyActive ? () => requirePrivacy(this) : undefined) });
     if (runClaimsEnabled(process.env) && !this.runClaims) {
       try {
         const claims = createSqliteRunClaims(this.db), history = createSqliteRunOwnershipHistory(this.db);
@@ -225,6 +234,11 @@ export class SqliteAdapter implements KeryxDB {
         Object.defineProperty(this, "runOwnershipHistory", { value: history });
       }
       catch (error) { if (!(error instanceof RunClaimError && error.code === "claims_unavailable")) throw error; }
+    }
+    if (this.runPrivacyActive && !this.runPrivacy) {
+      try { Object.defineProperty(this, "runPrivacy", { value:withRunReadProjection(createSqliteRunPrivacy(this.db,this.runOwnershipHistory),
+        run=>projectRecordedEvidenceProvenance(lookup=>this.readEvidenceProvenance(lookup),run)) }); }
+      catch(error) { if (!(error instanceof PrivacyError && error.code === "privacy_unavailable")) throw error; }
     }
     if (!this.decisionReviews) {
       try { Object.defineProperty(this, "decisionReviews", { value: createSqliteDecisionReviews(this.db) }); }
@@ -237,6 +251,10 @@ export class SqliteAdapter implements KeryxDB {
     if (!this.privateBibliographies) {
       try { Object.defineProperty(this, "privateBibliographies", { value: createSqlitePrivateBibliographies(this.db) }); }
       catch (error) { if (!(error instanceof PrivateBibliographyError && error.code === "bibliography_unavailable")) throw error; }
+    }
+    if (process.env.KERYX_ZOTERO_ENABLED === "1" && !this.zotero) {
+      try { Object.defineProperty(this, "zotero", { value: createSqliteZotero(this.db) }); }
+      catch (error) { if (!(error instanceof ZoteroError && error.code === "zotero_unavailable")) throw error; }
     }
     if (!this.personalHistory) Object.defineProperty(this, "personalHistory", { value: createSqlitePersonalHistory(this.db) });
     if (!this.privateProfiles) {
@@ -1577,10 +1595,16 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listFollowUps(parentId: string): Promise<QueryRun[]> {
-    const rows = this.db
+    if(!privacyReadsActive(this)) {
+      const rows = this.db
       .prepare(`SELECT data FROM query_runs WHERE parent_id=? ORDER BY created_at ASC`)
       .all(parentId);
     return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), rows.map((r) => JSON.parse(r.data as string) as QueryRun));
+
+    }
+    const runs=await requirePrivacy(this).list({take:2500,parentId});
+    runs.sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id));
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup),runs);
   }
 
   async listQueryRunsByAsker(wallet: string, limit: number): Promise<QueryRun[]> {
@@ -1596,14 +1620,20 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listRecentQueries(limit: number): Promise<QueryRun[]> {
-    const rows = this.db
+    if(!privacyReadsActive(this)) {
+      const rows = this.db
       .prepare(`SELECT data FROM query_runs ORDER BY created_at DESC LIMIT ?`)
       .all(limit);
     return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), rows.map((r) => JSON.parse(r.data as string) as QueryRun));
+
+    }
+    return projectRecordedEvidenceProvenanceList(lookup => this.readEvidenceProvenance(lookup), await requirePrivacy(this).list({take:limit}));
   }
 
   async *iterateRecentQueries(limit: number): AsyncIterable<QueryRun> {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 2500) throw new Error("Invalid query scan limit");
+    if(!privacyReadsActive(this)) {
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 2500) throw new Error("Invalid query scan limit");
     // The live statement holds one SQLite read snapshot; iterator return/throw
     // closes it. Do not materialize raw JSON strings with .all() here.
     // Sort only identifiers: without a matching index SQLite would otherwise
@@ -1614,6 +1644,20 @@ export class SqliteAdapter implements KeryxDB {
       const record = read.get(row.id);
       if (!record) throw new Error("Query scan row unavailable");
       yield await projectRecordedEvidenceProvenance(lookup => this.readEvidenceProvenance(lookup), JSON.parse(record.data as string) as QueryRun);
+    }
+      return;
+    }
+    // Bound each public-only page; recheck visibility before yielding so a queued
+    // body cannot survive revocation while a consumer pauses this iterator.
+    let count=0, before: {id:string;createdAt:string} | undefined;
+    while(count<limit) {
+      const rows=await requirePrivacy(this).list({take:Math.min(32,limit-count),before});
+      if(!rows.length) break;
+      for(const run of rows) {
+        count++;const fresh=await requirePrivacy(this).read(run.id);
+        if(fresh.item?.state.visibility==="public")yield await projectRecordedEvidenceProvenance(lookup => this.readEvidenceProvenance(lookup),fresh.item.run);
+      }
+      before={id:rows.at(-1)!.id,createdAt:rows.at(-1)!.createdAt};
     }
   }
 
@@ -2434,6 +2478,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async loadQueryMemories(limit: number): Promise<QueryMemoryEntry[]> {
+    if(privacyReadsActive(this)) return requirePrivacy(this).memories(limit);
     const rows = this.db
       .prepare(`SELECT * FROM query_memories ORDER BY created_at DESC LIMIT ?`)
       .all(limit) as {
