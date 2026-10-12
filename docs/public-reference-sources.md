@@ -6,7 +6,14 @@ verification, registry registration, access toll, or citation reward. Public ava
 does not establish an agreement with the publisher or authorize Keryx to monetize their
 writing. Existing verified creator sources keep their payment and registry authority.
 
-The October 6 approved batch contains 31 public feeds, including 26 additions across
+The October 12 approved batch contains **50 public feeds and 79 publisher directory
+links**, including 19 newly audited feeds. See [the current expansion and live-count
+boundaries](engineering/source-catalog-2026-10-12.md). Qualified unclaimed public
+citations may contribute to a separately authorized Keryx operating fee under the
+[existing sponsored fee policy](sponsored-research-trial.md); public feed reading
+remains free and this is separate from publisher ownership and creator rewards.
+
+The historical October 6 approved batch contains 31 public feeds, including 26 additions across
 AI/agents, data/infrastructure, payments and creator research. A separate 60-entry
 publisher directory contains unread links rather than retained article evidence.
 See [the exact feed audit and limits](engineering/source-catalog-2026-10-06.md).
@@ -99,8 +106,8 @@ at most two feeds and twenty candidates per hour, with the existing 45-second jo
 and eligibility/URL recheck before writes. The Worker is unchanged. With thirteen
 verified feeds and five public references, the historical stable combined pool required nine hourly
 batches to visit each source. The combined bounds remain 48 feed fetches and at most
-480 candidates per day. A failed or interrupted slot stays consumed. With all 31 public
-feeds eligible and no creator feeds, a pass requires at least 16 hourly slots. More
+480 candidates per day. A failed or interrupted slot stays consumed. With all 50 public
+feeds eligible and no creator feeds, a pass requires at least 25 hourly slots. More
 creator feeds lengthen that pass. This does not establish active scheduling or successful
 collection; the catalog expansion raises no hourly allowance.
 
