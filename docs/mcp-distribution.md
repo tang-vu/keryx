@@ -13,8 +13,8 @@ The existing installed-package test gains actual compiled stdio vectors for
 finite presentation labels, an honest UNKNOWN answer-language notice and v3
 available/capture-bound/private-field refusal. It asserts the unchanged paid
 question/budget/deep/async body, evidence/machine fields, micro amounts,
-settlement references and the receipt/checkpoint/result hashes actually exported
-by the contract. Language is not sent in the stdio paid body. Syntax/source
+settlement references, the retained checkpoint digest and locally computed
+receipt/result preservation hashes. Language is not sent in the stdio paid body. Syntax/source
 checks do not substitute for running this final installed bundle.
 
 Freeze the accepted cohort and versioned locks before its one final canonical
