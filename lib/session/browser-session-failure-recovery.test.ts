@@ -14,6 +14,7 @@ it("recovers exact failed capacity once across tabs and epochs while retaining n
     "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"',
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": '"0x1111111111111111111111111111111111111111"',
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": '"0x1111111111111111111111111111111111111111"',
+    "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS": "undefined",
     "process.env.NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS": '"300"',
   } });
   const browser = await chromium.launch({ headless: true });
