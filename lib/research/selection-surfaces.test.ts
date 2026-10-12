@@ -107,23 +107,33 @@ describe("terminal source-selection failure on hosted callers", () => {
     } finally { uuid.mockRestore(); }
   });
 
-  it("remote MCP retains isError plus exportable diagnostic text without a completed result", async () => {
+  it.each([
+    { language: "English", question: "Answer in English. Compare Atlas v3 source selection.",
+      failurePrefix: "Keryx research failed: ",
+      diagnosticLabel: "Source-selection diagnostic (not a completed report or payment receipt):" },
+    { language: "Vietnamese", question: SQLITE_SELECTION_QUESTION,
+      failurePrefix: "Nghiên cứu Keryx thất bại: ",
+      diagnosticLabel: "Chẩn đoán lựa chọn nguồn (không phải báo cáo hoàn tất hay biên nhận thanh toán):" },
+  ])("remote MCP $language retains isError plus exportable diagnostic text without a completed result", async ({ question, failurePrefix, diagnosticLabel }) => {
     const server = createRemoteMcpServer({ budgetCap: 0.03, clientChannel: "other" });
     const client = new Client({ name: "selection-failure-fixture", version: "1" });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     try {
       await server.connect(serverTransport); await client.connect(clientTransport);
-      const result = await client.callTool({ name: "research", arguments: { question: SQLITE_SELECTION_QUESTION, budget: 0 } });
+      const result = await client.callTool({ name: "research", arguments: { question, budget: 0 } });
       expect(result.isError).toBe(true); expect(result.structuredContent).toBeUndefined();
       const content = result.content as { type: string; text: string }[];
       expect(content).toHaveLength(2);
-      expect(content[0].text).toContain("Keryx research failed:");
+      expect(content[0]).toEqual({ type: "text", text: failurePrefix + researchFailureMessage(new ResearchSelectionError(diagnostic, 2048)) });
       expect(content[0].text).toContain("2,048-token output limit");
       expect(content[0].text).toContain("Inspect or save this diagnostic");
       expect(content[0].text).not.toMatch(/503|saved evidence/);
+      expect(content[1]).toEqual({ type: "text", text: `${diagnosticLabel}\n${JSON.stringify(diagnostic)}` });
       expect(JSON.parse(content[1].text.split("\n")[1])).toEqual(diagnostic);
       expect(mocks.collectRun).toHaveBeenCalledOnce();
-      expect(mocks.collectRun.mock.calls[0][0].question).toBe(SQLITE_SELECTION_QUESTION);
+      expect(mocks.collectRun.mock.calls[0][0].question).toBe(question);
+      expect(mocks.saveQueryRun).not.toHaveBeenCalled();
+      expect(mocks.pay).not.toHaveBeenCalled(); expect(mocks.payCitation).not.toHaveBeenCalled();
     } finally { await client.close(); await server.close(); }
   });
 });

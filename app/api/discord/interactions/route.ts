@@ -21,6 +21,7 @@ import { prepareHostedRunClaim } from "@/lib/run-claims/hosted-delivery";
 import { privateRunClaimText } from "@/lib/run-claims/delivery";
 import { config } from "@/lib/config";
 import { botResearchMessages } from "@/lib/bots/research-messages";
+import { botControlResponse } from "@/lib/bots/language";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { verifyInteractionSignature } from "@/lib/discord/verify-interaction-signature";
 import {
@@ -28,6 +29,8 @@ import {
   type Interaction,
   InteractionType,
   parseAskCommand,
+  parseControlCommand,
+  helpText,
   pong,
   deferredResponse,
   ephemeralReply,
@@ -61,6 +64,13 @@ export async function POST(req: NextRequest) {
   }
 
   if (interaction.type === InteractionType.Ping) return Response.json(pong());
+
+  const control = parseControlCommand(interaction);
+  if (control) {
+    const reply = await botControlResponse({ control, platformLocale: interaction.locale,
+      recipient: { platform: "discord", scope: interaction.application_id!, userId: interaction.member?.user?.id ?? interaction.user?.id ?? "" } });
+    return Response.json(ephemeralReply(control.action === "help" ? helpText(reply.language) : reply.text));
+  }
 
   const cmd = parseAskCommand(interaction);
   if (!cmd) {
