@@ -125,9 +125,10 @@ describe("shared sponsored admission with durable identity", () => {
     expect(history).toHaveLength(1); expect(history[0].askerFunded).not.toBe(true);
     expect(history[0].provenance).toEqual({ version: 1, surface: "api", ownershipMethod: "api-key" });
     const historyRequest = new NextRequest("http://localhost/api/me/asks?limit=1", { headers: { authorization: `Bearer ${key.rawKey}` } });
-    expect((await walletHistory(historyRequest)).status).toBe(401); // A key never substitutes for a history session.
+    expect((await walletHistory(historyRequest)).status).toBe(403); // Existing ask keys never acquire explicit history:read.
     mocks.getSession.mockResolvedValue({ address: OWNER });
-    const view = await (await walletHistory(historyRequest)).json();
+    expect((await walletHistory(historyRequest)).status).toBe(403); // A cookie cannot expand a key's scope.
+    const view = await (await walletHistory(new NextRequest("http://localhost/api/me/asks?view=recent&limit=1"))).json();
     expect(view.asks).toHaveLength(1); expect(view.asks[0]).toMatchObject({ funded: false, provenance: history[0].provenance });
     expect(view.totals.spentUsdc).toBe(0);
     await db.revokeApiKey(key.id, OWNER);

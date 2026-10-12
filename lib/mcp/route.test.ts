@@ -119,6 +119,7 @@ describe("/mcp", () => {
       "profile_read",
       "profile_update",
       "history_read",
+      "history_owned_read", "history_export",
       "run_privacy_read", "run_owner_export",
       "profile_identities_read",
     ]);

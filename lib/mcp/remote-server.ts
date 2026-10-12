@@ -29,6 +29,9 @@ import { registerProfileTools } from "../profiles/profile-mcp";
 import { registerObligationInspection } from "../operator-obligations/mcp";
 import { readDelegatedOperatorObligations } from "../operator-obligations/delegated";
 import { registerHistoryTool } from "../history/personal-history-mcp";
+import { registerOwnedHistoryTools } from "../history/owned-history-mcp";
+import { readOwnedHistory } from "../history/owned-history-reader";
+import { exportOwnedHistory } from "../history/owned-history-export";
 import { requirePersonalHistory } from "../history/personal-history";
 import { readPersonalHistory } from "../history/personal-history-reader";
 import { registerIdentityReadTool } from "../profiles/identity-mcp";
@@ -261,6 +264,12 @@ export function createRemoteMcpServer(
     if (!access.actor || !access.historyScopes?.includes("history:read")) throw new Error("Explicit history scope required");
     return readPersonalHistory(requirePersonalHistory(await getDb()), access.actor, config.networkId, input);
   });
+  const ownedHistoryDb = async () => {
+    if (!access.actor || !access.historyScopes?.includes("history:read")) throw new Error("Explicit history scope required");
+    return getDb();
+  };
+  registerOwnedHistoryTools(server, async input => readOwnedHistory(await ownedHistoryDb(), access.actor!, privacyBinding(), input, access.signal),
+    async input => exportOwnedHistory(await ownedHistoryDb(), access.actor!, privacyBinding(), input, access.signal));
   registerRunPrivacyRead(server,async(id,requestId)=>{
     if(!access.actor||!access.historyScopes?.includes("history:read"))throw new Error("Explicit history scope required");
     const db=await getDb(),actor={wallet:privacyWallet.parse(access.actor),binding:privacyBinding()},store=requirePrivacy(db);

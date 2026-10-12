@@ -12,9 +12,11 @@ import { Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { DisplayTime } from "@/components/keryx/display-time";
+import { OwnedHistoryPane } from "./owned-history-view";
 import { CurrentHistoryPane } from "./current-history-view";
 import { ClaimantHistoryPane } from "./claimant-history-view";
 import { personalHistoryCopy as copy } from "@/locales/en/personal-history";
+import { ownedHistoryCopy } from "@/locales/en/owned-history";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { selectPlural } from "@/lib/i18n/format";
@@ -62,19 +64,22 @@ export function MyAsksView() {
   const [historical, setHistorical] = useState(false);
   const [browse, setBrowse] = useState(false);
   const [claimantHistory, setClaimantHistory] = useState(false);
+  const [owned, setOwned] = useState(true);
   return <div>
     <nav className="mb-6 flex flex-wrap gap-3" aria-label={message("myHistory.networkLabel")}>
       <button type="button" aria-pressed={!historical} onClick={() => setHistorical(false)} className="min-h-11 border border-line px-4 text-sm">{message("myHistory.currentNetwork")}</button>
       <button type="button" aria-pressed={historical} onClick={() => setHistorical(true)} className="min-h-11 border border-line px-4 text-sm">{message("myHistory.testnetHistory")}</button>
     </nav>
     {historical && <p className="mb-5 text-sm leading-relaxed text-ink-2">{message("myHistory.testnetScope")}</p>}
-    {!historical && !claimantHistory && <button type="button" className="mb-5 min-h-11 border border-line px-4 text-sm" onClick={() => setBrowse(value => !value)}>{browse ? copy.recent : copy.browse}</button>}
-    {!historical && <button type="button" className="mb-5 min-h-11 border border-line px-4 text-sm" aria-pressed={claimantHistory} onClick={() => setClaimantHistory(value => !value)}>{claimantHistory ? message("claimantHistory.close") : message("claimantHistory.open")}</button>}
-    {!historical && claimantHistory ? <ClaimantHistoryPane /> : !historical && browse ? <CurrentHistoryPane /> : <MyAsksLedger key={historical ? "testnet" : "current"} historical={historical} />}
+    {!historical && <button type="button" className="mb-5 min-h-11 border border-line px-4 text-sm" aria-pressed={owned}
+      onClick={() => { setOwned(value => !value); setBrowse(false); setClaimantHistory(false); }}>{ownedHistoryCopy.title}</button>}
+    {!historical && !claimantHistory && <button type="button" className="mb-5 min-h-11 border border-line px-4 text-sm" onClick={() => { setOwned(false); setBrowse(value => !value); }}>{browse ? copy.recent : copy.browse}</button>}
+    {!historical && <button type="button" className="mb-5 min-h-11 border border-line px-4 text-sm" aria-pressed={claimantHistory} onClick={() => { setOwned(false); setClaimantHistory(value => !value); }}>{claimantHistory ? message("claimantHistory.close") : message("claimantHistory.open")}</button>}
+    {historical ? <MyAsksLedger key="testnet" historical /> : claimantHistory ? <ClaimantHistoryPane /> : browse ? <CurrentHistoryPane /> : owned ? <OwnedHistoryPane /> : <MyAsksLedger key="current" historical={false} />}
   </div>;
 }
 
-function MyAsksLedger({ historical }: { historical: boolean }) {
+export function MyAsksLedger({ historical }: { historical: boolean }) {
   const [loading, setLoading] = useState(true);
   const [signedOut, setSignedOut] = useState(false);
   const [asks, setAsks] = useState<AskRow[]>([]);
@@ -87,7 +92,7 @@ function MyAsksLedger({ historical }: { historical: boolean }) {
     const controller = new AbortController();
     void (async () => {
       try {
-        const res = await fetch(historical ? "/api/me/asks?network=arcTestnet&limit=200" : "/api/me/asks", { cache: "no-store", signal: controller.signal });
+        const res = await fetch(historical ? "/api/me/asks?network=arcTestnet&limit=200" : "/api/me/asks?view=recent", { cache: "no-store", signal: controller.signal });
         if (res.status === 401) {
           setSignedOut(true);
           return;
