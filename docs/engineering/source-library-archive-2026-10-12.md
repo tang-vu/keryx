@@ -70,6 +70,26 @@ commit, review report, local evidence and actual hosted checks. No local full
 production build was attempted while another owner held the host-heavy slot;
 required hosted production-build and aggregate/domain checks remain merge gates.
 
+The first hosted candidate passed all three unit shards, production build/browser,
+checks, source-browser and informational lint. Its integration lane correctly
+refused an undeclared archive read in the controlled paying-source study. The
+correction admits only that read against each trial's fresh in-memory store and
+reproduces all 48 cells on current source. The separate v2 result and October 13
+report become the exact CLI/CI baseline; held v1 artifacts and tests remain intact.
+Corpus, prices, budgets, scoring, outbound denial, simulation-only payment checks
+and exact source/output comparison remain unchanged. Only trace and read-counter
+fields changed in the observed matrix; all economic outputs match v1. The actual
+`--check` passed all 48 cells, zero outbound attempts and exact current-source
+output/report comparison. The original 46 study regressions plus three current
+baseline/provenance/economic-parity checks passed 49/49. Operations TypeScript and
+scoped lint passed on this correction. Refreshed independent review and actual
+hosted aggregate/domain acceptance remain required. The final independent refresh
+passed with 45 bound files, including both generated v2 artifacts, source-set
+SHA-256 `260274c95d5720bf5af5129c12511e9986f84f6b77cc8a6c18135cba094b794c`.
+Application TypeScript also passed after the test's ES2017-compatible BigInt
+initializer correction; the corrected three-test file passed again. Fresh hosted
+CI remains required for this revised candidate.
+
 ## Delivery and remaining operational work
 
 At source freeze, record the exact PR/head, independent review and checks in the
