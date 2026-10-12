@@ -113,7 +113,7 @@ describe("lexical support", () => {
 describe("private draft check contract", () => {
   it("ties every verdict to a verbatim excerpt or an explicit absence, and never classifies an unsupplied source", () => {
     const check = buildDraftCheck(draftCheckFixture());
-    expect(check).toMatchObject({ version: 1, scope: "private-draft-check", method: "lexical-overlap-v1", origin: "caller-supplied-source-text",
+    expect(check).toMatchObject({ version: 1, scope: "private-draft-check", method: "lexical-overlap-v2", origin: "caller-supplied-source-text",
       summary: { claims: 3, supported: 1, partlySupported: 0, notFound: 0, sourceUnavailable: 1, notChecked: 1 } });
     expect(check.claims[0]).toMatchObject({ id: "claim1", text: "Retrieval improves factual accuracy on open-domain questions [1].", verdict: "supported",
       citations: [{ token: "1", reference: "ref1", verdict: "supported", evidence: "verbatim-excerpt", coverage: "partial",

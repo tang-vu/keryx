@@ -4,7 +4,7 @@ Source candidate for issue 282. Paste a passage and its reference list, supply t
 source text you hold, and get one result per cited sentence. Each result quotes the
 supplied text exactly or states that no supporting passage was found.
 
-This is a deterministic wording comparison (`method: "lexical-overlap-v1"`). It is
+This is a deterministic wording comparison (`method: "lexical-overlap-v2"`). It is
 not semantic entailment, model review or expert review, and it does not read the
 cited works itself. Issue 282 is not complete; see [what remains open](#what-remains-open).
 
@@ -18,6 +18,8 @@ cited works itself. Issue 282 is not complete; see [what remains open](#what-rem
    - `unresolved`: nothing usable, an unterminated entry, or a duplicate key.
 
    Nothing is looked up. `identified` does not mean the DOI or link resolves.
+   Bare DOIs beginning `10.` are preserved; list numbering requires whitespace
+   after a written number and dot/parenthesis, or an unambiguous bracket label.
    Every occurrence of a duplicate key is unresolved; the first work is never chosen
    as a default. Duplicate display labels cannot collide with another written key.
 2. **Splits the passage** into sentences with exact UTF-16 offsets. A sentence is
@@ -56,6 +58,24 @@ Rules that hold for every result:
   `full-text` or `partial` by the caller and that declaration is returned with the
   citation.
 - The cited author's name and the marker are excluded from the comparison.
+- Optional `sources[].identity` carries `sourceId`, `itemId`, `itemUrl` and
+  `contentVersion`, plus optional DOI/body hash. Each returned excerpt or negative
+  check retains this exact identity and its offsets. These fields are caller
+  assertions, not authenticated origin, completeness or settlement evidence.
+  A DOI must match the recorded DOI, or a written link must match the exact recorded
+  document URL (fragments are ignored). Another work or an unresolvable binding
+  stays unavailable, even when its wording matches perfectly. Synthetic identities
+  and known demo fingerprints cannot support a citation.
+- A version-bound **partial** read with no supporting passage yields unavailable:
+  the unread remainder cannot become a negative verdict for the work. Legacy
+  unversioned text checks retain their explicitly text-scoped `not-found` behavior.
+- Reversed operands around written `outperform`, `exceed`, `surpass`, `beat`, or
+  comparative `… than …` patterns are withheld. This bounded wording guard is not
+  a general grammar or semantic classifier.
+- Optional `suggestions` supplies at most eight alternative read bodies, each
+  with an exact URL/title/version identity. Matching excerpts appear in a separate
+  `claims[].suggestions` list. They never rewrite claims, repair written citations,
+  increase the supported summary, or authorize a creator reward.
 
 ## Flags
 
@@ -64,25 +84,29 @@ Rules that hold for every result:
 - `possible-different-work`: the text names an author directly before a numeric or
   key marker (`Jones et al. [3]`) who is not an author of the cited reference.
 - `reference-not-cited`: a listed reference is not cited in the passage.
+- `source-different-work`: supplied version metadata identifies another work;
+  the written citation remains unavailable.
 
 ## Measured behaviour on the fixed set
 
 `lib/research/fixtures/draft-check-evaluation.ts` holds 50 single-sentence cases:
 18 labelled supported, 6 partly supported and 26 not supported. All text is synthetic
-and labelled by the author of the set. It is a development set: the first 36 cases
-informed the method's rules, the last 14 were written before the final rule change and
-were not used to adjust it. No expert labelled it and no real paper is represented.
+and labelled by the author of the set. All 50 are now development cases: v2 was
+adjusted against the three recorded role-reversal failures, including a case in
+the second batch. None is claimed as held out. No expert labelled it and no real
+paper is represented. The fixture's bytes and labels were not changed for v2.
 `lib/research/draft-check-evaluation.test.ts` pins these figures.
 
 | Labelled | Returned supported | Returned partly supported | Returned not found |
 | --- | --- | --- | --- |
 | supported (18) | 15 | 0 | 3 |
 | partly supported (6) | 0 | 6 | 0 |
-| not supported (26) | 3 | 5 | 18 |
+| not supported (26) | 0 | 5 | 21 |
 
-- **False "supported" rate: 3 of 32 (9.4%)** of the cases not labelled supported.
-  All three are role reversals ("A outperformed B" against a source saying "B
-  outperformed A"). Word order is not analysed.
+- **False "supported" rate: 0 of 32 (0%)** of the cases not labelled supported,
+  measured by the executable fixed-set check for v2. The previous v1 result was
+  3/32 (9.4%); all three role reversals remain in the set and now return `not-found`.
+- Exact label agreement is 42/50 (84%).
 - 3 of 18 supported cases were returned `not-found`. All three are paraphrases that
   share no vocabulary with the source.
 - 5 of 26 unsupported cases were returned `partly-supported` (a different population,
@@ -123,10 +147,20 @@ work, that it is complete, or that it was lawfully obtained.
 
 ## Privacy
 
-The check is stateless. It writes no draft, query, history, archive, payment or
-analytics record and starts no model call, source fetch, purchase or reward. The
-browser page compares in the tab and makes no request; text is lost on reload unless
-the user downloads the result. API responses are `private, no-store`, authentication
+The API/MCP check is stateless. It writes no draft, query, history, archive, payment
+or analytics record and starts no model call, source fetch, purchase or reward. The
+browser page compares in the tab and makes no request. Nothing is saved by default.
+An explicit device save lets the user choose one hour, one day or one week of
+restore eligibility. Input is stored in this origin's browser local storage and
+is accessible to the browser and same-origin scripts. Expiry refuses restore and
+removes the save on the next restore attempt; it does not schedule background
+physical deletion while the page is closed. Browser backups follow browser policy.
+Separate controls clear the tab or delete the device save. Private input files
+can also be deliberately downloaded/restored; their retention belongs to the user.
+Saved input is bounded and validated before replacement, writes/deletes are read
+back, and cooperating tabs serialize deliberate actions with Web Locks. Restore
+recomputes the current method's results, rather than trusting saved verdicts.
+API responses are `private, no-store`, authentication
 is checked before the body is read, and fixed errors never echo the passage. An MCP
 client may keep its own tool messages; that retention is outside Keryx's control.
 
@@ -134,7 +168,7 @@ client may keep its own tool messages; that retention is outside Keryx's control
 
 | Surface | Behaviour and role |
 | --- | --- |
-| Web | `/literature/check`, linked from `/literature`. Runs the shared contract in the browser; no server call. Not indexed. |
+| Web | `/literature/check`, linked from `/literature`. Runs the shared contract in the browser; explicit local input/file retention and separate suggestions. No server call. Not indexed. |
 | API | `POST /api/research/draft-check` with an export-scoped API key or an active same-origin web session, the same authorization as the evidence-draft route. Returns `{ check }`. Listed in OpenAPI as `checkPrivateDraft`. |
 | Remote MCP | `draft_check(check)`, the same pure handler. Retrieves no private record and grants no authority. |
 | Stdio MCP | The same local `draft_check` tool; no HTTP or wallet call. |
@@ -152,15 +186,23 @@ For issue 282:
 
 - **Reading the cited sources.** Keryx does not fetch, buy or cache the cited works
   for a draft check, so BUY/SKIP/CACHE decisions, budgets and creator rewards do not
-  apply here. Connecting the check to the research run, with private handling of the
-  passage, needs its own design, payment review and authorized live trial.
+  apply here. `draftSourcesFromReads` now adapts an owner-admitted private run's
+  completed `GatheredContent` bodies into exact version/DOI/URL-bound partial reads.
+  It never substitutes payment decisions, metadata, public history or current cache
+  bodies for completed reads, and withholds ambiguous versions. It is a pure adapter,
+  **not wired to the executor**. The existing 276/301 owners retain `run-agent.ts`;
+  root's shared-path partition, private execution integration/payment review and
+  authorized live trial remain open. BUY/SKIP/CACHE/reward authority is unchanged.
 - **Reference resolution.** DOIs and links are not resolved, and a citation is not
-  compared with the retrieved work's metadata.
-- **Semantic verdicts.** Role reversal, paraphrase, scope and causal strength are
+  looked up here. Supplied completed-read identities are now checked against written
+  DOI/URL locators; an authenticated resolver/executor connection remains open.
+- **Semantic verdicts.** General role assignment, paraphrase, scope and causal strength are
   outside a wording comparison. A reviewed model or human assessment is needed, with
   its own false-supported measurement.
 - **Evaluation.** The fixed set is synthetic and author-labelled. Expert-labelled
   passages from real papers and a held-out set remain to be built.
-- **Suggested better-supported sources** are not produced.
-- **Chosen retention.** Nothing is stored at all; there is no opt-in saved draft.
+- **Suggested better-supported sources.** Supplied alternatives now produce separate
+  wording suggestions. Automatic discovery and semantic ranking are not implemented.
+- **Chosen retention.** Explicit browser-local retention is implemented. A hosted
+  owner-private saved draft with enforced deletion remains a separate storage gate.
 - A built-app browser run and responsive check of `/literature/check` are not recorded.

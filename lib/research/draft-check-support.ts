@@ -2,12 +2,13 @@
  * This is not semantic entailment: it reports which verbatim source passage shares
  * the claim's wording, and withholds "supported" when numbers, negation, a listed
  * opposite term or tentative wording differ. Every excerpt is an exact slice of the
- * supplied text. Word order, paraphrase and meaning are not analysed. */
+ * supplied text. A bounded comparative-role check rejects reversed operands;
+ * general grammar, paraphrase and meaning are not analysed. */
 
-export const DRAFT_CHECK_METHOD = "lexical-overlap-v1" as const;
+export const DRAFT_CHECK_METHOD = "lexical-overlap-v2" as const;
 export const MAX_DRAFT_EXCERPT_CHARACTERS = 600;
 export type LexicalVerdict = "supported" | "partly-supported" | "not-found";
-export type LexicalDifference = "negation" | "opposite-term" | "different-number";
+export type LexicalDifference = "negation" | "opposite-term" | "different-number" | "reversed-comparison";
 export interface DraftExcerptSpan { text: string; start: number; end: number }
 export interface LexicalSupport {
   verdict: LexicalVerdict;
@@ -102,6 +103,25 @@ function oppositeTerm(claim: Terms, passage: Terms): boolean {
     || (surplus(claim, passage, right) && surplus(passage, claim, left)));
 }
 
+/** Compare exclusive operand words around one written comparison. Shared context
+ * ("model", "in the reserve") cannot stand in for either operand. This withholds
+ * evidence only; it is not a general syntactic or semantic entailment classifier. */
+function comparisonRoles(text: string) {
+  const value = fold(text);
+  const operator = /\b(?:outperform(?:s|ed|ing)?|exceed(?:s|ed|ing)?|surpass(?:es|ed|ing)?|beat(?:s|en)?)\b/.exec(value)
+    ?? /\b(?:more|less|fewer|higher|lower|greater|smaller|larger|better|worse|faster|slower)\b[^.;!?]{0,120}?\bthan\b/.exec(value);
+  if (!operator) return;
+  return { left: terms(value.slice(0, operator.index)), right: terms(value.slice(operator.index + operator[0].length)) };
+}
+function reversedComparison(claimText: string, sourceText: string): boolean {
+  const claim = comparisonRoles(claimText), source = comparisonRoles(sourceText);
+  if (!claim || !source) return false;
+  const left = [...claim.left.words.keys()].filter(word => !claim.right.words.has(word));
+  const right = [...claim.right.words.keys()].filter(word => !claim.left.words.has(word));
+  return left.some(word => source.right.words.has(word) && !source.left.words.has(word))
+    && right.some(word => source.left.words.has(word) && !source.right.words.has(word));
+}
+
 /** Compare one claim (citation markers already removed) with one prepared source. */
 export function lexicalSupport(claimText: string, source: PreparedSource): LexicalSupport {
   const claim = terms(claimText), claimWords = [...claim.words.keys()], claimNumbers = [...claim.numbers];
@@ -116,7 +136,8 @@ export function lexicalSupport(claimText: string, source: PreparedSource): Lexic
     // A claimed figure is absent while the passage states another figure in its place.
     const otherNumber = missingNumbers.length > 0 && [...candidate.terms.numbers].some(number => !claim.numbers.has(number));
     const difference: LexicalDifference | undefined = claim.negated !== candidate.terms.negated ? "negation"
-      : oppositeTerm(claim, candidate.terms) ? "opposite-term" : otherNumber ? "different-number" : undefined;
+      : oppositeTerm(claim, candidate.terms) ? "opposite-term" : otherNumber ? "different-number"
+        : reversedComparison(claimText, source.text.slice(candidate.start, candidate.end)) ? "reversed-comparison" : undefined;
     if (difference) {
       if (candidate.sentences === 1 && (!near || recall > near.recall)) near = { candidate, recall, difference };
       continue;
