@@ -11,6 +11,8 @@ import { createMessages } from "@/lib/i18n/messages";
 import { Fragment, type ReactNode } from "react";
 import type { Citation } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import type { PresentationLanguage } from "@/lib/research/presentation-language";
+import { quotedOriginalParts } from "@/lib/i18n/quoted-originals";
 
 const copy = createMessages("en");
 
@@ -18,11 +20,20 @@ interface AnswerMarkdownProps {
   text: string;
   citations: Citation[];
   className?: string;
+  /** Trusted recorded generated-prose language, independently of the viewer. */
+  language?: PresentationLanguage;
   onCitationClick?: (marker: string, trigger: HTMLButtonElement) => void;
 }
 
 const CITATION_RE = /\[(S\d+)\]/g;
 const INLINE_RE = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+
+/** The ordinary renderer encloses verbatim topics/excerpts in curly quotes.
+ * Their language is outside generated-prose provenance and stays undetermined.
+ * Use the widest quoted span so nested source quotation cannot inherit a false tag. */
+function renderOriginalQuotes(text: string): ReactNode {
+  return quotedOriginalParts(text).map((part, i) => part.original ? <span key={i} lang="und">{part.text}</span> : part.text);
+}
 
 function renderInline(text: string, keyBase: string): ReactNode[] {
   const parts = text.split(INLINE_RE).filter(Boolean);
@@ -31,14 +42,14 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
         <strong key={key} className="font-semibold text-ink">
-          {part.slice(2, -2)}
+          {renderOriginalQuotes(part.slice(2, -2))}
         </strong>
       );
     }
     if (part.startsWith("*") && part.endsWith("*")) {
       return (
         <em key={key} className="italic">
-          {part.slice(1, -1)}
+          {renderOriginalQuotes(part.slice(1, -1))}
         </em>
       );
     }
@@ -48,11 +59,11 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
           key={key}
           className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[0.82em] text-ink [overflow-wrap:anywhere]"
         >
-          {part.slice(1, -1)}
+          {renderOriginalQuotes(part.slice(1, -1))}
         </code>
       );
     }
-    return <Fragment key={key}>{part}</Fragment>;
+    return <Fragment key={key}>{renderOriginalQuotes(part)}</Fragment>;
   });
 }
 
@@ -102,6 +113,7 @@ export function AnswerMarkdown({
   text,
   citations,
   className,
+  language,
   onCitationClick,
 }: AnswerMarkdownProps) {
   const blocks: { trimmed: string; heading: RegExpExecArray | null; list?: string[] }[] = [];
@@ -119,7 +131,7 @@ export function AnswerMarkdown({
     3,
   );
   return (
-    <div lang="und" className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink [overflow-wrap:anywhere]", className)}>
+    <div lang={language ?? "und"} className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink [overflow-wrap:anywhere]", className)}>
       {blocks.map(({ trimmed, heading, list }, bi) => {
         if (list) return (
           <ul key={`b${bi}`} className="list-disc space-y-3 pl-6">

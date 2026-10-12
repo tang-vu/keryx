@@ -22,6 +22,7 @@ import { archiveIndexJsonLd } from "@/app/answers/archive-index-json-ld";
 import { paginateArchive } from "../answers-pagination";
 import { ArchivePagination } from "@/components/keryx/archive-pagination";
 import { ArchiveAnswerRow } from "@/components/keryx/archive-answer-row";
+import { AnswerMarkdown } from "@/components/keryx/answer-markdown";
 import sitemap from "@/app/sitemap";
 
 function entry(id: string, answerLanguage?: string): ArchiveEntry {
@@ -83,5 +84,15 @@ describe("actual public language surfaces", () => {
     expect(rows[0].item?.inLanguage).toBe("vi");
     expect(rows[1].item?.inLanguage).toBe("zh-Hans");
     expect(rows[2].item).toBeUndefined();
+  });
+
+  it("keeps verbatim quotation outside recorded generated-prose language without changing bytes", () => {
+    const text = 'Generated sentence. Source text: “Original “nested” quotation” [S1]';
+    const html = renderToStaticMarkup(createElement(AnswerMarkdown, { text, citations: [], language: "vi" }));
+    expect(html).toContain('<div lang="vi"');
+    expect(html).toContain('<span lang="und">“Original');
+    expect(html).toContain('Original “nested” quotation');
+    expect(html).toContain('<button lang="en"');
+    expect(renderToStaticMarkup(createElement(AnswerMarkdown, { text, citations: [] }))).toContain('<div lang="und"');
   });
 });

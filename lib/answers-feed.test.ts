@@ -29,12 +29,18 @@ describe("buildAnswersFeedXml", () => {
   it("declares recorded answer language on answer content independently of the English wrapper", () => {
     const xml = buildAnswersFeedXml([entry({ id: "vi", answerLanguage: "vi", answerSnippet: "Tiếng Việt" }),
       entry({ id: "zh", answerLanguage: "zh-Hans", answerSnippet: "中文" }), entry({ id: "unknown" })], BASE);
-    expect(xml).toContain('<content type="text" xml:lang="vi">Tiếng Việt</content>');
-    expect(xml).toContain('<content type="text" xml:lang="zh-Hans">中文</content>');
+    expect(xml).toContain('<content type="html" xml:lang="vi">Tiếng Việt</content>');
+    expect(xml).toContain('<content type="html" xml:lang="zh-Hans">中文</content>');
     expect(xml).toContain('<content type="text" xml:lang="und">');
     expect(xml).toContain('hreflang="vi" href="https://keryx.cc/dispatch/vi"');
     expect(xml).toContain('<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">');
     expect(xml).not.toContain('hreflang="und"');
+  });
+
+  it("keeps quoted originals undetermined in Atom HTML content and escapes source markup", () => {
+    const xml = buildAnswersFeedXml([entry({ answerLanguage: "vi", answerSnippet: 'Generated prose. “<script>Original & text</script>”' })], BASE);
+    expect(xml).toContain('&lt;span lang=&quot;und&quot;&gt;“&amp;lt;script&amp;gt;Original &amp;amp; text&amp;lt;/script&amp;gt;”&lt;/span&gt;');
+    expect(xml).not.toContain('<script>');
   });
 
   it("binds a language subscription self link to the same filtered feed", () => {

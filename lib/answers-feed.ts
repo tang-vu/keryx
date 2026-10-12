@@ -9,6 +9,7 @@
 import type { ArchiveEntry } from "./answers-archive";
 import { englishPublicAlternates } from "./i18n/public-metadata";
 import { archiveAnswerLanguage, archiveLanguagePath } from "./answers-language";
+import { quotedOriginalParts } from "./i18n/quoted-originals";
 
 /** Entries per feed — enough for any reader's backfill without shipping the whole corpus. */
 export const FEED_ENTRY_LIMIT = 60;
@@ -38,6 +39,8 @@ function entryXml(e: ArchiveEntry, base: string): string {
     (e.archivedNetwork ? `${e.toCreators.toFixed(4)} test USDC in recorded creator rewards (Arc testnet history)` : `$${e.toCreators.toFixed(4)} in recorded creator rewards`) +
     `; inspect dispatch for settlement state.${sources}`;
   const language = archiveAnswerLanguage(e);
+  const content = language === "und" ? xmlEscape(e.answerSnippet) : xmlEscape(quotedOriginalParts(e.answerSnippet)
+    .map(part => part.original ? `<span lang="und">${xmlEscape(part.text)}</span>` : xmlEscape(part.text)).join(""));
   return [
     // Unknown recorded answer/question language must not inherit the feed's English.
     '  <entry xml:lang="">',
@@ -46,7 +49,7 @@ function entryXml(e: ArchiveEntry, base: string): string {
     `    <link rel="alternate" type="text/html"${language === "und" ? "" : ` hreflang="${xmlEscape(language)}"`} href="${xmlEscape(url)}"/>`,
     `    <updated>${rfc3339(e.createdAt)}</updated>`,
     `    <summary>${xmlEscape(summary)}</summary>`,
-    `    <content type="text" xml:lang="${xmlEscape(language)}">${xmlEscape(e.answerSnippet)}</content>`,
+    `    <content type="${language === "und" ? "text" : "html"}" xml:lang="${xmlEscape(language)}">${content}</content>`,
     "  </entry>",
   ].join("\n");
 }
