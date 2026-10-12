@@ -54,7 +54,9 @@ function packets(wire: string) {
     data: JSON.parse(/^data: (.+)$/m.exec(packet)![1]) as Record<string, unknown> }));
 }
 
-async function refusal(surface: Surface, question: string): Promise<{ message: string; wire: string }> {
+async function refusal(surface: Surface, question: string,
+  mcpFailurePrefix: "Keryx research failed: " | "Nghiên cứu Keryx thất bại: " = "Keryx research failed: ",
+): Promise<{ message: string; wire: string }> {
   if (surface === "mcp") {
     const server = createRemoteMcpServer({ budgetCap: 0.03, clientChannel: "other" });
     const client = new Client({ name: "planning-refusal-fixture", version: "1.0.0" });
@@ -63,7 +65,7 @@ async function refusal(surface: Surface, question: string): Promise<{ message: s
       await server.connect(serverTransport); await client.connect(clientTransport);
       const result = await client.callTool({ name: "research", arguments: { question, budget: 0.02 } });
       expect(result.isError).toBe(true); expect(result.structuredContent).toBeUndefined();
-      expect(result.content).toEqual([{ type: "text", text: expect.stringMatching(/^Keryx research failed: /) }]);
+      expect(result.content).toEqual([{ type: "text", text: expect.stringMatching(new RegExp(`^${mcpFailurePrefix}`)) }]);
       return { message: (result.content as { type: "text"; text: string }[])[0].text, wire: JSON.stringify(result) };
     } finally { await client.close(); await server.close(); }
   }
@@ -172,7 +174,7 @@ describe("terminal planning refusals reach the original caller", () => {
   });
 
   it.each(surfaces)("%s keeps Vietnamese refinement guidance tied to that caller", async surface => {
-    const { message, wire } = await refusal(surface, vietnameseQuestion);
+    const { message, wire } = await refusal(surface, vietnameseQuestion, "Nghiên cứu Keryx thất bại: ");
     singleDispatch(surface, vietnameseQuestion);
     expect(message).toContain("So sánh Atlas v3 theo tài liệu chính thức");
     expect(message).toContain("Giữ phiên bản Boreal v7");

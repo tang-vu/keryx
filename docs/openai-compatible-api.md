@@ -41,6 +41,14 @@ and the settlement state of each run remain separate from network selection.
   carries a `keryx` extension (`queryId`, `citations`, `totalToCreators`, `dispatchUrl`).
 - **Budget (optional):** pass a Keryx `budget` field (USDC, via `extra_body`) to cap creator
   payouts; it is clamped to the tier ceiling. Omit it for the default.
+- **Human labels (source candidate):** optional `language: "en" | "vi" | "pt" | "pt-BR" | "es"`
+  selects generated response scaffolding in both JSON and SSE. Without it, labels use the original
+  question's existing finite selector. This parameter does not translate the answer, change the
+  question or request a model output language. Explicit overrides disclose that answer language
+  is not recorded by the current producer. Canonical money/USDC, financial authority notices,
+  raw trace/provider diagnostics, machine fields and receipt hashes stay unchanged. Unsupported
+  values return the existing `invalid_request` code before research admission. See
+  [shared presentation authority and remaining gates](engineering/research-presentation-language-276-2026-10-12.md).
 - Try it with no install at [keryx.cc/playground](https://keryx.cc/playground). Full schema at
   [keryx.cc/api/docs](https://keryx.cc/api/docs).
 
