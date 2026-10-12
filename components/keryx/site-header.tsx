@@ -15,15 +15,18 @@ import { DispatchWire } from "./dispatch-wire";
 import { WalletMenu } from "./wallet-menu";
 import { cn } from "@/lib/utils";
 import { createMessages } from "@/lib/i18n/messages";
+import { productGuideCopy } from "@/locales/en/product-guide";
 
 const message = createMessages("en");
 
 const NAV = [
   { href: "/", label: message("shellNavigation.ask") },
+  { href: "/sources", label: message("shellNavigation.sources") },
+  { href: "/pricing", label: productGuideCopy("product.navigationPricing") },
+  { href: "/about", label: productGuideCopy("product.navigationAbout") },
   { href: "/dashboard", label: message("shellNavigation.activity") },
   { href: "/operator", label: message("shellNavigation.operator") },
   { href: "/answers", label: message("shellNavigation.answers") },
-  { href: "/sources", label: message("shellNavigation.sources") },
   { href: "/literature", label: message("shellNavigation.literature") },
   { href: "/market", label: message("shellNavigation.market") },
   { href: "/integrations/mcp", label: "MCP" },

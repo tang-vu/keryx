@@ -1,38 +1,43 @@
-# Keryx
+﻿# Keryx
 
-> Keryx is a citation-toll research agent on Arc testnet. Ask it a question with a USDC budget; it autonomously buys and reads paid sources over x402, answers with citations, and settles a weighted USDC nanopayment to every creator it actually cited. Every buy/skip/cache/stop decision is model-reasoned and logged in a public trace.
+> Keryx is a citation-toll research agent. Give it a question and a source budget; it discovers sources, explains BUY/SKIP/CACHE/stop decisions, reads selected material, and returns a cited report with evidence and payment records. Eligible verified creators receive weighted USDC rewards for qualifying citations.
 
-Keryx is both a product you can use in the browser (free, no wallet needed to try) and a paid
-API other agents can call. All payments are real x402 settlements through Circle Gateway on
-Arc testnet (chain eip155:5042002, USDC). Creators register content sources, get cited, and
-withdraw earnings self-serve.
+Keryx serves readers researching a question, researchers preparing related work, creators publishing sources, and agents buying a bounded research job. Production payments use Circle x402 and Gateway on Arc mainnet (eip155:5042). Retained Arc testnet history (eip155:5042002) is labelled separately and is not current mainnet activity.
 
-## For agents (paid API)
+## Start here
 
-- [OpenAI-compatible chat endpoint](https://keryx.cc/api/v1/chat/completions): drop-in for any OpenAI SDK or tool (LangChain, LlamaIndex, OpenWebUI, LibreChat, Continue). Set base_url to https://keryx.cc/api/v1 and model `keryx`. Free to try with no key (treasury-funded, IP rate-limited); pass a `kx_live_…` key as the Bearer token for higher limits and usage metering. Returns a cited answer; every cited creator is paid downstream in USDC on Arc. With `stream:true`, the agent's live buy/skip/trust reasoning streams as `reasoning_content` deltas (o1-style). GET /api/v1/models lists the model. No x402 signing needed on this path — the treasury funds the free tier exactly as the site's anonymous asker does. Copy-paste integration recipes: https://github.com/tang-vu/keryx/blob/main/docs/openai-compatible-api.md
-- [Agent-to-agent research endpoint](https://keryx.cc/api/agent/ask): POST { question, budget? } — x402-protected (0.02 USDC fee via PAYMENT-REQUIRED header, x402 v2, GatewayWalletBatched scheme). Keryx answers with citations and pays every cited creator downstream from your budget. A GET returns the same 402 challenge plus schema for discovery tooling (e.g. `circle services inspect`).
-- [One-time testnet funding](https://keryx.cc/api/faucet/onramp): POST { address } — funds a brand-new caller's own Arc wallet once with testnet USDC, so you can pay the toll without visiting the Circle faucet.
-- [OpenAPI spec](https://keryx.cc/api/openapi.json): full schema for all public endpoints.
-- [MCP server](https://www.npmjs.com/package/keryx-mcp): `npx keryx-mcp` — adds an ask-Keryx tool to any MCP agent; auto-onramps and pays the x402 toll from your own wallet. Registry name io.github.tang-vu/keryx.
+- [Ask Keryx](https://keryx.cc/): try sponsored public research without a wallet or deposit. Keryx covers admitted source purchases, eligible creator rewards and operating fees within its usage, prefunding and spending limits. Availability is bounded; this is not unlimited free research.
+- [Pricing](https://keryx.cc/pricing): explains the sponsored trial, personal source budgets and paid research packages. A source-spend cap is not the price of every Keryx service. An active personal research budget uses the caller's USDC; check the payer in the composer before submitting.
+- [About and support](https://keryx.cc/about): product purpose, public source code, support and current limitations.
+- [Recorded walkthrough](https://keryx.cc/walkthrough): inspect a labelled walkthrough and its evidence before asking your own question.
 
-## For humans
+Sponsored trial reports have public links. Submit only questions you can share publicly. Account saving does not make an already published report private. Separately labelled private research has its own availability, payment and processing disclosures.
 
-- [Ask Keryx](https://keryx.cc/): free to try, no wallet — watch the live reasoning trace decide what to buy, skip, or trust.
-- [Developer docs](https://keryx.cc/dev): how to call the paid API, issue wallet-bound API keys, and integrate x402 payments.
-- [OpenAI-compatible playground](https://keryx.cc/playground): run the /api/v1 endpoint in the browser with no install — watch the agent's live reasoning stream, see the creators it pays, and copy the exact curl/Python/JS snippet.
-- [Browser extension](https://github.com/tang-vu/keryx/tree/main/extension): highlight text on any page and ask Keryx from a toolbar popup (cited answer, live reasoning, creators paid), or right-click to list a page you own as a paid source. No wallet or key to try; load unpacked on any Chromium browser.
-- [Register a source](https://keryx.cc/register): list your content behind an x402 toll; you are paid per fetch and per citation, directly to your wallet.
-- [Live traction dashboard](https://keryx.cc/dashboard): real settled payments only — queries, citations, USDC to creators.
-- [Status](https://keryx.cc/status): uptime, settlement mode, treasury Gateway balance.
+## Evidence and sources
 
-## Source & provenance
+- [Public proof](https://keryx.cc/proof): inspect recorded research and payment evidence. Settled, pending, failed and simulated payments are distinct states; a planned reward is not proof of settlement. Mainnet and historical testnet figures remain separate.
+- [Answer archive](https://keryx.cc/answers): past cited reports, including labelled historical entries. Each report retains its sources, decisions, limitations and payment states. Synthetic demo material is illustrative, not factual research evidence.
+- [Source directory](https://keryx.cc/sources): registered creator content and free public references. Reading a free public reference does not itself pay its publisher. A creator reward requires qualifying evidence, distribution permission and verified payout authority.
+- [Publish a source](https://keryx.cc/register): list content you have permission to provide, prove ownership and review access/reward policy. Listing does not guarantee purchases or earnings.
+- [Literature workspace](https://keryx.cc/literature): prepare related-work questions and inspect recorded references. Preparation alone does not dispatch research or authorize payment.
 
-- [GitHub repository](https://github.com/tang-vu/keryx): full source, Apache-2.0 scaffold portions.
-- [Reusable Arc primitives](https://github.com/tang-vu/keryx-arc-primitives): fork-and-run x402 two-toll, on-chain source registry + indexer, browser co-sign.
-- [Source registry contract](https://testnet.arcscan.app/address/0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536): on-chain registry on Arc testnet.
+Answers can be incomplete or mistaken. Citations, evidence assessments and payment receipts help readers inspect the result; they do not guarantee that every assertion is correct. Unverified ownership, unavailable sources and missing evidence can withhold a purchase, answer claim or creator reward.
 
-## Notes
+## For agents and developers
 
-- Testnet only — no real money moves. Payments settle in testnet USDC through Circle Gateway.
-- Cited-creator payouts are weighted by citation contribution; multi-author sources split in exact micro-USDC.
-- Machine-readable payment requirements always ride in the PAYMENT-REQUIRED response header (x402 v2); the A2A endpoint also declares Bazaar discovery metadata (extensions.bazaar.info).
+- [Paid research workspace](https://keryx.cc/research): review Quick/Deep packages. The fixed package price includes a service fee plus a bounded creator-spend reserve. Packages are non-refundable; unused creator reserve stays in the package. The payment challenge at purchase is authoritative. Availability and purchase admission remain gated.
+- [Developer portal](https://keryx.cc/dev): API integration, wallet-bound keys and supported account scopes. A key identifies and scopes its caller; it does not create new funding or bypass payment authority.
+- [OpenAPI reference](https://keryx.cc/api/docs) and [machine-readable spec](https://keryx.cc/api/openapi.json): current endpoint contracts and authentication requirements.
+- [OpenAI-compatible API](https://keryx.cc/api/v1/chat/completions): POST research through the hosted ordinary-answer contract. The sponsored tier is subject to caller and shared service limits; an API key is not prepaid research credit. See [integration guidance](https://github.com/tang-vu/keryx/blob/main/docs/openai-compatible-api.md).
+- [Agent-to-agent research](https://keryx.cc/api/agent/ask): caller-funded x402 research with a quoted fixed package and creator-spend cap. Review the current quote and preserve original purchase/recovery evidence after an uncertain response.
+- [Remote MCP](https://keryx.cc/integrations/mcp): supported hosted tools, scopes and research limits. [Stdio MCP](https://www.npmjs.com/package/keryx-mcp) has its own caller-funded buyer and recovery role; installation alone does not fund a wallet or authorize a purchase.
+- [Browser extension](https://github.com/tang-vu/keryx/tree/main/extension) and [desktop Operator](https://keryx.cc/operator): separate hosted-page and local task/receipt roles. Their capabilities and installed versions are not inferred from the web deployment.
+
+## Trust, operations and policies
+
+- [Service status](https://keryx.cc/status): current public service status and readiness disclosures.
+- [Source code](https://github.com/tang-vu/keryx): implementation, documentation and release evidence.
+- [Contact support](mailto:support@keryx.cc): questions about the service, content rights or a purchase. Include the relevant report, source or receipt identifier; never send private keys or recovery secrets.
+- [Privacy](https://keryx.cc/privacy) and [terms](https://keryx.cc/terms): publication, processing, wallet recovery, payment and support disclosures.
+
+Source access tolls, creator rewards, Keryx operating fees and network fees can be separate charges. Operating fees are recorded separately from creator rewards. Browser-funded research retains its authorized source/creator grants; a sponsored operating fee does not add a service charge to those grants. Circle Gateway references can identify batch settlement rather than an individual Arc transaction. Historical receipts retain their original network and payee.

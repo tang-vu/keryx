@@ -89,5 +89,5 @@ disclosed to the service providers needed for those operations, and submitted
 public research is disclosed publicly as described above. Transfer uses HTTPS.
 
 We will update the date when this policy changes. Questions, corrections or
-off-chain deletion requests: [vutang2212@gmail.com](mailto:vutang2212@gmail.com).
+off-chain deletion requests: [support@keryx.cc](mailto:support@keryx.cc).
 Do not send passwords, private keys or recovery secrets.

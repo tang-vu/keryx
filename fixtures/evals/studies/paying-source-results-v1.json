@@ -20,7 +20,7 @@
     "reevaluateRounds": 1,
     "searchCalls": 0
   },
-  "lockSha256": "c0271923bc971bcddc6c69f4d55f0aeef3b1edfb43c1432988d01e3e7b47d79d",
+  "lockSha256": "1a5d029968798437923956f86c8cea0853ab05c6683470b9730bf49f5f747112",
   "outboundAttempts": 0,
   "runtimeSources": {
     "lib/a2a/amount-micros.ts": "ad39789195855cc02b4dc12186e64ef25e265f2ecc562274ffa90c5f30249a25",
@@ -399,7 +399,7 @@
     "locales/en/claimant-history.ts": "9bc452b72958a3a1bd8fce9c706a4984719c5998c0df4e9bde90f657edba02fe",
     "locales/en/creator.ts": "84697add9017a2f9eeffc430bfb33d2569468156fc253738820c10fe6ee2a2e5",
     "locales/en/integrations.ts": "9de1bc7e839bcf805216bf8639d67ccb26cad172f12994c415fb8dd27b9e83fd",
-    "locales/en/landing.ts": "b654864f7285b5d6d498db9459c83ed8ac20576b17941048c84f54ec71b8cd7b",
+    "locales/en/landing.ts": "bbb8e59e258b528307825f64934b2bdc18d4f254048733c43edd006cbca4b5a3",
     "locales/en/ledger.ts": "7e51c82e2538ae69cd529d33564e7ed44e37c4fb5f2e3a2192b0049b3a91b4d8",
     "locales/en/legal.ts": "7eb020ca9e3f9131a5846fc5d2ccf0c9113c0d7fdf15cbf6d15116e857aad65f",
     "locales/en/my-history.ts": "8335b800347cfc9efeeaacdc14fe8c62dfbeb48ccb8d71de176a7b5c6cd6121b",

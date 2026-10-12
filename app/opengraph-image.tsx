@@ -1,15 +1,16 @@
 import { createMessages } from "@/lib/i18n/messages";
 import { ImageResponse } from "next/og";
+import { productGuideCopy } from "@/locales/en/product-guide";
 
 const uiCopy = createMessages("en");
 
-export const alt = uiCopy("landingCard.alt");
+export const alt = productGuideCopy("product.socialAlt");
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 // Social card — the banknote masthead, rendered server-side with system serif.
 export default function OpengraphImage() {
-  const [titleLine, emphasizedLine] = uiCopy("landingCard.title").split("\n");
+  const [titleLine, emphasizedLine] = productGuideCopy("product.socialTitle").split("\n");
   return new ImageResponse(
     (
       <div
@@ -41,10 +42,10 @@ export default function OpengraphImage() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 104, lineHeight: 1, fontWeight: 700 }}>{titleLine}</div>
+          <div style={{ fontSize: 90, lineHeight: 1, fontWeight: 700 }}>{titleLine}</div>
           <div
             style={{
-              fontSize: 104,
+              fontSize: 90,
               lineHeight: 1,
               fontWeight: 700,
               fontStyle: "italic",
@@ -74,7 +75,7 @@ export default function OpengraphImage() {
           </div>
           <div style={{ fontSize: 30, fontWeight: 700 }}>Keryx</div>
           <div style={{ fontSize: 19, color: "#7A6F58", letterSpacing: 2 }}>
-            {uiCopy("landingCard.creatorRewards")}
+            {productGuideCopy("product.socialSubtitle")}
           </div>
         </div>
       </div>
