@@ -193,6 +193,10 @@ describe("identity-bound review-first pipeline", () => {
     expect(absent.packet).toBeNull(); expect(throwing.packet).toBeNull(); expect(throwing.status).toBe("unavailable");
     expect(available.packet).not.toBeNull();
     expect(await verifyActualReadPacket(available.packet!.packet, available.packet!.retainedDigest)).toBe(true);
+    expect(available.packet!.packet.schema).toBe(3);
+    expect(available.packet!.packet.records).toEqual(expect.arrayContaining([
+      expect.objectContaining({ check: { kind: "review", required: true }, outcome: { action: "ESCALATE", rule: "human-review" } }),
+    ]));
     const serialized = JSON.stringify(available.packet!.packet);
     for (const privateValue of [owner, payee, "Compare synthetic evidence", "reviewed-source", "https:"]) expect(serialized).not.toContain(privateValue);
   });
@@ -2888,6 +2892,9 @@ it("keeps valid citations while reported disagreement limits the final confidenc
 
 describe("actual READ checkpoint capture differentials", () => {
   const cases = [
+    ["empty", "stop", "STOP"],
+    ["expired-cache", "channel", "BUY"], ["low-preview", "selection", "SKIP"],
+    ["low-attention", "selection", "SKIP"], ["initial-discussion", "selection", "SKIP"],
     ["paid", "channel", "BUY"], ["cache", "channel", "CACHE"], ["zero-delivery", "selection", "SKIP"],
     ["model-skip", "selection", "SKIP"], ["funding-refusal", "funding", "SKIP"],
     ["terms", "terms", "SKIP"], ["rights", "rights", "SKIP"], ["duplicate", "duplicate", "SKIP"],
@@ -2900,17 +2907,18 @@ describe("actual READ checkpoint capture differentials", () => {
     ["public", "public-route", "FREE"], ["reeval-public", "public-route", "FREE"],
     ["external", "selection", "SKIP"], ["reeval-discussion", "discussion", "SKIP"],
   ] as const;
-  async function fixture(scenario: typeof cases[number][0], capture: "missing" | "available" | "throwing" | "rejecting", stamp: string) {
+  async function fixture(scenario: typeof cases[number][0], capture: "missing" | "available" | "throwing" | "rejecting", stamp: string, budget?: number) {
     const expansion = scenario.startsWith("reeval-"), order: string[] = [];
     let selected = false, expanding = false;
-    const sources = [makeSource({ id: "checkpoint-a", fetchPrice: scenario === "zero-delivery" ? 0 : scenario === "reeval-budget" ? 0.05 : 0.002 }),
+    const sources = scenario === "empty" ? [] : [makeSource({ id: "checkpoint-a", fetchPrice: scenario === "zero-delivery" ? 0 : scenario === "reeval-budget" ? 0.05 : 0.002 }),
       makeSource({ id: "checkpoint-b", fetchPrice: 0.002 })];
-    const price = scenario === "zero-delivery" ? 0 : 0.05;
+    const price = budget ?? (scenario === "zero-delivery" ? 0 : 0.05);
     const engine = fakeEngine({ decide: input => {
       selected = true;
       return input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+        expectedValue: scenario === "low-preview" ? 0.1 : scenario === "low-attention" ? 0.15 : 0.8,
         action: scenario === "model-skip" || expansion && candidate.id !== "public:free" ? "SKIP" :
-          scenario === "public" && candidate.id !== "public:free" ? "SKIP" : scenario === "cache" ? "CACHE" : "BUY",
+          scenario === "public" && candidate.id !== "public:free" ? "SKIP" : ["cache", "expired-cache", "low-attention"].includes(scenario) ? "CACHE" : "BUY",
         targets: [candidate.id === "public:free" || !expansion && candidate.id === sources[0].id ? 0 : 1] }));
     }, sufficiency: () => {
       if (scenario === "assessment-error") throw Error("Synthetic assessment unavailable");
@@ -2925,9 +2933,9 @@ describe("actual READ checkpoint capture differentials", () => {
     } });
     engine.decompose = async () => ["public evidence", "owned evidence"];
     const gateway = fakeGateway(), d = deps(sources, engine, gateway, {
-      ...(scenario === "reeval-discussion" ? { items: { [sources[0].id]: [{ id: "checkpoint-thread", sourceId: sources[0].id,
+      ...(["reeval-discussion", "initial-discussion"].includes(scenario) ? { items: { [sources[0].id]: [{ id: "checkpoint-thread", sourceId: sources[0].id,
         title: "Forum proposal", summary: "A backup suggestion", link: "https://sqlite.org/forum/info/fixture", content: "A participant proposes a backup procedure." }] } } : {}),
-      ...(["cache", "reeval-cache"].includes(scenario) ? { cachedAt: { [sources[0].id]: stamp, [sources[1].id]: stamp } } : {}) });
+      ...(["cache", "reeval-cache", "low-attention"].includes(scenario) ? { cachedAt: { [sources[0].id]: stamp, [sources[1].id]: stamp } } : {}) });
     if (scenario === "external") d.discoverExternal = async () => [{ id: "ext:https://synthetic.example/api", name: "External fixture", description: "Unverified external offer",
       tags: [], fetchPrice: 0.001, cached: false, preview: "Synthetic preview", external: { resource: "https://synthetic.example/api", chains: ["eip155:5042002"], payTo: "0xexternal", onArc: true } }];
     d.db.listPublicReferences = async () => expansion || scenario === "public" || scenario === "funding-refusal" ? [publicRef(), publicRef("public:extra")] : [];
@@ -2952,11 +2960,13 @@ describe("actual READ checkpoint capture differentials", () => {
       }));
     }
     try {
-      const { run, steps } = await drive({ question: scenario === "reeval-discussion" ? "Use official SQLite documentation to explain backups." : "Synthetic checkpoint comparison", budget: price, origin: "web",
+      const { run, steps } = await drive({ question: ["reeval-discussion", "initial-discussion"].includes(scenario) ? "Use official SQLite documentation to explain backups." : "Synthetic checkpoint comparison", budget: price, origin: "web",
         executionLimits: { attentionLimit: scenario === "reeval-attention" ? 2 : 4, reevaluateRounds: expansion ? 1 : 0 } }, d);
       const packet = projectActualReadCheckpoints(run);
       return { packet, status: run.trace.at(-1)?.readCheckpoints?.status,
         economic: { order, answer: run.answer, decisions: run.decisions, citations: run.citations, totalSpent: run.totalSpent,
+          plannedFetchUsdc: run.evidencePortfolio?.selectedBuyUsdc,
+          payments: d.db.payments.map(row => ({ kind: row.kind, amount: String(row.amountUsdc), status: row.settlementStatus ?? "unknown", settled: row.settled })),
           totalToCreators: run.totalToCreators, fetchCalls: gateway.fetchCalls, fetchPrices: gateway.fetchPrices, citationCalls: gateway.citationCalls,
           trace: steps.map(({ phase, message }) => ({ phase, message })) } };
     } finally { terms.mockRestore(); rights.mockRestore(); duplicate.mockRestore(); for (const spy of spies) spy.mockRestore(); }
@@ -2966,13 +2976,72 @@ describe("actual READ checkpoint capture differentials", () => {
       available = await fixture(scenario, "available", stamp), throwing = await fixture(scenario, "throwing", stamp),
       rejecting = await fixture(scenario, "rejecting", stamp);
     expect(available.economic).toEqual(absent.economic); expect(throwing.economic).toEqual(absent.economic);
-    expect(rejecting.economic).toEqual(absent.economic); expect(rejecting.status).toBe("unavailable");
-    expect(absent.packet).toBeNull(); expect(throwing.status).toBe("unavailable");
+    expect(rejecting.economic).toEqual(absent.economic); expect(rejecting.status).toBe(scenario === "empty" ? "available" : "unavailable");
+    expect(absent.packet).toBeNull(); expect(throwing.status).toBe(scenario === "empty" ? "available" : "unavailable");
     expect(available.packet).not.toBeNull();
-    expect(available.packet!.packet.records.map(record => ({ kind: record.check.kind, action: record.outcome.action }))).toContainEqual({ kind, action });
+    if (scenario === "empty") {
+      expect(available.packet!.packet.schema).toBe(2);
+      if (available.packet!.packet.schema === 2) expect(available.packet!.packet.stops).toContainEqual({ afterCheckpoint: 0, stage: "discovery", count: 0, action: "STOP" });
+    } else expect(available.packet!.packet.records.map(record => ({ kind: record.check.kind, action: record.outcome.action }))).toContainEqual({ kind, action });
+    if (available.packet!.packet.schema !== 1) {
+      const v2 = available.packet!.packet;
+      if (scenario !== "empty") expect(v2.mappings.length).toBeGreaterThan(0);
+      if (scenario !== "empty" && scenario !== "external") expect(v2.normalizations.length).toBeGreaterThan(0);
+      expect(v2.observations.actions.map(row => row.action)).toEqual(available.economic.decisions.map(row => row.action));
+      expect(v2.observations.payments.map(row => ({ kind: row.kind, amount: row.amount, status: row.status, settled: row.settled })))
+        .toEqual(available.economic.payments);
+      for (const privateText of ["https:", "checkpoint-a", "Synthetic checkpoint comparison", "0x"]) expect(JSON.stringify(v2)).not.toContain(privateText);
+      if (v2.portfolio) expect(v2.portfolio.replay).toBe("unavailable");
+      const rules: Partial<Record<typeof cases[number][0], string>> = { "expired-cache": "cache-expired", "low-preview": "preview", "low-attention": "attention", "initial-discussion": "discussion" };
+      const rule = rules[scenario];
+      if (rule) expect(v2.normalizations.some(row => row.outcome.rule === rule)).toBe(true);
+      if (scenario !== "empty") {
+        expect(v2.schema).toBe(3);
+        if (v2.schema === 3) {
+          expect(v2.optimizer.status).toBe("available");
+          if (v2.optimizer.status === "available") expect(v2.optimizer.outcome.reserved).toBe(String(available.economic.plannedFetchUsdc));
+        }
+      }
+    }
     if (scenario === "external") expect(available.packet!.packet.records.some(record => record.check.kind === "selection" && record.check.external && record.outcome.action === "SKIP")).toBe(true);
     if (scenario === "reeval-discussion") expect(available.packet!.packet.records.some(record => record.check.kind === "discussion" && record.check.excluded && record.outcome.action === "SKIP")).toBe(true);
     expect(await verifyActualReadPacket(available.packet!.packet, available.packet!.retainedDigest)).toBe(true);
+  });
+
+  it.each(["paid", "cache", "model-skip", "funding-refusal", "reeval-paid"] as const)(
+    "records the actual exact remaining fetch budget for %s without changing execution", async scenario => {
+      const stamp = new Date().toISOString();
+      const budget = 0.1 / (1 - config.citationPoolRatio);
+      expect(fetchBudget(budget)).toBe(0.1);
+      const absent = await fixture(scenario, "missing", stamp, budget);
+      const available = await fixture(scenario, "available", stamp, budget);
+      const throwing = await fixture(scenario, "throwing", stamp, budget);
+      expect(available.economic).toEqual(absent.economic); expect(throwing.economic).toEqual(absent.economic);
+      const capture = available.packet!;
+      expect(capture).not.toBeNull();
+      const records = capture.packet.records;
+      const reserved = scenario === "paid" || scenario === "funding-refusal";
+      expect(available.economic.plannedFetchUsdc).toBe(reserved ? 0.004 : 0);
+      expect(records.filter(row => row.check.kind === "selection").every(row => row.amounts.remainingMicros === (reserved ? "96000" : "100000"))).toBe(true);
+      if (scenario === "paid") {
+        expect(records.find(row => row.check.kind === "channel" && row.outcome.action === "BUY")?.amounts)
+          .toEqual({ priceMicros: "2000", remainingMicros: "96000" });
+        expect(records.find(row => row.check.kind === "sufficiency" && row.outcome.action === "STOP")?.amounts.remainingMicros).toBe("96000");
+        expect(records.find(row => row.check.kind === "expansion")?.amounts.remainingMicros).toBe("98000");
+      }
+      if (scenario === "cache") expect(records.filter(row => row.check.kind === "channel").every(row => row.amounts.remainingMicros === "100000")).toBe(true);
+      if (scenario === "funding-refusal") expect(records.find(row => row.check.kind === "funding" && row.outcome.action === "SKIP")?.amounts.remainingMicros).toBe("96000");
+      if (scenario === "reeval-paid") expect(records.find(row => row.round === 1 && row.check.kind === "channel" && row.outcome.action === "BUY")?.amounts.remainingMicros).toBe("100000");
+      expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
+      const changed = structuredClone(capture.packet); changed.records[0].amounts.remainingMicros = "99999";
+      expect(await verifyActualReadPacket(changed, capture.retainedDigest)).toBe(false);
+    });
+
+  it("keeps a nonmicro initial budget operand unavailable instead of repairing it", async () => {
+    const capture = (await fixture("paid", "available", new Date().toISOString(), 0.1 + 0.2)).packet!;
+    // The finite Number budget is not rounded to an authoritative whole-micro reserve.
+    expect(capture.packet.records.find(row => row.check.kind === "selection")?.amounts.remainingMicros).toBeNull();
+    expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
   });
 });
 

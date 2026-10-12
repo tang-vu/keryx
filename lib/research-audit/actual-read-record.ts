@@ -1,4 +1,6 @@
 import { ACTUAL_READ_POLICY, actualReadCheckpoint, checkpointData, operandMicros, readCheck, type CheckpointOutcome, type PlannedReadAction, type ReadCheck } from "./actual-read-policy";
+import { canonicalReadPacketV2, type ActualReadPacketV2 } from "./actual-read-v2";
+import { canonicalReadPacketV3, type ActualReadPacketV3 } from "./actual-read-v3";
 
 export const MAX_READ_CHECKPOINTS = 256;
 export const MAX_READ_PACKET_BYTES = 256 * 1024;
@@ -7,10 +9,11 @@ export interface ActualReadRecord {
   plan: PlannedReadAction | "UNKNOWN"; facts: "assertions"; check: ReadCheck; outcome: CheckpointOutcome;
   amounts: { priceMicros: string | null; remainingMicros: string | null };
 }
-export interface ActualReadPacket {
+export interface ActualReadPacketV1 {
   schema: 1; policy: typeof ACTUAL_READ_POLICY; coverage: "post-portfolio-checkpoints";
   monetaryAuthority: "qualified-assertions-only"; records: ActualReadRecord[];
 }
+export type ActualReadPacket = ActualReadPacketV1 | ActualReadPacketV2 | ActualReadPacketV3;
 function integer(value: unknown, max: number): asserts value is number {
   if (!Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > max) throw Error("Invalid checkpoint index");
 }
@@ -37,6 +40,10 @@ function record(value: unknown, sequence: number): ActualReadRecord {
 }
 
 export function canonicalReadPacket(value: unknown): string {
+  const schema = value && typeof value === "object" ? Object.getOwnPropertyDescriptor(value, "schema") : undefined;
+  if (schema && "value" in schema && schema.value === 3) return canonicalReadPacketV3(value, canonicalReadPacket);
+  if (schema && "value" in schema && schema.value === 2) return canonicalReadPacketV2(value, records =>
+    JSON.parse(canonicalReadPacket({ schema: 1, policy: ACTUAL_READ_POLICY, coverage: "post-portfolio-checkpoints", monetaryAuthority: "qualified-assertions-only", records })).records);
   const packet = checkpointData(value, ["schema", "policy", "coverage", "monetaryAuthority", "records"]);
   if (packet.schema !== 1 || packet.policy !== ACTUAL_READ_POLICY || packet.coverage !== "post-portfolio-checkpoints" ||
       packet.monetaryAuthority !== "qualified-assertions-only" || !Array.isArray(packet.records) || Object.getPrototypeOf(packet.records) !== Array.prototype)
