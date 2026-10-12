@@ -8,7 +8,7 @@ import { registrationSponsorReadChain, registrationSponsorRuntime } from "./regi
 const mocked = vi.hoisted(() => ({
   config: { networkId: "eip155:5042", baseUrl: "https://keryx.example", registryAddress: "", registryReadAddress: "", rpcUrl: "https://rpc.invalid" },
   getDb: vi.fn(), createClient: vi.fn(), transport: vi.fn(),
-  db: { admitRegistrationSponsor: vi.fn(), getRegistrationSponsor: vi.fn(), transitionRegistrationSponsor: vi.fn() },
+  db: { admitRegistrationSponsor: vi.fn(), getRegistrationSponsor: vi.fn(), transitionRegistrationSponsor: vi.fn(), getRegistrationSponsorExecution: vi.fn() },
   rpc: { getCode: vi.fn(), readContract: vi.fn(), getTransactionCount: vi.fn(), estimateGas: vi.fn(), sendRawTransaction: vi.fn(), getTransactionReceipt: vi.fn() },
 }));
 vi.mock("../config", () => ({ config: mocked.config }));
@@ -57,6 +57,11 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
 
 describe("registration sponsor runtime custody boundary", () => {
+  it("refuses a backend missing durable private execution before sponsor signing", async () => {
+    mocked.getDb.mockResolvedValue({ ...mocked.db, getRegistrationSponsorExecution: undefined });
+    await expect(registrationSponsorRuntime()).rejects.toThrow("Registration sponsorship configuration is unavailable");
+    expect(mocked.rpc.sendRawTransaction).not.toHaveBeenCalled();
+  });
   it("stays disabled without a policy and never opens storage or an RPC client", async () => {
     vi.stubEnv("KERYX_REGISTRATION_SPONSOR_POLICY", undefined);
     expect(await registrationSponsorRuntime()).toBeNull();

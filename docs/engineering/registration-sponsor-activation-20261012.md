@@ -197,6 +197,14 @@ unresolved pending transaction and retain the same policy/cohort history. Updati
 caps or expiry cannot reset journal accounting. The testnet allowance is not a
 mainnet funding request, and deployment gas is outside registration allowance.
 
+The owner clarified that wallets already exist. "Dedicated sponsor" describes an
+execution role, not a requirement to create another wallet. Prefer an existing
+approved account that can serve that role. The existing personal owner wallet
+remains the deployment signer without importing its key. Selecting a currently
+shared treasury account for automatic gas relay needs explicit role/nonce and
+allowance acceptance; copying its key into a sponsor variable alone is not that
+review. No new wallet creation is requested by this candidate.
+
 Eligibility requires an allowlisted EOA on the selected network, a matching
 connected wallet/SIWE creator session, approved deployment origin, a verified exact
 HTTPS publisher/feed on the same origin, fresh publishing-control proof within
