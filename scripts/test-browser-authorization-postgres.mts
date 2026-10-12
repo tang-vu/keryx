@@ -215,10 +215,10 @@ try {
     } else if (extension.file === "0089_public_usage_window.sql") {
       observeBrowserPublicUsage(postgres.sql, ordinary);
     } else if (extension.file === "0091_public_researcher_profiles.sql") {
-      assert.deepEqual(JSON.parse(postgres.sql("set role service_role;select public.public_researcher_profile_v1('sitemap',null,'{\"take\":1}'::jsonb,null);", ordinary)),
+      assert.deepEqual(JSON.parse(postgres.sql("set role service_role;select public.public_researcher_profile_v1('sitemap',null,null,'{\"take\":1}'::jsonb);", ordinary)),
         { version: 1, action: "sitemap", handle: null, result: [] });
       for (const role of ["anon", "authenticated"]) {
-        assert.throws(() => postgres.sql(`set role ${role};select public.public_researcher_profile_v1('sitemap',null,'{"take":1}'::jsonb,null);`, ordinary), /permission denied/);
+        assert.throws(() => postgres.sql(`set role ${role};select public.public_researcher_profile_v1('sitemap',null,null,'{"take":1}'::jsonb);`, ordinary), /permission denied/);
         assert.throws(() => postgres.sql(`set role ${role};select * from public.public_researcher_profiles;`, ordinary), /permission denied/);
       }
       assert.equal(postgres.sql("select to_regprocedure('public.anonymous_run_claims_guard_v1()') is not null;", ordinary), "t");

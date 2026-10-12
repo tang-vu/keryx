@@ -8,6 +8,7 @@ import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { chromium, type Browser } from "playwright";
 import { copyNextConfigFixture } from "../test-support/next-config-fixture";
+import { qualifyOwnedNextFixtureExit, type OwnedNextFixtureExit } from "../test-support/owned-next-fixture-exit";
 import { SqliteAdapter } from "../lib/db/sqlite-adapter";
 import { installSqliteApplicationSchema } from "../lib/db/sqlite-application-schema";
 import { RUN_PRIVACY_SQL } from "../lib/db/run-privacy-sqlite";
@@ -26,6 +27,8 @@ await mkdir(join(fixture, "data"), { recursive: true });
 let database: SqliteAdapter | undefined, browser: Browser | undefined, child: ReturnType<typeof spawn> | undefined;
 let didExit = false, childCode: number | null = null, childSignal: NodeJS.Signals | null = null;
 let stdoutEof = false, stderrEof = false;
+let childExit: OwnedNextFixtureExit["exit"] = null, ownedStopRequest: OwnedNextFixtureExit["stopRequest"] = null;
+let childTermination: ReturnType<typeof qualifyOwnedNextFixtureExit> = null;
 let startupError: Error | undefined, stopped: Promise<void> | undefined, failure: unknown;
 let stdout = "", stderr = "", buildId: string | undefined;
 const checks: string[] = [], blockedRequests: string[] = [], widths: number[] = [];
@@ -74,6 +77,7 @@ try {
   child.stdout!.once("end", () => { stdoutEof = true; });
   child.stderr!.once("end", () => { stderrEof = true; });
   child.once("error", error => { startupError = error; });
+  child.once("exit", (code, signal) => { childExit = { code, signal }; });
   stopped = new Promise<void>(done => child!.once("close", (code, signal) => { didExit = true; childCode = code; childSignal = signal; done(); }));
   const request = (path: string, init: RequestInit = {}) => {
     const url = new URL(path, origin); assert.equal(url.origin, origin);
@@ -125,8 +129,20 @@ try {
       });
       const page = await context.newPage(), errors: string[] = [];
       page.on("pageerror", error => errors.push(error.message));
-      await page.goto(origin + "/u/fixture_researcher", { waitUntil: "networkidle" });
+      const navigation = await page.goto(origin + "/u/fixture_researcher", { waitUntil: "domcontentloaded" });
+      assert.equal(navigation?.status(), 200); assert.equal(page.url(), origin + "/u/fixture_researcher");
       await page.getByRole("heading", { name: "Fixture researcher", exact: true }).waitFor();
+      // Readiness belongs to this visible authored surface, not unrelated network quiescence.
+      // Keep the default bounded wait; no intercepted positive responses or timeout extension.
+      await page.waitForFunction(() => {
+        const main = document.querySelector("main"), heading = main?.querySelector("h1");
+        if (!main || !heading || heading.textContent !== "Fixture researcher") return false;
+        const rect = heading.getBoundingClientRect(), style = getComputedStyle(heading);
+        return rect.width > 0 && rect.height > 0 && style.visibility === "visible" && style.display !== "none" &&
+          parseFloat(style.opacity) > 0 && parseFloat(getComputedStyle(main).paddingLeft) >= 15 &&
+          parseFloat(style.fontSize) >= 28 && document.fonts.status === "loaded" &&
+          document.fonts.check(`${style.fontSize} ${style.fontFamily}`);
+      });
       assert.equal(await page.getByRole("link", { name: question, exact: true }).getAttribute("href"), `/dispatch/${publicId}`);
       assert.equal(await page.getByRole("link", { name: "Stored receipts", exact: true }).getAttribute("href"), `/api/dispatch/${publicId}/receipt`);
       assert.equal(await page.getByRole("link", { name: "Profile JSON", exact: true }).getAttribute("href"), "/api/u/fixture_researcher");
@@ -156,23 +172,27 @@ try {
 finally {
   try { await browser?.close(); } catch (error) { failure ??= error; }
   if (child && !didExit && child.pid !== undefined) {
-    child.kill("SIGTERM"); // Only the child returned by this fixture; no process discovery/force kill.
+    ownedStopRequest = { pid: child.pid, signal: "SIGTERM", sent: false, atUtc: new Date().toISOString(),
+      exitObservedBeforeRequest: childExit !== null, closeObservedBeforeRequest: didExit };
+    ownedStopRequest.sent = child.kill("SIGTERM"); // Only this returned child; no discovery/force kill or signal-ack inference.
     const ended = await Promise.race([stopped!.then(() => true), new Promise<false>(done => setTimeout(() => done(false), 5000))]);
     if (!ended) failure ??= Error("Owned Next child did not close after graceful stop");
   }
-  if (child && (!didExit || !stdoutEof || !stderrEof || (childCode !== 0 && childSignal !== "SIGTERM")))
-    failure ??= Error("Owned Next child exit/pipe completion was not accepted");
+  childTermination = qualifyOwnedNextFixtureExit({ pid: child?.pid, exit: childExit,
+    close: didExit ? { code: childCode, signal: childSignal } : null, stdoutEof, stderrEof, stopRequest: ownedStopRequest });
+  if (child && childTermination === null) failure ??= Error("Owned Next child exit/close/pipe completion was not accepted");
   try { database?.close(); } catch (error) { failure ??= error; }
   await writeFile(join(fixture, "stdout.txt"), stdout); await writeFile(join(fixture, "stderr.txt"), stderr);
-  const pins = await Promise.all(["scripts/test-public-profiles-built.mts", ".github/workflows/ci.yml",
+  const pins = await Promise.all(["scripts/test-public-profiles-built.mts", "test-support/owned-next-fixture-exit.ts", ".github/workflows/ci.yml",
     "lib/db/public-profiles-sqlite.ts", "supabase/migrations/0091_public_researcher_profiles.sql"].map(async path =>
     ({ path, sha256: createHash("sha256").update(await readFile(join(source, path))).digest("hex") })));
-  await writeFile(join(fixture, "acceptance.json"), JSON.stringify({ issue: 264, accepted: !failure && didExit, buildId,
+  await writeFile(join(fixture, "acceptance.json"), JSON.stringify({ issue: 264, accepted: !failure && childTermination !== null, buildId,
     sourceHead: execFileSync("git", ["rev-parse", "HEAD"], { cwd: source, encoding: "utf8" }).trim(), pins, checks, widths,
     blockedExternalRequests: blockedRequests.length, childCode, childSignal, childClosed: didExit,
+    childExited: childExit !== null, childExit, ownedStopRequest, childTermination,
     stdoutEof, stderrEof, syntheticOnly: true, costs: 0, productionActivation: false,
     error: failure instanceof Error ? failure.message : failure ? "Fixture failure" : null }, null, 2));
 }
 if (failure) throw failure;
-assert(didExit && stdoutEof && stderrEof, "Actual owned child close and both pipe completion required");
+assert(childTermination !== null, "Actual owned child exit/close and both pipe completion required");
 console.log("#264 actual built public routes, private exclusion, responsive production CSS and revocation accepted; synthetic/offline only.");
