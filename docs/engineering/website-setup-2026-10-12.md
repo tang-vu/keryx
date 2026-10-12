@@ -42,10 +42,12 @@ All 22 portable members and the installer match the accepted CI artifact;
 the source manifest and release checksums bind this exact commit.
 The same source's extension is 0.1.4.2, offered as a project source ZIP with
 explicit instructions to select its `extension/` directory. No unverified Chrome
-Web Store install link is invented. npm readback established keryx-mcp 0.4.18;
-the example retains that published version until npm 0.4.19 delivery is verified.
-The release's 0.4.19 tarball does not establish npm Registry publication.
-These observations establish published artifacts,
+Web Store install link is invented. npm and official MCP Registry readback
+established keryx-mcp 0.4.19 after publisher run 38272439384 succeeded. Its whole
+184801-byte npm tarball, SHA512 integrity, package descriptors and signed source
+provenance match accepted source `ec5f39c9750dfc9e80e66edd41348ca6034c01c3`;
+Sigstore verification used trusted roots and the explicit GitHub workflow identity.
+The stdio example pins that published version. These observations establish published artifacts,
 not an installed client or a future release.
 
 Acceptance requires type checking, scoped lint/copy guard, production build,
@@ -72,7 +74,7 @@ independent gates, not established by these local observations.
 | Web | New setup/download/integration routes and navigation; visible on mobile and desktop. |
 | Desktop | Published Windows alpha links, platform/runtime requirements, manual updates and explicit buyer handoff. No installer runtime change. |
 | Remote MCP | Existing `/integrations/mcp` remains the client-specific setup/probe authority; new directory explains HTTP and scope boundaries. No protocol change. |
-| Stdio MCP | Published 0.4.18 configuration and custody/funding/recovery guide. No package runtime change. |
+| Stdio MCP | Published 0.4.19 configuration and custody/funding/recovery guide. No package runtime change. |
 | API | OpenAI-compatible setup and OpenAPI/key links; paid x402 agent API remains distinct. Application/spec release identity remains owned by the release coordinator. |
 | CLI | Source installation and help commands; buyer and Operator guides retain custody/network roles. No command runtime change. |
 | Extension | Pinned source install instructions and public-trial/privacy limits. No extension runtime or manifest change. |

@@ -6,7 +6,7 @@ This web-only candidate adds indexed setup, download and integration guides for 
 Windows desktop, extension, remote/stdio MCP, API, CLI and bots. Download examples
 pin independently verified v0.27.63 Desktop artifacts and the matching source
 commit for the extension;
-stdio retains its verified published 0.4.18 package until newer npm delivery is verified.
+stdio pins the independently verified published npm/official Registry 0.4.19 package.
 Source availability is separate from installation. Existing client/payment protocols and packaged runtime inputs
 retain their original versions and authority. No new package or installer runtime
 is needed for web-only guides. Exact-source CI, source review, deployment and public
