@@ -233,6 +233,11 @@ jobs:
       - name: Private economics CLI startup (no environment or database)
         run: node --import tsx scripts/economics-private-report.mts --help
 
+      - name: Specialist preparation and private cohort CLI startup (no environment or services)
+        run: |
+          npm run research:brief -- --help
+          npm run research:pilot -- --help
+
       - name: Creator owner cash-out CLI startup (no environment, wallet or network)
         run: |
           node --import tsx scripts/creator-cashout-batch.mts --help
@@ -491,6 +496,9 @@ jobs:
           NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
           KERYX_FORCE_OFFLINE: "1"
         run: npm run test:browser-product-guide
+
+      - name: Specialist brief preparation (built, offline, no research or payment)
+        run: npm run test:browser-specialist-briefs
 
       - name: Retain immutable cohort rehearsal result
         if: always()

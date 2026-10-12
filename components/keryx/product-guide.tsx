@@ -13,6 +13,7 @@ export function ProductOverview() {
     <p className="font-mono text-xs uppercase tracking-widest text-seal">{copy("product.overviewKicker")}</p>
     <h2 id="product-overview" className="mt-3 max-w-[30ch] font-display text-3xl leading-tight sm:text-4xl">{copy("product.overviewTitle")}</h2>
     <p className="mt-4 max-w-[76ch] font-serif text-lg leading-relaxed text-ink-2">{copy("product.overviewBody")}</p>
+    <Link className={`${linkClass} mt-3`} href="/briefs">{copy("product.briefsAction")}</Link>
     <div className="mt-6 grid gap-4 md:grid-cols-3">
       {audiences.map(audience => <article key={audience.href} className="flex flex-col border border-line bg-paper p-6">
         <h3 className="font-display text-2xl">{audience.title}</h3>
