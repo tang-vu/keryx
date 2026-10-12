@@ -48,9 +48,13 @@ async function post(url: string, body: Record<string, string>, telegram = false)
  * configured channels acknowledge. Partial Telegram config never sends to Telegram.
  * There is no fallback to the public /ask bot or another chat.
  */
-export async function sendAlert(title: string, detail?: string): Promise<boolean> {
+export function operationalAlertChannelsReady(): boolean {
+  return Boolean(WEBHOOK || telegramConfigured) && !(telegramRequested && !telegramConfigured);
+}
+
+export async function sendAlert(title: string, detail?: string, options: { logDetail?: boolean } = {}): Promise<boolean> {
   const safeTitle = redact(title), safeDetail = detail ? redact(detail) : undefined;
-  console.warn(`[alert] ${safeDetail ? `${safeTitle} — ${safeDetail}` : safeTitle}`);
+  console.warn(`[alert] ${safeDetail && options.logDetail !== false ? `${safeTitle} — ${safeDetail}` : safeTitle}`);
   const text = safeDetail ? `⚠️ Keryx: ${safeTitle}\n${safeDetail}` : `⚠️ Keryx: ${safeTitle}`;
   const deliveries: Promise<boolean>[] = [];
   if (WEBHOOK) deliveries.push(post(WEBHOOK, { content: text, text }));

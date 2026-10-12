@@ -6,7 +6,7 @@ import { scorePurchases } from "../lib/research-audit/purchase-outcomes.ts";
 import { classifyUsage } from "../lib/research-audit/usage-cohort.ts";
 import { summarizeUsage } from "../lib/research-audit/usage-summary.ts";
 import { sourceLearningRecord, learnedValue } from "../lib/research-audit/source-learning.ts";
-import { MAX_READ_PACKET_BYTES, verifyActualReadPacket } from "../lib/research-audit/actual-read-record.ts";
+import { canonicalReadPacket, MAX_READ_PACKET_BYTES, verifyActualReadPacket } from "../lib/research-audit/actual-read-record.ts";
 
 const MAX_INPUT = 2 * 1024 * 1024;
 const [command, file, expectedHash, ...extra] = process.argv.slice(2);
@@ -36,7 +36,10 @@ try {
     output = { verified }; if (!verified) process.exitCode = 1;
   } else if (command === "verify-actual") {
     const verified = await verifyActualReadPacket(input, expectedHash ?? "");
+    const packet = verified ? JSON.parse(canonicalReadPacket(input)) : null;
     output = { verified, scope: "post-portfolio-checkpoints", facts: "assertions", sourceAuthenticity: "unproven", paymentAnchoring: "unproven" };
+    if (packet?.schema === 2) output = { ...output, scope: packet.coverage, optimizerReplay: "unavailable" };
+    if (packet?.schema === 3) output = { ...output, scope: packet.coverage, optimizerReplay: packet.optimizer.status === "available" ? "verified" : "unavailable" };
     if (!verified) process.exitCode = 1;
   } else if (command === "score") output = scorePurchases(input.run, input.payments, input.network);
   else if (command === "cohort") output = classifyUsage(input);
