@@ -33,7 +33,11 @@ contract. No shared pipeline/report changes are included here.
 The existing application storage contract exposes `getSyncState` and `setSyncState`; the
 enrolled SQLite and Supabase method inventories classify these as read and write respectively.
 Only these existing capabilities are used. No schema/migration/backfill or alternate datastore
-is introduced. The namespace `keryx:bot-help-language:v1:<sha256>` hashes a canonical tuple of
+is introduced. Supabase sync-state reads distinguish a successful missing row (`null`, automatic
+help preference) from a returned query error (unavailable). A failed read or write readback cannot
+confirm a preference, even if the backend also returns stale data; backend details stay private.
+The enrolled RPC/identity path and SQLite readback are unchanged.
+The namespace `keryx:bot-help-language:v1:<sha256>` hashes a canonical tuple of
 platform, scope and verified sender. Telegram scope is the webhook's bot context (`telegram`);
 Discord scope is application ID; Slack scope is workspace ID. Values contain only the finite
 locale or `auto`, never questions, sender/channel IDs, wallet/account linkage, tokens, email,
