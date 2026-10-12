@@ -15,8 +15,10 @@ than replacing the citation-toll agent with a general assistant or another ledge
 | `scholarly-literature` | Researchers and students | One narrow question, at most three papers within existing reading limits | Exact paper identities/read scopes, cited findings/limitations, conflicts, unavailable text and next search; no systematic-review claim |
 
 `/briefs` prepares these requests and checklists in page memory. Editing a field
-invalidates the prepared result. Copy/download are explicit user actions; there
-is no automatic submission, saved customer profile or question in a handoff URL.
+invalidates the prepared result and its copy confirmation. A pending copy must
+finish before another copy can start; downloads retain the original request text.
+Copy/download are explicit user actions. There is no automatic submission, saved
+customer profile or question in a handoff URL.
 The page keeps public-research privacy visible. Prepared requests can be used in
 existing web, API, CLI and MCP research inputs. Local preparation is also available:
 

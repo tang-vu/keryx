@@ -92,6 +92,28 @@ try {
         await page.getByRole("alert").filter({ hasText: copy.invalid }).waitFor();
         assert.equal(await page.getByRole("button", { name: copy.download, exact: true }).count(), 0);
       }
+      // A late clipboard acknowledgement belongs to the old draft. It must not
+      // claim that a newly edited/prepared request was copied.
+      await page.getByLabel(copy.sources).fill("https://example.org/docs");
+      await page.getByRole("button", { name: copy.prepare, exact: true }).click();
+      // Keep tsx naming helpers out of nested functions injected into the browser.
+      await page.evaluate(`(() => {
+        const state = window;
+        Object.defineProperty(navigator.clipboard, "writeText", { configurable: true,
+          value: () => new Promise(resolve => { state.releaseBriefCopy = resolve; }) });
+      })()`);
+      assert.equal(await page.evaluate(() => Object.hasOwn(navigator.clipboard, "writeText")), true);
+      await page.getByRole("button", { name: copy.copy, exact: true }).click();
+      await page.waitForFunction(text => [...document.querySelectorAll("button")]
+        .some(button => button.textContent === text && button.disabled), copy.copy);
+      await page.getByLabel(copy.decision).fill("A newly edited synthetic decision.");
+      await page.getByRole("button", { name: copy.prepare, exact: true }).click();
+      assert.equal(await page.getByRole("button", { name: copy.copy, exact: true }).isDisabled(), true);
+      await page.evaluate(() => (window as unknown as { releaseBriefCopy: () => void }).releaseBriefCopy());
+      await page.waitForFunction(text => [...document.querySelectorAll("button")]
+        .some(button => button.textContent === text && !button.disabled), copy.copy);
+      assert.equal(await page.getByText(copy.copied, { exact: true }).count(), 0);
+      assert((await page.getByRole("textbox", { name: copy.review, exact: true }).inputValue()).includes("A newly edited synthetic decision."));
       await page.reload();
       assert.equal(await page.getByLabel(copy.decision).inputValue(), "", "Draft is not persisted");
       assert.equal(await page.getByRole("textbox", { name: copy.review, exact: true }).count(), 0);

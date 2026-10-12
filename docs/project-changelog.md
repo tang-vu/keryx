@@ -5,6 +5,7 @@
 - Prepare API/platform, SaaS competitor/niche and literature requests with bounded
   scope and separate buyer review checklists at `/briefs` and in the source CLI.
   Drafting, copying and downloads do not start research or authorize payment.
+  Late clipboard acknowledgements cannot confirm a newer edited request.
 - Evaluate owner-private per-track cost, reported acceptance and independently
   funded return demand offline; unknown costs remain unknown and creator money
   stays separate from service contribution. Price-floor outputs are planning,

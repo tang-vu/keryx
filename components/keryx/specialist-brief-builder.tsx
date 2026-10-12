@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { SPECIALIST_BRIEF_IDS, specialistBriefs, prepareSpecialistBrief, type SpecialistBriefId } from "@/lib/research/specialist-briefs";
 import { specialistBriefCopy as copy } from "@/locales/en/specialist-briefs";
 
@@ -17,9 +17,11 @@ export function SpecialistBriefBuilder() {
   const [prepared, setPrepared] = useState<Prepared | null>(null);
   const [error, setError] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
-  const clear = () => { setPrepared(null); setError(false); setCopyStatus(""); };
+  const [copyPending, setCopyPending] = useState(false);
+  const revision = useRef(0);
+  const clear = () => { revision.current++; setPrepared(null); setError(false); setCopyStatus(""); };
   const submit = (event: FormEvent) => {
-    event.preventDefault(); setCopyStatus("");
+    event.preventDefault(); revision.current++; setCopyStatus("");
     try {
       setPrepared(prepareSpecialistBrief({ track, decision, context,
         sourceLeads: sources.split(/\r?\n/u).map(value => value.trim()).filter(Boolean) }));
@@ -27,9 +29,13 @@ export function SpecialistBriefBuilder() {
     } catch { setPrepared(null); setError(true); }
   };
   const copyRequest = async () => {
-    if (!prepared) return;
-    try { await navigator.clipboard.writeText(prepared.request.question); setCopyStatus(copy.copied); }
-    catch { setCopyStatus(copy.copyFailed); }
+    if (!prepared || copyPending) return;
+    const originalRevision = revision.current; setCopyPending(true);
+    try {
+      await navigator.clipboard.writeText(prepared.request.question);
+      if (revision.current === originalRevision) setCopyStatus(copy.copied);
+    } catch { if (revision.current === originalRevision) setCopyStatus(copy.copyFailed); }
+    finally { setCopyPending(false); }
   };
   const download = () => {
     if (!prepared) return;
@@ -54,7 +60,7 @@ export function SpecialistBriefBuilder() {
           })}
         </div>
       </fieldset>
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid items-start gap-6 md:grid-cols-2">
         <label className="grid gap-2 font-mono text-sm">{copy.decision}
           <textarea required maxLength={450} rows={4} value={decision} placeholder={specialistBriefs[track].placeholder}
             aria-describedby="brief-decision-help" onChange={event => { setDecision(event.target.value); clear(); }} className={fieldClass} />
@@ -81,7 +87,7 @@ export function SpecialistBriefBuilder() {
       <ul className="mt-3 list-disc space-y-2 pl-5 font-serif text-ink-2">{prepared.acceptanceChecklist.map(item => <li key={item}>{item}</li>)}</ul>
       <p className="mt-3 font-serif text-sm text-ink-3">{copy.rubricNotice}</p>
       <div className="mt-4 flex flex-wrap gap-4">
-        <button type="button" onClick={copyRequest} className="min-h-11 border border-ink px-4 py-2 font-mono text-sm">{copy.copy}</button>
+        <button type="button" onClick={copyRequest} disabled={copyPending} className="min-h-11 border border-ink px-4 py-2 font-mono text-sm disabled:opacity-50">{copy.copy}</button>
         <button type="button" onClick={download} className="min-h-11 border border-line px-4 py-2 font-mono text-sm">{copy.download}</button>
       </div>
       <p role="status" className="mt-3 font-serif text-sm text-paid">{copyStatus}</p>
