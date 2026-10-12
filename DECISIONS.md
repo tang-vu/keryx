@@ -1,5 +1,29 @@
 # Keryx — Decision Log
 
+## Commission missing evidence through a private portable contract — 2026-10-12
+
+The owner ranked Tameion innovation above repackaging the existing reading agent
+and authorized implementing the best outcome first, then its supporting ideas.
+Build demand-driven evidence requests, integer-priced quotation comparison,
+supporting/refuting delivery review and decision receipts as one coherent slice.
+The owner confirmed no participating buyer/provider yet: make the product usable
+before a real pilot, without inventing demand or contacting counterparties.
+
+Use a closed private version-1 packet shared by browser, authenticated API, CLI
+and remote/stdio MCP. Independently verify domain-separated EOA offer and delivery
+signatures. Bind reviews to exact attributed bytes; coverage, stance and customer
+review remain declarations. Quotes are proposed commitments, never signer
+reservations, admitted source prices, cash balances or settlement evidence. A
+signed source URL confers no registry/payout authority. Existing source reads,
+buyer originals and citation evidence remain payment/reward authority.
+
+Selected native storage has no generic admitted procurement domain. Do not reuse
+gap intents, query traces or profiles as an order book: those domains have separate
+execution, privacy and enrollment rules. Start with deliberate export/restore;
+retain hosted owner/provider journal, actual provider contact, funded workflow and
+independent usefulness as explicit subsequent gates. See [the contract, supported
+surfaces and remaining acceptance](docs/evidence-procurement.md).
+
 ## Make research decisions inspectable without expanding execution — 2026-10-12
 
 The owner requested applying useful Vestiarion patterns toward a first-place

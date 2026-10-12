@@ -1,5 +1,11 @@
 # Keryx roadmap
 
+October 12 owner direction: prioritize [commissioning missing evidence](evidence-procurement.md),
+then quotation value, useful refuting evidence and decision receipts. The first
+coherent increment is a private portable workbench shared across web/API/CLI/MCP.
+An actual provider/business pilot, hosted order authority and funded execution
+retain their separate acceptance gates; the owner requested a usable product first.
+
 The current acceptance map is the [product and mainnet delivery plan](./mainnet-delivery-plan.md).
 It covers buyer, creator, developer, operator, research-quality, economics, and
 mainnet release work. [DECISIONS.md](../DECISIONS.md) records why the architecture
