@@ -50,7 +50,8 @@ const bundled = await build({ absWorkingDir: root, stdin: { resolveDir: root, so
 const inputs = Object.keys(bundled.metafile!.inputs);
 assert(inputs.every(input => input.includes("node_modules/react/") || input.includes("node_modules/react-dom/") ||
   input.includes("node_modules/scheduler/") || ["actual-read-browser-fixture.tsx", "components/keryx/read-checkpoint-verify.tsx",
-    "lib/research-audit/actual-read-record.ts", "lib/research-audit/actual-read-policy.ts", "lib/research-audit/actual-read-copy.ts"].includes(input)), "Closed browser import graph");
+    "lib/research-audit/actual-read-record.ts", "lib/research-audit/actual-read-policy.ts", "lib/research-audit/actual-read-copy.ts",
+    "lib/research-audit/actual-read-v2.ts", "lib/research-audit/exact-units.ts", "lib/agent/coverage-precheck.ts"].includes(input)), "Closed browser import graph");
 assert(bundled.outputFiles[0].contents.byteLength < 1_500_000);
 const collector = createReadCheckpointCapture(true), check = { kind: "channel", creatorFree: false, cache: false } as const;
 collector.append(check, actualReadCheckpoint(check), { candidate: 1, round: 0, proposal: "BUY", plan: "BUY", price: 0.002 });
@@ -177,10 +178,21 @@ try {
   assert.equal(hostile.mutation, false); assert.equal(hostile.unknown, false); assert.equal(hostile.privateField, false);
   await page.evaluate(() => (window as unknown as { fixture: Fixture }).fixture.mount(null));
   await page.getByText(copy.unavailable, { exact: true }).waitFor(); assert.equal(await page.getByText(copy.passed, { exact: true }).count(), 0);
+  const runtimeCollector = createReadCheckpointCapture(true, undefined, true);
+  runtimeCollector.stop("discovery", 0);
+  const runtimeCapture = runtimeCollector.finish(); assert(runtimeCapture?.status === "available" && runtimeCapture.packet.schema === 2);
+  await mount(runtimeCapture); await page.getByText(copy.runtimeBoundary, { exact: true }).waitFor();
+  await page.getByText(runtimeCapture.retainedDigest, { exact: true }).waitFor();
+  await upload(runtimeCapture.packet); await page.getByRole("button", { name: copy.verify, exact: true }).click();
+  await page.getByText(copy.passed, { exact: true }).waitFor();
+  const forgedRuntime = structuredClone(runtimeCapture.packet); forgedRuntime.stops[0].count = 1;
+  await upload(forgedRuntime); await page.getByRole("button", { name: copy.verify, exact: true }).click();
+  await page.getByText(copy.refused, { exact: true }).waitFor();
   assert.deepEqual(errors, []); assert.deepEqual(refused, []); assert.deepEqual(requests.sort(), ["GET /", "GET /fixture.js"]);
   console.log(JSON.stringify({ gate: "actual-read-report-offline-browser", node: process.version, browser: browser.version(),
     actualReactReport: true, actualPacketDownload: true, separatelyRetainedDigest: true, forgedPairRefused: true, accessorNotInvoked: true,
     retainedDigestVisibleAndPropBound: true, policyVisible: true, modelReplayBoundaryVisible: true,
+    v2EmptyStopVerifiedOffline: true, v2TamperingRefused: true,
     mutationRefused: true, unavailableReset: true, sameMountedPropResets: propChecks.length, deferredOldResultsDiscarded: 4,
     externalRequests: 0, paymentAuthority: false }));
 } finally {

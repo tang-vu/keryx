@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { reviewMicros } from "../research/decision-review-types";
 import { ACTUAL_READ_POLICY, type ReadCheck, type CheckpointOutcome } from "../research-audit/actual-read-policy";
 import { canonicalReadPacket, MAX_READ_CHECKPOINTS, type ActualReadPacket, type ActualReadRecord } from "../research-audit/actual-read-record";
+import { ACTUAL_READ_CAPTURE_V2, replayMapping, replayNormalization, type MappingInput, type MappingOutcome,
+  type NormalizationInput, type PortfolioObservation, type StopRecord, type FinalObservations } from "../research-audit/actual-read-v2";
 
 export type ReadCheckpointCapture = { status: "unavailable" } | {
   status: "available"; packet: ActualReadPacket; retainedDigest: string;
@@ -24,10 +26,36 @@ function qualifiedMicros(value?: number): string | null {
 }
 
 /** Optional capture cannot escape into agent execution, including a throwing trusted sink. */
-export function createReadCheckpointCapture(enabled: boolean, sink?: (record: ActualReadRecord) => void) {
+export function createReadCheckpointCapture(enabled: boolean, sink?: (record: ActualReadRecord) => void, runtime = false) {
   const records: ActualReadRecord[] = [];
+  const mappings: { input: MappingInput; outcome: MappingOutcome }[] = [];
+  const normalizations: { input: NormalizationInput; outcome: ReturnType<typeof replayNormalization> }[] = [];
+  const stops: StopRecord[] = [];
+  let portfolio: PortfolioObservation | null = null;
+  let observations: FinalObservations = { actions: [], citations: [], payments: [] };
   let unavailable = !enabled;
+  const observe = (operation: () => void) => {
+    if (!runtime || unavailable) return;
+    try { operation(); } catch { unavailable = true; records.length = 0; }
+  };
   return {
+    refuse() { if (runtime && enabled) { unavailable = true; records.length = 0; } },
+    mapping(project: () => { input: MappingInput; outcome: MappingOutcome }) { observe(() => {
+      const { input, outcome } = project();
+      if (mappings.length >= MAX_READ_CHECKPOINTS || JSON.stringify(replayMapping(input)) !== JSON.stringify(outcome)) throw Error("Mapping capture disagreement");
+      mappings.push(structuredClone({ input, outcome }));
+    }); },
+    normalization(input: NormalizationInput, action: "BUY" | "SKIP" | "CACHE", targets: number[]) { observe(() => {
+      const outcome = replayNormalization(input);
+      if (normalizations.length >= MAX_READ_CHECKPOINTS || outcome.action !== action || JSON.stringify(outcome.targets) !== JSON.stringify(targets)) throw Error("Normalization capture disagreement");
+      normalizations.push(structuredClone({ input, outcome }));
+    }); },
+    portfolio(project: () => PortfolioObservation) { observe(() => { portfolio = structuredClone(project()); }); },
+    stop(stage: StopRecord["stage"], count: number) { observe(() => {
+      if (count !== 0 || stops.length >= MAX_READ_CHECKPOINTS) throw Error("Stop capture disagreement");
+      stops.push({ afterCheckpoint: records.length, stage, count, action: "STOP" });
+    }); },
+    observations(project: () => FinalObservations) { observe(() => { observations = structuredClone(project()); }); },
     append(check: ReadCheck, outcome: CheckpointOutcome, context: ReadCheckpointContext) {
       if (unavailable) return;
       try {
@@ -49,9 +77,11 @@ export function createReadCheckpointCapture(enabled: boolean, sink?: (record: Ac
     finish(): ReadCheckpointCapture | undefined {
       if (!enabled) return undefined;
       try {
-        if (unavailable || !records.length) return { status: "unavailable" };
-        const packet: ActualReadPacket = { schema: 1, policy: ACTUAL_READ_POLICY, coverage: "post-portfolio-checkpoints",
-          monetaryAuthority: "qualified-assertions-only", records };
+        if (unavailable || !records.length && !stops.length) return { status: "unavailable" };
+        const packet: ActualReadPacket = runtime ? { schema: 2, policy: ACTUAL_READ_CAPTURE_V2,
+          coverage: "normalization-and-read-checkpoints", monetaryAuthority: "qualified-assertions-only",
+          records, mappings, normalizations, portfolio, stops, observations } :
+          { schema: 1, policy: ACTUAL_READ_POLICY, coverage: "post-portfolio-checkpoints", monetaryAuthority: "qualified-assertions-only", records };
         const canonical = canonicalReadPacket(packet);
         return { status: "available", packet: JSON.parse(canonical), retainedDigest: createHash("sha256").update(canonical).digest("hex") };
       } catch { return { status: "unavailable" }; }

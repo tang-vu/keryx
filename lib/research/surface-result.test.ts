@@ -46,6 +46,17 @@ describe("research surface parity", () => {
     }
     expect(buildResearchReceipt(run, [])).toEqual(receipt);
   });
+  it("projects v2 empty-stop capture across public transports while private and native-owned records remain unavailable", () => {
+    const run = fixture(), receipt = buildResearchReceipt(run, []), capture = createReadCheckpointCapture(true, undefined, true);
+    capture.stop("discovery", 0); const retained = capture.finish(); expect(retained?.status).toBe("available");
+    run.trace = [{ phase: "done", message: "done", ts: 0, readCheckpoints: retained }];
+    const results = (value: QueryRun) => [surfaceResearch(value), remoteResearchResult(value), keryxMeta(value),
+      a2aResponseFromRun(value, quoteA2aResearch(0.03, "deep"))];
+    for (const result of results(run)) expect(result.readCheckpoints).toEqual(retained);
+    for (const restricted of [{ ...run, id: "prv_private" }, { ...run, originalFulfillment: undefined }])
+      for (const result of results(restricted)) expect(result.readCheckpoints).toEqual({ status: "unavailable" });
+    expect(buildResearchReceipt(run, [])).toEqual(receipt);
+  });
   it("exports only new closed ingress labels and leaves legacy projections and portable receipts unchanged", () => {
     const legacy = fixture(), receipt = buildResearchReceipt(legacy, []);
     expect(surfaceResearch(legacy)).not.toHaveProperty("provenance");

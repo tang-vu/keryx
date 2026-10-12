@@ -2,6 +2,7 @@
 export const actualReadCopy = {
   title: "Read checkpoints",
   boundary: "Verify checks the recorded post-portfolio admission predicates offline. Source facts are assertions; source authenticity and payment anchoring are unproven.",
+  runtimeBoundary: "Verify replays recorded proposal mapping, normalization, empty-run stops and admission checkpoints locally. Optimizer inputs/output and final actions, citations and payment states are recorded observations; optimizer and settlement authority are not replayed.",
   modelBoundary: "Model proposals and selected plan actions are recorded when available. Model generation is not replayed or expected to reproduce; verification checks only deterministic checkpoints.",
   policy: "Recorded checkpoint policy",
   digest: "SHA-256 retained by this report",

@@ -1,5 +1,79 @@
 # Actual READ checkpoints — issue301, bounded milestone
 
+## Ordinary runtime capture v2 — October 12 next-batch source candidate
+
+New ordinary-public captures use `ordinary-read-capture-v2`. The closed packet
+records model proposal mapping and target normalization before the portfolio,
+cache-expiry, discussion, preview and attention decisions, and actual zero-candidate
+discovery/evidence STOPs. Their pure replay uses the same normalization helper and
+unchanged admission-v1 evaluator. The packet retains distinct proposal, mapped,
+normalized and selected checkpoint actions; no model is rerun. Historical
+prospective-v1 and actual-post-portfolio-v1 canonical bytes, policy and hashes
+remain readable. The sections below describe their retained milestones.
+
+Portfolio inputs, numeric document groups, selected candidate references, final
+BUY/SKIP/CACHE actions, citations and payment states are recorded **observations**.
+They do not replay optimizer selection, reward allocation, reservation release,
+funding, signatures, retries or settlement. Payment status and settled flags are
+copied independently from the actual records, without interpreting a simulated
+or pending record as a confirmed payment. Monetary strings preserve the actual
+finite Number operand. Integer micro assertions are emitted only when its printed
+decimal is exactly representable without rounding; other values remain null.
+These assertions do not replace the underlying monetary authority.
+
+The report and offline CLI accept both packet versions and disclose that optimizer
+and settlement authority are not replayed. Browser verification uses local
+File/JSON/Web Crypto only, binds the report's separately retained digest, and
+rejects changed operands, outcomes, private/unknown fields, accessors and mutation.
+Public packets use run-local numeric candidate/document references, never raw
+questions, claim text, model rationale, URLs, account IDs, tokens, grants, Circle
+metadata, payment IDs or wallet addresses. Existing private/original reader and
+visibility gates, default-OFF roles and native ownership boundaries are unchanged.
+Missing capabilities, failed/overflow capture and unsupported records remain
+unavailable; there is no backfill or native fallback.
+
+The shared public result contract carries v2 through web/API, OpenAI-compatible,
+remote MCP and A2A projections. CLI can verify exported sidecars offline; stdio
+MCP/Desktop/extension and bots retain their existing result/export roles, rather
+than acquiring a new capture capability or local verifier UI. Native original and
+Operator-owned runs do not become ordinary-public captures. This source work does
+not assert installed/package/deployed parity or a newly shipped browser build.
+
+| Original issue301 criterion | Current source evidence / remaining gate |
+| --- | --- |
+| Every BUY/SKIP/CACHE, stop and escalation has a canonical record | Ordinary supported execution now captures mapping/normalization, both empty-run stops, existing admission/reevaluation/review escalation predicates, and final action observations. Full optimizer replay and unsupported/private/native capture remain explicitly unavailable. Exact candidate review/CI and delivery remain open. |
+| Every release-corpus record replays actions and exact integer amounts | Admission/normalization replay and representable amount assertions are covered. Complete optimizer/allocation/release replay and integer authority are not supplied by the existing financial policy. The frozen corpus/artifacts are unchanged; the root must bind the NEXT source epoch before hosted integration acceptance. |
+| Altered records fail | Closed canonical v1/v2 contracts and the separately retained digest reject tampering; focused runtime, hash, CLI and actual React/Web Crypto regressions qualify the candidate. Source facts and settlement remain assertions. |
+| Report Verify runs in the browser without calling Keryx | The existing client verifier handles v1/v2 locally. Offline mounted-browser proof is distinct from final compiled/delivery acceptance. |
+| Public records exclude/redact private question text | Closed numeric/flag/operand projection and unchanged private/original guards withhold sensitive inputs. The report's authenticated/private reader is not widened. |
+
+### Concrete root dependency for complete replay
+
+The existing `claim-coverage-v1` selector derives document equality from raw URLs,
+orders individual IDs with `localeCompare`, and compares sorted, concatenated
+raw-ID state keys. Replacing these identities with numeric ordinals can change
+ties and the paid subset; publishing them can expose private URLs/tokens.
+The selector is a separate root-owned scope. A complete follow-up needs one shared
+browser-safe selector core, with explicitly reviewed document grouping and
+tie-order representation that preserves the current policy's exact behavior and
+old replay contract (or a deliberately versioned successor). Differential tests
+must include alias grouping, tied IDs, non-ASCII IDs and concatenated-state ties.
+Copying an optimizer into the verifier would create a competing implementation.
+
+Integer-complete replay also requires root review of existing exact monetary
+sources and reservation/allocation/release inputs. Where legacy Number arithmetic
+and its 1e-9 tolerance have no authoritative integer input, keep explicit
+unavailability; converting rounded floats would falsely certify exact authority.
+Any change to monetary policy or ordering requires the planning/review scope
+before implementation. No real-money trial, chain anchor, new translation gate,
+DDL, access expansion, study rerun or issue291 completion is an issue301 substitute.
+
+This candidate changes the runner source pin. Current frozen study/corpus/report
+bytes are preserved and are not claimed valid for this new source. Root owns the
+NEXT-batch source binding, final applicable CI, independent review, compiled and
+distribution acceptance, delivery and original issue closure. The current release
+cohort proceeds independently; issue301 stays open for these concrete gaps.
+
 ## Reader replay access — October 12 source follow-up
 
 The same follow-up now supplies the existing active fetch-budget operand to every

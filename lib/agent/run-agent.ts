@@ -1,6 +1,8 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { actualReadCheckpoint, type ReadCheck, type PlannedReadAction } from "../research-audit/actual-read-policy";
 import { createReadCheckpointCapture, ordinaryCheckpointCapability } from "./read-checkpoint-capture";
+import { numberOperand } from "../research-audit/actual-read-policy";
+import { decimalMicros } from "../research-audit/exact-units";
 import { answerPresentation } from "../research/answer-presentation";
 import { confidenceBanner, ordinaryConfidence } from "../research/confidence-copy";
 import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../research/source-requirements";
@@ -273,7 +275,7 @@ async function* runAdmittedAgent(
   const checkpointPlans = new Map<string, PlannedReadAction>();
   const checkpointProposals = new Map<string, PlannedReadAction | "UNKNOWN">();
   const checkpointCapture = createReadCheckpointCapture(effects.scope.kind === "public" && !queryId.startsWith("prv_") &&
-    ordinaryCheckpointCapability(db), deps.readCheckpointSink);
+    ordinaryCheckpointCapability(db), deps.readCheckpointSink, true);
   let citations: Citation[] = [];
   let teachingProposals: TeachingProposalDelivery | undefined;
   let operatingFee: QueryRun["operatingFee"];
@@ -315,6 +317,27 @@ async function* runAdmittedAgent(
     throw new Error("invalid trusted agent execution limits");
   }
   let spentTolls = 0;
+
+  function checkpointCandidate(assetId: string): number {
+    if (!checkpointCandidates.has(assetId)) checkpointCandidates.set(assetId, checkpointCandidates.size + 1);
+    return checkpointCandidates.get(assetId)!;
+  }
+  function captureMapping(d: Decision, id: string | null, matched: boolean, duplicate: boolean, external: boolean, publicRead: boolean) {
+    checkpointCapture.mapping(() => {
+      const fields = Object.getOwnPropertyDescriptors(d);
+      if (!fields.action || !("value" in fields.action) || !fields.targets || !("value" in fields.targets) || !Array.isArray(fields.targets.value)) throw Error("Unsupported proposal capture");
+      const targetFields = Object.getOwnPropertyDescriptors(fields.targets.value as object), count: unknown = targetFields.length?.value;
+      if (typeof count !== "number" || !Number.isSafeInteger(count) || count < 0 || count > 10000 || Reflect.ownKeys(targetFields).length !== count + 1) throw Error("Unsupported target capture");
+      const targets: number[] = Array.from({ length: count }, (_, index) => {
+        const field = targetFields[index]; if (!field || !("value" in field) || typeof field.value !== "number" || !Number.isSafeInteger(field.value) || field.value < 0 || field.value > 10000) throw Error("Unsupported target capture");
+        return field.value;
+      });
+      const proposal = fields.action.value as PlannedReadAction;
+      return { input: { candidate: id ? checkpointCandidate(id) : 0, proposal, matched, duplicate, external, public: publicRead, claimCount: subClaims.length, targets },
+        outcome: { action: external ? "SKIP" : !matched || duplicate ? "DROP" : publicRead && proposal !== "SKIP" ? "CACHE" : proposal,
+          targets: external || !matched || duplicate ? [] : normalizeClaimTargets(targets, subClaims.length) } };
+    });
+  }
 
   function checkpoint(check: ReadCheck, assetId?: string, round = 0) {
     const outcome = actualReadCheckpoint(check);
@@ -776,6 +799,7 @@ async function* runAdmittedAgent(
   }
 
   if (candidates.length === 0) {
+    checkpointCapture.stop("discovery", candidates.length);
     evidenceMeasured = true;
     claimCoverage = subClaims.map((claim, claimIndex) => ({ claimIndex, claim, coverage: 0, coveredBy: [] }));
     return finish(emptyEvidenceAnswer({ question: input.question, outcomes: publicReadOutcomes, skipped: [], discovery: webDiscovery, fundingUnavailable: false, pendingPayments: 0, settledPayments: 0, fetchFailures: 0 }));
@@ -842,6 +866,7 @@ async function* runAdmittedAgent(
       // fallback/custom engine cannot erase all decisions during this additive rollout.
       const publicCandidate = publicCandidates.get(d.sourceId);
       if (publicCandidate) {
+        captureMapping(d, publicCandidate.id, true, proposedAssetIds.has(publicCandidate.id), false, true);
         if (proposedAssetIds.has(publicCandidate.id)) return [];
         proposedAssetIds.add(publicCandidate.id);
         modelActions.set(publicCandidate.id, d.action);
@@ -853,6 +878,7 @@ async function* runAdmittedAgent(
           targets: normalizeClaimTargets(d.targets, subClaims.length) }];
       }
       const asset = assetById.get(d.sourceId) ?? assetBySourceId.get(d.sourceId);
+      captureMapping(d, asset?.candidate.id ?? null, !!asset, !!asset && proposedAssetIds.has(asset.candidate.id), false, false);
       if (!asset) return [];
       if (proposedAssetIds.has(asset.candidate.id)) return [];
       proposedAssetIds.add(asset.candidate.id);
@@ -873,6 +899,7 @@ async function* runAdmittedAgent(
       }];
     });
   const externalProposed = proposed.filter((d) => isExternal(d.sourceId));
+  for (const d of externalProposed) captureMapping(d, d.sourceId, externalById.has(d.sourceId), false, true, false);
   // A model can omit an input candidate. Preserve every explicit original as an inspectable
   // refusal instead of silently substituting whatever search happened to return.
   if (!externalDocumentsWithheld) for (const [id, candidate] of requested.candidates) {
@@ -893,8 +920,21 @@ async function* runAdmittedAgent(
     const targets = proposedDecision.targets.filter(index =>
       !discussionDoesNotMeetDocumentRequest(input.question, proposedDecision.itemUrl, subClaims[index]));
     const r = { ...proposedDecision, targets };
-    if (discussionDoesNotMeetDocumentRequest(input.question, r.itemUrl) ||
-        proposedDecision.targets.length > 0 && targets.length === 0) {
+    const discussion = discussionDoesNotMeetDocumentRequest(input.question, r.itemUrl) ||
+        proposedDecision.targets.length > 0 && targets.length === 0;
+    const normalizationInput = () => ({ candidate: checkpointCandidate(r.assetId ?? r.sourceId),
+      proposal: modelActions.get(r.assetId ?? r.sourceId) ?? "UNKNOWN" as const, mapped: r.action,
+      price: numberOperand(r.price), expectedValue: numberOperand(r.expectedValue), claimCount: subClaims.length,
+      targets: proposedDecision.targets, allowedTargets: targets, freshCache: freshCache.has(r.assetId ?? r.sourceId),
+      originalPage: webCandidates.has(r.assetId ?? r.sourceId), discussion,
+      attentionFloor: numberOperand(webCandidates.has(r.assetId ?? r.sourceId) ? config.minPublicReadExpectedValue : config.minCacheExpectedValue) });
+    // Captures only closed numeric/flag inputs; the question, URL and model rationale never enter it.
+    const captureNormalization = (action: Decision["action"]) => {
+      try { checkpointCapture.normalization(normalizationInput(), action, targets); }
+      catch { checkpointCapture.refuse(); }
+    };
+    if (discussion) {
+      captureNormalization("SKIP");
       discussionBlockedIds.add(r.assetId ?? r.sourceId);
       codeRules.set(r.assetId ?? r.sourceId, "discussion");
       preparedDecisions.push({ ...r, action: "SKIP",
@@ -916,6 +956,7 @@ async function* runAdmittedAgent(
     const coverageBlock = previewCoverageBlockReason(d, subClaims.length);
     if (d.action === "BUY" && r.action === "CACHE") codeRules.set(d.assetId ?? d.sourceId, "cache-expired");
     if (coverageBlock) {
+      captureNormalization("SKIP");
       codeRules.set(d.assetId ?? d.sourceId, "preview");
       preparedDecisions.push({
         ...d,
@@ -930,6 +971,7 @@ async function* runAdmittedAgent(
       d.action === "CACHE" &&
       ((d.targets?.length ?? 0) === 0 || d.expectedValue < attentionFloor)
     ) {
+      captureNormalization("SKIP");
       codeRules.set(d.assetId ?? d.sourceId, "attention");
       preparedDecisions.push({
         ...d,
@@ -938,6 +980,7 @@ async function* runAdmittedAgent(
       });
       continue;
     }
+    captureNormalization(d.action);
     preparedDecisions.push(d);
   }
 
@@ -946,6 +989,19 @@ async function* runAdmittedAgent(
     claimCount: subClaims.length,
     attentionLimit,
     fetchBudgetUsdc: fetchBudget,
+  });
+  checkpointCapture.portfolio(() => {
+    const groups = new Map<string, number>();
+    const group = (decision: Decision) => { const key = documentSelectionKey(decision);
+      if (!groups.has(key)) groups.set(key, groups.size + 1); return groups.get(key)!; };
+    return { policy: "claim-coverage-v1", replay: "unavailable", input: { claimCount: subClaims.length, attentionLimit,
+      fetchBudget: numberOperand(fetchBudget), candidates: preparedDecisions.map(d => ({ candidate: checkpointCandidate(d.assetId ?? d.sourceId),
+        documentGroup: group(d), action: d.action, price: numberOperand(d.price), expectedValue: numberOperand(d.expectedValue), targets: d.targets,
+        public: d.sourceKind === "public-reference" })) }, outcome: {
+      selected: evidencePortfolio!.selectedAssetIds.map(checkpointCandidate), selectionMethod: evidencePortfolio!.selectionMethod!,
+      evaluatedStates: evidencePortfolio!.evaluatedStates!, cap: numberOperand(evidencePortfolio!.fetchBudgetUsdc),
+      reserved: numberOperand(evidencePortfolio!.selectedBuyUsdc), capMicros: decimalMicros(evidencePortfolio!.fetchBudgetUsdc),
+      reservedMicros: decimalMicros(evidencePortfolio!.selectedBuyUsdc) } };
   });
   const selectedAssets = new Set(evidencePortfolio.selectedAssetIds);
   const preparedByAsset = new Map(
@@ -1628,6 +1684,7 @@ async function* runAdmittedAgent(
   }
 
   if (gathered.length === 0) {
+    checkpointCapture.stop("evidence", gathered.length);
     // An observed empty evidence set is measured zero support, not missing telemetry.
     evidenceMeasured = true;
     claimCoverage = subClaims.map((claim, claimIndex) => ({
@@ -2331,6 +2388,14 @@ async function* runAdmittedAgent(
       "done",
       `Done. Spent $${totalSpent} across ${payments.length - pendingPayments} confirmed/simulated payment(s)${operatingFee ? "; Keryx operating fees are separate from creator rewards" : " to creators"}${pendingPayments ? `; ${pendingPayments} authorization(s) await settlement confirmation` : ""}.${fundingUnavailable ? " Creator-payment amounts only; wallet funding effects remain unknown." : ""}`,
     );
+    checkpointCapture.observations(() => ({
+      actions: run.decisions.map(d => ({ candidate: checkpointCandidate(d.assetId ?? d.sourceId), action: d.action,
+        price: numberOperand(d.price), priceMicros: decimalMicros(d.price) })),
+      citations: run.citations.map(c => ({ candidate: checkpointCandidate(c.itemId ? `item:${c.itemId}` : c.sourceId),
+        reward: numberOperand(c.reward), rewardMicros: decimalMicros(c.reward) })),
+      payments: payments.map(p => ({ candidate: checkpointCandidate(p.itemId ? `item:${p.itemId}` : p.sourceId), kind: p.kind,
+        amount: numberOperand(p.amountUsdc), amountMicros: decimalMicros(p.amountUsdc), status: p.settlementStatus ?? "unknown", settled: p.settled })),
+    }));
     const captured = checkpointCapture.finish();
     if (captured) done.readCheckpoints = captured;
     const completed = demoteSyntheticEvidence(run);
