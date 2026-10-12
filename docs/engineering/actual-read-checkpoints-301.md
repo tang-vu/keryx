@@ -1,5 +1,92 @@
 # Actual READ checkpoints — issue301, bounded milestone
 
+## Optimizer replay v3 — October 12 next-batch source candidate
+
+Supported ordinary captures now add a distinct `ordinary-read-optimizer-v3`
+envelope and `claim-coverage-replay-v1` checkpoint. It retains the actual prepared
+candidate inputs and actual initial portfolio output: selected subset/read order,
+cap/reservation/unused operands, eligibility, claim coverage, work count and
+exhaustive/bounded selection mode. Model proposals and normalization remain in
+their own records. The frozen pure diagnostic policy reproduces the unchanged
+live `claim-coverage-v1` algorithm; it is never consulted to authorize execution.
+No source230 selector, financial argument, payment/order, grant or settlement
+behavior changes. A mismatch against the actual output records unavailable
+optimizer evidence, rather than substituting the diagnostic result.
+
+Raw IDs and URLs stay server-side. Document equality becomes numeric groups;
+individual default-locale ordering becomes numeric weak ranks, retaining equal
+collations. For final state ties, the server records only numeric subset pairs and
+the sign of the actual sorted, NUL-joined private-key comparison. Browser replay
+uses those bounded witnesses, retaining concatenated-state/Unicode ties without
+publishing their strings or choosing a new comparator. Groups/ranks/comparison
+witnesses are asserted source observations, not independently authenticated facts.
+Missing/contradictory/unused witnesses, changed inputs/results, unknown fields or
+versions, sparse arrays, accessors and digest mutation refuse verification.
+
+Capture is bounded to 256 finite candidates, 32 claims/attention slots, 1,024
+state-comparison witnesses and the existing 256KiB packet ceiling. Unsupported
+inputs, exceeded bounds, source-policy drift or observer failure produce an
+explicit unavailable optimizer checkpoint. They do not change the live result.
+Private/original/pre-enrollment/native-owned capture remains unavailable; no
+backfill, enrollment, schema/storage activation or fallback is introduced.
+Legacy prospective-v1, actual-v1 and actual-v2 canonical/hash/replay contracts
+remain intact. The older sections below record their historical scope.
+
+Actual finite operands retain the existing Number arithmetic and 1e-9 tolerance.
+Representable input decimal assertions have integer micros; nonmicro/unsafe
+inputs stay null. A fractional cap remains null after the live policy floors it;
+a fractional selected price remains null after its rounded reservation result.
+Unknown monetary inputs propagate to associated micro assertions. These are
+diagnostic observations, never signed funding or complete integer authority.
+
+The existing report and offline CLI replay the available v3 optimizer locally.
+An unavailable optimizer is disclosed separately from verifiable normalization
+and admission records. The shared closed projection/OpenAPI grammar carries the
+same packet through ordinary web/API, OpenAI-compatible, remote MCP and A2A.
+CLI/stdio/Desktop/bots/extension retain their existing result/export/report roles;
+new local verifier UI or installed/package/native capture parity is not inferred.
+API/MCP human-locale helper ownership remains separate and untouched.
+
+| Original criterion | Source result and actual remaining gate |
+| --- | --- |
+| Every BUY/SKIP/CACHE, stop and escalation has a canonical record | Supported ordinary mapping/normalization, optimizer selection, initial/reevaluation/admission/review escalation and empty-run STOPs are now captured. Unsupported/private/native/pre-enrollment/bounded refusals remain explicit. Complete domain enrollment is not fabricated. |
+| Every release-corpus record replays actions and exact integer amounts | Supported optimizer actions/read order and qualified representable amounts replay. Full allocation/reservation-release integer authority and NEXT release-corpus/source binding remain open. Number inputs are not repaired into integers. |
+| Altered records fail | Closed v1/v2/v3 contracts, separately retained hash and optimizer output/comparison tamper refusal are covered by focused offline regressions. Asserted source facts remain distinct from integrity. |
+| Report verification runs in the browser without Keryx | The existing File/JSON/Web Crypto control handles the new pure client graph. Focused actual React/Web Crypto source proof is separate from final compiled delivery acceptance. |
+| Private question text is excluded/redacted publicly | Numeric identities/groups/ranks/tie witnesses and closed operands exclude question/claim/model text, URLs/tokens, source/account/wallet/payment/grant/Circle identities. Existing reader/auth/visibility/OFF boundaries stay unchanged. |
+
+### Staged design for the remaining exact-integer boundary (not implemented)
+
+1. Root first binds genuine integer quote/intent inputs at existing authority
+   seams. `sourceFetchTerms` currently turns allowlisted `fetchPriceUsdc6` into a
+   Number; owner review exposes strict `priceMicroUsdc`/`listPriceMicroUsdc`, and
+   `DecisionBasis` separately records qualified quote/budget observations. Retain
+   already admitted integer scalars alongside existing Number DTOs where they
+   actually exist. Missing historical or nonmicro values remain unavailable.
+   Public projections may retain only amount scalars/anonymous references; signer,
+   account, grant/epoch/nonce/payTo/Circle metadata stays private and authoritative.
+2. At the runner's existing initial portfolio reservation, unread-release,
+   reevaluation debit and `allocateSplit` citation/author-leg seams, capture actual
+   query-local integer inputs/results before considering a new policy version.
+   Query capacity must stay distinct from signer exposure. A funding error, pending
+   transfer or elapsed authorization must not release funding authority. Existing
+   Number allocation rounding is not evidence of a signed integer amount.
+3. Root reviews any representation/policy successor separately. It must preserve
+   old replay versions, source/price validation, hard caps, read order, exact
+   argument/recipient/nonce binding, payment-state truth and failure containment.
+   Offline differential gates include whole/fractional/unsafe micros, cache/free
+   reads, tied aliases, unread releases, funding uncertainty, sufficiency/reevaluation
+   stops, reward/author-leg sums and settled-but-undelivered/pending outcomes.
+   No broad payment rewrite, authority change or live funding trial is authorized
+   by this diagnostic candidate.
+
+Root owns final independent source review, the one NEXT combined source-epoch
+binding, applicable aggregate/platform CI, compiled/distribution acceptance and
+verified delivery/closure. Frozen study/corpus/report/lock/version bytes remain
+unchanged, and their old runner pin does not accept this new source. Current
+release delivery is independent. No study write/check/prepare or model/search/
+payment trial occurs here; original301 remains open for the actual remaining gates.
+
 ## Ordinary runtime capture v2 — October 12 next-batch source candidate
 
 New ordinary-public captures use `ordinary-read-capture-v2`. The closed packet

@@ -1,6 +1,7 @@
 import { ACTUAL_READ_POLICY, READ_CHECK_SHAPES, READ_CHECK_RULES } from "./actual-read-policy";
 import { MAX_READ_CHECKPOINTS, MAX_READ_PACKET_BYTES } from "./actual-read-record";
 import { runtimeCaptureOpenApi } from "./actual-read-v2-openapi";
+import { optimizerCaptureOpenApi } from "./optimizer-openapi";
 const actions = ["BUY", "SKIP", "CACHE"];
 const contextAction = { type: "string", enum: [...actions, "UNKNOWN"] };
 const integer = { type: "integer", minimum: 0, maximum: 10000 };
@@ -44,8 +45,9 @@ const legacySchemas = {
 const legacyAvailable = legacySchemas.ActualReadCheckpointCapture.oneOf[1] as {
   properties: { packet: { properties: { records: unknown } } };
 };
+const v2 = runtimeCaptureOpenApi(legacyAvailable.properties.packet.properties.records);
 export const actualReadOpenApiSchemas = { ActualReadCheckpointCapture: {
   ...legacySchemas.ActualReadCheckpointCapture,
-  description: "Bounded private-safe ordinary observations. V1 admission and v2 mapping/normalization/stop replay remain distinct; v2 optimizer/final payment observations are not replayed authority. Expected hash is separately retained; unsupported/private/original capture remains unavailable.",
-  oneOf: [...legacySchemas.ActualReadCheckpointCapture.oneOf, runtimeCaptureOpenApi(legacyAvailable.properties.packet.properties.records)],
+  description: "Bounded private-safe ordinary observations. V1 admission, v2 normalization and available v3 versioned optimizer replay remain distinct. Private collation/groups are asserted inputs; model/payment/funding authority is not replayed. Expected hash is separately retained; unsupported/private/original capture remains unavailable.",
+  oneOf: [...legacySchemas.ActualReadCheckpointCapture.oneOf, v2, optimizerCaptureOpenApi(v2)],
 } };

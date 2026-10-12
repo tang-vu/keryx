@@ -4,6 +4,8 @@ import { ACTUAL_READ_POLICY, type ReadCheck, type CheckpointOutcome } from "../r
 import { canonicalReadPacket, MAX_READ_CHECKPOINTS, type ActualReadPacket, type ActualReadRecord } from "../research-audit/actual-read-record";
 import { ACTUAL_READ_CAPTURE_V2, replayMapping, replayNormalization, type MappingInput, type MappingOutcome,
   type NormalizationInput, type PortfolioObservation, type StopRecord, type FinalObservations } from "../research-audit/actual-read-v2";
+import { ACTUAL_READ_CAPTURE_V3 } from "../research-audit/actual-read-v3";
+import type { OptimizerCheckpoint } from "../research-audit/optimizer-checkpoint";
 
 export type ReadCheckpointCapture = { status: "unavailable" } | {
   status: "available"; packet: ActualReadPacket; retainedDigest: string;
@@ -32,6 +34,7 @@ export function createReadCheckpointCapture(enabled: boolean, sink?: (record: Ac
   const normalizations: { input: NormalizationInput; outcome: ReturnType<typeof replayNormalization> }[] = [];
   const stops: StopRecord[] = [];
   let portfolio: PortfolioObservation | null = null;
+  let optimizer: OptimizerCheckpoint | undefined;
   let observations: FinalObservations = { actions: [], citations: [], payments: [] };
   let unavailable = !enabled;
   const observe = (operation: () => void) => {
@@ -51,6 +54,10 @@ export function createReadCheckpointCapture(enabled: boolean, sink?: (record: Ac
       normalizations.push(structuredClone({ input, outcome }));
     }); },
     portfolio(project: () => PortfolioObservation) { observe(() => { portfolio = structuredClone(project()); }); },
+    optimizer(project: () => OptimizerCheckpoint) {
+      if (!runtime || unavailable) return;
+      try { optimizer = structuredClone(project()); } catch { optimizer = { status: "unavailable", reason: "capture-failed" }; }
+    },
     stop(stage: StopRecord["stage"], count: number) { observe(() => {
       if (count !== 0 || stops.length >= MAX_READ_CHECKPOINTS) throw Error("Stop capture disagreement");
       stops.push({ afterCheckpoint: records.length, stage, count, action: "STOP" });
@@ -78,10 +85,12 @@ export function createReadCheckpointCapture(enabled: boolean, sink?: (record: Ac
       if (!enabled) return undefined;
       try {
         if (unavailable || !records.length && !stops.length) return { status: "unavailable" };
-        const packet: ActualReadPacket = runtime ? { schema: 2, policy: ACTUAL_READ_CAPTURE_V2,
+        let packet: ActualReadPacket = runtime ? { schema: 2, policy: ACTUAL_READ_CAPTURE_V2,
           coverage: "normalization-and-read-checkpoints", monetaryAuthority: "qualified-assertions-only",
           records, mappings, normalizations, portfolio, stops, observations } :
           { schema: 1, policy: ACTUAL_READ_POLICY, coverage: "post-portfolio-checkpoints", monetaryAuthority: "qualified-assertions-only", records };
+        if (packet.schema === 2 && optimizer !== undefined) packet = { ...packet, schema: 3, policy: ACTUAL_READ_CAPTURE_V3,
+          coverage: "normalization-optimizer-read-checkpoints", optimizer };
         const canonical = canonicalReadPacket(packet);
         return { status: "available", packet: JSON.parse(canonical), retainedDigest: createHash("sha256").update(canonical).digest("hex") };
       } catch { return { status: "unavailable" }; }

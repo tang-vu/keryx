@@ -192,7 +192,7 @@ describe("identity-bound review-first pipeline", () => {
     expect(absent.packet).toBeNull(); expect(throwing.packet).toBeNull(); expect(throwing.status).toBe("unavailable");
     expect(available.packet).not.toBeNull();
     expect(await verifyActualReadPacket(available.packet!.packet, available.packet!.retainedDigest)).toBe(true);
-    expect(available.packet!.packet.schema).toBe(2);
+    expect(available.packet!.packet.schema).toBe(3);
     expect(available.packet!.packet.records).toEqual(expect.arrayContaining([
       expect.objectContaining({ check: { kind: "review", required: true }, outcome: { action: "ESCALATE", rule: "human-review" } }),
     ]));
@@ -2982,7 +2982,7 @@ describe("actual READ checkpoint capture differentials", () => {
       expect(available.packet!.packet.schema).toBe(2);
       if (available.packet!.packet.schema === 2) expect(available.packet!.packet.stops).toContainEqual({ afterCheckpoint: 0, stage: "discovery", count: 0, action: "STOP" });
     } else expect(available.packet!.packet.records.map(record => ({ kind: record.check.kind, action: record.outcome.action }))).toContainEqual({ kind, action });
-    if (available.packet!.packet.schema === 2) {
+    if (available.packet!.packet.schema !== 1) {
       const v2 = available.packet!.packet;
       if (scenario !== "empty") expect(v2.mappings.length).toBeGreaterThan(0);
       if (scenario !== "empty" && scenario !== "external") expect(v2.normalizations.length).toBeGreaterThan(0);
@@ -2994,6 +2994,13 @@ describe("actual READ checkpoint capture differentials", () => {
       const rules: Partial<Record<typeof cases[number][0], string>> = { "expired-cache": "cache-expired", "low-preview": "preview", "low-attention": "attention", "initial-discussion": "discussion" };
       const rule = rules[scenario];
       if (rule) expect(v2.normalizations.some(row => row.outcome.rule === rule)).toBe(true);
+      if (scenario !== "empty") {
+        expect(v2.schema).toBe(3);
+        if (v2.schema === 3) {
+          expect(v2.optimizer.status).toBe("available");
+          if (v2.optimizer.status === "available") expect(v2.optimizer.outcome.reserved).toBe(String(available.economic.plannedFetchUsdc));
+        }
+      }
     }
     if (scenario === "external") expect(available.packet!.packet.records.some(record => record.check.kind === "selection" && record.check.external && record.outcome.action === "SKIP")).toBe(true);
     if (scenario === "reeval-discussion") expect(available.packet!.packet.records.some(record => record.check.kind === "discussion" && record.check.excluded && record.outcome.action === "SKIP")).toBe(true);

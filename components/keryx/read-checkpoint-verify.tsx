@@ -37,7 +37,8 @@ export function ReadCheckpointVerify({ capture }: { capture: ReturnType<typeof p
   };
   return <section className="mt-4 min-w-0 border border-line bg-paper p-4" aria-label={copy.title}>
     <h2 className="font-mono text-sm text-ink">{copy.title}</h2>
-    <p className="mt-2 text-xs text-ink-3">{capture ? capture.packet.schema === 2 ? copy.runtimeBoundary : copy.boundary : copy.unavailable}</p>
+    <p className="mt-2 text-xs text-ink-3">{capture ? capture.packet.schema === 3 ? copy.optimizerBoundary : capture.packet.schema === 2 ? copy.runtimeBoundary : copy.boundary : copy.unavailable}</p>
+    {capture?.packet.schema === 3 && capture.packet.optimizer.status === "unavailable" && <p className="mt-2 text-xs text-ink-3">{copy.optimizerUnavailable}</p>}
     {capture && <>
       <p className="mt-2 text-xs text-ink-3">{copy.modelBoundary}</p>
       <p className="mt-2 text-xs text-ink-3">{copy.amounts}</p>

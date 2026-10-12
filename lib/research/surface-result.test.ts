@@ -11,6 +11,7 @@ import type { QueryRun } from "../types";
 import { surfaceResearch } from "./surface-result";
 import { createReadCheckpointCapture } from "../agent/read-checkpoint-capture";
 import { actualReadCheckpoint } from "../research-audit/actual-read-policy";
+import { optimizerPacketFixture } from "../research-audit/optimizer-checkpoint.test-fixture";
 import type { ReasoningAttempt } from "../llm/reasoning-engine";
 import { readBibliographicTask } from "./bibliographic-task";
 import { recognizeBibliographicTask } from "./bibliographic-task-request";
@@ -55,6 +56,15 @@ describe("research surface parity", () => {
     for (const result of results(run)) expect(result.readCheckpoints).toEqual(retained);
     for (const restricted of [{ ...run, id: "prv_private" }, { ...run, originalFulfillment: undefined }])
       for (const result of results(restricted)) expect(result.readCheckpoints).toEqual({ status: "unavailable" });
+    expect(buildResearchReceipt(run, [])).toEqual(receipt);
+  });
+  it("projects v3 optimizer replay consistently while preserving private and original unavailable boundaries", () => {
+    const run = fixture(), receipt = buildResearchReceipt(run, []), capture = optimizerPacketFixture();
+    run.trace = [{ phase: "done", message: "done", ts: 0, readCheckpoints: capture }];
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "deep"))])
+      expect(result.readCheckpoints).toEqual(capture);
+    expect(surfaceResearch({ ...run, id: "prv_private" }).readCheckpoints).toEqual({ status: "unavailable" });
+    expect(surfaceResearch({ ...run, originalFulfillment: undefined }).readCheckpoints).toEqual({ status: "unavailable" });
     expect(buildResearchReceipt(run, [])).toEqual(receipt);
   });
   it("exports only new closed ingress labels and leaves legacy projections and portable receipts unchanged", () => {

@@ -3,6 +3,7 @@ import { actualReadCheckpoint, type ReadCheck, type PlannedReadAction } from "..
 import { createReadCheckpointCapture, ordinaryCheckpointCapability } from "./read-checkpoint-capture";
 import { numberOperand } from "../research-audit/actual-read-policy";
 import { decimalMicros } from "../research-audit/exact-units";
+import { captureOptimizer } from "./optimizer-checkpoint-capture";
 import { answerPresentation } from "../research/answer-presentation";
 import { confidenceBanner, ordinaryConfidence } from "../research/confidence-copy";
 import { discussionDoesNotMeetDocumentRequest, requestedSourceUrls } from "../research/source-requirements";
@@ -1003,6 +1004,8 @@ async function* runAdmittedAgent(
       reserved: numberOperand(evidencePortfolio!.selectedBuyUsdc), capMicros: decimalMicros(evidencePortfolio!.fetchBudgetUsdc),
       reservedMicros: decimalMicros(evidencePortfolio!.selectedBuyUsdc) } };
   });
+  checkpointCapture.optimizer(() => captureOptimizer({ decisions: preparedDecisions, claimCount: subClaims.length,
+    attentionLimit, fetchBudgetUsdc: fetchBudget }, evidencePortfolio!, checkpointCandidate));
   const selectedAssets = new Set(evidencePortfolio.selectedAssetIds);
   const preparedByAsset = new Map(
     preparedDecisions.map((decision) => [decision.assetId ?? decision.sourceId, decision]),

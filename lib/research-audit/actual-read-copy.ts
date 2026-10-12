@@ -3,6 +3,8 @@ export const actualReadCopy = {
   title: "Read checkpoints",
   boundary: "Verify checks the recorded post-portfolio admission predicates offline. Source facts are assertions; source authenticity and payment anchoring are unproven.",
   runtimeBoundary: "Verify replays recorded proposal mapping, normalization, empty-run stops and admission checkpoints locally. Optimizer inputs/output and final actions, citations and payment states are recorded observations; optimizer and settlement authority are not replayed.",
+  optimizerBoundary: "Verify locally replays recorded normalization, the available versioned optimizer checkpoint, selected candidates and read order, and admission predicates. Document groups and private collation comparisons are asserted inputs. Model generation, funding, reservation release, reward allocation and settlement authority are not replayed.",
+  optimizerUnavailable: "Optimizer replay is unavailable for this capture. Its supported normalization and admission records can still be checked; verification does not certify the missing optimizer evidence.",
   modelBoundary: "Model proposals and selected plan actions are recorded when available. Model generation is not replayed or expected to reproduce; verification checks only deterministic checkpoints.",
   policy: "Recorded checkpoint policy",
   digest: "SHA-256 retained by this report",

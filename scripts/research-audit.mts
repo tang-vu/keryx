@@ -39,6 +39,7 @@ try {
     const packet = verified ? JSON.parse(canonicalReadPacket(input)) : null;
     output = { verified, scope: "post-portfolio-checkpoints", facts: "assertions", sourceAuthenticity: "unproven", paymentAnchoring: "unproven" };
     if (packet?.schema === 2) output = { ...output, scope: packet.coverage, optimizerReplay: "unavailable" };
+    if (packet?.schema === 3) output = { ...output, scope: packet.coverage, optimizerReplay: packet.optimizer.status === "available" ? "verified" : "unavailable" };
     if (!verified) process.exitCode = 1;
   } else if (command === "score") output = scorePurchases(input.run, input.payments, input.network);
   else if (command === "cohort") output = classifyUsage(input);

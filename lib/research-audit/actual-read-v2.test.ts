@@ -89,5 +89,5 @@ it("refuses unavailable observations without invoking disabled callbacks or gran
   expect(projectActualReadCheckpoints(run)?.packet.schema).toBe(2);
   expect(projectActualReadCheckpoints({ ...run, id: "prv_private" })).toBeNull();
   expect(projectActualReadCheckpoints({ ...run, originalFulfillment: undefined })).toBeNull();
-  expect(actualReadOpenApiSchemas.ActualReadCheckpointCapture.oneOf.length).toBe(3);
+  expect(actualReadOpenApiSchemas.ActualReadCheckpointCapture.oneOf.length).toBe(4);
 });
