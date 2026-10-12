@@ -49,6 +49,12 @@
     "label": "Related-work themes",
     "heading": "Related-work evidence themes",
     "guidance": "Group exact excerpts before writing. A statement about a paper is exported only with a citation and the retained excerpt you select for it; quotations and your free-form notes stay separate, and notes remain marked as unverified.",
+    "assemblyGuidance": "Build extractive contributions grouped by the original research targets. Each quotes retained text and stays editable. Write agreements, disagreements and gaps only after reviewing the cited excerpts. Regeneration replaces sentences in the chosen theme and preserves its title, notes and all other themes. No model or reading request is started.",
+    "assemble": "Assemble retained contributions",
+    "regenerate": "Regenerate this theme from selected excerpts",
+    "assembled": "Retained contributions appended. Existing themes and edits were preserved; review the quotations and write comparisons in the statement editor.",
+    "regenerated": "This theme’s sentences were regenerated from its selected excerpts. Titles, notes and other themes were preserved.",
+    "assemblyRefused": "Assembly refused. Select one to 24 retained excerpts for regeneration, or make room within the 16-theme and 64 KiB limits. Your edits remain.",
     "title": "Theme title",
     "notes": "Your synthesis notes (unverified)",
     "clearExcerpts": "Clear this theme’s excerpt selections",
@@ -57,6 +63,19 @@
     "newTitle": "New theme",
     "unreadHeading": "Included papers without usable retained excerpts",
     "unreadPaper": "{title} — retained excerpt unavailable; not described."
+  },
+  "reading": {
+    "guidance": "Missing retained evidence does not tell us whether a paper was read. Record your observation for this exact saved record; it is not a Keryx access check. Unread and unavailable papers export in separate lists and are never described or cited.",
+    "prepareGuidance": "Prepare a reading request in a new tab to keep these edits. Review its question and budget before submitting through the existing reader, then import the retained report here. Preparing the request spends nothing and does not mark the paper as read.",
+    "prepare": "Prepare reading request in a new tab",
+    "clear": "Clear reading observations",
+    "status": "Your reading observation",
+    "unknown": "Reading status not recorded",
+    "unread": "Not read",
+    "unavailable": "Unavailable",
+    "reason": "Your reason (optional)",
+    "unreadHeading": "Unread papers (your observation)",
+    "unavailableHeading": "Unavailable papers (your observation)"
   },
   "statement": {
     "heading": "Statements in this theme",

@@ -5,6 +5,8 @@ import { referenceKey } from "./reference-export-core";
 import { hasKnownSeedFingerprint } from "./seed-evidence-fingerprints";
 import { isWellFormedUtf16 } from "../llm/well-formed-utf16";
 import { assertRelatedWorkStatementShape, RELATED_WORK_STATEMENT_KINDS, resolveRelatedWorkStatements } from "./related-work-statements";
+import { assembleRelatedWorkThemes, type RelatedWorkAssembly } from "./related-work-generation";
+import { relatedWorkReadingLists } from "./related-work-reading";
 
 export const MAX_EVIDENCE_DRAFT_BYTES = 65_536;
 const text = (max: number, min = 0) => z.string().min(min).max(max).refine(isWellFormedUtf16);
@@ -49,6 +51,9 @@ export const evidenceDraftRequestSchema = z.object({
   version: z.literal(1), scope: z.literal("private-evidence-draft"), workspace: literatureWorkspaceSchema,
   reports: z.array(evidenceDraftReportSchema).max(8), passage: text(12_000),
   claims: z.array(claimSchema).max(32), themes: z.array(evidenceDraftThemeSchema).max(16),
+  readingStatuses: z.array(z.object({ paperUrl: url, status: z.enum(["unread", "unavailable"]), reason: text(300) }).strict()).max(50).optional(),
+  assembly: z.discriminatedUnion("mode", [z.object({ mode: z.literal("append") }).strict(),
+    z.object({ mode: z.literal("regenerate"), themeId: id }).strict()]).optional(),
 }).strict();
 export type EvidenceDraftRequest = z.infer<typeof evidenceDraftRequestSchema>;
 export interface DraftExcerpt { id: string; reportId: string; paperUrl: string; contentVersion: string; quote: string }
@@ -104,7 +109,8 @@ export function retainedDraftExcerpts(input: EvidenceDraftRequest): DraftExcerpt
 }
 
 export function buildEvidenceDraft(value: unknown) {
-  const input = parseEvidenceDraftRequest(value), excerpts = retainedDraftExcerpts(input);
+  const parsed = parseEvidenceDraftRequest(value), input = parsed.assembly ? assembleEvidenceDraftRequest(parsed, parsed.assembly) : parsed;
+  const excerpts = retainedDraftExcerpts(input), reading = relatedWorkReadingLists(input, excerpts);
   const selected = (ids: readonly string[]) => ids.map(id => {
     const row = excerpts.find(row => row.id === id);
     if (!row) throw new Error("Selected excerpt is unavailable or changed");
@@ -136,12 +142,22 @@ export function buildEvidenceDraft(value: unknown) {
   if (new Set(references.map(row => row.key)).size !== references.length) throw new Error("Reference key collision");
   return { version: 1 as const, scope: "private-evidence-draft" as const, notice: EVIDENCE_DRAFT_NOTICE,
     origin: "caller-supplied-report" as const, title: input.workspace.title, question: input.workspace.question,
-    passage: input.passage, excerpts, claims, themes, references,
+    passage: input.passage, excerpts, claims, themes, references, reading,
+    ...(parsed.assembly ? { editableRequest: input } : {}),
     unread: input.workspace.entries.filter(row => row.screening === "include" && !excerpts.some(excerpt => excerpt.paperUrl === row.paper.url))
       .map(row => ({ paper: row.paper, status: "retained-excerpt-unavailable" as const })),
   };
 }
 export type EvidenceDraft = ReturnType<typeof buildEvidenceDraft>;
+
+/** A one-shot assembly operation returns editable inputs, with the operation
+ * removed. Rebuilding/exporting those inputs cannot overwrite subsequent edits. */
+export function assembleEvidenceDraftRequest(value: unknown, operation: RelatedWorkAssembly): EvidenceDraftRequest {
+  const input = parseEvidenceDraftRequest(value), excerpts = retainedDraftExcerpts(input);
+  relatedWorkReadingLists(input, excerpts);
+  const { assembly: _assembly, ...editable } = input;
+  return parseEvidenceDraftRequest({ ...editable, themes: assembleRelatedWorkThemes(input, excerpts, operation) });
+}
 
 /** Replace one explicit theme; preserve every other theme and its author edits. */
 export function replaceEvidenceDraftTheme(input: EvidenceDraftRequest, theme: z.infer<typeof evidenceDraftThemeSchema>): EvidenceDraftRequest {
