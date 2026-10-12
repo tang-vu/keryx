@@ -16,8 +16,9 @@ import { SponsoredTrialNotice } from "./sponsored-trial-notice";
 import { createPrivateClaimHandoff, type PrivateClaimStatus } from "@/lib/run-claims/web-handoff";
 import { readPrivateDocument } from "@/lib/run-claims/web-bootstrap";
 import { privateResearchCopy } from "@/locales/en/run-claim-research";
+import { productGuideCopy } from "@/locales/en/product-guide";
 
-export function ResearchChat({ paidHref = "/research#paid-research", showLaunchBadge = false, privateClaims = false }: { paidHref?: string; showLaunchBadge?: boolean; privateClaims?: boolean }) {
+export function ResearchChat({ paidHref = "/research#paid-research", showLaunchBadge = false, privateClaims = false, introduceProduct = false }: { paidHref?: string; showLaunchBadge?: boolean; privateClaims?: boolean; introduceProduct?: boolean }) {
   const [privateHandoff] = useState(() => createPrivateClaimHandoff({ origin: () => window.location.origin,
     documentProof: readPrivateDocument, open: url => { window.open(url, "_blank", "noopener,noreferrer"); } }));
   const [claimStatus, setClaimStatus] = useState<PrivateClaimStatus>("none");
@@ -87,11 +88,11 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
         <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-[0.4] sm:scale-100" />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p data-testid="hero-kicker" className="font-mono text-[11px] uppercase tracking-wide text-seal">{message("researchChat.kicker")}</p>
+        <p data-testid="hero-kicker" className="max-w-[calc(100%_-_100px)] font-mono text-[11px] uppercase tracking-wide text-seal">{introduceProduct ? productGuideCopy("product.heroKicker") : message("researchChat.kicker")}</p>
         <div data-testid="hero-guide" className="absolute right-0 top-0 sm:static sm:mr-[156px]"><OnboardingTour /></div>
       </div>
-      <h1 className="mt-1 font-display text-[clamp(32px,5vw,46px)] leading-none sm:mt-2 sm:leading-tight">{message("researchChat.title")}</h1>
-      <p className="mt-1 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:mt-2 sm:max-w-[64ch] sm:text-base sm:leading-normal">{message("researchChat.introduction")}</p>
+      <h1 className="mt-1 font-display text-[clamp(32px,5vw,46px)] leading-none sm:mt-2 sm:leading-tight">{introduceProduct ? productGuideCopy("product.heroTitle") : message("researchChat.title")}</h1>
+      <p className="mt-1 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:mt-2 sm:max-w-[64ch] sm:text-base sm:leading-normal">{introduceProduct ? productGuideCopy("product.heroBody") : message("researchChat.introduction")}</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label={message("researchChat.turnsLabel")}>
       {history.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
