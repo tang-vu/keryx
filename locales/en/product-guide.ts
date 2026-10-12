@@ -1,8 +1,8 @@
 /** Web-only English product explanation; do not embed marketing copy in packaged runtimes. */
 export const productGuideMessages = Object.freeze({
-  "product.heroKicker": "For researchers & builders",
-  "product.heroTitle": "Cited AI research.",
-  "product.heroBody": "Get a cited answer. Inspect source choices, spending and payment proof.",
+  "product.heroKicker": "For researchers",
+  "product.heroTitle": "AI research.",
+  "product.heroBody": "Cited answers. Visible source choices.",
   "product.overviewKicker": "What you get",
   "product.overviewTitle": "A research answer you can follow back to its sources.",
   "product.overviewBody": "Keryx is a citation-toll reading agent. Give it a question and a source budget: it discovers material, explains what it reads or skips, and writes an answer with citations. Eligible cited creators can receive separate USDC rewards.",
