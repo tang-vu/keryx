@@ -28,6 +28,13 @@ explicit and uses the original request, signature, nonce, gas limit and reservat
 The wallet-funded fallback is explicitly selected. An unavailable sponsor does not
 silently submit a transaction spending the creator's own native balance.
 
+Matched Wanted offers retain their explicit wallet-funded handoff and existing
+five-per-wallet daily treasury-retry admission gate. Their feed-matching page also
+offers the public sponsored registration entry for the same feed. That entry
+registers the source; a Wanted offer continues through its separate authority.
+Registration gas coverage supplies no additional treasury-retry permission. General
+and unmatched feed links use the default sponsored creator flow.
+
 Indexing and creator earnings are separate facts. After confirmation/indexing the
 page reloads the authoritative claim/listing. Activating paid reads or citation
 rewards still requires matching registry terms and explicit distribution permission.
@@ -124,6 +131,9 @@ adoption or settled earnings merely from synthetic or testnet acceptance.
   the new policy; invalid, stale or different-wallet proof cannot.
 - Google/wallet sign-in retains the exact draft, selected price and owner; identity
   changes invalidate callbacks and never move another wallet's recovery authority.
+- The actual matched Wanted product link retains its explicit wallet-funded mode,
+  chain, feed and post through sign-in and the existing guarded offer request;
+  a separate pure-registration link permits sponsored signup for the same publisher.
 - Atomic concurrent preparations share the same balance across legacy/new cohorts;
   exact liability boundaries and the target's existing reservation count once.
 - A settlement racing the observation, an external balance drop, a proof revision

@@ -116,7 +116,7 @@ function WalletFundedRegistrationPage({ initial }: { initial: RegistrationDraft 
   const ownerMatches = !draftOwner || draftOwner === address?.toLowerCase();
   const networkMatches = chainId === profile.chainId && (initial.chainId === undefined || initial.chainId === profile.chainId);
   const canRegister = accountMatches && ownerMatches && networkMatches && !draftContextError;
-  const connectHref = draftContextError ? null : registrationConnectHref({ ...initial, ...prefill, owner: draftOwner ?? address?.toLowerCase(), chainId: initial.chainId ?? profile.chainId, mode: "wallet-funded" });
+  const connectHref = draftContextError ? null : registrationConnectHref({ ...prefill, owner: draftOwner ?? address?.toLowerCase(), chainId: initial.chainId ?? profile.chainId, mode: "wallet-funded" });
   const feedOnlyDraft: RegistrationDraft = { rssUrl: prefill?.rssUrl, fetchPrice: prefill?.fetchPrice, gapId: prefill?.gapId, matchedItemLink: prefill?.matchedItemLink, owner: draftOwner ?? address?.toLowerCase(), chainId: initial.chainId ?? profile.chainId, mode: "wallet-funded" };
 
   return (
