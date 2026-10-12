@@ -512,6 +512,13 @@ jobs:
       - name: iPhone route prefetch and delayed navigation (built, offline GET only)
         run: node --import tsx scripts/test-browser-mobile-navigation-built.mts --webkit
 
+      - name: Product discovery, pricing and support (built, offline, no research or payment)
+        env:
+          KERYX_NETWORK: arcTestnet
+          NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
+          KERYX_FORCE_OFFLINE: "1"
+        run: npm run test:browser-product-guide
+
       - name: Retain immutable cohort rehearsal result
         if: always()
         uses: actions/upload-artifact@v4

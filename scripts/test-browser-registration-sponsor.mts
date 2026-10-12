@@ -89,6 +89,8 @@ return '0x'+'1'.repeat(130);}});
               row.replacesRequestId = prior!.id; history.set(prior!.id, prior!);
               if (lostRenewal) return route.abort();
             }
+          } else if (body.operation === "resolveExpired") {
+            row = { ...row!, state: "reverted", expiredResolution: true, transactionHash: hash, transactionNonce: 0, actualGasWei: "1000000000000000" };
           } else {
             row = { ...row!, state: "submitted", transactionHash: hash, transactionNonce: 0 };
             if (lostResponse) return route.abort();
@@ -101,7 +103,7 @@ return '0x'+'1'.repeat(130);}});
             return route.fulfill({ status: 404, json: { error: "No prior original" } });
           return route.fulfill({ json: { original: found } });
         }
-        return route.fulfill({ json: { available, sponsorAddress: sponsor, policyDigest: hash } });
+        return route.fulfill({ json: { available, sponsorAddress: sponsor, policyDigest: hash, publisherOrigins: ["https://feed.invalid"] } });
       }
       return route.fulfill({ contentType: "text/html", body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>' });
     });
@@ -113,7 +115,9 @@ return '0x'+'1'.repeat(130);}});
     const prepare = page.getByRole("button", { name: "Prepare sponsored registration", exact: true });
     const sign = page.getByRole("button", { name: "Sign reviewed registration", exact: true });
     const inspect = page.getByRole("button", { name: "Inspect original registration", exact: true });
+    const resume = page.getByRole("button", { name: "Resume original sponsored transaction", exact: true });
     await load(); await prepare.click(); await sign.waitFor();
+    await page.getByText("Gas sponsorship is limited to verified publishers at: https://feed.invalid.", { exact: true }).waitFor();
     assert.equal(posts.length, 1); assert.equal(posts[0].operation, "prepare");
     assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
     await page.getByText("Keryx gas reservation: up to 0.02 USDC.", { exact: false }).waitFor();
@@ -134,9 +138,15 @@ return '0x'+'1'.repeat(130);}});
     await load(); await page.getByText("Original transaction submitted: confirmation pending", { exact: true }).waitFor();
     assert.equal(await sign.count(), 0); assert.equal(posts.length, 2);
     assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
+    lostResponse = false; const originalHash = row!.transactionHash;
+    await resume.click();
+    assert.equal(posts.length, 3);
+    assert.deepEqual(posts.at(-1), { operation: "resume", id: row!.id });
+    assert.equal(row!.transactionHash, originalHash);
+    assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
     row = { ...row!, state: "confirmed", actualGasWei: "1000000000000000" }; indexed = true;
     await inspect.click(); await page.getByText("Registration confirmed and indexed", { exact: true }).waitFor();
-    assert.equal(posts.length, 2);
+    assert.equal(posts.length, 3);
 
     // Saved claim A must not block independently verified claim B.
     row = null; lostResponse = false; await load(claimB); await prepare.waitFor();
@@ -173,6 +183,18 @@ return '0x'+'1'.repeat(130);}});
     await page.evaluate(() => localStorage.clear()); row = null;
     await load(); await page.getByText("Registration gas sponsorship is currently unavailable", { exact: false }).waitFor();
     assert.equal(await prepare.count(), 0);
+
+    // Only an explicit owner action resolves an expired signing original, without another signature.
+    available = true; row = original(claimId, "signing"); row.deadline = Math.floor(Date.now() / 1000) - 10;
+    row.id = registrationIntentDigest(row); row.transactionNonce = 0;
+    const resolutionId = row.id, beforeResolution = posts.length;
+    await load(); await page.getByRole("button", { name: "Resolve expired original using reserved gas", exact: true }).waitFor();
+    assert.equal(posts.length, beforeResolution, "Reload never spends the retained gas reservation");
+    await page.getByRole("button", { name: "Resolve expired original using reserved gas", exact: true }).click();
+    await page.getByText("Registration reverted", { exact: true }).waitFor();
+    assert.deepEqual(posts.at(-1), { operation: "resolveExpired", id: resolutionId });
+    assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
+    assert.equal(await page.getByRole("button", { name: "Prepare new unsigned request", exact: true }).count(), 1);
 
     // Explicit expired unsigned renewal, with the exact prior request retained.
     available = true; row = original(claimId, "expired"); const expiredId = row.id;

@@ -1,5 +1,41 @@
 # Keryx — Decision Log
 
+## Resume only the admitted creator gas transaction — 2026-10-12
+
+The owner requested completing creator registration gas sponsorship. Retain the
+creator's exact typed signature at native signing admission and the sponsor's
+exact signed transaction before broadcasting, inside a server-only envelope.
+Expose neither bearer value through public originals, creator responses, browser
+storage or logs. Explicit owner resume may complete the original signing or
+replay unchanged bytes after receipt inspection; it never obtains a new nonce,
+changes fees, resets attempts or releases uncertain gas liability. Registry
+observations precede atomic live-proof gates immediately before signing and
+broadcast. GET/reload remain inspection only. Legacy originals without retained
+execution remain readable and cannot acquire replacement authority.
+
+Activation remains separate from source acceptance: expired unresolved originals
+need reviewed resolution, funded testnet/browser acceptance and dedicated finite
+custody remain open, and the two freshly observed live V1 listings cannot be
+silently replaced by V3. Use an unsigned, bounded deployment proposal; creation
+simulation does not authorize contract deployment, spending or registry cutover.
+See [sponsorship recovery](docs/creator-registration-sponsorship.md) and the
+[October 12 activation evidence](docs/engineering/registration-sponsor-activation-20261012.md).
+**Explain the research product before visitors interpret its ledger — 2026-10-12.**
+The owner requested one product update after an outside website critique. The
+current homepage already supports research and a sponsored trial; the critique's
+archive-only description and numeric score are not a verified assessment. Address
+the useful gaps: audience/outcome clarity, pricing discovery, support and report
+entry context. Reuse checkout's configured pricing for examples, remove the
+unqualified zero-price application offer and repair stale `llms.txt`. Preserve
+public-trial, evidence, historical testnet and simulation disclosures. Do not
+invent testimonials, customer logos, security badges or adoption claims.
+
+The owner confirmed **support@keryx.cc** as Keryx's official support address. Use
+the public support constant on web support/policy pages; historical personal
+contact records remain historical. New English marketing copy stays outside the
+catalogue embedded in desktop/MCP runtimes. See
+[product clarity and release boundaries](docs/engineering/product-clarity-2026-10-12.md).
+
 ## Check cited draft sentences against supplied text, by wording only — 2026-10-11
 
 Advance issue282 with a second zero-I/O private contract, `private-draft-check`
@@ -7818,3 +7854,43 @@ authority. #276 locale and #301 replay/agent files remain outside this outcome.
 Actual focused checks, compiled phone/accessibility evidence, PostgreSQL execution,
 hosted CI/independent review and owner-authorized rollout are separate from source
 implementation. No payer/model/human trial or new spending gate is introduced.
+
+## 2026-10-12: bounded Conzit registration sponsorship with retained registry origins
+
+The owner requested live creator gas sponsorship and selected the existing
+mainnet public-fee wallet with approximately one native USDC. Use that existing
+custody for a finite Conzit scope, with no new wallet, top-up or automatic renewal.
+Admit exact verified publisher origins as well as named wallets, preserving the
+creator's own SIWE identity, publisher proof, typed authorization and payout wallet.
+Per-origin limits span wallet identities and source URLs. The intended mainnet
+policy is 24 hours, 0.04 USDC per transaction, 0.08 daily, 0.20 lifetime, five total
+attempts and two per wallet/origin; deployment has a separate 0.088 USDC ceiling.
+These ceilings and the owner request do not prove execution or live availability.
+
+Retain private creator authorization and exact transaction bytes in the native
+journal. Explicit resume never replaces the original nonce, calldata, fees or
+reservation. Explicit expired-original resolution can execute only those original
+bytes within the still-live policy and existing reservation. Fresh chain expiry
+observations prevent a new successful registration. A prior submitted success
+may become visible during that observation; its matching receipt/event remains
+authoritative and recoverable. A matching reverted receipt charges actual gas,
+then a separately reviewed replacement consumes another capped attempt. No
+automatic retry, fee bump, hold reset or inferred settlement is introduced.
+
+Preserve both existing mainnet listings in V1, binding their immutable original
+registry through an atomic sync_state sidecar before selecting V3 for new
+registrations. Server/browser origin allowlists pin network, address, version,
+code hash and deployment block. Payout, claim, listing and indexing adapters use
+the bound origin; each registry advances its own cursor. A cross-origin duplicate
+ID retains scoped collision evidence and cannot replace old payout authority or
+block later valid events. Native/Supabase role boundaries, real funded testnet
+restart/expiry acceptance, exact-source CI/review, stopped-writer production
+binding and live commit/configuration readbacks are explicit release gates. See
+[the sponsor contract](docs/creator-registration-sponsorship.md) and
+[registry origin continuity](docs/source-registry-origins.md).
+
+Creator listing controls use the public browser origin parser, as the isolated
+signer does. Their bundled dependency graph excludes the server configuration
+and server authority module. Manual browser fixtures supply the same explicit
+public build pins, including an absent origin list for legacy-only cases; a
+generic environment shim must not hide a new server dependency in this path.

@@ -1,18 +1,16 @@
 import { createHash,randomUUID } from "node:crypto";
 import { privateKeyToAccount } from "viem/accounts";
-import { createPublicClient, type Hex } from "viem";
+import { type Hex } from "viem";
 import { SiweMessage } from "siwe";
 import { ARC_MAINNET_PROFILE as profile } from "../lib/arc-network-profile";
 import { paymentRuntimeConfig } from "../lib/payment-runtime-config";
-import { chainForProfile } from "../lib/chains";
-import { attestedArcAuthorityHttp } from "../lib/arc-rpc-attestation";
 import { readBoundedJson } from "../lib/read-bounded-json";
 import { createBrowserSessionKey } from "../lib/session/browser-session-key";
 import { createBrowserSessionRuntime } from "../lib/session/browser-session-runtime";
 import { browserSessionCustodyContext } from "../lib/session/browser-session-custody";
 import { createSessionGrantConsentMessage, parseSessionGrantConsent } from "../lib/payments/session-grant-consent";
 import type { SourcePaymentAuthority } from "../lib/payments/client-payto-allowlist";
-import { REGISTRY_ABI } from "../lib/registry/registry-abi";
+import { createMainnetSourceAuthorityReader } from "../lib/session/browser-session-source-authority";
 import { inspectHeadlessOriginal } from "./helpers/headless-mainnet-originals.mjs";
 import { canonicalJson } from "../lib/canonical-json";
 import { openHeadlessMainnetState } from "./helpers/headless-mainnet-state.mjs";
@@ -104,17 +102,7 @@ export async function runHeadlessMainnet(args: string[], ports: {
     let readSource = ports.readSource;
     if (!readSource) {
       const {config} = await import("../lib/config");if(config.profile!==profile)refuse();
-      const client=createPublicClient({chain:chainForProfile(profile),transport:attestedArcAuthorityHttp(payment.rpcUrl,{retryCount:0},profile)});
-      readSource=async id=>{
-        if(!/^0x[0-9a-f]{64}$/.test(id))refuse();
-        const source=await client.readContract({address:config.registryReadAddress as Hex,abi:REGISTRY_ABI,functionName:"get",args:[id as Hex]});
-        if(/^0x0{40}$/i.test(source.creator)||/^0x0{40}$/i.test(source.payoutWallet)||!source.active||
-          source.authors.length<1||source.authors.length>20||source.authors.reduce((n,a)=>n+Number(a.basisPoints),0)!==10000||
-          source.authors.some(a=>/^0x0{40}$/i.test(a.wallet)||Number(a.basisPoints)<1)||
-          new Set(source.authors.map(a=>a.wallet.toLowerCase())).size!==source.authors.length||source.fetchPriceUsdc6>BigInt(Number.MAX_SAFE_INTEGER))refuse();
-        return{creator:source.creator,fetchPayTo:source.payoutWallet.toLowerCase(),wallets:new Set([source.payoutWallet.toLowerCase(),...source.authors.map(a=>a.wallet.toLowerCase())]),
-          listPriceUsdc:Number(source.fetchPriceUsdc6)/1e6,onchain:true,active:true};
-      };
+      readSource=createMainnetSourceAuthorityReader(json,payment.rpcUrl);
     }
     const bot=process.env.KERYX_BOT_KEY, askPath=bot?`/api/ask?bot=${encodeURIComponent(bot)}`:"/api/ask";
     // Control RPCs retain 60s; the whole research response/body has a separate

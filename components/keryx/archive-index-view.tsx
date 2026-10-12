@@ -17,6 +17,7 @@ import { ArchiveAnswerRow } from "./archive-answer-row";
 import { ArchiveSearch } from "./archive-search";
 import { ArchivePagination } from "./archive-pagination";
 import { ArchiveTopicChips } from "./archive-topic-chips";
+import { ProductEntryNote } from "./product-guide";
 
 const copy = createMessages("en");
 const richCopy = createRichMessages("en");
@@ -57,6 +58,7 @@ export function ArchiveIndexView({
         )}
       </p>
       <Link href="/history/testnet" className="mt-3 inline-block text-sm text-seal underline underline-offset-4">{copy("archiveIndex.testnet")}</Link>
+      <div className="mt-6"><ProductEntryNote /></div>
 
       {slice.items.length > 0 && (
         <ArchiveSearch

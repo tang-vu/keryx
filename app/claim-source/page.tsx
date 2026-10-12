@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: uiCopy("sourceClaimPage.title"), desc
 export default async function ClaimSourcePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;
   const params = new URLSearchParams();
-  for (const key of ["url", "referenceId", "claimId", "challengeId", "owner"]) if (typeof query[key] === "string") params.set(key, query[key]);
+  for (const key of ["url", "rss", "referenceId", "claimId", "challengeId", "owner"]) if (typeof query[key] === "string") params.set(key, query[key]);
   let initial = {}, initialError = "";
   try {
     const draft = sourceClaimDraft(params);

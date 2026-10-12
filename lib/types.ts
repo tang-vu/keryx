@@ -4,6 +4,8 @@
 
 /** A registered content source = a creator (or multi-author publication) that gets paid per citation. */
 export interface Source {
+  /** Immutable registry origin; required when multiple registries share this catalog. */
+  registryAuthority?: import("./registry/source-registry-authority").SourceRegistryAuthority;
   /** Trusted catalog classification; settlement never establishes factual authenticity. */
   evidenceProvenance?: "synthetic-demo";
   /** Sticky distribution-rights enrollment; unsupported backends must refuse paid activation. */

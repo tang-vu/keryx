@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { createMessages, englishMessages, validateMessageCatalogue } from "./messages";
 import { createRichMessages } from "./rich-messages";
 import { legalMessages } from "@/locales/en/legal";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/public-support";
 
 const require = createRequire(path.join(process.cwd(), "package.json"));
 const evidenceDirectory = process.env.KERYX_LEGAL_RENDER_EVIDENCE;
@@ -51,14 +52,15 @@ describe("exact English legal page catalogue", () => {
     it(`${area} on ${network} retains complete markup, headings, link actions and metadata with English alternates`, async () => {
       const [base, candidate] = await Promise.all([compiledPage(area, "base", network), compiledPage(area, "candidate", network)]);
       const before = renderToStaticMarkup(createElement(base.default)), after = renderToStaticMarkup(createElement(candidate.default));
-      // Keep the original extraction fixture frozen. Only the reviewed extension
-      // section and policy date may differ; every other policy paragraph is exact.
+      // Keep the original extraction fixture frozen. Allow the reviewed extension
+      // section, policy date and owner-confirmed support contact; other prose is exact.
+      const expected = before.replaceAll("vutang2212@gmail.com", SUPPORT_EMAIL);
       const extensionSection = /<section[^>]*><h2[^>]*>The browser extension<\/h2>[\s\S]*?<\/section>/g;
       if (area === "privacy") {
         expect([...before.matchAll(extensionSection)]).toHaveLength(1);
         expect([...after.matchAll(extensionSection)]).toHaveLength(1);
         expect(after.replace(extensionSection, "<extension-policy/>")).toBe(
-          before.replace(extensionSection, "<extension-policy/>").replace("October 7, 2026", "October 11, 2026"));
+          expected.replace(extensionSection, "<extension-policy/>").replace("October 7, 2026", "October 12, 2026"));
         const extension = after.match(extensionSection)![0];
         for (const disclosure of ["Opening the popup checks research availability", "Include this page URL as a source",
           "are published and retained", "AI provider processes", "discovery services", "Open editable question on web",
@@ -67,7 +69,7 @@ describe("exact English legal page catalogue", () => {
         }
         expect(extension).not.toContain("only time a page URL leaves");
         expect(extension).not.toContain("holds only the hand-off");
-      } else expect(after).toBe(before);
+      } else expect(after).toBe(expected);
       const originalMetadata = base.metadata as { alternates: { canonical: string } };
       expect(candidate.metadata).toEqual({ ...originalMetadata,
         alternates: { ...originalMetadata.alternates, languages: { "x-default": `/${area}`, en: `/${area}` } },
@@ -75,8 +77,9 @@ describe("exact English legal page catalogue", () => {
       expect((after.match(/<main\b/g) ?? []).length).toBe(1); expect((after.match(/<h1\b/g) ?? []).length).toBe(1);
       expect((after.match(/<h2\b/g) ?? []).length).toBe(area === "privacy" ? 11 : 6);
       const links = (html: string) => [...html.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>/g)].map(match => match[0]);
-      expect(links(after)).toEqual(links(before));
-      expect(links(after).some(link => link.includes('href="mailto:vutang2212@gmail.com"'))).toBe(true);
+      expect(links(after)).toEqual(links(expected));
+      expect(links(after).some(link => link.includes(`href="${SUPPORT_MAILTO}"`))).toBe(true);
+      expect(after).not.toContain("vutang2212@gmail.com");
       expect(after).not.toContain("[object Object]"); expect(after).not.toContain("<script");
       if (area === "privacy") expect(after.includes("Mainnet sessions retain an encrypted signing key")).toBe(network === "arc");
       if (evidenceDirectory) {
@@ -84,7 +87,7 @@ describe("exact English legal page catalogue", () => {
         const label = `${area}-${network}`;
         writeFileSync(path.join(evidenceDirectory, `${label}-base.html`), before, { flag: "wx" });
         writeFileSync(path.join(evidenceDirectory, `${label}-candidate.html`), after, { flag: "wx" });
-        writeFileSync(path.join(evidenceDirectory, `${label}.json`), JSON.stringify({ area, network, exactHtml: area === "terms", reviewedExtensionPolicyDelta: area === "privacy", exactMetadata: false,
+        writeFileSync(path.join(evidenceDirectory, `${label}.json`), JSON.stringify({ area, network, exactHtml: false, reviewedSupportContactDelta: SUPPORT_EMAIL, reviewedExtensionPolicyDelta: area === "privacy", exactMetadata: false,
           metadataDelta: "English canonical preserved; en/x-default alternates added",
           baseSourceSha256: hash(base.source), candidateSourceSha256: hash(candidate.source), htmlSha256: hash(after),
           baseCompiledSha256: hash(base.compiled), candidateCompiledSha256: hash(candidate.compiled), metadata: candidate.metadata,
@@ -101,12 +104,14 @@ describe("exact English legal page catalogue", () => {
     expect(rendered).not.toContain("<script>");
     expect(message("legal.privacy.updated", { date: "<date>{network}" })).toContain("<date>{network}");
   });
-  it("has exactly the original five protocol/contact data allowances without copy waivers", async () => {
+  it("retains the three protocol allowances and retires literal contact allowances without new copy waivers", async () => {
     const { extractUiCopy, makeBaseline } = await import("../../scripts/check-ui-copy.mjs");
     const privacy = extractUiCopy("app/privacy/page.tsx", readFileSync("app/privacy/page.tsx", "utf8"));
     const terms = extractUiCopy("app/terms/page.tsx", readFileSync("app/terms/page.tsx", "utf8"));
-    expect(privacy.map(item => item.text)).toEqual(["/dispatch/…", "https://keryx.cc", "chrome.storage.local", "vutang2212@gmail.com"]);
-    expect(terms.map(item => item.text)).toEqual(["vutang2212@gmail.com"]);
+    expect(privacy.map(item => item.text)).toEqual(["/dispatch/…", "https://keryx.cc", "chrome.storage.local"]);
+    expect(terms).toEqual([]);
+    expect(SUPPORT_EMAIL).toBe("support@keryx.cc");
+    expect(SUPPORT_MAILTO).toBe(`mailto:${SUPPORT_EMAIL}`);
     const baseline = JSON.parse(readFileSync("locales/ui-copy-baseline.json", "utf8"));
     expect(baseline.entries.filter((value: { file: string }) => ["app/privacy/page.tsx", "app/terms/page.tsx"].includes(value.file)))
       .toEqual(makeBaseline([...privacy, ...terms], baseline.sourceCommit).entries);

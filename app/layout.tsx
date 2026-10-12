@@ -8,7 +8,8 @@ import { InkBleedCursor } from "@/components/keryx/ink-bleed-cursor";
 import { MintEngravings } from "@/components/keryx/mint-engravings";
 import { safeInlineJson } from "@/lib/safe-json";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
-import { currentArcLabel } from "@/lib/arc-network-display";
+import { productGuideCopy } from "@/locales/en/product-guide";
+import { SUPPORT_EMAIL } from "@/lib/public-support";
 import { Providers } from "./providers";
 import { MaintenanceBanner } from "@/components/keryx/maintenance-banner";
 import "./globals.css";
@@ -22,9 +23,9 @@ const defaultUrl =
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
   (process.env.NODE_ENV === "production" ? "https://keryx.cc" : "http://localhost:3939");
 
-const TITLE = uiCopy("landingMetadata.title");
+const TITLE = productGuideCopy("product.metaTitle");
 const DESCRIPTION =
-  uiCopy("landingMetadata.description", { network: currentArcLabel });
+  productGuideCopy("product.metaDescription");
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
@@ -119,8 +120,10 @@ const JSON_LD = {
       "@id": `${defaultUrl}/#org`,
       name: "Keryx",
       url: defaultUrl,
-      slogan: uiCopy("landingMetadata.slogan"),
+      slogan: productGuideCopy("product.slogan"),
       description: DESCRIPTION,
+      sameAs: ["https://github.com/tang-vu/keryx"],
+      contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: SUPPORT_EMAIL },
     },
     {
       "@type": "WebSite",
@@ -137,7 +140,6 @@ const JSON_LD = {
       operatingSystem: "Web",
       url: defaultUrl,
       description: DESCRIPTION,
-      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
     },
   ],
 };
