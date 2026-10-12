@@ -37,6 +37,17 @@ describe("#264 fixed Supabase publication contract", () => {
     const revoked = fixture({ unpublished: true }, "unpublish", null); await revoked.store.unpublish(actor); expect(revoked.from).not.toHaveBeenCalled();
     const unknown = fixture({ unpublished: false }, "unpublish", null); await expect(unknown.store.unpublish(actor)).rejects.toThrow("public_profile_unavailable");
   });
+  it("surfaces durable tombstone revision and stale/expired publication refusal without REST fallback",async()=>{
+    const settings={handle:"alice",published:false,fields:[],runIds:[],revision:1,updatedAt:date};
+    const tombstone=fixture(settings,"settings",null);expect(await tombstone.store.settings(actor)).toEqual(settings);
+    for(const message of ["conflict","unauthenticated"]){
+      const rejected=fixture(null,"update",null,{message});
+      await expect(rejected.store.update(actor,{published:true,fields:["about","purpose"],runIds:["private-selected"],revision:0})).rejects.toMatchObject({code:message});
+      expect(rejected.rpc).toHaveBeenCalledTimes(1);expect(rejected.from).not.toHaveBeenCalled();
+    }
+    const missing=fixture(null,"unpublish",null,{message:"profile_required"});
+    await expect(missing.store.unpublish(actor)).rejects.toMatchObject({code:"profile_required"});expect(missing.from).not.toHaveBeenCalled();
+  });
   it("keeps the SOURCE-only installer on existing proof contracts and closes table/function grants", () => {
     const sql = readFileSync(new URL("../../supabase/migrations/0091_public_researcher_profiles.sql", import.meta.url), "utf8");
     expect(sql).toContain("public.run_privacy_guard_v1()"); expect(sql).toContain("public.anonymous_run_claim_history_read_v1(who,selection.binding->>'network',selection.binding->>'origin',row.id)");

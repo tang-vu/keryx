@@ -1,6 +1,9 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { createHash, randomUUID } from "node:crypto";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { writeSqliteQueryRun } from "./query-run-record";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
@@ -11,17 +14,19 @@ import { createSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite"
 import { createSqlitePublicProfiles } from "./public-profiles-sqlite";
 import type { QueryRun } from "../types";
 import type { PublicProfileActor, PublicProfileInput } from "../profiles/public-profile";
+import { createPublicProfileOwnerRoutes, readPublicProfileJson } from "../profiles/public-profile-route";
+import type { KeryxDB } from "./keryx-db";
 
 const connections: DatabaseSync[] = [];
-afterEach(() => connections.splice(0).forEach(db => db.close()));
+afterEach(() => { connections.splice(0).forEach(db => db.close()); vi.useRealTimers(); vi.restoreAllMocks(); });
 const alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`;
 const hash = (text: string) => createHash("sha256").update(text).digest("hex");
 const binding = { network: "eip155:5042002" as const, origin: "https://profile-fixture.example" };
 const actor: PublicProfileActor = { wallet: alice, sessionHash: hash(alice), binding };
 const input = (runIds: string[] = [], fields: PublicProfileInput["fields"] = ["displayName"], revision = 0): PublicProfileInput => ({ published: true, runIds, fields, revision });
 
-async function fixture() {
-  const db = new DatabaseSync(":memory:"); connections.push(db); installSqliteApplicationSchema(db);
+async function fixture(path = ":memory:") {
+  const db = new DatabaseSync(path); connections.push(db); installSqliteApplicationSchema(db);
   db.exec(RUN_CLAIMS_SQL);
   const profiles = createSqlitePrivateProfiles(db), identities = createSqliteProfileIdentities(db), now = Date.now();
   for (const [wallet, handle] of [[alice, "alice"], [bob, "bobby"]]) {
@@ -91,6 +96,47 @@ describe("#264 ordinary SQLite explicit publication", () => {
     const f = await fixture(); f.save("owned");
     const port = createSqlitePublicProfiles(f.db, { ...f.privacy, async owner(id, who) { const result = await f.privacy.owner(id, who); f.db.prepare("DELETE FROM web_sessions WHERE wallet=?").run(alice); return result; } }, f.identities, f.history);
     await expect(port.update(actor, input(["owned"]))).rejects.toMatchObject({ code: "unauthenticated" }); expect(await f.publicProfiles.read("alice")).toBeNull();
+  });
+  it("persists first-time DELETE and rejects a pending revision0 publication of selected private fields", async () => {
+    const f = await fixture(); f.save("private-selected");
+    let entered!: () => void, release!: () => void;
+    const observed = new Promise<void>(done => { entered = done; }), held = new Promise<void>(done => { release = done; });
+    const port = createSqlitePublicProfiles(f.db, { ...f.privacy, async owner(id, who) {
+      const owned = await f.privacy.owner(id,who); entered(); await held; return owned;
+    } }, f.identities, f.history);
+    const db={publicProfiles:port,runPrivacyActive:true} as unknown as KeryxDB;
+    const routes=createPublicProfileOwnerRoutes({session:async()=>({db,wallet:alice,currentId:actor.sessionHash}),binding});
+    const request=(method:string,body?:unknown)=>new Request(`${binding.origin}/api/me/public-profile`,{method,headers:{Origin:binding.origin,"X-Keryx-Expected-Wallet":alice,"Content-Type":"application/json"},...(body?{body:JSON.stringify(body)}:{})});
+    const pending = routes.PUT(request("PUT",input(["private-selected"],["about","purpose"])));
+    await observed;const deleted=await routes.DELETE(request("DELETE"));expect(deleted.status).toBe(200);expect(await deleted.json()).toEqual({unpublished:true});
+    expect(await f.publicProfiles.settings(actor)).toMatchObject({published:false,revision:1,fields:[],runIds:[]});
+    expect(await f.publicProfiles.read("alice")).toBeNull(); expect(await f.publicProfiles.sitemap(1000)).toEqual([]);
+    release();expect((await pending).status).toBe(409);
+    expect(await f.publicProfiles.read("alice")).toBeNull(); expect(f.db.prepare("SELECT visibility FROM run_privacy WHERE run_id='private-selected'").get()?.visibility).toBe("private");
+    expect((await readPublicProfileJson(db,"alice")).status).toBe(404);
+    await f.publicProfiles.update(actor,input([], ["displayName"],1));expect((await f.publicProfiles.settings(actor)).revision).toBe(2);
+  });
+  it("retains absent-row revocation across a physical database close/reopen and never acknowledges a missing profile", async () => {
+    const path=join(mkdtempSync(join(tmpdir(),"keryx-profile264-tombstone-")),"isolated.sqlite"),f=await fixture(path);
+    await f.publicProfiles.unpublish(actor);f.db.close();connections.splice(connections.indexOf(f.db),1);
+    const db=new DatabaseSync(path);connections.push(db);
+    const history=createSqliteRunOwnershipHistory(db),privacy=createSqliteRunPrivacy(db,history),identities=createSqliteProfileIdentities(db);
+    const port=createSqlitePublicProfiles(db,privacy,identities,history);
+    expect(await port.settings(actor)).toMatchObject({published:false,revision:1});
+    await expect(port.update(actor,input())).rejects.toMatchObject({code:"conflict"});
+    await port.unpublish(actor);expect((await port.settings(actor)).revision).toBe(2);
+    expect(await port.read("alice")).toBeNull();expect(await port.sitemap(1000)).toEqual([]);
+    const fresh=await fixture();await fresh.profiles.delete(alice);
+    await expect(fresh.publicProfiles.unpublish(actor)).rejects.toMatchObject({code:"profile_required"});
+    expect(fresh.db.prepare("SELECT count(*) n FROM public_researcher_profiles").get()?.n).toBe(0);
+  });
+  it("rejects expiry after private ownership I/O and retains unpublished state without changing selected originals",async()=>{
+    const f=await fixture();f.save("private-selected");const before=f.db.prepare("SELECT data FROM query_runs WHERE id='private-selected'").get();
+    const expiry=Number(f.db.prepare("SELECT expires_at FROM web_sessions WHERE wallet=?").get(alice)?.expires_at);
+    const port=createSqlitePublicProfiles(f.db,{...f.privacy,async owner(id,who){const owned=await f.privacy.owner(id,who);vi.useFakeTimers();vi.setSystemTime(expiry);return owned;}},f.identities,f.history);
+    await expect(port.update(actor,input(["private-selected"],["about","purpose"]))).rejects.toMatchObject({code:"unauthenticated"});
+    expect(await f.publicProfiles.read("alice")).toBeNull();expect(await f.publicProfiles.sitemap(1000)).toEqual([]);
+    expect(f.db.prepare("SELECT data FROM query_runs WHERE id='private-selected'").get()).toEqual(before);
   });
   it("hides both old and new handles after rename and cascades publication on profile deletion", async () => {
     const f = await fixture(); await f.publicProfiles.update(actor, input());

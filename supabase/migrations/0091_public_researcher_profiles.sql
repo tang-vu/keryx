@@ -65,6 +65,9 @@ begin
     if (select count(*) from jsonb_object_keys(p_actor->'binding'))<>2
       or not coalesce(p_actor->'binding'->>'network' in ('eip155:5042','eip155:5042002'),false)
       or not coalesce(public.anonymous_run_claim_origin_valid_v1(p_actor->'binding'->>'origin'),false) then raise exception 'unauthenticated'; end if;
+    -- Same order as run_privacy mutations: serialize session DELETE before
+    -- acquiring owner/profile/original row locks. Never wait on those first.
+    if p_action in ('update','unpublish') then lock table public.web_sessions in share mode; end if;
     perform public.private_profiles_ordinary_v1(who);
     select * into profile_row from public.private_profiles where wallet=who for update;
     -- Recheck expiry after waiting for the owner row lock; a revoked session never publishes.
@@ -73,7 +76,18 @@ begin
     if not found then raise exception 'unauthenticated'; end if;
     if p_action='settings' then result:=public.public_researcher_settings_v1(who);
     elsif p_action='unpublish' then
-      update public.public_researcher_profiles s set published=false,revision=least(s.revision::bigint+1,2147483647)::integer,updated_at=clock_timestamp() where s.wallet=who;
+      select * into selection from public.public_researcher_profiles where wallet=who for update;
+      if selection.wallet is null and profile_row.handle is null then raise exception 'profile_required'; end if;
+      stamp:=floor(extract(epoch from clock_timestamp())*1000)::bigint;
+      perform 1 from public.web_sessions where hash=session_id and wallet=who and issued_at<=stamp and expires_at>stamp;
+      if not found then raise exception 'unauthenticated'; end if;
+      -- A first DELETE must fence a delayed revision0 PUT just like an existing
+      -- publication. Never acknowledge an absent row without durable revocation.
+      if selection.wallet is null then
+        insert into public.public_researcher_profiles values(who,profile_row.handle,false,'[]','[]',p_actor->'binding',1,clock_timestamp());
+      else
+        update public.public_researcher_profiles s set published=false,revision=least(s.revision::bigint+1,2147483647)::integer,updated_at=clock_timestamp() where s.wallet=who;
+      end if;
       result:=jsonb_build_object('unpublished',true);
     else
       if profile_row.handle is null then raise exception 'profile_required'; end if;
@@ -96,6 +110,11 @@ begin
           if proof->'result' is null or proof->'result'='null'::jsonb or coalesce((proof->'result'->'state'->>'erased')::boolean,true) then raise exception 'not_owned'; end if;
         end loop;
       end if;
+      -- All profile/publication/ownership row waits have finished. SHARE keeps
+      -- revocation serialized; a clock_timestamp refresh still rejects expiry.
+      stamp:=floor(extract(epoch from clock_timestamp())*1000)::bigint;
+      perform 1 from public.web_sessions where hash=session_id and wallet=who and issued_at<=stamp and expires_at>stamp;
+      if not found then raise exception 'unauthenticated'; end if;
       -- Nothing here changes query_runs, visibility defaults, claims, identities or payment journals.
       insert into public.public_researcher_profiles values(who,profile_row.handle,(p_input->>'published')::boolean,fields,ids,p_actor->'binding',revision+1,clock_timestamp())
         on conflict(wallet) do update set handle=excluded.handle,published=excluded.published,fields=excluded.fields,run_ids=excluded.run_ids,binding=excluded.binding,revision=excluded.revision,updated_at=excluded.updated_at;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { publicHandle, publicProfileInput, publicProfilesEnabled, requirePublicProfiles, type PublicProfilesStore } from "./public-profile";
+import { PublicProfileError, publicHandle, publicProfileInput, publicProfilesEnabled, requirePublicProfiles, type PublicProfilesStore } from "./public-profile";
 import { publicCitationUrl, publicRun, recordedMicros, type PublicRunSource } from "./public-profile-projection";
 import { createPublicProfileOwnerRoutes, readPublicProfileJson } from "./public-profile-route";
 import type { KeryxDB } from "../db/keryx-db";
@@ -83,5 +83,12 @@ describe("#264 closed public profile and owner boundary", () => {
     const f = fixture(), response = await f.routes.DELETE(request("DELETE"));
     expect(response.status).toBe(200); expect(await response.json()).toEqual({ unpublished: true }); expect(f.store.unpublish).toHaveBeenCalledWith({ wallet, sessionHash, binding });
     expect(f.store.update).not.toHaveBeenCalled();
+  });
+  it("never reports unpublish success or publishes selected private fields after a storage authority refusal",async()=>{
+    const f=fixture();f.store.unpublish.mockRejectedValueOnce(new PublicProfileError("profile_required"));
+    const missing=await f.routes.DELETE(request("DELETE"));expect(missing.status).toBe(409);expect(await missing.json()).toEqual({error:"profile_required"});
+    f.store.update.mockRejectedValueOnce(new PublicProfileError("unauthenticated"));
+    const expired=await f.routes.PUT(request("PUT",{},JSON.stringify({published:true,fields:["about","purpose"],runIds:["private-selected"],revision:0})));
+    expect(expired.status).toBe(401);expect(await expired.json()).toEqual({error:"unauthenticated"});expect(f.store.read).not.toHaveBeenCalled();
   });
 });

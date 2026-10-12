@@ -11,6 +11,7 @@ import type { RunOwnershipHistoryStore } from "../run-claims/history";
 import { PublicProfileError, publicHandle, publicProfileActor, publicProfileInput, publicProfileSettings,
   publicProfileSnapshot, type PublicProfilesStore, type PublicProfileActor } from "../profiles/public-profile";
 import { publicRun, recordedMicros } from "../profiles/public-profile-projection";
+import { canonicalJson } from "../canonical-json";
 
 /** Ordinary SOURCE-only publication metadata. No run visibility/default or financial row is changed. */
 export const PUBLIC_PROFILES_SQL = `CREATE TABLE public_researcher_profiles (
@@ -64,7 +65,7 @@ export function createSqlitePublicProfiles(db: DatabaseSync, privacy: RunPrivacy
       if (input.published) for (const id of input.runIds) {
         const owned = await privacy.owner(id, who); if (!owned || owned.state.erased) throw new PublicProfileError("not_owned");
         const row = db.prepare("SELECT data,asker FROM query_runs WHERE id=?").get(id);
-        if (!row || JSON.stringify(JSON.parse(String(row.data))) !== JSON.stringify(owned.run)) throw new PublicProfileError("not_owned");
+        if (!row || canonicalJson(JSON.parse(String(row.data))) !== canonicalJson(owned.run)) throw new PublicProfileError("not_owned");
         originals.set(id, { data: String(row.data), asker: row.asker });
       }
       return transaction(() => {
@@ -72,14 +73,21 @@ export function createSqlitePublicProfiles(db: DatabaseSync, privacy: RunPrivacy
         if (settings(who.wallet).revision !== input.revision) throw new PublicProfileError("conflict");
         for (const [id, original] of originals) { const now=db.prepare("SELECT data,asker FROM query_runs WHERE id=?").get(id);
           if (now?.data !== original.data || now?.asker !== original.asker) throw new PublicProfileError("conflict"); }
+        actor(who); // Fresh write-time expiry check after ownership and original validation.
         db.prepare(`INSERT INTO public_researcher_profiles VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(wallet) DO UPDATE SET handle=excluded.handle,
           published=excluded.published,fields=excluded.fields,run_ids=excluded.run_ids,binding=excluded.binding,revision=excluded.revision,updated_at=excluded.updated_at`)
           .run(who.wallet,current.handle,input.published ? 1 : 0,JSON.stringify(input.fields),JSON.stringify(input.runIds),JSON.stringify(who.binding),input.revision+1,new Date().toISOString());
         return settings(who.wallet);
       });
     },
-    async unpublish(rawActor) { transaction(() => { const who = actor(rawActor);
-      db.prepare("UPDATE public_researcher_profiles SET published=0,revision=min(revision+1,2147483647),updated_at=? WHERE wallet=?").run(new Date().toISOString(),who.wallet); }); },
+    async unpublish(rawActor) { transaction(() => { const who = actor(rawActor), current = profile(who.wallet);
+      const existing = db.prepare("SELECT 1 FROM public_researcher_profiles WHERE wallet=?").get(who.wallet);
+      if (!existing && !current?.handle) throw new PublicProfileError("profile_required");
+      actor(who); // BEGIN IMMEDIATE excludes concurrent revoke; expiry is checked at the write.
+      if (existing) db.prepare("UPDATE public_researcher_profiles SET published=0,revision=min(revision+1,2147483647),updated_at=? WHERE wallet=?").run(new Date().toISOString(),who.wallet);
+      else db.prepare("INSERT INTO public_researcher_profiles VALUES(?,?,0,'[]','[]',?,1,?)")
+        .run(who.wallet,current!.handle,JSON.stringify(who.binding),new Date().toISOString());
+    }); },
     async read(rawHandle) {
       guard(); const handle = publicHandle.parse(rawHandle);
       const publication = db.prepare(`SELECT s.* FROM public_researcher_profiles s JOIN private_profiles p ON p.wallet=s.wallet AND p.handle=s.handle WHERE s.handle=? AND s.published=1`).get(handle);
@@ -94,7 +102,7 @@ export function createSqlitePublicProfiles(db: DatabaseSync, privacy: RunPrivacy
         const run = validatePrivacyRun(JSON.parse(String(row.data)),String(row.id)); let claimed = false;
         if (row.asker === wallet) { if (run.asker && run.asker.toLowerCase() !== wallet) throw new PublicProfileError("public_profile_unavailable"); }
         else { if (row.asker !== null || !history) continue; const proof = await history.read(wallet,binding,run.id);
-          if (!proof || proof.ownership.method !== "claimed" || JSON.stringify(proof.run) !== JSON.stringify(run)) continue; claimed = true; }
+          if (!proof || proof.ownership.method !== "claimed" || canonicalJson(proof.run) !== canonicalJson(run)) continue; claimed = true; }
         const networks = db.prepare("SELECT DISTINCT network FROM payment_events WHERE query_id=? LIMIT 3").all(run.id).map(value => String(value.network));
         runs.push(publicRun(run,claimed,networks));
       }
