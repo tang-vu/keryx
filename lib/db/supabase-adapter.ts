@@ -13,6 +13,8 @@ import { createSupabasePrivateProfiles } from "./private-profiles-supabase";
 import { createSupabaseRunClaims } from "./run-claims-supabase";
 import { runClaimsEnabled, type RunClaimsStore } from "../run-claims/contracts";
 import { createSupabaseRunPrivacy } from "./run-privacy-supabase";
+import { createSupabasePublicProfiles } from "./public-profiles-supabase";
+import type { PublicProfilesStore } from "../profiles/public-profile";
 import { withRunReadProjection } from "../run-privacy/projection";
 import { privacyReadsActive, requirePrivacy, type RunPrivacyStore } from "../run-privacy/contracts";
 import { createSupabaseRunOwnershipHistory } from "./run-ownership-history-supabase";
@@ -162,6 +164,7 @@ export function assembleAuthorityBoundSupabaseCore(
 }
 
 export class SupabaseAdapter implements KeryxDB {
+  declare readonly publicProfiles?: PublicProfilesStore;
   declare readonly runPrivacy?: RunPrivacyStore;
   readonly #runPrivacyActive: boolean;
   get runPrivacyActive(): boolean { return this.#runPrivacyActive; }
@@ -206,6 +209,8 @@ export class SupabaseAdapter implements KeryxDB {
     if (!deployment) Object.defineProperty(this, "decisionReviews", { value: createSupabaseDecisionReviews(this.#sb) });
     if (!deployment) Object.defineProperty(this, "publicUsage", { value: createSupabasePublicUsage(this.#sb,this.runPrivacyActive ? () => requirePrivacy(this) : undefined) });
     if (!deployment && this.privateProfiles) Object.defineProperty(this, "profileIdentities", { value: createSupabaseProfileIdentities(this.#sb, this.privateProfiles) });
+    if (!deployment && this.runPrivacyActive && process.env.KERYX_PUBLIC_PROFILES_ENABLED === "true")
+      Object.defineProperty(this,"publicProfiles",{value:createSupabasePublicProfiles(this.#sb,runClaimsEnabled(process.env))});
     if (deployment) this.#enrolled = { deployment, ready: false, readDeployment: construction!.readDeployment,
       authority: new SupabaseAuthority(this.#sb, deployment.identity, () => { this.assertEntry(); return this.#enrolled?.ready === true; }) };
     if (deployment) enrolledEntryGuards.set(this, { verify: async () => {

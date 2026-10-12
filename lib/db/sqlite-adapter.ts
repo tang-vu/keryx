@@ -1,6 +1,8 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
 import { createSqliteRunPrivacy } from "./run-privacy-sqlite";
+import { createSqlitePublicProfiles } from "./public-profiles-sqlite";
+import { PublicProfileError, type PublicProfilesStore } from "../profiles/public-profile";
 import { withRunReadProjection } from "../run-privacy/projection";
 import { PrivacyError, privacyReadsActive, requirePrivacy, type RunPrivacyStore } from "../run-privacy/contracts";
 import { createSqliteRunClaims } from "./run-claims-sqlite";
@@ -152,6 +154,7 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 
 export class SqliteAdapter implements KeryxDB {
+  declare readonly publicProfiles?: PublicProfilesStore;
   declare readonly runPrivacy?: RunPrivacyStore;
   declare readonly runPrivacyActive: boolean;
   declare readonly runClaims?: RunClaimsStore;
@@ -271,6 +274,10 @@ export class SqliteAdapter implements KeryxDB {
         // An unknown additive identity domain stays unavailable without repairing it.
         if (!(error instanceof ProfileIdentityError && error.code === "identity_unavailable")) throw error;
       }
+    }
+    if (process.env.KERYX_PUBLIC_PROFILES_ENABLED === "true" && this.runPrivacyActive && this.runPrivacy && this.privateProfiles && this.profileIdentities && !this.publicProfiles) {
+      try { Object.defineProperty(this,"publicProfiles",{value:createSqlitePublicProfiles(this.db,this.runPrivacy,this.profileIdentities,this.runOwnershipHistory)}); }
+      catch(error) { if (!(error instanceof PublicProfileError && error.code === "public_profile_unavailable")) throw error; }
     }
     // Releases before 2026-08-22 keyed two authenticated routes by the raw `kx_live_...` bearer
     // value before verification. Remove those legacy counters during every startup so the live DB
