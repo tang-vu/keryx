@@ -47,10 +47,23 @@ independently initiated use and recorded evidence; a bot channel alone does not 
 ```
 /ask question: What is x402 and who settles the payment?
 /ask question: … budget: 0.03        # optional max USDC, clamped server-side
+/help                              # private help
+/help language:vi                  # request-local help language
+/language value:es                 # save your application-specific help language
+/language                          # inspect help preference
+/language value:auto               # restore sender-locale / English help fallback
 ```
 
 The placeholder "Keryx is thinking…" appears instantly; the answer embed replaces it when the
 dispatch completes (typically well under a minute; the interaction token allows 15).
+
+The registration script now includes `/help` and `/language`. Registration is a separate
+deployment-owner operation; source tests do not prove these commands are installed on a live
+Discord application. Controls reply ephemerally and never start research. Help uses its explicit
+locale, stored application/sender preference, the interaction's sender locale, then English.
+Research wrappers keep following the original question; saved help language does not translate
+an answer. Financial help paragraphs and private claim authority text retain their English bytes.
+See [the source and cross-surface gates](engineering/bot-controls-language-276-2026-10-12.md).
 
 ## Guardrails
 

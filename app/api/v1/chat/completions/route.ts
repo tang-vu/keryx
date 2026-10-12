@@ -46,6 +46,7 @@ import { ResearchSelectionError } from "@/lib/llm/research-selection";
 import type { SelectionDiagnostic } from "@/lib/research/selection-diagnostic";
 import { readResearchAvailability } from "@/lib/research/availability";
 import { researchAdmissionError } from "@/lib/research/availability-contract";
+import { presentationLanguage } from "@/lib/research/presentation-language";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
 
   if (body.scholarly !== undefined && typeof body.scholarly !== "boolean") return openaiError("scholarly must be a boolean", 400, "invalid_request");
   if (body.mode !== undefined && body.mode !== "quick" && body.mode !== "deep") return openaiError("mode must be quick or deep", 400, "invalid_request");
+  if (body.language !== undefined && !presentationLanguage(body.language)) return openaiError("language must be en, vi, pt, pt-BR or es (generated labels only)", 400, "invalid_request");
   const parsedQuestion = parseAskQuestion(lastUserQuestion(body.messages));
   if (!parsedQuestion.success) {
     return openaiError(parsedQuestion.error, 400, "invalid_request");
@@ -153,7 +155,7 @@ export async function POST(req: NextRequest) {
       const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep", ...(keyIdentity ? { asker: keyIdentity.walletAddress } : {}),
         provenance: { version: 1, surface: "api", ownershipMethod: keyIdentity ? "api-key" : "unknown" } });
       const packet = await privateClaim?.complete(run);
-      return Response.json({ ...buildCompletion(run, modelName), ...(packet ? { keryx_private: packet } : {}) }, { headers: { ...CORS, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
+      return Response.json({ ...buildCompletion(run, modelName, body.language), ...(packet ? { keryx_private: packet } : {}) }, { headers: { ...CORS, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
     } catch (error) {
       if (error instanceof RunClaimError) return openaiError("Private run claims are unavailable on this deployment.", 503, "claims_unavailable");
       const held = researchAdmissionError(error);
@@ -186,7 +188,7 @@ export async function POST(req: NextRequest) {
             provenance: { version: 1, surface: "api", ownershipMethod: keyIdentity ? "api-key" : "unknown" } },
           { onStep: (s) => send(buildChunk(id, modelName, { reasoning_content: traceLine(s) })) },
         );
-        send(buildChunk(id, modelName, { content: buildAnswerContent(run) }));
+        send(buildChunk(id, modelName, { content: buildAnswerContent(run, body.language) }));
         const packet = await privateClaim?.complete(run);
         send(buildChunk(id, modelName, {}, "stop", { keryx: keryxMeta(run), ...(packet ? { keryx_private: packet } : {}) }));
         try {

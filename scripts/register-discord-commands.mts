@@ -49,6 +49,14 @@ const commands = [
       },
     ],
   },
+  { name: "help", description: "Show Keryx help", options: [
+    { type: 3, name: "language", description: "Help language (en, vi, pt, es)", required: false,
+      choices: ["en", "vi", "pt", "es"].map(value => ({ name: value, value })) },
+  ] },
+  { name: "language", description: "Set or inspect your help language; answers follow the original question", options: [
+    { type: 3, name: "value", description: "Help language, or auto for platform locale / English fallback", required: false,
+      choices: ["en", "vi", "pt", "es", "auto"].map(value => ({ name: value, value })) },
+  ] },
 ];
 
 const url = guildId

@@ -1,5 +1,15 @@
 # Keryx MCP
 
+The #276 source candidate adds optional `language: en|vi|pt|pt-BR|es` to `ask_keryx` for
+human-readable presentation only. It is consumed locally after the buyer returns: it is not
+added to the paid request/body/hash or forwarded as a model-language directive. Omission uses
+the original question's finite selector; explicit overrides disclose that actual answer language
+is unrecorded. Serving/output-limit notices share the API/remote MCP catalogue. The original
+answer/excerpts, structured result, custody/recovery path, payment/settlement authority text,
+canonical USDC amount and receipts stay unchanged. Package build/publication and actual delivery
+remain root-owned gates; no live call is required or executed by these source checks. See
+[the exact shared contract and coordinator inputs](../docs/engineering/research-presentation-language-276-2026-10-12.md).
+
 App0.27.59 is the combined release candidate for bounded caller comparisons,
 whole source URLs, RFC/MDN source-unit retrieval and locale-aware amount display.
 It selects stdio/package/Registry **0.4.18** and hosted MCP **0.3.16**, with

@@ -54,10 +54,23 @@ recorded evidence; a bot channel alone does not prove it.
 ```
 /keryx What is x402 and who settles the payment?
 /keryx                                    # no question → private usage help
+/keryx /help vi                           # request-local help language
+/keryx /language es                       # save your workspace-specific help language
+/keryx /language                          # inspect help preference
+/keryx /language auto                     # restore English help fallback
 ```
 
-The ephemeral "Keryx is dispatching…" note appears only to you and instantly; the in-channel answer
+The ephemeral "Keryx is dispatching…" note appears only to you and instantly; the private answer
 follows when the dispatch completes (typically well under a minute; the `response_url` allows ~30).
+
+Help uses an explicit help locale, then the stored workspace/sender preference, then English.
+The signed slash-command payload supplies no supported sender-language hint. The existing
+`/keryx` registration supports the nested controls above; optional standalone `/language` and
+`/help` commands can point to this same endpoint when separately registered by the deployment
+owner. No extra command registration or outbound delivery is needed to process nested controls.
+Research wrappers continue to follow the original question. The help preference does not translate
+an answer; financial help and private claim authority text retain their English bytes.
+See [storage, privacy and remaining delivery gates](engineering/bot-controls-language-276-2026-10-12.md).
 
 ## Guardrails
 
