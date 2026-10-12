@@ -1,13 +1,17 @@
 # MCP package distribution
 
-## App60 audit and presentation cohort — October12 candidate
+## App61 audit and presentation cohort — October12 candidate
 
-App/OpenAPI0.27.60 selects hosted MCP0.3.17, stdio/npm/official Registry0.4.19
+App/OpenAPI0.27.61 selects hosted MCP0.3.17, stdio/npm/official Registry0.4.19
 and Desktop0.4.17. Changed shared executable inputs require new package artifacts;
 extension0.1.4.2 keeps its exact unchanged payload and prior provenance. These
 candidate identities do not claim publication, owner installation or deployment.
-The actually delivered59 cohort remains app513c6fa6, hosted0.3.16 and published
-npm/Registry0.4.18 until this release's actual acceptance/readbacks complete.
+The delivered59 acceptance records app513c6fa6, hosted0.3.16 and published
+npm/Registry0.4.18. A concurrent PR430 web deployment was observed at c49f4b3e
+on October12 with operational public health and normal maintenance. Those reads
+do not establish its physical lifecycle, ENV/custody/Operator/holds, backup or
+full-original preservation. The combined cohort's artifacts, hosted identities
+and delivery still require their own acceptance and readbacks.
 
 The existing installed-package test gains actual compiled stdio vectors for
 finite presentation labels, an honest UNKNOWN answer-language notice and v3
@@ -34,6 +38,9 @@ observations before original274 completion; earlier guarded refusals are retaine
 See [supported-surface roles](surface-parity.md).
 
 ## App60 product discovery — October 12 source candidate
+
+This section records PR430's web-only increment; it does not replace the combined
+App61 cohort's distribution identities and acceptance gates above.
 
 App/OpenAPI **0.27.60** changes web discovery/support and the public machine-readable
 product description. Web-only copy is excluded from packaged catalogues; existing

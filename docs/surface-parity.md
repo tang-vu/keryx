@@ -1,11 +1,15 @@
 # Supported-surface release parity
 
-## App60 audit and presentation cohort — October12 candidate
+## App61 audit and presentation cohort — October12 candidate
 
-Candidate identities: app/OpenAPI **0.27.60**, hosted MCP **0.3.17**,
+Candidate identities: app/OpenAPI **0.27.61**, hosted MCP **0.3.17**,
 stdio/npm/official Registry **0.4.19**, Desktop **0.4.17**. The unchanged
 extension payload retains **0.1.4.2**; publication is separate from installation.
-Production **0.27.59 /513c6fa6** is delivered; this candidate is not yet deployed.
+The **0.27.59 /513c6fa6** delivery has retained acceptance evidence. A concurrent
+PR430 web deployment was observed at **c49f4b3e** on October12; public health and
+normal maintenance establish availability and commit only. Its physical lifecycle,
+ENV/custody/Operator/holds, backup and full-original handoff remain unverified here.
+This combined cohort and its distribution are not yet accepted as delivered.
 
 | Surface | Coordinated behavior and boundary | Acceptance |
 | --- | --- | --- |
@@ -26,6 +30,9 @@ scheduler and funding holds are unchanged. A source fixture is not actual delive
 See the [cohort distribution gates](mcp-distribution.md).
 
 ## App60 product clarity — October 12 source candidate
+
+This section describes PR430's web scope. It does not replace the combined
+audit and presentation cohort's package identities or distribution gates above.
 
 App/OpenAPI **0.27.60** explains the research product, publishes indexed pricing/
 about pages and unifies official support. New English copy is web-only; native,
