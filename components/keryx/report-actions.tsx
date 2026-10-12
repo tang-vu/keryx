@@ -29,6 +29,7 @@ export function ReportActions({ run, meta, payments }: { run: QueryRun; meta: As
       } catch { setMessage(copy("reportActions.downloadUnavailable")); }
     }}>{copy("reportActions.download")}</button>
     <a href={`/dispatch/${encodeURIComponent(run.id)}`} className={buttonClass}>{copy("reportActions.openSaved")}</a>
+    <a href="/operator/evidence" className={buttonClass}>Commission missing evidence</a>
     <span role="status" className="text-xs text-ink-3">{message}</span>
   </div>;
 }

@@ -39,6 +39,7 @@ import { profileWallet, requirePrivateProfiles } from "../profiles/private-profi
 import type { ApiKeyScope } from "../api-key-scopes";
 import { registerEvidenceDraftTool } from "../research/evidence-draft-tool";
 import { registerDraftCheckTool } from "../research/draft-check-tool";
+import { registerEvidenceProcurementTool } from "../evidence-procurement/tool";
 import { registerAcceptanceTools } from "../deliverable-acceptance/mcp";
 import { requireDeliverableAcceptance } from "../deliverable-acceptance/contracts";
 import { prepareHostedRunClaim } from "../run-claims/hosted-delivery";
@@ -97,6 +98,7 @@ export function createRemoteMcpServer(
   });
   registerEvidenceDraftTool(server);
   registerDraftCheckTool(server);
+  registerEvidenceProcurementTool(server);
   const acceptanceStore = async (scope: "deliverable:read" | "deliverable:write") => {
     if (!access.actor || !access.keyId || !access.deliverableScopes?.includes(scope)) throw new Error("Explicit deliverable scope required");
     return requireDeliverableAcceptance(await getDb());

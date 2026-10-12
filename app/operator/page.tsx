@@ -20,6 +20,7 @@ export default function OperatorPage() {
       <SiteHeader />
       <main className="mx-auto max-w-[1180px] px-4 py-10 sm:px-[30px] sm:py-16">
         <Link href="/operator/ledger" className="mb-6 inline-block text-sm underline">{createMessages("en")("jobLedger.title")}</Link>
+        <Link prefetch={false} href="/operator/evidence" className="mb-6 ml-5 inline-block text-sm underline">Commission missing evidence</Link>
         <OperatorBusinessView />
       </main>
       <SiteFooter />

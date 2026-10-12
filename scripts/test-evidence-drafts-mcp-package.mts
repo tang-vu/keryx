@@ -46,6 +46,19 @@ try {
     assert.deepEqual(check.claims.map(claim => claim.verdict), ["supported", "source-unavailable", "not-checked"]);
     const refusedCheck = await client.callTool({ name: "draft_check", arguments: { check: { passage: "PRIVATE_SECRET_FIXTURE" } } });
     assert(refusedCheck.isError); assert(!JSON.stringify(refusedCheck).includes("PRIVATE_SECRET_FIXTURE"));
+    assert(tools.tools.some(tool => tool.name === "evidence_procurement"));
+    const packet = { version: 1, scope: "private-evidence-procurement", request: {
+      id: "synthetic-procurement", network: "eip155:5042002", decision: "SYNTHETIC: Need measured API latency evidence",
+      budgetMicroUsdc: "50000", expiresAt: "2099-10-13T12:00:00Z",
+      requirements: [{ id: "latency", question: "SYNTHETIC: Observed latency?", priority: 10, status: "missing" }],
+    }, offers: [], selectedOfferIds: [], deliveries: [], reviews: [] };
+    const proposed = await client.callTool({ name: "evidence_procurement", arguments: { packet } });
+    assert(!proposed.isError);
+    const procurement = (proposed.structuredContent as { procurement: { packet: unknown; state: string; payment: { status: string }; quoteBudget: { remainingMicroUsdc: string } } }).procurement;
+    assert.deepEqual(procurement.packet, packet); assert.equal(procurement.state, "awaiting-eligible-offers");
+    assert.equal(procurement.payment.status, "not-observed"); assert.equal(procurement.quoteBudget.remainingMicroUsdc, "50000");
+    const refusedProcurement = await client.callTool({ name: "evidence_procurement", arguments: { packet: { decision: "PRIVATE_SECRET_FIXTURE", settled: true } } });
+    assert(refusedProcurement.isError); assert(!JSON.stringify(refusedProcurement).includes("PRIVATE_SECRET_FIXTURE"));
   } finally { await client.close(); }
   assert(!(await readdir(directory)).some(name => name.startsWith("forbidden-")));
   console.log("Built stdio private draft tool passed: retained fixture matching, pending semantics, UTF-16 span validation, fixed invalid-input errors and no network/custody writes. Not publication or a fresh-consumer install claim.");

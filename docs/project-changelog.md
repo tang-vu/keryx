@@ -1,5 +1,20 @@
 # Keryx Project Changelog
 
+### Demand-driven evidence procurement (source candidate, October 12)
+
+- Prepare a private request for missing evidence; compare provider-signed
+  quotations by proposed requirement priority per integer micro-USDC.
+- Bind separately signed delivery bytes and exact excerpts to their quotation;
+  retain caller reviews of both supporting and refuting material.
+- Restore the original portable packet and recompute its budget account,
+  recommendation, signatures and decision receipt on web, API, CLI and MCP.
+- Add no provider contact, arbitrary code execution, hosted order book, new
+  financial authority, payout or settlement. Signatures and reviews do not certify
+  factual truth or independent business adoption. Existing buyer/registry gates
+  remain authoritative. See [workflow and remaining gates](evidence-procurement.md).
+- Release versions, exact-source CI, deployment and package publication are
+  coordinated delivery gates, not established by this source entry.
+
 ### Conzit creator registration gas sponsorship (0.27.61 candidate)
 
 - Retain private creator authorization and exact sponsor transaction bytes before

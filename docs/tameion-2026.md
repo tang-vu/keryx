@@ -1,5 +1,12 @@
 # Keryx at Tameion 2026 — planned direction
 
+October 12 direction: the owner authorized ranked delivery of demand-driven
+[evidence procurement](evidence-procurement.md): commission missing evidence first,
+compare quotation value, retain useful counter-evidence, then inspect decision
+receipts. No buyer/provider pilot is identified yet. The initial portable request,
+quotation and review slice adds no funded marketplace, custody, schedule or
+production schema authority; actual usage and economic proof remain open.
+
 October 6 implementation increment: the owner requested resolving bottlenecks and
 making Operator an autonomous research business. [Hosted business Operator](operator-business.md)
 records the whole-obligation financial gate, private audit, mainnet queued execution,
