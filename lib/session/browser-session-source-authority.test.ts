@@ -13,6 +13,7 @@ it.each([6, 20, 21])("enforces the ordinary contract author bound for %s authors
   const result = encodeFunctionResult({ abi: REGISTRY_ABI, functionName: "get", result: { creator: payout, payoutWallet: payout,
     authors, fetchPriceUsdc6: BigInt(1000), active: true, contentCid: "", tags: "" } });
   vi.stubGlobal("fetch", async (_url: unknown, init: RequestInit) => {
+    if (_url === "/api/sources") return Response.json({ sources: [{ id: "publication", onchainId: `0x${"55".repeat(32)}` }] });
     const req = JSON.parse(String(init.body)) as { method: string; id: number };
     return Response.json({ jsonrpc: "2.0", id: req.id, result: req.method === "eth_chainId" ? "0x13b2" : req.method === "eth_call" ? result
       : { number: "0x64", hash: `0x${"66".repeat(32)}`, timestamp: "0x64", transactions: [], gasLimit: "0x100000", gasUsed: "0x0" } });

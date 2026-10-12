@@ -334,6 +334,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
+    if (s.registryAuthority) throw new Error("Immutable registry origin admission requires the SQLite adapter");
     if (s.sourceClaimId) throw new Error("Managed source claims require accepted atomic SQLite claim storage; Supabase imports are unsupported");
     if (s.scholarlyEnrolled) throw new Error("Scholarly enrolled sources cannot migrate to the unsupported Supabase backend");
     if (s.id.startsWith("public:")) throw new Error("Reserved public-reference source ID");
@@ -393,6 +394,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async setSourceMeta(id: string, meta: import("./keryx-db").SourceMeta): Promise<void> {
+    if (meta.registryAuthority) throw new Error("Immutable registry origin admission requires the SQLite adapter");
     await this.domainCall("set_source_meta", { p_row: {
       id,
       name: meta.name,

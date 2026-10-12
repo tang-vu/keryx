@@ -66,6 +66,8 @@ export interface CreatorEarnings {
  *  Stored separately from the on-chain record so the indexer can merge them
  *  without clobbering payment-critical chain data. */
 export interface SourceMeta {
+  /** Immutable origin sidecar retained without changing the source_meta schema. */
+  registryAuthority?: import("../registry/source-registry-authority").SourceRegistryAuthority;
   name: string;
   description: string;
   url: string;
@@ -235,6 +237,8 @@ export interface KeryxDB {
     row: import("../sources/registration-sponsor-protocol").SponsoredRegistration, now?: number): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
   getRegistrationSponsor?(input: { wallet: string; id?: string; canonicalUrl?: string }): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration | null>;
   transitionRegistrationSponsor?(input: import("./registration-sponsor").RegistrationSponsorTransition): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
+  /** Server-only registration execution authority; never expose in API projections. */
+  getRegistrationSponsorExecution?(input: { wallet: string; id: string }): Promise<import("./registration-sponsor").RegistrationSponsorExecution | null>;
   /** Private verified-identity domain; ordinary admitted profiles only, absent on sealed/native storage. */
   readonly profileIdentities?: ProfileIdentitiesStore;
   /** Supervised SQLite scholarly pilot capability; absent on unsupported backends. */

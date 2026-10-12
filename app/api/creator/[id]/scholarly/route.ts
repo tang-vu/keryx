@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { config } from "@/lib/config";
+import { sourceRegistryAuthorityForSource } from "@/lib/registry/source-registry-authority";
 import { sourceFetchTerms } from "@/lib/registry/source-fetch-payto";
 import { sourceItemContentVersion } from "@/lib/sources/source-item-asset";
 import { signedPaperDeclarationSchema } from "@/lib/scholarly/rights-protocol";
@@ -35,7 +36,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   return Response.json({ state, enrolled: source.scholarlyEnrolled === true, ready, items: items.length, active: source.active !== false && terms.active, verified: source.verified === true,
     binding: ready ? {
       protocol: "keryx-scholarly-rights-v1", network: "eip155:5042002", deploymentOrigin: new URL(config.baseUrl).origin,
-      sourceId: source.id, itemId: item.id, registry: config.registryReadAddress, onchainId: source.onchainId,
+      sourceId: source.id, itemId: item.id, registry: sourceRegistryAuthorityForSource(source)?.address ?? config.registryReadAddress, onchainId: source.onchainId,
       creator: terms.creator, recipient: terms.payTo, priceMicros: String(Math.round(terms.listPriceUsdc * 1e6)),
       canonicalUrl: item.link, contentVersion: sourceItemContentVersion(item), bodyHash: item.manifest!.bodyHash,
       plaintextBytes: item.manifest!.plaintextBytes, manifestId: item.manifest!.id,

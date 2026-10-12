@@ -88,3 +88,20 @@ inspection and independent source review apply. Actual hosted aggregate/domain/
 platform success remains a merge gate. After merge, perform one reviewed serialized
 deployment, verify its health commit, publish a factual product update and archive
 verified evidence before removing the finished local worktree/branch.
+
+## Post-merge validation maintenance
+
+PR #430 passed all applicable hosted checks, including the actual aggregate,
+and merged as `c49f4b3e`. Its tree equals the accepted candidate's tree.
+Reviewed deployment passed VPS TypeScript/build and restored the same two roles;
+public health and the new pages were observed at that commit on Arc mainnet.
+
+The subsequent main run exposed an existing DOM-observation race in the normal
+browser-session journey: a delayed stale-epoch revoke resolved before React
+committed its queued `paused` render. The test read `revoking` immediately.
+Three recovery/logout observations now poll for exactly `paused` using the
+existing bounded assertion pattern. Server epoch CAS, retained custody, spend,
+settlement and other assertions remain intact. This separate CI maintenance
+changes no product/runtime, pricing, authority, dependencies or versions and
+needs no additional production deployment or product announcement. Its own
+focused journey, source review and actual hosted aggregate remain required.

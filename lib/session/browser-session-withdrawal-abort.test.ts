@@ -26,7 +26,8 @@ it.each(["exposed", "cancelled_unexposed"] as const)("fences old publication and
     Object.assign(window,{storage,runtime,context,profile,privateKeyToAccount,sessionWithdrawalAbortMessage,createSessionWithdrawalAbort});
   `, resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "esm",
     define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined",
-      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS": '"300"' } });
+      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS": "undefined",
+      "process.env.NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS": '"300"' } });
   const browser = await chromium.launch({ headless: true });
   try {
     const context = await browser.newContext();

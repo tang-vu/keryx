@@ -476,6 +476,22 @@ it("admits and exposes a v3 original through enrolled storage while retaining ev
       `http://127.0.0.1:${port}`,
       registry
     );
+    const financialState = () => JSON.stringify({
+      queries: verified!.db.prepare("SELECT * FROM browser_signing_queries").all(),
+      capacity: verified!.db.prepare("SELECT * FROM browser_signer_capacity").all(),
+      intents: verified!.db.prepare("SELECT * FROM browser_authorization_intents").all(),
+      originals: verified!.db.prepare("SELECT * FROM browser_signing_originals").all(),
+    });
+    const beforeSource = financialState();
+    // Catalog/RPC fixture evidence alone cannot authorize a source absent from
+    // the enrolled writer's actual catalog. A refusal retains every reservation.
+    expect((await admitSqliteBrowserSourceSigningOriginal(verified.db, input, authority)).status).toBe("refused");
+    expect(financialState()).toBe(beforeSource);
+    verified.db.prepare(`INSERT INTO sources
+      (id,name,url,description,wallet_address,fetch_price,tags,authors,created_at,active,onchain_id,verified)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).run(source.id, source.name, source.url, source.description,
+        source.walletAddress, source.fetchPrice, JSON.stringify(source.tags), JSON.stringify(source.authors),
+        source.createdAt, 1, source.onchainId!, 1);
     const result = await admitSqliteBrowserSourceSigningOriginal(
       verified.db,
       input,
