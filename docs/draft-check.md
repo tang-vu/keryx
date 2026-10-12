@@ -72,6 +72,13 @@ Rules that hold for every result:
 - Reversed operands around written `outperform`, `exceed`, `surpass`, `beat`, or
   comparative `… than …` patterns are withheld. This bounded wording guard is not
   a general grammar or semantic classifier.
+- When either passage has multiple explicit percentages, distinct words in simple
+  percentage clauses must uniquely bind each claimed population to the same value,
+  without reusing one source clause for several claimed populations. Equal values
+  alone cannot establish that binding. Swapping
+  women/men's 60%/40% yields no lexical support; a version-bound partial read stays
+  unavailable. Ambiguous clause associations withhold `supported`. This guard
+  does not parse general population roles, implicit lists or semantic entailment.
 - Optional `suggestions` supplies at most eight alternative read bodies, each
   with an exact URL/title/version identity. Matching excerpts appear in a separate
   `claims[].suggestions` list. They never rewrite claims, repair written citations,

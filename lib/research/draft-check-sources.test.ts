@@ -54,6 +54,66 @@ it("keeps no-match partial reads unavailable; only a declared full body permits 
   expect(buildDraftCheck(request).claims[0].citations[0]).toMatchObject({ verdict: "not-found", evidence: "no-supporting-passage-found" });
 });
 
+it.each(["partial", "full-text"] as const)("keeps reassigned percentages %s and separate from matching suggestions", coverage => {
+  const request = input();
+  request.passage = "Women had 60% recovery and men had 40% recovery [1].";
+  request.sources[0] = { ...request.sources[0], coverage, text: "Men had 60% recovery and women had 40% recovery." };
+  const alternative = { ...identity, itemId: "alternative", itemUrl: "https://example.org/alternative", contentVersion: "v2" };
+  request.suggestions = [{ url: alternative.itemUrl, title: "Matching alternative", coverage: "partial",
+    text: "Men had 40% recovery and women had 60% recovery.", identity: alternative }];
+  const result = buildDraftCheck(request), claim = result.claims[0], citation = claim.citations[0];
+  expect(claim).toMatchObject({ start: 0, end: request.passage.length, text: request.passage,
+    verdict: coverage === "partial" ? "source-unavailable" : "not-found" });
+  expect(citation).toMatchObject({ reference: "ref1", token: "1", coverage, sourceIdentity: identity,
+    evidence: coverage === "partial" ? "source-unavailable" : "no-supporting-passage-found" });
+  if (coverage === "partial") expect(citation.unavailableReason).toBe("source-read-incomplete");
+  else expect(citation.closest).toMatchObject({ difference: "different-number" });
+  expect(citation).not.toHaveProperty("excerpt");
+  expect(claim.suggestions).toMatchObject([{ kind: "suggestion", verdict: "supported", sourceIdentity: alternative }]);
+  expect(result.summary.supported).toBe(0);
+});
+
+it.each(["partial", "full-text"] as const)("keeps equal-value many-to-one percentages %s separate from matching suggestions", async coverage => {
+  const request = input();
+  request.passage = "Women had 60% recovery and men had 60% recovery [1].";
+  const body = "Background.\nWomen had 60% recovery unlike men.";
+  request.sources = draftSourcesFromReads(parseDraftReferences("list", identity.itemUrl), [read({ text: body })]);
+  request.sources[0].coverage = coverage;
+  const alternative = { ...identity, itemId: "alternative", itemUrl: "https://example.org/alternative", contentVersion: "v2" };
+  const alternativeText = "Men had 60% recovery and women had 60% recovery.";
+  request.suggestions = [{ url: alternative.itemUrl, title: "Matching alternative", coverage: "partial", text: alternativeText, identity: alternative }];
+  const result = buildDraftCheck(request), claim = result.claims[0], citation = claim.citations[0];
+  expect(result).toMatchObject({ version: 1, scope: "private-draft-check", method: "lexical-overlap-v2", summary: { supported: 0, partlySupported: 1 } });
+  expect(claim).toMatchObject({ start: 0, end: request.passage.length, text: request.passage, verdict: "partly-supported" });
+  expect(citation).toMatchObject({ reference: "ref1", token: "1", coverage, sourceIdentity: identity,
+    verdict: "partly-supported", evidence: "verbatim-excerpt", excerpt: { text: "Women had 60% recovery unlike men." } });
+  expect(body.slice(citation.excerpt!.start, citation.excerpt!.end)).toBe(citation.excerpt!.text);
+  expect(claim.suggestions).toMatchObject([{ kind: "suggestion", verdict: "supported", sourceIdentity: alternative, excerpt: { text: alternativeText } }]);
+  expect(alternativeText.slice(claim.suggestions[0].excerpt.start, claim.suggestions[0].excerpt.end)).toBe(claim.suggestions[0].excerpt.text);
+  expect(JSON.stringify(result)).not.toContain("Background.");
+  const response = await createDraftCheckRoute(async () => null)(new Request("https://example.invalid/api/research/draft-check", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(request) }));
+  expect(response.headers.get("cache-control")).toBe("private, no-store");
+  expect((await response.json()).check).toEqual(result);
+  expect(draftCheckTool({ check: request }).structuredContent!.check).toEqual(result);
+});
+
+it("binds genuinely matching percentages to the exact completed-read version across API and MCP", async () => {
+  const request = input(); request.passage = "Women had 60% recovery and men had 40% recovery [1].";
+  const body = "Background.\nMen had 40% recovery and women had 60% recovery.";
+  request.sources = draftSourcesFromReads(parseDraftReferences("list", identity.itemUrl), [read({ text: body })]);
+  const result = buildDraftCheck(request), citation = result.claims[0].citations[0];
+  expect(result.claims[0]).toMatchObject({ text: request.passage, start: 0, end: request.passage.length, verdict: "supported" });
+  expect(citation).toMatchObject({ reference: "ref1", sourceIdentity: identity, coverage: "partial", verdict: "supported",
+    excerpt: { text: "Men had 40% recovery and women had 60% recovery." } });
+  expect(body.slice(citation.excerpt!.start, citation.excerpt!.end)).toBe(citation.excerpt!.text);
+  const response = await createDraftCheckRoute(async () => null)(new Request("https://example.invalid/api/research/draft-check", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(request) }));
+  expect(response.headers.get("cache-control")).toBe("private, no-store");
+  expect((await response.json()).check).toEqual(result);
+  expect(draftCheckTool({ check: request }).structuredContent!.check).toEqual(result);
+});
+
 it("adapts completed read bodies only; excludes missing, oversized, synthetic, ambiguous versions and changed works", () => {
   const references = parseDraftReferences("list", identity.itemUrl);
   expect(draftSourcesFromReads(references, [read()])).toEqual(input().sources);

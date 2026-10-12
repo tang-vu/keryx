@@ -2,7 +2,8 @@
  * This is not semantic entailment: it reports which verbatim source passage shares
  * the claim's wording, and withholds "supported" when numbers, negation, a listed
  * opposite term or tentative wording differ. Every excerpt is an exact slice of the
- * supplied text. A bounded comparative-role check rejects reversed operands;
+ * supplied text. Bounded role checks reject reversed comparisons and percentages
+ * assigned to different clause wording;
  * general grammar, paraphrase and meaning are not analysed. */
 
 export const DRAFT_CHECK_METHOD = "lexical-overlap-v2" as const;
@@ -122,9 +123,48 @@ function reversedComparison(claimText: string, sourceText: string): boolean {
     && right.some(word => source.left.words.has(word) && !source.right.words.has(word));
 }
 
+/** Explicit percentage clauses only. Exclusive words are lexical population cues,
+ * not parsed subjects: shared outcome/context words cannot identify a population.
+ * Multiple figures in one clause and implicit/respectively lists remain unbound. */
+function percentageRoles(text: string) {
+  const value = fold(text), roles: { number: string; words: Set<string> }[] = [];
+  const percentage = /\b(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:%|percent\b|per\s+cent\b)/gu;
+  const count = [...value.matchAll(percentage)].length;
+  for (const clause of value.split(/[;!?]|\.(?=\s|$)|,(?=\s*\p{L})|\b(?:and|but|while|whereas)\b/u)) {
+    const figures = [...clause.matchAll(percentage)];
+    if (figures.length === 1) roles.push({ number: figures[0][1].replace(/,/g, ""), words: new Set(terms(clause).words.keys()) });
+  }
+  const exclusive = roles.map((role, index) => ({ number: role.number,
+    words: new Set([...role.words].filter(word => !roles.some((other, otherIndex) => otherIndex !== index && other.words.has(word)))) }));
+  return { count, roles: exclusive, implicitList: /\brespectively\b/u.test(value) };
+}
+
+function percentageAssociation(claim: ReturnType<typeof percentageRoles>, sourceText: string): "matched" | "different" | "unbound" {
+  if (!claim.count) return "matched";
+  const source = percentageRoles(sourceText);
+  // Preserve ordinary single-figure checks; association matters when either text
+  // contains multiple explicit percentages, including a one-population claim.
+  if (claim.count < 2 && source.count < 2) return "matched";
+  if (claim.implicitList || source.implicitList || claim.roles.length !== claim.count || source.roles.length !== source.count) return "unbound";
+  const boundSourceRoles = new Set<(typeof source.roles)[number]>();
+  let unbound = false;
+  for (const role of claim.roles) {
+    const matches = source.roles.filter(other => [...role.words].some(word => other.words.has(word)));
+    if (matches.length !== 1) unbound = true;
+    else if (matches[0].number !== role.number) return "different";
+    else {
+      // Distinct claimed roles cannot share one source percentage clause.
+      if (boundSourceRoles.has(matches[0])) unbound = true;
+      boundSourceRoles.add(matches[0]);
+    }
+  }
+  return unbound ? "unbound" : "matched";
+}
+
 /** Compare one claim (citation markers already removed) with one prepared source. */
 export function lexicalSupport(claimText: string, source: PreparedSource): LexicalSupport {
   const claim = terms(claimText), claimWords = [...claim.words.keys()], claimNumbers = [...claim.numbers];
+  const claimPercentages = percentageRoles(claimText);
   const original = (keys: string[]) => keys.map(key => claim.words.get(key)!);
   let best: { tier: number; candidate: Candidate; recall: number; missing: string[]; missingNumbers: string[]; tentative: boolean } | undefined;
   let near: { candidate: Candidate; recall: number; difference: LexicalDifference } | undefined;
@@ -135,15 +175,17 @@ export function lexicalSupport(claimText: string, source: PreparedSource): Lexic
     const missingNumbers = claimNumbers.filter(number => !candidate.terms.numbers.has(number));
     // A claimed figure is absent while the passage states another figure in its place.
     const otherNumber = missingNumbers.length > 0 && [...candidate.terms.numbers].some(number => !claim.numbers.has(number));
+    const passage = source.text.slice(candidate.start, candidate.end);
+    const percentages = percentageAssociation(claimPercentages, passage);
     const difference: LexicalDifference | undefined = claim.negated !== candidate.terms.negated ? "negation"
-      : oppositeTerm(claim, candidate.terms) ? "opposite-term" : otherNumber ? "different-number"
-        : reversedComparison(claimText, source.text.slice(candidate.start, candidate.end)) ? "reversed-comparison" : undefined;
+      : oppositeTerm(claim, candidate.terms) ? "opposite-term" : otherNumber || percentages === "different" ? "different-number"
+        : reversedComparison(claimText, passage) ? "reversed-comparison" : undefined;
     if (difference) {
       if (candidate.sentences === 1 && (!near || recall > near.recall)) near = { candidate, recall, difference };
       continue;
     }
     const tentative = candidate.terms.tentative && !claim.tentative;
-    const tier = recall >= 0.8 && claimWords.length >= 3 && missingNumbers.length === 0 && !tentative ? 2 : 1;
+    const tier = recall >= 0.8 && claimWords.length >= 3 && missingNumbers.length === 0 && !tentative && percentages === "matched" ? 2 : 1;
     // Prefer the stronger verdict, then one sentence over two, then closer wording, then the earlier passage.
     if (!best || tier > best.tier || (tier === best.tier && (candidate.sentences < best.candidate.sentences
       || (candidate.sentences === best.candidate.sentences && recall > best.recall))))
