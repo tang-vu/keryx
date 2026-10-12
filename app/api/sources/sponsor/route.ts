@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth";
 import { RegistrationSponsorError } from "@/lib/db/registration-sponsor";
 import { SourceClaimError } from "@/lib/db/public-source-claims";
 import { claimBody } from "../../source-claims/shared";
-import { prepareSponsoredRegistration, recoverSponsoredRegistration, submitSponsoredRegistration } from "@/lib/sources/registration-sponsor-service";
+import { prepareSponsoredRegistration, recoverSponsoredRegistration, resumeSponsoredRegistration, submitSponsoredRegistration } from "@/lib/sources/registration-sponsor-service";
 import { registrationSponsorReadChain, registrationSponsorRuntime } from "@/lib/sources/registration-sponsor-runtime";
 import { registrationPolicyDigest } from "@/lib/sources/registration-sponsor-protocol";
 
@@ -15,6 +15,7 @@ const idSchema = z.string().regex(/^0x[0-9a-f]{64}$/).transform(value => value a
 const bodySchema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("prepare"), claimId: z.string().regex(/^[a-f0-9]{64}$/), fetchPrice: z.number().finite().min(0).max(1_000_000), replacesRequestId: idSchema.optional() }).strict(),
   z.object({ operation: z.literal("submit"), id: idSchema, signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/).transform(value => value as `0x${string}`) }).strict(),
+  z.object({ operation: z.literal("resume"), id: idSchema }).strict(),
 ]);
 const headers = { "Cache-Control": "no-store", Vary: "Cookie, Origin", "Referrer-Policy": "no-referrer" };
 const response = (value: unknown, status = 200) => Response.json(value, { status, headers });
@@ -61,7 +62,8 @@ export async function POST(req: Request) {
     if (!ctx) return response({ error: "Registration gas sponsorship is not enabled", code: "sponsor_disabled" }, 503);
     const original = body.operation === "prepare"
       ? await prepareSponsoredRegistration(ctx, session.address, body)
+      : body.operation === "resume" ? await resumeSponsoredRegistration(ctx, session.address, body.id)
       : await submitSponsoredRegistration(ctx, session.address, body.id, body.signature);
-    return response({ original }, body.operation === "submit" ? 202 : 200);
+    return response({ original }, body.operation === "prepare" ? 200 : 202);
   } catch (error) { return failure(error); }
 }

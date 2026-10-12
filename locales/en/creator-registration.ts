@@ -56,6 +56,8 @@ export const creatorRegistrationCopy = Object.freeze({
   prepareReplacementButton: "Prepare new unsigned request",
   requestRecoveryUnavailable: "Original recovery unavailable; retain this request.",
   inspectOriginalButton: "Inspect original registration",
+  resumeOriginalButton: "Resume original sponsored transaction",
+  resumeOriginalExplanation: "Resume uses the original creator authorization, transaction nonce and gas limits. A retained signed transaction is sent again unchanged. It does not register a new attempt or increase the gas reservation.",
   lostResponseExplanation: "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
   earningsPolicyLink: "Review this source's earnings policy ▸",
   recoverRequestLabel: "Recover original request",

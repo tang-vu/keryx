@@ -136,6 +136,18 @@ export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
       if (epoch === generation.current) setError(cause instanceof Error ? cause.message : copy.submissionUnknown);
     } finally { if (epoch === generation.current) setBusy(false); }
   }
+  async function resume() {
+    if (!row || !["signing", "submitted"].includes(row.state) || busy || !authenticated || !availability?.available) return;
+    const epoch = generation.current; setBusy(true); setError("");
+    try {
+      const original = checkedOriginal(row);
+      if (Date.now() > original.deadline * 1000) { setError(copy.signingAllowanceUnavailable); return; }
+      const body = await readJson("/api/sources/sponsor", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operation: "resume", id: original.id }) });
+      if (epoch === generation.current) setRow(checkedOriginal(body.original));
+    } catch (cause) { if (epoch === generation.current) setError(cause instanceof Error ? cause.message : copy.submissionUnknown); }
+    finally { if (epoch === generation.current) setBusy(false); }
+  }
   if (!authenticated) return <div className="mt-6"><p>{copy.connectInstructions({ network: profile.label })}</p><Link className="mt-3 inline-block underline" href="/connect">{copy.connectWalletLink}</Link></div>;
   return <section className="mt-6 space-y-4" aria-label={copy.formLabel}>
     {error && <p role="alert" className="break-words text-sm text-seal">{error}</p>}
@@ -163,6 +175,8 @@ export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
       {row.transactionHash && <a className="block break-all text-xs underline" href={`${profile.explorerUrl}/tx/${row.transactionHash}`} target="_blank" rel="noreferrer">{copy.originalTransaction({ transactionHash: row.transactionHash })}</a>}
       {row.actualGasWei !== undefined && <p className="text-sm">{copy.confirmedGasCost({ gasUsdc: formatUnits(BigInt(row.actualGasWei), 18) })}</p>}
       {row.state === "prepared" && <button className="border border-ink px-4 py-2" disabled={busy || attemptedIds.has(row.id) || !availability?.available} onClick={() => void sign()}>{copy.signRegistrationButton}</button>}
+      {["signing", "submitted"].includes(row.state) && <div className="space-y-2"><p className="text-sm">{copy.resumeOriginalExplanation}</p>
+        <button className="border border-ink px-4 py-2" disabled={busy || !availability?.available} onClick={() => void resume()}>{copy.resumeOriginalButton}</button></div>}
       {row.state === "expired" && claim && availability?.available && <div className="space-y-2"><p className="text-sm">{copy.expiredRequestExplanation}</p>
         <button className="border border-ink px-4 py-2" disabled={busy} onClick={() => void prepare(row.id)}>{copy.prepareReplacementButton}</button></div>}
       <button className="block text-sm underline" disabled={busy} onClick={() => void inspect(row.id).catch(() => setError(copy.requestRecoveryUnavailable))}>{copy.inspectOriginalButton}</button>

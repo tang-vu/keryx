@@ -3,11 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters, encodeEventTopics, keccak256, toBytes, type Hex, type TransactionReceipt } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { KeryxDB } from "../db/keryx-db";
-import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, transitionSqliteRegistrationSponsor } from "../db/registration-sponsor";
+import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, getSqliteRegistrationSponsorExecution, transitionSqliteRegistrationSponsor } from "../db/registration-sponsor";
 import { REGISTRY_ABI } from "../registry/registry-abi";
 import { registrationId } from "./registration-status";
 import { registrationTypedData, type RegistrationSponsorPolicy } from "./registration-sponsor-protocol";
-import { prepareSponsoredRegistration, recoverSponsoredRegistration, submitSponsoredRegistration, type RegistrationSponsorContext } from "./registration-sponsor-service";
+import { prepareSponsoredRegistration, recoverSponsoredRegistration, resumeSponsoredRegistration, submitSponsoredRegistration, type RegistrationSponsorContext } from "./registration-sponsor-service";
 import { prepareSourceRegistration } from "./prepare-registration";
 vi.mock("./prepare-registration", () => ({ prepareSourceRegistration: vi.fn() }));
 const creator = privateKeyToAccount(`0x${"11".repeat(32)}`), sponsor = privateKeyToAccount(`0x${"22".repeat(32)}`);
@@ -34,6 +34,7 @@ function fixture() {
   const db = { getSourceClaim: vi.fn(async () => claim),
     admitRegistrationSponsor: async (...args: Parameters<typeof admitSqliteRegistrationSponsor> extends [DatabaseSync, ...infer R] ? R : never) => admitSqliteRegistrationSponsor(native, ...args),
     getRegistrationSponsor: async (input: Parameters<typeof getSqliteRegistrationSponsor>[1]) => getSqliteRegistrationSponsor(native, input),
+    getRegistrationSponsorExecution: async (input: Parameters<typeof getSqliteRegistrationSponsorExecution>[1]) => getSqliteRegistrationSponsorExecution(native, input),
     transitionRegistrationSponsor: async (input: Parameters<typeof transitionSqliteRegistrationSponsor>[1]) => transitionSqliteRegistrationSponsor(native, input) } as unknown as KeryxDB;
   vi.mocked(prepareSourceRegistration).mockResolvedValue({ status: 200, payload: { mode: "onchain", sourceId: onchainId,
     registerParams: { urlHash, payoutWallet: creator.address, authors: [{ wallet: creator.address, basisPoints: 10000 }], fetchPriceUsdc6: "16000", contentCid: "", tags: "software" } } });
@@ -51,6 +52,89 @@ function fixture() {
   return { ctx, db, native, chain, claim, syncClaim, prepare, get, makeReceipt, setClock: (value: number) => { clock = value; }, setReceipt: (value: TransactionReceipt) => { receipt = value; } };
 }
 describe("sponsored source registration service", () => {
+  it("retains private execution before exposure and resumes a signing failure with the original nonce", async () => {
+    const f = fixture(), row = await f.prepare(), signature = await creator.signTypedData(registrationTypedData(row));
+    f.chain.sign.mockRejectedValueOnce(new Error("signer interrupted"));
+    const signing = await submitSponsoredRegistration(f.ctx, creator.address, row.id, signature);
+    expect(signing.state).toBe("signing");
+    expect(JSON.stringify(signing)).not.toContain(signature);
+    expect(await f.db.getRegistrationSponsorExecution!({ wallet: creator.address, id: row.id })).toEqual({ creatorSignature: signature });
+    // A reconstructed service context uses durable execution, not an in-process signed transaction.
+    const resumed = await resumeSponsoredRegistration({ ...f.ctx }, creator.address, row.id);
+    expect(resumed).toMatchObject({ id: row.id, state: "submitted", transactionNonce: 7, reservedWei: row.reservedWei });
+    expect(f.chain.transactionNonce).toHaveBeenCalledTimes(1);
+    expect(f.chain.sign.mock.calls.every(([transaction]) => transaction.nonce === 7)).toBe(true);
+    expect(f.native.prepare("SELECT COUNT(*) n FROM sync_state WHERE key LIKE ?").get("keryx:registration-sponsor:v1:row:%")?.n).toBe(1);
+    expect(await f.db.getRegistrationSponsorExecution!({ wallet: sponsor.address, id: row.id })).toBeNull();
+  });
+  it("resumes a lost broadcast response with identical bytes and never signs a replacement", async () => {
+    const f = fixture(), row = await f.prepare(), signature = await creator.signTypedData(registrationTypedData(row));
+    f.chain.broadcast.mockRejectedValueOnce(new Error("response lost"));
+    const submitted = await submitSponsoredRegistration(f.ctx, creator.address, row.id, signature);
+    const raw = f.chain.broadcast.mock.calls[0][0];
+    expect(await f.db.getRegistrationSponsorExecution!({ wallet: creator.address, id: row.id })).toMatchObject({ signedTransaction: raw });
+    expect(JSON.stringify(submitted)).not.toContain(raw);
+    const resumed = await resumeSponsoredRegistration(f.ctx, creator.address, row.id);
+    expect(resumed).toMatchObject({ transactionHash: submitted.transactionHash, transactionNonce: 7 });
+    expect(f.chain.broadcast.mock.calls[1][0]).toBe(raw);
+    expect(f.chain.sign).toHaveBeenCalledTimes(1); expect(f.chain.transactionNonce).toHaveBeenCalledTimes(1);
+    f.setReceipt(f.makeReceipt(resumed.transactionHash!));
+    expect((await resumeSponsoredRegistration(f.ctx, creator.address, row.id))?.state).toBe("confirmed");
+    expect(f.chain.broadcast).toHaveBeenCalledTimes(2);
+  });
+  it("refuses resumed execution after expiry and retains full original liability", async () => {
+    const f = fixture(), row = await f.prepare(), signature = await creator.signTypedData(registrationTypedData(row));
+    f.chain.sign.mockRejectedValueOnce(new Error("interrupted"));
+    await submitSponsoredRegistration(f.ctx, creator.address, row.id, signature);
+    f.setClock((row.deadline + 1) * 1000);
+    await expect(resumeSponsoredRegistration(f.ctx, creator.address, row.id)).rejects.toMatchObject({ code: "resume_refused" });
+    expect(await f.get(row.id)).toMatchObject({ state: "signing", reservedWei: row.reservedWei });
+    expect(f.chain.sign).toHaveBeenCalledTimes(1); expect(f.chain.broadcast).not.toHaveBeenCalled();
+  });
+  it("rechecks native publishing proof before resuming signing and before original broadcast", async () => {
+    const f = fixture(), row = await f.prepare(), signature = await creator.signTypedData(registrationTypedData(row));
+    f.chain.sign.mockRejectedValueOnce(new Error("interrupted"));
+    await submitSponsoredRegistration(f.ctx, creator.address, row.id, signature);
+    f.chain.registrationNonce.mockImplementationOnce(async () => { f.claim.revision++; f.syncClaim(); return BigInt(0); });
+    expect((await resumeSponsoredRegistration(f.ctx, creator.address, row.id))?.state).toBe("signing");
+    expect(f.chain.sign).toHaveBeenCalledTimes(1);
+    f.claim.revision--; f.syncClaim();
+    f.chain.sign.mockImplementationOnce(async transaction => {
+      f.claim.revision++; f.syncClaim(); return sponsor.signTransaction(transaction);
+    });
+    expect((await resumeSponsoredRegistration(f.ctx, creator.address, row.id))?.state).toBe("submitted");
+    expect(f.chain.broadcast).not.toHaveBeenCalled();
+  });
+  it("never broadcasts when signed-byte persistence fails; explicit resume retains the same original", async () => {
+    const f = fixture(), row = await f.prepare(), signature = await creator.signTypedData(registrationTypedData(row));
+    const transition = f.db.transitionRegistrationSponsor!;
+    f.db.transitionRegistrationSponsor = async change => {
+      if (change.nextState === "submitted") throw new Error("storage interrupted");
+      return transition(change);
+    };
+    expect((await submitSponsoredRegistration(f.ctx, creator.address, row.id, signature)).state).toBe("signing");
+    expect(f.chain.broadcast).not.toHaveBeenCalled();
+    f.db.transitionRegistrationSponsor = transition;
+    const result = await resumeSponsoredRegistration(f.ctx, creator.address, row.id);
+    expect(result?.state).toBe("submitted");
+    expect(f.chain.sign.mock.calls.every(([transaction]) => transaction.nonce === 7)).toBe(true);
+  });
+  it("places every registry observation before the final native proof gate for resumed signing", async () => {
+    const f = fixture(), row = await f.prepare(), signature = await creator.signTypedData(registrationTypedData(row));
+    f.chain.sign.mockRejectedValueOnce(new Error("interrupted"));
+    await submitSponsoredRegistration(f.ctx, creator.address, row.id, signature);
+    const order: string[] = [], transition = f.db.transitionRegistrationSponsor!;
+    f.chain.assertRegistry.mockImplementation(async () => { order.push("registry"); });
+    f.chain.registrationNonce.mockImplementation(async () => { order.push("nonce"); return BigInt(0); });
+    f.db.transitionRegistrationSponsor = async change => {
+      const result = await transition(change);
+      if (change.expectedState === "signing" && change.nextState === "signing") order.push("proof");
+      return result;
+    };
+    f.chain.sign.mockImplementationOnce(async transaction => { order.push("sign"); return sponsor.signTransaction(transaction); });
+    expect((await resumeSponsoredRegistration(f.ctx, creator.address, row.id))?.state).toBe("submitted");
+    expect(order.slice(0, 4)).toEqual(["registry", "nonce", "proof", "sign"]);
+  });
   it("returns the same original on reload without preparing content or refreshing price/signature", async () => {
     const f = fixture(), row = await f.prepare();
     f.setClock(now + 1000);

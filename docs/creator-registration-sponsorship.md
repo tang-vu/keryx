@@ -132,14 +132,29 @@ journal in this candidate and cannot enable the relay.
 
 ## Recovery limits and activation gates
 
-Two operational recovery gaps remain open. A crash or signing failure can leave
-`signing` with a reserved nonce and no retained transaction hash. A crash after
-hash retention but before broadcast can leave `submitted` with no transaction
-on-chain. The implementation retains those originals and their full liability;
-it provides receipt inspection but no retry, replacement, rebroadcast or
-operator reset feature. Such uncertainty also blocks later sponsor signing.
-Removing browser data or changing configuration does not grant another attempt.
-Operational resolution needs a reviewed design and acceptance before activation.
+The October 12 candidate retains the creator signature atomically with signing
+admission and the exact signed transaction atomically with its hash before
+broadcast. These bearer values live only in the private journal envelope;
+creator lookups, API responses and browser storage receive only the existing
+public original. The native reader uses one consistent snapshot. Legacy
+originals without retained execution remain inspectable but cannot be resumed.
+
+An explicit owner action, POST `operation: "resume"` or the browser's
+"Resume original sponsored transaction" button, first inspects any original
+receipt. If execution is still unresolved and authority remains live, it may
+finish signing the same original transaction nonce or send its retained signed
+bytes unchanged. It creates no new registration attempt, nonce, fee ceiling or
+gas reservation. Fresh registry observations precede native publishing-proof
+checks immediately before signing and broadcast. Reload and GET inspection
+never execute a transaction. Proof/policy/deadline changes refuse execution;
+unknown outcomes retain the complete hold.
+
+An unresolved original beyond its authorization/policy window still needs
+reviewed operator resolution: this candidate provides no cancellation,
+replacement, fee bump, autonomous retry or gas-hold reset. It continues to block
+later sponsor signing. Funded restart, replay and expired-original resolution
+acceptance remain activation gates. Removing browser data or changing
+configuration does not grant another attempt.
 
 Local SQLite/service tests and in-process contract tests exercise synthetic
 transport, signatures, concurrency, caps, proof changes and failure retention.
@@ -162,7 +177,7 @@ receipts cannot be repurposed as V3 activation consent or proof. See
 | Surface | Registration role |
 | --- | --- |
 | Web | `/register/sponsored` is an explicit pilot for one verified feed, with creator review/signing and retained request inspection. Bulk import does not automatically receive sponsorship. |
-| Hosted API | `/api/sources/sponsor` uses the same SIWE, same-origin, proof, allowlist and atomic caps. Its owner lookup and receipt reader retain original identity. |
+| Hosted API | `/api/sources/sponsor` uses the same SIWE, same-origin, proof, allowlist and atomic caps. Its owner lookup and receipt reader retain original identity; explicit resume preserves the original private execution authority. |
 | CLI and remote/stdio MCP | Existing research, payment and inspection roles remain. No new publisher private key, creator transaction signing or sponsor executor is distributed. |
 | Desktop Operator | Existing desktop/local roles remain; this candidate grants no publisher custody or sponsored registration signing. |
 | Browser extension and bots | Existing hosted links and research adapters remain. A browser handoff still requires the creator's own session, proof and signature. |

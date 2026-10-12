@@ -1,5 +1,21 @@
 # Keryx Project Changelog
 
+### Creator registration gas recovery and activation preparation (0.27.60 candidate)
+
+- Retain private creator authorization and exact sponsor transaction bytes before
+  exposure; add explicit owner resume on the website and same-origin SIWE API.
+  Resume preserves the original nonce, fee limits, attempts and gas reservation.
+  Inspection and reload do not execute transactions or expose bearer values.
+- Prepare an unsigned V3 deployment proposal with fresh chain/nonce/gas/runtime
+  observations and explicit maximum liability. Keep the two live V1 listings'
+  authority and all funded testnet, custody, expired-original resolution and
+  mainnet activation gates open. Sponsorship remains disabled by default.
+- Web/API and SQLite share the recovery contract. CLI, remote/stdio MCP,
+  desktop, extension and bots retain their research/inspection or browser-handoff
+  roles; no publisher key or sponsor executor is distributed to those surfaces.
+  This candidate does not claim deployment, package/installer synchronization,
+  new gas spending or creator earnings.
+
 ### Bounded source outcomes (source candidate)
 
 - Share one bounded source/topic outcome record across the creator page, public

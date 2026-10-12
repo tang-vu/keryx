@@ -90,26 +90,56 @@ export async function submitSponsoredRegistration(ctx: RegistrationSponsorContex
   if (await ctx.chain.estimateGas(data) > BigInt(ctx.policy.maxGas)) refused("Registration exceeds its sponsor gas limit", "gas_limit", 409);
   const transactionNonce = await ctx.chain.transactionNonce();
   active(ctx, wallet);
-  await journal.transition({ wallet, id, expectedState: "prepared", nextState: "signing", transactionNonce, now: ctx.now?.() ?? Date.now() });
+  if (!ctx.db.getRegistrationSponsorExecution) refused("Private registration recovery is unavailable");
+  await journal.transition({ wallet, id, expectedState: "prepared", nextState: "signing", transactionNonce, creatorSignature: signature, now: ctx.now?.() ?? Date.now() });
   // Any exception after this durable boundary retains the complete maximum hold.
   // It never grants another transaction nonce, signature or automatic broadcast.
+  return executeSponsoredRegistration(ctx, wallet, id);
+}
+
+/** Explicit owner action only: preserve the exact original nonce, calldata, gas and signed bytes. */
+export async function resumeSponsoredRegistration(ctx: RegistrationSponsorContext, wallet: string, id: Hex) {
+  const recovered = await recoverSponsoredRegistration(ctx.db, wallet, id, ctx.chain, ctx.now?.() ?? Date.now());
+  if (!recovered) refused("Original sponsored registration not found", "original_not_found", 404);
+  if (!["signing", "submitted"].includes(recovered.state)) return recovered;
+  return executeSponsoredRegistration(ctx, wallet, id);
+}
+
+async function executeSponsoredRegistration(ctx: RegistrationSponsorContext, wallet: string, id: Hex) {
+  const journal = store(ctx.db), row = await journal.get({ wallet, id });
+  if (!row || !["signing", "submitted"].includes(row.state)) refused("Inspect the original registration before resuming", "resume_refused", 409);
+  const now = active(ctx, wallet);
+  if (now > row.deadline * 1000 || row.policyDigest !== registrationPolicyDigest(ctx.policy))
+    refused("Original execution authority is no longer active; its full reservation remains", "resume_refused", 409);
+  const execution = await ctx.db.getRegistrationSponsorExecution?.({ wallet, id });
+  if (!execution) refused("This original has no retained execution authority; retain its reservation", "resume_refused", 409);
+  if ((await recoverTypedDataAddress({ ...registrationTypedData(row), signature: execution.creatorSignature })).toLowerCase() !== row.creator)
+    refused("Original creator authorization is invalid", "resume_refused", 409);
+  const data = encodeFunctionData({ abi: REGISTRATION_SPONSOR_ABI, functionName: "registerWithSignature", args: [registrationContractRequest(row), execution.creatorSignature] });
+  const transactionNonce = row.transactionNonce!;
   try {
+    await ctx.chain.assertRegistry(); active(ctx, wallet);
+    if (row.state === "signing" && await ctx.chain.registrationNonce(row.creator) !== BigInt(row.nonce)) throw new Error();
+    // Native reread of the current publishing proof after external observations, before signing/broadcast.
+    await journal.transition({ wallet, id, expectedState: row.state, nextState: row.state, now: ctx.now?.() ?? Date.now() });
     const transaction: TransactionSerializableEIP1559 = { type: "eip1559", chainId: row.chainId, nonce: transactionNonce,
       to: row.registryAddress, data, value: BigInt(0), gas: BigInt(ctx.policy.maxGas),
       maxFeePerGas: BigInt(ctx.policy.maxFeePerGasWei), maxPriorityFeePerGas: BigInt(1) };
-    await ctx.chain.assertRegistry(); active(ctx, wallet);
-    const raw = await ctx.chain.sign(transaction), parsed = parseTransaction(raw);
+    const raw = row.state === "submitted" ? execution.signedTransaction! : await ctx.chain.sign(transaction);
+    const parsed = parseTransaction(raw);
     if ((await recoverTransactionAddress({ serializedTransaction: raw as Parameters<typeof recoverTransactionAddress>[0]["serializedTransaction"] })).toLowerCase() !== row.relayer ||
       parsed.type !== "eip1559" || parsed.chainId !== row.chainId || parsed.nonce !== transactionNonce ||
       parsed.to?.toLowerCase() !== row.registryAddress || parsed.data?.toLowerCase() !== data.toLowerCase() ||
       (parsed.value ?? BigInt(0)) !== BigInt(0) || parsed.gas !== transaction.gas || parsed.maxFeePerGas !== transaction.maxFeePerGas ||
       parsed.maxPriorityFeePerGas !== transaction.maxPriorityFeePerGas || parsed.accessList?.length) throw new Error();
     const transactionHash = keccak256(raw);
-    await journal.transition({ wallet, id, expectedState: "signing", nextState: "submitted", transactionHash, now: ctx.now?.() ?? Date.now() });
+    if (row.state === "submitted" && transactionHash !== row.transactionHash) throw new Error();
+    if (row.state === "signing") await journal.transition({ wallet, id, expectedState: "signing", nextState: "submitted", transactionHash, signedTransaction: raw, now: ctx.now?.() ?? Date.now() });
     await ctx.chain.assertRegistry(); active(ctx, wallet);
+    await journal.transition({ wallet, id, expectedState: "submitted", nextState: "submitted", now: ctx.now?.() ?? Date.now() });
     const returned = await ctx.chain.broadcast(raw);
     if (returned.toLowerCase() !== transactionHash) throw new Error();
-  } catch { /* Unknown signing/submission retains the original. Never expose SDK/key diagnostics. */ }
+  } catch { /* Unknown execution retains the original. No new nonce, gas reservation or automatic retry. */ }
   return (await journal.get({ wallet, id }))!;
 }
 export async function recoverSponsoredRegistration(db: KeryxDB, wallet: string, id: Hex,

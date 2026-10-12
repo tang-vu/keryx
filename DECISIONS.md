@@ -1,5 +1,26 @@
 # Keryx — Decision Log
 
+## Resume only the admitted creator gas transaction — 2026-10-12
+
+The owner requested completing creator registration gas sponsorship. Retain the
+creator's exact typed signature at native signing admission and the sponsor's
+exact signed transaction before broadcasting, inside a server-only envelope.
+Expose neither bearer value through public originals, creator responses, browser
+storage or logs. Explicit owner resume may complete the original signing or
+replay unchanged bytes after receipt inspection; it never obtains a new nonce,
+changes fees, resets attempts or releases uncertain gas liability. Registry
+observations precede atomic live-proof gates immediately before signing and
+broadcast. GET/reload remain inspection only. Legacy originals without retained
+execution remain readable and cannot acquire replacement authority.
+
+Activation remains separate from source acceptance: expired unresolved originals
+need reviewed resolution, funded testnet/browser acceptance and dedicated finite
+custody remain open, and the two freshly observed live V1 listings cannot be
+silently replaced by V3. Use an unsigned, bounded deployment proposal; creation
+simulation does not authorize contract deployment, spending or registry cutover.
+See [sponsorship recovery](docs/creator-registration-sponsorship.md) and the
+[October 12 activation evidence](docs/engineering/registration-sponsor-activation-20261012.md).
+
 ## Check cited draft sentences against supplied text, by wording only — 2026-10-11
 
 Advance issue282 with a second zero-I/O private contract, `private-draft-check`

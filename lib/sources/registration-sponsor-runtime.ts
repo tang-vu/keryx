@@ -30,7 +30,7 @@ export async function registrationSponsorRuntime(): Promise<RegistrationSponsorC
       registryAddress: policy.registryAddress, registryCodeHash: policy.registryCodeHash, relayer: policy.sponsorAddress });
     const client = sponsorClient(policy.network === "eip155:5042" ? 5042 : 5042002);
     const db = await getDb();
-    if (!db.admitRegistrationSponsor || !db.getRegistrationSponsor || !db.transitionRegistrationSponsor) throw new Error();
+    if (!db.admitRegistrationSponsor || !db.getRegistrationSponsor || !db.transitionRegistrationSponsor || !db.getRegistrationSponsorExecution) throw new Error();
     return { db, policy, assertPolicy, chain: { ...chain,
       async sign(transaction) {
         assertPolicy();

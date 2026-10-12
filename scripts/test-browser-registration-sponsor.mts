@@ -113,6 +113,7 @@ return '0x'+'1'.repeat(130);}});
     const prepare = page.getByRole("button", { name: "Prepare sponsored registration", exact: true });
     const sign = page.getByRole("button", { name: "Sign reviewed registration", exact: true });
     const inspect = page.getByRole("button", { name: "Inspect original registration", exact: true });
+    const resume = page.getByRole("button", { name: "Resume original sponsored transaction", exact: true });
     await load(); await prepare.click(); await sign.waitFor();
     assert.equal(posts.length, 1); assert.equal(posts[0].operation, "prepare");
     assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
@@ -134,9 +135,15 @@ return '0x'+'1'.repeat(130);}});
     await load(); await page.getByText("Original transaction submitted: confirmation pending", { exact: true }).waitFor();
     assert.equal(await sign.count(), 0); assert.equal(posts.length, 2);
     assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
+    lostResponse = false; const originalHash = row!.transactionHash;
+    await resume.click();
+    assert.equal(posts.length, 3);
+    assert.deepEqual(posts.at(-1), { operation: "resume", id: row!.id });
+    assert.equal(row!.transactionHash, originalHash);
+    assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
     row = { ...row!, state: "confirmed", actualGasWei: "1000000000000000" }; indexed = true;
     await inspect.click(); await page.getByText("Registration confirmed and indexed", { exact: true }).waitFor();
-    assert.equal(posts.length, 2);
+    assert.equal(posts.length, 3);
 
     // Saved claim A must not block independently verified claim B.
     row = null; lostResponse = false; await load(claimB); await prepare.waitFor();

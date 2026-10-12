@@ -14,20 +14,29 @@ const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/).transform(value => value
 const hash = z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform(value => value.toLowerCase() as Hex);
 const timestamp = z.number().int().positive().max(8_640_000_000_000_000);
 const state = sponsoredRegistrationSchema.shape.state;
+const executionSchema = z.object({
+  creatorSignature: z.string().regex(/^0x[0-9a-fA-F]{130}$/).transform(value => value as Hex),
+  signedTransaction: z.string().regex(/^0x02[0-9a-fA-F]+$/).max(32768).transform(value => value as Hex).optional(),
+}).strict();
 const lookupSchema = z.object({ wallet: address, id: hash.optional(), canonicalUrl: z.string().optional() })
   .strict().refine(value => value.id !== undefined || value.canonicalUrl !== undefined);
 const transitionSchema = z.object({
   wallet: address, id: hash, expectedState: state, nextState: state,
   transactionNonce: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
   transactionHash: hash.optional(), actualGasWei: z.string().regex(/^(0|[1-9]\d{0,77})$/).optional(),
+  creatorSignature: executionSchema.shape.creatorSignature.optional(),
+  signedTransaction: executionSchema.shape.signedTransaction,
   now: timestamp.optional(),
 }).strict();
-const entrySchema = z.object({ original: sponsoredRegistrationSchema, current: sponsoredRegistrationSchema }).strict();
+const entrySchema = z.object({ original: sponsoredRegistrationSchema, current: sponsoredRegistrationSchema,
+  execution: executionSchema.optional() }).strict();
 const policyEnvelopeSchema = z.object({ cohortDigest: hash, policyDigest: hash, policy: registrationSponsorPolicySchema }).strict();
 type Entry = z.infer<typeof entrySchema>;
 type PolicyEnvelope = z.infer<typeof policyEnvelopeSchema>;
 export type RegistrationSponsorLookup = z.input<typeof lookupSchema>;
 export type RegistrationSponsorTransition = z.input<typeof transitionSchema>;
+/** Server-only bearer authority. Never include this in creator/API projections or logs. */
+export type RegistrationSponsorExecution = z.infer<typeof executionSchema>;
 
 /** Messages are safe for public API responses; storage details and submitted values stay private. */
 export class RegistrationSponsorError extends Error {
@@ -123,6 +132,13 @@ function readEntries(db: DatabaseSync, policies = readPolicies(db)): Entry[] {
         entry.original.createdAt !== entry.original.updatedAt || immutable(entry.original) !== immutable(entry.current) ||
         entry.current.updatedAt < entry.original.updatedAt) unavailable();
     validateBinding(entry.original, policy); validateBinding(entry.current, policy);
+    if (entry.execution) {
+      const { state, transactionHash } = entry.current;
+      if (["prepared", "expired"].includes(state) ||
+          (state === "signing" && entry.execution.signedTransaction !== undefined) ||
+          (["submitted", "confirmed", "reverted"].includes(state) &&
+            (!entry.execution.signedTransaction || keccak256(entry.execution.signedTransaction) !== transactionHash))) unavailable();
+    }
     if (["signing", "submitted"].includes(entry.current.state) && ++activeOriginals > 1) unavailable();
     if (entry.current.transactionHash !== undefined) {
       if (transactions.has(entry.current.transactionHash)) unavailable();
@@ -255,7 +271,19 @@ export function getSqliteRegistrationSponsor(db: DatabaseSync, input: Registrati
   });
 }
 
-/** No retry/replacement path exists once signing authority has been retained. */
+/** Read private execution authority separately from the public original. Legacy originals lack it. */
+export function getSqliteRegistrationSponsorExecution(db: DatabaseSync, input: { wallet: string; id: string }): RegistrationSponsorExecution | null {
+  const lookup = parseInput(lookupSchema, input);
+  return safeStorage(() => {
+    db.exec("BEGIN");
+    try {
+      const execution = readEntries(db).find(entry => entry.current.creator === lookup.wallet && entry.current.id === lookup.id)?.execution ?? null;
+      db.exec("COMMIT"); return execution;
+    } catch (error) { try { db.exec("ROLLBACK"); } catch { /* Preserve the original safe failure. */ } throw error; }
+  });
+}
+
+/** Resuming execution never changes the admitted transaction nonce or gas reservation. */
 export function transitionSqliteRegistrationSponsor(db: DatabaseSync, input: RegistrationSponsorTransition): SponsoredRegistration {
   const change = parseInput(transitionSchema, input), now = change.now ?? Date.now();
   parseInput(timestamp, now);
@@ -264,6 +292,9 @@ export function transitionSqliteRegistrationSponsor(db: DatabaseSync, input: Reg
     const entry = entries.find(value => value.current.id === change.id && value.current.creator === change.wallet);
     if (!entry) conflict("Original registration is unavailable for this wallet", "registration_sponsor_original_missing");
     const row = entry.current;
+    if (change.creatorSignature !== undefined && !(row.state === "prepared" && change.nextState === "signing") ||
+        change.signedTransaction !== undefined && !(row.state === "signing" && change.nextState === "submitted"))
+      conflict("Execution authority can only be retained with its original transition");
     if (row.state !== change.expectedState || now < row.updatedAt)
       conflict("Original registration state changed; read it before continuing", "registration_sponsor_state_changed");
     const proofMatches = (change.transactionNonce === undefined || change.transactionNonce === row.transactionNonce) &&
@@ -286,6 +317,14 @@ export function transitionSqliteRegistrationSponsor(db: DatabaseSync, input: Reg
           (change.transactionNonce !== undefined && change.transactionNonce !== row.transactionNonce))
         conflict("Submission must retain the original sponsor transaction");
       if (entries.some(value => value.current.transactionHash === change.transactionHash)) conflict("The transaction hash already has an original");
+      if (entry.execution && (!change.signedTransaction || keccak256(change.signedTransaction) !== change.transactionHash))
+        conflict("Submission must retain the exact signed original before broadcast");
+    } else if (row.state === change.nextState && ["signing", "submitted"].includes(row.state)) {
+      const policy = policies.get(row.policyDigest)!.policy;
+      if (!entry.execution || !proofMatches || change.actualGasWei !== undefined || expired(row, now) ||
+          now > row.deadline * 1000 || policy.expiresAt <= now)
+        conflict("The original execution authority cannot be resumed");
+      assertLiveClaim(db, row, policy, now);
     } else if (row.state === "submitted" && ["confirmed", "reverted"].includes(change.nextState)) {
       if (!proofMatches || change.actualGasWei === undefined || BigInt(change.actualGasWei) > BigInt(row.reservedWei))
         conflict("Finality evidence must match the original reserved transaction");
@@ -295,6 +334,11 @@ export function transitionSqliteRegistrationSponsor(db: DatabaseSync, input: Reg
       ...(change.transactionHash === undefined ? {} : { transactionHash: change.transactionHash }),
       ...(change.actualGasWei === undefined ? {} : { actualGasWei: change.actualGasWei }),
     };
+    if (change.creatorSignature) entry.execution = { creatorSignature: change.creatorSignature };
+    if (change.signedTransaction) {
+      if (!entry.execution) conflict("Signed execution needs its retained creator authorization");
+      entry.execution = { ...entry.execution, signedTransaction: change.signedTransaction };
+    }
     return saveEntry(db, entry, now);
   });
 }

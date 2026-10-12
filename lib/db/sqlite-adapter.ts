@@ -20,7 +20,7 @@ import type { PersonalHistoryStore } from "../history/personal-history";
 import { createSqliteProfileIdentities } from "./profile-identities-sqlite";
 import { ProfileIdentityError, type ProfileIdentitiesStore } from "../profiles/verified-identities";
 import { PrivateProfileError, type PrivateProfilesStore } from "../profiles/private-profile";
-import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, transitionSqliteRegistrationSponsor, type RegistrationSponsorTransition } from "./registration-sponsor";
+import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, getSqliteRegistrationSponsorExecution, transitionSqliteRegistrationSponsor, type RegistrationSponsorTransition } from "./registration-sponsor";
 import type { RegistrationSponsorPolicy, SponsoredRegistration } from "../sources/registration-sponsor-protocol";
 import { readSqliteOperatorInventory, type OperatorInventoryInput } from "../business-operator/inventory";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
@@ -736,6 +736,7 @@ export class SqliteAdapter implements KeryxDB {
   }
   async admitRegistrationSponsor(policy: RegistrationSponsorPolicy, row: SponsoredRegistration, now?: number) { return admitSqliteRegistrationSponsor(this.db, policy, row, now); }
   async getRegistrationSponsor(input: { wallet: string; id?: string; canonicalUrl?: string }) { return getSqliteRegistrationSponsor(this.db, input); }
+  async getRegistrationSponsorExecution(input: { wallet: string; id: string }) { return getSqliteRegistrationSponsorExecution(this.db, input); }
   async transitionRegistrationSponsor(input: RegistrationSponsorTransition) { return transitionSqliteRegistrationSponsor(this.db, input); }
   async issueSourceClaimChallenge(input: IssueSourceClaimChallenge) { return issueSqliteSourceClaimChallenge(this.db, input); }
   async getSourceClaimChallenge(id: string) { return getSqliteSourceClaimChallenge(this.db, id); }

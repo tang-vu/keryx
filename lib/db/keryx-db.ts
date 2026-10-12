@@ -235,6 +235,8 @@ export interface KeryxDB {
     row: import("../sources/registration-sponsor-protocol").SponsoredRegistration, now?: number): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
   getRegistrationSponsor?(input: { wallet: string; id?: string; canonicalUrl?: string }): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration | null>;
   transitionRegistrationSponsor?(input: import("./registration-sponsor").RegistrationSponsorTransition): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
+  /** Server-only registration execution authority; never expose in API projections. */
+  getRegistrationSponsorExecution?(input: { wallet: string; id: string }): Promise<import("./registration-sponsor").RegistrationSponsorExecution | null>;
   /** Private verified-identity domain; ordinary admitted profiles only, absent on sealed/native storage. */
   readonly profileIdentities?: ProfileIdentitiesStore;
   /** Supervised SQLite scholarly pilot capability; absent on unsupported backends. */

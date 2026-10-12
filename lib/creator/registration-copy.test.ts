@@ -77,7 +77,15 @@ for (const fixture of fixtures.forms) {
     const source = readFileSync(new URL("../../components/keryx/sponsored-registration-form.tsx", import.meta.url), "utf8");
     const form = component(source, states, fixture.authenticated).SponsoredRegistrationForm;
     const element = await form({ claimId: fixture.claim?.id });
-    expect(visible(renderToStaticMarkup(element))).toEqual(fixture.visible);
+    const rendered = visible(renderToStaticMarkup(element));
+    if (row && ["signing", "submitted"].includes(row.state)) {
+      expect(rendered).toContainEqual({ tag: "p", attributes: {}, text: copy.resumeOriginalExplanation });
+      expect(rendered).toContainEqual({ tag: "button", attributes: fixture.busy || !fixture.available ? { disabled: "" } : {}, text: copy.resumeOriginalButton });
+      // Preserve the historical copy baseline separately from the intentional new execution control.
+      const original = rendered.filter(item => item.text !== copy.resumeOriginalExplanation && item.text !== copy.resumeOriginalButton)
+        .map(item => ({ ...item, text: item.text.replace(copy.resumeOriginalExplanation + copy.resumeOriginalButton, "") }));
+      expect(original).toEqual(fixture.visible);
+    } else expect(rendered).toEqual(fixture.visible);
   });
 }
 
