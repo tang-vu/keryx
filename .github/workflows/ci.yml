@@ -556,6 +556,9 @@ jobs:
       - name: Private profile UI (production CSS, synthetic owner sessions, no outbound requests)
         run: node --import tsx scripts/test-browser-private-profiles.mts
 
+      - name: Owned history UI (production CSS, synthetic privacy and owner races)
+        run: node --import tsx scripts/test-browser-owned-history.mts
+
       - name: Private verified identity UI (production CSS, synthetic consent and owner isolation)
         run: node --import tsx scripts/test-browser-profile-identities.mts
 

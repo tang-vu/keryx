@@ -27,6 +27,7 @@
     "scripts/test-personal-history-postgres.mts",
     "scripts/test-run-privacy-postgres.mts",
     "scripts/test-personal-history-mcp-package.mts",
+    "scripts/test-browser-owned-history.mts",
     "scripts/test-server-profile-identities-origin.mts",
     "scripts/test-profile-identities-postgres.mts",
     "scripts/test-browser-profile-identities.mts",

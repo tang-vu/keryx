@@ -34,3 +34,41 @@ The web starts on the existing ledger. Owned history is an explicit opt-in, so p
 keeps its old default while explicit v2 still fails closed without admitted capability.
 The optional membership consumer remains unbacked by a real #267 producer; these corrections
 add no activation, schema, financial mutation or account-wide ownership claim.
+
+## Current-main convergence and hosted acceptance wiring
+
+The normal merge of accepted main `9cc54ec6` into reviewed history `e89f8ffe`
+preserves both parents. Only remote and stdio MCP files join contributions:
+generated research-presentation labels coexist with the unchanged strict owned
+history schemas, request-local current-key fence and fixed key-only HTTPS bridge.
+Presentation language is not a history filter, ownership grant or stored answer
+language. Privacy/claim feature flags remain OFF; the prior session ledger stays
+the default and explicit v2 still refuses absent admitted capabilities.
+
+The existing hosted built-stdio history check now covers v2 read/export,
+revocation refusal, forbidden owner/language selectors and credential/custody
+exclusion alongside all v1 assertions. It uses the real built package with fixed
+synthetic HTTPS responses, not an actual backend or publication receipt.
+The existing isolated network-none PostgreSQL privacy check now composes the
+actual ordinary Supabase ownership/privacy/receipt adapters with the shared v2
+reader/export. It checks claimed and recorded owners, foreign exclusion, exact
+micro-USDC, receipt-I/O erasure, financial retention and enrolled-store refusal.
+All DDL and claims in that check belong to its already owned synthetic container;
+no production schema authority or membership producer is added.
+
+Hosted Chromium checks the actual history components with production CSS after
+a successful stock BUILD_ID: legacy default, unavailable versus empty, paging,
+safe original text, exact recorded amount, report/export, synthetic revision
+mutations, wallet-switch stale response isolation, signout and phone width.
+The fixture uses synthetic auth/transport with every unexpected request blocked;
+it does not establish actual Next routing, backend admission or customer delivery.
+Local stock build is not retried to work around the retained QA junction.
+
+These are source-wired gates, not passed hosted acceptance. Root owns the final
+canonical source epoch, exact-head aggregate/build/domain/package/browser CI,
+independent combined review and delivery. Current-source local check results and
+native signal/EOF qualifications belong in the convergence handoff. Original
+#268 remains open: recorded all-surface attribution and a real stored multiwallet
+provider remain capability gaps; synthetic membership fixtures are not that
+producer. The original criteria and actual deployment/distribution acceptance
+remain separate from source convergence, with no new paid or human trial gate.
