@@ -205,6 +205,17 @@ shared treasury account for automatic gas relay needs explicit role/nonce and
 allowance acceptance; copying its key into a sponsor variable alone is not that
 review. No new wallet creation is requested by this candidate.
 
+After the owner asked to locate the previously selected wallet with approximately
+one USDC, a read-only mainnet balance at `2026-10-12T03:49:07.980Z` identified the
+existing public-fee EOA `0xdbd07d89eb85d7a36fb204b2a4d2aa68735c24e1` with
+`1043503668200545505` native wei (`1.043503668200545505` USDC). Protected local
+configuration already retains its `KERYX_MAINNET_PUBLIC_FEE_PRIVATE_KEY`; no key
+value was emitted or copied. Prior handoff evidence records this EOA providing
+the creator's registration gas gift. It is the existing-account candidate for
+the sponsor review, not a new wallet or an already enabled relay. This dated
+balance is neither an approved allowance nor proof of unencumbered gas capacity;
+fresh role/nonce/custody and finite-liability checks remain required.
+
 Eligibility requires an allowlisted EOA on the selected network, a matching
 connected wallet/SIWE creator session, approved deployment origin, a verified exact
 HTTPS publisher/feed on the same origin, fresh publishing-control proof within
