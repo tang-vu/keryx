@@ -5,9 +5,12 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile, symlink } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { chromium, type Browser } from "playwright";
 import { copyNextConfigFixture } from "../test-support/next-config-fixture";
 import { SqliteAdapter } from "../lib/db/sqlite-adapter";
+import { installSqliteApplicationSchema } from "../lib/db/sqlite-application-schema";
+import { RUN_PRIVACY_SQL } from "../lib/db/run-privacy-sqlite";
 import { issueWebSession } from "../lib/auth-session";
 
 assert.deepEqual(process.argv.slice(2), ["--acceptance"]);
@@ -33,7 +36,14 @@ try {
   // Reuse the actual build on Linux. Dependencies resolve through the unchanged
   // repository ancestry; do not add/alter node_modules links, loaders or config.
   await symlink(dist, join(fixture, ".next"), "dir");
-  database = new SqliteAdapter(join(fixture, "data", "keryx.sqlite"));
+  const databasePath = join(fixture, "data", "keryx.sqlite");
+  // Privacy rollout stays explicit: install only in this fresh UUID-owned fixture.
+  const bootstrap = new DatabaseSync(databasePath);
+  try {
+    installSqliteApplicationSchema(bootstrap);
+    bootstrap.exec(RUN_PRIVACY_SQL);
+  } finally { bootstrap.close(); }
+  database = new SqliteAdapter(databasePath);
   await database.init();
   assert(database.privateProfiles && database.publicProfiles && database.runPrivacy);
   const alice = `0x${"a".repeat(40)}`, secret = randomBytes(32).toString("hex");
