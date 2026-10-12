@@ -1,5 +1,52 @@
 # Current Arc mainnet deployment
 
+## October 12 live Conzit gas pilot
+
+Application **0.27.62**, source `d7f79046874899c0df4bd29b927349d627805f1e`, is live on Arc mainnet.
+Accepted PR/main CI preceded deployment. Public [/api/health](https://keryx.cc/api/health)
+and the [Conzit publishing-control page](https://keryx.cc/claim-source?url=https%3A%2F%2Fconzit.com%2F&rss=https%3A%2F%2Fconzit.com%2Frss.xml)
+returned HTTP 200 at `2026-10-12T12:45:15.336Z`, with exact `d7f79046` / Arc / V3 health.
+Postflight completed at `12:43:03.623Z`: normal boot, existing private holds and the
+financial-original digest were preserved. Normal public admission resumed at `12:44:11.714Z`.
+Both existing listings retain V1 creator/payout/price authority. Scoped cursors read back
+V1 `25583527`, V3 `25583532`; the retained global cursor stayed `25558372`.
+
+V3 CREATE confirmed in block `25564218`, transaction
+`0x553aed2b7063fcf0b9d517adb4e1eec5a1718d32d33b12a045a52cc61bfa81f8`.
+The existing public-fee EOA `0xdbd07d89eb85d7a36fb204b2a4d2aa68735c24e1` paid
+`0.039205040001960252` native USDC deployment gas. This is contract deployment cost,
+not a creator registration or reward. Current and retained registry addresses are below.
+
+The installed policy allows only `https://conzit.com`: **0.04 native USDC/original,
+0.08/day, 0.20/lifetime**, at most five attempts/day and five total, two per wallet and per publisher origin,
+with 1,000,000 gas and 40 gwei ceilings. Its fixed window is
+`2026-10-12T10:39:10.054Z` to `2026-10-13T10:39:10.054Z` (October 13 **17:39:10.054 Vietnam time** end).
+Policy digest: `0x961e313198b014bc0ed4f4328b63e7bb36d21f473fc8ca5686a0c1b376d737eb`.
+There is no automatic renewal, funding or top-up; other activations retain their explicit gates.
+
+Authenticated SIWE acceptance passed all 13 assertions for the selected fee EOA:
+exact sponsor availability and Conzit origin, unverified preparation refused with
+`403 proof_required`, signout acknowledged, replayed cookie rejected with `401`, and
+sponsor unavailable after signout. It did not prove Conzit publishing control or submit
+any creator registration. The creator must still verify control and sign the registration.
+
+Retained receipt SHA-256: postflight `c40f55fea824eb9fa792ceb380a215b1e6f8594bcd4fbf552bdb9c11956dc799`;
+front-door clear `b5488e1dda6c9dacaa8294c4a733d0ad8cff56126b57bf21f20ebcd77932f183`;
+public readback `24f45bf693646d372612242a0b2b1882562bf5d0b3c26eb98ce29476c2c9d64c`;
+authenticated availability `3f3834a1504f5a2db7411796de9f0d52c911b9fc288b1e3b71bf8696fdd62c63`.
+The Arc Canteen product announcement was acknowledged at `12:47:35Z` (HTTP 200,
+delivery known); receipt `0db56487b7c7ca11eea7240177ad20fe55b1da9b66a1d6bcb09f18bf8ebf143f`.
+It names Arc mainnet and makes no traction claim; historical event/profile settings were retained.
+
+Earlier accepted `b6009528` and `2f47a2d4` / 0.27.61 evidence retains its original source/profile.
+The [v0.27.62](https://github.com/tang-vu/keryx/releases/tag/v0.27.62) small source/checksum manifests
+name `d7f79046`, MCP **0.4.18** and Operator installer **0.4.16**. The MCP manifest records
+`npmRegistryPublished: false`; this limited readback does not verify npm or binary byte equality.
+The one-shot mainnet source backup's read-only full typed-pair proof is
+`d099899511523050385a562faa22d4f2487b0a819f79d6254c967d22a060423d`.
+The ordinary storage-identity snapshot's mainnet network-classification refusal remains open;
+its scanner/runtime was not weakened. See [pilot authority and channel boundaries](creator-registration-sponsorship.md).
+
 October 6 distribution observation (`2026-10-06T04:05:21.690Z`):
 [v0.27.0](https://github.com/tang-vu/keryx/releases/tag/v0.27.0) binds source
 `df17c4243e87cb2ea7cefebe0e8f20befb1f9890` ([PR 185](https://github.com/tang-vu/keryx/pull/185));
@@ -94,7 +141,9 @@ of the production host's private provider configuration.
 | Explorer | `https://explorer.arc.io` |
 | Circle Gateway API | `https://gateway-api.circle.com` |
 | CCTP domain | `26` |
-| Production SourceRegistry, observed through health | [`0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb) |
+| Production SourceRegistry V3, observed October 12 | [`0x2217250019ab614dae7391d346d05c3fc4d71ae1`](https://explorer.arc.io/address/0x2217250019ab614dae7391d346d05c3fc4d71ae1) |
+| V3 deploy block / runtime code hash | `25564218` / `0xc915aed2667848d7a52af54c6202940116145dca6f7dbb8a9c58ce8335740fb9` |
+| Retained V1 authority, first health observation October 4 | [`0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb), deploy block `23910720` |
 
 Creator payout wallets, caller session signers and merchant payees are workflow-specific.
 Read their authoritative mainnet registry or current quote; an old testnet address
@@ -133,7 +182,7 @@ explicitly carried forward as an unresolved quality, security or operational gat
 
 ## Delivery and evidence limits
 
-The observed hosted release is [v0.26.8](https://github.com/tang-vu/keryx/releases/tag/v0.26.8)
+The October 4 hosted release observation is [v0.26.8](https://github.com/tang-vu/keryx/releases/tag/v0.26.8)
 at `1297d43f7c1a8356ceccac061b1cba65b93d2819`. Its GitHub assets include MCP 0.4.3
 and Windows desktop 0.4.3; the public npm registry independently reported
 `keryx-mcp` 0.4.3 on October 4. Remote MCP protocol 0.2.0 and extension source 0.1.1
@@ -142,7 +191,7 @@ explicit buyer handoff; extension and bots remain hosted research adapters.
 Publication does not establish that every installed client has updated. See
 [surface parity](surface-parity.md) for artifact and role-specific evidence.
 
-The health snapshot recorded zero payments and zero creator payouts in the current
+That October 4 health snapshot recorded zero payments and zero creator payouts in the current
 ledger. It does not establish mainnet paid adoption, profitability, external audit
 closure or complete useful synthesis. Hosted capacity is explicitly `not-probed`;
 the public Monthly quote returned HTTP 503 during this documentation check, so
