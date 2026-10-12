@@ -12,6 +12,7 @@ import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { SUPPORT_MAILTO } from "@/lib/public-support";
+import { setupCopy } from "@/locales/en/get-started";
 
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
@@ -44,6 +45,9 @@ const HOUSE: FooterLink[] = [
 
 // Current configured contract references; historical receipt links keep their original rail.
 const DOCS: FooterLink[] = [
+  { label: setupCopy.navigation.start, href: "/get-started" },
+  { label: setupCopy.navigation.download, href: "/download" },
+  { label: setupCopy.navigation.integrations, href: "/integrations" },
   { label: productGuideCopy("product.support"), href: SUPPORT_MAILTO, external: true },
   { label: message("shellFooter.github"), href: "https://github.com/tang-vu/keryx", external: true },
   { label: message("shellFooter.registryContract"), href: `${EXPLORER}/address/${REGISTRY}#code`, external: true },

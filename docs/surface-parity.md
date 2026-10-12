@@ -1,5 +1,15 @@
 # Supported-surface release parity
 
+## App62 setup discovery — October 12 source candidate
+
+App/OpenAPI **0.27.62** adds indexed setup, download and integration guides for web,
+Windows desktop, extension, remote/stdio MCP, API, CLI and bots. Download examples
+pin independently published v0.27.61 artifacts; source availability is separate
+from installation. Existing client/payment protocols and packaged runtime inputs
+retain their original versions and authority. No new package or installer runtime
+is needed for web-only guides. Exact-source CI, source review, deployment and public
+readback remain delivery gates. See [the source-backed design and surface audit](engineering/website-setup-2026-10-12.md).
+
 ## App60 product clarity — October 12 source candidate
 
 App/OpenAPI **0.27.60** explains the research product, publishes indexed pricing/

@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+## Make installation and integrations discoverable — 2026-10-12
+
+Owner requested complete website guidance for app installation, MCP, API,
+extensions and other supported channels, learning applicable patterns from
+ChatGPT, Claude and other AI websites. Use a visible Get started entry, a download
+page with verified platform artifacts and an integration guide organized by
+workflow. Keep the existing paper/ink visual system and English shipped UI.
+
+Use explicit requirements, installation steps, copyable examples and support
+links. Preserve different hosted, caller-funded and local Operator roles; never
+infer OAuth, store approval, unattended execution, cross-device synchronization
+or payment authority from another product's design. Pin actually published
+artifacts independently of the web release. See [design sources and the complete
+surface audit](docs/engineering/website-setup-2026-10-12.md).
+
 ## Resume only the admitted creator gas transaction — 2026-10-12
 
 The owner requested completing creator registration gas sponsorship. Retain the

@@ -13,6 +13,8 @@ for eligible creator rewards.
 
 **[Guided recorded walkthrough](https://keryx.cc/walkthrough)** ·
 **[Live app](https://keryx.cc)** · **[Public proof](https://keryx.cc/proof)** ·
+**[Get started](https://keryx.cc/get-started)** · **[Downloads](https://keryx.cc/download)** ·
+**[MCP, API, CLI & bots](https://keryx.cc/integrations)** ·
 **[Dated quality scorecard](https://keryx.cc/quality)** ·
 **[Archived QA walkthrough (2m40s, app 0.27.43, recorded Oct 8)](https://github.com/tang-vu/keryx/releases/download/v0.27.43/keryx-current-release-6e591603-archived-qa-05.mp4)**.
 Reopens an archived first-party report and receipt; no new research was submitted.
