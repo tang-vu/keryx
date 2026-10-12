@@ -29,6 +29,7 @@ import { API_KEY_SCOPES } from "./api-key-scopes";
 import { profileIdentityOpenApiPaths } from "./profiles/identity-openapi";
 import { decisionReviewOpenApiPaths } from "./research/decision-review-openapi";
 import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
+import { registrationSponsorOpenApiPaths, registrationSponsorOpenApiSchemas } from "./sources/registration-sponsor-openapi";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
   supportedA2aPackageVersions,
@@ -100,6 +101,7 @@ export const openapiSpec = {
       ...paidJobEscalationOpenApiSchemas,
       ...paperOpenApiSchemas,
       ...sourceClaimOpenApiSchemas,
+      ...registrationSponsorOpenApiSchemas,
       ...runClaimOpenApiSchemas,
       ReferenceExport: {
         type: "object", required: ["content", "count", "omitted"],
@@ -641,6 +643,7 @@ export const openapiSpec = {
     ...profileIdentityOpenApiPaths,
     ...paperOpenApiPaths,
     ...sourceClaimOpenApiPaths,
+    ...registrationSponsorOpenApiPaths,
     "/api/source/{id}": {
       get: {
         operationId: "readRegisteredSource", summary: "Read an eligible registered source bundle",

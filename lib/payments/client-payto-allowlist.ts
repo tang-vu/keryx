@@ -13,6 +13,7 @@ export interface IndexedSource {
 export type SourceIndex = ReadonlyMap<string, IndexedSource>;
 
 export interface SourcePaymentAuthority {
+  registryAuthority?: SourceRegistryAuthority;
   wallets: ReadonlySet<string>;
   /** Exact payout wallet for source fetch tolls; author wallets are citation-only. */
   fetchPayTo: string;
@@ -62,6 +63,7 @@ export async function resolveSourcePaymentAuthority(
   switch (allowlist.status) {
     case "onchain":
       return {
+        ...(registryAuthority ? { registryAuthority } : {}),
         wallets: allowlist.wallets,
         fetchPayTo: allowlist.payoutWallet.toLowerCase(),
         creator: allowlist.creator,

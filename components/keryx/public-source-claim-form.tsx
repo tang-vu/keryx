@@ -13,11 +13,12 @@ import { PublicSourceClaimPolicy } from "./public-source-claim-policy";
 import { claimRequest } from "./public-source-claim-api";
 import { ClaimControlStatus, ClaimTime } from "./public-source-claim-status";
 import { PublicSourceClaims } from "./public-source-claims";
+import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
 
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
 
-interface InitialClaim extends SourceClaimDraft { rssUrl?: string; name?: string }
+interface InitialClaim extends SourceClaimDraft { name?: string }
 interface ProofState { challenge: SourceClaimChallenge; proof: SourceClaimProof; proofUrl: string; proofToken?: string }
 const actionStyle = "min-h-11 border border-ink bg-seal px-4 py-2.5 text-sm text-paper disabled:cursor-not-allowed disabled:opacity-50";
 function parseProofState(data: Record<string, unknown>, owner: string | undefined, network: string, canonicalUrl?: string): ProofState {
@@ -42,6 +43,7 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "" }: { ini
   const enabled = accountMatches && draftMatches && wallet.chainId === profile.chainId;
   const identity = `${owner ?? ""}:${wallet.address?.toLowerCase() ?? ""}:${wallet.chainId ?? ""}:${enabled}`;
   const [url, setUrl] = useState(initial.url ?? "");
+  const [feedUrl, setFeedUrl] = useState(initial.rssUrl ?? "");
   const [proofMethod, setProofMethod] = useState<SourceClaimProofMethod>("website-file");
   const [selection, setSelection] = useState<SourceClaimDraft>(initial);
   const selectionRef = useRef(selection);
@@ -69,7 +71,8 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "" }: { ini
     setReviewRevision(value => value + 1);
     setProofMethod(next.proofMethod ?? "website-file");
     setUrl(next.canonicalUrl);
-    const draft = { url: next.canonicalUrl, claimId: next.id, ...(next.publicReferenceId ? { referenceId: next.publicReferenceId } : {}), owner: next.ownerWallet };
+    setFeedUrl(next.rssUrl ?? "");
+    const draft = { url: next.canonicalUrl, ...(next.rssUrl ? { rssUrl: next.rssUrl } : {}), claimId: next.id, ...(next.publicReferenceId ? { referenceId: next.publicReferenceId } : {}), owner: next.ownerWallet };
     setSelection(draft);
     window.history.replaceState(window.history.state, "", sourceClaimTarget(draft));
     return next;
@@ -89,6 +92,7 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "" }: { ini
         if (data.challenge) {
           const saved = parseProofState(data, owner, profile.networkId);
           setProofMethod(saved.challenge.proofMethod ?? "website-file");
+          setFeedUrl(saved.challenge.rssUrl ?? "");
           setNow(Date.now()); setSnapshot({ identity: captured, claim: relatedClaim(data.claim, saved.challenge), proof: saved });
         } else if (data.claim) acceptClaim(data.claim, captured);
         else setSnapshot({ identity: captured, claim: null, proof: null });
@@ -105,12 +109,14 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "" }: { ini
     busy.current = true; setLoading(true); setMessage("");
     try {
       const canonicalUrl = canonicalSourceUrl(claim?.canonicalUrl ?? url.trim());
-      const rssUrl = claim?.rssUrl ?? (initial.rssUrl && initial.url === canonicalUrl ? initial.rssUrl : proofMethod === "rss-channel" ? canonicalUrl : undefined);
+      const rssUrl = claim?.rssUrl ?? (feedUrl.trim() ? canonicalSourceUrl(feedUrl.trim()) : proofMethod === "rss-channel" ? canonicalUrl : undefined);
+      if (rssUrl && new URL(rssUrl).origin !== new URL(canonicalUrl).origin) throw new Error(copy.feedOriginUnavailable);
       const data = await claimRequest("/api/source-claims/challenge", { canonicalUrl, ...(rssUrl ? { rssUrl } : {}), ...(proofMethod === "rss-channel" ? { proofMethod } : {}), ...(selection.referenceId && selection.url === canonicalUrl ? { publicReferenceId: selection.referenceId } : {}) });
       if (!current(token, captured)) return;
       const issued = parseProofState(data, owner, profile.networkId, canonicalUrl);
       setNow(Date.now()); setSnapshot({ identity: captured, claim: data.claim ? relatedClaim(data.claim, issued.challenge) : claim, proof: issued });
-      const draft = { url: canonicalUrl, challengeId: issued.challenge.id, ...(selection.referenceId && selection.url === canonicalUrl ? { referenceId: selection.referenceId } : {}), owner };
+      setFeedUrl(issued.challenge.rssUrl ?? "");
+      const draft = { url: canonicalUrl, ...(rssUrl ? { rssUrl } : {}), challengeId: issued.challenge.id, ...(selection.referenceId && selection.url === canonicalUrl ? { referenceId: selection.referenceId } : {}), owner };
       // Retain source context, not a local assertion of verification or monetization.
       setSelection(draft); window.history.replaceState(window.history.state, "", sourceClaimTarget(draft));
       setMessage(proofMethod === "rss-channel" ? uiCopy("sourceClaimForm.publishToken") : uiCopy("sourceClaimForm.publishFile"));
@@ -131,7 +137,7 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "" }: { ini
   };
   const copyProof = async () => { if (!proof) return; try { await navigator.clipboard.writeText(proof.challenge.proofMethod === "rss-channel" ? proof.proofToken! : JSON.stringify(proof.proof, null, 2)); setMessage(uiCopy("sourceClaimForm.copied")); } catch { setMessage(uiCopy("sourceClaimForm.copyUnavailable")); } };
   const downloadProof = () => { if (!proof) return; const objectUrl = URL.createObjectURL(new Blob([JSON.stringify(proof.proof, null, 2)], { type: "application/json" })); const a = document.createElement("a"); a.href = objectUrl; a.download = "keryx-source-claim.json"; a.click(); URL.revokeObjectURL(objectUrl); };
-  const connectHref = sourceClaimConnectHref({ ...selection, url: url || selection.url, owner: selection.owner ?? wallet.address?.toLowerCase() });
+  const connectHref = sourceClaimConnectHref({ ...selection, url: url || selection.url, rssUrl: feedUrl || undefined, owner: selection.owner ?? wallet.address?.toLowerCase() });
   const browsingClaims = !selection.url && !selection.claimId && !selection.challengeId;
   const ownedClaims = enabled && owner ? <PublicSourceClaims key={identity} owner={owner} network={profile.networkId} enabled={!loading} now={now} /> : null;
   return <div className="mt-8 space-y-6">
@@ -140,6 +146,9 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "" }: { ini
       <h2 id="claim-source-url-title" className="font-display text-2xl">{uiCopy("sourceClaimForm.choose")}</h2>
       <label htmlFor="claim-source-url" className="block text-sm">{uiCopy("sourceClaimForm.urlLabel")}</label>
       <input id="claim-source-url" type="url" value={url} onChange={event => setUrl(event.target.value)} readOnly={!!claim || !!proof} placeholder="https://your-site.example/article" className="min-h-11 w-full min-w-0 border border-line bg-paper px-3 text-sm" />
+      <label htmlFor="claim-feed-url" className="block text-sm">{copy.feedUrlLabel}</label>
+      <input id="claim-feed-url" type="url" value={feedUrl} onChange={event => setFeedUrl(event.target.value)} readOnly={!!claim?.rssUrl || !!proof} className="min-h-11 w-full min-w-0 border border-line bg-paper px-3 text-sm" />
+      <p className="text-sm leading-relaxed text-ink-2">{copy.feedUrlExplanation}</p>
       <p className="text-sm leading-relaxed text-ink-2">{uiCopy("sourceClaimForm.supportedProof")}</p>
       {enabled && <fieldset disabled={loading} className="space-y-2 text-sm"><legend className="mb-2 font-semibold">{uiCopy("sourceClaimForm.proofMethod")}</legend><label className="flex min-h-11 items-center gap-2"><input type="radio" name="claim-proof-method" checked={proofMethod === "website-file"} onChange={() => setProofMethod("website-file")} />{uiCopy("sourceClaimForm.websiteMethod")}</label><label className="flex min-h-11 items-center gap-2"><input type="radio" name="claim-proof-method" checked={proofMethod === "rss-channel"} onChange={() => setProofMethod("rss-channel")} />{uiCopy("sourceClaimForm.feedMethod")}</label><p className="text-ink-2">{uiCopy("sourceClaimForm.feedPair")}</p></fieldset>}
       {(claim || proof || selection.url || selection.claimId) && <Link href="/claim-source" className="inline-block min-h-11 py-2 text-sm underline">{uiCopy("sourceClaimForm.anotherSource")}</Link>}

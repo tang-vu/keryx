@@ -21,10 +21,12 @@ import type { KeryxDB } from "../lib/db/keryx-db";
 import type { RegistrationSponsorContext } from "../lib/sources/registration-sponsor-service";
 import type { SourceRegistryAuthority } from "../lib/registry/source-registry-authority";
 import { sourceInputs } from "../lib/evals/paying-source-study/source-inputs";
+import { FUNDED_BASELINE, inspectFundedBaseline, verifyFundedBaseline, type FundedBaselineBinding } from "./helpers/registration-sponsor-funded-baseline.mjs";
 
 export const TESTNET_SPONSOR = "0x384462d9d8e2645a017e4ef34a0cdfd91b4b97cd" as const;
 export const TESTNET_CREATOR = "0xc5965e3175ef063faeb8bcd3abe2d25b5d27d586" as const;
 const ORIGIN = "https://registration-sponsor-funded.test.invalid";
+const SUPPLEMENT_ORIGIN = "https://registration-sponsor-funded-expiry.test.invalid";
 const RPC = "https://rpc.testnet.arc.network";
 export const FUNDED_SCENARIOS = ["normal", "authorization-interrupt", "raw-interrupt", "ack-lost", "expired-original"] as const;
 export type FundedScenario = typeof FUNDED_SCENARIOS[number];
@@ -34,17 +36,29 @@ const sha256 = (value: string | Buffer) => createHash("sha256").update(value).di
 function fail(): never { throw new Error("Funded testnet acceptance refused; preserve original state"); }
 
 /** The fifth attempt cannot increase the original 0.16 native test-USDC money cap. */
-export const fundedFixturePolicySchema = z.object({
-  format: z.literal("keryx-registration-sponsor-funded-acceptance-v1"), sourceCommit: z.string().regex(/^[a-f0-9]{40}$/),
+const fixtureFields = {
+  sourceCommit: z.string().regex(/^[a-f0-9]{40}$/),
   runId: z.string().uuid(), creator: z.literal(TESTNET_CREATOR), claimEvidence: z.literal("controlled-testnet-fixture"),
   sponsorKeyField: z.literal("AGENT_FUNDER_PRIVATE_KEY"), creatorKeyField: z.literal("SELLER_PRIVATE_KEY"),
   policy: registrationSponsorPolicySchema,
-}).strict().refine(value => value.policy.network === "eip155:5042002" && value.policy.deploymentOrigin === ORIGIN &&
+};
+const ordinaryFixtureSchema = z.object({ format: z.literal("keryx-registration-sponsor-funded-acceptance-v1"), ...fixtureFields }).strict();
+const supplementFixtureSchema = z.object({ format: z.literal("keryx-registration-sponsor-funded-expiry-supplement-v1"), ...fixtureFields,
+  baseline: z.object({ reportSha256: z.literal(FUNDED_BASELINE.reportSha256), policyDigest: z.literal(FUNDED_BASELINE.policyDigest),
+    sourceCommit: z.literal(FUNDED_BASELINE.sourceCommit), sourceDigest: z.literal(FUNDED_BASELINE.sourceDigest),
+    actualGasWei: z.literal(FUNDED_BASELINE.actualGasWei), expiredOriginalId: z.literal(FUNDED_BASELINE.expiredOriginalId),
+    aggregateCapWei: z.literal(FUNDED_BASELINE.aggregateCapWei) }).strict(),
+}).strict();
+export const fundedFixturePolicySchema = z.union([ordinaryFixtureSchema, supplementFixtureSchema]).refine(value => value.policy.network === "eip155:5042002" &&
   value.policy.sponsorAddress === TESTNET_SPONSOR && canonicalJson(value.policy.allowlistedCreators) === canonicalJson([TESTNET_CREATOR]) &&
   value.policy.registryAddress === "0x75403cf34cedf107735209abdd1ecd111d5e10b3" &&
   value.policy.maxGas === 1_000_000 && value.policy.maxFeePerGasWei === "40000000000" && value.policy.maxTransactionWei === "40000000000000000" &&
-  value.policy.maxDailyWei === "160000000000000000" && value.policy.maxLifetimeWei === "160000000000000000" &&
-  value.policy.maxRegistrationsPerWallet === 5 && value.policy.maxRegistrationsPerDay === 5 && value.policy.maxRegistrationsTotal === 5,
+  (value.format === "keryx-registration-sponsor-funded-expiry-supplement-v1"
+    ? value.policy.deploymentOrigin === SUPPLEMENT_ORIGIN && value.runId !== FUNDED_BASELINE.runId &&
+      value.policy.maxDailyWei === "40000000000000000" && value.policy.maxLifetimeWei === "40000000000000000" &&
+      value.policy.maxRegistrationsPerWallet === 1 && value.policy.maxRegistrationsPerDay === 1 && value.policy.maxRegistrationsTotal === 1
+    : value.policy.deploymentOrigin === ORIGIN && value.policy.maxDailyWei === "160000000000000000" && value.policy.maxLifetimeWei === "160000000000000000" &&
+      value.policy.maxRegistrationsPerWallet === 5 && value.policy.maxRegistrationsPerDay === 5 && value.policy.maxRegistrationsTotal === 5),
 "Exact bounded fixture policy required");
 export type FundedFixturePolicy = z.infer<typeof fundedFixturePolicySchema>;
 const sourceBindingSchema = z.object({ format: z.literal("keryx-funded-testnet-source-binding-v1"),
@@ -115,7 +129,7 @@ export function readFundedCustody(path: string) {
 }
 
 export function fundedCanonicalUrl(manifest: FundedFixturePolicy, scenario: FundedScenario) {
-  return `${ORIGIN}/${manifest.runId}/${scenario}`;
+  return `${manifest.policy.deploymentOrigin}/${manifest.runId}/${scenario}`;
 }
 export function fundedFixtureOriginal(manifest: FundedFixturePolicy, scenario: FundedScenario, nonce: bigint, now: number): SponsoredRegistration {
   const canonicalUrl = fundedCanonicalUrl(manifest, scenario), urlHash = keccak256(toBytes(canonicalUrl));
@@ -125,13 +139,13 @@ export function fundedFixtureOriginal(manifest: FundedFixturePolicy, scenario: F
     registryAddress: manifest.policy.registryAddress, registryCodeHash: manifest.policy.registryCodeHash, relayer: TESTNET_SPONSOR, chainId: 5042002,
     params: { urlHash, payoutWallet: TESTNET_CREATOR, authors: [{ wallet: TESTNET_CREATOR, basisPoints: 10000 }],
       fetchPriceUsdc6: "1000", contentCid: "", tags: "keryx-testnet-acceptance,fixture-publisher" }, nonce: nonce.toString(),
-    deadline: Math.floor(Math.min(now + (scenario === "expired-original" ? 60_000 : 600_000), manifest.policy.expiresAt) / 1000),
+    deadline: Math.floor(Math.min(now + (scenario === "expired-original" ? 300_000 : 600_000), manifest.policy.expiresAt) / 1000),
     createdAt: now, updatedAt: now, reservedWei: manifest.policy.maxTransactionWei, state: "prepared" };
   row.id = registrationIntentDigest(row); return row;
 }
-export function fundedFixtureClaim(row: SponsoredRegistration, now: number) {
+export function fundedFixtureClaim(row: SponsoredRegistration, now: number, deploymentOrigin = ORIGIN) {
   return sourceClaimSchema.parse({ id: row.claimId, ownerWallet: row.creator, canonicalUrl: row.canonicalUrl, rssUrl: row.rssUrl,
-    network: "eip155:5042002", deploymentOrigin: ORIGIN, registryAddress: row.registryAddress, verifiedAt: new Date(now).toISOString(),
+    network: "eip155:5042002", deploymentOrigin, registryAddress: row.registryAddress, verifiedAt: new Date(now).toISOString(),
     effectiveAt: new Date(now).toISOString(), revision: 1, linkedSourceId: row.sourceId, onchainId: row.onchainId,
     mode: "free", distributionPermission: false, proofMethod: "website-file" });
 }
@@ -145,11 +159,12 @@ CREATE TABLE fixture_events(sequence INTEGER PRIMARY KEY,scenario TEXT NOT NULL,
 CREATE TRIGGER fixture_events_immutable BEFORE UPDATE ON fixture_events BEGIN SELECT RAISE(ABORT,'immutable'); END;
 CREATE TRIGGER fixture_events_retained BEFORE DELETE ON fixture_events BEGIN SELECT RAISE(ABORT,'retained'); END;
 CREATE TABLE fixture_index(id TEXT PRIMARY KEY,value TEXT NOT NULL) STRICT;`;
-export function initializeFundedFixture(db: DatabaseSync, manifest: FundedFixturePolicy, sourceBinding: FundedSourceBinding) {
+export function initializeFundedFixture(db: DatabaseSync, manifest: FundedFixturePolicy, sourceBinding: FundedSourceBinding, baselineBinding?: FundedBaselineBinding) {
   const parsed = fundedFixturePolicySchema.parse(manifest);
+  if ((parsed.format === "keryx-registration-sponsor-funded-expiry-supplement-v1") !== !!baselineBinding) fail();
   db.exec("BEGIN IMMEDIATE");
   try { db.exec(SCHEMA); db.prepare("INSERT INTO fixture_manifest VALUES(1,?)").run(canonicalJson({ configuration: parsed,
-    sourceBinding: sourceBindingSchema.parse(sourceBinding) })); db.exec("COMMIT"); }
+    sourceBinding: sourceBindingSchema.parse(sourceBinding), ...(baselineBinding ? { baselineBinding } : {}) })); db.exec("COMMIT"); }
   catch (error) { db.exec("ROLLBACK"); throw error; }
 }
 export function acquireFundedFixtureLock(db: DatabaseSync, scenario: string, resume: boolean,
@@ -175,7 +190,7 @@ function selectRuntime(manifest: FundedFixturePolicy) {
     KERYX_REGISTRY_READ_ADDRESS: manifest.policy.registryAddress, NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS: manifest.policy.registryAddress,
     KERYX_REGISTRY_VERSION: "3", NEXT_PUBLIC_KERYX_REGISTRY_VERSION: "3", KERYX_REGISTRY_DEPLOY_BLOCK: "66758711",
     KERYX_REGISTRY_ORIGINS: canonicalJson([fundedRegistryAuthority(manifest)]),
-    NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS: canonicalJson([fundedRegistryAuthority(manifest)]), BASE_URL: ORIGIN });
+    NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS: canonicalJson([fundedRegistryAuthority(manifest)]), BASE_URL: manifest.policy.deploymentOrigin });
 }
 async function storageFacade(native: DatabaseSync) {
   const core = await import("../lib/db/registration-sponsor");
@@ -312,6 +327,7 @@ async function main() {
     console.log("Bounded real TESTNET fixture acceptance; never mainnet, creates no wallet and never funds.\n" +
       "Actions: initialize, admit, start, resume, resolve-expired, reconcile, report.\n" +
       "All: --state-directory ABSOLUTE_PRIVATE_DIRECTORY. initialize: --policy ABS --policy-sha256 SHA --custody-env ABS.\n" +
+      "Explicit one-attempt expiry supplement initialize also requires --baseline-state-directory ABS; old books remain read-only and immutable.\n" +
       "admit: --scenario NAME. start/resume/resolve-expired: --scenario NAME --original-id HASH --expected-sponsor-nonce INTEGER --custody-env ABS.\n" +
       "reconcile: --scenario NAME --original-id HASH. report is keyless/read-only.\n" +
       "Crash exit codes 77/78/79 are intentional after native commits. Explicit resume owns stale local process lock recovery.\n" +
@@ -322,7 +338,7 @@ async function main() {
     if (!["initialize", "admit", "start", "resume", "resolve-expired", "reconcile", "report"].includes(action)) fail();
     const { values } = parseArgs({ args, strict: true, options: { "state-directory": { type: "string" }, policy: { type: "string" },
       "policy-sha256": { type: "string" }, "custody-env": { type: "string" }, scenario: { type: "string" },
-      "original-id": { type: "string" }, "expected-sponsor-nonce": { type: "string" } } });
+      "original-id": { type: "string" }, "expected-sponsor-nonce": { type: "string" }, "baseline-state-directory": { type: "string" } } });
     const directory = values["state-directory"]!; assertFundedPrivatePath(directory, true);
     const file = join(directory, "funded-registration.sqlite");
     if (action === "initialize") {
@@ -332,24 +348,32 @@ async function main() {
       const manifest = fundedFixturePolicySchema.parse(JSON.parse(bytes.toString("utf8")));
       if (manifest.policy.expiresAt <= Date.now() || manifest.policy.expiresAt > Date.now() + 24 * 3600_000) fail();
       const binding = captureFundedSourceBinding(); if (binding.headCommit !== manifest.sourceCommit) fail();
+      const baselineBinding = manifest.format === "keryx-registration-sponsor-funded-expiry-supplement-v1"
+        ? inspectFundedBaseline(values["baseline-state-directory"]!, assertFundedPrivatePath) : undefined;
+      if (values["baseline-state-directory"] && !baselineBinding || baselineBinding?.directory === directory) fail();
       const fd = fs.openSync(file, "wx", 0o600); fs.closeSync(fd); assertFundedPrivatePath(file, false);
       native = new DatabaseSync(file); native.exec("PRAGMA synchronous=FULL; PRAGMA journal_mode=DELETE; PRAGMA busy_timeout=1000");
-      initializeFundedFixture(native, manifest, binding); console.log(JSON.stringify({ status: "initialized", network: "eip155:5042002", policyDigest: registrationPolicyDigest(manifest.policy),
+      initializeFundedFixture(native, manifest, binding, baselineBinding); console.log(JSON.stringify({ status: "initialized", network: "eip155:5042002", policyDigest: registrationPolicyDigest(manifest.policy),
+        ...(baselineBinding ? { baseline: verifyFundedBaseline(baselineBinding, assertFundedPrivatePath) } : {}),
         sourcePin: verifyFundedSourceBinding(binding), sponsor: TESTNET_SPONSOR, creator: TESTNET_CREATOR })); return;
     }
-    if (values.policy || values["policy-sha256"]) fail(); assertFundedPrivatePath(file, false);
+    if (values.policy || values["policy-sha256"] || values["baseline-state-directory"]) fail(); assertFundedPrivatePath(file, false);
     native = new DatabaseSync(file, { readOnly: action === "report" });
     if (action !== "report") native.exec("PRAGMA synchronous=FULL; PRAGMA busy_timeout=1000");
     const retained = JSON.parse(String(native.prepare("SELECT value FROM fixture_manifest WHERE singleton=1").get()?.value));
     const manifest = fundedFixturePolicySchema.parse(retained.configuration), sourcePin = verifyFundedSourceBinding(retained.sourceBinding);
     if (sourcePin.declaredCommit !== manifest.sourceCommit) fail();
+    const baseline = manifest.format === "keryx-registration-sponsor-funded-expiry-supplement-v1"
+      ? verifyFundedBaseline(retained.baselineBinding, assertFundedPrivatePath) : undefined;
     selectRuntime(manifest);
     const db = await storageFacade(native);
     if (action === "report") {
       if (values.scenario || values["original-id"] || values["expected-sponsor-nonce"] || values["custody-env"]) fail();
-      const originals = await Promise.all(FUNDED_SCENARIOS.map(scenario => db.getRegistrationSponsor!({ wallet: TESTNET_CREATOR, canonicalUrl: fundedCanonicalUrl(manifest, scenario) })));
+      const scenarios = manifest.format === "keryx-registration-sponsor-funded-expiry-supplement-v1" ? ["expired-original" as const] : FUNDED_SCENARIOS;
+      const originals = await Promise.all(scenarios.map(scenario => db.getRegistrationSponsor!({ wallet: TESTNET_CREATOR, canonicalUrl: fundedCanonicalUrl(manifest, scenario) })));
       const rows = originals.filter((row): row is SponsoredRegistration => !!row), actual = rows.reduce((total, row) => total + BigInt(row.actualGasWei ?? "0"), BigInt(0));
-      console.log(JSON.stringify({ network: "eip155:5042002", claimEvidence: manifest.claimEvidence, policyDigest: registrationPolicyDigest(manifest.policy), sourcePin,
+      console.log(JSON.stringify({ format: manifest.format, network: "eip155:5042002", claimEvidence: manifest.claimEvidence, policyDigest: registrationPolicyDigest(manifest.policy), sourcePin,
+        ...(baseline ? { baseline, aggregateActualGasWei: (BigInt(baseline.baselineActualGasWei) + actual).toString(), baselineNativeFingerprintSha256: retained.baselineBinding.nativeFingerprintSha256 } : {}),
         registry: manifest.policy.registryAddress, creator: TESTNET_CREATOR, sponsor: TESTNET_SPONSOR, admitted: rows.length,
         maxLifetimeWei: manifest.policy.maxLifetimeWei, actualGasWei: actual.toString(),
         originals: rows.map(row => ({ id: row.id, scenario: FUNDED_SCENARIOS.find(scenario => fundedCanonicalUrl(manifest, scenario) === row.canonicalUrl),
@@ -359,6 +383,7 @@ async function main() {
         productionActivated: false, publisherControlAccepted: false })); return;
     }
     const scenario = scenarioSchema.parse(values.scenario);
+    if (manifest.format === "keryx-registration-sponsor-funded-expiry-supplement-v1" && scenario !== "expired-original") fail();
     if ((action === "admit" || action === "reconcile") && (values["custody-env"] || values["expected-sponsor-nonce"]) || action === "admit" && values["original-id"]) fail();
     const custody = ["start", "resume", "resolve-expired"].includes(action) ? readFundedCustody(values["custody-env"]!) : undefined;
     const expectedNonce = custody ? z.coerce.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).parse(values["expected-sponsor-nonce"]) : undefined;
@@ -371,7 +396,7 @@ async function main() {
     if (action === "admit") {
       if (!original) {
         original = fundedFixtureOriginal(manifest, scenario, await chain.registrationNonce(TESTNET_CREATOR), Date.now());
-        const claim = fundedFixtureClaim(original, Date.now());
+        const claim = fundedFixtureClaim(original, Date.now(), manifest.policy.deploymentOrigin);
         native.prepare("INSERT INTO sync_state VALUES(?,?,?)").run("keryx:source-claims:v1:claim:" + claim.id, canonicalJson(claim), new Date().toISOString());
         original = await db.admitRegistrationSponsor!(manifest.policy, original);
       }

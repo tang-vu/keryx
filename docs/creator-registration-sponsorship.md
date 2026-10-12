@@ -52,6 +52,12 @@ The service reads the retained claim history before preparing or submitting.
 Proof of publishing control does not establish content redistribution rights;
 the existing source-policy and distribution-permission gates remain separate.
 
+The claim page accepts an optional exact same-origin HTTPS RSS URL with the
+website-file proof and preserves it through wallet sign-in and proof reload.
+After verification it offers a direct sponsored-registration handoff for an
+eligible publisher. Conzit's draft pairs `https://conzit.com/` with
+`https://conzit.com/rss.xml`; this draft establishes no ownership or registration.
+
 EIP-712 supplies typed hashing and domain separation, while application and
 contract nonces supply replay protection. The standard does not provide replay
 protection by itself. See [EIP-712](https://eips.ethereum.org/EIPS/eip-712) and the

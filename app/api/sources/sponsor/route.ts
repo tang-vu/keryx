@@ -48,7 +48,8 @@ export async function GET(req: Request) {
     return response({ available: true, network: ctx.policy.network, registryAddress: ctx.policy.registryAddress,
       sponsorAddress: ctx.policy.sponsorAddress, policyDigest: registrationPolicyDigest(ctx.policy),
       maxGasWei: ctx.policy.maxTransactionWei, requiresPublishingProof: true,
-      ...(ctx.policy.allowlistedPublisherOrigins?.length ? { publisherOrigins: ctx.policy.allowlistedPublisherOrigins } : {}) });
+      ...(ctx.policy.allowlistedPublisherOrigins?.length && !ctx.policy.allowlistedCreators.includes(session.address.toLowerCase() as `0x${string}`)
+        ? { publisherOrigins: ctx.policy.allowlistedPublisherOrigins } : {}) });
   } catch { return response({ available: false }); }
 }
 export async function POST(req: Request) {

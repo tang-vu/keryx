@@ -112,7 +112,7 @@ a distributed custody/clone-exclusion guarantee.
 | `authorization-interrupt` | Process exits `77` in the signing callback, after durable creator authority and reserved sponsor nonce but before signed sponsor bytes; explicit resume retains the same intent/nonce/reservation. |
 | `raw-interrupt` | Process exits `78` in the broadcast callback, after exact raw/hash retention but before any broadcast; explicit resume broadcasts those same bytes without another signature. |
 | `ack-lost` | One real broadcast succeeds, then process exits `79` before returning its acknowledgment; keyless reconciliation finds the same receipt without rebroadcast. |
-| `expired-original` | An explicitly short 60-second fixture deadline and signing interruption retain the original. After two actual attested chain deadline observations, explicit gas-paying resolution sends the exact expired calldata/nonce/fees and must produce a real reverted receipt, charge its gas and retain the consumed attempt. No source event/index is created. |
+| `expired-original` | Newly prepared fixtures use a 300-second setup deadline. Signing interruption retains the original. After two actual attested chain deadline observations, explicit gas-paying resolution sends the exact expired calldata/nonce/fees and must produce a real reverted receipt, charge its gas and retain the consumed attempt. No source event/index is created. The earlier unsigned 60-second original below remains unchanged. |
 
 Publishing-control rows and URLs are explicitly controlled fixtures, with no
 content distribution permission. They do not prove SIWE/browser acceptance,
@@ -153,12 +153,95 @@ reports there when execution creates them. Archive and verify these artifacts
 before any worktree cleanup; they are not generated files to discard. No keys or
 raw bearer transactions belong in Git, public reports or logs.
 
-At this document's preparation, deployment proof above was complete; funded
-registration scenarios still awaited the final source/origin freeze and execution.
-Their final report must identify the source pin, exact policy, all immutable
-original IDs/nonces/hashes, real receipts/events/gas, durable origin projections
-and cursor, plus the explicit expired-original revert. Preserve every unresolved
-original with its full hold if any gate fails. Mainnet sponsored availability,
-new live creator eligibility and legacy V1 continuity still require their own
-reviewed production configuration, real mainnet receipt and applicable release
-acceptance; no testnet evidence changes their network or authority.
+The original frozen report was captured before further source changes:
+`frozen-five-attempt-report-51708.json`, SHA256
+`4a53fa1953f3207eb360271c3c0a9023386fea59b0e25bd60175c00c8feb9365`.
+It binds clean HEAD `51708d76e39a11622cf58729a2bfac0bfc24e2b6`, tracked tree
+`233d138aaf1ae218f648b32bb7020605d3f4b90b`, Node `v24.21.0`, 307 actual
+application/dependency-declaration inputs and source digest
+`0eb86f972b4ea1704c4cfd54e07a00a5b721d5ba1d1a6301b7497fa39d24120a`.
+The exact original policy digest was
+`0xc03dab66b51407aac227af9f14171c815cd0f340449c96297328a7fd9cad56dd`,
+wrapper SHA256
+`a96a9aa75429dccf7232f1a34d769de400b5330688d1d51022d0f66baece7755`,
+expiry `1791864973292` milliseconds. The source report makes no hosted-CI claim.
+
+### Original cohort results: four real successes and one unsigned expiry
+
+| Scenario | Sponsor nonce | Real transaction | Receipt block / gas used | Actual native gas, wei |
+| --- | --- | --- | --- | --- |
+| `normal` | `132` | `0x4b29ca0be1b7379abf28f9ea942f07ed097493bf8d1ee5283d2d2af9b660f966` | `66762478` / `332396` | `6647920000332396` |
+| `authorization-interrupt` | `133` | `0xf76d0f6a8fc3291dd529858c16a5030d93aeba03bdc80c11fb139a67d1ea445a` | `66762841` / `298208` | `5964160000298208` |
+| `raw-interrupt` | `134` | `0x91e13d6e567b11d6a8578b4a44919fcf9df5f83822a57d8890bc2f14e6ac06e5` | `66763151` / `298208` | `5964160000298208` |
+| `ack-lost` | `135` | `0xac73f6cf2f3e652ba0914ba4c2b6a3a66c4f77f8dff6e38aad0623da71867d32` | `66763464` / `298196` | `5963920000298196` |
+| Original `expired-original` | none retained | no signed sponsor transaction or broadcast | conclusively unsigned-expired | `0` |
+
+All four receipts were successful, with effective gas price `20000000001` wei.
+Total registration gas was `24540160001227008` wei, or
+**0.024540160001227008 native test USDC**, below the unchanged 0.16 allowance.
+One signing and one broadcast were recorded for each confirmed original.
+Authorization interruption recovered the retained creator signature and nonce;
+raw interruption recovered the exact previously retained bytes/hash without a
+second signing; lost acknowledgment completed through keyless receipt inspection
+without rebroadcast. Real source records preserved the original creator/payTo,
+author split, price, tags/CID and revision. Real app indexer projections and durable
+origin sidecars read back correctly; the scoped cursor reached `66763609` and
+never imported the old singleton checkpoint. Creator edit simulation succeeded
+and sponsor edit simulation returned the explicit `NotCreator` error.
+
+Original request IDs were respectively
+`0x4f415206b04b08c593a359d72f075a156d96418d3846dc0f69ca43da8bf322cd`,
+`0x5117ceb7bf6a693563a57cbe37616534b273a81db731183efdbba197f87ebbb7`,
+`0x86fa1dda57d9ae3136d21790f170bcb49392a3e587102f0bef178c4d6b135a7d`,
+`0xa23cc0db27b11dec074070d34318766100f9aff34d8186bcd89cb4f356d17b06`
+and `0xa2a3df62572210b0f3e19a8a9574397ed4c5ef2824fe1a8d0fd3d5ccbb8acf7f`.
+Creator registration nonces were 0 through 3 for the real successful transactions; the
+unsigned fifth retained creator nonce 4 but no sponsor nonce/hash/execution.
+
+The fifth fixture's 60-second deadline was too short for coordination/process
+setup. It elapsed before service signing admission, so the service expired its
+unsigned original and released only its monetary hold. Its fifth attempt remains
+consumed. No signing/submission uncertainty remained. This result is unsigned
+expiry containment, **not funded expired-original resolution**; it cannot be
+reported as five financial scenarios passing.
+
+### Explicit supplemental expiry cohort
+
+After observing the closed original books, the coordinating owner-authorized flow
+admits one supplemental sixth test attempt under the same cumulative **0.16**
+registration money authority, without another deployment, wallet, funding or
+mainnet action. It uses a new run ID and distinct deployment origin
+`https://registration-sponsor-funded-expiry.test.invalid`, the same verified V3
+and existing testnet identities, a separate private SQLite journal, and maximum
+transaction/day/lifetime **0.04** with per-wallet/day/total counts **one**.
+Its newly prepared expiry deadline is 300 seconds. No original row, deadline,
+policy, count or hold is rewritten or reset.
+
+The explicit format is `keryx-registration-sponsor-funded-expiry-supplement-v1`.
+Initialization additionally requires `--baseline-state-directory` pointing to the
+retained original private directory. The
+[`read-only baseline helper`](../../scripts/helpers/registration-sponsor-funded-baseline.mts)
+checks the exact frozen report, five retained originals, four real confirmed
+charges, one unsigned expiry, zero uncertain originals and exhausted original
+count five. It fingerprints all original native books and verifies that same
+read-only fingerprint before every supplemental action/report. The verified original
+native fingerprint is hard-pinned at initialization and every subsequent action:
+`f7db56a58a67d257221d5e947896388ec522befd9c37a2c81954e01b8e2b9814`.
+The original database stays read-only; the real core recovery reader validates a
+bounded in-memory copy of its consistent native snapshot, including retained
+policy/original lineage and private execution hashes. Each fixture table is capped
+at 512 records before copying; a different closed journal with the same totals
+cannot substitute for this fingerprint. The budget bound
+is `24540160001227008 + 40000000000000000 = 64540160001227008` wei, or
+**0.064540160001227008** maximum combined registration exposure, below 0.16.
+This supplemental cohort must be named separately in source/execution reports;
+its receipt must not be relabelled as the original fifth attempt.
+
+At this update, the original report above is captured and supplemental source/
+policy review and a new exact-source freeze precede its execution. Funded expired
+resolution remains open until its real reverted receipt, exact original identity,
+actual gas, absent source event/index and released execution barrier are recorded.
+Mainnet sponsored availability, new live creator eligibility and legacy V1
+continuity still require their reviewed production configuration, real mainnet
+receipt and applicable release acceptance. No testnet evidence changes its network
+or authority, establishes external publisher control or becomes creator revenue.

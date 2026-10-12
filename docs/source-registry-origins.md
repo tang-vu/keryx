@@ -37,6 +37,25 @@ desktop, extension and bot research roles consume the same hosted catalog and
 payment paths; they gain no publisher or sponsor custody. The historical testnet
 backfill refuses origin-profile mode.
 
+The mainnet signer worker and headless web CLI independently resolve each ID from
+the hosted catalog, then check its exact allowed origin, code and declared version
+at one pinned block with a final block-hash reread. Their catalog response cannot
+enroll an origin. Headless operators must supply the reviewed public origin JSON
+in both `KERYX_REGISTRY_ORIGINS` and `NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS`, alongside
+matching mainnet network settings; copy the public deployment profiles from the
+reviewed release configuration, never infer them from a sign request or arbitrary
+API response. A client without these pins refuses bound sources before signing.
+Existing installations must update that configuration before using the mixed
+registry catalog; no new key, funding, creator registration or custody migration
+is required. Single-registry unbound catalogs keep their previous configuration.
+
+New native claim payments compare the claim to the stored immutable source
+origin inside the financial writer transaction. The testnet-only durable-v3
+original lane additionally retains the exact origin in its context and checks
+the current stored binding before a new authorization. Historical originals
+continue to verify and replay their original evidence without current RPC or
+origin-config inference. This does not activate that lane on mainnet.
+
 The indexer maintains a separate checkpoint for each network/address/version/code
 hash. A unique V1 origin may bootstrap from historical `lastSyncedBlock` after
 code, chain and head-window checks. V2/V3 never inherit that cursor and scan their

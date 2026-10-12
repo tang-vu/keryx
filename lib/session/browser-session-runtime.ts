@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { sameRegistryAuthority, sourceRegistryAuthoritySchema } from "../registry/source-registry-authority-schema";
+import { browserSourceRegistryAuthorityForSource } from "../registry/browser-source-registry-authority";
 import { recoverMessageAddress, type Hex } from "viem";
 import { ARC_MAINNET_PROFILE as profile } from "../arc-network-profile";
 import { canonicalJson } from "../canonical-json";
@@ -42,6 +44,7 @@ const challengeSchema = z.object({ sessionId: addr, reqId: z.string().uuid(), gr
 });
 export type BrowserSessionAuthorizationBinding = z.infer<typeof challengeSchema>;
 const sourceIndexSchema = z.array(z.object({ id: z.string(), onchainId: z.string().regex(/^0x[0-9a-f]{64}$/).optional(),
+  registryAuthority: sourceRegistryAuthoritySchema.optional(),
   sourceClaimId: z.string().regex(/^[a-f0-9]{64}$/).optional() })).max(1000);
 const itemSchema = z.object({ itemId: z.string().min(1).max(1024), contentVersion: z.string().min(1).max(256) }).passthrough();
 const previewSchema = z.object({ sourceId: z.string(), item: itemSchema, payTo: addr,
@@ -109,7 +112,9 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
       const sources = sourceIndexSchema.parse(Array.isArray(indexBody) ? indexBody : (indexBody as { sources?: unknown })?.sources);
       const entry = sources.find(source => source.id === challenge.sourceId);
       if (!entry?.onchainId) refuse();
+      const expectedOrigin = browserSourceRegistryAuthorityForSource(entry!, profile);
       const authority = await dependencies.readSource(entry!.onchainId!);
+      if (expectedOrigin && (!authority.registryAuthority || !sameRegistryAuthority(expectedOrigin, authority.registryAuthority))) refuse();
       const requirements = challenge.requirements, payTo = requirements.payTo;
       if (!authority.active || !authority.onchain || (challenge.kind === "fetch"
         ? payTo !== authority.fetchPayTo.toLowerCase() : !authority.wallets.has(payTo))) refuse();
@@ -120,6 +125,7 @@ export function createBrowserSessionRuntime(key: SessionRuntimeKey, dependencies
         const claim = sourceClaimSchema.parse((body as { claim?: unknown })?.claim);
         if (entry!.sourceClaimId !== expected.id || claim.linkedSourceId !== challenge.sourceId ||
             claim.onchainId !== entry!.onchainId || claim.network !== profile.networkId ||
+            expectedOrigin && claim.registryAddress !== expectedOrigin.address ||
             claim.deploymentOrigin !== key.context.origin || claim.ownerWallet !== authority.creator.toLowerCase() ||
             !sameSourceClaim(claim, expected) || !claimControlIsFresh(claim) || Date.parse(claim.effectiveAt) > Date.now() || !claim.distributionPermission ||
             (challenge.kind === "fetch" ? claim.mode !== "paid" || authority.listPriceUsdc <= 0 :

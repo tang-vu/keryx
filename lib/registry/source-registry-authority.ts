@@ -1,35 +1,27 @@
 import { z } from "zod";
-import { canonicalJson } from "../canonical-json";
 import { config } from "../config";
 import { getBrowserRegistryVersion, getServerRegistryVersion } from "./registry-version";
-
-const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/).refine(value => !/^0x0{40}$/i.test(value)).transform(value => value.toLowerCase() as `0x${string}`);
-export const sourceRegistryAuthoritySchema = z.object({
-  network: z.enum(["eip155:5042", "eip155:5042002"]), address,
-  version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  codeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform(value => value.toLowerCase() as `0x${string}`),
-  deployBlock: z.string().regex(/^(0|[1-9]\d{0,19})$/),
-}).strict();
-export type SourceRegistryAuthority = z.infer<typeof sourceRegistryAuthoritySchema>;
+import { sameRegistryAuthority, sourceRegistryAuthoritySchema, type SourceRegistryAuthority } from "./source-registry-authority-schema";
+export { sameRegistryAuthority, sourceRegistryAuthoritySchema, type SourceRegistryAuthority } from "./source-registry-authority-schema";
 const originsSchema = z.array(sourceRegistryAuthoritySchema).min(1).max(4);
 const publicOrigins = () => process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS;
 const network = () => config.networkId ?? config.profile?.networkId;
-const version = () => typeof window === "undefined" ? getServerRegistryVersion() : getBrowserRegistryVersion();
+// Dedicated signer workers have no window, but retain browser build-pinned authority.
+const browserRuntime = () => typeof window !== "undefined" ||
+  (globalThis as typeof globalThis & { WorkerGlobalScope?: unknown }).WorkerGlobalScope !== undefined;
+const version = () => browserRuntime() ? getBrowserRegistryVersion() : getServerRegistryVersion();
 
 /** Explicit deployment allowlist. An API response never enrolls a new registry. */
 export function configuredRegistryAuthorities(): SourceRegistryAuthority[] {
   const text = config.registryOrigins ?? "";
   if (!text) return [];
   if (text.length > 8192) throw new Error("Registry origin configuration is unavailable");
-  if (typeof window === "undefined" && (process.env.KERYX_REGISTRY_ORIGINS !== text || publicOrigins() !== text))
+  if (!browserRuntime() && (process.env.KERYX_REGISTRY_ORIGINS !== text || publicOrigins() !== text))
     throw new Error("Server and browser registry origins differ");
   const origins = originsSchema.parse(JSON.parse(text));
   if (origins.some(origin => origin.network !== network()) || new Set(origins.map(origin => origin.address)).size !== origins.length)
     throw new Error("Registry origins must be unique and belong to this network");
   return origins;
-}
-export function sameRegistryAuthority(left: SourceRegistryAuthority, right: SourceRegistryAuthority): boolean {
-  return canonicalJson(sourceRegistryAuthoritySchema.parse(left)) === canonicalJson(sourceRegistryAuthoritySchema.parse(right));
 }
 export function assertConfiguredRegistryAuthority(input: SourceRegistryAuthority): SourceRegistryAuthority {
   const authority = sourceRegistryAuthoritySchema.parse(input);

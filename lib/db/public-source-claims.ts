@@ -12,6 +12,8 @@ import { config } from "../config";
 import { operatingFeeContextSchema, operatingFeeMaxMicroUsdc, operatingFeePolicySchema, operatingFeePolicyDigest, operatingFeeRequestHash,
   OPERATING_FEE_SOURCE_ID, OPERATING_FEE_POLICY_KEY_PREFIX } from "../payments/operating-fee-policy";
 import { hostedTreasuryPolicySchema } from "../payments/hosted-treasury-policy";
+import { readSqliteSourceRegistryOrigin } from "./source-registry-origin";
+import { sourceRegistryAuthorityForSource } from "../registry/source-registry-authority";
 
 const PREFIX = "keryx:source-claims:v1:";
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -238,10 +240,16 @@ export function assertSqliteSourceClaimPaymentPolicy(db: DatabaseSync, input: {
     return null;
   }
   const expected = sourceClaimReceiptSchema.parse(input.expected), now = input.now ?? Date.now();
+  // Read the immutable source sidecar under this same financial writer transaction.
+  const authority = sourceRegistryAuthorityForSource({
+    onchainId: source?.onchain_id ? String(source.onchain_id) : undefined,
+    registryAuthority: source?.onchain_id ? readSqliteSourceRegistryOrigin(db, String(source.onchain_id)) : undefined,
+  });
   if (claim.id !== expected.id || claim.revision !== expected.revision || claim.mode !== expected.mode ||
     claim.effectiveAt !== expected.effectiveAt || claim.verifiedAt !== expected.verifiedAt ||
     claim.network !== input.network || claim.deploymentOrigin !== new URL(config.baseUrl).origin ||
-    claim.registryAddress !== config.registryReadAddress?.toLowerCase() || !claimControlIsFresh(claim, now) ||
+    claim.registryAddress !== (authority?.address ?? config.registryReadAddress?.toLowerCase()) ||
+    authority && authority.network !== input.network || !claimControlIsFresh(claim, now) ||
     Date.parse(claim.effectiveAt) > now || !claim.distributionPermission || claim.mode === "free" ||
     input.kind === "fetch" && claim.mode !== "paid") throw new Error("Current source claim policy does not admit this new payment");
   if (!source || source.active === 0 || source.verified !== 1 || source.scholarly_enrolled === 1 ||
