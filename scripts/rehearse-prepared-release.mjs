@@ -86,19 +86,42 @@ export async function startPreparedPublicRole(source, env, scratch, label, spawn
     });
   });
   exited.catch(() => {});
-  const ready = await Promise.race([
-    new Promise(resolve => child.once('message', resolve)),
-    exited.then(exit => {
-      const error = Error('Prepared public server exited before readiness; inspect its retained output');
-      error.rehearsal = { phase: 'before-readiness', exit, source, logFile,
-        outputBytes: retained.length, outputSha256: createHash('sha256').update(retained).digest('hex'),
-        outputTail: retained.subarray(-8192).toString('utf8'), capture: capture() };
-      throw error;
-    }),
-  ]);
-  assert.equal(ready.ready, true); assert.equal(ready.source, source);
-  assert.equal(ready.physicalHost, '127.0.0.1'); assert.equal(ready.physicalPort, 3940);
-  return { child, exited, output: () => retained.toString('utf8'), capture };
+  const role = { child, exited, output: () => retained.toString('utf8'), capture };
+  try {
+    const ready = await Promise.race([
+      new Promise(resolve => child.once('message', resolve)),
+      exited.then(exit => {
+        const error = Error('Prepared public server exited before readiness; inspect its retained output');
+        error.rehearsal = { phase: 'before-readiness', exit, source, logFile,
+          outputBytes: retained.length, outputSha256: createHash('sha256').update(retained).digest('hex'),
+          outputTail: retained.subarray(-8192).toString('utf8'), capture: capture() };
+        throw error;
+      }),
+    ]);
+    assert.equal(ready.ready, true); assert.equal(ready.source, source);
+    assert.equal(ready.physicalHost, '127.0.0.1'); assert.equal(ready.physicalPort, 3940);
+    return role;
+  } catch (error) {
+    // The caller has not received this owned handle yet. A refused readiness
+    // receipt must not strand it outside the rehearsal's graceful-drain finally.
+    if (!closed) {
+      let closedReceipt;
+      try { closedReceipt = await drainPreparedPublicRole(role); }
+      catch (drainError) {
+        const refusal = Error('Prepared readiness refused and graceful drain was not verified; retain owned-role evidence', { cause: drainError });
+        refusal.rehearsal = { phase: 'readiness-refused', exit, capture: capture(),
+          closedReceipt: drainError.rehearsal?.closedReceipt ?? null, drainAccepted: false };
+        throw refusal;
+      }
+      error.rehearsal = { phase: 'readiness-refused', exit, capture: capture(), closedReceipt, drainAccepted: true };
+    } else if (!error.rehearsal) {
+      // Readiness can win the race before close, but assert only after close.
+      // Keep that refusal's evidence without signaling an already-closed child
+      // or replacing the richer existing before-readiness failure qualification.
+      error.rehearsal = { phase: 'readiness-refused', exit, capture: capture(), closedReceipt: null, drainAccepted: false };
+    }
+    throw error;
+  }
 }
 
 export async function readPreparedPublicHealth(commit) {

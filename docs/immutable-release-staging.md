@@ -176,6 +176,16 @@ not an old/new-version financial-worker drain, mainnet schema compatibility,
 rollback acceptance or a production availability promise. A failure retains its
 candidate and scratch evidence; no release cleanup command is provided.
 
+An invalid readiness receipt must also retain ownership of the spawned rehearsal
+role until the existing graceful shutdown and pipe-close checks finish. It cannot
+throw away the handle before the outer rehearsal's drain handler can receive it.
+The refusal retains exit/capture evidence; failed drain or incomplete output stays
+a failure. This control launches no additional role and grants no production admission.
+If close wins the event ordering before an invalid readiness assertion resumes,
+the refusal still retains actual exit/capture/EOF with graceful drain unaccepted.
+It sends no further drain to that closed child and preserves existing rich
+before-readiness failure diagnostics.
+
 The production CI lane also runs `rehearse-built-release.mjs` against its existing
 completed build, without repeating the build or broad tests. It stages the exact
 Git source, compares every actual build-source file with that inventory, copies
@@ -392,3 +402,31 @@ Do not choose a numeric availability promise from this tiny synthetic fixture or
 remove the current early drain before those acceptance records exist. No paid
 exercise, new schedule, custody change or forced economic recovery is authorized
 by this plan.
+
+## Original #164 admission map — 2026-10-12
+
+[PR396](https://github.com/tang-vu/keryx/pull/396) merged as
+`c6215548afd112399b9523dd2cd5ca30415c2eb0` with 22 applicable successful checks;
+its publication-only skip is not acceptance. Its preparation/staging/rehearsal
+helpers remain in current source. Accepted production 0.27.59 at
+`513c6fa6b1f78b5f1db6b215973581ef3b51eb69` used the reviewed ordinary deployment,
+with accepted normal/public observations and cleared maintenance. That delivery
+does not admit the staged path or prove all immutable-release criteria. Subsequent
+main source is distinct from that production identity.
+
+| Original criterion | Retained evidence | Remaining admission gate |
+| --- | --- | --- |
+| Exact source/artifact checked before writer hold | PR396 isolated builder, immutable byte/trace inspection and accepted CI | Intended-host secret-free builder with actual mainnet public settings; three cwd extraction callers and writable-cache separation |
+| Positive drain and retained ambiguous state | Existing early-drain ordinary release; hosted rehearsal's idle web close | Every affected native writer and in-flight/ambiguous economic-state proof for the immutable transition; no forced termination or replay |
+| Storage/schema/rollback compatibility | Explicit protected compatibility binding and hold-for-review behavior | Actual sealed storage/schema/fence evidence and predecessor/candidate compatibility; crash/uncertain-ack and compatible compiled rollback |
+| Previously authorized roles, held schedules, exact health | Release59 normal/public acceptance on its ordinary source; staged role validation source | Full role/build/queue/internal/public observations for the admitted immutable cohort, preserving ENV/custody and held schedules |
+| Verified off-box rollback retention and scoped headroom | Source/artifact/headroom checks and no release-deletion command | Encrypted off-box retention plus independent retrieval of the exact rollback lineage before any deletion |
+| Measured rehearsal/ordinary release and practical availability target | Historical hosted idle fixture: startup1372ms, handover16714ms, post-drain readiness16288ms | Intended-host no-spend timing and a reviewed ordinary release measured with the same interval definition; grounded target and observed compliance |
+
+The hosted idle timings belong to their original CI cohort, not production59 or
+an intended-host availability target. A successful ordinary release establishes
+its own delivery; passive health/normal observations cannot substitute for staged
+builder, every-writer, schema, cache, compiled rollback or retrieval acceptance.
+The current early-drain deployment remains authoritative and original #164 stays
+OPEN until all original criteria and real delivery evidence are accepted. No
+additional paid trial, new funding, schedule or custody gate is introduced here.
