@@ -28,6 +28,7 @@ import { publicQueryRun } from "@/lib/research/public-query-run";
 import { DeliverableAcceptance } from "@/components/keryx/deliverable-acceptance";
 import { pagePrivacyActor } from "@/lib/run-privacy/auth";
 import { runPrivacyCopy } from "@/locales/en/run-privacy";
+import { ProductEntryNote } from "@/components/keryx/product-guide";
 
 const copy = createMessages("en");
 
@@ -198,6 +199,7 @@ export default async function DispatchPage({ params }: PageProps) {
       </header>
 
       <main className="mx-auto max-w-[1180px] px-4 pb-20 pt-10 sm:px-[30px]">
+        {dispatch.visibility === "public" && <ProductEntryNote />}
         {archive ? <HistoricalDispatchNote archive={archive} /> : null}
         {thread.parentUnavailable ? <p role="status" className="mb-6 max-w-[860px] font-serif text-sm text-ink-3">{copy("reportDispatch.parentUnavailable")}</p> : null}
         {parent ? (

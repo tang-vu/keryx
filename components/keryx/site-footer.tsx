@@ -10,6 +10,8 @@ import { browserPaymentProfile,browserRegistryAddress } from "@/lib/browser-paym
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
+import { productGuideCopy } from "@/locales/en/product-guide";
+import { SUPPORT_MAILTO } from "@/lib/public-support";
 
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
@@ -24,6 +26,9 @@ type FooterLink = { label: string; href: string; external?: boolean };
 // Product surfaces. "API for agents" is the OpenAPI reference (also the A2A entry point).
 const HOUSE: FooterLink[] = [
   { label: message("shellNavigation.ask"), href: "/" },
+  { label: productGuideCopy("product.pricing"), href: "/pricing" },
+  { label: productGuideCopy("product.about"), href: "/about" },
+  { label: message("shellNavigation.operator"), href: "/operator" },
   { label: message("shellNavigation.answers"), href: "/answers" },
   { label: message("shellNavigation.sources"), href: "/sources" },
   { label: message("shellNavigation.literature"), href: "/literature" },
@@ -39,6 +44,7 @@ const HOUSE: FooterLink[] = [
 
 // Current configured contract references; historical receipt links keep their original rail.
 const DOCS: FooterLink[] = [
+  { label: productGuideCopy("product.support"), href: SUPPORT_MAILTO, external: true },
   { label: message("shellFooter.github"), href: "https://github.com/tang-vu/keryx", external: true },
   { label: message("shellFooter.registryContract"), href: `${EXPLORER}/address/${REGISTRY}#code`, external: true },
   { label: message("shellFooter.usdcOnArc"), href: `${EXPLORER}/address/${USDC}`, external: true },

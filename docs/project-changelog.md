@@ -1,5 +1,19 @@
 # Keryx Project Changelog
 
+### Research product clarity and official support (source candidate)
+
+- Lead with cited AI research, visible source decisions and practical researcher,
+  builder/writer, creator and developer paths. Keep the question form prominent.
+- Add indexed pricing/about pages with checkout-derived examples, explicit
+  sponsored-public-trial and prepaid terms, proof links and **support@keryx.cc**.
+- Explain Keryx on public archive/report entry points. Correct stale `llms.txt`,
+  social metadata and the unqualified zero-price application offer without
+  removing historical, synthetic, confidence or payment-state disclosures.
+- Add credential-free built browser acceptance for content, amounts, metadata,
+  support, keyboard FAQ and 320/390/1024/1366px layouts. Package/payment authority
+  stays unchanged; [release gates](engineering/product-clarity-2026-10-12.md)
+  distinguish source acceptance, publication and deployment.
+
 ### Bounded source outcomes (source candidate)
 
 - Share one bounded source/topic outcome record across the creator page, public
