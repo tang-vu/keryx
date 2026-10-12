@@ -1,7 +1,7 @@
 import { formatRecordedAmount } from "@/lib/i18n/format";
 import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
-import { dispatchMetadataCopy } from "@/lib/i18n/report-metadata";
+import { closedDispatchMetadata, dispatchMetadataCopy, publicDispatchMetadata } from "@/lib/i18n/report-metadata";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   try {
     const dispatch = await resolveDispatch(id);
-    if (!dispatch || dispatch.visibility!=="public") return { title:copy("reportDispatch.fallbackTitle"),robots:{index:false,follow:false},referrer:"no-referrer" };
+    if (!dispatch || dispatch.visibility!=="public") return closedDispatchMetadata();
     const { run, archive } = dispatch;
     const snippet = run.answer.slice(0, 160).replace(/\n/g, " ");
     const cited = run.citations.length;
@@ -66,17 +66,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       confidence: conf ? String(conf.level) : undefined, count: cited, spent: formatRecordedAmount(run.totalSpent, { minimumFractionDigits: 4 }),
       creators: formatRecordedAmount(run.totalToCreators, { minimumFractionDigits: 4 }), excerpt: snippet,
     });
-    return {
-      title: copy("reportDispatch.title", { question: run.question }),
-      description: descriptions.description,
-      alternates: { canonical: `/dispatch/${id}` },
-      openGraph: {
-        title: copy("reportDispatch.title", { question: run.question }),
-        description: descriptions.openGraph,
-      },
-    };
+    return publicDispatchMetadata({ id, title: copy("reportDispatch.title", { question: run.question }),
+      description: descriptions.description, openGraphDescription: descriptions.openGraph });
   } catch {
-    return { title: copy("reportDispatch.fallbackTitle"), robots: { index: false } };
+    return closedDispatchMetadata();
   }
 }
 

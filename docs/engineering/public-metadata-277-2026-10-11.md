@@ -4,6 +4,22 @@ This change advances [issue 277](https://github.com/tang-vu/keryx/issues/277).
 English remains the only shipped interface locale. It changes public metadata
 and image assets; it does not activate Vietnamese or Chinese interfaces.
 
+The current report adapter explicitly marks its answer language UNKNOWN (`und`):
+QueryRun has no authoritative recorded output-language field. The shared answer
+renderer resets inherited English on answer text with `lang="und"`; citation UI
+labels remain English. This is a metadata attribute change, not translation,
+language detection, answer rewriting or a new language-activation flag. Public
+report head metadata retains one permalink and emits `DC.language=und` without
+language alternates. Twitter uses the same current report title/preview copy as
+Open Graph rather than inheriting the landing preview. The existing English
+wrapper is independent of any requested answer language.
+
+Private, unlisted, unknown and unavailable report heads replace root alternates,
+description and social metadata with the same closed nonindexed/no-referrer
+contract. File-based generic images keep their existing response behavior and
+never acquire private question text. Public structured-data visibility checks
+and omission of unrecorded answer language remain unchanged.
+
 ## Current public URLs
 
 The landing, archive and pagination, topic hubs, creator profiles, wanted pages,
@@ -38,6 +54,14 @@ synthetic public text, mock storage reads and refuse remote asset requests; they
 make no database writes or model/search/payment calls. PNG inspection is local
 rendering evidence, not a deployed link preview or remote indexing observation.
 
+After privacy admission was added, the preview test's dispatch mock needed an
+explicit public visibility. The corrected fixture now verifies that each real
+route passes its supplied Vietnamese/Chinese text to the real local font
+selector, in addition to producing PNGs. Unknown/private/unlisted dispatch input
+must produce identical generic PNGs for the same URL and never select hidden
+question text. Prior dimension-only tests with missing visibility do not prove
+that a current dispatch preview rendered its non-Latin question.
+
 Legal copy fixtures remain frozen. Their metadata assertions retain the original
 titles, descriptions and canonicals while checking the exact English alternate
 addition; all policy markup, link and copy-guard assertions remain unchanged.
@@ -56,13 +80,21 @@ Original private/unlisted acceptance still needs integrated tests once a reviewe
 visibility adapter exists, rather than synthetic flags being treated as authority.
 
 The full original issue remains open. Recorded answer-language production and
-storage, the answer's DOM language attribute, language-aware archive browsing,
+storage, the answer's correct known DOM language attribute, language-aware archive browsing,
 and actual report language in metadata/structured data/feed remain gates. Do not
 guess historical language from the question, viewer preference or script. Public
 Vietnamese/Chinese interface titles, descriptions, captions and structured data
 also need human locale/glossary review and actual published variants. Prepared
 locale URLs must not be advertised before that release. No new paid live trial
 is required for the frozen synthetic glyph tests.
+
+The necessary upstream input is a reviewed write-time record of actual output
+language with validated storage/public projection, separate from requested
+language or provider/prompt settings. This phase supplies no such record and
+does not invent a property, backfill, classifier or authority. Until that input
+exists, metadata and answer DOM stay UNKNOWN and no language-filtered archive
+or additional locale URL is advertised. #273's existing financial-copy gate is
+retained; this phase adds no translated financial text or new human/model trial.
 
 Web pages, sitemap, feed and social images are the applicable runtime surfaces.
 Shared public links opened from desktop, CLI, remote/stdio MCP, extensions and

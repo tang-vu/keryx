@@ -75,6 +75,7 @@ function renderWithCitations(
     const cite = citations.find((c) => c.marker === marker);
     nodes.push(
       <button
+        lang="en"
         key={`${keyBase}-c${idx}`}
         type="button"
         onClick={(event) => onCitationClick?.(marker, event.currentTarget)}
@@ -118,7 +119,7 @@ export function AnswerMarkdown({
     3,
   );
   return (
-    <div className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink [overflow-wrap:anywhere]", className)}>
+    <div lang="und" className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink [overflow-wrap:anywhere]", className)}>
       {blocks.map(({ trimmed, heading, list }, bi) => {
         if (list) return (
           <ul key={`b${bi}`} className="list-disc space-y-3 pl-6">
