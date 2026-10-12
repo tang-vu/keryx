@@ -3,19 +3,25 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterAll, afterEach, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
-import { recoverTypedDataAddress, type Hex } from "viem";
+import { recoverTypedDataAddress, encodeFunctionResult, keccak256, type Hex } from "viem";
+import { REGISTRY_ABI } from "../lib/registry/registry-abi";
+import type { SourceRegistryAuthority } from "../lib/registry/source-registry-authority";
 import { SiweMessage } from "siwe";
 import { ARC_MAINNET_PROFILE as profile } from "../lib/arc-network-profile";
 import { browserSessionCustodyContext } from "../lib/session/browser-session-custody";
 import { privateHeadlessTestDirectory } from "./helpers/headless-state-test-fixture";
 import { headlessCashoutFixture,testHeadlessWrapping } from "./helpers/headless-cashout-test-fixture";
 vi.stubEnv("KERYX_NETWORK","arc");vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK","arc");
+vi.stubEnv("KERYX_REGISTRY_ADDRESS",`0x${"33".repeat(20)}`);vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS",`0x${"33".repeat(20)}`);
+vi.stubEnv("KERYX_REGISTRY_READ_ADDRESS",undefined);vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS",undefined);
 const {runHeadlessMainnet}=await import("./web-client-mainnet.mjs");
-const roots:string[]=[];afterEach(()=>{for(const root of roots.splice(0))fs.rmSync(root,{recursive:true,force:true});vi.restoreAllMocks();});
+const {config}=await import("../lib/config");
+const previousConfig = { registryOrigins:config.registryOrigins, profile:config.profile, networkId:config.networkId };
+const roots:string[]=[];afterEach(()=>{for(const root of roots.splice(0))fs.rmSync(root,{recursive:true,force:true});vi.restoreAllMocks();vi.unstubAllGlobals();Object.assign(config,previousConfig);});
 afterAll(()=>vi.unstubAllEnvs());
 const owner=privateKeyToAccount(`0x${"11".repeat(32)}`),payout=privateKeyToAccount(`0x${"22".repeat(32)}`).address.toLowerCase();
 const epoch="00000000-0000-4000-8000-000000000001",reqId="00000000-0000-4000-8000-000000000002",nonce=`0x${"33".repeat(32)}`;
-function fixture(lost=false,duplicate=false){
+function fixture(lost=false,duplicate=false,registryAuthority?:SourceRegistryAuthority){
   const directory=privateHeadlessTestDirectory();roots.push(directory);
   vi.stubEnv("KERYX_HEADLESS_OWNER_PRIVATE_KEY",`0x${"11".repeat(32)}`);vi.stubEnv("KERYX_HEADLESS_WRAPPING_KEY",`0x${"55".repeat(32)}`);
   vi.stubEnv("KERYX_HEADLESS_STATE_DIRECTORY",directory);vi.stubEnv("KERYX_BASE_URL","https://keryx.cc");
@@ -43,7 +49,7 @@ function fixture(lost=false,duplicate=false){
       sourceId:"publication",kind:"fetch",expectedNonce:nonce,browserAuthorizationProtocol:"durable-v1",
       requirements:{scheme:"exact",network:profile.networkId,asset:profile.usdcAddress,amount:"1000",payTo:payout,maxTimeoutSeconds:604900,
         extra:{name:"GatewayWalletBatched",version:"1",verifyingContract:profile.gatewayWallet}}});
-    if(url.pathname==="/api/sources")return json({sources:[{id:"publication",onchainId:`0x${"44".repeat(32)}`} ]});
+    if(url.pathname==="/api/sources")return json({sources:[{id:"publication",onchainId:`0x${"44".repeat(32)}`,...(registryAuthority?{registryAuthority}:{})} ]});
     if(url.pathname==="/api/ask"){const notification=`event: sign-request\ndata: ${JSON.stringify({reqId,requirements:{network:"eip155:5042002",payTo:owner.address,amount:"999999"}})}\n\n`;return new Response(notification+(duplicate?notification:"")+`event: done\ndata: {"answer":"Synthetic hermetic answer"}\n\n`);}
     if(url.pathname==="/api/ask/sign"){
       const header=JSON.parse(atob(body.paymentHeader)),a=header.authorization;
@@ -66,6 +72,34 @@ it("normal mainnet headless uses authenticated challenge, native encrypted custo
   const f=fixture();vi.spyOn(console,"log").mockImplementation(()=>{});await runHeadlessMainnet(["ask","Synthetic question","1000","2000"],f.ports);
   expect(f.requests.filter(p=>p==="/api/ask/sign")).toHaveLength(1);expect(f.requests).not.toContain("/api/faucet");
   expect(fs.readFileSync(f.file).toString()).not.toContain("11".repeat(32));
+});
+it("default headless reader uses hosted retained V1 origin and rejects API enrollment without matching local pins",async()=>{
+  const legacy:SourceRegistryAuthority={network:profile.networkId,address:`0x${"88".repeat(20)}`,version:1,codeHash:keccak256("0x6000"),deployBlock:"1"};
+  const current={...legacy,address:`0x${"99".repeat(20)}` as Hex,version:3 as const,codeHash:keccak256("0x6001"),deployBlock:"2"};
+  const origins=JSON.stringify([legacy,current]);Object.assign(config,{registryOrigins:origins,profile,networkId:profile.networkId});
+  vi.stubEnv("KERYX_RPC_URL",profile.rpcUrl);
+  vi.stubEnv("KERYX_REGISTRY_ORIGINS",origins);vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS",origins);
+  const f=fixture(false,false,legacy),calls:Array<{method:string;params:unknown[]}>=[];
+  vi.spyOn(console,"log").mockImplementation(()=>{});
+  vi.stubGlobal("fetch",async(input:unknown,init:RequestInit)=>{
+    const req=JSON.parse(String(init.body));calls.push(req);expect(new URL(String(input)).origin).toBe(new URL(profile.rpcUrl).origin);
+    const result=req.method==="eth_chainId"?profile.chainIdHex:req.method==="eth_getCode"?"0x6000":req.method==="eth_getBlockByNumber"?
+      {number:"0x64",hash:`0x${"66".repeat(32)}`,timestamp:`0x${Math.floor(Date.now()/1000).toString(16)}`,transactions:[]}:
+      encodeFunctionResult({abi:REGISTRY_ABI,functionName:"get",result:{creator:payout as Hex,payoutWallet:payout as Hex,authors:[{wallet:payout as Hex,basisPoints:10000}],fetchPriceUsdc6:BigInt(1000),contentCid:"",tags:"",active:true}});
+    return Response.json({jsonrpc:"2.0",id:req.id,result});
+  });
+  await runHeadlessMainnet(["ask","Synthetic bound source","1000","2000"],{fetchImpl:f.ports.fetchImpl});
+  expect(calls.map(call=>call.method)).toContain("eth_call");
+  expect(f.requests.filter(p=>p==="/api/sources")).toHaveLength(2);
+  expect(f.requests.filter(p=>p==="/api/ask/sign")).toHaveLength(1);
+  for(const call of calls.filter(c=>c.method==="eth_call"||c.method==="eth_getCode")){
+    expect(call.method==="eth_call"?(call.params[0] as {to:string}).to:call.params[0]).toBe(legacy.address);
+    expect(call.params[1]).toBe("0x64");
+  }
+  const refused=fixture(false,false,legacy);Object.assign(config,{registryOrigins:""});vi.stubEnv("KERYX_REGISTRY_ORIGINS",undefined);vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS",undefined);
+  vi.spyOn(console,"error").mockImplementation(()=>{});const before=calls.length;
+  await runHeadlessMainnet(["ask","Synthetic missing pins","1000","2000"],{fetchImpl:refused.ports.fetchImpl});
+  expect(refused.requests).not.toContain("/api/ask/sign");expect(calls).toHaveLength(before);
 });
 it("lost signed response preserves originals and blocks a second research/signature",async()=>{
   const f=fixture(true),log=vi.spyOn(console,"log").mockImplementation(()=>{}),error=vi.spyOn(console,"error").mockImplementation(()=>{});

@@ -29,6 +29,7 @@ import { API_KEY_SCOPES } from "./api-key-scopes";
 import { profileIdentityOpenApiPaths } from "./profiles/identity-openapi";
 import { decisionReviewOpenApiPaths } from "./research/decision-review-openapi";
 import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
+import { registrationSponsorOpenApiPaths, registrationSponsorOpenApiSchemas } from "./sources/registration-sponsor-openapi";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
   supportedA2aPackageVersions,
@@ -57,7 +58,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.27.59",
+    version: "0.27.61",
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -100,6 +101,7 @@ export const openapiSpec = {
       ...paidJobEscalationOpenApiSchemas,
       ...paperOpenApiSchemas,
       ...sourceClaimOpenApiSchemas,
+      ...registrationSponsorOpenApiSchemas,
       ...runClaimOpenApiSchemas,
       ReferenceExport: {
         type: "object", required: ["content", "count", "omitted"],
@@ -642,6 +644,7 @@ export const openapiSpec = {
     ...profileIdentityOpenApiPaths,
     ...paperOpenApiPaths,
     ...sourceClaimOpenApiPaths,
+    ...registrationSponsorOpenApiPaths,
     "/api/source/{id}": {
       get: {
         operationId: "readRegisteredSource", summary: "Read an eligible registered source bundle",
