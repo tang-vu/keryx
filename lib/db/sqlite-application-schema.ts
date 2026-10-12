@@ -16,6 +16,7 @@ import { PRIVATE_RESEARCH_INTERRUPTION_SQL } from "./private-research-interrupti
 import { PRIVATE_RESEARCH_PAYMENTS_SQL } from "./private-research-payments";
 import { PRIVATE_RESEARCH_INTENTS_SQL } from "./private-research-intents";
 import { assertOrdinarySqliteResearchAuthority, initializeSqliteResearchMonthly } from "./research-monthly";
+import { installPublicReferenceArchive } from "./public-reference-archive";
 
 export const SQLITE_APPLICATION_SCHEMA = `
 CREATE TABLE IF NOT EXISTS sources (
@@ -304,17 +305,19 @@ ${CREATOR_WITHDRAWAL_ATTESTATIONS_SQL}
 `;
 
 /** Legacy installer only; enrolled runtime validates without migrating. */
-export function installSqliteApplicationSchema(db: DatabaseSync, options: { originalFulfillment?: boolean } = {}): void {
+export function installSqliteApplicationSchema(db: DatabaseSync, options: { originalFulfillment?: boolean; publicReferenceArchive?: boolean } = {}): void {
  // The predecessor is constructed only for an exact explicit migration contract.
- // Ordinary startup and fresh enrollment always include the current schema.
+ // Existing enrollment/operational migration callers retain the predecessor.
+ // Archive admission is explicit; ordinary startup opts in below.
  db.exec(options.originalFulfillment === false ? SQLITE_APPLICATION_SCHEMA.replace(A2A_FULFILLMENT_SQL, "") : SQLITE_APPLICATION_SCHEMA);
  ensureSqliteApplicationColumns(db);
+ if (options.publicReferenceArchive === true) installPublicReferenceArchive(db);
 }
 
 /** Deployed TypeScript authority. Monthly has no enrolled/native domain cutover. */
 export function installOrdinarySqliteApplicationSchema(db: DatabaseSync): void {
   assertOrdinarySqliteResearchAuthority(db);
-  installSqliteApplicationSchema(db);
+  installSqliteApplicationSchema(db, { publicReferenceArchive: true });
   initializeSqliteResearchMonthly(db);
 }
 

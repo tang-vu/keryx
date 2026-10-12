@@ -5,6 +5,9 @@
     "incremental": false
   },
   "include": [
+    "scripts/backfill-public-references.mts",
+    "scripts/source-archive-storage-migrate.mts",
+    "scripts/test-browser-source-archive.mts",
     "scripts/test-browser-evidence-procurement.mts",
     "scripts/evidence-procurement.mts",
     "scripts/evidence-procurement.test.mts",
