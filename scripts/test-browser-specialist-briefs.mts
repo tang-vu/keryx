@@ -83,7 +83,9 @@ try {
         assert.equal(request.question, question); assert.equal(request.researchMode, "deep");
         await page.getByRole("button", { name: copy.copy, exact: true }).click();
         await page.getByText(copy.copied, { exact: true }).waitFor();
-        assert.equal(await page.evaluate(() => navigator.clipboard.readText()), question);
+        // Windows' native clipboard represents line breaks as CRLF. Compare only
+        // that transport normalization; downloaded request JSON stays byte-exact.
+        assert.equal((await page.evaluate(() => navigator.clipboard.readText())).replaceAll("\r\n", "\n"), question);
         await page.getByLabel(copy.sources).fill("http://example.org/docs");
         assert.equal(await page.getByRole("textbox", { name: copy.review, exact: true }).count(), 0, "Editing hides the stale request");
         await page.getByRole("button", { name: copy.prepare, exact: true }).click();
@@ -93,7 +95,10 @@ try {
       await page.reload();
       assert.equal(await page.getByLabel(copy.decision).inputValue(), "", "Draft is not persisted");
       assert.equal(await page.getByRole("textbox", { name: copy.review, exact: true }).count(), 0);
-      if (screenshots) await page.screenshot({ path: join(screenshots, `briefs-${width}.png`), fullPage: true });
+      if (screenshots) {
+        await page.evaluate(async () => { window.scrollTo(0, 0); await document.fonts.ready; });
+        await page.screenshot({ path: join(screenshots, `briefs-${width}.png`), fullPage: true });
+      }
       assert.deepEqual(outbound, []); assert.deepEqual(errors, []);
     } finally { await context.unrouteAll({ behavior: "wait" }); await context.close(); }
   }
