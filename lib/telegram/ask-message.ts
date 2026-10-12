@@ -14,6 +14,7 @@ import { formatRecordedUsdc, formatNumber, selectPlural } from "../i18n/format";
 import { answerPresentation } from "../research/answer-presentation";
 import { botResearchFailure, botResearchMessages } from "../bots/research-messages";
 import { botHelpEnglish } from "../../locales/en/bot-research";
+import { botControlsCatalogues, type BotLanguage } from "../bots/language";
 import type { QueryRun } from "../types";
 
 /** Telegram caps any message text at 4096 chars; leave room for the citations block + link. */
@@ -26,7 +27,7 @@ export interface TelegramUpdate {
     message_id?: number;
     text?: string;
     chat?: { id?: number; type?: string };
-    from?: { id?: number; is_bot?: boolean };
+    from?: { id?: number; is_bot?: boolean; language_code?: string };
   };
 }
 
@@ -70,17 +71,20 @@ export function isHelpCommand(update: TelegramUpdate): boolean {
   return /^\/(start|help)(@\w+)?$/.test(text);
 }
 
-export function helpText(): string {
+export function helpText(language: BotLanguage = "en", privateChat = true): string {
+  const copy = botControlsCatalogues[language];
   return [
-    `<b>${botHelpEnglish.herald}</b> — ${botHelpEnglish.tagline}`,
+    `<b>${botHelpEnglish.herald}</b>${language === "en" ? ` — ${botHelpEnglish.tagline}` : ""}`,
     "",
+    ...(language === "en" ? [] : [copy.introduction, copy.financialDetails]),
     botHelpEnglish.telegramExplanation,
     "",
-    botHelpEnglish.telegramUsage,
-    botHelpEnglish.reviewBoundary,
-    botHelpEnglish.privateQuestion,
+    `${copy.usage} <code>/ask ${copy.exampleQuestion}</code>`,
+    copy.reviewBoundary,
+    ...(privateChat ? [copy.privateQuestion] : []),
+    copy.languageHelp,
     "",
-    `${botHelpEnglish.telegramStatus} ${config.baseUrl}/status`,
+    `${language === "en" ? botHelpEnglish.telegramStatus : copy.status} ${config.baseUrl}/status`,
   ].join("\n");
 }
 

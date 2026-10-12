@@ -33,7 +33,7 @@ initiated use and recorded evidence; a bot channel alone does not prove it.
 3. **Deploy** so the endpoint goes live with both values (`npm run redeploy`).
 4. **Register the webhook + commands:**
    ```sh
-   npm run register-telegram              # setWebhook + /ask + /help + bot descriptions
+   npm run register-telegram              # setWebhook + /ask + /help + /language + bot descriptions
    npm run register-telegram -- --delete  # unhook (e.g. to test another deployment)
    ```
    `BASE_URL` decides where the webhook points — it must be public HTTPS, so register against the
@@ -46,10 +46,22 @@ initiated use and recorded evidence; a bot channel alone does not prove it.
 /ask What is x402 and who settles the payment?
 just type the question                    # DMs only — no command needed
 /help                                     # what Keryx is + usage
+/help vi                                  # request-local help language
+/language es                              # private chat only: save help language
+/language                                 # private chat only: inspect preference
+/language auto                            # restore platform-locale / English help fallback
 ```
 
 The placeholder "Keryx is dispatching…" appears instantly; the answer replaces it when the
 dispatch completes (typically well under a minute).
+
+Help uses an explicit help locale, your saved private help preference, Telegram's sender-language
+hint, then English. `/start` and bare `/ask` also show help. Preferences can only be inspected or
+changed in a private chat whose address matches the sender; group commands receive a private-chat
+instruction without reading or writing preferences. Research wrappers and the sender-private
+claim preflight placeholder follow the original question, including its explicit answer-language
+request. A help preference does not translate a research answer. Financial help paragraphs and
+private claim authority text remain in English. See [the exact source and delivery boundaries](engineering/bot-controls-language-276-2026-10-12.md).
 
 ## Guardrails
 

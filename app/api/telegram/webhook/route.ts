@@ -25,12 +25,12 @@ import { privateRunClaimText, type PrivateRunClaimPacket } from "@/lib/run-claim
 import { prepareTelegramPrivateReply, type TelegramPrivatePlaceholder } from "@/lib/run-claims/telegram-private";
 import { config } from "@/lib/config";
 import { botResearchMessages } from "@/lib/bots/research-messages";
+import { botControlResponse, parseBotControl } from "@/lib/bots/language";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import {
   type AskMessage,
   type TelegramUpdate,
   parseAskMessage,
-  isHelpCommand,
   helpText,
   apiUrl,
   buildAnswerText,
@@ -62,12 +62,20 @@ export async function POST(req: NextRequest) {
   // update in a retry loop. Replies ride the webhook response itself where possible (one fewer
   // round trip): a JSON body naming a Bot API `method` is executed by Telegram on receipt.
   const chatId = update.message?.chat?.id;
-  if (isHelpCommand(update) && typeof chatId === "number") {
+  const sender = update.message?.from;
+  const userId = sender?.id;
+  const control = parseBotControl(update.message?.text ?? "");
+  if (control && typeof chatId === "number" && typeof userId === "number" && Number.isSafeInteger(chatId)
+    && Number.isSafeInteger(userId) && userId > 0 && !sender?.is_bot) {
+    const privateChat = update.message?.chat?.type === "private" && chatId === userId;
+    const reply = await botControlResponse({ control, platformLocale: sender?.language_code, privateOnly: !privateChat,
+      ...(privateChat ? { recipient: { platform: "telegram", scope: "telegram", userId: String(userId) } } : {}) });
     return Response.json({
       method: "sendMessage",
       chat_id: chatId,
-      text: helpText(),
+      text: control.action === "help" ? helpText(reply.language, privateChat) : reply.text,
       parse_mode: "HTML",
+      ...(privateChat ? { protect_content: true } : {}),
     });
   }
 

@@ -1,6 +1,5 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { surfaceResearch } from "../research/surface-result";
-import { formatRecordedUsdc } from "../display/recorded-usdc";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { collectRun } from "../agent";
@@ -9,7 +8,10 @@ import { resolveModelChoice } from "../llm";
 import type { McpClientChannel, QueryRun } from "../types";
 import { registerMonthlyDiscovery } from "../monthly/mcp-discovery";
 import { quoteResearchMonthly } from "../monthly/quote";
-import { reasoningServingText } from "../llm/reasoning-telemetry";
+import { livePresentationLocale, presentationLanguages } from "../research/presentation-language";
+import { researchPresentationMessages } from "../research/presentation-messages";
+import { remoteResearchText } from "../research/result-presentation";
+import { botResearchCatalogues } from "../bots/research-messages";
 import { researchFailureMessage } from "../llm/research-plan";
 import { ResearchSelectionError } from "../llm/research-selection";
 import { registerOperatorDiscovery } from "../business-operator/mcp";
@@ -82,39 +84,6 @@ export function remoteResearchResult(run: QueryRun) {
   };
 }
 
-function researchText(result: ReturnType<typeof remoteResearchResult>): string {
-  const rewards =
-    result.citations.length > 0
-      ? result.citations
-          .map((citation) => `- ${citation.source}: ${formatRecordedUsdc(citation.rewardPlannedUsdc, { minimumFractionDigits: 4 })} USDC`)
-          .join("\n")
-      : "- No source reward was allocated.";
-  const settlement =
-    result.paymentMode === "real"
-      ? `${result.settledPayments}/${result.paymentAttempts} payment attempts settled`
-      : result.paymentMode === "offline" ? "offline payment simulation" : "payment mode unknown; no simulation or settlement inferred";
-  const selection = result.reasoning.sourceSelection;
-  const engines = selection.servingEngines.slice(0, 4).join(", ") || "none recorded";
-  const engineRemainder = selection.servingEngines.length > 4 ? ` + ${selection.servingEngines.length - 4} more` : "";
-  const selectionText = `Recorded source selection: ${selection.state} · ${engines}${engineRemainder} · ` +
-    (selection.fallbackUsed === true ? "fallback served" : selection.fallbackUsed === false ? "requested tier served" : "fallback use unknown") +
-    ` (${result.reasoning.telemetry} attempt telemetry)`;
-  const groundedClaims = result.claimCoverage.filter(
-    (claim) => claim.coverage >= 0.4,
-  ).length;
-
-  return (
-    `${result.answer}\n\n` +
-    `${reasoningServingText(result)}\n\n` +
-    `Citations and planned creator rewards\n${rewards}\n\n` +
-    `Evidence: ${groundedClaims}/${result.claimCoverage.length} research targets meet the recorded excerpt-support threshold; this does not verify entailment or complete synthesis\n` +
-    `${selectionText}\n` +
-    `Total recorded to creators: ${formatRecordedUsdc(result.totalToCreatorsUsdc, { minimumFractionDigits: 4 })} USDC · ${settlement}\n` +
-    (result.operatingFee ? `Keryx operating fee allocation: ${formatRecordedUsdc(result.operatingFee.amountUsdc, { minimumFractionDigits: 6 })} USDC · ${result.operatingFee.status}. Separate from creator rewards; inspect the payment ledger for settlement evidence.\n` : "") +
-    `Confidence: ${result.confidence?.level ?? "Low"} · ${result.dispatchUrl}`
-  );
-}
-
 /** Build one stateless MCP server per HTTP request. The request's verified access stays in closure. */
 export function createRemoteMcpServer(
   access: RemoteMcpAccess,
@@ -158,6 +127,7 @@ export function createRemoteMcpServer(
         reviewFirst: z.literal(false).optional().describe("Review-first requires the authenticated live browser; this adapter refuses true."),
         researchMode: z.never().optional(), responseMode: z.never().optional(),
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
+        language: z.enum(presentationLanguages).optional().describe("Language of generated labels only; the original question and answer are unchanged. Answer language is not recorded by this producer."),
         budget: z
           .number()
           .nonnegative()
@@ -177,7 +147,9 @@ export function createRemoteMcpServer(
         openWorldHint: true,
       },
     },
-    async ({ question, budget, model, scholarly, mode }) => {
+    async ({ question, budget, model, scholarly, mode, language }) => {
+      const locale = livePresentationLocale({ requestedLanguage: language, originalQuestion: question });
+      const copy = researchPresentationMessages(locale.language);
       try {
         assertOrdinaryResearchAvailable();
         const requested =
@@ -203,21 +175,21 @@ export function createRemoteMcpServer(
         return {
           // Direct caller's private tool response only. The structured public
           // projection remains unchanged and never acquires claim credentials.
-          content: [{ type: "text" as const, text: researchText(result) },
+          content: [{ type: "text" as const, text: remoteResearchText(result, locale) },
             ...(packet ? [{ type: "text" as const, text: privateRunClaimText(packet) }] : [])],
           ...(packet ? { _meta: { "keryx/privateRunClaim": packet } } : {}),
           structuredContent: result,
         };
       } catch (error) {
-        const message = researchFailureMessage(error);
         const held = researchAdmissionError(error);
+        const message = held ? botResearchCatalogues[locale.language].paused : researchFailureMessage(error);
         return {
           isError: true,
           ...(held ? { structuredContent: { error: held.code, message: held.message,
             availability: readResearchAvailability() } } : {}),
-          content: [{ type: "text" as const, text: `Keryx research failed: ${message}` },
+          content: [{ type: "text" as const, text: copy("remoteFailure", { detail: message }) },
             ...(error instanceof ResearchSelectionError ? [{ type: "text" as const,
-              text: `Source-selection diagnostic (not a completed report or payment receipt):\n${JSON.stringify(error.diagnostic)}` }] : [])],
+              text: `${copy("selectionDiagnostic")}\n${JSON.stringify(error.diagnostic)}` }] : [])],
         };
       }
     },

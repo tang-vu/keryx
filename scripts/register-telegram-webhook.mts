@@ -2,7 +2,7 @@
  * register-telegram-webhook.mts — point the Telegram bot at Keryx and register its commands.
  *
  * Calls setWebhook (with the shared secret Telegram will echo on every update), setMyCommands
- * (/ask + /help), and setMyDescription so the bot's empty-chat screen explains itself. Safe to
+ * (/ask + /help + /language), and setMyDescription so the bot's empty-chat screen explains itself. Safe to
  * re-run: every call is an upsert. Pass --delete to unhook the webhook instead (local testing).
  *
  * Run:  npm run register-telegram
@@ -52,9 +52,10 @@ await call("setMyCommands", {
   commands: [
     { command: "ask", description: "Ask Keryx — it buys paid sources and pays every cited creator" },
     { command: "help", description: "What Keryx is and how to use it" },
+    { command: "language", description: "Set or inspect your help language; answers follow the original question" },
   ],
 });
-console.log("Commands registered: /ask, /help");
+console.log("Commands registered: /ask, /help, /language");
 
 await call("setMyDescription", {
   description:

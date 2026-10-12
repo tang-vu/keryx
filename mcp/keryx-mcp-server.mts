@@ -16,8 +16,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { askKeryx, getStatus, meta, recoverKeryx } from "./keryx-buyer.mts";
-import { reasoningServingText } from "../lib/llm/reasoning-telemetry.ts";
-import { formatRecordedUsdc } from "../lib/display/recorded-usdc.ts";
+import { presentationLanguages } from "../lib/research/presentation-language.ts";
+import { createStdioResearchHandler } from "../lib/research/result-presentation.ts";
 import { createPaperLookupHandler, paperLookupToolOptions } from "../lib/papers/lookup.ts";
 import { fetchPaperLookup } from "../lib/papers/client.ts";
 import { MAX_ASK_QUESTION_CHARS } from "../lib/ask-input.ts";
@@ -83,6 +83,7 @@ server.registerTool(
       researchMode: z.never().optional(), responseMode: z.never().optional(),
       question: z.string().max(8192).trim().min(3).max(MAX_ASK_QUESTION_CHARS)
         .describe(`The research question to ask Keryx (3–${MAX_ASK_QUESTION_CHARS} characters after trimming).`),
+      language: z.enum(presentationLanguages).optional().describe("Language of generated labels only. Does not change the paid body/hash, original question or answer; answer language is not recorded."),
       budget: z
         .number()
         .positive()
@@ -90,27 +91,7 @@ server.registerTool(
         .describe("Optional prepaid creator-spend cap in USDC (default 0.05); added to the deep-mode service fee."),
     },
   },
-  async ({ question, budget }) => {
-    try {
-      const r = await askKeryx(question, budget);
-      const cites = r.citations?.length
-        ? r.citations.map((c) => `  • ${c.source} — ${formatRecordedUsdc(c.reward)}`).join("\n")
-        : "  (none)";
-      // The settlement id is a batched Circle Gateway UUID, not an EVM hash — label it honestly and
-      // point at the dashboard for the on-chain proof rather than a /tx/ link that won't resolve.
-      const proof = r.settlementId ? ` (Circle Gateway settlement ${r.settlementId.slice(0, 12)}…, batched on Arc)` : "";
-      const text =
-        `${r.answer}\n\n` +
-        `${reasoningServingText(r)}\n\n` +
-        `— Paid Keryx ${r.amountPaid} USDC${proof}\n` +
-        `Recorded creator total: ${formatRecordedUsdc(r.totalToCreators)}; citation allocations (not individual settlement proof):\n${cites}\n` +
-        `On-chain proof + live feed: ${meta.baseUrl}/dashboard`;
-      return { content: [{ type: "text" as const, text }], structuredContent: { ...r } };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return { isError: true, content: [{ type: "text" as const, text: `Keryx call failed: ${msg}` }] };
-    }
-  },
+  createStdioResearchHandler(askKeryx, meta.baseUrl),
 );
 
 server.registerTool(
