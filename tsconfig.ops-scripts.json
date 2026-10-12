@@ -5,6 +5,9 @@
     "incremental": false
   },
   "include": [
+    "scripts/decision-bundle.mts",
+    "scripts/test-decision-lab-browser.mts",
+    "scripts/test-decision-lab-built.mts",
     "scripts/inspect-purchase-outcomes.mts",
     "scripts/check-purchase-regression.mts",
     "scripts/test-purchase-outcomes-transports.mts",
