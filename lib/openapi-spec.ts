@@ -417,6 +417,7 @@ export const openapiSpec = {
           },
           scholarly: { type: "boolean", default: false, description: "Opt into bounded Crossref/arXiv discovery; sends the public question to those providers." },
           mode: { type: "string", enum: ["quick", "deep"], default: "deep" },
+          language: { type: "string", enum: ["en", "vi", "pt", "pt-BR", "es"], description: "Language of generated human-readable labels only. Defaults to the original question's finite selector; does not translate the answer, alter the question or establish its recorded language. Machine fields, receipts and canonical financial authority remain unchanged." },
           budget: {
             type: "number",
             description:

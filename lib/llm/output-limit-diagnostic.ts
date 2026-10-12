@@ -38,7 +38,8 @@ export function collectOutputLimits(attempts: readonly ReasoningAttempt[], trace
   return uniqueOutputLimits(records);
 }
 
-function uniqueOutputLimits(recorded: unknown): OutputLimitDiagnostic[] {
+/** Reuse the existing bounded public projection in presentation adapters; no new metadata parser. */
+export function uniqueOutputLimits(recorded: unknown): OutputLimitDiagnostic[] {
   const records = new Map<string, OutputLimitDiagnostic>();
   for (const value of (Array.isArray(recorded) ? recorded : []).slice(0, 2304)) {
     try {
