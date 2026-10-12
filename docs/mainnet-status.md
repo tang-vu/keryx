@@ -39,9 +39,12 @@ The Arc Canteen product event created at `12:47:35Z` was acknowledged HTTP 200
 It names Arc mainnet and makes no traction claim; historical event/profile settings were retained.
 
 Earlier accepted `b6009528` and `2f47a2d4` / 0.27.61 evidence retains its original source/profile.
-The [v0.27.62](https://github.com/tang-vu/keryx/releases/tag/v0.27.62) small source/checksum manifests
-name `d7f79046`, MCP **0.4.18** and Operator installer **0.4.16**. The MCP manifest records
-`npmRegistryPublished: false`; this limited readback does not verify npm or binary byte equality.
+The limited [v0.27.62](https://github.com/tang-vu/keryx/releases/tag/v0.27.62) asset readback
+retained MCP **0.4.18** and Operator installer **0.4.16** manifests whose embedded
+`sourceCommit` is `b60095280d60f2fe1991b4ae37f14ae8e0a8d5c3`. Those package/installer
+observations remain bound to that source; the application's deployed `d7f79046` / **0.27.62**
+identity was verified separately above. The MCP manifest records `npmRegistryPublished: false`;
+this limited readback does not verify npm or binary byte equality.
 The reviewed read-only typed backup succeeded; retained SQLite backup SHA
 `d099899511523050385a562faa22d4f2487b0a819f79d6254c967d22a060423d`.
 The ordinary storage-identity snapshot's mainnet network-classification refusal remains open;
