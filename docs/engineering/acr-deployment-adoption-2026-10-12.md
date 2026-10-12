@@ -66,6 +66,8 @@ traction. Empty, complete cohorts are valid and do not imply demand.
 Missing, stale, future or malformed monitoring produces an explicit warning.
 `--require-monitoring` makes it a failure. A recent recorded timestamp is not
 proof of a passing watchdog, active schedule or current settlement parity.
+The existing 7,200-second registry/dispatch/settlement and 1,800-second
+reconciliation bounds are pinned; the response cannot lengthen them to pass.
 
 Exit codes: 0 means the declared observations passed (inspect warnings), 1
 means at least one observation failed, and 2 means invalid command arguments.

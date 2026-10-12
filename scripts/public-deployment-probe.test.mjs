@@ -15,7 +15,7 @@ function fixtures() {
     '/api/health': { name: 'keryx', ok: true, status: 'operational', db: 'ok', network: 'arc',
       settles: 'real', commit: sha.slice(0, 8), time: stamp,
       monitoring: { state: 'recent', checks: ['registry', 'dispatches', 'settlement', 'reconciliation']
-        .map(name => ({ name, state: 'recent', checkedAt: stamp, maxAgeSeconds: 1800 })) } },
+        .map(name => ({ name, state: 'recent', checkedAt: stamp, maxAgeSeconds: name === 'reconciliation' ? 1800 : 7200 })) } },
     '/api/metrics': { metricsScope: { cohort: 'mixed-all-origins', period: 'all-time', network: 'not-row-partitioned' },
       usage: { endpoint: '/api/usage', unclassifiedIsOutside: false }, metrics: { totalQueries: 0, totalPayments: 0 } },
     '/api/usage': { basis: 'complete-bounded-database-window', complete: true, network: 'eip155:5042',
@@ -83,7 +83,8 @@ test('missing, duplicate or future monitoring is visible; strict mode refuses it
   for (const mutate of [data => { delete data.monitoring; },
     data => { data.monitoring.checks[0].checkedAt = new Date(now + 1).toISOString(); },
     data => { data.monitoring.checks[1].name = 'registry'; },
-    data => { data.monitoring.checks[0].checkedAt = new Date(now - 1800001).toISOString(); }]) {
+    data => { data.monitoring.checks[3].checkedAt = new Date(now - 1800001).toISOString(); },
+    data => { data.monitoring.checks[0].maxAgeSeconds = 999999; }]) {
     const records = fixtures(); mutate(records['/api/health']);
     const warning = await probe(records);
     assert.equal(warning.status, 'pass'); assert.equal(find(warning, 'monitoring').status, 'warn');
@@ -143,7 +144,7 @@ test('real CLI probes only fixture GETs and exits nonzero for an unavailable pub
     '--origin', `http://127.0.0.1:${server.address().port}`, '--expect-commit', sha, '--json'],
   { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
   let stdout = '', stderr = ''; child.stdout.on('data', chunk => { stdout += chunk; }); child.stderr.on('data', chunk => { stderr += chunk; });
-  const [code] = await once(child, 'exit');
+  const [code] = await once(child, 'close');
   assert.equal(code, 1, stderr);
   const report = JSON.parse(stdout); assert.equal(find(report, 'usage').httpStatus, 503);
   assert.equal(find(report, 'commit').status, 'pass');

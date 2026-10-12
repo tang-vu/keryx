@@ -1,6 +1,8 @@
 // Read-only observations of a selected public deployment, never payment acceptance.
 const NETWORKS = { arc: 'eip155:5042', arcTestnet: 'eip155:5042002' };
 const MAX_JSON_BYTES = 256 * 1024;
+// Existing public monitoring contract; a server cannot lengthen these bounds to pass this observer.
+const MONITORING_MAX_AGE = { registry: 7200, dispatches: 7200, settlement: 7200, reconciliation: 1800 };
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const count = value => Number.isSafeInteger(value) && value >= 0;
 const utc = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)
@@ -105,13 +107,13 @@ function assess(observations, options, now) {
         ? `Reported ${reported.length}-character commit matches the expected SHA${reported.length < 40 ? ' prefix; full source attestation remains separate' : '; runtime self-report only'}`
         : 'Reported commit is missing, invalid or differs from the expected SHA'));
       const monitoring = object(data) ? data.monitoring : undefined;
-      const names = ['registry', 'dispatches', 'settlement', 'reconciliation'];
+      const names = Object.keys(MONITORING_MAX_AGE);
       const recent = object(monitoring) && monitoring.state === 'recent' && Array.isArray(monitoring.checks)
         && monitoring.checks.length === names.length && names.every(name => {
           const rows = monitoring.checks.filter(check => object(check) && check.name === name);
           const check = rows[0];
           return rows.length === 1 && check.state === 'recent' && utc(check.checkedAt)
-            && count(check.maxAgeSeconds) && check.maxAgeSeconds > 0
+            && check.maxAgeSeconds === MONITORING_MAX_AGE[name]
             && Date.parse(check.checkedAt) <= now && now - Date.parse(check.checkedAt) <= check.maxAgeSeconds * 1000;
         });
       checks.push({ id: 'monitoring', path: row.path, status: recent ? 'pass' : options.requireMonitoring ? 'fail' : 'warn',
