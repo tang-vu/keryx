@@ -21,7 +21,7 @@ try {
     const refused = await client.callTool({ name: "ask_keryx", arguments: input });
     assert.equal(refused.isError, true); // Input validation before buyer signing/payment/provider.
   }
-  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["evidence_draft", "draft_check", "deliverable_acceptance_read", "deliverable_acceptance_submit", "operator_obligations_read", "paper_lookup", "ask_keryx", "keryx_wallet_status", "keryx_recover", "research_monthly", "keryx_operator_status", "keryx_public_job_ledger", "keryx_purchase_outcomes", "keryx_source_learning", "profile_read", "profile_update", "history_read", "profile_identities_read", "run_privacy_read", "run_owner_export"].sort());
+  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["evidence_draft", "draft_check", "evidence_procurement", "deliverable_acceptance_read", "deliverable_acceptance_submit", "operator_obligations_read", "paper_lookup", "ask_keryx", "keryx_wallet_status", "keryx_recover", "research_monthly", "keryx_operator_status", "keryx_public_job_ledger", "keryx_purchase_outcomes", "keryx_source_learning", "profile_read", "profile_update", "history_read", "profile_identities_read", "run_privacy_read", "run_owner_export"].sort());
   for (const name of ["run_privacy_read", "run_owner_export"]) {
     const reader = tools.tools.find(item => item.name === name)!;
     assert.equal(reader.annotations?.readOnlyHint, true);assert.equal(reader.annotations?.destructiveHint, false);

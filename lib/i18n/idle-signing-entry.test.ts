@@ -73,7 +73,8 @@ describe("idle signing prefetch isolation", () => {
   it("recognises finite Next RSC prefetch markers on fixed root-link paths", () => {
     for (const marker of ["1", "2", "3"]) expect(signingDisplayPrefetchPath({ ...original,
       headers: { ...original.headers, "next-router-prefetch": marker } }, origin)).toBe("/sources");
-    expect(signingDisplayPrefetchPath({ ...original, url: `${origin}/research?_rsc=fixture_1` }, origin)).toBe("/research");
+    for (const path of ["/research", "/pricing", "/about", "/quality"])
+      expect(signingDisplayPrefetchPath({ ...original, url: `${origin}${path}?_rsc=fixture_1` }, origin)).toBe(path);
   });
   it("never isolates external, non-GET or actual navigation requests", () => {
     for (const value of [{ ...original, url: "https://external.invalid/sources?_rsc=fixture_1" },
