@@ -15,6 +15,7 @@ import { buyMonthly, monthlyStatus, submitMonthly, monthlyIntentSchema, type Mon
 import type { MonthlyQuote } from "@/lib/monthly/protocol";
 import { monthlyIdSchema, monthlyRecoveryRequestSchema, monthlyRecoveryFileSchema, monthlyRecoveryFile } from "@/lib/monthly/protocol";
 import { ResearchJob } from "./research-job";
+import { ResearchJobTarget } from "./research-job-target";
 import { AskQuestionSchema, MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
 
 import { BUYER_PROFILE } from "@/lib/buyer/protocol";
@@ -99,6 +100,7 @@ export function ResearchMonthly({ quote }: { quote: MonthlyQuote }) {
   return <section id="monthly" aria-labelledby="monthly-heading" className="space-y-4 border border-line bg-paper p-6">
     <p className="font-mono text-xs text-seal">{copy("monthlyResearch.renewal", { network: BUYER_PROFILE.label })}</p>
     <h2 id="monthly-heading" className="font-display text-3xl">{copy("monthlyResearch.title")}</h2>
+    <ResearchJobTarget mode={quote.researchMode} version={quote.packageVersion} monthly />
     <p className="font-serif text-ink-2">{copy("monthlyResearch.introduction", { total: format(quote.totalMicros), separateTotal: format(quote.separateTotalMicros), cap: format(quote.creatorBudgetMicros) })}</p>
     <p className="font-serif text-sm text-ink-3">{quote.roundingMicros ? copy("monthlyResearch.roundedTerms", { rounding: quote.roundingMicros }) : copy("monthlyResearch.terms")}</p>
     <p className="text-xs"><SigningAmount micros={quote.totalMicros} /></p>

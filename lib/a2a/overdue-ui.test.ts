@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
 import { expect, it } from "vitest";
 import { ResearchJobEscalation } from "../../components/keryx/research-job-escalation";
+import { ResearchJobTarget } from "../../components/keryx/research-job-target";
 import { accountHistorySchema } from "./account-history-types";
 import type { PaidJobEscalation } from "./overdue-types";
 
@@ -9,14 +10,26 @@ const escalation: PaidJobEscalation = { state: "overdue", escalationNeeded: true
   acceptedAt: "2026-10-09T00:00:00Z", targetCompletionAt: "2026-10-09T00:03:00Z", targetCompletionMs: 180000, elapsedMs: 240000,
   lastRecordedStage: "creator_payment_boundary", failureCode: null, creatorPaymentState: "pending_recorded",
   evaluation: "on_observation", objectiveKind: "provisional_slo", remedy: "none" };
-it("renders an observed overdue alert without implying notification, remedy or another payment action", () => {
+it("renders an observed overdue alert and local guidance without implying submitted remedies", () => {
   const html = renderToStaticMarkup(createElement(ResearchJobEscalation, { escalation }));
   expect(html).toContain('role="alert"'); expect(html).toContain("pending"); expect(html).toContain("Do not pay again");
   expect(html).toContain("does not mean that a person has been notified");
-  expect(html).not.toMatch(/<button|<a |original-ref|Original order amount/);
+  expect(html).not.toMatch(/<a |original-ref|Original order amount/);
+  for (const text of ["Wait", "Partial-result guidance", "Human-review guidance", "does not submit a request", "owner confirmation"]) expect(html).toContain(text);
+  expect(html).not.toMatch(/>Refund<|refunded|request submitted/);
   const owner = renderToStaticMarkup(createElement(ResearchJobEscalation, { escalation, original: { orderId: "original-id",
     payment: { kind: "inbound_payment", reference: "original-ref", network: "eip155:5042", asset: "USDC", amountMicros: "50001" } } }));
   for (const text of ["original-id", "original-ref", "eip155:5042", "50001", "micro-USDC"]) expect(owner).toContain(text);
+});
+it("shows tier targets and original acceptance basis before any payment control", () => {
+  for (const [mode, seconds] of [["quick", "180"], ["deep", "300"]] as const) {
+    const html = renderToStaticMarkup(createElement(ResearchJobTarget, { mode, version: "1.0.0", monthly: true }));
+    expect(html).toContain(`${seconds} seconds from original job acceptance`);
+    expect(html).toContain("not when the plan is purchased");
+    expect(html).toContain("no automatic remedy");
+    expect(html).not.toMatch(/<button|<a /);
+  }
+  expect(renderToStaticMarkup(createElement(ResearchJobTarget, { mode: "quick", version: "future" }))).toContain("target unavailable");
 });
 it("keeps unavailable timing explicit and accepts old strict history packets without invented escalation", () => {
   expect(renderToStaticMarkup(createElement(ResearchJobEscalation))).toBe("");
