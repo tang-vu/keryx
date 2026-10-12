@@ -1,5 +1,45 @@
 # Supported-surface release parity
 
+## App62 combined audit and presentation cohort - October12 candidate
+
+Candidate identities: app/OpenAPI **0.27.62**, hosted MCP **0.3.17**,
+stdio/npm/official Registry **0.4.19**, Desktop **0.4.17**. Retain extension
+**0.1.4.2** only after the final twelve shipped inputs match the accepted payload.
+GitHub v0.27.61 already belongs to the separate b6009528 publication; the prior
+App61 cohort section below is historical candidate provenance, not acceptance
+of this combined source or distribution. Publication is not owner installation.
+
+This candidate preserves the complete incoming PR430 product clarity and PR428
+creator-registration source, plus the reviewed audit/presentation, default-OFF
+deadline observer and idle-signing corrections. The previous supported-surface
+roles remain: web/API/OpenAI/A2A and hosted bots consume hosted source; remote
+MCP retains its scoped tools; stdio/Registry and Desktop require exact final
+shared executable and artifact acceptance. CLI inspection and extension browser
+handoff roles acquire no signer, sponsor executor, private storage or scheduler.
+
+The accepted **0.27.59 /513c6fa6** delivery remains historical evidence. Public
+**c49f4b3e /0.27.60** health and normal maintenance show availability only;
+physical source/build, ENV/custody/Operator/holds, backup/dependency preservation
+and two complete trusted originals still require fresh guarded observation.
+The user has confirmed this release owner controls the combined deployment;
+fresh independent evidence replaces waiting for another deployment handoff.
+
+After the final source and versioned lock freeze, run the existing canonical
+offline producer once, require actual exact-source aggregate/domain/platform CI
+including main publication acceptance, then verify final npm/Registry/Desktop
+artifacts and readbacks. One accepted combined deployment must verify public
+health/commit/OpenAPI/initialized MCP. The four compiled idle-signing observations
+remain original274 delivery gates. Source graph or syntax evidence is not a
+production build, installed-client acceptance, settled traction or delivery.
+
+No new funding/spending, sponsor-policy activation, registry-origin/cutover
+activation, production DDL/backfill, custody or schedule is authorized by this
+release. Upstream sponsorship and registry source/documents are retained; their
+separate activation evidence does not grant new authority here. Original
+#301/#257/#276/#274 and profile/privacy/financial-language gates stay open.
+See [current distribution gates](mcp-distribution.md).
+
+
 ## App61 audit and presentation cohort — October12 candidate
 
 Candidate identities: app/OpenAPI **0.27.61**, hosted MCP **0.3.17**,

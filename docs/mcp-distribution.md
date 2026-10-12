@@ -1,5 +1,44 @@
 # MCP package distribution
 
+## App62 combined distribution - October12 candidate
+
+App/OpenAPI **0.27.62** coordinates hosted MCP **0.3.17**, stdio/npm/official
+Registry **0.4.19** and Desktop **0.4.17**. The extension retains **0.1.4.2**
+only with exact twelve-input equality. These are candidate identities; no new
+publication, installer, owner installation or deployment is claimed. The prior
+App61 section below retains its original candidate evidence. Immutable GitHub
+v0.27.61 from separate b6009528 publication cannot be reused for this cohort.
+
+Preserve PR430 web product/support and PR428 creator-registration source and
+their historical documents. Shared research labels and v3 projection require
+final stdio installed-bundle vectors and Desktop helper/native artifact proofs;
+server-only registration sponsorship does not distribute a sponsor executor or
+publisher key to CLI, MCP, Desktop, extension or bots. Existing human approval,
+custody, machine-code, paid-body, raw evidence, amount and receipt contracts stay
+authoritative. Public source/graph checks do not establish activation or earnings.
+
+The accepted59 app513c6fa6/hosted0.3.16/npm-Registry0.4.18 records remain retained.
+Observed public c49f4b3e/0.27.60 availability is not acceptance of its physical
+lifecycle, ENV/custody/Operator/holds, backup/dependency state, two originals or
+this distribution. Sole combined deployment ownership is confirmed; independently
+read the actual held baseline rather than waiting for another owner handoff.
+
+Freeze this exact source and normalized versioned lock before one actual stock
+canonical offline reproduction. Require current-source aggregate/platform/domain
+success and exact main publication acceptance, build/read back final package and
+Desktop source/checksum manifests, publish through the existing mechanisms once,
+then verify exact/latest npm/Registry and actual release assets. One accepted
+combined main deployment must verify public health/commit/OpenAPI/initialized MCP
+and all original compiled signing observations before any issue-completion claim.
+Only successful delivery supports the single factual product update.
+
+No exhausted or new model/search/payment allowance, funding/spending, sponsor
+activation, registry-origin/cutover activation, production schema/backfill,
+custody or scheduler change is granted. Original301/257/276/274 and other held
+privacy/profile/financial-language gates remain separate. See
+[supported-surface roles](surface-parity.md).
+
+
 ## App61 audit and presentation cohort — October12 candidate
 
 App/OpenAPI0.27.61 selects hosted MCP0.3.17, stdio/npm/official Registry0.4.19
