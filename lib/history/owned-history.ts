@@ -2,9 +2,10 @@ import { z } from "zod";
 import { historyDateSchema, historyIdSchema, historyRowSchema, historyPositionSchema } from "./personal-history";
 import { RUN_SURFACES } from "../research/run-provenance";
 import { visibilitySchema } from "../run-privacy/contracts";
+import { isWellFormedUtf16 } from "../llm/well-formed-utf16";
 
 const wallet = z.string().regex(/^0x[a-f0-9]{40}$/);
-const boundedText = (max: number) => z.string().max(max).refine(s => !s.includes("\0") && s.isWellFormed());
+const boundedText = (max: number) => z.string().max(max).refine(s => !s.includes("\0") && isWellFormedUtf16(s));
 export const ownedFiltersShape = {
   search: boundedText(200).optional(), surface: z.enum(RUN_SURFACES).optional(),
   network: z.enum(["eip155:5042", "eip155:5042002", "unknown"]).optional(),

@@ -72,3 +72,14 @@ native signal/EOF qualifications belong in the convergence handoff. Original
 provider remain capability gaps; synthetic membership fixtures are not that
 producer. The original criteria and actual deployment/distribution acceptance
 remain separate from source convergence, with no new paid or human trial gate.
+
+## Portable Unicode validation for Desktop
+
+The Desktop compiler declares ES2022 libraries. Owned-history bounded text now
+uses the existing pure `isWellFormedUtf16` helper, already used by personal
+history v1, instead of requiring the ES2024 String method. UTF-16 length bounds,
+NUL rejection, malformed/lone-surrogate refusal, closed schemas and original
+text/receipt/micro amounts are unchanged; no normalization or compiler-lib
+waiver is added. Differential boundary tests use native validation only as the
+pinned Node24 test oracle. Fresh exact-head Desktop/aggregate CI remains required;
+this correction grants no privacy activation, membership, delivery or closure.
