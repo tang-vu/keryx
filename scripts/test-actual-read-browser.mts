@@ -9,6 +9,7 @@ import { actualReadCheckpoint } from "../lib/research-audit/actual-read-policy.t
 import { actualReadCopy as copy } from "../lib/research-audit/actual-read-copy.ts";
 import type * as Audit from "../lib/research-audit/actual-read-record.ts";
 import type { ReadCheckpointCapture } from "../lib/agent/read-checkpoint-capture.ts";
+import { optimizerPacketFixture } from "../lib/research-audit/optimizer-checkpoint.test-fixture.ts";
 
 async function bounded<T>(promise: Promise<T>, milliseconds = 10_000): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -50,7 +51,9 @@ const bundled = await build({ absWorkingDir: root, stdin: { resolveDir: root, so
 const inputs = Object.keys(bundled.metafile!.inputs);
 assert(inputs.every(input => input.includes("node_modules/react/") || input.includes("node_modules/react-dom/") ||
   input.includes("node_modules/scheduler/") || ["actual-read-browser-fixture.tsx", "components/keryx/read-checkpoint-verify.tsx",
-    "lib/research-audit/actual-read-record.ts", "lib/research-audit/actual-read-policy.ts", "lib/research-audit/actual-read-copy.ts"].includes(input)), "Closed browser import graph");
+    "lib/research-audit/actual-read-record.ts", "lib/research-audit/actual-read-policy.ts", "lib/research-audit/actual-read-copy.ts",
+    "lib/research-audit/actual-read-v2.ts", "lib/research-audit/exact-units.ts", "lib/agent/coverage-precheck.ts",
+    "lib/research-audit/actual-read-v3.ts", "lib/research-audit/optimizer-checkpoint.ts", "lib/research-audit/optimizer-policy-v1.ts"].includes(input)), "Closed browser import graph");
 assert(bundled.outputFiles[0].contents.byteLength < 1_500_000);
 const collector = createReadCheckpointCapture(true), check = { kind: "channel", creatorFree: false, cache: false } as const;
 collector.append(check, actualReadCheckpoint(check), { candidate: 1, round: 0, proposal: "BUY", plan: "BUY", price: 0.002 });
@@ -87,8 +90,29 @@ try {
   type Fixture = { audit: typeof Audit; mount(capture: ReadCheckpointCapture | null): void;
     counters: { digests: number; completedDigests: number }; defer(stage: "file" | "digest"): void;
     release(): void; restore(): void; observed(): { started: number; read: number; completed: number } };
+  if (process.argv.includes("--optimizer-only")) {
+    const capture = optimizerPacketFixture();
+    await page.evaluate(capture => (window as unknown as { fixture: Fixture }).fixture.mount(capture), capture);
+    await page.getByText(copy.optimizerBoundary, { exact: true }).waitFor(); await page.getByText(capture.retainedDigest, { exact: true }).waitFor();
+    const upload = async (value: unknown) => page.getByLabel(copy.choose).setInputFiles({ name: "synthetic-optimizer.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+    await upload(capture.packet); await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.passed, { exact: true }).waitFor();
+    const altered = structuredClone(capture.packet); assert(altered.optimizer.status === "available"); altered.optimizer.outcome.selected.reverse();
+    await upload(altered); await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.refused, { exact: true }).waitFor();
+    const unavailable = createReadCheckpointCapture(true, undefined, true); unavailable.stop("evidence", 0);
+    unavailable.optimizer(() => ({ status: "unavailable", reason: "capture-bound" })); const partial = unavailable.finish(); assert(partial?.status === "available");
+    await page.evaluate(capture => (window as unknown as { fixture: Fixture }).fixture.mount(capture), partial);
+    await page.getByText(copy.optimizerUnavailable, { exact: true }).waitFor(); assert.equal(await page.getByText(copy.passed, { exact: true }).count(), 0);
+    await upload(partial.packet); await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.passed, { exact: true }).waitFor();
+    assert.deepEqual(errors, []); assert.deepEqual(refused, []); assert.deepEqual(requests.sort(), ["GET /", "GET /fixture.js"]);
+    console.log(JSON.stringify({ gate: "v3-optimizer-report-offline-browser", actualReactReport: true, localWebCrypto: true,
+      availableOptimizerVerified: true, selectedOutputTamperingRefused: true, unavailableOptimizerDisclosed: true, propResetObserved: true,
+      closedBrowserInputs: inputs, externalRequests: 0, paymentAuthority: false, compiledNextAcceptance: false }));
+  } else {
   await page.evaluate(capture => (window as unknown as { fixture: Fixture }).fixture.mount(capture), capture);
   await page.getByText(copy.boundary, { exact: true }).waitFor();
+  await page.getByText(copy.modelBoundary, { exact: true }).waitFor();
+  await page.getByText(capture.packet.policy, { exact: true }).waitFor();
+  await page.getByText(capture.retainedDigest, { exact: true }).waitFor();
   const downloaded = page.waitForEvent("download", { timeout: 5000 });
   await page.getByRole("button", { name: copy.download, exact: true }).click();
   const artifact = await downloaded; assert.equal(artifact.suggestedFilename(), "read-checkpoints.json");
@@ -116,9 +140,14 @@ try {
   }), { passed: copy.passed, verify: copy.verify });
   const propChecks: { label: string; passed: number; statuses: number; files: number; verifyEnabled: boolean }[] = [];
   await mount(otherCapture); propChecks.push({ label: "completed-to-new-digest", ...await state() });
+  await page.getByText(otherCapture.retainedDigest, { exact: true }).waitFor();
+  assert.equal(await page.getByText(capture.retainedDigest, { exact: true }).count(), 0);
   await upload(otherCapture.packet); await page.getByRole("button", { name: copy.verify, exact: true }).click();
   await page.getByText(copy.passed, { exact: true }).waitFor();
-  await mount(null); await page.getByText(copy.unavailable, { exact: true }).waitFor(); await mount(capture);
+  await mount(null); await page.getByText(copy.unavailable, { exact: true }).waitFor();
+  assert.equal(await page.getByText(otherCapture.retainedDigest, { exact: true }).count(), 0);
+  assert.equal(await page.getByText(copy.digest, { exact: true }).count(), 0);
+  await mount(capture);
   propChecks.push({ label: "completed-through-null", ...await state() });
   await upload(capture.packet); await page.getByRole("button", { name: copy.verify, exact: true }).click();
   await page.getByText(copy.passed, { exact: true }).waitFor();
@@ -149,6 +178,8 @@ try {
   const changed = structuredClone(capture.packet); changed.records[0].check = { kind: "channel", creatorFree: false, cache: true };
   changed.records[0].outcome = actualReadCheckpoint(changed.records[0].check);
   await upload(changed); await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.refused, { exact: true }).waitFor();
+  await page.getByText(capture.retainedDigest, { exact: true }).waitFor();
+  assert.equal(await page.getByText(otherCapture.retainedDigest, { exact: true }).count(), 0);
   await upload(capture); await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.refused, { exact: true }).waitFor();
   await page.getByLabel(copy.choose).setInputFiles({ name: "oversized.json", mimeType: "application/json", buffer: Buffer.alloc(256 * 1024 + 1, 32) });
   await page.getByRole("button", { name: copy.verify, exact: true }).click(); await page.getByText(copy.refused, { exact: true }).waitFor();
@@ -167,11 +198,24 @@ try {
   assert.equal(hostile.mutation, false); assert.equal(hostile.unknown, false); assert.equal(hostile.privateField, false);
   await page.evaluate(() => (window as unknown as { fixture: Fixture }).fixture.mount(null));
   await page.getByText(copy.unavailable, { exact: true }).waitFor(); assert.equal(await page.getByText(copy.passed, { exact: true }).count(), 0);
+  const runtimeCollector = createReadCheckpointCapture(true, undefined, true);
+  runtimeCollector.stop("discovery", 0);
+  const runtimeCapture = runtimeCollector.finish(); assert(runtimeCapture?.status === "available" && runtimeCapture.packet.schema === 2);
+  await mount(runtimeCapture); await page.getByText(copy.runtimeBoundary, { exact: true }).waitFor();
+  await page.getByText(runtimeCapture.retainedDigest, { exact: true }).waitFor();
+  await upload(runtimeCapture.packet); await page.getByRole("button", { name: copy.verify, exact: true }).click();
+  await page.getByText(copy.passed, { exact: true }).waitFor();
+  const forgedRuntime = structuredClone(runtimeCapture.packet); forgedRuntime.stops[0].count = 1;
+  await upload(forgedRuntime); await page.getByRole("button", { name: copy.verify, exact: true }).click();
+  await page.getByText(copy.refused, { exact: true }).waitFor();
   assert.deepEqual(errors, []); assert.deepEqual(refused, []); assert.deepEqual(requests.sort(), ["GET /", "GET /fixture.js"]);
   console.log(JSON.stringify({ gate: "actual-read-report-offline-browser", node: process.version, browser: browser.version(),
     actualReactReport: true, actualPacketDownload: true, separatelyRetainedDigest: true, forgedPairRefused: true, accessorNotInvoked: true,
+    retainedDigestVisibleAndPropBound: true, policyVisible: true, modelReplayBoundaryVisible: true,
+    v2EmptyStopVerifiedOffline: true, v2TamperingRefused: true,
     mutationRefused: true, unavailableReset: true, sameMountedPropResets: propChecks.length, deferredOldResultsDiscarded: 4,
     externalRequests: 0, paymentAuthority: false }));
+  }
 } finally {
   try { if (browser) await bounded(browser.close(), 5000); }
   finally { if (server.listening) { const closed = new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
