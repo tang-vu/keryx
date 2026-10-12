@@ -1,8 +1,8 @@
 /** Web-only English product explanation; do not embed marketing copy in packaged runtimes. */
 export const productGuideMessages = Object.freeze({
-  "product.heroKicker": "AI research for researchers and builders",
+  "product.heroKicker": "For researchers & builders",
   "product.heroTitle": "Cited AI research.",
-  "product.heroBody": "Turn a question into a cited answer. Inspect source choices, spending and payment proof.",
+  "product.heroBody": "Get a cited answer. Inspect source choices, spending and payment proof.",
   "product.overviewKicker": "What you get",
   "product.overviewTitle": "A research answer you can follow back to its sources.",
   "product.overviewBody": "Keryx is a citation-toll reading agent. Give it a question and a source budget: it discovers material, explains what it reads or skips, and writes an answer with citations. Eligible cited creators can receive separate USDC rewards.",
@@ -23,6 +23,8 @@ export const productGuideMessages = Object.freeze({
   "product.quality": "Read quality and evaluation limits",
   "product.pricing": "Pricing & budgets",
   "product.about": "About & contact",
+  "product.navigationPricing": "Pricing",
+  "product.navigationAbout": "About",
   "product.try": "Try a research question",
   "product.faqTitle": "Before your first question",
   "product.faqWallet": "Do I need a wallet to try Keryx?",
@@ -38,6 +40,7 @@ export const productGuideMessages = Object.freeze({
   "pricing.title": "Know what you pay for.",
   "pricing.metadataTitle": "Pricing & research budgets",
   "pricing.description": "Understand Keryx's sponsored trial, browser-funded source budgets and prepaid Quick/Deep research fees before you start.",
+  "pricing.currencySuffix": "· USDC",
   "pricing.introduction": "Choose the research path that fits your task. Source access, eligible creator rewards and the research service are distinct costs. Payment amounts below are in USDC; the configured network is shown above.",
   "pricing.trialTitle": "Sponsored public trial",
   "pricing.trialPrice": "No wallet or deposit",

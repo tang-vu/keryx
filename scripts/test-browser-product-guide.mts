@@ -73,7 +73,7 @@ try {
   assert(sitemap.includes("/pricing</loc>") && sitemap.includes("/about</loc>"));
 
   const forbidden: string[] = [];
-  for (const width of [320, 390, 1366]) {
+  for (const width of [320, 390, 1024, 1366]) {
     const context = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: "reduce" });
     await context.route("**/*", async route => {
       const request = route.request(), url = new URL(request.url());
@@ -104,15 +104,22 @@ try {
       }
       if (path === "/about") assert.equal(await page.getByRole("link", { name: SUPPORT_EMAIL, exact: true }).getAttribute("href"), SUPPORT_MAILTO);
       if (path === "/") {
+        const kicker = await page.getByTestId("hero-kicker").boundingBox();
+        const guide = await page.getByTestId("hero-guide").boundingBox();
+        assert(kicker && guide && kicker.x + kicker.width <= guide.x, "Hero label leaves space for the guide");
+        if (screenshots) await page.screenshot({ path: join(screenshots, `home-viewport-${width}.png`) });
         const faq = page.getByText(copy("product.faqWallet"), { exact: true });
         await faq.focus(); await page.keyboard.press("Enter");
         assert.equal(await faq.evaluate(node => node.parentElement?.hasAttribute("open")), true, "FAQ works by keyboard");
       }
-      if (screenshots) await page.screenshot({ path: join(screenshots, `${path === "/" ? "home" : path.slice(1)}-${width}.png`), fullPage: true });
+      if (screenshots) {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({ path: join(screenshots, `${path === "/" ? "home" : path.slice(1)}-${width}.png`), fullPage: true });
+      }
     }
     if (width < 1024) {
       await page.getByRole("button", { name: "Open menu" }).click();
-      await page.locator("#mobile-site-menu").getByRole("link", { name: copy("product.pricing") }).click();
+      await page.locator("#mobile-site-menu").getByRole("link", { name: copy("product.navigationPricing"), exact: true }).click();
       await page.waitForURL(origin + "/pricing");
       assert.equal(await page.locator("#mobile-site-menu").isVisible(), false, "New route hides the menu");
     }
@@ -120,7 +127,7 @@ try {
     await context.close();
   }
   assert.deepEqual(forbidden, [], "Product discovery never submits research or payment requests");
-  console.log("PASS: built crawlable product/pricing/about/support, checkout-derived amounts, keyboard FAQ and navigation at 320/390/1366px; no research, signing or payment.");
+  console.log("PASS: built crawlable product/pricing/about/support, checkout-derived amounts, keyboard FAQ and navigation at 320/390/1024/1366px; no research, signing or payment.");
 } finally {
   await browser.close();
   if (child && !didExit) child.kill();

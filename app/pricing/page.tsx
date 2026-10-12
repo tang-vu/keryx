@@ -30,7 +30,7 @@ export default function PricingPage() {
     <SiteHeader />
     <main className="mx-auto max-w-[1080px] px-4 py-12 sm:px-[30px]">
       <header>
-        <p className="font-mono text-xs uppercase tracking-widest text-seal">{copy("product.pricing")} · {config.profile.label} · USDC</p>
+        <p className="font-mono text-xs uppercase tracking-widest text-seal">{copy("product.pricing")} · {config.profile.label} {copy("pricing.currencySuffix")}</p>
         <h1 className="mt-3 font-display text-4xl leading-tight sm:text-5xl">{copy("pricing.title")}</h1>
         <p className="mt-5 max-w-[76ch] font-serif text-lg leading-relaxed text-ink-2">{copy("pricing.introduction")}</p>
       </header>

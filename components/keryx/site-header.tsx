@@ -22,8 +22,8 @@ const message = createMessages("en");
 const NAV = [
   { href: "/", label: message("shellNavigation.ask") },
   { href: "/sources", label: message("shellNavigation.sources") },
-  { href: "/pricing", label: productGuideCopy("product.pricing") },
-  { href: "/about", label: productGuideCopy("product.about") },
+  { href: "/pricing", label: productGuideCopy("product.navigationPricing") },
+  { href: "/about", label: productGuideCopy("product.navigationAbout") },
   { href: "/dashboard", label: message("shellNavigation.activity") },
   { href: "/operator", label: message("shellNavigation.operator") },
   { href: "/answers", label: message("shellNavigation.answers") },

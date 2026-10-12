@@ -88,7 +88,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
         <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-[0.4] sm:scale-100" />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p data-testid="hero-kicker" className="max-w-[calc(100%_-_100px)] font-mono text-[11px] uppercase tracking-wide text-seal">{introduceProduct ? productGuideCopy("product.heroKicker") : message("researchChat.kicker")}</p>
+        <p data-testid="hero-kicker" className={`${introduceProduct ? "max-w-[calc(100%_-_140px)] sm:max-w-none " : ""}font-mono text-[11px] uppercase tracking-wide text-seal`}>{introduceProduct ? productGuideCopy("product.heroKicker") : message("researchChat.kicker")}</p>
         <div data-testid="hero-guide" className="absolute right-0 top-0 sm:static sm:mr-[156px]"><OnboardingTour /></div>
       </div>
       <h1 className="mt-1 font-display text-[clamp(32px,5vw,46px)] leading-none sm:mt-2 sm:leading-tight">{introduceProduct ? productGuideCopy("product.heroTitle") : message("researchChat.title")}</h1>

@@ -54,7 +54,7 @@ funding, spending, custody, schema or schedule is introduced.
 `npm run test:browser-product-guide` checks actual built Next pages in a disposable
 credential-free offline testnet fixture: crawlable text, own canonicals/indexing,
 configured quote amounts, sitemap/`llms.txt`, support, keyboard FAQ and navigation
-at 320/390/1366 pixels. Browser APIs are intercepted; research/payment requests
+at 320/390/1024/1366 pixels. Browser APIs are intercepted; research/payment requests
 fail the check. Optional screenshots use `KERYX_PRODUCT_SCREENSHOT_DIR`. CI runs
 the fixture after build. Original chat/mobile-header fixtures cover existing
 questions, follow-ups, refusal/recovery and wallet/menu interaction.
