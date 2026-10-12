@@ -30,7 +30,7 @@ export function ProductProof() {
       <h2 id="product-proof" className="mt-3 font-display text-3xl">{copy("product.proofTitle")}</h2>
       <p className="mt-4 max-w-[76ch] font-serif leading-relaxed text-ink-2">{copy("product.proofBody")}</p>
       <nav className="mt-4 flex flex-wrap gap-x-6" aria-label={copy("product.proofKicker")}>
-        <Link href="/walkthrough" className={linkClass}>{copy("product.walkthrough")}</Link>
+        <Link href="/walkthrough" prefetch={false} className={linkClass}>{copy("product.walkthrough")}</Link>
         <Link href="/proof" className={linkClass}>{copy("product.proof")}</Link>
         <Link href="/quality" className={linkClass}>{copy("product.quality")}</Link>
       </nav>

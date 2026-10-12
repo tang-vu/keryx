@@ -76,6 +76,11 @@ section; the original fixture remains frozen. Retire the two obsolete literal
 contact allowances. Browser teardown waits for route handlers before disposing
 their fetched responses, without suppressing errors or relaxing assertions.
 
+Integration includes accepted main PR #429's local launch badge and narrow idle
+signing observation. The added walkthrough link retains the original prefetch
+opt-out. Both legal and idle-entry tests pass; the combined study checks all 48
+offline trials against the existing canonical results with zero outbound attempts.
+
 TypeScript, scoped lint, UI-copy/payment-glossary checks, production build, visual
 inspection and independent source review apply. Actual hosted aggregate/domain/
 platform success remains a merge gate. After merge, perform one reviewed serialized

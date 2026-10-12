@@ -154,3 +154,80 @@ app `0.27.57`, hosted MCP `0.3.15`, stdio `0.4.17` metadata are inherited from
 accepted main, without a worker version or release change. The prior `2b210c42`
 convergence checkpoint remains preserved. Exact-source root review, combined
 hosted CI, full built signing acceptance and delivery still remain gates.
+
+## Read-only compiled fixture setup — October 12
+
+The signing-only fixture uses the ordinary root chat. `/research` also mounts
+private-history components and is outside this idle-preview scope. A fresh root
+tab normally posts an anonymous daily landing counter; the fixture seeds only
+that existing tab/day counter key before hydration so the review performs no
+telemetry write. It creates no wallet, authentication, grant or recovery state.
+All existing assertions against POSTs, external requests, signing/recovery
+workers, popups, failed assets and overflow remain enforced.
+
+For the production compiled artifact, a temporary loopback GET relay can read
+the original root and static responses directly through an SSH tunnel, using the
+reviewed origin Host and protocol headers. It preserves status, response headers
+and body bytes; it does not render substitutes or change production configuration.
+This avoids edge-injected analytics that otherwise violates the fixture's
+read-only guard. The transport and synthetic tab setup require source review
+before the actual four-case observation. This setup correction alone is not a
+passed compiled observation or issue closure.
+
+## Idle root asset correction — October 12
+
+The actual origin observation against app `0.27.59` / main `513c6fa6` failed
+before accepting its first case. Its browser guard blocked the Product Hunt
+embedded image GET; the relay also refused two local requests before dispatch.
+Those failures, the earlier `/research` private-history POST refusal and the
+natural tunnel closure remain evidence. They are not successful signing reviews.
+
+The launch link now renders its branding as inline SVG, retaining its accessible
+name, destination, dimensions and keyboard focus. Viewing it needs no external
+image or image preload. Root navigation opts out of Next's speculative route
+prefetching, including the landing creator links; explicit navigation remains
+available. Other pages retain the shared header/footer's default behavior.
+The existing synthetic tab/day initializer and every compiled fixture guard stay
+unchanged. No amount formatter, stored value, signing payload or locale changes.
+
+The retained root HTML references `/icon.svg?icon.0py8vkqw_ibso.svg`, generated
+from the existing `app/icon.svg`. Visible Next links can also request linked
+routes in production. These are source-backed refusal causes; the old generic
+relay log cannot establish the exact identity of either refused request.
+A separately prepared transport revision admits only that static icon pathname
+and its bounded Next-generated icon query, alongside the existing root/static
+allowlist. It records bounded, redacted refusal diagnostics and leaves all
+API, non-GET, client credential and other route restrictions intact.
+
+The transport revision is unexecuted source and still pins the existing app59
+deployment receipts. Root must independently review it and bind it to actual
+accepted compiled source containing this correction before another observation.
+Offline SSR/link-contract checks are not compiled browser acceptance. Applicable
+CI, review, release/delivery and all four built English signing observations
+remain required; original #274 stays open. No extra language or payment gate is
+introduced.
+
+## Navigation and catalogue correction — October 12, PR429
+
+Actual CI rejected the inline badge text outside the English catalogue and the
+root navigation opt-out broke the existing WebKit dynamic-prefetch/loading-shell
+acceptance. Root/header/footer/creator navigation now retains its original Next
+prefetch behavior; the mobile-navigation fixture and its assertions are unchanged.
+The inline badge retains its link, accessible names and dimensions while its
+neutral Product Hunt brand label uses the existing English catalogue.
+
+Only the idle signing-display mode isolates unrelated speculative route reads.
+Before dispatch it aborts same-origin fetch GETs on the fixed root navigation and
+footer paths only when Next16 supplies RSC=1, a finite next-router-prefetch value
+1/2/3, no navigation flag and one bounded _rsc query. Actual root HTML, JS/CSS,
+icons, explicit navigation, API, wallet/signing/recovery, external and non-GET
+requests are not classified as those prefetches. Original forbidden-call guards
+and every amount/micro/readiness/viewport assertion remain intact.
+
+Isolation is capped at64 requests per context with at most32 fixed-path log
+entries, without query/header values; an exceeded bound is a failed observation.
+No synthetic positive HTML/RSC/asset response is produced, and the origin relay
+still admits only root/static/icon reads. The default chat fixture is unchanged.
+These are source/fixture corrections, not compiled or deployed acceptance.
+Actual required CI, corrected-source delivery, separately reviewed transport
+binding and all four guarded English observations still govern original274.
