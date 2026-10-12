@@ -10,6 +10,7 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   admitRegistrationSponsor: "write",
   getRegistrationSponsor: "read",
   getRegistrationSponsorExecution: "read",
+  inspectRegistrationSponsorFunding: "read",
   transitionRegistrationSponsor: "write",
   upsertSource: "write",
   verifySourceIfUnchanged: "write",

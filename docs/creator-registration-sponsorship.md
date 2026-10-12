@@ -1,5 +1,30 @@
 # Creator registration gas sponsorship
 
+## Public wallet-funded registration candidate
+
+Owner direction on October 12: `/register` must be one quick creator flow for any
+verified publisher, with gas covered while the existing sponsor wallet has sufficient
+native funds. The new strict `keryx-registration-sponsor-v2` policy uses
+`eligibility: "verified-publisher"` and `funding: "wallet-balance"`. It admits no
+site/wallet allowlists, pilot expiry, daily/lifetime budget or attempt-count fields.
+Publishing proof, creator authorization and complete transaction gas limits remain
+mandatory. Fresh native balance and all unresolved reservations across old/new
+policies control admission and execution; an unavailable RPC or insufficient funds
+does not grant new authority.
+
+The main page keeps proof, chosen price, signing and confirmed/indexed completion
+together, with saved-request recovery under Advanced and an explicit wallet-funded
+fallback. Indexed registration does not activate earnings without distribution
+permission and matching registry terms. Google/Circle uses the same creator authority.
+
+Legacy finite policies and originals retain their digests, accounting and recovery.
+The earlier Conzit rollout and its dated evidence below are distinct from this public
+candidate. Activation and one combined deploy belong to the existing coordinator;
+including this source is not a claim that the new policy is already live.
+See [design, surface boundaries and acceptance](engineering/public-creator-registration-20261012.md).
+
+## Earlier finite-policy rollout
+
 October 12, 2026 activation candidate: registration sponsorship is **disabled by
 default**. The owner selected the existing funded public-fee wallet for a bounded
 Conzit rollout. Production activation remains pending the funded acceptance and

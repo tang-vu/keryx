@@ -20,8 +20,8 @@ import type { PersonalHistoryStore } from "../history/personal-history";
 import { createSqliteProfileIdentities } from "./profile-identities-sqlite";
 import { ProfileIdentityError, type ProfileIdentitiesStore } from "../profiles/verified-identities";
 import { PrivateProfileError, type PrivateProfilesStore } from "../profiles/private-profile";
-import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, getSqliteRegistrationSponsorExecution, transitionSqliteRegistrationSponsor, type RegistrationSponsorTransition } from "./registration-sponsor";
-import type { RegistrationSponsorPolicy, SponsoredRegistration } from "../sources/registration-sponsor-protocol";
+import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, getSqliteRegistrationSponsorExecution, inspectSqliteRegistrationSponsorFunding, transitionSqliteRegistrationSponsor, type RegistrationSponsorTransition } from "./registration-sponsor";
+import type { ActiveRegistrationSponsorPolicy, RegistrationSponsorFundingObservation, SponsoredRegistration } from "../sources/registration-sponsor-protocol";
 import { bindSqliteSourceRegistryOrigin, readSqliteSourceRegistryOrigin } from "./source-registry-origin";
 import { retainSqliteRegistryCollision } from "./registry-collisions";
 import { readSqliteOperatorInventory, type OperatorInventoryInput } from "../business-operator/inventory";
@@ -755,7 +755,8 @@ export class SqliteAdapter implements KeryxDB {
     const row = this.db.prepare(`SELECT value FROM sync_state WHERE key=?`).get(key);
     return row ? (row.value as string) : null;
   }
-  async admitRegistrationSponsor(policy: RegistrationSponsorPolicy, row: SponsoredRegistration, now?: number) { return admitSqliteRegistrationSponsor(this.db, policy, row, now); }
+  async admitRegistrationSponsor(policy: ActiveRegistrationSponsorPolicy, row: SponsoredRegistration, now?: number, fundingObservation?: RegistrationSponsorFundingObservation) { return admitSqliteRegistrationSponsor(this.db, policy, row, now, fundingObservation); }
+  async inspectRegistrationSponsorFunding(policy: ActiveRegistrationSponsorPolicy, observation: RegistrationSponsorFundingObservation, now?: number) { return inspectSqliteRegistrationSponsorFunding(this.db, policy, observation, now); }
   async getRegistrationSponsor(input: { wallet: string; id?: string; canonicalUrl?: string }) { return getSqliteRegistrationSponsor(this.db, input); }
   async getRegistrationSponsorExecution(input: { wallet: string; id: string }) { return getSqliteRegistrationSponsorExecution(this.db, input); }
   async transitionRegistrationSponsor(input: RegistrationSponsorTransition) { return transitionSqliteRegistrationSponsor(this.db, input); }

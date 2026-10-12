@@ -2,9 +2,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
+import { registrationTarget } from "@/lib/registration-return";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 /** The ordinary registration flow stays available while sponsorship is disabled. */
-export function RegistrationSponsorLink({ claimId, wallet, publisherUrl }: { claimId?: string; wallet: string; publisherUrl?: string }) {
+export function RegistrationSponsorLink({ claimId, wallet, publisherUrl, rssUrl, name, fetchPrice }: { claimId?: string; wallet: string; publisherUrl?: string; rssUrl?: string; name?: string; fetchPrice?: number }) {
   const [result, setResult] = useState<{ wallet: string; available: boolean; publisherOrigins?: string[] } | null>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -23,6 +25,6 @@ export function RegistrationSponsorLink({ claimId, wallet, publisherUrl }: { cla
     <h2 className="font-display text-xl">{copy.invitationHeading}</h2>
     <p className="mt-2 text-sm text-ink-2">{copy.invitationExplanation}</p>
     {!!result.publisherOrigins?.length && <p className="mt-2 text-sm text-ink-2">{copy.publisherScope({ publishers: result.publisherOrigins.join(", ") })}</p>}
-    <Link className="mt-3 inline-block text-sm underline" href={`/register/sponsored${claimId ? `?claimId=${encodeURIComponent(claimId)}` : ""}`}>{copy.sponsoredRegistrationLink}</Link>
+    <Link className="mt-3 inline-block text-sm underline" href={registrationTarget({ sourceClaimId: claimId, url: publisherUrl, rssUrl, name, fetchPrice, owner: wallet.toLowerCase(), chainId: browserPaymentProfile().chainId })}>{copy.sponsoredRegistrationLink}</Link>
   </section>;
 }

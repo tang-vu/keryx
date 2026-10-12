@@ -1,18 +1,9 @@
 "use client";
 
 /**
- * Register — creator onboarding. Gated behind wallet connect + SIWE sign-in.
- * The connected wallet address pre-fills the walletAddress field so creators
- * use their own wallet (not a server-generated custodial one).
- *
- * Auth states:
- *   - not connected → prompt to connect (link to /connect)
- *   - connected, not signed in → prompt to sign in
- *   - signed in (any role) → show the register form
- *
- * Listing is permissionless: any signed-in wallet may register a source, and
- * doing so makes it a creator (role re-derives from source ownership). There is
- * no creator precondition — that would be an impossible bootstrap.
+ * Default onboarding verifies publishing control and uses sponsored gas.
+ * The explicit wallet-funded query mode keeps the existing permissionless flow.
+ * Both use the connected creator wallet and preserve the initiating draft through SIWE.
  */
 
 import { createMessages } from "@/lib/i18n/messages";
@@ -31,6 +22,8 @@ import { BulkImportForm } from "@/components/keryx/bulk-import-form";
 import { ClaimOnchainPanel } from "@/components/keryx/claim-onchain-panel";
 import { FaucetPanel } from "@/components/keryx/faucet-panel";
 import { RegistrationSponsorLink } from "@/components/keryx/registration-sponsor-link";
+import { CreatorRegistration } from "@/components/keryx/creator-registration";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { WithdrawEarningsPanel } from "@/components/keryx/withdraw-earnings-panel";
 import {
   SourcesList,
@@ -43,23 +36,37 @@ const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
 
 export default function RegisterPage() {
-  const { address, isConnected } = useAccount();
+  const [restored, setRestored] = useState<{ draft: RegistrationDraft; error: string } | null>(null);
+  useEffect(() => {
+    try { setRestored({ draft: registrationDraft(new URLSearchParams(window.location.search)), error: "" }); }
+    catch (error) { setRestored({ draft: {}, error: error instanceof Error ? error.message : uiCopy("registrationPage.restoreFailed") }); }
+  }, []);
+  if (restored?.draft.mode === "wallet-funded" && !restored.error) return <WalletFundedRegistrationPage initial={restored.draft} />;
+  return <div className="min-h-screen bg-paper"><SiteHeader /><main className="mx-auto max-w-3xl px-4 py-10 sm:px-8">
+    {restored ? <CreatorRegistration initial={restored.draft} initialError={restored.error} /> : <AuthPlaceholder message={uiCopy("registrationPage.checkingSession")} />}
+  </main></div>;
+}
+
+function WalletFundedRegistrationPage({ initial }: { initial: RegistrationDraft }) {
+  const { address, isConnected, chainId } = useAccount();
+  const profile = browserPaymentProfile();
   const { session } = useSiweAuth();
   const [sources, setSources] = useState<SourceCardData[]>([]);
   const [sourcesState, setSourcesState] = useState<"loading" | "ready" | "error">("loading");
   // Pre-fill for claiming a pre-registry source on-chain. The form applies initial values on
   // mount only, so bump the key to re-initialise it with each claim.
-  const [prefill, setPrefill] = useState<RegisterPrefill | null>(null);
+  const [prefill, setPrefill] = useState<RegisterPrefill | null>(initial);
   const [formKey, setFormKey] = useState(0);
   // Single source at a time, or a pasted batch of feeds. Claiming a pre-registry source pre-fills
   // the single form, so a claim always snaps back to that tab.
   const [mode, setMode] = useState<"single" | "bulk">("single");
-  const [draftFeed, setDraftFeed] = useState("");
+  const [draftFeed, setDraftFeed] = useState(initial.rssUrl ?? "");
   const [feedError, setFeedError] = useState("");
   const [draftContextError, setDraftContextError] = useState("");
-  const [draftOwner, setDraftOwner] = useState<string | undefined>();
+  const [draftOwner, setDraftOwner] = useState(initial.owner);
 
   const saveDraft = (draft: RegistrationDraft) => {
+    draft = { ...draft, mode: "wallet-funded", chainId: initial.chainId ?? profile.chainId };
     const target = registrationTarget(draft);
     window.history.replaceState(window.history.state, "", target);
     setDraftOwner(draft.owner);
@@ -77,34 +84,12 @@ export default function RegisterPage() {
       if (parsed.username || parsed.password) throw new Error("Invalid feed URL");
       const rssUrl = registrationDraft(new URLSearchParams({ rss: parsed.toString() })).rssUrl;
       if (!rssUrl) throw new Error("Invalid feed URL");
-      saveDraft({ rssUrl, ...(rssUrl === prefill?.rssUrl ? { gapId: prefill.gapId, matchedItemLink: prefill.matchedItemLink } : {}), ...(address ? { owner: address.toLowerCase() } : {}) });
+      saveDraft({ rssUrl, fetchPrice: prefill?.fetchPrice, ...(rssUrl === prefill?.rssUrl ? { gapId: prefill.gapId, matchedItemLink: prefill.matchedItemLink } : {}), ...(address ? { owner: address.toLowerCase() } : {}) });
       setFeedError("");
     } catch {
       setFeedError(uiCopy("registrationPage.feedUrlInvalid"));
     }
   };
-
-  // Deep-link prefill: ?url= / ?name= / ?desc= seed the manual fields (the browser extension's
-  // "list this page as a paid source"), ?rss= seeds the feed field (the demand board's feed check,
-  // which arrives having already read that feed). Parsed from window.location on mount
-  // (client-only) so the page needs no Suspense boundary for useSearchParams.
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const params = new URLSearchParams(window.location.search);
-      try {
-        const draft = registrationDraft(params);
-        setDraftOwner(draft.owner);
-        if (!draft.url && !draft.name && !draft.rssUrl) return;
-        setPrefill(draft);
-        setDraftFeed(draft.rssUrl ?? "");
-        setFormKey((k) => k + 1);
-        setMode("single");
-      } catch (error) {
-        setDraftContextError(error instanceof Error ? error.message : uiCopy("registrationPage.restoreFailed"));
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
 
   const loadSources = useCallback(async () => {
     try {
@@ -129,9 +114,10 @@ export default function RegisterPage() {
   // makes it a creator). No creator-role precondition.
   const accountMatches = !!session && !!address && isConnected && session.address.toLowerCase() === address.toLowerCase();
   const ownerMatches = !draftOwner || draftOwner === address?.toLowerCase();
-  const canRegister = accountMatches && ownerMatches && !draftContextError;
-  const connectHref = draftContextError ? null : registrationConnectHref({ ...prefill, owner: draftOwner ?? address?.toLowerCase() });
-  const feedOnlyDraft = { rssUrl: prefill?.rssUrl, gapId: prefill?.gapId, matchedItemLink: prefill?.matchedItemLink, owner: draftOwner ?? address?.toLowerCase() };
+  const networkMatches = chainId === profile.chainId && (initial.chainId === undefined || initial.chainId === profile.chainId);
+  const canRegister = accountMatches && ownerMatches && networkMatches && !draftContextError;
+  const connectHref = draftContextError ? null : registrationConnectHref({ ...initial, ...prefill, owner: draftOwner ?? address?.toLowerCase(), chainId: initial.chainId ?? profile.chainId, mode: "wallet-funded" });
+  const feedOnlyDraft: RegistrationDraft = { rssUrl: prefill?.rssUrl, fetchPrice: prefill?.fetchPrice, gapId: prefill?.gapId, matchedItemLink: prefill?.matchedItemLink, owner: draftOwner ?? address?.toLowerCase(), chainId: initial.chainId ?? profile.chainId, mode: "wallet-funded" };
 
   return (
     <div className="min-h-screen bg-paper">
@@ -196,6 +182,7 @@ export default function RegisterPage() {
             </div>}
             {session && !accountMatches && connectHref && <AuthGate heading={uiCopy("registrationPage.payoutTitle")} body={uiCopy("registrationPage.payoutBody")} cta={uiCopy("registrationPage.reviewSignIn")} href={connectHref} />}
             {session && accountMatches && !ownerMatches && <div role="alert" className="border border-line p-5 text-sm">{uiRichCopy("registrationPage.draftWallet", { owner: draftOwner ?? "", restartLink: <a className="underline" href="/register">{uiCopy("registrationPage.restartRegistration")}</a> })}</div>}
+            {session && accountMatches && ownerMatches && !networkMatches && connectHref && <AuthGate heading={uiCopy("registrationPage.payoutTitle")} body={`Switch your wallet to ${profile.label} to use this registration draft.`} cta={uiCopy("registrationPage.reviewSignIn")} href={connectHref} />}
             {canRegister && (
               <>
                 {/* Show which wallet will be used as the payout address */}
@@ -212,7 +199,7 @@ export default function RegisterPage() {
                 </div>
                 {/* Returning creators: pull accrued citation earnings on-chain (gasless). */}
                 {address && <WithdrawEarningsPanel address={address} />}
-                {address && <RegistrationSponsorLink wallet={address} claimId={prefill?.sourceClaimId} />}
+                {address && <RegistrationSponsorLink wallet={address} claimId={prefill?.sourceClaimId} publisherUrl={prefill?.url} rssUrl={prefill?.rssUrl} name={prefill?.name} fetchPrice={prefill?.fetchPrice} />}
                 {/* Sources this wallet listed before the registry existed — one click pre-fills
                     the form below with the source's own feed/URL and price to claim it on-chain. */}
                 {!prefill?.sourceClaimId && <ClaimOnchainPanel
