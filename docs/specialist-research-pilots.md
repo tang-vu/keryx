@@ -89,6 +89,14 @@ buyer-initiated work from prompted or sponsored activity. `outcome` requires
 customer acceptance evidence beyond technical completion. Evidence IDs are opaque
 references to records retained privately; do not put questions or identities in them.
 
+This first evaluator covers standalone per-job collections. Monthly redemptions
+allocate an original prepaid purchase and must not be entered as new settled
+payments or fresh purchasing demand. Unredeemed entitlements and cross-period
+allocations need a separate reconciled cohort adapter before Monthly contribution
+can be reported. Citation operating fees are also a separate income stream,
+outside this service-fee-only model. Do not treat these results as the whole
+business's cash flow or profit.
+
 Retain full receipts/invoices/customer identities privately for human audit.
 Opaque evidence IDs alone do not certify them. Unknown costs, incomplete periods,
 uncertain refunds and missing currency conversion stay unknown. Failed/cancelled
