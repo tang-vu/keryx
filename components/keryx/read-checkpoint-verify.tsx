@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_READ_PACKET_BYTES, verifyActualReadPacket } from "@/lib/research-audit/actual-read-record";
 import { actualReadCopy as copy } from "@/lib/research-audit/actual-read-copy";
 import type { projectActualReadCheckpoints } from "@/lib/research-audit/actual-read-projection";
+import { DecisionCheckpointInspection } from "./decision-checkpoint-inspection";
 
 export function ReadCheckpointVerify({ capture }: { capture: ReturnType<typeof projectActualReadCheckpoints> }) {
   const expectedDigest = capture?.retainedDigest ?? null;
@@ -58,6 +59,7 @@ export function ReadCheckpointVerify({ capture }: { capture: ReturnType<typeof p
       </label>
       <button type="button" disabled={!file || state === "busy"} onClick={() => void verify()} className="mt-3 min-h-11 border border-line px-3 py-2 font-mono text-xs disabled:opacity-50">{copy.verify}</button>
       {state !== "idle" && <p role="status" className="mt-2 text-sm text-ink-2">{copy[state]}</p>}
+      <DecisionCheckpointInspection key={generation} packet={capture.packet} />
     </>}
   </section>;
 }

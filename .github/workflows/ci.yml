@@ -342,6 +342,9 @@ jobs:
       - name: Actual ordinary READ report offline verification
         run: npm run test:actual-read-browser
 
+      - name: Decision Lab and signed export verification (offline)
+        run: npm run test:decision-lab-browser
+
       - name: Unpacked MV3 extension (synthetic HTTP, no research or payments)
         run: npm run test:browser-extension
 
@@ -495,6 +498,9 @@ jobs:
           KERYX_FORCE_OFFLINE: "1"
         run: npm run test:browser-product-guide
 
+      - name: Decision Lab compiled route and mobile layout (offline)
+        run: npm run test:decision-lab-built
+
       - name: Retain immutable cohort rehearsal result
         if: always()
         uses: actions/upload-artifact@v4
@@ -589,6 +595,9 @@ jobs:
 
       - name: Private evidence drafts built interactions (offline, no research)
         run: node --import tsx scripts/test-browser-evidence-drafts.mts
+
+      - name: Evidence procurement request, signatures and restored reviews (offline, synthetic providers)
+        run: node --import tsx scripts/test-browser-evidence-procurement.mts
 
       - name: Stored excerpt readability (built CSS, hermetic Chromium)
         env:

@@ -7,6 +7,7 @@
  */
 
 import { config } from "./config";
+import application from "../package.json";
 import { paperOpenApiPaths, paperOpenApiSchemas } from "./papers/openapi";
 import { operatorStatusOpenApiPath } from "./business-operator/openapi";
 import { operatorObligationOpenApiPath } from "./operator-obligations/openapi";
@@ -23,6 +24,7 @@ import { privateProfileOpenApiPaths } from "./profiles/openapi";
 import { deliverableAcceptanceOpenApiPaths } from "./deliverable-acceptance/openapi";
 import { evidenceDraftOpenApiPath } from "./research/evidence-draft-openapi";
 import { draftCheckOpenApiPath } from "./research/draft-check-openapi";
+import { evidenceProcurementOpenApiPath } from "./evidence-procurement/openapi";
 import { personalHistoryOpenApiPaths } from "./history/openapi";
 import { runClaimOpenApiPaths, runClaimOpenApiSchemas, privateRunClaimOpenAiProperties, privateRunClaimOpenAiDescription, privateRunClaimOpenAiStream } from "./run-claims/openapi";
 import { API_KEY_SCOPES } from "./api-key-scopes";
@@ -58,7 +60,7 @@ export const openapiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Keryx API",
-    version: "0.27.61",
+    version: application.version,
     description:
       "Citation-toll autonomous research. POST a question + budget — Keryx buys paid sources via x402, " +
       "answers with citations, and settles weighted nanopayments to every cited creator in USDC on Arc. " +
@@ -638,6 +640,7 @@ export const openapiSpec = {
     ...deliverableAcceptanceOpenApiPaths,
     ...evidenceDraftOpenApiPath,
     ...draftCheckOpenApiPath,
+    ...evidenceProcurementOpenApiPath,
     ...privateProfileOpenApiPaths,
     ...personalHistoryOpenApiPaths,
     ...runClaimOpenApiPaths,
