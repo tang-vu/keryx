@@ -474,14 +474,16 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     await expect.poll(() => held).toBe(true);
     await page.evaluate(() => window.dispatchEvent(new CustomEvent("keryx:auth", { detail: "signed-out" })));
     releaseHeld!(); await oldPublication;
-    expect((await hookState()).status).toBe("paused");
+    // Resolving the hook operation does not synchronously commit React's render.
+    // Observe the exact final state, rather than racing the previous snapshot.
+    await expect.poll(async () => (await hookState()).status).toBe("paused");
     expect((await hookState()).grantEpoch).toBeNull();
 
     // An older metadata response cannot publish after another tab replaces the exact proof.
     held = false; holdGrant = true; const replacedPublication = recover();
     await expect.poll(() => held).toBe(true); const replacement = await renew();
     releaseHeld!(); await replacedPublication;
-    expect((await hookState()).status).toBe("paused");
+    await expect.poll(async () => (await hookState()).status).toBe("paused");
     await recover(); await expect.poll(hookState).toMatchObject({ status: "active", grantEpoch: replacement.grantEpoch });
     expect((await hookState()).spent).toBe(Number(replacement.spentMicroUsdc)/1e6);
 
@@ -490,7 +492,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     const delayedLogout = page.evaluate(() => (window as unknown as { normalGrant: { revoke(): Promise<unknown> } }).normalGrant.revoke());
     await expect.poll(() => held).toBe(true); const afterLogout = await renew();
     releaseHeld!(); await delayedLogout;
-    expect((await hookState()).status).toBe("paused");
+    await expect.poll(async () => (await hookState()).status).toBe("paused");
     expect((await (await dispatch(`${origin}/api/session/grant`, {}, token)).json()).grantEpoch).toBe(afterLogout.grantEpoch);
     await recover(); await expect.poll(hookState).toMatchObject({ status: "active", grantEpoch: afterLogout.grantEpoch });
   }
