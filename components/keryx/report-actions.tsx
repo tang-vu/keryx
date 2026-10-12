@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import type { PaymentRecord, QueryRun } from "@/lib/types";
 import { researchReportFilename, researchReportMarkdown } from "@/lib/research-report-export";
+import { evidenceProcurementCopy } from "@/lib/evidence-procurement/copy";
 
 const copy = createMessages("en");
 
@@ -29,7 +30,7 @@ export function ReportActions({ run, meta, payments }: { run: QueryRun; meta: As
       } catch { setMessage(copy("reportActions.downloadUnavailable")); }
     }}>{copy("reportActions.download")}</button>
     <a href={`/dispatch/${encodeURIComponent(run.id)}`} className={buttonClass}>{copy("reportActions.openSaved")}</a>
-    <a href="/operator/evidence" className={buttonClass}>Commission missing evidence</a>
+    <a href="/operator/evidence" className={buttonClass}>{evidenceProcurementCopy.links.commission}</a>
     <span role="status" className="text-xs text-ink-3">{message}</span>
   </div>;
 }

@@ -55,6 +55,10 @@ choose a private destination. Closing or reloading loses edits without an export
 Remote MCP retains its existing 65,536-byte cap on the entire JSON-RPC body, so
 the tool envelope reduces the packet size available over that transport.
 
+The browser wrapper's labels, notices and named text templates use the separate
+English source catalogue `locales/en/evidence-procurement.json`; this adds no
+locale selection, translation approval or support for additional languages.
+
 | Surface | Role |
 |---|---|
 | Web | Create, inspect, export and restore the portable packet at `/operator/evidence`; computations stay in the browser. |
