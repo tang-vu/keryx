@@ -8,6 +8,34 @@ import { test } from 'node:test';
 import { createHash } from 'node:crypto';
 import { startPreparedPublicRole, drainPreparedPublicRole } from './rehearse-prepared-release.mjs';
 
+test('uncertain readiness acknowledgement drains the original once and retains its complete close evidence', async () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'keryx-readiness-ack-'));
+  const child = new EventEmitter(); child.pid = 4242;
+  child.stdout = new PassThrough(); child.stderr = new PassThrough();
+  let drains = 0;
+  child.send = child.kill = () => {
+    drains++;
+    setImmediate(() => {
+      child.stdout.end(JSON.stringify({ format: 'keryx-next-public-server-closed-v1', httpDrained: true,
+        pid: child.pid, signal: 'SIGTERM', exitCode: 143 }) + '\n');
+      child.stderr.end(); child.emit('exit', 143, null);
+      setImmediate(() => child.emit('close', 143, null));
+    });
+    return true;
+  };
+  // The ready ACK is deliberately absent. A bounded observation deadline is a
+  // refusal, never permission to restart/replay or abandon this owned process.
+  await assert.rejects(startPreparedPublicRole(path.join(scratch, 'source'), {}, scratch, 'lost-ack',
+    () => child, { readinessTimeoutMs: 1 }), error => {
+    assert.match(error.message, /acknowledgement not observed/);
+    assert.equal(error.rehearsal.drainAccepted, true);
+    assert.equal(error.rehearsal.capture.complete, true);
+    assert.deepEqual(error.rehearsal.exit, { code: 143, signal: null });
+    return true;
+  });
+  assert.equal(drains, 1); assert.equal(fs.existsSync(path.join(scratch, 'runtime-rehearsal.json')), false);
+});
+
 test('rehearsal readiness refusal retains ownership until graceful close and pipe evidence', async t => {
   // Only in-memory child/pipe seams; no server, real process, socket or ENV load.
   // Retain these small synthetic logs for inspection rather than deleting them.

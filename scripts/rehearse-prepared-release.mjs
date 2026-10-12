@@ -13,14 +13,18 @@ import { preparationEnvironment } from './prepare-immutable-release.mjs';
 
 const program = `
   const { pathToFileURL } = await import('node:url');
+  const { readFileSync } = await import('node:fs');
+  const { join } = await import('node:path');
   const { startNextPublicServer, installNextPublicShutdown } = await import(pathToFileURL(process.argv[2]));
   const running = await startNextPublicServer({ dir: process.argv[3], port: 3940, useBuildConfig: true });
   installNextPublicShutdown(running);
   process.on('message', message => { if (message === 'drain') process.emit('SIGTERM'); });
-  process.send({ ...running.receipt, source: process.argv[3] });
+  process.send({ ...running.receipt, source: process.argv[3],
+    buildId: readFileSync(join(process.argv[3], '.next', 'BUILD_ID'), 'utf8').trim() });
 `;
 
-export async function startPreparedPublicRole(source, env, scratch, label, spawnRole = spawn) {
+export async function startPreparedPublicRole(source, env, scratch, label, spawnRole = spawn, { readinessTimeoutMs = 30000 } = {}) {
+  assert.ok(Number.isInteger(readinessTimeoutMs) && readinessTimeoutMs > 0 && readinessTimeoutMs <= 30000);
   const logFile = path.join(scratch, `${label}.log`);
   // Refuse log creation before there is an owned process to drain.
   const log = fs.openSync(logFile, 'wx', 0o600);
@@ -87,9 +91,11 @@ export async function startPreparedPublicRole(source, env, scratch, label, spawn
   });
   exited.catch(() => {});
   const role = { child, exited, output: () => retained.toString('utf8'), capture };
+  let readinessTimer;
   try {
     const ready = await Promise.race([
       new Promise(resolve => child.once('message', resolve)),
+      new Promise((_, reject) => { readinessTimer = setTimeout(() => reject(Error('Prepared readiness acknowledgement not observed; hold for graceful close')), readinessTimeoutMs); }),
       exited.then(exit => {
         const error = Error('Prepared public server exited before readiness; inspect its retained output');
         error.rehearsal = { phase: 'before-readiness', exit, source, logFile,
@@ -100,6 +106,7 @@ export async function startPreparedPublicRole(source, env, scratch, label, spawn
     ]);
     assert.equal(ready.ready, true); assert.equal(ready.source, source);
     assert.equal(ready.physicalHost, '127.0.0.1'); assert.equal(ready.physicalPort, 3940);
+    role.ready = ready;
     return role;
   } catch (error) {
     // The caller has not received this owned handle yet. A refused readiness
@@ -121,7 +128,7 @@ export async function startPreparedPublicRole(source, env, scratch, label, spawn
       error.rehearsal = { phase: 'readiness-refused', exit, capture: capture(), closedReceipt: null, drainAccepted: false };
     }
     throw error;
-  }
+  } finally { clearTimeout(readinessTimer); }
 }
 
 export async function readPreparedPublicHealth(commit) {
@@ -172,14 +179,20 @@ export async function drainPreparedPublicRole(role) {
 
 export async function rehearsePreparedRelease(options) {
   const before = verifyImmutableArtifact(options);
+  const originalOptions = options.predecessor ?? options;
+  const original = verifyImmutableArtifact(originalOptions);
+  if (options.predecessor) assert.notEqual(original.commit, before.commit, 'Compiled rollback needs a distinct predecessor commit');
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'keryx-prepared-rehearsal-'));
   const source = path.join(options.candidate, 'source');
+  const oldSource = path.join(originalOptions.candidate, 'source');
   const env = preparationEnvironment({ commit: before.commit, scratch });
+  const oldEnv = preparationEnvironment({ commit: original.commit, scratch });
   const initialStarted = performance.now();
   let active;
   try {
-  const predecessor = await startPreparedPublicRole(source, env, scratch, 'predecessor'); active = predecessor;
-  const initial = await readPreparedPublicHealth(before.commit);
+  const predecessor = await startPreparedPublicRole(oldSource, oldEnv, scratch, 'predecessor'); active = predecessor;
+  assert.equal(predecessor.ready.buildId, original.buildId);
+  const initial = await readPreparedPublicHealth(original.commit);
   const initialReadyMs = Math.round(performance.now() - initialStarted);
   const startedAt = new Date().toISOString(), maintenanceStarted = performance.now();
   let previousClosed;
@@ -189,20 +202,44 @@ export async function rehearsePreparedRelease(options) {
   // Rehash all exact candidate bytes at the actual handover boundary.
   const after = verifyImmutableArtifact(options); assert.deepEqual(after, before);
   const replacement = await startPreparedPublicRole(source, env, scratch, 'replacement'); active = replacement;
+  assert.equal(replacement.ready.buildId, before.buildId);
   const final = await readPreparedPublicHealth(before.commit);
+  assert.deepEqual(final.a2aJobs, initial.a2aJobs, 'Idle handover cannot change the queue');
   const handoverMs = Math.round(performance.now() - maintenanceStarted);
   const postDrainReadinessMs = Math.round(performance.now() - drainedAt);
   let replacementClosed;
   try { replacementClosed = await drainPreparedPublicRole(replacement); }
   finally { if (replacement.capture().closed) active = undefined; }
+  // Runtime cache/trace writes must not change either inspected cohort, even
+  // after startup, real requests and positive close. Failure keeps all evidence.
+  assert.deepEqual(verifyImmutableArtifact(options), before);
+  assert.deepEqual(verifyImmutableArtifact(originalOptions), original);
+  let rollback;
+  if (options.predecessor) {
+    const rollbackStarted = performance.now();
+    const restored = await startPreparedPublicRole(oldSource, oldEnv, scratch, 'rollback'); active = restored;
+    assert.equal(restored.ready.buildId, original.buildId);
+    const health = await readPreparedPublicHealth(original.commit);
+    assert.deepEqual(health.a2aJobs, initial.a2aJobs);
+    const readinessMs = Math.round(performance.now() - rollbackStarted);
+    let closedReceipt;
+    try { closedReceipt = await drainPreparedPublicRole(restored); }
+    finally { if (restored.capture().closed) active = undefined; }
+    assert.deepEqual(verifyImmutableArtifact(originalOptions), original);
+    rollback = { commit: original.commit, buildId: original.buildId, health, readinessMs,
+      closedReceipt, output: restored.capture(), artifactDigest: original.artifactDigest };
+  }
   const receipt = { format: 'keryx-prepared-next-rehearsal-v1', productionAdmitted: false,
-    evidence: 'actual prepared Next public server; same-cohort idle restart; isolated testnet/offline SQLite',
+    evidence: options.predecessor ? 'actual compiled predecessor/candidate/rollback; isolated testnet/offline idle web' :
+      'actual prepared Next public server; same-cohort idle restart; isolated testnet/offline SQLite',
     commit: before.commit, tree: before.tree, buildId: before.buildId,
     artifactInspectionSha256: options.artifactInspectionSha256, artifactDigest: before.artifactDigest,
     platform: process.platform, node: process.versions.node, startedAt, initialReadyMs,
     handoverMs, postDrainReadinessMs, initial, final, previousClosed, replacementClosed,
     output: { predecessor: predecessor.capture(), replacement: replacement.capture() },
     nativeSignal: process.platform !== 'win32', scratch,
+    immutableBytesAfterRuntimeAccepted: true, predecessor: original, rollback: rollback ?? null,
+    compiledRollbackRehearsed: Boolean(rollback),
     financialWorkerDrainAccepted: false, rollbackAccepted: false,
     productionAvailabilityTargetAccepted: false, schedulesChanged: false };
   const file = path.join(options.candidate, 'runtime-rehearsal.json');
