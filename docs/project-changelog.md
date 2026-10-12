@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### Conzit creator registration gas sponsorship (0.27.60 candidate)
+### Conzit creator registration gas sponsorship (0.27.61 candidate)
 
 - Retain private creator authorization and exact sponsor transaction bytes before
   exposure; add explicit owner resume on the website and same-origin SIWE API.
@@ -21,6 +21,19 @@
   roles; no publisher key or sponsor executor is distributed to those surfaces.
   This candidate does not claim package/installer synchronization or creator
   earnings. See the funded acceptance and mainnet status for actual rollout evidence.
+### Research product clarity and official support (source candidate)
+
+- Lead with cited AI research, visible source decisions and practical researcher,
+  builder/writer, creator and developer paths. Keep the question form prominent.
+- Add indexed pricing/about pages with checkout-derived examples, explicit
+  sponsored-public-trial and prepaid terms, proof links and **support@keryx.cc**.
+- Explain Keryx on public archive/report entry points. Correct stale `llms.txt`,
+  social metadata and the unqualified zero-price application offer without
+  removing historical, synthetic, confidence or payment-state disclosures.
+- Add credential-free built browser acceptance for content, amounts, metadata,
+  support, keyboard FAQ and 320/390/1024/1366px layouts. Package/payment authority
+  stays unchanged; [release gates](engineering/product-clarity-2026-10-12.md)
+  distinguish source acceptance, publication and deployment.
 
 ### Bounded source outcomes (source candidate)
 

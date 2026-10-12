@@ -20,6 +20,21 @@ silently replaced by V3. Use an unsigned, bounded deployment proposal; creation
 simulation does not authorize contract deployment, spending or registry cutover.
 See [sponsorship recovery](docs/creator-registration-sponsorship.md) and the
 [October 12 activation evidence](docs/engineering/registration-sponsor-activation-20261012.md).
+**Explain the research product before visitors interpret its ledger — 2026-10-12.**
+The owner requested one product update after an outside website critique. The
+current homepage already supports research and a sponsored trial; the critique's
+archive-only description and numeric score are not a verified assessment. Address
+the useful gaps: audience/outcome clarity, pricing discovery, support and report
+entry context. Reuse checkout's configured pricing for examples, remove the
+unqualified zero-price application offer and repair stale `llms.txt`. Preserve
+public-trial, evidence, historical testnet and simulation disclosures. Do not
+invent testimonials, customer logos, security badges or adoption claims.
+
+The owner confirmed **support@keryx.cc** as Keryx's official support address. Use
+the public support constant on web support/policy pages; historical personal
+contact records remain historical. New English marketing copy stays outside the
+catalogue embedded in desktop/MCP runtimes. See
+[product clarity and release boundaries](docs/engineering/product-clarity-2026-10-12.md).
 
 ## Check cited draft sentences against supplied text, by wording only — 2026-10-11
 
