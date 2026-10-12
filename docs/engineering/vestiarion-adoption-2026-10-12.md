@@ -130,6 +130,13 @@ were visually inspected. Independent source review found the run-context display
 and preview-reset issues; both were corrected before the candidate was pushed.
 Hosted CI, merge and production delivery are not implied by these local results.
 
+The first hosted integration run detected the app-version-only lockfile change
+against the controlled study's retained lock SHA. Reproducing its 48 isolated
+offline trials changed only `lockSha256` and the generated report's matching lock
+reference: all trials, the corpus and all 398 runtime-source fingerprints remained
+byte-equivalent, with zero outbound attempts. The study checker then passed.
+No study corpus, metric, rubric, engine or dependency resolution was changed.
+
 ## Demo and remaining work
 
 In a short reviewer journey: open Decision Lab, show model BUY blocked by the
