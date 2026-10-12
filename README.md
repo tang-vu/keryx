@@ -55,6 +55,13 @@ not guaranteed. Submitted questions become public reports. See
 
 ## Recorded purchase outcomes
 
+For a question the available evidence cannot resolve, the new
+[evidence procurement workspace](docs/evidence-procurement.md) prepares a bounded
+request, compares signed provider quotations and reviews the delivered excerpts.
+Private portable packets can be exported and restored across web, API, CLI and
+MCP. This is a proposal/evaluation slice; actual provider contact, funded execution
+and independent customer acceptance remain separately gated.
+
 The October 11 source candidate adds `/purchase-outcomes` and its read-only
 `/api/purchase-outcomes` view. It compares recorded exact-version purchases with
 citations, showing the newest-run sample, UTC interval and separate recorded

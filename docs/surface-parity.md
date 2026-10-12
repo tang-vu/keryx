@@ -1,8 +1,8 @@
 # Supported-surface release parity
 
-## App62 setup discovery — October 12 source candidate
+## Website setup discovery — October 12 source candidate
 
-App/OpenAPI **0.27.62** adds indexed setup, download and integration guides for web,
+This web-only candidate adds indexed setup, download and integration guides for web,
 Windows desktop, extension, remote/stdio MCP, API, CLI and bots. Download examples
 pin independently published v0.27.61 artifacts; source availability is separate
 from installation. Existing client/payment protocols and packaged runtime inputs
@@ -10,7 +10,79 @@ retain their original versions and authority. No new package or installer runtim
 is needed for web-only guides. Exact-source CI, source review, deployment and public
 readback remain delivery gates. See [the source-backed design and surface audit](engineering/website-setup-2026-10-12.md).
 
+## App62 combined audit and presentation cohort - October12 candidate
+
+Candidate identities: app/OpenAPI **0.27.62**, hosted MCP **0.3.17**,
+stdio/npm/official Registry **0.4.19**, Desktop **0.4.17**. Retain extension
+**0.1.4.2** only after the final twelve shipped inputs match the accepted payload.
+GitHub v0.27.61 already belongs to the separate b6009528 publication; the prior
+App61 cohort section below is historical candidate provenance, not acceptance
+of this combined source or distribution. Publication is not owner installation.
+
+This candidate preserves the complete incoming PR430 product clarity and PR428
+creator-registration source, plus the reviewed audit/presentation, default-OFF
+deadline observer and idle-signing corrections. The previous supported-surface
+roles remain: web/API/OpenAI/A2A and hosted bots consume hosted source; remote
+MCP retains its scoped tools; stdio/Registry and Desktop require exact final
+shared executable and artifact acceptance. CLI inspection and extension browser
+handoff roles acquire no signer, sponsor executor, private storage or scheduler.
+
+The accepted **0.27.59 /513c6fa6** delivery remains historical evidence. Public
+**c49f4b3e /0.27.60** health and normal maintenance show availability only;
+physical source/build, ENV/custody/Operator/holds, backup/dependency preservation
+and two complete trusted originals still require fresh guarded observation.
+The user has confirmed this release owner controls the combined deployment;
+fresh independent evidence replaces waiting for another deployment handoff.
+
+After the final source and versioned lock freeze, run the existing canonical
+offline producer once, require actual exact-source aggregate/domain/platform CI
+including main publication acceptance, then verify final npm/Registry/Desktop
+artifacts and readbacks. One accepted combined deployment must verify public
+health/commit/OpenAPI/initialized MCP. The four compiled idle-signing observations
+remain original274 delivery gates. Source graph or syntax evidence is not a
+production build, installed-client acceptance, settled traction or delivery.
+
+No new funding/spending, sponsor-policy activation, registry-origin/cutover
+activation, production DDL/backfill, custody or schedule is authorized by this
+release. Upstream sponsorship and registry source/documents are retained; their
+separate activation evidence does not grant new authority here. Original
+#301/#257/#276/#274 and profile/privacy/financial-language gates stay open.
+See [current distribution gates](mcp-distribution.md).
+
+
+## App61 audit and presentation cohort — October12 candidate
+
+Candidate identities: app/OpenAPI **0.27.61**, hosted MCP **0.3.17**,
+stdio/npm/official Registry **0.4.19**, Desktop **0.4.17**. The unchanged
+extension payload retains **0.1.4.2**; publication is separate from installation.
+The **0.27.59 /513c6fa6** delivery has retained acceptance evidence. A concurrent
+PR430 web deployment was observed at **c49f4b3e** on October12; public health and
+normal maintenance establish availability and commit only. Its physical lifecycle,
+ENV/custody/Operator/holds, backup and full-original handoff remain unverified here.
+This combined cohort and its distribution are not yet accepted as delivered.
+
+| Surface | Coordinated behavior and boundary | Acceptance |
+| --- | --- | --- |
+| Web/report | Bounded ordinary v3 optimizer replay; unavailable/private captures remain explicit. Idle signing fixes retain every monetary/viewport guard. | Final stock Next/browser CI, corrected four-case compiled observation and exact deployed commit. |
+| API/OpenAI/A2A | Closed v3 projections and presentation-only finite labels. Machine codes, raw answer/evidence, paid body, amounts and receipts retain authority. | Exact combined aggregate/domain checks and deployed OpenAPI. |
+| Remote MCP | Shared research labels and v3 projection; no language directive or new payment/incident tool. | Initialized0.3.17 and actual deployed contract. |
+| Stdio/npm/Registry | Language controls affect local presentation after the buyer returns. Answer language stays UNKNOWN without recorded authority. | Final installed bundle vectors, isolated consumer/integrity/provenance, npm and Registry exact/latest readbacks. |
+| CLI | Existing local audit/result/export roles; Operator queue is read-only. | Exact source and applicable controls; no general CLI locale claim. |
+| Desktop | Changed shared executable inputs require a fresh0.4.17 helper/native package; existing renderer and custody roles remain. | Final-source packaged smoke/fresh-runner acceptance, source/checksum asset readback. |
+| Extension | All shipped inputs remain byte-identical; hosted page updates arrive through existing links. | Confirm final12-input equality; retain prior0.1.4.2 artifact provenance, no new zip/store claim. |
+| Bots | Help/private-placeholder labels and scoped help-only preferences. | Hosted source; Telegram/Discord command-definition readback before discoverability claims. No live message trial is inferred. |
+| A2A worker/private ops/email | Deadline observer stays OFF on the existing locked cadence. No new recipient, timer, email preference or customer delivery. | Preserve ENV/holds; real activation/customer/human/timeliness gates remain open. |
+
+Original #301 integer allocation/reservation-release/every-record qualification,
+#257 real service delivery and #276 trusted producer/report/email/client language
+agreement remain open. Privacy/profile, schema/backfill, Zotero, financial-copy,
+scheduler and funding holds are unchanged. A source fixture is not actual delivery.
+See the [cohort distribution gates](mcp-distribution.md).
+
 ## App60 product clarity — October 12 source candidate
+
+This section describes PR430's web scope. It does not replace the combined
+audit and presentation cohort's package identities or distribution gates above.
 
 App/OpenAPI **0.27.60** explains the research product, publishes indexed pricing/
 about pages and unifies official support. New English copy is web-only; native,
@@ -942,3 +1014,29 @@ scaffold, with its real transport and funding held. Source tests do not assert
 published package/installer versions or deployed commit equality. Required hosted
 acceptance, review, actual built-browser checks and coordinated delivery remain
 gates; see [scope and remaining issue298 criteria](engineering/purchase-outcomes-298.md).
+
+
+## App63 combined cohort after main436 convergence - October12 candidate
+
+The release candidate now uses app/OpenAPI **0.27.63**. The whole incoming
+OpenAPI obtains its identity from package.json; no hardcoded OpenAPI version
+is added. Main436/d7f79046 advanced the separate app62 source, so prior App62
+and App61 sections retain historical candidate provenance rather than acceptance
+of this combined source. Existing stdio/npm/official Registry **0.4.19**, hosted
+MCP **0.3.17** and Desktop **0.4.17** remain candidates. Retain extension
+**0.1.4.2** only with final twelve-input equality and original artifact provenance.
+
+The normal merge preserves main436, PR430 product discovery, PR428 registration
+and all prior cohort source/documents. The whole incoming startup/privacy/signature
+authority requires its independent review. No version scalar or graph inventory
+proves runtime compatibility, publication, installation or delivery. Freeze the
+final source and versioned lock before one canonical offline reproduction; require
+fresh exact-source aggregate/domain/platform CI and main publication acceptance,
+then final shared-client/native artifacts and readbacks before one combined deploy.
+
+Accepted59/513c6fa6 remains historical delivery evidence. Public c49f4b3e/0.27.60
+health establishes availability only; physical baseline, ENV/custody/Operator/holds,
+backup/dependency preservation and two full trusted originals remain separate gates.
+Original301/257/276/274, privacy/profile and financial-language criteria stay open.
+No new spending/funding, sponsor or registry-origin activation, production DDL/
+backfill, custody or schedule authority is granted. See [distribution gates](mcp-distribution.md).

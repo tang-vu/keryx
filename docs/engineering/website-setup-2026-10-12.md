@@ -27,7 +27,7 @@ or copying their supported platforms, OAuth, accounts or billing capabilities.
 
 ## Source outcome and acceptance
 
-App/OpenAPI candidate 0.27.62 adds server-rendered `/get-started`, `/download` and
+The web-only source candidate adds server-rendered `/get-started`, `/download` and
 `/integrations`. Header, home, footer, sitemap, README and `llms.txt` link them.
 The setup guide separates hosted trial research from caller-funded buyers and
 retains public-report, payment-state and interrupted-job recovery disclosures.
@@ -68,7 +68,7 @@ independent gates, not established by these local observations.
 | Desktop | Published Windows alpha links, platform/runtime requirements, manual updates and explicit buyer handoff. No installer runtime change. |
 | Remote MCP | Existing `/integrations/mcp` remains the client-specific setup/probe authority; new directory explains HTTP and scope boundaries. No protocol change. |
 | Stdio MCP | Published 0.4.18 configuration and custody/funding/recovery guide. No package runtime change. |
-| API | OpenAI-compatible setup and OpenAPI/key links; paid x402 agent API remains distinct. Only application/spec release identity increments. |
+| API | OpenAI-compatible setup and OpenAPI/key links; paid x402 agent API remains distinct. Application/spec release identity remains owned by the release coordinator. |
 | CLI | Source installation and help commands; buyer and Operator guides retain custody/network roles. No command runtime change. |
 | Extension | Pinned source install instructions and public-trial/privacy limits. No extension runtime or manifest change. |
 | Bots | Documented Telegram/Discord links; Slack administrator setup, with no invented OAuth install path. No bot adapter change. |
