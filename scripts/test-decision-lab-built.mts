@@ -39,6 +39,7 @@ try {
   assert(ready, "Compiled Decision Lab unavailable");
   const response = await fetch(origin + "/operator/decisions"); assert.equal(response.status, 200);
   const html = await response.text(); assert(html.includes(copy.title)); assert(html.includes(copy.sample));
+  assert(/<input(?=[^>]*value="0\.005")(?=[^>]*disabled)[^>]*>/.test(html), "SSR budget input is disabled until local handlers exist");
   assert(html.includes('href="' + origin + '/operator/decisions"') || html.includes('/operator/decisions"'));
   const context = await browser.newContext({ serviceWorkers: "block" });
   const writes: string[] = [], external: string[] = [], errors: string[] = [];

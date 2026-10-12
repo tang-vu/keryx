@@ -2,12 +2,14 @@
 import { useMemo, useState } from "react";
 import { inspectReadDecisions, previewReadPolicy } from "@/lib/research-audit/decision-inspection";
 import { decisionLabCopy as copy } from "@/lib/research-audit/decision-lab-copy";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 
 const fieldClass = "mt-1 block min-h-11 w-full max-w-sm border border-line bg-paper px-3 py-2 font-mono text-sm";
 const buttonClass = "min-h-11 border border-ink px-4 py-2 font-mono text-xs disabled:opacity-50";
 
 export function DecisionCheckpointInspection({ packet }: { packet: unknown }) {
   const inspection = useMemo(() => inspectReadDecisions(packet), [packet]);
+  const hydrated = useHydrated();
   const [remaining, setRemaining] = useState("0.005");
   const [attention, setAttention] = useState("2");
   const [preview, setPreview] = useState<ReturnType<typeof previewReadPolicy> | null>(null);
@@ -46,10 +48,10 @@ export function DecisionCheckpointInspection({ packet }: { packet: unknown }) {
       <h2 className="font-display text-2xl">{copy.previewTitle}</h2>
       <p className="mt-2 max-w-3xl text-sm text-ink-3">{copy.previewHelp}</p>
       <div className="mt-4 flex flex-wrap gap-4">
-        <label className="text-sm">{copy.remaining}<input className={fieldClass} inputMode="decimal" maxLength={32} value={remaining} onChange={event => { setRemaining(event.target.value); setPreview(null); }} /></label>
-        <label className="text-sm">{copy.attention}<input className={fieldClass} inputMode="numeric" maxLength={5} value={attention} onChange={event => { setAttention(event.target.value); setPreview(null); }} /></label>
+        <label className="text-sm">{copy.remaining}<input disabled={!hydrated} className={fieldClass} inputMode="decimal" maxLength={32} value={remaining} onChange={event => { setRemaining(event.target.value); setPreview(null); }} /></label>
+        <label className="text-sm">{copy.attention}<input disabled={!hydrated} className={fieldClass} inputMode="numeric" maxLength={5} value={attention} onChange={event => { setAttention(event.target.value); setPreview(null); }} /></label>
       </div>
-      <button type="button" onClick={compare} className={`${buttonClass} mt-4`}>{copy.preview}</button>
+      <button type="button" disabled={!hydrated} onClick={compare} className={`${buttonClass} mt-4`}>{copy.preview}</button>
       {preview && (preview.status === "unavailable" ? <p role="status" className="mt-3 text-sm">{copy.noPreview}</p> : <div className="mt-4">
         <p role="status" className="text-sm text-ink-3">{copy.previewScope}</p>
         <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[380px] text-left text-xs">

@@ -137,6 +137,13 @@ reference: all trials, the corpus and all 398 runtime-source fingerprints remain
 byte-equivalent, with zero outbound attempts. The study checker then passed.
 No study corpus, metric, rubric, engine or dependency resolution was changed.
 
+Hosted compiled-route acceptance also reproduced editing the server-rendered
+budget field before hydration: the first client render restored its default.
+Lab controls now remain disabled until their browser handlers exist, using the
+same server/client snapshot pattern as the existing wallet UI. Compiled acceptance
+requires disabled SSR budget markup and preservation of the typed value after
+interaction; this does not add payment or persistence authority.
+
 ## Demo and remaining work
 
 In a short reviewer journey: open Decision Lab, show model BUY blocked by the

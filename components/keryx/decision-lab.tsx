@@ -5,10 +5,12 @@ import { syntheticDecisionShowcasePacket } from "@/lib/research-audit/decision-i
 import { decisionLabCopy as copy } from "@/lib/research-audit/decision-lab-copy";
 import { DecisionCheckpointInspection } from "./decision-checkpoint-inspection";
 import { SignedDecisionVerify } from "./signed-decision-verify";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 
 const buttonClass = "min-h-11 border border-ink px-4 py-2 font-mono text-xs disabled:opacity-50";
 
 export function DecisionLab() {
+  const hydrated = useHydrated();
   const [packet, setPacket] = useState<ActualReadPacket>(syntheticDecisionShowcasePacket);
   const [recorded, setRecorded] = useState(false);
   const [recordedDigest, setRecordedDigest] = useState<string | null>(null);
@@ -48,16 +50,16 @@ export function DecisionLab() {
       <p className="mt-2 max-w-3xl text-sm text-ink-3">{recorded ? copy.recordedBoundary : copy.shadowBoundary}</p>
       {recordedDigest && <p className="mt-2 break-all font-mono text-xs text-ink-3">{copy.digest}: {recordedDigest}</p>}
       <div className="mt-4 flex flex-wrap gap-3">
-        <button type="button" onClick={reset} className={buttonClass}>{copy.reset}</button>
-        <button type="button" onClick={download} className={buttonClass}>{copy.download}</button>
+        <button type="button" disabled={!hydrated} onClick={reset} className={buttonClass}>{copy.reset}</button>
+        <button type="button" disabled={!hydrated} onClick={download} className={buttonClass}>{copy.download}</button>
       </div>
     </section>
     <DecisionCheckpointInspection key={generation} packet={packet} />
     <section className="mt-5 border border-line bg-paper p-4 sm:p-5" aria-label={copy.importTitle}>
       <h2 className="font-display text-2xl">{copy.importTitle}</h2>
       <p className="mt-2 max-w-3xl text-sm text-ink-3">{copy.importHelp}</p>
-      <label className="mt-4 block text-sm">{copy.file}<input type="file" accept="application/json,.json" className="mt-2 block max-w-full" onChange={event => { invalidate(); setFile(event.target.files?.[0] ?? null); }} /></label>
-      <label className="mt-4 block text-sm">{copy.digest}<input value={expectedDigest} maxLength={64} spellCheck={false} autoComplete="off" className="mt-1 block min-h-11 w-full border border-line bg-paper px-3 py-2 font-mono text-xs" onChange={event => { invalidate(); setExpectedDigest(event.target.value); }} /></label>
+      <label className="mt-4 block text-sm">{copy.file}<input disabled={!hydrated} type="file" accept="application/json,.json" className="mt-2 block max-w-full" onChange={event => { invalidate(); setFile(event.target.files?.[0] ?? null); }} /></label>
+      <label className="mt-4 block text-sm">{copy.digest}<input disabled={!hydrated} value={expectedDigest} maxLength={64} spellCheck={false} autoComplete="off" className="mt-1 block min-h-11 w-full border border-line bg-paper px-3 py-2 font-mono text-xs" onChange={event => { invalidate(); setExpectedDigest(event.target.value); }} /></label>
       <button type="button" onClick={() => void inspect()} disabled={!file || state === "busy"} className={`${buttonClass} mt-4`}>{copy.inspect}</button>
       {state !== "idle" && <p role="status" className="mt-3 text-sm">{copy[state]}</p>}
     </section>
