@@ -1,6 +1,7 @@
-import { expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
-import { recoverTypedDataAddress, type Hex } from "viem";
+import { recoverTypedDataAddress, keccak256, type Hex } from "viem";
+import { config } from "../config";
 import { ARC_MAINNET_PROFILE as profile } from "../arc-network-profile";
 import { createSessionGrantConsentMessage } from "../payments/session-grant-consent";
 import { createBrowserSessionKey, type RetainedSessionStore } from "./browser-session-key";
@@ -8,6 +9,8 @@ import { createBrowserSessionRuntime } from "./browser-session-runtime";
 import type { IsolatedWrappedKey, WrappingKeyStore } from "./isolated-session-vault";
 import type { SourceClaim } from "../sources/public-source-claim";
 import { sourceClaimReceipt } from "../sources/source-claim-access";
+const originalOriginConfig = { registryOrigins: config.registryOrigins, networkId: config.networkId };
+afterEach(() => { Object.assign(config, originalOriginConfig); vi.unstubAllEnvs(); });
 
 async function fixture(researchBudget?: { durationSeconds: number; questionCapMicroUsdc: string }) {
   const owner = privateKeyToAccount(`0x${"11".repeat(32)}`), payout = privateKeyToAccount(`0x${"22".repeat(32)}`).address.toLowerCase();
@@ -62,6 +65,23 @@ it.each(["fetch", "citation"] as const)("retains and independently validates the
   const result = await createBrowserSessionRuntime(f.key, f.dependencies).authorizePayment(f.challenge.reqId, f.question);
   expect(JSON.parse(atob(result.paymentHeader)).authorization.nonce).toBe(f.challenge.expectedNonce);
   expect(f.consumed.size).toBe(1);
+});
+it("binds managed payment signing to the same exact origin seen by catalog, independent reader and claim", async () => {
+  const legacy = { network: profile.networkId, address: `0x${"99".repeat(20)}` as Hex, version: 1 as const,
+    codeHash: keccak256("0x6000"), deployBlock: "1" };
+  const current = { ...legacy, address: `0x${"88".repeat(20)}` as Hex, version: 3 as const, codeHash: keccak256("0x6001"), deployBlock: "2" };
+  const origins = JSON.stringify([legacy, current]); Object.assign(config, { registryOrigins: origins, networkId: profile.networkId });
+  vi.stubEnv("KERYX_REGISTRY_ORIGINS", origins); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS", origins);
+  for (const mode of ["matching", "reader-switched", "claim-switched"] as const) {
+    const f = await claimedFixture(), originalJson = f.dependencies.json, originalSource = await f.dependencies.readSource();
+    f.dependencies.json = async path => path === "/api/sources" ? { sources: [{ id: "publication", onchainId: f.claim.onchainId,
+      sourceClaimId: f.claim.id, registryAuthority: legacy }] } : originalJson(path);
+    f.dependencies.readSource = async () => ({ ...originalSource, registryAuthority: mode === "reader-switched" ? current : legacy });
+    if (mode === "claim-switched") f.claim.registryAddress = current.address;
+    const authorization = createBrowserSessionRuntime(f.key, f.dependencies).authorizePayment(f.challenge.reqId, f.question);
+    if (mode === "matching") { expect((await authorization).paymentHeader).toBeTruthy(); expect(f.consumed.size).toBe(1); }
+    else { await expect(authorization).rejects.toThrow("refused"); expect(f.consumed.size).toBe(0); }
+  }
 });
 
 it("refuses changed, expired, disabled or missing claim policy before nonce exposure", async () => {

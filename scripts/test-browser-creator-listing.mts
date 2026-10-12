@@ -24,7 +24,7 @@ function Harness(){const [wallet,setWallet]=React.useState({address:'${creator}'
   return React.createElement(ListingControlsPanel,{creatorId:'synthetic'});}
 createRoot(document.getElementById('root')).render(React.createElement(Harness));
 `, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,
-  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_VERSION": JSON.stringify(String(registryVersion)), "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-wallet", setup(b) {
+  define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_VERSION": JSON.stringify(String(registryVersion)), "process.env.NODE_ENV": '"development"' }, plugins: [{ name: "synthetic-wallet", setup(b) {
     b.onResolve({ filter: /^wagmi$|^sonner$/ }, a => ({ path: a.path, namespace: "fixture" }));
     b.onLoad({ filter: /.*/, namespace: "fixture" }, a => ({ contents: a.path === "wagmi" ? `
 export const useAccount=()=>window.listingWallet;
@@ -56,6 +56,7 @@ try {
     return route.fulfill({ contentType: "text/html", body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>' });
   });
   await page.goto("https://listing.invalid"); await page.addScriptTag({ content: bundle.outputFiles[0].text });
+  assert.deepEqual(errors, [], "Creator fixture must load its reviewed browser configuration before any listing action");
   const save = page.getByRole("button", { name: "Save price", exact: true });
   const delist = page.getByRole("button", { name: "Delist source", exact: true });
   await save.waitFor(); await page.getByRole("slider").focus(); await page.keyboard.press("ArrowRight");
@@ -116,7 +117,7 @@ try {
 
   // A deployment version change cannot switch the selector family of a bundled page.
   await freshPage();currentVersion=registryVersion===1?3:1;
-  await save.click();await page.waitForFunction(()=>window.listingToasts.some(x=>x.kind==="error"&&x.message.includes("Wallet or source changed")));
+  await save.click();await page.waitForFunction(()=>window.listingToasts.some(x=>x.kind==="error"&&x.message==="Configured listing registry differs"));
   assert.equal((await page.evaluate(()=>window.listingWrites)).length,0,"Foreign registry version must not reach the wallet");
   currentVersion=registryVersion;
 
@@ -162,7 +163,7 @@ try {
   assert.equal((await page.evaluate(() => window.listingWrites)).length, 0);
   if(!profile.testnet){
     await freshPage();currentRegistry=`0x${"e".repeat(40)}`;
-    await save.click();await page.waitForFunction(()=>window.listingToasts.some(x=>x.kind==="error"&&x.message.includes("Wallet or source changed")));
+    await save.click();await page.waitForFunction(()=>window.listingToasts.some(x=>x.kind==="error"&&x.message==="Configured listing registry differs"));
     assert.equal((await page.evaluate(()=>window.listingWrites)).length,0,"Foreign server registry must never reach a mainnet wallet");
   }
   assert.deepEqual(errors, []);

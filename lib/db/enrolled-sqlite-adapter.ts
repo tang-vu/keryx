@@ -9,6 +9,7 @@ import type { StorageIdentity } from "./storage-identity";
 export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   admitRegistrationSponsor: "write",
   getRegistrationSponsor: "read",
+  getRegistrationSponsorExecution: "read",
   transitionRegistrationSponsor: "write",
   upsertSource: "write",
   verifySourceIfUnchanged: "write",

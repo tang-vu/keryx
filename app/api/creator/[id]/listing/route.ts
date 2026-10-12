@@ -21,6 +21,7 @@ import { config } from "@/lib/config";
 import { ownsSource } from "@/lib/sources/source-ownership";
 import { getRegistrySource } from "@/lib/registry/registry-client";
 import { getServerRegistryVersion } from "@/lib/registry/registry-version";
+import { sourceRegistryAuthorityForSource } from "@/lib/registry/source-registry-authority";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,13 +59,15 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   let registryVersion;
+  let registryAuthority;
   try {
-    registryVersion = getServerRegistryVersion();
+    registryAuthority = sourceRegistryAuthorityForSource(source);
+    registryVersion = registryAuthority?.version ?? getServerRegistryVersion();
   } catch {
     return NextResponse.json({ error: "Listing management requires matching supported registry versions." }, { status: 409 });
   }
 
-  if (!config.registryAddress || config.registryAddress.toLowerCase() !== config.registryReadAddress.toLowerCase()) {
+  if (!registryAuthority && (!config.registryAddress || config.registryAddress.toLowerCase() !== config.registryReadAddress.toLowerCase())) {
     return NextResponse.json(
       { error: "Listing management requires matching registry read and write addresses." },
       { status: 409 },
@@ -75,7 +78,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   // client resubmits the current payout/authors/tags verbatim with only the price swapped.
   let record;
   try {
-    record = await getRegistrySource(source.onchainId as Hex);
+    record = registryAuthority ? await getRegistrySource(source.onchainId as Hex, { authority: registryAuthority }) : await getRegistrySource(source.onchainId as Hex);
   } catch {
     return NextResponse.json(
       { error: "Registry unreachable — try again in a moment." },
@@ -102,7 +105,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     mode: "onchain",
     fetchPrice: Number(record.fetchPriceUsdc6) / 1_000_000,
     active: record.active,
-    registryAddress: config.registryAddress,
+    registryAddress: registryAuthority?.address ?? config.registryAddress,
+    registryAuthority,
     onchainId: source.onchainId,
     // Only this wallet's update()/deactivate() will pass the contract's onlyCreator check.
     creator: record.creator,

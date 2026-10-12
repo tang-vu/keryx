@@ -17,6 +17,7 @@ import { arcTestnet } from "@/lib/chains";
 import { config } from "@/lib/config";
 import { REGISTRY_ABI } from "@/lib/registry/registry-client";
 import { safeErrorMessage } from "@/lib/ops/safe-error-message";
+import { configuredRegistryAuthorities } from "../registry/source-registry-authority";
 
 /**
  * Subscribe to registry log pushes; call `onActivity` on every batch.
@@ -33,7 +34,7 @@ export function subscribeRegistryLogs(onActivity: () => void): () => void {
     });
 
     return client.watchEvent({
-      address: config.registryAddress as Address,
+      address: configuredRegistryAuthorities().length ? configuredRegistryAuthorities().map(origin => origin.address) : config.registryAddress as Address,
       events: REGISTRY_ABI.filter(
         (e): e is (typeof REGISTRY_ABI)[number] & { type: "event" } => e.type === "event",
       ),

@@ -3,6 +3,7 @@ import { verifyMessage, type Hex } from "viem";
 import { canonicalJson } from "../canonical-json";
 import { config } from "../config";
 import { getRegistrySource } from "../registry/registry-client";
+import { sourceRegistryAuthorityForSource } from "../registry/source-registry-authority";
 import { sourceItemContentVersion } from "../sources/source-item-asset";
 import { recoverArticleContentManifestSigner, articleContentManifestId } from "../sources/article-content-manifest";
 import type { Source, SourceItem } from "../types";
@@ -64,13 +65,14 @@ export async function assertPaperManifest(d: PaperDeclaration, item: SourceItem)
     throw new Error("Exact manuscript manifest signature is unavailable");
 }
 export async function assertPaperRegistry(d: PaperDeclaration, source: Source): Promise<void> {
+  const authority = sourceRegistryAuthorityForSource(source);
   if (config.networkId !== "eip155:5042002" || config.usdcAddress.toLowerCase() !== "0x3600000000000000000000000000000000000000"
     || d.deploymentOrigin !== new URL(config.baseUrl).origin || !source.onchainId || source.onchainId.toLowerCase() !== d.onchainId
-    || !config.registryReadAddress || config.registryReadAddress.toLowerCase() !== d.registry
+    || !(authority?.address ?? config.registryReadAddress) || (authority?.address ?? config.registryReadAddress).toLowerCase() !== d.registry
     || source.id !== d.sourceId || source.active === false || source.verified !== true)
     throw new Error("Active verified Arc-testnet registry enrollment is required");
   // Direct uncached read: no legacy unregistered/unavailable/stale fallback for scholarly rights.
-  const record = await getRegistrySource(source.onchainId as Hex, { timeoutMs: 4000 });
+  const record = await getRegistrySource(source.onchainId as Hex, { timeoutMs: 4000, ...(authority ? { authority } : {}) });
   if (!record || !record.active || record.creator.toLowerCase() !== d.creator
     || record.payoutWallet.toLowerCase() !== d.recipient || record.fetchPriceUsdc6.toString() !== d.priceMicros
     || record.authors.length > 1 || record.authors.some(a => a.wallet.toLowerCase() !== d.recipient || a.basisPoints !== 10000)

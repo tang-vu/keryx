@@ -4,10 +4,12 @@ import { readBoundedJson } from "../read-bounded-json";
  * token, origin, network, callback URL, or trusted payout fields to this transport.
  */
 export async function sessionJson(path: string, method = "GET", body?: unknown): Promise<unknown> {
+  const sourceClaim = /^\/api\/source-claims\?claimId=[a-f0-9]{64}$/.test(path);
+  if (sourceClaim && (method !== "GET" || body !== undefined)) throw new Error("Session API refused");
   const liabilities = /^\/api\/session\/withdraw\/payments\?sessAddr=0x[0-9a-f]{40}&grantEpoch=[0-9a-f-]{36}(?:&afterNonce=0x[0-9a-f]{64})?$/.test(path);
   const cashout = /^\/api\/session\/withdraw\/(?:prepare|authorize|cancel|abort|submit|complete|0x[0-9a-f]{64})$/.test(path);
   if (!/^\/api\/session\/grant(?:\/challenge)?$/.test(path) && !liabilities && !cashout &&
-    !/^\/api\/ask\/challenge$/.test(path) && path !== "/api/sources" &&
+    !/^\/api\/ask\/challenge$/.test(path) && path !== "/api/sources" && !sourceClaim &&
     !/^\/api\/source\/[^/?]+\/item\/[^/?]+\/preview\?version=[^&?#]+$/.test(path)) throw new Error("Session API refused");
   try {
     const response = await fetch(path, { method, credentials: "same-origin", redirect: "error", cache: "no-store",

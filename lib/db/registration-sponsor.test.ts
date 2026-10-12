@@ -196,15 +196,31 @@ describe("registration sponsor journal", () => {
     expect(db.prepare("SELECT COUNT(*) n FROM sync_state WHERE key LIKE ?").get(prefix + "row:%")?.n).toBe(2);
   });
 
-  it.each(["prepared", "signing", "submitted", "confirmed", "reverted"] as const)("never renews a %s original", priorState => {
+  it.each(["prepared", "signing", "submitted", "confirmed"] as const)("never renews a %s original", priorState => {
     const { db } = fixture(), p = policy(), first = admit(db, p, row(p), NOW); saveClaim(db, p, first);
     if (priorState !== "prepared") transition(db, { wallet: A, id: first.id, expectedState: "prepared", nextState: "signing", transactionNonce: 0, now: NOW });
     if (["submitted", "confirmed", "reverted"].includes(priorState)) transition(db, { wallet: A, id: first.id, expectedState: "signing", nextState: "submitted", transactionHash: HASH, now: NOW });
-    if (priorState === "confirmed" || priorState === "reverted") transition(db, { wallet: A, id: first.id, expectedState: "submitted", nextState: priorState, actualGasWei: "100", now: NOW });
+    if (priorState === "confirmed") transition(db, { wallet: A, id: first.id, expectedState: "submitted", nextState: priorState, actualGasWei: "100", now: NOW });
     const at = priorState === "prepared" ? NOW + 1000 : (first.deadline + 1) * 1000;
     const renewal = row(p, 1, A, at); renewal.replacesRequestId = first.id; renewal.id = registrationIntentDigest(renewal);
     expectCode(() => admit(db, p, renewal, at), "registration_sponsor_renewal_refused");
     expect(get(db, { wallet: A, id: first.id })?.state).toBe(priorState);
+  });
+  it("retains receipt-reverted predecessor gas and attempt counts when admitting a fresh reviewed attempt", () => {
+    const { db } = fixture(), p = policy(), first = admit(db, p, row(p), NOW); saveClaim(db, p, first);
+    transition(db, { wallet: A, id: first.id, expectedState: "prepared", nextState: "signing", transactionNonce: 0, now: NOW });
+    transition(db, { wallet: A, id: first.id, expectedState: "signing", nextState: "submitted", transactionHash: HASH, now: NOW });
+    transition(db, { wallet: A, id: first.id, expectedState: "submitted", nextState: "reverted", actualGasWei: "100", now: NOW });
+    const at = NOW + 2000, renewal = row(p, 1, A, at);
+    renewal.replacesRequestId = first.id; renewal.id = registrationIntentDigest(renewal);
+    expect(admit(db, p, renewal, at)).toMatchObject({ state: "prepared", replacesRequestId: first.id });
+    expect(get(db, { wallet: A, id: first.id })).toMatchObject({ state: "reverted", actualGasWei: "100" });
+    expect(db.prepare("SELECT COUNT(*) n FROM sync_state WHERE key LIKE ?").get(prefix + "row:%")?.n).toBe(2);
+  });
+  it("bounds publisher-origin attempts across different wallets and canonical URLs", () => {
+    const { db } = fixture(), p = policy({ allowlistedCreators: [], allowlistedPublisherOrigins: ["https://creator.example"], maxRegistrationsPerOrigin: 1 });
+    admit(db, p, row(p), NOW);
+    expectCode(() => admit(db, p, row(p, 2, B), NOW + 1000), "registration_sponsor_limit");
   });
 
   it("refuses orphan or corrupted renewal lineages", () => {

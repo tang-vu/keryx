@@ -1,16 +1,38 @@
 import { afterEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ session: null as null | { address: string }, ctx: null as unknown, db: {},
-  prepare: vi.fn(), submit: vi.fn(), recover: vi.fn() }));
+  prepare: vi.fn(), submit: vi.fn(), recover: vi.fn(), resume: vi.fn(), resolveExpired: vi.fn() }));
 vi.mock("../auth", () => ({ getSession: async () => mocks.session }));
 vi.mock("../db", () => ({ getDb: async () => mocks.db }));
 vi.mock("../config", () => ({ config: { baseUrl: "https://keryx.example" } }));
 vi.mock("../sources/registration-sponsor-runtime", () => ({ registrationSponsorRuntime: async () => mocks.ctx, registrationSponsorReadChain: () => ({}) }));
-vi.mock("../sources/registration-sponsor-service", () => ({ prepareSponsoredRegistration: mocks.prepare, submitSponsoredRegistration: mocks.submit, recoverSponsoredRegistration: mocks.recover }));
+vi.mock("../sources/registration-sponsor-service", () => ({ prepareSponsoredRegistration: mocks.prepare, submitSponsoredRegistration: mocks.submit, recoverSponsoredRegistration: mocks.recover, resumeSponsoredRegistration: mocks.resume, resolveExpiredSponsoredRegistration: mocks.resolveExpired }));
 import { GET, POST } from "../../app/api/sources/sponsor/route";
 const wallet = `0x${"11".repeat(20)}`, id = `0x${"aa".repeat(32)}`, signature = `0x${"bb".repeat(65)}`;
 const request = (value: unknown, origin = "https://keryx.example", url = "https://keryx.example/api/sources/sponsor") => new Request(url, {
   method: "POST", headers: { Origin: origin, "Content-Type": "application/json", Authorization: "Bearer API-key-is-not-owner-authority" }, body: JSON.stringify(value) });
 afterEach(() => { mocks.session = null; mocks.ctx = null; mocks.db = {}; vi.clearAllMocks(); });
+it("keeps expired resolution an explicit same-origin owner action without replacement terms", async () => {
+  expect((await POST(request({ operation: "resolveExpired", id }))).status).toBe(401);
+  mocks.session = { address: wallet }; mocks.ctx = {};
+  expect((await POST(request({ operation: "resolveExpired", id }, "https://foreign.example"))).status).toBe(403);
+  expect((await POST(request({ operation: "resolveExpired", id, maxFee: 99 }))).status).toBe(400);
+  mocks.resolveExpired.mockResolvedValue({ id, state: "submitted", expiredResolution: true });
+  expect((await POST(request({ operation: "resolveExpired", id }))).status).toBe(202);
+  expect(mocks.resolveExpired).toHaveBeenCalledExactlyOnceWith(mocks.ctx, wallet, id);
+});
+
+it("requires same-origin creator authentication for explicit original resume and never accepts a replacement payload", async () => {
+  expect((await POST(request({ operation: "resume", id }))).status).toBe(401);
+  mocks.session = { address: wallet }; mocks.ctx = {};
+  expect((await POST(request({ operation: "resume", id }, "https://foreign.example"))).status).toBe(403);
+  expect((await POST(request({ operation: "resume", id, signature }))).status).toBe(400);
+  expect(mocks.resume).not.toHaveBeenCalled();
+  mocks.resume.mockResolvedValue({ id, state: "submitted", transactionNonce: 7 });
+  const response = await POST(request({ operation: "resume", id }));
+  expect(response.status).toBe(202);
+  expect(mocks.resume).toHaveBeenCalledExactlyOnceWith(mocks.ctx, wallet, id);
+  expect(await response.json()).toEqual({ original: { id, state: "submitted", transactionNonce: 7 } });
+});
 it("keeps absent policy disabled without admitting an action", async () => {
   expect(await (await GET(new Request("https://keryx.example/api/sources/sponsor"))).json()).toEqual({ available: false });
   mocks.session = { address: wallet };

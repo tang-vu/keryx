@@ -12,6 +12,7 @@ import { registrationTarget } from "@/lib/registration-return";
 import { fmtUsdc } from "./phase-style";
 import { claimRequest } from "./public-source-claim-api";
 import { ClaimTime } from "./public-source-claim-status";
+import { RegistrationSponsorLink } from "./registration-sponsor-link";
 
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
@@ -100,6 +101,7 @@ export function PublicSourceClaimPolicy({ claim, name, enabled, controlFresh, on
         {mode === "paid" && <><label htmlFor="claim-new-price" className="block text-sm">{uiCopy("sourceClaimPolicy.newPriceLabel")}</label><input id="claim-new-price" type="number" min="0.000001" step="0.000001" value={newPrice} onChange={event => setNewPrice(event.target.value)} disabled={!enabled || working} className="min-h-11 w-full border border-line bg-paper-2 px-3 text-sm" /></>}
         <p className="text-sm">{validNewPrice ? uiCopy("sourceClaimPolicy.newReadPrice", { price: fmtUsdc(price) }) : uiCopy("sourceClaimPolicy.invalidReadPrice")}</p>
         {enabled && controlFresh && registrationHref && <Link href={registrationHref} className="inline-block min-h-11 py-2 text-sm underline">{uiCopy("sourceClaimPolicy.register")}</Link>}
+        {enabled && controlFresh && claim.rssUrl && <RegistrationSponsorLink wallet={claim.ownerWallet} claimId={claim.id} publisherUrl={claim.canonicalUrl} />}
       </div>}
       <button type="button" disabled={working} onClick={() => void loadListings()} className="min-h-11 text-sm underline">{uiCopy("sourceClaimPolicy.refresh")}</button>
       {earning && claim.linkedSourceId && listingsReady && !feeMatches && <p role="status" className="text-sm text-seal">{mode === "citation-only" ? uiCopy("sourceClaimPolicy.citationPriceMismatch") : uiCopy("sourceClaimPolicy.paidPriceMismatch")}</p>}

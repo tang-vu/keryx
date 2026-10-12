@@ -187,6 +187,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
   const worker = await fixtureBundle("worker", { entryPoints: ["lib/session/mainnet-session-signer.worker.ts"], platform: "browser", bundle: true, write: false,
     banner: { js: transportProbe },
     define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined",
+      "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS": "undefined",
       "process.env.NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS":'"300"' } });
   const hook = await fixtureBundle(failCitation === "creator" ? "creator" : "session", { stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
     import React from 'react'; import {createRoot} from 'react-dom/client';
@@ -473,14 +474,16 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     await expect.poll(() => held).toBe(true);
     await page.evaluate(() => window.dispatchEvent(new CustomEvent("keryx:auth", { detail: "signed-out" })));
     releaseHeld!(); await oldPublication;
-    expect((await hookState()).status).toBe("paused");
+    // Resolving the hook operation does not synchronously commit React's render.
+    // Observe the exact final state, rather than racing the previous snapshot.
+    await expect.poll(async () => (await hookState()).status).toBe("paused");
     expect((await hookState()).grantEpoch).toBeNull();
 
     // An older metadata response cannot publish after another tab replaces the exact proof.
     held = false; holdGrant = true; const replacedPublication = recover();
     await expect.poll(() => held).toBe(true); const replacement = await renew();
     releaseHeld!(); await replacedPublication;
-    expect((await hookState()).status).toBe("paused");
+    await expect.poll(async () => (await hookState()).status).toBe("paused");
     await recover(); await expect.poll(hookState).toMatchObject({ status: "active", grantEpoch: replacement.grantEpoch });
     expect((await hookState()).spent).toBe(Number(replacement.spentMicroUsdc)/1e6);
 

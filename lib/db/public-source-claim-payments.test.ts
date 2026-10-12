@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { keccak256 } from "viem";
 import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -12,10 +13,10 @@ import { claimSupabaseResearchPurchase, type ResearchPurchaseClaim } from "./res
 
 const owner = "0x2222222222222222222222222222222222222222", signer = "0x1111111111111111111111111111111111111111";
 const registryAddress = "0x8888888888888888888888888888888888888888", onchainId = `0x${"c".repeat(64)}`;
-const previous = { baseUrl: config.baseUrl, registryReadAddress: config.registryReadAddress };
+const previous = { baseUrl: config.baseUrl, registryReadAddress: config.registryReadAddress, registryOrigins: config.registryOrigins };
 const fixtures: { db: SqliteAdapter; file: string; folder: string }[] = [];
 beforeEach(() => { Object.assign(config, { baseUrl: "https://keryx.cc", registryReadAddress: registryAddress }); });
-afterEach(() => { for (const fixture of fixtures.splice(0)) { fixture.db.close(); rmSync(fixture.folder, { recursive: true, force: true }); } Object.assign(config, previous); });
+afterEach(() => { for (const fixture of fixtures.splice(0)) { fixture.db.close(); rmSync(fixture.folder, { recursive: true, force: true }); } Object.assign(config, previous); vi.unstubAllEnvs(); });
 function receipt(claim: SourceClaim): SourceClaimReceipt {
   return { id: claim.id, revision: claim.revision, mode: claim.mode, effectiveAt: claim.effectiveAt, verifiedAt: claim.verifiedAt };
 }
@@ -50,6 +51,38 @@ function browser(claim: SourceClaim, requestId = "original", kind: "fetch" | "ci
       amountUsdc: 0.000001, network: config.networkId, grantEpoch: "epoch", sourceClaim } };
 }
 describe("atomic source claim financial admission", () => {
+  it("admits retained V1 claim payments after V3 selection only through the exact stored origin, preserving original replay", async () => {
+    const { db, claim, file } = await fixture();
+    const legacy = { network: config.networkId as "eip155:5042002", address: registryAddress, version: 1 as const,
+      codeHash: keccak256("0x6000"), deployBlock: "1" };
+    const current = { ...legacy, address: "0x9999999999999999999999999999999999999999", version: 3 as const, codeHash: keccak256("0x6001"), deployBlock: "2" };
+    const origins = JSON.stringify([legacy, current]);
+    Object.assign(config, { registryOrigins: origins, registryReadAddress: current.address });
+    vi.stubEnv("KERYX_REGISTRY_ORIGINS", origins); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS", origins);
+    await expect(db.claimResearchPurchase(purchase(claim, "unbound"))).rejects.toThrow("immutable original registry binding");
+    await db.setSourceMeta(onchainId, { name: "Owner", description: "Publisher feed", url: claim.canonicalUrl,
+      registryAuthority: { ...legacy, address: registryAddress as `0x${string}` } });
+    await db.claimResearchPurchase(purchase(claim));
+    expect((await db.admitBrowserJournal(browser(claim))).status).toBe("admitted");
+    const raw = new DatabaseSync(file);
+    try {
+      const key = `keryx:source-registry-origin:v1:${onchainId}`;
+      const retained = String(raw.prepare("SELECT value FROM sync_state WHERE key=?").get(key)!.value);
+      raw.prepare("UPDATE sync_state SET value=? WHERE key=?").run(JSON.stringify({ ...JSON.parse(retained), authority: current }), key);
+      await expect(db.claimResearchPurchase(purchase(claim, "wrong-bound-origin"))).rejects.toThrow("policy");
+      await expect(db.admitBrowserJournal(browser(claim, "wrong-bound-origin"))).rejects.toThrow("policy");
+      raw.prepare("UPDATE sync_state SET value=? WHERE key=?").run(retained, key);
+      const narrowed = JSON.stringify([current]);
+      Object.assign(config, { registryOrigins: narrowed });
+      vi.stubEnv("KERYX_REGISTRY_ORIGINS", narrowed); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS", narrowed);
+      await expect(db.claimResearchPurchase(purchase(claim, "unreviewed-origin"))).rejects.toThrow("allowlist");
+      await expect(db.admitBrowserJournal(browser(claim, "unreviewed-origin"))).rejects.toThrow("allowlist");
+      await expect(db.claimResearchPurchase(purchase(claim))).resolves.toBeUndefined();
+      expect((await db.getBrowserJournal("session", "original"))?.payment.sourceClaim).toEqual(receipt(claim));
+      expect(raw.prepare("SELECT count(*) n FROM research_purchase_authorizations").get()?.n).toBe(1);
+      expect(raw.prepare("SELECT count(*) n FROM browser_authorization_intents").get()?.n).toBe(1);
+    } finally { raw.close(); }
+  });
   it("preserves original seller replay after disabling, rejecting new or rewritten authorizations", async () => {
     const { db, claim, file } = await fixture(), original = purchase(claim);
     await db.claimResearchPurchase(original);
