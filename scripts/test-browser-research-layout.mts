@@ -94,8 +94,10 @@ try {
       const question = page.getByRole("textbox", { name: "What do you want to know?" });
       await question.waitFor();
       await waitForLayout(page);
-      // Wait for the shipped atlas to paint countries, not merely an empty ocean disc.
-      await page.waitForFunction(() => {
+      // The product introduction omits its decorative globe on small screens.
+      // Visible desktop globes must still paint countries, not just an ocean disc.
+      if (width < 640) assert.equal(await page.getByTestId("chat-globe").isVisible(), false);
+      else await page.waitForFunction(() => {
         const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="chat-globe"] canvas');
         const context = canvas?.getContext("2d");
         if (!canvas || !context || !canvas.width) return false;
@@ -132,10 +134,12 @@ try {
       await page.screenshot({ path: join(screenshotDir, `home-${width}x${height}.png`) });
       assert.equal(measurements.docWidth, width, `Horizontal overflow at ${width}x${height}`);
       assert(measurements.globe && measurements.canvas && measurements.header, "Signature globe missing");
+      if (width >= 640) {
       assert(measurements.globe.left >= measurements.header.left && measurements.globe.right <= measurements.header.right && measurements.globe.bottom <= measurements.header.bottom + 1,
         `Globe must stay inside the chat header at ${width}px`);
       assert(measurements.canvas.left >= measurements.globe.left && measurements.canvas.right <= measurements.globe.right && measurements.canvas.bottom <= measurements.globe.bottom,
         `Globe canvas must fit its visible wrapper at ${width}px`);
+      }
       assert.equal(await page.locator('[data-testid="chat-globe"]').getAttribute("aria-hidden"), "true");
       assert.equal(await page.locator('[data-testid="chat-globe"]').evaluate(element => getComputedStyle(element).pointerEvents), "none");
       assert.equal(await page.locator('[data-testid="chat-globe"] svg g').first().evaluate(element => getComputedStyle(element).animationName), "none");
@@ -158,7 +162,7 @@ try {
         assert(measurements.kickerText && measurements.headlineText);
         assert(measurements.kickerText.right + 8 <= measurements.guide.left,
           `Guide overlaps the mobile intro label at ${width}px`);
-        assert(measurements.headlineText.right + 8 <= measurements.guide.left,
+        assert(measurements.headlineText.right + 8 <= measurements.guide.left || measurements.guide.bottom + 8 <= measurements.headlineText.top,
           `Guide overlaps the mobile headline at ${width}px`);
       }
       if (width >= 768) {

@@ -12,6 +12,9 @@ need discoverable pages, and saved reports need product context.
 - Home leads with cited AI research and visible source decisions. The question
   form remains the primary action; explanatory sections follow it. Researcher,
   builder/writer and agent-developer paths point to existing surfaces.
+  On narrow screens the guide has its own reserved row and the decorative globe
+  yields space to readable product text; existing research-workspace decoration
+  is unchanged. First-viewport question/action and non-overlap gates still apply.
 - Indexed `/pricing` uses `quoteA2aResearch` and deployment configuration for
   six-decimal Quick/Deep examples. A quote does not establish availability. The
   buyer workspace checks live readiness and remains intentionally noindex.
