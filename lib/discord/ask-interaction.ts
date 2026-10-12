@@ -13,6 +13,8 @@ import { unsupportedDecisionReviewFlag } from "../research/decision-review-types
 import { formatRecordedUsdc, formatNumber, selectPlural } from "../i18n/format";
 import { answerPresentation } from "../research/answer-presentation";
 import { botResearchFailure, botResearchMessages } from "../bots/research-messages";
+import { botControlsCatalogues, type BotControl, type BotLanguage } from "../bots/language";
+import { botHelpEnglish } from "../../locales/en/bot-research";
 import type { QueryRun } from "../types";
 
 // Discord wire constants — the two interaction types and three callback types this flow uses.
@@ -39,6 +41,7 @@ export interface Interaction {
   type?: number;
   application_id?: string;
   token?: string;
+  locale?: string;
   data?: { name?: string; options?: CommandOption[] };
   // Guild invocations carry the user under `member.user`; DM invocations under `user`.
   member?: { user?: { id?: string } };
@@ -84,6 +87,22 @@ export function parseAskCommand(interaction: Interaction): AskCommand | null {
 
 function optionValue(options: CommandOption[], name: string): unknown {
   return options.find((o) => o.name === name)?.value;
+}
+
+/** Registered control commands never enter sponsored research admission. */
+export function parseControlCommand(interaction: Interaction): BotControl | null {
+  if (interaction.type !== InteractionType.ApplicationCommand || !interaction.application_id || !interaction.token) return null;
+  const name = interaction.data?.name;
+  if (name !== "help" && name !== "language") return null;
+  const options = interaction.data?.options ?? [], option = name === "help" ? "language" : "value";
+  if (options.length > 1 || options.some(item => item.name !== option || typeof item.value !== "string")) return null;
+  return { action: name, ...(options.length ? { value: options[0].value as string } : {}) };
+}
+
+export function helpText(language: BotLanguage = "en") {
+  const copy = botControlsCatalogues[language];
+  return ["Keryx", copy.introduction, copy.financialDetails, botHelpEnglish.slackExplanation,
+    `${copy.usage} \`/ask question:<text>\``, copy.reviewBoundary, copy.languageHelp, `${copy.status} ${config.baseUrl}/status`].join("\n\n");
 }
 
 /** Immediate ack for Discord's URL-validation ping. */

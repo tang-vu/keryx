@@ -15,6 +15,7 @@ import { formatRecordedUsdc, formatNumber, selectPlural } from "../i18n/format";
 import { answerPresentation } from "../research/answer-presentation";
 import { botResearchFailure, botResearchMessages } from "../bots/research-messages";
 import { botHelpEnglish } from "../../locales/en/bot-research";
+import { botControlsCatalogues, type BotLanguage } from "../bots/language";
 import type { QueryRun } from "../types";
 
 /** Slack renders a message's `text` up to 40k chars; keep the whole payload well under that and the
@@ -48,16 +49,19 @@ export function parseSlashCommand(params: URLSearchParams): SlashCommand | null 
   };
 }
 
-export function helpText(): string {
+export function helpText(language: BotLanguage = "en"): string {
+  const copy = botControlsCatalogues[language];
   return [
-    `*${botHelpEnglish.herald}* — ${botHelpEnglish.tagline}`,
+    `*${botHelpEnglish.herald}*${language === "en" ? ` — ${botHelpEnglish.tagline}` : ""}`,
     "",
+    ...(language === "en" ? [] : [copy.introduction, copy.financialDetails]),
     botHelpEnglish.slackExplanation,
     "",
-    botHelpEnglish.slackUsage,
-    botHelpEnglish.reviewBoundary,
+    `${copy.usage} \`/keryx ${copy.exampleQuestion}\``,
+    copy.reviewBoundary,
+    copy.languageHelp,
     "",
-    `${botHelpEnglish.slackStatus} ${config.baseUrl}/status`,
+    `${language === "en" ? botHelpEnglish.slackStatus : copy.status} ${config.baseUrl}/status`,
   ].join("\n");
 }
 

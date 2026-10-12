@@ -2,6 +2,9 @@ import { demoteSyntheticEvidence } from "./research/evidence-provenance";
 import { isRequestObject } from "./request-object";
 import { surfaceResearch } from "./research/surface-result";
 import { formatRecordedUsdc } from "./display/recorded-usdc";
+import { livePresentationLocale, type PresentationLocale } from "./research/presentation-language";
+import { researchPresentationMessages } from "./research/presentation-messages";
+import { API_SETTLEMENT_NOTICE, presentationLocaleNotice } from "./research/result-presentation";
 /**
  * OpenAI Chat Completions ↔ Keryx mappers (pure, side-effect free).
  *
@@ -38,6 +41,8 @@ export interface ChatCompletionRequest {
   budget?: number;
   scholarly?: boolean;
   mode?: "quick" | "deep";
+  /** Generated labels only; never changes question, model output or payment authority. */
+  language?: "en" | "vi" | "pt" | "pt-BR" | "es";
 }
 
 /** Validate every entry, including earlier turns that are not used as the question. */
@@ -95,29 +100,32 @@ export function keryxMeta(run: QueryRun) {
 
 /** Markdown footer listing planned rewards — so even a client that renders only `content`
  *  (not the vendor extension) surfaces the citation economy. Empty when nothing was cited. */
-function citationsFooter(run: QueryRun): string {
+function citationsFooter(run: QueryRun, locale: PresentationLocale): string {
   if (run.citations.length === 0) return "";
+  const copy = researchPresentationMessages(locale.language);
   const lines = run.citations.map(
-    (c) => `- ${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (weight ${c.weight.toFixed(2)})`,
+    (c) => `- ${c.sourceName} — ${formatRecordedUsdc(c.reward, { minimumFractionDigits: 4 })} (${copy("weight", { weight: c.weight.toFixed(2) })})`,
   );
   return (
-    `\n\n---\n**Citations and planned creator rewards** — weighted USDC allocations:\n` +
+    `\n\n---\n**${copy("citations")}** — ${copy("apiAllocations")}\n` +
     lines.join("\n") +
-    `\n\nRecorded to creators: ${formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 })} · payment mode: ${run.paymentMode ?? "legacy"}. ` +
+    `\n\n${copy("apiTotal", { amount: formatRecordedUsdc(run.totalToCreators, { minimumFractionDigits: 4 }), mode: run.paymentMode ?? "legacy" })} ` +
+    (locale.language === "en" ? "" : `${copy("financialDetails")} `) +
     (run.operatingFee ? `Keryx operating fee allocation: ${formatRecordedUsdc(run.operatingFee.amountUsdc, { minimumFractionDigits: 6 })} USDC (${run.operatingFee.status}), recorded separately from creator rewards. ` : "") +
-    `Planned rewards and recorded totals do not establish settlement; inspect the original payment receipts. ` +
-    `dispatch: ${config.baseUrl}/dispatch/${run.id}`
+    API_SETTLEMENT_NOTICE +
+    `${copy("dispatch")} ${config.baseUrl}/dispatch/${run.id}`
   );
 }
 
 /** Assistant message body = the grounded answer plus planned rewards and receipt guidance. */
-export function buildAnswerContent(run: QueryRun): string {
+export function buildAnswerContent(run: QueryRun, requestedLanguage?: ChatCompletionRequest["language"]): string {
   run = demoteSyntheticEvidence(run);
-  return run.answer + citationsFooter(run);
+  const locale = livePresentationLocale({ requestedLanguage, originalQuestion: run.question }), notice = presentationLocaleNotice(locale);
+  return run.answer + citationsFooter(run, locale) + (notice ? `\n\n${notice}` : "");
 }
 
 /** A complete (non-streamed) OpenAI ChatCompletion object. */
-export function buildCompletion(run: QueryRun, model: string) {
+export function buildCompletion(run: QueryRun, model: string, requestedLanguage?: ChatCompletionRequest["language"]) {
   return {
     id: `chatcmpl-${run.id}`,
     object: "chat.completion" as const,
@@ -126,7 +134,7 @@ export function buildCompletion(run: QueryRun, model: string) {
     choices: [
       {
         index: 0,
-        message: { role: "assistant" as const, content: buildAnswerContent(run) },
+        message: { role: "assistant" as const, content: buildAnswerContent(run, requestedLanguage) },
         finish_reason: "stop" as const,
       },
     ],

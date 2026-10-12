@@ -1,5 +1,14 @@
 # Remote MCP
 
+The #276 presentation source candidate adds an optional `language` parameter to `research`:
+`en`, `vi`, `pt`/`pt-BR`, or `es`. It selects generated result labels and serving/output-limit
+notices; omission uses the original question's existing finite selector. It never changes the
+research input, generated answer, cited excerpts, private claim binding, structured result or
+receipt. Explicit overrides disclose the current producer's unrecorded answer language.
+Canonical financial authority and money remain English/exact, under the existing #273 boundary.
+This is not a deployed-version or translated-answer claim. See
+[the shared API/MCP/report/CLI contract](engineering/research-presentation-language-276-2026-10-12.md).
+
 The coordinated app0.27.47 candidate selects hosted protocol0.3.10 and
 stdio/Registry0.4.14 after final tool-source integration. OpenAPI is already
 labelled0.27.47; no new application version or financial/receipt protocol follows.
