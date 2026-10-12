@@ -73,8 +73,10 @@ CI also caught stale legal-render expectations for the old contact and a Linux
 prefetch teardown race in the new browser fixture. Legal comparisons permit only
 the confirmed contact, administrative date and previously reviewed extension
 section; the original fixture remains frozen. Retire the two obsolete literal
-contact allowances. Browser teardown waits for route handlers before disposing
-their fetched responses, without suppressing errors or relaxing assertions.
+contact allowances. The browser fixture now visits its built loopback server
+directly, preserving the actual Next configuration and interception boundary.
+This removes the fetched-response proxy lifetime; teardown still waits for
+handlers without suppressing errors or relaxing assertions.
 
 Integration includes accepted main PR #429's local launch badge and narrow idle
 signing observation. The added walkthrough link retains the original prefetch

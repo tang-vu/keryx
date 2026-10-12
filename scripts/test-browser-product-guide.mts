@@ -23,7 +23,7 @@ const listener = createServer();
 listener.listen(0, "127.0.0.1"); await once(listener, "listening");
 const address = listener.address(); assert(address && typeof address === "object");
 await new Promise<void>((done, reject) => listener.close(error => error ? reject(error) : done()));
-const transport = `http://127.0.0.1:${address.port}`, origin = "https://product-guide.test";
+const transport = `http://127.0.0.1:${address.port}`, origin = transport;
 let child: ReturnType<typeof spawn> | undefined, stopped: Promise<void> | undefined, didExit = false;
 const browser = await chromium.launch({ headless: true });
 try {
@@ -84,7 +84,9 @@ try {
           return route.fulfill({ status: 503, json: { error: "Read-only product fixture" } });
         }
         assert.equal(request.method(), "GET", "Informational pages make no product writes");
-        return route.fulfill({ response: await route.fetch({ url: transport + url.pathname + url.search }) });
+        // Visit the built loopback server directly. Native browser loads avoid
+        // an APIResponse proxy whose lifetime can outlast a Next prefetch route.
+        return route.continue();
       });
       const page = await context.newPage();
       const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
@@ -126,8 +128,7 @@ try {
       }
       assert.deepEqual(errors, [], `No page errors at ${width}px`);
     } finally {
-      // Next may still be prefetching when the visible assertions finish. Wait
-      // for those handlers before close disposes their fetched responses.
+      // Wait for immediate interception handlers before closing the fixture.
       await context.unrouteAll({ behavior: "wait" });
       await context.close();
     }
