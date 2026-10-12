@@ -1,6 +1,6 @@
 {
   "name": "keryx",
-  "version": "0.27.61",
+  "version": "0.27.62",
   "private": true,
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -11,6 +11,9 @@
     "test:browser-evidence-procurement": "node --import tsx scripts/test-browser-evidence-procurement.mts",
     "evidence:procurement": "node --import tsx --no-warnings scripts/evidence-procurement.mts",
     "verify:live": "node scripts/verify-public-deployment.mjs",
+    "audit:decisions": "node --import tsx scripts/decision-bundle.mts",
+    "test:decision-lab-browser": "node --import tsx scripts/test-decision-lab-browser.mts",
+    "test:decision-lab-built": "node --import tsx scripts/test-decision-lab-built.mts",
     "test:browser-product-guide": "node --import tsx scripts/test-browser-product-guide.mts",
     "test:browser-mobile-header": "node --import tsx scripts/test-browser-mobile-header.mts",
     "inspect:purchase-outcomes": "node --import tsx scripts/inspect-purchase-outcomes.mts",

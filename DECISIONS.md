@@ -24,6 +24,25 @@ retain hosted owner/provider journal, actual provider contact, funded workflow a
 independent usefulness as explicit subsequent gates. See [the contract, supported
 surfaces and remaining acceptance](docs/evidence-procurement.md).
 
+## Make research decisions inspectable without expanding execution — 2026-10-12
+
+The owner requested applying useful Vestiarion patterns toward a first-place
+hackathon entry. Reuse current ordinary READ capture and its deterministic
+evaluator for model/plan/checkpoint inspection and isolated budget/attention
+comparisons. Start the public lab with explicitly synthetic, no-spend data;
+inspect real recordings only against their separately retained digest. Historical,
+private and unsupported native capture stays unavailable. Alternative research
+trajectories, semantic quality and settlement are not inferred from replay.
+
+Add separately anchored Ed25519 signatures to offline EXPORT snapshots, with a
+dedicated environment-provided audit key and no payment-key reuse or production
+key provisioning. This is not a continuous signed operational ledger. Public
+anchors, exact canonical packet/schema, purpose and metadata bind verification;
+timestamps and source facts remain signer assertions. Keep existing v1/v2/v3,
+money, database, recovery, schedules and supported-surface roles unchanged. See
+[source pins, acceptance and remaining gates](docs/engineering/vestiarion-adoption-2026-10-12.md).
+
+
 ## Resume only the admitted creator gas transaction — 2026-10-12
 
 The owner requested completing creator registration gas sponsorship. Retain the

@@ -342,6 +342,9 @@ jobs:
       - name: Actual ordinary READ report offline verification
         run: npm run test:actual-read-browser
 
+      - name: Decision Lab and signed export verification (offline)
+        run: npm run test:decision-lab-browser
+
       - name: Unpacked MV3 extension (synthetic HTTP, no research or payments)
         run: npm run test:browser-extension
 
@@ -494,6 +497,9 @@ jobs:
           NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
           KERYX_FORCE_OFFLINE: "1"
         run: npm run test:browser-product-guide
+
+      - name: Decision Lab compiled route and mobile layout (offline)
+        run: npm run test:decision-lab-built
 
       - name: Retain immutable cohort rehearsal result
         if: always()
