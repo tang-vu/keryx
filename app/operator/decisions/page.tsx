@@ -20,6 +20,7 @@ export default function DecisionLabPage() {
       <h1 className="mt-6 font-display text-4xl sm:text-5xl">{copy.title}</h1>
       <p className="mt-3 max-w-3xl font-serif text-lg text-ink-2">{copy.description}</p>
       <DecisionLab />
+      <Link href="/research-audit" className="mt-8 inline-block text-sm underline">Audit reviewed claim costs and compare decisions with receipts</Link>
     </main>
     <SiteFooter />
   </div>;

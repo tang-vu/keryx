@@ -5,6 +5,9 @@
     "incremental": false
   },
   "include": [
+    "scripts/research-evidence-audit.mts",
+    "scripts/research-evidence-audit.test.mts",
+    "scripts/test-browser-research-evidence-audit.mts",
     "scripts/decision-bundle.mts",
     "scripts/test-decision-lab-browser.mts",
     "scripts/test-decision-lab-built.mts",
