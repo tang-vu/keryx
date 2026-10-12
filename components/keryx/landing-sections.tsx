@@ -10,6 +10,7 @@ import Link from "next/link";
 import { MintIcon, type MintIconName } from "./mint-icons";
 import { cn } from "@/lib/utils";
 import { currentArcLabel } from "@/lib/arc-network-display";
+import { productGuideCopy } from "@/locales/en/product-guide";
 
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
@@ -24,13 +25,13 @@ const STEPS: {
     num: "I",
     kicker: uiCopy("landingSteps.decide"),
     icon: "weighted",
-    body: uiCopy("landingSteps.decideBody"),
+    body: productGuideCopy("product.stepsDecide"),
   },
   {
     num: "II",
     kicker: uiCopy("landingSteps.cite"),
     icon: "citation",
-    body: uiCopy("landingSteps.citeBody"),
+    body: productGuideCopy("product.stepsCite"),
   },
   {
     num: "III",
@@ -42,11 +43,11 @@ const STEPS: {
 
 export function HowItWorks() {
   return (
-    <section className="mx-auto max-w-[1180px] px-4 pb-2.5 pt-16 sm:px-[30px]">
+    <section id="how-it-works" className="mx-auto max-w-[1180px] scroll-mt-24 px-4 pb-2.5 pt-12 sm:px-[30px]" aria-labelledby="how-it-works-title">
       <div className="mb-7 flex items-baseline gap-4">
-        <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-          {uiCopy("landingSteps.title")}
-        </span>
+        <h2 id="how-it-works-title" className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
+          {productGuideCopy("product.stepsTitle")}
+        </h2>
         <span className="h-px flex-1 bg-line" />
       </div>
       <div className="grid border border-ink bg-paper sm:grid-cols-3">

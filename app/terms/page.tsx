@@ -5,6 +5,7 @@ import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/public-support";
 
 const message = createMessages("en");
 const richMessage = createRichMessages("en");
@@ -63,7 +64,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title={message("legal.terms.contact.heading")}>
-          <p>{richMessage("legal.terms.contact.support", { contactAddress: <a href="mailto:vutang2212@gmail.com" className="text-seal underline underline-offset-2">vutang2212@gmail.com</a> })}</p>
+          <p>{richMessage("legal.terms.contact.support", { contactAddress: <a href={SUPPORT_MAILTO} className="text-seal underline underline-offset-2">{SUPPORT_EMAIL}</a> })}</p>
         </Section>
       </main>
       <SiteFooter />
