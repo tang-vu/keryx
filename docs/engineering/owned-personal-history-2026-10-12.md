@@ -121,3 +121,26 @@ text/receipt/micro amounts are unchanged; no normalization or compiler-lib
 waiver is added. Differential boundary tests use native validation only as the
 pinned Node24 test oracle. Fresh exact-head Desktop/aggregate CI remains required;
 this correction grants no privacy activation, membership, delivery or closure.
+
+## Recovery of the observed PR427 CI failures
+
+The ordinary recovery checkpoint retains all nine session-fence/CLI/CSV files,
+then composes accepted main `ec5f39c9` without changing its version, OpenAPI or
+whole study inputs. Remote and stdio discovery expectations retain both owned
+history tools and incoming evidence procurement. Missing surface provenance uses
+the existing English unavailable label; it does not invent a known surface.
+
+Vite's asset `BASE_URL` is `/`, and Vitest copies that value to `process.env`.
+The isolated history and sponsored-admission fixtures now pin canonical server
+origins, allowing their scope and credential-race checks to reach private IO.
+The runtime origin schema and authorization fences remain unchanged. The
+synthetic browser fixture replaces both optional public registry environment
+references, matching the existing browser fixtures; its original missing
+substitutions were reproduced as `process is not defined` before first render.
+Render failures now expose the captured fixture errors before the timeout.
+
+Focused local checks cover the affected history/auth/MCP cases and genuine CLI
+help startup. A render-only diagnostic proves that startup correction, without
+production CSS or route/backend acceptance. Fresh combined-source required CI,
+PostgreSQL, built browser, stdio package and Desktop acceptance remain gates.
+Root retains merge/release ownership, and original #268 remains open.

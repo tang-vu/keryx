@@ -2,6 +2,13 @@ import { createHash, randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// Vite's BASE_URL is an asset path ("/"), not the server's canonical claim origin.
+// Pin this isolated transport fixture without changing the runtime origin guard.
+vi.mock("../config", async original => {
+  const actual = await original<typeof import("../config")>();
+  return { ...actual, config: { ...actual.config, baseUrl: "https://synthetic-history.example" } };
+});
 import { installSqliteApplicationSchema } from "../db/sqlite-application-schema";
 import { writeSqliteQueryRun } from "../db/query-run-record";
 import { createSqliteRunClaims, RUN_CLAIMS_SQL } from "../db/run-claims-sqlite";

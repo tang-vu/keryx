@@ -98,7 +98,7 @@ export function OwnedHistoryView({ owner }: { owner: string }) {
     {failure && <p role="alert">{failure}</p>}{!page && !failure && <p role="status">{copy.checking}</p>}
     {page?.rows.length === 0 && <p>{copy.empty}</p>}{page?.scanLimited && <p>{copy.scanLimited}</p>}
     {page?.rows.map(row => <article key={row.id} className="space-y-3 border border-line p-4">
-      <h3>{row.question}</h3><p>{row.createdAt} · {row.provenance?.surface ?? "unknown"} · {row.ownership.method} · {row.visibility} · {row.funding}</p>
+      <h3>{row.question}</h3><p>{row.createdAt} · {row.provenance?.surface ?? copy.unknown} · {row.ownership.method} · {row.visibility} · {row.funding}</p>
       <p>{copy.own}: {row.ownSettledSpendMicros === null ? copy.unknown : formatUsdcMicros(row.ownSettledSpendMicros)} · {copy.sponsored}: {row.sponsoredSettledSpendMicros === null ? copy.unknown : formatUsdcMicros(row.sponsoredSettledSpendMicros)}</p>
       {row.receiptsTruncated && <p>{copy.receiptBound}</p>}<p>{copy.paidCreators}</p><ul>{row.paidCreators.map((c,i) => <li key={i}>{c.name} · {formatUsdcMicros(c.amountMicros)} · {c.network} · {c.reference}</li>)}</ul>
       <div className="flex flex-wrap gap-3"><button className={button} onClick={() => void openReport(row)}>{copy.report}</button>

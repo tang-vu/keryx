@@ -18,7 +18,8 @@ const row = (owner: string, id: string, question: string): OwnedHistoryRow => ow
   networks: ["eip155:5042002"], funding: "paid", ownSettledSpendMicros: 1, sponsoredSettledSpendMicros: 0, receiptsTruncated: false, paidCreators: [],
   links: { report: `/api/me/asks/${id}`, receipts: `/api/me/asks/${id}?format=receipts`, references: `/api/me/asks/${id}?format=bibtex`, privacy: `/api/me/run-privacy/${id}` } });
 const bundle = await build({ stdin: { contents: `import React from'react';import{createRoot}from'react-dom/client';import{MyAsksView}from'./app/me/asks/my-asks-view';window.auth={address:${JSON.stringify(alice)},role:'asker'};createRoot(document.getElementById('root')).render(<MyAsksView/>);`, loader: "tsx", resolveDir: process.cwd() },
-  bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"' },
+  bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
+    "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
   plugins: [{ name: "synthetic-history-session", setup(builder) {
     builder.onResolve({ filter: /^(next\/link|@\/lib\/hooks\/use-siwe-auth)$/ }, args => ({ path: args.path, namespace: "fixture" }));
     builder.onLoad({ filter: /.*/, namespace: "fixture" }, args => ({ loader: "jsx", resolveDir: process.cwd(), contents: args.path === "next/link"
@@ -66,7 +67,11 @@ try {
         forbidden.push(`${request.method()} unsupported`); return route.abort();
       });
       await page.goto("https://owned-history.test/"); await page.addStyleTag({ content: css }); await page.addScriptTag({ content: bundle.outputFiles[0].text });
-      await page.waitForFunction(() => document.querySelectorAll('button').length > 0); await page.waitForLoadState("networkidle");
+      await page.waitForFunction(() => document.querySelectorAll('button').length > 0).catch(error => {
+        assert.deepEqual(errors, [], "Owned history fixture failed before its first render");
+        throw error;
+      });
+      await page.waitForLoadState("networkidle");
       assert(legacy > 0); assert.equal(ownedReads, 0, "Privacy OFF leaves the ordinary ledger default");
       await page.getByRole("button", { name: copy.title, exact: true }).click(); await page.getByRole("alert").waitFor();
       assert.equal(await page.getByText(copy.empty, { exact: true }).count(), 0, "Unavailable is not an empty owner history");

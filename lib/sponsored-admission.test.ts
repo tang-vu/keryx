@@ -20,7 +20,8 @@ vi.mock("./agent/run-agent", () => ({ runAgent: mocks.runAgent }));
 vi.mock("next/server", async original => ({ ...await original<typeof import("next/server")>(), after: mocks.after }));
 vi.mock("./config", async original => {
   const actual = await original<typeof import("./config")>();
-  return { ...actual, config: { ...actual.config, sellerAddress: "0x1111111111111111111111111111111111111111",
+  // Vite's BASE_URL is an asset path; the synthetic server needs a canonical origin.
+  return { ...actual, config: { ...actual.config, baseUrl: "http://localhost:3939", sellerAddress: "0x1111111111111111111111111111111111111111",
     get discordPublicKey() { return mocks.discordPublicKey; }, slackSigningSecret: "synthetic-slack-secret", telegramBotToken: "synthetic-token", telegramWebhookSecret: "synthetic-webhook-secret" } };
 });
 
