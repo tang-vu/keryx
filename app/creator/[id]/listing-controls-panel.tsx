@@ -18,11 +18,12 @@ import { Archive, Banknote, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { arcChain } from "@/lib/chains";
-import { browserPaymentProfile,browserRegistryAddress } from "@/lib/browser-payment-profile";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { parseUnits } from "viem";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
-import { getBrowserRegistryVersion, type RegistryVersion } from "@/lib/registry/registry-version";
+import { type RegistryVersion } from "@/lib/registry/registry-version";
+import { assertListingRegistryOrigin } from "@/lib/registry/source-registry-authority";
 import { listingPriceCall, listingDeactivateCall } from "@/lib/creator/listing-call";
 import { REGISTRY_ABI, REVISIONED_REGISTRY_ABI } from "@/lib/registry/registry-abi";
 import { parseListingSnapshot, sameListingSnapshot } from "@/lib/creator/listing-snapshot";
@@ -76,8 +77,11 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
       if (!res.ok) return; // 401/403/404 → not the owner, stay hidden
       const value = (await res.json()) as ListingData;
       const d = value.mode === "onchain" ? parseListingSnapshot(value) : value;
-      if (d.mode === "onchain" && d.registryVersion !== getBrowserRegistryVersion()) throw new Error("Configured listing registry version differs");
-      if(!browserPaymentProfile().testnet&&(d.mode!=="onchain"||d.registryAddress?.toLowerCase()!==browserRegistryAddress().toLowerCase()))throw new Error("Configured listing registry differs");
+      if (d.mode === "onchain") {
+        if (!d.registryAddress || d.registryVersion === undefined) throw new Error(uiCopy("creatorListing.authorityUnavailable"));
+        assertListingRegistryOrigin(d.registryAddress, d.registryVersion);
+      }
+      if (!browserPaymentProfile().testnet && d.mode !== "onchain") throw new Error(uiCopy("creatorListing.authorityUnavailable"));
       setData(d);
       setPrice(String(d.fetchPrice));
     } catch {
@@ -123,11 +127,10 @@ export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
     if (!res.ok) throw new Error(uiCopy("creatorListing.authorityUnavailable"));
     const fresh = parseListingSnapshot(await res.json());
     if (!owner.active || identity.current !== owner || owner.creatorId !== creatorId
-      || owner.chainId !== arcChain.id || owner.connected?.toLowerCase() !== fresh.creator ||
-      fresh.registryVersion !== getBrowserRegistryVersion() ||
-      !browserPaymentProfile().testnet&&fresh.registryAddress.toLowerCase()!==browserRegistryAddress().toLowerCase()) {
+      || owner.chainId !== arcChain.id || owner.connected?.toLowerCase() !== fresh.creator) {
       throw new Error(uiCopy("creatorListing.identityChanged"));
     }
+    assertListingRegistryOrigin(fresh.registryAddress, fresh.registryVersion);
     if (!sameListingSnapshot(data, fresh)) {
       setData(fresh); setPrice(String(fresh.fetchPrice)); setDelistArmed(false); setReviewRequired(true);
       throw new Error(uiCopy("creatorListing.changed"));

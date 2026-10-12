@@ -6,6 +6,7 @@ import { canonicalSourceUrl, claimControlIsFresh } from "./public-source-claim";
 import { prepareSourceRegistration } from "./prepare-registration";
 import { REGISTRATION_SPONSOR_ABI, registrationContractRequest, registrationIntentDigest, registrationParamsSchema,
   registrationPolicyDigest, registrationTypedData, type RegistrationSponsorPolicy, type SponsoredRegistration } from "./registration-sponsor-protocol";
+import { registrationCreatorEligible, registrationWalletMayPrepare } from "./registration-sponsor-protocol";
 
 export interface RegistrationSponsorChain {
   assertRegistry(): Promise<void>;
@@ -15,6 +16,7 @@ export interface RegistrationSponsorChain {
   sign(transaction: TransactionSerializableEIP1559): Promise<Hex>;
   broadcast(raw: Hex): Promise<Hex>;
   receipt(hash: Hex): Promise<TransactionReceipt | null>;
+  hasExpiredDeadline?(deadline: number): Promise<boolean>;
 }
 export interface RegistrationSponsorContext {
   db: KeryxDB; policy: RegistrationSponsorPolicy; chain: RegistrationSponsorChain;
@@ -29,13 +31,14 @@ function store(db: KeryxDB) {
 function active(ctx: RegistrationSponsorContext, wallet: string) {
   ctx.assertPolicy();
   const now = ctx.now?.() ?? Date.now();
-  if (now >= ctx.policy.expiresAt || !ctx.policy.allowlistedCreators.includes(wallet.toLowerCase() as Hex))
+  if (now >= ctx.policy.expiresAt || !registrationWalletMayPrepare(ctx.policy, wallet))
     refused("This wallet has no active registration gas sponsorship", "sponsor_ineligible", 403);
   return now;
 }
 async function claimFor(ctx: RegistrationSponsorContext, wallet: string, claimId: string) {
   const claim = await ctx.db.getSourceClaim?.(claimId);
   if (!claim || claim.ownerWallet !== wallet.toLowerCase()) refused("Verify publishing control with this wallet first", "proof_required", 403);
+  if (!registrationCreatorEligible(ctx.policy, wallet, claim.canonicalUrl)) refused("This publisher has no registration gas allowance", "publisher_ineligible", 403);
   if (claim.network !== ctx.policy.network || claim.deploymentOrigin !== ctx.policy.deploymentOrigin ||
     claim.registryAddress && claim.registryAddress !== ctx.policy.registryAddress ||
     !claimControlIsFresh(claim, ctx.now?.() ?? Date.now()))
@@ -49,8 +52,8 @@ export async function prepareSponsoredRegistration(ctx: RegistrationSponsorConte
   const claim = await claimFor(ctx, wallet, input.claimId);
   const prior = await journal.get({ wallet, canonicalUrl: claim.canonicalUrl });
   if (prior && !input.replacesRequestId) return prior; // Reload never creates a new original or refreshes its signature.
-  if (input.replacesRequestId && (!prior || prior.id !== input.replacesRequestId || prior.state !== "expired" ||
-    now < (prior.deadline + 1) * 1000)) refused("Only a conclusively expired unsigned original may be renewed", "renewal_refused", 409);
+  if (input.replacesRequestId && (!prior || prior.id !== input.replacesRequestId || !["expired", "reverted"].includes(prior.state) ||
+    prior.state === "expired" && now < (prior.deadline + 1) * 1000)) refused("Only an expired unsigned or receipt-reverted original may be renewed", "renewal_refused", 409);
   await ctx.chain.assertRegistry();
   const result = await prepareSourceRegistration(ctx.db, wallet, { sourceClaimId: claim.id,
     url: claim.canonicalUrl, rssUrl: claim.rssUrl, fetchPrice: input.fetchPrice });
@@ -105,11 +108,19 @@ export async function resumeSponsoredRegistration(ctx: RegistrationSponsorContex
   return executeSponsoredRegistration(ctx, wallet, id);
 }
 
-async function executeSponsoredRegistration(ctx: RegistrationSponsorContext, wallet: string, id: Hex) {
+/** Deliberate gas-paying resolution, not registration: the exact expired calldata must revert. */
+export async function resolveExpiredSponsoredRegistration(ctx: RegistrationSponsorContext, wallet: string, id: Hex) {
+  const recovered = await recoverSponsoredRegistration(ctx.db, wallet, id, ctx.chain, ctx.now?.() ?? Date.now());
+  if (!recovered) refused("Original sponsored registration not found", "original_not_found", 404);
+  if (!["signing", "submitted"].includes(recovered.state)) return recovered;
+  return executeSponsoredRegistration(ctx, wallet, id, true);
+}
+
+async function executeSponsoredRegistration(ctx: RegistrationSponsorContext, wallet: string, id: Hex, resolveExpired = false) {
   const journal = store(ctx.db), row = await journal.get({ wallet, id });
   if (!row || !["signing", "submitted"].includes(row.state)) refused("Inspect the original registration before resuming", "resume_refused", 409);
   const now = active(ctx, wallet);
-  if (now > row.deadline * 1000 || row.policyDigest !== registrationPolicyDigest(ctx.policy))
+  if ((resolveExpired ? now <= row.deadline * 1000 : now > row.deadline * 1000 || row.expiredResolution) || row.policyDigest !== registrationPolicyDigest(ctx.policy))
     refused("Original execution authority is no longer active; its full reservation remains", "resume_refused", 409);
   const execution = await ctx.db.getRegistrationSponsorExecution?.({ wallet, id });
   if (!execution) refused("This original has no retained execution authority; retain its reservation", "resume_refused", 409);
@@ -119,9 +130,12 @@ async function executeSponsoredRegistration(ctx: RegistrationSponsorContext, wal
   const transactionNonce = row.transactionNonce!;
   try {
     await ctx.chain.assertRegistry(); active(ctx, wallet);
-    if (row.state === "signing" && await ctx.chain.registrationNonce(row.creator) !== BigInt(row.nonce)) throw new Error();
+    if (resolveExpired) {
+      if (!await ctx.chain.hasExpiredDeadline?.(row.deadline)) throw new Error();
+    } else if (row.state === "signing" && await ctx.chain.registrationNonce(row.creator) !== BigInt(row.nonce)) throw new Error();
     // Native reread of the current publishing proof after external observations, before signing/broadcast.
-    await journal.transition({ wallet, id, expectedState: row.state, nextState: row.state, now: ctx.now?.() ?? Date.now() });
+    await journal.transition({ wallet, id, expectedState: row.state, nextState: row.state,
+      ...(resolveExpired ? { expiredResolution: true } : {}), now: ctx.now?.() ?? Date.now() });
     const transaction: TransactionSerializableEIP1559 = { type: "eip1559", chainId: row.chainId, nonce: transactionNonce,
       to: row.registryAddress, data, value: BigInt(0), gas: BigInt(ctx.policy.maxGas),
       maxFeePerGas: BigInt(ctx.policy.maxFeePerGasWei), maxPriorityFeePerGas: BigInt(1) };
@@ -136,7 +150,9 @@ async function executeSponsoredRegistration(ctx: RegistrationSponsorContext, wal
     if (row.state === "submitted" && transactionHash !== row.transactionHash) throw new Error();
     if (row.state === "signing") await journal.transition({ wallet, id, expectedState: "signing", nextState: "submitted", transactionHash, signedTransaction: raw, now: ctx.now?.() ?? Date.now() });
     await ctx.chain.assertRegistry(); active(ctx, wallet);
-    await journal.transition({ wallet, id, expectedState: "submitted", nextState: "submitted", now: ctx.now?.() ?? Date.now() });
+    if (resolveExpired && !await ctx.chain.hasExpiredDeadline?.(row.deadline)) throw new Error();
+    await journal.transition({ wallet, id, expectedState: "submitted", nextState: "submitted",
+      ...(resolveExpired ? { expiredResolution: true } : {}), now: ctx.now?.() ?? Date.now() });
     const returned = await ctx.chain.broadcast(raw);
     if (returned.toLowerCase() !== transactionHash) throw new Error();
   } catch { /* Unknown execution retains the original. No new nonce, gas reservation or automatic retry. */ }
@@ -152,6 +168,14 @@ export async function recoverSponsoredRegistration(db: KeryxDB, wallet: string, 
   await chain.assertRegistry();
   const receipt = await chain.receipt(row.transactionHash);
   if (!receipt) return row;
+  const execution = await db.getRegistrationSponsorExecution?.({ wallet, id });
+  if (execution?.signedTransaction) {
+    const transaction = parseTransaction(execution.signedTransaction);
+    if (!transaction.gas || !transaction.maxFeePerGas || receipt.gasUsed > transaction.gas || receipt.effectiveGasPrice > transaction.maxFeePerGas)
+      return refused("Original receipt gas exceeds its signed terms", "receipt_mismatch", 409);
+  }
+  // A submitted original may already have succeeded before the deadline while
+  // its receipt was unavailable. A later expiry observation cannot override it.
   if (receipt.transactionHash.toLowerCase() !== row.transactionHash || receipt.from.toLowerCase() !== row.relayer ||
     receipt.to?.toLowerCase() !== row.registryAddress || receipt.gasUsed < BigInt(0) || receipt.effectiveGasPrice < BigInt(0))
     return refused("Original receipt identity differs; retain the full sponsor reservation", "receipt_mismatch", 409);

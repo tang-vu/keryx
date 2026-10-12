@@ -29,6 +29,7 @@
 import type { Hex } from "viem";
 import { config } from "../config";
 import { getRegistrySource } from "./registry-client";
+import { assertConfiguredRegistryAuthority, type SourceRegistryAuthority } from "./source-registry-authority";
 
 /** How long a successfully read allowlist is served without re-reading the chain. */
 const TTL_MS = 10 * 60_000;
@@ -80,17 +81,18 @@ function walletsOf(record: {
  */
 export async function allowedPayTo(
   onchainId: string,
-  options: { refresh?: boolean } = {},
+  options: { refresh?: boolean; authority?: SourceRegistryAuthority } = {},
 ): Promise<PayToAllowlist> {
+  const authority = options.authority ? assertConfiguredRegistryAuthority(options.authority) : undefined;
   // A source that claims a registry id while no registry is configured means the guard is
   // silently doing nothing. Say so once, loudly — an inert check is worse than no check,
   // because it reads like protection.
-  if (!config.registryReadAddress) {
+  if (!authority && !config.registryReadAddress) {
     warnUnconfiguredOnce();
     return { status: "unregistered" };
   }
 
-  const key = onchainId.toLowerCase();
+  const key = `${authority ? `${authority.network}:${authority.address}:${authority.version}:${authority.codeHash}` : config.registryReadAddress}:` + onchainId.toLowerCase();
   const hit = cache.get(key);
   if (config.profile.name !== "arc" && !options.refresh && hit && Date.now() - hit.readAt < TTL_MS) {
     return {
@@ -105,7 +107,7 @@ export async function allowedPayTo(
   }
 
   try {
-    const record = await getRegistrySource(onchainId as Hex);
+    const record = authority ? await getRegistrySource(onchainId as Hex, { authority }) : await getRegistrySource(onchainId as Hex);
     if (!record) return { status: "unregistered" };
     const wallets = walletsOf(record);
     const payoutWallet = record.payoutWallet;

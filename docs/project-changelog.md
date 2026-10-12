@@ -1,20 +1,26 @@
 # Keryx Project Changelog
 
-### Creator registration gas recovery and activation preparation (0.27.60 candidate)
+### Conzit creator registration gas sponsorship (0.27.60 candidate)
 
 - Retain private creator authorization and exact sponsor transaction bytes before
   exposure; add explicit owner resume on the website and same-origin SIWE API.
   Resume preserves the original nonce, fee limits, attempts and gas reservation.
   Inspection and reload do not execute transactions or expose bearer values.
-- Prepare an unsigned V3 deployment proposal with fresh chain/nonce/gas/runtime
-  observations and explicit maximum liability. Keep the two live V1 listings'
-  authority and all funded testnet, custody, expired-original resolution and
-  mainnet activation gates open. Sponsorship remains disabled by default.
+- Admit freshly verified publisher origins under per-domain and wallet caps, so
+  Conzit can use its own creator wallet. Explicit expired-original resolution
+  preserves the exact transaction and charges its matching reverted receipt;
+  any reviewed replacement consumes another attempt within the same allowance.
+- Keep the two live V1 listings bound to V1 while new registrations select V3.
+  Index each configured registry independently and quarantine cross-origin ID
+  collisions without replacing legacy payout authority or blocking valid events.
+- Prepare an unsigned V3 deployment packet with pinned runtime and explicit
+  maximum liability. Sponsorship remains disabled without its finite protected
+  policy; funded and live activation evidence stays separate from source tests.
 - Web/API and SQLite share the recovery contract. CLI, remote/stdio MCP,
   desktop, extension and bots retain their research/inspection or browser-handoff
   roles; no publisher key or sponsor executor is distributed to those surfaces.
-  This candidate does not claim deployment, package/installer synchronization,
-  new gas spending or creator earnings.
+  This candidate does not claim package/installer synchronization or creator
+  earnings. See the funded acceptance and mainnet status for actual rollout evidence.
 
 ### Bounded source outcomes (source candidate)
 

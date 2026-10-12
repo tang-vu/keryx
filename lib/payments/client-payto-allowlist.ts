@@ -1,7 +1,9 @@
 /** Browser-side payment authority resolved from the public index plus SourceRegistry. */
 import { allowedPayTo } from "../registry/payto-guard";
+import { sourceRegistryAuthorityForSource, type SourceRegistryAuthority } from "../registry/source-registry-authority";
 
 export interface IndexedSource {
+  registryAuthority?: SourceRegistryAuthority;
   walletAddress: string;
   fetchPrice?: number;
   /** bytes32 registry id, absent for sources that predate the on-chain registry. */
@@ -54,7 +56,9 @@ export async function resolveSourcePaymentAuthority(
   });
   if (!entry.onchainId) return fallback();
 
-  const allowlist = await allowedPayTo(entry.onchainId, options);
+  let registryAuthority;
+  try { registryAuthority = sourceRegistryAuthorityForSource(entry); } catch { return null; }
+  const allowlist = await allowedPayTo(entry.onchainId, { ...options, ...(registryAuthority ? { authority: registryAuthority } : {}) });
   switch (allowlist.status) {
     case "onchain":
       return {
@@ -66,7 +70,7 @@ export async function resolveSourcePaymentAuthority(
         active: allowlist.active,
       };
     case "unregistered":
-      return fallback();
+      return registryAuthority ? null : fallback();
     case "unavailable":
       return null;
   }
@@ -87,6 +91,7 @@ export function buildSourceIndex(
     walletAddress?: string;
     fetchPrice?: number;
     onchainId?: string;
+    registryAuthority?: SourceRegistryAuthority;
   }>,
 ): SourceIndex {
   const index = new Map<string, IndexedSource>();
@@ -96,6 +101,7 @@ export function buildSourceIndex(
       walletAddress: source.walletAddress,
       fetchPrice: source.fetchPrice,
       onchainId: source.onchainId,
+      registryAuthority: source.registryAuthority,
     });
   }
   return index;

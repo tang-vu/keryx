@@ -6,10 +6,10 @@ import type { RegistrationSponsorPolicy } from "./registration-sponsor-protocol"
 import { registrationSponsorReadChain, registrationSponsorRuntime } from "./registration-sponsor-runtime";
 
 const mocked = vi.hoisted(() => ({
-  config: { networkId: "eip155:5042", baseUrl: "https://keryx.example", registryAddress: "", registryReadAddress: "", rpcUrl: "https://rpc.invalid" },
+  config: { networkId: "eip155:5042", baseUrl: "https://keryx.example", registryAddress: "", registryReadAddress: "", rpcUrl: "https://rpc.invalid", registryOrigins: "", registryDeployBlock: "5" },
   getDb: vi.fn(), createClient: vi.fn(), transport: vi.fn(),
   db: { admitRegistrationSponsor: vi.fn(), getRegistrationSponsor: vi.fn(), transitionRegistrationSponsor: vi.fn(), getRegistrationSponsorExecution: vi.fn() },
-  rpc: { getCode: vi.fn(), readContract: vi.fn(), getTransactionCount: vi.fn(), estimateGas: vi.fn(), sendRawTransaction: vi.fn(), getTransactionReceipt: vi.fn() },
+  rpc: { getCode: vi.fn(), getBlock: vi.fn(), readContract: vi.fn(), getTransactionCount: vi.fn(), estimateGas: vi.fn(), sendRawTransaction: vi.fn(), getTransactionReceipt: vi.fn() },
 }));
 vi.mock("../config", () => ({ config: mocked.config }));
 vi.mock("../db", () => ({ getDb: mocked.getDb }));
@@ -44,7 +44,7 @@ function transaction(): TransactionSerializableEIP1559 {
 beforeEach(() => {
   vi.resetAllMocks(); vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(NOW);
   Object.assign(mocked.config, { networkId: "eip155:5042", baseUrl: "https://keryx.example", registryAddress: registry,
-    registryReadAddress: registry, rpcUrl: "https://rpc.invalid" });
+    registryReadAddress: registry, rpcUrl: "https://rpc.invalid", registryOrigins: "", registryDeployBlock: "5" });
   vi.stubEnv("KERYX_REGISTRATION_SPONSOR_POLICY", JSON.stringify(policy()));
   vi.stubEnv("KERYX_REGISTRATION_SPONSOR_PRIVATE_KEY", TEST_KEY);
   vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
@@ -53,10 +53,31 @@ beforeEach(() => {
   mocked.transport.mockReturnValue({ mocked: true }); mocked.rpc.getCode.mockResolvedValue(code);
   mocked.rpc.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => functionName === "registryVersion" ? 3 : BigInt(0));
   mocked.rpc.getTransactionCount.mockResolvedValue(7); mocked.rpc.sendRawTransaction.mockResolvedValue(hash);
+  mocked.rpc.getBlock.mockResolvedValue({ number: BigInt(5), hash, timestamp: BigInt(Math.floor(NOW / 1000)) });
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
 
 describe("registration sponsor runtime custody boundary", () => {
+  it("requires the sponsor code pin to match the selected immutable registration origin", async () => {
+    const origins = JSON.stringify([{ network: "eip155:5042", address: registry, version: 3, codeHash: keccak256(code), deployBlock: "5" }]);
+    mocked.config.registryOrigins = origins;
+    vi.stubEnv("KERYX_REGISTRY_ORIGINS", origins); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS", origins);
+    expect(await registrationSponsorRuntime()).not.toBeNull();
+    mocked.createClient.mockClear();
+    vi.stubEnv("KERYX_REGISTRATION_SPONSOR_POLICY", JSON.stringify(policy({ registryCodeHash: hash })));
+    await expect(registrationSponsorRuntime()).rejects.toThrow("Registration sponsorship configuration is unavailable");
+    expect(mocked.createClient).not.toHaveBeenCalled();
+  });
+  it("requires a fresh canonical block strictly after the authorization deadline for expiry resolution", async () => {
+    const chain = registrationSponsorReadChain(original());
+    expect(await chain.hasExpiredDeadline!(NOW / 1000 - 1)).toBe(true);
+    expect(await chain.hasExpiredDeadline!(NOW / 1000)).toBe(false);
+    mocked.rpc.getBlock.mockResolvedValue({ number: BigInt(5), hash, timestamp: BigInt(NOW / 1000 - 61) });
+    await expect(chain.hasExpiredDeadline!(NOW / 1000 - 120)).rejects.toThrow("Fresh original expiry observation is unavailable");
+    mocked.rpc.getBlock.mockResolvedValue({ number: BigInt(5), hash, timestamp: BigInt(NOW / 1000 + 6) });
+    await expect(chain.hasExpiredDeadline!(NOW / 1000 - 1)).rejects.toThrow();
+    expect(mocked.rpc.sendRawTransaction).not.toHaveBeenCalled();
+  });
   it("refuses a backend missing durable private execution before sponsor signing", async () => {
     mocked.getDb.mockResolvedValue({ ...mocked.db, getRegistrationSponsorExecution: undefined });
     await expect(registrationSponsorRuntime()).rejects.toThrow("Registration sponsorship configuration is unavailable");

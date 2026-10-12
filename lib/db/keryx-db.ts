@@ -66,6 +66,8 @@ export interface CreatorEarnings {
  *  Stored separately from the on-chain record so the indexer can merge them
  *  without clobbering payment-critical chain data. */
 export interface SourceMeta {
+  /** Immutable origin sidecar retained without changing the source_meta schema. */
+  registryAuthority?: import("../registry/source-registry-authority").SourceRegistryAuthority;
   name: string;
   description: string;
   url: string;

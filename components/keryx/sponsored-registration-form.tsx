@@ -15,7 +15,7 @@ import { registrationIntentDigest, registrationTypedData, sponsoredRegistrationS
 import { getBrowserRegistryVersion } from "@/lib/registry/registry-version";
 import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
 
-interface Availability { available: boolean; sponsorAddress?: string; policyDigest?: string; maxGasWei?: string }
+interface Availability { available: boolean; sponsorAddress?: string; policyDigest?: string; maxGasWei?: string; publisherOrigins?: string[] }
 const labels: Record<SponsoredRegistration["state"], string> = copy.stateLabels;
 export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
   const wallet = useAccount(), { session } = useSiweAuth(), { signTypedDataAsync } = useSignTypedData();
@@ -102,7 +102,7 @@ export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
   }, [owner, session?.address, wallet.chainId, claimId, authenticated, storageKey]);
   async function prepare(replacesRequestId?: `0x${string}`) {
     if (!claim || !authenticated || busy) return;
-    if (replacesRequestId && row && Date.now() < (row.deadline + 1) * 1000) {
+    if (replacesRequestId && row?.state === "expired" && Date.now() < (row.deadline + 1) * 1000) {
       setError(copy.waitForExpiry); return;
     }
     const epoch = generation.current; setBusy(true); setError("");
@@ -148,10 +148,23 @@ export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
     } catch (cause) { if (epoch === generation.current) setError(cause instanceof Error ? cause.message : copy.submissionUnknown); }
     finally { if (epoch === generation.current) setBusy(false); }
   }
+  async function resolveExpired() {
+    if (!row || !["signing", "submitted"].includes(row.state) || busy || !authenticated || !availability?.available) return;
+    const epoch = generation.current; setBusy(true); setError("");
+    try {
+      const original = checkedOriginal(row);
+      if (Date.now() <= original.deadline * 1000) { setError(copy.waitForExpiry); return; }
+      const body = await readJson("/api/sources/sponsor", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operation: "resolveExpired", id: original.id }) });
+      if (epoch === generation.current) setRow(checkedOriginal(body.original));
+    } catch (cause) { if (epoch === generation.current) setError(cause instanceof Error ? cause.message : copy.submissionUnknown); }
+    finally { if (epoch === generation.current) setBusy(false); }
+  }
   if (!authenticated) return <div className="mt-6"><p>{copy.connectInstructions({ network: profile.label })}</p><Link className="mt-3 inline-block underline" href="/connect">{copy.connectWalletLink}</Link></div>;
   return <section className="mt-6 space-y-4" aria-label={copy.formLabel}>
     {error && <p role="alert" className="break-words text-sm text-seal">{error}</p>}
     {!availability?.available && <p className="text-sm text-ink-2">{copy.sponsorshipUnavailable}</p>}
+    {availability?.publisherOrigins?.length && <p className="text-sm text-ink-2">{copy.publisherScope({ publishers: availability.publisherOrigins.join(", ") })}</p>}
     {!row && availability?.available && (claim ? <div className="space-y-3">
       <p className="break-all text-sm">{copy.verifiedFeed({ feedUrl: claim.rssUrl || claim.canonicalUrl })}</p>
       <label className="block text-sm">{copy.readPriceLabel}<input className="mt-1 block w-full border border-line bg-paper p-2" type="number" min="0" max="1000000" step="0.001" value={price} onChange={event => setPrice(event.target.value)} disabled={busy} /></label>
@@ -177,7 +190,9 @@ export function SponsoredRegistrationForm({ claimId }: { claimId?: string }) {
       {row.state === "prepared" && <button className="border border-ink px-4 py-2" disabled={busy || attemptedIds.has(row.id) || !availability?.available} onClick={() => void sign()}>{copy.signRegistrationButton}</button>}
       {["signing", "submitted"].includes(row.state) && <div className="space-y-2"><p className="text-sm">{copy.resumeOriginalExplanation}</p>
         <button className="border border-ink px-4 py-2" disabled={busy || !availability?.available} onClick={() => void resume()}>{copy.resumeOriginalButton}</button></div>}
-      {row.state === "expired" && claim && availability?.available && <div className="space-y-2"><p className="text-sm">{copy.expiredRequestExplanation}</p>
+      {["signing", "submitted"].includes(row.state) && <div className="space-y-2"><p className="text-sm">{copy.resolveExpiredExplanation}</p>
+        <button className="border border-ink px-4 py-2" disabled={busy || !availability?.available} onClick={() => void resolveExpired()}>{copy.resolveExpiredButton}</button></div>}
+      {["expired", "reverted"].includes(row.state) && claim && availability?.available && <div className="space-y-2"><p className="text-sm">{row.state === "expired" ? copy.expiredRequestExplanation : copy.revertedRequestExplanation}</p>
         <button className="border border-ink px-4 py-2" disabled={busy} onClick={() => void prepare(row.id)}>{copy.prepareReplacementButton}</button></div>}
       <button className="block text-sm underline" disabled={busy} onClick={() => void inspect(row.id).catch(() => setError(copy.requestRecoveryUnavailable))}>{copy.inspectOriginalButton}</button>
       <p className="text-xs text-ink-2">{copy.lostResponseExplanation}</p>

@@ -5,6 +5,7 @@ import { canonicalJson } from "../canonical-json";
 import { canonicalSourceUrl, claimControlIsFresh, sourceClaimSchema } from "../sources/public-source-claim";
 import {
   registrationIntentDigest, registrationPolicyDigest, registrationSponsorPolicySchema,
+  registrationCreatorEligible,
   sponsoredRegistrationSchema, type RegistrationSponsorPolicy, type SponsoredRegistration,
 } from "../sources/registration-sponsor-protocol";
 
@@ -26,6 +27,7 @@ const transitionSchema = z.object({
   transactionHash: hash.optional(), actualGasWei: z.string().regex(/^(0|[1-9]\d{0,77})$/).optional(),
   creatorSignature: executionSchema.shape.creatorSignature.optional(),
   signedTransaction: executionSchema.shape.signedTransaction,
+  expiredResolution: z.literal(true).optional(),
   now: timestamp.optional(),
 }).strict();
 const entrySchema = z.object({ original: sponsoredRegistrationSchema, current: sponsoredRegistrationSchema,
@@ -75,7 +77,7 @@ function cohortDigest(policy: RegistrationSponsorPolicy): string {
     registryAddress: policy.registryAddress, sponsorAddress: policy.sponsorAddress })));
 }
 function immutable(row: SponsoredRegistration): string {
-  const mutable = new Set(["state", "updatedAt", "transactionHash", "transactionNonce", "actualGasWei"]);
+  const mutable = new Set(["state", "updatedAt", "transactionHash", "transactionNonce", "actualGasWei", "expiredResolution"]);
   return canonicalJson(Object.fromEntries(Object.entries(row).filter(([key]) => !mutable.has(key))));
 }
 function sameRequestedIntent(original: SponsoredRegistration, requested: SponsoredRegistration): boolean {
@@ -83,6 +85,7 @@ function sameRequestedIntent(original: SponsoredRegistration, requested: Sponsor
   return immutable({ ...requested, createdAt: original.createdAt }) === immutable(original);
 }
 function validateRow(row: SponsoredRegistration): void {
+  if (row.expiredResolution && !["signing", "submitted", "confirmed", "reverted"].includes(row.state)) unavailable();
   if (!timestamp.safeParse(row.createdAt).success || !timestamp.safeParse(row.updatedAt).success ||
       !Number.isSafeInteger(row.claimRevision) || !Number.isSafeInteger(row.deadline) ||
       row.deadline > Math.floor(Number.MAX_SAFE_INTEGER / 1000) || row.updatedAt < row.createdAt ||
@@ -103,7 +106,7 @@ function validateRow(row: SponsoredRegistration): void {
 function validateBinding(row: SponsoredRegistration, policy: RegistrationSponsorPolicy): void {
   if (row.policyDigest !== registrationPolicyDigest(policy) || row.registryAddress !== policy.registryAddress || row.registryCodeHash !== policy.registryCodeHash ||
       row.relayer !== policy.sponsorAddress || `eip155:${row.chainId}` !== policy.network ||
-      row.reservedWei !== policy.maxTransactionWei || !policy.allowlistedCreators.includes(row.creator) ||
+      row.reservedWei !== policy.maxTransactionWei || !registrationCreatorEligible(policy, row.creator, row.canonicalUrl) ||
       row.deadline * 1000 > policy.expiresAt) unavailable();
 }
 function readPolicies(db: DatabaseSync): Map<string, PolicyEnvelope> {
@@ -171,11 +174,12 @@ function readEntries(db: DatabaseSync, policies = readPolicies(db)): Entry[] {
   return entries;
 }
 function mayRenew(previous: SponsoredRegistration, requested: SponsoredRegistration, now: number): boolean {
-  return previous.state === "expired" && previous.transactionNonce === undefined && previous.transactionHash === undefined &&
-    previous.actualGasWei === undefined && previous.creator === requested.creator && previous.policyDigest === requested.policyDigest &&
+  const terminal = previous.state === "reverted" && previous.transactionHash !== undefined && previous.actualGasWei !== undefined ||
+    previous.state === "expired" && previous.transactionNonce === undefined && previous.transactionHash === undefined && previous.actualGasWei === undefined;
+  return terminal && previous.creator === requested.creator && previous.policyDigest === requested.policyDigest &&
     previous.canonicalUrl === requested.canonicalUrl && previous.claimId === requested.claimId && previous.sourceId === requested.sourceId &&
     previous.id !== requested.id && requested.replacesRequestId === previous.id && now > previous.createdAt &&
-    now >= (previous.deadline + 1) * 1000 && previous.updatedAt <= now;
+    (previous.state === "reverted" || now >= (previous.deadline + 1) * 1000) && previous.updatedAt <= now;
 }
 function assertLiveClaim(db: DatabaseSync, row: SponsoredRegistration, policy: RegistrationSponsorPolicy, now: number): void {
   const saved = db.prepare("SELECT value FROM sync_state WHERE key=?").get("keryx:source-claims:v1:claim:" + row.claimId);
@@ -235,7 +239,7 @@ export function admitSqliteRegistrationSponsor(db: DatabaseSync, policyValue: Re
       conflict("Registration sponsorship inspection limit reached", "registration_sponsor_limit");
     expirePrepared(db, entries, now);
     if (requested.replacesRequestId !== undefined && (!latest || !mayRenew(latest.current, requested, now)))
-      conflict("Only the latest conclusively expired unsigned original may be renewed", "registration_sponsor_renewal_refused");
+      conflict("Only the latest expired unsigned or receipt-reverted original may be renewed", "registration_sponsor_renewal_refused");
     if (entries.some(entry => entry.current.creator === requested.creator &&
         ["prepared", "signing", "submitted"].includes(entry.current.state)))
       conflict("This creator already has an original registration awaiting completion", "registration_sponsor_creator_busy");
@@ -244,6 +248,7 @@ export function admitSqliteRegistrationSponsor(db: DatabaseSync, policyValue: Re
     const reservation = BigInt(policy.maxTransactionWei);
     if (cohortRows.length >= policy.maxRegistrationsTotal || today.length >= policy.maxRegistrationsPerDay ||
         cohortRows.filter(row => row.creator === requested.creator).length >= policy.maxRegistrationsPerWallet ||
+        (policy.maxRegistrationsPerOrigin !== undefined && cohortRows.filter(row => new URL(row.canonicalUrl).origin === new URL(requested.canonicalUrl).origin).length >= policy.maxRegistrationsPerOrigin) ||
         cohortRows.reduce((sum, row) => sum + heldWei(row), BigInt(0)) + reservation > BigInt(policy.maxLifetimeWei) ||
         today.reduce((sum, row) => sum + heldWei(row), BigInt(0)) + reservation > BigInt(policy.maxDailyWei))
       conflict("Registration sponsorship allowance is exhausted", "registration_sponsor_limit");
@@ -295,6 +300,8 @@ export function transitionSqliteRegistrationSponsor(db: DatabaseSync, input: Reg
     if (change.creatorSignature !== undefined && !(row.state === "prepared" && change.nextState === "signing") ||
         change.signedTransaction !== undefined && !(row.state === "signing" && change.nextState === "submitted"))
       conflict("Execution authority can only be retained with its original transition");
+    if (change.expiredResolution && !(row.state === change.nextState && ["signing", "submitted"].includes(row.state)))
+      conflict("Expired resolution must retain an unresolved original");
     if (row.state !== change.expectedState || now < row.updatedAt)
       conflict("Original registration state changed; read it before continuing", "registration_sponsor_state_changed");
     const proofMatches = (change.transactionNonce === undefined || change.transactionNonce === row.transactionNonce) &&
@@ -321,10 +328,11 @@ export function transitionSqliteRegistrationSponsor(db: DatabaseSync, input: Reg
         conflict("Submission must retain the exact signed original before broadcast");
     } else if (row.state === change.nextState && ["signing", "submitted"].includes(row.state)) {
       const policy = policies.get(row.policyDigest)!.policy;
-      if (!entry.execution || !proofMatches || change.actualGasWei !== undefined || expired(row, now) ||
-          now > row.deadline * 1000 || policy.expiresAt <= now)
+      const resolvingExpired = change.expiredResolution === true;
+      if (!entry.execution || !proofMatches || change.actualGasWei !== undefined || policy.expiresAt <= now ||
+          (resolvingExpired ? now <= row.deadline * 1000 : now > row.deadline * 1000 || row.expiredResolution))
         conflict("The original execution authority cannot be resumed");
-      assertLiveClaim(db, row, policy, now);
+      if (!resolvingExpired) assertLiveClaim(db, row, policy, now);
     } else if (row.state === "submitted" && ["confirmed", "reverted"].includes(change.nextState)) {
       if (!proofMatches || change.actualGasWei === undefined || BigInt(change.actualGasWei) > BigInt(row.reservedWei))
         conflict("Finality evidence must match the original reserved transaction");
@@ -333,6 +341,7 @@ export function transitionSqliteRegistrationSponsor(db: DatabaseSync, input: Reg
       ...(change.transactionNonce === undefined ? {} : { transactionNonce: change.transactionNonce }),
       ...(change.transactionHash === undefined ? {} : { transactionHash: change.transactionHash }),
       ...(change.actualGasWei === undefined ? {} : { actualGasWei: change.actualGasWei }),
+      ...(change.expiredResolution ? { expiredResolution: true as const } : {}),
     };
     if (change.creatorSignature) entry.execution = { creatorSignature: change.creatorSignature };
     if (change.signedTransaction) {

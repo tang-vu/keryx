@@ -7800,3 +7800,37 @@ No production DDL/backfill/data/ENV/activation is authorized or performed. Root 
 review precedes ONE266PR; actual exact combined CI/PG17/build/distribution and delivery
 remain gates, original266OPEN. Root reserves final actual offline48 --write; this phase
 neither runs it nor claims inherited/projected canonical metadata as new-head success.
+
+## 2026-10-12: bounded Conzit registration sponsorship with retained registry origins
+
+The owner requested live creator gas sponsorship and selected the existing
+mainnet public-fee wallet with approximately one native USDC. Use that existing
+custody for a finite Conzit scope, with no new wallet, top-up or automatic renewal.
+Admit exact verified publisher origins as well as named wallets, preserving the
+creator's own SIWE identity, publisher proof, typed authorization and payout wallet.
+Per-origin limits span wallet identities and source URLs. The intended mainnet
+policy is 24 hours, 0.04 USDC per transaction, 0.08 daily, 0.20 lifetime, five total
+attempts and two per wallet/origin; deployment has a separate 0.088 USDC ceiling.
+These ceilings and the owner request do not prove execution or live availability.
+
+Retain private creator authorization and exact transaction bytes in the native
+journal. Explicit resume never replaces the original nonce, calldata, fees or
+reservation. Explicit expired-original resolution can execute only those original
+bytes within the still-live policy and existing reservation. Fresh chain expiry
+observations prevent a new successful registration. A prior submitted success
+may become visible during that observation; its matching receipt/event remains
+authoritative and recoverable. A matching reverted receipt charges actual gas,
+then a separately reviewed replacement consumes another capped attempt. No
+automatic retry, fee bump, hold reset or inferred settlement is introduced.
+
+Preserve both existing mainnet listings in V1, binding their immutable original
+registry through an atomic sync_state sidecar before selecting V3 for new
+registrations. Server/browser origin allowlists pin network, address, version,
+code hash and deployment block. Payout, claim, listing and indexing adapters use
+the bound origin; each registry advances its own cursor. A cross-origin duplicate
+ID retains scoped collision evidence and cannot replace old payout authority or
+block later valid events. Native/Supabase role boundaries, real funded testnet
+restart/expiry acceptance, exact-source CI/review, stopped-writer production
+binding and live commit/configuration readbacks are explicit release gates. See
+[the sponsor contract](docs/creator-registration-sponsorship.md) and
+[registry origin continuity](docs/source-registry-origins.md).

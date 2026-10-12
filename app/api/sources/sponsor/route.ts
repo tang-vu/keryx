@@ -5,9 +5,9 @@ import { getSession } from "@/lib/auth";
 import { RegistrationSponsorError } from "@/lib/db/registration-sponsor";
 import { SourceClaimError } from "@/lib/db/public-source-claims";
 import { claimBody } from "../../source-claims/shared";
-import { prepareSponsoredRegistration, recoverSponsoredRegistration, resumeSponsoredRegistration, submitSponsoredRegistration } from "@/lib/sources/registration-sponsor-service";
+import { prepareSponsoredRegistration, recoverSponsoredRegistration, resolveExpiredSponsoredRegistration, resumeSponsoredRegistration, submitSponsoredRegistration } from "@/lib/sources/registration-sponsor-service";
 import { registrationSponsorReadChain, registrationSponsorRuntime } from "@/lib/sources/registration-sponsor-runtime";
-import { registrationPolicyDigest } from "@/lib/sources/registration-sponsor-protocol";
+import { registrationPolicyDigest, registrationWalletMayPrepare } from "@/lib/sources/registration-sponsor-protocol";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +16,7 @@ const bodySchema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("prepare"), claimId: z.string().regex(/^[a-f0-9]{64}$/), fetchPrice: z.number().finite().min(0).max(1_000_000), replacesRequestId: idSchema.optional() }).strict(),
   z.object({ operation: z.literal("submit"), id: idSchema, signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/).transform(value => value as `0x${string}`) }).strict(),
   z.object({ operation: z.literal("resume"), id: idSchema }).strict(),
+  z.object({ operation: z.literal("resolveExpired"), id: idSchema }).strict(),
 ]);
 const headers = { "Cache-Control": "no-store", Vary: "Cookie, Origin", "Referrer-Policy": "no-referrer" };
 const response = (value: unknown, status = 200) => Response.json(value, { status, headers });
@@ -41,12 +42,13 @@ export async function GET(req: Request) {
       catch { return response({ original: row, recoveryUnavailable: true }); }
     }
     const ctx = await registrationSponsorRuntime();
-    if (!ctx || !session || !ctx.policy.allowlistedCreators.includes(session.address.toLowerCase() as `0x${string}`))
+    if (!ctx || !session || !registrationWalletMayPrepare(ctx.policy, session.address))
       return response({ available: false });
     await ctx.chain.assertRegistry();
     return response({ available: true, network: ctx.policy.network, registryAddress: ctx.policy.registryAddress,
       sponsorAddress: ctx.policy.sponsorAddress, policyDigest: registrationPolicyDigest(ctx.policy),
-      maxGasWei: ctx.policy.maxTransactionWei, requiresPublishingProof: true });
+      maxGasWei: ctx.policy.maxTransactionWei, requiresPublishingProof: true,
+      ...(ctx.policy.allowlistedPublisherOrigins?.length ? { publisherOrigins: ctx.policy.allowlistedPublisherOrigins } : {}) });
   } catch { return response({ available: false }); }
 }
 export async function POST(req: Request) {
@@ -63,6 +65,7 @@ export async function POST(req: Request) {
     const original = body.operation === "prepare"
       ? await prepareSponsoredRegistration(ctx, session.address, body)
       : body.operation === "resume" ? await resumeSponsoredRegistration(ctx, session.address, body.id)
+      : body.operation === "resolveExpired" ? await resolveExpiredSponsoredRegistration(ctx, session.address, body.id)
       : await submitSponsoredRegistration(ctx, session.address, body.id, body.signature);
     return response({ original }, body.operation === "prepare" ? 200 : 202);
   } catch (error) { return failure(error); }

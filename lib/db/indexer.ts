@@ -26,8 +26,8 @@
  * listSources() filters active=true, so deactivated sources are never surfaced to the agent.
  */
 
-import { createPublicClient, type Address, type Log } from "viem";
-import { arcTestnet } from "@/lib/chains";
+import { createPublicClient, keccak256, type Address, type Log } from "viem";
+import { arcTestnet, chainForProfile } from "@/lib/chains";
 import { assertArcRpcChain, attestedArcAuthorityHttp } from "@/lib/arc-rpc-attestation";
 import { config } from "@/lib/config";
 import { REGISTRY_ABI, getRegistrySource } from "@/lib/registry/registry-client";
@@ -35,6 +35,9 @@ import { subscribeRegistryLogs } from "./indexer-event-subscription";
 import { safeErrorMessage } from "../ops/safe-error-message";
 import type { KeryxDB } from "./keryx-db";
 import type { Author, Source } from "@/lib/types";
+import { assertConfiguredRegistryAuthority, configuredRegistryAuthorities, registryCheckpointKey, sameRegistryAuthority, type SourceRegistryAuthority } from "../registry/source-registry-authority";
+import { REVISIONED_REGISTRY_ABI } from "../registry/registry-abi";
+import { retainRegistryCollision } from "../registry/registry-collisions";
 
 // BigInt() constructor used instead of a `10000n` literal — tsconfig targets ES2017, which predates
 // BigInt literal syntax (ES2020+), though BigInt itself is available at runtime.
@@ -48,7 +51,7 @@ const SYNC_KEY = "lastSyncedBlock";
 
 function getPublicClient() {
   return createPublicClient({
-    chain: arcTestnet,
+    chain: config.profile ? chainForProfile(config.profile) : arcTestnet,
     transport: attestedArcAuthorityHttp(config.rpcUrl),
   });
 }
@@ -62,12 +65,40 @@ function getPublicClient() {
  */
 export async function syncOnce(db: KeryxDB): Promise<void> {
   if (!config.registryAddress) return;
+  const authorities = configuredRegistryAuthorities();
+  if (!authorities.length) return syncRegistry(db);
+  const failures: unknown[] = [];
+  for (const authority of authorities) {
+    try { await syncRegistry(db, authority, authorities.filter(origin => origin.version === 1).length === 1); }
+    catch (error) { failures.push(error); }
+  }
+  if (failures.length) throw failures[0];
+}
+
+async function syncRegistry(db: KeryxDB, authority?: SourceRegistryAuthority, uniqueLegacyV1 = false): Promise<void> {
 
   const client = getPublicClient();
+  if (authority) {
+    const code = await client.getCode({ address: authority.address });
+    if (!code || code === "0x" || keccak256(code) !== authority.codeHash ||
+        authority.version !== 1 && await client.readContract({ address: authority.address, abi: REVISIONED_REGISTRY_ABI, functionName: "registryVersion" }) !== authority.version)
+      throw new Error("Indexer registry differs from its reviewed immutable origin");
+  }
   const head = await client.getBlockNumber();
 
-  const lastRaw = await db.getSyncState(SYNC_KEY);
-  const lastSynced = lastRaw !== null ? BigInt(lastRaw) : BigInt(config.registryDeployBlock ?? 0);
+  const syncKey = authority ? registryCheckpointKey(authority) : SYNC_KEY;
+  let lastRaw = await db.getSyncState(syncKey);
+  if (authority?.version === 1 && uniqueLegacyV1 && lastRaw === null) {
+    // Historical singleton checkpoint belonged to V1. It never bootstraps V2/V3.
+    const legacyRaw = await db.getSyncState(SYNC_KEY);
+    if (legacyRaw !== null) {
+      if (!/^(0|[1-9]\d{0,19})$/.test(legacyRaw) || BigInt(legacyRaw) < BigInt(authority.deployBlock) || BigInt(legacyRaw) > head)
+        throw new Error("Legacy V1 checkpoint is outside its reviewed chain window");
+      await assertArcRpcChain(config.rpcUrl);
+      await db.setSyncState(syncKey, legacyRaw); lastRaw = legacyRaw;
+    }
+  }
+  const lastSynced = lastRaw !== null ? BigInt(lastRaw) : authority ? BigInt(authority.deployBlock) - BigInt(1) : BigInt(config.registryDeployBlock ?? 0);
 
   const from = lastSynced + BigInt(1);
   if (from > head) return;
@@ -78,7 +109,7 @@ export async function syncOnce(db: KeryxDB): Promise<void> {
     const hi = lo + CHUNK_SIZE - BigInt(1) < head ? lo + CHUNK_SIZE - BigInt(1) : head;
 
     const logs = await client.getLogs({
-      address: config.registryAddress as Address,
+      address: (authority?.address ?? config.registryAddress) as Address,
       events: REGISTRY_ABI.filter(
         (e): e is (typeof REGISTRY_ABI)[number] & { type: "event" } => e.type === "event",
       ),
@@ -87,10 +118,10 @@ export async function syncOnce(db: KeryxDB): Promise<void> {
     });
 
     // applyLogs throws if any RPC call fails — do NOT advance checkpoint on error.
-    await applyLogs(logs, db);
+    await applyLogs(logs, db, authority);
     // Re-attest before the durable cursor moves, including an empty log chunk.
     await assertArcRpcChain(config.rpcUrl);
-    await db.setSyncState(SYNC_KEY, hi.toString());
+    await db.setSyncState(syncKey, hi.toString());
   }
 }
 
@@ -111,8 +142,11 @@ export async function syncOnce(db: KeryxDB): Promise<void> {
  * a row by the hash alone would mint a second row beside them on the first `SourceUpdated`, and a
  * `SourceDeactivated` would sail past the real one.
  */
-export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
+export async function applyLogs(logs: Log[], db: KeryxDB, authority?: SourceRegistryAuthority): Promise<void> {
+  if (authority) assertConfiguredRegistryAuthority(authority);
   for (const log of logs) {
+    if (authority && log.address && log.address.toLowerCase() !== authority.address)
+      throw new Error("Registry event belongs to another immutable origin");
     const eventName = (log as { eventName?: string }).eventName;
 
     if (eventName === "SourceRegistered" || eventName === "SourceUpdated") {
@@ -121,7 +155,7 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
       if (!id) continue;
 
       // getRegistrySource now throws on RPC error — propagates to syncOnce.
-      const record = await getRegistrySource(id);
+      const record = authority ? await getRegistrySource(id, { authority }) : await getRegistrySource(id);
       // Record not found (zero-address creator) means the event is stale or mismatched.
       // Skip inactive records on initial index — SourceDeactivated will handle them.
       if (!record || !record.active) continue;
@@ -130,6 +164,13 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
       const fetchPrice = Number(record.fetchPriceUsdc6) / 1_000_000;
 
       const existing = await resolveSource(db, id);
+      if (authority && existing) {
+        if (!existing.registryAuthority) throw new Error("Existing source requires its original registry origin binding");
+        assertConfiguredRegistryAuthority(existing.registryAuthority);
+        if (!sameRegistryAuthority(existing.registryAuthority, authority)) {
+          await quarantineCollision(db, log, id, existing.id, authority, existing.registryAuthority); continue;
+        }
+      }
 
       // Map on-chain basis-point splits → Author.splitWeight = basisPoints / 10_000, stored as a
       // float in the cache. The float is lossless for payouts: settlement allocates the reward in
@@ -153,6 +194,10 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
       // Read off-chain metadata written by POST /api/sources at register time.
       // Payment fields always come from chain; name/description/url come from source_meta.
       const meta = await db.getSourceMeta(id);
+      if (authority && meta?.registryAuthority && !sameRegistryAuthority(meta.registryAuthority, authority)) {
+        assertConfiguredRegistryAuthority(meta.registryAuthority);
+        await quarantineCollision(db, log, id, existing?.id ?? id, authority, meta.registryAuthority); continue;
+      }
 
       const source: Source = {
         // Keep the id the row already has. Sources that predate this cache use a slug.
@@ -180,6 +225,7 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
         // consults the chain for sources that have one — would quietly wave its payouts through.
         onchainId: id,
         registerTx: existing?.registerTx ?? (log as { transactionHash?: string }).transactionHash,
+        ...(authority ? { registryAuthority: authority } : {}),
       };
 
       await db.upsertSource(source);
@@ -193,11 +239,27 @@ export async function applyLogs(logs: Log[], db: KeryxDB): Promise<void> {
       // failure and the chunk was retried), skip — the Register retry sets active from the
       // on-chain record, which already reads false.
       const existing = await resolveSource(db, id);
+      if (authority && existing) {
+        if (!existing.registryAuthority) throw new Error("Existing source requires its original registry origin binding");
+        assertConfiguredRegistryAuthority(existing.registryAuthority);
+        if (!sameRegistryAuthority(existing.registryAuthority, authority)) {
+          await quarantineCollision(db, log, id, existing.id, authority, existing.registryAuthority); continue;
+        }
+      }
       if (existing) {
         await db.upsertSource({ ...existing, active: false });
       }
     }
   }
+}
+
+async function quarantineCollision(db: KeryxDB, log: Log, id: string, sourceId: string, observedOrigin: SourceRegistryAuthority, retainedOrigin: SourceRegistryAuthority): Promise<void> {
+  const eventName = (log as { eventName?: string }).eventName;
+  if (eventName !== "SourceRegistered" && eventName !== "SourceUpdated" && eventName !== "SourceDeactivated")
+    throw new Error("Unrecognized registry collision event");
+  await retainRegistryCollision(db, { format: "keryx-registry-collision-v1", status: "withheld", onchainId: id, sourceId, observedOrigin, retainedOrigin,
+    eventName,
+    ...(log.transactionHash ? { transactionHash: log.transactionHash } : {}), ...(log.blockNumber !== null && log.blockNumber !== undefined ? { blockNumber: log.blockNumber.toString() } : {}) });
 }
 
 /**

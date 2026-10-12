@@ -22,6 +22,8 @@ import { ProfileIdentityError, type ProfileIdentitiesStore } from "../profiles/v
 import { PrivateProfileError, type PrivateProfilesStore } from "../profiles/private-profile";
 import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, getSqliteRegistrationSponsorExecution, transitionSqliteRegistrationSponsor, type RegistrationSponsorTransition } from "./registration-sponsor";
 import type { RegistrationSponsorPolicy, SponsoredRegistration } from "../sources/registration-sponsor-protocol";
+import { bindSqliteSourceRegistryOrigin, readSqliteSourceRegistryOrigin } from "./source-registry-origin";
+import { retainSqliteRegistryCollision } from "./registry-collisions";
 import { readSqliteOperatorInventory, type OperatorInventoryInput } from "../business-operator/inventory";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteSessionFundingAccounting } from "./session-funding-accounting";
@@ -303,6 +305,16 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async upsertSource(s: Source): Promise<void> {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+    const priorIdentity = this.db.prepare("SELECT onchain_id FROM sources WHERE id=?").get(s.id)?.onchain_id;
+    if (typeof priorIdentity === "string" && readSqliteSourceRegistryOrigin(this.db, priorIdentity) &&
+        s.onchainId && s.onchainId.toLowerCase() !== priorIdentity.toLowerCase())
+      throw new Error("Source row must retain its original bound on-chain identity");
+    if (s.registryAuthority) {
+      if (!s.onchainId) throw new Error("Registry origin requires the exact on-chain source ID");
+      bindSqliteSourceRegistryOrigin(this.db, s.onchainId, s.registryAuthority);
+    }
     const claim = getSqliteSourceClaimForSource(this.db, s.id);
     if (s.sourceClaimId && s.sourceClaimId !== claim?.id) throw new Error("Managed source import requires its original source claim history");
     if (claim && (canonicalSourceUrl(s.url) !== claim.canonicalUrl || s.onchainId?.toLowerCase() !== claim.onchainId?.toLowerCase()
@@ -345,6 +357,8 @@ export class SqliteAdapter implements KeryxDB {
         s.previewDepth ?? null,
         s.id, s.evidenceProvenance ?? null,
       );
+    this.db.exec("COMMIT");
+    } catch (error) { this.db.exec("ROLLBACK"); throw error; }
   }
 
   async verifySourceIfUnchanged(input: { sourceId: string; walletAddress: string; feedUrl: string }): Promise<boolean> {
@@ -386,11 +400,16 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async setSourceMeta(id: string, meta: import("./keryx-db").SourceMeta): Promise<void> {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+    if (meta.registryAuthority) bindSqliteSourceRegistryOrigin(this.db, id, meta.registryAuthority);
     this.db
       .prepare(
         `INSERT OR REPLACE INTO source_meta (id,name,description,url,rss_url,updated_at) VALUES (?,?,?,?,?,?)`,
       )
       .run(id, meta.name, meta.description, meta.url, meta.rssUrl ?? null, new Date().toISOString());
+    this.db.exec("COMMIT");
+    } catch (error) { this.db.exec("ROLLBACK"); throw error; }
   }
 
   async getSourceMeta(id: string): Promise<import("./keryx-db").SourceMeta | null> {
@@ -398,7 +417,9 @@ export class SqliteAdapter implements KeryxDB {
       .prepare(`SELECT name,description,url,rss_url FROM source_meta WHERE id=?`)
       .get(id);
     if (!row) return null;
+    const registryAuthority = readSqliteSourceRegistryOrigin(this.db, id);
     return {
+      ...(registryAuthority ? { registryAuthority } : {}),
       name: (row.name as string) ?? "",
       description: (row.description as string) ?? "",
       url: (row.url as string) ?? "",
@@ -757,6 +778,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async setSyncState(key: string, value: string): Promise<void> {
+    if (key.startsWith("keryx:registry-collision:v1:")) return retainSqliteRegistryCollision(this.db, key, value);
     this.db
       .prepare(
         `INSERT OR REPLACE INTO sync_state (key,value,updated_at) VALUES (?,?,?)`,
@@ -2574,6 +2596,8 @@ function rowToApiKey(r: Record<string, unknown>): ApiKeyRow {
 
 function rowToSourceWithClaim(db: DatabaseSync, row: Record<string, unknown>): Source {
   const source = rowToSource(row), marker = getRetainedSourceClaimMarker(db, source.id);
+  const authority = source.onchainId ? readSqliteSourceRegistryOrigin(db, source.onchainId) : undefined;
+  if (authority) source.registryAuthority = authority;
   return marker ? { ...source, sourceClaimId: marker } : source;
 }
 function rowToSource(r: Record<string, unknown>): Source {
