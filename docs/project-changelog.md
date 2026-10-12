@@ -1,5 +1,17 @@
 # Keryx Project Changelog
 
+### Broader reading library (0.27.62 candidate)
+
+- Expand the approved catalog from 31 to 50 feeds and the publisher directory
+  from 60 to 79 links with audited engineering, AI, security, payments and open
+  research publications. Production retained counts require the explicit import.
+- Preserve public free reads, verified creator payout authority and separate
+  Keryx operating-fee accounting. A creator leaderboard counts settled source
+  recipients; it does not count all available research sources.
+- Hosted web/API/MCP/bots share imported sources. Existing CLI, desktop and
+  extension handoffs retain their package and custody contracts; no new schedule
+  or spend allowance. See the October 12 source catalog audit.
+
 ### Conzit creator registration gas sponsorship (0.27.61 candidate)
 
 - Retain private creator authorization and exact sponsor transaction bytes before

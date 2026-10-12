@@ -6,7 +6,14 @@ verification, registry registration, access toll, or citation reward. Public ava
 does not establish an agreement with the publisher or authorize Keryx to monetize their
 writing. Existing verified creator sources keep their payment and registry authority.
 
-The October 6 approved batch contains 31 public feeds, including 26 additions across
+The October 12 approved batch contains **50 public feeds and 79 publisher directory
+links**, including 19 newly audited feeds. See [the current expansion and live-count
+boundaries](engineering/source-catalog-2026-10-12.md). Qualified unclaimed public
+citations may contribute to a separately authorized Keryx operating fee under the
+[existing sponsored fee policy](sponsored-research-trial.md); public feed reading
+remains free and this is separate from publisher ownership and creator rewards.
+
+The historical October 6 approved batch contains 31 public feeds, including 26 additions across
 AI/agents, data/infrastructure, payments and creator research. A separate 60-entry
 publisher directory contains unread links rather than retained article evidence.
 See [the exact feed audit and limits](engineering/source-catalog-2026-10-06.md).
