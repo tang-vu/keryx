@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { publicProfileCopy as copy } from "@/locales/en/public-profiles";
 import { notFound } from "next/navigation";
 import { loadPublicProfile } from "@/lib/profiles/public-profile-loader";
 import { PublicResearcherProfile } from "@/components/keryx/public-researcher-profile";
@@ -8,8 +9,8 @@ export const dynamic="force-dynamic";
 export const revalidate=0;
 type Props={params:Promise<{handle:string}>};
 export async function generateMetadata({params}:Props):Promise<Metadata>{
-  const profile=await loadPublicProfile((await params).handle);if(!profile)return {title:"Profile unavailable",robots:{index:false,follow:false}};
-  const title=profile.displayName||`@${profile.handle}`,description=profile.purpose||profile.about||"Selected public research on Keryx.";
+  const profile=await loadPublicProfile((await params).handle);if(!profile)return {title:copy.unavailableTitle,robots:{index:false,follow:false}};
+  const title=profile.displayName||`@${profile.handle}`,description=profile.purpose||profile.about||copy.metadataDescription;
   return {title,description,alternates:{canonical:`/u/${profile.handle}`,types:{"application/json":`/api/u/${profile.handle}`}},
     openGraph:{title,description,type:"profile",url:`/u/${profile.handle}`,images:[`/u/${profile.handle}/opengraph-image`]},
     twitter:{card:"summary_large_image",title,description,images:[`/u/${profile.handle}/opengraph-image`]}};

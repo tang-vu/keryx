@@ -26,7 +26,10 @@ export function createPublicProfileOwnerRoutes(deps:{session():Promise<{db:Keryx
       const expected=req.headers.get("x-keryx-expected-wallet");
       if(!expected)return authJson({error:"owner_precondition_required"},428);
       if(!/^0x[0-9a-fA-F]{40}$/.test(expected))return authJson({error:"invalid_owner_precondition"},400);
-      if(action!=="settings"&&req.headers.get("origin")!==new URL(req.url).origin)return authJson({error:"same_origin_required"},403);
+      // The reviewed public binding is authority; Next's internal transport URL
+      // may use a loopback host. Never accept an origin merely because it matches
+      // a caller-controlled request URL or forwarded Host.
+      if(action!=="settings"&&req.headers.get("origin")!==deps.binding.origin)return authJson({error:"same_origin_required"},403);
       const context=await deps.session();if(context instanceof Response)return context;
       if(expected.toLowerCase()!==context.wallet.toLowerCase())return authJson({error:"profile_owner_changed"},409);
       const store=requirePublicProfiles(context.db),actor={wallet:context.wallet,sessionHash:context.currentId,binding:deps.binding};

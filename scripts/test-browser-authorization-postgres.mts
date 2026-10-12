@@ -185,6 +185,12 @@ try {
     if (extension.file === "0090_run_privacy.sql")
       assert.equal(sql("select to_regprocedure('public.run_privacy_v1(text,text,jsonb,jsonb,boolean)') is null;"), "t",
         "Native installation refusal must not publish an ordinary privacy RPC");
+    if (extension.file === "0091_public_researcher_profiles.sql") {
+      assert.equal(sql("select to_regclass('public.public_researcher_profiles') is null;"), "t",
+        "Native installation refusal must not publish ordinary profile rows");
+      assert.equal(sql("select to_regprocedure('public.public_researcher_profile_v1(text,text,jsonb,jsonb,boolean)') is null;"), "t",
+        "Native installation refusal must not publish an ordinary profile RPC");
+    }
   }
   const ordinary = `browser_ordinary_${randomUUID().replaceAll("-", "")}`;
   postgres.createDatabase(ordinary);
@@ -208,6 +214,14 @@ try {
       assert.throws(() => postgres.sql("set role authenticated;select * from public.anonymous_run_claims;", ordinary), /permission denied/);
     } else if (extension.file === "0089_public_usage_window.sql") {
       observeBrowserPublicUsage(postgres.sql, ordinary);
+    } else if (extension.file === "0091_public_researcher_profiles.sql") {
+      assert.deepEqual(JSON.parse(postgres.sql("set role service_role;select public.public_researcher_profile_v1('sitemap',null,'{\"take\":1}'::jsonb,null);", ordinary)),
+        { version: 1, action: "sitemap", handle: null, result: [] });
+      for (const role of ["anon", "authenticated"]) {
+        assert.throws(() => postgres.sql(`set role ${role};select public.public_researcher_profile_v1('sitemap',null,'{"take":1}'::jsonb,null);`, ordinary), /permission denied/);
+        assert.throws(() => postgres.sql(`set role ${role};select * from public.public_researcher_profiles;`, ordinary), /permission denied/);
+      }
+      assert.equal(postgres.sql("select to_regprocedure('public.anonymous_run_claims_guard_v1()') is not null;", ordinary), "t");
     } else if (extension.file === "0090_run_privacy.sql") {
       assert.deepEqual(JSON.parse(postgres.sql("set role service_role;select public.run_privacy_v1('list',null,'{\"take\":1,\"ids\":[]}'::jsonb,null);", ordinary)),
         { version: 1, action: "list", id: null, result: [] });

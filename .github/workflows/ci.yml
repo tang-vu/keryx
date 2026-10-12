@@ -111,9 +111,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: public-profile-postgres-${{ github.sha }}
-          path: .artifacts/profile264-postgres/
+          path: |
+            .artifacts/profile264-postgres/image.json
+            .artifacts/profile264-postgres/stdout.txt
+            .artifacts/profile264-postgres/stderr.txt
+            .artifacts/profile264-postgres/exit-code.txt
           if-no-files-found: error
           retention-days: 7
+          include-hidden-files: true
       - name: Prepaid A2A acceptance PostgreSQL atomic choices and active authority (synthetic)
         if: needs.scope.outputs.scope == 'full'
         run: node --import tsx scripts/test-deliverable-acceptance-postgres.mts
@@ -547,6 +552,8 @@ jobs:
             .artifacts/public-profile-built-*/profile-*.png
           if-no-files-found: error
           retention-days: 7
+          # Only these named evidence files; never data/keryx.sqlite or the .next link.
+          include-hidden-files: true
 
       - name: Private bibliography snapshots (built routes, isolated SQLite and synthetic sessions)
         run: node --import tsx scripts/test-private-bibliography-built.mts

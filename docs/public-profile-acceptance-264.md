@@ -7,3 +7,25 @@ Before final adapter initialization, the fixture explicitly installs the source-
 The built gate requires actual owner/public routes, Origin and anonymous refusals, explicit PUBLIC-only selection, JSON/HTML/JSON-LD/OpenGraph PNG/sitemap, immediate subsequent unpublish refusal, stale revision conflict and session revocation. Chromium loads the real public page at 320, 390, 768 and 1366px, checks overflow, authored CSS padding, keyboard focus and original report/receipt links, and retains screenshots. Outward browser requests are aborted. This proves those bounded DOM predicates; it is not a full assistive-technology audit, connected-wallet editor exercise or deployed phone trial. Both production capabilities remain default OFF. No research/payment/provider or external database call is part of the gate.
 
 The owned Next child receives one graceful stop; no process enumeration, force kill, shared cleanup or dependency repair is performed. Source/build pins, stdout/stderr, child close/signal and failure-qualified acceptance are retained under .artifacts/public-profile-built-*. Missing BUILD_ID, readiness/CSS/route failure or missing graceful close cannot produce accepted:true. The existing aggregate requires both checks and production lanes. Hosted evidence must match the final reviewed source and build; author static checks alone do not approve auth/privacy or complete #264.
+# PR434 CI integration correction
+
+The first required CI run failed rather than qualifying delivery: the copy guard
+found new inline labels, the browser migration selector refused the new0091
+identity, and the built publication returned403. Public-profile copy now uses an
+English source catalogue without a baseline exception. The closed browser fixture
+admits only0091 plus its exact existing0083/0085 ordinary prerequisites, installed
+before claim/privacy catalog seals; the full native chain remains unchanged.
+Native refusal and absence of profile table/RPC, fresh ordinary service-only
+readiness, future/duplicate refusal and all existing seals remain required.
+
+Owner writes compare Origin to the configured public binding, preserving the same
+origin policy when Next uses an internal loopback request URL. Missing, foreign or
+forged matching request origins refuse before session/store access. The built
+fixture keeps every original status, owner/private projection, phone, revocation,
+body and graceful-child assertion. A bounded machine refusal code aids failures;
+it does not replace the positive200 gate. CI retains only named result/log/image
+files from the hidden artifact folder, excluding SQLite and the build link.
+
+Fresh actual PostgreSQL17, stock-built routes/phone and full aggregate CI remain
+merge gates. No production DDL, privacy/publication activation, historical owner
+promotion, deployment or original issue264 closure follows from this source delta.

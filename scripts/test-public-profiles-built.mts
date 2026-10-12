@@ -97,8 +97,11 @@ try {
   const input = { published: true, fields: ["displayName", "purpose"], runIds: [publicId, privateId], revision: 0 };
   const foreign = owner("PUT", input); foreign.headers = { ...foreign.headers, Origin: "https://foreign.invalid" };
   assert.equal((await request("/api/me/public-profile", foreign)).status, 403);
-  const published = await request("/api/me/public-profile", owner("PUT", input)); assert.equal(published.status, 200);
-  assert.equal((await published.json()).revision, 1);
+  const published = await request("/api/me/public-profile", owner("PUT", input)), publication = await published.json();
+  const refusalCodes = new Set(["same_origin_required", "not_owned", "profile_owner_changed", "conflict", "unauthenticated", "profile_required", "public_profile_unavailable"]);
+  const refusal = typeof publication?.error === "string" && refusalCodes.has(publication.error) ? publication.error : "unclassified_publication_refusal";
+  assert.equal(published.status, 200, `Owner publication must be confirmed: ${refusal}`);
+  assert.equal(publication.revision, 1);
   const json = await request("/api/u/fixture_researcher"); assert.equal(json.status, 200);
   assert.match(json.headers.get("cache-control") ?? "", /no-store/);
   const packet = await json.json(); assert.deepEqual(packet.runs.map((run: { id: string }) => run.id), [publicId]);

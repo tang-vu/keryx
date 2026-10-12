@@ -72,6 +72,19 @@ describe("#264 closed public profile and owner boundary", () => {
     expect((await f.routes.PUT(request("PUT", {}, JSON.stringify({ published: true, fields: [], runIds: [], revision: 0, wallet })))).status).toBe(400);
     expect((await f.routes.PUT(request("PUT", {}, " ".repeat(8193)))).status).toBe(400); expect(f.store.update).not.toHaveBeenCalled();
   });
+  it("binds writes to the configured public origin despite internal transport URLs and refuses forged matching URLs", async () => {
+    const f=fixture(),input=JSON.stringify({published:true,fields:[],runIds:[],revision:1});
+    const headers={"x-keryx-expected-wallet":wallet,"content-type":"application/json",origin:binding.origin};
+    const internal=new Request("http://127.0.0.1:3939/api/me/public-profile",{method:"PUT",headers,body:input});
+    expect((await f.routes.PUT(internal)).status).toBe(200);
+    expect(f.store.update).toHaveBeenCalledWith({wallet,sessionHash,binding},JSON.parse(input));
+    f.store.update.mockClear();f.session.mockClear();
+    for(const origin of ["https://attacker.example","http://127.0.0.1:3939",""]){
+      const forged=new Request(`${origin||binding.origin}/api/me/public-profile`,{method:"PUT",headers:{...headers,origin},body:input});
+      const response=await f.routes.PUT(forged);expect(response.status).toBe(403);expect(await response.json()).toEqual({error:"same_origin_required"});
+    }
+    expect(f.session).not.toHaveBeenCalled();expect(f.store.update).not.toHaveBeenCalled();
+  });
   it("handles unknown/noncanonical handles and unavailable capabilities without disclosing private errors", async () => {
     const f = fixture(); expect((await readPublicProfileJson(f.db, "alice")).status).toBe(404);
     expect((await readPublicProfileJson(f.db, "ALICE")).status).toBe(404);
