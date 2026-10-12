@@ -32,6 +32,7 @@ let childTermination: ReturnType<typeof qualifyOwnedNextFixtureExit> = null;
 let startupError: Error | undefined, stopped: Promise<void> | undefined, failure: unknown;
 let stdout = "", stderr = "", buildId: string | undefined;
 const checks: string[] = [], blockedRequests: string[] = [], widths: number[] = [];
+const readinessFailures: Array<Record<string, unknown>> = [];
 try {
   buildId = (await readFile(join(dist, "BUILD_ID"), "utf8")).trim();
   assert(buildId, "A successful stock Next build is required");
@@ -129,6 +130,14 @@ try {
       });
       const page = await context.newPage(), errors: string[] = [];
       page.on("pageerror", error => errors.push(error.message));
+      const staticAssets: Array<{ path: string; kind: string; status?: number; failure?: string }> = [];
+      const noteStatic = (request: { url(): string; resourceType(): string }, result: { status?: number; failure?: string }) => {
+        const url = new URL(request.url()), kind = request.resourceType();
+        if (staticAssets.length < 80 && url.origin === origin && (url.pathname.startsWith("/_next/static/") || kind === "font" || kind === "stylesheet"))
+          staticAssets.push({ path: url.pathname.slice(0, 512), kind, ...result }); // No query, headers, cookies or response bodies.
+      };
+      page.on("response", response => noteStatic(response.request(), { status: response.status() }));
+      page.on("requestfailed", request => noteStatic(request, { failure: (request.failure()?.errorText ?? "Unknown request failure").slice(0, 256) }));
       const navigation = await page.goto(origin + "/u/fixture_researcher", { waitUntil: "domcontentloaded" });
       assert.equal(navigation?.status(), 200); assert.equal(page.url(), origin + "/u/fixture_researcher");
       await page.getByRole("heading", { name: "Fixture researcher", exact: true }).waitFor();
@@ -142,6 +151,35 @@ try {
           parseFloat(style.opacity) > 0 && parseFloat(getComputedStyle(main).paddingLeft) >= 15 &&
           parseFloat(style.fontSize) >= 28 && document.fonts.status === "loaded" &&
           document.fonts.check(`${style.fontSize} ${style.fontFamily}`);
+      }).catch(async error => {
+        const diagnostic: Record<string, unknown> = { width, staticAssets, pageErrors: errors.slice(0, 20) };
+        readinessFailures.push(diagnostic);
+        try {
+          diagnostic.computed = await page.evaluate(() => {
+            const main = document.querySelector("main"), heading = main?.querySelector("h1");
+            const style = heading ? getComputedStyle(heading) : null, mainStyle = main ? getComputedStyle(main) : null;
+            const rect = heading?.getBoundingClientRect(), mainRect = main?.getBoundingClientRect();
+            const font = style ? `${style.fontSize} ${style.fontFamily}` : null;
+            const primaryFont = style ? `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily.split(",")[0].trim()}` : null;
+            return { mainFound: !!main, headingFound: !!heading, headingExact: heading?.textContent === "Fixture researcher",
+              headingRect: rect ? { width: rect.width, height: rect.height, left: rect.left, right: rect.right } : null,
+              mainRect: mainRect ? { width: mainRect.width, height: mainRect.height, left: mainRect.left, right: mainRect.right } : null,
+              visibility: style?.visibility, display: style?.display, opacity: style?.opacity, mainPaddingLeft: mainStyle?.paddingLeft,
+              headingFontSize: style?.fontSize, headingFontFamily: style?.fontFamily, headingFontStyle: style?.fontStyle, headingFontWeight: style?.fontWeight,
+              predicates: { headingSized: !!rect && rect.width > 0 && rect.height > 0, visibility: style?.visibility === "visible",
+                display: !!style && style.display !== "none", opacity: !!style && parseFloat(style.opacity) > 0,
+                mainPadding: !!mainStyle && parseFloat(mainStyle.paddingLeft) >= 15, fontSize: !!style && parseFloat(style.fontSize) >= 28,
+                fontsLoaded: document.fonts.status === "loaded", fullFamilyCheck: font ? document.fonts.check(font) : null },
+              fontsStatus: document.fonts.status, primaryFamilyCheck: primaryFont ? document.fonts.check(primaryFont, heading?.textContent ?? "") : null,
+              fontFaces: Array.from(document.fonts).slice(0, 64).map(face => ({ family: face.family.slice(0, 160),
+                status: face.status, style: face.style, weight: face.weight })) };
+          });
+        } catch (observationError) { diagnostic.observationError = observationError instanceof Error ? observationError.message.slice(0, 512) : "Observation failed"; }
+        try {
+          await page.screenshot({ path: join(fixture, `profile-readiness-failure-${width}.png`), fullPage: true, timeout: 2000 });
+          diagnostic.screenshotSaved = true;
+        } catch (screenshotError) { diagnostic.screenshotSaved = false; diagnostic.screenshotError = screenshotError instanceof Error ? screenshotError.message.slice(0, 512) : "Screenshot failed"; }
+        throw error; // Preserve the original readiness failure; observations never grant acceptance.
       });
       assert.equal(await page.getByRole("link", { name: question, exact: true }).getAttribute("href"), `/dispatch/${publicId}`);
       assert.equal(await page.getByRole("link", { name: "Stored receipts", exact: true }).getAttribute("href"), `/api/dispatch/${publicId}/receipt`);
@@ -187,7 +225,7 @@ finally {
     "lib/db/public-profiles-sqlite.ts", "supabase/migrations/0091_public_researcher_profiles.sql"].map(async path =>
     ({ path, sha256: createHash("sha256").update(await readFile(join(source, path))).digest("hex") })));
   await writeFile(join(fixture, "acceptance.json"), JSON.stringify({ issue: 264, accepted: !failure && childTermination !== null, buildId,
-    sourceHead: execFileSync("git", ["rev-parse", "HEAD"], { cwd: source, encoding: "utf8" }).trim(), pins, checks, widths,
+    sourceHead: execFileSync("git", ["rev-parse", "HEAD"], { cwd: source, encoding: "utf8" }).trim(), pins, checks, widths, readinessFailures,
     blockedExternalRequests: blockedRequests.length, childCode, childSignal, childClosed: didExit,
     childExited: childExit !== null, childExit, ownedStopRequest, childTermination,
     stdoutEof, stderrEof, syntheticOnly: true, costs: 0, productionActivation: false,
