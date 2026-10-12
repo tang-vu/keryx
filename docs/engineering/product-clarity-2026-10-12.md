@@ -62,6 +62,13 @@ fail the check. Optional screenshots use `KERYX_PRODUCT_SCREENSHOT_DIR`. CI runs
 the fixture after build. Original chat/mobile-header fixtures cover existing
 questions, follow-ups, refusal/recovery and wallet/menu interaction.
 
+The release-only lockfile version update invalidated the controlled study's
+locked provenance. Reproducing all 48 actual offline trials and then `--check`
+updated only its lock hash and generated write-up hash reference. All canonical
+results, 393 runtime source hashes and zero outbound attempts remained unchanged;
+the drift gate was retained. This is synthetic reproducibility, not new real
+research, settlement or customer evidence.
+
 TypeScript, scoped lint, UI-copy/payment-glossary checks, production build, visual
 inspection and independent source review apply. Actual hosted aggregate/domain/
 platform success remains a merge gate. After merge, perform one reviewed serialized
