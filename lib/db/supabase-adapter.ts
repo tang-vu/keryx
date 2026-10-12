@@ -1677,11 +1677,12 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getSyncState(key: string): Promise<string | null> {
-    const { data } = await this.domainCall("get_sync_state", { p_key: key }, (_args) => this.#sb
+    const { data, error } = await this.domainCall("get_sync_state", { p_key: key }, (_args) => this.#sb
       .from("sync_state")
       .select("value")
       .eq("key", _args.p_key)
       .maybeSingle());
+    if (error) throw new Error("Sync-state read unavailable");
     return data?.value ?? null;
   }
 

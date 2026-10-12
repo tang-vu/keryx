@@ -5,6 +5,11 @@ existing [customer overdue state](paid-job-overdue-escalation-257.md) and
 [ordinary/recovered latency cohorts](completion-latency-cohorts-257.md). The
 remaining issue criteria stay open; this command creates no background service.
 
+The [default-OFF worker deadline observer](paid-job-deadline-alerts-257.md) reuses
+the existing hosted worker cadence and dedicated ops transport. This CLI remains
+read-only and never sends; actual private-channel/customer delivery and human
+response qualification still gate the original issue.
+
 ## Operator command and evidence
 
 Run `npm run operator:overdue` in an explicitly configured operator environment,

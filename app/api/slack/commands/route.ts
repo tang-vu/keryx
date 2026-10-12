@@ -23,6 +23,7 @@ import { privateRunClaimText } from "@/lib/run-claims/delivery";
 import { privateSlackResponseUrl } from "@/lib/run-claims/slack-private";
 import { config } from "@/lib/config";
 import { botResearchMessages } from "@/lib/bots/research-messages";
+import { botControlResponse, parseBotControl } from "@/lib/bots/language";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { verifyRequestSignature } from "@/lib/slack/verify-request-signature";
 import {
@@ -51,8 +52,17 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "invalid request signature" }, { status: 401 });
   }
 
-  const cmd = parseSlashCommand(new URLSearchParams(rawBody));
-  if (!cmd) return Response.json(ephemeral(helpText())); // bare /keryx → usage help
+  const params = new URLSearchParams(rawBody), command = params.get("command"), text = params.get("text")?.trim() ?? "";
+  const control = command === "/language" ? { action: "language" as const, ...(text ? { value: text } : {}) }
+    : command === "/help" ? { action: "help" as const, ...(text ? { value: text } : {}) }
+    : command === "/keryx" && !text ? { action: "help" as const } : parseBotControl(text);
+  if (control) {
+    const reply = await botControlResponse({ control,
+      recipient: { platform: "slack", scope: params.get("team_id") ?? "", userId: params.get("user_id") ?? "" } });
+    return Response.json(ephemeral(control.action === "help" ? helpText(reply.language) : reply.text));
+  }
+  const cmd = parseSlashCommand(params);
+  if (!cmd) return Response.json(ephemeral(helpText()));
   if (!config.sellerAddress) {
     return Response.json(ephemeral(botResearchMessages(cmd.question)("treasuryUnavailable")));
   }
