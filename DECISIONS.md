@@ -64,6 +64,23 @@ This records an active-session protocol, not an automatically enforced runtime
 lock or background scheduler. Payment/custody/DDL/schedule authority and every
 applicable release gate remain unchanged; no measured speedup is claimed.
 
+## Validate three bounded specialist outcomes before activating new prices — 2026-10-12
+
+The owner accepted the direction of selling useful specialist research with
+value-based pricing and selected all three tracks: API/platform comparison for
+freelancers/small teams, SaaS competitor/niche research and scholarly literature.
+Use one existing research/payment engine, bounded request templates and separate
+buyer review criteria. Preparation is local; it cannot promise complete synthesis,
+record acceptance, invent source evidence or create payment authority.
+
+Evaluate independently funded mainnet repeat demand and service contribution per
+track. Include failed/sponsored work and assistance/acquisition costs; preserve
+unknown costs, refund exposure and explicit currency conversion. Private local
+evidence declarations need receipt/invoice audit and cannot establish independent
+verification. Keep current versioned quotes until useful outcomes and complete
+costs justify a prospective offer with buyer-visible scope and terms. See
+[the pilot, role boundaries and release gates](docs/specialist-research-pilots.md).
+
 ## Commission missing evidence through a private portable contract — 2026-10-12
 
 The owner ranked Tameion innovation above repackaging the existing reading agent

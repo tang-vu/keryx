@@ -1,5 +1,10 @@
 # Keryx product validation
 
+October 12: the owner approved [three specialist research tracks](specialist-research-pilots.md)
+with per-track outcomes, value-based pricing evaluation and paid repeat-use gates.
+This is the current research-business experiment; the dated YouTube experiment
+below retains its history and remains separate evidence.
+
 Authorized October 1, 2026: investigate specialized research and information-selling
 infrastructure through narrow usable experiments. This is product work beyond bounty
 eligibility. Neither direction has demonstrated independent repeat demand. Event speed

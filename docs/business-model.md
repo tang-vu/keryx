@@ -1,5 +1,10 @@
 # Keryx business model and scenario calculator
 
+October 12 owner-approved increment: pursue all three [specialist research
+tracks](specialist-research-pilots.md), with separately reviewed outcomes and
+private per-track cost/paid-return evidence before selecting higher-value offers.
+Request templates and pricing-floor calculations do not change live quotes.
+
 The browser calculator at `/economics` uses the same arithmetic and validation as the
 CLI. It offers editable assumptions, side-by-side contribution/break-even views and
 local input/report JSON exports. Import the inputs file to continue a saved scenario;
