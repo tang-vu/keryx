@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### App0.27.64 release preparation — October 13
+
+- Prepare bank-first USDC funding through Arc AppKit/BVNK with buyer KYC and
+  provider country eligibility. Merchant KYB is required for card methods;
+  bank activation awaits this combined release. Arc sandbox bank settlement is unavailable.
+- Accumulate reviewed, CI-accepted focused PRs directly on main and deploy the
+  accepted final source once. A completed session does not wait for other PRs
+  before merging and does not trigger a separate deploy.
+- Reserve hosted MCP0.3.18, npm/Registry0.4.20 and Desktop0.4.18 alongside
+  app/OpenAPI0.27.64. Final-source publication and deployment are pending.
+- Retain extension0.1.4.2 only after its final capability and shipped-input audit.
+  Preserve existing payment, custody, Operator, private-data and activation holds.
+
 ### Three specialist research pilots (unreleased)
 
 - Prepare API/platform, SaaS competitor/niche and literature requests with bounded
