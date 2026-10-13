@@ -1,6 +1,32 @@
 import { createMessages } from "./messages";
+import type { Metadata } from "next";
+import { publicReportLanguage } from "./public-metadata";
 
 const copy = createMessages("en");
+
+/** Replace root metadata rather than inheriting landing alternates/previews on a closed report. */
+export function closedDispatchMetadata(): Metadata {
+  return {
+    title: copy("reportDispatch.fallbackTitle"), description: null, robots: { index: false, follow: false }, referrer: "no-referrer",
+    alternates: { canonical: null, languages: {}, types: {} }, openGraph: null, twitter: null, other: {},
+  };
+}
+
+/** QueryRun has no authoritative recorded answer-language field.
+ * Question text, trace presentation, requested language and the English UI are not output-language proof.
+ * A single public permalink remains independent of all those inputs. */
+export function publicDispatchMetadata(input: {
+  id: string; title: string; description: string; openGraphDescription: string;
+}): Metadata {
+  const language = publicReportLanguage({ id: input.id, visibility: "public", contentLanguage: null })!;
+  return {
+    title: input.title, description: input.description,
+    alternates: { canonical: language.canonical, languages: {}, types: {} },
+    other: { "DC.language": language.contentLanguage },
+    openGraph: { title: input.title, description: input.openGraphDescription, url: language.canonical },
+    twitter: { card: "summary_large_image", title: input.title, description: input.openGraphDescription },
+  };
+}
 
 /** Complete English metadata variants; payment amounts and confidence remain recorded data. */
 export function dispatchMetadataCopy(input: {

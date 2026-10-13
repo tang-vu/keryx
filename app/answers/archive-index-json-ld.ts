@@ -8,6 +8,7 @@
 
 import type { ArchivePage } from "@/lib/answers-pagination";
 import { ANSWERS_PAGE_SIZE } from "@/lib/answers-pagination";
+import { archiveAnswerLanguage } from "@/lib/answers-language";
 
 export function archiveIndexJsonLd({
   base,
@@ -44,6 +45,11 @@ export function archiveIndexJsonLd({
         position: offset + i + 1,
         url: `${base}/dispatch/${e.id}`,
         name: e.question,
+        ...(archiveAnswerLanguage(e) === "und" ? {} : { item: {
+          "@type": "CreativeWork",
+          url: `${base}/dispatch/${e.id}`,
+          inLanguage: archiveAnswerLanguage(e),
+        } }),
       })),
     },
   };
