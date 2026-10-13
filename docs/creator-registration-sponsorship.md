@@ -1,7 +1,8 @@
 # Creator registration gas sponsorship
 
-October 12, 2026: the finite Conzit gas pilot is **live on Arc mainnet** in
-application **0.27.62**, source `d7f79046`. V3 is
+The finite Conzit gas pilot was activated on Arc mainnet on October 12, 2026, in
+application **0.27.62**, source `d7f79046`; its policy was retained in the October 13
+**0.27.63** delivery. V3 is
 `0x2217250019ab614dae7391d346d05c3fc4d71ae1`; both existing V1 listings retain
 original creator/payout/price authority. Sponsorship stays **disabled by default**
 for unconfigured profiles, and future activations require the gates below.

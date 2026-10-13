@@ -23,7 +23,8 @@ timestamp. A report digest only binds a separately retained report's bytes.
 `;
 
 async function readFileBounded(path: string, maximum: number): Promise<string> {
-  const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  // Admit the descriptor without waiting for a FIFO writer, then require a regular file.
+  const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
   try {
     const info = await handle.stat();
     if (!info.isFile() || info.size > maximum) throw Error("Invalid input file");

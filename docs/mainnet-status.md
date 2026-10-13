@@ -1,8 +1,14 @@
 # Current Arc mainnet deployment
 
+October 13, 2026: application **0.27.63**, source `ec5f39c9750dfc9e80e66edd41348ca6034c01c3`,
+is live on Arc mainnet after one combined deploy and the owned maintenance clear.
+Public health, OpenAPI and `/` returned HTTP 200; health reported `ec5f39c9`, OpenAPI **0.27.63**.
+ENV (commit-only update), custody, Operator and private holds were preserved.
+Public readback SHA-256: `1ddfed95ac1b2282120e761f0d221f98e620fad5626aa3a51ccac621f3d9e401`; release receipt: `dd2681b77ecf4a7df19d6685de23777c7d53615a7c13a5f55946a4b8b1ed9e47`.
+
 ## October 12 live Conzit gas pilot
 
-Application **0.27.62**, source `d7f79046874899c0df4bd29b927349d627805f1e`, is live on Arc mainnet.
+Application **0.27.62**, source `d7f79046874899c0df4bd29b927349d627805f1e`, was observed live on Arc mainnet on October 12.
 Accepted PR/main CI preceded deployment. Public [/api/health](https://keryx.cc/api/health)
 and the [Conzit publishing-control page](https://keryx.cc/claim-source?url=https%3A%2F%2Fconzit.com%2F&rss=https%3A%2F%2Fconzit.com%2Frss.xml)
 returned HTTP 200 at `2026-10-12T12:45:15.336Z`, with exact `d7f79046` / Arc / V3 health.

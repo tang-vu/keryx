@@ -5,6 +5,12 @@ preserving product quality, security, reliability and maintainability. This
 clarifies the standing release workflow; it grants no new payment, custody,
 scheduler or production activation authority.
 
+Owner-confirmed October 12, 2026: multiple concurrent Codex sessions use the
+[session coordination workflow](engineering/multi-session-coordination.md).
+Claim one outcome and its paths/resources before editing; use isolated worktrees,
+one merge queue and one release owner. Batch agreed outcomes into one accepted
+combined deployment, and reuse evidence only while its source and inputs apply.
+
 ## One PR per coherent outcome
 
 Keep related edits and review corrections on one focused branch and PR until
