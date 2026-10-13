@@ -25,8 +25,8 @@ const modes: { value: SourceClaimMode; title: string; detail: string }[] = [
 ];
 function sameUrl(a: string | undefined, b: string) { try { return !!a && canonicalSourceUrl(a) === b; } catch { return false; } }
 
-export function PublicSourceClaimPolicy({ claim, name, enabled, controlFresh, onChanged, onReload }: {
-  claim: SourceClaim; name?: string; enabled: boolean; controlFresh: boolean; onChanged: (claim: SourceClaim) => void; onReload: () => void;
+export function PublicSourceClaimPolicy({ claim, name, initialFetchPrice = 0.016, embedded = false, enabled, controlFresh, onChanged, onReload }: {
+  claim: SourceClaim; name?: string; initialFetchPrice?: number; embedded?: boolean; enabled: boolean; controlFresh: boolean; onChanged: (claim: SourceClaim) => void; onReload: () => void;
 }) {
   const wallet = useAccount(), { session } = useSiweAuth();
   const owner = session?.address.toLowerCase(), profile = browserPaymentProfile();
@@ -36,7 +36,7 @@ export function PublicSourceClaimPolicy({ claim, name, enabled, controlFresh, on
   const [listings, setListings] = useState<Listing[]>([]);
   const [listingsReady, setListingsReady] = useState(false);
   const [selected, setSelected] = useState(claim.linkedSourceId ?? "");
-  const [newPrice, setNewPrice] = useState("0.016");
+  const [newPrice, setNewPrice] = useState(String(initialFetchPrice));
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState("");
   const latest = useRef({ identity, enabled }), mounted = useRef(true), busy = useRef(false);
@@ -60,7 +60,7 @@ export function PublicSourceClaimPolicy({ claim, name, enabled, controlFresh, on
   const canActivate = enabled && !working && (mode === "free" || controlFresh && !!claim.linkedSourceId && feeMatches && consent);
   const price = mode === "paid" ? Number(newPrice) : 0;
   const validNewPrice = Number.isFinite(price) && price >= 0 && (mode !== "paid" || price > 0) && Number.isSafeInteger(Math.round(price * 1_000_000)) && Math.round(price * 1_000_000) / 1_000_000 === price;
-  const registrationHref = validNewPrice ? registrationTarget({ url: claim.canonicalUrl, ...(claim.rssUrl ? { rssUrl: claim.rssUrl } : {}), name: name ?? new URL(claim.canonicalUrl).hostname, sourceClaimId: claim.id, fetchPrice: price, owner: claim.ownerWallet }) : null;
+  const registrationHref = validNewPrice ? registrationTarget({ url: claim.canonicalUrl, ...(claim.rssUrl ? { rssUrl: claim.rssUrl } : {}), name: name ?? new URL(claim.canonicalUrl).hostname, sourceClaimId: claim.id, fetchPrice: price, owner: claim.ownerWallet, chainId: profile.chainId, mode: "wallet-funded" }) : null;
   const mutate = async (action: "link" | "policy") => {
     if (busy.current || !enabled || owner !== claim.ownerWallet || wallet.address?.toLowerCase() !== owner || wallet.chainId !== profile.chainId) return;
     if (action === "link" && (!selected || !controlFresh) || action === "policy" && !canActivate) return;
@@ -78,7 +78,7 @@ export function PublicSourceClaimPolicy({ claim, name, enabled, controlFresh, on
   };
   return <div className="space-y-5 border-t border-paid/30 pt-5">
     <div>
-      <h3 className="font-display text-2xl">{uiCopy("sourceClaimPolicy.title")}</h3>
+      {!embedded && <h3 className="font-display text-2xl">{uiCopy("sourceClaimPolicy.title")}</h3>}
       <p className="mt-2 text-sm leading-relaxed text-ink-2">{uiRichCopy("sourceClaimPolicy.saved", { policy: <strong>{modes.find(value => value.value === claim.mode)?.title}</strong>, time: <ClaimTime value={claim.effectiveAt} /> })}</p>
     </div>
     <fieldset disabled={working || !enabled} className="space-y-3">
@@ -101,7 +101,7 @@ export function PublicSourceClaimPolicy({ claim, name, enabled, controlFresh, on
         {mode === "paid" && <><label htmlFor="claim-new-price" className="block text-sm">{uiCopy("sourceClaimPolicy.newPriceLabel")}</label><input id="claim-new-price" type="number" min="0.000001" step="0.000001" value={newPrice} onChange={event => setNewPrice(event.target.value)} disabled={!enabled || working} className="min-h-11 w-full border border-line bg-paper-2 px-3 text-sm" /></>}
         <p className="text-sm">{validNewPrice ? uiCopy("sourceClaimPolicy.newReadPrice", { price: fmtUsdc(price) }) : uiCopy("sourceClaimPolicy.invalidReadPrice")}</p>
         {enabled && controlFresh && registrationHref && <Link href={registrationHref} className="inline-block min-h-11 py-2 text-sm underline">{uiCopy("sourceClaimPolicy.register")}</Link>}
-        {enabled && controlFresh && claim.rssUrl && <RegistrationSponsorLink wallet={claim.ownerWallet} claimId={claim.id} publisherUrl={claim.canonicalUrl} />}
+        {enabled && controlFresh && claim.rssUrl && validNewPrice && <RegistrationSponsorLink wallet={claim.ownerWallet} claimId={claim.id} publisherUrl={claim.canonicalUrl} rssUrl={claim.rssUrl} name={name} fetchPrice={price} />}
       </div>}
       <button type="button" disabled={working} onClick={() => void loadListings()} className="min-h-11 text-sm underline">{uiCopy("sourceClaimPolicy.refresh")}</button>
       {earning && claim.linkedSourceId && listingsReady && !feeMatches && <p role="status" className="text-sm text-seal">{mode === "citation-only" ? uiCopy("sourceClaimPolicy.citationPriceMismatch") : uiCopy("sourceClaimPolicy.paidPriceMismatch")}</p>}
