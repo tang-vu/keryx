@@ -137,3 +137,22 @@ hosted aggregate/domain CI must bind root's finalized combined candidate.
 
 The review request and exact commit/check/handoff references live in the native
 launch capture folder. Keep the original276 criteria open until genuinely delivered.
+
+## Primary continuation, October 13
+
+The existing candidate is composed with accepted main `14ae99f0`. Its ordinary
+requested-source footer now uses Portuguese labels when the unchanged original
+question or authenticated adapter selects Portuguese. Observed qualification,
+truncation, abstract-only access, withheld reads and whole-document fragment scope
+remain explicit. Source URLs, excerpt bytes, bounded diagnostic codes and reasons,
+receipt fields and reward eligibility are unchanged. English and Vietnamese legacy
+footer bytes are retained; private and special contracts keep their previous path.
+
+This is operational presentation, not proof of generated-prose language. Answers
+with a requested-source footer still cannot acquire `answerLanguage` through the
+existing finalizer. Historical answers and their receipts are not rewritten.
+Offline caller coverage verifies the final answer bytes in the receipt, API/MCP
+and A2A results without a model, external read, signature or payment. The focused
+merged-source run passed 355 cases in six files and its TypeScript closure passed.
+Required exact-candidate CI, package/native delivery, human financial terminology
+approval and the original authorized live/MCP evaluation remain separate gates.

@@ -1152,6 +1152,30 @@ it.each([
   expect((d.gateway as FakeGateway).citationCalls).toEqual([]);
 });
 
+it("uses the original Portuguese selection for supplied-source status without promoting language provenance", async () => {
+  const url = "https://developer.mozilla.org/en-US/docs/Web/API/AbortController#examples";
+  const d = deps([], fakeEngine(), fakeGateway());
+  d.webSearch = { search: async () => [] };
+  d.readWebArticle = vi.fn(async original => ({ text: "Exact synthetic original text.", title: "Original",
+    finalUrl: original, kind: "html" as const, truncated: true }));
+  const fund = vi.spyOn(d.gateway, "ensureFunded");
+  const { run } = await drive({ question: `Earlier context: Answer in English. Use ${url}`,
+    originalQuestion: `Responda em português. Use ${url}`, origin: "web" }, d);
+  expect(run.answer).toContain("### Estado das fontes originais fornecidas");
+  expect(run.answer).toContain("A extração foi truncada.");
+  expect(run.answer).toContain("não daquela seção em particular.");
+  expect(run.answer).not.toContain("### Supplied original source status");
+  expect(recordedAnswerLanguage(run)).toBeUndefined();
+  const receipt = buildResearchReceipt(run, []);
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  expect(receipt.payload.dispatch.answer).toBe(run.answer);
+  for (const result of [remoteResearchResult(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick"))])
+    expect(result.answer).toBe(run.answer);
+  expect(fund).not.toHaveBeenCalled();
+  expect((d.gateway as FakeGateway).fetchCalls).toEqual([]);
+  expect((d.gateway as FakeGateway).citationCalls).toEqual([]);
+});
+
 it("makes omitted supplied originals inspectable when only secondary evidence is selected", async () => {
   const d = deps([], fakeEngine({ decide: input => input.candidates.filter(c => !c.item?.requestedSource).map(c => buy({ id: c.id, name: c.name, price: 0 })) }), fakeGateway());
   d.webSearch = { search: async () => [{ title: "Secondary", url: "https://secondary.example/queue", snippet: "preview" }] };

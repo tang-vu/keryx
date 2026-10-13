@@ -2388,7 +2388,8 @@ async function* runAdmittedAgent(
   function finish(answer: string): QueryRun {
     const originals = requestedSourceReport({ candidates: requested.candidates, notices: requested.notices,
       decisions: finalDecisions, gathered, evidence, outcomes: publicReadOutcomes,
-      vi: researchResponseLanguage(input.question) === "vi", withheld: externalDocumentsWithheld });
+      vi: researchResponseLanguage(input.question) === "vi", withheld: externalDocumentsWithheld,
+      language: initialPresentation?.language });
     const recency = sourceRecencyReport(recencyGaps, researchResponseLanguage(input.question) === "vi");
     const observedRecency = sourceRecencyObservationReport(recencyObservations, researchResponseLanguage(input.question) === "vi");
     const withOperationalNotices = (body: string): string => {
