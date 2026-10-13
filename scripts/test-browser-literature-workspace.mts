@@ -120,16 +120,37 @@ try {
       navigator.locks.request(key, () => new Promise<void>(resolve => { (window as unknown as { releaseLock: () => void }).releaseLock = resolve; }));
     }, LITERATURE_STORAGE_KEY);
     await page.waitForFunction(() => typeof (window as unknown as { releaseLock?: unknown }).releaseLock === "function");
-    const changeTitle = page.evaluate(async () => {
-      await (window as unknown as { probeChange: (change: (value: { title: string }) => unknown) => Promise<void> }).probeChange(value => ({ ...value, title: "Concurrent title" }));
-    });
-    const changeQuestion = other.evaluate(async () => {
-      await (window as unknown as { probeChange: (change: (value: { question: string }) => unknown) => Promise<void> }).probeChange(value => ({ ...value, question: "Concurrent question" }));
-    });
+    const observeChange = (tab: Page, field: "title" | "question") => tab.evaluate(async field => {
+      type Focus = { title: string; question: string };
+      const events: { at: number; phase: string; input?: string[]; output?: string[] }[] = [];
+      // The store emits this synchronously after native setItem and verified readback.
+      window.addEventListener("keryx-literature-changed", () => events.push({ at: performance.timeOrigin + performance.now(), phase: "write-completed" }), { once: true });
+      events.push({ at: performance.timeOrigin + performance.now(), phase: "invocation" });
+      await (window as unknown as { probeChange: (change: (value: Focus) => unknown) => Promise<void> }).probeChange(value => {
+        const output = field === "title" ? { ...value, title: "Concurrent title" } : { ...value, question: "Concurrent question" };
+        // The actual updater runs only after the real exclusive lock is granted.
+        events.push({ at: performance.timeOrigin + performance.now(), phase: "granted-updater",
+          input: [value.title.slice(0, 120), value.question.slice(0, 600)],
+          output: [output.title.slice(0, 120), output.question.slice(0, 600)] });
+        return output;
+      });
+      events.push({ at: performance.timeOrigin + performance.now(), phase: "promise-completed" });
+      return events;
+    }, field);
+    const changeTitle = observeChange(page, "title");
+    const changeQuestion = observeChange(other, "question");
     await other.waitForFunction(async key => (await navigator.locks.query()).pending?.filter(lock => lock.name === key).length === 2, LITERATURE_STORAGE_KEY);
     await page.evaluate(() => (window as unknown as { releaseLock: () => void }).releaseLock());
-    await Promise.all([changeTitle, changeQuestion]);
-    assert.deepEqual(await page.evaluate(key => { const value = JSON.parse(localStorage.getItem(key)!); return [value.title, value.question]; }, LITERATURE_STORAGE_KEY), ["Concurrent title", "Concurrent question"]);
+    const [titleEvents, questionEvents] = await Promise.all([changeTitle, changeQuestion]);
+    const tabReads = await Promise.all([page, other].map(tab => tab.evaluate(key => { const value = JSON.parse(localStorage.getItem(key)!); return [value.title, value.question]; }, LITERATURE_STORAGE_KEY)));
+    console.log("LITERATURE_CONCURRENCY_TABS", JSON.stringify({ width, titleEvents, questionEvents, tabReads }));
+    const fresh = await context.newPage();
+    try {
+      await fresh.goto("https://literature.test/");
+      const persistedPair = await fresh.evaluate(key => { const value = JSON.parse(localStorage.getItem(key)!); return [value.title, value.question]; }, LITERATURE_STORAGE_KEY);
+      console.log("LITERATURE_CONCURRENCY_PERSISTED", JSON.stringify({ width, persistedPair }));
+    } finally { await fresh.close(); }
+    assert.deepEqual(tabReads[0], ["Concurrent title", "Concurrent question"]);
     // One tab adds while the other has an already rendered list: current unrelated notes survive.
     await save(2).click(); await other.getByRole("heading", { name: "Your papers 3/50" }).waitFor();
     const stored = await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), LITERATURE_STORAGE_KEY);

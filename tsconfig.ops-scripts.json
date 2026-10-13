@@ -41,6 +41,8 @@
     "scripts/eval-related-work.mts",
     "scripts/test-personal-history-postgres.mts",
     "scripts/test-run-privacy-postgres.mts",
+    "scripts/test-public-profiles-postgres.mts",
+    "scripts/test-public-profiles-built.mts",
     "scripts/test-personal-history-mcp-package.mts",
     "scripts/test-browser-owned-history.mts",
     "scripts/test-server-profile-identities-origin.mts",

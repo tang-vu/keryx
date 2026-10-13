@@ -124,9 +124,21 @@ export async function testPostgresFundingReadiness(context: {
     const token = await observe(request); assert(token); await context.changeNamespace();
     await unchanged(async () => {
       assertVerifiedGatewayFundingReadinessCurrent(token, request); const before = reservationReads;
-      await assert.rejects(() => unsealVerifiedGatewayFundingReadiness(token, request), "actual changed namespace refuses stale evidence");
+      await assert.rejects(() => unsealVerifiedGatewayFundingReadiness(token, request),
+        { message: "Gateway funding readiness unknown; inspect original operation" }, "actual changed namespace refuses stale evidence");
       assert.equal(reservationReads, before + 1, "changed snapshot was fully read from actual backend");
-      assertVerifiedGatewayFundingReadinessCurrent(token, request);
+      // Actual asynchronous PG reads may cross the unchanged native five-second
+      // TTL. The final boundary must still be current or refuse for that expiry.
+      try { assertVerifiedGatewayFundingReadinessCurrent(token, request); }
+      catch (error) {
+        assert(error instanceof Error);
+        assert.equal(error.message, "Gateway funding readiness unknown; inspect original operation");
+        const diagnostic = error.cause as { phase: string; tokenAgeMs: number };
+        assert(diagnostic && typeof diagnostic === "object");
+        assert.deepEqual(Object.keys(diagnostic).sort(), ["phase", "tokenAgeMs"]);
+        assert.equal(diagnostic.phase, "readiness-token-freshness");
+        assert(Number.isSafeInteger(diagnostic.tokenAgeMs) && diagnostic.tokenAgeMs >= 5000, "only native TTL expiry is accepted after the backend read");
+      }
     });
     console.log("Actual PG/PostgREST current readiness acceptance passed: original protected deposit, native Circle protocol, ACL, outage, TTL and unchanged history/caps/nonces.");
   } finally { server.closeAllConnections(); await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
