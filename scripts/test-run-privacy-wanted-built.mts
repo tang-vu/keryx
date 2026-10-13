@@ -78,7 +78,7 @@ async function serve(fixture: string, expectedBuildId: string) {
       // Like next-public-server's existing terminal shutdown, exit only after
       // positive close: instrumentation owns background intervals after app.close.
       // This is the child's graceful terminal exit, never a parent kill/destroy.
-      process.disconnect();
+      process.disconnect!();
       process.exit(0);
     })().catch(error => { console.error(error); process.exitCode = 1; });
   });
@@ -603,7 +603,7 @@ async function runMode(mode: "on" | "off", buildId: string, copies: CopyEntry[])
     assert.ok(compiled404.length <= 2 * 1024 * 1024);
     const brandedMain = mainMarkup({ status: 404, headers: {}, body: compiled404 });
     assert.ok(brandedMain.includes("Dispatch \u2116 404") && brandedMain.includes("\u25c2 Return to the masthead"));
-    const assets = new Map(copies.filter(entry => entry.stats.isFile()).flatMap(entry => {
+    const assets = new Map<string, string>(copies.filter(entry => entry.stats.isFile()).flatMap(entry => {
       const path = entry.target.split(sep).join("/");
       return path.startsWith(".next/static/") && /\.(?:js|css|woff2)$/.test(path)
         ? [[`/_next/static/${path.slice(".next/static/".length)}`, join(fixture, entry.target)] as const] : [];
