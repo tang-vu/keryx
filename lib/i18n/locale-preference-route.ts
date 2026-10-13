@@ -112,7 +112,7 @@ export function createLocalePreferenceRoute(dependencies: LocaleRouteDependencie
  * Other facades stay unavailable; no ordinary adapter construction or storage fallback. */
 export async function enrolledSqliteLocalePort(db: KeryxDB, access: "read" | "write", network: string): Promise<LocalePreferencePort | null> {
   try {
-    const { assertEnrolledSqliteAdapter } = await import("../db/enrolled-sqlite-adapter");
+    const { applicationSqliteIdentity: assertEnrolledSqliteAdapter } = await import("../db/application-storage");
     const assert = () => { if (assertEnrolledSqliteAdapter(db, access).network !== network) throw new Error("Locale storage realm mismatch"); };
     assert();
     if (typeof db.getSyncState !== "function" || typeof db.setSyncState !== "function") return null;

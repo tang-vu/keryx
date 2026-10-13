@@ -26,6 +26,29 @@ persistence, production Next CSS/fonts/CSP or human translation acceptance.
 Full candidate CI, combined-source composition and batch delivery remain separate
 gates; original #271/#275 stay open for their broader acceptance criteria.
 
+## Candidate CI corrections
+
+The first #453 hosted candidate exposed a direct import of the enrolled SQLite
+adapter from the private locale route. The route now uses the existing
+`applicationSqliteIdentity` boundary, which delegates the same provenance and
+read/write guard. It constructs no adapter and adds no storage fallback,
+enrollment or funding authority. Nine route cases and the dormant funding graph
+regressions passed after this correction; the other locale checks remain scoped
+to unchanged inputs.
+
+The providerless mobile header fixture now defines the public testnet profile
+constants already used by other browser fixtures. Chromium and WebKit passed
+with unchanged menu, accessibility and wallet controls. Sponsor fixture originals
+use a unique synthetic nonce for each newly created original. A controlled same
+clock reproduction proved that nonce zero plus a second-resolution deadline
+could select an archived expired row instead of a fresh signing row. The original
+two-profile fixture and the corrected fixed-clock MAINNET case passed; clone and
+resume keep their original nonce/ID and all financial assertions. The exact
+hosted wall-clock sequence was not observed, so that cause remains qualified.
+
+These are local focused results. Required CI on the final checkpoint remains a
+merge gate; no production, signing, provider, database or payment call occurred.
+
 ## Retained round12 repair and validation history
 
 The two round10 P2 findings are corrected in source. Explicit intent is retained
@@ -231,15 +254,15 @@ accepted combined-build provenance; no such runtime/port was opened here.
 
 ## Study, surface and delivery boundaries
 
-The retained study artifact declares 398 runtime inputs, 48 fictional trials and
-no unresolved inputs. Its declared input names have zero intersection with the
-19 claimed paths. The producer's source-input walker follows literal runtime
-imports, including unexecuted branches. Text inspection finds new runtime edges
-through web providers/shell and the private locale endpoint, with no incoming
-edge from the study entries. This is static metadata/source reasoning, not a
-fresh parser/closure or producer acceptance. Study/result/report bytes are
-retained; no rewrite or rerun occurred. A changed combined graph still requires
-ROOT's applicable exact-source acceptance.
+The current static source map contains 403 runtime inputs, no unresolved
+imports, and the unchanged lock and canonical corpus. Every current physical
+source pin matches the one actual offline 48-case run on the finalized #439
+candidate. This PR reuses that exact v2 JSON/report pair and the genuine #433
+historical v1 JSON/report pair; it runs no second producer and rewrites no hashes.
+The fixture-only corrections and locale route are outside those study inputs.
+The archive source/lock/corpus and both report-rendering regressions passed on
+this candidate. Historical v1 evidence remains evidence for its original source
+epoch, rather than current-source acceptance.
 
 Web shell and the private cookie API are affected. Desktop embedded web gains
 the same source path only after its delivered web composition passes gates.
@@ -254,6 +277,6 @@ Next build and browser/cache/navigation/financial tests, ROOT's DECISIONS append
 required hosted aggregate/domain CI and combined batch delivery. Original275
 still needs every namespace, source/stale coverage release gates, actual named
 human review for payment/consent/onboarding, and phone/desktop font/layout review.
-ROOT remains sole queue/release/financial/issue-closure owner; ec5/app63 goes first
-under merge hold. This unmerged worktree and all old native failures/captures stay
+ROOT remains sole queue/release/financial/issue-closure owner. Merged runtime
+work awaits the next deployment batch; this PR performs no deploy. This unmerged worktree and all old native failures/captures stay
 retained. No cleanup or old-output mutation is authorized by this handoff.

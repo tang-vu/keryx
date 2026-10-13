@@ -4,7 +4,7 @@ import { encodeLocaleValue } from "./locale-preference";
 import type { KeryxDB } from "../db/keryx-db";
 
 // No DB driver imports or real database calls in these route fixtures.
-vi.mock("../db/enrolled-sqlite-adapter", () => ({ assertEnrolledSqliteAdapter() { throw new Error("Unproven facade"); } }));
+vi.mock("../db/application-storage", () => ({ applicationSqliteIdentity() { throw new Error("Unproven facade"); } }));
 const owner = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`, origin = "https://keryx.test", network = "eip155:5042";
 function fixture() {
   const db = {} as KeryxDB, values = new Map<string, string>();
