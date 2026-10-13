@@ -9,7 +9,7 @@ import { mandateExample } from "./example";
 import { evaluateMandate } from "./evaluate";
 
 const script = resolve("scripts/research-mandate.mts");
-const cleanEnv: Record<string, string> = {};
+const cleanEnv: NodeJS.ProcessEnv = { NODE_ENV: "test" };
 for (const key of ["PATH", "Path", "SystemRoot", "TEMP", "TMP", "USERPROFILE", "LOCALAPPDATA", "APPDATA"])
   if (process.env[key]) cleanEnv[key] = process.env[key]!;
 const run = (...args: string[]) => spawnSync(process.execPath, ["--import", "tsx", script, ...args], { encoding: "utf8", env: cleanEnv, timeout: 10_000, windowsHide: true });
