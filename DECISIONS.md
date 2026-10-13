@@ -7977,3 +7977,14 @@ remains an explicit operational refusal, without deleting payment evidence.
 The existing coordinator owns activation and the combined release. Source/tests are
 not a live delivery or real creator-earnings claim. See
 [implementation and acceptance](docs/engineering/public-creator-registration-20261012.md).
+
+### 2026-10-13 — Refuse reserved Telegram account intents before sponsored research
+
+Bare `link`, `unlink` and `whoami` requests could previously send their arguments
+into sponsored research. Reserve these finite account verbs before preference,
+treasury, admission or deferred work and return a fixed unavailable message. Keep
+the existing webhook secret boundary first, ignore account arguments, protect
+matching private replies and disclose no account state in groups. This safety
+patch grants no binding, token, sign-in or past-run ownership authority; original
+#263 linking criteria remain open. Explicit `/ask` research and budget limits stay
+unchanged.
