@@ -165,3 +165,16 @@ from the actual operations summarizer with cohort capability. These fixtures are
 synthetic and **UNRUN**. No observer producer or test runner was invoked for this
 correction; the prior native refusal remains retained. Different source/control/
 environment review and lawful root validation are still required.
+
+## Coordinator validation — October 13, 2026
+
+The permitted primary coordinator subsequently passed all 88 focused job-target
+and overdue UI tests. Hosted CI then found a fixture-only TypeScript mismatch;
+the owner-payment fixture now uses the existing strict schema, and all 25 changed
+SSR-file tests passed. The native CLI refusals and first primary CJS-loader failure
+remain recorded; the successful checks used isolated offline outputs and one worker.
+
+These results supersede the earlier source-only/**UNRUN** status for these fixtures.
+They establish the tested assertions, not live alert timing or customer delivery.
+At this checkpoint, [PR 452](https://github.com/tang-vu/keryx/pull/452) still requires
+current hosted CI, merge and batch delivery. Original issue 257 remains open.
