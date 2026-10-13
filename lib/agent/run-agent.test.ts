@@ -3540,6 +3540,42 @@ describe("ordinary registered RSS document aliases", () => {
 });
 
 describe("public feed references remain off the creator payment rail", () => {
+  it("preserves unequal creator attribution when two cited articles share one public publisher", async () => {
+    const gateway = fakeGateway();
+    const engine = fakeEngine({
+      decide: input => input.candidates.map(candidate => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }), targets: [0, 1, 2],
+      })),
+      sufficiency: input => ({ sufficient: input.gathered.length === 3, rationale: "coverage",
+        perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.9, coveredBy: input.gathered.map(item => item.marker) })) }),
+    });
+    engine.decompose = async () => ["SQLite backups", "Postgres replication", "creator evidence"];
+    engine.attribute = async input => {
+      const publicItems = input.used.filter(item => item.sourceKind === "public-reference");
+      expect(new Set(input.used.map(item => item.sourceId)).size).toBe(3);
+      return input.used.map(item => ({ sourceId: item.sourceId,
+        weight: item.sourceKind === "public-reference" ? publicItems.indexOf(item) === 0 ? 0.1 : 0.2 : 0.7,
+        rationale: "Unequal per-article contribution" }));
+    };
+    const reference = referenceSnapshot({ ...publicRef(), items: [] }, {
+      feedTitle: "Public publisher", feedDescription: "Engineering", link: "https://public.test/",
+      items: [{ title: "SQLite backups", summary: "SQLite backups", content: "SQLite backups need consistent snapshots.", link: "https://public.test/backups", deliveryKind: "excerpt" },
+        { title: "Postgres replication", summary: "Postgres replication", content: "Postgres replication copies WAL records.", link: "https://public.test/replication", deliveryKind: "excerpt" }],
+    });
+    const d = deps([makeSource({ id: "owned-a" })], engine, gateway);
+    d.db.listPublicReferences = async () => [reference];
+    const budget = 0.03;
+    const { run } = await drive({ question: "Compare SQLite backups, Postgres replication and creator evidence", budget,
+      executionLimits: { attentionLimit: 3, reevaluateRounds: 0 } }, d);
+    expect(run.citations).toHaveLength(3);
+    const publicCitations = run.citations.filter(citation => citation.sourceKind === "public-reference");
+    expect(publicCitations).toHaveLength(2);
+    expect(new Set(publicCitations.map(citation => citation.sourceId))).toEqual(new Set([reference.id]));
+    expect(publicCitations.map(citation => citation.reward)).toEqual([0, 0]);
+    expect(run.citations.find(citation => citation.sourceId === "owned-a")?.weight).toBeCloseTo(0.7);
+    expect(gateway.citationCalls.map(call => [call.sourceId, Math.round(call.amount * 1_000_000)]))
+      .toEqual([["owned-a", Math.round(budget * config.citationPoolRatio * 1_000_000 * 0.7)]]);
+  });
   it("grounds public citations after a malicious BUY without gateway, cache or settlement rows", async () => {
     const gateway = fakeGateway();
     gateway.ensureFunded = async () => { throw new Error("Free-only research must never fund/deposit"); };

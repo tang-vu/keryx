@@ -6,6 +6,7 @@ import { z } from "zod";
 import { circleWalletPublicConfig, circleWalletPublicConfigured } from "./circle-wallet-config";
 import { browserPaymentProfile } from "./browser-payment-profile";
 import { AUTH_CHALLENGE_TTL_MS } from "./auth-time-policy";
+import { safeRegistrationReturn, sourceReturnWithOwner, registrationOwnerMatches } from "./registration-return";
 
 const CONTINUATION = "keryx-circle-google-oauth-v1";
 const IDENTITY = `keryx-circle-owner-${browserPaymentProfile().networkId}`;
@@ -13,7 +14,7 @@ const identitySchema = z.object({ address: z.string().regex(/^0x[a-fA-F0-9]{40}$
   origin: z.string().url(), network: z.string() }).strict();
 const pendingSchema = z.object({ state: z.string().regex(/^[a-f0-9]{64}$/), deviceToken: z.string().min(1).max(8192),
   deviceEncryptionKey: z.string().min(1).max(8192), expiresAt: z.number().int().positive(), origin: z.string().url(),
-  oauthState: z.string().optional(), oauthNonce: z.string().optional() });
+  oauthState: z.string().optional(), oauthNonce: z.string().optional(), publicReturn: z.unknown().optional() });
 type PendingLogin = z.infer<typeof pendingSchema>;
 export type CircleWalletIdentity = { address: `0x${string}`; walletId: string };
 let sdk: W3SSdk | undefined;
@@ -74,6 +75,10 @@ export function clearCircleWalletIdentity() {
   if (typeof window !== "undefined") localStorage.removeItem(IDENTITY);
 }
 export async function startGoogleWalletLogin() {
+  const target = window.location.pathname === "/connect"
+    ? safeRegistrationReturn(new URLSearchParams(window.location.search).get("returnTo")) : null;
+  // Public navigation only; retain an existing owner and the initiating profile.
+  const publicReturn = target ? { target: sourceReturnWithOwner(target, identity?.address), network: browserPaymentProfile().networkId } : undefined;
   if (!circleWalletPublicConfigured()) throw new Error("Google wallet sign-in is not configured");
   const ready = await fetch("/api/auth/circle/config", { cache: "no-store", signal: AbortSignal.timeout(10_000) });
   if (!ready.ok || !(await ready.json()).available) throw new Error("Google wallet sign-in is not configured");
@@ -83,7 +88,7 @@ export async function startGoogleWalletLogin() {
   sdk ??= new SDK(sdkConfig());
   const deviceId = await sdk.getDeviceId();
   const device = await post("device", { deviceId });
-  const pending = pendingSchema.parse({ ...device, origin: window.location.origin });
+  const pending = pendingSchema.parse({ ...device, origin: window.location.origin, publicReturn });
   // Tab-scoped, five-minute Keryx continuation only. User/refresh/encryption credentials never enter storage.
   sessionStorage.setItem(CONTINUATION, JSON.stringify(pending));
   sdk.updateConfigs(sdkConfig(pending));
@@ -117,6 +122,7 @@ export function resumeGoogleWalletLogin(): Promise<CircleWalletIdentity | null> 
   const raw = sessionStorage.getItem(CONTINUATION);
   const hash = new URLSearchParams(window.location.hash.slice(1));
   if (!raw || (!hash.has("id_token") && !hash.has("error"))) return Promise.resolve(null);
+  const revision = identityRevision;
   callback = (async () => {
     let pending: PendingLogin | undefined;
     try {
@@ -154,6 +160,19 @@ export function resumeGoogleWalletLogin(): Promise<CircleWalletIdentity | null> 
       identityRevision++;
       identity = { address: verified.address as `0x${string}`, walletId: verified.walletId };
       localStorage.setItem(IDENTITY, JSON.stringify({ ...identity, origin: window.location.origin, network: browserPaymentProfile().networkId }));
+      // Restore only after Circle and the server have verified the callback, before
+      // auth listeners/connector consumers resume. Bad context never changes login authority.
+      const context = pending.publicReturn;
+      if (identityRevision === revision + 1 && pending.expiresAt > Date.now()
+        && window.location.pathname === "/connect" && context && typeof context === "object"
+        && "network" in context && context.network === browserPaymentProfile().networkId
+        && "target" in context && typeof context.target === "string") {
+        const target = safeRegistrationReturn(context.target);
+        if (target && registrationOwnerMatches(target, identity.address)) {
+          const params = new URLSearchParams({ returnTo: sourceReturnWithOwner(target, identity.address) });
+          history.replaceState(history.state, "", `/connect?${params}`);
+        }
+      }
       window.dispatchEvent(new Event("keryx:auth"));
       try { const channel = new BroadcastChannel("keryx-auth-v1"); channel.postMessage("changed"); channel.close(); } catch { /* Same-tab refresh remains available. */ }
       return identity;

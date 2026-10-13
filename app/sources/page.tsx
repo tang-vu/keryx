@@ -10,6 +10,8 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SourceRegistryRow } from "@/components/keryx/source-registry-row";
 import { PublicReferenceCard } from "@/components/keryx/public-reference-card";
+import { PublicReferenceLibrary, parseArticleLibraryFilters } from "@/components/keryx/public-reference-library";
+import type { PublicReferencePage } from "@/lib/public-references/archive";
 import { CitedSourceCard } from "@/components/keryx/cited-source-card";
 import { ExploreSourceCard } from "@/components/keryx/explore-source-card";
 import { SourceLibraryFilters } from "@/components/keryx/source-library-filters";
@@ -46,10 +48,25 @@ export const metadata: Metadata = {
 export default async function SourcesPage({ searchParams }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 } = {}) {
-  const filters = parseLibraryFilters(await searchParams ?? {});
+  const params = await searchParams ?? {};
+  const filters = parseLibraryFilters(params);
+  const articleFilters = parseArticleLibraryFilters(params);
+  if (!articleFilters.query && filters.q) articleFilters.query = filters.q;
+  let articlePage: PublicReferencePage | null = null;
+  let articleStatus: "ready" | "unavailable" | "unsupported" = "unsupported";
   let directory;
   try {
-    directory = await loadSourceDirectory(await getDb());
+    const db = await getDb();
+    directory = await loadSourceDirectory(db);
+    if (db.queryPublicReferenceItems) {
+      try {
+        articlePage = await db.queryPublicReferenceItems({ query: articleFilters.query,
+          ...(articleFilters.referenceId ? { referenceId: articleFilters.referenceId } : {}),
+          ...(articleFilters.cursor ? { cursor: articleFilters.cursor } : {}),
+          sort: articleFilters.sort, limit: 20 });
+        articleStatus = "ready";
+      } catch { articleStatus = "unavailable"; }
+    }
   } catch {
     directory = unavailableSourceDirectory();
   }
@@ -60,7 +77,7 @@ export default async function SourcesPage({ searchParams }: {
   const hasSources = entries.length + references.length + citedSources.entries.length > 0;
   const onchainCount = entries.filter((entry) => entry.source.onchainId).length;
   const totalPaid = entries.reduce((sum, entry) => sum + (entry.totalEarnedUsdc ?? 0), 0);
-  const retainedItemCount = references.reduce((sum, reference) => sum + reference.items.length, 0);
+  const retainedItemCount = references.reduce((sum, reference) => sum + (reference.archivedItemCount ?? reference.items.length), 0);
   const exploreRecords = spreadLibraryTopics(EXPLORE_SOURCES.map(source => ({ ...source, kind: "explore" as const, data: source })));
   const citedRecords = citedSources.entries.map(entry => ({ id: entry.url, name: entry.title, url: entry.url,
     kind: "cited" as const, observedAt: entry.citedAt, data: entry }));
@@ -149,7 +166,7 @@ export default async function SourcesPage({ searchParams }: {
             <p className="mt-1 font-display text-3xl text-ink">
               {publicReferences.status === "ready" ? references.length : copy("sourceLibrary.unavailable")}
             </p>
-            <p className="mt-1 font-serif text-sm text-ink-2">{publicReferences.status === "ready" ? copy(retainedItemCount === 1 ? "sourceLibrary.feedItems.one" : "sourceLibrary.feedItems.other", { count: retainedItemCount }) : copy("sourceLibrary.feedItemsUnavailable")}</p>
+            <p className="mt-1 font-serif text-sm text-ink-2">{publicReferences.status === "ready" ? copy("sourceArchive.feedCount", { count: retainedItemCount }) : copy("sourceLibrary.feedItemsUnavailable")}</p>
           </Link>}
           {(registry.status === "unavailable" || entries.length > 0 || !hasSources) && <Link href={libraryBrowseHref(filters, { kind: "creator" })} className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">{copy("sourceLibrary.creatorListings")}</p>
@@ -166,6 +183,7 @@ export default async function SourcesPage({ searchParams }: {
         )}
 
         <SourceLibraryFilters filters={filters} total={allRecords.length} matched={matches.length} publishers={libraryPublisherGroups(matches)} />
+        {showCollection("feed") && <PublicReferenceLibrary page={articlePage} status={articleStatus} references={references} filters={articleFilters} />}
 
         <Link prefetch={false} href="/literature" className="mt-5 flex min-h-11 flex-wrap items-center justify-between gap-3 border border-line bg-panel p-5 text-ink">
           <span><span className="block font-display text-xl">{copy("sourceLibrary.reviewQuestion")}</span><span className="mt-1 block font-serif text-sm text-ink-2">{copy("sourceLibrary.reviewNotice")}</span></span>
