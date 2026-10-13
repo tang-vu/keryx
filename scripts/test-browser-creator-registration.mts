@@ -33,7 +33,7 @@ import {DecisionFeedbackPanel} from './app/creator/[id]/decision-feedback-panel'
 window.registrationErrors=[];window.registrationWrites=[];window.registrationCreated=0;window.registrationChainReads=0;window.registrationRpcChain=${profile.chainId};window.registrationWriteError=undefined;
 const initialCreator=window.registrationInitialCreator||'${creator}';
 function Harness(){const [address,setAddress]=React.useState(initialCreator);window.registrationWallet=address;window.setRegistrationWallet=setAddress;const [visible,setVisible]=React.useState(true);window.registrationMount=setVisible;
-return React.createElement(React.Fragment,null,visible&&React.createElement(RegisterForm,{prefillWalletAddress:initialCreator,onCreated:()=>window.registrationCreated++}),React.createElement(DecisionFeedbackPanel,{creatorId:'feedback'}));}
+return React.createElement(React.Fragment,null,visible&&React.createElement(RegisterForm,{prefillWalletAddress:initialCreator,prefill:{fetchPrice:.005},onCreated:()=>window.registrationCreated++}),React.createElement(DecisionFeedbackPanel,{creatorId:'feedback'}));}
 createRoot(document.getElementById('root')).render(React.createElement(Harness));
 ` }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,
   define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": JSON.stringify(registry), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": JSON.stringify(registry), "process.env.NODE_ENV": '"development"' }, plugins: [circleSdkBrowserPlugin(), { name: "synthetic-registration", setup(b) {
@@ -47,13 +47,13 @@ export const usePublicClient=({chainId})=>{window.registrationChain=chainId;retu
 ` : a.path === "sonner" ? "export const toast=Object.fromEntries(['success','error','loading','dismiss'].map(kind=>[kind,(message)=>{if(kind==='error')window.registrationErrors.push(message);}]));" : "" }));
   } }] });
  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
- let offline=false, indexMode="pending", posts=0, reads=0, verifiedId="";
+ let offline=false, indexMode="pending", posts=0, reads=0, verifiedId="", preparedPrice: number | undefined;
  let holdPost: Promise<void> | undefined, observedPost: (()=>void) | undefined;
  const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
  await page.route("**/*",async route=>{
   const u=new URL(route.request().url());if(u.origin!=="https://registration.invalid")return route.abort();
   if(u.pathname==="/api/auth/session")return route.fulfill({json:{session:{address:creator,role:"creator"}}});
-  if(u.pathname==="/api/sources") {posts++;observedPost?.();await holdPost;return route.fulfill({json:offline?{mode:"offline",source:{id:sourceId,name:"Fixture feed",walletAddress:creator,fetchPrice:.016,authors:[],verified:false},verification:{token:`keryx-verify:${creator}`,canVerify:true,instructions:"Place token in your feed"},notify:{url:"https://webhook.invalid",secret:"fixture-secret"}}:{mode:"onchain",sourceId,registryAddress:registry,registerParams:{urlHash,payoutWallet:creator,authors:[{wallet:creator,basisPoints:10000}],fetchPriceUsdc6:"16000",contentCid:"",tags:""},verification:{token:`keryx-verify:${creator}`,canVerify:true,instructions:"Place token in your feed"},notify:{url:"https://webhook.invalid",secret:"fixture-secret"}}});}
+  if(u.pathname==="/api/sources") {posts++;preparedPrice=route.request().postDataJSON().fetchPrice;observedPost?.();await holdPost;return route.fulfill({json:offline?{mode:"offline",source:{id:sourceId,name:"Fixture feed",walletAddress:creator,fetchPrice:.005,authors:[],verified:false},verification:{token:`keryx-verify:${creator}`,canVerify:true,instructions:"Place token in your feed"},notify:{url:"https://webhook.invalid",secret:"fixture-secret"}}:{mode:"onchain",sourceId,registryAddress:registry,registerParams:{urlHash,payoutWallet:creator,authors:[{wallet:creator,basisPoints:10000}],fetchPriceUsdc6:"5000",contentCid:"",tags:""},verification:{token:`keryx-verify:${creator}`,canVerify:true,instructions:"Place token in your feed"},notify:{url:"https://webhook.invalid",secret:"fixture-secret"}}});}
   if(u.pathname==="/api/sources/verify"){verifiedId=route.request().postDataJSON().sourceId;return route.fulfill({json:{verified:true}});}
   if(u.pathname.endsWith("/listing")){reads++;if(indexMode==="network")return route.abort();return route.fulfill({status:indexMode==="pending"?404:indexMode==="unavailable"?502:200,json:{mode:indexMode==="offline"?"offline":"onchain",onchainId:indexMode==="mismatch"?urlHash:sourceId,registryAddress:registry,creator}});}
   if(u.pathname.endsWith("/performance"))return route.fulfill({json:{windowRuns:3,performance:{considered:3,bought:2,reused:1,cited:1,citeThrough:1/3,skipped:0,recentSkips:[],rivalPriceOnSkip:null,price:.016}}});
@@ -63,9 +63,10 @@ export const usePublicClient=({chainId})=>{window.registrationChain=chainId;retu
  async function submit(){await page.getByRole("button",{name:/Publish source/}).click();await page.waitForFunction(()=>!!window.finishReceipt);}
  async function receipt(status="success",logs:unknown[]=[log],transactionHash=hash){await page.evaluate(value=>window.finishReceipt(value),{status,logs,transactionHash});}
  await fresh();await page.getByText("2 BUY",{exact:false}).waitFor();assert.equal(await page.getByText(/fresh tolls/).count(),0);
+ assert.equal(await page.locator("#price").inputValue(), "0.005", "Wallet-funded fallback preserves a chosen exact price");
  // Atomic duplicate guard: two same-turn click events produce exactly one prepare/write.
  await page.getByRole("button",{name:/Publish source/}).evaluate(el=>{(el as HTMLButtonElement).click();(el as HTMLButtonElement).click();});
- await page.waitForFunction(()=>!!window.finishReceipt);assert.equal(posts,1);assert.equal((await page.evaluate(()=>window.registrationWrites)).length,1);assert.equal(await page.evaluate(()=>window.registrationChainReads),1);
+ await page.waitForFunction(()=>!!window.finishReceipt);assert.equal(posts,1);assert.equal(preparedPrice,.005);assert.equal((await page.evaluate(()=>window.registrationWrites)).length,1);assert.equal(await page.evaluate(()=>window.registrationChainReads),1);
  await page.getByText("Transaction submitted: confirmation pending",{exact:false}).waitFor();assert.equal(reads,0);
  assert(await page.getByRole("button",{name:"Register another source"}).isDisabled());
  await page.getByText(`keryx-verify:${creator}`,{exact:true}).waitFor();await page.getByText("fixture-secret",{exact:true}).waitFor();
