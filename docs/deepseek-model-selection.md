@@ -82,9 +82,12 @@ that order; the removed MiMo name and key never revive its endpoint.
 Historical MiMo labels, receipts and captures remain historical. Existing private
 policy records can still be read through their original schema, but new MiMo
 engine construction refuses. Do not replace a paid original with another model
-or regenerate its quoted disclosure. A fresh private Flash quote uses the
-canonical wire name; retained requests with another exact disclosure require
-their original-policy execution/recovery review before release admission.
+or regenerate its quoted disclosure. Private Flash construction retains the
+exact `deepseek-v4-flash` wire alias already bound by accepted private quotes.
+The supplier serves that alias with V4.1 Flash. Public catalog/default
+normalization therefore does not rewrite private payment terms or break their
+original recovery path. Retained MiMo originals remain inspectable but cannot
+be resumed by silently substituting a DeepSeek policy.
 
 Business-canary and finite production engines keep their exact legacy Flash wire
 identity, supplier policy and allowance. Historical price observations remain
