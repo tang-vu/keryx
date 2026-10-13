@@ -17,7 +17,7 @@ it("pins one explicit model and endpoint across planning and synthesis and snaps
   for (const [url, init] of http.mock.calls) {
     expect(url).toBe("https://synthetic-provider.example/v1/chat/completions");
     expect(init?.redirect).toBe("error");
-    expect(JSON.parse(init?.body as string).model).toBe("deepseek-v4-flash");
+    expect(JSON.parse(init?.body as string).model).toBe("deepseek-flash");
     expect(init?.headers).toMatchObject({ Authorization: "Bearer synthetic-not-a-credential" });
   }
   expect(built.disclosure).toMatchObject({ modelId: "deepseek-flash", fallback: "local-heuristic", redirects: "prohibited" });
