@@ -18,7 +18,9 @@ const address = listener.address(); assert(address && typeof address === "object
 await new Promise<void>((done, reject) => listener.close(error => error ? reject(error) : done()));
 const physicalOrigin = `http://127.0.0.1:${address.port}`, origin = "https://navigation-latency.test";
 const engine = process.argv.includes("--webkit") ? webkit : chromium;
+console.log(JSON.stringify({ phase: "browser-launch-start", engine: engine.name() }));
 const browser = await engine.launch({ headless: true });
+console.log(JSON.stringify({ phase: "browser-launch-complete", engine: engine.name() }));
 let child: ReturnType<typeof spawn> | undefined, didExit = false, stopped: Promise<void> | undefined;
 const held = new Set<Route>();
 try {
@@ -43,6 +45,7 @@ try {
     await new Promise(done => setTimeout(done, 250));
   }
   assert(ready, `Built navigation server unavailable: ${output}`);
+  console.log(JSON.stringify({ phase: "startup-ready", engine: engine.name() }));
 
   for (const width of [390, 1366]) {
     for (const destination of ["/research", "/proof", "/usage", "/history/testnet"]) {
@@ -64,7 +67,9 @@ try {
         });
         const prefetch = page.waitForResponse(response => new URL(response.url()).pathname === destination &&
           response.request().headers()["next-router-prefetch"] === "1");
+        console.log(JSON.stringify({ phase: "goto-start", engine: engine.name(), width, destination, entryPath }));
         await page.goto(origin + entryPath);
+        console.log(JSON.stringify({ phase: "goto-complete", engine: engine.name(), width, destination }));
         await page.waitForFunction(() => [...document.querySelectorAll("button")].some(button => button.textContent?.includes("Connect Wallet")));
         let link;
         if (width === 390 && destination === "/research") {
@@ -75,7 +80,11 @@ try {
           link = page.locator(`a[href="${destination}"]`).first();
         }
         await link.scrollIntoViewIfNeeded();
-        const prefetched = await prefetch; await prefetched.finished();
+        console.log(JSON.stringify({ phase: "prefetch-response-start", engine: engine.name(), width, destination }));
+        const prefetched = await prefetch;
+        console.log(JSON.stringify({ phase: "prefetch-body-start", engine: engine.name(), width, destination, status: prefetched.status() }));
+        await prefetched.finished();
+        console.log(JSON.stringify({ phase: "prefetch-body-complete", engine: engine.name(), width, destination }));
         assert.equal(prefetched.status(), 200, `${destination} route tree is prefetched`);
         // Measure from the actual input event to the fallback's next animation frame.
         // Playwright's scroll/actionability waits precede the user's click.
@@ -89,7 +98,9 @@ try {
           });
           observer.observe(document.body, { childList: true, subtree: true, attributes: true });
         });
+        console.log(JSON.stringify({ phase: "click-start", engine: engine.name(), width, destination }));
         if (width === 390) await link.tap(); else await link.click();
+        console.log(JSON.stringify({ phase: "click-complete", engine: engine.name(), width, destination, finalResponseHeld: Boolean(finalRoute) }));
         try {
           await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ timeout: 1000 });
         } catch (error) {
@@ -151,8 +162,10 @@ try {
         assert.deepEqual(errors, []);
         console.log(JSON.stringify({ engine: engine.name(), width, destination, loadingMs, finalResponseWithheld: true }));
       } finally {
+        console.log(JSON.stringify({ phase: "context-cleanup-start", engine: engine.name(), width, destination, heldRouteCount: held.size }));
         await context.unrouteAll({ behavior: "ignoreErrors" });
         await context.close();
+        console.log(JSON.stringify({ phase: "context-cleanup-complete", engine: engine.name(), width, destination }));
       }
     }
   }
@@ -161,9 +174,12 @@ try {
   assert.equal((await fetch(physicalOrigin + "/purchase-outcomes")).status, 200, "Purchase outcomes remains available");
   console.log("PASS: mobile header and internal links switch before delayed data; cancellation, destination headings, history and 404 preserved.");
 } finally {
+  console.log(JSON.stringify({ phase: "final-cleanup-start", engine: engine.name(), heldRouteCount: held.size, serverExited: didExit }));
   for (const route of held) await route.abort().catch(() => undefined);
   await browser.close();
+  console.log(JSON.stringify({ phase: "browser-cleanup-complete", engine: engine.name(), serverExited: didExit }));
   if (child && !didExit) { child.kill(); await stopped; }
+  console.log(JSON.stringify({ phase: "server-cleanup-complete", engine: engine.name(), serverExited: didExit }));
   assert(!child || didExit, "Server exited before fixture cleanup");
   await rm(temporary, { recursive: true, force: true });
 }
