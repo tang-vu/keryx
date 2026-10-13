@@ -5,6 +5,9 @@
     "incremental": false
   },
   "include": [
+    "scripts/backfill-public-references.mts",
+    "scripts/source-archive-storage-migrate.mts",
+    "scripts/test-browser-source-archive.mts",
     "scripts/test-browser-evidence-procurement.mts",
     "scripts/evidence-procurement.mts",
     "scripts/evidence-procurement.test.mts",
@@ -35,6 +38,7 @@
     "scripts/test-public-profiles-postgres.mts",
     "scripts/test-public-profiles-built.mts",
     "scripts/test-personal-history-mcp-package.mts",
+    "scripts/test-browser-owned-history.mts",
     "scripts/test-server-profile-identities-origin.mts",
     "scripts/test-profile-identities-postgres.mts",
     "scripts/test-browser-profile-identities.mts",
@@ -74,6 +78,7 @@
     "scripts/test-operator-business-postgres.mts",
     "scripts/test-browser-operator-business.mts",
     "scripts/ask.mts",
+    "scripts/history.mts",
     "scripts/private-cli-claims.mts",
     "scripts/private-cli-claims.test-fixture.mts",
     "scripts/private-cli-claims.test.mts",

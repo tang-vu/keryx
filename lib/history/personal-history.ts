@@ -40,6 +40,8 @@ export type HistoryPage = z.infer<typeof historyPageSchema>;
 export const historyWallet = (value: string) => z.string().regex(/^0x[0-9a-fA-F]{40}$/).parse(value).toLowerCase();
 export interface PersonalHistoryStore {
   list(wallet: string, query: { filters: HistoryFilters; take: number; upper?: HistoryPosition; before?: HistoryPosition }): Promise<HistoryRow[]>;
+  /** Internal bounded financial allowlist. Caller must first prove research ownership via privacy.owner. */
+  receipts?(id: string, take: number): Promise<import("./owned-history").HistoryReceipt[]>;
 }
 export class HistoryError extends Error {
   constructor(readonly code: "invalid_history_query" | "history_unavailable") { super(code); }

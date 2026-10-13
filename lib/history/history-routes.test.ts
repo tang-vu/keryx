@@ -36,7 +36,7 @@ it("authenticates historical account history before archive access and ignores c
   expect(response.headers.get("cache-control")).toBe("no-store");
 });
 it("leaves current account money separate and refuses unavailable testnet history", async () => {
-  const body = await (await asks(new NextRequest("https://keryx.cc/api/me/asks"))).json();
+  const body = await (await asks(new NextRequest("https://keryx.cc/api/me/asks?view=recent"))).json();
   expect(body.asks.map((row: { id: string }) => row.id)).toEqual(["current"]);
   expect(body.archive).toBeUndefined(); expect(archived.listQueryRunsByAsker).not.toHaveBeenCalled();
   mocks.archive.mockRejectedValue(new Error("private archive path"));
