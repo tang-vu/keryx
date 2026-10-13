@@ -342,9 +342,14 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     await expect.poll(status).toContain("differs from your review");
     expect(creatorBurnSigns).toBe(0);expect(transferCalls).toBe(0);
     await page.getByLabel("Creator withdrawal maximum fee").fill("0.001");
+    // Read the actual prepare response body before polling its durable UI publication.
+    const preparation=page.waitForResponse(response=>response.url()===`${origin}/api/me/withdrawals/prepare`&&response.request().method()==="POST");
     await page.getByRole("button",{name:"Prepare creator withdrawal",exact:true}).click();
+    const preparedResponse=await preparation;expect(preparedResponse.status()).toBe(200);
+    const prepared=await preparedResponse.json();
     await expect.poll(()=>page.getByLabel("Original creator withdrawal request").inputValue()).toMatch(/^0x[0-9a-f]{64}$/);
     originalCashoutId=await page.getByLabel("Original creator withdrawal request").inputValue();
+    expect(originalCashoutId).toBe(prepared.draft.id);
     await page.getByLabel("Creator withdrawal amount").fill("0.2");
     await page.getByRole("button",{name:"Sign reviewed creator burn",exact:true}).click();
     await expect.poll(status).toContain("review differs");expect(creatorBurnSigns).toBe(0);
