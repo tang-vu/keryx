@@ -329,7 +329,7 @@ describe("recorded generated-prose DOM caller chain", () => {
   it("invalidates the tag when the existing synthetic-evidence projection changes the answer", async () => {
     const value = retainedRun();
     value.citations = [{ marker: "S1", sourceId: "synthetic-source", sourceName: "Synthetic original",
-      weight: 1, reward: 0, evidenceProvenance: "synthetic-demo" }];
+      weight: 1, reward: 0, rationale: "Synthetic fixture citation", evidenceProvenance: "synthetic-demo" }];
     expect(recordedAnswerLanguage(value)).toBe("vi");
     const html = await renderDispatch(value);
     expect(new JSDOM(html).window.document.body.textContent).toContain(SYNTHETIC_EVIDENCE_NOTICE);
@@ -342,7 +342,7 @@ describe("recorded generated-prose DOM caller chain", () => {
     const payments: PaymentRecord[] = [{ kind: "operating-fee", queryId: value.id, sourceId: "synthetic-fee",
       sourceName: "Synthetic fee", payer: `0x${"1".repeat(40)}`, payee: `0x${"2".repeat(40)}`,
       amountUsdc: 0.000001, txHash: "synthetic_reference_123", network: "eip155:5042",
-      settled: false, settlementStatus: "pending" }];
+      settled: false, settlementStatus: "pending", createdAt: value.createdAt }];
     const before = JSON.stringify({ value, payments });
     const run = publicQueryRun(value);
     const html = renderToStaticMarkup(createElement(DispatchView, { run, payments, answerLanguage: recordedAnswerLanguage(value) }));

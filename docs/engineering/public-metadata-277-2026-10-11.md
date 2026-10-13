@@ -30,8 +30,11 @@ The final review's 30 source pins and 15 donor/runtime controls were verified.
 The existing compatible read-only dependency donor and earlier semantic closure
 qualification were reused. Earlier CLI spawn/config refusals and zero-case
 captures remain retained; they are not passing evidence for this candidate.
-Applicable final TypeScript/Next production-build and aggregate/domain CI remain
-hosted gates. ROOT serializes the same PR431 merge and the next deployment batch.
+Hosted TypeScript found two synthetic fixture objects missing required rationale
+and createdAt fields. Those fields are now explicit; both affected cases and a
+fixture-focused TypeScript check passed. Remaining unchanged cases were reused.
+Final whole-source TypeScript/Next build and aggregate/domain CI remain hosted
+gates. ROOT serializes the same PR431 merge and the next deployment batch.
 The literal three-file #276 reader/type/review contract is included without
 claiming producer ancestry, live language production, backfill or activation.
 
