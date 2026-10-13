@@ -2,7 +2,7 @@ import { researchPresentationEnglish } from "../../locales/en/research-presentat
 import { researchPresentationVietnamese } from "../../locales/vi/research-presentation";
 import { researchPresentationPortuguese } from "../../locales/pt-BR/research-presentation";
 import { researchPresentationSpanish } from "../../locales/es/research-presentation";
-import type { PresentationLanguage } from "./presentation-language";
+import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
 
 export const researchPresentationCatalogues = Object.freeze({ en: researchPresentationEnglish, vi: researchPresentationVietnamese,
   pt: researchPresentationPortuguese, es: researchPresentationSpanish });

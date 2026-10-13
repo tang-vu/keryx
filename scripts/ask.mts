@@ -12,6 +12,8 @@ import { c, printStep } from "./trace-console.mts";
 import { formatRecordedUsdc, formatNumber } from "../lib/i18n/format.ts";
 import { projectActualReadCheckpoints } from "../lib/research-audit/actual-read-projection.ts";
 import { parsePrivateCliClaimFd, preparePrivateCliClaim } from "./private-cli-claims.mts";
+import { clientPresentationLanguage, clientPresentationMessages } from "../shared/i18n/client-language.ts";
+import { recordedAnswerLanguage } from "../lib/research/answer-language-provenance.ts";
 
 // ── parse args ──
 const argv = process.argv.slice(2);
@@ -19,6 +21,7 @@ let budget: number | undefined;
 let model: string | undefined;
 let allowExternalWeb = false;
 let privateClaimFd: number | undefined;
+let languageOverride: string | undefined;
 const qParts: string[] = [];
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === "--budget") {
@@ -31,6 +34,11 @@ for (let i = 0; i < argv.length; i++) {
     if (!value?.trim() || value.startsWith("-") || /[\u0000-\u001f\u007f]/u.test(value))
       throw new Error("--model requires a nonempty model id.");
     model = value.trim();
+  } else if (argv[i] === "--language") {
+    if (languageOverride !== undefined) throw new Error("Duplicate presentation language option.");
+    languageOverride = argv[++i];
+    if (!languageOverride || languageOverride.startsWith("-")) throw new Error("--language requires en, vi, pt, pt-BR, es or auto.");
+    clientPresentationLanguage(undefined, languageOverride);
   } else if (argv[i] === "--web") {
     allowExternalWeb = true;
   } else if (argv[i] === "--private-claim-fd") {
@@ -45,6 +53,7 @@ for (let i = 0; i < argv.length; i++) {
 const question =
   qParts.join(" ").trim() ||
   "How do x402 and stablecoin micropayments enable autonomous AI agent commerce?";
+const clientLanguage = clientPresentationLanguage(Intl.DateTimeFormat().resolvedOptions().locale, languageOverride);
 
 // Refuse unsupported execution intent before initializing the agent/provider graph.
 const privateClaim = await preparePrivateCliClaim({ env: process.env, fd: privateClaimFd, prepare: async runId => {
@@ -76,7 +85,9 @@ const run = await collectRun({ question, budget, model, origin: "engine", allowE
 const privateClaimStatus = await privateClaim?.complete(run);
 
 console.log(c.dim("─".repeat(72)));
-console.log(c.bold("\n📝 Answer\n"));
+const answerLanguage = recordedAnswerLanguage(run) ?? clientLanguage;
+const resultCopy = clientPresentationMessages(answerLanguage);
+console.log(c.bold(`\n📝 ${resultCopy.controls.answer}\n`));
 console.log(run.answer);
 const readCheckpoints = projectActualReadCheckpoints(run);
 console.log(readCheckpoints ? `READ checkpoint assertions retained: ${readCheckpoints.retainedDigest}. Verify the downloaded report sidecar offline with research-audit verify-actual; this does not prove source authenticity or settlement.`
