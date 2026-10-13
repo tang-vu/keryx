@@ -220,7 +220,7 @@ describe("rendered owner and saved-profile lifecycle", () => {
     try {
       await view.click("Delete profile fields");
       expect(view.requests[2].path).toBe("/api/me/profile"); expect(view.requests[2].init.method).toBe("DELETE");
-      await view.requests[2].respond({ profile: null });
+      await view.requests[2].respond({ deleted: true });
       expect(view.requests[1].signal.aborted).toBe(true);
       expect(view.links()).toHaveLength(0);
       expect(view.button(copy.verifyGithub).disabled).toBe(true);
