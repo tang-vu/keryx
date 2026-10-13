@@ -13,6 +13,8 @@ import { quoteA2aResearch } from "../lib/a2a/pricing";
 import { config } from "../lib/config";
 import { formatRecordedAmount } from "../lib/i18n/format";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "../lib/public-support";
+import { setupCopy } from "../locales/en/get-started";
+import { installationLinks, setupExamples } from "../lib/public-installation";
 
 const source = process.cwd();
 const temporary = await mkdtemp(join(tmpdir(), "keryx-product-guide-"));
@@ -51,11 +53,12 @@ try {
 
   // Raw HTML is useful to crawlers without hydration. The price page must expose
   // the actual configured checkout examples, not a hard-coded universal free offer.
-  for (const path of ["/", "/pricing", "/about", "/privacy", "/terms"]) {
+  const setupRoutes = ["/get-started", "/download", "/integrations"];
+  for (const path of ["/", "/pricing", "/about", "/privacy", "/terms", ...setupRoutes]) {
     const response = await fetch(transport + path); assert.equal(response.status, 200, path);
     const html = await response.text();
     assert(html.includes(SUPPORT_EMAIL), `${path} has public support contact`);
-    if (path === "/pricing" || path === "/about") {
+    if (path === "/pricing" || path === "/about" || setupRoutes.includes(path)) {
       const canonical = html.match(/<link rel="canonical" href="([^"]+)"/u)?.[1];
       assert(canonical && new URL(canonical).pathname === path, `${path} has own canonical`);
       assert(!html.includes('content="noindex'), `${path} is indexable`);
@@ -71,6 +74,9 @@ try {
   assert(llms.includes("/pricing") && llms.includes("/about"));
   const sitemap = await (await fetch(transport + "/sitemap.xml")).text();
   assert(sitemap.includes("/pricing</loc>") && sitemap.includes("/about</loc>"));
+  for (const path of setupRoutes) {
+    assert(llms.includes(path) && sitemap.includes(`${path}</loc>`), `${path} is discoverable`);
+  }
 
   const forbidden: string[] = [];
   for (const width of [320, 390, 1024, 1366]) {
@@ -88,9 +94,18 @@ try {
         // an APIResponse proxy whose lifetime can outlast a Next prefetch route.
         return route.continue();
       });
+      // Raw browser JavaScript avoids tsx's keepNames helper in a serialized callback.
+      await context.addInitScript(`
+        const copied = [];
+        Object.defineProperty(window, "setupCopies", { value: copied });
+        Object.defineProperty(navigator, "clipboard", { value: { writeText: async value => {
+          if (window.rejectSetupCopy) throw Error("Synthetic clipboard refusal");
+          copied.push(value);
+        } } });
+      `);
       const page = await context.newPage();
       const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
-      for (const path of ["/", "/pricing", "/about"]) {
+      for (const path of ["/", "/pricing", "/about", ...setupRoutes]) {
         await page.goto(origin + path); await page.locator("h1").waitFor();
         await page.evaluate(() => document.fonts.ready);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `${path} fits ${width}px`);
@@ -106,6 +121,47 @@ try {
           assert.equal(await page.getByRole("link", { name: copy("pricing.checkout") }).first().getAttribute("href"), "/research#paid-research");
         }
         if (path === "/about") assert.equal(await page.getByRole("link", { name: SUPPORT_EMAIL, exact: true }).getAttribute("href"), SUPPORT_MAILTO);
+        if (setupRoutes.includes(path)) {
+          const guideNav = page.getByRole("navigation", { name: setupCopy.navigation.label, exact: true }).first();
+          assert.equal(await guideNav.locator('[aria-current="page"]').getAttribute("href"), path);
+          assert.equal(await page.getByRole("link", { name: setupCopy.common.support, exact: true }).getAttribute("href"), SUPPORT_MAILTO);
+        }
+        if (path === "/get-started") {
+          for (const surface of setupCopy.surfaces) {
+            const card = page.locator("article").filter({ has: page.getByRole("heading", { name: surface.title, exact: true }) });
+            assert.equal(await card.getByRole("link").getAttribute("href"), surface.href);
+          }
+          const question = page.getByText(setupCopy.start.faq[0].question, { exact: true });
+          await question.focus(); await page.keyboard.press("Enter");
+          assert.equal(await question.evaluate(node => node.parentElement?.hasAttribute("open")), true);
+          await page.getByRole("link", { name: setupCopy.surfaces[2].action, exact: true }).click();
+          await page.waitForURL(origin + "/download#extension");
+          await page.getByRole("heading", { name: setupCopy.download.extensionTitle }).waitFor();
+          await page.goto(origin + path);
+        }
+        if (path === "/download") {
+          assert.equal(await page.getByRole("link", { name: setupCopy.download.installer, exact: true }).getAttribute("href"), installationLinks.installer);
+          assert.equal(await page.getByRole("link", { name: setupCopy.download.extensionDownload, exact: true }).getAttribute("href"), installationLinks.extensionSource);
+          assert.equal(await page.locator('a[href*="chromewebstore.google.com"]').count(), 0, "No invented store install link");
+          assert((await page.locator("#extension").innerText()).includes("Load unpacked"));
+        }
+        if (path === "/integrations") {
+          const copyModels = page.getByRole("button", { name: `${setupCopy.common.copy} ${setupCopy.integrations.apiReadOnly}`, exact: true });
+          await copyModels.click();
+          await page.waitForFunction(() => Reflect.get(window, "setupCopies")?.length === 1);
+          assert.deepEqual(await page.evaluate(() => Reflect.get(window, "setupCopies")), [setupExamples.models]);
+          await page.evaluate(() => Reflect.set(window, "rejectSetupCopy", true));
+          await page.getByRole("button", { name: `${setupCopy.common.copy} ${setupCopy.integrations.apiExample}`, exact: true }).click();
+          await page.getByRole("status").filter({ hasText: setupCopy.common.copyFailed }).waitFor();
+          assert.deepEqual(await page.evaluate(() => Reflect.get(window, "setupCopies")), [setupExamples.models]);
+          assert.equal(await page.getByRole("link", { name: setupCopy.integrations.remoteAction }).getAttribute("href"), "/integrations/mcp");
+          for (const anchor of ["mcp", "api", "cli", "bots"]) {
+            assert.equal(await page.locator(`#${anchor}`).count(), 1);
+            assert.equal(await page.locator(`main nav a[href="#${anchor}"]`).count(), 1);
+          }
+          await page.locator('main nav a[href="#api"]').click();
+          await page.waitForURL(origin + path + "#api");
+        }
         if (path === "/") {
           const kicker = await page.getByTestId("hero-kicker").boundingBox();
           const guide = await page.getByTestId("hero-guide").boundingBox();
@@ -119,6 +175,9 @@ try {
           await page.evaluate(() => window.scrollTo(0, 0));
           await page.screenshot({ path: join(screenshots, `${path === "/" ? "home" : path.slice(1)}-${width}.png`), fullPage: true });
         }
+      }
+      if (width >= 1024) {
+        assert.equal(await page.locator("header nav").getByRole("link", { name: setupCopy.navigation.start, exact: true }).isVisible(), true);
       }
       if (width < 1024) {
         await page.getByRole("button", { name: "Open menu" }).click();
@@ -134,7 +193,7 @@ try {
     }
   }
   assert.deepEqual(forbidden, [], "Product discovery never submits research or payment requests");
-  console.log("PASS: built crawlable product/pricing/about/support, checkout-derived amounts, keyboard FAQ and navigation at 320/390/1024/1366px; no research, signing or payment.");
+  console.log("PASS: built product/setup/download/integration routes, crawlability, seven surfaces, pinned downloads, clipboard success/refusal, keyboard FAQ and navigation at 320/390/1024/1366px; no research, signing or payment.");
 } finally {
   await browser.close();
   if (child && !didExit) child.kill();

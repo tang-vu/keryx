@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { productGuideCopy as copy } from "@/locales/en/product-guide";
+import { setupCopy } from "@/locales/en/get-started";
 
 const linkClass = "inline-flex min-h-11 items-center font-mono text-xs text-paid underline underline-offset-4";
 
@@ -7,7 +8,7 @@ export function ProductOverview() {
   const audiences = [
     { title: copy("product.researchersTitle"), body: copy("product.researchersBody"), action: copy("product.researchersAction"), href: "/literature" },
     { title: copy("product.buildersTitle"), body: copy("product.buildersBody"), action: copy("product.buildersAction"), href: "/sources" },
-    { title: copy("product.agentsTitle"), body: copy("product.agentsBody"), action: copy("product.agentsAction"), href: "/dev" },
+    { title: copy("product.agentsTitle"), body: copy("product.agentsBody"), action: copy("product.agentsAction"), href: "/integrations" },
   ];
   return <section className="mx-auto max-w-[1180px] px-4 pt-10 sm:px-[30px]" aria-labelledby="product-overview">
     <p className="font-mono text-xs uppercase tracking-widest text-seal">{copy("product.overviewKicker")}</p>
@@ -20,6 +21,22 @@ export function ProductOverview() {
         <p className="mb-3 mt-3 flex-1 font-serif leading-relaxed text-ink-2">{audience.body}</p>
         <Link className={linkClass} href={audience.href}>{audience.action}</Link>
       </article>)}
+    </div>
+  </section>;
+}
+
+export function ProductSetupEntry() {
+  return <section className="mx-auto max-w-[1180px] px-4 pt-8 sm:px-[30px]" aria-labelledby="product-setup">
+    <div className="border-y border-line py-6 sm:flex sm:items-center sm:justify-between sm:gap-8">
+      <div>
+        <h2 id="product-setup" className="font-display text-2xl">{setupCopy.navigation.label}</h2>
+        <p className="mt-2 max-w-[64ch] font-serif leading-relaxed text-ink-2">{setupCopy.navigation.entryBody}</p>
+      </div>
+      <nav aria-label={setupCopy.navigation.label} className="mt-3 flex shrink-0 flex-col sm:mt-0">
+        <Link href="/get-started" className={linkClass}>{setupCopy.navigation.start}</Link>
+        <Link href="/download" className={linkClass}>{setupCopy.navigation.downloadAction}</Link>
+        <Link href="/integrations" className={linkClass}>{setupCopy.navigation.connectAction}</Link>
+      </nav>
     </div>
   </section>;
 }

@@ -32,12 +32,25 @@ export interface SlashCommand {
   command: string;
 }
 
+/** Reserved account verbs only, not occurrences or word prefixes in research questions.
+ * Arguments (including malformed or secret-like values) never turn a control into research.
+ * This recognizes intent only; it grants no account identity or storage authority. */
+export function isSlackAccountControl(params: URLSearchParams): boolean {
+  const command = (params.get("command") ?? "").trim() || "/keryx";
+  if (/^\/(?:link|unlink|whoami)$/u.test(command)) return true;
+  return command === "/keryx" && /^\/?(?:link|unlink|whoami)(?:\s|$)/u.test((params.get("text") ?? "").trim());
+}
+
+export const slackAccountLinkingUnavailable =
+  "Slack account linking is unavailable. This command did not read or change an account binding.";
+
 /**
- * Pull the /keryx command out of the parsed form body, or null when there's no question. Slack
+ * Pull the /keryx question out of the parsed form body, or null for account controls or no question. Slack
  * always sends the whole payload; a blank `text` means the user typed just `/keryx`, which the
  * route answers with usage help. Missing user id falls back to a shared bucket rather than failing.
  */
 export function parseSlashCommand(params: URLSearchParams): SlashCommand | null {
+  if (isSlackAccountControl(params)) return null;
   const question = (params.get("text") ?? "").trim();
   if (!question || unsupportedDecisionReviewFlag(question) || unsupportedDecisionReviewIntent(Object.fromEntries(params))) return null;
   return {
