@@ -15,7 +15,7 @@ import { assertOrdinaryCanarySupplierAdmission } from "../business-operator/cana
 
 export interface OpenAICompatibleOpts {
   /** Explicit provider identity; vendor options must not leak to generic compatible hosts. */
-  provider?: "deepseek" | "mimo" | "cloudflare";
+  provider?: "deepseek" | "cloudflare";
   /** Engine name recorded on each run, e.g. "llm:deepseek:deepseek-v4-pro". */
   name: string;
   baseUrl: string;

@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { access, cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -7,6 +8,8 @@ import { pathToFileURL } from "node:url";
 import { renderDeck, renderScene, renderThumbnail } from "./grant-media/render.mjs";
 
 const repo = process.cwd();
+const suppliedAudioDir = process.env.KERYX_GRANT_AUDIO_DIR;
+if (!suppliedAudioDir) throw new Error("MiMo has been retired. Set KERYX_GRANT_AUDIO_DIR to reviewed local scene WAV files and matching TXT transcripts; no voice provider is invoked.");
 const outputDir = path.join(repo, "deliverables", "circle-grant-2026");
 const workDir = await mkdtemp(path.join(os.tmpdir(), "keryx-circle-grant-"));
 const screensDir = path.join(workDir, "screens");
@@ -18,7 +21,7 @@ const videoPath = path.join(outputDir, "keryx-circle-grant-demo.mp4");
 const subtitlesPath = path.join(outputDir, "keryx-circle-grant-demo.en.srt");
 const deckPath = path.join(outputDir, "keryx-circle-investor-deck.pdf");
 const thumbnailPath = path.join(outputDir, "keryx-circle-grant-thumbnail.png");
-const asrReportPath = path.join(outputDir, "mimo-asr-verification.json");
+const asrReportPath = path.join(outputDir, "narration-verification.json");
 const uploadPath = path.join(outputDir, "youtube-upload.md");
 const readmePath = path.join(outputDir, "README.md");
 const voicePlaybackRate = 1.06;
@@ -27,21 +30,6 @@ for (const dir of [outputDir, screensDir, scenesDir, audioDir, clipsDir]) await 
 
 function log(message) {
   process.stdout.write(`[grant-media] ${message}\n`);
-}
-
-function loadLocalEnv() {
-  const localPath = path.join(repo, ".env.local");
-  if (!existsSync(localPath)) return;
-  const lines = readFileSync(localPath, "utf8").split(/\r?\n/);
-  for (const line of lines) {
-    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
-    if (!match || process.env[match[1]]) continue;
-    let value = match[2].trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    process.env[match[1]] = value;
-  }
 }
 
 function findExecutable(name, candidates = []) {
@@ -129,66 +117,6 @@ function renderHtmlToPng(html, basename, width = 1920, height = 1080) {
     if (!existsSync(pngPath)) throw new Error(`Failed to render ${basename}`);
     return pngPath;
   });
-}
-
-async function mimoRequest(body, attempts = 3) {
-  const endpoint = `${process.env.KERYX_MIMO_BASE_URL?.replace(/\/$/, "") ?? "https://api.xiaomimimo.com/v1"}/chat/completions`;
-  let lastError;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "api-key": process.env.MIMO_API_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(180_000),
-      });
-      if (!response.ok) {
-        const detail = (await response.text()).slice(0, 500);
-        throw new Error(`MiMo HTTP ${response.status}: ${detail}`);
-      }
-      return await response.json();
-    } catch (error) {
-      lastError = error;
-      if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
-    }
-  }
-  throw lastError;
-}
-
-const voiceDirection = [
-  "Premium English technology documentary narrator.",
-  "Warm, assured male voice with crisp articulation and a measured pace around 145 words per minute.",
-  "Sound like a founder calmly demonstrating a serious production system to technical grant reviewers.",
-  "Use short natural pauses between ideas, emphasize concrete proof, and avoid hype, radio-announcer energy, or exaggerated emotion.",
-].join(" ");
-
-async function synthesize(text, target) {
-  const response = await mimoRequest({
-    model: "mimo-v2.5-tts",
-    messages: [
-      { role: "user", content: voiceDirection },
-      { role: "assistant", content: text },
-    ],
-    audio: { format: "wav", voice: "Milo" },
-  });
-  const encoded = response?.choices?.[0]?.message?.audio?.data;
-  if (!encoded) throw new Error("MiMo TTS response did not include choices[0].message.audio.data");
-  await writeFile(target, Buffer.from(encoded, "base64"));
-}
-
-async function transcribe(audioPath) {
-  const encoded = (await readFile(audioPath)).toString("base64");
-  const response = await mimoRequest({
-    model: "mimo-v2.5-asr",
-    messages: [{
-      role: "user",
-      content: [{ type: "input_audio", input_audio: { data: `data:audio/wav;base64,${encoded}` } }],
-    }],
-    asr_options: { language: "en" },
-  });
-  const text = response?.choices?.[0]?.message?.content;
-  if (typeof text !== "string" || !text.trim()) throw new Error("MiMo ASR returned an empty transcript");
-  return text.trim();
 }
 
 function normaliseTranscript(value) {
@@ -324,8 +252,6 @@ function gitSafeRelative(file) {
   return path.relative(repo, file).replaceAll("\\", "/");
 }
 
-loadLocalEnv();
-if (!process.env.MIMO_API_KEY) throw new Error("MIMO_API_KEY is missing from the environment or .env.local");
 
 let completed = false;
 try {
@@ -425,24 +351,20 @@ try {
   for (let index = 0; index < scenes.length; index++) {
     const scene = scenes[index];
     const audioPath = path.join(audioDir, `${scene.id}.wav`);
-    let transcript = "";
-    let wer = 1;
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      log(`MiMo TTS ${index + 1}/${scenes.length}: ${scene.id}${attempt > 1 ? " (retry)" : ""}`);
-      await synthesize(scene.narration, audioPath);
-      transcript = await transcribe(audioPath);
-      wer = wordErrorRate(scene.narration, transcript);
-      if (wer <= 0.24) break;
-    }
-    if (wer > 0.24) throw new Error(`MiMo ASR verification failed for ${scene.id} (word error rate ${wer.toFixed(3)})`);
+    // Caller supplies reviewed narration; a supplied transcript is not an ASR attestation.
+    await cp(path.join(suppliedAudioDir, `${scene.id}.wav`), audioPath);
+    const transcript = (await readFile(path.join(suppliedAudioDir, `${scene.id}.txt`), "utf8")).trim();
+    const wer = wordErrorRate(scene.narration, transcript);
+    if (!transcript || wer > 0.24) throw new Error(`Supplied transcript differs from the script for ${scene.id}`);
+    const audioSha256 = createHash("sha256").update(await readFile(audioPath)).digest("hex");
     const sourceAudioDuration = durationOf(audioPath);
     const audioDuration = sourceAudioDuration / voicePlaybackRate;
     const clipDuration = audioDuration + 0.72;
     const clipPath = path.join(clipsDir, `${scene.id}.mp4`);
     createClip(scene.image, audioPath, clipPath, clipDuration);
-    verification.push({ scene: scene.id, model: "mimo-v2.5-asr", voiceModel: "mimo-v2.5-tts", voice: "Milo", playbackRate: voicePlaybackRate, wordErrorRate: Number(wer.toFixed(4)), expected: scene.narration, transcript });
+    verification.push({ scene: scene.id, provenance: "caller-supplied-audio-and-transcript", automaticAsrVerified: false, audioSha256, playbackRate: voicePlaybackRate, wordErrorRate: Number(wer.toFixed(4)), expected: scene.narration, transcript });
     sceneResults.push({ ...scene, audioPath, sourceAudioDuration, audioDuration, clipDuration, clipPath });
-    log(`Verified ${scene.id}: WER ${wer.toFixed(3)}, ${audioDuration.toFixed(1)}s mastered`);
+    log(`Compared supplied transcript ${scene.id}: WER ${wer.toFixed(3)}, ${audioDuration.toFixed(1)}s mastered`);
   }
   await writeFile(asrReportPath, `${JSON.stringify({ generatedAt: new Date().toISOString(), threshold: 0.24, scenes: verification }, null, 2)}\n`, "utf8");
   await writeFile(subtitlesPath, createSrt(sceneResults), "utf8");
@@ -484,7 +406,7 @@ try {
     cursor += sceneResults[index].clipDuration;
   }
   await writeFile(uploadPath, `# YouTube upload copy\n\n## Title\n\nKeryx — Every Citation Pays Its Creator | Circle x Arc Technical Demo\n\n## Description\n\nKeryx is a citation-toll reading agent. Given a question and a budget, it discovers sources, explains BUY/SKIP/CACHE decisions, buys selected x402 content, synthesizes a cited answer, and settles weighted USDC rewards to the creators it actually cites.\n\nThis technical demo walks through the production code and a real Arc testnet dispatch powered by Circle USDC, Agent Stack / Gateway Nanopayments, x402, and Unified Balance Kit. Combined query totals and settled-only payment totals are shown with their supporting proof.\n\nLive product: https://keryx.cc\nPublic proof: https://keryx.cc/proof\nGitHub: https://github.com/tang-vu/keryx\nSourceRegistry: https://testnet.arcscan.app/address/${health.registry.address}\n\nArc testnet snapshot captured ${capturedAt}: ${m.totalPayments.toLocaleString("en-US")} settled payments, ${m.totalVolumeUsdc.toFixed(6)} testnet USDC volume, ${m.totalCreatorPayoutsUsdc.toFixed(6)} paid to creator wallets. Testnet figures are not revenue and simulations/pending payments are excluded.\n\n## Chapters\n\n${chapterStarts.join("\n")}\n\n## Tags\n\nKeryx, Circle, Arc, USDC, x402, Gateway Nanopayments, Agent Stack, AI agents, creator economy, micropayments\n\n## Upload settings\n\n- Visibility: Unlisted\n- Audience: No, it is not made for kids\n- Language: English\n- Captions: upload keryx-circle-grant-demo.en.srt\n- Thumbnail: upload keryx-circle-grant-thumbnail.png\n`, "utf8");
-  await writeFile(readmePath, `# Circle 2026 Cohort 2 deliverables\n\nUpload-ready files generated from the live product on ${capturedAt}.\n\n- **Video:** \`keryx-circle-grant-demo.mp4\` (${video.width}×${video.height}, ${video.duration.toFixed(1)} seconds)\n- **Investor deck:** \`keryx-circle-investor-deck.pdf\` (10 slides)\n- **YouTube captions:** \`keryx-circle-grant-demo.en.srt\`\n- **YouTube thumbnail:** \`keryx-circle-grant-thumbnail.png\`\n- **Upload copy:** \`youtube-upload.md\`\n- **Voice verification:** \`mimo-asr-verification.json\`\n\nThe narration was synthesized with \`mimo-v2.5-tts\` using the Milo voice. Every scene was transcribed again with \`mimo-v2.5-asr\`; the report records the transcript and word-error score. No API key or secret is stored in these files.\n\n## Submission\n\n1. Upload the MP4 to YouTube as **Unlisted**. Use the supplied title, description, chapters, thumbnail, and English SRT.\n2. Upload the PDF deck to Google Drive. Set access to **Anyone with the link — Viewer**.\n3. Open both links in an incognito window before pasting them into the Circle form.\n`, "utf8");
+  await writeFile(readmePath, `# Circle 2026 Cohort 2 deliverables\n\nUpload-ready files generated from the live product on ${capturedAt}.\n\n- **Video:** \`keryx-circle-grant-demo.mp4\` (${video.width}×${video.height}, ${video.duration.toFixed(1)} seconds)\n- **Investor deck:** \`keryx-circle-investor-deck.pdf\` (10 slides)\n- **YouTube captions:** \`keryx-circle-grant-demo.en.srt\`\n- **YouTube thumbnail:** \`keryx-circle-grant-thumbnail.png\`\n- **Upload copy:** \`youtube-upload.md\`\n- **Voice verification:** \`narration-verification.json\`\n\nNarration WAV files and TXT transcripts were supplied locally through KERYX_GRANT_AUDIO_DIR. No voice provider was invoked. The report hashes each audio file and compares its supplied transcript with the script; it does not attest that the recording matches that transcript. No API key or secret is stored in these files.\n\n## Submission\n\n1. Upload the MP4 to YouTube as **Unlisted**. Use the supplied title, description, chapters, thumbnail, and English SRT.\n2. Upload the PDF deck to Google Drive. Set access to **Anyone with the link — Viewer**.\n3. Open both links in an incognito window before pasting them into the Circle form.\n`, "utf8");
 
   completed = true;
   log(`Done: ${gitSafeRelative(videoPath)} (${video.duration.toFixed(1)}s)`);

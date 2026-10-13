@@ -39,6 +39,25 @@ export const FLASH_POLICY = Object.freeze({
   upperRates: Object.freeze({ cachedInputUsdPerMillion: 0.006, inputUsdPerMillion: 0.30, outputUsdPerMillion: 1.20 }),
 } as const);
 const FLASH_ALIASES = new Set(["deepseek-flash", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp"]);
+/** New ordinary captures use the canonical wire name. Earlier finite allowances
+ * keep their exact legacy wire identity and original observed policy. */
+export const FLASH_POLICY_2026_10_13 = Object.freeze({
+  ...FLASH_POLICY,
+  id: "deepseek-flash-observed-2026-10-13-v1",
+  observedAt: "2026-10-13",
+} as const);
+/** Published Pro remains available under its own tariff according to the updated
+ * pricing/change log. An earlier launch notice proposing a redirect is superseded. */
+export const PRO_POLICY_2026_10_13 = Object.freeze({
+  id: "deepseek-v4-pro-observed-2026-10-13-v1",
+  observedAt: "2026-10-13",
+  source: "https://api-docs.deepseek.com/quick_start/pricing/",
+  effectiveFrom: null, effectiveUntil: null,
+  billingFamily: "DeepSeek-V4-Pro-0813",
+  window: "offpeak-peak-interval",
+  lowerRates: Object.freeze({ cachedInputUsdPerMillion: 0.022, inputUsdPerMillion: 0.66, outputUsdPerMillion: 1.98 }),
+  upperRates: Object.freeze({ cachedInputUsdPerMillion: 0.044, inputUsdPerMillion: 1.32, outputUsdPerMillion: 3.96 }),
+} as const);
 /** Published gross tariff, not an invoice: free daily Neurons and other account usage are unknown. */
 export const CLOUDFLARE_POLICY = Object.freeze({
   id: "cloudflare-llama-3.3-observed-2026-10-02-v1",
@@ -80,6 +99,8 @@ const PRICE_POLICIES = new Map<string, { provider: string; policy: Omit<Captured
   [CLOUDFLARE_POLICY.id, { provider: "cloudflare", policy: CLOUDFLARE_POLICY, aliases: CLOUDFLARE_ALIASES }],
   [CLOUDFLARE_GPT_OSS_POLICY.id, { provider: "cloudflare", policy: CLOUDFLARE_GPT_OSS_POLICY, aliases: new Set(["@cf/openai/gpt-oss-120b"]) }],
   [FLASH_POLICY_2026_10_06.id, { provider: "deepseek", policy: FLASH_POLICY_2026_10_06, aliases: FLASH_ALIASES }],
+  [FLASH_POLICY_2026_10_13.id, { provider: "deepseek", policy: FLASH_POLICY_2026_10_13, aliases: new Set(["deepseek-flash"]) }],
+  [PRO_POLICY_2026_10_13.id, { provider: "deepseek", policy: PRO_POLICY_2026_10_13, aliases: new Set(["deepseek-v4-pro"]) }],
 ]);
 
 /** Called before the HTTP request, not when a report is generated. No holiday/window guessing. */
