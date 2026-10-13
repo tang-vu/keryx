@@ -2,6 +2,7 @@ import { ACTUAL_READ_POLICY, READ_CHECK_SHAPES, READ_CHECK_RULES } from "./actua
 import { MAX_READ_CHECKPOINTS, MAX_READ_PACKET_BYTES } from "./actual-read-record";
 import { runtimeCaptureOpenApi } from "./actual-read-v2-openapi";
 import { optimizerCaptureOpenApi } from "./optimizer-openapi";
+import { economicCaptureOpenApi } from "./economic-openapi";
 const actions = ["BUY", "SKIP", "CACHE"];
 const contextAction = { type: "string", enum: [...actions, "UNKNOWN"] };
 const integer = { type: "integer", minimum: 0, maximum: 10000 };
@@ -46,8 +47,9 @@ const legacyAvailable = legacySchemas.ActualReadCheckpointCapture.oneOf[1] as {
   properties: { packet: { properties: { records: unknown } } };
 };
 const v2 = runtimeCaptureOpenApi(legacyAvailable.properties.packet.properties.records);
+const v3 = optimizerCaptureOpenApi(v2);
 export const actualReadOpenApiSchemas = { ActualReadCheckpointCapture: {
   ...legacySchemas.ActualReadCheckpointCapture,
-  description: "Bounded private-safe ordinary observations. V1 admission, v2 normalization and available v3 versioned optimizer replay remain distinct. Private collation/groups are asserted inputs; model/payment/funding authority is not replayed. Expected hash is separately retained; unsupported/private/original capture remains unavailable.",
-  oneOf: [...legacySchemas.ActualReadCheckpointCapture.oneOf, v2, optimizerCaptureOpenApi(v2)],
+  description: "Bounded private-safe ordinary observations. V1 admission, v2 normalization, v3 optimizer and v4 exact query-local economic record replay remain distinct. Private groups, eligibility and classifications are asserted inputs; model generation, signer capacity and settlement authority are not replayed. Unavailable economic records and uncaptured families cannot claim monetary coverage. Expected hash is separately retained; unsupported/private/original capture remains unavailable.",
+  oneOf: [...legacySchemas.ActualReadCheckpointCapture.oneOf, v2, v3, economicCaptureOpenApi(v3)],
 } };
