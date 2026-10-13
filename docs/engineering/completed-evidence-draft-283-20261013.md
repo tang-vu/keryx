@@ -63,3 +63,22 @@ open for genuine expert/reference-section assessment and applicable delivery;
 coverage, usefulness and unsupported-statement metrics remain UNJUDGED/null.
 The coordinator owns main merge and the next combined deployment. This feature
 does not activate a schedule or permit new spending.
+
+## Owned application shutdown
+
+Programmatic Next.js servers now retain the registry indexer's own cleanup.
+After HTTP draining, the compiled instrumentation module disarms its timer and
+subscription and awaits the admitted indexing pass before framework shutdown and
+trace flushing. Repeated start and close calls share their owned lifecycle;
+cleanup failures remain failures while the remaining framework cleanup runs.
+Registry synchronization and payout authority are unchanged.
+
+Sixteen focused lifecycle cases and focused TypeScript passed. One production
+build passed; Next.js's generated TypeScript include additions were archived and
+the source configuration restored exactly. One affected compiled boot, API
+refusal and shutdown check then exited naturally with both output streams closed.
+The four previously passing responsive draft flows were retained locally; all
+four remain in the unchanged hosted fixture assertions for exact-head CI.
+The inherited genuine 48-trial study matches all 413 current source pins, lock
+and corpus; these five lifecycle paths are outside that graph, so no study was
+rerun. This validation creates no production, payment or activation authority.
