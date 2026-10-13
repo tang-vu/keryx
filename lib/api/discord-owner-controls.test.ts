@@ -115,9 +115,16 @@ describe("Discord recipient refusal through the actual signed POST", () => {
   });
 
   it.each([
-    { name: "guild", recipient: { member: { user: { id: "789" } }, user: { id: "790" } }, userId: "789" },
-    { name: "DM", recipient: { member: undefined, user: { id: "790" } }, userId: "790" },
-  ])("preserves normal $name admission and captures after without running it", async ({ recipient, userId }) => {
+    { name: "guild", recipient: { member: { user: { id: "789" } }, user: { id: "790" } }, userId: "789",
+      preferenceKey: "keryx:bot-answer-language:v1:373c5389f8b63582eee341e5dfdffc0cd86943e6a9f1c41aa7ba2fabd843a445" },
+    { name: "DM", recipient: { member: undefined, user: { id: "790" } }, userId: "790",
+      preferenceKey: "keryx:bot-answer-language:v1:dcb60ce937d912baa9e24eeb9d388a559959b6152292ebc310dcedd720bfc089" },
+  ])("preserves normal $name admission and captures after without running it", async ({ name, recipient, userId, preferenceKey }) => {
+    const read = vi.fn(), write = vi.fn();
+    // Unavailable metadata cannot grant more work or block an otherwise valid ask.
+    if (name === "DM") read.mockRejectedValue(new Error("Synthetic unknown preference capability"));
+    else read.mockResolvedValue(null);
+    mocks.db.mockResolvedValue({ getSyncState: read, setSyncState: write });
     const response = await POST(signedRequest(JSON.stringify(askPayload(recipient))));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ type: 5, data: { flags: 64 } });
@@ -125,17 +132,34 @@ describe("Discord recipient refusal through the actual signed POST", () => {
     expect(mocks.after).toHaveBeenCalledExactlyOnceWith(expect.any(Function));
     expect(mocks.collect).not.toHaveBeenCalled();
     expect(mocks.claim).not.toHaveBeenCalled();
-    expect(mocks.db).not.toHaveBeenCalled();
+    expect(mocks.db).toHaveBeenCalledExactlyOnceWith();
+    expect(read).toHaveBeenCalledExactlyOnceWith(preferenceKey);
+    if (name === "DM") await expect(read.mock.results[0].value).rejects.toThrow("Synthetic unknown preference capability");
+    else await expect(read.mock.results[0].value).resolves.toBe(null);
+    expect(write).not.toHaveBeenCalled();
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
   it("preserves sponsored refusal for a valid recipient without scheduling research", async () => {
+    const read = vi.fn().mockResolvedValue("vi"), write = vi.fn();
+    mocks.db.mockResolvedValue({ getSyncState: read, setSyncState: write });
     mocks.admission.mockResolvedValue(Response.json({ error: "sponsored_rate_limit" }, { status: 429 }));
     const response = await POST(signedRequest(JSON.stringify(askPayload())));
-    expect(await response.json()).toEqual({ type: 4, data: { flags: 64,
-      content: botResearchMessages(question)("sponsoredLimited") } });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({ type: 4, data: { flags: 64,
+      content: botResearchMessages(question, "vi")("sponsoredLimited") } });
+    expect(JSON.stringify(body)).not.toContain(question);
+    expect(JSON.stringify(body)).not.toContain(token);
     expect(mocks.admission).toHaveBeenCalledExactlyOnceWith({ kind: "bot", platform: "discord", userId: "789" });
-    expectNoWork();
+    expect(mocks.db).toHaveBeenCalledExactlyOnceWith();
+    expect(read).toHaveBeenCalledExactlyOnceWith("keryx:bot-answer-language:v1:373c5389f8b63582eee341e5dfdffc0cd86943e6a9f1c41aa7ba2fabd843a445");
+    await expect(read.mock.results[0].value).resolves.toBe("vi");
+    expect(write).not.toHaveBeenCalled();
+    expect(mocks.after).not.toHaveBeenCalled();
+    expect(mocks.collect).not.toHaveBeenCalled();
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
   it("preserves Ping and the existing private unsupported-command response", async () => {
