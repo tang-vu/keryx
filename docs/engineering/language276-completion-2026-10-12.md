@@ -156,3 +156,20 @@ and A2A results without a model, external read, signature or payment. The focuse
 merged-source run passed 355 cases in six files and its TypeScript closure passed.
 Required exact-candidate CI, package/native delivery, human financial terminology
 approval and the original authorized live/MCP evaluation remain separate gates.
+
+## Current-main composition, October 13
+
+The candidate now includes main `92733ecc`. Ordinary Slack and Telegram preference
+reads occur inside the admitted reply callback, after existing private claim and
+reply guards. Account controls, immediate admission and treasury refusals retain
+their no-storage/no-research behavior. Synthetic teaching reviewers explicitly
+identify their Vietnamese statements; the retained factual, answer and financial
+equality assertions remain. The funding fixture waits for the exact committed
+React state without changing its cap, authority checks or default polling deadline.
+
+The affected API, Portuguese, teaching and funding cases and focused types passed;
+unchanged mapper and previous focused evidence are reused. One offline 48-trial
+study bound the final 413-source graph. Its only input changes were the four
+incoming main files, and every trial and other artifact field remained unchanged.
+No external call or payment occurred. Exact-head hosted CI and coordinated delivery
+remain required; this checkpoint enables no UI locale or financial terminology.
