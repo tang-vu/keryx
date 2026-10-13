@@ -12,6 +12,11 @@ export function clientPresentationLanguage(systemLocale: unknown, override?: unk
   return typeof systemLocale === "string" ? presentationLanguage(systemLocale.split(/[-_]/u)[0].toLowerCase()) ?? "en" : "en";
 }
 
+// Invariant language autonyms for the finite client selector; no UI-locale activation.
+export const clientLanguageNames = Object.freeze({
+  en: "English", vi: "Tiếng Việt", pt: "Português", es: "Español",
+} as const satisfies Readonly<Record<PresentationLanguage, string>>);
+
 export const clientLanguageControls = {
   en: { language: "Presentation language", auto: "System language", answer: "Answer", savedAnswer: "Saved answer", unsavedAnswer: "Unsaved answer", citations: "Citations" },
   vi: { language: "Ngôn ngữ trình bày", auto: "Ngôn ngữ hệ thống", answer: "Câu trả lời", savedAnswer: "Câu trả lời đã lưu", unsavedAnswer: "Câu trả lời chưa lưu", citations: "Trích dẫn" },

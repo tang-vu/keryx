@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import type { CreateInput, DesktopAPI, SavedResult, WorkspaceView } from "./contracts";
 import { createMessages } from "../../lib/i18n/messages";
 import { checkedBibliographyExportCopy } from "../../locales/en/checked-bibliography-exports";
-import { clientPresentationLanguage, clientPresentationMessages } from "../../shared/i18n/client-language";
+import { clientLanguageNames, clientPresentationLanguage, clientPresentationMessages } from "../../shared/i18n/client-language";
 
 declare global { interface Window { keryxDesktop: DesktopAPI } }
 
@@ -112,7 +112,7 @@ function App() {
     <aside className="sidebar">
       <div className="brand"><MintMark/><div><strong>{message("nativeDesktop.brand.name")}</strong><span>{message("nativeDesktop.brand.tagline")}</span></div></div>
       <label className="sidebar-section-label">{presentation.language}<select aria-label={presentation.language} value={languageOverride} onChange={event => setLanguageOverride(event.target.value)}>
-        <option value="auto">{presentation.auto}</option><option value="en">English</option><option value="vi">Tiếng Việt</option><option value="pt">Português</option><option value="es">Español</option>
+        <option value="auto">{presentation.auto}</option><option value="en">{clientLanguageNames.en}</option><option value="vi">{clientLanguageNames.vi}</option><option value="pt">{clientLanguageNames.pt}</option><option value="es">{clientLanguageNames.es}</option>
       </select></label>
       <div className="sidebar-section-label">{message("nativeDesktop.workspace.section")}</div>
     <div className="workspace-card"><div className="workspace-icon">⌂</div><div className="workspace-copy"><strong>{view?.name ?? message("nativeDesktop.workspace.none")}</strong><small>{view ? message(selectPlural(view.tasks.length) === "one" ? "nativeDesktop.workspace.taskCount.one" : "nativeDesktop.workspace.taskCount.other", { count: view.tasks.length }) : message("nativeDesktop.workspace.chooseFolder")}</small></div></div>
