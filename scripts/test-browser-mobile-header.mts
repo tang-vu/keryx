@@ -45,7 +45,10 @@ const mocks: Record<string, string> = {
 };
 const bundle = await build({ stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import{SiteHeader}from'./components/keryx/site-header';import{Toaster}from'sonner';window.walletSelections=[];window.signIns=0;window.failedConnections=0;window.googleStarts=[];createRoot(document.getElementById('root')).render(<><SiteHeader/><main><button id="outside" style={{position:'fixed',bottom:0}}>Outside the header</button></main><Toaster/></>);`, loader: "tsx", resolveDir: process.cwd() },
   bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
-  define: { "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "synthetic-boundaries", setup(builder) {
+  define: { "process.env.NODE_ENV": '"production"', "process.env.CI": '"false"',
+    "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"',
+    "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": '"0x1111111111111111111111111111111111111111"',
+    "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" }, plugins: [{ name: "synthetic-boundaries", setup(builder) {
     builder.onResolve({ filter: /.*/ }, args => args.path in mocks ? { path: args.path, namespace: "mock" } : undefined);
     builder.onLoad({ filter: /.*/, namespace: "mock" }, args => ({ contents: mocks[args.path], loader: "tsx", resolveDir: process.cwd() }));
   } }] });

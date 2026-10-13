@@ -513,6 +513,8 @@ jobs:
 
       - name: Specialist brief preparation (built, offline, no research or payment)
         run: npm run test:browser-specialist-briefs
+      - name: Reviewed claim costs and decision receipt audit (built, local data only)
+        run: node --import tsx scripts/test-browser-research-evidence-audit.mts
 
       - name: Retain immutable cohort rehearsal result
         if: always()
