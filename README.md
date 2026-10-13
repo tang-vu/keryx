@@ -53,6 +53,13 @@ not guaranteed. Submitted questions become public reports. See
 
 ## Recorded purchase outcomes
 
+For a question the available evidence cannot resolve, the new
+[evidence procurement workspace](docs/evidence-procurement.md) prepares a bounded
+request, compares signed provider quotations and reviews the delivered excerpts.
+Private portable packets can be exported and restored across web, API, CLI and
+MCP. This is a proposal/evaluation slice; actual provider contact, funded execution
+and independent customer acceptance remain separately gated.
+
 The October 11 source candidate adds `/purchase-outcomes` and its read-only
 `/api/purchase-outcomes` view. It compares recorded exact-version purchases with
 citations, showing the newest-run sample, UTC interval and separate recorded
@@ -249,6 +256,11 @@ Historical testnet trace (recorded output; not current mainnet traction):
 Windows local Operator alpha: `npm run desktop:install` then `npm run desktop:start`.
 See the [desktop guide](docs/desktop-alpha.md) for the unpacked app build, offline
 saved results, private Markdown briefs, and limits.
+
+Developing in concurrent sessions: read the
+[shared coordination workflow](docs/engineering/multi-session-coordination.md)
+before editing or releasing, together with the
+[validation and release gates](docs/development-workflow.md).
 
 [Research-paper library](docs/paper-library.md): browse 40 observed paper records
 from arXiv, OpenReview, PMLR and ACL Anthology, filter by author/year/DOI, or explicitly

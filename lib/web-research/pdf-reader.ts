@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import path from "node:path";
+import { extractionWorker } from "./extraction-worker";
 import { acquireParserSlot } from "./parser-slots";
 
 export interface PdfExtractionOptions {
@@ -31,9 +31,8 @@ export async function extractPdfText(bytes: Uint8Array, options: PdfExtractionOp
   return new Promise((resolve, reject) => {
     let release: () => void;
     try { release = acquireParserSlot(); } catch { reject(failure()); return; }
-    const worker = path.join(process.cwd(), "lib", "web-research", "pdf-reader-worker.mjs");
     let child: ReturnType<typeof spawn>;
-    try { child = spawn(process.execPath, ["--max-old-space-size=64", worker,
+    try { child = spawn(process.execPath, ["--max-old-space-size=64", extractionWorker("pdf"),
       String(options.maxPages), String(options.maxChars)], {
       windowsHide: true,
       env: { NODE_ENV: "production" },

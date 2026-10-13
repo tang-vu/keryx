@@ -162,7 +162,9 @@ function parseRis(text: string): RawReference[] {
 /** One reference per non-empty line: a DOI, an https link, or a formatted citation. */
 function parseList(text: string): RawReference[] {
   return text.split(/\r\n|\r|\n/).map(line => line.trim()).filter(Boolean).map(line => {
-    const body = line.replace(/^(?:\[\d{1,3}\]|\d{1,3}[.)])\s*/, "");
+    // An unnumbered DOI starts "10."; only whitespace-delimited prose numbering
+    // may consume that prefix. Bracket numbering remains unambiguous without a space.
+    const body = line.replace(/^(?:\[\d{1,3}\]\s*|\d{1,3}[.)]\s+)/, "");
     const url = body.match(/https:\/\/[^\s<>"]+/)?.[0];
     const doi = doiOf(body);
     const prose = body.replace(/https?:\/\/[^\s<>"]+/g, " ").replace(DOI, " ").replace(/\bdoi:\s*/i, " ").trim();

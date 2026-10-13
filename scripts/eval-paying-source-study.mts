@@ -9,8 +9,8 @@ import { sourceInputs } from "../lib/evals/paying-source-study/source-inputs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const corpusPath = path.join(root, "fixtures/evals/studies/paying-source-corpus-v1.json");
-const resultsPath = path.join(root, "fixtures/evals/studies/paying-source-results-v1.json");
-const reportPath = path.join(root, "docs/studies/paying-for-sources-2026-10-09.md");
+const resultsPath = path.join(root, "fixtures/evals/studies/paying-source-results-v2.json");
+const reportPath = path.join(root, "docs/studies/paying-for-sources-2026-10-13.md");
 const args = process.argv.slice(2);
 if (args.length !== 1 || !["--check", "--write", "--internal-worker"].includes(args[0]))
   throw new Error("Use --check or --write; no provider, private input or payment options are accepted");
@@ -44,7 +44,7 @@ if (args[0] === "--internal-worker") {
   const corpus = readCorpus();
   if (result.trials.length !== 48 || result.outboundAttempts !== 0 || result.corpusSha256 !== sha256(canonical(corpus)))
     throw new Error("Controlled study artifact failed matrix boundary");
-  const report = renderStudy(result, corpus);
+  const report = renderStudy(result, corpus, "archive-v2");
   if (args[0] === "--write") {
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(resultsPath, bytesOut); fs.writeFileSync(reportPath, report);

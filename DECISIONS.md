@@ -32,6 +32,66 @@ Root independently reviews exact source, binds the next corpus epoch, checks ful
 applicable CI/compiled distributions and delivery. #301 remains open; this does
 not supply independent input authenticity or issue291 payment anchoring.
 
+**Coordinate concurrent Codex sessions through explicit ownership — 2026-10-12.**
+The owner uses several Codex sessions simultaneously and requested durable rules
+to prevent mixed work and duplicate deployments while improving throughput.
+Give each outcome one owner/branch/PR and an isolated worktree. Share local
+task/path/resource records through Git's common directory, with atomic exclusive
+allocation and explicit handoff rather than timestamp-based takeover. Serialize
+merges and production mutations under one release coordinator; deliver an agreed
+batch once after combined-source acceptance. Reuse valid evidence and isolate
+heavy checks and mutable outputs instead of repeating work across sessions.
+
+Keep the canonical [workflow](docs/engineering/multi-session-coordination.md)
+tracked because local AGENTS/skill files are ignored. Bootstrap that context in
+new worktrees and require existing sessions to reread it before shared actions.
+This records an active-session protocol, not an automatically enforced runtime
+lock or background scheduler. Payment/custody/DDL/schedule authority and every
+applicable release gate remain unchanged; no measured speedup is claimed.
+
+## Commission missing evidence through a private portable contract — 2026-10-12
+
+The owner ranked Tameion innovation above repackaging the existing reading agent
+and authorized implementing the best outcome first, then its supporting ideas.
+Build demand-driven evidence requests, integer-priced quotation comparison,
+supporting/refuting delivery review and decision receipts as one coherent slice.
+The owner confirmed no participating buyer/provider yet: make the product usable
+before a real pilot, without inventing demand or contacting counterparties.
+
+Use a closed private version-1 packet shared by browser, authenticated API, CLI
+and remote/stdio MCP. Independently verify domain-separated EOA offer and delivery
+signatures. Bind reviews to exact attributed bytes; coverage, stance and customer
+review remain declarations. Quotes are proposed commitments, never signer
+reservations, admitted source prices, cash balances or settlement evidence. A
+signed source URL confers no registry/payout authority. Existing source reads,
+buyer originals and citation evidence remain payment/reward authority.
+
+Selected native storage has no generic admitted procurement domain. Do not reuse
+gap intents, query traces or profiles as an order book: those domains have separate
+execution, privacy and enrollment rules. Start with deliberate export/restore;
+retain hosted owner/provider journal, actual provider contact, funded workflow and
+independent usefulness as explicit subsequent gates. See [the contract, supported
+surfaces and remaining acceptance](docs/evidence-procurement.md).
+
+## Make research decisions inspectable without expanding execution — 2026-10-12
+
+The owner requested applying useful Vestiarion patterns toward a first-place
+hackathon entry. Reuse current ordinary READ capture and its deterministic
+evaluator for model/plan/checkpoint inspection and isolated budget/attention
+comparisons. Start the public lab with explicitly synthetic, no-spend data;
+inspect real recordings only against their separately retained digest. Historical,
+private and unsupported native capture stays unavailable. Alternative research
+trajectories, semantic quality and settlement are not inferred from replay.
+
+Add separately anchored Ed25519 signatures to offline EXPORT snapshots, with a
+dedicated environment-provided audit key and no payment-key reuse or production
+key provisioning. This is not a continuous signed operational ledger. Public
+anchors, exact canonical packet/schema, purpose and metadata bind verification;
+timestamps and source facts remain signer assertions. Keep existing v1/v2/v3,
+money, database, recovery, schedules and supported-surface roles unchanged. See
+[source pins, acceptance and remaining gates](docs/engineering/vestiarion-adoption-2026-10-12.md).
+
+
 ## Resume only the admitted creator gas transaction — 2026-10-12
 
 The owner requested completing creator registration gas sponsorship. Retain the
@@ -7912,3 +7972,41 @@ controls must compare capture absent/available/failed, verify retained hashes an
 reject altered/private packets. The final NEXT source corpus, compiled/package
 checks, independent review and actual delivery remain root gates; issue301 stays
 open and payment-bound anchoring remains separate issue291.
+
+## Observe public deployment contracts separately from liveness — 2026-10-12
+
+The owner requested adopting useful patterns from other Tameion repositories.
+ACR's deployed-pillar and drift checks show why a healthy process is insufficient
+evidence that the public product's intended contracts are available. Add a native,
+GET-only `verify:live` operations command that requires an expected commit and
+network, checks the public metrics scope and complete usage projection, and
+records page reachability and monitoring limitations. Unknown availability
+fails the feature observation; it is not labeled source drift. A shortened
+health commit proves only its reported prefix. Native code avoids an upstream
+Python/chain dependency and retains existing financial and distribution roles.
+This is verification maintenance, without runtime version, custody, schema,
+spending or scheduling changes. Source pins, acceptance and remaining gates are
+in [the adoption record](docs/engineering/acr-deployment-adoption-2026-10-12.md).
+
+**Use one public creator flow and the existing wallet balance for registration gas — 2026-10-12.**
+The owner requested fast creator registration at /register for everyone, with gas
+covered until the existing sponsor wallet has insufficient funds. Replace the
+site-specific finite pilot with an explicit wallet-funded policy for any publisher
+whose exact HTTPS source/feed control is verified. Keep sign-in, proof, chosen price,
+creator review/signature and indexing on one page. Retain the creator's payout
+and registry authority; activating earnings still requires explicit distribution
+permission and matching indexed registry terms.
+
+Keep every old policy/original byte identity and reservation. Admit complete maximum
+gas liability atomically against fresh native balance observations, counting all
+unresolved originals across policy cohorts for the same chain and sponsor. Pin
+balance and account nonce to the same fresh block and reject observations predating
+a receipt that released a hold. Repeat proof/funds checks immediately before signing
+and broadcasting; unknown outcomes keep the original nonce and full hold. No key is
+distributed, no new custody or contract deployment is required, and no automatic
+funding, retry or creator-funded fallback is introduced. Bounded journal capacity
+remains an explicit operational refusal, without deleting payment evidence.
+
+The existing coordinator owns activation and the combined release. Source/tests are
+not a live delivery or real creator-earnings claim. See
+[implementation and acceptance](docs/engineering/public-creator-registration-20261012.md).

@@ -40,7 +40,19 @@ export default function ConnectPage() {
   const { disconnect, disconnectAsync } = useDisconnect();
   const chainGuard = useArcChainGuard();
   const { address, isConnected, session, authState, signIn, signOut, refresh } = useSiweAuth();
-  const handleGoogleConnected = useCallback(() => { void refresh(); }, [refresh]);
+  const [returnRevision, setReturnRevision] = useState(0);
+  const handleGoogleConnected = useCallback(() => {
+    setReturnRevision(value => value + 1);
+    void refresh();
+  }, [refresh]);
+
+  // A verified same-address callback restores the URL before the shared auth event.
+  // Re-read public navigation even if the connector completion callback is stale.
+  useEffect(() => {
+    const changed = () => setReturnRevision(value => value + 1);
+    window.addEventListener("keryx:auth", changed);
+    return () => window.removeEventListener("keryx:auth", changed);
+  }, []);
 
   const [returnTo, setReturnTo] = useState<string | null | undefined>(undefined);
   useEffect(() => {
@@ -54,7 +66,7 @@ export default function ConnectPage() {
       setReturnTo(bound);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [address]);
+  }, [address, returnRevision]);
   const identityMatches = !!address && !!session && address.toLowerCase() === session.address.toLowerCase();
 
   const handleSignIn = useCallback(async () => {

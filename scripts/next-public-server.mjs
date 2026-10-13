@@ -52,6 +52,15 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939, 
         manifest.config.distDir !== '.next' || manifest.config.output === 'export' || manifest.config.output === 'standalone')
       throw new Error('INVALID_PREPARED_BUILD_CONFIG');
     conf = manifest.config;
+    const cacheHandler = resolve(appDir, 'scripts', 'immutable-next-cache.cjs');
+    const cacheStat = lstatSync(cacheHandler);
+    if (!cacheStat.isFile() || cacheStat.isSymbolicLink() || cacheStat.nlink !== 1)
+      throw new Error('INVALID_PREPARED_CACHE_HANDLER');
+    // Only the explicit immutable branch changes caching. Ordinary startup keeps
+    // its established configuration and runtime/storage working directory.
+    conf = { ...conf, cacheHandler, cacheMaxMemorySize: 16 * 1024 * 1024,
+      images: { ...conf.images, customCacheHandler: true },
+      experimental: { ...conf.experimental, isrFlushToDisk: false } };
   }
   const next = requireApp('next');
   let handle;
@@ -121,6 +130,7 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939, 
     physicalHost: '127.0.0.1', physicalPort: server.address().port,
     publicOrigin: PUBLIC_ORIGIN, publicMetadataPort: 443, nextVersion: NEXT_VERSION,
     ready: true,
+    ...(useBuildConfig ? { runtimeCache: 'bounded-process-memory', diskCacheWrites: false } : {}),
   } };
 }
 

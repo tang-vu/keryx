@@ -439,7 +439,12 @@ async function* runAdmittedAgent(
   // the first purchase of a source would be the last toll it ever earned, and every later answer
   // would be built from text the source has moved on from. See ./cache-freshness.ts.
   const freshCache = new Set<string>();
-  const { publicReads, publicCandidates, recencyGaps, recencyObservations, itemClaimUrls } = await discoverPublicReferences(db, input.question, subClaims, recencyRequirement, recencyResolver);
+  const { publicReads, publicCandidates, recencyGaps, recencyObservations, itemClaimUrls, archiveSearch } = await discoverPublicReferences(db, input.question, subClaims, recencyRequirement, recencyResolver);
+  if (archiveSearch.status !== "unsupported") yield emit("discover", archiveSearch.status === "withheld"
+    ? "Historical archive search withheld for the requested newest-feed task; only the exact qualified current entry may be selected."
+    : archiveSearch.status === "completed"
+    ? `Article library searched across retained history: ${archiveSearch.matchedItems} matching article(s). Different articles from one publisher may support different research targets; preview matches alone are not evidence.`
+    : "Historical article search is unavailable for part of this run; available retained feed previews remain in discovery. No exhaustive archive search is claimed.", archiveSearch);
   for (const gap of recencyGaps) yield emit("discover",
     `WITHHELD ${gap.sourceName}: retained feed metadata does not establish the requested newest entry; no older cached article substituted.`, gap);
   recencyGaps.push(...requestRecencyGaps);
@@ -1972,18 +1977,23 @@ async function* runAdmittedAgent(
 
   // 6) ATTRIBUTE contribution weights
   if (used.length > 0) {
+    // Contribution weights bind to articles. Duplicate publisher IDs get unique
+    // marker keys only inside the attribution request; payout/claim identities
+    // remain the captured originals when citations are constructed below.
+    const attributionUsed = used.map(item => used.some(other => other !== item && other.sourceId === item.sourceId)
+      ? { ...item, sourceId: `attribution:${item.marker}` } : item);
     let proposedAttributions: Awaited<ReturnType<typeof engine.attribute>> = [];
     try { proposedAttributions = await engine.attribute({
       question: input.question,
       answer,
-      used,
+      used: attributionUsed,
     }); } catch {
       // Reuse the existing invalid/incomplete-attribution equal-share policy,
       // restricted to the final delivered evidence. No additional model call.
       yield emit("attribute", "Attribution unavailable; using the existing equal split across evidence-eligible delivered citations.");
     }
     const attributions = resolveAttributions(
-      used,
+      attributionUsed,
       proposedAttributions,
     );
     const rewards = allocateSplit(
@@ -2451,7 +2461,8 @@ async function* runAdmittedAgent(
     checkpointCapture.observations(() => ({
       actions: run.decisions.map(d => ({ candidate: checkpointCandidate(d.assetId ?? d.sourceId), action: d.action,
         price: numberOperand(d.price), priceMicros: decimalMicros(d.price) })),
-      citations: run.citations.map(c => ({ candidate: checkpointCandidate(c.itemId ? `item:${c.itemId}` : c.sourceId),
+      citations: run.citations.map(c => ({ candidate: checkpointCandidate(used.find(item => item.marker === c.marker)?.assetId
+        ?? (c.itemId ? `item:${c.itemId}` : c.sourceId)),
         reward: numberOperand(c.reward), rewardMicros: decimalMicros(c.reward) })),
       payments: payments.map(p => ({ candidate: checkpointCandidate(p.itemId ? `item:${p.itemId}` : p.sourceId), kind: p.kind,
         amount: numberOperand(p.amountUsdc), amountMicros: decimalMicros(p.amountUsdc), status: p.settlementStatus ?? "unknown", settled: p.settled })),

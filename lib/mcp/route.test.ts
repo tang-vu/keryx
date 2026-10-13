@@ -107,6 +107,7 @@ describe("/mcp", () => {
     expect(body.result.tools.map((tool: { name: string }) => tool.name)).toEqual([
       "evidence_draft",
       "draft_check",
+      "evidence_procurement",
       "deliverable_acceptance_read",
       "deliverable_acceptance_submit",
       "operator_obligations_read",
@@ -119,6 +120,7 @@ describe("/mcp", () => {
       "profile_read",
       "profile_update",
       "history_read",
+      "history_owned_read", "history_export",
       "run_privacy_read", "run_owner_export",
       "profile_identities_read",
     ]);

@@ -55,7 +55,9 @@ assert(inputs.every(input => input.includes("node_modules/react/") || input.incl
     "lib/research-audit/actual-read-record.ts", "lib/research-audit/actual-read-policy.ts", "lib/research-audit/actual-read-copy.ts",
     "lib/research-audit/actual-read-v2.ts", "lib/research-audit/exact-units.ts", "lib/agent/coverage-precheck.ts",
     "lib/research-audit/actual-read-v3.ts", "lib/research-audit/optimizer-checkpoint.ts", "lib/research-audit/optimizer-policy-v1.ts",
-    "lib/research-audit/actual-read-v4.ts", "lib/research-audit/economic-checkpoint.ts"].includes(input)), "Closed browser import graph");
+    "lib/research-audit/actual-read-v4.ts", "lib/research-audit/economic-checkpoint.ts",
+    "components/keryx/decision-checkpoint-inspection.tsx", "lib/research-audit/decision-inspection.ts", "lib/research-audit/decision-lab-copy.ts",
+    "lib/hooks/use-hydrated.ts"].includes(input)), "Closed browser import graph");
 assert(bundled.outputFiles[0].contents.byteLength < 1_500_000);
 const collector = createReadCheckpointCapture(true), check = { kind: "channel", creatorFree: false, cache: false } as const;
 collector.append(check, actualReadCheckpoint(check), { candidate: 1, round: 0, proposal: "BUY", plan: "BUY", price: 0.002 });

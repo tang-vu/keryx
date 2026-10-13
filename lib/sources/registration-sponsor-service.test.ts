@@ -3,11 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters, encodeEventTopics, keccak256, toBytes, type Hex, type TransactionReceipt } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { KeryxDB } from "../db/keryx-db";
-import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, getSqliteRegistrationSponsorExecution, transitionSqliteRegistrationSponsor } from "../db/registration-sponsor";
+import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, getSqliteRegistrationSponsorExecution, inspectSqliteRegistrationSponsorFunding, transitionSqliteRegistrationSponsor } from "../db/registration-sponsor";
 import { REGISTRY_ABI } from "../registry/registry-abi";
 import { registrationId } from "./registration-status";
-import { registrationTypedData, type RegistrationSponsorPolicy } from "./registration-sponsor-protocol";
-import { prepareSponsoredRegistration, recoverSponsoredRegistration, resolveExpiredSponsoredRegistration, resumeSponsoredRegistration, submitSponsoredRegistration, type RegistrationSponsorContext } from "./registration-sponsor-service";
+import { registrationTypedData, type RegistrationSponsorFundingObservation, type RegistrationSponsorPolicy, type WalletFundedRegistrationSponsorPolicy } from "./registration-sponsor-protocol";
+import { inspectSponsoredRegistrationFunding, prepareSponsoredRegistration, recoverSponsoredRegistration, resolveExpiredSponsoredRegistration, resumeSponsoredRegistration, submitSponsoredRegistration, type RegistrationSponsorContext } from "./registration-sponsor-service";
 import { prepareSourceRegistration } from "./prepare-registration";
 vi.mock("./prepare-registration", () => ({ prepareSourceRegistration: vi.fn() }));
 const creator = privateKeyToAccount(`0x${"11".repeat(32)}`), sponsor = privateKeyToAccount(`0x${"22".repeat(32)}`);
@@ -51,6 +51,66 @@ function fixture() {
       args: { id: onchainId, creator: creator.address } }), data: encodeAbiParameters([{ type: "string" }], [""]) }] : [] } as unknown as TransactionReceipt);
   return { ctx, db, native, chain, claim, syncClaim, prepare, get, makeReceipt, setClock: (value: number) => { clock = value; }, setReceipt: (value: TransactionReceipt) => { receipt = value; } };
 }
+function fundedFixture() {
+  const f = fixture(), old = f.ctx.policy;
+  const policy: WalletFundedRegistrationSponsorPolicy = { protocol: "keryx-registration-sponsor-v2",
+    eligibility: "verified-publisher", funding: "wallet-balance", network: old.network, deploymentOrigin: old.deploymentOrigin,
+    registryAddress: old.registryAddress, registryCodeHash: old.registryCodeHash, sponsorAddress: old.sponsorAddress,
+    maxTransactionWei: old.maxTransactionWei, maxGas: old.maxGas, maxFeePerGasWei: "40000000000" };
+  let balance = BigInt(policy.maxTransactionWei) * BigInt(2);
+  const observation = (): RegistrationSponsorFundingObservation => ({ network: policy.network, sponsorAddress: policy.sponsorAddress,
+    blockNumber: "100", blockHash: codeHash, blockTimestamp: Math.floor(f.ctx.now!() / 1000), observedAt: f.ctx.now!(),
+    nativeBalanceWei: balance.toString(), latestTransactionNonce: 7 });
+  const chain = { ...f.chain, fundingObservation: vi.fn(async () => observation()) };
+  f.db.inspectRegistrationSponsorFunding = async (...args) => inspectSqliteRegistrationSponsorFunding(f.native, ...args);
+  const ctx: RegistrationSponsorContext<WalletFundedRegistrationSponsorPolicy> = { ...f.ctx, policy, chain };
+  return { ...f, ctx, chain, observation, setBalance: (value: bigint) => { balance = value; },
+    prepare: () => prepareSponsoredRegistration(ctx, creator.address, { claimId, fetchPrice: 0.016 }) };
+}
+describe("wallet-funded sponsorship service", () => {
+  it("requires proof and an exact RSS feed from any publisher before source preparation", async () => {
+    const f = fundedFixture(); f.claim.rssUrl = ""; f.syncClaim();
+    await expect(f.prepare()).rejects.toMatchObject({ code: "feed_proof_required" });
+    expect(prepareSourceRegistration).not.toHaveBeenCalled(); expect(f.chain.sign).not.toHaveBeenCalled();
+  });
+  it("refuses insufficient funds before preparing a source or admitting an original", async () => {
+    const f = fundedFixture(); f.setBalance(BigInt(f.ctx.policy.maxTransactionWei) - BigInt(1));
+    expect(await inspectSponsoredRegistrationFunding(f.ctx)).toMatchObject({ available: false });
+    await expect(f.prepare()).rejects.toMatchObject({ code: "registration_sponsor_insufficient_funds" });
+    expect(prepareSourceRegistration).not.toHaveBeenCalled(); expect(await f.db.getRegistrationSponsor!({ wallet: creator.address, canonicalUrl })).toBeNull();
+  });
+  it("keeps a durably admitted signing hold when balance drops immediately before signing", async () => {
+    const f = fundedFixture(), row = await f.prepare(), signature = await creator.signTypedData(registrationTypedData(row));
+    let count = 0;
+    f.chain.fundingObservation.mockImplementation(async () => {
+      if (++count === 2) f.setBalance(BigInt(row.reservedWei) - BigInt(1)); return f.observation();
+    });
+    const retained = await submitSponsoredRegistration(f.ctx, creator.address, row.id, signature);
+    expect(retained).toMatchObject({ state: "signing", transactionNonce: 7, reservedWei: row.reservedWei });
+    expect(f.chain.sign).not.toHaveBeenCalled(); expect(f.chain.broadcast).not.toHaveBeenCalled();
+    f.setBalance(BigInt(row.reservedWei)); f.chain.fundingObservation.mockImplementation(async () => f.observation());
+    expect((await resumeSponsoredRegistration(f.ctx, creator.address, row.id)).transactionNonce).toBe(7);
+    expect(f.chain.sign).toHaveBeenCalledTimes(1); expect(f.chain.broadcast).toHaveBeenCalledTimes(1);
+  });
+  it("persists signed bytes but never broadcasts when funds drop at the final atomic guard", async () => {
+    const f = fundedFixture(), row = await f.prepare(), signature = await creator.signTypedData(registrationTypedData(row));
+    let count = 0;
+    f.chain.fundingObservation.mockImplementation(async () => {
+      if (++count === 3) f.setBalance(BigInt(row.reservedWei) - BigInt(1)); return f.observation();
+    });
+    const retained = await submitSponsoredRegistration(f.ctx, creator.address, row.id, signature);
+    expect(retained.state).toBe("submitted"); expect(retained.transactionHash).toBeDefined();
+    expect((await f.db.getRegistrationSponsorExecution!({ wallet: creator.address, id: row.id }))?.signedTransaction).toBeDefined();
+    expect(f.chain.broadcast).not.toHaveBeenCalled();
+  });
+  it("refuses an unavailable fresh RPC observation without acquiring signing authority", async () => {
+    const f = fundedFixture(), row = await f.prepare(), signature = await creator.signTypedData(registrationTypedData(row));
+    f.chain.fundingObservation.mockRejectedValue(new Error("private RPC details"));
+    await expect(submitSponsoredRegistration(f.ctx, creator.address, row.id, signature)).rejects.toMatchObject({ code: "registration_sponsor_rpc_unavailable", status: 503 });
+    expect((await f.get(row.id))?.state).toBe("prepared"); expect(f.chain.sign).not.toHaveBeenCalled(); expect(f.chain.broadcast).not.toHaveBeenCalled();
+  });
+});
+
 describe("sponsored source registration service", () => {
   it("recovers an authentic prior success when its receipt arrives during expired resolution", async () => {
     const f = fixture(), row = await f.prepare(), signature = await creator.signTypedData(registrationTypedData(row));

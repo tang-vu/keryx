@@ -64,7 +64,7 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
         ],
       },
-      ...["/api/me/run-claims", "/api/me/run-history/:path*", "/api/me/run-privacy/:path*", "/me/run-privacy",
+      ...["/api/me/run-claims", "/api/me/run-history/:path*", "/api/me/run-privacy/:path*", "/me/run-privacy", "/api/me/asks/:path*", "/me/asks",
         ...(process.env.KERYX_RUN_PRIVACY_ENABLED==="true"?["/dispatch/:path*", "/api/dispatch/:path*"]:[])].map(source => ({
         source, headers: [...runClaimPrivateHeaders],
       })),

@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import path from "node:path";
+import { extractionWorker } from "../web-research/extraction-worker";
 import { parse } from "parse5";
 import { z } from "zod";
 import { acquireParserSlot } from "../web-research/parser-slots";
@@ -22,7 +22,7 @@ export async function observeArxivBibliographicPage(html: string, signal?: Abort
   const release = acquireParserSlot();
   try {
     return await new Promise<z.infer<typeof pageSchema>>((resolve, reject) => {
-      const child = spawn(process.execPath, ["--max-old-space-size=64", path.join(process.cwd(), "lib/research/arxiv-bibliography-worker.mjs")],
+      const child = spawn(process.execPath, ["--max-old-space-size=64", extractionWorker("bibliography")],
         { windowsHide: true, env: { NODE_ENV: "production" }, stdio: ["pipe", "pipe", "ignore"] });
       let output = "", bytes = 0, failed = false;
       const stop = () => { failed = true; child.kill("SIGKILL"); };

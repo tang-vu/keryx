@@ -1,6 +1,6 @@
 /** Only unrelated root-link RSC prefetches may be isolated from the idle signing observation. */
 export const SIGNING_DISPLAY_PREFETCH_PATHS = Object.freeze([
-  "/dashboard", "/operator", "/answers", "/sources", "/literature", "/market", "/integrations/mcp",
+  "/dashboard", "/operator", "/answers", "/sources", "/literature", "/market", "/integrations/mcp", "/pricing", "/about", "/quality",
   "/wanted", "/register", "/me/sources", "/me/asks", "/playground", "/research", "/dev",
   "/proof", "/economics", "/privacy", "/terms",
 ] as const);

@@ -60,6 +60,9 @@ jobs:
       - name: CI scope and merge gate regression checks
         run: node --test scripts/ci-scope.test.mjs
 
+      - name: Public deployment observer (synthetic anonymous GETs only)
+        run: node --test scripts/public-deployment-probe.test.mjs
+
       - name: Payment glossary consistency and review bindings (offline)
         run: |
           node --test scripts/check-payment-glossaries.test.mjs
@@ -339,6 +342,9 @@ jobs:
       - name: Actual ordinary READ report offline verification
         run: npm run test:actual-read-browser
 
+      - name: Decision Lab and signed export verification (offline)
+        run: npm run test:decision-lab-browser
+
       - name: Unpacked MV3 extension (synthetic HTTP, no research or payments)
         run: npm run test:browser-extension
 
@@ -485,12 +491,20 @@ jobs:
       - name: iPhone route prefetch and delayed navigation (built, offline GET only)
         run: node --import tsx scripts/test-browser-mobile-navigation-built.mts --webkit
 
+      - name: Dynamic page navigation (built, offline GET only)
+        run: |
+          node --import tsx scripts/test-browser-navigation-latency.mts
+          node --import tsx scripts/test-browser-navigation-latency.mts --webkit
+
       - name: Product discovery, pricing and support (built, offline, no research or payment)
         env:
           KERYX_NETWORK: arcTestnet
           NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
           KERYX_FORCE_OFFLINE: "1"
         run: npm run test:browser-product-guide
+
+      - name: Decision Lab compiled route and mobile layout (offline)
+        run: npm run test:decision-lab-built
 
       - name: Retain immutable cohort rehearsal result
         if: always()
@@ -563,6 +577,9 @@ jobs:
       - name: Private profile UI (production CSS, synthetic owner sessions, no outbound requests)
         run: node --import tsx scripts/test-browser-private-profiles.mts
 
+      - name: Owned history UI (production CSS, synthetic privacy and owner races)
+        run: node --import tsx scripts/test-browser-owned-history.mts
+
       - name: Private verified identity UI (production CSS, synthetic consent and owner isolation)
         run: node --import tsx scripts/test-browser-profile-identities.mts
 
@@ -586,6 +603,9 @@ jobs:
 
       - name: Private evidence drafts built interactions (offline, no research)
         run: node --import tsx scripts/test-browser-evidence-drafts.mts
+
+      - name: Evidence procurement request, signatures and restored reviews (offline, synthetic providers)
+        run: node --import tsx scripts/test-browser-evidence-procurement.mts
 
       - name: Stored excerpt readability (built CSS, hermetic Chromium)
         env:
