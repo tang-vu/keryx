@@ -17,8 +17,20 @@ listener.listen(0, "127.0.0.1"); await once(listener, "listening");
 const address = listener.address(); assert(address && typeof address === "object");
 await new Promise<void>((done, reject) => listener.close(error => error ? reject(error) : done()));
 const physicalOrigin = `http://127.0.0.1:${address.port}`, origin = "https://navigation-latency.test";
+async function fulfillBuiltGet(route: Route) {
+  const request = route.request(), url = new URL(request.url());
+  assert.equal(request.method(), "GET");
+  const response = await route.fetch({ url: physicalOrigin + url.pathname + url.search });
+  const body = await response.body(), headers = { ...response.headers() };
+  // APIResponse bodies are decoded buffers, not the upstream compressed/chunked wire stream.
+  for (const name of ["content-encoding", "transfer-encoding", "content-length", "connection", "keep-alive"])
+    delete headers[name];
+  return route.fulfill({ response, headers, body });
+}
 const engine = process.argv.includes("--webkit") ? webkit : chromium;
+console.log(JSON.stringify({ phase: "browser-launch-start", engine: engine.name() }));
 const browser = await engine.launch({ headless: true });
+console.log(JSON.stringify({ phase: "browser-launch-complete", engine: engine.name() }));
 let child: ReturnType<typeof spawn> | undefined, didExit = false, stopped: Promise<void> | undefined;
 const held = new Set<Route>();
 try {
@@ -43,6 +55,7 @@ try {
     await new Promise(done => setTimeout(done, 250));
   }
   assert(ready, `Built navigation server unavailable: ${output}`);
+  console.log(JSON.stringify({ phase: "startup-ready", engine: engine.name() }));
 
   for (const width of [390, 1366]) {
     for (const destination of ["/research", "/proof", "/usage", "/history/testnet"]) {
@@ -60,11 +73,14 @@ try {
             assert(!finalRoute, "One final navigation request");
             finalRoute = route; held.add(route); return;
           }
-          return route.fulfill({ response: await route.fetch({ url: physicalOrigin + url.pathname + url.search }) });
+          return fulfillBuiltGet(route);
         });
         const prefetch = page.waitForResponse(response => new URL(response.url()).pathname === destination &&
-          response.request().headers()["next-router-prefetch"] === "1");
+          response.request().headers()["next-router-prefetch"] === "1" &&
+          response.request().headers()["next-router-segment-prefetch"] === undefined);
+        console.log(JSON.stringify({ phase: "goto-start", engine: engine.name(), width, destination, entryPath }));
         await page.goto(origin + entryPath);
+        console.log(JSON.stringify({ phase: "goto-complete", engine: engine.name(), width, destination }));
         await page.waitForFunction(() => [...document.querySelectorAll("button")].some(button => button.textContent?.includes("Connect Wallet")));
         let link;
         if (width === 390 && destination === "/research") {
@@ -75,8 +91,12 @@ try {
           link = page.locator(`a[href="${destination}"]`).first();
         }
         await link.scrollIntoViewIfNeeded();
-        const prefetched = await prefetch; await prefetched.finished();
-        assert.equal(prefetched.status(), 200, `${destination} route tree is prefetched`);
+        console.log(JSON.stringify({ phase: "prefetch-response-start", engine: engine.name(), width, destination }));
+        const prefetched = await prefetch;
+        console.log(JSON.stringify({ phase: "prefetch-body-start", engine: engine.name(), width, destination, status: prefetched.status() }));
+        await prefetched.finished();
+        console.log(JSON.stringify({ phase: "prefetch-body-complete", engine: engine.name(), width, destination }));
+        assert.equal(prefetched.status(), 200, `${destination} loading boundary is prefetched`);
         // Measure from the actual input event to the fallback's next animation frame.
         // Playwright's scroll/actionability waits precede the user's click.
         await link.evaluate(anchor => {
@@ -89,8 +109,44 @@ try {
           });
           observer.observe(document.body, { childList: true, subtree: true, attributes: true });
         });
+        console.log(JSON.stringify({ phase: "click-start", engine: engine.name(), width, destination }));
         if (width === 390) await link.tap(); else await link.click();
-        await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ timeout: 1000 });
+        console.log(JSON.stringify({ phase: "click-complete", engine: engine.name(), width, destination, finalResponseHeld: Boolean(finalRoute) }));
+        try {
+          await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ timeout: 1000 });
+        } catch (error) {
+          let diagnosticTimer: ReturnType<typeof setTimeout> | undefined;
+          try {
+            const dom = await Promise.race([
+              page.evaluate(() => {
+                const main = document.querySelector("main"), box = main?.getBoundingClientRect();
+                const loading = [...document.querySelectorAll('[role="status"]')]
+                  .filter(element => element.textContent?.includes("Loading page")).slice(0, 4);
+                return {
+                  main: main ? { busy: main.getAttribute("aria-busy"), height: box?.height,
+                    display: getComputedStyle(main).display, visibility: getComputedStyle(main).visibility } : null,
+                  loading: loading.map(element => ({ text: element.textContent?.slice(0, 100),
+                    height: element.getBoundingClientRect().height, display: getComputedStyle(element).display,
+                    visibility: getComputedStyle(element).visibility })),
+                  click: performance.getEntriesByName("navigation-click").slice(0, 4)
+                    .map(entry => ({ startTime: entry.startTime, duration: entry.duration })),
+                  loadingMeasures: performance.getEntriesByName("navigation-loading").slice(0, 4)
+                    .map(entry => ({ startTime: entry.startTime, duration: entry.duration })),
+                };
+              }),
+              new Promise(resolve => { diagnosticTimer = setTimeout(() => resolve({ unavailable: "DOM observation exceeded 1000ms" }), 1000); }),
+            ]).catch(reason => ({ unavailable: String(reason).slice(0, 300) }));
+            console.error(JSON.stringify({ diagnostic: "navigation-loading-failure", engine: engine.name(), width,
+              destination, currentUrl: page.url(), finalResponseHeld: Boolean(finalRoute), heldRouteCount: held.size,
+              finalRequest: finalRoute ? { path: new URL(finalRoute.request().url()).pathname,
+                method: finalRoute.request().method(), prefetch: finalRoute.request().headers()["next-router-prefetch"] ?? null } : null,
+              pageErrors: errors.slice(0, 8).map(message => message.slice(0, 300)), dom }));
+          } catch (diagnosticError) {
+            console.error(JSON.stringify({ diagnostic: "navigation-loading-observation-unavailable",
+              engine: engine.name(), width, destination, reason: String(diagnosticError).slice(0, 300) }));
+          } finally { if (diagnosticTimer) clearTimeout(diagnosticTimer); }
+          throw error;
+        }
         await page.waitForFunction(() => performance.getEntriesByName("navigation-loading").length > 0, undefined, { timeout: 1000 });
         const loadingMs = await page.evaluate(() => Math.round(performance.getEntriesByName("navigation-loading")[0].duration));
         assert(loadingMs < 1000, `Immediate route shell (${loadingMs}ms), before final response`);
@@ -105,8 +161,7 @@ try {
           await page.locator('header button[aria-label="Open menu"]').waitFor({ state: "attached" });
           await finalRoute.abort(); held.delete(finalRoute);
         } else {
-          const url = new URL(finalRoute.request().url());
-          await finalRoute.fulfill({ response: await finalRoute.fetch({ url: physicalOrigin + url.pathname + url.search }) });
+          await fulfillBuiltGet(finalRoute);
           held.delete(finalRoute);
           await page.waitForURL(origin + destination);
           await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ state: "detached" });
@@ -117,8 +172,10 @@ try {
         assert.deepEqual(errors, []);
         console.log(JSON.stringify({ engine: engine.name(), width, destination, loadingMs, finalResponseWithheld: true }));
       } finally {
+        console.log(JSON.stringify({ phase: "context-cleanup-start", engine: engine.name(), width, destination, heldRouteCount: held.size }));
         await context.unrouteAll({ behavior: "ignoreErrors" });
         await context.close();
+        console.log(JSON.stringify({ phase: "context-cleanup-complete", engine: engine.name(), width, destination }));
       }
     }
   }
@@ -127,9 +184,12 @@ try {
   assert.equal((await fetch(physicalOrigin + "/purchase-outcomes")).status, 200, "Purchase outcomes remains available");
   console.log("PASS: mobile header and internal links switch before delayed data; cancellation, destination headings, history and 404 preserved.");
 } finally {
+  console.log(JSON.stringify({ phase: "final-cleanup-start", engine: engine.name(), heldRouteCount: held.size, serverExited: didExit }));
   for (const route of held) await route.abort().catch(() => undefined);
   await browser.close();
+  console.log(JSON.stringify({ phase: "browser-cleanup-complete", engine: engine.name(), serverExited: didExit }));
   if (child && !didExit) { child.kill(); await stopped; }
+  console.log(JSON.stringify({ phase: "server-cleanup-complete", engine: engine.name(), serverExited: didExit }));
   assert(!child || didExit, "Server exited before fixture cleanup");
   await rm(temporary, { recursive: true, force: true });
 }

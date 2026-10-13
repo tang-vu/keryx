@@ -269,8 +269,22 @@ try {
     assert.deepEqual(errors, []);
     if (width === 390) {
       await page.goto(`${base}/research`, { waitUntil: "domcontentloaded" });
-      await question.waitFor();
-      assert((await question.boundingBox())!.y < 740);
+      const researchAvailability = parseResearchAvailability({ state: "not-paused" });
+      assert(researchAvailability);
+      // This rendered status exists only after the real availability effect consumes the intercepted GET.
+      await page.getByRole("main").getByText(researchAvailability.message, { exact: true }).waitFor();
+      await page.evaluate(() => document.fonts.ready);
+      const researchQuestion = page.getByRole("main").getByRole("textbox", { name: "What do you want to know?", exact: true });
+      await researchQuestion.waitFor({ state: "visible" });
+      // Measure visibility and position in one DOM task, rather than handing a node across two protocol queries.
+      const researchQuestionBox = await researchQuestion.evaluate(element => {
+        const box = element.getBoundingClientRect(), style = getComputedStyle(element);
+        return { visible: element.isConnected && element.getClientRects().length > 0 && box.width > 0 && box.height > 0 &&
+          style.display !== "none" && style.visibility === "visible", y: box.y, width: box.width, height: box.height };
+      });
+      console.log(JSON.stringify({ observation: "hydrated-research-composer-viewport", viewportHeight: 740, ...researchQuestionBox }));
+      assert(researchQuestionBox.visible && Number.isFinite(researchQuestionBox.y) && researchQuestionBox.y < 740,
+        "The visible research-page composer must remain inside the 740px viewport");
       await page.getByRole("link", { name: "Paid agent research & recovery" }).click();
       await page.getByRole("heading", { name: "Give your agent a research budget." }).waitFor();
       assert.equal(new URL(page.url()).hash, "#paid-research");
