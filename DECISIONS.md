@@ -1,5 +1,37 @@
 # Keryx — Decision Log
 
+## Replay ordinary query allocation and reservation evidence without authority - 2026-10-12
+
+Add an incompatible ordinary-public v4 capture envelope for bounded query-local
+reserve, release, hold, remaining-budget and reevaluation debit observations, and
+citation/author largest-remainder allocations. Observe actual inputs and outputs
+at the existing runner seams after the live operation. A frozen browser-safe pure
+policy checks them; its output never authorizes or replaces execution. Capture
+model attribution proposals separately from deterministic normalization and reward
+eligibility. Numeric run-local groups/candidates and author-leg ordinals replace
+private identifiers. No questions, rationales, URLs, accounts, wallets, payTo,
+grants/nonces, Circle metadata or original receipt payload enter these records.
+
+Only genuine exactly representable safe integer micro operands qualify. Fractional
+micro, unsafe, missing or contradictory operands/outcomes record unavailable;
+rounding a Number cannot create exact monetary authority. Preserve the live Number
+operations, rounding, tie order, source recipients and every funding/payment call.
+Query-local capacity is distinct from atomic signer exposure: pending, settled but
+undelivered and unknown funding retain their existing capacity, never release it.
+The diagnostic record asserts the observed classification, not settlement proof.
+Payment/reward authority gates and unsupported native/private/pre-enrollment runs
+remain explicitly outside replay. No new storage, backfill, activation or signer.
+
+Keep v1-v3 closed codecs and digests intact. Bound economics to 256 records/legs
+and the existing 256KiB packet limit; unknown fields, accessors, sparse arrays,
+future versions and altered outcomes refuse. Reuse the shared report/browser,
+offline CLI and public API/MCP projection; browser verification uses local JSON
+and Web Crypto only. Qualify current offline runner corpus records and differential
+controls, including unavailable evidence, without rewriting release study artifacts.
+Root independently reviews exact source, binds the next corpus epoch, checks full
+applicable CI/compiled distributions and delivery. #301 remains open; this does
+not supply independent input authenticity or issue291 payment anchoring.
+
 **Coordinate concurrent Codex sessions through explicit ownership — 2026-10-12.**
 The owner uses several Codex sessions simultaneously and requested durable rules
 to prevent mixed work and duplicate deployments while improving throughput.
@@ -7954,6 +7986,22 @@ signer does. Their bundled dependency graph excludes the server configuration
 and server authority module. Manual browser fixtures supply the same explicit
 public build pins, including an absent origin list for legacy-only cases; a
 generic environment shim must not hide a new server dependency in this path.
+
+## Complete ordinary failure observations without changing money policy - issue301
+
+The existing versioned read policy already represents unavailable assessment STOP
+and positive-price funding SKIP. Emit those observations at the final assessment
+failure and each actual funding-withheld selection, including the current
+reevaluation round. These are captured inputs and existing rule outcomes, not
+another policy, a model rerun or authority to release a reservation. Keep all
+payment arguments, query-ledger expressions, atomic signer capacity and settlement
+behavior unchanged. Retain missing/nonmicro authority as unavailable, old v1-v4
+codecs/policies and private/native capability refusals. Focused injected runner
+controls must compare capture absent/available/failed, verify retained hashes and
+reject altered/private packets. The final NEXT source corpus, compiled/package
+checks, independent review and actual delivery remain root gates; issue301 stays
+open and payment-bound anchoring remains separate issue291.
+
 ## Observe public deployment contracts separately from liveness — 2026-10-12
 
 The owner requested adopting useful patterns from other Tameion repositories.

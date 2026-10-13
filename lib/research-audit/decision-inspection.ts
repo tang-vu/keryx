@@ -74,7 +74,7 @@ export function inspectReadDecisions(value: unknown): DecisionInspection | null 
   return { schema: packet.schema, policy: packet.policy, checkpointPolicy: ACTUAL_READ_POLICY, coverage: packet.coverage,
     facts: "recorded-assertions", integrity: "canonical-policy-consistent", rows, candidates: [...candidates.values()],
     mappings: extended?.mappings ?? [], normalizations: extended?.normalizations ?? [], portfolio: extended?.portfolio ?? null,
-    optimizer: packet.schema === 3 ? packet.optimizer : null, stops: extended?.stops ?? [],
+    optimizer: packet.schema === 3 || packet.schema === 4 ? packet.optimizer : null, stops: extended?.stops ?? [],
     totals: { checkpoints: rows.length, candidates: candidates.size, unresolvedCandidates: byDisposition.UNKNOWN,
       continueCheckpoints: rows.filter(row => row.outcome.action === "CONTINUE").length,
       stopCheckpoints: rows.filter(row => row.outcome.action === "STOP").length + (extended?.stops.length ?? 0),
