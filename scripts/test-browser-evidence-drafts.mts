@@ -167,7 +167,16 @@ try {
   try { await browser?.close(); } finally {
     try {
       if (server.listening) await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
-      await app.close();
+      const cleanupFailures: unknown[] = [];
+      try {
+        const instrumentation = createRequire(import.meta.url)(join(dist, "server", "instrumentation.js")) as { close(): Promise<boolean> };
+        assert.equal(typeof instrumentation.close, "function", "Built instrumentation has no owned cleanup");
+        assert.equal(await instrumentation.close(), true, "The actual boot module did not own an indexer");
+      } catch (error) { cleanupFailures.push(error); }
+      try { await app.close(); } catch (error) { cleanupFailures.push(error); }
+      try { await createRequire(import.meta.url)("next/dist/trace").flushAllTraces(); }
+      catch (error) { cleanupFailures.push(error); }
+      if (cleanupFailures.length) throw cleanupFailures[0];
       assert.equal(server.listening, false, "Built local draft server did not close");
     } finally {
       process.chdir(previousCwd);
