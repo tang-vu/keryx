@@ -62,6 +62,11 @@ export function parseAskCommand(interaction: Interaction): AskCommand | null {
   if (interaction.data?.name !== "ask") return null;
   if (!interaction.application_id || !interaction.token) return null;
 
+  // A present guild member is authoritative; an invalid member must not fall back to a DM user.
+  const userId = interaction.member !== undefined ? interaction.member?.user?.id : interaction.user?.id;
+  // Same bounded Discord recipient syntax as lib/bots/language.ts; this is not wallet ownership.
+  if (typeof userId !== "string" || userId !== userId.trim() || !/^[1-9]\d{0,19}$/u.test(userId)) return null;
+
   const options = interaction.data.options ?? [];
   if (options.some(option => !["question", "budget"].includes(option.name ?? ""))) return null;
   const question =
@@ -79,7 +84,7 @@ export function parseAskCommand(interaction: Interaction): AskCommand | null {
   return {
     question,
     budget,
-    userId: interaction.member?.user?.id ?? interaction.user?.id ?? "unknown",
+    userId,
     applicationId: interaction.application_id,
     token: interaction.token,
   };

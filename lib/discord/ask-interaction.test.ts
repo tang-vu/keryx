@@ -68,7 +68,7 @@ function askInteraction(overrides: Partial<Interaction> = {}): Interaction {
     application_id: "app123",
     token: "tok456",
     data: { name: "ask", options: [{ name: "question", value: "What is x402?" }] },
-    member: { user: { id: "user789" } },
+    member: { user: { id: "789" } },
     ...overrides,
   };
 }
@@ -84,7 +84,7 @@ describe("parseAskCommand", () => {
     const cmd = parseAskCommand(askInteraction());
     expect(cmd).toMatchObject({
       question: "What is x402?",
-      userId: "user789",
+      userId: "789",
       applicationId: "app123",
       token: "tok456",
     });
@@ -95,7 +95,7 @@ describe("parseAskCommand", () => {
     const cmd = parseAskCommand(
       askInteraction({
         member: undefined,
-        user: { id: "dm-user" },
+        user: { id: "790" },
         data: {
           name: "ask",
           options: [
@@ -105,7 +105,32 @@ describe("parseAskCommand", () => {
         },
       }),
     );
-    expect(cmd).toMatchObject({ question: "padded?", budget: 0.03, userId: "dm-user" });
+    expect(cmd).toMatchObject({ question: "padded?", budget: 0.03, userId: "790" });
+  });
+
+  it.each([undefined, null, "", " ", "unknown", "user789", "0", "0123", "-123", "1.5",
+    "123\n", " 123", "123 ", "１２３", "1".repeat(21), 789, true, {}, ["789"]])(
+    "refuses an incompatible recipient %j in both guild and DM invocations", id => {
+      for (const recipient of [{ member: { user: { id } } }, { member: undefined, user: { id } }]) {
+        expect(parseAskCommand({ ...askInteraction(), ...recipient } as unknown as Interaction)).toBeNull();
+      }
+    },
+  );
+
+  it.each([null, {}, [], "invalid-member", { user: null }, { user: {} }, { user: { id: "" } },
+    { user: { id: "invalid-user" } }, { user: { id: 789 } }])(
+    "never falls back from an invalid present guild member %j to a different DM user", member => {
+      expect(parseAskCommand({ ...askInteraction(), member, user: { id: "790" } } as unknown as Interaction)).toBeNull();
+    },
+  );
+
+  it("refuses an interaction with neither guild nor DM recipient", () => {
+    expect(parseAskCommand(askInteraction({ member: undefined }))).toBeNull();
+  });
+
+  it.each(["1", "12345678901234567890"])("preserves the bounded recipient %s without numeric coercion", id => {
+    expect(parseAskCommand(askInteraction({ member: { user: { id } }, user: { id: "790" } }))?.userId).toBe(id);
+    expect(parseAskCommand(askInteraction({ member: undefined, user: { id } }))?.userId).toBe(id);
   });
 
   it("returns null for pings, other commands, and empty questions", () => {
