@@ -233,8 +233,12 @@ export interface KeryxDB {
   /** Ordinary-only decision opinions/admission sidecars; never payment authority. */
   readonly decisionReviews?: import("../research/decision-review-types").DecisionReviewsStore;
   /** Atomic creator gas originals; absent on storage without a reviewed sponsor journal. */
-  admitRegistrationSponsor?(policy: import("../sources/registration-sponsor-protocol").RegistrationSponsorPolicy,
-    row: import("../sources/registration-sponsor-protocol").SponsoredRegistration, now?: number): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
+  admitRegistrationSponsor?(policy: import("../sources/registration-sponsor-protocol").ActiveRegistrationSponsorPolicy,
+    row: import("../sources/registration-sponsor-protocol").SponsoredRegistration, now?: number,
+    fundingObservation?: import("../sources/registration-sponsor-protocol").RegistrationSponsorFundingObservation): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
+  inspectRegistrationSponsorFunding?(policy: import("../sources/registration-sponsor-protocol").ActiveRegistrationSponsorPolicy,
+    observation: import("../sources/registration-sponsor-protocol").RegistrationSponsorFundingObservation,
+    now?: number): Promise<import("./registration-sponsor").RegistrationSponsorFundingInspection>;
   getRegistrationSponsor?(input: { wallet: string; id?: string; canonicalUrl?: string }): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration | null>;
   transitionRegistrationSponsor?(input: import("./registration-sponsor").RegistrationSponsorTransition): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
   /** Server-only registration execution authority; never expose in API projections. */

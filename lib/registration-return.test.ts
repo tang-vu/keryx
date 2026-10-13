@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { registrationConnectHref, registrationDraft, registrationOwnerMatches, registrationTarget, safeRegistrationReturn, sourceClaimDraft, sourceClaimTarget, sourceReturnWithOwner, sourceClaimConnectHref } from "./registration-return";
+import { registrationConnectHref, registrationDraft, registrationOwnerMatches, registrationTarget, safeRegistrationReturn, sourceClaimDraft, sourceClaimTarget, sourceReturnWithOwner, sourceClaimConnectHref, type RegistrationDraft } from "./registration-return";
 const owner = `0x${"a".repeat(40)}`;
 it("roundtrips the prepared feed and paired Wanted context with wallet binding", () => {
   const draft = { rssUrl: "https://publisher.example/feed?a=1&b=2", gapId: "gap-123", matchedItemLink: "https://publisher.example/post", owner };
@@ -46,6 +46,24 @@ it("retains a claim registration and its exact zero-price review through sign-in
   expect(new URL(registrationConnectHref(draft)!, "https://test.example").searchParams.get("returnTo")).toBe(target);
   expect(() => registrationDraft(new URLSearchParams({ fetchPrice: "0.0000001" }))).toThrow();
   expect(() => registrationDraft(new URLSearchParams({ sourceClaimId: "../invalid" }))).toThrow();
+});
+it.each([5042, 5042002])("retains the exact proof, wallet-funded mode and chosen0.005 price on network %s through sign-in", chainId => {
+  const draft: RegistrationDraft = { url: "https://independent.example/", rssUrl: "https://independent.example/news.xml", name: "Independent publisher", sourceClaimId: "a".repeat(64), challengeId: "b".repeat(64), referenceId: "public:independent", fetchPrice: 0.005, owner, chainId, mode: "wallet-funded" };
+  const target = registrationTarget(draft), href = registrationConnectHref(draft)!;
+  expect(safeRegistrationReturn(new URL(href, "https://test.example").searchParams.get("returnTo"))).toBe(target);
+  expect(registrationDraft(new URL(target, "https://test.example").searchParams)).toEqual(draft);
+  expect(sourceReturnWithOwner(target, `0x${"c".repeat(40)}`)).toBe(target);
+  expect(registrationOwnerMatches(target, `0x${"c".repeat(40)}`)).toBe(false);
+  expect(safeRegistrationReturn(target + "&signature=untrusted&submit=1&returnTo=//evil.example")).toBe(target);
+});
+it("canonicalizes the historical sponsor claimId alias without changing the fixed return path", () => {
+  const draft = registrationDraft(new URLSearchParams({ claimId: "a".repeat(64), fetchPrice: "0.005", chainId: "5042" }));
+  expect(draft).toEqual({ sourceClaimId: "a".repeat(64), fetchPrice: 0.005, chainId: 5042 });
+  expect(safeRegistrationReturn(`/register/sponsored?claimId=${"a".repeat(64)}`)).toBeNull();
+  expect(() => registrationDraft(new URLSearchParams({ claimId: "a".repeat(64), sourceClaimId: "b".repeat(64) }))).toThrow(/Conflicting/);
+});
+it.each(["chainId=1", "chainId=5042.0", "mode=sponsored", "mode=../connect", "challengeId=wrong", "referenceId=../wrong", "owner=invalid", "fetchPrice=0.0050001"])("refuses invalid unified registration context %s", query => {
+  expect(safeRegistrationReturn(`/register?${query}`)).toBeNull();
 });
 it("roundtrips only bounded claim context and retains the original initiating wallet", () => {
   const draft = { url: "https://publisher.example/article", referenceId: "public:publisher", challengeId: "b".repeat(64), owner };
