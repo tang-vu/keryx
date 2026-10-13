@@ -506,6 +506,9 @@ jobs:
       - name: Decision Lab compiled route and mobile layout (offline)
         run: npm run test:decision-lab-built
 
+      - name: Reviewed claim costs and decision receipt audit (built, local data only)
+        run: node --import tsx scripts/test-browser-research-evidence-audit.mts
+
       - name: Retain immutable cohort rehearsal result
         if: always()
         uses: actions/upload-artifact@v4

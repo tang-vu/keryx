@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { ZoteroError, zoteroCollectionsSchema, zoteroKeySchema, type ZoteroLease, type ZoteroStore } from "./zotero-contract";
+import { zoteroSubmittedFieldsMatch } from "./zotero-data";
 
 const version = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+function libraryVersion(value: string | null): number | undefined {
+  if (value !== null && /^(0|[1-9]\d{0,14})$/.test(value)) return Number(value);
+}
 export const zoteroItemSchema = z.object({ key: zoteroKeySchema, version, data: z.object({
   key: zoteroKeySchema, version, itemType: z.string().max(64), title: z.string().max(16384).optional(),
   url: z.string().max(4096).optional(), DOI: z.string().max(1024).optional(), extra: z.string().max(131072).optional(),
@@ -61,32 +65,54 @@ export class ZoteroProvider {
     return String(parsed.data.userID);
   }
   async list(user: string, resource: "items" | "collections") {
-    const rows: unknown[] = []; let libraryVersion: string | null = null;
+    const rows: unknown[] = []; let snapshotVersion: number | undefined, snapshotTotal: number | undefined;
     for (let start = 0; start <= 1000; start += 100) {
       const { response, value } = await this.request(`/users/${user}/${resource}?limit=100&start=${start}${resource === "items" ? "&includeTrashed=1" : ""}`);
-      const observed = response.headers.get("last-modified-version"), total = response.headers.get("total-results");
-      if (!observed || !/^\d{1,15}$/.test(observed) || !total || !/^\d{1,4}$/.test(total) || Number(total) > 1000 || !Array.isArray(value) || value.length > 100) throw new ZoteroError("zotero_limit");
-      if (libraryVersion !== null && libraryVersion !== observed) throw new ZoteroError("zotero_conflict");
-      libraryVersion = observed; rows.push(...value);
-      if (rows.length === Number(total)) return rows;
+      const observed = libraryVersion(response.headers.get("last-modified-version")), total = response.headers.get("total-results");
+      if (observed === undefined || !total || !/^\d{1,4}$/.test(total) || Number(total) > 1000 || !Array.isArray(value) || value.length > 100) throw new ZoteroError("zotero_limit");
+      if (snapshotVersion !== undefined && snapshotVersion !== observed || snapshotTotal !== undefined && snapshotTotal !== Number(total)) throw new ZoteroError("zotero_conflict");
+      snapshotVersion = observed; snapshotTotal = Number(total); rows.push(...value);
+      if (rows.length === Number(total)) return { rows, libraryVersion: observed };
       if (rows.length > Number(total) || value.length < 100) throw new ZoteroError("zotero_provider");
     }
     throw new ZoteroError("zotero_limit");
   }
   async collections(user: string) {
-    const rows = await this.list(user, "collections");
+    const { rows } = await this.list(user, "collections");
     return zoteroCollectionsSchema.parse(rows.map(row => { const parsed = z.object({ key: zoteroKeySchema, data: z.object({ name: z.string().min(1).max(256) }) }).parse(row); return { key: parsed.key, name: parsed.data.name }; }));
   }
-  async items(user: string) { return zoteroItemSchema.array().max(1000).parse(await this.list(user, "items")); }
-  async write(user: string, items: Record<string, unknown>[]) {
+  async items(user: string) {
+    const snapshot = await this.list(user, "items"), items = zoteroItemSchema.array().max(1000).parse(snapshot.rows);
+    if (new Set(items.map(item => item.key)).size !== items.length || items.some(item => item.version > snapshot.libraryVersion)) throw new ZoteroError("zotero_provider");
+    return { items, libraryVersion: snapshot.libraryVersion };
+  }
+  async write(user: string, items: Record<string, unknown>[], expectedVersion: number) {
     if (!items.length || items.length > 50) throw new ZoteroError("zotero_limit");
-    const { value } = await this.request(`/users/${user}/items`, "POST", items);
+    if (libraryVersion(String(expectedVersion)) === undefined) throw new ZoteroError("zotero_provider");
+    const { response, value } = await this.request(`/users/${user}/items`, "POST", items, { "If-Unmodified-Since-Version": String(expectedVersion) });
     const result = z.object({ successful: z.record(zoteroItemSchema), unchanged: z.record(zoteroKeySchema), failed: z.record(z.unknown()) }).strict().safeParse(value);
     if (!result.success) throw new ZoteroError("zotero_provider");
     // A 200 can contain partial failure; never echo provider messages or claim total success.
     if (Object.keys(result.data.failed).length) throw new ZoteroError("zotero_conflict");
     const indices = [...Object.keys(result.data.successful), ...Object.keys(result.data.unchanged)];
     if (indices.length !== items.length || new Set(indices).size !== items.length || indices.some(index => !/^(0|[1-9]\d?)$/.test(index) || Number(index) >= items.length)) throw new ZoteroError("zotero_provider");
-    for (let index = 0; index < items.length; index++) if ((result.data.successful[String(index)]?.key ?? result.data.unchanged[String(index)]) !== items[index].key) throw new ZoteroError("zotero_provider");
+    const acceptedVersion = libraryVersion(response.headers.get("last-modified-version"));
+    if (acceptedVersion === undefined || acceptedVersion < expectedVersion || Object.keys(result.data.successful).length && acceptedVersion === expectedVersion) throw new ZoteroError("zotero_provider");
+    for (let index = 0; index < items.length; index++) {
+      const saved = result.data.successful[String(index)], unchanged = result.data.unchanged[String(index)];
+      if ((saved?.key ?? unchanged) !== items[index].key) throw new ZoteroError("zotero_provider");
+      if (saved) {
+        if (saved.version !== acceptedVersion || saved.data.deleted === 1 || !zoteroSubmittedFieldsMatch(saved.data, items[index])) throw new ZoteroError("zotero_provider");
+      } else {
+        // An unchanged result supplies only a key, not field-equality evidence.
+        // Read that exact object without retries; every request retains the lease,
+        // backoff, byte and operation deadline checks.
+        const read = await this.request(`/users/${user}/items/${unchanged}`), parsed = zoteroItemSchema.safeParse(read.value);
+        if (!parsed.success || parsed.data.key !== unchanged || parsed.data.version > acceptedVersion || parsed.data.data.deleted === 1
+          || libraryVersion(read.response.headers.get("last-modified-version")) !== parsed.data.version
+          || !zoteroSubmittedFieldsMatch(parsed.data.data, items[index])) throw new ZoteroError("zotero_provider");
+      }
+    }
+    return acceptedVersion;
   }
 }
