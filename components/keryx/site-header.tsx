@@ -16,6 +16,7 @@ import { WalletMenu } from "./wallet-menu";
 import { cn } from "@/lib/utils";
 import { createMessages } from "@/lib/i18n/messages";
 import { productGuideCopy } from "@/locales/en/product-guide";
+import { setupCopy } from "@/locales/en/get-started";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { LanguageSwitcher } from "./language-switcher";
 
@@ -24,6 +25,7 @@ function navigation(message: ReturnType<typeof createMessages>) { return [
   { href: "/sources", label: message("shellNavigation.sources") },
   { href: "/pricing", label: productGuideCopy("product.navigationPricing") },
   { href: "/about", label: productGuideCopy("product.navigationAbout") },
+  { href: "/get-started", label: setupCopy.navigation.start },
   { href: "/dashboard", label: message("shellNavigation.activity") },
   { href: "/operator", label: message("shellNavigation.operator") },
   { href: "/answers", label: message("shellNavigation.answers") },
@@ -37,6 +39,8 @@ function navigation(message: ReturnType<typeof createMessages>) { return [
   { href: "/playground", label: message("shellNavigation.playground") },
   { href: "/research", label: message("shellNavigation.research") },
   { href: "/dev", label: message("shellNavigation.developer") },
+  { href: "/download", label: setupCopy.navigation.download },
+  { href: "/integrations", label: setupCopy.navigation.integrations },
 ]; }
 
 export function SiteHeader() {
@@ -97,7 +101,7 @@ export function SiteHeader() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1 lg:flex">
-            {NAV.slice(0, 5).map((link) => {
+            {NAV.slice(0, 6).map((link) => {
               const active =
                 link.href === "/"
                   ? pathname === "/"
@@ -172,7 +176,7 @@ export function SiteHeader() {
               <div id="mobile-site-menu" hidden={!menuOpen} className="absolute left-0 right-0 top-[66px] z-50 max-h-[calc(100dvh-66px)] overflow-y-auto overscroll-contain border-b border-ink bg-paper shadow-lg">
                 <nav className="mx-auto flex max-w-[1180px] flex-col px-4 py-3" aria-label={message("shellHeader.mobileNavigation")}>
                   <span className="px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-seal">{message("shellHeader.explore")}</span>
-                  {NAV.slice(0, 5).map((link) => {
+                  {NAV.slice(0, 6).map((link) => {
                     const active =
                       link.href === "/"
                         ? pathname === "/"
@@ -196,7 +200,7 @@ export function SiteHeader() {
                   <Link href="/register" onNavigate={closeMenu} className={cn("flex min-h-11 items-center border-l-2 px-4 py-2 font-mono text-[12px] uppercase tracking-[0.08em]", pathname.startsWith("/register") ? "border-seal text-ink" : "border-transparent text-seal")}>{message("shellNavigation.creators")}</Link>
                   <details className="mt-2 border-t border-line pt-2">
                     <summary className="flex min-h-11 cursor-pointer items-center px-4 font-mono text-[11px] uppercase tracking-wider text-ink">{message("shellHeader.moreTools")}</summary>
-                    {NAV.slice(5).filter((link) => link.href !== "/register").map((link) => <Link key={link.href} href={link.href} onNavigate={closeMenu} className="flex min-h-11 items-center px-4 font-mono text-[11px] uppercase text-ink-2">{link.label}</Link>)}
+                    {NAV.slice(6).filter((link) => link.href !== "/register").map((link) => <Link key={link.href} href={link.href} onNavigate={closeMenu} className="flex min-h-11 items-center px-4 font-mono text-[11px] uppercase text-ink-2">{link.label}</Link>)}
                   </details>
                   <div className="mt-3 border-t border-line px-4 pt-3">
                     <WalletMenu />
