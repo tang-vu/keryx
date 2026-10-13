@@ -8,6 +8,13 @@ import { configuredRegistryAddress } from "./arc-network-profile";
 import { browserPaymentProfile } from "./browser-payment-profile";
 import { assertPaymentRuntimeConfiguration, paymentAuthorizationLifetime } from "./payment-runtime-config";
 
+/** Ordinary fresh dispatch only. Accepted private/bounded originals retain their
+ * separately bound wire identities; this is not a migration of paid requests. */
+function ordinaryDeepSeekModel(model: string | undefined): string {
+  const retired = new Set(["deepseek-chat", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp", "mimo-v2.5", "mimo-v2.5-pro"]);
+  return !model || retired.has(model.trim()) ? "deepseek-flash" : model;
+}
+
 /** Reject network contract overrides until a separately reviewed network profile exists. */
 export function assertArcConfiguration(env: {
   KERYX_NETWORK?: string;
@@ -169,18 +176,12 @@ export const config = {
   embeddingModel: process.env.KERYX_EMBEDDING_MODEL ?? "text-embedding-3-small",
 
   // ── LLM ──
-  // Provider priority: Anthropic > DeepSeek > MiMo > enabled Cloudflare > offline heuristic.
-  // provider becomes a fallback tier before the deterministic heuristic.
+  // DeepSeek is the primary provider. Other explicitly configured tiers remain fallbacks.
   anthropicKey: process.env.ANTHROPIC_API_KEY ?? "",
   deepseekKey: process.env.DEEPSEEK_API_KEY ?? process.env.OPENAI_API_KEY ?? "",
   llmBaseUrl: process.env.KERYX_LLM_BASE_URL ?? "https://api.deepseek.com",
-  llmModel: process.env.KERYX_LLM_MODEL ?? "deepseek-v4-flash",
-  synthesisModel: process.env.KERYX_SYNTHESIS_MODEL ?? "deepseek-v4-flash",
-  // Xiaomi MiMo — a second picker and failover tier on its own credential, OpenAI-compatible.
-  // When it is the only credentialed provider it becomes the default real engine.
-  // The base URL carries /v1 (DeepSeek's does not); the engine appends /chat/completions to it.
-  mimoKey: process.env.MIMO_API_KEY ?? "",
-  mimoBaseUrl: process.env.KERYX_MIMO_BASE_URL ?? "https://api.xiaomimimo.com/v1",
+  llmModel: ordinaryDeepSeekModel(process.env.KERYX_LLM_MODEL),
+  synthesisModel: ordinaryDeepSeekModel(process.env.KERYX_SYNTHESIS_MODEL),
   // Cloudflare is an explicitly enabled experimental third provider; credentials alone do not
   // authorize sending public research to another processor. Private reasoning has its own policy.
   cloudflareEnabled: process.env.KERYX_CLOUDFLARE_ENABLED === "true",
@@ -294,22 +295,22 @@ export const config = {
   deployerKey: (process.env.DEPLOYER_PRIVATE_KEY ?? "") as `0x${string}` | "",
 } as const;
 
-export type LlmProvider = "anthropic" | "deepseek" | "mimo" | "cloudflare" | "heuristic";
+export type LlmProvider = "anthropic" | "deepseek" | "cloudflare" | "heuristic";
 
 type RealLlmProvider = Exclude<LlmProvider, "heuristic">;
 
 /**
- * Ordered real-provider tiers. Production keeps the historical order unless an operator gives a
+ * Ordered real-provider tiers. DeepSeek leads unless an operator gives a
  * deployment-local override; unknown and duplicate names are ignored so a typo cannot select an
  * unconfigured transport or remove the deterministic final fallback.
  */
 export function llmProviderOrder(): RealLlmProvider[] {
-  const fallback: RealLlmProvider[] = ["anthropic", "deepseek", "mimo", "cloudflare"];
+  const fallback: RealLlmProvider[] = ["deepseek", "anthropic", "cloudflare"];
   const requested = (process.env.KERYX_LLM_PROVIDER_ORDER ?? "")
     .split(",")
     .map((provider) => provider.trim().toLowerCase())
     .filter((provider): provider is RealLlmProvider =>
-      provider === "anthropic" || provider === "deepseek" || provider === "mimo" || provider === "cloudflare",
+      provider === "anthropic" || provider === "deepseek" || provider === "cloudflare",
     );
   return requested.length > 0 ? [...new Set(requested)] : fallback;
 }
@@ -319,7 +320,6 @@ export function llmProvider(): LlmProvider {
   for (const provider of llmProviderOrder()) {
     if (provider === "anthropic" && config.anthropicKey.length > 0) return provider;
     if (provider === "deepseek" && config.deepseekKey.length > 0) return provider;
-    if (provider === "mimo" && config.mimoKey.length > 0) return provider;
     if (provider === "cloudflare" && config.cloudflareEnabled && /^[a-f0-9]{32}$/.test(config.cloudflareAccountId) && config.cloudflareKey.length > 0) return provider;
   }
   return "heuristic";

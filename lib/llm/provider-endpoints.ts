@@ -24,7 +24,6 @@ export interface ProviderEndpoint {
 export function endpointFor(provider: ModelProvider): ProviderEndpoint | null {
   const endpoints: Record<ModelProvider, ProviderEndpoint> = {
     deepseek: { baseUrl: config.llmBaseUrl, apiKey: config.deepseekKey },
-    mimo: { baseUrl: config.mimoBaseUrl, apiKey: config.mimoKey },
     cloudflare: {
       baseUrl: `https://api.cloudflare.com/client/v4/accounts/${config.cloudflareAccountId}/ai/v1`,
       apiKey: config.cloudflareEnabled && /^[a-f0-9]{32}$/.test(config.cloudflareAccountId) ? config.cloudflareKey : "",

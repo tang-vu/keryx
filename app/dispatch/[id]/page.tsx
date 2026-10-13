@@ -1,7 +1,7 @@
 import { formatRecordedAmount } from "@/lib/i18n/format";
 import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
-import { dispatchMetadataCopy } from "@/lib/i18n/report-metadata";
+import { closedDispatchMetadata, dispatchMetadataCopy, publicDispatchMetadata } from "@/lib/i18n/report-metadata";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
@@ -29,6 +29,7 @@ import { DeliverableAcceptance } from "@/components/keryx/deliverable-acceptance
 import { pagePrivacyActor } from "@/lib/run-privacy/auth";
 import { runPrivacyCopy } from "@/locales/en/run-privacy";
 import { ProductEntryNote } from "@/components/keryx/product-guide";
+import { recordedAnswerLanguage } from "@/lib/research/answer-language-provenance";
 
 const copy = createMessages("en");
 
@@ -57,7 +58,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   try {
     const dispatch = await resolveDispatch(id);
-    if (!dispatch || dispatch.visibility!=="public") return { title:copy("reportDispatch.fallbackTitle"),robots:{index:false,follow:false},referrer:"no-referrer" };
+    if (!dispatch || dispatch.visibility!=="public") return closedDispatchMetadata();
     const { run, archive } = dispatch;
     const snippet = run.answer.slice(0, 160).replace(/\n/g, " ");
     const cited = run.citations.length;
@@ -67,17 +68,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       confidence: conf ? String(conf.level) : undefined, count: cited, spent: formatRecordedAmount(run.totalSpent, { minimumFractionDigits: 4 }),
       creators: formatRecordedAmount(run.totalToCreators, { minimumFractionDigits: 4 }), excerpt: snippet,
     });
-    return {
-      title: copy("reportDispatch.title", { question: run.question }),
-      description: descriptions.description,
-      alternates: { canonical: `/dispatch/${id}` },
-      openGraph: {
-        title: copy("reportDispatch.title", { question: run.question }),
-        description: descriptions.openGraph,
-      },
-    };
+    const metadata = publicDispatchMetadata({ id, title: copy("reportDispatch.title", { question: run.question }),
+      description: descriptions.description, openGraphDescription: descriptions.openGraph });
+    return { ...metadata, other: { ...metadata.other, "DC.language": recordedAnswerLanguage(run) ?? "und" } };
   } catch {
-    return { title: copy("reportDispatch.fallbackTitle"), robots: { index: false } };
+    return closedDispatchMetadata();
   }
 }
 
@@ -132,6 +127,7 @@ export default async function DispatchPage({ params }: PageProps) {
   // QAPage structured data — lets search + AI crawlers read this permalink as a
   // question with an accepted answer, and surface the sources it credited.
   const answerText = cleanText(run.answer);
+  const answerLanguage = recordedAnswerLanguage(run);
   const jsonLd = [
     {
       "@context": "https://schema.org",
@@ -146,6 +142,7 @@ export default async function DispatchPage({ params }: PageProps) {
           ? {
               acceptedAnswer: {
                 "@type": "Answer",
+                ...(answerLanguage ? { inLanguage: answerLanguage } : {}),
                 text: answerText,
                 url: `${BASE}/dispatch/${id}`,
                 dateCreated: run.createdAt,
@@ -216,7 +213,7 @@ export default async function DispatchPage({ params }: PageProps) {
           </Link>
         ) : null}
 
-        <DispatchView run={publicQueryRun(run)} payments={payments} historical={Boolean(archive)} historicalNetwork={archive?.network} />
+        <DispatchView run={publicQueryRun(run)} answerLanguage={answerLanguage} payments={payments} historical={Boolean(archive)} historicalNetwork={archive?.network} />
 
         <PortableReceiptPanel dispatchId={id} />
         <Link href={`/me/run-privacy?run=${encodeURIComponent(id)}`} className="text-sm underline">{runPrivacyCopy.manage}</Link>

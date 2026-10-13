@@ -42,15 +42,26 @@ export interface AskMessage {
   chatType?: string;
 }
 
+/** Exact reserved account verbs only; arguments never turn controls into research.
+ * This recognizes intent, not account ownership. /ask questions remain research. */
+export function isTelegramAccountControl(update: TelegramUpdate): boolean {
+  const text = update?.message?.text;
+  return typeof text === "string" && /^\/?(?:link|unlink|whoami)(?:@\w+)?(?:\s|$)/u.test(text.trim());
+}
+
+export const telegramAccountLinkingUnavailable =
+  "Telegram account linking is unavailable. This command did not read or change an account binding.";
+
 /**
  * Extract a question from an update, or null when there isn't one. `/ask <q>` (with optional
- * @BotName suffix, as groups append it) works everywhere; in a private chat any plain text is
- * treated as the question, so DMing the bot just works. Other slash commands return null and are
+ * @BotName suffix, as groups append it) works everywhere; in a private chat plain text other than
+ * reserved account controls is treated as the question. Other slash commands return null and are
  * handled (or ignored) by the route.
  */
 export function parseAskMessage(update: TelegramUpdate): AskMessage | null {
-  const msg = update.message;
-  const text = msg?.text?.trim() ?? "";
+  if (isTelegramAccountControl(update)) return null;
+  const msg = update?.message;
+  const text = typeof msg?.text === "string" ? msg.text.trim() : "";
   const chatId = msg?.chat?.id;
   const userId = msg?.from?.id;
   if (!text || typeof chatId !== "number" || typeof userId !== "number") return null;
