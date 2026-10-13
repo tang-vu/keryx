@@ -9,7 +9,7 @@ const DIGEST = /^[a-f0-9]{64}$/;
 /** A signed EXPORT snapshot. The timestamp and recorded facts remain signer assertions. */
 export interface DecisionAuditEnvelope {
   schema: 1; purpose: typeof DECISION_AUDIT_PURPOSE; algorithm: "Ed25519";
-  keyId: string; packetSchema: 1 | 2 | 3; packetDigest: string;
+  keyId: string; packetSchema: ActualReadPacket["schema"]; packetDigest: string;
   reportDigest: string | null; exportedAt: string;
 }
 export interface DecisionAuditTrustAnchor { keyId: string; publicKeySpki: string }
@@ -51,7 +51,7 @@ function keyId(value: unknown): asserts value is string {
 function envelope(value: unknown): DecisionAuditEnvelope {
   const row = checkpointData(value, ["schema", "purpose", "algorithm", "keyId", "packetSchema", "packetDigest", "reportDigest", "exportedAt"]);
   if (row.schema !== 1 || row.purpose !== DECISION_AUDIT_PURPOSE || row.algorithm !== "Ed25519" ||
-      ![1, 2, 3].includes(row.packetSchema as number)) throw Error("Unsupported audit envelope");
+      ![1, 2, 3, 4].includes(row.packetSchema as number)) throw Error("Unsupported audit envelope");
   keyId(row.keyId); digest(row.packetDigest); if (row.reportDigest !== null) digest(row.reportDigest);
   if (typeof row.exportedAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(row.exportedAt) ||
       new Date(row.exportedAt).toISOString() !== row.exportedAt) throw Error("Invalid audit timestamp");
@@ -74,7 +74,7 @@ function verifyOptions(value: unknown): SignedDecisionVerifyOptions {
 
 export function canonicalDecisionAuditEnvelope(value: unknown): string { return JSON.stringify(envelope(value)); }
 
-/** Closed grammar, fixed ordering and original v1/v2/v3 packet canonicalization. */
+/** Closed grammar, fixed ordering and original versioned packet canonicalization. */
 export function canonicalSignedDecisionBundle(value: unknown): string {
   const row = checkpointData(value, ["schema", "envelope", "packet", "publicKeySpki", "signature"]);
   if (row.schema !== 1) throw Error("Unsupported audit bundle");
