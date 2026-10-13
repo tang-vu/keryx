@@ -1,4 +1,5 @@
 import type { PublicReference } from "../public-references/catalog";
+import type { PublicReferenceArchiveDb } from "../public-references/archive";
 import type { PrivateProfilesStore } from "../profiles/private-profile";
 import type { PrivateBibliographiesStore } from "../bibliographies/private-bibliography";
 import type { ZoteroStore } from "../references/zotero-contract";
@@ -208,7 +209,7 @@ export interface FeedbackStats {
   rate: number; // up / total, 0 when no feedback
 }
 
-export interface KeryxDB {
+export interface KeryxDB extends PublicReferenceArchiveDb {
   /** Explicitly admitted ordinary run text privacy. Public callers must never fall back to raw originals. */
   readonly runPrivacy?: import("../run-privacy/contracts").RunPrivacyStore;
   /** Captured staged activation; false preserves existing admitted readers, true requires the privacy port. */
@@ -259,7 +260,7 @@ export interface KeryxDB {
   verifySourceIfUnchanged(input: { sourceId: string; walletAddress: string; feedUrl: string }): Promise<boolean>;
   listPublicReferences?(): Promise<PublicReference[]>;
   getPublicReference?(id: string): Promise<PublicReference | null>;
-  upsertPublicReference?(reference: PublicReference): Promise<void>;
+  upsertPublicReference?(reference: PublicReference): Promise<void | { added: number; updated: number }>;
   listSources(): Promise<Source[]>;
   /** Every source row, including ones deactivated on-chain. Discovery must NEVER use this —
    *  it exists for owner-facing history (an audit export of what a wallet earned must still

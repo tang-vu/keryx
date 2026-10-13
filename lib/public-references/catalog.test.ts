@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { publicReferenceSchema, referenceSnapshot, type PublicReference } from "./catalog";
+import { publicReferenceSchema, referenceSnapshot, fetchPublicReferenceFeed, type PublicReference } from "./catalog";
 import { importPublicReferenceCatalog } from "./import-catalog";
 import { discoverPublicReferences } from "../agent/public-reference-evidence";
 import { evidenceContext } from "../llm/evidence-context";
@@ -14,13 +14,25 @@ const item = { title: "Agents need evidence", summary: "Agents need evidence", c
 const feed = { feedTitle: "Public", feedDescription: "Public", link: "https://public.test/", items: [item] };
 
 describe("separate public catalog authority", () => {
+  it("keeps the exact observed newest feed URL while canonicalizing its deduplication ID", () => {
+    const link = "https://public.test/post?utm_source=feed#section";
+    const original = referenceSnapshot(reference, { ...feed, items: [{ ...item, link }] });
+    const canonical = referenceSnapshot(reference, feed);
+    expect(original.items[0].link).toBe(link);
+    expect(original.items[0].id).toBe(canonical.items[0].id);
+  });
+  it("rejects an overflowing RSS transport batch rather than silently discarding history", async () => {
+    const xml = `<rss version="2.0"><channel><title>Publisher</title><link>https://public.test/</link><description>Feed</description>${Array.from({ length: 1001 }, (_, index) =>
+      `<item><title>Article ${index}</title><link>https://public.test/${index}</link><description>Content ${index}</description></item>`).join("")}</channel></rss>`;
+    await expect(fetchPublicReferenceFeed(reference.rssUrl, async () => xml)).rejects.toThrow("resumable historical backfill");
+  });
   it("rejects every payment/ownership field, unsafe rendered links and overlarge snapshots", () => {
     for (const field of ["walletAddress", "authors", "fetchPrice", "verified", "onchainId", "registerTx"])
       expect(publicReferenceSchema.safeParse({ ...reference, [field]: "forged" }).success).toBe(false);
     const snapshot = referenceSnapshot(reference, { ...feed, items: [item, item, { ...item, link: "javascript:alert(1)" },
       { ...item, link: "https://user:password@public.test/post" }] });
     expect(snapshot.items).toHaveLength(1);
-    expect(referenceSnapshot(reference, { ...feed, items: Array.from({ length: 30 }, (_, index) => ({ ...item, link: `https://public.test/${index}` })) }).items).toHaveLength(10);
+    expect(referenceSnapshot(reference, { ...feed, items: Array.from({ length: 30 }, (_, index) => ({ ...item, link: `https://public.test/${index}` })) }).items).toHaveLength(30);
   });
 
   it("stores public snapshots apart from payable sources and refuses paid-ID collisions", async () => {

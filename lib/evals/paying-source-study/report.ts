@@ -31,7 +31,10 @@ function summarize(trials: StudyTrial[]) {
     toll: String(trials.reduce((total, trial) => total + BigInt(trial.metrics.fetchMicro), BigInt(0))),
     reward: String(trials.reduce((total, trial) => total + BigInt(trial.metrics.citationMicro), BigInt(0))), policyChanges };
 }
-export function renderStudy(result: StudyArtifact, corpus: StudyCorpus): string {
+export function renderStudy(result: StudyArtifact, corpus: StudyCorpus, revision: "v1" | "archive-v2" = "v1"): string {
+  const current = revision === "archive-v2";
+  const date = current ? "2026-10-13" : "2026-10-09";
+  const resultsFile = current ? "paying-source-results-v2.json" : "paying-source-results-v1.json";
   const row = (label: string, trials: StudyTrial[]) => {
     const s = summarize(trials);
     return `| ${label} | ${trials.length} | ${s.reads} / ${s.paid} | ${s.claims} | ${s.facts} | ${s.citations} | ${s.toll} / ${s.reward} | ${s.policyChanges} |`;
@@ -40,7 +43,10 @@ export function renderStudy(result: StudyArtifact, corpus: StudyCorpus): string 
   const concentration = result.trials.filter(trial => trial.metrics.rewardHhi !== null);
   const mean = (field: "rewardHhi" | "topRewardShare") => concentration.length === 0 ? "not measured (no reward-bearing trials)"
     : (concentration.reduce((total, trial) => { const ratio = trial.metrics[field]!; return total + Number(ratio.numerator) / Number(ratio.denominator); }, 0) / concentration.length).toFixed(4);
-  return `# Paying for sources: a controlled offline fixture study (2026-10-09)
+  return `# Paying for sources: a controlled offline fixture study (${date})${current ? `
+
+This is baseline revision 2 of the unchanged 48-cell protocol, reproduced against the source-library archive candidate. The [October 9 study](paying-for-sources-2026-10-09.md) and its v1 outputs remain historical records. The isolated per-trial in-memory store now explicitly permits the archive query read; corpus, prices, budgets, scoring, outbound denial and simulation-only payment checks are unchanged. This revision is the current CLI/CI baseline; the JSON artifact schema remains version 1.
+` : ""}
 
 This is a reproducible **48-trial synthetic study**, using Keryx's actual \`runAgent\`, \`HeuristicEngine\` and \`OfflineGateway\`. All questions, documents, wallets and outputs are fictional and publicly published here. No private question or real user behavior is sampled. No payment settles: every recorded payment is \`simulated\`, \`settled: false\`, with \`txHash: null\` on the isolated Arc testnet profile. These amounts are not traction or creator earnings.
 
@@ -65,7 +71,7 @@ Citation reward concentration uses **citation legs only**, grouped by creator so
 ## Fixed protocol and ground truth
 
 - Four fixed publicly published fictional questions, each with two authored required facts and four retained source bodies (one free, three priced). Bodies, titles, summaries, URLs and order are constant across the matrix. The paid catalogue price is 1000, 4000 or 12000 micro-USDC per item; budgets are 0, 6000, 18000 or 60000 micro-USDC. No result is hand-authored.
-- Actual deep-mode orchestration, fixed heuristic engine, attention limit 4, at most one reevaluation round, citation pool ratio 0.5, model allowance 0, search allowance 0. Observe engine methods by delegating to their original implementation unchanged. Public discovery is disabled by an explicit job-scoped effect strategy.
+- Actual deep-mode orchestration, fixed heuristic engine, attention limit 4, at most one reevaluation round, citation pool ratio 0.5, model allowance 0, search allowance 0. Observe engine methods by delegating to their original implementation unchanged. ${current ? "External discovery is disabled by an explicit job-scoped effect strategy; local archive retrieval can read only the empty per-trial in-memory article index." : "Public discovery is disabled by an explicit job-scoped effect strategy."}
 - A new real SQLite \`:memory:\` store and empty cache are created for **each** trial. Only declared local read methods are exposed to the pipeline. The complete effects strategy owns local cache and simulated ledger; notifications, activation and memory sinks are isolated no-ops. Query history is never persisted. No \`getDb\`, live gateway or dependency factory is called.
 - A fresh worker process uses a closed environment, forces offline/testnet, blanks Supabase and model credentials before dynamic runtime imports, and denies outbound HTTP, fetch, sockets, DNS, TLS, UDP and WebSockets. Any attempted outbound call fails the whole study, even if application code catches its error. Observed outbound attempts: ${result.outboundAttempts}.
 - Retained UTF-8 body SHA-256 and Keryx's exact article content-version tuple are checked before every run. A literal evidence row must match actual read marker, creator, item, URL, content version and body hash, quote bytes present in both retained and read bodies, an actual answer quote/marker and matching citation. Paid rows additionally require the exact simulated fetch receipt for this run/item/version.
@@ -90,14 +96,14 @@ npm run eval:paying-source-study -- --write
 The bounded CLI runs all 48 actual trials in a fresh process (128 KiB corpus ceiling, 120-second deadline, 4 MiB output ceiling). \`--check\` compares canonical output **and this generated write-up** exactly after Git CRLF-to-LF text normalization; it does not ignore other byte/value differences. \`--write\` replaces only these two public study artifacts after all checks pass. It accepts no model, provider, corpus, wallet, private-input or arbitrary-output option. Both commands deny outbound study I/O; neither spends funds or touches a shared database.
 
 - [Retained corpus and authored facts](../../fixtures/evals/studies/paying-source-corpus-v1.json)
-- [Actual canonical synthetic outputs, proposals, reads, simulated ledger and metrics](../../fixtures/evals/studies/paying-source-results-v1.json)
+- [Actual canonical synthetic outputs, proposals, reads, simulated ledger and metrics](../../fixtures/evals/studies/${resultsFile})
 - [Launcher](../../scripts/eval-paying-source-study.mts), [actual pipeline runner](../../lib/evals/paying-source-study/runner.ts), [literal rubric](../../lib/evals/paying-source-study/rubric.ts), [report generator](../../lib/evals/paying-source-study/report.ts)
 
 Corpus canonical SHA-256: \`${result.corpusSha256}\`. Lock SHA-256: \`${result.lockSha256}\`. The JSON pins ${Object.keys(result.runtimeSources).length} application source files reachable by static literal relative/\`@/\` imports, exports and imports/requires from the launcher, including potential unexecuted branches. The TypeScript syntax walker does not prove a complete executed dependency graph; ${result.unresolvedSourceInputs.length} unresolved/nonliteral forms are listed in the JSON, and arbitrary filesystem reads/generated code are outside this source boundary. Source and lock hashes normalize CRLF to LF to match Git's text across Windows/Linux; no other source transformation occurs. Node built-ins use the declared supported runtime; package dependency bytes are bounded by the lockfile, not independently audited here. Relevant source/dependency changes require actual reproduction and review of the newly generated artifact, rather than waiving a drift. Canonicalization omits only ${result.canonicalOmissions.map(field => `\`${field}\``).join(", ")}; answer, decision, quote, policy trace and payment values are actual outputs. Numeric rates in tables are rounded only for display; exact counts/ratios and integer amounts are retained.
 
 ## Surface and acceptance boundaries
 
-This is a shared offline evaluation and public report. README and Proof link to it; the CLI reproduces it. Web/desktop research, API, remote and stdio MCP, extensions and bots gain **no new research or payment authority**, tool, quota, enrollment or custody behavior. Existing runtime and rewards policy remain authoritative. No study claim asserts a deployed or published version.
+This is a shared offline evaluation and public report. ${current ? "README and Proof retain the original study link; the CLI reproduces this current baseline revision." : "README and Proof link to it; the CLI reproduces it."} Web/desktop research, API, remote and stdio MCP, extensions and bots gain **no new research or payment authority**, tool, quota, enrollment or custody behavior. Existing runtime and rewards policy remain authoritative. No study claim asserts a deployed or published version.
 
 This source candidate does not close issue #302 by itself. Exact-source local reproduction, focused regressions, both TypeScript graphs, lint, default production build, required hosted CI, independent review and the applicable synchronized release gates must be recorded separately. Full issue closure and broader value-of-paying/semantic claims remain open until their required evidence exists.
 `;
