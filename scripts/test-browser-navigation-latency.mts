@@ -94,7 +94,17 @@ try {
         console.log(JSON.stringify({ phase: "prefetch-response-start", engine: engine.name(), width, destination }));
         const prefetched = await prefetch;
         console.log(JSON.stringify({ phase: "prefetch-body-start", engine: engine.name(), width, destination, status: prefetched.status() }));
-        await prefetched.finished();
+        if (engine === webkit) {
+          assert.equal(await prefetched.finished(), null, "WebKit prefetch completes without a transport error");
+        } else {
+          const prefetchedBytes = Number(prefetched.headers()["content-length"]);
+          assert(Number.isSafeInteger(prefetchedBytes) && prefetchedBytes > 0, "Prefetched decoded body has a positive byte length");
+          // Observe complete decoded delivery in the browser, rather than a protocol response handle.
+          await page.waitForFunction(({ url, bytes }) => performance.getEntriesByName(url, "resource").some(entry => {
+            const resource = entry as PerformanceResourceTiming;
+            return resource.initiatorType === "fetch" && resource.responseEnd > 0 && resource.decodedBodySize === bytes;
+          }), { url: prefetched.url(), bytes: prefetchedBytes });
+        }
         console.log(JSON.stringify({ phase: "prefetch-body-complete", engine: engine.name(), width, destination }));
         assert.equal(prefetched.status(), 200, `${destination} loading boundary is prefetched`);
         // Measure from the actual input event to the fallback's next animation frame.
