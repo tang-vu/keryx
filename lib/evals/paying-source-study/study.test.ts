@@ -137,6 +137,10 @@ describe("fresh-process outbound boundary and input scope", () => {
     expect(scope.files["lib/agent/run-agent.ts"]).toHaveLength(64);
     expect(scope.files["lib/payments/offline-gateway.ts"]).toHaveLength(64);
     expect(scope.files["lib/llm/heuristic-engine.ts"]).toHaveLength(64);
+    expect(scope.files["lib/web-research/extraction-worker.ts"]).toHaveLength(64);
+    expect(scope.files["lib/web-research/html-reader.ts"]).toHaveLength(64);
+    expect(scope.files["lib/web-research/pdf-reader.ts"]).toHaveLength(64);
+    expect(scope.files["lib/research/arxiv-bibliography-page.ts"]).toHaveLength(64);
     expect(scope.files["app/proof/page.tsx"]).toBeUndefined();
     expect(scope.files["lib/evals/paying-source-study/study.test.ts"]).toBeUndefined();
   });

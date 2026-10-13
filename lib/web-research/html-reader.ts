@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import path from "node:path";
+import { extractionWorker } from "./extraction-worker";
 import type { ArticleRead } from "./article-reader";
 import { acquireParserSlot } from "./parser-slots";
 import { parse } from "parse5";
@@ -12,7 +12,7 @@ export async function extractHtml(text: string, finalUrl: string, signal?: Abort
   if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
   const release = acquireParserSlot();
   try { return await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ["--max-old-space-size=64", path.join(process.cwd(), "lib/web-research/html-reader-worker.mjs")],
+    const child = spawn(process.execPath, ["--max-old-space-size=64", extractionWorker("html")],
       { windowsHide: true, env: { NODE_ENV: "production" }, stdio: ["pipe", "pipe", "ignore"] });
     let output = "", size = 0, failed = false;
     const stop = () => { failed = true; child.kill("SIGKILL"); };
