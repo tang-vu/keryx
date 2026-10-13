@@ -32,7 +32,7 @@ describe("archive-integrated controlled study baseline", () => {
     expect(renderStudy(current, corpus, "archive-v2")).toContain("paying-source-results-v2.json");
   });
 
-  it("preserves all 48 economic outcomes while permitting only isolated archive reads", () => {
+  it("preserves all 48 economic outcomes with exact UNKNOWN provenance", () => {
     expect(current.trials).toHaveLength(48);
     expect(new Set(current.trials.map(trial => trial.id)).size).toBe(48);
     expect(current.design).toEqual(prior.design);
@@ -40,8 +40,16 @@ describe("archive-integrated controlled study baseline", () => {
     const original = new Map(prior.trials.map(trial => [trial.id, trial]));
     for (const trial of current.trials) {
       const old = original.get(trial.id)!;
-      for (const field of ["proposals", "reevaluations", "reads", "payments", "output", "metrics"] as const)
+      for (const field of ["proposals", "reevaluations", "reads", "payments", "metrics"] as const)
         expect(trial[field], `${trial.id} ${field}`).toEqual(old[field]);
+      expect(old.output, `${trial.id} v1 output`).not.toHaveProperty("provenance");
+      const { provenance, ...outputWithoutProvenance } = trial.output;
+      expect(provenance, `${trial.id} provenance`).toStrictEqual({
+        version: 1,
+        surface: "unknown",
+        ownershipMethod: "unknown",
+      });
+      expect(outputWithoutProvenance, `${trial.id} output without provenance`).toEqual(old.output);
       expect(Object.keys(trial.effects).some(key => key.startsWith("db.denied."))).toBe(false);
       expect(trial.effects["db.queryPublicReferenceItems"]).toBeGreaterThan(0);
       expect(trial.output.settledPayments).toBe(0);
