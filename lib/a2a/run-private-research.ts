@@ -60,6 +60,7 @@ export async function runPrivateResearch(db: KeryxDB, id: string, payer: string,
   const { effects, diagnostics } = await privateResearchEffects(db, { id, payer, workerId: claim.workerId }, resultSpool);
   const run = await collectRun({ queryId: id, question: request.question, budget: request.budget, researchMode: request.researchMode,
     model: request.model ?? undefined, executionLimits: { ...contract.execution }, asker: intent.submission.payment.authorization.from,
+    provenance: { version: 1, surface: "agent-to-agent", ownershipMethod: "verified-payer" },
     origin: "a2a", fundingOwner: "treasury" }, { deps: { db, engine, gateway, effects } });
   return { status: "completed" as const, run, diagnostics };
 }
