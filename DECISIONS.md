@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**Coordinate concurrent Codex sessions through explicit ownership — 2026-10-12.**
+The owner uses several Codex sessions simultaneously and requested durable rules
+to prevent mixed work and duplicate deployments while improving throughput.
+Give each outcome one owner/branch/PR and an isolated worktree. Share local
+task/path/resource records through Git's common directory, with atomic exclusive
+allocation and explicit handoff rather than timestamp-based takeover. Serialize
+merges and production mutations under one release coordinator; deliver an agreed
+batch once after combined-source acceptance. Reuse valid evidence and isolate
+heavy checks and mutable outputs instead of repeating work across sessions.
+
+Keep the canonical [workflow](docs/engineering/multi-session-coordination.md)
+tracked because local AGENTS/skill files are ignored. Bootstrap that context in
+new worktrees and require existing sessions to reread it before shared actions.
+This records an active-session protocol, not an automatically enforced runtime
+lock or background scheduler. Payment/custody/DDL/schedule authority and every
+applicable release gate remain unchanged; no measured speedup is claimed.
+
 ## Commission missing evidence through a private portable contract — 2026-10-12
 
 The owner ranked Tameion innovation above repackaging the existing reading agent
