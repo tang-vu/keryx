@@ -2,14 +2,16 @@
  * Answer-archive selection: turns the raw run log into a public, index-worthy
  * corpus. Two jobs the SEO surface depends on:
  *   1. Keep only real answers — a non-empty answer that actually cited a source.
- *   2. Dedupe by question — repeat questions can create near-identical pages that
- *      read as doorway spam to a crawler. We keep
- *      one canonical dispatch per question (the richest one) and drop the rest.
+ *   2. Dedupe by question and recorded answer language — repeat questions can
+ *      create near-identical pages that read as doorway spam to a crawler. We keep
+ *      one canonical dispatch per question/language (the richest one) and drop the rest.
  * Pure functions so the page stays lean and the selection logic stays testable.
  */
 
 import type { Confidence, QueryRun } from "./types";
 import { deriveConfidence } from "./agent/confidence";
+import { recordedAnswerLanguage } from "./research/answer-language-provenance";
+import type { PresentationLanguage } from "../shared/i18n/presentation-language";
 
 export interface ArchiveEntry {
   id: string;
@@ -52,7 +54,7 @@ function betterThanEntry(run: QueryRun, entry: ArchiveEntry): boolean {
   return run.createdAt > entry.createdAt;
 }
 
-function toEntry(r: QueryRun): ArchiveEntry {
+function toEntry(r: QueryRun, answerLanguage: PresentationLanguage | "und"): ArchiveEntry {
   const answer = cleanText(r.answer);
   return {
     id: r.id,
@@ -65,19 +67,22 @@ function toEntry(r: QueryRun): ArchiveEntry {
     sourceNames: [...new Set(r.citations.map((c) => c.sourceName).filter(Boolean))],
     createdAt: r.createdAt,
     confidence: deriveConfidence(r),
+    answerLanguage,
   };
 }
 
 /**
  * Build the public answer archive from raw runs: real cited answers only,
- * one canonical dispatch per question, newest first.
+ * one canonical dispatch per normalized question and recorded answer language, newest first.
  */
 function retainCandidate(best: Map<string, ArchiveEntry>, run: QueryRun) {
   if (!run.answer?.trim() || !run.citations?.length) return;
-  const key = normalizeQuestion(run.question);
-  if (!key) return;
+  const question = normalizeQuestion(run.question);
+  if (!question) return;
+  const answerLanguage = recordedAnswerLanguage(run) ?? "und";
+  const key = JSON.stringify([question, answerLanguage]);
   const previous = best.get(key);
-  if (!previous || betterThanEntry(run, previous)) best.set(key, toEntry(run));
+  if (!previous || betterThanEntry(run, previous)) best.set(key, toEntry(run, answerLanguage));
 }
 
 function finishArchive(best: Map<string, ArchiveEntry>): ArchiveEntry[] {

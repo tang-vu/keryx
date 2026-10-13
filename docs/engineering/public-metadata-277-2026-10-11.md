@@ -1,18 +1,39 @@
-# Shipped public metadata and preview delivery
+# Public metadata and recorded answer-language consumers
 
 This change advances [issue 277](https://github.com/tang-vu/keryx/issues/277).
 English remains the only shipped interface locale. It changes public metadata
 and image assets; it does not activate Vietnamese or Chinese interfaces.
 
-The current report adapter explicitly marks its answer language UNKNOWN (`und`):
-QueryRun has no authoritative recorded output-language field. The shared answer
-renderer resets inherited English on answer text with `lang="und"`; citation UI
-labels remain English. This is a metadata attribute change, not translation,
-language detection, answer rewriting or a new language-activation flag. Public
-report head metadata retains one permalink and emits `DC.language=und` without
-language alternates. Twitter uses the same current report title/preview copy as
-Open Graph rather than inheriting the landing preview. The existing English
-wrapper is independent of any requested answer language.
+The consumer accepts one finite terminal answer-language packet bound to the
+exact final answer bytes. Supported recorded generated-prose tags are en/vi/pt/es;
+missing, conflicting, malformed or changed-byte proof stays `und`. Requested
+language, question text, viewer preferences and provider settings are not proof.
+Original quotation text stays undetermined across Markdown/citation splitting;
+English citation controls keep `en`. If the existing synthetic-evidence projection
+changes the answer, its generated text also becomes undetermined. Public reports
+keep their single permalink. DC.language uses the recorded tag or und; public
+JSON-LD places a known tag only on Answer, never on Question or the interface.
+Twitter and Open Graph use the same current report preview copy.
+
+## Focused completion ? October 13
+
+The final five-file scope executed 118 cases: 117 passed initially, including all
+quoted-original page-chain cases. One fixture compared an apostrophe-containing
+notice with React's escaped raw HTML. The assertion now compares the complete
+existing notice through DOM textContent, preserving language and input-byte
+assertions; that single corrected case passed. The unchanged 117 results are
+reused. Natural process exit and both output-stream EOF were captured. Tests use
+synthetic retained packets and mocked storage/auth boundaries; no producer,
+database, provider, signing, payment, full local suite or build ran.
+
+The final review's 30 source pins and 15 donor/runtime controls were verified.
+The existing compatible read-only dependency donor and earlier semantic closure
+qualification were reused. Earlier CLI spawn/config refusals and zero-case
+captures remain retained; they are not passing evidence for this candidate.
+Applicable final TypeScript/Next production-build and aggregate/domain CI remain
+hosted gates. ROOT serializes the same PR431 merge and the next deployment batch.
+The literal three-file #276 reader/type/review contract is included without
+claiming producer ancestry, live language production, backfill or activation.
 
 Private, unlisted, unknown and unavailable report heads replace root alternates,
 description and social metadata with the same closed nonindexed/no-referrer
@@ -113,6 +134,35 @@ language contracts. A real in-memory SQLite privacy fixture checks rich hidden
 duplicates and an erasure between selection and publication. All use zero model,
 search and payment calls. Their source evidence is not production readback.
 
+## October 13 pinned provenance-consumer successor
+
+The consumer successor imports the accepted issue 276 reader from commit
+`867aeb3dd10b0c79ef244492d8d055cd37308861`, with raw reader SHA256
+`23b97d0b8f9d4eb18e36667a1fab70a67bae596b44771242c19fed5a96317c20`.
+Its required review module and finite shared language type are literal dependency
+copies in this consumer candidate; the producer and original 276 worktree remain
+untouched. Literal dependency bytes provide the consumer contract; this candidate does not claim producer ancestry or activation.
+The old uncheckpointed `f971` pointer above is historical.
+
+Archive selection now retains one richest winner per normalized question and
+validated recorded language, including a separate undetermined bucket. It reads
+the exact final answer bytes before generating snippets, and revalidates the fresh
+publication projection. The public dispatch page supplies `DC.language` from that
+same reader and declares `inLanguage` only on a known structured Answer. Original
+questions and quotations do not acquire output-language authority. Missing,
+conflicting, duplicate, malformed, future or final-byte-mismatched evidence stays
+undetermined; requested language and question text supply no substitute.
+
+This is an uncommitted consumer overlay on the `a20859c7` checkpoint, not merged
+276 ancestry or release acceptance. The page's `DispatchView` still reaches
+`AnswerCard` without passing the recorded value to `AnswerMarkdown`; those caller
+paths are outside this worker's accepted board claim. Root must resolve that DOM
+seam explicitly. Root also retains `app/sitemap.ts` and must reconcile its
+`getArchiveCached()` input: the same question can now retain multiple real
+language winners at their existing `/dispatch/<id>` URLs. No locale URLs are added.
+Current successor checks and raw/Git pins belong in the assigned worker handoff;
+the older 73-test capture does not accept changed source.
+
 ## Privacy, supported surfaces and remaining original criteria
 
 The archive, sitemap and feed share the same public corpus. The existing
@@ -122,20 +172,20 @@ source-only privacy staging does not establish production activation. Separate
 protected private-research storage is unchanged. Existing integrated SQLite
 public-surface tests and the new tombstone fixture verify admitted local behavior.
 
-The full original issue remains open. Recorded answer-language production and
-consumer integration, the answer's correct known DOM language attribute,
-language-aware dedup and actual report language in head/structured data remain
-gates. The archive filter/feed/snippet contracts are implemented independently. Do not
+The full original issue remains open. Live producer integration, applicable
+final-source CI/build acceptance and deployed readbacks remain separate gates. Language-aware dedup and actual
+report language in head/structured data are implemented in the consumer overlay;
+the archive filter/feed/snippet contracts consume its recorded projection. Do not
 guess historical language from the question, viewer preference or script. Public
 Vietnamese/Chinese interface titles, descriptions, captions and structured data
 also need human locale/glossary review and actual published variants. Prepared
 locale URLs must not be advertised before that release. No new paid live trial
 is required for the frozen synthetic glyph tests.
 
-The necessary upstream input is issue 276's reviewed write-time record of actual
+The upstream input is issue 276's accepted write-time record of actual
 generated-prose language and its shared reader, bound to final answer bytes,
-separate from requested language or provider/prompt settings. Until its exact
-checkpoint is integrated, raw historical runs project undetermined language.
+separate from requested language or provider/prompt settings. The consumer uses
+the pinned reader above; raw historical runs without that packet stay undetermined.
 No historical backfill, classifier or new locale URL is supplied. Original
 quotes/questions remain outside that provenance scope. #273's existing financial-copy gate is
 retained; this phase adds no translated financial text or new human/model trial.

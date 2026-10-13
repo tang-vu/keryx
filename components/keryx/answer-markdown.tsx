@@ -12,7 +12,7 @@ import { Fragment, type ReactNode } from "react";
 import type { Citation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { PresentationLanguage } from "@/lib/research/presentation-language";
-import { quotedOriginalParts } from "@/lib/i18n/quoted-originals";
+import { quotedOriginalSpan } from "@/lib/i18n/quoted-originals";
 
 const copy = createMessages("en");
 
@@ -28,28 +28,33 @@ interface AnswerMarkdownProps {
 const CITATION_RE = /\[(S\d+)\]/g;
 const INLINE_RE = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
 
-/** The ordinary renderer encloses verbatim topics/excerpts in curly quotes.
- * Their language is outside generated-prose provenance and stays undetermined.
- * Use the widest quoted span so nested source quotation cannot inherit a false tag. */
-function renderOriginalQuotes(text: string): ReactNode {
-  return quotedOriginalParts(text).map((part, i) => part.original ? <span key={i} lang="und">{part.text}</span> : part.text);
+/** Clip the original span from the unsplit text to each displayed fragment. */
+function renderOriginalQuotes(text: string, original: ReturnType<typeof quotedOriginalSpan>, offset: number): ReactNode {
+  if (!original) return text;
+  const start = Math.max(0, original.start - offset);
+  const end = Math.min(text.length, original.end - offset);
+  if (end <= start) return text;
+  return <>{text.slice(0, start)}<span lang="und">{text.slice(start, end)}</span>{text.slice(end)}</>;
 }
 
-function renderInline(text: string, keyBase: string): ReactNode[] {
+function renderInline(text: string, keyBase: string, original: ReturnType<typeof quotedOriginalSpan>, offset: number): ReactNode[] {
   const parts = text.split(INLINE_RE).filter(Boolean);
+  let cursor = offset;
   return parts.map((part, i) => {
     const key = `${keyBase}-i${i}`;
+    const start = cursor;
+    cursor += part.length;
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
         <strong key={key} className="font-semibold text-ink">
-          {renderOriginalQuotes(part.slice(2, -2))}
+          {renderOriginalQuotes(part.slice(2, -2), original, start + 2)}
         </strong>
       );
     }
     if (part.startsWith("*") && part.endsWith("*")) {
       return (
         <em key={key} className="italic">
-          {renderOriginalQuotes(part.slice(1, -1))}
+          {renderOriginalQuotes(part.slice(1, -1), original, start + 1)}
         </em>
       );
     }
@@ -59,11 +64,11 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
           key={key}
           className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[0.82em] text-ink [overflow-wrap:anywhere]"
         >
-          {renderOriginalQuotes(part.slice(1, -1))}
+          {renderOriginalQuotes(part.slice(1, -1), original, start + 1)}
         </code>
       );
     }
-    return <Fragment key={key}>{renderOriginalQuotes(part)}</Fragment>;
+    return <Fragment key={key}>{renderOriginalQuotes(part, original, start)}</Fragment>;
   });
 }
 
@@ -74,6 +79,8 @@ function renderWithCitations(
   onCitationClick?: (marker: string, trigger: HTMLButtonElement) => void,
 ): ReactNode[] {
   const nodes: ReactNode[] = [];
+  // Detect quotation before citation/emphasis splitting removes its open context.
+  const original = quotedOriginalSpan(text);
   let last = 0;
   let m: RegExpExecArray | null;
   CITATION_RE.lastIndex = 0;
@@ -81,7 +88,7 @@ function renderWithCitations(
 
   while ((m = CITATION_RE.exec(text)) !== null) {
     const before = text.slice(last, m.index);
-    if (before) nodes.push(...renderInline(before, `${keyBase}-t${idx}`));
+    if (before) nodes.push(...renderInline(before, `${keyBase}-t${idx}`, original, last));
     const marker = m[1];
     const cite = citations.find((c) => c.marker === marker);
     nodes.push(
@@ -105,7 +112,7 @@ function renderWithCitations(
     idx++;
   }
   const tail = text.slice(last);
-  if (tail) nodes.push(...renderInline(tail, `${keyBase}-tend`));
+  if (tail) nodes.push(...renderInline(tail, `${keyBase}-tend`, original, last));
   return nodes;
 }
 

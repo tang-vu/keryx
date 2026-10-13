@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 import { NextRequest } from "next/server";
 import { createElement, Fragment } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -148,6 +149,69 @@ describe("original-network dispatch resolution", () => {
     mocks.current.mockResolvedValue(current);
     const html = renderToStaticMarkup(await DispatchPage(params(child.id)));
     expect(html).toContain(child.answer); expect(html).toContain("earlier payment comparison could not be loaded");
+  });
+});
+
+describe("public dispatch recorded-language consumer", () => {
+  function recorded(): QueryRun {
+    const value = { ...run("recorded-public"), question: "Câu hỏi gốc “Original topic”?", answer: "Synthetic generated prose. “Original excerpt” [S1]" };
+    return { ...value, trace: [{ phase: "done", ts: 0, message: "Synthetic terminal provenance", detail: {
+      answerLanguage: { format: "keryx-answer-language-v1", scope: "generated-prose", language: "vi",
+        method: "deterministic-renderer", answerSha256: `0x${createHash("sha256").update(value.answer, "utf8").digest("hex")}` },
+    } }] };
+  }
+
+  async function languageSurfaces(value: QueryRun) {
+    mocks.current.mockResolvedValue(reader([value]));
+    const metadata = await generateMetadata(params(value.id));
+    const html = renderToStaticMarkup(await DispatchPage(params(value.id)));
+    const script = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/);
+    expect(script).not.toBeNull();
+    const jsonLd = JSON.parse(script![1]);
+    return { metadata, question: jsonLd[0].mainEntity, answer: jsonLd[0].mainEntity.acceptedAnswer };
+  }
+
+  it("passes exact final-byte provenance to the actual public head and Answer only", async () => {
+    const value = recorded(), before = JSON.stringify(value);
+    const { metadata, question, answer } = await languageSurfaces(value);
+    expect(metadata.other?.["DC.language"]).toBe("vi");
+    expect(metadata.alternates).toEqual({ canonical: `/dispatch/${value.id}`, languages: {}, types: {} });
+    expect(question.inLanguage).toBeUndefined();
+    expect(question.name).toBe(value.question);
+    expect(answer.inLanguage).toBe("vi");
+    expect(answer.text).toContain("Original excerpt");
+    expect(JSON.stringify(value)).toBe(before);
+  });
+
+  it.each(["missing", "duplicate", "conflicting", "final-byte-mismatch", "future", "extra-field", "malformed"])(
+    "refuses %s evidence in the actual head and structured answer", async kind => {
+      const value = recorded();
+      const detail = value.trace[0].detail as { answerLanguage: Record<string, unknown> | null };
+      const packet = detail.answerLanguage!;
+      if (kind === "missing") value.trace = [];
+      if (kind === "duplicate") value.trace = [...value.trace, ...value.trace];
+      if (kind === "conflicting") value.trace.push({ ...value.trace[0], detail: { answerLanguage: { ...packet, language: "en" } } });
+      if (kind === "final-byte-mismatch") value.answer += " ";
+      if (kind === "future") packet.language = "zh-Hans";
+      if (kind === "extra-field") packet.viewerLanguage = "vi";
+      if (kind === "malformed") detail.answerLanguage = null;
+      const before = JSON.stringify(value);
+      const { metadata, question, answer } = await languageSurfaces(value);
+      expect(metadata.other?.["DC.language"]).toBe("und");
+      expect(question.inLanguage).toBeUndefined();
+      expect(answer.inLanguage).toBeUndefined();
+      expect(JSON.stringify(value)).toBe(before);
+    });
+
+  it.each(["private", "unlisted"] as const)("retains closed metadata for %s records even with valid provenance", async visibility => {
+    const value = recorded(), store = reader([value]);
+    vi.mocked(store.runPrivacy!.read).mockResolvedValue({ exists: true,
+      item: { run: value, state: { visibility, revision: 0, erased: false } } });
+    mocks.current.mockResolvedValue(store);
+    const metadata = await generateMetadata(params(value.id));
+    expect(metadata.other).toEqual({});
+    expect(metadata.robots).toEqual({ index: false, follow: false });
+    expect(JSON.stringify(metadata)).not.toContain(value.answer);
   });
 });
 

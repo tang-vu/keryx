@@ -29,6 +29,7 @@ import { DeliverableAcceptance } from "@/components/keryx/deliverable-acceptance
 import { pagePrivacyActor } from "@/lib/run-privacy/auth";
 import { runPrivacyCopy } from "@/locales/en/run-privacy";
 import { ProductEntryNote } from "@/components/keryx/product-guide";
+import { recordedAnswerLanguage } from "@/lib/research/answer-language-provenance";
 
 const copy = createMessages("en");
 
@@ -67,8 +68,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       confidence: conf ? String(conf.level) : undefined, count: cited, spent: formatRecordedAmount(run.totalSpent, { minimumFractionDigits: 4 }),
       creators: formatRecordedAmount(run.totalToCreators, { minimumFractionDigits: 4 }), excerpt: snippet,
     });
-    return publicDispatchMetadata({ id, title: copy("reportDispatch.title", { question: run.question }),
+    const metadata = publicDispatchMetadata({ id, title: copy("reportDispatch.title", { question: run.question }),
       description: descriptions.description, openGraphDescription: descriptions.openGraph });
+    return { ...metadata, other: { ...metadata.other, "DC.language": recordedAnswerLanguage(run) ?? "und" } };
   } catch {
     return closedDispatchMetadata();
   }
@@ -125,6 +127,7 @@ export default async function DispatchPage({ params }: PageProps) {
   // QAPage structured data — lets search + AI crawlers read this permalink as a
   // question with an accepted answer, and surface the sources it credited.
   const answerText = cleanText(run.answer);
+  const answerLanguage = recordedAnswerLanguage(run);
   const jsonLd = [
     {
       "@context": "https://schema.org",
@@ -139,6 +142,7 @@ export default async function DispatchPage({ params }: PageProps) {
           ? {
               acceptedAnswer: {
                 "@type": "Answer",
+                ...(answerLanguage ? { inLanguage: answerLanguage } : {}),
                 text: answerText,
                 url: `${BASE}/dispatch/${id}`,
                 dateCreated: run.createdAt,
@@ -209,7 +213,7 @@ export default async function DispatchPage({ params }: PageProps) {
           </Link>
         ) : null}
 
-        <DispatchView run={publicQueryRun(run)} payments={payments} historical={Boolean(archive)} historicalNetwork={archive?.network} />
+        <DispatchView run={publicQueryRun(run)} answerLanguage={answerLanguage} payments={payments} historical={Boolean(archive)} historicalNetwork={archive?.network} />
 
         <PortableReceiptPanel dispatchId={id} />
         <Link href={`/me/run-privacy?run=${encodeURIComponent(id)}`} className="text-sm underline">{runPrivacyCopy.manage}</Link>

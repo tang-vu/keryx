@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 import type { QueryRun } from "./types";
 import type { PrivacyList } from "./run-privacy/contracts";
 
@@ -54,6 +55,21 @@ describe("archive publication admission", () => {
     admit(query => query.ids ? [fresh] : query.before ? [] : [old]);
     const { getArchiveCached } = await import("./answers-archive-cache");
     expect((await getArchiveCached())[0].answerSnippet).toBe(fresh.answer);
+  });
+
+  it("revalidates recorded language against the freshly published answer bytes", async () => {
+    const old = run("current-language");
+    old.trace = [{ phase: "done", ts: 0, message: "Synthetic terminal provenance", detail: {
+      answerLanguage: { format: "keryx-answer-language-v1", scope: "generated-prose", language: "vi",
+        method: "deterministic-renderer", answerSha256: `0x${createHash("sha256").update(old.answer, "utf8").digest("hex")}` },
+    } }];
+    const fresh = { ...old, answer: "Changed final publication bytes" };
+    admit(query => query.ids ? [fresh] : query.before ? [] : [old]);
+    const { getArchiveCached } = await import("./answers-archive-cache");
+    const entries = await getArchiveCached();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].answerSnippet).toBe(fresh.answer);
+    expect(entries[0].answerLanguage).toBe("und");
   });
 
   it("does not serve legacy cached text after admitted privacy or a subsequent database outage", async () => {

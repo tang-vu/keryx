@@ -1,12 +1,15 @@
 import { describe, it, expect } from "vitest";
+import { createHash } from "node:crypto";
 import {
   buildArchive,
+  buildArchiveStream,
   normalizeQuestion,
   cleanText,
   relatedAnswers,
   type ArchiveEntry,
 } from "./answers-archive";
 import type { QueryRun } from "./types";
+import type { PresentationLanguage } from "../shared/i18n/presentation-language";
 
 function run(over: Partial<QueryRun>): QueryRun {
   return {
@@ -26,6 +29,15 @@ function run(over: Partial<QueryRun>): QueryRun {
   };
 }
 
+// Synthetic stored envelopes only; these tests never invoke the language producer.
+function recorded(over: Partial<QueryRun>, language: PresentationLanguage): QueryRun {
+  const value = run(over);
+  return { ...value, trace: [{ phase: "done", ts: 0, message: "Synthetic terminal provenance", detail: {
+    answerLanguage: { format: "keryx-answer-language-v1", scope: "generated-prose", language,
+      method: "deterministic-renderer", answerSha256: `0x${createHash("sha256").update(value.answer, "utf8").digest("hex")}` },
+  } }] };
+}
+
 describe("normalizeQuestion", () => {
   it("lowercases, collapses whitespace, strips trailing punctuation", () => {
     expect(normalizeQuestion("  What  is  x402? ")).toBe("what is x402");
@@ -40,6 +52,49 @@ describe("cleanText", () => {
 });
 
 describe("buildArchive", () => {
+  it("keeps a winner per normalized question and recorded generated-prose language in both scans", async () => {
+    const vietnamese = recorded({ id: "vi-thin", question: "  WHAT is x402?! ", answer: "Synthetic generated prose. “Original topic”" }, "vi");
+    const rich = { ...vietnamese, id: "vi-rich", citations: [...vietnamese.citations, { ...vietnamese.citations[0], marker: "S2" }] };
+    const paid = { ...rich, id: "vi-paid", totalToCreators: 0.006 };
+    const newest = { ...paid, id: "vi-newest", createdAt: "2026-07-15T00:00:00.000Z" };
+    const rows = [vietnamese, rich, paid, newest,
+      ...(["en", "pt", "es"] as const).map(language => recorded({ id: language }, language)),
+      run({ id: "historical" }), run({ id: "historical-newest", createdAt: "2026-07-16T00:00:00.000Z" })];
+    const before = JSON.stringify(rows);
+    const entries = buildArchive(rows);
+    expect(entries.slice(0, 2).map(entry => [entry.id, entry.answerLanguage])).toEqual([
+      ["historical-newest", "und"], ["vi-newest", "vi"],
+    ]);
+    expect(entries.slice(2).map(entry => entry.answerLanguage).sort()).toEqual(["en", "es", "pt"]);
+    async function* scan() { yield* rows; }
+    expect(await buildArchiveStream(scan())).toEqual(entries);
+    expect(JSON.stringify(rows)).toBe(before);
+  });
+
+  it("does not infer language from the question or unrecorded intent", () => {
+    const value = recorded({ id: "actual-en", question: "Câu hỏi tiếng Việt?" }, "en");
+    const intent = { ...run({ id: "intent", question: value.question }), trace: [{ phase: "done" as const, ts: 0,
+      message: "Synthetic requested language", detail: { requestedLanguage: "vi", language: "vi" } }] };
+    expect(buildArchive([value, intent]).map(entry => entry.answerLanguage).sort()).toEqual(["en", "und"]);
+  });
+
+  it.each(["missing", "duplicate", "conflicting", "final-byte-mismatch", "future", "extra-field", "malformed"])(
+    "keeps %s recorded provenance undetermined", kind => {
+      const value = recorded({ id: kind }, "vi");
+      const detail = value.trace[0].detail as { answerLanguage: Record<string, unknown> | null };
+      const packet = detail.answerLanguage!;
+      if (kind === "missing") value.trace = [];
+      if (kind === "duplicate") value.trace = [...value.trace, ...value.trace];
+      if (kind === "conflicting") value.trace.push({ ...value.trace[0], detail: { answerLanguage: { ...packet, language: "en" } } });
+      if (kind === "final-byte-mismatch") value.answer += " ";
+      if (kind === "future") packet.format = "keryx-answer-language-v2";
+      if (kind === "extra-field") packet.requestedLanguage = "vi";
+      if (kind === "malformed") detail.answerLanguage = null;
+      const before = JSON.stringify(value);
+      expect(buildArchive([value])[0].answerLanguage).toBe("und");
+      expect(JSON.stringify(value)).toBe(before);
+    });
+
   it("drops runs with no answer or no citations", () => {
     const runs = [
       run({ id: "ok" }),
