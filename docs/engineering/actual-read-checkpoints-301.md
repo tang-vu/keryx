@@ -1,5 +1,34 @@
 # Actual READ checkpoints — issue301, bounded milestone
 
+## Final ordinary failure observations - NEXT source completion
+
+The runner now captures its existing conservative STOP when the final evidence
+assessment fails. The funding-withheld helper records each known positive-price
+selection's actual SKIP, including cached selections, and retains the actual
+reevaluation round for its query-local hold and selected refusal. These use the
+existing closed read policy and v4 economics envelope. No model generation,
+payment arguments, amounts, allocation, reservation release or settlement changes.
+
+New focused injected-runner controls cover final assessment failure, cached
+funding refusal, reevaluation funding refusal, capture sink failure, digest
+tampering, unknown private fields and the private-ID exclusion. They compare
+answers/actions/money/call order with capture absent. In this native phase the
+PowerShell launcher was refused before Node started: these controls and fresh
+TypeScript/lint remain UNEXECUTED, with no execution-policy bypass. Retained
+35-vector/132-record and React/Web Crypto evidence covers its unchanged inputs,
+not this new emission delta or a compiled Next build. The old CLI engine PASS
+retains its artifact-name/parent-evidence qualification.
+
+Normal composition with reviewed release source `628c8ff8` was denied before any
+source/index change. Root must perform the ordinary merge, retain both whole
+DECISIONS sections and the whole incoming study/report pair, then reconcile the
+shared report inspection and browser import allowlist with v4. The NEXT source
+epoch, full release corpus, independent review, applicable CI, compiled/package
+and delivery gates remain open. Native/private/pre-enrollment capture and missing
+integer monetary authority stay explicitly unsupported; no history is backfilled.
+Original #301 stays OPEN; source integrity does not attest source truth or private
+ledger authenticity, and payment anchoring remains separate #291 scope.
+
 ## Query-local integer economics v4 - next-batch source candidate
 
 `ordinary-query-economics-v4` adds a separate `query-economics-replay-v1` family

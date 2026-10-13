@@ -7897,3 +7897,18 @@ signer does. Their bundled dependency graph excludes the server configuration
 and server authority module. Manual browser fixtures supply the same explicit
 public build pins, including an absent origin list for legacy-only cases; a
 generic environment shim must not hide a new server dependency in this path.
+
+## Complete ordinary failure observations without changing money policy - issue301
+
+The existing versioned read policy already represents unavailable assessment STOP
+and positive-price funding SKIP. Emit those observations at the final assessment
+failure and each actual funding-withheld selection, including the current
+reevaluation round. These are captured inputs and existing rule outcomes, not
+another policy, a model rerun or authority to release a reservation. Keep all
+payment arguments, query-ledger expressions, atomic signer capacity and settlement
+behavior unchanged. Retain missing/nonmicro authority as unavailable, old v1-v4
+codecs/policies and private/native capability refusals. Focused injected runner
+controls must compare capture absent/available/failed, verify retained hashes and
+reject altered/private packets. The final NEXT source corpus, compiled/package
+checks, independent review and actual delivery remain root gates; issue301 stays
+open and payment-bound anchoring remains separate issue291.

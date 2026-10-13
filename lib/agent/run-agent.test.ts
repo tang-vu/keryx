@@ -98,7 +98,7 @@ import { createLiveDecisionReviews, recordLiveReviewVerdict } from "../research/
 import type { DecisionReview } from "../research/decision-review-types";
 import { projectActualReadCheckpoints } from "../research-audit/actual-read-projection";
 import { createTrustedUsageContext } from "../research/usage-provenance";
-import { verifyActualReadPacket } from "../research-audit/actual-read-record";
+import { verifyActualReadPacket, type ActualReadRecord } from "../research-audit/actual-read-record";
 
 const AGENT = "0xAGENT";
 const EPS = 1e-6;
@@ -2910,8 +2910,10 @@ describe("actual READ checkpoint capture differentials", () => {
     ["pre-submit-failure", "channel", "BUY"], ["pending-fetch", "channel", "BUY"], ["settled-fetch", "channel", "BUY"],
     ["reeval-pending-fetch", "channel", "BUY"], ["reeval-settled-fetch", "channel", "BUY"],
   ] as const;
-  async function fixture(scenario: typeof cases[number][0], capture: "missing" | "available" | "throwing" | "rejecting", stamp: string, budget?: number) {
+  async function fixture(scenario: typeof cases[number][0] | "final-assessment-error" | "reeval-funding-refusal" | "cache-funding-refusal",
+    capture: "missing" | "available" | "throwing" | "rejecting" | "late-throwing" | "late-rejecting" | "private", stamp: string, budget?: number) {
     const expansion = scenario.startsWith("reeval-"), order: string[] = [];
+    const acceptedCheckpoints: ActualReadRecord[] = [], targetedCheckpoints: ActualReadRecord[] = [], fundingCalls: unknown[][] = [];
     let selected = false, expanding = false;
     const sources = scenario === "empty" ? [] : [makeSource({ id: "checkpoint-a", fetchPrice: scenario === "zero-delivery" ? 0 : scenario === "reeval-budget" ? 0.05 : 0.002 }),
       makeSource({ id: "checkpoint-b", fetchPrice: 0.002 })];
@@ -2921,10 +2923,10 @@ describe("actual READ checkpoint capture differentials", () => {
       return input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
         expectedValue: scenario === "low-preview" ? 0.1 : scenario === "low-attention" ? 0.15 : 0.8,
         action: scenario === "model-skip" || expansion && candidate.id !== "public:free" ? "SKIP" :
-          scenario === "public" && candidate.id !== "public:free" ? "SKIP" : ["cache", "expired-cache", "low-attention"].includes(scenario) ? "CACHE" : "BUY",
+          scenario === "public" && candidate.id !== "public:free" ? "SKIP" : ["cache", "expired-cache", "low-attention", "final-assessment-error", "cache-funding-refusal"].includes(scenario) ? "CACHE" : "BUY",
         targets: [candidate.id === "public:free" || !expansion && candidate.id === sources[0].id ? 0 : 1] }));
     }, sufficiency: () => {
-      if (scenario === "assessment-error") throw Error("Synthetic assessment unavailable");
+      if (scenario === "assessment-error" || scenario === "final-assessment-error") throw Error("Synthetic assessment unavailable");
       return { sufficient: scenario === "sufficient" || scenario === "paid" || scenario === "cache", rationale: "Synthetic coverage",
         perClaim: [{ claim: "public evidence", coverage: 0.9, coveredBy: ["S1"] }, { claim: "owned evidence", coverage: expansion ? 0 : 0.9, coveredBy: [] }] };
     }, reevaluate: () => {
@@ -2938,13 +2940,26 @@ describe("actual READ checkpoint capture differentials", () => {
     const gateway = fakeGateway(), d = deps(sources, engine, gateway, {
       ...(["reeval-discussion", "initial-discussion"].includes(scenario) ? { items: { [sources[0].id]: [{ id: "checkpoint-thread", sourceId: sources[0].id,
         title: "Forum proposal", summary: "A backup suggestion", link: "https://sqlite.org/forum/info/fixture", content: "A participant proposes a backup procedure." }] } } : {}),
-      ...(["cache", "reeval-cache", "low-attention"].includes(scenario) ? { cachedAt: { [sources[0].id]: stamp, [sources[1].id]: stamp } } : {}) });
+      ...(["cache", "reeval-cache", "low-attention", "final-assessment-error", "cache-funding-refusal"].includes(scenario) ? { cachedAt: { [sources[0].id]: stamp, [sources[1].id]: stamp } } : {}) });
     if (scenario === "external") d.discoverExternal = async () => [{ id: "ext:https://synthetic.example/api", name: "External fixture", description: "Unverified external offer",
       tags: [], fetchPrice: 0.001, cached: false, preview: "Synthetic preview", external: { resource: "https://synthetic.example/api", chains: ["eip155:5042002"], payTo: "0xexternal", onArc: true } }];
     d.db.listPublicReferences = async () => expansion || scenario === "public" || scenario === "funding-refusal" ? [publicRef(), publicRef("public:extra")] : [];
     if (capture !== "missing") Object.defineProperty(d.db, "decisionReviews", { value: {} });
     if (capture === "throwing") d.readCheckpointSink = () => { throw Error("Synthetic observer unavailable"); };
     if (capture === "rejecting") d.readCheckpointSink = async () => { throw Error("Synthetic asynchronous observer unavailable"); };
+    if (capture === "late-throwing" || capture === "late-rejecting") d.readCheckpointSink = record => {
+      const target = scenario === "final-assessment-error"
+        ? record.candidate === 0 && record.round === 0 && record.check.kind === "sufficiency" && record.check.unavailable &&
+          record.outcome.action === "STOP" && record.outcome.rule === "assessment-unavailable"
+        : record.check.kind === "funding" && record.check.unavailable && record.check.positivePrice && record.outcome.action === "SKIP" &&
+          (scenario === "cache-funding-refusal" && record.round === 0 && record.proposal === "CACHE" && record.plan === "CACHE" ||
+            scenario === "reeval-funding-refusal" && record.round === 1 && record.proposal === "BUY" && record.plan === "BUY");
+      // Earlier records must complete synchronously: returning a promise here would refuse capture before the target.
+      if (!target) { acceptedCheckpoints.push(record); return; }
+      targetedCheckpoints.push(record);
+      if (capture === "late-throwing") throw Error("Synthetic late observer unavailable");
+      return Promise.reject(Error("Synthetic late asynchronous observer unavailable"));
+    };
     const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
       payTo: source.walletAddress, creator: source.walletAddress, listPriceUsdc: source.fetchPrice +
         ((scenario === "terms" && selected || scenario === "reeval-terms" && expanding) ? 0.001 : 0), active: true, authority: "database", stale: false }));
@@ -2958,7 +2973,8 @@ describe("actual READ checkpoint capture differentials", () => {
     for (const name of ["ensureFunded", "payFetch", "payCitation"] as const) {
       const original = observedGateway[name].bind(gateway);
       spies.push(vi.spyOn(observedGateway, name).mockImplementation(async (...args: unknown[]) => {
-        order.push(name); if (name === "ensureFunded" && scenario === "funding-refusal") throw Error("Synthetic unknown funding");
+        if (name === "ensureFunded") fundingCalls.push(args);
+        order.push(name); if (name === "ensureFunded" && ["funding-refusal", "cache-funding-refusal", "reeval-funding-refusal"].includes(scenario)) throw Error("Synthetic unknown funding");
         if (name === "payFetch" && scenario === "pre-submit-failure") throw Error("Synthetic definite pre-submission failure");
         if (name === "payFetch" && (scenario.endsWith("pending-fetch") || scenario.endsWith("settled-fetch"))) {
           const request = args[0] as Parameters<PaymentGateway["payFetch"]>[0], source = request.source, pending = scenario.endsWith("pending-fetch");
@@ -2973,16 +2989,118 @@ describe("actual READ checkpoint capture differentials", () => {
     }
     try {
       const { run, steps } = await drive({ question: ["reeval-discussion", "initial-discussion"].includes(scenario) ? "Use official SQLite documentation to explain backups." : "Synthetic checkpoint comparison", budget: price, origin: "web",
+        ...(capture === "private" ? { queryId: "prv_synthetic-checkpoint-control" } : {}),
         executionLimits: { attentionLimit: scenario === "reeval-attention" ? 2 : 4, reevaluateRounds: expansion ? 1 : 0 } }, d);
       const packet = projectActualReadCheckpoints(run);
       return { packet, status: run.trace.at(-1)?.readCheckpoints?.status,
-        economic: { order, answer: run.answer, decisions: run.decisions, citations: run.citations, totalSpent: run.totalSpent,
+        sink: { acceptedCheckpoints, targetedCheckpoints },
+        economic: { order, fundingCalls, answer: run.answer, decisions: run.decisions, citations: run.citations, totalSpent: run.totalSpent,
           plannedFetchUsdc: run.evidencePortfolio?.selectedBuyUsdc,
           payments: d.db.payments.map(row => ({ kind: row.kind, amount: String(row.amountUsdc), status: row.settlementStatus ?? "unknown", settled: row.settled })),
+          paymentRecipients: d.db.payments.map(row => ({ sourceId: row.sourceId, payer: row.payer, payee: row.payee })),
           totalToCreators: run.totalToCreators, fetchCalls: gateway.fetchCalls, fetchPrices: gateway.fetchPrices, citationCalls: gateway.citationCalls,
           trace: steps.map(({ phase, message }) => ({ phase, message })) } };
     } finally { terms.mockRestore(); rights.mockRestore(); duplicate.mockRestore(); for (const spy of spies) spy.mockRestore(); }
   }
+  it.each(["final-assessment-error", "cache-funding-refusal", "reeval-funding-refusal"] as const)(
+    "v4 final failure capture records %s without changing actions, amounts or effects", async scenario => {
+      const stamp = new Date().toISOString();
+      const absent = await fixture(scenario, "missing", stamp, 0.2);
+      const actual = await fixture(scenario, "available", stamp, 0.2);
+      const throwing = await fixture(scenario, "throwing", stamp, 0.2);
+      const rejecting = await fixture(scenario, "rejecting", stamp, 0.2);
+      expect(actual.economic).toEqual(absent.economic);
+      expect(throwing.economic).toEqual(absent.economic);
+      expect(rejecting.economic).toEqual(absent.economic);
+      expect(throwing.status).toBe("unavailable"); expect(rejecting.status).toBe("unavailable");
+      expect(actual.economic.order).toEqual(["ensureFunded"]);
+      expect(actual.economic.fetchCalls).toEqual([]); expect(actual.economic.citationCalls).toEqual([]);
+      expect(actual.economic.totalSpent).toBe(0);
+      const capture = actual.packet;
+      if (!capture || capture.packet.schema !== 4) throw Error("Missing failure capture");
+      expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
+      const records = capture.packet.records;
+      if (scenario === "final-assessment-error") {
+        expect(actual.economic.decisions.map(d => d.action)).toEqual(["CACHE", "CACHE"]);
+        expect(records.filter(r => r.check.kind === "sufficiency" && r.check.unavailable))
+          .toEqual([expect.objectContaining({ candidate: 0, round: 0, outcome: { action: "STOP", rule: "assessment-unavailable" } })]);
+      } else {
+        const refused = records.filter(r => r.check.kind === "funding" && r.check.unavailable && r.outcome.action === "SKIP");
+        expect(refused.length).toBeGreaterThan(0);
+        if (scenario === "cache-funding-refusal") {
+          expect(actual.economic.decisions.map(d => d.action)).toEqual(["SKIP", "SKIP"]);
+          expect(new Set(refused.filter(r => r.plan === "CACHE").map(r => r.candidate)).size).toBe(2);
+        } else {
+          expect(refused.some(r => r.round === 1 && r.proposal === "BUY")).toBe(true);
+          if (capture.packet.economics.status !== "available") throw Error("Missing hold capture");
+          expect(capture.packet.economics.records).toContainEqual(expect.objectContaining({
+            kind: "query-budget", event: "funding", round: 1, status: "available",
+            input: { operation: "hold", before: "0", operands: [] }, outcome: { beforeMicros: "0", afterMicros: "0" },
+          }));
+        }
+      }
+      const changed = structuredClone(capture.packet);
+      changed.records[records.length - 1].outcome.action = "BUY";
+      expect(await verifyActualReadPacket(changed, capture.retainedDigest)).toBe(false);
+      const leaked = { ...capture.packet, question: "PRIVATE_QUESTION https://private.example/?token=SECRET" };
+      expect(await verifyActualReadPacket(leaked, capture.retainedDigest)).toBe(false);
+      for (const privateValue of ["Synthetic checkpoint comparison", "checkpoint-a", "checkpoint-b", "https:", AGENT])
+        expect(JSON.stringify(capture.packet)).not.toContain(privateValue);
+    });
+  it.each([
+    ["final-assessment-error", "late-throwing"], ["final-assessment-error", "late-rejecting"],
+    ["cache-funding-refusal", "late-throwing"], ["cache-funding-refusal", "late-rejecting"],
+    ["reeval-funding-refusal", "late-throwing"], ["reeval-funding-refusal", "late-rejecting"],
+  ] as const)("v4 late failure sink reaches %s with %s after accepting selection without changing economic effects", async (scenario, capture) => {
+    const stamp = new Date().toISOString();
+    const absent = await fixture(scenario, "missing", stamp, 0.2);
+    const available = await fixture(scenario, "available", stamp, 0.2);
+    const failed = await fixture(scenario, capture, stamp, 0.2);
+    expect(available.economic).toEqual(absent.economic);
+    expect(failed.economic).toEqual(absent.economic);
+    expect(absent.packet).toBeNull(); expect(available.status).toBe("available");
+    expect(failed.status).toBe("unavailable"); expect(failed.packet).toBeNull();
+    expect(failed.sink.targetedCheckpoints).toHaveLength(1);
+    const target = failed.sink.targetedCheckpoints[0];
+    const records = available.packet?.packet.records;
+    if (!target || !records) throw Error("Missing targeted late checkpoint");
+    expect(target).toEqual(records[target.sequence]);
+    expect(failed.sink.acceptedCheckpoints).toEqual(records.slice(0, target.sequence));
+    const selections = failed.sink.acceptedCheckpoints.filter(record => record.check.kind === "selection");
+    expect(selections.length).toBeGreaterThan(0);
+    expect(selections).toEqual(records.filter(record => record.check.kind === "selection"));
+    expect(selections.some(record => record.outcome.action === "CONTINUE")).toBe(true);
+    expect(failed.sink.acceptedCheckpoints.every(record => record.sequence < target.sequence)).toBe(true);
+    if (scenario === "final-assessment-error") {
+      expect(target).toMatchObject({ candidate: 0, round: 0, proposal: "UNKNOWN", plan: "UNKNOWN",
+        check: { kind: "sufficiency", sufficient: false, unavailable: true }, outcome: { action: "STOP", rule: "assessment-unavailable" } });
+      expect(failed.economic.decisions.map(decision => decision.action)).toEqual(["CACHE", "CACHE"]);
+    } else {
+      expect(target).toMatchObject({ round: scenario === "cache-funding-refusal" ? 0 : 1,
+        proposal: scenario === "cache-funding-refusal" ? "CACHE" : "BUY", plan: scenario === "cache-funding-refusal" ? "CACHE" : "BUY",
+        check: { kind: "funding", unavailable: true, positivePrice: true }, outcome: { action: "SKIP", rule: "funding-unavailable" },
+        amounts: { priceMicros: "2000" } });
+      expect(target.candidate).toBeGreaterThan(0);
+      if (scenario === "cache-funding-refusal") expect(failed.economic.decisions.map(decision => decision.action)).toEqual(["SKIP", "SKIP"]);
+      const packet = available.packet?.packet;
+      if (!packet || packet.schema !== 4 || packet.economics.status !== "available") throw Error("Missing funding hold capture");
+      expect(packet.economics.records).toContainEqual(expect.objectContaining({
+        kind: "query-budget", event: "funding", round: target.round, afterCheckpoint: target.sequence, status: "available",
+        input: { operation: "hold", before: "0", operands: [] }, outcome: { beforeMicros: "0", afterMicros: "0" },
+      }));
+    }
+    expect(failed.economic.order).toEqual(["ensureFunded"]);
+    expect(failed.economic.fundingCalls).toEqual([[0.2]]);
+    expect(failed.economic.plannedFetchUsdc).toBe(0); expect(failed.economic.totalSpent).toBe(0);
+    expect(failed.economic.fetchCalls).toEqual([]); expect(failed.economic.fetchPrices).toEqual([]);
+    expect(failed.economic.citationCalls).toEqual([]); expect(failed.economic.totalToCreators).toBe(0);
+    expect(failed.economic.payments).toEqual([]); expect(failed.economic.paymentRecipients).toEqual([]);
+  });
+  it("v4 final failure capture refuses private runs with the ordinary capability present", async () => {
+    const result = await fixture("final-assessment-error", "private", new Date().toISOString(), 0.2);
+    expect(result.status).toBeUndefined(); expect(result.packet).toBeNull();
+    expect(result.economic.fetchCalls).toEqual([]); expect(result.economic.citationCalls).toEqual([]);
+  });
   it("v4 economic release corpus replays every produced record, refuses missing integer authority and preserves actual effects", async () => {
     const kinds = new Set<string>(), events = new Set<string>(); let verified = 0, refused = 0;
     const stamp = new Date().toISOString();

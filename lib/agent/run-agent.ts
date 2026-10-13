@@ -1554,7 +1554,7 @@ async function* runAdmittedAgent(
         }
         if (checkpoint({ kind: "funding", unavailable: fundingUnavailable, positivePrice: asset.priceUsdc > 0 }, recId, round + 1).action === "SKIP") {
           await captureRecommendation(recId, "SKIP", "funding-unavailable", round + 1, reeval.recommendedIds.indexOf(recId));
-          yield* await withholdOwnedReads("reevaluate", recId);
+          yield* await withholdOwnedReads("reevaluate", recId, round + 1);
           continue;
         }
         try {
@@ -1621,7 +1621,7 @@ async function* runAdmittedAgent(
             spendWalletReady = true;
           } catch (error) {
             if (error instanceof Error && error.name === "AbortError") throw error;
-            yield* await withholdOwnedReads("reevaluate", recId);
+            yield* await withholdOwnedReads("reevaluate", recId, round + 1);
             continue;
           }
         }
@@ -1751,6 +1751,10 @@ async function* runAdmittedAgent(
         });
   } catch {
     finalAssessmentAvailable = false;
+    // Observe the existing conservative stop; this diagnostic cannot authorize rewards.
+    const check = { kind: "sufficiency", sufficient: false, unavailable: true } as const;
+    checkpointCapture.append(check, actualReadCheckpoint(check), { candidate: 0, round: 0,
+      proposal: "UNKNOWN", plan: "UNKNOWN", remaining: remainingBudget });
     finalSufficiency = {
       sufficient: false,
       rationale:
@@ -2327,9 +2331,9 @@ async function* runAdmittedAgent(
     finalDecisions[index] = { ...current, action: "SKIP", rationale: `${current.rationale} — ${reason}` };
     return current.action;
   }
-  async function withholdOwnedReads(phase: "fetch" | "reevaluate" | "settle", selectedAssetId?: string): Promise<TraceStep[]> {
+  async function withholdOwnedReads(phase: "fetch" | "reevaluate" | "settle", selectedAssetId?: string, round = 0): Promise<TraceStep[]> {
     const steps: TraceStep[] = [];
-    captureQueryBudget("hold", "funding", spentTolls, [], spentTolls, selectedAssetId);
+    captureQueryBudget("hold", "funding", spentTolls, [], spentTolls, selectedAssetId, round);
     if (!fundingUnavailable) {
       fundingUnavailable = true;
       steps.push(emit(phase, fundingNotice, {
@@ -2345,6 +2349,9 @@ async function* runAdmittedAgent(
       const withheld: Decision = { ...decision, action: "SKIP",
         rationale: "Funding readiness is unknown; this owned source cannot be read or rewarded in this run." };
       finalDecisions[index] = withheld;
+      const asset = assetById.get(assetId);
+      if (asset) checkpoint({ kind: "funding", unavailable: true, positivePrice: asset.priceUsdc > 0 },
+        assetId, assetId === selectedAssetId ? round : 0);
       await observeReview(assetId, "funding-unavailable");
       steps.push(emit(phase, `SKIP ${withheld.sourceName}: ${withheld.rationale}`));
     }
