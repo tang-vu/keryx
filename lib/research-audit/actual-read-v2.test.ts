@@ -89,5 +89,11 @@ it("refuses unavailable observations without invoking disabled callbacks or gran
   expect(projectActualReadCheckpoints(run)?.packet.schema).toBe(2);
   expect(projectActualReadCheckpoints({ ...run, id: "prv_private" })).toBeNull();
   expect(projectActualReadCheckpoints({ ...run, originalFulfillment: undefined })).toBeNull();
-  expect(actualReadOpenApiSchemas.ActualReadCheckpointCapture.oneOf.length).toBe(4);
+  expect(actualReadOpenApiSchemas.ActualReadCheckpointCapture.oneOf).toHaveLength(5);
+  expect(actualReadOpenApiSchemas.ActualReadCheckpointCapture.oneOf).toMatchObject([
+    { properties: { status: { const: "unavailable" } } },
+    ...[1, 2, 3, 4].map(schema => ({ properties: {
+      status: { const: "available" }, packet: { properties: { schema: { const: schema } } },
+    } })),
+  ]);
 });

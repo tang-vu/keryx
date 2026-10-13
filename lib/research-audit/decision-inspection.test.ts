@@ -3,6 +3,7 @@ import { ACTUAL_READ_POLICY, actualReadCheckpoint, operandMicros, type ReadCheck
 import { actualReadPacketHash, verifyActualReadPacket, type ActualReadPacketV1, type ActualReadRecord } from "./actual-read-record";
 import { ACTUAL_READ_CAPTURE_V2, replayMapping, replayNormalization, type ActualReadPacketV2 } from "./actual-read-v2";
 import { optimizerPacketFixture } from "./optimizer-checkpoint.test-fixture";
+import { economicPacketFixture } from "./economic-checkpoint.test-fixture";
 import { DECISION_INSPECTION_BOUNDARY, inspectReadDecisions, previewReadPolicy, syntheticDecisionShowcasePacket } from "./decision-inspection";
 
 function packet(checks: ReadCheck[], patch: Partial<ActualReadRecord> = {}): ActualReadPacketV1 {
@@ -85,6 +86,19 @@ it("accepts existing schema3 optimizer packets and empty-discovery/evidence STOP
   expect(inspection?.stops).toEqual([{ afterCheckpoint: 0, stage: "evidence", count: 0, action: "STOP" }]);
   expect(previewReadPolicy(fixture.packet, { remainingMicros: "1000", attentionLimit: 1 }))
     .toEqual({ status: "unavailable", reason: "no-recorded-checkpoints" });
+});
+
+it("retains v4 optimizer inspection without promoting economic assertions to settlement", () => {
+  const fixture = economicPacketFixture(), before = JSON.stringify(fixture.packet);
+  const inspection = inspectReadDecisions(fixture.packet);
+  expect(inspection?.schema).toBe(4);
+  expect(inspection?.optimizer).toEqual(fixture.packet.optimizer);
+  expect(inspection?.facts).toBe("recorded-assertions");
+  expect(inspection).not.toHaveProperty("settledPayments");
+  expect(inspection).not.toHaveProperty("settledUsdc");
+  expect(JSON.stringify(fixture.packet)).toBe(before);
+  const changed = { ...fixture.packet, economics: { ...fixture.packet.economics, privateLedger: "PRIVATE" } };
+  expect(inspectReadDecisions(changed)).toBeNull();
 });
 
 it("re-evaluates only recorded budget and attention predicates with the unchanged evaluator", () => {
