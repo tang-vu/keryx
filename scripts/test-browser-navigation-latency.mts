@@ -90,7 +90,41 @@ try {
           observer.observe(document.body, { childList: true, subtree: true, attributes: true });
         });
         if (width === 390) await link.tap(); else await link.click();
-        await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ timeout: 1000 });
+        try {
+          await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ timeout: 1000 });
+        } catch (error) {
+          let diagnosticTimer: ReturnType<typeof setTimeout> | undefined;
+          try {
+            const dom = await Promise.race([
+              page.evaluate(() => {
+                const main = document.querySelector("main"), box = main?.getBoundingClientRect();
+                const loading = [...document.querySelectorAll('[role="status"]')]
+                  .filter(element => element.textContent?.includes("Loading page")).slice(0, 4);
+                return {
+                  main: main ? { busy: main.getAttribute("aria-busy"), height: box?.height,
+                    display: getComputedStyle(main).display, visibility: getComputedStyle(main).visibility } : null,
+                  loading: loading.map(element => ({ text: element.textContent?.slice(0, 100),
+                    height: element.getBoundingClientRect().height, display: getComputedStyle(element).display,
+                    visibility: getComputedStyle(element).visibility })),
+                  click: performance.getEntriesByName("navigation-click").slice(0, 4)
+                    .map(entry => ({ startTime: entry.startTime, duration: entry.duration })),
+                  loadingMeasures: performance.getEntriesByName("navigation-loading").slice(0, 4)
+                    .map(entry => ({ startTime: entry.startTime, duration: entry.duration })),
+                };
+              }),
+              new Promise(resolve => { diagnosticTimer = setTimeout(() => resolve({ unavailable: "DOM observation exceeded 1000ms" }), 1000); }),
+            ]).catch(reason => ({ unavailable: String(reason).slice(0, 300) }));
+            console.error(JSON.stringify({ diagnostic: "navigation-loading-failure", engine: engine.name(), width,
+              destination, currentUrl: page.url(), finalResponseHeld: Boolean(finalRoute), heldRouteCount: held.size,
+              finalRequest: finalRoute ? { path: new URL(finalRoute.request().url()).pathname,
+                method: finalRoute.request().method(), prefetch: finalRoute.request().headers()["next-router-prefetch"] ?? null } : null,
+              pageErrors: errors.slice(0, 8).map(message => message.slice(0, 300)), dom }));
+          } catch (diagnosticError) {
+            console.error(JSON.stringify({ diagnostic: "navigation-loading-observation-unavailable",
+              engine: engine.name(), width, destination, reason: String(diagnosticError).slice(0, 300) }));
+          } finally { if (diagnosticTimer) clearTimeout(diagnosticTimer); }
+          throw error;
+        }
         await page.waitForFunction(() => performance.getEntriesByName("navigation-loading").length > 0, undefined, { timeout: 1000 });
         const loadingMs = await page.evaluate(() => Math.round(performance.getEntriesByName("navigation-loading")[0].duration));
         assert(loadingMs < 1000, `Immediate route shell (${loadingMs}ms), before final response`);
