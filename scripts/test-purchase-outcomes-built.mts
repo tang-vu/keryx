@@ -121,7 +121,7 @@ try {
       await panel.screenshot({ path: join(fixture, `outcome-${width}.png`) });
       await panel.getByRole("link", { name: copy.allReports, exact: true }).click();
       await page.getByRole("heading", { name: aggregateCopy.title, exact: true }).waitFor();
-      await page.getByText(aggregateCopy.recordedOnly, { exact: true }).waitFor();
+      await page.getByRole("main").getByText(aggregateCopy.recordedOnly, { exact: true }).waitFor();
       await page.getByLabel(aggregateCopy.network, { exact: true }).selectOption("eip155:5042002");
       await page.getByRole("button", { name: aggregateCopy.apply, exact: true }).click();
       const sampled = page.getByRole("table", { name: aggregateCopy.cohortLimit, exact: true });
