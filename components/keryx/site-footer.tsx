@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * The colophon — panel-toned footer with the coin, the Keryx etymology, and the
  * house / docs link columns. Internal routes use next/link; external + the /api/docs
@@ -12,8 +14,9 @@ import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { SUPPORT_MAILTO } from "@/lib/public-support";
+import { useLocale } from "@/lib/i18n/locale-context";
+import { LanguageSwitcher } from "./language-switcher";
 
-const message = createMessages("en");
 const richMessage = createRichMessages("en");
 
 const profile=browserPaymentProfile(),EXPLORER=profile.explorerUrl;
@@ -24,7 +27,7 @@ const USDC = profile.usdcAddress;
 type FooterLink = { label: string; href: string; external?: boolean };
 
 // Product surfaces. "API for agents" is the OpenAPI reference (also the A2A entry point).
-const HOUSE: FooterLink[] = [
+function houseLinks(message: ReturnType<typeof createMessages>): FooterLink[] { return [
   { label: message("shellNavigation.ask"), href: "/" },
   { label: productGuideCopy("product.pricing"), href: "/pricing" },
   { label: productGuideCopy("product.about"), href: "/about" },
@@ -40,10 +43,10 @@ const HOUSE: FooterLink[] = [
   { label: message("shellFooter.businessCalculator"), href: "/economics" },
   { label: message("shellFooter.remoteMcp"), href: "/integrations/mcp" },
   { label: message("shellFooter.agentApi"), href: "/api/docs", external: true },
-];
+]; }
 
 // Current configured contract references; historical receipt links keep their original rail.
-const DOCS: FooterLink[] = [
+function docsLinks(message: ReturnType<typeof createMessages>): FooterLink[] { return [
   { label: productGuideCopy("product.support"), href: SUPPORT_MAILTO, external: true },
   { label: message("shellFooter.github"), href: "https://github.com/tang-vu/keryx", external: true },
   { label: message("shellFooter.registryContract"), href: `${EXPLORER}/address/${REGISTRY}#code`, external: true },
@@ -52,7 +55,7 @@ const DOCS: FooterLink[] = [
   { label: message("shellFooter.arcNetwork"), href: profile.testnet?"https://docs.arc.network":"https://docs.arc.io", external: true },
   { label: message("shellFooter.privacy"), href: "/privacy" },
   { label: message("shellFooter.terms"), href: "/terms" },
-];
+]; }
 
 function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
   return (
@@ -64,7 +67,7 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
         {links.map((l) =>
           l.external ? (
             <a
-              key={l.label}
+              key={l.href}
               href={l.href}
               target="_blank"
               rel="noopener noreferrer"
@@ -73,7 +76,7 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
               {l.label}
             </a>
           ) : (
-            <Link key={l.label} href={l.href} className="transition-colors hover:text-seal">
+            <Link key={l.href} href={l.href} className="transition-colors hover:text-seal">
               {l.label}
             </Link>
           ),
@@ -84,8 +87,9 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
 }
 
 export function SiteFooter() {
+  const { message, locale } = useLocale();
   return (
-    <footer className="border-t border-ink bg-panel">
+    <footer lang={locale} className="border-t border-ink bg-panel">
       <div className="mx-auto max-w-[1180px] px-4 pb-10 pt-[54px] sm:px-[30px]">
         <div className="grid gap-10 md:grid-cols-[1.6fr_1fr_1fr]">
           <div>
@@ -95,18 +99,19 @@ export function SiteFooter() {
                 Keryx
               </span>
             </div>
-            <p className="mt-4 max-w-[42ch] font-serif text-[16px] leading-[1.55] text-ink-3">
+            <p lang="en" className="mt-4 max-w-[42ch] font-serif text-[16px] leading-[1.55] text-ink-3">
               {richMessage("shellFooter.etymology", { gap: " ", word: <span className="italic text-ink">κῆρυξ</span> })}
             </p>
           </div>
 
-          <FooterCol title={message("shellFooter.house")} links={HOUSE} />
-          <FooterCol title={message("shellFooter.docsAndProof")} links={DOCS} />
+          <FooterCol title={message("shellFooter.house")} links={houseLinks(message)} />
+          <FooterCol title={message("shellFooter.docsAndProof")} links={docsLinks(message)} />
         </div>
 
         <div className="mt-10 flex flex-wrap justify-between gap-3 border-t border-ink pt-5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-3">
-          <span>{message("shellFooter.copyright", { year: 2026 })}</span>
-          <span className="text-seal">{richMessage("shellFooter.originalEvidence", { network: currentArcLabel })}</span>
+          <span lang="en">{message("shellFooter.copyright", { year: 2026 })}</span>
+          <LanguageSwitcher />
+          <span lang="en" className="text-seal">{richMessage("shellFooter.originalEvidence", { network: currentArcLabel })}</span>
         </div>
       </div>
     </footer>

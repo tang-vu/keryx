@@ -23,6 +23,7 @@ declare global { interface Window {
 const browser = await chromium.launch({ headless: true });
 try {
   for (const profile of [ARC_TESTNET_PROFILE, ARC_MAINNET_PROFILE]) {
+    let nextOriginalNonce = 0n;
     function original(claim = claimId, state: SponsoredRegistration["state"] = "prepared"): SponsoredRegistration {
       const canonicalUrl = `https://feed.invalid/${claim === claimId ? "a" : "b"}`;
       const urlHash = keccak256(toBytes(canonicalUrl)), now = Date.now();
@@ -31,7 +32,7 @@ try {
         sourceId: `fixture-${claim}`, onchainId: registrationId(creator, urlHash), registryAddress: registry,
         registryCodeHash: hash, relayer: sponsor, chainId: profile.chainId as 5042 | 5042002,
         params: { urlHash, payoutWallet: creator, authors: [{ wallet: creator, basisPoints: 10000 }],
-          fetchPriceUsdc6: "5000", contentCid: "", tags: "research" }, nonce: "0",
+          fetchPriceUsdc6: "5000", contentCid: "", tags: "research" }, nonce: String(nextOriginalNonce++),
         deadline: Math.floor(now / 1000) + (state === "expired" ? -10 : 600), createdAt: now, updatedAt: now,
         reservedWei: "20000000000000000", state };
       row.id = registrationIntentDigest(row);
