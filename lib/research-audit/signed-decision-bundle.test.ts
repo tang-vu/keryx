@@ -3,6 +3,7 @@ import { expect, it, vi } from "vitest";
 import { ACTUAL_READ_POLICY } from "./actual-read-policy";
 import { actualReadPacketHash, type ActualReadPacketV1 } from "./actual-read-record";
 import { optimizerPacketFixture } from "./optimizer-checkpoint.test-fixture";
+import { economicPacketFixture } from "./economic-checkpoint.test-fixture";
 import { canonicalSignedDecisionBundle, decisionAuditTrustAnchor, verifySignedDecisionBundle, type SignedDecisionBundle } from "./signed-decision-bundle";
 import { decisionAuditTrustAnchorFromPem, signDecisionBundle } from "./signed-decision-bundle-node";
 
@@ -36,17 +37,33 @@ it("binds a closed canonical snapshot, packet schema/digest, report digest, purp
   expect(canonicalSignedDecisionBundle(bundle)).not.toContain("PRIVATE KEY");
 });
 
-it("retains exact schema2/3 canonical digest rather than creating a competing record policy", async () => {
-  const key = keys(), v3 = optimizerPacketFixture().packet;
+it("retains exact schema2/3/4 canonical digest rather than creating a competing record policy", async () => {
+  const key = keys(), v3 = optimizerPacketFixture().packet, v4 = economicPacketFixture().packet;
   const v2 = { schema: 2, policy: "ordinary-read-capture-v2", coverage: "normalization-and-read-checkpoints", monetaryAuthority: "qualified-assertions-only",
     records: [], mappings: [], normalizations: [], portfolio: null,
     stops: [{ afterCheckpoint: 0, stage: "discovery", count: 0, action: "STOP" }], observations: { actions: [], citations: [], payments: [] } };
-  for (const packet of [v2, v3]) {
+  for (const packet of [v2, v3, v4]) {
     const bundle = await signDecisionBundle(packet, { signingKeyPem: key.signingKeyPem, exportedAt });
     expect(bundle.envelope.packetSchema).toBe(packet.schema);
     expect(bundle.envelope.packetDigest).toBe(await actualReadPacketHash(packet));
     expect(await verifySignedDecisionBundle(bundle, key.anchor)).toMatchObject({ verified: true });
   }
+});
+
+it("binds v4 economics and refuses changed schema or economic outcomes with the retained signature", async () => {
+  const key = keys(), packet = economicPacketFixture().packet;
+  const bundle = await signDecisionBundle(packet, { signingKeyPem: key.signingKeyPem, exportedAt });
+  const before = canonicalSignedDecisionBundle(bundle);
+  expect(await verifySignedDecisionBundle(bundle, key.anchor)).toMatchObject({ verified: true });
+  const changed = structuredClone(bundle);
+  if (changed.packet.schema !== 4 || changed.packet.economics.status !== "available") throw Error("Missing v4 economics");
+  const record = changed.packet.economics.records[0];
+  if (record.status !== "available" || record.kind !== "query-budget") throw Error("Missing query budget");
+  record.outcome.afterMicros = "2";
+  expect(await verifySignedDecisionBundle(changed, key.anchor)).toEqual({ verified: false });
+  expect(await verifySignedDecisionBundle({ ...bundle, envelope: { ...bundle.envelope, packetSchema: 3 } }, key.anchor))
+    .toEqual({ verified: false });
+  expect(canonicalSignedDecisionBundle(bundle)).toBe(before);
 });
 
 it("requires the external trust anchor, checks fingerprints and permits only externally selected key rotation", async () => {
