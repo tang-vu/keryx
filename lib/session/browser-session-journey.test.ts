@@ -293,6 +293,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
   });
   let holdGrant = false, holdRevoke = false, releaseHeld: (() => void) | undefined, held = false;
   let failStatusLookup=false,holdAskChallenge=false;
+  let captureCreatorPreparation=false,creatorPreparationBody:string|undefined;
   await context.route("**/*", async route => {
     const req = route.request(), url = req.url();
     if (url === `${origin}/`) return route.fulfill({ contentType: "text/html", body: '<div id="root"></div><script type="module" src="/hook.js"></script>' });
@@ -315,7 +316,11 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
       fundingProposals.push({ requested: JSON.parse(req.postData()!).budgetMicros, cap: proposal.consent.capMicroUsdc });
     }
     if (holdGrant && req.method() === "GET" && url === `${origin}/api/session/grant`) { holdGrant = false; held = true; await new Promise<void>(resolve => { releaseHeld = resolve; }); }
-    return route.fulfill({ status: response.status, body: await response.text(), headers: Object.fromEntries(response.headers) });
+    const responseBody=await response.text();
+    if(captureCreatorPreparation&&failCitation==="creator"&&url===`${origin}/api/me/withdrawals/prepare`&&req.method()==="POST"&&response.status===200){
+      creatorPreparationBody=responseBody;captureCreatorPreparation=false;
+    }
+    return route.fulfill({ status: response.status, body: responseBody, headers: Object.fromEntries(response.headers) });
   });
   const page = await context.newPage();
   page.on("console", message => { if (message.text().startsWith("SESSION_TRANSPORT ")) transportDiagnostics.push(message.text().slice("SESSION_TRANSPORT ".length)); });
@@ -342,9 +347,16 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     await expect.poll(status).toContain("differs from your review");
     expect(creatorBurnSigns).toBe(0);expect(transferCalls).toBe(0);
     await page.getByLabel("Creator withdrawal maximum fee").fill("0.001");
+    // Retain the handler serialization fulfilled to this POST before browser body handles can expire.
+    captureCreatorPreparation=true;
+    const preparation=page.waitForResponse(response=>response.url()===`${origin}/api/me/withdrawals/prepare`&&response.request().method()==="POST");
     await page.getByRole("button",{name:"Prepare creator withdrawal",exact:true}).click();
+    const preparedResponse=await preparation;expect(preparedResponse.status()).toBe(200);
+    expect(creatorPreparationBody).toBeDefined();
+    const prepared=JSON.parse(creatorPreparationBody!);
     await expect.poll(()=>page.getByLabel("Original creator withdrawal request").inputValue()).toMatch(/^0x[0-9a-f]{64}$/);
     originalCashoutId=await page.getByLabel("Original creator withdrawal request").inputValue();
+    expect(originalCashoutId).toBe(prepared.draft.id);
     await page.getByLabel("Creator withdrawal amount").fill("0.2");
     await page.getByRole("button",{name:"Sign reviewed creator burn",exact:true}).click();
     await expect.poll(status).toContain("review differs");expect(creatorBurnSigns).toBe(0);

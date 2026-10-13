@@ -74,3 +74,49 @@ it("remote MCP unavailable claim domain refuses before its research runner", asy
     expect(result.isError).toBe(true); expect(mocks.collect).not.toHaveBeenCalled();
   } finally { await client.close(); await server.close(); }
 });
+it.each([false, true])("OpenAI %s preserves the saved answer on late issuance failure without echo or replay", async stream => {
+  const secret = "e".repeat(64), logs = vi.spyOn(console, "error").mockImplementation(() => {});
+  const issue = vi.spyOn(f.store, "issue").mockRejectedValue(new Error("Synthetic backend echoed /claim-run#" + secret));
+  const response = await POST(request(stream)), text = await response.text();
+  const values = stream ? text.split("\n\n").filter(value => value.startsWith("data: {")).map(value => JSON.parse(value.slice(6))) : [JSON.parse(text)];
+  const final = stream ? values.find(value => value.choices[0].finish_reason === "stop") : values[0];
+  const packet = privateRunClaimPacketSchema.parse(final.keryx_private);
+  expect(packet).toEqual({ version: 1, runId: packet.runId, status: "unavailable" });
+  expect(text).toContain("Saved synthetic answer"); expect(text).not.toContain(secret); expect(text).not.toContain("backend echoed");
+  if (stream) expect(text).toContain("data: [DONE]");
+  expect(JSON.stringify(logs.mock.calls)).not.toContain(secret);
+  expect(response.headers.get("cache-control")).toContain("no-store"); expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+  expect(mocks.collect).toHaveBeenCalledOnce(); expect(issue).toHaveBeenCalledOnce();
+  expect(f.sql.prepare("SELECT data FROM query_runs WHERE id=?").get(packet.runId)?.data).toContain("Saved synthetic answer");
+  expect(f.sql.prepare("SELECT * FROM anonymous_run_claims").all()).toEqual([]);
+});
+it.each([false, true])("default-off OpenAI %s needs no claim capability and emits no private field", async stream => {
+  vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "false"); mocks.db.mockResolvedValue({});
+  const issue = vi.spyOn(f.store, "issue"), response = await POST(request(stream)), text = await response.text();
+  expect(text).toContain("Saved synthetic answer"); expect(text).not.toContain("keryx_private");
+  expect(mocks.collect).toHaveBeenCalledOnce(); expect(issue).not.toHaveBeenCalled();
+});
+it.each(["owned", "off", "late-failure"] as const)("remote MCP %s retains the public result and its established authority", async kind => {
+  const actor = `0x${"a".repeat(40)}`, secret = "e".repeat(64);
+  const issue = vi.spyOn(f.store, "issue");
+  if (kind === "off") { vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "false"); mocks.db.mockResolvedValue({}); }
+  if (kind === "late-failure") issue.mockRejectedValue(new Error("Synthetic backend echoed /claim-run#" + secret));
+  const server = createRemoteMcpServer({ budgetCap: 0, clientChannel: "other", ...(kind === "owned" ? { actor } : {}) }, mocks.collect);
+  const client = new Client({ name: "private-controlled-failure", version: "1" }), [ct, st] = InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(st); await client.connect(ct);
+    const result = await client.callTool({ name: "research", arguments: { question: "Synthetic private delivery", budget: 0 } });
+    expect(result.isError).not.toBe(true); expect(mocks.collect).toHaveBeenCalledOnce();
+    const run = JSON.parse(String(f.sql.prepare("SELECT data FROM query_runs").get()?.data));
+    expect(result.structuredContent).toEqual(JSON.parse(JSON.stringify(remoteResearchResult(run))));
+    expect(JSON.stringify(result)).not.toContain(secret); expect(JSON.stringify(result)).not.toContain("backend echoed");
+    if (kind === "late-failure") {
+      expect(result._meta?.["keryx/privateRunClaim"]).toEqual({ version: 1, runId: run.id, status: "unavailable" });
+      expect(result.content).toHaveLength(2); expect(issue).toHaveBeenCalledOnce();
+    } else {
+      expect(result._meta?.["keryx/privateRunClaim"]).toBeUndefined(); expect(result.content).toHaveLength(1); expect(issue).not.toHaveBeenCalled();
+    }
+    if (kind === "owned") { expect(run.asker).toBe(actor); expect(mocks.collect.mock.calls[0][0].asker).toBe(actor); }
+    expect(f.sql.prepare("SELECT * FROM anonymous_run_claims").all()).toEqual([]);
+  } finally { await client.close(); await server.close(); }
+});
