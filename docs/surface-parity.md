@@ -1,5 +1,17 @@
 # Supported-surface release parity
 
+## Website setup discovery — October 12 source candidate
+
+This web-only candidate adds indexed setup, download and integration guides for web,
+Windows desktop, extension, remote/stdio MCP, API, CLI and bots. Download examples
+pin independently verified v0.27.63 Desktop artifacts and the matching source
+commit for the extension;
+stdio pins the independently verified published npm/official Registry 0.4.19 package.
+Source availability is separate from installation. Existing client/payment protocols and packaged runtime inputs
+retain their original versions and authority. No new package or installer runtime
+is needed for web-only guides. Exact-source CI, source review, deployment and public
+readback remain delivery gates. See [the source-backed design and surface audit](engineering/website-setup-2026-10-12.md).
+
 ## App62 combined audit and presentation cohort - October12 candidate
 
 Candidate identities: app/OpenAPI **0.27.62**, hosted MCP **0.3.17**,

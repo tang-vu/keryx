@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 import {
   type TelegramUpdate,
   parseAskMessage,
+  isTelegramAccountControl,
+  telegramAccountLinkingUnavailable,
   isHelpCommand,
   helpText,
   apiUrl,
@@ -66,6 +68,46 @@ describe("parseAskMessage", () => {
     expect(parseAskMessage(askUpdate({ from: { id: 1, is_bot: true } }))).toBeNull();
     expect(parseAskMessage({})).toBeNull();
     expect(parseAskMessage({ message: { text: "/ask q" } })).toBeNull(); // no chat/from ids
+  });
+});
+
+describe("reserved Telegram account intent", () => {
+  it.each(["link", "unlink", "whoami", "/link", "/unlink", "/whoami",
+    "/link@KeryxHeraldBot", "/unlink@KeryxHeraldBot", "/whoami@KeryxHeraldBot"])
+    ("partitions %s from private and group research, regardless of arguments", control => {
+      for (const suffix of ["", " fixture-account-token", "\t{broken:fixture-account-token}", "\n/language es"]) {
+        for (const chat of [{ id: 789, type: "private" }, { id: -100123, type: "group" }]) {
+          const update = askUpdate({ text: `  ${control}${suffix}  `, chat });
+          expect(isTelegramAccountControl(update)).toBe(true);
+          expect(parseAskMessage(update)).toBeNull();
+        }
+      }
+    });
+
+  it.each(["What does whoami do?", "Explain the link between citations and rewards.",
+    "How do I unlink an account?", "linking accounts safely", "unlinkable sources", "whoami?",
+    "link: an explanation", "whoami@Bot.example", "link@BotNameSuffix?", "linkage", "unlinking"])
+    ("keeps ordinary private prose %s", question => {
+      const update = askUpdate({ text: question, chat: { id: 789, type: "private" } });
+      expect(isTelegramAccountControl(update)).toBe(false);
+      expect(parseAskMessage(update)?.question).toBe(question);
+    });
+
+  it.each(["/ask link fixture-token", "/ask@KeryxHeraldBot whoami", "/ask unlink an account safely"])
+    ("preserves explicit research %s", text => {
+      const update = askUpdate({ text });
+      expect(isTelegramAccountControl(update)).toBe(false);
+      expect(parseAskMessage(update)?.question).toBe(text.slice(text.indexOf(" ") + 1));
+    });
+
+  it("keeps help/language commands distinct and the refusal bounded and argument-free", () => {
+    for (const text of ["help", "/start", "/help vi", "/language es", "/ask", "/linking", "/whoami?"]) {
+      expect(isTelegramAccountControl(askUpdate({ text }))).toBe(false);
+    }
+    expect(isTelegramAccountControl({})).toBe(false);
+    expect(isTelegramAccountControl({ message: {} })).toBe(false);
+    expect(telegramAccountLinkingUnavailable.length).toBeLessThan(200);
+    expect(telegramAccountLinkingUnavailable).not.toContain("fixture-account-token");
   });
 });
 

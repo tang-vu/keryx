@@ -22,7 +22,9 @@ afterEach(() => {
 const names = { deepseek: "llm:deepseek:deepseek-v4-flash", mimo: "llm:mimo:mimo-v2.5",
   cloudflare: "llm:cloudflare:@cf/meta/llama-3.3-70b-instruct-fp8-fast" };
 function provider(provider: keyof typeof names) {
-  return new OpenAICompatibleEngine({ provider, name: names[provider], model: names[provider].slice(`llm:${provider}:`.length),
+  // Retained historical MiMo labels use an inert generic synthetic transport;
+  // they do not re-enable a configured provider, credential or vendor endpoint.
+  return new OpenAICompatibleEngine({ provider: provider === "mimo" ? undefined : provider, name: names[provider], model: names[provider].slice(`llm:${provider}:`.length),
     baseUrl: `https://${provider}.synthetic.invalid`, apiKey: "synthetic" });
 }
 const input = (count = 1): DecideInput => ({ question: "How does the documented synthetic recovery journal work?",

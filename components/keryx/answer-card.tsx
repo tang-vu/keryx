@@ -14,6 +14,7 @@ import { demoteSyntheticEvidence } from "@/lib/research/evidence-provenance";
 
 import { useState, useCallback, useRef } from "react";
 import type { QueryRun, PaymentRecord } from "@/lib/types";
+import type { PresentationLanguage } from "@/shared/i18n/presentation-language";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import { AnswerMarkdown } from "./answer-markdown";
 import { AnswerFeedback } from "./answer-feedback";
@@ -34,8 +35,11 @@ import { BibliographyExports } from "./bibliography-exports";
 
 const copy = createMessages("en");
 
-export function AnswerCard({ run, meta, permalink, payments = [], showFeedback = true, historicalNetwork }: { run: QueryRun; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[]; showFeedback?: boolean; historicalNetwork?: string }) {
+export function AnswerCard({ run, answerLanguage, meta, permalink, payments = [], showFeedback = true, historicalNetwork }: { run: QueryRun; answerLanguage?: PresentationLanguage; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[]; showFeedback?: boolean; historicalNetwork?: string }) {
+  const originalAnswer = run.answer;
   run = demoteSyntheticEvidence(run);
+  // A read projection that changes prose invalidates the recorded final bytes.
+  const generatedProseLanguage = run.answer === originalAnswer ? answerLanguage : undefined;
   const bibliography = projectBibliographicTask(run.bibliography);
   const [highlight, setHighlight] = useState<string | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -83,6 +87,7 @@ export function AnswerCard({ run, meta, permalink, payments = [], showFeedback =
         <div className="px-6 py-6 sm:px-9">
           <div className="max-w-[64ch]">
             <AnswerMarkdown
+              language={generatedProseLanguage}
               text={run.answer}
               citations={run.citations}
               onCitationClick={openCitation}

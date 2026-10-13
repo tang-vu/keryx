@@ -15,8 +15,11 @@ and the settlement state of each run remain separate from network selection.
 
 - **Base URL:** `https://keryx.cc/api/v1`
 - **Model:** `keryx` (default), or pick a reasoning model chat-app style with
-  `keryx:<id>` — currently `keryx:deepseek-flash` (workhorse), `keryx:deepseek-v4-pro`,
-  `keryx:mimo-v2.5` and `keryx:mimo-v2.5-pro` (Xiaomi MiMo, added 2026-07-26).
+  `keryx:<id>` — `keryx:deepseek-flash` (DeepSeek V4.1 Flash, default) or
+  `keryx:deepseek-v4-pro` (V4 Pro 0813, manual comparison). MiMo has been removed
+  from fresh selections and fallback dispatch. Retained MiMo ids use the ordinary
+  default; historical receipts retain their original model identity.
+  See [prices, model selection and quality gates](deepseek-model-selection.md).
   Enabled Cloudflare installations also offer `keryx:cloudflare-llama-3.3` and,
   after a separate opt-in, the manually selected experimental
   `keryx:cloudflare-gpt-oss-120b`. See [Cloudflare configuration and gates](cloudflare-workers-ai.md).
@@ -27,9 +30,10 @@ and the settlement state of each run remain separate from network selection.
   The open-weight options served through Ollama Cloud (`glm-5.2`, `qwen3.5-397b`, `gemma4`,
   `kimi-k2.7-code`, `minimax-m3`, `gpt-oss-120b`) were withdrawn on 2026-07-26; those ids still
   resolve — to the workhorse — so existing callers and saved embeds keep working.
-  V4 Pro can take 2–3 minutes for the full research loop: use `stream: true` with it — a
-  non-streaming call may hit proxy timeouts even though the run completes and settles
-  server-side (the answer stays at its dispatch URL).
+  Use `stream: true` for research loops. Supplier latency and call count vary;
+  a catalog label does not prove Pro is more accurate for a particular question.
+  A proxy timeout does not establish whether a purchase settled; inspect the run's
+  actual settlement evidence before retrying a paid request.
 - **Auth:** send any token as the API key. On the **free tier** the token is ignored
   (treasury-funded, IP rate-limited). Send a **`kx_live_…`** key (mint at
   [keryx.cc/dev](https://keryx.cc/dev)) for wallet-based limits + usage metering.

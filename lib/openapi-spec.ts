@@ -636,6 +636,35 @@ export const openapiSpec = {
     },
   },
   paths: {
+    "/api/creator/{id}/notify/language": {
+      parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+      get: {
+        summary: "Read the owner-configured email recipient's presentation language",
+        description: "Existing verified web session and source ownership required. Missing/unreadable preference falls back to English. Never returns the email, unsubscribe token or storage key. Language does not establish financial settlement or human translation approval.",
+        security: [{ WebSession: [] }],
+        responses: { "200": { description: "Language and preference availability", content: { "application/json": { schema: {
+          type: "object", additionalProperties: false, required: ["language", "available"], properties: {
+            language: { type: "string", enum: ["en", "vi", "pt", "es"] }, available: { type: "boolean" },
+          },
+        } } } }, "401": { description: "Unauthenticated" }, "403": { description: "Not your source" },
+          "404": { description: "Source not found" }, "409": { description: "Email notification not configured" } },
+      },
+      post: {
+        summary: "Set the current configured email recipient's presentation language",
+        description: "Owner-only, no notification is sent. Token/email replacement starts a fresh preference. Save succeeds only after storage readback; no new schema or account identity join.",
+        security: [{ WebSession: [] }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: {
+            type: "object", additionalProperties: false, required: ["language"],
+            properties: { language: { type: "string", enum: ["en", "vi", "pt", "pt-BR", "es"] } },
+          } } },
+        },
+        responses: { "200": { description: "Confirmed saved language" }, "400": { description: "invalid_language" },
+          "401": { description: "Unauthenticated" }, "403": { description: "Not your source" }, "404": { description: "Source not found" },
+          "409": { description: "Email notification not configured or notification_recipient_changed during save" }, "503": { description: "language_preference_unavailable" } },
+      },
+    },
     ...decisionReviewOpenApiPaths,
     ...deliverableAcceptanceOpenApiPaths,
     ...evidenceDraftOpenApiPath,

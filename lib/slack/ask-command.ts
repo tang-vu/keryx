@@ -10,6 +10,7 @@
  */
 
 import { config } from "../config";
+import { recordedAnswerLanguage } from "../research/answer-language-provenance";
 import { unsupportedDecisionReviewFlag, unsupportedDecisionReviewIntent } from "../research/decision-review-types";
 import { formatRecordedUsdc, formatNumber, selectPlural } from "../i18n/format";
 import { answerPresentation } from "../research/answer-presentation";
@@ -25,6 +26,8 @@ const MESSAGE_MAX = 12000;
 
 /** The fields the /keryx flow reads from Slack's urlencoded slash-command payload. */
 export interface SlashCommand {
+  /** Authenticated route preference only; never parsed from slash-command fields. */
+  presentationLanguage?: BotLanguage;
   question: string;
   userId: string;
   channelId: string;
@@ -32,12 +35,25 @@ export interface SlashCommand {
   command: string;
 }
 
+/** Reserved account verbs only, not occurrences or word prefixes in research questions.
+ * Arguments (including malformed or secret-like values) never turn a control into research.
+ * This recognizes intent only; it grants no account identity or storage authority. */
+export function isSlackAccountControl(params: URLSearchParams): boolean {
+  const command = (params.get("command") ?? "").trim() || "/keryx";
+  if (/^\/(?:link|unlink|whoami)$/u.test(command)) return true;
+  return command === "/keryx" && /^\/?(?:link|unlink|whoami)(?:\s|$)/u.test((params.get("text") ?? "").trim());
+}
+
+export const slackAccountLinkingUnavailable =
+  "Slack account linking is unavailable. This command did not read or change an account binding.";
+
 /**
- * Pull the /keryx command out of the parsed form body, or null when there's no question. Slack
+ * Pull the /keryx question out of the parsed form body, or null for account controls or no question. Slack
  * always sends the whole payload; a blank `text` means the user typed just `/keryx`, which the
  * route answers with usage help. Missing user id falls back to a shared bucket rather than failing.
  */
 export function parseSlashCommand(params: URLSearchParams): SlashCommand | null {
+  if (isSlackAccountControl(params)) return null;
   const question = (params.get("text") ?? "").trim();
   if (!question || unsupportedDecisionReviewFlag(question) || unsupportedDecisionReviewIntent(Object.fromEntries(params))) return null;
   return {
@@ -70,9 +86,9 @@ export function helpText(language: BotLanguage = "en"): string {
  * planned rewards, recorded payment mode, and a link to the full dispatch trace (which carries
  * settlement evidence and any truncated text). QueryRun alone does not contain per-payment evidence.
  */
-export function buildAnswerText(run: QueryRun): string {
-  const message = botResearchMessages(run.question);
-  const locale = answerPresentation(run.question, "ordinary").language;
+export function buildAnswerText(run: QueryRun, requestedLanguage?: BotLanguage): string {
+  const locale = recordedAnswerLanguage(run) ?? requestedLanguage ?? answerPresentation(run.question, "ordinary").language;
+  const message = botResearchMessages(run.question, locale);
   const parts = [`*${escapeSlack(truncate(run.question, 256))}*`, ""];
   parts.push(escapeSlack(truncate(run.answer, ANSWER_MAX)), "");
 
@@ -95,8 +111,8 @@ export function buildAnswerText(run: QueryRun): string {
 }
 
 /** Failure text for the response_url post — the run died, say so instead of leaving it silent. */
-export function buildErrorText(err: unknown, originalQuestion = ""): string {
-  return truncate(escapeSlack(botResearchFailure(err, originalQuestion)), MESSAGE_MAX);
+export function buildErrorText(err: unknown, originalQuestion = "", requestedLanguage?: BotLanguage): string {
+  return truncate(escapeSlack(botResearchFailure(err, originalQuestion, requestedLanguage)), MESSAGE_MAX);
 }
 
 /**

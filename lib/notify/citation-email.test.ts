@@ -55,6 +55,15 @@ describe("shouldSendEmail (rate cap)", () => {
 });
 
 describe("buildCitationEmailContent", () => {
+  it.each(["en", "vi", "pt", "es"] as const)("localizes ordinary %s navigation while retaining original financial authority", async language => {
+    const { citationEmailMessages } = await import("./citation-messages");
+    const content = buildCitationEmailContent(payload(), { base: "https://keryx.cc", unsubToken: "tok123", language });
+    expect(content.text).toContain(citationEmailMessages[language].trace);
+    expect(content.html).toContain(citationEmailMessages[language].unsubscribe);
+    expect(content.subject).toContain("USDC settled to you");
+    expect(content.text).toContain("settled on");
+    expect(content.text).not.toContain("How do x402 tolls work?");
+  });
   const content = buildCitationEmailContent(payload(), {
     base: "https://keryx.cc",
     unsubToken: "tok123",
