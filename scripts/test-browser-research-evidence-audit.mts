@@ -47,9 +47,11 @@ try {
   });
   const page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
   const screenshots = join(source, ".artifacts", "evidence-audit"); await mkdir(screenshots, { recursive: true });
+  const expectedExample = JSON.stringify(JSON.parse(await readFile(join(source, "docs/research-evidence-audit-example.json"), "utf8")), null, 2);
   for (const width of [320, 390, 1366]) {
-    await page.setViewportSize({ width, height: 900 }); await page.goto(origin + "/research-audit", { waitUntil: "domcontentloaded" });
+    await page.setViewportSize({ width, height: 900 }); await page.goto(origin + "/research-audit");
     await page.getByRole("button", { name: "Load illustrative example", exact: true }).click();
+    await page.waitForFunction(expected => document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Audit input JSON"]')?.value === expected, expectedExample);
     await page.getByRole("button", { name: "Check locally", exact: true }).click();
     await page.getByRole("heading", { name: "Local audit result", exact: true }).waitFor();
     assert(await page.getByText("Access: simulated", { exact: false }).isVisible());
