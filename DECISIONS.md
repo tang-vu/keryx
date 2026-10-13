@@ -7940,6 +7940,21 @@ This is verification maintenance, without runtime version, custody, schema,
 spending or scheduling changes. Source pins, acceptance and remaining gates are
 in [the adoption record](docs/engineering/acr-deployment-adoption-2026-10-12.md).
 
+## Review-bound claim costs and immutable decision/receipt comparisons ? 2026-10-12
+
+The owner authorized both further Tameion OSS-adoption proposals. Use a shared
+pure local observer to measure reviewed supported claims, separate exact USD
+provider costs from USDC source costs, and compare immutable captured source
+terms with portable receipt observations. Missing human reviews, bills, full
+ledger windows and unique payment joins remain unavailable or ambiguous.
+Derive the decision commitment from initial capture, excluding later verdicts
+and payment results; separately retained digests check later changes while
+independent pre-spend timing and settlement remain unproven. No payment, DB,
+pricing or semantic-judge authority changes. A native browser/CLI adaptation
+avoids copying upstream code or adding a framework. Source pins, seven-surface
+roles, validation and stronger future attestation gates are recorded in
+[the adoption record](docs/engineering/research-evidence-audit-2026-10-12.md).
+
 **Use one public creator flow and the existing wallet balance for registration gas — 2026-10-12.**
 The owner requested fast creator registration at /register for everyone, with gas
 covered until the existing sponsor wallet has insufficient funds. Replace the
