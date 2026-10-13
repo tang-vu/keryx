@@ -6,15 +6,17 @@ import type { originalOrderPaymentSchema, PaidJobEscalation } from "@/lib/a2a/ov
 import copy from "@/locales/en/paid-job-escalation.json";
 import { jobTargetCopy } from "@/locales/en/job-targets";
 import { useJobTargetWarning } from "@/lib/operator/job-target-observation";
+import { jobTargetCustomerState } from "@/lib/operator/job-targets";
 
 export function ResearchJobEscalation({ escalation, original }: {
   escalation?: PaidJobEscalation;
   original?: { orderId: string; payment: z.infer<typeof originalOrderPaymentSchema> };
 }) {
   const localWarning = useJobTargetWarning(escalation);
+  const customerState = jobTargetCustomerState(escalation, localWarning);
   const [choice, setChoice] = useState<"wait" | "partial" | "human" | null>(null);
-  if (!escalation || (escalation.state === "within_target" && !localWarning) || escalation.state === "completed") return null;
-  if (escalation.state === "unavailable") return <p role="status" className="mt-3 text-sm text-ink-3">{copy.unavailable}</p>;
+  if (!escalation || customerState === "within_target_on_observation" || customerState === "completed_on_observation") return null;
+  if (customerState === "unavailable") return <p role="status" className="mt-3 text-sm text-ink-3">{copy.unavailable}</p>;
   return <div role="alert" className="mt-4 space-y-3 border-l-2 border-seal pl-4 font-serif text-sm">
     <p className="font-semibold text-seal">{localWarning ? jobTargetCopy.localTitle : copy.overdueTitle}</p>
     <p>{localWarning ? jobTargetCopy.localBody : copy.overdueBody}</p>

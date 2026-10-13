@@ -103,3 +103,65 @@ not zero or inferred from acceptance/update time. Persisted customer remedy
 requests, prospective remedy consent and any refund require their own reviewed
 authority. No retry, sign, buy, reconciliation, hold release, refund, production
 DDL/backfill, custody, ENV, schedule or App54 UNBOUND execution is introduced.
+
+## Scoped successor adapters awaiting acceptance
+
+The successor keeps a small read-only adapter in `lib/operator/job-targets.ts`.
+`jobCompletionMetrics` names the existing whole operations snapshot's basis as
+original acceptance to recorded completion/update in the last 24 hours. It keeps
+ordinary, recovered and unknown completed/sample counts separate, including the
+full original delay for held/repaired jobs. Missing capability, inconsistent
+totals, unsafe counts or contradictory percentiles stay unavailable. At this
+adapter, absent/null cohort capability makes both `recordedCompletion.completed`
+and `recordedCompletion.cohorts` null, even for a valid legacy aggregate total of
+six. The existing producer and public schema keep their independently known
+`completedLast24h` aggregate unchanged. This is the conservative scoped adapter
+requirement; root may explicitly revise it during admission. A valid empty
+snapshot with cohort capability has zero completed/sample counts in all three
+cohorts and null percentiles. Legacy zero/null cohorts, missing input and malformed
+input remain unavailable rather than measured empty. Transaction references,
+creator-leg timestamps, service completion and supplied-corpus usage latency do not supply missing
+original inbound settlement/customer delivery or first-user arrival endpoints.
+
+`jobAlertDeliveryObservation` preserves the existing observer's measured coverage
+and transport counters. OFF, unbound and failed observations have null counters.
+An acknowledged transport, suppressed reservation or unknown transport cannot
+prove responder receipt, customer state delivery on a closed page or timely
+coverage. Those fields remain null, and the adapter grants no automatic resend.
+It is an aggregate adapter, not evidence for any particular original job.
+
+Successful observations must account for each overdue original using the existing
+producer's branches. Let `R = overdue - acknowledged - suppressed - deferred`:
+`R >= 0` and `R <= unknown <= R + suppressed`. New attempts are acknowledged or
+unknown; retained reservations are suppressed and may also be unknown. Deferred
+originals have no transport outcome. These bounds permit suppression/unknown
+overlap and refuse missing outcomes or deferred/unknown double counting. Deferred
+entries require partial coverage. Complete empty scans may have measured zeros;
+partial scans can also have zero overdue entries when truncation, unreadable rows
+or unavailable timing prevents complete coverage. Neither case establishes
+target-window delivery. Invalid integer counters remain unavailable.
+
+The existing customer escalation component consumes `jobTargetCustomerState`
+to distinguish retained completion/overdue state from a local stale warning and
+to refuse contradictory original acceptance/deadline clocks. Original references,
+pending legs and local-only guidance are unchanged. These helpers add no public
+schema, storage writer, contact, cadence or notification path. The aggregate
+metrics/observer call sites still require a root-assigned integration partition.
+
+New offline fixtures cover count/percentile refusal, a 52-hour recovery, later
+bookkeeping, unsupported capability, uncertain transport and contradictory
+customer timing. Their focused check attempt was refused before execution by
+PowerShell's disabled-script policy (`PSSecurityException`, `UnauthorizedAccess`).
+No alternate runner or policy change was attempted. The successor source and
+fixtures remain unvalidated; earlier 82-test, browser and type/lint evidence
+applies only to its unchanged source/input scope. Root must independently review
+and admit any later check and integration action. Original issue 257 remains OPEN.
+
+The source-only review correction adds producer-derived missing-outcome,
+deferred/unknown, overlap lower/upper boundary, empty/partial scan and invalid
+integer fixtures. Separate completion fixtures distinguish the unchanged legacy
+aggregate six/null cohorts, missing input, malformed input and an empty snapshot
+from the actual operations summarizer with cohort capability. These fixtures are
+synthetic and **UNRUN**. No observer producer or test runner was invoked for this
+correction; the prior native refusal remains retained. Different source/control/
+environment review and lawful root validation are still required.
