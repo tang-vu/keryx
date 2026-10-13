@@ -38,7 +38,8 @@ describe("stateless policy surfaces", () => {
       expect((await client.listTools()).tools.map(tool => tool.name)).toEqual(["research_mandate_assess", "research_mandate_example"]);
       const example = await client.callTool({ name: "research_mandate_example", arguments: { network: "eip155:5042002" } });
       expect(example.structuredContent).toMatchObject({ synthetic: true, executionAuthorized: false });
-      const input = example.structuredContent!.input;
+      const payload = example.structuredContent as { input: unknown };
+      const input = payload.input;
       const result = await client.callTool({ name: "research_mandate_assess", arguments: { input } });
       expect(result.structuredContent).toMatchObject({ executionAuthorized: false, basis: "caller-supplied-policy-and-books", identity: { network: "eip155:5042002" } });
       const invalid = await client.callTool({ name: "research_mandate_assess", arguments: { input: { execute: true } } });
