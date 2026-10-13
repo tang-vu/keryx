@@ -26,11 +26,14 @@ import { prepareTelegramPrivateReply, type TelegramPrivatePlaceholder } from "@/
 import { config } from "@/lib/config";
 import { botResearchMessages } from "@/lib/bots/research-messages";
 import { botControlResponse, parseBotControl } from "@/lib/bots/language";
+import { botAnswerPresentation } from "@/lib/bots/answer-preference";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import {
   type AskMessage,
   type TelegramUpdate,
   parseAskMessage,
+  isTelegramAccountControl,
+  telegramAccountLinkingUnavailable,
   helpText,
   apiUrl,
   buildAnswerText,
@@ -54,6 +57,11 @@ export async function POST(req: NextRequest) {
   let update: TelegramUpdate;
   try {
     update = (await req.json()) as TelegramUpdate;
+    if (!update || typeof update !== "object" || Array.isArray(update)
+      || update.message !== undefined && (!update.message || typeof update.message !== "object" || Array.isArray(update.message)
+        || update.message.text !== undefined && typeof update.message.text !== "string")) {
+      return Response.json({ error: "malformed update body" }, { status: 400 });
+    }
   } catch {
     return Response.json({ error: "malformed update body" }, { status: 400 });
   }
@@ -64,6 +72,17 @@ export async function POST(req: NextRequest) {
   const chatId = update.message?.chat?.id;
   const sender = update.message?.from;
   const userId = sender?.id;
+  // Transport authentication is complete. Never pass account arguments to language/storage,
+  // sponsored admission or research, and never include them in a private or group reply.
+  if (isTelegramAccountControl(update)) {
+    if (typeof chatId !== "number" || !Number.isSafeInteger(chatId)
+      || typeof userId !== "number" || !Number.isSafeInteger(userId) || userId <= 0 || sender?.is_bot) {
+      return Response.json({ ok: true });
+    }
+    const privateChat = update.message?.chat?.type === "private" && chatId === userId;
+    return Response.json({ method: "sendMessage", chat_id: chatId, text: telegramAccountLinkingUnavailable,
+      ...(privateChat ? { protect_content: true } : {}) });
+  }
   const control = parseBotControl(update.message?.text ?? "");
   if (control && typeof chatId === "number" && typeof userId === "number" && Number.isSafeInteger(chatId)
     && Number.isSafeInteger(userId) && userId > 0 && !sender?.is_bot) {
@@ -85,7 +104,7 @@ export async function POST(req: NextRequest) {
     return Response.json({
       method: "sendMessage",
       chat_id: cmd.chatId,
-      text: botResearchMessages(cmd.question)("treasuryUnavailable"),
+      text: botResearchMessages(cmd.question, cmd.presentationLanguage)("treasuryUnavailable"),
     });
   }
 
@@ -96,7 +115,7 @@ export async function POST(req: NextRequest) {
     return Response.json({
       method: "sendMessage",
       chat_id: cmd.chatId,
-      text: botResearchMessages(cmd.question)("sponsoredLimited"),
+      text: botResearchMessages(cmd.question, cmd.presentationLanguage)("sponsoredLimited"),
     });
   }
 
@@ -121,10 +140,12 @@ async function runAndReply(cmd: AskMessage, budget: number) {
   const privateReply = hostedRunClaimsEnabled()
     ? await prepareTelegramPrivateReply(cmd, body => callTelegram<TelegramPrivatePlaceholder>("sendMessage", body)) : null;
   if (hostedRunClaimsEnabled() && !privateReply) return;
+  // Preference storage never delays admission or bypasses the private reply gates.
+  cmd.presentationLanguage = (await botAnswerPresentation(cmd.question, { platform: "telegram", scope: "telegram", userId: String(cmd.userId) })).language;
   const replyChatId = privateReply?.chatId ?? cmd.chatId;
   const placeholderId = privateReply?.placeholderId ?? await callTelegram<{ message_id?: number }>("sendMessage", {
     chat_id: cmd.chatId,
-    text: botResearchMessages(cmd.question)("dispatching"),
+    text: botResearchMessages(cmd.question, cmd.presentationLanguage)("dispatching"),
     reply_to_message_id: cmd.messageId,
     allow_sending_without_reply: true,
   }).then((r) => r?.message_id);
@@ -133,16 +154,17 @@ async function runAndReply(cmd: AskMessage, budget: number) {
   try {
     const run = await collectRun({
       question: cmd.question,
+      ...(cmd.presentationLanguage ? { presentationLanguage: cmd.presentationLanguage } : {}),
       budget,
       queryId,
       origin: "web",
       provenance: { version: 1, surface: "telegram", ownershipMethod: "unknown" },
     });
     packet = await privateClaim?.complete(run);
-    text = buildAnswerText(run);
+    text = buildAnswerText(run, cmd.presentationLanguage);
   } catch (err) {
     console.error("[telegram] /ask run failed:", err);
-    text = buildErrorText(err, cmd.question);
+    text = buildErrorText(err, cmd.question, cmd.presentationLanguage);
   }
 
   let edited: unknown = null;

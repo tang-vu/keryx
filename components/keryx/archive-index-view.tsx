@@ -18,6 +18,7 @@ import { ArchiveSearch } from "./archive-search";
 import { ArchivePagination } from "./archive-pagination";
 import { ArchiveTopicChips } from "./archive-topic-chips";
 import { ProductEntryNote } from "./product-guide";
+import { ArchiveLanguageFilter } from "./archive-language-filter";
 
 const copy = createMessages("en");
 const richCopy = createRichMessages("en");
@@ -26,11 +27,15 @@ export function ArchiveIndexView({
   slice,
   topics,
   totalEntries,
+  languages = [],
+  language = null,
 }: {
   slice: ArchivePage;
   topics: ArchiveTopic[];
   /** Size of the whole archive, not this page — the headline counts the corpus. */
   totalEntries: number;
+  languages?: Array<{ language: string; count: number }>;
+  language?: string | null;
 }) {
   return (
     <main className="mx-auto max-w-[860px] px-4 pb-20 pt-12 sm:px-[30px]">
@@ -39,7 +44,7 @@ export function ArchiveIndexView({
           {slice.page > 1 ? copy("archiveIndex.page", { page: slice.page, pages: slice.totalPages }) : copy("archiveIndex.kicker")}
         </span>
         <a
-          href="/answers/feed.xml"
+          href={language ? `/answers/feed.xml?${new URLSearchParams({ language })}` : "/answers/feed.xml"}
           className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3 underline decoration-dotted underline-offset-4 transition-colors hover:text-seal"
         >
           {copy("archiveIndex.feed")}
@@ -59,6 +64,7 @@ export function ArchiveIndexView({
       </p>
       <Link href="/history/testnet" className="mt-3 inline-block text-sm text-seal underline underline-offset-4">{copy("archiveIndex.testnet")}</Link>
       <div className="mt-6"><ProductEntryNote /></div>
+      <ArchiveLanguageFilter languages={languages} selected={language} />
 
       {slice.items.length > 0 && (
         <ArchiveSearch
@@ -72,7 +78,7 @@ export function ArchiveIndexView({
         </ArchiveSearch>
       )}
 
-      <ArchivePagination page={slice.page} totalPages={slice.totalPages} />
+      <ArchivePagination page={slice.page} totalPages={slice.totalPages} language={language} />
 
       <div className="mt-12 border-t border-ink pt-6">
         <Link

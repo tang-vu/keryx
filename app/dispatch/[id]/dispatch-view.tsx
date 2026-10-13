@@ -5,6 +5,7 @@ import { DisplayTime } from "@/components/keryx/display-time";
 
 import { createMessages } from "@/lib/i18n/messages";
 import type { QueryRun, PaymentRecord } from "@/lib/types";
+import type { PresentationLanguage } from "@/shared/i18n/presentation-language";
 import { ReasoningConsole } from "@/components/keryx/reasoning-console";
 import { CreatorsPaidPanel } from "@/components/keryx/creators-paid-panel";
 import { AnswerCard } from "@/components/keryx/answer-card";
@@ -19,11 +20,14 @@ const copy = createMessages("en");
 
 export function DispatchView({
   run,
+  answerLanguage,
   payments,
   historical = false,
   historicalNetwork,
 }: {
   run: QueryRun;
+  /** Trusted stored-answer language, read on the server before public projection. */
+  answerLanguage?: PresentationLanguage;
   payments: PaymentRecord[];
   historical?: boolean;
   historicalNetwork?: string;
@@ -40,7 +44,7 @@ export function DispatchView({
         {copy("reportDispatchView.archived")}
       </div>
       <div className="mb-7 max-w-[860px]">
-        <p className="font-serif text-[clamp(17px,1.5vw,20px)] leading-[1.55] text-ink-2">
+        <p lang="und" className="font-serif text-[clamp(17px,1.5vw,20px)] leading-[1.55] text-ink-2">
           {run.question}
         </p>
         <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -52,7 +56,7 @@ export function DispatchView({
       </div>
 
       <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,330px)]">
-        <AnswerCard run={run} meta={null} payments={payments} showFeedback={!historical} historicalNetwork={recordedNetwork} />
+        <AnswerCard run={run} answerLanguage={answerLanguage} meta={null} payments={payments} showFeedback={!historical} historicalNetwork={recordedNetwork} />
         <aside className="min-w-0 lg:sticky lg:top-6" aria-label={copy("reportDispatchView.paymentEvidence")}>
           <CreatorsPaidPanel payments={payments} mode={mode} streaming={false} historicalNetwork={recordedNetwork} />
         </aside>
