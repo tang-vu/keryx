@@ -68,7 +68,6 @@ export async function POST(req: NextRequest) {
   }
   const cmd = parseSlashCommand(params);
   if (!cmd) return Response.json(ephemeral(helpText()));
-  cmd.presentationLanguage = (await botAnswerPresentation(cmd.question, { platform: "slack", scope: params.get("team_id") ?? "", userId: cmd.userId })).language;
   if (!config.sellerAddress) {
     return Response.json(ephemeral(botResearchMessages(cmd.question, cmd.presentationLanguage)("treasuryUnavailable")));
   }
@@ -81,7 +80,7 @@ export async function POST(req: NextRequest) {
   }
 
   const budget = Math.min(config.defaultBudget, config.anonMaxBudget);
-  after(() => runAndReply(cmd, budget));
+  after(() => runAndReply(cmd, budget, { platform: "slack", scope: params.get("team_id") ?? "", userId: cmd.userId }));
   return Response.json(ephemeral(botResearchMessages(cmd.question, cmd.presentationLanguage)("dispatching")));
 }
 
@@ -91,12 +90,14 @@ function ephemeral(text: string) {
 }
 
 /** Runs the agent after the ack, then posts the answer (or a failure note) to the response_url. */
-async function runAndReply(cmd: SlashCommand, budget: number) {
+async function runAndReply(cmd: SlashCommand, budget: number, recipient: Parameters<typeof botAnswerPresentation>[1]) {
   if (hostedRunClaimsEnabled() && !privateSlackResponseUrl(cmd.responseUrl)) return;
   let text: string;
   try {
     const queryId = crypto.randomUUID();
     const privateClaim = await prepareHostedRunClaim(queryId);
+    // Resolve stored generation intent only after the owned reply path is admitted.
+    cmd.presentationLanguage = (await botAnswerPresentation(cmd.question, recipient)).language;
     const run = await collectRun({
       question: cmd.question,
       ...(cmd.presentationLanguage ? { presentationLanguage: cmd.presentationLanguage } : {}),

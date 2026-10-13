@@ -100,7 +100,6 @@ export async function POST(req: NextRequest) {
 
   const cmd = parseAskMessage(update);
   if (!cmd) return Response.json({ ok: true }); // not an /ask — acknowledge and move on
-  cmd.presentationLanguage = (await botAnswerPresentation(cmd.question, { platform: "telegram", scope: "telegram", userId: String(cmd.userId) })).language;
   if (!config.sellerAddress) {
     return Response.json({
       method: "sendMessage",
@@ -141,6 +140,8 @@ async function runAndReply(cmd: AskMessage, budget: number) {
   const privateReply = hostedRunClaimsEnabled()
     ? await prepareTelegramPrivateReply(cmd, body => callTelegram<TelegramPrivatePlaceholder>("sendMessage", body)) : null;
   if (hostedRunClaimsEnabled() && !privateReply) return;
+  // Preference storage never delays admission or bypasses the private reply gates.
+  cmd.presentationLanguage = (await botAnswerPresentation(cmd.question, { platform: "telegram", scope: "telegram", userId: String(cmd.userId) })).language;
   const replyChatId = privateReply?.chatId ?? cmd.chatId;
   const placeholderId = privateReply?.placeholderId ?? await callTelegram<{ message_id?: number }>("sendMessage", {
     chat_id: cmd.chatId,
