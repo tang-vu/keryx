@@ -88,7 +88,7 @@ without claiming all packages gained new tools. No version is allocated here.
 
 ## Validation and release gates
 
-Focused local acceptance: 17 adversarial contract cases; 28 compiler/API/CLI/
+Focused local acceptance: 18 adversarial contract cases; 28 compiler/API/CLI/
 actual HTTP and stdio MCP protocol cases; EN/VI browser scenarios at 360/1440
 pixels with refusal/export/edit-invalidation checks and zero network requests.
 Screenshots inspect the real bundled component; they are not deployed Next-route

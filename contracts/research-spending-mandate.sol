@@ -103,14 +103,14 @@ contract ResearchSpendingMandate is ReentrancyGuard {
         owner = owner_;
         deploymentChainId = block.chainid;
         _validateLimits(initialLimits);
-        if (agent_ == address(0) || agent_ == address(this)) revert InvalidPolicy();
+        if (agent_ == address(0) || agent_ == address(this) || agent_ == owner_) revert InvalidPolicy();
         agent = agent_;
         limits = initialLimits;
     }
 
     function setPolicy(address agent_, Limits calldata next) external onlyOwner {
         _validateLimits(next);
-        if (agent_ == address(0) || agent_ == address(this)) revert InvalidPolicy();
+        if (agent_ == address(0) || agent_ == address(this) || agent_ == owner) revert InvalidPolicy();
         agent = agent_;
         limits = next;
         _invalidate();
