@@ -491,6 +491,11 @@ jobs:
       - name: iPhone route prefetch and delayed navigation (built, offline GET only)
         run: node --import tsx scripts/test-browser-mobile-navigation-built.mts --webkit
 
+      - name: Dynamic page navigation (built, offline GET only)
+        run: |
+          node --import tsx scripts/test-browser-navigation-latency.mts
+          node --import tsx scripts/test-browser-navigation-latency.mts --webkit
+
       - name: Product discovery, pricing and support (built, offline, no research or payment)
         env:
           KERYX_NETWORK: arcTestnet

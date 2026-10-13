@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { formatUsdcMicros } from "@/lib/display/recorded-usdc";
@@ -82,6 +83,6 @@ export default async function PurchaseOutcomesPage({ searchParams }: { searchPar
         </table></div>}
       </section>)}
     </>}
-    <div className="mt-8 flex flex-wrap gap-6"><a className="underline" href={`/api/purchase-outcomes?${query}`}>{copy.json}</a><a className="underline" href="/usage">{copy.usage}</a></div>
+    <div className="mt-8 flex flex-wrap gap-6"><a className="underline" href={`/api/purchase-outcomes?${query}`}>{copy.json}</a><Link className="underline" href="/usage">{copy.usage}</Link></div>
   </main><SiteFooter /></div>;
 }
