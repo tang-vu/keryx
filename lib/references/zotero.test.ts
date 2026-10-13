@@ -33,6 +33,7 @@ function syntheticZotero() {
       return Response.json(rows.slice(start, start + 100), { headers: { ...responseHeaders, "Total-Results": String(state.total || rows.length) } });
     }
     if (url.pathname === "/users/1234/items" && method === "POST") {
+      if (headers.has("If-Unmodified-Since-Version") && headers.get("If-Unmodified-Since-Version") !== String(version)) return new Response(null, { status: 412 });
       const successful: Record<string, unknown> = {}, failed: Record<string, unknown> = {}; version++;
       for (const [index, fields] of (body as Record<string, unknown>[]).entries()) {
         const key = String(fields.key), previous = items.get(key);
@@ -41,7 +42,7 @@ function syntheticZotero() {
         items.set(key, item); successful[String(index)] = item;
       }
       if (state.dropped) { state.dropped = false; throw new Error(`ambiguous write ${token}`); }
-      return Response.json({ successful, unchanged: {}, failed }, { headers: responseHeaders });
+      return Response.json({ successful, unchanged: {}, failed }, { headers: { ...responseHeaders, "Last-Modified-Version": String(version) } });
     }
     throw new Error("Unexpected synthetic request");
   });

@@ -3,18 +3,11 @@ import { ZoteroError, zoteroTokenSchema, type ZoteroLease, type ZoteroStore } fr
 import { digest, type ZoteroReference } from "./zotero-export";
 import { ZoteroProvider, type ZoteroItem } from "./zotero-provider";
 import { arxivDocumentId, normalizeVersionedArxivId } from "../scholarly/arxiv-identity";
+import { zoteroDataEqual } from "./zotero-data";
 
 const aad = (owner: string, user: string) => new TextEncoder().encode(`keryx-zotero-token-v1:${owner}:${user}`);
-function same(a: unknown, b: unknown): boolean {
-  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((value, index) => same(value, b[index]));
-  if (a && b && typeof a === "object" && typeof b === "object") {
-    const left = Object.keys(a).sort(), right = Object.keys(b).sort();
-    return same(left, right) && left.every(key => same((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]));
-  }
-  return a === b;
-}
 function matches(item: ZoteroItem, reference: ZoteroReference) {
-  return Object.entries(reference.fields).every(([key, value]) => key === "extra" || key === "citationKey" || same(item.data[key] ?? (Array.isArray(value) ? [] : ""), value));
+  return Object.entries(reference.fields).every(([key, value]) => key === "extra" || key === "citationKey" || zoteroDataEqual(item.data[key] ?? (Array.isArray(value) ? [] : ""), value));
 }
 function arxivIdentity(data: Record<string, unknown>) {
   const extra = String(data.extra ?? "");
@@ -73,7 +66,7 @@ export function createZoteroService(store: ZoteroStore, transport: typeof fetch 
       if (!collections.some(row => row.key === collection)) throw new ZoteroError("zotero_conflict");
       // Scan a complete bounded library snapshot before the first write. A large,
       // changing, duplicate or incompatible library refuses instead of guessing.
-      const remote = await provider.items(user), planned: Record<string, unknown>[] = [];
+      const snapshot = await provider.items(user), remote = snapshot.items, planned: Record<string, unknown>[] = [];
       for (const reference of references) {
         const found = remote.filter(item => item.data.itemType !== "note" && item.data.itemType !== "attachment" && candidate(item.data, reference));
         if (found.length > 1 || found[0] && (!matches(found[0], reference) || found[0].data.deleted === 1)) throw new ZoteroError("zotero_conflict");
@@ -90,7 +83,7 @@ export function createZoteroService(store: ZoteroStore, transport: typeof fetch 
           }
           const extra = [...new Set([...(item.data.extra?.split("\n").filter(Boolean) ?? []), ...String(reference.fields.extra).split("\n")])].join("\n");
           const membership = item.data.collections ?? [];
-          if (!membership.includes(collection) || item.data.extra !== extra || !item.data.citationKey) planned.push({ key, version: item.version,
+          if (!membership.includes(collection) || item.data.extra !== extra || !item.data.citationKey) planned.push({ ...reference.fields, key, version: item.version,
             collections: [...new Set([...membership, collection])], citationKey: reference.citationKey, extra });
         }
         const identical = remote.filter(row => row.data.itemType === "note" && row.data.parentItem === key && row.data.note === reference.note && row.data.deleted !== 1);
@@ -101,11 +94,15 @@ export function createZoteroService(store: ZoteroStore, transport: typeof fetch 
           planned.push({ key: noteKey, version: 0, itemType: "note", parentItem: key, note: reference.note, tags: [], collections: [], relations: {} });
         }
       }
+      let libraryVersion = snapshot.libraryVersion;
       for (let start = 0; start < planned.length; start += 50) {
         // Publication can be revoked while provider reads are held. Recheck the
         // exact admitted revision/export before each new write, without retries.
         await reportAdmission?.();
-        await provider.write(user, planned.slice(start, start + 50));
+        // Object versions alone cannot detect an independently created duplicate
+        // after our scan. Guard the whole library and advance only on accepted
+        // replies. A 412 needs a new explicit action with a fresh complete scan.
+        libraryVersion = await provider.write(user, planned.slice(start, start + 50), libraryVersion);
       }
       return { references: references.length, writes: planned.length, collection, provider: "zotero" as const };
     }),

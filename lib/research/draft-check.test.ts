@@ -108,12 +108,55 @@ describe("lexical support", () => {
     expect(lexicalSupport("Costs rose", prepareDraftSource("Costs rose sharply."))).toMatchObject({ verdict: "partly-supported" });
     expect(lexicalSupport("Glaciers retreated", source)).toEqual({ verdict: "not-found", missingTerms: ["glaciers", "retreated"], missingNumbers: [] });
   });
+  it.each([
+    ["Women had 60% recovery and men had 40% recovery", "Men had 60% recovery and women had 40% recovery."],
+    ["Women had 60.5 percent recovery and men had 40.5 percent recovery", "Men had 60.5 percent recovery and women had 40.5 percent recovery."],
+    ["Women had 60% recovery", "Men had 60% recovery and women had 40% recovery."],
+    ["Cohort alpha had 60% recovery and cohort beta had 40% recovery", "Cohort beta had 60% recovery and cohort alpha had 40% recovery."],
+  ])("rejects reassigned percentages: %s", (claim, text) => {
+    const result = lexicalSupport(claim, prepareDraftSource(text));
+    expect(result).toMatchObject({ verdict: "not-found", missingNumbers: [], closest: { difference: "different-number" } });
+    expect(result).not.toHaveProperty("excerpt");
+    expect(text.slice(result.closest!.start, result.closest!.end)).toBe(result.closest!.text);
+  });
+  it.each([
+    "Women had 60% recovery and men had 40% recovery.",
+    "Men had 40% recovery and women had 60% recovery.",
+    "Men had 40 percent recovery. Women had 60 percent recovery.",
+  ])("supports matching population percentages with exact source offsets: %s", text => {
+    const result = lexicalSupport("Women had 60% recovery and men had 40% recovery", prepareDraftSource(text));
+    expect(result.verdict).toBe("supported");
+    expect(text.slice(result.excerpt!.start, result.excerpt!.end)).toBe(result.excerpt!.text);
+  });
+  it("withholds supported when percentage populations cannot be bound to distinct clauses", () => {
+    const text = "Women and men had 60% and 40% recovery, respectively.";
+    expect(lexicalSupport("Women had 60% recovery and men had 40% recovery", prepareDraftSource(text)))
+      .toMatchObject({ verdict: "partly-supported", excerpt: { text } });
+  });
+  it.each([
+    "Women had 60% recovery unlike men.",
+    "Men had 60% recovery unlike women.",
+  ])("withholds supported for equal-value many-to-one percentage roles: %s", text => {
+    const result = lexicalSupport("Women had 60% recovery and men had 60% recovery", prepareDraftSource(text));
+    expect(result).toMatchObject({ verdict: "partly-supported", missingTerms: [], missingNumbers: [], excerpt: { text } });
+    expect(text.slice(result.excerpt!.start, result.excerpt!.end)).toBe(result.excerpt!.text);
+  });
+  it.each([
+    "Women had 60% recovery and men had 60% recovery.",
+    "Men had 60% recovery and women had 60% recovery.",
+    "Men had 60 percent recovery. Women had 60 percent recovery.",
+  ])("supports distinct equal-value population percentage clauses: %s", text => {
+    const result = lexicalSupport("Women had 60% recovery and men had 60% recovery", prepareDraftSource(text));
+    expect(result.verdict).toBe("supported");
+    expect(text.slice(result.excerpt!.start, result.excerpt!.end)).toBe(result.excerpt!.text);
+    expect(result.excerpt!.text).toBe(text);
+  });
 });
 
 describe("private draft check contract", () => {
   it("ties every verdict to a verbatim excerpt or an explicit absence, and never classifies an unsupplied source", () => {
     const check = buildDraftCheck(draftCheckFixture());
-    expect(check).toMatchObject({ version: 1, scope: "private-draft-check", method: "lexical-overlap-v1", origin: "caller-supplied-source-text",
+    expect(check).toMatchObject({ version: 1, scope: "private-draft-check", method: "lexical-overlap-v2", origin: "caller-supplied-source-text",
       summary: { claims: 3, supported: 1, partlySupported: 0, notFound: 0, sourceUnavailable: 1, notChecked: 1 } });
     expect(check.claims[0]).toMatchObject({ id: "claim1", text: "Retrieval improves factual accuracy on open-domain questions [1].", verdict: "supported",
       citations: [{ token: "1", reference: "ref1", verdict: "supported", evidence: "verbatim-excerpt", coverage: "partial",
