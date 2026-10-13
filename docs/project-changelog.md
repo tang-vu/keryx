@@ -1,5 +1,21 @@
 # Keryx Project Changelog
 
+### Three specialist research pilots (unreleased)
+
+- Prepare API/platform, SaaS competitor/niche and literature requests with bounded
+  scope and separate buyer review checklists at `/briefs` and in the source CLI.
+  Drafting, copying and downloads do not start research or authorize payment.
+  Late clipboard acknowledgements cannot confirm a newer edited request.
+- Evaluate owner-private per-track cost, reported acceptance and independently
+  funded return demand offline; unknown costs remain unknown and creator money
+  stays separate from service contribution. Price-floor outputs are planning,
+  not changed offers, verified invoices or operating-profit evidence.
+- Keep existing checkout, shared research, payment, native/package and hosted
+  adapter roles. [Pilot and release gates](specialist-research-pilots.md) remain
+  explicit; real customers, new-price checkout and profitable repeat use are open.
+- Both local source CLIs refuse direct remote and device-alias input paths before
+  access, with no-network controls preserving ordinary bounded file behavior.
+
 ### Demand-driven evidence procurement (source candidate, October 12)
 
 - Prepare a private request for missing evidence; compare provider-signed

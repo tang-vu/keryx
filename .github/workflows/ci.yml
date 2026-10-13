@@ -236,6 +236,11 @@ jobs:
       - name: Private economics CLI startup (no environment or database)
         run: node --import tsx scripts/economics-private-report.mts --help
 
+      - name: Specialist preparation and private cohort CLI startup (no environment or services)
+        run: |
+          npm run research:brief -- --help
+          npm run research:pilot -- --help
+
       - name: Creator owner cash-out CLI startup (no environment, wallet or network)
         run: |
           node --import tsx scripts/creator-cashout-batch.mts --help
@@ -506,6 +511,8 @@ jobs:
       - name: Decision Lab compiled route and mobile layout (offline)
         run: npm run test:decision-lab-built
 
+      - name: Specialist brief preparation (built, offline, no research or payment)
+        run: npm run test:browser-specialist-briefs
       - name: Reviewed claim costs and decision receipt audit (built, local data only)
         run: node --import tsx scripts/test-browser-research-evidence-audit.mts
 

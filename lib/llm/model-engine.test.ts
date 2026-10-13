@@ -3,14 +3,13 @@ import { config } from "../config";
 import { MODEL_CATALOG } from "./model-catalog";
 import { createModelEngine } from "./model-engine";
 
-const mutableConfig = config as { deepseekKey: string; mimoKey: string; cloudflareEnabled: boolean; cloudflareGptOssEnabled: boolean; cloudflareAccountId: string; cloudflareKey: string };
-const originalKeys = { deepseekKey: config.deepseekKey, mimoKey: config.mimoKey, cloudflareEnabled: config.cloudflareEnabled, cloudflareGptOssEnabled: config.cloudflareGptOssEnabled, cloudflareAccountId: config.cloudflareAccountId, cloudflareKey: config.cloudflareKey };
+const mutableConfig = config as { deepseekKey: string; cloudflareEnabled: boolean; cloudflareGptOssEnabled: boolean; cloudflareAccountId: string; cloudflareKey: string };
+const originalKeys = { deepseekKey: config.deepseekKey, cloudflareEnabled: config.cloudflareEnabled, cloudflareGptOssEnabled: config.cloudflareGptOssEnabled, cloudflareAccountId: config.cloudflareAccountId, cloudflareKey: config.cloudflareKey };
 afterEach(() => { Object.assign(mutableConfig, originalKeys); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("shared runtime and watchdog model construction", () => {
   it.each(MODEL_CATALOG)("preserves provider policy and bounded decompose transport for $id", async choice => {
     mutableConfig.deepseekKey = "synthetic-only";
-    mutableConfig.mimoKey = "synthetic-only";
     mutableConfig.cloudflareEnabled = true;
     mutableConfig.cloudflareGptOssEnabled = true;
     mutableConfig.cloudflareAccountId = "a".repeat(32);
@@ -20,7 +19,7 @@ describe("shared runtime and watchdog model construction", () => {
     expect(await createModelEngine(choice)!.decompose("test")).toEqual(["How does settlement work?"]);
     const [url, init] = request.mock.calls[0] as unknown as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    const base = choice.provider === "deepseek" ? config.llmBaseUrl : choice.provider === "mimo" ? config.mimoBaseUrl
+    const base = choice.provider === "deepseek" ? config.llmBaseUrl
       : `https://api.cloudflare.com/client/v4/accounts/${config.cloudflareAccountId}/ai/v1`;
     expect(url).toBe(`${base}/chat/completions`);
     expect(body.model).toBe(choice.model);

@@ -81,6 +81,7 @@ export default function PricingPage() {
         </section>
       </div>
       <nav className="mt-6 flex flex-wrap gap-x-6" aria-label={copy("product.about")}>
+        <Link href="/briefs" className={actionClass}>{copy("product.briefsAction")}</Link>
         <Link href="/about" className={actionClass}>{copy("product.about")}</Link>
         <Link href="/terms" className={actionClass}>{copy("product.terms")}</Link>
         <Link href="/privacy" className={actionClass}>{copy("product.privacy")}</Link>

@@ -1,5 +1,20 @@
 # Keryx — Decision Log
 
+## Make installation and integrations discoverable — 2026-10-12
+
+Owner requested complete website guidance for app installation, MCP, API,
+extensions and other supported channels, learning applicable patterns from
+ChatGPT, Claude and other AI websites. Use a visible Get started entry, a download
+page with verified platform artifacts and an integration guide organized by
+workflow. Keep the existing paper/ink visual system and English shipped UI.
+
+Use explicit requirements, installation steps, copyable examples and support
+links. Preserve different hosted, caller-funded and local Operator roles; never
+infer OAuth, store approval, unattended execution, cross-device synchronization
+or payment authority from another product's design. Pin actually published
+artifacts independently of the web release. See [design sources and the complete
+surface audit](docs/engineering/website-setup-2026-10-12.md).
+
 ## Replay ordinary query allocation and reservation evidence without authority - 2026-10-12
 
 Add an incompatible ordinary-public v4 capture envelope for bounded query-local
@@ -48,6 +63,23 @@ new worktrees and require existing sessions to reread it before shared actions.
 This records an active-session protocol, not an automatically enforced runtime
 lock or background scheduler. Payment/custody/DDL/schedule authority and every
 applicable release gate remain unchanged; no measured speedup is claimed.
+
+## Validate three bounded specialist outcomes before activating new prices — 2026-10-12
+
+The owner accepted the direction of selling useful specialist research with
+value-based pricing and selected all three tracks: API/platform comparison for
+freelancers/small teams, SaaS competitor/niche research and scholarly literature.
+Use one existing research/payment engine, bounded request templates and separate
+buyer review criteria. Preparation is local; it cannot promise complete synthesis,
+record acceptance, invent source evidence or create payment authority.
+
+Evaluate independently funded mainnet repeat demand and service contribution per
+track. Include failed/sponsored work and assistance/acquisition costs; preserve
+unknown costs, refund exposure and explicit currency conversion. Private local
+evidence declarations need receipt/invoice audit and cannot establish independent
+verification. Keep current versioned quotes until useful outcomes and complete
+costs justify a prospective offer with buyer-visible scope and terms. See
+[the pilot, role boundaries and release gates](docs/specialist-research-pilots.md).
 
 ## Commission missing evidence through a private portable contract — 2026-10-12
 
@@ -8025,3 +8057,14 @@ remains an explicit operational refusal, without deleting payment evidence.
 The existing coordinator owns activation and the combined release. Source/tests are
 not a live delivery or real creator-earnings claim. See
 [implementation and acceptance](docs/engineering/public-creator-registration-20261012.md).
+
+### 2026-10-13 — Refuse reserved Telegram account intents before sponsored research
+
+Bare `link`, `unlink` and `whoami` requests could previously send their arguments
+into sponsored research. Reserve these finite account verbs before preference,
+treasury, admission or deferred work and return a fixed unavailable message. Keep
+the existing webhook secret boundary first, ignore account arguments, protect
+matching private replies and disclose no account state in groups. This safety
+patch grants no binding, token, sign-in or past-run ownership authority; original
+#263 linking criteria remain open. Explicit `/ask` research and budget limits stay
+unchanged.

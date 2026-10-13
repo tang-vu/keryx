@@ -19,6 +19,7 @@ import { ArchiveIndexView } from "@/components/keryx/archive-index-view";
 import { archiveIndexJsonLd } from "../../archive-index-json-ld";
 import { safeInlineJson } from "@/lib/safe-json";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
+import { archiveLanguages, archiveLanguagePath, filterArchiveLanguage, parseArchiveLanguage } from "@/lib/answers-language";
 
 const copy = createMessages("en");
 
@@ -36,21 +37,25 @@ export function generateStaticParams(): { n: string }[] {
   return [];
 }
 
-async function loadPage(raw: string) {
+async function loadPage(raw: string, language: string | null) {
   const n = parsePageParam(raw);
   if (n === null) return null;
-  const entries = await getArchiveCached();
+  const all = await getArchiveCached();
+  const entries = filterArchiveLanguage(all, language);
   const slice = paginateArchive(entries, n);
-  return { entries, slice, n };
+  return { all, entries, slice, n };
 }
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ n: string }>;
+  searchParams: Promise<{ language?: string | string[] }>;
 }): Promise<Metadata> {
   const { n } = await params;
-  const loaded = await loadPage(n);
+  const language = parseArchiveLanguage((await searchParams).language);
+  const loaded = await loadPage(n, language);
   if (!loaded || loaded.slice.items.length === 0) {
     return { title: copy("reportArchiveRoute.notFound"), robots: { index: false } };
   }
@@ -60,6 +65,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    ...(language ? { robots: { index: false, follow: true } } : {}),
     alternates: englishPublicAlternates(answersPagePath(slice.page)),
     openGraph: {
       title,
@@ -71,13 +77,14 @@ export async function generateMetadata({
   };
 }
 
-export default async function AnswersPageN({ params }: { params: Promise<{ n: string }> }) {
+export default async function AnswersPageN({ params, searchParams }: { params: Promise<{ n: string }>; searchParams: Promise<{ language?: string | string[] }> }) {
   const { n } = await params;
-  const loaded = await loadPage(n);
+  const language = parseArchiveLanguage((await searchParams).language);
+  const loaded = await loadPage(n, language);
   if (!loaded) notFound();
   // /answers/page/1 is the index under a second address — send it home rather than serve a
   // duplicate that competes with /answers in search.
-  if (loaded.n === 1) redirect("/answers");
+  if (loaded.n === 1) redirect(archiveLanguagePath(1, language));
   if (loaded.slice.items.length === 0) notFound();
 
   const { entries, slice } = loaded;
@@ -108,6 +115,8 @@ export default async function AnswersPageN({ params }: { params: Promise<{ n: st
         slice={slice}
         topics={buildTopics(entries)}
         totalEntries={entries.length}
+        languages={archiveLanguages(loaded.all)}
+        language={language}
       />
       <SiteFooter />
     </div>

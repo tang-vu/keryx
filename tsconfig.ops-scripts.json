@@ -5,6 +5,9 @@
     "incremental": false
   },
   "include": [
+    "scripts/prepare-specialist-brief.mts",
+    "scripts/research-pilot.mts",
+    "scripts/test-browser-specialist-briefs.mts",
     "scripts/research-evidence-audit.mts",
     "scripts/research-evidence-audit.test.mts",
     "scripts/test-browser-research-evidence-audit.mts",
