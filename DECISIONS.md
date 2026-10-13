@@ -1,5 +1,54 @@
 # Keryx — Decision Log
 
+## Replay ordinary query allocation and reservation evidence without authority - 2026-10-12
+
+Add an incompatible ordinary-public v4 capture envelope for bounded query-local
+reserve, release, hold, remaining-budget and reevaluation debit observations, and
+citation/author largest-remainder allocations. Observe actual inputs and outputs
+at the existing runner seams after the live operation. A frozen browser-safe pure
+policy checks them; its output never authorizes or replaces execution. Capture
+model attribution proposals separately from deterministic normalization and reward
+eligibility. Numeric run-local groups/candidates and author-leg ordinals replace
+private identifiers. No questions, rationales, URLs, accounts, wallets, payTo,
+grants/nonces, Circle metadata or original receipt payload enter these records.
+
+Only genuine exactly representable safe integer micro operands qualify. Fractional
+micro, unsafe, missing or contradictory operands/outcomes record unavailable;
+rounding a Number cannot create exact monetary authority. Preserve the live Number
+operations, rounding, tie order, source recipients and every funding/payment call.
+Query-local capacity is distinct from atomic signer exposure: pending, settled but
+undelivered and unknown funding retain their existing capacity, never release it.
+The diagnostic record asserts the observed classification, not settlement proof.
+Payment/reward authority gates and unsupported native/private/pre-enrollment runs
+remain explicitly outside replay. No new storage, backfill, activation or signer.
+
+Keep v1-v3 closed codecs and digests intact. Bound economics to 256 records/legs
+and the existing 256KiB packet limit; unknown fields, accessors, sparse arrays,
+future versions and altered outcomes refuse. Reuse the shared report/browser,
+offline CLI and public API/MCP projection; browser verification uses local JSON
+and Web Crypto only. Qualify current offline runner corpus records and differential
+controls, including unavailable evidence, without rewriting release study artifacts.
+Root independently reviews exact source, binds the next corpus epoch, checks full
+applicable CI/compiled distributions and delivery. #301 remains open; this does
+not supply independent input authenticity or issue291 payment anchoring.
+
+**Coordinate concurrent Codex sessions through explicit ownership — 2026-10-12.**
+The owner uses several Codex sessions simultaneously and requested durable rules
+to prevent mixed work and duplicate deployments while improving throughput.
+Give each outcome one owner/branch/PR and an isolated worktree. Share local
+task/path/resource records through Git's common directory, with atomic exclusive
+allocation and explicit handoff rather than timestamp-based takeover. Serialize
+merges and production mutations under one release coordinator; deliver an agreed
+batch once after combined-source acceptance. Reuse valid evidence and isolate
+heavy checks and mutable outputs instead of repeating work across sessions.
+
+Keep the canonical [workflow](docs/engineering/multi-session-coordination.md)
+tracked because local AGENTS/skill files are ignored. Bootstrap that context in
+new worktrees and require existing sessions to reread it before shared actions.
+This records an active-session protocol, not an automatically enforced runtime
+lock or background scheduler. Payment/custody/DDL/schedule authority and every
+applicable release gate remain unchanged; no measured speedup is claimed.
+
 ## Commission missing evidence through a private portable contract — 2026-10-12
 
 The owner ranked Tameion innovation above repackaging the existing reading agent
@@ -7908,6 +7957,22 @@ signer does. Their bundled dependency graph excludes the server configuration
 and server authority module. Manual browser fixtures supply the same explicit
 public build pins, including an absent origin list for legacy-only cases; a
 generic environment shim must not hide a new server dependency in this path.
+
+## Complete ordinary failure observations without changing money policy - issue301
+
+The existing versioned read policy already represents unavailable assessment STOP
+and positive-price funding SKIP. Emit those observations at the final assessment
+failure and each actual funding-withheld selection, including the current
+reevaluation round. These are captured inputs and existing rule outcomes, not
+another policy, a model rerun or authority to release a reservation. Keep all
+payment arguments, query-ledger expressions, atomic signer capacity and settlement
+behavior unchanged. Retain missing/nonmicro authority as unavailable, old v1-v4
+codecs/policies and private/native capability refusals. Focused injected runner
+controls must compare capture absent/available/failed, verify retained hashes and
+reject altered/private packets. The final NEXT source corpus, compiled/package
+checks, independent review and actual delivery remain root gates; issue301 stays
+open and payment-bound anchoring remains separate issue291.
+
 ## Observe public deployment contracts separately from liveness — 2026-10-12
 
 The owner requested adopting useful patterns from other Tameion repositories.
@@ -7922,3 +7987,41 @@ Python/chain dependency and retains existing financial and distribution roles.
 This is verification maintenance, without runtime version, custody, schema,
 spending or scheduling changes. Source pins, acceptance and remaining gates are
 in [the adoption record](docs/engineering/acr-deployment-adoption-2026-10-12.md).
+
+## Review-bound claim costs and immutable decision/receipt comparisons ? 2026-10-12
+
+The owner authorized both further Tameion OSS-adoption proposals. Use a shared
+pure local observer to measure reviewed supported claims, separate exact USD
+provider costs from USDC source costs, and compare immutable captured source
+terms with portable receipt observations. Missing human reviews, bills, full
+ledger windows and unique payment joins remain unavailable or ambiguous.
+Derive the decision commitment from initial capture, excluding later verdicts
+and payment results; separately retained digests check later changes while
+independent pre-spend timing and settlement remain unproven. No payment, DB,
+pricing or semantic-judge authority changes. A native browser/CLI adaptation
+avoids copying upstream code or adding a framework. Source pins, seven-surface
+roles, validation and stronger future attestation gates are recorded in
+[the adoption record](docs/engineering/research-evidence-audit-2026-10-12.md).
+
+**Use one public creator flow and the existing wallet balance for registration gas — 2026-10-12.**
+The owner requested fast creator registration at /register for everyone, with gas
+covered until the existing sponsor wallet has insufficient funds. Replace the
+site-specific finite pilot with an explicit wallet-funded policy for any publisher
+whose exact HTTPS source/feed control is verified. Keep sign-in, proof, chosen price,
+creator review/signature and indexing on one page. Retain the creator's payout
+and registry authority; activating earnings still requires explicit distribution
+permission and matching indexed registry terms.
+
+Keep every old policy/original byte identity and reservation. Admit complete maximum
+gas liability atomically against fresh native balance observations, counting all
+unresolved originals across policy cohorts for the same chain and sponsor. Pin
+balance and account nonce to the same fresh block and reject observations predating
+a receipt that released a hold. Repeat proof/funds checks immediately before signing
+and broadcasting; unknown outcomes keep the original nonce and full hold. No key is
+distributed, no new custody or contract deployment is required, and no automatic
+funding, retry or creator-funded fallback is introduced. Bounded journal capacity
+remains an explicit operational refusal, without deleting payment evidence.
+
+The existing coordinator owns activation and the combined release. Source/tests are
+not a live delivery or real creator-earnings claim. See
+[implementation and acceptance](docs/engineering/public-creator-registration-20261012.md).

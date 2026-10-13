@@ -491,6 +491,11 @@ jobs:
       - name: iPhone route prefetch and delayed navigation (built, offline GET only)
         run: node --import tsx scripts/test-browser-mobile-navigation-built.mts --webkit
 
+      - name: Dynamic page navigation (built, offline GET only)
+        run: |
+          node --import tsx scripts/test-browser-navigation-latency.mts
+          node --import tsx scripts/test-browser-navigation-latency.mts --webkit
+
       - name: Product discovery, pricing and support (built, offline, no research or payment)
         env:
           KERYX_NETWORK: arcTestnet
@@ -500,6 +505,9 @@ jobs:
 
       - name: Decision Lab compiled route and mobile layout (offline)
         run: npm run test:decision-lab-built
+
+      - name: Reviewed claim costs and decision receipt audit (built, local data only)
+        run: node --import tsx scripts/test-browser-research-evidence-audit.mts
 
       - name: Retain immutable cohort rehearsal result
         if: always()
@@ -571,6 +579,9 @@ jobs:
 
       - name: Private profile UI (production CSS, synthetic owner sessions, no outbound requests)
         run: node --import tsx scripts/test-browser-private-profiles.mts
+
+      - name: Owned history UI (production CSS, synthetic privacy and owner races)
+        run: node --import tsx scripts/test-browser-owned-history.mts
 
       - name: Private verified identity UI (production CSS, synthetic consent and owner isolation)
         run: node --import tsx scripts/test-browser-profile-identities.mts

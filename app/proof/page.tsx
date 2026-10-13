@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SiteHeader } from "@/components/keryx/site-header";
@@ -87,7 +88,7 @@ export default function ProofPage() {
         </section>
 
         <ProofDashboard />
-        <p className="mt-6 font-serif text-ink-2"><a href="/usage" className="text-paid underline underline-offset-4">{usageMessages.proofLink}</a> {usageMessages.proofLimit}</p>
+        <p className="mt-6 font-serif text-ink-2"><Link href="/usage" className="text-paid underline underline-offset-4">{usageMessages.proofLink}</Link> {usageMessages.proofLimit}</p>
         <HistoricalHistorySection />
       </main>
       <SiteFooter />

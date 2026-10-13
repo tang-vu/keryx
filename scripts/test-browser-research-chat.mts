@@ -269,8 +269,11 @@ try {
     assert.deepEqual(errors, []);
     if (width === 390) {
       await page.goto(`${base}/research`, { waitUntil: "domcontentloaded" });
-      await question.waitFor();
-      assert((await question.boundingBox())!.y < 740);
+      const researchQuestion = page.getByRole("main").getByRole("textbox", { name: "What do you want to know?", exact: true });
+      await researchQuestion.waitFor({ state: "visible" });
+      const researchQuestionBox = await researchQuestion.boundingBox();
+      assert(researchQuestionBox && researchQuestionBox.y < 740,
+        "The visible research-page composer must remain inside the 740px viewport");
       await page.getByRole("link", { name: "Paid agent research & recovery" }).click();
       await page.getByRole("heading", { name: "Give your agent a research budget." }).waitFor();
       assert.equal(new URL(page.url()).hash, "#paid-research");
