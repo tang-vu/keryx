@@ -1,18 +1,22 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { downloadBrowserText } from "@/lib/browser-text-download";
-import { buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace, EVIDENCE_DRAFT_NOTICE, MAX_EVIDENCE_DRAFT_BYTES,
+import { assembleEvidenceDraftRequest, buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace, EVIDENCE_DRAFT_NOTICE, MAX_EVIDENCE_DRAFT_BYTES,
   type EvidenceDraftRequest } from "@/lib/research/evidence-draft";
 import { exportEvidenceDraft } from "@/lib/research/evidence-draft-export";
 import { evidenceDraftCopy as copy, evidenceDraftCopyText as copyText } from "@/lib/research/evidence-draft-copy";
 import { RELATED_WORK_STATEMENT_KINDS } from "@/lib/research/related-work-statements";
+import { relatedWorkReadingDraft } from "@/lib/research/related-work-generation";
+import { appendCompletedEvidenceDraftImport } from "@/components/keryx/completed-evidence-draft-import";
+import { CompletedEvidenceDraftSelector } from "@/components/keryx/completed-evidence-draft-selector";
+import { completedEvidenceDraftSelectionCopy as completedCopy } from "@/locales/en/completed-evidence-draft-selection";
 
 const field = "mt-2 block w-full min-w-0 rounded-none border border-line bg-paper px-3 py-2 font-serif text-sm text-ink";
 const button = "inline-flex min-h-11 items-center border border-ink px-3 py-2 font-mono text-xs text-ink disabled:opacity-50";
 const assessmentLabels = copy.claim.verdicts;
-type Editors = Pick<EvidenceDraftRequest, "reports" | "passage" | "claims" | "themes">;
+type Editors = Pick<EvidenceDraftRequest, "reports" | "passage" | "claims" | "themes" | "readingStatuses">;
 type Statement = NonNullable<EvidenceDraftRequest["themes"][number]["statements"]>[number];
 const choice = "mt-2 flex gap-3 font-serif text-sm text-ink-2";
 const empty = (): Editors => ({ reports: [], passage: "", claims: [], themes: [{ id: "theme1", title: copy.theme.initialTitle, authorNote: "", excerptIds: [] }] });
@@ -20,12 +24,15 @@ const empty = (): Editors => ({ reports: [], passage: "", claims: [], themes: [{
 export function EvidenceDraftWorkspace() {
   const store = useLiteratureWorkspace(), [editors, setEditors] = useState(empty), [reportJson, setReportJson] = useState("");
   const [message, setMessage] = useState(""), [reviewer, setReviewer] = useState(""), passageRef = useRef<HTMLTextAreaElement>(null);
+  const [resetRevision, setResetRevision] = useState(0);
   // A sentence still being written stays in this tab and out of the draft contract.
   const themes = editors.themes.map(({ statements, ...theme }) => {
     const written = (statements ?? []).filter(row => row.text.trim());
     return written.length ? { ...theme, statements: written } : theme;
   });
   const request: EvidenceDraftRequest = { version: 1, scope: "private-evidence-draft", workspace: evidenceDraftWorkspace(store.workspace), ...editors, themes };
+  const liveEditors = useRef(editors), liveWorkspace = useRef(store.workspace);
+  useLayoutEffect(() => { liveEditors.current = editors; liveWorkspace.current = store.workspace; }, [editors, store.workspace]);
   let draft: ReturnType<typeof buildEvidenceDraft> | undefined, error = "";
   try { draft = buildEvidenceDraft(request); } catch { error = copy.workspace.changed; }
   const included = store.workspace.entries.filter(row => row.screening === "include");
@@ -50,13 +57,25 @@ export function EvidenceDraftWorkspace() {
     {!store.ready && <p role="status">{copy.workspace.loading}</p>}
     {store.error && <p role="alert" className="text-seal">{store.error}</p>}
     {included.length === 0 && <p className="font-serif text-sm text-ink-2">{copy.workspace.includeFirst}</p>}
+    <CompletedEvidenceDraftSelector key={resetRevision} workspace={store.workspace} disabled={!store.ready || !!store.error} onImport={value => {
+      try {
+        const next = appendCompletedEvidenceDraftImport(liveEditors.current, liveWorkspace.current, value);
+        liveEditors.current = next; setEditors(next); setMessage(completedCopy.imported);
+        return true;
+      } catch { return false; }
+    }} />
     <form className="border border-line bg-paper p-5" onSubmit={event => {
       event.preventDefault();
       try {
         if (new TextEncoder().encode(reportJson).length > MAX_EVIDENCE_DRAFT_BYTES) throw new Error();
         const raw = JSON.parse(reportJson), report = evidenceDraftReportSchema.parse({ ...raw, id: raw.id ?? raw.queryId });
         if (editors.reports.some(row => row.id === report.id)) throw new Error();
-        const reports = [...editors.reports, report]; buildEvidenceDraft({ ...request, reports }); update({ reports }); setReportJson("");
+        const reports = [...editors.reports, report];
+        // Imported usable evidence supersedes a former caller observation. Other
+        // observations and author edits remain attached to their exact records.
+        const fresh = buildEvidenceDraft({ ...request, reports, readingStatuses: [] }).excerpts;
+        const readingStatuses = editors.readingStatuses?.filter(row => !fresh.some(excerpt => excerpt.paperUrl === row.paperUrl));
+        buildEvidenceDraft({ ...request, reports, readingStatuses }); update({ reports, readingStatuses }); setReportJson("");
         setMessage(copy.import.success);
       } catch { setMessage(copy.import.refused); }
     }}>
@@ -110,6 +129,15 @@ export function EvidenceDraftWorkspace() {
     <section aria-label={copy.theme.label} className="border border-line bg-paper p-5">
       <h2 className="font-display text-xl text-ink">{copy.theme.heading}</h2>
       <p className="mt-2 font-serif text-sm text-ink-2">{copy.theme.guidance}</p>
+      <p className="mt-2 font-serif text-xs text-ink-3">{copy.theme.assemblyGuidance}</p>
+      <button type="button" className={`${button} mt-3`} disabled={!draft || !excerpts.length} onClick={() => {
+        try {
+          const assembled = assembleEvidenceDraftRequest(request, { mode: "append" });
+          // The request omits unfinished sentences; existing editor rows must stay.
+          update({ themes: [...editors.themes, ...assembled.themes.slice(request.themes.length)] }); setMessage(copy.theme.assembled);
+        }
+        catch { setMessage(copy.theme.assemblyRefused); }
+      }}>{copy.theme.assemble}</button>
       {editors.themes.map(theme => {
         const replace = (changes: Partial<typeof theme>) => update({ themes: editors.themes.map(row => row.id === theme.id ? { ...row, ...changes } : row) });
         return <article key={theme.id} className="mt-5 border-t border-line pt-4">
@@ -120,6 +148,13 @@ export function EvidenceDraftWorkspace() {
             <span>{row.quote}<span className="block break-all font-mono text-xs text-ink-3">{row.paperUrl} · {row.contentVersion}</span></span>
           </label>)}
           <button type="button" className={`${button} mt-3`} onClick={() => replace({ excerptIds: [] })}>{copy.theme.clearExcerpts}</button>
+          <button type="button" className={`${button} ml-2 mt-3`} disabled={!draft || !theme.excerptIds.length} onClick={() => {
+            try {
+              const assembled = assembleEvidenceDraftRequest(request, { mode: "regenerate", themeId: theme.id });
+              replace({ statements: assembled.themes.find(row => row.id === theme.id)!.statements }); setMessage(copy.theme.regenerated);
+            }
+            catch { setMessage(copy.theme.assemblyRefused); }
+          }}>{copy.theme.regenerate}</button>
           <h3 className="mt-5 font-mono text-xs text-ink-2">{copy.statement.heading}</h3>
           <p className="mt-2 font-serif text-xs text-ink-3">{copy.statement.guidance}</p>
           {(theme.statements ?? []).map(statement => {
@@ -168,7 +203,35 @@ export function EvidenceDraftWorkspace() {
         </article>;
       })}
       <button type="button" className={`${button} mt-4`} disabled={editors.themes.length >= 16} onClick={() => update({ themes: [...editors.themes, { id: `theme${editors.themes.length + 1}`, title: copy.theme.newTitle, authorNote: "", excerptIds: [] }] })}>{copy.theme.add}</button>
-      {!!draft?.unread.length && <div className="mt-5"><h3 className="font-mono text-xs text-ink-2">{copy.theme.unreadHeading}</h3><ul className="mt-2 list-disc pl-5 font-serif text-sm text-ink-2">{draft.unread.map(row => <li key={row.paper.url}>{copyText(copy.theme.unreadPaper, { title: row.paper.title })}</li>)}</ul></div>}
+      <button type="button" className={`${button} ml-2 mt-4`} disabled={!editors.readingStatuses?.length} onClick={() => update({ readingStatuses: [] })}>{copy.reading.clear}</button>
+      {!!draft?.unread.length && <div className="mt-5">
+        <h3 className="font-mono text-xs text-ink-2">{copy.theme.unreadHeading}</h3>
+        <p className="mt-2 font-serif text-xs text-ink-3">{copy.reading.guidance}</p>
+        <p className="mt-2 font-serif text-xs text-ink-3">{copy.reading.prepareGuidance}</p>
+        {draft.unread.map(row => {
+          const observation = editors.readingStatuses?.find(status => status.paperUrl === row.paper.url);
+          const observe = (status: "unread" | "unavailable" | "", reason: string) => update({ readingStatuses: [
+            ...(editors.readingStatuses ?? []).filter(status => status.paperUrl !== row.paper.url),
+            ...(status ? [{ paperUrl: row.paper.url, status, reason }] : []),
+          ] });
+          let readHref: string | undefined;
+          try { readHref = `/?${new URLSearchParams({ q: relatedWorkReadingDraft(store.workspace, row.paper.url), mode: "deep" })}`; } catch { /* Keep the editor when the normal question limit refuses. */ }
+          return <div key={row.paper.url} className="mt-3">
+            <p className="break-all font-serif text-sm text-ink-2">{row.paper.title} · {row.paper.url}</p>
+            {readHref && <a href={readHref} target="_blank" rel="noopener noreferrer" className={`${button} mt-2`}>{copy.reading.prepare}</a>}
+            <label className="font-mono text-xs text-ink-2">{copy.reading.status}
+              <select className={field} value={observation?.status ?? ""} onChange={event => observe(event.target.value as "unread" | "unavailable" | "", observation?.reason ?? "")}>
+                <option value="">{copy.reading.unknown}</option><option value="unread">{copy.reading.unread}</option><option value="unavailable">{copy.reading.unavailable}</option>
+              </select>
+            </label>
+            {observation && <label className="mt-2 block font-mono text-xs text-ink-2">{copy.reading.reason}
+              <input className={field} maxLength={300} value={observation.reason} onChange={event => observe(observation.status, event.target.value)} />
+            </label>}
+          </div>;
+        })}
+        {draft.reading.unread.length > 0 && <p className="mt-3 font-serif text-sm">{copy.reading.unreadHeading}: {draft.reading.unread.map(row => row.paper.title).join("; ")}</p>}
+        {draft.reading.unavailable.length > 0 && <p className="mt-3 font-serif text-sm">{copy.reading.unavailableHeading}: {draft.reading.unavailable.map(row => row.paper.title).join("; ")}</p>}
+      </div>}
     </section>
     {error && <p role="alert" className="font-serif text-sm text-seal">{error}</p>}
     <div className="flex flex-wrap gap-3">{(["markdown", "latex", "bibtex", "ris"] as const).map(format => <button key={format} type="button" className={button} disabled={!draft} onClick={() => exportFile(format)}>{copy.download[format]}</button>)}
@@ -176,7 +239,7 @@ export function EvidenceDraftWorkspace() {
         try { buildEvidenceDraft(request); downloadBrowserText(JSON.stringify(request, null, 2) + "\n", "private-evidence-draft.json", "application/json"); setMessage(copy.download.backupSuccess); }
         catch { setMessage(copy.download.backupRefused); }
       }}>{copy.download.backup}</button>
-      <button type="button" className={button} onClick={() => { setEditors(empty()); setReportJson(""); setReviewer(""); setMessage(copy.workspace.cleared); }}>{copy.workspace.clear}</button></div>
+      <button type="button" className={button} onClick={() => { setResetRevision(current => current + 1); setEditors(empty()); setReportJson(""); setReviewer(""); setMessage(copy.workspace.cleared); }}>{copy.workspace.clear}</button></div>
     <p role="status" aria-live="polite" className="font-serif text-sm text-seal">{message}</p>
   </section>;
 }

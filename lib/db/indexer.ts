@@ -270,53 +270,51 @@ async function resolveSource(db: KeryxDB, onchainId: string): Promise<Source | n
   return (await db.getSourceByOnchainId(onchainId)) ?? (await db.getSource(onchainId));
 }
 
-let _started = false;
+let ownedStop: (() => Promise<void>) | undefined;
 
-/**
- * Start the background indexer. Event-driven with a safety net:
- *   - a WebSocket log subscription wakes a sync pass the moment the registry
- *     emits (see indexer-event-subscription.ts) — near-instant discovery;
- *   - a slow heartbeat poll covers WS drops and anything the socket missed —
- *     the checkpoint means a heartbeat that finds nothing new costs one
- *     getBlockNumber call, and one that finds ground re-covers none of it.
- * Safe to call multiple times — idempotent via guard.
- * Returns a cleanup function that stops both channels (useful for tests).
- */
-export function startIndexer(db: KeryxDB, heartbeatMs = 30_000): () => void {
-  if (_started) return () => {};
-  _started = true;
+/** Start the existing coalesced registry sync and retain its owned async drain. */
+export function startIndexer(db: KeryxDB, heartbeatMs = 30_000): () => Promise<void> {
+  if (ownedStop) return ownedStop;
 
-  let running = false;
+  let running: Promise<void> | undefined;
   let pending = false;
-  const sync = async () => {
+  let stopped = false;
+  const sync = () => {
+    if (stopped) return;
     if (running) {
-      // A push landed mid-pass: the pass in flight already fixed its head, so
-      // remember to run once more instead of waiting out the heartbeat.
       pending = true;
       return;
     }
-    running = true;
-    try {
-      await syncOnce(db);
-    } catch (err) {
-      // Log errors but don't crash the server — the next wake retries from last checkpoint.
-      console.error("[keryx indexer]", safeErrorMessage(err));
-    } finally {
-      running = false;
-      if (pending) {
-        pending = false;
-        void sync();
+    running = (async () => {
+      try {
+        await syncOnce(db);
+      } catch (err) {
+        console.error("[keryx indexer]", safeErrorMessage(err));
+      } finally {
+        running = undefined;
+        if (pending && !stopped) {
+          pending = false;
+          sync();
+        }
       }
-    }
+    })();
   };
 
-  const unsubscribe = subscribeRegistryLogs(() => void sync());
-  const timerId = setInterval(() => void sync(), heartbeatMs);
-  void sync(); // catch up immediately on boot instead of waiting a heartbeat
-
-  return () => {
-    clearInterval(timerId);
-    unsubscribe();
-    _started = false;
+  const unsubscribe = subscribeRegistryLogs(sync);
+  const timerId = setInterval(sync, heartbeatMs);
+  let closing: Promise<void> | undefined;
+  const stop = () => {
+    if (!closing) closing = (async () => {
+      stopped = true;
+      pending = false;
+      clearInterval(timerId);
+      // Even a subscription-close failure cannot strand the already-owned pass.
+      try { unsubscribe(); } finally { await running; }
+      if (ownedStop === stop) ownedStop = undefined;
+    })();
+    return closing;
   };
+  ownedStop = stop;
+  sync(); // Preserve the existing immediate catch-up pass.
+  return stop;
 }

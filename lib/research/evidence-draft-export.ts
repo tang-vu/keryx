@@ -12,7 +12,7 @@ const latex = (text: string) => text.replace(/[\\{}%&_#$^~]/g, char => ({
 const markdown = (text: string) => text.replace(/[\\`*_{}\[\]<>#!|@]/g, "\\$&");
 export const RELATED_WORK_STATEMENT_LABELS: Record<RelatedWorkStatementKind, string> = {
   contribution: "Contribution", agreement: "Agreement", disagreement: "Disagreement", gap: "Gap" };
-const STATEMENT_NOTICE = "Author-written statements. Each cites its paper and links the retained excerpt it relies on; whether an excerpt supports the wording is not verified.";
+const STATEMENT_NOTICE = "Draft statements, editable by the author. Extractive assembly quotes retained text; other wording is author-written. Each cites its paper and links the retained excerpt it relies on; whether an excerpt supports the wording is not verified.";
 const AUTHOR_GAP_LABEL = "Gap (author-stated; cites no paper; unverified)";
 const withheldNotice = (count: number) => `Withheld: ${count} author statement${count === 1 ? " is" : "s are"} not exported, because a cited paper has no selected retained excerpt or the statement kind needs a different number of papers.`;
 /** Statement identifiers are author chosen; anchors and LaTeX labels use a stable alphanumeric key. */
@@ -78,9 +78,20 @@ export function exportEvidenceDraft(value: unknown) {
   }
   md.push("## Included papers without usable retained excerpts", "");
   tex.push("\\subsection{Included papers without usable retained excerpts}", "");
-  for (const row of draft.unread) {
+  for (const row of draft.reading.unknown) {
     md.push(`- ${markdown(single(row.paper.title))}: retained excerpt unavailable; not described.`);
     tex.push(`${latex(single(row.paper.title))}: retained excerpt unavailable; not described.\\par`);
+  }
+  for (const [heading, rows, status] of [
+    ["Unread papers (caller observation)", draft.reading.unread, "not read"],
+    ["Unavailable papers (caller observation)", draft.reading.unavailable, "unavailable"],
+  ] as const) {
+    md.push("", `## ${heading}`, ""); tex.push("", `\\subsection{${heading}}`, "");
+    for (const row of rows) {
+      const reason = row.observation?.reason.trim();
+      const line = `${single(row.paper.title)}: ${status}; not described.${reason ? ` Reason: ${single(reason)}` : ""}`;
+      md.push(`- ${markdown(line)}`); tex.push(`${latex(line)}\\par`);
+    }
   }
   md.push("", DRAFT_REFERENCES_HEADING, "", ...draft.references.map(row => `- [@${row.key}] ${markdown(single(row.paper.title))} — <${row.paper.url}>`), "");
   tex.push("", "\\printbibliography", "");
