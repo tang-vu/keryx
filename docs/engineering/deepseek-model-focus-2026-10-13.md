@@ -16,6 +16,9 @@ and belongs to the existing coordinator's release batch.
   operator overrides and separately enabled alternatives.
 - Use canonical `deepseek-flash` for ordinary defaults/catalog construction,
   label its current V4.1 identity, and keep Pro an explicit manual comparison.
+- Preserve the private Flash engine's exact accepted `deepseek-v4-flash` wire
+  disclosure. Upstream serves it with V4.1; public normalization cannot rebind
+  private originals or their recovery/checkout authorization.
 - Append October 13 Flash/Pro price observations. Keep earlier policies and
   legacy-wire finite-canary captures unchanged. No historical cost backfill.
 
@@ -40,9 +43,10 @@ CI and release/surface gates before claiming delivery.
 
 See [selection rationale and remaining live evaluation](../deepseek-model-selection.md).
 
-Focused local checks: 74 tests across 11 files passed, including provider/model
-selection, transport, private configuration/quotes/worker, price arithmetic and
-finite production/canary allowance refusal paths. Changed-file ESLint, UI copy
-guard, media-generator syntax and whitespace checks passed. Provider HTTP was
-mocked; no live provider quality, invoice or settlement claim follows. Required
-full PR CI/typecheck/build and independent review remain release gates.
+Focused provider/model, exact-price and finite production/canary refusal checks
+passed. A further 113 regression cases cover current provider ordering/failover,
+durable historical labels, private checkout, interruption, original recovery and
+exact private wire identity. Changed-file ESLint, UI copy guard, media-generator
+syntax and whitespace checks passed. Provider HTTP was mocked; no live provider
+quality, invoice or settlement claim follows. Required full PR CI/typecheck/build
+and independent review remain release gates.

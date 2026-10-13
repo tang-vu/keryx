@@ -22,11 +22,15 @@ export function privateReasoningEngine(input: z.infer<typeof policySchema>) {
   const endpoint = new URL(policy.baseUrl);
   if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) throw new Error("Private reasoning endpoint unavailable");
   const baseUrl = endpoint.href.replace(/\/+$/, "");
-  const primary = new OpenAICompatibleEngine({ provider: choice.provider, name: `llm:${choice.provider}:${choice.model}`,
-    model: choice.model, baseUrl, apiKey: policy.apiKey, redirect: "error" });
+  // Exact private disclosures already bind this accepted alias. It serves V4.1
+  // upstream, so keep it stable instead of requoting paid originals during a
+  // public catalog normalization. Private Pro retains its distinct wire identity.
+  const wireModel = choice.id === "deepseek-flash" ? "deepseek-v4-flash" : choice.model;
+  const primary = new OpenAICompatibleEngine({ provider: choice.provider, name: `llm:${choice.provider}:${wireModel}`,
+    model: wireModel, baseUrl, apiKey: policy.apiKey, redirect: "error" });
   return {
     engine: new ResilientEngine(primary, new HeuristicEngine(), 0, new MemoryReasoningCircuitStore()),
-    disclosure: Object.freeze(privateReasoningPolicySchema.parse({ modelId: choice.id, provider: choice.provider, wireModel: choice.model,
+    disclosure: Object.freeze(privateReasoningPolicySchema.parse({ modelId: choice.id, provider: choice.provider, wireModel,
       endpoint: `${baseUrl}/chat/completions`, fallback: "local-heuristic", redirects: "prohibited" })),
   };
 }
