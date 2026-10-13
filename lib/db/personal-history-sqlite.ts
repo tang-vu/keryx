@@ -2,6 +2,8 @@ import type { DatabaseSync } from "node:sqlite";
 import { assertOrdinarySqliteResearchAuthority } from "./research-monthly";
 import { parseRunProvenance, RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "../research/run-provenance";
 import { HistoryError, historyFiltersSchema, historyPositionSchema, historyRowSchema, historyWallet, type PersonalHistoryStore } from "../history/personal-history";
+import { historyReceiptSchema } from "../history/owned-history";
+import { historyIdSchema } from "../history/personal-history";
 
 /** Reads only an allowlist projection. Never selects answer, private fulfillment or raw data. */
 export function createSqlitePersonalHistory(db: DatabaseSync): PersonalHistoryStore {
@@ -39,5 +41,16 @@ export function createSqlitePersonalHistory(db: DatabaseSync): PersonalHistorySt
         funding: row.funded === "true" ? "browser-recorded" : "other-or-unknown", recordedSpendUsdc: row.total_spent,
         recordedCreatorAllocationUsdc: row.total_to_creators, paymentMode: row.payment_mode, isFollowUp: row.parent_id !== null });
     }); } catch { throw new HistoryError("history_unavailable"); }
+  }, async receipts(rawId, take) {
+    assertOrdinarySqliteResearchAuthority(db);
+    const id = historyIdSchema.parse(rawId);
+    if (!Number.isInteger(take) || take < 1 || take > 201) throw new HistoryError("history_unavailable");
+    const rows = db.prepare(`SELECT id,query_id,kind,source_id,source_name,payer,payee,amount_usdc,network,tx_hash,
+      settled,settlement_status,created_at FROM payment_events WHERE query_id=?
+      AND (authorization_phase IS NULL OR authorization_phase NOT IN ('prepared','cancelled_unexposed'))
+      ORDER BY created_at,id COLLATE BINARY LIMIT ?`).all(id, take);
+    return rows.map(row => historyReceiptSchema.parse({ id: row.id, queryId: row.query_id, kind: row.kind,
+      sourceId: row.source_id, sourceName: row.source_name, payer: row.payer, payee: row.payee, amountUsdc: row.amount_usdc,
+      network: row.network, txHash: row.tx_hash, settled: row.settled === 1, settlementStatus: row.settlement_status, createdAt: row.created_at }));
   } } satisfies PersonalHistoryStore);
 }

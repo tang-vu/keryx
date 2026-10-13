@@ -15,6 +15,7 @@ wallets.json
 .next.tmp/
 # Temporary, rollback and retained Next builds are generated release evidence.
 .next.*/
+.next-public-fixtures/
 out/
 build/
 dist/

@@ -3,11 +3,12 @@
  */
 
 import { openapiSpec } from "@/lib/openapi-spec";
+import { publicReferenceArchiveOpenApiPaths } from "@/lib/public-references/archive-openapi";
 
 export const runtime = "nodejs";
 
 export function GET() {
-  return Response.json(openapiSpec, {
+  return Response.json({ ...openapiSpec, paths: { ...openapiSpec.paths, ...publicReferenceArchiveOpenApiPaths } }, {
     headers: {
       // Allow Scalar UI (same origin) and external API explorers to fetch the spec.
       "Access-Control-Allow-Origin": "*",

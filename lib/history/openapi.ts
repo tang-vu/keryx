@@ -1,4 +1,5 @@
 import { RUN_SURFACES } from "../research/run-provenance";
+import { ownedHistoryOpenApiPaths } from "./owned-history-openapi";
 export const personalHistoryOpenApiPaths = { "/api/me/history": { get: {
   operationId: "readPersonalHistory", tags: ["Account"], summary: "Page your attributed current-store dispatch summaries",
   security: [{ WebSession: [] }, { ApiKeyAuth: [] }],
@@ -14,4 +15,4 @@ export const personalHistoryOpenApiPaths = { "/api/me/history": { get: {
   ], responses: { "200": { description: "version, wallet, scope, storeNetwork, bounded rows and nextCursor; no whole-history aggregate. Rows link by safe id to the existing public dispatch/receipt endpoints." },
     "400": { description: "Invalid, duplicate, unknown or oversized filters/cursor; owner/store/filter cursor mismatch." }, "401": { description: "Absent/revoked authentication." },
     "403": { description: "Explicit history:read absent." }, "409": { description: "history_owner_changed; no other owner's rows." }, "503": { description: "history_unavailable; no adapter/archive fallback." } },
-} } };
+} }, ...ownedHistoryOpenApiPaths };

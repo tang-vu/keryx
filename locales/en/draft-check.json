@@ -10,7 +10,7 @@
   },
   "workspace": {
     "label": "Private draft check",
-    "privacy": "Your passage, references and source text stay in this tab’s memory and are compared in your browser. Nothing is uploaded, saved or added to public history. Reloading or leaving loses them. Your browser and same-origin scripts can access this page.",
+    "privacy": "By default your passage, references and source text stay in this tab’s memory and are compared in your browser. Nothing is uploaded or added to public history. Nothing is saved unless you choose Save on this device or download a private file. Your browser and same-origin scripts can access this page and saved drafts.",
     "check": "Check cited sentences",
     "clear": "Clear this tab’s check",
     "cleared": "Check cleared from this tab.",
@@ -23,6 +23,24 @@
   "passage": {
     "label": "Your passage",
     "guidance": "Sentences are checked as written and never reworded. Citations may be written as [3], \\cite{key}, [@key], Smith et al. (2020) or (Smith, 2020). A sentence without a citation is listed but not checked."
+  },
+  "retention": {
+    "heading": "Optional private retention",
+    "notice": "Save only when you choose. A device save contains the passage, references and source text in this browser’s local storage. Expired saves cannot be restored and are removed on the next restore attempt; closing the page does not schedule deletion. Browser backups and downloaded files follow your own retention settings. Clearing this tab does not delete a device save.",
+    "lifetime": "Allow restore for",
+    "hour": "One hour",
+    "day": "One day",
+    "week": "One week",
+    "save": "Save on this device",
+    "restore": "Restore device save",
+    "clear": "Delete device save",
+    "saved": "Private input saved on this device for the selected period.",
+    "restored": "Private input restored. Results were checked again using the current method.",
+    "absent": "No current device save is available; expired saves were removed.",
+    "cleared": "Device save deleted. Text currently in this tab remains until you clear it.",
+    "unavailable": "Device retention could not be verified. Your current text remains in this tab.",
+    "downloadInput": "Download private input for restore",
+    "importInput": "Restore private input file"
   },
   "references": {
     "label": "Reference list",
@@ -67,9 +85,16 @@
       "source-text-not-supplied": "No text was supplied for this work, so it was not checked.",
       "reference-unresolved": "This citation could not be bound to a readable reference in the list.",
       "reference-ambiguous": "This citation matches more than one listed work.",
-      "reference-year-differs": "The list has this author with a different year."
+      "reference-year-differs": "The list has this author with a different year.",
+      "different-work": "The supplied text identifies a different work. The cited work was not checked.",
+      "source-identity-unresolved": "The recorded source identity cannot be matched to this reference. The cited work was not checked.",
+      "source-read-incomplete": "No supporting passage was found in this partial read. The rest of the cited work is unavailable, so this is not an unsupported verdict.",
+      "synthetic-source": "Synthetic demonstration text cannot support a factual draft verdict."
     },
     "partialCoverage": "Only part of this work was supplied; the rest was not searched.",
+    "version": "Recorded source version (caller asserted)",
+    "suggestions": "Suggested alternative sources",
+    "suggestionNotice": "Suggestions are separate wording matches. They do not change your claims, written citations, verdicts or creator rewards. Read these works before changing your references.",
     "noPassage": "No supporting passage found in the text you supplied.",
     "missingTerms": "Not in the quoted passage: {terms}",
     "missingEverywhere": "Not in the supplied text: {terms}",
@@ -78,7 +103,8 @@
     "difference": {
       "negation": "It differs in negation.",
       "opposite-term": "It uses an opposite term.",
-      "different-number": "It states a different figure."
+      "different-number": "It states a different figure.",
+      "reversed-comparison": "It reverses the subjects of the comparison."
     }
   },
   "flags": {
@@ -88,6 +114,7 @@
     "reference-not-cited": "Reference {reference} is listed but not cited in the passage.",
     "citation-unresolved": "{claim}: citation {token} could not be matched to one listed work.",
     "possible-different-work": "{claim}: the text names {author}, who is not an author of {reference}. Check that the citation points to the intended work.",
+    "source-different-work": "{claim}: the supplied source for {reference} identifies a different work ({url}). This citation remains unavailable.",
     "claim": "Sentence {number}"
   }
 }

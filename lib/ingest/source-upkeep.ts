@@ -1,4 +1,4 @@
-import { isPublicReferenceId, referenceSnapshot } from "../public-references/catalog";
+import { isPublicReferenceId, referenceSnapshot, fetchPublicReferenceFeed } from "../public-references/catalog";
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { KeryxDB } from "../db/keryx-db";
 import type { SourceUpkeepSummary } from "../db/source-upkeep";
@@ -94,7 +94,7 @@ export async function runSourceUpkeep(
         let timer: ReturnType<typeof setTimeout> | undefined;
         try {
           const feed = await Promise.race([
-            (options.ingest ?? boundedIngest)(reference.rssUrl),
+            (options.ingest ?? fetchPublicReferenceFeed)(reference.rssUrl),
             new Promise<never>((_, reject) => { timer = setTimeout(() => reject(timeout()), Math.max(1, deadline - now())); }),
           ]);
           assertLive();
@@ -104,8 +104,8 @@ export async function runSourceUpkeep(
           const snapshot = referenceSnapshot(live, feed);
           if (!snapshot.items.length) throw new Error("Public feed has no usable content; preserve last-good snapshot");
           const seen = new Set(live.items.map((item) => item.link));
-          await db.upsertPublicReference(snapshot);
-          summary.added += snapshot.items.filter((item) => !seen.has(item.link)).length;
+          const change = await db.upsertPublicReference(snapshot);
+          summary.added += change?.added ?? snapshot.items.filter((item) => !seen.has(item.link)).length;
         } finally { clearTimeout(timer); }
         continue;
       }

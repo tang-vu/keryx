@@ -19,6 +19,8 @@ import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useState } from "react";
 import Link from "next/link";
 import { Loader2, Rss } from "lucide-react";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { registrationTarget } from "@/lib/registration-return";
 
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
@@ -158,6 +160,8 @@ export function FeedMatchForm({
 function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
   const { feed, matches, gapsChecked, judged, wouldBuy, rationale } = result;
   const byModel = judged === "model";
+  const matchedPost = matches[0]?.post?.link ? matches[0] : null;
+  const sponsoredHref = registrationTarget({ rssUrl, chainId: browserPaymentProfile().chainId });
 
   return (
     <div className="mt-6 border-t border-line pt-5">
@@ -232,14 +236,16 @@ function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
       <div className="mt-6">
         <Link
           href={
-            matches[0]?.post?.link
-              ? registrationHref(rssUrl, matches[0])
-              : `/register?rss=${encodeURIComponent(rssUrl)}`
+            matchedPost ? registrationHref(rssUrl, matchedPost) : sponsoredHref
           }
           className="inline-block border border-ink bg-seal px-[18px] py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
         >
-          {matches.length > 0 ? uiCopy("wantedFeed.list") : uiCopy("wantedFeed.listAnyway")}
+          {matchedPost ? uiCopy("wantedFeed.listWalletFunded") : matches.length > 0 ? uiCopy("wantedFeed.list") : uiCopy("wantedFeed.listAnyway")}
         </Link>
+        {matchedPost && <div className="mt-3">
+          <Link href={sponsoredHref} className="inline-block min-h-11 py-2 font-mono text-[11px] underline">{uiCopy("wantedFeed.sponsoredRegistration")}</Link>
+          <p className="mt-1 max-w-[62ch] text-sm text-ink-2">{uiCopy("wantedFeed.sponsoredRegistrationBoundary")}</p>
+        </div>}
         <p className="mt-3 max-w-[62ch] font-mono text-[10.5px] leading-relaxed text-ink-3">
           {uiCopy("wantedFeed.decisionBoundary")}
         </p>
@@ -249,12 +255,8 @@ function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
 }
 
 function registrationHref(rssUrl: string, match: Match): string {
-  const params = new URLSearchParams({
-    rss: rssUrl,
-    gap: match.id,
-    post: match.post?.link ?? "",
-  });
-  return `/register?${params.toString()}`;
+  return registrationTarget({ rssUrl, gapId: match.id, matchedItemLink: match.post?.link,
+    mode: "wallet-funded", chainId: browserPaymentProfile().chainId });
 }
 
 function matchDescription(match: Match) {

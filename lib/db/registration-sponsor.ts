@@ -4,9 +4,9 @@ import { encodeAbiParameters, keccak256, toBytes, type Address, type Hex } from 
 import { canonicalJson } from "../canonical-json";
 import { canonicalSourceUrl, claimControlIsFresh, sourceClaimSchema } from "../sources/public-source-claim";
 import {
-  registrationIntentDigest, registrationPolicyDigest, registrationSponsorPolicySchema,
-  registrationCreatorEligible,
-  sponsoredRegistrationSchema, type RegistrationSponsorPolicy, type SponsoredRegistration,
+  registrationIntentDigest, registrationPolicyDigest, activeRegistrationSponsorPolicySchema,
+  registrationCreatorEligible, registrationPolicyExpired, registrationSponsorFundingObservationSchema,
+  sponsoredRegistrationSchema, type ActiveRegistrationSponsorPolicy, type RegistrationSponsorFundingObservation, type SponsoredRegistration,
 } from "../sources/registration-sponsor-protocol";
 
 const PREFIX = "keryx:registration-sponsor:v1:";
@@ -28,11 +28,12 @@ const transitionSchema = z.object({
   creatorSignature: executionSchema.shape.creatorSignature.optional(),
   signedTransaction: executionSchema.shape.signedTransaction,
   expiredResolution: z.literal(true).optional(),
+  fundingObservation: registrationSponsorFundingObservationSchema.optional(),
   now: timestamp.optional(),
 }).strict();
 const entrySchema = z.object({ original: sponsoredRegistrationSchema, current: sponsoredRegistrationSchema,
   execution: executionSchema.optional() }).strict();
-const policyEnvelopeSchema = z.object({ cohortDigest: hash, policyDigest: hash, policy: registrationSponsorPolicySchema }).strict();
+const policyEnvelopeSchema = z.object({ cohortDigest: hash, policyDigest: hash, policy: activeRegistrationSponsorPolicySchema }).strict();
 type Entry = z.infer<typeof entrySchema>;
 type PolicyEnvelope = z.infer<typeof policyEnvelopeSchema>;
 export type RegistrationSponsorLookup = z.input<typeof lookupSchema>;
@@ -72,9 +73,10 @@ function put(db: DatabaseSync, key: string, value: unknown, now: number): void {
   db.prepare("INSERT INTO sync_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at")
     .run(PREFIX + key, canonicalJson(value), new Date(now).toISOString());
 }
-function cohortDigest(policy: RegistrationSponsorPolicy): string {
+function cohortDigest(policy: ActiveRegistrationSponsorPolicy): string {
   return keccak256(toBytes(canonicalJson({ network: policy.network, deploymentOrigin: policy.deploymentOrigin,
-    registryAddress: policy.registryAddress, sponsorAddress: policy.sponsorAddress })));
+    registryAddress: policy.registryAddress, sponsorAddress: policy.sponsorAddress,
+    ...(policy.protocol === "keryx-registration-sponsor-v2" ? { protocol: policy.protocol } : {}) })));
 }
 function immutable(row: SponsoredRegistration): string {
   const mutable = new Set(["state", "updatedAt", "transactionHash", "transactionNonce", "actualGasWei", "expiredResolution"]);
@@ -103,11 +105,12 @@ function validateRow(row: SponsoredRegistration): void {
       (["confirmed", "reverted"].includes(row.state) && (row.transactionNonce === undefined || row.transactionHash === undefined ||
         row.actualGasWei === undefined || BigInt(row.actualGasWei) > BigInt(row.reservedWei)))) unavailable();
 }
-function validateBinding(row: SponsoredRegistration, policy: RegistrationSponsorPolicy): void {
+function validateBinding(row: SponsoredRegistration, policy: ActiveRegistrationSponsorPolicy): void {
   if (row.policyDigest !== registrationPolicyDigest(policy) || row.registryAddress !== policy.registryAddress || row.registryCodeHash !== policy.registryCodeHash ||
       row.relayer !== policy.sponsorAddress || `eip155:${row.chainId}` !== policy.network ||
       row.reservedWei !== policy.maxTransactionWei || !registrationCreatorEligible(policy, row.creator, row.canonicalUrl) ||
-      row.deadline * 1000 > policy.expiresAt) unavailable();
+      (policy.protocol === "keryx-registration-sponsor-v1" ? row.deadline * 1000 > policy.expiresAt :
+        row.deadline * 1000 > row.createdAt + 10 * 60_000)) unavailable();
 }
 function readPolicies(db: DatabaseSync): Map<string, PolicyEnvelope> {
   const rows = db.prepare("SELECT key,value FROM sync_state WHERE key LIKE ? ORDER BY key LIMIT 1001").all(PREFIX + "policy:%");
@@ -167,21 +170,28 @@ function readEntries(db: DatabaseSync, policies = readPolicies(db)): Entry[] {
         if (row.replacesRequestId !== undefined) unavailable();
       } else {
         const previous = lineage[index - 1].current;
-        if (row.replacesRequestId !== previous.id || !mayRenew(previous, row, row.createdAt)) unavailable();
+        if (row.replacesRequestId !== previous.id || !mayRenew(previous, row, row.createdAt,
+          policies.get(previous.policyDigest)?.policy, policies.get(row.policyDigest)?.policy)) unavailable();
       }
     }
   }
   return entries;
 }
-function mayRenew(previous: SponsoredRegistration, requested: SponsoredRegistration, now: number): boolean {
+function mayRenew(previous: SponsoredRegistration, requested: SponsoredRegistration, now: number,
+  previousPolicy?: ActiveRegistrationSponsorPolicy, requestedPolicy?: ActiveRegistrationSponsorPolicy): boolean {
   const terminal = previous.state === "reverted" && previous.transactionHash !== undefined && previous.actualGasWei !== undefined ||
     previous.state === "expired" && previous.transactionNonce === undefined && previous.transactionHash === undefined && previous.actualGasWei === undefined;
-  return terminal && previous.creator === requested.creator && previous.policyDigest === requested.policyDigest &&
+  const samePolicy = previous.policyDigest === requested.policyDigest;
+  const explicitUpgrade = previousPolicy?.protocol === "keryx-registration-sponsor-v1" &&
+    requestedPolicy?.protocol === "keryx-registration-sponsor-v2" && previousPolicy.deploymentOrigin === requestedPolicy.deploymentOrigin &&
+    previous.chainId === requested.chainId && previous.relayer === requested.relayer && previous.registryAddress === requested.registryAddress &&
+    previous.registryCodeHash === requested.registryCodeHash && previous.rssUrl === requested.rssUrl;
+  return terminal && previous.creator === requested.creator && (samePolicy || explicitUpgrade) &&
     previous.canonicalUrl === requested.canonicalUrl && previous.claimId === requested.claimId && previous.sourceId === requested.sourceId &&
     previous.id !== requested.id && requested.replacesRequestId === previous.id && now > previous.createdAt &&
     (previous.state === "reverted" || now >= (previous.deadline + 1) * 1000) && previous.updatedAt <= now;
 }
-function assertLiveClaim(db: DatabaseSync, row: SponsoredRegistration, policy: RegistrationSponsorPolicy, now: number): void {
+function assertLiveClaim(db: DatabaseSync, row: SponsoredRegistration, policy: ActiveRegistrationSponsorPolicy, now: number): void {
   const saved = db.prepare("SELECT value FROM sync_state WHERE key=?").get("keryx:source-claims:v1:claim:" + row.claimId);
   const parsed = sourceClaimSchema.safeParse(saved ? JSON.parse(String(saved.value)) : null);
   if (!parsed.success) conflict("Publishing-control proof is unavailable; retain this registration original", "registration_sponsor_proof_changed");
@@ -211,10 +221,54 @@ function heldWei(row: SponsoredRegistration): bigint {
 }
 const day = (at: number): string => new Date(at).toISOString().slice(0, 10);
 
+export interface RegistrationSponsorFundingInspection {
+  available: boolean; reservedGasCovered: boolean; heldWei: string; spendableWei: string;
+}
+function fundingUnavailable(): never {
+  throw new RegistrationSponsorError("Fresh sponsor funds could not be verified", 503, "registration_sponsor_rpc_unavailable");
+}
+/** Balance and nonce share one fresh attested block; liability spans all immutable policies. */
+function inspectFunding(entries: Entry[], policy: ActiveRegistrationSponsorPolicy,
+  value: RegistrationSponsorFundingObservation | undefined, now: number): RegistrationSponsorFundingInspection {
+  const parsed = registrationSponsorFundingObservationSchema.safeParse(value);
+  if (!parsed.success) fundingUnavailable();
+  const observation = parsed.data;
+  if (observation.network !== policy.network || observation.sponsorAddress !== policy.sponsorAddress ||
+      observation.observedAt > now || now - observation.observedAt > 5_000 ||
+      observation.blockTimestamp * 1000 > now + 5_000 || observation.blockTimestamp * 1000 < now - 60_000)
+    fundingUnavailable();
+  const rows = entries.map(entry => entry.current).filter(row => `eip155:${row.chainId}` === policy.network && row.relayer === policy.sponsorAddress);
+  // A receipt released after an older snapshot must not expose its pre-spend balance again.
+  if (rows.some(row => ["confirmed", "reverted"].includes(row.state) &&
+      row.transactionNonce! >= observation.latestTransactionNonce)) fundingUnavailable();
+  const held = rows.reduce((sum, row) => sum + (["signing", "submitted"].includes(row.state) ||
+    row.state === "prepared" && !expired(row, now) ? BigInt(row.reservedWei) : BigInt(0)), BigInt(0));
+  const balance = BigInt(observation.nativeBalanceWei), spendable = balance > held ? balance - held : BigInt(0);
+  return { available: balance >= held && spendable >= BigInt(policy.maxTransactionWei), reservedGasCovered: held > BigInt(0) && balance >= held,
+    heldWei: held.toString(), spendableWei: spendable.toString() };
+}
+function requireFundedHold(entries: Entry[], policy: ActiveRegistrationSponsorPolicy,
+  observation: RegistrationSponsorFundingObservation | undefined, now: number, newHold: boolean, transactionNonce?: number): void {
+  const inspection = inspectFunding(entries, policy, observation, now);
+  if (transactionNonce !== undefined && observation!.latestTransactionNonce !== transactionNonce) fundingUnavailable();
+  const covered = newHold ? inspection.available : BigInt(observation!.nativeBalanceWei) >= BigInt(inspection.heldWei);
+  if (!covered) conflict("The sponsor wallet cannot cover this registration's full gas hold", "registration_sponsor_insufficient_funds");
+}
+/** Read-only discovery cannot reserve gas or release an uncertain signed original. */
+export function inspectSqliteRegistrationSponsorFunding(db: DatabaseSync, policyValue: ActiveRegistrationSponsorPolicy,
+  observation: RegistrationSponsorFundingObservation, now = Date.now()): RegistrationSponsorFundingInspection {
+  const policy = parseInput(activeRegistrationSponsorPolicySchema, policyValue); parseInput(timestamp, now);
+  return safeStorage(() => {
+    db.exec("BEGIN");
+    try { const result = inspectFunding(readEntries(db), policy, observation, now); db.exec("COMMIT"); return result; }
+    catch (error) { try { db.exec("ROLLBACK"); } catch { /* Retain the safe observation failure. */ } throw error; }
+  });
+}
+
 /** Atomically retain one original and its maximum gas liability before any sponsor signing. */
-export function admitSqliteRegistrationSponsor(db: DatabaseSync, policyValue: RegistrationSponsorPolicy,
-  rowValue: SponsoredRegistration, now = Date.now()): SponsoredRegistration {
-  const policy = parseInput(registrationSponsorPolicySchema, policyValue);
+export function admitSqliteRegistrationSponsor(db: DatabaseSync, policyValue: ActiveRegistrationSponsorPolicy,
+  rowValue: SponsoredRegistration, now = Date.now(), fundingObservation?: RegistrationSponsorFundingObservation): SponsoredRegistration {
+  const policy = parseInput(activeRegistrationSponsorPolicySchema, policyValue);
   const requested = parseInput(sponsoredRegistrationSchema, rowValue);
   parseInput(timestamp, now);
   try { validateRow(requested); validateBinding(requested, policy); }
@@ -233,12 +287,15 @@ export function admitSqliteRegistrationSponsor(db: DatabaseSync, policyValue: Re
       if (!sameRequestedIntent(original.original, requested)) conflict("This source already retains a different registration original", "registration_sponsor_original_conflict");
       expirePrepared(db, [original], now); return original.current;
     }
-    if (policy.expiresAt <= now || requested.deadline * 1000 <= now)
+    if (registrationPolicyExpired(policy, now) || requested.deadline * 1000 <= now)
       conflict("Registration sponsorship authority has expired", "registration_sponsor_expired");
+    if (policy.protocol === "keryx-registration-sponsor-v2" && requested.deadline * 1000 > now + 10 * 60_000)
+      conflict("Registration authorization must expire within ten minutes", "registration_sponsor_invalid");
     if (entries.length >= MAX_RECORDS || (!pinned && policies.size >= MAX_RECORDS))
       conflict("Registration sponsorship inspection limit reached", "registration_sponsor_limit");
     expirePrepared(db, entries, now);
-    if (requested.replacesRequestId !== undefined && (!latest || !mayRenew(latest.current, requested, now)))
+    if (requested.replacesRequestId !== undefined && (!latest || !mayRenew(latest.current, requested, now,
+      policies.get(latest.current.policyDigest)?.policy, policy)))
       conflict("Only the latest expired unsigned or receipt-reverted original may be renewed", "registration_sponsor_renewal_refused");
     if (entries.some(entry => entry.current.creator === requested.creator &&
         ["prepared", "signing", "submitted"].includes(entry.current.state)))
@@ -246,7 +303,11 @@ export function admitSqliteRegistrationSponsor(db: DatabaseSync, policyValue: Re
     const cohortRows = entries.filter(entry => entry.current.policyDigest === digest).map(entry => entry.current);
     const today = cohortRows.filter(row => day(row.createdAt) === day(now));
     const reservation = BigInt(policy.maxTransactionWei);
-    if (cohortRows.length >= policy.maxRegistrationsTotal || today.length >= policy.maxRegistrationsPerDay ||
+    if (policy.protocol === "keryx-registration-sponsor-v2") {
+      assertLiveClaim(db, requested, policy, now);
+      requireFundedHold(entries, policy, fundingObservation, now, true);
+    }
+    else if (cohortRows.length >= policy.maxRegistrationsTotal || today.length >= policy.maxRegistrationsPerDay ||
         cohortRows.filter(row => row.creator === requested.creator).length >= policy.maxRegistrationsPerWallet ||
         (policy.maxRegistrationsPerOrigin !== undefined && cohortRows.filter(row => new URL(row.canonicalUrl).origin === new URL(requested.canonicalUrl).origin).length >= policy.maxRegistrationsPerOrigin) ||
         cohortRows.reduce((sum, row) => sum + heldWei(row), BigInt(0)) + reservation > BigInt(policy.maxLifetimeWei) ||
@@ -311,7 +372,7 @@ export function transitionSqliteRegistrationSponsor(db: DatabaseSync, input: Reg
         conflict("Only an expired unsigned registration can release its gas hold");
     } else if (row.state === "prepared" && change.nextState === "signing") {
       const policy = policies.get(row.policyDigest)!.policy;
-      if (expired(row, now) || policy.expiresAt <= now) conflict("Registration sponsorship authority has expired", "registration_sponsor_expired");
+      if (expired(row, now) || registrationPolicyExpired(policy, now)) conflict("Registration sponsorship authority has expired", "registration_sponsor_expired");
       if (change.transactionNonce === undefined || change.transactionHash !== undefined || change.actualGasWei !== undefined)
         conflict("Sponsor signing requires its original transaction nonce");
       if (entries.some(value => value.current.state === "signing" || value.current.state === "submitted"))
@@ -319,6 +380,7 @@ export function transitionSqliteRegistrationSponsor(db: DatabaseSync, input: Reg
       if (entries.some(value => value.current.chainId === row.chainId && value.current.relayer === row.relayer &&
         value.current.transactionNonce === change.transactionNonce)) conflict("The sponsor transaction nonce already has an original");
       assertLiveClaim(db, row, policy, now);
+      if (policy.protocol === "keryx-registration-sponsor-v2") requireFundedHold(entries, policy, change.fundingObservation, now, false, change.transactionNonce);
     } else if (row.state === "signing" && change.nextState === "submitted") {
       if (change.transactionHash === undefined || change.actualGasWei !== undefined ||
           (change.transactionNonce !== undefined && change.transactionNonce !== row.transactionNonce))
@@ -329,10 +391,11 @@ export function transitionSqliteRegistrationSponsor(db: DatabaseSync, input: Reg
     } else if (row.state === change.nextState && ["signing", "submitted"].includes(row.state)) {
       const policy = policies.get(row.policyDigest)!.policy;
       const resolvingExpired = change.expiredResolution === true;
-      if (!entry.execution || !proofMatches || change.actualGasWei !== undefined || policy.expiresAt <= now ||
+      if (!entry.execution || !proofMatches || change.actualGasWei !== undefined || registrationPolicyExpired(policy, now) ||
           (resolvingExpired ? now <= row.deadline * 1000 : now > row.deadline * 1000 || row.expiredResolution))
         conflict("The original execution authority cannot be resumed");
       if (!resolvingExpired) assertLiveClaim(db, row, policy, now);
+      if (policy.protocol === "keryx-registration-sponsor-v2") requireFundedHold(entries, policy, change.fundingObservation, now, false, row.transactionNonce);
     } else if (row.state === "submitted" && ["confirmed", "reverted"].includes(change.nextState)) {
       if (!proofMatches || change.actualGasWei === undefined || BigInt(change.actualGasWei) > BigInt(row.reservedWei))
         conflict("Finality evidence must match the original reserved transaction");
