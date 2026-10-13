@@ -124,15 +124,20 @@ try {
       await page.getByText(aggregateCopy.recordedOnly, { exact: true }).waitFor();
       await page.getByLabel(aggregateCopy.network, { exact: true }).selectOption("eip155:5042002");
       await page.getByRole("button", { name: aggregateCopy.apply, exact: true }).click();
-      const sampled = page.getByRole("table").first();
+      const sampled = page.getByRole("table", { name: aggregateCopy.cohortLimit, exact: true });
       assert.equal(await sampled.getByRole("row", { name: /^Scored purchases / }).getByRole("cell").nth(2).innerText(), "1");
-      await page.getByText(aggregateCopy.rows.missed[1], { exact: true }).waitFor();
-      await page.getByText(aggregateCopy.rows.questionType[1], { exact: true }).waitFor();
+      for (const [label, rule] of [aggregateCopy.rows.missed, aggregateCopy.rows.questionType]) {
+        const row = sampled.getByRole("row").filter({ has: page.getByRole("rowheader", { name: label, exact: true }) });
+        assert.equal(await row.count(), 1, "One visible metric row in the captioned aggregate table");
+        await row.getByRole("cell", { name: rule, exact: true }).waitFor();
+        assert.equal(await row.getByRole("cell", { name: aggregateCopy.unmeasured, exact: true }).count(), 4,
+          "Every cohort remains explicitly unmeasured");
+      }
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.screenshot({ path: join(fixture, `pooled-outcome-${width}.png`) });
       await page.getByLabel(aggregateCopy.network, { exact: true }).selectOption("eip155:5042");
       await page.getByRole("button", { name: aggregateCopy.apply, exact: true }).click();
-      assert.equal(await page.getByRole("table").first().getByRole("row", { name: /^Scored purchases / }).getByRole("cell").nth(2).innerText(), "0");
+      assert.equal(await sampled.getByRole("row", { name: /^Scored purchases / }).getByRole("cell").nth(2).innerText(), "0");
       await page.goto(`${origin}/dispatch/${empty.id}`);
       await page.getByText(copy.noSample, { exact: true }).waitFor();
       assert.deepEqual(external, []); assert.deepEqual(errors, []);
