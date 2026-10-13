@@ -17,6 +17,16 @@ listener.listen(0, "127.0.0.1"); await once(listener, "listening");
 const address = listener.address(); assert(address && typeof address === "object");
 await new Promise<void>((done, reject) => listener.close(error => error ? reject(error) : done()));
 const physicalOrigin = `http://127.0.0.1:${address.port}`, origin = "https://navigation-latency.test";
+async function fulfillBuiltGet(route: Route) {
+  const request = route.request(), url = new URL(request.url());
+  assert.equal(request.method(), "GET");
+  const response = await route.fetch({ url: physicalOrigin + url.pathname + url.search });
+  const body = await response.body(), headers = { ...response.headers() };
+  // APIResponse bodies are decoded buffers, not the upstream compressed/chunked wire stream.
+  for (const name of ["content-encoding", "transfer-encoding", "content-length", "connection", "keep-alive"])
+    delete headers[name];
+  return route.fulfill({ response, headers, body });
+}
 const engine = process.argv.includes("--webkit") ? webkit : chromium;
 console.log(JSON.stringify({ phase: "browser-launch-start", engine: engine.name() }));
 const browser = await engine.launch({ headless: true });
@@ -63,7 +73,7 @@ try {
             assert(!finalRoute, "One final navigation request");
             finalRoute = route; held.add(route); return;
           }
-          return route.fulfill({ response: await route.fetch({ url: physicalOrigin + url.pathname + url.search }) });
+          return fulfillBuiltGet(route);
         });
         const prefetch = page.waitForResponse(response => new URL(response.url()).pathname === destination &&
           response.request().headers()["next-router-prefetch"] === "1" &&
@@ -84,7 +94,17 @@ try {
         console.log(JSON.stringify({ phase: "prefetch-response-start", engine: engine.name(), width, destination }));
         const prefetched = await prefetch;
         console.log(JSON.stringify({ phase: "prefetch-body-start", engine: engine.name(), width, destination, status: prefetched.status() }));
-        await prefetched.finished();
+        if (engine === webkit) {
+          assert.equal(await prefetched.finished(), null, "WebKit prefetch completes without a transport error");
+        } else {
+          const prefetchedBytes = Number(prefetched.headers()["content-length"]);
+          assert(Number.isSafeInteger(prefetchedBytes) && prefetchedBytes > 0, "Prefetched decoded body has a positive byte length");
+          // Observe complete decoded delivery in the browser, rather than a protocol response handle.
+          await page.waitForFunction(({ url, bytes }) => performance.getEntriesByName(url, "resource").some(entry => {
+            const resource = entry as PerformanceResourceTiming;
+            return resource.initiatorType === "fetch" && resource.responseEnd > 0 && resource.decodedBodySize === bytes;
+          }), { url: prefetched.url(), bytes: prefetchedBytes });
+        }
         console.log(JSON.stringify({ phase: "prefetch-body-complete", engine: engine.name(), width, destination }));
         assert.equal(prefetched.status(), 200, `${destination} loading boundary is prefetched`);
         // Measure from the actual input event to the fallback's next animation frame.
@@ -151,8 +171,7 @@ try {
           await page.locator('header button[aria-label="Open menu"]').waitFor({ state: "attached" });
           await finalRoute.abort(); held.delete(finalRoute);
         } else {
-          const url = new URL(finalRoute.request().url());
-          await finalRoute.fulfill({ response: await finalRoute.fetch({ url: physicalOrigin + url.pathname + url.search }) });
+          await fulfillBuiltGet(finalRoute);
           held.delete(finalRoute);
           await page.waitForURL(origin + destination);
           await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ state: "detached" });
