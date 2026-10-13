@@ -24,12 +24,19 @@ describe("private transport completion boundary", () => {
   });
   it("delivers once after save, retains only hash, and leaves original and public projectors unchanged", async () => {
     const f = fixture(), delivery = (await preparePrivateRunClaim({ enabled: true, runId: "new", binding, db: async () => f.db }))!;
-    const run = f.save("new"), original = JSON.stringify(run), publicValues = JSON.stringify([buildCompletion(run, "keryx"), keryxMeta(run), telegramAnswer(run)]);
+    const run = f.save("new"), original = JSON.stringify(run), publicNow = Date.now();
+    // Compare projectors at one instant while claim issuance keeps the real clock.
+    const publicSnapshot = () => {
+      const clock = vi.spyOn(Date, "now").mockReturnValue(publicNow);
+      try { return JSON.stringify([buildCompletion(run, "keryx"), keryxMeta(run), telegramAnswer(run)]); }
+      finally { clock.mockRestore(); }
+    };
+    const publicValues = publicSnapshot();
     const packet = (await delivery.complete(run))!; expect(packet.status).toBe("available");
     if (packet.status !== "available") throw new Error("Expected private delivery");
     const token = new URL(packet.delivery.claimUrl).hash.slice(1), rows = f.sql.prepare("SELECT * FROM anonymous_run_claims").all();
     expect(rows).toHaveLength(1); expect(rows[0].token_hash).toBe(runClaimTokenHash(token, binding)); expect(JSON.stringify(rows)).not.toContain(token);
-    expect(JSON.stringify(run)).toBe(original); expect(JSON.stringify([buildCompletion(run, "keryx"), keryxMeta(run), telegramAnswer(run)])).toBe(publicValues);
+    expect(JSON.stringify(run)).toBe(original); expect(publicSnapshot()).toBe(publicValues);
     expect(publicValues).not.toContain(token); expect(privateRunClaimText(packet)).toContain(packet.delivery.claimUrl);
     expect(await delivery.complete(run)).toBeNull(); expect(f.sql.prepare("SELECT * FROM anonymous_run_claims").all()).toHaveLength(1);
   });
