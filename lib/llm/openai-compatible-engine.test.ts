@@ -22,7 +22,7 @@ describe("bounded provider JSON requests", () => {
     expect(bodies[0]).toMatchObject({ max_tokens: 8192, thinking: { type: "enabled" }, reasoning_effort: "low" });
     expect(bodies[1].thinking).toEqual({ type: "disabled" });
     expect(bodies[1].reasoning_effort).toBeUndefined();
-    expect(new TransportEngine({ provider: "mimo", name: "test", baseUrl: "https://provider.test", model: "mimo-v2.5", apiKey: "test-only" }).briefSupported()).toBe(false);
+    expect(new TransportEngine({ provider: "cloudflare", name: "test", baseUrl: "https://provider.test", model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast", apiKey: "test-only" }).briefSupported()).toBe(false);
     expect(new TransportEngine({ provider: "deepseek", name: "test", baseUrl: "https://proxy.test", model: "deepseek-v4-flash", apiKey: "test-only" }).briefSupported()).toBe(false);
   });
   it("prohibits redirect delivery under the private transport policy with a real local HTTP server", async () => {
@@ -49,7 +49,7 @@ describe("bounded provider JSON requests", () => {
     ["deepseek", "deepseek-v4-flash", true],
     ["deepseek", "deepseek-v4-pro", true],
     ["deepseek", "unknown-future-model", false],
-    ["mimo", "mimo-v2.5", false],
+    ["cloudflare", "@cf/meta/llama-3.3-70b-instruct-fp8-fast", false],
     [undefined, "deepseek-v4-flash", false],
   ] as const)("scopes thinking control to %s / %s", async (provider, model, disabled) => {
     const fetchMock = vi.fn(async () => Response.json({ choices: [{ message: { content: '{"ok":true}' }, finish_reason: "stop" }] }));

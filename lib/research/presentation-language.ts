@@ -1,19 +1,13 @@
 import { answerPresentation } from "./answer-presentation";
 
-export const presentationLanguages = ["en", "vi", "pt", "pt-BR", "es"] as const;
-export type RequestedPresentationLanguage = typeof presentationLanguages[number];
-export type PresentationLanguage = "en" | "vi" | "pt" | "es";
+import { presentationLanguage, type PresentationLanguage } from "../../shared/i18n/presentation-language";
+export { presentationLanguage, presentationLanguages, type RequestedPresentationLanguage, type PresentationLanguage } from "../../shared/i18n/presentation-language";
 export interface PresentationLocale {
   language: PresentationLanguage;
   source: "requested" | "recorded-answer" | "question" | "fallback";
   answerLanguage: PresentationLanguage | "UNKNOWN";
   agreement: "MATCHED" | "MISMATCH" | "UNKNOWN";
   unsupportedRequestedLanguage: boolean;
-}
-
-/** This finite namespace does not enable prepared UI locales or infer a model's language. */
-export function presentationLanguage(value: unknown): PresentationLanguage | undefined {
-  return value === "pt-BR" ? "pt" : value === "en" || value === "vi" || value === "pt" || value === "es" ? value : undefined;
 }
 
 /** Request-local labels only. recordedAnswerLanguage must come from a trusted producer,

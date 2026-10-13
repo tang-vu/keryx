@@ -1,6 +1,9 @@
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import type { PaymentRecord, QueryRun } from "@/lib/types";
-import { reasoningOutputLimitText } from "./llm/reasoning-telemetry";
+import { recordedAnswerLanguage } from "./research/answer-language-provenance";
+import { recordedReportPresentation, presentationReasoningText } from "./research/result-presentation";
+import { surfaceReasoning } from "./llm/reasoning-telemetry";
+import { reportPresentationMessages } from "./research/report-messages";
 import { projectBibliographicTask } from "./research/bibliographic-task-result";
 import { createMessages } from "./i18n/messages";
 
@@ -23,30 +26,35 @@ function quotedReportLiteral(value: string): string {
 
 /** Export the observed report; a citation or proposed reward never implies settlement. */
 export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, payments: PaymentRecord[]): string {
-  const lines = [copy("reportExport.title"), "", run.question, "", copy("reportExport.sourceCap", { budget: run.budget, mode: meta?.mode ?? run.paymentMode ?? "unknown" }), ""];
-  const limit = reasoningOutputLimitText(run.reasoningAttempts, /[ăâđêôơưĂÂĐÊÔƠƯ\u1ea0-\u1ef9]/u.test(run.question) ? "vi" : "en", run.trace);
+  const report = recordedReportPresentation(recordedAnswerLanguage(run)), labels = report.labels;
+  const ordinary = reportPresentationMessages(report.locale.language);
+  const lines = [labels.title, "", run.question, "", copy("reportExport.sourceCap", { budget: run.budget, mode: meta?.mode ?? run.paymentMode ?? "unknown" }), ""];
+  if (report.notice) lines.push(report.notice, "");
+  const reasoning = surfaceReasoning(run.reasoningAttempts, run.trace);
+  const limit = reasoning.outputLimits?.length || reasoning.outputLimitTraceStepsOmitted
+    ? presentationReasoningText(reasoning, report.locale.language) : "";
   if (limit) lines.push(`> ${limit}`, "");
   lines.push(run.answer, "");
   const bibliography = projectBibliographicTask(run.bibliography);
-  if (bibliography) lines.push(copy("reportExport.bibliography"), "", "```bibtex", bibliography.bibliographyExports.bibtex.content, "```", "", "```ris", bibliography.bibliographyExports.ris.content, "```", "");
-  lines.push(copy("reportExport.citedSources"), "");
+  if (bibliography) lines.push(labels.bibliography, "", "```bibtex", bibliography.bibliographyExports.bibtex.content, "```", "", "```ris", bibliography.bibliographyExports.ris.content, "```", "");
+  lines.push(labels.sources, "");
   for (const citation of run.citations) {
     const url = safeUrl(citation.itemUrl);
     lines.push(`${citation.marker}: ${citation.itemTitle ?? citation.sourceName}${url ? ` — ${url}` : ""}`);
-    if (citation.contentVersion) lines.push(copy("reportExport.documentVersion", { version: citation.contentVersion }));
+    if (citation.contentVersion) lines.push(ordinary("documentVersion", { version: citation.contentVersion }));
     if (citation.accessKind === "creator-free") lines.push(copy("reportExport.freeAccess"));
     if (citation.sourceClaim) lines.push(copy("reportExport.creatorPolicy", { policy: JSON.stringify({ id: citation.sourceClaim.id,
       revision: citation.sourceClaim.revision, mode: citation.sourceClaim.mode, effectiveAt: citation.sourceClaim.effectiveAt,
       verifiedAt: citation.sourceClaim.verifiedAt }) }));
-    if (citation.webProvenance) lines.push(copy("reportExport.provenance", { provenance: JSON.stringify(citation.webProvenance) }));
-    if (citation.requestedSource) lines.push(copy("reportExport.originalScope", { scope: JSON.stringify(citation.requestedSource) }));
-    if (citation.scholarly) lines.push(copy("reportExport.scholarly", { metadata: JSON.stringify(citation.scholarly) }));
+    if (citation.webProvenance) lines.push(ordinary("provenance", { provenance: JSON.stringify(citation.webProvenance) }));
+    if (citation.requestedSource) lines.push(ordinary("scope", { scope: JSON.stringify(citation.requestedSource) }));
+    if (citation.scholarly) lines.push(ordinary("scholarly", { metadata: JSON.stringify(citation.scholarly) }));
   }
-  lines.push("", copy("reportExport.evidence"), "");
-  lines.push(copy("reportExport.evidenceNotice"), "");
-  for (const evidence of run.evidence ?? []) lines.push(copy("reportExport.target", { marker: evidence.marker, claim: quotedReportLiteral(evidence.claim) }), copy("reportExport.quote", { quote: quotedReportLiteral(evidence.quote) }), copy("reportExport.admission", { admitted: String(evidence.qualifiesForAnswer === true), eligible: String(evidence.qualifiesForReward) }), "");
-  for (const coverage of run.claimCoverage ?? []) lines.push(copy("reportExport.coverage", { claim: quotedReportLiteral(coverage.claim), coverage: coverage.coverage, sources: coverage.coveredBy.join(", ") || copy("reportExport.noAdmittedSources") }));
-  lines.push("", copy("reportExport.payments"), "", copy("reportExport.paymentNotice"));
+  lines.push("", labels.evidence, "");
+  lines.push(labels.evidenceNotice, "");
+  for (const evidence of run.evidence ?? []) lines.push(ordinary("target", { marker: evidence.marker, claim: quotedReportLiteral(evidence.claim) }), `${labels.quote} ${quotedReportLiteral(evidence.quote)}`, copy("reportExport.admission", { admitted: String(evidence.qualifiesForAnswer === true), eligible: String(evidence.qualifiesForReward) }), "");
+  for (const coverage of run.claimCoverage ?? []) lines.push(ordinary("coverage", { claim: quotedReportLiteral(coverage.claim), coverage: coverage.coverage, sources: coverage.coveredBy.join(", ") || ordinary("noSources") }));
+  lines.push("", labels.payments, "", copy("reportExport.paymentNotice"));
   if (!payments.length) lines.push(copy("reportExport.noPayments"));
   for (const payment of payments) {
     const recorded = payment.settlementStatus ?? (payment.settled ? "settled" : "unverified");

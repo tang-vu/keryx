@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { researchReportFilename, researchReportMarkdown } from "./research-report-export";
 import type { PaymentRecord, QueryRun } from "./types";
+import { finalizeAnswerLanguage } from "./research/answer-language-provenance";
+import { recordedReportPresentation } from "./research/result-presentation";
 
 const run = {
   id: "report", question: "Question", budget: 0.05, answer: "Finding [S1].",
@@ -11,6 +13,15 @@ const run = {
 const payment = (settled: boolean, settlementStatus?: PaymentRecord["settlementStatus"]) => ({ sourceName: "Writer", amountUsdc: 0.001, kind: "citation", settled, settlementStatus } as PaymentRecord);
 
 describe("research report export", () => {
+  it.each(["en", "vi", "pt", "es"] as const)("uses recorded %s final-answer provenance for report headings without changing originals", language => {
+    const packet = finalizeAnswerLanguage({ answer: run.answer, rendererLanguage: language, statements: [], proposals: [] });
+    const snapshot = { ...run, trace: [{ phase: "done", ts: 0, message: "Done", detail: { answerLanguage: packet } }] } as QueryRun;
+    const before = JSON.stringify(snapshot);
+    const text = researchReportMarkdown(snapshot, null, []), labels = recordedReportPresentation(language).labels;
+    expect(text).toContain(labels.title); expect(text).toContain(labels.evidence); expect(text).toContain(labels.sources);
+    expect(text).toContain(run.answer); expect(JSON.stringify(snapshot)).toBe(before);
+    expect(researchReportMarkdown({ ...snapshot, answer: "changed" }, null, [])).toContain("# Keryx research report");
+  });
   it("exports a safe observed review ceiling without exposing private trace detail or changing the answer", () => {
     const snapshot = { ...run, trace: [{ phase: "synthesize", ts: 1, message: "PRIVATE TRACE MESSAGE",
       detail: { reasoningOutputLimit: { stage: "review", outputTokenLimit: 4096, body: "PRIVATE BODY" } } }] } as QueryRun;

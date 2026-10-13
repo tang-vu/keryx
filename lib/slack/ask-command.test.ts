@@ -9,6 +9,7 @@ import { createHmac } from "node:crypto";
 import { verifyRequestSignature } from "./verify-request-signature";
 import {
   type SlashCommand,
+  isSlackAccountControl,
   parseSlashCommand,
   helpText,
   buildAnswerText,
@@ -62,6 +63,31 @@ function params(overrides: Record<string, string> = {}): URLSearchParams {
 }
 
 describe("parseSlashCommand", () => {
+  it.each(["link", "unlink", "whoami", "/link", "/unlink", "/whoami",
+    "  /link\tfixture-secret  ", "unlink --confirm=fixture-secret", "whoami\n<@U123>"])
+    ("keeps reserved account intent %s out of research", text => {
+      expect(isSlackAccountControl(params({ text }))).toBe(true);
+      expect(parseSlashCommand(params({ text }))).toBeNull();
+    });
+
+  it.each(["/link", "/unlink", "/whoami"])("refuses direct %s regardless of text", command => {
+    for (const text of ["", "fixture-secret", "/help vi", "What is x402?"]) {
+      expect(isSlackAccountControl(params({ command, text }))).toBe(true);
+      expect(parseSlashCommand(params({ command, text }))).toBeNull();
+    }
+  });
+
+  it.each(["What does whoami do?", "Explain the link between citations and rewards.",
+    "How do I unlink an account?", "linking accounts safely", "unlinkable sources", "whoami?"])
+    ("preserves the ordinary question %s", text => {
+      expect(isSlackAccountControl(params({ text }))).toBe(false);
+      expect(parseSlashCommand(params({ text }))?.question).toBe(text);
+    });
+
+  it.each(["/help", "/language"])("leaves direct %s arguments to its existing control", command => {
+    expect(isSlackAccountControl(params({ command, text: "link" }))).toBe(false);
+  });
+
   it.each(["--review-first", "--reviewFirst=true", "--mode review-first"])("refuses unsupported review intent %s before research admission", flag => {
     expect(parseSlashCommand(params({ text: `Synthetic question ${flag}` }))).toBeNull();
     expect(helpText()).toContain("Review-first");
