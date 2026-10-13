@@ -64,11 +64,11 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
         ],
       },
-      ...["/api/me/run-claims", "/api/me/run-history/:path*", "/api/me/run-privacy/:path*", "/me/run-privacy", "/api/me/asks/:path*", "/me/asks",
+      ...["/api/me/run-claims", "/api/me/run-history/:path*", "/api/me/run-privacy/:path*", "/me/run-privacy", "/api/me/asks/:path*", "/me/asks", "/api/me/public-profile", "/me/public-profile",
         ...(process.env.KERYX_RUN_PRIVACY_ENABLED==="true"?["/dispatch/:path*", "/api/dispatch/:path*"]:[])].map(source => ({
         source, headers: [...runClaimPrivateHeaders],
       })),
-      ...["/answers/:path*", "/answers", "/wanted/:path*", "/wanted", "/sitemap.xml", "/api/runs", "/api/activity", "/api/wanted/:path*", "/api/creator/:path*"].map(source=>({
+      ...["/answers/:path*", "/answers", "/wanted/:path*", "/wanted", "/sitemap.xml", "/api/runs", "/api/activity", "/api/wanted/:path*", "/api/creator/:path*", "/u/:path*", "/api/u/:path*"].map(source=>({
         source,headers:[{key:"Cache-Control",value:"no-store"}],
       })),
       { source: "/research/private", headers: [...runClaimPrivateHeaders,

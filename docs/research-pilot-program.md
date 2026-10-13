@@ -1,5 +1,10 @@
 # Independent research pilot
 
+October 12 direction: the owner selected all three [specialist tracks](specialist-research-pilots.md):
+API/platform comparison, SaaS competitor/niche research and scholarly literature.
+Prepare each as a separate bounded outcome and measure independent paid returns,
+buyer acceptance and complete costs per track. The dated baseline below is historical.
+
 Status, September 30, 2026: no independent buyer is committed yet. Recruitment and
 paid repeat-use validation remain open. This runbook prepares the pilot; it does
 not claim customers, revenue or outreach.

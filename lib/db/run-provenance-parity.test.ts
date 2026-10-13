@@ -38,6 +38,8 @@ it("round trips new provenance and preserves legacy/ownerless history through bo
   const owned = [run("key", { asker: owner.toUpperCase(),
     provenance: { version: 1, surface: "api", ownershipMethod: "api-key" } }),
   run("payer", { asker: owner, provenance: { version: 1, surface: "agent-to-agent", ownershipMethod: "verified-payer" } }),
+  run("invalid-metadata", { asker: owner, provenance: { version: 1, surface: "desktop",
+    ownershipMethod: "session", wallet: other } as QueryRun["provenance"] }),
   run("legacy", { asker: owner, origin: "web" })];
   const anonymous = run("anonymous", { origin: "mcp", mcpClient: "codex",
     provenance: { version: 1, surface: "remote-mcp", ownershipMethod: "api-key" } });
@@ -45,9 +47,12 @@ it("round trips new provenance and preserves legacy/ownerless history through bo
     for (const db of [sqlite, supabase]) {
       for (const value of [...owned, anonymous]) await db.saveQueryRun(value);
       const history = await db.listQueryRunsByAsker(owner, 200);
-      expect(history.map(value => value.id).sort()).toEqual(["key", "legacy", "payer"]);
+      expect(history.map(value => value.id).sort()).toEqual(["invalid-metadata", "key", "legacy", "payer"]);
       expect(history.find(value => value.id === "key")?.provenance).toEqual(owned[0].provenance);
       expect(history.find(value => value.id === "payer")?.provenance).toEqual(owned[1].provenance);
+      expect(history.find(value => value.id === "invalid-metadata")).toMatchObject({ asker: owner,
+        provenance: { version: 1, surface: "unknown", ownershipMethod: "unknown" } });
+      expect(history.find(value => value.id === "invalid-metadata")?.provenance).not.toHaveProperty("wallet");
       expect(history.find(value => value.id === "legacy")).not.toHaveProperty("provenance");
       expect(await db.listQueryRunsByAsker(other, 200)).toEqual([]);
       expect((await db.listQueryRunsByAsker(owner, 1))).toHaveLength(1);

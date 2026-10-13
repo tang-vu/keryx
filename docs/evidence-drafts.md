@@ -18,10 +18,12 @@ have not been measured. Neither issue's full acceptance is established.
    named supported, partly-supported or not-found assessment. It remains explicitly
    user supplied. Missing retained source evidence always withholds that judgment.
    A not-found assessment is your own observation, never an exhaustive Keryx search.
-5. Group retained quotations into themes and edit your synthesis notes separately.
-   Selecting/clearing one theme never overwrites another theme's notes. The exporter
-   characterises papers only through quotations; author notes remain visibly
-   unverified. It does not automatically invent themes, contributions or gaps.
+5. Choose **Assemble retained contributions** to append editable literal quotations
+   grouped by the original research targets, or group retained quotations manually.
+   Existing themes and edits remain. **Regenerate this theme from selected excerpts**
+   replaces only that theme's sentences, preserving its title, notes and other themes.
+   Assembly does not infer agreement, disagreement or gaps. Author notes remain
+   visibly unverified; write comparisons only after reviewing their cited excerpts.
 6. Optionally write the section one sentence at a time with **Add statement**.
    Choose what the sentence does (one paper's contribution, agreement,
    disagreement or a gap), tick the papers it names and tick the retained excerpt
@@ -67,12 +69,25 @@ IDs identify rows; literal row bytes additionally bind user assessments. Changed
 claim text, references, selected excerpts or row bytes invalidate an assessment.
 Reviewer names and timestamps are assertions, not verified identity or expert review.
 
-Unavailable here means no usable retained excerpt for that exact record. It does
-not assert the original publisher is down or that the paper was never read.
-Unread/unavailable originals cannot be distinguished from this packet alone and
-remain together in the explicitly labelled retention-gap list. Existing BUY/SKIP/
-CACHE reasons, source purchases and creator rewards remain in the original report.
-This transformation does not rerun research or change receipt/payment authority.
+No usable retained excerpt alone says nothing about original access. Optional
+`readingStatuses` records the caller's explicit `unread` or `unavailable` observation
+and reason for a unique exact Include URL. These papers export separately and are
+never described or cited. Records without an observation stay in the unknown
+retention-gap list. Contradictions with usable retained evidence refuse. The legacy
+v1 `unread` result remains the combined no-excerpt compatibility list; the new
+`reading.unread`, `reading.unavailable` and `reading.unknown` lists distinguish
+observations honestly. Existing BUY/SKIP/CACHE reasons, source purchases and creator
+rewards remain in the original report. This transformation does not rerun research
+or change receipt/payment authority. **Prepare reading request in a new tab**
+deliberately opens the existing editable budgeted reader; submission and importing
+its resulting report remain separate user actions.
+
+Optional `assembly: {mode: "append"}` appends extractive contribution themes.
+`assembly: {mode: "regenerate", themeId: "…"}` replaces one theme's sentences from
+its 1–24 selected retained excerpts. Both enforce the same packet and theme bounds.
+An assembly response includes `draft.editableRequest` with the operation removed,
+so subsequent edits need not trigger regeneration again. API and both MCP surfaces
+reuse this zero-I/O behavior. See [candidate controls and remaining gates](engineering/related-work283-completion-2026-10-12.md).
 
 The related-work reference set derives only from selected theme excerpt URLs and
 the excerpts of exported statements. Multiple themes using one exact record produce

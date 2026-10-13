@@ -5,6 +5,9 @@
     "incremental": false
   },
   "include": [
+    "scripts/prepare-specialist-brief.mts",
+    "scripts/research-pilot.mts",
+    "scripts/test-browser-specialist-briefs.mts",
     "scripts/research-evidence-audit.mts",
     "scripts/research-evidence-audit.test.mts",
     "scripts/test-browser-research-evidence-audit.mts",
@@ -38,6 +41,8 @@
     "scripts/eval-related-work.mts",
     "scripts/test-personal-history-postgres.mts",
     "scripts/test-run-privacy-postgres.mts",
+    "scripts/test-public-profiles-postgres.mts",
+    "scripts/test-public-profiles-built.mts",
     "scripts/test-personal-history-mcp-package.mts",
     "scripts/test-browser-owned-history.mts",
     "scripts/test-server-profile-identities-origin.mts",
