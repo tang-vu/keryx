@@ -1,4 +1,4 @@
-/** Documentation only. SIWE/proof/native caps remain execution authority. */
+/** Documentation only. Wallet session/proof/native funding remain execution authority. */
 const hash = { type: "string", pattern: "^0x[0-9a-f]{64}$" } as const;
 const address = { type: "string", pattern: "^0x[0-9a-f]{40}$" } as const;
 const decimal = { type: "string", pattern: "^(0|[1-9][0-9]*)$" } as const;
@@ -34,17 +34,20 @@ export const registrationSponsorOpenApiSchemas = {
 export const registrationSponsorOpenApiPaths = {
   "/api/sources/sponsor": {
     get: { tags: ["Sources"], summary: "Inspect sponsorship availability or the creator's retained original",
-      description: "Without id/claimId, returns availability for the SIWE wallet and any exact eligible publisher origins. This is discovery, not admission. Original lookup requires its creator session. Receipt inspection needs no active policy/key and never signs or broadcasts.",
+      description: "Without id/claimId, returns discovery for the authenticated creator wallet. Wallet-funded v2 permits any publisher with fresh exact RSS publishing proof and checks fresh attested native balance against every unresolved maximum gas hold. Legacy v1 retains its finite eligibility. False reasons distinguish insufficient funds, RPC and configuration. Original lookup requires its creator session, no active policy/key, and never signs or broadcasts.",
       parameters: [{ in: "query", name: "id", schema: hash }, { in: "query", name: "claimId", schema: claimId }],
       responses: { "200": { description: "Availability or retained public original; recoveryUnavailable preserves the original when receipt observation fails.",
         content: json({ oneOf: [originalResponse, { type: "object", required: ["available"], properties: {
           available: { type: "boolean" }, network: { type: "string", enum: ["eip155:5042", "eip155:5042002"] },
           registryAddress: address, sponsorAddress: address, policyDigest: hash, maxGasWei: decimal,
           requiresPublishingProof: { const: true }, publisherOrigins: { type: "array", items: { type: "string", format: "uri" } },
+          eligibility: { const: "verified-publisher" }, funding: { const: "wallet-balance" },
+          reservedGasAvailable: { type: "boolean", description: "All existing maximum holds are covered. Only an owner's retained active-policy original may use this discovery signal; atomic execution still rechecks its exact hold." },
+          reason: { type: "string", enum: ["insufficient_funds", "rpc_unavailable", "configuration_unavailable", "sponsor_disabled", "authentication_required", "publisher_ineligible"] },
         } }] }) }, "401": { description: "Sign in with the original creator wallet." }, "404": { description: "No retained original for this owner/claim." } } },
     post: { tags: ["Sources"], summary: "Explicitly prepare, submit, resume or resolve one sponsored registration",
       security: [{ WebSession: [] }],
-      description: "Same-origin SIWE creator role; API keys do not grant publishing authority. Preparation requires fresh publishing proof and exact policy eligibility/caps. Submit accepts one creator EIP-712 authorization. Resume retains exact nonce/calldata/fees/reservation. resolveExpired requires fresh chain expiry and the still-live original policy; it can only send original bytes, without a replacement or hold reset. Receipt-reverted renewal names its predecessor and consumes another capped attempt. No automatic retry or creator earnings activation.",
+      description: "Same-origin authenticated creator wallet; API keys do not grant publishing authority. Preparation requires fresh exact RSS publishing proof. Wallet-funded v2 has no publisher allowlist, pilot expiry or attempt/daily/lifetime allowance; each gas leg remains bounded and all unresolved originals consume native wallet funds across policies. Admission, signing and broadcast require fresh same-block native balance/nonce observations and atomic full holds. Submit accepts one creator EIP-712 authorization with a ten-minute deadline. Resume retains exact nonce/calldata/fees/reservation. resolveExpired can only send original bytes after fresh chain expiry. Explicit renewal names an unsigned-expired or receipt-reverted predecessor; a new v2 original never rewrites legacy authority. No automatic retry, top-up or creator earnings activation.",
       parameters: [{ in: "header", name: "Origin", required: true, schema: { type: "string", format: "uri" }, description: "This deployment's exact configured origin." }],
       requestBody: { required: true, content: json({ oneOf: [
         { type: "object", additionalProperties: false, required: ["operation", "claimId", "fetchPrice"], properties: {
@@ -55,7 +58,7 @@ export const registrationSponsorOpenApiPaths = {
       ] }) },
       responses: { "200": { description: "Prepared or previously retained original.", content: json(originalResponse) },
         "202": { description: "Retained original state. Submitted/unknown is not confirmation.", content: json(originalResponse) },
-        "400": { description: "Invalid bounded JSON or exact registration terms." }, "401": { description: "SIWE creator session required." },
+        "400": { description: "Invalid bounded JSON or exact registration terms." }, "401": { description: "Authenticated creator wallet session required." },
         "403": { description: "Origin, owner, proof or publisher eligibility differs." }, "409": { description: "Cap, identity, proof, nonce, expiry or policy conflict; retain the original." },
         "413": { description: "JSON exceeds 8192 bytes." }, "503": { description: "Sponsor/storage/registry unavailable; no new authority granted." } },
     },

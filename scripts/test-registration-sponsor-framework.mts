@@ -34,7 +34,9 @@ try {
     await response.body?.cancel();
   }
   const disabled = await fetch(`${base}/api/sources/sponsor`, { signal: AbortSignal.timeout(10000) });
-  assert.equal(disabled.status, 200); assert.deepEqual(await disabled.json(), { available: false });
+  assert.equal(disabled.status, 200); assert.deepEqual(await disabled.json(), {
+    available: false, reservedGasAvailable: false, reason: "authentication_required",
+  });
   const page = await fetch(`${base}/register/sponsored`, { signal: AbortSignal.timeout(10000) });
   assert.equal(page.status, 200); assert.equal(page.headers.get("referrer-policy"), "no-referrer");
   await page.body?.cancel();

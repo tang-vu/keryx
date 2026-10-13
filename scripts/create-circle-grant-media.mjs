@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { access, cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -262,6 +262,7 @@ try {
     fetchJson("https://keryx.cc/api/treasury"),
   ]);
   if (!health.ok || health.settles !== "real") throw new Error("Production health does not report real settlement");
+  if (health.network !== "arcTestnet") throw new Error("This legacy grant-media scenario uses testnet proof paths. Current network differs; preserve historical files and use a separately verified mainnet media workflow.");
   if (!treasury.available || treasury.via !== "@circle-fin/unified-balance-kit") throw new Error("Unified Balance Kit treasury proof is unavailable");
   const capturedAt = new Date(health.time).toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
 

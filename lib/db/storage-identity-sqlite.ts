@@ -23,6 +23,7 @@ export const STORAGE_APPLICATION_TABLES = Object.freeze([
   "private_research_payment_attempts", "private_research_executions", "private_research_results", "private_creator_submissions",
   "private_creator_confirmations", "private_treasury_releases", "private_research_interruptions", "creator_withdrawal_requests",
   "creator_withdrawal_transfer_attempts", "creator_withdrawal_attestations", "public_references", "sync_state",
+  "public_reference_articles", "public_reference_article_versions", "public_reference_article_terms",
 ]);
 const quote = (name: string) => `"${name.replaceAll('"', '""')}"`;
 export interface HeldStorageTarget {
