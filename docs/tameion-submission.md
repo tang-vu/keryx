@@ -1,23 +1,96 @@
-# Tameion submission pack — working evidence
+# Keryx — Tameion submission and evidence
+
+Keryx connects original-source research, practical writing outputs, durable tasks
+and creator payments across web, Windows, CLI and agent integrations. A question
+and budget lead to visible source decisions, a cited report and inspectable USDC
+settlement on Arc.
+
+**[Submitted demo — 2:47, English narration and subtitles](https://youtu.be/sNonqLPMysg)** ·
+**[Live product](https://keryx.cc)** · **[Reviewer route](reviewer-start.md)** ·
+**[Windows/MCP release](https://github.com/tang-vu/keryx/releases/tag/v0.27.63)** ·
+**[User workflow video — 0xacee](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4)**
+
+The owner confirmed submitting the Google Form on **October 13, 2026**. The
+submitted code comparison is frozen from the September 25 pre-event baseline to
+the submitted October 13 source:
+[2291753…92733ec](https://github.com/tang-vu/keryx/compare/2291753cc4fff2135d546227d5aafda287cbed7d...92733ecc6dfb5076815c2a29de6370c02a84845c).
+Later main commits remain visible in the repository and are not silently added
+to that submitted comparison.
+
+## Event-period product delta
+
+The event began September 27. The existing citation-toll service has been developed
+solo since June 2026. Earlier Canteen/Circle awards were Agora Standout for
+ReasoningReceipt ($625), and Lepton 1st Place for Keryx ($10,000) plus Committed
+Builder ($250). These are prior awards, separate from Tameion results and revenue.
+
+| Capability built or expanded during Tameion | What a user or builder gains | Source and scope |
+| --- | --- | --- |
+| Windows desktop and durable task CLI | Private workspaces; Quick/Deep task preparation; pinned seller, network and cap; original-job recovery; offline saved answers; native brief/reference exports | [Desktop](desktop-alpha.md), [task alpha](operator-task-alpha.md); shared Rust task creation, Tauri/WebView2 shell and deliberate buyer handoff |
+| Original public-web and scholarly reading | Bounded original HTML/PDF reads, exact Crossref DOI/arXiv discovery and explicit read limits | [Scholarly research](scholarly-research.md); metadata and public references retain their own evidence/payment roles |
+| Literature and writing workflow | Paper screening, notes, editable comparisons, retained-excerpt related-work drafts and supplied-text citation checks | [Literature workspace](literature-workspace.md), [evidence drafts](evidence-drafts.md), [draft check](draft-check.md) |
+| Research exports | Respective Markdown/LaTeX, BibTeX/RIS, CSL-JSON and evidence CSV outputs | [Researcher exports](researcher-exports.md), [checked bibliography](engineering/checked-bibliography-exports-2026-10-09.md); bibliography-only records stay distinct from read/cited evidence |
+| Visible economic decisions | BUY/SKIP/CACHE and stops under separate source-USDC and attention caps; cached reads retain their attention cost | [Decision review](engineering/decision-review-253.md), [research audit contracts](engineering/research-decision-audit-2026-10-09.md) |
+| Arc mainnet and creator authority | Production cutover October 4; source/version, publishing-control and payout checks; creator-signed V3 registration, gas-sponsor policy and original-transaction recovery | [Mainnet status](mainnet-status.md), [registration sponsorship](creator-registration-sponsorship.md); sponsor availability depends on installed policy and funds |
+| Prepaid business Operator | Obligation, capacity and Gateway-liquidity checks; retained pre-claim decision and outcomes; original-order/creator-ledger result repair | [Business Operator](operator-business.md); independently accepted paid fulfillment remains a validation milestone |
+| Bounded Research Monthly | Four manual Deep requests over 30 days, 10% below four separate packages, with unchanged creator caps | [Monthly terms](research-monthly.md); manual renewal and existing entitlement/quote checks, with live purchase acceptance separate |
+| Agent and developer entry points | Shared research/evidence contracts through API, remote/stdio MCP, client adapters, extension and chat bots | [Supported-surface roles](surface-parity.md); authentication and spending roles remain specific to each adapter |
+| Decision Lab and signed offline exports | Inspect model proposals, selected plans, execution rules and observations; separately keyed Ed25519 exports and bounded what-if inspection | `/operator/decisions`, [decision audit](engineering/research-decision-audit-2026-10-09.md); integrity does not establish factual correctness |
+| Economic replay and supplied-review/cost analysis | Inspect recorded budget/allocation arithmetic and relate supplied claim reviews to supplied source/provider costs | [Research evidence audit](research-evidence-audit.md); newer merged work, with unknown values and USD/USDC kept distinct |
+| Recorded purchase outcomes | Compare exact-version purchases against citations, with a bounded sample/window and separate outside/team/scripted/unknown cohorts | [Purchase outcomes](engineering/purchase-outcomes-298.md); recorded uncited spend is descriptive and does not establish missed value |
+| Missing-evidence procurement | Define a research gap, compare provider-signed quotations using integer micro-USDC budgets, inspect signed supporting/refuting deliveries | [Procurement](evidence-procurement.md); portable prototype, funded provider execution remains a next stage |
+| Reusable Arc components | Exact money/allocation, two-toll x402, durable journal interfaces, registry indexing, budget reservations and withdrawal helpers | [Separate MIT library](https://github.com/tang-vu/keryx-arc-primitives), [accepted refresh](arc-primitives-maintenance.md); testnet defaults and explicit host duties |
+
+After the submitted comparison, [PR #455](https://github.com/tang-vu/keryx/pull/455)
+also merged owner-bound completed-private-read import into evidence drafts. It
+reuses the retained job and exact excerpts through explicit selection/import;
+the [source record](engineering/completed-evidence-draft-283-20261013.md) retains
+its privacy and evidence boundaries. It awaits the next production batch.
+
+## October 13 traction snapshot
+
+These are the retained submission observations, rather than an October 14 live
+recount. Financial activity, directly identified users and distribution are
+reported separately with their own windows.
+
+| Channel | Observation | Window / counting rule |
+| --- | --- | --- |
+| Arc mainnet activity | 129 recorded questions; 15 accounts; 87 guest questions included in the total | October 13 database snapshot; accounts/questions are not a unique-human count |
+| Arc mainnet settlement | 40 settled payment records totaling 0.703750 USDC | October 13 database snapshot; all caller origins including owner/QA, gross volume rather than revenue |
+| npm | 2,333 Tameion downloads; +1,434 since the previously reported October 4 total of 899 | September 27–October 12; 3,241 lifetime downloads since June 23; automated/repeat installs can contribute |
+| Website | Approximately 1,000 visits and 1,180 page views, Cloudflare Exclude bots enabled | Owner-supplied 21-day snapshot on October 13; visits rather than unique people |
+| GitHub | 33,649 clones, 1,537 unique cloners, 766 views, 46 unique visitors; 3 stars and 1 fork | Owner-supplied 14-day snapshot on October 13; clones can include CI/automation |
+| X / Product Hunt | 46 @keryxpays followers; more than 20 posts, likes and several thousand cumulative views; interested comments; 8 Product Hunt upvotes | Owner-supplied October 13 snapshot |
+| Discoverability | 126 backlinks from 47 linking websites; listings include Glama and Trendshift | Owner-supplied cumulative Ahrefs snapshot; event-period growth not established, catalogs/mirrors may contribute |
+| Direct users | At least four identified outside users, spanning app development, academic research and SaaS discovery | Verified minimum; stories and matched evidence below |
+
+[npm event-period data](https://api.npmjs.org/downloads/point/2026-09-27:2026-10-12/keryx-mcp),
+[npm lifetime data](https://api.npmjs.org/downloads/point/2026-06-23:2026-10-12/keryx-mcp),
+[public activity](https://keryx.cc/dashboard) and [current metrics](https://keryx.cc/api/metrics).
+Public discovery examples: [Glama](https://glama.ai/mcp/servers/tang-vu/keryx),
+[Trendshift](https://trendshift.io/repositories/81301).
+
+The owner also reported 27 project-related contacts/interactions across three
+email accounts, excluding seven generic promotional messages. These include
+organizer relationships, product discussions, event invitations and service
+offers across periods; conversion to paying use is unestablished. Arc Office Hours,
+the Arc Discord Builder/Arc House Architect roles and a Canteen fireside/showcase
+invitation provided feedback and collaboration opportunities. They are community
+participation, not endorsements. Repeat use and accepted outcomes remain the
+next validation targets.
 
 ## Event-period usage: testnet week, then mainnet
 
-Tameion began on September 27. Keryx ran on Arc testnet for the first week of the
-event and moved production to Arc mainnet on October 4. Both phases are event-period
-usage and are reported separately, never added together.
+Production moved from Arc testnet to mainnet on October 4. The retained event-period
+testnet snapshot covers September 27 00:00–October 2 17:01 UTC: **258 completed
+research runs, 304 settled payment records and 2.086750 test USDC**. All caller
+origins, including internal activity, are included. The unobserved interval to the
+cutover is not extrapolated or added to the mainnet snapshot above.
 
-| Phase | Window (UTC) | Research runs | Settled payments | USDC | Counting rule |
-| --- | --- | --- | --- | --- | --- |
-| Arc testnet | Sep 27 00:00 – Oct 2 17:01 | 258 completed | 304 source-access and citation-reward payments | 2.086750 | One read-only production snapshot; all caller origins, internal activity included. No pending, failed or simulated payments in the window. |
-| Arc mainnet | Oct 4 – Oct 8 15:05 | 50 recorded | 7 | 0.095, of which 0.065 to 2 creators | [Public metrics](https://keryx.cc/api/metrics) and [run history](https://keryx.cc/api/runs); all caller origins. |
-
-Testnet activity between October 2 17:01 and the October 4 cutover is not in the
-snapshot and is not counted. Cumulative lifetime figures include activity before
-the event and are not event traction.
-
-On mainnet, [Operator status](https://keryx.cc/api/operator/status) at
-`2026-10-08T15:05:07Z` reported one completed and zero failed jobs over 24 hours,
-with two registered creator sources.
+The separate June 15–October 2 archive records **3,280 questions, 11,314 settled
+creator payments, 56.748064 test USDC and 23 paid creator wallets**. It includes
+owner-operated activity and pre-event history. [The original testnet archive](https://keryx.cc/history/testnet)
+retains its network and evidence; lifetime totals are not new event growth.
 
 ### Named external user: Hoàng, freelance developer
 
@@ -26,7 +99,9 @@ Keryx through the MCP server inside Devin CLI to research questions for that app
 facial-analysis methods, privacy and app-platform policies, and MediaPipe Face
 Landmarker. He is outside the Keryx team. His identity and workflow were published
 by the owner with a screen recording on X ([@tangvu_dev](https://x.com/tangvu_dev),
-October 2) and in the October 3 Canteen traction update.
+October 2) and in the October 3 Canteen traction update. The owner confirmed on
+October 14 that the X account is suspended, so its video is currently unavailable.
+The matched runs and payment evidence below remain independently inspectable.
 
 | Field | Value |
 | --- | --- |
@@ -62,20 +137,139 @@ agreed to be named.
 | --- | --- | --- | --- |
 | [@JamWaveX](https://t.me/JamWaveX) (Telegram) | International student in China preparing for a master's programme | Scientific research for the master's application | Not recorded |
 | [Trần Minh Hiếu](https://www.linkedin.com/in/tr%E1%BA%A7n-minh-hi%E1%BA%BFu-667915335/) | Fourth-year university student | Undergraduate research for a study-abroad scholarship application | Not recorded |
-| [0xacee](https://github.com/0xacee) | Builder working on a SaaS product | Finding a product niche | Keryx API |
+| [0xacee](https://github.com/0xacee) | Builder working on a SaaS product | Finding a product niche; a later storage/backup design session is recorded below | Keryx API; later web session |
 
 Limits of these records:
 
-- Run IDs, dates, network and payment legs for these three users are not matched in
-  this pack yet. Stored runs do not carry a name, so matching needs each person's
+- Run IDs and payment legs for the two academic users and the earlier SaaS-niche
+  session are not matched in this pack yet. The later 0xacee recording has its own
+  three report IDs below. Stored runs do not carry a name, so matching needs each person's
   session time or wallet.
-- Until a run is matched, these rows show who used Keryx and why, not settled
-  payments by an outside wallet.
+- Participant attribution comes from the owner-confirmed stories. A matched
+  research record and an outside wallet funding that record are separate facts.
 
 Other people have contacted the owner through X, LinkedIn and Product Hunt and are
 added here as their use is recorded.
 
-## October 8 current evidence and deliverable gate
+### Recorded outside-user workflow: 0xacee
+
+[Watch the English recording, 3:05](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4) ·
+[Subtitles](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.srt) ·
+[Recording scope and SHA-256](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.txt)
+
+On October 14 the owner confirmed that 0xacee directly ran or supervised this
+October 12 session for a news-monitoring application's storage and backup design.
+The footage shows actual Keryx browser research and inspection of original SQLite
+wording, followed by a prototype design note. English narration/captions were added;
+waiting gaps were shortened and some scene endings held.
+
+| Research task | Retained report | Observed outcome |
+| --- | --- | --- |
+| Vietnamese WAL and backup question | [2912b7db](https://keryx.cc/dispatch/2912b7db-666b-4233-8322-19300f227287) | Partial backup evidence; two WAL targets lacked qualifying evidence |
+| Narrower English WAL question | [e2c8a5d2](https://keryx.cc/dispatch/e2c8a5d2-629e-40e1-a0dd-b9be004a9b15) | Official excerpts about concurrent readers and the one-writer limit; confidence boundary retained |
+| Backup-only supplementary question | [51a10b2e](https://keryx.cc/dispatch/51a10b2e-7295-4696-a4f4-b2ea1cf71bbd) | Evidence-review output limit; no supported answer delivered |
+
+The hosted app was **0.27.62** during recording; **0.27.63** was the observed GitHub
+release. The zero-source-budget sponsored session has no recorded creator payments.
+Six SQLite checks shown later were run separately by an assistant with synthetic
+data; they establish those prototype checks, not Keryx execution or independent
+human validation of research quality. The recording's closing label retains that
+validation limit. The owner-confirmed participant involvement is distinct from it.
+This is another documented workflow for an already identified user, not a fifth user.
+
+## Observed delivery and supported surfaces
+
+Read-only public health rechecked on **October 14, 2026** reported operational/db
+ok, Arc mainnet and deployed commit `ec5f39c9`. The recorded full source is
+`ec5f39c9750dfc9e80e66edd41348ca6034c01c3`, application **0.27.63**.
+[Mainnet status](mainnet-status.md) retains the release/maintenance evidence.
+Public npm metadata reports **keryx-mcp 0.4.19**. The
+[v0.27.63 release](https://github.com/tang-vu/keryx/releases/tag/v0.27.63) exposes the
+MCP tarball/source manifest and Windows **0.4.17** installer/portable ZIP/checksums,
+whose manifests name that full source. This refresh checked discovery/manifests;
+it did not repeat a fresh installation or package acceptance trial.
+
+| Surface | User role | Boundary |
+| --- | --- | --- |
+| Web | Questions, cited reports, source decisions, literature tools, creator flow and inspection workspaces | Newer merged source can await deployment; submitted questions use the disclosed payer/budget |
+| Windows desktop | Private task preparation, shared CLI files, original-job recovery, offline results and native exports | Explicit buyer/web handoffs; no renderer wallet signer or autonomous scheduler |
+| Repository CLI | Task workspace/create/status/resume/result/export/brief and buyer workflow | Pin quote/network/payee/cap; journal original authorization before submission; GET-only recovery |
+| API / A2A / OpenAI-compatible | Hosted research, packages, jobs, receipts and exports | Public and private delivery retain their own authentication contracts |
+| Remote MCP | Hosted agent access and shared research/evidence tools | Hosted auth/spending roles; no local custody |
+| Stdio MCP | Published caller-funded client and original-request recovery | Caller provides wallet and merchant policy; no automatic funding |
+| Browser extension | Existing browser research/registration entry points | Thin adapter, separate package/store status; hosted handoffs |
+| Discord / Telegram / Slack | Existing chat research adapters and report links | Each adapter keeps its own authentication and sponsored-service role |
+
+The submitted source comparison ends at `92733ecc`; current main also includes
+later merged improvements. Public health remains the deployment authority. Source
+or downloadable artifacts alone do not establish independently accepted work.
+
+## Arc OSS: components other builders can use
+
+The separate [keryx-arc-primitives](https://github.com/tang-vu/keryx-arc-primitives)
+repository is MIT-licensed and refreshed to **0.3.0** during Tameion. Its built ESM
+exports, TypeScript declarations, offline demo and consumer checks support reuse of
+integer micro-USDC parsing/allocation, fixed/computed two-toll x402 flows with
+required durable journals, creator-bound registry/indexing helpers, an atomic
+budget-reservation reference and signed withdrawal helpers.
+
+Alongside [Circle's Arc Nanopayments reference](https://github.com/circlefin/arc-nanopayments),
+Keryx adds the research workflow around a transfer: select useful information,
+separate access from citation rewards, require exact evidence and preserve the
+original paid request across interrupted delivery. Local task/receipt recovery,
+research exports, creator registration and decision/procurement examples are
+additional application patterns, distinct from the standalone exported API.
+The extraction keeps testnet defaults; hosts own durability, custody,
+reconciliation and funded acceptance. [Maintenance and accepted scope](arc-primitives-maintenance.md).
+
+## Public addresses
+
+Only public API/configuration values are reproduced. Rows below describe the
+**current Arc mainnet, eip155:5042** deployment/profile. The former October 2 testnet
+address table remains in Git history, on its original rail. Merchant and treasury
+identities are read from current selected-role responses rather than imported from
+that table; Monthly returned HTTP 503 during this check and its current payee is unverified.
+Creator `payTo` and session addresses vary per source/user and must be captured for
+the actual workflow rather than inferred from this table.
+
+| Role | Full public address | Public source / explorer |
+| --- | --- | --- |
+| SourceRegistry | `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb` | [Health](https://keryx.cc/api/health), [explorer](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb) |
+| Settlement treasury balance identity | Read the current selected-role public projection | [Treasury API](https://keryx.cc/api/treasury); availability is separate from health |
+| Research Monthly quote merchant/payee | Current quote unavailable at this check | [Public quote](https://keryx.cc/api/research/monthly?quote=1); do not reuse the historical testnet payee |
+| USDC token | `0x3600000000000000000000000000000000000000` | [Public network profile](../lib/arc-network-profile.ts), [explorer](https://explorer.arc.io/address/0x3600000000000000000000000000000000000000) |
+| Circle Gateway wallet contract | `0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE` | [Public network profile](../lib/arc-network-profile.ts), [explorer](https://explorer.arc.io/address/0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE) |
+| Circle Gateway minter contract | `0x2222222d7164433c4C09B0b0D809a9b52C04C205` | [Public network profile](../lib/arc-network-profile.ts), [explorer](https://explorer.arc.io/address/0x2222222d7164433c4C09B0b0D809a9b52C04C205) |
+
+## Historical checkpoints
+
+The following October 4–8 observations retain their dates and original limits.
+Use the October 13 snapshot and October 14 release observation above for this
+submission refresh.
+
+<details>
+<summary>Earlier deployment, QA and entry checkpoints</summary>
+
+### Earlier event-period usage snapshot
+
+Tameion began on September 27. Keryx ran on Arc testnet for the first week of the
+event and moved production to Arc mainnet on October 4. Both phases are event-period
+usage and are reported separately, never added together.
+
+| Phase | Window (UTC) | Research runs | Settled payments | USDC | Counting rule |
+| --- | --- | --- | --- | --- | --- |
+| Arc testnet | Sep 27 00:00 – Oct 2 17:01 | 258 completed | 304 source-access and citation-reward payments | 2.086750 | One read-only production snapshot; all caller origins, internal activity included. No pending, failed or simulated payments in the window. |
+| Arc mainnet | Oct 4 – Oct 8 15:05 | 50 recorded | 7 | 0.095, of which 0.065 to 2 creators | [Public metrics](https://keryx.cc/api/metrics) and [run history](https://keryx.cc/api/runs); all caller origins. |
+
+Testnet activity between October 2 17:01 and the October 4 cutover is not in the
+snapshot and is not counted. Cumulative lifetime figures include activity before
+the event and are not event traction.
+
+On mainnet, [Operator status](https://keryx.cc/api/operator/status) at
+`2026-10-08T15:05:07Z` reported one completed and zero failed jobs over 24 hours,
+with two registered creator sources.
+
+## October 8 evidence and deliverable checkpoint
 
 At `2026-10-08T09:02:01.625Z`, [public health](https://keryx.cc/api/health)
 reported operational/db ok, Arc real settlement at `ab2195d6`/app0.27.35.
@@ -141,9 +335,9 @@ The [finite canary](operator-canary.md) adds original-bound financial/provider
 admission and recovery. Its internal owner run, funding and useful result are
 still acceptance gates, not independent traction or a general on-chain wallet.
 
-Updated October 4, 2026 against deployed source `1297d43`. This is a preparation pack,
-not a submitted entry or a completed customer pilot. Update the dated observations
-before recording or submitting. [Active direction](tameion-2026.md),
+Historical October 4 preparation checkpoint against deployed source `1297d43`.
+The submission status, demo and current release observations are updated above;
+this historical checkpoint does not establish a completed customer pilot. [Active direction](tameion-2026.md),
 [release gates](mainnet-delivery-plan.md), and [public changelog](project-changelog.md)
 remain authoritative for scope and limitations.
 
@@ -153,8 +347,8 @@ Keryx is an agent-operated paid research service: a question and source budget l
 to visible BUY/SKIP/CACHE decisions, selected x402 reads, a cited deliverable, and
 weighted USDC rewards for eligible creators actually cited. The Tameion goal is
 one complete business workflow with payment, logs, delivered outcome and recovery.
-The full Operator, general business ledger, onchain policy wallet and autonomous
-scheduler are not shipped. No complete independent-business workflow is supplied
+The complete accepted business workflow, general onchain policy wallet and autonomous
+scheduler remain separate milestones; the implemented hosted Operator is described above. No complete independent-business workflow is supplied
 in this pack yet. Production is now Arc mainnet, observed through public health.
 [Current status](mainnet-status.md) records the network/contracts and release identities;
 launch does not prove an accepted business outcome or grant unlimited spending.
@@ -164,77 +358,19 @@ repository and a recorded demo **under three minutes**, encourages a live link,
 and allows repeated submissions before the deadline. Submit via the
 [official form](https://forms.gle/BBWrdfuircrKiG2i6) by October 17, 23:59 ET
 (October 18, 10:59 Vietnam; extended from October 10, observed October 5). Repository: [tang-vu/keryx](https://github.com/tang-vu/keryx).
-Live service: [keryx.cc](https://keryx.cc). Video URL: **pending**.
+Live service: [keryx.cc](https://keryx.cc). Submitted video: [2:47 narrated demo](https://youtu.be/sNonqLPMysg).
 Product and evidence-backed traction updates in Canteen, and showcase participation,
 are separate from submitting this form. This document does not authorize posting,
 contacting businesses, recording participants or submitting on their behalf.
 
-## Event-period product delta
 
-Compare against `2291753cc4fff2135d546227d5aafda287cbed7d` (September 25), the
-pre-event main baseline; no intervening September 26/27 main commit replaces it.
-The September 27–October 17 window is still in progress. These are implemented
-changes through October 4, not forecasts for the remainder or evidence of adoption.
+</details>
 
-| Change | Source evidence | What it establishes and limits |
-| --- | --- | --- |
-| Durable local task CLI and Windows desktop | `44c8660`, `e7e82c5`, [task alpha](operator-task-alpha.md) | Local create/status/resume/export; deliberate buyer handoff, not autonomous purchasing. |
-| Saved results, Rust task creation, Tauri shell | `dfcc1b3`, [PR #21](https://github.com/tang-vu/keryx/pull/21), [PR #22](https://github.com/tang-vu/keryx/pull/22), [desktop](desktop-alpha.md) | Reopen/export private results and GET-only recovery; TypeScript remains payment authority. |
-| Public original-document and scholarly research | [PR #101](https://github.com/tang-vu/keryx/pull/101), [PR #109](https://github.com/tang-vu/keryx/pull/109), [PR #130](https://github.com/tang-vu/keryx/pull/130) | Bounded search, HTML/PDF reads and DOI/arXiv metadata; unavailable/oversized documents and answer quality remain limits. Public references alone confer no creator payout rights. |
-| Chat-first reading and portable evidence | [PR #105](https://github.com/tang-vu/keryx/pull/105), [PR #106](https://github.com/tang-vu/keryx/pull/106), [PR #111](https://github.com/tang-vu/keryx/pull/111), [surface parity](surface-parity.md) | Cited reports, Markdown/BibTeX/RIS/evidence CSV and classified payment states; not proof of a customer accepting the result. |
-| Bounded Research Monthly | [PR #125](https://github.com/tang-vu/keryx/pull/125), [terms](research-monthly.md) | Four manual Deep requests over 30 days, a 10% discount against four separate packages. Current quote/readiness returned HTTP 503 during this documentation check; old testnet prices are historical. No automatic renewal; failed/pending requests retain slots. Owner live purchase/redemption evidence is pending. |
-| Custody, signing, recovery and storage preparation | [PR #113](https://github.com/tang-vu/keryx/pull/113), [PR #129](https://github.com/tang-vu/keryx/pull/129), [PR #126](https://github.com/tang-vu/keryx/pull/126), [PR #133](https://github.com/tang-vu/keryx/pull/133) | Narrow validated boundaries and fresh release identities; synthetic/mainnet preparation checks do not demonstrate mainnet activation. Full-product cutover [PR #131](https://github.com/tang-vu/keryx/pull/131) has merged; current production is mainnet. Funded acceptance, independent audit and adoption remain distinct. |
+## Next accepted paid-business workflow
 
-## Observed delivery and supported surfaces
-
-Read-only public health at `2026-10-04T16:42:30.685Z` reported `1297d43`,
-`arc`, real settlement mode and operational database. The current ledger projection
-reported zero payments/creator payouts; this is a dated observation, not independent
-customer traction. The October 2 `f563d9c`/`arcTestnet` observation and its degraded
-reasoning/pending-payment state belong to the earlier deployment. Healthy HTTP
-does not establish perfect research, per-role purchase readiness or reconciliation.
-
-[Release v0.26.8](https://github.com/tang-vu/keryx/releases/tag/v0.26.8) points to
-`1297d43f7c1a8356ceccac061b1cba65b93d2819` and exposes MCP 0.4.3 plus desktop
-0.4.3 installer/ZIP/source manifest/checksums. Public `npm view keryx-mcp version`
-returned 0.4.3 on October 4. Version discovery and downloadable assets alone are
-not independent verification of all package bytes or fresh installer acceptance;
-retain their exact release evidence before claiming synchronized delivery.
-
-| Surface | Current role | Boundary / remaining evidence |
-| --- | --- | --- |
-| Web | Chat, decisions, wallet/session funding, creator registration, Monthly checkout/manual requests | Arc mainnet observed; live Monthly purchase/redemption and accepted outcome evidence remain separate. |
-| API / A2A / OpenAI-compatible | Shared research, jobs, receipts, paid packages and Monthly API | Public research and separately scoped private contract; no full Operator ledger. |
-| Remote MCP | Hosted research and read-only Monthly discovery/handoff | Remote protocol identity 0.2.0; no local custody or entitlement writer. |
-| Stdio MCP | Caller-funded research, retained payment journal, GET-only recovery; Monthly handoff | Published package 0.4.3; caller-provisioned wallet and merchant policy, no automatic wallet creation. |
-| CLI | Buyer research and Monthly status/manual redemption; local Operator tasks/results/export | Shared API/handoff boundaries, no background scheduler. |
-| Windows desktop | Tauri local task alpha, bounded helper, private references/results/exports | 0.4.3 release assets; deliberate purchase and Monthly web handoff, no renderer wallet/signer. |
-| Browser extension | Thin OpenAI-compatible client, source-registration handoff | Separate 0.1.1 identity; unpacked release, store publication unverified; Monthly web handoff. |
-| Discord / Telegram / Slack | Hosted research adapters and dispatch links | Sponsored service role, no customer-owned Operator ledger or Monthly writer; independent business-use evidence pending. |
-
-## Public addresses
-
-Only public API/configuration values are reproduced. Rows below describe the
-**current Arc mainnet, eip155:5042** deployment/profile. The former October 2 testnet
-address table remains in Git history, on its original rail. Merchant and treasury
-identities are read from current selected-role responses rather than imported from
-that table; Monthly returned HTTP 503 during this check and its current payee is unverified.
-Creator `payTo` and session addresses vary per source/user and must be captured for
-the actual workflow rather than inferred from this table.
-
-| Role | Full public address | Public source / explorer |
-| --- | --- | --- |
-| SourceRegistry | `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb` | [Health](https://keryx.cc/api/health), [explorer](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb) |
-| Settlement treasury balance identity | Read the current selected-role public projection | [Treasury API](https://keryx.cc/api/treasury); availability is separate from health |
-| Research Monthly quote merchant/payee | Current quote unavailable at this check | [Public quote](https://keryx.cc/api/research/monthly?quote=1); do not reuse the historical testnet payee |
-| USDC token | `0x3600000000000000000000000000000000000000` | [Public network profile](../lib/arc-network-profile.ts), [explorer](https://explorer.arc.io/address/0x3600000000000000000000000000000000000000) |
-| Circle Gateway wallet contract | `0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE` | [Public network profile](../lib/arc-network-profile.ts), [explorer](https://explorer.arc.io/address/0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE) |
-| Circle Gateway minter contract | `0x2222222d7164433c4C09B0b0D809a9b52C04C205` | [Public network profile](../lib/arc-network-profile.ts), [explorer](https://explorer.arc.io/address/0x2222222d7164433c4C09B0b0D809a9b52C04C205) |
-
-## Record one actual workflow in 2:45
-
-This is the recording plan; the completed recording and business acceptance are
-pending. Use an actual consented business task and its original artifacts. If the
+The submitted 2:47 product demo and supporting user recording are linked above.
+The following plan is retained for a future accepted paid-business workflow.
+Use an actual consented business task and its original artifacts. If the
 first run needs longer, record the genuine steps and disclose elapsed time/cuts.
 
 | Time | Show | Required evidence |
