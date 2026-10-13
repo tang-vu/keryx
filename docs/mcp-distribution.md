@@ -1,5 +1,26 @@
 # MCP package distribution
 
+## App64 release batch in preparation — October 13
+
+Production app **0.27.63 /ec5f39c9** is delivered and operational. The next
+reserved release is app/OpenAPI **0.27.64**, hosted MCP **0.3.18**, stdio/npm
+and official Registry **0.4.20**, and Desktop **0.4.18**. These new versions are
+local preparation; publication, installation and deployment remain pending.
+
+Focused outcomes merge directly into main after review and required CI. Only
+deployment is batched. The release coordinator will accept the final merged main,
+refresh the existing offline study once for its changed versioned inputs, and
+use the existing exact-main MCP/Desktop publication workflows. Keep accepted
+App63 download links until the new immutable assets and provenance are verified.
+Extension **0.1.4.2** may be retained after its final shipped-input and capability
+comparison; unchanged version alone is insufficient.
+
+This release retains the existing custody, payment, private-data, Operator and
+activation limits. Human language review, private-result usefulness and held
+profile/privacy rollouts keep their separately recorded acceptance requirements.
+See [surface roles](surface-parity.md). Older candidate sections below preserve
+their historical evidence and do not describe current production.
+
 ## App62 combined distribution - October12 candidate
 
 App/OpenAPI **0.27.62** coordinates hosted MCP **0.3.17**, stdio/npm/official

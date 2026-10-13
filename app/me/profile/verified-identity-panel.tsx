@@ -25,7 +25,9 @@ function IdentityPanelSession({ wallet, saved }: { wallet: string; saved: boolea
       if (value.wallet !== wallet) throw new Error(copy.changed);
       if (!controller.signal.aborted) {
         setSnapshot(value);
-        if (notice) setMessage(notice === "verified" ? copy.verified : notice === "conflict" ? copy.conflict : copy.failed);
+        // The hint proves no new verification or provider: only this owner's stored records support the notice.
+        if (notice) setMessage(notice === "verified" && saved && value.identities.length > 0
+          ? copy.verified : notice === "conflict" ? copy.conflict : copy.failed);
       }
     }).catch(() => { if (!controller.signal.aborted) { setSnapshot(null); setMessage(copy.unavailable); } });
     return () => controller.abort();
@@ -34,14 +36,19 @@ function IdentityPanelSession({ wallet, saved }: { wallet: string; saved: boolea
     const controller = owner.current;
     if (!controller || controller.signal.aborted || busy || !saved) return;
     setBusy(true); setMessage("");
+    let failureMessage: string = copy.failed;
     try {
       const response = await fetch(`/api/me/profile/identities/${provider}${unlink ? "" : "/start"}`, {
         method: unlink ? "DELETE" : "POST", headers: { "X-Keryx-Expected-Wallet": wallet },
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
       });
       const value = await response.json();
-      if (!response.ok) throw new Error(value.error === "profile_owner_changed" ? copy.changed : copy.unavailable);
+      if (!response.ok) {
+        failureMessage = value?.error === "profile_owner_changed" ? copy.changed : copy.unavailable;
+        throw new Error();
+      }
       if (controller.signal.aborted) return;
+      failureMessage = copy.invalid;
       if (unlink) {
         if (value.unlinked !== true || Object.keys(value).length !== 1) throw new Error(copy.invalid);
         setSnapshot(current => current ? { ...current, identities: current.identities.filter(identity => identity.provider !== provider) } : null);
@@ -54,7 +61,7 @@ function IdentityPanelSession({ wallet, saved }: { wallet: string; saved: boolea
           || url.pathname !== (provider === "github" ? "/login/oauth/authorize" : "/oauth/authorize")) throw new Error(copy.invalid);
         window.location.assign(url.href);
       }
-    } catch (error) { if (!controller.signal.aborted) setMessage(error instanceof Error ? error.message : copy.failed); }
+    } catch { if (!controller.signal.aborted) setMessage(failureMessage); }
     finally { if (!controller.signal.aborted) setBusy(false); }
   };
   return <section className="space-y-3 border-t border-line pt-5">

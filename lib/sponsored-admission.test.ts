@@ -65,7 +65,7 @@ const mcpRequest = (ip?: string, key?: string) => request("/mcp", {
 }, ip, key);
 const webRequest = (ip?: string, extra: Record<string, unknown> = {}) => request("/api/ask", { question: "Synthetic question", ...extra }, ip);
 
-function discordRequest(userId = "discord-user") {
+function discordRequest(userId = "123456789012345678") {
   const body = JSON.stringify({ type: 2, application_id: "synthetic-app", token: "synthetic-token", user: { id: userId },
     data: { name: "ask", options: [{ name: "question", value: "Synthetic question" }] } });
   const timestamp = String(Math.floor(Date.now() / 1000));
@@ -172,7 +172,7 @@ describe("shared sponsored admission with durable identity", () => {
     ]);
     for (const [input] of mocks.collectRun.mock.calls) {
       expect(input.asker).toBeUndefined(); expect(JSON.stringify(input)).not.toContain("slack-user");
-      expect(JSON.stringify(input)).not.toContain("discord-user");
+      expect(JSON.stringify(input)).not.toContain("123456789012345678");
     }
   });
 
@@ -279,10 +279,10 @@ describe("shared sponsored admission with durable identity", () => {
   });
 
   it("bot users retain their own five-call allowance and provider namespaces do not collide", async () => {
-    for (let i = 0; i < 5; i++) expect((await discord(discordRequest("same-id"))).status).toBe(200);
+    for (let i = 0; i < 5; i++) expect((await discord(discordRequest("123456789012345679"))).status).toBe(200);
     expect(mocks.after).toHaveBeenCalledTimes(5);
-    expect(await (await discord(discordRequest("same-id"))).text()).toContain("temporarily limited or unavailable");
-    await slack(slackRequest("same-id"));
+    expect(await (await discord(discordRequest("123456789012345679"))).text()).toContain("temporarily limited or unavailable");
+    await slack(slackRequest("123456789012345679"));
     expect(mocks.after).toHaveBeenCalledTimes(6);
   });
 

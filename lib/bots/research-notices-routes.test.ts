@@ -31,7 +31,7 @@ const sent: { url: string; body: Record<string, unknown> }[] = [];
 const handlers = { discord, slack, telegram };
 function request(platform: Platform, question: string): NextRequest {
   const body = platform === "discord" ? JSON.stringify({ type: 2, application_id: "synthetic-app", token: "synthetic-interaction",
-    member: { user: { id: "caller-1" } }, data: { name: "ask", options: [{ name: "question", value: question }, { name: "budget", value: 9 }] } })
+    member: { user: { id: "123456789012345678" } }, data: { name: "ask", options: [{ name: "question", value: question }, { name: "budget", value: 9 }] } })
     : platform === "slack" ? new URLSearchParams({ command: "/keryx", text: question, user_id: "caller-1", channel_id: "room",
       response_url: "https://hooks.slack.com/commands/synthetic/private" }).toString()
       : JSON.stringify({ message: { message_id: 42, text: `/ask ${question}`, chat: { id: 789, type: "private" }, from: { id: 789 } } });
@@ -70,7 +70,7 @@ it.each(cases)("%s/%s sponsored refusal preserves the same limiter authority bef
   mocks.limited.mockResolvedValue({ unavailable: true });
   const body = await (await handlers[platform](request(platform, question))).json();
   expect(platform === "discord" ? body.data.content : body.text).toBe(botResearchMessages(question)("sponsoredLimited"));
-  expect(mocks.limited).toHaveBeenCalledExactlyOnceWith({ kind: "bot", platform, userId: platform === "telegram" ? "789" : "caller-1" });
+  expect(mocks.limited).toHaveBeenCalledExactlyOnceWith({ kind: "bot", platform, userId: platform === "discord" ? "123456789012345678" : platform === "telegram" ? "789" : "caller-1" });
   expect(mocks.after).toEqual([]); expect(mocks.claim).not.toHaveBeenCalled(); expect(mocks.collect).not.toHaveBeenCalled();
 });
 it.each(cases)("%s/%s progress and result use original question, not evidence or transport metadata", async (platform, question) => {

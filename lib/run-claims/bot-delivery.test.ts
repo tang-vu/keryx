@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 afterEach(() => { f.sql.close(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 const req = (path: string, body: string, headers = {}) => new NextRequest(`https://claims.example${path}`, { method: "POST", body, headers });
-const discordBody = JSON.stringify({ type: 2, application_id: "synthetic-app", token: "synthetic-interaction", member: { user: { id: "user-1" } },
+const discordBody = JSON.stringify({ type: 2, application_id: "synthetic-app", token: "synthetic-interaction", member: { user: { id: "123456789012345678" } },
   data: { name: "ask", options: [{ name: "question", value: "Synthetic private delivery" }] } });
 const slackBody = (url = "https://hooks.slack.com/commands/synthetic/private") => new URLSearchParams({ command: "/keryx", text: "Synthetic private delivery", user_id: "user-1", channel_id: "room", response_url: url }).toString();
 const telegramReq = () => req("/api/telegram/webhook", JSON.stringify({ message: { message_id: 42, chat: { id: -100123, type: "group" }, from: { id: 789, is_bot: false }, text: "/ask Synthetic private delivery" } }), { "x-telegram-bot-api-secret-token": "synthetic-webhook" });
