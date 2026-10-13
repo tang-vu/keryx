@@ -104,3 +104,5 @@ recordings and `<scene-id>.txt` transcripts. Its new narration report records
 audio hashes and supplied-transcript comparison, explicitly without automatic
 ASR verification. Historical narration and reports are not rewritten. No new
 audio provider is introduced or treated as a DeepSeek text-model feature.
+The legacy generator also refuses a different live network instead of labelling
+current mainnet evidence as testnet. No submission media was regenerated.
