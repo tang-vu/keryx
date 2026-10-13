@@ -6,6 +6,7 @@ import { isAbsolute, join, relative } from "node:path";
 import { createReadCheckpointCapture } from "../agent/read-checkpoint-capture";
 import { actualReadCheckpoint } from "./actual-read-policy";
 import { optimizerPacketFixture } from "./optimizer-checkpoint.test-fixture";
+import { economicPacketFixture } from "./economic-checkpoint.test-fixture";
 
 let directory: string;
 beforeAll(async () => { directory = await mkdtemp(join(tmpdir(), "keryx-offline-audit-")); });
@@ -50,6 +51,17 @@ it("verifies v3 optimizer replay offline against the report digest and refuses s
   if (capture.packet.optimizer.status !== "available") throw Error("Unavailable fixture");
   capture.packet.optimizer.outcome.selected.reverse(); await writeFile(file, JSON.stringify(capture.packet));
   expect(command(["verify-actual", file, capture.retainedDigest]).status).toBe(1);
+});
+it("verifies v4 integer economics offline while disclosing unavailable authority and refusing leg tampering", async () => {
+  const capture = economicPacketFixture(), file = join(directory, "actual-v4.json"); await writeFile(file, JSON.stringify(capture.packet));
+  const checked = command(["verify-actual", file, capture.retainedDigest]); expect(checked.error, checked.stderr).toBeUndefined(); expect(checked.status).toBe(0);
+  expect(JSON.parse(checked.stdout)).toMatchObject({ verified: true, scope: "normalization-optimizer-query-economics-checkpoints",
+    economicReplay: { availableRecords: 2, unavailableRecords: 0 }, monetaryAuthority: "qualified-assertions-only", signerCapacity: "not-replayed", settlementAuthority: "unproven" });
+  if (capture.packet.economics.status !== "available") throw Error("Fixture unavailable");
+  const row = capture.packet.economics.records[1]; if (row.status !== "available" || row.kind !== "author-split") throw Error("Wrong fixture");
+  row.outcome.legMicros.reverse(); await writeFile(file, JSON.stringify(capture.packet));
+  const refused = command(["verify-actual", file, capture.retainedDigest]); expect(refused.status).toBe(1);
+  expect(refused.stderr).not.toContain(file);
 });
 it("creates and verifies a record in a fresh process using a retained digest", async () => {
   const input = await readFile("examples/research-audit/read-input.json", "utf8"), file = join(directory, "input.json");
