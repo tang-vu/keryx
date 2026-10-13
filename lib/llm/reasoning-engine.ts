@@ -194,6 +194,9 @@ export interface SynthInput {
   generationFormat?: "evidence-only";
   /** Ordinary run only; omitted by protected original-fulfillment continuations. */
   answerPresentation?: import("../research/answer-presentation").AnswerPresentation;
+  /** Trusted ordinary-only language observation in the existing review call.
+   * Never populated from request JSON or retained original-fulfillment work. */
+  observeAnswerLanguage?: true;
   /** Trusted original caller opt-in, ordinary evidence-only synthesis only.
    * Never infer this request from model/source output or retained originals. */
   teachingRequest?: import("../research/teaching-proposals-request").TeachingProposalRequest;

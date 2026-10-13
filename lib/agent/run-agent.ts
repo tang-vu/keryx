@@ -135,8 +135,13 @@ import {
   selectEvidencePortfolio,
 } from "./evidence-portfolio";
 import { withDecisionBasis } from "../research/decision-basis";
+import { trustedAnswerPresentation } from "../research/trusted-answer-presentation";
+import { finalizeAnswerLanguage } from "../research/answer-language-provenance";
+import { languageReviewedProposals } from "../research/answer-language-review";
 
 export interface RunInput {
+  /** Validated bot adapter preference only; never accept from public request JSON. */
+  presentationLanguage?: import("../../shared/i18n/presentation-language").PresentationLanguage;
   /** Interactive same-owner browser admission only; other adapters fail before effects. */
   reviewFirst?: boolean;
   /** Trusted ordinary sidecar adapter. Never accept this object from request JSON. */
@@ -280,6 +285,7 @@ async function* runAdmittedAgent(
   const checkpointCapture = createReadCheckpointCapture(effects.scope.kind === "public" && !queryId.startsWith("prv_") &&
     ordinaryCheckpointCapability(db), deps.readCheckpointSink, true, true);
   let citations: Citation[] = [];
+  let languageFinalization: Omit<Parameters<typeof finalizeAnswerLanguage>[0], "answer"> | undefined;
   let teachingProposals: TeachingProposalDelivery | undefined;
   let operatingFee: QueryRun["operatingFee"];
   let evidence: EvidenceRecord[] = [];
@@ -294,7 +300,7 @@ async function* runAdmittedAgent(
   const initialPresentation = effects.scope.kind === "public" && !input.targetAsset && !input.paidScholarly &&
     !input.answerFormat && !input.executionLimits && process.env.KERYX_DECISION_BRIEF !== "1" &&
     process.env.KERYX_TEACHING_PROPOSALS !== "1"
-    ? answerPresentation(input.originalQuestion ?? input.question) : undefined;
+    ? trustedAnswerPresentation(answerPresentation(input.originalQuestion ?? input.question), input.presentationLanguage) : undefined;
   const initialWordBudget = initialPresentation?.requestedMaximumWords;
   let finalWordBudget: { maximumWords: number; compactAnswer?: string } | undefined = initialWordBudget
     ? { maximumWords: initialWordBudget } : undefined;
@@ -1802,7 +1808,12 @@ async function* runAdmittedAgent(
   let synthesized: SynthResult;
   const ordinaryPresentation = effects.scope.kind === "public" && !input.targetAsset && !input.paidScholarly &&
     !input.answerFormat && process.env.KERYX_DECISION_BRIEF !== "1";
-  const presentation = answerPresentation(input.originalQuestion ?? input.question, ordinaryPresentation ? "ordinary" : "retained");
+  // Package/private/teaching contracts retain their existing sentence delivery.
+  // Only the admitted ordinary renderer participates in language observation.
+  const observeAnswerLanguage = ordinaryPresentation && !input.executionLimits &&
+    process.env.KERYX_TEACHING_PROPOSALS !== "1";
+  const originalPresentation = answerPresentation(input.originalQuestion ?? input.question, ordinaryPresentation ? "ordinary" : "retained");
+  const presentation = observeAnswerLanguage ? trustedAnswerPresentation(originalPresentation, input.presentationLanguage) : originalPresentation;
   // First-turn ordinary caller only. Augmented follow-ups, retained/private
   // originals and bounded packages keep their existing synthesis contract.
   const teachingRequest = process.env.KERYX_TEACHING_PROPOSALS === "1" && effects.scope.kind === "public" &&
@@ -1815,6 +1826,7 @@ async function* runAdmittedAgent(
   const { requestedSentenceCount: _withheldNoteCount, ...withoutNoteCount } = presentation;
   try { synthesized = await engine.synthesize({ question: input.question, subClaims, gathered, generationFormat: "evidence-only",
     answerPresentation: finalSentenceNote && !teachingRequest ? presentation : withoutNoteCount,
+    ...(observeAnswerLanguage ? { observeAnswerLanguage: true as const } : {}),
     ...(teachingRequest ? { teachingRequest } : {}),
     ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
       ? { answerFormat: "decision-brief" as const } : {}) }); }
@@ -1877,7 +1889,8 @@ async function* runAdmittedAgent(
   }
   evidenceMeasured = true;
   // Sentences are admitted against the final ledger, after every source, quote and review gate.
-  const citedStatements = brief ? [] : selectCitedStatements(synthesized.evidence ?? [], ledger);
+  const citedStatements = brief ? [] : selectCitedStatements(observeAnswerLanguage
+    ? languageReviewedProposals(synthesized.evidence ?? [], presentation.language) : synthesized.evidence ?? [], ledger);
   if (teachingRequest && !brief) {
     teachingProposals = deliverTeachingProposals(teachingRequest,
       synthesized.teachingProposals?.reviewed, ledger, citedStatements, synthesized.teachingProposals?.preparationGaps);
@@ -2267,6 +2280,9 @@ async function* runAdmittedAgent(
   // Append proposals after contribution allocation and settlement. Their text,
   // labels and gaps cannot enter factual coverage or model attribution input.
   if (teachingProposals) answer += `\n\n${teachingProposalAnswer(teachingProposals)}`;
+  // Additional follow-up/recency/special prose is not observed by this narrow contract.
+  if (observeAnswerLanguage && !brief && !followUp && !recencyRequirement)
+    languageFinalization = { rendererLanguage: presentation.language, statements: citedStatements, proposals: synthesized.evidence ?? [] };
   return finish(answer);
 
   // ── helpers ──
@@ -2372,7 +2388,8 @@ async function* runAdmittedAgent(
   function finish(answer: string): QueryRun {
     const originals = requestedSourceReport({ candidates: requested.candidates, notices: requested.notices,
       decisions: finalDecisions, gathered, evidence, outcomes: publicReadOutcomes,
-      vi: researchResponseLanguage(input.question) === "vi", withheld: externalDocumentsWithheld });
+      vi: researchResponseLanguage(input.question) === "vi", withheld: externalDocumentsWithheld,
+      language: initialPresentation?.language });
     const recency = sourceRecencyReport(recencyGaps, researchResponseLanguage(input.question) === "vi");
     const observedRecency = sourceRecencyObservationReport(recencyObservations, researchResponseLanguage(input.question) === "vi");
     const withOperationalNotices = (body: string): string => {
@@ -2470,6 +2487,12 @@ async function* runAdmittedAgent(
     const captured = checkpointCapture.finish();
     if (captured) done.readCheckpoints = captured;
     const completed = demoteSyntheticEvidence(run);
+    // finish() may add operational prose outside the observed renderer. Never
+    // infer its language from the requested preference or relabel a demotion.
+    if (languageFinalization && !originals && !recency && !observedRecency && !fundingUnavailable && completed.answer === answer) {
+      const answerLanguage = finalizeAnswerLanguage({ ...languageFinalization, answer: completed.answer });
+      if (answerLanguage) done.detail = { ...(done.detail as Record<string, unknown> | undefined), answerLanguage };
+    }
     if (effects.scope.kind === "public") {
       try {
         const learningTerms = new Map(learningAuthoritySnapshots);
