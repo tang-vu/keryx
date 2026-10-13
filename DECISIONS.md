@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+**Coordinate concurrent Codex sessions through explicit ownership — 2026-10-12.**
+The owner uses several Codex sessions simultaneously and requested durable rules
+to prevent mixed work and duplicate deployments while improving throughput.
+Give each outcome one owner/branch/PR and an isolated worktree. Share local
+task/path/resource records through Git's common directory, with atomic exclusive
+allocation and explicit handoff rather than timestamp-based takeover. Serialize
+merges and production mutations under one release coordinator; deliver an agreed
+batch once after combined-source acceptance. Reuse valid evidence and isolate
+heavy checks and mutable outputs instead of repeating work across sessions.
+
+Keep the canonical [workflow](docs/engineering/multi-session-coordination.md)
+tracked because local AGENTS/skill files are ignored. Bootstrap that context in
+new worktrees and require existing sessions to reread it before shared actions.
+This records an active-session protocol, not an automatically enforced runtime
+lock or background scheduler. Payment/custody/DDL/schedule authority and every
+applicable release gate remain unchanged; no measured speedup is claimed.
+
 ## Commission missing evidence through a private portable contract — 2026-10-12
 
 The owner ranked Tameion innovation above repackaging the existing reading agent
@@ -7937,3 +7954,26 @@ pricing or semantic-judge authority changes. A native browser/CLI adaptation
 avoids copying upstream code or adding a framework. Source pins, seven-surface
 roles, validation and stronger future attestation gates are recorded in
 [the adoption record](docs/engineering/research-evidence-audit-2026-10-12.md).
+
+**Use one public creator flow and the existing wallet balance for registration gas — 2026-10-12.**
+The owner requested fast creator registration at /register for everyone, with gas
+covered until the existing sponsor wallet has insufficient funds. Replace the
+site-specific finite pilot with an explicit wallet-funded policy for any publisher
+whose exact HTTPS source/feed control is verified. Keep sign-in, proof, chosen price,
+creator review/signature and indexing on one page. Retain the creator's payout
+and registry authority; activating earnings still requires explicit distribution
+permission and matching indexed registry terms.
+
+Keep every old policy/original byte identity and reservation. Admit complete maximum
+gas liability atomically against fresh native balance observations, counting all
+unresolved originals across policy cohorts for the same chain and sponsor. Pin
+balance and account nonce to the same fresh block and reject observations predating
+a receipt that released a hold. Repeat proof/funds checks immediately before signing
+and broadcasting; unknown outcomes keep the original nonce and full hold. No key is
+distributed, no new custody or contract deployment is required, and no automatic
+funding, retry or creator-funded fallback is introduced. Bounded journal capacity
+remains an explicit operational refusal, without deleting payment evidence.
+
+The existing coordinator owns activation and the combined release. Source/tests are
+not a live delivery or real creator-earnings claim. See
+[implementation and acceptance](docs/engineering/public-creator-registration-20261012.md).

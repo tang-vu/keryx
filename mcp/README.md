@@ -19,15 +19,21 @@ canonical USDC amount and receipts stay unchanged. Package build/publication and
 remain root-owned gates; no live call is required or executed by these source checks. See
 [the exact shared contract and coordinator inputs](../docs/engineering/research-presentation-language-276-2026-10-12.md).
 
-App0.27.59 is the combined release candidate for bounded caller comparisons,
-whole source URLs, RFC/MDN source-unit retrieval and locale-aware amount display.
-It selects stdio/package/Registry **0.4.18** and hosted MCP **0.3.16**, with
-prepared Desktop **0.4.16** and extension **0.1.4.2**. Zotero and owner run-privacy
-contracts retain their readiness and default-OFF gates; this release grants no
-production schema, backfill or activation authority. Exact combined source/CI,
-artifact, initialized identity, publication and deployed readback remain pending.
-Production remains the accepted app0.27.57 cohort. Version notes below retain
-their original source and delivery evidence.
+App **0.27.60** is the next coordinated candidate for bounded ordinary optimizer
+replay, presentation-only research/bot labels and default-OFF deadline observation.
+The read-only idle signing correction joins this cohort after its own CI gates.
+Candidate identities are stdio/package/Registry **0.4.19**, hosted MCP **0.3.17**
+and Desktop **0.4.17**. The unchanged extension payload retains **0.1.4.2**.
+Exact final-source CI, compiled package vectors, artifacts, publication and
+deployed readback remain required; these numbers are not publication or install proof.
+
+Production app **0.27.59 /513c6fa6** was actually delivered on October12, with
+hosted MCP **0.3.16** and published npm/Registry **0.4.18**. Its compiled idle
+signing fixture refused unrelated traffic and supplied no four-case acceptance;
+#274 stays open until the corrected source is delivered and observed. Zotero,
+privacy and deadline-observer activation retain their explicit holds. No new
+schema/backfill, schedule, payment or custody authority is granted. Dated notes
+below retain their original source and delivery evidence.
 
 App0.27.58's iPhone header repair is scoped to the hosted web UI. It retains
 hosted MCP0.3.15 and stdio/package/Registry0.4.17 tool contracts and identities;

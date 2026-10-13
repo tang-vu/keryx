@@ -176,6 +176,16 @@ not an old/new-version financial-worker drain, mainnet schema compatibility,
 rollback acceptance or a production availability promise. A failure retains its
 candidate and scratch evidence; no release cleanup command is provided.
 
+An invalid readiness receipt must also retain ownership of the spawned rehearsal
+role until the existing graceful shutdown and pipe-close checks finish. It cannot
+throw away the handle before the outer rehearsal's drain handler can receive it.
+The refusal retains exit/capture evidence; failed drain or incomplete output stays
+a failure. This control launches no additional role and grants no production admission.
+If close wins the event ordering before an invalid readiness assertion resumes,
+the refusal still retains actual exit/capture/EOF with graceful drain unaccepted.
+It sends no further drain to that closed child and preserves existing rich
+before-readiness failure diagnostics.
+
 The production CI lane also runs `rehearse-built-release.mjs` against its existing
 completed build, without repeating the build or broad tests. It stages the exact
 Git source, compares every actual build-source file with that inventory, copies
@@ -220,8 +230,12 @@ fail-closed crash/acknowledgement handling. Start only previously authorized rol
 keep previously held schedulers held. Verify their actual executable arguments,
 full commit/build IDs, storage identity, queue state and internal/public health
 without submitting funds. Keep writable Next/runtime caches explicitly separate
-from the immutable cohort; their concrete configuration and runtime acceptance
-are still open. Do not introduce a compatibility symlink that lets old scripts
+from the immutable cohort. The explicit serialized-build launcher now selects
+`immutable-next-cache.cjs`, a narrow wrapper around pinned Next's existing cache:
+immutable build seeds remain readable, cache writes stay in bounded process memory,
+and optimized images are recomputed without disk persistence. Ordinary startup
+retains its configuration. Intended-host full-application cache/trace acceptance
+remains open. Do not introduce a compatibility symlink that lets old scripts
 silently select whichever generation is current.
 
 ## Reviewed staged role adapter (production acceptance pending)
@@ -242,10 +256,13 @@ A2A imports the cohort's own tsx loader and worker. Only the nonsecret full
 `KERYX_COMMIT` control is added to the existing clean ENV command. Operational
 cwd remains `/root/keryx`, the external ENV file remains unchanged, and all
 previous allowance/feature controls must still match across both roles.
-Before admitting roles, the adapter refuses the observed extraction-worker
-`process.cwd()` source paths. Closing those HTML/PDF/bibliography paths needs
-its narrow source ownership and actual trace/startup acceptance; merely rebasing
-PM2 or adding a source-root ENV assignment cannot waive the gap.
+The HTML, PDF and bibliography callers now use `extractionWorker`, which finds
+assets at the package root of its loaded module, including a compiled server
+chunk. It never selects code from storage cwd or an ENV override. Missing,
+linked or hardlinked assets refuse at that package root instead of searching
+a predecessor. Their existing child environment, parser admission and document
+bounds remain intact. The adapter still refuses any reintroduced cwd caller;
+intended-host trace/startup acceptance of the complete candidate remains required.
 
 The protected preparation receipt must record actual successful typecheck,
 tests and build, pinned Node/npm, Linux and mainnet public settings. The new
@@ -338,8 +355,8 @@ independent dependency copy. Alias targets must map inside that copy or the know
 dependency input root; outside paths refuse before mutation. Bounded byte/entry
 and disk-headroom checks precede materialization. The build/input dependency trees
 remain untouched, and the complete artifact/trace inspector retains its link
-containment rules. This does not close the separate cwd extraction or runtime cache
-admission gates.
+containment rules. Intended-host extraction and runtime-cache admission are
+separate from dependency-alias materialization.
 The dependency copy uses a checked per-entry copy filter, since the pinned native
 recursive copy retained npm executable links in the actual Linux output. Internal
 file-link bytes count toward headroom, their targets are rechecked at copy, and the
@@ -392,3 +409,91 @@ Do not choose a numeric availability promise from this tiny synthetic fixture or
 remove the current early drain before those acceptance records exist. No paid
 exercise, new schedule, custody change or forced economic recovery is authorized
 by this plan.
+
+## Original #164 admission map — 2026-10-12
+
+[PR396](https://github.com/tang-vu/keryx/pull/396) merged as
+`c6215548afd112399b9523dd2cd5ca30415c2eb0` with 22 applicable successful checks;
+its publication-only skip is not acceptance. Its preparation/staging/rehearsal
+helpers remain in current source. Accepted production 0.27.59 at
+`513c6fa6b1f78b5f1db6b215973581ef3b51eb69` used the reviewed ordinary deployment,
+with accepted normal/public observations and cleared maintenance. That delivery
+does not admit the staged path or prove all immutable-release criteria. Subsequent
+main source is distinct from that production identity.
+
+| Original criterion | Retained evidence | Remaining admission gate |
+| --- | --- | --- |
+| Exact source/artifact checked before writer hold | PR396 isolated builder, immutable byte/trace inspection and accepted CI; module-bound extraction and memory-only staged cache source | Intended-host secret-free builder with actual mainnet public settings and complete extraction/cache/trace acceptance |
+| Positive drain and retained ambiguous state | Existing early-drain ordinary release; hosted rehearsal's idle web close | Every affected native writer and in-flight/ambiguous economic-state proof for the immutable transition; no forced termination or replay |
+| Storage/schema/rollback compatibility | Explicit protected compatibility binding and hold-for-review behavior | Actual sealed storage/schema/fence evidence and predecessor/candidate compatibility; crash/uncertain-ack and compatible compiled rollback |
+| Previously authorized roles, held schedules, exact health | Release59 normal/public acceptance on its ordinary source; staged role validation source | Full role/build/queue/internal/public observations for the admitted immutable cohort, preserving ENV/custody and held schedules |
+| Verified off-box rollback retention and scoped headroom | Source/artifact/headroom checks and no release-deletion command | Encrypted off-box retention plus independent retrieval of the exact rollback lineage before any deletion |
+| Measured rehearsal/ordinary release and practical availability target | Historical hosted idle fixture: startup1372ms, handover16714ms, post-drain readiness16288ms | Intended-host no-spend timing and a reviewed ordinary release measured with the same interval definition; grounded target and observed compliance |
+
+The hosted idle timings belong to their original CI cohort, not production59 or
+an intended-host availability target. A successful ordinary release establishes
+its own delivery; passive health/normal observations cannot substitute for staged
+builder, every-writer, schema, cache, compiled rollback or retrieval acceptance.
+The current early-drain deployment remains authoritative and original #164 stays
+OPEN until all original criteria and real delivery evidence are accepted. No
+additional paid trial, new funding, schedule or custody gate is introduced here.
+
+## Cohort extraction, cache and recovery source — 2026-10-12
+
+The existing compiled public-origin fixture now runs the actual HTML, PDF and
+bibliography callers with decoy worker files in its separate storage cwd. It also
+reads an immutable route-cache seed and optimizes a local image. Complete build
+file names and byte hashes must remain identical after requests and positive
+close. This exercises the narrow cache wrapper against pinned Next, including
+its seed and image paths, without an external cache service or filesystem shim.
+Images retain their response behavior but lose persistent caching in the staged
+branch; resource acceptance on the intended host is still required.
+
+The fixture independently compiles two cohorts with different build IDs and
+security-header markers, then verifies predecessor, candidate and explicit
+compiled rollback using fresh owned processes. Actual close and both pipe EOFs,
+without overflow or capture errors, remain required. A deliberately missing ready
+ACK must retain the original process through one graceful drain; its observation
+deadline cannot authorize replacement, replay or forced termination. Readiness
+observation is bounded at 30 seconds, while graceful drain has no force deadline.
+Failed cohorts and logs are retained for inspection.
+
+`rehearsePreparedRelease` additionally accepts an optional `predecessor` containing
+its candidate path and exact source/inspection digests. Distinct commits are
+required. Both cohorts are reverified at each boundary and after actual runtime
+close. The shared unfunded scratch store and observed queue are retained across
+predecessor, replacement and explicit rollback. Its receipt distinguishes this
+compiled exercise from production rollback compatibility: financial-worker drain,
+production rollback and the availability target remain unaccepted. The ordinary
+CLI keeps its existing same-cohort invocation.
+
+Local Windows evidence measured two fixture compilations at 19,416 and 19,182 ms,
+candidate readiness at 1,401 ms and rollback readiness at 1,389 ms. These are
+development observations from a tiny fixture, not intended-host maintenance
+measurements. An additional isolated drill self-exited a compiled idle candidate
+before its ACK, retained actual exit/EOF evidence and explicitly restored the
+unchanged compiled predecessor. Synthetic sealed-storage refusal checks cover
+identity relabeling, absent manifests, manifest drift and offline bypass. They do
+not establish compatibility of the production original or its economic fences.
+
+The next root-owned admission must bind the complete candidate, intended Linux
+toolchain/resource shape, mainnet public settings, exact original storage/schema/
+fences and economic-state observations. It must inventory every affected writer,
+prove their graceful exits and unchanged ambiguous state, and inspect all authorized
+role/build/queue/internal/public identities. Reuse encrypted retrieval evidence
+only if its exact rollback lineage and digests already match. Otherwise a separate
+root-reviewed, one-object retrieval proposal must specify the existing budget,
+object name, encrypted size/hash and independent local verification; this worker
+does not reserve or spend a remote request. No retained release may be deleted on
+PUT acknowledgement or a fixture result.
+
+Measure preparation outside writer hold, total maintenance from admission-hold
+ACK through final required public readiness, and handover from the last positive
+writer exit through that same readiness. The root must choose a finite target
+from matched intended-host observations and validate it on one reviewed ordinary
+production release using these same intervals. A missed target retains the hold;
+it cannot justify force kill, uncertain payment replay or early drain removal.
+Web/API, hosted MCP, A2A and bots inherit hosted extraction behavior. Source CLI
+uses its own loaded code root; packaged stdio MCP, desktop and extension retain
+their established hosted handoffs and distribution authority. Root owns the final
+combined-source/platform acceptance and release; this source grants none of it.

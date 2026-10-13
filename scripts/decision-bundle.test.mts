@@ -20,8 +20,8 @@ const packet = { schema: 1, policy: "actual-post-portfolio-read-v1", coverage: "
   records: [{ sequence: 0, candidate: 1, round: 0, proposal: "BUY", plan: "BUY", facts: "assertions",
     check: { kind: "channel", creatorFree: false, cache: false }, outcome: { action: "BUY", rule: "delivery-channel" },
     amounts: { priceMicros: null, remainingMicros: null } }] };
-const command = (args: string[], env: NodeJS.ProcessEnv = {}) => spawnSync(process.execPath, ["--import", "tsx", "scripts/decision-bundle.mts", ...args],
-  { cwd: process.cwd(), encoding: "utf8", timeout: 15000, maxBuffer: 400 * 1024,
+const command = (args: string[], env: NodeJS.ProcessEnv = {}, timeout = 15000) => spawnSync(process.execPath, ["--import", "tsx", "scripts/decision-bundle.mts", ...args],
+  { cwd: process.cwd(), encoding: "utf8", timeout, maxBuffer: 400 * 1024,
     env: { ...process.env, KERYX_AUDIT_SIGNING_KEY_PEM: "", KERYX_AUDIT_TRUSTED_PUBLIC_KEY_PEM: "", ...env } });
 
 it("documents offline commands and never prints a key or touches application state for help", () => {
@@ -29,6 +29,16 @@ it("documents offline commands and never prints a key or touches application sta
   expect(result.status).toBe(0); expect(result.stdout).toContain("Signature/integrity cannot prove settlement");
   expect(result.stdout).not.toContain("SECRET_SENTINEL"); expect(result.stdout).not.toContain("PUBLIC_SENTINEL");
   expect(command(["--help", "extra"]).status).toBe(1);
+});
+
+it.skipIf(process.platform === "win32")("refuses a FIFO without waiting for a writer", () => {
+  const fifo = join(directory, "unsupported-input.fifo");
+  const created = spawnSync("mkfifo", [fifo], { encoding: "utf8", timeout: 2000 });
+  expect(created.error).toBeUndefined(); expect(created.status).toBe(0);
+  const result = command(["anchor", fifo], {}, 5000);
+  expect(result.error).toBeUndefined(); expect(result.signal).toBeNull();
+  expect(result.status).toBe(1); expect(result.stdout).toBe("");
+  expect(result.stderr).toBe("Decision bundle refused the input. Run --help for the offline contract.\n");
 });
 
 it("exports only a signed public snapshot and verifies offline against separate public PEM and retained digests", async () => {

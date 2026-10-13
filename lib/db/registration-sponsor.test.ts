@@ -7,10 +7,10 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { encodeAbiParameters, keccak256, toBytes, type Address, type Hex } from "viem";
 import { afterEach, describe, expect, it } from "vitest";
-import { registrationIntentDigest, registrationPolicyDigest, type RegistrationSponsorPolicy, type SponsoredRegistration } from "../sources/registration-sponsor-protocol";
+import { registrationIntentDigest, registrationPolicyDigest, type ActiveRegistrationSponsorPolicy, type RegistrationSponsorFundingObservation, type RegistrationSponsorPolicy, type WalletFundedRegistrationSponsorPolicy, type SponsoredRegistration } from "../sources/registration-sponsor-protocol";
 import { sourceClaimSchema, type SourceClaim } from "../sources/public-source-claim";
 import { admitSqliteRegistrationSponsor as admit, getSqliteRegistrationSponsor as get,
-  RegistrationSponsorError, transitionSqliteRegistrationSponsor as transition } from "./registration-sponsor";
+  inspectSqliteRegistrationSponsorFunding as inspectFunding, RegistrationSponsorError, transitionSqliteRegistrationSponsor as transition } from "./registration-sponsor";
 
 const A = "0x1111111111111111111111111111111111111111" as Address;
 const B = "0x2222222222222222222222222222222222222222" as Address;
@@ -31,7 +31,7 @@ function policy(overrides: Partial<RegistrationSponsorPolicy> = {}): Registratio
     maxGas: 21000, maxFeePerGasWei: "20000000000", maxRegistrationsPerWallet: 10,
     maxRegistrationsPerDay: 10, maxRegistrationsTotal: 10, allowlistedCreators: [A, B], ...overrides };
 }
-function row(p = policy(), index = 1, creator = A, at = NOW): SponsoredRegistration {
+function row(p: ActiveRegistrationSponsorPolicy = policy(), index = 1, creator = A, at = NOW): SponsoredRegistration {
   const canonicalUrl = `https://creator.example/feed-${index}.xml`, urlHash = keccak256(toBytes(canonicalUrl));
   const value: SponsoredRegistration = { id: HASH, policyDigest: keccak256(toBytes("unused")), creator, canonicalUrl, rssUrl: canonicalUrl,
     claimId: keccak256(toBytes(canonicalUrl)).slice(2), claimRevision: 1, sourceId: `source-${index}`,
@@ -43,10 +43,10 @@ function row(p = policy(), index = 1, creator = A, at = NOW): SponsoredRegistrat
   // Importing the production policy digest also exercises the exact policy serialization.
   return finalizePolicyRow(p, value);
 }
-function finalizePolicyRow(p: RegistrationSponsorPolicy, value: SponsoredRegistration): SponsoredRegistration {
+function finalizePolicyRow(p: ActiveRegistrationSponsorPolicy, value: SponsoredRegistration): SponsoredRegistration {
   value.policyDigest = registrationPolicyDigest(p); value.id = registrationIntentDigest(value); return value;
 }
-function saveClaim(db: DatabaseSync, p: RegistrationSponsorPolicy, request: SponsoredRegistration, overrides: Partial<SourceClaim> = {}): SourceClaim {
+function saveClaim(db: DatabaseSync, p: ActiveRegistrationSponsorPolicy, request: SponsoredRegistration, overrides: Partial<SourceClaim> = {}): SourceClaim {
   const claim = sourceClaimSchema.parse({ id: request.claimId, canonicalUrl: request.canonicalUrl, rssUrl: request.rssUrl,
     ownerWallet: request.creator, deploymentOrigin: p.deploymentOrigin, network: p.network,
     verifiedAt: new Date(request.createdAt).toISOString(), revision: request.claimRevision, effectiveAt: new Date(request.createdAt).toISOString(),
@@ -68,6 +68,118 @@ function expectCode(operation: () => unknown, code: string, status = 409) {
   try { operation(); throw new Error("Expected a refusal"); }
   catch (error) { expect(error).toBeInstanceOf(RegistrationSponsorError); expect(error).toMatchObject({ code, status }); }
 }
+
+function walletFundedPolicy(): WalletFundedRegistrationSponsorPolicy {
+  const p = policy();
+  return { protocol: "keryx-registration-sponsor-v2", eligibility: "verified-publisher", funding: "wallet-balance",
+    network: p.network, deploymentOrigin: p.deploymentOrigin, registryAddress: p.registryAddress, registryCodeHash: p.registryCodeHash,
+    sponsorAddress: p.sponsorAddress, maxTransactionWei: p.maxTransactionWei, maxGas: p.maxGas, maxFeePerGasWei: p.maxFeePerGasWei };
+}
+function funding(p = walletFundedPolicy(), balance = RESERVATION * BigInt(20), at = NOW, nonce = 0): RegistrationSponsorFundingObservation {
+  return { network: p.network, sponsorAddress: p.sponsorAddress, blockNumber: "100", blockHash: HASH,
+    blockTimestamp: Math.floor(at / 1000), observedAt: at, nativeBalanceWei: balance.toString(), latestTransactionNonce: nonce };
+}
+describe("wallet-funded registration journal", () => {
+  it("reserves against unresolved legacy holds across policy cohorts at the exact one-wei boundary", () => {
+    const { db } = fixture(), old = policy(), legacy = row(old), p = walletFundedPolicy(), next = row(p, 2, B);
+    admit(db, old, legacy, NOW); saveClaim(db, p, next);
+    expectCode(() => admit(db, p, next, NOW, funding(p, RESERVATION * BigInt(2) - BigInt(1))), "registration_sponsor_insufficient_funds");
+    expect(db.prepare("SELECT COUNT(*) n FROM sync_state WHERE key LIKE ?").get(prefix + "row:%")?.n).toBe(1);
+    expect(admit(db, p, next, NOW, funding(p, RESERVATION * BigInt(2))).policyDigest).not.toBe(legacy.policyDigest);
+    const before = db.prepare("SELECT key,value,updated_at FROM sync_state ORDER BY key").all();
+    expect(inspectFunding(db, p, funding(p, RESERVATION * BigInt(2)), NOW)).toEqual({ available: false, reservedGasCovered: true, heldWei: String(RESERVATION * BigInt(2)), spendableWei: "0" });
+    expect(db.prepare("SELECT key,value,updated_at FROM sync_state ORDER BY key").all()).toEqual(before);
+    expect(get(db, { wallet: A, id: legacy.id })).toEqual(legacy);
+  });
+  it.each(["stale", "future", "chain", "wallet", "block age"])("refuses %s funding observation without new authority", problem => {
+    const { db } = fixture(), p = walletFundedPolicy(), next = row(p); saveClaim(db, p, next); const observation = funding(p);
+    if (problem === "stale") observation.observedAt = NOW - 5001;
+    if (problem === "future") observation.observedAt = NOW + 1;
+    if (problem === "chain") observation.network = "eip155:5042002";
+    if (problem === "wallet") observation.sponsorAddress = B;
+    if (problem === "block age") observation.blockTimestamp -= 61;
+    expectCode(() => admit(db, p, next, NOW, observation), "registration_sponsor_rpc_unavailable", 503);
+    expect(db.prepare("SELECT COUNT(*) n FROM sync_state WHERE key LIKE ?").get(prefix + "row:%")?.n).toBe(0);
+  });
+  it("does not release a newly mined terminal leg against an older pre-mining balance snapshot", () => {
+    const { db } = fixture(), old = policy(), legacy = row(old), p = walletFundedPolicy(); saveClaim(db, old, legacy); admit(db, old, legacy, NOW);
+    transition(db, { wallet: A, id: legacy.id, expectedState: "prepared", nextState: "signing", transactionNonce: 7, now: NOW });
+    transition(db, { wallet: A, id: legacy.id, expectedState: "signing", nextState: "submitted", transactionHash: OTHER_HASH, now: NOW });
+    transition(db, { wallet: A, id: legacy.id, expectedState: "submitted", nextState: "reverted", transactionHash: OTHER_HASH, actualGasWei: String(RESERVATION / BigInt(2)), now: NOW });
+    const next = row(p, 2, B); saveClaim(db, p, next);
+    expectCode(() => admit(db, p, next, NOW, funding(p, RESERVATION, NOW, 7)), "registration_sponsor_rpc_unavailable", 503);
+    expect(admit(db, p, next, NOW, funding(p, RESERVATION, NOW, 8)).id).toBe(next.id);
+    expect(get(db, { wallet: A, id: legacy.id })?.actualGasWei).toBe(String(RESERVATION / BigInt(2)));
+  });
+  it("renewal names an unsigned-expired legacy predecessor without rewriting its original or policy", () => {
+    const { db } = fixture(), old = policy(), legacy = row(old), p = walletFundedPolicy(); admit(db, old, legacy, NOW);
+    const oldPolicy = db.prepare("SELECT value FROM sync_state WHERE key LIKE ?").get(prefix + "policy:%")?.value;
+    const expiredAt = NOW + 600_001;
+    transition(db, { wallet: A, id: legacy.id, expectedState: "prepared", nextState: "expired", now: expiredAt });
+    const tooSoon = finalizePolicyRow(p, { ...row(p, 1, A, expiredAt), replacesRequestId: legacy.id });
+    expectCode(() => admit(db, p, tooSoon, expiredAt, funding(p, RESERVATION, expiredAt)), "registration_sponsor_renewal_refused");
+    // Renewal retains the predecessor's existing whole-second expiry boundary.
+    const at = NOW + 601_000;
+    const next = finalizePolicyRow(p, { ...row(p, 1, A, at), replacesRequestId: legacy.id }); saveClaim(db, p, next);
+    expect(admit(db, p, next, at, funding(p, RESERVATION, at)).id).toBe(next.id);
+    const stored = JSON.parse(String(db.prepare("SELECT value FROM sync_state WHERE key=?").get(prefix + "row:" + legacy.id)?.value));
+    expect(stored.original).toEqual(legacy);
+    expect(db.prepare("SELECT value FROM sync_state WHERE key=?").get(prefix + "policy:" + JSON.parse(String(oldPolicy)).cohortDigest)?.value).toBe(oldPolicy);
+  });
+  it("requires a named receipt-reverted predecessor and preserves its real cost during v1-to-v2 renewal", () => {
+    const { db } = fixture(), old = policy(), legacy = row(old), p = walletFundedPolicy(); saveClaim(db, old, legacy); admit(db, old, legacy, NOW);
+    transition(db, { wallet: A, id: legacy.id, expectedState: "prepared", nextState: "signing", transactionNonce: 7, now: NOW });
+    transition(db, { wallet: A, id: legacy.id, expectedState: "signing", nextState: "submitted", transactionHash: OTHER_HASH, now: NOW });
+    transition(db, { wallet: A, id: legacy.id, expectedState: "submitted", nextState: "reverted", actualGasWei: String(RESERVATION / BigInt(2)), now: NOW });
+    const at = NOW + 1000, next = finalizePolicyRow(p, { ...row(p, 1, A, at), replacesRequestId: legacy.id }); saveClaim(db, p, next);
+    expect(admit(db, p, next, at, funding(p, RESERVATION, at, 8)).id).toBe(next.id);
+    expect(get(db, { wallet: A, id: legacy.id })).toMatchObject({ state: "reverted", actualGasWei: String(RESERVATION / BigInt(2)), transactionNonce: 7 });
+    expect(inspectFunding(db, p, funding(p, RESERVATION, at, 8), at).heldWei).toBe(String(RESERVATION));
+  });
+  it("does not admit a second connection against a balance already fully reserved by the first", () => {
+    const { db, file } = fixture(true), other = new DatabaseSync(file); cleanup.push(() => other.close());
+    const p = walletFundedPolicy(), first = row(p), second = row(p, 2, B); saveClaim(db, p, first); saveClaim(db, p, second);
+    const snapshot = funding(p, RESERVATION);
+    admit(db, p, first, NOW, snapshot);
+    expectCode(() => admit(other, p, second, NOW, snapshot), "registration_sponsor_insufficient_funds");
+    expect(get(other, { wallet: B, id: second.id })).toBeNull();
+  });
+  it.each(["signing", "submitted", "confirmed"] as const)("never upgrades a legacy %s original into new authority", target => {
+    const { db } = fixture(), old = policy(), legacy = row(old), p = walletFundedPolicy(); saveClaim(db, old, legacy); admit(db, old, legacy, NOW);
+    transition(db, { wallet: A, id: legacy.id, expectedState: "prepared", nextState: "signing", transactionNonce: 7, now: NOW });
+    if (target !== "signing") transition(db, { wallet: A, id: legacy.id, expectedState: "signing", nextState: "submitted", transactionHash: OTHER_HASH, now: NOW });
+    if (target === "confirmed") transition(db, { wallet: A, id: legacy.id, expectedState: "submitted", nextState: "confirmed", actualGasWei: String(RESERVATION / BigInt(2)), now: NOW });
+    const at = NOW + 1000, next = finalizePolicyRow(p, { ...row(p, 1, A, at), replacesRequestId: legacy.id }); saveClaim(db, p, next);
+    expectCode(() => admit(db, p, next, at, funding(p, RESERVATION * BigInt(2), at, target === "confirmed" ? 8 : 7)), "registration_sponsor_renewal_refused");
+    expect(get(db, { wallet: A, id: legacy.id })?.state).toBe(target);
+  });
+  it("pins the new policy too and cannot reset its cohort through changed liability terms", () => {
+    const { db } = fixture(), p = walletFundedPolicy(), first = row(p); saveClaim(db, p, first); admit(db, p, first, NOW, funding(p));
+    const changed = { ...p, maxTransactionWei: String(RESERVATION + BigInt(1)) }, next = row(changed, 2, B); saveClaim(db, changed, next);
+    expectCode(() => admit(db, changed, next, NOW, funding(changed)), "registration_sponsor_policy_changed");
+  });
+  it("keeps an expired signing original's full hold and refuses a nonce mismatch before signing", () => {
+    const { db } = fixture(), p = walletFundedPolicy(), next = row(p); saveClaim(db, p, next); admit(db, p, next, NOW, funding(p, RESERVATION));
+    expectCode(() => transition(db, { wallet: A, id: next.id, expectedState: "prepared", nextState: "signing", transactionNonce: 1, fundingObservation: funding(p, RESERVATION), now: NOW }), "registration_sponsor_rpc_unavailable", 503);
+    transition(db, { wallet: A, id: next.id, expectedState: "prepared", nextState: "signing", transactionNonce: 0, fundingObservation: funding(p, RESERVATION), now: NOW });
+    const at = NOW + 600_001;
+    expect(inspectFunding(db, p, funding(p, RESERVATION, at), at)).toEqual({ available: false, reservedGasCovered: true, heldWei: String(RESERVATION), spendableWei: "0" });
+    expect(inspectFunding(db, p, funding(p, RESERVATION - BigInt(1), at), at).reservedGasCovered).toBe(false);
+    expect(get(db, { wallet: A, id: next.id })?.state).toBe("signing");
+  });
+  it("accepts more than pilot attempt counts while every new original has proof and a full affordable hold", () => {
+    const { db } = fixture(), p = walletFundedPolicy();
+    for (let index = 1; index <= 11; index++) {
+      const at = NOW + (index - 1) * 600_001, next = row(p, index, A, at); saveClaim(db, p, next);
+      expect(admit(db, p, next, at, funding(p, RESERVATION, at)).id).toBe(next.id);
+    }
+    expect(db.prepare("SELECT COUNT(*) n FROM sync_state WHERE key LIKE ?").get(prefix + "row:%")?.n).toBe(11);
+  });
+  it("requires native fresh publishing proof even if the wallet has ample gas", () => {
+    const { db } = fixture(), p = walletFundedPolicy(), next = row(p);
+    expectCode(() => admit(db, p, next, NOW, funding(p)), "registration_sponsor_proof_changed");
+  });
+});
 
 describe("registration sponsor journal", () => {
   it("keeps GET read-only and wallet-bound, and reuses the exact original across connections and restart", () => {

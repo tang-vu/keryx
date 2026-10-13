@@ -140,8 +140,8 @@ it("refreshes free snapshots without encryption or paid cache/storage and record
   const upsertPublicReference = vi.fn(async (_reference: PublicReference) => {});
   const result = await runSourceUpkeep({ ...db, getPublicReference: async () => ({ ...publicReference }), upsertPublicReference },
     { ingest: async () => ({ ...feed, items: Array.from({ length: 12 }, (_, index) => ({ ...feed.items[0]!, link: `https://publisher.test/${index}` })) }) });
-  expect(result.summary).toEqual({ attempted: 1, added: 10, failed: 0, skipped: 0 });
-  expect(upsertPublicReference.mock.calls[0]![0].items).toHaveLength(10);
+  expect(result.summary).toEqual({ attempted: 1, added: 12, failed: 0, skipped: 0 });
+  expect(upsertPublicReference.mock.calls[0]![0].items).toHaveLength(12);
   expect(db.addItems).not.toHaveBeenCalled();
   expect(db.setCached).not.toHaveBeenCalled();
   expect(db.getSource).not.toHaveBeenCalled();
