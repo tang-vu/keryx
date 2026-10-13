@@ -4,7 +4,7 @@ import { expect, it, vi } from "vitest";
 import { ResearchJobEscalation } from "../../components/keryx/research-job-escalation";
 import { ResearchJobTarget } from "../../components/keryx/research-job-target";
 import { accountHistorySchema } from "./account-history-types";
-import type { PaidJobEscalation } from "./overdue-types";
+import { originalOrderPaymentSchema, type PaidJobEscalation } from "./overdue-types";
 import { originalOrderPayment, paidJobEscalation } from "./overdue-status";
 import { a2aResearchPackage } from "./research-package-definition";
 import type { A2aOrder } from "./order";
@@ -88,7 +88,7 @@ it("renders the first overdue millisecond from original acceptance while the exp
   expect(publicHtml).toContain("Expiry or delay does not prove that it failed");
   expect(publicHtml).toContain("does not mean that a person has been notified");
   expect(publicHtml).not.toMatch(/PRIVATE_|a2a_original_ssr|original-ssr-reference|<form|<a /);
-  const refs = { orderId: original.id, payment: originalOrderPayment(original) }, refsBefore = structuredClone(refs);
+  const refs = { orderId: original.id, payment: originalOrderPaymentSchema.parse(originalOrderPayment(original)) }, refsBefore = structuredClone(refs);
   const ownerHtml = renderToStaticMarkup(createElement(ResearchJobEscalation, { escalation: firstOverdue, original: refs }));
   for (const text of [original.id, "original-ssr-reference", "eip155:5042002", "50001", "Creator payment boundary recorded",
     "Do not pay again", "owner confirmation", "does not submit a request", "move money"]) expect(ownerHtml).toContain(text);
