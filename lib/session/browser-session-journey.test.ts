@@ -394,7 +394,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
   await page.waitForFunction(() => !!(window as unknown as { normalGrant?: unknown }).normalGrant);
   await page.evaluate(() => (window as unknown as { normalGrant: { generateAndFund(budget: number): Promise<void> } }).normalGrant.generateAndFund(0.05));
   const hookState = async () => JSON.parse((await page.locator("#state").textContent())!);
-  expect(await hookState()).toMatchObject({ status: "active", cap: 0.05, spent: 0 });
+  await expect.poll(hookState).toMatchObject({ status: "active", cap: 0.05, spent: 0 });
   expect((await hookState()).sessAddr.toLowerCase()).toBe(sessionAddress);
   await page.evaluate(() => {
     const worker = new Worker("/worker.js"), pending = new Map<number, { resolve(value: unknown): void; reject(reason: Error): void }>(); let id = 0;

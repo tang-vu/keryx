@@ -3,16 +3,20 @@ import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  db: vi.fn(), collect: vi.fn(), admission: vi.fn(), claim: vi.fn(), after: vi.fn(),
+  db: vi.fn(), presentation: vi.fn(), collect: vi.fn(), admission: vi.fn(), claim: vi.fn(), enabled: vi.fn(), after: vi.fn(),
   config: { baseUrl: "https://slack-controls.example", slackSigningSecret: "fixture-signing-secret",
     sellerAddress: "fixture-treasury", defaultBudget: 0.05, anonMaxBudget: 0.025 },
 }));
 vi.mock("next/server", async original => ({ ...await original<typeof import("next/server")>(), after: mocks.after }));
 vi.mock("@/lib/config", () => ({ config: mocks.config }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
+vi.mock("@/lib/bots/answer-preference", async original => ({
+  ...await original<typeof import("@/lib/bots/answer-preference")>(),
+  botAnswerPresentation: mocks.presentation,
+}));
 vi.mock("@/lib/agent", () => ({ collectRun: mocks.collect }));
 vi.mock("@/lib/sponsored-admission", () => ({ checkSponsoredResearchAdmission: mocks.admission }));
-vi.mock("@/lib/run-claims/hosted-delivery", () => ({ prepareHostedRunClaim: mocks.claim, hostedRunClaimsEnabled: () => false }));
+vi.mock("@/lib/run-claims/hosted-delivery", () => ({ prepareHostedRunClaim: mocks.claim, hostedRunClaimsEnabled: mocks.enabled }));
 
 import { POST } from "../../app/api/slack/commands/route";
 import { helpText, slackAccountLinkingUnavailable } from "../slack/ask-command";
@@ -25,8 +29,10 @@ beforeEach(() => {
   mocks.config.slackSigningSecret = "fixture-signing-secret";
   mocks.config.sellerAddress = "fixture-treasury";
   mocks.db.mockRejectedValue(new Error("Account controls must not open storage"));
+  mocks.presentation.mockResolvedValue({ language: "en", input: { presentationLanguage: "en" } });
   mocks.collect.mockRejectedValue(new Error("Research callback must not execute in this fixture"));
   mocks.admission.mockResolvedValue(null);
+  mocks.enabled.mockReturnValue(false);
   fetchMock = vi.fn(async () => { throw new Error("Outbound delivery forbidden in this fixture"); });
   vi.stubGlobal("fetch", fetchMock);
 });
@@ -47,6 +53,7 @@ function signedRequest(overrides: Record<string, string> = {}, options: { timest
 }
 
 function expectNoEffects() {
+  expect(mocks.presentation).not.toHaveBeenCalled();
   expect(mocks.db).not.toHaveBeenCalled();
   expect(mocks.admission).not.toHaveBeenCalled();
   expect(mocks.after).not.toHaveBeenCalled();
@@ -132,11 +139,42 @@ describe("signed Slack account-control refusal", () => {
       expect(mocks.admission).toHaveBeenCalledExactlyOnceWith({ kind: "bot", platform: "slack", userId: "U123" });
       expect(mocks.after).toHaveBeenCalledExactlyOnceWith(expect.any(Function));
       // Admission and scheduling are observed; the stored callback is never executed.
+      expect(mocks.presentation).not.toHaveBeenCalled();
       expect(mocks.db).not.toHaveBeenCalled();
       expect(mocks.collect).not.toHaveBeenCalled();
       expect(mocks.claim).not.toHaveBeenCalled();
       expect(fetchMock).not.toHaveBeenCalled();
     });
+
+  it("resolves the scoped generation preference only in the owned callback", async () => {
+    const question = "Explain x402 citations.";
+    mocks.presentation.mockResolvedValue({ language: "vi", input: { presentationLanguage: "vi" } });
+    mocks.claim.mockResolvedValue(null);
+    mocks.collect.mockResolvedValue({ id: "fixture-run", question, budget: 0.025, engine: "heuristic", subClaims: [],
+      decisions: [], citations: [], answer: "Synthetic fixture answer", totalSpent: 0, totalToCreators: 0,
+      trace: [], createdAt: "2026-10-13T00:00:00.000Z", paymentMode: "offline" });
+    fetchMock.mockResolvedValue(new Response("", { status: 200 }));
+    await POST(signedRequest({ text: question }));
+    expect(mocks.presentation).not.toHaveBeenCalled();
+    expect(mocks.db).not.toHaveBeenCalled();
+    await mocks.after.mock.calls[0]![0]();
+    expect(mocks.presentation).toHaveBeenCalledExactlyOnceWith(question, { platform: "slack", scope: "T123", userId: "U123" });
+    expect(mocks.collect).toHaveBeenCalledExactlyOnceWith({ question, presentationLanguage: "vi", budget: 0.025,
+      queryId: expect.any(String), origin: "web", provenance: { version: 1, surface: "slack", ownershipMethod: "unknown" } });
+    expect(mocks.db).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps preference lookup behind the existing private response-URL gate", async () => {
+    mocks.enabled.mockReturnValue(true);
+    await POST(signedRequest({ text: "Explain x402 citations.", response_url: "https://foreign.example/private" }));
+    await mocks.after.mock.calls[0]![0]();
+    expect(mocks.presentation).not.toHaveBeenCalled();
+    expect(mocks.db).not.toHaveBeenCalled();
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(mocks.collect).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 
   it.each(["", "help", "/help vi"])("preserves existing nested help semantics: %s", async text => {
     mocks.db.mockResolvedValue({ getSyncState: vi.fn(async () => null) });

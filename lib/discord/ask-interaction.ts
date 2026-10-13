@@ -9,6 +9,7 @@
  */
 
 import { config } from "../config";
+import { recordedAnswerLanguage } from "../research/answer-language-provenance";
 import { unsupportedDecisionReviewFlag } from "../research/decision-review-types";
 import { formatRecordedUsdc, formatNumber, selectPlural } from "../i18n/format";
 import { answerPresentation } from "../research/answer-presentation";
@@ -49,6 +50,8 @@ export interface Interaction {
 }
 
 export interface AskCommand {
+  /** Authenticated route preference only; never parsed from interaction options. */
+  presentationLanguage?: BotLanguage;
   question: string;
   budget?: number;
   userId: string;
@@ -133,9 +136,9 @@ export function followupUrl(applicationId: string, token: string): string {
  * to the full dispatch trace. Discord caps embed descriptions at 4096 and any field value at 1024,
  * so both are truncated with the dispatch page carrying the full text.
  */
-export function buildAnswerMessage(run: QueryRun) {
-  const message = botResearchMessages(run.question);
-  const locale = answerPresentation(run.question, "ordinary").language;
+export function buildAnswerMessage(run: QueryRun, requestedLanguage?: BotLanguage) {
+  const locale = recordedAnswerLanguage(run) ?? requestedLanguage ?? answerPresentation(run.question, "ordinary").language;
+  const message = botResearchMessages(run.question, locale);
   const fields = [];
   if (run.citations.length > 0) {
     const lines = run.citations.map(
@@ -165,8 +168,8 @@ export function buildAnswerMessage(run: QueryRun) {
 }
 
 /** Failure text for the deferred placeholder — the run died, say so instead of hanging forever. */
-export function buildErrorMessage(err: unknown, originalQuestion = "") {
-  return { content: truncate(botResearchFailure(err, originalQuestion), 2000) };
+export function buildErrorMessage(err: unknown, originalQuestion = "", requestedLanguage?: BotLanguage) {
+  return { content: truncate(botResearchFailure(err, originalQuestion, requestedLanguage), 2000) };
 }
 
 function truncate(text: string, max: number): string {

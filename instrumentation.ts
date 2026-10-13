@@ -17,18 +17,42 @@
  * calls register() more than once (e.g. during hot reload in dev).
  */
 
-export async function register() {
-  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+let registration: Promise<void> | undefined;
+let stopIndexer: (() => Promise<void>) | undefined;
+let closing: Promise<boolean> | undefined;
 
-  const { getDb } = await import("./lib/db");
-  const { startIndexer } = await import("./lib/db/indexer");
-  const { pruneExpiredGrants } = await import("./lib/payments/session-grants");
+export function register(): Promise<void> {
+  if (process.env.NEXT_RUNTIME !== "nodejs") return Promise.resolve();
+  if (registration) return registration;
+  const previousClose = closing;
+  closing = undefined;
+  registration = (async () => {
+    await previousClose;
+    const { getDb } = await import("./lib/db");
+    const { startIndexer } = await import("./lib/db/indexer");
+    const { pruneExpiredGrants } = await import("./lib/payments/session-grants");
 
-  const db = await getDb();
-  startIndexer(db);
+    const db = await getDb();
+    stopIndexer = startIndexer(db);
+    await pruneExpiredGrants().catch((err) =>
+      console.warn("[boot] could not prune expired session grants:", err),
+    );
+  })();
+  return registration;
+}
 
-  // Boot-time housekeeping only — never let it stop the server from coming up.
-  await pruneExpiredGrants().catch((err) =>
-    console.warn("[boot] could not prune expired session grants:", err),
-  );
+/** Explicit programmatic-server shutdown; Next does not call this export itself. */
+export function close(): Promise<boolean> {
+  if (!closing) {
+    const registered = registration;
+    closing = (async () => {
+      await registered;
+      const stop = stopIndexer;
+      await stop?.();
+      if (stopIndexer === stop) stopIndexer = undefined;
+      if (registration === registered) registration = undefined;
+      return stop !== undefined;
+    })();
+  }
+  return closing;
 }

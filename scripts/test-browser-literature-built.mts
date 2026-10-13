@@ -140,11 +140,31 @@ try {
     const box = await metadataLink.boundingBox(); assert(box && box.height >= 43 && box.x >= 0 && box.x + box.width <= width + 1);
     await metadataLink.screenshot({ path: join(screenshots, `metadata-handoff-${width}.png`) });
     await metadataLink.click();
+    // Count the queried catalogue after this document navigation finishes streaming.
+    await page.waitForURL(`${base}/sources?kind=paper&q=2005.11401v4#research-papers`, { waitUntil: "load" });
+    assert.equal(await page.getByRole("searchbox", { name: "Title, topic, DOI or versioned arXiv identifier" }).inputValue(), "2005.11401v4");
     const exactCard = page.locator("#research-papers article");
     await exactCard.getByRole("heading", { name: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks", exact: true }).waitFor();
-    assert.equal(await exactCard.count(), 1);
+    const cardBoundary = await page.evaluate(() => {
+      const nodes = Array.from(document.querySelectorAll("#research-papers article"));
+      return {
+      pathname: location.pathname, query: new URL(location.href).searchParams.get("q"),
+      count: nodes.length, cards: nodes.slice(0, 8).map(node => {
+        const element = node as HTMLElement, box = element.getBoundingClientRect();
+        const ancestors = []; let parent: HTMLElement | null = element;
+        for (let depth = 0; parent && depth < 12; depth++, parent = parent.parentElement) {
+          const style = getComputedStyle(parent);
+          ancestors.push({ tag: parent.tagName, id: parent.id.slice(0, 200), hidden: parent.hidden,
+            ariaHidden: parent.getAttribute("aria-hidden")?.slice(0, 200) ?? null, display: style.display, visibility: style.visibility });
+        }
+        return { title: element.querySelector("h3")?.textContent?.slice(0, 200) ?? null,
+          connected: element.isConnected, rect: {x:box.x,y:box.y,width:box.width,height:box.height}, ancestors };
+      })
+      };
+    });
+    console.log("LITERATURE_EXACT_CARD_BOUNDARY", JSON.stringify({ width, ...cardBoundary }));
+    assert.equal(cardBoundary.count, 1);
     assert((await exactCard.innerText()).includes("Patrick Lewis"));
-    assert.equal(await page.getByRole("searchbox", { name: "Title, topic, DOI or versioned arXiv identifier" }).inputValue(), "2005.11401v4");
     assert.equal(metadataRequests.length, 0, "Opening a metadata handoff must not search external repositories");
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     assert.equal(researchRequests.length, 0, "Preparing a comparison never runs research");

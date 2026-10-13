@@ -435,3 +435,14 @@ test("dashboard notices, counts, payment labels and accessibility copy are catal
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
   }
 });
+
+test("public researcher profile consent, ownership and ledger qualifications are catalogued without a baseline exception", () => {
+  const files = ["app/me/public-profile/page.tsx", "app/me/public-profile/public-profile-editor.tsx",
+    "app/u/[handle]/page.tsx", "app/u/[handle]/opengraph-image.tsx", "components/keryx/public-researcher-profile.tsx"];
+  for (const file of files) assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);
+  const editor = readFileSync(new URL("../app/me/public-profile/public-profile-editor.tsx", import.meta.url), "utf8");
+  assert.equal(editor.split("{copy.fieldsLegend}").length, 2);
+  const regressed = editor.replace("{copy.fieldsLegend}", "Fields to publish");
+  assert(extractUiCopy(files[1], regressed).some(finding => finding.kind === "jsx-text" && finding.text === "Fields to publish"),
+    "A new inline label must still fail the unchanged source guard");
+});

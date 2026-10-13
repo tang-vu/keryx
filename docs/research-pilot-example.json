@@ -1,0 +1,244 @@
+{
+  "version": 1,
+  "basis": "illustrative",
+  "cohort": {
+    "startsAt": "2026-10-01T00:00:00Z",
+    "endsAt": "2026-11-01T00:00:00Z",
+    "jobCoverage": "unknown",
+    "evidenceId": null
+  },
+  "usdConversion": null,
+  "tracks": [
+    {
+      "id": "api-platform",
+      "targetContributionUsdcPerPaidJob": null,
+      "unassignedDirectCosts": {
+        "ai": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "discovery": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "infrastructure": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "paymentAndGas": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "support": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "acquisition": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "other": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        }
+      }
+    },
+    {
+      "id": "saas-competition",
+      "targetContributionUsdcPerPaidJob": null,
+      "unassignedDirectCosts": {
+        "ai": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "discovery": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "infrastructure": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "paymentAndGas": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "support": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "acquisition": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "other": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        }
+      }
+    },
+    {
+      "id": "scholarly-literature",
+      "targetContributionUsdcPerPaidJob": null,
+      "unassignedDirectCosts": {
+        "ai": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "discovery": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "infrastructure": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "paymentAndGas": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "support": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "acquisition": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "other": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        }
+      }
+    }
+  ],
+  "jobs": [
+    {
+      "jobId": "job-synthetic0001",
+      "buyerId": null,
+      "track": "api-platform",
+      "initiatedAt": "2026-10-12T00:00:00Z",
+      "status": "pending",
+      "origin": {
+        "kind": "unknown",
+        "evidenceId": null
+      },
+      "payment": {
+        "network": "unknown",
+        "status": "none",
+        "funding": "unknown",
+        "serviceFeeUsdc": null,
+        "settledAt": null,
+        "receiptEvidenceId": null,
+        "fundingEvidenceId": null
+      },
+      "refunds": {
+        "coverage": "unknown",
+        "settledUsdc": null,
+        "pendingUsdc": null,
+        "evidenceId": null
+      },
+      "outcome": {
+        "status": "unknown",
+        "observedAt": null,
+        "evidenceId": null
+      },
+      "creatorFunds": {
+        "collectedUsdc": null,
+        "settledPaymentsUsdc": null,
+        "pendingObligationsUsdc": null
+      },
+      "directCosts": {
+        "ai": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "discovery": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "infrastructure": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "paymentAndGas": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "support": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "acquisition": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        },
+        "other": {
+          "status": "unknown",
+          "currency": "USDC",
+          "amount": null,
+          "evidenceId": null
+        }
+      },
+      "willingness": {
+        "offeredServiceFeeUsdc": null,
+        "response": "unknown",
+        "evidenceId": null
+      }
+    }
+  ]
+}

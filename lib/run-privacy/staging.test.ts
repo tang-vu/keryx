@@ -112,11 +112,17 @@ it("keeps actual enrolled Supabase factory reflection sealed and binds private c
     } finally {closeEnrolledSupabaseAdapter(facade);}
   }
 });
-it("admits exactly ordinary privacy0090 while retaining the native chain and refusing future/duplicate migrations",()=>{
+it("admits exactly ordinary privacy0090/profile0091 while retaining the native chain and refusing future/duplicate migrations",()=>{
   const files=readdirSync("supabase/migrations"),profiles=postgresBrowserMigrationProfiles(files);
   expect(profiles.native).toEqual(files.filter(file=>/^\d{4}.*\.sql$/.test(file)&&Number(file.slice(0,4))<=85).sort());
   expect(profiles.extensions.find(item=>item.file==="0090_run_privacy.sql")).toEqual({file:"0090_run_privacy.sql",refusal:"privacy_unavailable"});
   expect(profiles.ordinary).not.toContain("0090_run_privacy.sql");
+  expect(profiles.extensions.find(item=>item.file==="0091_public_researcher_profiles.sql")).toEqual({file:"0091_public_researcher_profiles.sql",refusal:"run_privacy_guard_v1\\(\\) does not exist"});
+  for(const prerequisite of ["0083_private_profiles.sql","0085_profile_verified_identities.sql"])expect(profiles.ordinary).toContain(prerequisite);
+  for(const nativeOnly of ["0073_enrolled_storage_substrate.sql","0077_browser_prepaid_purchase_cutover.sql","0079_enrolled_research_monthly_cutover.sql"])expect(profiles.ordinary).not.toContain(nativeOnly);
+  expect(profiles.ordinary).not.toContain("0091_public_researcher_profiles.sql");
+  expect(()=>postgresBrowserMigrationProfiles([...files,"0092_unreviewed.sql"])).toThrow("Unreviewed migration profile");
+  expect(()=>postgresBrowserMigrationProfiles([...files,"0091_public_researcher_profiles.sql"])).toThrow("Duplicate migration identity");
   expect(()=>postgresBrowserMigrationProfiles([...files,"0091_unreviewed.sql"])).toThrow("Unreviewed migration profile");
   expect(()=>postgresBrowserMigrationProfiles([...files,"0090_run_privacy.sql"])).toThrow("Duplicate migration identity");
   expect(readFileSync("supabase/migrations/0090_run_privacy.sql","utf8")).toContain("if to_regclass('keryx_storage.identity') is not null");

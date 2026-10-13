@@ -64,6 +64,23 @@ This records an active-session protocol, not an automatically enforced runtime
 lock or background scheduler. Payment/custody/DDL/schedule authority and every
 applicable release gate remain unchanged; no measured speedup is claimed.
 
+## Validate three bounded specialist outcomes before activating new prices — 2026-10-12
+
+The owner accepted the direction of selling useful specialist research with
+value-based pricing and selected all three tracks: API/platform comparison for
+freelancers/small teams, SaaS competitor/niche research and scholarly literature.
+Use one existing research/payment engine, bounded request templates and separate
+buyer review criteria. Preparation is local; it cannot promise complete synthesis,
+record acceptance, invent source evidence or create payment authority.
+
+Evaluate independently funded mainnet repeat demand and service contribution per
+track. Include failed/sponsored work and assistance/acquisition costs; preserve
+unknown costs, refund exposure and explicit currency conversion. Private local
+evidence declarations need receipt/invoice audit and cannot establish independent
+verification. Keep current versioned quotes until useful outcomes and complete
+costs justify a prospective offer with buyer-visible scope and terms. See
+[the pilot, role boundaries and release gates](docs/specialist-research-pilots.md).
+
 ## Commission missing evidence through a private portable contract — 2026-10-12
 
 The owner ranked Tameion innovation above repackaging the existing reading agent
@@ -7932,6 +7949,35 @@ No production DDL/backfill/data/ENV/activation is authorized or performed. Root 
 review precedes ONE266PR; actual exact combined CI/PG17/build/distribution and delivery
 remain gates, original266OPEN. Root reserves final actual offline48 --write; this phase
 neither runs it nor claims inherited/projected canonical metadata as new-head success.
+
+## 2026-10-12 — #264 explicit researcher publication, source only
+
+Add one opt-in `/u/<handle>` projection and matching public JSON, backed by a
+separate ordinary publication selection. Reuse existing private-profile handles,
+verified identities, active signed-wallet sessions, recorded owners and immutable
+receipt claims. Do not infer identity, assign ownership, grant a new API-key
+publication scope, extend native/private custody or change #266 visibility defaults.
+Only selected fields and currently PUBLIC/unerased owned runs enter the projection.
+Every page/image/JSON/sitemap read rechecks publication; unpublish advances the
+revision so a stale write cannot silently republish. Rename requires republishing.
+
+Wallet-wide financial aggregates are a separate explained opt-in. Count canonical
+positive settled fetch/citation events with confirmation references, separated by
+stored network and exact micro-USDC. Exclude pending/simulation/offline/package
+receipts/operating fees. Recorded creator payee earnings survive source deletion;
+this does not infer legal identity or content ownership. Treasury-sponsored creator
+payments remain separate and never count as the reader's own spend. Private run
+identifiers, original bodies and authorization/recovery/claim material stay absent.
+
+The optional publication capability requires BOTH explicit source flags and existing
+privacy admission. Missing/unknown/sealed capabilities have no fallback. Supabase
+uses one source-only fixed RPC and the existing immutable catalog-seal pattern;
+no production DDL/backfill/ENV/activation is included. Web/API share the public
+contract; MCP/CLI/Desktop/bots/extension/A2A gain no private enumeration or publishing
+authority. #276 locale and #301 replay/agent files remain outside this outcome.
+Actual focused checks, compiled phone/accessibility evidence, PostgreSQL execution,
+hosted CI/independent review and owner-authorized rollout are separate from source
+implementation. No payer/model/human trial or new spending gate is introduced.
 
 ## 2026-10-12: bounded Conzit registration sponsorship with retained registry origins
 
