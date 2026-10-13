@@ -20,7 +20,7 @@ it("pins one explicit model and endpoint across planning and synthesis and snaps
     expect(JSON.parse(init?.body as string).model).toBe("deepseek-v4-flash");
     expect(init?.headers).toMatchObject({ Authorization: "Bearer synthetic-not-a-credential" });
   }
-  expect(built.disclosure).toMatchObject({ modelId: "deepseek-flash", fallback: "local-heuristic", redirects: "prohibited" });
+  expect(built.disclosure).toMatchObject({ modelId: "deepseek-flash", wireModel: "deepseek-v4-flash", fallback: "local-heuristic", redirects: "prohibited" });
   expect(JSON.stringify(built.disclosure)).not.toContain(policy.apiKey);
 });
 

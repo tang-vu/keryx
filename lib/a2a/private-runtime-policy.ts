@@ -10,7 +10,7 @@ const activeSchema = z.object({
   KERYX_PRIVATE_TREASURY_CAPACITY_MICROS: z.string().regex(/^[1-9]\d{0,11}$/),
   KERYX_PRIVATE_SERVICE_FEE_MICROS: z.string().regex(/^[1-9]\d{0,5}$/).refine(value => Number(value) <= 500000),
   KERYX_PRIVATE_MODEL_ID: z.string().min(1),
-  KERYX_PRIVATE_PROVIDER: z.enum(["deepseek", "mimo"]),
+  KERYX_PRIVATE_PROVIDER: z.literal("deepseek"),
   KERYX_PRIVATE_PROVIDER_BASE_URL: z.string().url(),
   KERYX_PRIVATE_PROVIDER_API_KEY: z.string().min(1),
   KERYX_PRIVATE_APPROVED_ENDPOINTS: z.string().min(1).max(16384),
