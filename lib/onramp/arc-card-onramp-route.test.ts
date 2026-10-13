@@ -1,9 +1,13 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 const wallet = `0x${"cd".repeat(20)}`;
-const state = vi.hoisted(() => ({ ready: true, owner: null as { wallet: string } | Response | null, limited: false }));
+const state = vi.hoisted(() => ({ ready: true, environment: "production" as "production" | "sandbox",
+  owner: null as { wallet: string } | Response | null, limited: false }));
 const mint = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/onramp/arc-card-onramp", () => ({ arcCardOnrampReady: () => state.ready, mintArcCardOnrampSession: mint }));
+vi.mock("@/lib/onramp/arc-card-onramp", () => ({ arcCardOnrampReady: () => state.ready,
+  arcCardOnrampAvailability: () => ({ available: state.ready, environment: state.environment,
+    widgetOrigin: state.environment === "sandbox" ? "https://onramp-sandbox.arc.io" : "https://onramp.arc.io",
+    bankTransfer: state.ready ? "provider-dependent" : "unavailable" }), mintArcCardOnrampSession: mint }));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(async () => state.limited ? Response.json({ error: "rate limit exceeded" }, { status: 429 }) : null),
 }));
@@ -15,28 +19,30 @@ import { GET, POST } from "@/app/api/onramp/session/route";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 const session = { sessionId: "s", sessionToken: "t", widgetUrl: "https://onramp.arc.io/?t=1",
-  expiresAt: "2026-10-06T00:30:00.000Z", traceId: "trace", destinationWallet: wallet };
+  environment: "production", expiresAt: "2026-10-06T00:30:00.000Z", traceId: "trace", destinationWallet: wallet };
 const post = (headers: Record<string, string> = { origin: "https://keryx.example", host: "keryx.example" }, body?: string) =>
   new Request("https://keryx.example/api/onramp/session", { method: "POST", headers, ...(body ? { body } : {}) });
 
 beforeEach(() => {
-  state.ready = true; state.owner = { wallet }; state.limited = false;
+  state.ready = true; state.environment = "production"; state.owner = { wallet }; state.limited = false;
   mint.mockReset(); mint.mockResolvedValue(session); vi.mocked(checkRateLimit).mockClear();
 });
 
 it("reports availability without authentication and never caches it", async () => {
   state.ready = false;
   const off = await GET();
-  expect(await off.json()).toEqual({ available: false });
+  expect(await off.json()).toEqual({ available: false, environment: "production", widgetOrigin: "https://onramp.arc.io", bankTransfer: "unavailable" });
   expect(off.headers.get("cache-control")).toBe("no-store");
   state.ready = true;
-  expect(await (await GET()).json()).toEqual({ available: true });
+  expect(await (await GET()).json()).toEqual({ available: true, environment: "production", widgetOrigin: "https://onramp.arc.io", bankTransfer: "provider-dependent" });
+  expect(mint).not.toHaveBeenCalled();
 });
 
 it("mints for the signed-in wallet and ignores a caller-chosen destination", async () => {
   const attacker = `0x${"ee".repeat(20)}`;
   const response = await POST(post({ origin: "https://keryx.example", host: "keryx.example", "content-type": "application/json" },
-    JSON.stringify({ destinationAddress: attacker, appUserId: "other", assets: { chains: ["ethereum"] } })));
+    JSON.stringify({ destinationAddress: attacker, appUserId: "other", assets: { chains: ["ethereum"] },
+      environment: "sandbox", apiKey: "TEST_API_KEY:synthetic:synthetic", widgetBaseUrl: "https://attacker.example", paymentMethod: "card" })));
   expect(response.status).toBe(200);
   expect(response.headers.get("cache-control")).toBe("no-store");
   expect(await response.json()).toEqual({ session });
@@ -53,11 +59,26 @@ it("refuses before any vendor call when the feature is off, cross-origin, signed
   expect((await POST(post({ host: "keryx.example" }))).status).toBe(403);
   state.owner = Response.json({ error: "Sign in to access your account." }, { status: 401 });
   expect((await POST(post())).status).toBe(401);
+  state.owner = null;
+  expect((await POST(post())).status).toBe(401);
   state.owner = { wallet }; state.limited = true;
   const throttled = await POST(post());
   expect(throttled.status).toBe(429);
   expect(throttled.headers.get("cache-control")).toBe("no-store");
   expect(mint).not.toHaveBeenCalled();
+});
+
+it("reports sandbox bank unavailability and refuses minting without widening the Arc destination", async () => {
+  state.environment = "sandbox"; state.ready = false;
+  const response = await GET();
+  expect(await response.json()).toEqual({ available: false, environment: "sandbox",
+    widgetOrigin: "https://onramp-sandbox.arc.io", bankTransfer: "unavailable" });
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  const refused = await POST(post());
+  expect(refused.status).toBe(503);
+  expect(refused.headers.get("cache-control")).toBe("no-store");
+  expect(mint).not.toHaveBeenCalled();
+  expect(checkRateLimit).not.toHaveBeenCalled();
 });
 
 it("returns a generic failure when Circle is unavailable", async () => {

@@ -6,6 +6,21 @@ Public health, OpenAPI and `/` returned HTTP 200; health reported `ec5f39c9`, Op
 ENV (commit-only update), custody, Operator and private holds were preserved.
 Public readback SHA-256: `1ddfed95ac1b2282120e761f0d221f98e620fad5626aa3a51ccac621f3d9e401`; release receipt: `dd2681b77ecf4a7df19d6685de23777c7d53615a7c13a5f55946a4b8b1ed9e47`.
 
+Fresh public readback on October 13 at `08:17:58Z` again confirmed HTTP 200,
+`ec5f39c9`, Arc, app0.27.63 and no maintenance page. App0.27.64 is in local
+release preparation; accepted focused PRs accumulate on main for one deployment.
+No App64 publication, maintenance window or deployment has started.
+
+## Owner operating fee — October 13
+
+The owner-fee policy is active on the same app0.27.63 source after one configuration
+update. The October 13 bounded sponsored validation batch completed at `18:07:42Z`:
+six canonical operating-fee payments settled **0.015 USDC** to the owner. The
+owner's Arc Gateway balance rose from 0.030000 to 0.045000 USDC, with no pending
+batch fee. This is separate from creator payouts and does
+not demonstrate payment from the user's own wallet. Existing caps, expiry,
+custody, Operator and private/scheduler holds remain unchanged.
+
 ## October 12 live Conzit gas pilot
 
 Application **0.27.62**, source `d7f79046874899c0df4bd29b927349d627805f1e`, was observed live on Arc mainnet on October 12.
