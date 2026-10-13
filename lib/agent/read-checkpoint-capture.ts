@@ -6,6 +6,9 @@ import { ACTUAL_READ_CAPTURE_V2, replayMapping, replayNormalization, type Mappin
   type NormalizationInput, type PortfolioObservation, type StopRecord, type FinalObservations } from "../research-audit/actual-read-v2";
 import { ACTUAL_READ_CAPTURE_V3 } from "../research-audit/actual-read-v3";
 import type { OptimizerCheckpoint } from "../research-audit/optimizer-checkpoint";
+import { ACTUAL_READ_CAPTURE_V4 } from "../research-audit/actual-read-v4";
+import { ECONOMIC_POLICY, ECONOMIC_LIMIT, EconomicUnavailable, economicRecord,
+  type EconomicCapture, type EconomicRecord, type EconomicPayload, type EconomicKind, type EconomicEvent, type EconomicRefusal } from "../research-audit/economic-checkpoint";
 
 export type ReadCheckpointCapture = { status: "unavailable" } | {
   status: "available"; packet: ActualReadPacket; retainedDigest: string;
@@ -28,20 +31,41 @@ function qualifiedMicros(value?: number): string | null {
 }
 
 /** Optional capture cannot escape into agent execution, including a throwing trusted sink. */
-export function createReadCheckpointCapture(enabled: boolean, sink?: (record: ActualReadRecord) => void, runtime = false) {
+export function createReadCheckpointCapture(enabled: boolean, sink?: (record: ActualReadRecord) => void, runtime = false, economicRuntime = false) {
   const records: ActualReadRecord[] = [];
   const mappings: { input: MappingInput; outcome: MappingOutcome }[] = [];
   const normalizations: { input: NormalizationInput; outcome: ReturnType<typeof replayNormalization> }[] = [];
   const stops: StopRecord[] = [];
   let portfolio: PortfolioObservation | null = null;
   let optimizer: OptimizerCheckpoint | undefined;
+  let economics: EconomicCapture = { status: "available", policy: ECONOMIC_POLICY, records: [] };
   let observations: FinalObservations = { actions: [], citations: [], payments: [] };
   let unavailable = !enabled;
   const observe = (operation: () => void) => {
     if (!runtime || unavailable) return;
     try { operation(); } catch { unavailable = true; records.length = 0; }
   };
+  function appendEconomic(kind: EconomicKind, event: EconomicEvent, candidate: number, round: number,
+    project?: () => EconomicPayload, reason: EconomicRefusal = "authority-not-captured") {
+    if (!runtime || !economicRuntime || unavailable || economics.status !== "available") return;
+    if (economics.records.length >= ECONOMIC_LIMIT) { economics = { status: "unavailable", reason: "bounds" }; return; }
+    const context = { sequence: economics.records.length, afterCheckpoint: records.length, candidate, round };
+    let record: EconomicRecord;
+    try {
+      if (!project) throw new EconomicUnavailable(reason);
+      const observed = project();
+      if (observed.kind !== kind || observed.event !== event) throw new EconomicUnavailable("invalid-input");
+      record = economicRecord({ ...context, status: "available", ...observed }, context.sequence, records.length);
+    } catch (error) {
+      record = { ...context, status: "unavailable", kind, event, reason: error instanceof EconomicUnavailable ? error.reason : "capture-failed" };
+    }
+    economics.records.push(record);
+  }
   return {
+    economic(kind: EconomicKind, event: EconomicEvent, candidate: number, round: number, project: () => EconomicPayload) {
+      appendEconomic(kind, event, candidate, round, project);
+    },
+    economicUnavailable(kind: EconomicKind, event: EconomicEvent, candidate: number, round = 0) { appendEconomic(kind, event, candidate, round); },
     refuse() { if (runtime && enabled) { unavailable = true; records.length = 0; } },
     mapping(project: () => { input: MappingInput; outcome: MappingOutcome }) { observe(() => {
       const { input, outcome } = project();
@@ -91,6 +115,10 @@ export function createReadCheckpointCapture(enabled: boolean, sink?: (record: Ac
           { schema: 1, policy: ACTUAL_READ_POLICY, coverage: "post-portfolio-checkpoints", monetaryAuthority: "qualified-assertions-only", records };
         if (packet.schema === 2 && optimizer !== undefined) packet = { ...packet, schema: 3, policy: ACTUAL_READ_CAPTURE_V3,
           coverage: "normalization-optimizer-read-checkpoints", optimizer };
+        if (runtime && economicRuntime && packet.schema === 2) packet = { ...packet, schema: 3, policy: ACTUAL_READ_CAPTURE_V3,
+          coverage: "normalization-optimizer-read-checkpoints", optimizer: { status: "unavailable", reason: "capture-failed" } };
+        if (economicRuntime && packet.schema === 3) packet = { ...packet, schema: 4, policy: ACTUAL_READ_CAPTURE_V4,
+          coverage: "normalization-optimizer-query-economics-checkpoints", economics };
         const canonical = canonicalReadPacket(packet);
         return { status: "available", packet: JSON.parse(canonical), retainedDigest: createHash("sha256").update(canonical).digest("hex") };
       } catch { return { status: "unavailable" }; }
