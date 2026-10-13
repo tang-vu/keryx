@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "incremental": false, "plugins": [] },
+  "include": ["../../scripts/research-mandate.mts", "../../scripts/test-browser-research-mandate.mts"],
+  "exclude": ["../../node_modules"]
+}
