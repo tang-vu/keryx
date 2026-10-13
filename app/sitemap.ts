@@ -4,6 +4,7 @@ import { buildTopics } from "@/lib/answers-topics";
 import { answersPagePath, paginateArchive } from "@/lib/answers-pagination";
 import { loadWantedBoard, WANTED_DETAIL_LIMIT } from "@/lib/wanted-board";
 import { englishSitemapAlternates } from "@/lib/i18n/public-metadata";
+import { publicProfileSitemap } from "@/lib/profiles/public-profile-loader";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
@@ -15,6 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${BASE}/pricing`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${BASE}/briefs`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE}/about`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/get-started`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE}/download`, changeFrequency: "weekly", priority: 0.8 },
@@ -85,5 +87,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // must not inherit an English hreflang from the surrounding archive interface.
   const interfaces = [...staticRoutes, ...pageRoutes, ...topicRoutes, ...wantedRoutes]
     .map(route => ({ ...route, alternates: englishSitemapAlternates(new URL(route.url).pathname, BASE) }));
-  return [...interfaces, ...answerRoutes];
+  const profiles = (await publicProfileSitemap()).map(profile=>({url:`${BASE}/u/${profile.handle}`,lastModified:new Date(profile.updatedAt),changeFrequency:"weekly" as const,priority:0.6}));
+  return [...interfaces, ...answerRoutes, ...profiles];
 }

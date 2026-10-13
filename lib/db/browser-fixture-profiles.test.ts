@@ -6,7 +6,7 @@ it("preserves all supplied accepted native inputs and isolates explicit ordinary
   const files = [...accepted, "0086_decision_reviews.sql", "0087_deliverable_acceptance.sql", "0088_anonymous_run_claims.sql", "0089_public_usage_window.sql"];
   const profiles = postgresBrowserMigrationProfiles(files);
   expect(profiles.native).toEqual([...accepted].sort());
-  expect(profiles.ordinary).toEqual(accepted.filter(file => Number(file.slice(0, 4)) < 73 || file === "0078_research_monthly.sql").sort());
+  expect(profiles.ordinary).toEqual(["0067_browser_authorization_admission.sql", "0068_browser_authorization_timestamp.sql", "0069_browser_authorization_journal.sql", "0078_research_monthly.sql", "0085_profile_verified_identities.sql"].sort());
   expect(profiles.extensions).toEqual([{ file: "0086_decision_reviews.sql", refusal: "review_unavailable" },
     { file: "0087_deliverable_acceptance.sql", refusal: "acceptance_unavailable" },
     { file: "0088_anonymous_run_claims.sql", refusal: "claims_unavailable" }, { file: "0089_public_usage_window.sql", refusal: "usage_unavailable" }]);

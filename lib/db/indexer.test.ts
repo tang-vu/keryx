@@ -5,7 +5,7 @@
  * that carry one, so a row without it would have its payouts waved through unchecked.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Source } from "../types";
 
 const getRegistrySource = vi.fn();
@@ -76,6 +76,75 @@ const registered = (id: string, txHash = "0xabc123") => ({
   eventName: "SourceRegistered",
   args: { id },
   transactionHash: txHash,
+});
+
+describe("owned indexer shutdown", () => {
+  let wake: () => void;
+  let releaseHead: (head: bigint) => void;
+  let closing: Promise<void> | undefined;
+  const unsubscribe = vi.fn();
+  const checkpoint = vi.fn();
+  const headRead = vi.fn();
+
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    unsubscribe.mockReset(); checkpoint.mockReset(); headRead.mockReset();
+    const head = new Promise<bigint>(resolve => { releaseHead = resolve; });
+    headRead.mockReturnValue(head);
+    vi.doMock("viem", async original => ({ ...await original<typeof import("viem")>(),
+      createPublicClient: () => ({ getBlockNumber: headRead, getLogs: async () => [] }) }));
+    vi.doMock("@/lib/config", () => ({ config: { registryAddress: `0x${"11".repeat(20)}`,
+      registryDeployBlock: 0, rpcUrl: "https://fixture.invalid" } }));
+    vi.doMock("../registry/source-registry-authority", async original => ({
+      ...await original<typeof import("../registry/source-registry-authority")>(), configuredRegistryAuthorities: () => [],
+    }));
+    vi.doMock("@/lib/arc-rpc-attestation", () => ({ attestedArcAuthorityHttp: () => ({}), assertArcRpcChain: async () => {} }));
+    vi.doMock("./indexer-event-subscription", () => ({ subscribeRegistryLogs: (listener: () => void) => {
+      wake = listener; return unsubscribe;
+    } }));
+    closing = undefined;
+  });
+
+  afterEach(async () => {
+    releaseHead(BigInt(5));
+    await closing?.catch(() => {});
+    vi.useRealTimers();
+    for (const module of ["viem", "@/lib/config", "../registry/source-registry-authority",
+      "@/lib/arc-rpc-attestation", "./indexer-event-subscription"]) vi.doUnmock(module);
+    vi.resetModules();
+  });
+
+  it("drains the current pass once and prevents queued or later writes after close", async () => {
+    const { startIndexer } = await import("./indexer");
+    const db = { getSyncState: async () => null, setSyncState: checkpoint } as unknown as import("./keryx-db").KeryxDB;
+    const stop = startIndexer(db, 10);
+    expect(startIndexer(db, 10)).toBe(stop);
+    expect(headRead).toHaveBeenCalledOnce();
+    wake(); vi.advanceTimersByTime(30);
+    let closed = false;
+    closing = stop(); expect(stop()).toBe(closing);
+    void closing.then(() => { closed = true; });
+    expect(vi.getTimerCount()).toBe(0); expect(unsubscribe).toHaveBeenCalledOnce();
+    await Promise.resolve(); expect(closed).toBe(false);
+    wake(); releaseHead(BigInt(5)); await closing;
+    expect(checkpoint).toHaveBeenCalledExactlyOnceWith("lastSyncedBlock", "5");
+    wake(); vi.advanceTimersByTime(100); await Promise.resolve();
+    expect(headRead).toHaveBeenCalledOnce(); expect(checkpoint).toHaveBeenCalledOnce();
+  });
+
+  it("still drains an in-flight pass when subscription cleanup refuses, without claiming a successful close", async () => {
+    const { startIndexer } = await import("./indexer");
+    const db = { getSyncState: async () => null, setSyncState: checkpoint } as unknown as import("./keryx-db").KeryxDB;
+    unsubscribe.mockImplementation(() => { throw new Error("Synthetic subscription close refusal"); });
+    const stop = startIndexer(db, 10);
+    closing = stop(); const refused = expect(closing).rejects.toThrow("Synthetic subscription close refusal");
+    let settled = false; void closing.catch(() => { settled = true; });
+    await Promise.resolve(); expect(settled).toBe(false);
+    expect(vi.getTimerCount()).toBe(0); wake(); releaseHead(BigInt(5)); await refused;
+    expect(checkpoint).toHaveBeenCalledOnce(); expect(headRead).toHaveBeenCalledOnce();
+    expect(startIndexer(db, 10)).toBe(stop); expect(stop()).toBe(closing);
+  });
 });
 const updated = (id: string) => ({ eventName: "SourceUpdated", args: { id } });
 const deactivated = (id: string) => ({ eventName: "SourceDeactivated", args: { id } });
