@@ -2,7 +2,7 @@
  * Reasoning engine selector.
  *
  * The default chain contains every configured provider before the deterministic heuristic:
- * Anthropic -> DeepSeek Flash -> MiMo V2.5 -> enabled Cloudflare -> heuristic. A picked model leads,
+ * DeepSeek Flash -> Anthropic -> enabled Cloudflare -> heuristic. A picked model leads,
  * then falls back through the other configured defaults. Engines are built per run because their
  * effective label and attempt telemetry are run-local; provider circuit state is shared separately.
  */
@@ -57,8 +57,6 @@ function defaultRealEngines(exclude = new Set<string>()): ReasoningEngine[] {
     } else if (provider === "deepseek" && endpointFor("deepseek")) {
       // The bare constructor preserves KERYX_LLM_MODEL / KERYX_SYNTHESIS_MODEL for this tier.
       engine = new OpenAICompatibleEngine();
-    } else if (provider === "mimo") {
-      engine = createModelEngine(findModelChoice("mimo-v2.5")!);
     } else if (provider === "cloudflare") {
       engine = createModelEngine(findModelChoice("cloudflare-llama-3.3")!);
     }

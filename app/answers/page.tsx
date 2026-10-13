@@ -21,6 +21,7 @@ import { ArchiveIndexView } from "@/components/keryx/archive-index-view";
 import { archiveIndexJsonLd } from "./archive-index-json-ld";
 import { safeInlineJson } from "@/lib/safe-json";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
+import { archiveLanguages, filterArchiveLanguage, parseArchiveLanguage } from "@/lib/answers-language";
 
 const copy = createMessages("en");
 
@@ -33,7 +34,7 @@ const TITLE = copy("reportArchiveRoute.title");
 const DESCRIPTION =
   copy("reportArchiveRoute.description");
 
-export const metadata: Metadata = {
+const archiveMetadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: {
@@ -46,8 +47,17 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
 
-export default async function AnswersPage() {
-  const entries = await getArchiveCached();
+type PageProps = { searchParams: Promise<{ language?: string | string[] }> };
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const language = parseArchiveLanguage((await searchParams).language);
+  return { ...archiveMetadata, ...(language ? { robots: { index: false, follow: true } } : {}) };
+}
+
+export default async function AnswersPage({ searchParams }: PageProps) {
+  const language = parseArchiveLanguage((await searchParams).language);
+  const all = await getArchiveCached();
+  const entries = filterArchiveLanguage(all, language);
   const topics = buildTopics(entries);
   const slice = paginateArchive(entries, 1);
 
@@ -74,6 +84,8 @@ export default async function AnswersPage() {
         slice={slice}
         topics={topics}
         totalEntries={entries.length}
+        languages={archiveLanguages(all)}
+        language={language}
       />
       <SiteFooter />
     </div>

@@ -8,6 +8,8 @@
 
 import type { ArchiveEntry } from "./answers-archive";
 import { englishPublicAlternates } from "./i18n/public-metadata";
+import { archiveAnswerLanguage, archiveLanguagePath } from "./answers-language";
+import { quotedOriginalParts } from "./i18n/quoted-originals";
 
 /** Entries per feed — enough for any reader's backfill without shipping the whole corpus. */
 export const FEED_ENTRY_LIMIT = 60;
@@ -36,14 +38,18 @@ function entryXml(e: ArchiveEntry, base: string): string {
     `${e.answerSnippet} — ${e.citationCount} source${e.citationCount !== 1 ? "s" : ""} cited, ` +
     (e.archivedNetwork ? `${e.toCreators.toFixed(4)} test USDC in recorded creator rewards (Arc testnet history)` : `$${e.toCreators.toFixed(4)} in recorded creator rewards`) +
     `; inspect dispatch for settlement state.${sources}`;
+  const language = archiveAnswerLanguage(e);
+  const content = language === "und" ? xmlEscape(e.answerSnippet) : xmlEscape(quotedOriginalParts(e.answerSnippet)
+    .map(part => part.original ? `<span lang="und">${xmlEscape(part.text)}</span>` : xmlEscape(part.text)).join(""));
   return [
     // Unknown recorded answer/question language must not inherit the feed's English.
     '  <entry xml:lang="">',
     `    <title>${xmlEscape(e.question)}</title>`,
     `    <id>${xmlEscape(url)}</id>`,
-    `    <link rel="alternate" type="text/html" href="${xmlEscape(url)}"/>`,
+    `    <link rel="alternate" type="text/html"${language === "und" ? "" : ` hreflang="${xmlEscape(language)}"`} href="${xmlEscape(url)}"/>`,
     `    <updated>${rfc3339(e.createdAt)}</updated>`,
     `    <summary>${xmlEscape(summary)}</summary>`,
+    `    <content type="${language === "und" ? "text" : "html"}" xml:lang="${xmlEscape(language)}">${content}</content>`,
     "  </entry>",
   ].join("\n");
 }
@@ -53,7 +59,7 @@ function entryXml(e: ArchiveEntry, base: string): string {
  * buildArchive; the feed's own <updated> is the newest entry's timestamp so a
  * quiet archive doesn't look freshly changed on every poll.
  */
-export function buildAnswersFeedXml(entries: ArchiveEntry[], base: string): string {
+export function buildAnswersFeedXml(entries: ArchiveEntry[], base: string, language: string | null = null): string {
   const top = entries.slice(0, FEED_ENTRY_LIMIT);
   const { languages } = englishPublicAlternates("/answers");
   const updated = top.length > 0 ? rfc3339(top[0].createdAt) : new Date(0).toISOString();
@@ -62,10 +68,10 @@ export function buildAnswersFeedXml(entries: ArchiveEntry[], base: string): stri
     '<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">',
     "  <title>Keryx Answer Archive</title>",
     "  <subtitle>Cited answers from Keryx research history. Each dispatch shows its payment state.</subtitle>",
-    `  <id>${xmlEscape(`${base}/answers`)}</id>`,
+    `  <id>${xmlEscape(`${base}${archiveLanguagePath(1, language)}`)}</id>`,
     ...Object.entries(languages).filter(([language]) => language !== "x-default").map(([language, path]) =>
       `  <link rel="alternate" type="text/html" hreflang="${language}" href="${xmlEscape(`${base}${path}`)}"/>`),
-    `  <link rel="self" type="application/atom+xml" href="${xmlEscape(`${base}/answers/feed.xml`)}"/>`,
+    `  <link rel="self" type="application/atom+xml" href="${xmlEscape(`${base}/answers/feed.xml${language ? `?${new URLSearchParams({ language })}` : ""}`)}"/>`,
     `  <updated>${updated}</updated>`,
     "  <author>",
     "    <name>Keryx</name>",

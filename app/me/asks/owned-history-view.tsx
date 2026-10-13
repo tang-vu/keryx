@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { z } from "zod";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { readBoundedJson } from "@/lib/read-bounded-json";
@@ -18,59 +18,67 @@ const queryString = (input: OwnedHistoryInput) => new URLSearchParams(Object.ent
 /** Unmount/abort and owner precondition fence late reads, downloads and mutations. */
 export function OwnedHistoryView({ owner }: { owner: string }) {
   const formId = useId(), controller = useRef<AbortController | null>(null);
+  // Each effect controller identifies one owner/filter/revision generation.
+  const isCurrent = useCallback((abort: AbortController | null): abort is AbortController =>
+    abort !== null && controller.current === abort && !abort.signal.aborted, []);
   const [query, setQuery] = useState<OwnedHistoryInput>({ limit: 25 }), [past, setPast] = useState<(string | undefined)[]>([]);
   const [revision, setRevision] = useState(0), [result, setResult] = useState<{ key: string; page: OwnedHistoryPage } | null>(null);
   const [failure, setFailure] = useState<string | null>(null), [report, setReport] = useState<{ key: string; id: string; answer: string } | null>(null);
   const key = JSON.stringify({ owner, query, revision }), page = result?.key === key ? result.page : null;
   useEffect(() => {
-    const abort = new AbortController(); controller.current = abort; let active = true;
+    const abort = new AbortController(); controller.current = abort;
     void (async () => {
       try {
         const response = await fetch(`/api/me/asks?contract=owned&${queryString(query)}`, { headers: { "X-Keryx-Expected-Wallet": owner }, cache: "no-store", signal: abort.signal });
+        if (!isCurrent(abort)) { await response.body?.cancel(); return; }
         if (!response.ok) { await response.body?.cancel(); throw new Error("Refused"); }
         const value = ownedPageSchema.parse(await readBoundedJson(response, 2 * 1024 * 1024));
         if (value.wallet !== owner) throw new Error("Owner changed");
-        if (active) { setResult({ key, page: value }); setFailure(null); setReport(null); }
-      } catch { if (active) setFailure(copy.unavailable); }
+        if (isCurrent(abort)) { setResult({ key, page: value }); setFailure(null); setReport(null); }
+      } catch { if (isCurrent(abort)) setFailure(copy.unavailable); }
     })();
-    return () => { active = false; abort.abort(); };
-  }, [owner, query, key]);
-  async function read(url: string) {
-    const abort = controller.current; if (!abort || abort.signal.aborted) throw new Error("Stale owner");
+    return () => { abort.abort(); if (controller.current === abort) controller.current = null; };
+  }, [owner, query, key, isCurrent]);
+  async function read(url: string, abort: AbortController | null) {
+    if (!isCurrent(abort)) throw new Error("Stale owner");
     const response = await fetch(url, { headers: { "X-Keryx-Expected-Wallet": owner }, cache: "no-store", redirect: "error", signal: abort.signal });
+    if (!isCurrent(abort)) { await response.body?.cancel(); throw new Error("Stale owner"); }
     if (!response.ok) { await response.body?.cancel(); throw new Error("Refused"); }
-    return { response, abort };
+    return response;
   }
   async function download(url: string, name: string) {
+    const abort = controller.current;
     try {
-      const { response, abort } = await read(url);
+      const response = await read(url, abort);
       // Server bounds exports; enforce a browser bound too before creating a download.
       const reader = response.body?.getReader(); if (!reader) throw new Error("No download");
       const chunks: Uint8Array<ArrayBuffer>[] = []; let size = 0;
-      try { for (;;) { const part = await reader.read(); if (part.done) break; size += part.value.length; if (size > 8 * 1024 * 1024) throw new Error("Too large"); chunks.push(new Uint8Array(part.value)); } }
+      try { for (;;) { const part = await reader.read(); if (!isCurrent(abort)) return; if (part.done) break; size += part.value.length; if (size > 8 * 1024 * 1024) throw new Error("Too large"); chunks.push(new Uint8Array(part.value)); } }
       finally { await reader.cancel().catch(() => undefined); reader.releaseLock(); }
-      if (abort.signal.aborted) return;
-      const href = URL.createObjectURL(new Blob(chunks)), anchor = document.createElement("a"); anchor.href = href; anchor.download = name; anchor.click(); URL.revokeObjectURL(href);
-    } catch { if (!controller.current?.signal.aborted) setFailure(copy.failed); }
+      if (!isCurrent(abort)) return;
+      const href = URL.createObjectURL(new Blob(chunks)), anchor = document.createElement("a"); anchor.href = href; anchor.download = name;
+      try { anchor.click(); } finally { URL.revokeObjectURL(href); }
+    } catch { if (isCurrent(abort)) setFailure(copy.failed); }
   }
   async function openReport(row: OwnedHistoryRow) {
+    const abort = controller.current;
     try {
-      const { response, abort } = await read(row.links.report);
+      const response = await read(row.links.report, abort);
       const value = z.object({ wallet: z.literal(owner), run: z.object({ id: z.literal(row.id), answer: z.string().max(4_000_000) }).passthrough() }).passthrough().parse(await readBoundedJson(response, 4 * 1024 * 1024));
-      if (!abort.signal.aborted) setReport({ key, id: row.id, answer: value.run.answer });
-    } catch { if (!controller.current?.signal.aborted) setFailure(copy.failed); }
+      if (isCurrent(abort)) setReport({ key, id: row.id, answer: value.run.answer });
+    } catch { if (isCurrent(abort)) setFailure(copy.failed); }
   }
   async function mutate(row: OwnedHistoryRow, visibility?: string) {
-    if (row.ownerWallet !== owner || !controller.current || controller.current.signal.aborted) return;
-    if (visibility === undefined && !window.confirm(copy.confirmErase)) return;
     const abort = controller.current;
+    if (row.ownerWallet !== owner || !isCurrent(abort)) return;
+    if (visibility === undefined && !window.confirm(copy.confirmErase)) return;
     try {
       const response = await fetch(row.links.privacy, { method: visibility === undefined ? "DELETE" : "PATCH", signal: abort.signal,
         headers: { "Content-Type": "application/json", "X-Keryx-Expected-Wallet": owner },
         body: JSON.stringify({ ...(visibility ? { visibility } : {}), revision: row.revision, requestId: crypto.randomUUID() }) });
       await response.body?.cancel(); if (!response.ok) throw new Error("Refused");
-      if (!abort.signal.aborted) { setReport(null); setRevision(v => v + 1); }
-    } catch { if (!abort.signal.aborted) setFailure(copy.failed); }
+      if (isCurrent(abort)) { setReport(null); setRevision(v => v + 1); }
+    } catch { if (isCurrent(abort)) setFailure(copy.failed); }
   }
   const button = "min-h-11 border border-line px-3 text-sm", inputClass = "min-h-11 w-full border border-line bg-paper px-3";
   return <section className="space-y-5" aria-label={copy.title}>
