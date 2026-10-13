@@ -8,6 +8,13 @@ paper export only with a citation and a selected retained excerpt. Imported orig
 and model-written synthesis remain unverified; full issues 282/283 acceptance and
 deployment are separate gates. No automatic paper read, upload or payment occurs.
 
+The [related-work controls candidate](engineering/related-work283-completion-2026-10-12.md)
+adds local extractive contribution assembly, targeted regeneration that preserves
+other edits, separate caller-observed unread/unavailable lists, and deliberate
+editable reading requests in another tab under the existing budget/decision rules.
+Unknown reading status stays explicit. Actual expert-reference evaluation and
+root-owned read integration, review, CI and combined delivery remain open.
+
 The [private draft check](draft-check.md) at `/literature/check` compares each cited
 sentence of a pasted passage with source text the user supplies, in the tab. It is a
 wording comparison, not semantic review, and reads no cited work itself.
