@@ -212,11 +212,11 @@ elif [[ -n "$REVIEWED_CONFIG" ]]; then
 else
   say "3/5 typechecking + building into .next.tmp (old build still live)"
 fi
-# The full TypeScript graph now exceeds 1536 MiB. Keep its separate, finite
-# 2560 MiB allowance; Next and its static worker retain the reviewed 1536 MiB cap.
+# Typechecking has a separate, finite 4096 MiB old-space allowance.
+# Next and its static worker retain the reviewed 1536 MiB cap.
 # These phases run sequentially, and a failed check cannot reach the build/swap.
 if [[ -n "$REVIEWED_CONFIG" ]]; then
-  run_ssh "$SSH" "cd $APP_DIR && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=2560 npm run typecheck && test ! -e .next.tmp && test ! -L .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
+  run_ssh "$SSH" "cd $APP_DIR && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=4096 npm run typecheck && test ! -e .next.tmp && test ! -L .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
   if [[ -n "$ECONOMIC_CONFIG" ]]; then
     # A lost response may follow committed DDL. Arm the hold before making the call;
     # no subsequent failure may restart the old exact-profile runtime.
@@ -224,7 +224,7 @@ if [[ -n "$REVIEWED_CONFIG" ]]; then
     economic_migration migrate
   fi
 else
-  run_ssh "$SSH" "cd $APP_DIR && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=2560 npm run typecheck && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
+  run_ssh "$SSH" "cd $APP_DIR && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=4096 npm run typecheck && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build"
 fi
 
 else
