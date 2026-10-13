@@ -7,134 +7,105 @@
 [![payments: Circle x402](https://img.shields.io/badge/payments-Circle_x402-2775CA)](https://github.com/circlefin/arc-nanopayments)
 [![CI](https://github.com/tang-vu/keryx/actions/workflows/ci.yml/badge.svg)](https://github.com/tang-vu/keryx/actions/workflows/ci.yml)
 
-Keryx is a citation-toll reading agent for researchers and builders: a question and
-budget lead to a cited report, visible BUY/SKIP/CACHE decisions, and payment receipts
-for eligible creator rewards.
+Keryx is a research agent for researchers and builders. Give it a question and a
+budget: inspect its source choices, reuse the cited evidence, and see USDC payment
+receipts for eligible creators whose work it cites. Production runs on Arc mainnet
+with Circle Gateway and x402.
 
-**[Guided recorded walkthrough](https://keryx.cc/walkthrough)** ·
-**[Live app](https://keryx.cc)** · **[Public proof](https://keryx.cc/proof)** ·
-**[Get started](https://keryx.cc/get-started)** · **[Downloads](https://keryx.cc/download)** ·
-**[MCP, API, CLI & bots](https://keryx.cc/integrations)** ·
-**[Dated quality scorecard](https://keryx.cc/quality)** ·
-**[Archived QA walkthrough (2m40s, app 0.27.43, recorded Oct 8)](https://github.com/tang-vu/keryx/releases/download/v0.27.43/keryx-current-release-6e591603-archived-qa-05.mp4)**.
-Reopens an archived first-party report and receipt; no new research was submitted.
-See the [recording scope and public checks](docs/reviewer-start.md#recording-gate).
+**[Tameion demo — 2:47, narrated and subtitled](https://youtu.be/sNonqLPMysg)** ·
+**[Try Keryx](https://keryx.cc)** · **[Windows downloads](https://keryx.cc/download)** ·
+**[MCP / API / CLI](https://keryx.cc/integrations)** ·
+**[Reviewer guide](docs/reviewer-start.md)** · **[Tameion build and traction](docs/tameion-submission.md)**
 
-The [quality scorecard](docs/engineering/public-quality-scorecard-287-2026-10-11.md)
-publishes frozen diagnostics with all eight failures retained. Semantic and language
-judgments are unjudged, useful-answer rates are unavailable and historical allowance
-is unknown. Different archive sizes do not establish a release improvement.
+## What you can do
+
+| Workflow | What Keryx provides | Guide |
+| --- | --- | --- |
+| Research original sources | Public-web and scholarly discovery, exact Crossref DOIs/arXiv versions, bounded HTML/PDF reads and cited reports | [Scholarly research](docs/scholarly-research.md) |
+| Turn reading into writing | Paper screening, notes, editable comparisons, retained-excerpt related-work drafts and cited-sentence checks; Markdown/LaTeX and reference/evidence exports | [Literature workspace](docs/literature-workspace.md), [evidence drafts](docs/evidence-drafts.md) |
+| Keep a task across sessions | Windows Tauri app and task CLI share private workspaces, pinned seller/network/caps, original-job recovery, offline results and native exports | [Desktop](docs/desktop-alpha.md), [task CLI](docs/operator-task-alpha.md) |
+| Inspect economic decisions | BUY/SKIP/CACHE reasons under USDC and attention limits; Decision Lab separates model proposals, selected plans, rules and observed actions | [Decision inspection](docs/tameion-submission.md#event-period-product-delta) |
+| Pay and recover research | Separate access tolls and evidence-gated citation rewards; prepaid Operator checks obligations, capacity and liquidity before claiming a job | [Business Operator](docs/operator-business.md) |
+| Plan repeat research | Research Monthly groups four manual Deep requests over 30 days, with explicit creator caps and renewal | [Monthly terms](docs/research-monthly.md) |
+| Connect another tool | Web, API/OpenAI-compatible calls, remote and caller-funded stdio MCP, browser extension and Discord/Telegram/Slack adapters | [Integration roles](docs/surface-parity.md) |
+
+The desktop prepares tasks and hands spending to the buyer explicitly. Metadata,
+read excerpts and author judgments keep their own labels. See the
+[release/source boundary](docs/tameion-submission.md#observed-delivery-and-supported-surfaces)
+for published clients and newer merged features awaiting deployment.
+
+## See a user use it
+
+**[0xacee's software-design workflow — English video, 3:05](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4)**
+shows research for storage and backups in a news-monitoring application. The owner
+confirmed that 0xacee directly operated or supervised the session. The recording
+retains a useful SQLite WAL result alongside partial and unsupported results;
+English narration and captions explain the steps.
+
+Hoàng, a freelance developer, used Keryx MCP inside Devin CLI for his Face Marker
+app. Academic research and SaaS discovery are also documented in the
+[outside-user stories](docs/tameion-submission.md#named-external-user-hoàng-freelance-developer).
+Four identified outside users are a verified minimum, rather than the total audience.
+The user video is supporting traction evidence; the separate 2:47 video above is
+the submitted hackathon demo.
 
 ## Try it in two minutes — no wallet
 
-1. Open this [existing English cited report](https://keryx.cc/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913)
-   about how source-access tolls differ from citation rewards. Read the summary
-   and its `[S1]` source excerpts, including the Low confidence boundary.
-2. Expand **Decision log** below the answer. Inspect why Keryx reused the cached
-   first-party article and skipped unrelated candidates. This run has CACHE/SKIP
-   decisions; it did not pay a new access toll.
-3. Open **View JSON** in **Portable research receipt**, or use the
-   [direct receipt](https://keryx.cc/api/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913/receipt).
-   Under `payload.settlement`, check `mode: real`, `ledgerCompleteness: complete`,
-   **0 USDC access / 0.025 USDC citation**, and the mainnet Circle reference.
-   [Receipt verification and the retained digest](docs/reviewer-start.md#verify-the-example)
-   explain what these records prove.
+1. Open [keryx.cc](https://keryx.cc), choose Quick and enter a shareable question.
+   The sponsored trial composer shows the payer and budget. Submitted questions
+   become public reports; availability depends on current quota, capacity and caps.
+2. Inspect the answer's source excerpts and **Decision log**, including unmet
+   research targets and confidence boundaries.
+3. Open **Portable research receipt** to inspect recorded payment states and exact
+   source versions. A citation alone does not establish settlement.
 
-This is an archived owner-operated QA result using **Keryx Engineering (first-party)**,
-not a fresh answer or an outside customer's task. The location/job in its prompt is
-a test persona. It supports the three core payment facts but omits the requested
-document revision, so the original deliverable remains partial. Opening the report
-or receipt makes no research or payment request.
-
-**Next, ask your own question:** open [keryx.cc](https://keryx.cc), choose Quick,
-and submit a shareable question. The public sponsored trial needs no wallet or
-sign-up; the composer shows the payer and budget. Admission depends on current
-quota, available capacity and spend caps, so a new answer within two minutes is
-not guaranteed. Submitted questions become public reports. See
-[sponsored trial limits](docs/sponsored-research-trial.md).
-
-## Recorded purchase outcomes
-
-For a question the available evidence cannot resolve, the new
-[evidence procurement workspace](docs/evidence-procurement.md) prepares a bounded
-request, compares signed provider quotations and reviews the delivered excerpts.
-Private portable packets can be exported and restored across web, API, CLI and
-MCP. This is a proposal/evaluation slice; actual provider contact, funded execution
-and independent customer acceptance remain separately gated.
-
-The October 11 source candidate adds `/purchase-outcomes` and its read-only
-`/api/purchase-outcomes` view. It compares recorded exact-version purchases with
-citations, showing the newest-run sample, UTC interval and separate recorded
-outside/team/scripted/unknown groups. Uncited spend is descriptive; missed value,
-question-type splits and cost per supported claim remain unmeasured. Initial
-planning decisions retain exact price and planned-budget snapshots, without
-rewriting history or changing payment authority. See the
-[scope, offline comparison command and remaining acceptance gates](docs/engineering/purchase-outcomes-298.md).
-This source entry does not claim deployment or independently verified settlement.
+For a read-only tour, open this [stored cited report](https://keryx.cc/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913)
+and its [receipt](https://keryx.cc/api/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913/receipt).
+It is an archived owner-operated QA example with CACHE/SKIP choices, zero access
+USDC and a recorded 0.025 USDC mainnet citation reward to Keryx Engineering.
+The [reviewer guide](docs/reviewer-start.md#verify-the-example) retains its original
+partial-result boundary, digest and verification scope. Opening it submits no new job.
 
 ## Usage so far
 
-Read-only snapshot of [public metrics](https://keryx.cc/api/metrics),
-**October 8, 2026, 16:24 UTC**, with [public health](https://keryx.cc/api/health)
-reporting Arc mainnet / real settlement at `3b839ccd`.
+The **October 13, 2026 submission snapshot** keeps each reporting window separate:
 
-| Measure | Observed value | Counting boundary |
+| Measure | Snapshot | Window |
 | --- | --- | --- |
-| Recorded research runs | 50 | All caller origins, including team and QA; not accepted deliverables |
-| Settled payment records | 7 | All payment kinds; pending, failed and simulated excluded |
-| Settled volume | 0.095 USDC | Gross payment volume, not net revenue |
-| Creator access + citation payouts | 0.065 USDC to 2 earning creators | Includes first-party recipients; not independent creator adoption |
-| Settled operating fees | 0 USDC | Reported separately from creator rewards |
-| Outside users / team / QA | Separate counts unavailable | The endpoint does not partition these groups; guest questions are not unique outside users |
-| Historical Arc testnet | Separate evidence only | Not included in these mainnet totals; see the [event-period record](docs/tameion-submission.md#event-period-usage-testnet-week-then-mainnet) |
+| Arc mainnet activity | 129 recorded questions, 15 accounts, 87 guest questions included in the question total | Retained October 13 mainnet snapshot |
+| Arc mainnet settlements | 40 settled payment records, 0.703750 USDC gross volume | Retained October 13 mainnet snapshot |
+| MCP distribution | 2,333 npm downloads; +1,434 since the previously reported October 4 total | September 27–October 12 |
+| Website reach | Approximately 1,000 visits and 1,180 page views, with Cloudflare bot exclusion enabled | 21-day snapshot supplied October 13 |
+| Repository distribution | 33,649 clones, 1,537 unique cloners, 766 views and 46 unique visitors | 14-day snapshot supplied October 13 |
+| Community reach | 46 @keryxpays followers, more than 20 posts and several thousand cumulative views; 8 Product Hunt upvotes | Owner-supplied October 13 snapshot |
 
-These are dated database projections. [Live Ledger](https://keryx.cc/dashboard)
-and [Public Proof](https://keryx.cc/proof) expose the current records and their limits.
-The [submission pack](docs/tameion-submission.md#named-external-user-hoàng-freelance-developer)
-separately documents sponsored outside use on testnet and unmatched participant
-stories; none is inferred from these aggregate counts. [Snapshot hashes](docs/reviewer-start.md#public-checkpoint)
-retain the exact observation.
-
-## What is real and what is scripted
-
-- **The two-minute path reopens a stored run.** Its model-written answer, decision
-  trace and receipt are recorded artifacts. It is a curated QA example, not a live
-  rerun or evidence of customer acceptance.
-- **The example's payment is recorded as real Arc mainnet settlement:** one
-  0.025 USDC citation reward to the first-party Engineering source. Its cached read
-  cost zero. The Circle transfer reference is not a per-citation Arc transaction hash.
-- **First-party and public sources are distinct.** Keryx Engineering and Keryx owner
-  release notes are first-party validation sources. Public web/paper references
-  alone grant no creator payout rights. Historical seeded sample sources have
-  Keryx-controlled authority; they do not establish independent seller adoption.
-- **CLI demo, seed and benchmark commands are scripts.** Offline development uses
-  labelled simulated payments. Invoking a real-mode script can make actual paid
-  requests; it is not required for the wallet-free review path.
-- **Production research is caller-driven.** The local desktop alpha is not an
-  autonomous scheduler. Monitoring/reconciliation jobs are operational checks,
-  not independent users or fresh research. This public checkpoint does not verify
-  the host's current schedule inventory.
-- **Settlement is checked per receipt.** Pending, failed, simulated and planned
-  amounts are separate from settled value. A cited answer, healthy API or script
-  completion alone does not prove a payment settled.
+Mainnet records include owner/QA activity; gross volume is distinct from revenue.
+Downloads, clones and visits measure reach and can include repeat or automated
+activity. [The submission pack](docs/tameion-submission.md#october-13-traction-snapshot)
+documents the named users, counting rules, discovery channels and separate testnet
+history. [Live Ledger](https://keryx.cc/dashboard) and [public metrics](https://keryx.cc/api/metrics)
+show newer activity without rewriting this dated snapshot.
 
 ## What happened during Tameion
 
-The pre-event main baseline is
-[`2291753` (September 25)](https://github.com/tang-vu/keryx/tree/2291753cc4fff2135d546227d5aafda287cbed7d).
-During the event Keryx added original-document and scholarly discovery, portable
-cited-report exports, a local CLI/Windows task workspace, bounded manual Research
-Monthly, and prepaid Operator recovery/observation. Production moved from Arc
-testnet to mainnet on October 4. The
-[event-period product delta](docs/tameion-submission.md#event-period-product-delta)
-links source evidence and the limits of each change.
+Starting from the [September 25 baseline](https://github.com/tang-vu/keryx/tree/2291753cc4fff2135d546227d5aafda287cbed7d),
+Keryx grew from the earlier citation-toll agent into a research workflow across
+desktop, terminal and agent tools. The event added durable tasks and private
+exports, original-source and scholarly research, literature/drafting tools,
+prepaid Operator recovery, creator-signed registration and decision inspection.
+Production moved to Arc mainnet on October 4.
 
-The usage record separates the event's testnet phase from mainnet; the mainnet
-snapshot above includes internal activity. Sponsored outside use is documented,
-but independent paid demand, repeat use and general deliverable usefulness remain
-separate evidence gates. Source candidates beyond the observed deployment are
-not claimed live. The dated archived-QA walkthrough above reopens existing artifacts; it is not a
-live-Ask or complete current-feature demonstration.
+Newer merged work adds economic replay, supplied-review/cost analysis, signed
+missing-evidence procurement and owner-bound completed-read import into drafts.
+The [event delta](docs/tameion-submission.md#event-period-product-delta) distinguishes
+deployed and published entry points from source awaiting the next release batch.
+Funded evidence-provider execution and independently accepted paid-business
+fulfillment remain validation milestones.
+
+Builders can reuse the separate **[MIT-licensed Arc primitives library](https://github.com/tang-vu/keryx-arc-primitives)**:
+integer micro-USDC allocation, two-toll x402 flows, required durable journal
+interfaces, registry helpers, budget reservations and withdrawal helpers. Its
+testnet defaults and host duties are described in [the maintained extraction](docs/arc-primitives-maintenance.md).
 
 ---
 
@@ -145,11 +116,12 @@ subscriptions, tips. AI agents broke that contract. They read everything and sen
 no click, no view, no cent. Every answer an assistant gives is built on someone's work, and that
 someone is invisible at the exact moment their work proves its value.
 
-Keryx (κῆρυξ — *herald*) exists to fix that one moment. It makes **citation itself the payment
-event**: the instant an agent relies on your writing to answer a question, you are paid,
-proportional to how much you helped, settled sub-cent in USDC on [Arc](https://docs.arc.network).
-No accounts, no invoices, no ad tech. A creator onboards by pasting an RSS URL. An agent pays
-because paying is cheaper than not knowing.
+Keryx (κῆρυξ — *herald*) makes **citation itself a payment event**: qualifying
+evidence from an eligible creator earns a bounded, weighted citation reward,
+with sub-cent USDC settlement on [Arc](https://docs.arc.io).
+Creators verify publishing control and authorize payout terms; qualifying source evidence
+and settlement determine their rewards. An agent pays because useful information can
+be worth buying.
 
 ## What Keryx is
 
@@ -617,8 +589,8 @@ canonical build of the "herald" model — *content cited, paid per citation* —
 running. The service at [keryx.cc](https://keryx.cc) runs caller-driven research with
 Arc mainnet payment authority; it has no hourly research or payout guarantee.
 Current work adds broad-web and scholarly evidence, chat-first cited reports, local
-Windows/CLI task recovery, and a bounded Research Monthly pilot. The full Operator
-and autonomous scheduler remain planned. Production mainnet is live; independent
+Windows/CLI task recovery, and a bounded Research Monthly pilot. The hosted prepaid Operator layer is implemented; independently accepted fulfillment
+and a general autonomous scheduler remain separate milestones. Production mainnet is live; independent
 usefulness, audit, adoption and profitability retain their
 [explicit acceptance gates](docs/mainnet-delivery-plan.md). See the [Tameion submission evidence](docs/tameion-submission.md)
 for dated releases, public contract/wallet addresses, product delta and pending pilot proof.
@@ -627,5 +599,5 @@ for dated releases, public contract/wallet addresses, product delta and pending 
 
 Next.js 16 · React 19 · Tailwind 4 · shadcn/ui · viem/wagmi · `@circle-fin/x402-batching` ·
 `@circle-fin/unified-balance-kit` · `@x402/fetch` · Node `node:sqlite` / Supabase ·
-Anthropic / DeepSeek. Built on the verified
+Rust / Tauri / WebView2 · Anthropic / DeepSeek. Built on the verified
 [`circlefin/arc-nanopayments`](https://github.com/circlefin/arc-nanopayments) x402/Gateway plumbing.

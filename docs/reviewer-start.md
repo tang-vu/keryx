@@ -1,8 +1,65 @@
-# Reviewer start: retained result and remaining demo gates
+# Reviewer guide: product, user workflows and proof
 
-The [README](../README.md#try-it-in-two-minutes--no-wallet) is the wallet-free
-entry point. Its example opens existing public artifacts; it does not promise a
-fresh answer, initiate a purchase or prove independent adoption.
+Start with the **[submitted Tameion demo, 2:47](https://youtu.be/sNonqLPMysg)**:
+English narration and subtitles cover source choices, the stored report/receipt,
+Operator observation, the evidence-procurement prototype and reusable Arc primitives.
+Its stored first-party example and prototype scenes keep their own scope; the
+supporting user recording below is separate traction evidence.
+
+## A short review route
+
+1. **Watch someone use Keryx:** [0xacee's software-design session, 3:05](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4)
+   shows actual research, source inspection and a prototype design note. The owner
+   confirmed direct user operation/supervision. The [user-story record](tameion-submission.md#recorded-outside-user-workflow-0xacee)
+   links all three reports and explains the shortened waits, narration, results
+   and separate assistant-run SQLite checks.
+2. **Try the web workflow:** open [keryx.cc](https://keryx.cc), choose Quick and
+   submit a shareable question within the displayed sponsored quota/payer/budget.
+   Inspect exact excerpts, unmet targets, BUY/SKIP/CACHE reasons and the receipt.
+   The [dated quality scorecard](engineering/public-quality-scorecard-287-2026-10-11.md)
+   retains its frozen diagnostics and unjudged semantic/language outcomes.
+3. **Explore researcher outputs:** follow [literature workspace](literature-workspace.md)
+   for paper screening, notes and comparisons, and [evidence drafts](evidence-drafts.md)
+   for retained-excerpt writing and reference exports. Metadata and read evidence
+   remain distinct.
+4. **Inspect task continuity:** [Windows release assets](https://github.com/tang-vu/keryx/releases/tag/v0.27.63)
+   and the [desktop](desktop-alpha.md)/[CLI](operator-task-alpha.md) guides show
+   shared tasks, explicit buyer handoff, original-job recovery, offline results
+   and private exports.
+5. **Inspect economic agency and reuse:** source routes include
+   `/operator/decisions`, `/research-audit` and the [procurement workspace](evidence-procurement.md).
+   Compare [source versus deployment](tameion-submission.md#observed-delivery-and-supported-surfaces)
+   before treating newer merged tools as live. The separate
+   [MIT Arc primitives](https://github.com/tang-vu/keryx-arc-primitives) offer reusable
+   payment, allocation, registry and recovery components.
+
+## Submission and counting scope
+
+The owner confirmed the form submission on October 13. The
+[submitted comparison](https://github.com/tang-vu/keryx/compare/2291753cc4fff2135d546227d5aafda287cbed7d...92733ecc6dfb5076815c2a29de6370c02a84845c)
+keeps the September 25 baseline and submitted source fixed. The
+[submission pack](tameion-submission.md) records the broader build, four identified
+outside users, dated mainnet/testnet activity and distribution windows.
+
+The October 13 mainnet snapshot records 129 questions and 40 settled payment
+records totaling 0.703750 USDC. It includes owner/QA activity. The 2,333 npm
+downloads cover September 27–October 12; website visits and GitHub clones retain
+their own 21/14-day windows. These are distinct from unique people or accepted
+deliverables. The October 14 health recheck still reports production `ec5f39c9`;
+newer merged code awaits its release batch.
+
+Hoàng's October 2 MCP/Devin recording was posted on the owner's @tangvu_dev
+account, which is now suspended. Its original video is currently unavailable;
+the [matched testnet runs and sponsored payment](tameion-submission.md#named-external-user-hoàng-freelance-developer)
+remain documented. The available 0xacee video adds inspectable workflow evidence
+for an existing named user, rather than a new person count.
+
+## Read-only receipt inspection
+
+The [README](../README.md#try-it-in-two-minutes--no-wallet) also links a stored
+first-party QA example. Opening its public report/receipt submits no new research
+or payment. The October 8–9 digests and recording scope below are frozen historical
+checks; they remain unchanged by the newer demo, user recording and metrics.
 
 ## Verify the example
 
