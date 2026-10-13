@@ -17,10 +17,10 @@ import { cn } from "@/lib/utils";
 import { createMessages } from "@/lib/i18n/messages";
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { setupCopy } from "@/locales/en/get-started";
+import { useLocale } from "@/lib/i18n/locale-context";
+import { LanguageSwitcher } from "./language-switcher";
 
-const message = createMessages("en");
-
-const NAV = [
+function navigation(message: ReturnType<typeof createMessages>) { return [
   { href: "/", label: message("shellNavigation.ask") },
   { href: "/sources", label: message("shellNavigation.sources") },
   { href: "/pricing", label: productGuideCopy("product.navigationPricing") },
@@ -41,9 +41,11 @@ const NAV = [
   { href: "/dev", label: message("shellNavigation.developer") },
   { href: "/download", label: setupCopy.navigation.download },
   { href: "/integrations", label: setupCopy.navigation.integrations },
-];
+]; }
 
 export function SiteHeader() {
+  const { message, locale } = useLocale();
+  const NAV = navigation(message);
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuMounted, setMenuMounted] = useState(false);
@@ -91,7 +93,7 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-ink bg-paper/90 backdrop-blur-md">
+      <header lang={locale} className="sticky top-0 z-50 border-b border-ink bg-paper/90 backdrop-blur-md">
         <div className="mx-auto flex h-[66px] max-w-[1180px] items-center justify-between gap-6 px-4 sm:px-[30px]">
           <Link href="/" className="transition-opacity hover:opacity-80">
             <KeryxWordmark />
@@ -128,6 +130,7 @@ export function SiteHeader() {
             <div className="ml-2">
               <WalletMenu />
             </div>
+            <LanguageSwitcher />
           </nav>
 
           {/* Mobile hamburger */}
@@ -201,6 +204,7 @@ export function SiteHeader() {
                   </details>
                   <div className="mt-3 border-t border-line px-4 pt-3">
                     <WalletMenu />
+                    <LanguageSwitcher />
                   </div>
                 </nav>
               </div>

@@ -19,7 +19,7 @@ export function registerDraftCheckTool(server: McpServer) {
   server.registerTool("draft_check", {
     title: "Check a draft's cited claims against supplied source text",
     description: "Split a private passage into sentences, bind citation markers ([3], \cite{key}, [@key], Author (Year)) to a BibTeX, RIS or DOI/link reference list, and compare each cited sentence with source text you supply. Each verdict (supported, partly-supported, not-found, source-unavailable) carries a verbatim excerpt of that text or states that no supporting passage was found; a source without supplied text is always source-unavailable. Deterministic wording comparison, not semantic review. No fetching, model, database, history, payment or reward I/O. Inputs and results can be retained by your MCP client; choose that client’s privacy settings before sharing private passages.",
-    inputSchema: { check: z.unknown().describe("Version-1 private-draft-check contract, at most 65536 UTF-8 bytes. See docs/draft-check.md.") },
+    inputSchema: { check: z.unknown().describe("Version-1 private-draft-check contract, method lexical-overlap-v2, at most 65536 UTF-8 bytes. Optional sources[].identity binds exact DOI/URL and contentVersion; suggestions[] stays separate from written citations. No fetching or payment. See docs/draft-check.md.") },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   }, draftCheckTool);
 }

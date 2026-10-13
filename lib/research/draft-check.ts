@@ -4,6 +4,7 @@ import { boundedPortableCopy } from "./bounded-portable-json";
 import { claimComparisonText, draftClaimMarkers, impliesDifferentWork, splitDraftClaims, MAX_DRAFT_CLAIMS, type DraftClaimSpan } from "./draft-check-claims";
 import { parseDraftReferences, type DraftReference } from "./draft-check-references";
 import { DRAFT_CHECK_METHOD, lexicalSupport, prepareDraftSource, usesUnsegmentedScript, type DraftExcerptSpan, type LexicalDifference, type PreparedSource } from "./draft-check-support";
+import { draftSourceIdentitySchema, draftSourceUrlSchema, draftWorkBinding, syntheticDraftIdentity, type DraftSourceIdentity } from "./draft-check-sources";
 
 /** Private draft check, version 1: one stateless contract for the browser, API and MCP.
  * It compares each cited sentence with source text the caller supplies. It fetches,
@@ -22,7 +23,13 @@ export const draftCheckRequestSchema = z.object({
     /** "partial" when the caller supplies an abstract, section or retained excerpts only. */
     coverage: z.enum(["full-text", "partial"]),
     text: text(MAX_DRAFT_SOURCE_CHARACTERS, 1).refine(value => !!value.trim()),
+    identity: draftSourceIdentitySchema.optional(),
   }).strict()).max(32),
+  /** Alternative READ bodies are suggestions only; they cannot repair written citations. */
+  suggestions: z.array(z.object({ url: draftSourceUrlSchema, title: text(1000, 1),
+    coverage: z.enum(["full-text", "partial"]), text: text(MAX_DRAFT_SOURCE_CHARACTERS, 1).refine(value => !!value.trim()),
+    identity: draftSourceIdentitySchema,
+  }).strict()).max(8).optional(),
   /** Optional caller-chosen exact spans; absent means one claim per sentence. */
   claims: z.array(z.object({ start: z.number().int().nonnegative(), end: z.number().int().positive() }).strict()).max(MAX_DRAFT_CLAIMS).optional(),
 }).strict();
@@ -38,8 +45,9 @@ export interface DraftCitationCheck {
   verdict: DraftCitationVerdict;
   /** Every verdict names exactly one of these evidence states. */
   evidence: "verbatim-excerpt" | "no-supporting-passage-found" | "source-unavailable";
-  unavailableReason?: "source-text-not-supplied" | "reference-unresolved" | "reference-ambiguous" | "reference-year-differs";
+  unavailableReason?: "source-text-not-supplied" | "reference-unresolved" | "reference-ambiguous" | "reference-year-differs" | "different-work" | "source-identity-unresolved" | "source-read-incomplete" | "synthetic-source";
   coverage?: "full-text" | "partial";
+  sourceIdentity?: DraftSourceIdentity;
   excerpt?: DraftExcerptSpan;
   missingTerms?: string[];
   missingNumbers?: string[];
@@ -51,7 +59,8 @@ export type DraftCheckFlag =
   | { kind: "reference-unresolved"; reference: string; problem: NonNullable<DraftReference["problem"]> }
   | { kind: "reference-not-cited"; reference: string }
   | { kind: "citation-unresolved"; claim: string; token: string; problem: "unresolved" | "ambiguous" | "year-differs"; candidates?: string[] }
-  | { kind: "possible-different-work"; claim: string; reference: string; impliedAuthor: string };
+  | { kind: "possible-different-work"; claim: string; reference: string; impliedAuthor: string }
+  | { kind: "source-different-work"; claim: string; reference: string; observedUrl: string };
 
 function claimSpans(input: DraftCheckRequest, references: DraftReference[]): DraftClaimSpan[] {
   if (!input.claims) return splitDraftClaims(input.passage, references);
@@ -76,12 +85,16 @@ export function parseDraftCheckRequest(value: unknown): DraftCheckRequest {
 export function buildDraftCheck(value: unknown) {
   const input = parseDraftCheckRequest(value);
   const references = parseDraftReferences(input.references.format, input.references.text);
-  const sources = new Map<string, { coverage: "full-text" | "partial"; prepared: PreparedSource }>();
+  const sources = new Map<string, { coverage: "full-text" | "partial"; prepared: PreparedSource; identity?: DraftSourceIdentity }>();
   for (const source of input.sources) {
     // Text for a work that is not in the list cannot be attributed to any citation.
     if (!references.some(row => row.key === source.reference && row.problem !== "duplicate-key")) throw new Error("Source text names an unknown reference");
-    sources.set(source.reference, { coverage: source.coverage, prepared: prepareDraftSource(source.text) });
+    sources.set(source.reference, { coverage: source.coverage, prepared: prepareDraftSource(source.text), identity: source.identity });
   }
+  const alternatives = (input.suggestions ?? []).map(row => {
+    if (row.url !== row.identity.itemUrl) throw new Error("Suggestion identity changed");
+    return { ...row, prepared: prepareDraftSource(row.text) };
+  });
   const flags: DraftCheckFlag[] = references.filter(row => row.status === "unresolved")
     .map(row => ({ kind: "reference-unresolved" as const, reference: row.key, problem: row.problem! }));
   const cited = new Set<string>();
@@ -113,9 +126,26 @@ export function buildDraftCheck(value: unknown) {
       const source = sources.get(reference.key);
       // No supplied text means unavailable. It is never reported as unsupported.
       if (!source) { citations.push({ token: target.token, reference: reference.key, verdict: "source-unavailable", evidence: "source-unavailable", unavailableReason: "source-text-not-supplied" }); continue; }
+      if (source.identity) {
+        const binding = draftWorkBinding(reference, source.identity);
+        const reason = syntheticDraftIdentity(source.identity) ? "synthetic-source"
+          : binding === "different-work" ? "different-work" : binding === "unresolved" ? "source-identity-unresolved" : undefined;
+        if (reason) {
+          if (reason === "different-work") flags.push({ kind: "source-different-work", claim: id, reference: reference.key, observedUrl: source.identity.itemUrl });
+          citations.push({ token: target.token, reference: reference.key, verdict: "source-unavailable", evidence: "source-unavailable", unavailableReason: reason });
+          continue;
+        }
+      }
       if (unsegmented) continue;
       const support = lexicalSupport(comparison, source.prepared);
+      // Bounded/abstract READs cannot establish an exhaustive negative for a work.
+      if (source.identity && source.coverage === "partial" && support.verdict === "not-found") {
+        citations.push({ token: target.token, reference: reference.key, verdict: "source-unavailable", evidence: "source-unavailable",
+          unavailableReason: "source-read-incomplete", coverage: source.coverage, sourceIdentity: source.identity });
+        continue;
+      }
       citations.push({ token: target.token, reference: reference.key, verdict: support.verdict, coverage: source.coverage,
+        ...(source.identity ? { sourceIdentity: source.identity } : {}),
         evidence: support.excerpt ? "verbatim-excerpt" : "no-supporting-passage-found",
         ...(support.excerpt ? { excerpt: support.excerpt } : {}), missingTerms: support.missingTerms, missingNumbers: support.missingNumbers,
         ...(support.sourceTentative ? { sourceTentative: true as const } : {}), ...(support.closest ? { closest: support.closest } : {}) });
@@ -124,7 +154,13 @@ export function buildDraftCheck(value: unknown) {
     const verdict: DraftClaimVerdict = !targets.length || (unsegmented && !citations.some(row => row.verdict === "source-unavailable")) || best === undefined ? "not-checked" : best;
     return { id, start: span.start, end: span.end, text: claimText, verdict,
       ...(verdict === "not-checked" ? { notCheckedReason: !targets.length ? "no-citation" as const : "script-without-word-spacing" as const } : {}),
-      citations };
+      citations,
+      suggestions: unsegmented ? [] : alternatives.flatMap(row => {
+        if (syntheticDraftIdentity(row.identity)) return [];
+        const support = lexicalSupport(comparison, row.prepared);
+        return support.excerpt ? [{ kind: "suggestion" as const, url: row.url, title: row.title, verdict: support.verdict,
+          coverage: row.coverage, excerpt: support.excerpt, sourceIdentity: row.identity }] : [];
+      }) };
   });
   for (const reference of references) if (reference.status !== "unresolved" && !cited.has(reference.key)) flags.push({ kind: "reference-not-cited", reference: reference.key });
   const count = (verdict: DraftClaimVerdict) => claims.filter(row => row.verdict === verdict).length;
