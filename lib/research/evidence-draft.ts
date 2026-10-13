@@ -84,8 +84,14 @@ export function parseEvidenceDraftRequest(value: unknown): EvidenceDraftRequest 
 /** Exact URL + source + item + version + marker + claim binding from the retained ledger.
  * No title similarity, DOI inference, cross-version substitution or semantic support inference. */
 export function retainedDraftExcerpts(input: EvidenceDraftRequest): DraftExcerpt[] {
+  return retainedDraftEvidence(input).map(row => row.excerpt);
+}
+
+/** Keep assembly context beside the exact row admitted by the shared gate.
+ * Targets are internal context, never part of the portable excerpt/assessment. */
+function retainedDraftEvidence(input: EvidenceDraftRequest) {
   const included = new Set(input.workspace.entries.filter(row => row.screening === "include").map(row => row.paper.url));
-  const result = new Map<string, DraftExcerpt>();
+  const result = new Map<string, { excerpt: DraftExcerpt; target: string }>();
   for (const report of input.reports) {
     const syntheticMarkers = new Set([...report.citations, ...(report.evidence ?? [])]
       .filter(row => row.evidenceProvenance === "synthetic-demo" || hasKnownSeedFingerprint(row.itemTitle, row.itemUrl, row.contentReceipt?.bodyHash)).map(row => row.marker));
@@ -101,8 +107,8 @@ export function retainedDraftExcerpts(input: EvidenceDraftRequest): DraftExcerpt
       const body = { reportId: report.id, paperUrl: row.itemUrl, contentVersion: row.contentVersion, quote: row.quote };
       const key = referenceKey(JSON.stringify({ ...body, sourceId: row.sourceId, itemId: row.itemId, marker: row.marker }), "excerpt");
       const excerpt = { id: key, ...body };
-      if (result.has(key) && JSON.stringify(result.get(key)) !== JSON.stringify(excerpt)) throw new Error("Excerpt identifier collision");
-      result.set(key, excerpt);
+      if (result.has(key) && JSON.stringify(result.get(key)!.excerpt) !== JSON.stringify(excerpt)) throw new Error("Excerpt identifier collision");
+      result.set(key, { excerpt, target: row.claim });
     }
   }
   return [...result.values()];
@@ -153,10 +159,10 @@ export type EvidenceDraft = ReturnType<typeof buildEvidenceDraft>;
 /** A one-shot assembly operation returns editable inputs, with the operation
  * removed. Rebuilding/exporting those inputs cannot overwrite subsequent edits. */
 export function assembleEvidenceDraftRequest(value: unknown, operation: RelatedWorkAssembly): EvidenceDraftRequest {
-  const input = parseEvidenceDraftRequest(value), excerpts = retainedDraftExcerpts(input);
+  const input = parseEvidenceDraftRequest(value), retained = retainedDraftEvidence(input), excerpts = retained.map(row => row.excerpt);
   relatedWorkReadingLists(input, excerpts);
   const { assembly: _assembly, ...editable } = input;
-  return parseEvidenceDraftRequest({ ...editable, themes: assembleRelatedWorkThemes(input, excerpts, operation) });
+  return parseEvidenceDraftRequest({ ...editable, themes: assembleRelatedWorkThemes(input, retained, operation) });
 }
 
 /** Replace one explicit theme; preserve every other theme and its author edits. */

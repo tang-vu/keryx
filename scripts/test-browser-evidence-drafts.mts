@@ -123,15 +123,31 @@ try {
     const bibDownload = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download BibTeX", exact: true }).click()]);
     const bibPath = await bibDownload[0].path(); assert(bibPath); const bib = await readFile(bibPath, "utf8");
     const citedKey = md.match(/\[@(keryxDraft[a-f0-9]+)\]/)?.[1]; assert(citedKey); assert(bib.includes(`{${citedKey},`));
+    // Unfinished rows intentionally stay outside the export request, but their
+    // text, kind and selected papers/excerpts must survive both editor actions.
+    const articles = themes.locator("article"), unfinished = articles.nth(1), unfinishedText = " \n\t ";
+    await unfinished.getByRole("button", { name: "Add statement", exact: true }).click();
+    await unfinished.getByLabel("What this sentence does").selectOption("gap");
+    await unfinished.getByLabel("Your sentence").fill(unfinishedText);
+    await unfinished.getByRole("group", { name: "Papers this sentence names" }).getByRole("checkbox").first().check();
+    await unfinished.getByRole("group", { name: "Retained excerpts this sentence relies on" }).getByRole("checkbox").check();
+    const assertUnfinished = async () => {
+      assert.equal(await unfinished.getByLabel("Your sentence").inputValue(), unfinishedText);
+      assert.equal(await unfinished.getByLabel("What this sentence does").inputValue(), "gap");
+      assert.equal(await unfinished.getByRole("group", { name: "Papers this sentence names" }).getByRole("checkbox").first().isChecked(), true);
+      assert.equal(await unfinished.getByRole("group", { name: "Retained excerpts this sentence relies on" }).getByRole("checkbox").isChecked(), true);
+    };
     // Targeted regeneration must preserve other theme edits, and its generated
     // sentence remains editable without an assembly operation running again.
     await themes.getByRole("button", { name: "Regenerate this theme from selected excerpts", exact: true }).first().click();
+    await assertUnfinished();
     assert.equal(await themes.getByLabel("Your synthesis notes (unverified)").first().inputValue(), "My retained first-theme edits");
     assert.equal(await themes.getByLabel("Your synthesis notes (unverified)").nth(1).inputValue(), "Second-theme edits");
-    assert.equal(await themes.getByLabel("Your sentence").inputValue(), `The retained excerpt states: “${report.evidence![0].quote}”`);
-    await themes.getByLabel("Your sentence").fill("My in-place contribution edit.");
+    assert.equal(await articles.first().getByLabel("Your sentence").inputValue(), `The retained excerpt states: “${report.evidence![0].quote}”`);
+    await articles.first().getByLabel("Your sentence").fill("My in-place contribution edit.");
     await themes.getByRole("button", { name: "Assemble retained contributions", exact: true }).click();
-    assert.equal(await themes.getByLabel("Your sentence").inputValue(), "My in-place contribution edit.");
+    await assertUnfinished();
+    assert.equal(await articles.first().getByLabel("Your sentence").inputValue(), "My in-place contribution edit.");
     const editedDownload = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download Markdown", exact: true }).click()]);
     const editedPath = await editedDownload[0].path(); assert(editedPath);
     const edited = await readFile(editedPath, "utf8"); assert(edited.includes("My in-place contribution edit."));

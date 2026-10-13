@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { assembleEvidenceDraftRequest, buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace, EVIDENCE_DRAFT_NOTICE, MAX_EVIDENCE_DRAFT_BYTES,
@@ -9,6 +9,9 @@ import { exportEvidenceDraft } from "@/lib/research/evidence-draft-export";
 import { evidenceDraftCopy as copy, evidenceDraftCopyText as copyText } from "@/lib/research/evidence-draft-copy";
 import { RELATED_WORK_STATEMENT_KINDS } from "@/lib/research/related-work-statements";
 import { relatedWorkReadingDraft } from "@/lib/research/related-work-generation";
+import { appendCompletedEvidenceDraftImport } from "@/components/keryx/completed-evidence-draft-import";
+import { CompletedEvidenceDraftSelector } from "@/components/keryx/completed-evidence-draft-selector";
+import { completedEvidenceDraftSelectionCopy as completedCopy } from "@/locales/en/completed-evidence-draft-selection";
 
 const field = "mt-2 block w-full min-w-0 rounded-none border border-line bg-paper px-3 py-2 font-serif text-sm text-ink";
 const button = "inline-flex min-h-11 items-center border border-ink px-3 py-2 font-mono text-xs text-ink disabled:opacity-50";
@@ -21,12 +24,15 @@ const empty = (): Editors => ({ reports: [], passage: "", claims: [], themes: [{
 export function EvidenceDraftWorkspace() {
   const store = useLiteratureWorkspace(), [editors, setEditors] = useState(empty), [reportJson, setReportJson] = useState("");
   const [message, setMessage] = useState(""), [reviewer, setReviewer] = useState(""), passageRef = useRef<HTMLTextAreaElement>(null);
+  const [resetRevision, setResetRevision] = useState(0);
   // A sentence still being written stays in this tab and out of the draft contract.
   const themes = editors.themes.map(({ statements, ...theme }) => {
     const written = (statements ?? []).filter(row => row.text.trim());
     return written.length ? { ...theme, statements: written } : theme;
   });
   const request: EvidenceDraftRequest = { version: 1, scope: "private-evidence-draft", workspace: evidenceDraftWorkspace(store.workspace), ...editors, themes };
+  const liveEditors = useRef(editors), liveWorkspace = useRef(store.workspace);
+  useLayoutEffect(() => { liveEditors.current = editors; liveWorkspace.current = store.workspace; }, [editors, store.workspace]);
   let draft: ReturnType<typeof buildEvidenceDraft> | undefined, error = "";
   try { draft = buildEvidenceDraft(request); } catch { error = copy.workspace.changed; }
   const included = store.workspace.entries.filter(row => row.screening === "include");
@@ -51,6 +57,13 @@ export function EvidenceDraftWorkspace() {
     {!store.ready && <p role="status">{copy.workspace.loading}</p>}
     {store.error && <p role="alert" className="text-seal">{store.error}</p>}
     {included.length === 0 && <p className="font-serif text-sm text-ink-2">{copy.workspace.includeFirst}</p>}
+    <CompletedEvidenceDraftSelector key={resetRevision} workspace={store.workspace} disabled={!store.ready || !!store.error} onImport={value => {
+      try {
+        const next = appendCompletedEvidenceDraftImport(liveEditors.current, liveWorkspace.current, value);
+        liveEditors.current = next; setEditors(next); setMessage(completedCopy.imported);
+        return true;
+      } catch { return false; }
+    }} />
     <form className="border border-line bg-paper p-5" onSubmit={event => {
       event.preventDefault();
       try {
@@ -118,7 +131,11 @@ export function EvidenceDraftWorkspace() {
       <p className="mt-2 font-serif text-sm text-ink-2">{copy.theme.guidance}</p>
       <p className="mt-2 font-serif text-xs text-ink-3">{copy.theme.assemblyGuidance}</p>
       <button type="button" className={`${button} mt-3`} disabled={!draft || !excerpts.length} onClick={() => {
-        try { const assembled = assembleEvidenceDraftRequest(request, { mode: "append" }); update({ themes: assembled.themes }); setMessage(copy.theme.assembled); }
+        try {
+          const assembled = assembleEvidenceDraftRequest(request, { mode: "append" });
+          // The request omits unfinished sentences; existing editor rows must stay.
+          update({ themes: [...editors.themes, ...assembled.themes.slice(request.themes.length)] }); setMessage(copy.theme.assembled);
+        }
         catch { setMessage(copy.theme.assemblyRefused); }
       }}>{copy.theme.assemble}</button>
       {editors.themes.map(theme => {
@@ -132,7 +149,10 @@ export function EvidenceDraftWorkspace() {
           </label>)}
           <button type="button" className={`${button} mt-3`} onClick={() => replace({ excerptIds: [] })}>{copy.theme.clearExcerpts}</button>
           <button type="button" className={`${button} ml-2 mt-3`} disabled={!draft || !theme.excerptIds.length} onClick={() => {
-            try { const assembled = assembleEvidenceDraftRequest(request, { mode: "regenerate", themeId: theme.id }); update({ themes: assembled.themes }); setMessage(copy.theme.regenerated); }
+            try {
+              const assembled = assembleEvidenceDraftRequest(request, { mode: "regenerate", themeId: theme.id });
+              replace({ statements: assembled.themes.find(row => row.id === theme.id)!.statements }); setMessage(copy.theme.regenerated);
+            }
             catch { setMessage(copy.theme.assemblyRefused); }
           }}>{copy.theme.regenerate}</button>
           <h3 className="mt-5 font-mono text-xs text-ink-2">{copy.statement.heading}</h3>
@@ -219,7 +239,7 @@ export function EvidenceDraftWorkspace() {
         try { buildEvidenceDraft(request); downloadBrowserText(JSON.stringify(request, null, 2) + "\n", "private-evidence-draft.json", "application/json"); setMessage(copy.download.backupSuccess); }
         catch { setMessage(copy.download.backupRefused); }
       }}>{copy.download.backup}</button>
-      <button type="button" className={button} onClick={() => { setEditors(empty()); setReportJson(""); setReviewer(""); setMessage(copy.workspace.cleared); }}>{copy.workspace.clear}</button></div>
+      <button type="button" className={button} onClick={() => { setResetRevision(current => current + 1); setEditors(empty()); setReportJson(""); setReviewer(""); setMessage(copy.workspace.cleared); }}>{copy.workspace.clear}</button></div>
     <p role="status" aria-live="polite" className="font-serif text-sm text-seal">{message}</p>
   </section>;
 }

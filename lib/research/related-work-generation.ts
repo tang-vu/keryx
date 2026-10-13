@@ -25,7 +25,8 @@ export function relatedWorkReadingDraft(workspace: LiteratureWorkspace, paperUrl
 
 /** Literal extractive drafting only. Topic labels come from the original research
  * targets, never metadata. Similar wording is not evidence of agreement or a gap. */
-export function assembleRelatedWorkThemes(input: EvidenceDraftRequest, excerpts: readonly DraftExcerpt[], operation: RelatedWorkAssembly) {
+export function assembleRelatedWorkThemes(input: EvidenceDraftRequest, retained: readonly { excerpt: DraftExcerpt; target: string }[], operation: RelatedWorkAssembly) {
+  const excerpts = retained.map(row => row.excerpt);
   const used = new Set(input.themes.flatMap(theme => [theme.id, ...(theme.statements ?? []).map(row => row.id)]));
   const fresh = (seed: string) => {
     const base = referenceKey(seed, "relatedWork");
@@ -54,12 +55,10 @@ export function assembleRelatedWorkThemes(input: EvidenceDraftRequest, excerpts:
     ...theme.excerptIds.map(id => excerpts.find(row => row.id === id)?.paperUrl),
     ...(theme.statements ?? []).flatMap(row => row.paperUrls),
   ]));
-  const records = new Map<string, DraftExcerpt>();
-  for (const row of excerpts) if (!organised.has(row.paperUrl) && !records.has(row.paperUrl)) records.set(row.paperUrl, row);
+  const records = new Map<string, { excerpt: DraftExcerpt; target: string }>();
+  for (const row of retained) if (!organised.has(row.excerpt.paperUrl) && !records.has(row.excerpt.paperUrl)) records.set(row.excerpt.paperUrl, row);
   const groups = new Map<string, DraftExcerpt[]>();
-  for (const row of records.values()) {
-    const report = input.reports.find(report => report.id === row.reportId)!;
-    const target = report.evidence?.find(evidence => evidence.itemUrl === row.paperUrl && evidence.contentVersion === row.contentVersion && evidence.quote === row.quote)?.claim ?? "Retained contributions";
+  for (const { excerpt: row, target } of records.values()) {
     // Split large groups without omitting records or silently exceeding the contract.
     let index = 1, group = target;
     while ((groups.get(group)?.length ?? 0) >= 24) group = `${target} (${++index})`;

@@ -34,6 +34,50 @@ describe("retained extractive related-work assembly", () => {
     expect(exportEvidenceDraft({ ...input, assembly: { mode: "append" } }).referenceCount).toBe(0);
   });
 
+  it.each(["unqualified", "claim-mismatch", "source-mismatch", "item-mismatch", "marker-mismatch", "ambiguous-citation"])(
+    "ignores an earlier %s row sharing the accepted URL, version and quote when choosing a heading", rejection => {
+      const input = evidenceDraftFixture(), report = input.reports[0], valid = report.evidence![0];
+      const original = buildEvidenceDraft(input).excerpts;
+      const rejected = { ...valid, claimIndex: 1, claim: "Rejected target: universal superiority" };
+      if (rejection !== "claim-mismatch") report.subClaims.push(rejected.claim);
+      if (rejection === "unqualified") Object.assign(rejected, { qualifiesForAnswer: false, qualifiesForReward: false });
+      if (rejection === "source-mismatch") rejected.sourceId = "other-source";
+      if (rejection === "item-mismatch") rejected.itemId = "other-item";
+      if (rejection === "marker-mismatch" || rejection === "ambiguous-citation") rejected.marker = "S2";
+      if (rejection === "ambiguous-citation") report.citations.push(
+        { ...report.citations[0], marker: "S2" }, { ...report.citations[0], marker: "S2" });
+      report.evidence!.unshift(rejected);
+      const before = structuredClone(input), next = assembleEvidenceDraftRequest(input, { mode: "append" });
+      expect(next.themes[1].title).toBe(report.subClaims[0]);
+      expect(buildEvidenceDraft(next).excerpts).toEqual(original);
+      expect(exportEvidenceDraft(next).markdown).not.toContain(rejected.claim);
+      expect(input).toEqual(before);
+    });
+
+  it("keeps the target of the admitted deduplicated row when distinct valid targets share an excerpt", () => {
+    const input = evidenceDraftFixture(), report = input.reports[0], original = buildEvidenceDraft(input).excerpts;
+    report.subClaims.push("Second admitted target");
+    report.evidence!.push({ ...report.evidence![0], claimIndex: 1, claim: report.subClaims[1] });
+    const next = assembleEvidenceDraftRequest(input, { mode: "append" });
+    expect(next.themes[1].title).toBe(report.subClaims[1]);
+    // Deduplication keeps its established last-row behavior; the portable binding is unchanged.
+    expect(buildEvidenceDraft(next).excerpts).toEqual(original);
+    expect(Object.keys(buildEvidenceDraft(next).excerpts[0]).sort()).toEqual(
+      ["id", "reportId", "paperUrl", "contentVersion", "quote"].sort());
+  });
+
+  it("keeps distinct admitted excerpt identities when targets share quote bytes", () => {
+    const input = evidenceDraftFixture(), report = input.reports[0];
+    report.subClaims.push("Other admitted target");
+    report.citations.push({ ...report.citations[0], marker: "S2", sourceId: "second-source", itemId: "second-item" });
+    report.evidence!.push({ ...report.evidence![0], ...report.citations[1], claimIndex: 1, claim: report.subClaims[1] });
+    const next = assembleEvidenceDraftRequest(input, { mode: "append" }), excerpts = buildEvidenceDraft(next).excerpts;
+    expect(excerpts).toHaveLength(2); expect(excerpts[0].id).not.toBe(excerpts[1].id);
+    expect(next.themes[1].title).toBe(report.subClaims[0]);
+    expect(next.themes[1].excerptIds).toEqual([excerpts[0].id]);
+    expect(buildEvidenceDraft(next).references).toHaveLength(1);
+  });
+
   it("keeps bounded topic labels well-formed even at a UTF-16 boundary or with an empty original target", () => {
     const input = evidenceDraftFixture();
     for (const target of ["x".repeat(119) + "😀", "😀".repeat(100), ""]) {
